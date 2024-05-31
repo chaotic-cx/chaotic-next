@@ -1,0 +1,9 @@
+{
+    "eslintIntegration": true,
+    "htmlWhitespaceSensitivity": "strict",
+    "parser": "typescript",
+    "plugins": ["prettier-plugin-organize-imports"],
+    "proseWrap": "always",
+    "semi": false,
+    "tabWidth": 4
+}

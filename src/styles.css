@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    background-color: #1e1e2e !important;
+}
+
+@layer base {
+    @font-face {
+        font-family: "Fira Sans";
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+    }
+}
