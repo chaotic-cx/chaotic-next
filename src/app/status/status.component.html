@@ -1,0 +1,66 @@
+<div class="mocha bg-base">
+    <div>
+        <h2 class="text-4xl text-violet-500 font-extrabold text-center">Status</h2>
+        <p class="my-4 text-lg text-orange-300 text-center">
+            This page shows the status of the Chaotic-AUR infrastructure.
+        </p>
+        <p class="my-4 text-lg text-orange-300 text-center">Last updated: {{ lastUpdated }}</p>
+    </div>
+    <div class="container ml-auto mr-auto">
+        <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">Queue metrics</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="bg-violet-300 p-4 rounded-lg">
+                <h4 class="text-2xl text-center">Database - completed</h4>
+                <p class="text-center text-green-700">{{ currentMetrics.database_queue.completed }}</p>
+            </div>
+            <div class="bg-violet-300 p-4 rounded-lg">
+                <h4 class="text-2xl text-center">Database - failed</h4>
+                <p class="text-center text-red-950">{{ currentMetrics.database_queue.failed }}</p>
+            </div>
+            <div class="bg-violet-300 text-green-950 p-4 rounded-lg">
+                <h4 class="text-2xl text-center">Builder - completed</h4>
+                <p class="text-center text-green-700">{{ currentMetrics.builder_queue.completed }}</p>
+            </div>
+            <div class="bg-violet-300 p-4 rounded-lg">
+                <h4 class="text-2xl text-center">Builder - failed</h4>
+                <p class="text-center text-red-950">{{ currentMetrics.builder_queue.failed }}</p>
+            </div>
+        </div>
+    </div>
+
+    @if (currentQueue.length > 0) {
+        <div class="container mr-auto ml-auto pt-10">
+            <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">Current queue stats</h3>
+            @for (queue of currentQueue; track queue) {
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="bg-violet-300 p-4 rounded-lg">
+                        <h4 class="text-2xl text-center">Status</h4>
+                        <p class="mt-2 mb-2 text-center">{{ queue.status }}</p>
+                    </div>
+                    <div class="bg-violet-300 p-4 rounded-lg">
+                        <h4 class="text-2xl text-center">Packages</h4>
+                        <div class="mt-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-5">
+                            @for (pkg of queue["packages"]; track pkg) {
+                                <p class="text-center text-red-950">{{ pkg }}</p>
+                            }
+                        </div>
+                    </div>
+                    <div class="bg-violet-300 p-4 rounded-lg">
+                        <h4 class="text-2xl text-center">Count</h4>
+                        <p class="mt-2 mb-2 text-center text-red-950">{{ queue["count"] }}</p>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="container mr-auto ml-auto items-center pt-10">
+        <button
+            type="button"
+            (click)="updateAll()"
+            class="py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-amber-500 rounded-lg border"
+        >
+            Refresh
+        </button>
+    </div>
+</div>
