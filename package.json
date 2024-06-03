@@ -67,5 +67,8 @@
             "prettier --write",
             "git add -A"
         ]
+    },
+    "engines": {
+        "npm": "^22.2.0"
     }
 }

@@ -7,7 +7,7 @@ import {
     SpecificPackageMetrics,
     StatsObject,
     UserAgentList,
-    UserAgentMetric
+    UserAgentMetric,
 } from "../types";
 import { FormsModule } from "@angular/forms";
 
@@ -101,7 +101,7 @@ export class PackageStatsComponent {
             })
             .catch((err) => {
                 console.error(err);
-                return []
+                return [];
             });
     }
 
@@ -161,7 +161,7 @@ export class PackageStatsComponent {
             })
             .catch((err) => {
                 console.error(err);
-                return []
+                return [];
             });
     }
 
@@ -177,7 +177,7 @@ export class PackageStatsComponent {
             })
             .catch((err) => {
                 console.error(err);
-                return []
+                return [];
             });
     }
 }
