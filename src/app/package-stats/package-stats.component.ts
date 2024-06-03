@@ -21,7 +21,7 @@ import { FormsModule } from "@angular/forms";
 export class PackageStatsComponent {
     lastUpdated: string;
     protected axios: Axios;
-    protected apiUrl = "http://metrics.chaotic.local:8080/";
+    protected apiUrl = "https://metrics.chaotic.cx/";
     usersMetrics: number = 0;
     userAgentMetrics: UserAgentList = [];
     specificPackageMetrics: SpecificPackageMetrics = {};
