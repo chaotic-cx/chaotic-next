@@ -6,53 +6,92 @@
         </p>
         <p class="my-4 text-lg text-orange-300 text-center">Last updated: {{ lastUpdated }}</p>
     </div>
-    <div class="container ml-auto mr-auto">
-        <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">Queue metrics</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div class="bg-violet-300 p-4 rounded-lg">
-                <h4 class="text-2xl text-center">Database - completed</h4>
-                <p class="text-center text-green-700">{{ currentMetrics.database_queue.completed }}</p>
-            </div>
-            <div class="bg-violet-300 p-4 rounded-lg">
-                <h4 class="text-2xl text-center">Database - failed</h4>
-                <p class="text-center text-red-950">{{ currentMetrics.database_queue.failed }}</p>
-            </div>
-            <div class="bg-violet-300 text-green-950 p-4 rounded-lg">
-                <h4 class="text-2xl text-center">Builder - completed</h4>
-                <p class="text-center text-green-700">{{ currentMetrics.builder_queue.completed }}</p>
-            </div>
-            <div class="bg-violet-300 p-4 rounded-lg">
-                <h4 class="text-2xl text-center">Builder - failed</h4>
-                <p class="text-center text-red-950">{{ currentMetrics.builder_queue.failed }}</p>
-            </div>
-        </div>
-    </div>
 
     @if (currentQueue.length > 0) {
         <div class="container mr-auto ml-auto pt-10">
             <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">Current queue stats</h3>
             @for (queue of currentQueue; track queue) {
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <div class="bg-violet-300 p-4 rounded-lg">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-x-0 mt-3 mb-3">
+                    <div class="place-self-auto bg-violet-300 p-4 rounded-l-2xl">
                         <h4 class="text-2xl text-center">Status</h4>
                         <p class="mt-2 mb-2 text-center">{{ queue.status }}</p>
                     </div>
-                    <div class="bg-violet-300 p-4 rounded-lg">
+                    <div class="bg-violet-300 p-4">
+                        <h4 class="text-2xl text-center">Count</h4>
+                        <p class="mt-2 mb-2 text-center text-red-950">{{ queue["count"] }}</p>
+                    </div>
+                    <div class="col-span-4 bg-violet-300 p-4 rounded-r-2xl">
                         <h4 class="text-2xl text-center">Packages</h4>
                         <div class="mt-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-5">
                             @for (pkg of queue["packages"]; track pkg) {
-                                <p class="text-center text-red-950">{{ pkg }}</p>
+                                <p class="text-center text-s text-red-950">{{ pkg }}</p>
                             }
                         </div>
-                    </div>
-                    <div class="bg-violet-300 p-4 rounded-lg">
-                        <h4 class="text-2xl text-center">Count</h4>
-                        <p class="mt-2 mb-2 text-center text-red-950">{{ queue["count"] }}</p>
                     </div>
                 </div>
             }
         </div>
     }
+    @if (currentPackages.length > 0) {
+        <div class="container mr-auto ml-auto pt-10">
+            <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">
+                Current queued package information
+            </h3>
+            @for (pkg of currentPackages; track pkg) {
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-x-0 mt-3 mb-3">
+                    <div class="place-self-auto bg-violet-300 p-4 rounded-l-2xl">
+                        <h4 class="text-2xl text-center">Name</h4>
+                        <p class="mt-2 mb-2 text-center">{{ pkg.name }}</p>
+                    </div>
+                    <div class="bg-violet-300 p-4">
+                        <h4 class="text-2xl text-center">Queued up at</h4>
+                        <p class="mt-2 mb-2 text-center text-red-950">{{ pkg.time }}</p>
+                    </div>
+                    <div class="col-span-4 bg-violet-300 p-4 rounded-r-2xl">
+                        <h4 class="text-2xl text-center">Target repo</h4>
+                        <div class="mt-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <p class="text-center text-s text-red-950">{{ pkg.srcrepo }}</p>
+                        </div>
+                    </div>
+                    <div class="col-span-4 bg-violet-300 p-4 rounded-r-2xl">
+                        <h4 class="text-2xl text-center">Source files</h4>
+                        <div class="mt-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <p class="text-center text-s text-red-950">{{ pkg.repo_files }}</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    @if (currentQueue.length === 0) {
+        <div class="container mr-auto ml-auto pt-10">
+            <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">
+                There are currently no ongoing builds 😴
+            </h3>
+        </div>
+    }
+
+    <div class="container ml-auto mr-auto">
+        <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">Queue metrics</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-0 gap-y-2">
+            <div class="bg-violet-300 pt-4 pb-4 rounded-l-2xl">
+                <h4 class="text-2xl text-center">Database - completed</h4>
+                <p class="text-center text-green-700">{{ currentMetrics.database_queue.completed }}</p>
+            </div>
+            <div class="bg-violet-300 pt-4 pb-4 rounded-r-2xl">
+                <h4 class="text-2xl text-center">Database - failed</h4>
+                <p class="text-center text-red-950">{{ currentMetrics.database_queue.failed }}</p>
+            </div>
+            <div class="bg-violet-300 text-green-950 pt-4 pb-4 rounded-l-2xl">
+                <h4 class="text-2xl text-center">Builder - completed</h4>
+                <p class="text-center text-green-700">{{ currentMetrics.builder_queue.completed }}</p>
+            </div>
+            <div class="bg-violet-300 pt-4 pb-4 rounded-r-2xl">
+                <h4 class="text-2xl text-center">Builder - failed</h4>
+                <p class="text-center text-red-950">{{ currentMetrics.builder_queue.failed }}</p>
+            </div>
+        </div>
+    </div>
 
     <div class="container mr-auto ml-auto items-center pt-10">
         <button
