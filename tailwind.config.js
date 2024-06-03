@@ -5,6 +5,9 @@ module.exports = {
         "./node_modules/flowbite/**/*.js", // add this line
     ],
     theme: {
+        container: {
+            center: true,
+        },
         fontFamily: {
             sans: ["Fira Sans", "ui-sans-serif", "system-ui"],
             serif: ["Fira Sans", "ui-serif", "Georgia"],
