@@ -42,3 +42,22 @@ export interface CurrentPackage {
     repo_files: string;
 }
 export type CurrentPackages = CurrentPackage[];
+
+export interface SpecificPackageMetrics {
+    name?: string;
+    downloads?: number;
+    user_agents?: UserAgentList;
+}
+
+export interface CountNameObject {
+    name: string;
+    count: number;
+}
+export type CountryRankList = CountNameObject[];
+export type PackageRankList = CountNameObject[];
+
+export interface UserAgentMetric {
+    name: string;
+    count: number;
+}
+export type UserAgentList = UserAgentMetric[];

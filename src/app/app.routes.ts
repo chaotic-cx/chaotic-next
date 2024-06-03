@@ -5,6 +5,7 @@ import { HomeComponent } from "./home/home.component";
 import { MemorialComponent } from "./memorial/memorial.component";
 import { AboutComponent } from "./about/about.component";
 import { DocsComponent } from "./docs/docs.component";
+import { PackageStatsComponent } from "./package-stats/package-stats.component";
 
 export const routes: Routes = [
     {
@@ -30,6 +31,10 @@ export const routes: Routes = [
     {
         path: "memorial",
         component: MemorialComponent,
+    },
+    {
+        path: "package-stats",
+        component: PackageStatsComponent,
     },
 ];
 
