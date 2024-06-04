@@ -45,8 +45,8 @@ export type CurrentPackages = CurrentPackage[];
 
 export interface SpecificPackageMetrics {
     name?: string;
-    downloads?: number;
-    user_agents?: UserAgentList;
+    downloads: number;
+    user_agents: UserAgentList;
 }
 
 export interface CountNameObject {

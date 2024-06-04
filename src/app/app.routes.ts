@@ -5,7 +5,8 @@ import { HomeComponent } from "./home/home.component";
 import { MemorialComponent } from "./memorial/memorial.component";
 import { AboutComponent } from "./about/about.component";
 import { DocsComponent } from "./docs/docs.component";
-import { PackageStatsComponent } from "./package-stats/package-stats.component";
+import { StatsPage } from "./stats-page/stats-page";
+import { NotFoundComponent } from "./not-found/not-found.component";
 
 export const routes: Routes = [
     {
@@ -33,8 +34,16 @@ export const routes: Routes = [
         component: MemorialComponent,
     },
     {
-        path: "package-stats",
-        component: PackageStatsComponent,
+        path: "stats",
+        component: StatsPage,
+    },
+    {
+        path: "not-found",
+        component: NotFoundComponent,
+    },
+    {
+        path: "**",
+        redirectTo: "not-found",
     },
 ];
 
