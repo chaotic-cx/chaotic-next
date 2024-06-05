@@ -1,22 +1,30 @@
 <div class="bg-base mocha pt-10">
-    <div class="container" [style.width.px]="400">
+    <div class="container" [style.width.px]="300">
         <app-chaotic-attractor></app-chaotic-attractor>
     </div>
 
-    <div class="container items-center mx-auto text-center pt-10">
-        <h1
-            class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-violet-500 md:text-5xl lg:text-6xl dark:text-white"
+    <div class="container items-center mx-auto text-center py-10 px-10">
+        <p
+            class="mb-4 text-xl font-extrabold leading-none tracking-tight text-violet-500 md:text-3xl lg:text-4xl dark:text-white"
         >
-            Binary repository for AUR packages
-        </h1>
-        <p class="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">
+            Automated building repo for
+            <a
+                class="mb-4 text-xl font-extrabold leading-none tracking-tight text-violet-300 md:text-3xl lg:text-4xl dark:text-white"
+                target="_blank"
+                rel="noopener"
+                href="https://aur.archlinux.org"
+                >AUR</a
+            >
+            packages 👨🏻‍💻
+        </p>
+        <p class="my-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">
             Compiling AUR packages for you so you don't have to!
         </p>
         <a
             routerLink="docs"
             routerLinkActive="active"
             ariaCurrentWhenActive="page"
-            class="inline-flex items-center justify-center px-5 py-3 text-base font-medium text-center text-white bg-red-600 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900"
+            class="inline-flex items-center justify-center px-5 py-3 text-base font-medium text-center text-white bg-orange-600 rounded-lg hover:bg-orange-400 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900"
         >
             How to make use of it
             <svg

@@ -1,6 +1,6 @@
 import { Component } from "@angular/core";
 import { Axios } from "axios";
-import { CurrentPackages, CurrentQueue, PackagesObject, StatsObject } from "../types";
+import { CAUR_API_URL, CurrentPackages, CurrentQueue, PackagesObject, StatsObject } from "../types";
 
 @Component({
     selector: "app-status",
@@ -24,11 +24,10 @@ export class StatusComponent {
     };
     lastUpdated: string;
     axios: Axios;
-    apiUrl = "https://builds.garudalinux.org/api/";
 
     constructor() {
         this.axios = new Axios({
-            baseURL: this.apiUrl,
+            baseURL: CAUR_API_URL,
             timeout: 1000,
         });
         this.lastUpdated = new Date().toLocaleString("en-GB", { timeZone: "UTC" });

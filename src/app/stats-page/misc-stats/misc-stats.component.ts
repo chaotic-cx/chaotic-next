@@ -1,5 +1,5 @@
 import { Component } from "@angular/core";
-import { CountryRankList, UserAgentList } from "../../types";
+import { CAUR_METRICS_URL, CountryRankList, UserAgentList } from "../../types";
 import { getNow, parseOutput } from "../../utils/utils";
 import { Axios } from "axios";
 
@@ -14,14 +14,13 @@ export class MiscStatsComponent {
     loading: boolean = true;
     lastUpdated = "Stats are currently loading...";
     protected axios: Axios;
-    protected apiUrl = "https://metrics.chaotic.cx/";
     userAgentMetrics: UserAgentList = [];
     countryRanks: CountryRankList = [];
     countryRankRange: number = 30;
 
     constructor() {
         this.axios = new Axios({
-            baseURL: this.apiUrl,
+            baseURL: CAUR_METRICS_URL,
             timeout: 100000,
         });
     }

@@ -13,7 +13,7 @@ import iframeResizer from "@iframe-resizer/parent";
     imports: [NgOptimizedImage],
 })
 export class ChaoticAttractorComponent {
-    // Thanks for adapting the original applet and letting us use it!
+    // Many thanks for adapting the original applet and letting us use it!
     // Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
     // Copyright (c) 2018 Juan Carlos Ponce Campuzano
     url = "https://www.dynamicmath.xyz/calculus/velfields/chaotic-aur";

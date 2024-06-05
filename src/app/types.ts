@@ -61,3 +61,6 @@ export interface UserAgentMetric {
     count: number;
 }
 export type UserAgentList = UserAgentMetric[];
+
+export const CAUR_METRICS_URL: string = "https://metrics.chaotic.cx/";
+export const CAUR_API_URL: string = "https://builds.garudalinux.org/api/";

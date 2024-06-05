@@ -1,5 +1,5 @@
 import { Component } from "@angular/core";
-import { PackageRankList } from "../../types";
+import { CAUR_METRICS_URL, PackageRankList } from "../../types";
 import { getNow, parseOutput } from "../../utils/utils";
 import { Axios } from "axios";
 
@@ -20,7 +20,7 @@ export class PackageStatsComponent {
     constructor() {
         this.lastUpdated = "Stats are currently loading...";
         this.axios = new Axios({
-            baseURL: "https://metrics.chaotic.cx/",
+            baseURL: CAUR_METRICS_URL,
             timeout: 100000,
         });
     }
