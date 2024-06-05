@@ -4,6 +4,7 @@ import { NgOptimizedImage } from "@angular/common";
 import { PLATFORM_ID } from "@angular/core";
 import { isPlatformBrowser } from "@angular/common";
 import iframeResizer from "@iframe-resizer/parent";
+import { CAUR_HOME_URL } from "../types";
 
 @Component({
     selector: "app-chaotic-attractor",
@@ -16,7 +17,7 @@ export class ChaoticAttractorComponent {
     // Many thanks for adapting the original applet and letting us use it!
     // Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
     // Copyright (c) 2018 Juan Carlos Ponce Campuzano
-    url = "https://www.dynamicmath.xyz/calculus/velfields/chaotic-aur";
+    url = CAUR_HOME_URL + "aizawa";
     urlSafe: SafeResourceUrl;
     displayInteractive: boolean = true;
     // @ts-ignore
