@@ -4,8 +4,8 @@ import { PackageSearchComponent } from "./package-search/package-search.componen
 import { PackageStatsComponent } from "./package-stats/package-stats.component";
 import { MiscStatsComponent } from "./misc-stats/misc-stats.component";
 import { Axios } from "axios";
-import { routes } from "../app.routes";
 import { RouterLink, RouterLinkActive } from "@angular/router";
+import { CAUR_METRICS_URL } from "../types";
 
 @Component({
     selector: "app-stats-page",
@@ -24,17 +24,8 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
 export class StatsPage {
     currentView: string = "search";
     total30dUsers: string = "0";
-    protected axios: Axios;
-    protected apiUrl = "https://metrics.chaotic.cx/";
 
-    constructor() {
-        this.axios = new Axios({
-            baseURL: this.apiUrl,
-            timeout: 100000,
-        });
-    }
-
-    ngAfterViewInit(): void {
+    ngOnInit(): void {
         void this.get30DayUsers();
     }
 
@@ -44,7 +35,6 @@ export class StatsPage {
      */
     changeDisplay(event: any) {
         this.currentView = event.srcElement.id.split("-")[1];
-        // routes.navigate([`stats/${this.currentView}`]);
     }
 
     /**
@@ -52,7 +42,12 @@ export class StatsPage {
      * @returns The total users count as string.
      */
     async get30DayUsers(): Promise<string> {
-        return this.axios
+        const axios = new Axios({
+            baseURL: CAUR_METRICS_URL,
+            timeout: 100000,
+        });
+
+        return axios
             .get("30d/users")
             .then((response) => {
                 return response.data;

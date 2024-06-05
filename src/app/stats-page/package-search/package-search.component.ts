@@ -1,6 +1,6 @@
 import { Component } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { SpecificPackageMetrics } from "../../types";
+import { CAUR_METRICS_URL, SpecificPackageMetrics } from "../../types";
 import { getNow, parseOutput } from "../../utils/utils";
 import { Axios } from "axios";
 
@@ -17,11 +17,10 @@ export class PackageSearchComponent {
     loading: boolean = false;
     searchPackage: string = "";
     initialSearchDone: boolean = false;
-    apiUrl: string = "https://metrics.chaotic.cx/";
 
     constructor() {
         this.axios = new Axios({
-            baseURL: this.apiUrl,
+            baseURL: CAUR_METRICS_URL,
             timeout: 100000,
         });
     }
