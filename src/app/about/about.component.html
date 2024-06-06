@@ -1,10 +1,12 @@
 <div class="">
     <h2 class="chaotic-h2">About</h2>
     <h3 class="chaotic-h3">Our team consists of these awesome people 🎉</h3>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 mx-15 md:mx-20 lg:mx-60 mb-20 items-center">
+    <div
+        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 mb-20 items-center sm:max-w-screen-sm lg:max-w-screen-lg mx-auto"
+    >
         @for (member of team; track member) {
             <div
-                class="chaotic-grow-s h-auto max-w-full bg-violet-300 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700"
+                class="chaotic-grow-s h-auto max-w-full chaotic-background-surface0 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700"
             >
                 <div class="flex flex-col items-center pb-10">
                     <img
@@ -14,12 +16,12 @@
                         width="96"
                         alt="{{ member.name }} avatar"
                     />
-                    <h5 class="mb-1 text-xl font-medium text-gray-900 dark:text-white">{{ member.name }}</h5>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ member.role }}</span>
+                    <h5 class="mb-1 text-xl font-medium chaotic-text-color-peach dark:text-white">{{ member.name }}</h5>
+                    <span class="text-sm dark:text-gray-400 chaotic-text-color-peach">{{ member.role }}</span>
                     <div class="flex mt-4 md:mt-6">
                         <a
                             href="https://github.com/{{ member.github }}"
-                            class="chaotic-grow-l inline-flex items-center px-4 py-2 text-sm hover:bg-red-900 font-medium text-center text-white bg-violet-700 rounded-lg focus:ring-4 focus:outline-none focus:ring-green dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                            class="chaotic-grow-l inline-flex items-center px-4 py-2 text-sm hover:chaotic-grow-l font-medium text-center text-base chaotic-background-mocha-maroon rounded-lg focus:ring-4 focus:outline-none focus:ring-green dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                             >GitHub</a
                         >
                     </div>

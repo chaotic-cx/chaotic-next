@@ -1,10 +1,10 @@
-<div class="mocha bg-base">
+<div class="chaotic-container-regular mocha bg-base">
     <div>
-        <h2 class="text-4xl text-violet-500 font-extrabold text-center">Status</h2>
-        <p class="my-4 text-lg text-orange-300 text-center">
+        <h1 class="text-4xl chaotic-h1 font-extrabold text-center">Status</h1>
+        <p class="my-4 text-lg chaotic-text-color-regular text-center">
             This page shows the status of the Chaotic-AUR infrastructure.
         </p>
-        <p class="my-4 text-lg text-orange-300 text-center">Last updated: {{ lastUpdated }}</p>
+        <p class="my-4 text-lg chaotic-text-color-regular text-center">Last updated: {{ lastUpdated }}</p>
     </div>
 
     @if (currentQueue.length > 0) {
@@ -65,30 +65,30 @@
     }
     @if (currentQueue.length === 0) {
         <div class="container mr-auto ml-auto pt-10">
-            <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">
+            <h3 class="text-3xl text-center font-bold text-mauve pt-5 pb-10">
                 There are currently no ongoing builds 😴
             </h3>
         </div>
     }
 
     <div class="container ml-auto mr-auto">
-        <h3 class="text-3xl text-center font-bold text-orange-300 pt-5 pb-10">Queue metrics</h3>
+        <h3 class="text-3xl text-center font-bold text-maroon pt-5 pb-10">Queue metrics</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-0 gap-y-2">
-            <div class="bg-violet-300 pt-4 pb-4 rounded-l-2xl">
-                <h4 class="text-2xl text-center">Database - completed</h4>
-                <p class="text-center text-green-700">{{ currentMetrics.database_queue.completed }}</p>
+            <div class="bg-surface0 pt-4 pb-4 rounded-l-2xl">
+                <h4 class="text-2xl text-center text-green">Database - completed</h4>
+                <p class="text-center text-green">{{ currentMetrics.database_queue.completed }}</p>
             </div>
-            <div class="bg-violet-300 pt-4 pb-4 rounded-r-2xl">
-                <h4 class="text-2xl text-center">Database - failed</h4>
-                <p class="text-center text-red-950">{{ currentMetrics.database_queue.failed }}</p>
+            <div class="bg-surface0 pt-4 pb-4 rounded-r-2xl">
+                <h4 class="text-2xl text-center text-red">Database - failed</h4>
+                <p class="text-center text-red">{{ currentMetrics.database_queue.failed }}</p>
             </div>
-            <div class="bg-violet-300 text-green-950 pt-4 pb-4 rounded-l-2xl">
-                <h4 class="text-2xl text-center">Builder - completed</h4>
-                <p class="text-center text-green-700">{{ currentMetrics.builder_queue.completed }}</p>
+            <div class="bg-surface0 text-green-950 pt-4 pb-4 rounded-l-2xl">
+                <h4 class="text-2xl text-center text-green">Builder - completed</h4>
+                <p class="text-center text-green">{{ currentMetrics.builder_queue.completed }}</p>
             </div>
-            <div class="bg-violet-300 pt-4 pb-4 rounded-r-2xl">
-                <h4 class="text-2xl text-center">Builder - failed</h4>
-                <p class="text-center text-red-950">{{ currentMetrics.builder_queue.failed }}</p>
+            <div class="bg-surface0 pt-4 pb-4 rounded-r-2xl">
+                <h4 class="text-2xl text-center text-red">Builder - failed</h4>
+                <p class="text-center text-red">{{ currentMetrics.builder_queue.failed }}</p>
             </div>
         </div>
     </div>
@@ -97,7 +97,7 @@
         <button
             type="button"
             (click)="updateAll()"
-            class="py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-amber-500 rounded-lg border"
+            class="py-2.5 px-5 text-sm font-medium text-base focus:outline-none bg-mauve rounded-lg hover:chaotic-grow-l"
         >
             Refresh
         </button>
