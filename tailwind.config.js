@@ -8,6 +8,13 @@ module.exports = {
         container: {
             center: true,
         },
+        extend: {
+            screens: {
+                "3xl": "1600px",
+                "4xl": "1920px",
+                "5xl": "2200px",
+            },
+        },
         fontFamily: {
             sans: ["Fira Sans", "ui-sans-serif", "system-ui"],
             serif: ["Fira Sans", "ui-serif", "Georgia"],
@@ -15,7 +22,6 @@ module.exports = {
             display: ["Fira Sans"],
             body: ['"Fira Sans"'],
         },
-        extend: {},
     },
     plugins: [require("flowbite/plugin"), require("@catppuccin/tailwindcss")],
 };
