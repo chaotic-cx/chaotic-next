@@ -66,3 +66,12 @@ export const CAUR_METRICS_URL: string = "https://metrics.chaotic.cx/";
 export const CAUR_API_URL: string = "https://builds.garudalinux.org/api/";
 export const CAUR_MAP_URL: string = "https://status.chaotic.cx/map";
 export const CAUR_HOME_URL: string = "https://caur-frontend.pages.dev/";
+
+export interface TeamMember {
+    name: string;
+    github: string;
+    avatarUrl?: string;
+    role?: string;
+    occupation?: string;
+}
+export type TeamList = TeamMember[];

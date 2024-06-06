@@ -1,6 +1,34 @@
-<div class="text-center mr-auto ml-auto">
-    <h2 class="text-4xl text-violet-500 font-extrabold">About</h2>
-    <ul class="my-4 text-lg text-orange-300 text-center">
+<div class="">
+    <h2 class="chaotic-h2">About</h2>
+    <h3 class="chaotic-h3">Our team consists of these awesome people 🎉</h3>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mx-15 md:mx-20 lg:mx-60 mb-20 items-center">
+        @for (member of team; track member) {
+            <div class="h-auto max-w-full bg-violet-300 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+                <div class="flex flex-col items-center pb-10">
+                    <img
+                        class="w-24 h-24 my-5 rounded-full shadow-lg"
+                        ngSrc="{{ member.avatarUrl }}"
+                        height="96"
+                        width="96"
+                        alt="{{ member.name }} avatar"
+                    />
+                    <h5 class="mb-1 text-xl font-medium text-gray-900 dark:text-white">{{ member.name }}</h5>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ member.role }}</span>
+                    <div class="flex mt-4 md:mt-6">
+                        <a
+                            href="https://github.com/{{ member.github }}"
+                            class="inline-flex items-center px-4 py-2 text-sm hover:bg-red-900 font-medium text-center text-white bg-violet-700 rounded-lg focus:ring-4 focus:outline-none focus:ring-green dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                            >GitHub</a
+                        >
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <h3 class="chaotic-h3">Information about build nodes</h3>
+</div>
+<div class="chaotic-container-regular">
+    <ul class="chaotic-list-regular chaotic-text-color-regular">
         <li>
             Most packages available in this repo are automatically built from their respective
             <a target="_blank" rel="noopener" href="https://aur.archlinux.org">AUR</a>
@@ -9,209 +37,93 @@
             to find out which ones.
         </li>
         <li>
-            The primary building cluster is a node in
+            The main node in is located in Hetzner's finnish datacenter and runs in one of
+            <a target="_blank" rel="noopener" href="https://www.hetzner.com/dedicated-rootserver/ax102/">these</a>. The
+            hardware is provided by Garuda Linux.
+        </li>
+        <li>
+            The second building cluster is a node in
             <a target="_blank" rel="noopener" href="https://www2.ufscar.br/">UFSCar</a>s datacenter which is hosted in
             São Carlos, São Paulo, Brazil.
         </li>
     </ul>
-    <br />
-    <p class="my-4 text-lg text-orange-300 text-center">
-        Feel free to create issues to suggest enhancements, flag database corruptions and all other requests:
-        <a target="_blank" rel="noopener" href="https://github.com/chaotic-aur/packages/issues">Issues</a><br />
-        Please report build bugs to the AUR package maintainers.
-    </p>
+    <h3 class="chaotic-h3">Reporting bugs</h3>
+    <ul class="chaotic-list-regular chaotic-text-color-regular">
+        <li>
+            Feel free to create issues to suggest enhancements, flag database corruptions and all other requests:
+            <a target="_blank" rel="noopener" class="text-red" href="https://github.com/chaotic-aur/packages/issues"
+                >Issues</a
+            ><br />
+        </li>
+        <li>Please report build bugs to the AUR package maintainers.</li>
+    </ul>
 </div>
 
-<div class="text-center mr-auto ml-auto">
-    <h2 class="text-2xl text-violet-500 font-extrabold">Links:</h2>
-    <ul class="my-4 text-lg text-orange-300 text-center">
+<div class="chaotic-container-regular">
+    <h3 class="chaotic-h3">Links</h3>
+    <ul class="chaotic-list-regular chaotic-text-color-regular">
         <li>
             Telegram channel with news and updates:
-            <a target="_blank" rel="noopener" href="https://t.me/s/chaotic_aur">
-                <li>
-                    Our community group for on- and offtopics:
-                    <a target="_blank" rel="noopener" href="https://t.me/s/chaotic_aur_sac">
-                        - feel free to come by! 😊 (<a
-                            target="_blank"
-                            rel="noopener"
-                            href="https://matrix.to/#/%23chaotic-aur:mozilla.org"
-                            >Matrix-bridge</a
-                        >)
-                        <li>
-                            Package list:
-                            <a
-                                target="_blank"
-                                rel="noopener"
-                                href="https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/"
-                                >Pkgs.org</a
-                            >
-                        </li>
-                        <li>
-                            Package directory (for manual downloads):
-                            <a
-                                target="_blank"
-                                rel="noopener"
-                                href="https://builds.garudalinux.org/repos/chaotic-aur/x86_64/"
-                                >Manual downloads</a
-                            >
-                        </li>
-                        <li>
-                            Infra / toolbox source code:
-                            <a target="_blank" rel="noopener" href="https://github.com/chaotic-aur/toolbox">GitHub</a>
-                        </li>
-                        <li>
-                            Status page:
-                            <a target="_blank" rel="noopener" href="https://uptimes.chaotic.cx">Status monitoring</a>
-                        </li>
-                        <li>
-                            Latest logs:
-                            <a
-                                target="_blank"
-                                rel="noopener"
-                                href="https://builds.garudalinux.org/repos/chaotic-aur/logs/"
-                                >Logfiles</a
-                            >
-                        </li>
-                        <li>
-                            Chaotic keys:
-                            <a target="_blank" rel="noopener" href="https://aur.chaotic.cx/chaotic.gpg">Keyring</a>
-                        </li>
-
-                        <div class="list">
-                            <h2>Lead Maintainer:</h2>
-                            <p>
-                                dr460nf1r3 (Nico) 🐉
-                                <a target="_blank" rel="noopener" href="https://github.com/dr460nf1r3"
-                                    >&lt;github.com/dr460nf1r3&gt;</a
-                                >
-                            </p>
-                            <br />
-                            <h2>Co-maintainers and contributors:</h2>
-                            <ul>
-                                <li>
-                                    Pedro H. Lara Campos
-                                    <a target="_blank" rel="noopener" href="https://github.com/PedroHLC"
-                                        >&lt;github.com/PedroHLC&gt;</a
-                                    >
-                                    -- Founder
-                                </li>
-                                <li>
-                                    Thotypous (Paulo Matias)
-                                    <a target="_blank" rel="noopener" href="https://github.com/thotypous"
-                                        >&lt;github.com/thotypous&gt;</a
-                                    >
-                                    --
-                                    <a
-                                        target="_blank"
-                                        rel="noopener"
-                                        href="https://archlinux.org/people/trusted-user-fellows/#pmatias"
-                                        >Past Trusted User</a
-                                    >, co-founder
-                                </li>
-                                <li>
-                                    Naman (web designer)
-                                    <a target="_blank" rel="noopener" href="https://github.com/namanlp"
-                                        >&lt;github.com/namanlp&gt;</a
-                                    >
-                                </li>
-                                <li>
-                                    João Figueiredo (KDE's -git packages)
-                                    <a target="_blank" rel="noopener" href="https://github.com/IslandC0der"
-                                        >&lt;github.com/IslandC0der&gt;</a
-                                    >
-                                </li>
-                                <li>
-                                    TNE (sysadmin)
-                                    <a target="_blank" rel="noopener" href="https://github.com/JustTNE"
-                                        >&lt;github.com/JustTNE&gt;</a
-                                    >
-                                </li>
-
-                                <li>
-                                    Alexjp (KDE's -git packages)
-                                    <a target="_blank" rel="noopener" href="https://github.com/alexjp"
-                                        >&lt;github.com/alexjp&gt;</a
-                                    >
-                                </li>
-                                <li>
-                                    Technetium1 (general package maintenance)
-                                    <a target="_blank" rel="noopener" href="https://github.com/technetium1"
-                                        >&lt;github.com/technetium1&gt;</a
-                                    >
-                                </li>
-                                <li>
-                                    xiota (General package maintenance)
-                                    <a target="_blank" rel="noopener" href="https://github.com/xiota"
-                                        >&lt;github.com/xiota&gt;</a
-                                    >
-                                </li>
-                                <li>
-                                    SolarAquarion (S. Choina)
-                                    <a target="_blank" rel="noopener" href="https://github.com/SolarAquarion"
-                                        >&lt;github.com/SolarAquarion&gt;</a
-                                    >
-                                </li>
-                                <li>
-                                    Eduard Tolosa (former builder of TKG kernels)
-                                    <a target="_blank" rel="noopener" href="https://github.com/Edu4rdSHL"
-                                        >&lt;github.com/Edu4rdSHL&gt;</a
-                                    >
-                                </li>
-                                <li>
-                                    LordKitsuna (and his retired Threadripper)
-                                    <a target="_blank" rel="noopener" href="https://github.com/lordkitsuna"
-                                        >&lt;github.com/lordkitsuna&gt;</a
-                                    >
-                                </li>
-                                <li>
-                                    Rustem B.
-                                    <a target="_blank" rel="noopener" href="https://github.com/RustemB"
-                                        >&lt;github.com/RustemB&gt;</a
-                                    >
-                                </li>
-                            </ul>
-                            <h2>Special thanks:</h2>
-                            <ul>
-                                <li>All our current and past mirror providers;</li>
-                                <li>
-                                    Librewish (Shrinivas Kumbhar)
-                                    <a target="_blank" rel="noopener" href="https://github.com/librewish"
-                                        >&lt;github.com/librewish&gt;</a
-                                    >
-                                    -- Ex-co-maintainer, Garuda Linux founder
-                                </li>
-                                <li>Garuda Linux staffers;</li>
-                                <li>
-                                    <a target="_blank" rel="noopener" href="https://github.com/Tk-Glitch"
-                                        >Tk-Glitch (TkG)</a
-                                    >;
-                                    <a target="_blank" rel="noopener" href="https://github.com/Kodehawa">Kodehawa</a>;
-                                    <a target="_blank" rel="noopener" href="https://aur.archlinux.org/account/figue"
-                                        >Figue</a
-                                    >;
-                                    <a target="_blank" rel="noopener" href="https://github.com/benjamimgois"
-                                        >Benjamim Gois</a
-                                    >;
-                                </li>
-                                <li>
-                                    Dr Juan Carlos Ponce Campuzano, creator of the Aizawa applet and our logo
-                                    (https://www.patreon.com/jcponce)
-                                </li>
-                                <li>Frogging Family and Linux Gaming Dev Discord servers;</li>
-                                <li>
-                                    André,
-                                    <a target="_blank" rel="noopener" href="https://github.com/olivatooo"
-                                        >Gabriel Olivato</a
-                                    >
-                                    and Maiser;
-                                </li>
-                                <li>AUR package maintainers; ArchLinux TUs and staffers;</li>
-                                <li>And everybody who somehow helped all the projects we prebuild! 🤗</li>
-                            </ul>
-                        </div>
-                    </a>
-                </li>
+            <a target="_blank" rel="noopener" href="https://t.me/s/chaotic_aur">t.me/s/chaotic_aur</a>
+        </li>
+        <li>
+            Our community group for on- and offtopics:
+            <a target="_blank" rel="noopener" href="https://t.me/s/chaotic_aur_sac"> feel free to come by! 😊</a
+            ><a target="_blank" rel="noopener" href="https://matrix.to/#/%23chaotic-aur:mozilla.org">
+                (Matrix bridge here)
             </a>
         </li>
+        <li>
+            Package list:
+            <a target="_blank" rel="noopener" href="https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/">Pkgs.org</a>
+        </li>
+        <li>
+            Package directory (for manual downloads):
+            <a target="_blank" rel="noopener" href="https://builds.garudalinux.org/repos/chaotic-aur/x86_64/"
+                >Manual downloads</a
+            >
+        </li>
+        <li>
+            Infra / toolbox source code:
+            <a target="_blank" rel="noopener" href="https://github.com/chaotic-aur/toolbox">GitHub</a>
+        </li>
+        <li>
+            Status page:
+            <a target="_blank" rel="noopener" href="https://uptimes.chaotic.cx">Status monitoring</a>
+        </li>
+        <li>
+            Latest logs:
+            <a target="_blank" rel="noopener" href="https://builds.garudalinux.org/repos/chaotic-aur/logs/">Logfiles</a>
+        </li>
+        <li>
+            Chaotic keys:
+            <a target="_blank" rel="noopener" href="https://aur.chaotic.cx/chaotic.gpg">Keyring</a>
+        </li>
+    </ul>
+</div>
+
+<div class="chaotic-container-regular">
+    <h3 class="chaotic-h3">Special thanks</h3>
+    <ul class="chaotic-list-regular chaotic-text-color-regular">
+        <li>All our current and past mirror providers;</li>
+        <li>Librewish (Shrinivas Kumbhar) - Ex-co-maintainer, Garuda Linux founder</li>
+        <li>Garuda Linux staffers;</li>
+        <li>
+            <a target="_blank" rel="noopener" href="https://github.com/Tk-Glitch">Tk-Glitch (TkG)</a>;
+            <a target="_blank" rel="noopener" href="https://github.com/Kodehawa">Kodehawa</a>;
+            <a target="_blank" rel="noopener" href="https://aur.archlinux.org/account/figue">Figue</a>;
+            <a target="_blank" rel="noopener" href="https://github.com/benjamimgois">Benjamim Gois</a>;
+        </li>
+        <li>
+            Dr Juan Carlos Ponce Campuzano, creator of the Aizawa applet and our logo (https://www.patreon.com/jcponce)
+        </li>
+        <li>Frogging Family and Linux Gaming Dev Discord servers;</li>
+        <li>
+            André,
+            <a target="_blank" rel="noopener" href="https://github.com/olivatooo">Gabriel Olivato</a>
+            and Maiser;
+        </li>
+        <li>AUR package maintainers; ArchLinux TUs and staffers;</li>
+        <li>And everybody who somehow helped all the projects we prebuild! 🤗</li>
     </ul>
 </div>

@@ -14,3 +14,23 @@ body {
         font-display: swap;
     }
 }
+
+.chaotic-h2 {
+    @apply text-center text-4xl text-violet-500 font-extrabold my-10;
+}
+
+.chaotic-h3 {
+    @apply text-center text-2xl text-violet-500 font-bold my-10;
+}
+
+.chaotic-list-regular {
+    @apply px-20 md:px-32 lg:px-48 block space-y-1  list-disc list-inside  my-4 text-lg text-left;
+}
+
+.chaotic-text-color-regular {
+    @apply text-gray-500;
+}
+
+.chaotic-container-regular {
+    @apply container text-center mx-auto max-w-screen-xl align-middle;
+}
