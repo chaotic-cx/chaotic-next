@@ -1,11 +1,11 @@
 <div class="md:container md:mx-aut">
-    <h3 class="text-2xl text-violet-500 font-extrabold text-center">Search for a specific package</h3>
+    <h3 class="text-2xl chaotic-text-color-mocha-maroon font-extrabold text-center">Search for a specific package</h3>
     <form class="max-w-md mx-auto">
         <label for="input-search-package" class="mb-2 text-sm font-medium text-red sr-only dark:text-white"
             >Search</label
         >
         <div class="relative pt-5">
-            <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+            <div class="absolute inset-y-0 start-0 flex align-middle items-center ps-3 pointer-events-none">
                 <svg
                     class="w-4 h-4 text-red dark:text-gray-400"
                     aria-hidden="true"
@@ -28,7 +28,7 @@
                 type="search"
                 [(ngModel)]="searchPackage"
                 name="searchPackage"
-                class="block w-full p-4 ps-10 text-sm text-red border border-gray-300 rounded-lg bg-violet-400 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                class="block w-full p-4 ps-10 text-sm text-red border border-red rounded-lg chaotic-background-surface0 focus:ring-blue-500 focus:border-flamingo dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 placeholder="Search for a specific package..."
                 required
             />
@@ -46,7 +46,7 @@
             <div role="status">
                 <svg
                     aria-hidden="true"
-                    class="ml-96 mr-96 inline w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-purple-600"
+                    class="ml-96 mr-96 inline w-12 h-12 text-gray-200 animate-spin dark:text-gray-600 fill-red"
                     viewBox="0 0 100 101"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
@@ -67,7 +67,7 @@
 
     @if (packageMetrics.downloads > 0 && packageMetrics.user_agents !== []) {
         <div class="md:container flex md:mx-auto my-10">
-            <table class="table-auto p-20 md:mx-auto bg-violet-400 rounded-xl">
+            <table class="table-auto p-20 md:mx-auto chaotic-background-mocha-maroon rounded-xl">
                 <thead>
                     <tr>
                         <th class="px-20 py-5">Total count</th>
