@@ -34,3 +34,20 @@ body {
 .chaotic-container-regular {
     @apply container text-center mx-auto max-w-screen-xl align-middle;
 }
+
+.chaotic-grow-l {
+    @apply transition ease-in-out hover:scale-125;
+}
+
+.chaotic-grow-s {
+    @apply transition ease-in-out hover:scale-105;
+}
+
+.chaotic-glow {
+    -webkit-box-shadow: 0px 0px 252px 0px rgba(255, 46, 241, 0.9);
+    -moz-box-shadow: 0px 0px 252px 0px rgba(255, 46, 241, 0.9);
+    box-shadow: 0px 0px 252px 0px rgba(255, 46, 241, 0.9);
+}
+.chaotic-hover-glow {
+    @extends hover chaotic-glow;
+}
