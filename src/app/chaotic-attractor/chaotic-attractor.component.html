@@ -1,10 +1,10 @@
 @if (displayInteractive) {
-    <iframe #iframe class="rounded-3xl mx-3 my-3" [src]="urlSafe"></iframe>
+    <iframe class="mx-3 my-3 rounded-3xl" #iframe [src]="urlSafe"></iframe>
 }
 @if (!displayInteractive) {
     <img
+        class="mx-3 my-3 rounded-3xl"
         ngSrc="../public/assets/logo.png"
-        class="rounded-3xl mx-3 my-3"
         alt="Chaotic-AUR logo"
         priority
         width="875"

@@ -1,7 +1,7 @@
-import { Component } from "@angular/core";
-import { CAUR_METRICS_URL, PackageRankList } from "../../types";
-import { getNow, parseOutput } from "../../utils/utils";
-import { Axios } from "axios";
+import { Component } from "@angular/core"
+import { Axios } from "axios"
+import { CAUR_METRICS_URL, PackageRankList } from "../../types"
+import { getNow, parseOutput } from "../../utils/utils"
 
 @Component({
     selector: "app-package-stats",
@@ -11,34 +11,34 @@ import { Axios } from "axios";
     styleUrl: "./package-stats.component.css",
 })
 export class PackageStatsComponent {
-    packageMetricRange: number = 30;
-    globalPackageMetrics: PackageRankList = [];
-    loading: boolean = true;
-    lastUpdated: string;
-    axios: Axios;
+    packageMetricRange: number = 30
+    globalPackageMetrics: PackageRankList = []
+    loading: boolean = true
+    lastUpdated: string
+    axios: Axios
 
     constructor() {
-        this.lastUpdated = "Stats are currently loading...";
+        this.lastUpdated = "Stats are currently loading..."
         this.axios = new Axios({
             baseURL: CAUR_METRICS_URL,
             timeout: 100000,
-        });
+        })
     }
 
     ngAfterViewInit(): void {
-        this.updateOverallMetrics();
+        this.updateOverallMetrics()
     }
 
     /**
      * Update all metrics on the page.
      */
     updateOverallMetrics(): void {
-        this.loading = true;
+        this.loading = true
         this.getOverallPackageMetrics().then((result) => {
-            this.globalPackageMetrics = result;
-            this.loading = false;
-            this.lastUpdated = getNow();
-        });
+            this.globalPackageMetrics = result
+            this.loading = false
+            this.lastUpdated = getNow()
+        })
     }
 
     /**
@@ -49,11 +49,11 @@ export class PackageStatsComponent {
         return this.axios
             .get(`30d/rank/${this.packageMetricRange}/packages`)
             .then((response) => {
-                return parseOutput(response.data);
+                return parseOutput(response.data)
             })
             .catch((err) => {
-                console.error(err);
-                return [];
-            });
+                console.error(err)
+                return []
+            })
     }
 }

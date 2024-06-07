@@ -1,11 +1,11 @@
-import { Component } from "@angular/core";
-import { FormsModule } from "@angular/forms";
-import { PackageSearchComponent } from "./package-search/package-search.component";
-import { PackageStatsComponent } from "./package-stats/package-stats.component";
-import { MiscStatsComponent } from "./misc-stats/misc-stats.component";
-import { Axios } from "axios";
-import { RouterLink, RouterLinkActive } from "@angular/router";
-import { CAUR_METRICS_URL } from "../types";
+import { Component } from "@angular/core"
+import { FormsModule } from "@angular/forms"
+import { RouterLink, RouterLinkActive } from "@angular/router"
+import { Axios } from "axios"
+import { CAUR_METRICS_URL } from "../types"
+import { MiscStatsComponent } from "./misc-stats/misc-stats.component"
+import { PackageSearchComponent } from "./package-search/package-search.component"
+import { PackageStatsComponent } from "./package-stats/package-stats.component"
 
 @Component({
     selector: "app-stats-page",
@@ -22,11 +22,11 @@ import { CAUR_METRICS_URL } from "../types";
     styleUrl: "./stats-page.css",
 })
 export class StatsPage {
-    currentView: string = "search";
-    total30dUsers: string = "loading... ☕️";
+    currentView: string = "search"
+    total30dUsers: string = "loading... ☕️"
 
     async ngOnInit(): Promise<void> {
-        this.total30dUsers = await this.get30DayUsers();
+        this.total30dUsers = await this.get30DayUsers()
     }
 
     /**
@@ -34,7 +34,7 @@ export class StatsPage {
      * @param event
      */
     changeDisplay(event: any) {
-        this.currentView = event.srcElement.id.split("-")[1];
+        this.currentView = event.srcElement.id.split("-")[1]
     }
 
     /**
@@ -45,16 +45,16 @@ export class StatsPage {
         const axios = new Axios({
             baseURL: CAUR_METRICS_URL,
             timeout: 100000,
-        });
+        })
 
         return axios
             .get("30d/users")
             .then((response) => {
-                return response.data;
+                return response.data
             })
             .catch((err) => {
-                console.error(err);
-                return "failed to load users count 😔";
-            });
+                console.error(err)
+                return "failed to load users count 😔"
+            })
     }
 }

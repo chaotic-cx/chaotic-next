@@ -1,28 +1,28 @@
 <div class="chaotic-container-regular bg-base">
     <div>
-        <h1 class="text-4xl text-maroon font-extrabold text-center">Status</h1>
-        <p class="my-4 text-lg text-text text-center">This page shows the status of the Chaotic-AUR infrastructure.</p>
-        <p class="my-4 text-lg text-text text-center">Last updated: {{ lastUpdated }}</p>
+        <h1 class="text-center text-4xl font-extrabold text-maroon">Status</h1>
+        <p class="my-4 text-center text-lg text-text">This page shows the status of the Chaotic-AUR infrastructure.</p>
+        <p class="my-4 text-center text-lg text-text">Last updated: {{ lastUpdated }}</p>
     </div>
 
     @if (currentQueue.length > 0) {
-        <div class="container mr-auto ml-auto pt-10">
-            <h3 class="text-3xl text-center font-bold text-text pt-5 pb-10">Current queue stats</h3>
+        <div class="container ml-auto mr-auto pt-10">
+            <h3 class="pb-10 pt-5 text-center text-3xl font-bold text-text">Current queue stats</h3>
             @for (queue of currentQueue; track queue) {
-                <div class="grid grid-cols-1 md:grid-cols-6 gap-x-0 mt-3 mb-3">
-                    <div class="place-self-auto bg-surface0 p-4 rounded-l-2xl">
-                        <h4 class="text-2xl text-center text-mauve">Status</h4>
-                        <p class="mt-2 mb-2 text-center">{{ queue.status }}</p>
+                <div class="mb-3 mt-3 grid grid-cols-1 gap-x-0 md:grid-cols-6">
+                    <div class="place-self-auto rounded-l-2xl bg-surface0 p-4">
+                        <h4 class="text-center text-2xl text-mauve">Status</h4>
+                        <p class="mb-2 mt-2 text-center">{{ queue.status }}</p>
                     </div>
                     <div class="bg-surface0 p-4">
-                        <h4 class="text-2xl text-center">Count</h4>
-                        <p class="mt-2 mb-2 text-center text-red">{{ queue["count"] }}</p>
+                        <h4 class="text-center text-2xl">Count</h4>
+                        <p class="mb-2 mt-2 text-center text-red">{{ queue["count"] }}</p>
                     </div>
-                    <div class="col-span-4 bg-surface0 p-4 rounded-r-2xl">
-                        <h4 class="text-2xl text-center text-mauve">Packages</h4>
-                        <div class="mt-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="col-span-4 rounded-r-2xl bg-surface0 p-4">
+                        <h4 class="text-center text-2xl text-mauve">Packages</h4>
+                        <div class="mb-2 mt-2 grid grid-cols-1 gap-5 md:grid-cols-3">
                             @for (pkg of queue["packages"]; track pkg) {
-                                <p class="text-center text-s text-red">{{ pkg }}</p>
+                                <p class="text-s text-center text-red">{{ pkg }}</p>
                             }
                         </div>
                     </div>
@@ -31,28 +31,28 @@
         </div>
     }
     @if (currentPackages.length > 0) {
-        <div class="container mr-auto ml-auto pt-10">
-            <h3 class="text-3xl text-center font-bold text-text pt-5 pb-10">Current queued package information</h3>
+        <div class="container ml-auto mr-auto pt-10">
+            <h3 class="pb-10 pt-5 text-center text-3xl font-bold text-text">Current queued package information</h3>
             @for (pkg of currentPackages; track pkg) {
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-x-0 mt-3 mb-3">
-                    <div class="place-self-auto bg-surface0 p-4 rounded-l-2xl">
-                        <h4 class="text-2xl text-center">Name</h4>
-                        <p class="mt-2 mb-2 text-center">{{ pkg.name }}</p>
+                <div class="mb-3 mt-3 grid grid-cols-1 gap-x-0 md:grid-cols-4">
+                    <div class="place-self-auto rounded-l-2xl bg-surface0 p-4">
+                        <h4 class="text-center text-2xl">Name</h4>
+                        <p class="mb-2 mt-2 text-center">{{ pkg.name }}</p>
                     </div>
                     <div class="bg-surface0 p-4">
-                        <h4 class="text-2xl text-center">Queued up at</h4>
-                        <p class="mt-2 mb-2 text-center text-red-950">{{ pkg.time }}</p>
+                        <h4 class="text-center text-2xl">Queued up at</h4>
+                        <p class="mb-2 mt-2 text-center text-red-950">{{ pkg.time }}</p>
                     </div>
-                    <div class="col-span-4 bg-surface0 p-4 rounded-r-2xl">
-                        <h4 class="text-2xl text-center">Target repo</h4>
-                        <div class="mt-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-5">
-                            <p class="text-center text-s text-red-950">{{ pkg.srcrepo }}</p>
+                    <div class="col-span-4 rounded-r-2xl bg-surface0 p-4">
+                        <h4 class="text-center text-2xl">Target repo</h4>
+                        <div class="mb-2 mt-2 grid grid-cols-1 gap-5 md:grid-cols-3">
+                            <p class="text-s text-center text-red-950">{{ pkg.srcrepo }}</p>
                         </div>
                     </div>
-                    <div class="col-span-4 bg-surface0 p-4 rounded-r-2xl">
-                        <h4 class="text-2xl text-center">Source files</h4>
-                        <div class="mt-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-5">
-                            <p class="text-center text-s text-red-950">{{ pkg.repo_files }}</p>
+                    <div class="col-span-4 rounded-r-2xl bg-surface0 p-4">
+                        <h4 class="text-center text-2xl">Source files</h4>
+                        <div class="mb-2 mt-2 grid grid-cols-1 gap-5 md:grid-cols-3">
+                            <p class="text-s text-center text-red-950">{{ pkg.repo_files }}</p>
                         </div>
                     </div>
                 </div>
@@ -61,27 +61,27 @@
     }
     @if (currentQueue.length === 0) {
         <div class="container my-auto px-5">
-            <h3 class="text-xl text-center font-bold text-mauve py-10">There are currently no ongoing builds 😴</h3>
+            <h3 class="py-10 text-center text-xl font-bold text-mauve">There are currently no ongoing builds 😴</h3>
         </div>
     }
 
     <div class="container ml-auto mr-auto p-5">
-        <h3 class="text-3xl text-center font-bold text-maroon pb-5">Queue metrics</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-l-2xl">
-                <h4 class="text-2xl text-center text-green">Database - completed</h4>
+        <h3 class="pb-5 text-center text-3xl font-bold text-maroon">Queue metrics</h3>
+        <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <div class="rounded-2xl bg-surface0 pb-4 pt-4 md:rounded-l-2xl">
+                <h4 class="text-center text-2xl text-green">Database - completed</h4>
                 <p class="text-center text-green">{{ currentMetrics.database_queue.completed }}</p>
             </div>
-            <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-r-2xl">
-                <h4 class="text-2xl text-center text-red">Database - failed</h4>
+            <div class="rounded-2xl bg-surface0 pb-4 pt-4 md:rounded-r-2xl">
+                <h4 class="text-center text-2xl text-red">Database - failed</h4>
                 <p class="text-center text-red">{{ currentMetrics.database_queue.failed }}</p>
             </div>
-            <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-l-2xl">
-                <h4 class="text-2xl text-center text-green">Builder - completed</h4>
+            <div class="rounded-2xl bg-surface0 pb-4 pt-4 md:rounded-l-2xl">
+                <h4 class="text-center text-2xl text-green">Builder - completed</h4>
                 <p class="text-center text-green">{{ currentMetrics.builder_queue.completed }}</p>
             </div>
-            <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-r-2xl">
-                <h4 class="text-2xl text-center text-red">Builder - failed</h4>
+            <div class="rounded-2xl bg-surface0 pb-4 pt-4 md:rounded-r-2xl">
+                <h4 class="text-center text-2xl text-red">Builder - failed</h4>
                 <p class="text-center text-red">{{ currentMetrics.builder_queue.failed }}</p>
             </div>
         </div>
@@ -89,9 +89,9 @@
 
     <div class="container mx-auto mb-5 items-center">
         <button
-            type="button"
+            class="hover:chaotic-grow-l rounded-lg bg-mauve px-5 py-2.5 text-base text-sm font-medium focus:outline-none"
             (click)="updateAll()"
-            class="py-2.5 px-5 text-sm font-medium text-base focus:outline-none bg-mauve rounded-lg hover:chaotic-grow-l"
+            type="button"
         >
             Refresh
         </button>

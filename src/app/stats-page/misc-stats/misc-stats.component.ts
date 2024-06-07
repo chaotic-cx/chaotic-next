@@ -1,7 +1,7 @@
-import { Component } from "@angular/core";
-import { CAUR_METRICS_URL, CountryRankList, UserAgentList } from "../../types";
-import { getNow, parseOutput } from "../../utils/utils";
-import { Axios } from "axios";
+import { Component } from "@angular/core"
+import { Axios } from "axios"
+import { CAUR_METRICS_URL, CountryRankList, UserAgentList } from "../../types"
+import { getNow, parseOutput } from "../../utils/utils"
 
 @Component({
     selector: "app-misc-stats",
@@ -11,22 +11,34 @@ import { Axios } from "axios";
     styleUrl: "./misc-stats.component.css",
 })
 export class MiscStatsComponent {
-    loading: boolean = true;
-    lastUpdated = "Stats are currently loading...";
-    protected axios: Axios;
-    userAgentMetrics: UserAgentList = [];
-    countryRanks: CountryRankList = [];
-    countryRankRange: number = 30;
+    loading: boolean = true
+    lastUpdated = "Stats are currently loading..."
+    userAgentMetrics: UserAgentList = []
+    countryRanks: CountryRankList = []
+    countryRankRange: number = 30
+    protected axios: Axios
 
     constructor() {
         this.axios = new Axios({
             baseURL: CAUR_METRICS_URL,
             timeout: 100000,
-        });
+        })
     }
 
     ngAfterViewInit(): void {
-        this.updateAllMetrics();
+        this.updateAllMetrics()
+    }
+
+    /**
+     * Update all metrics and sets the values of the user agent metrics and country ranks.
+     */
+    updateAllMetrics(): void {
+        Promise.all([this.get30DayUserAgents(), this.getCountryRanks()]).then((values) => {
+            this.userAgentMetrics = values[0]
+            this.countryRanks = values[1]
+            this.loading = false
+            this.lastUpdated = getNow()
+        })
     }
 
     /**
@@ -38,19 +50,19 @@ export class MiscStatsComponent {
             .get("30d/user-agents")
             .then((response) => {
                 // We don't want to display >30 user agents
-                const rightAmount = parseOutput(response.data).slice(0, 30);
+                const rightAmount = parseOutput(response.data).slice(0, 30)
                 // and also not too long user agent strings as that breaks visuals
                 for (const entry of rightAmount) {
                     if (entry.name.length > 50) {
-                        entry.name = entry.name.substring(0, 50) + "...";
+                        entry.name = entry.name.substring(0, 50) + "..."
                     }
                 }
-                return rightAmount;
+                return rightAmount
             })
             .catch((err) => {
-                console.error(err);
-                return [];
-            });
+                console.error(err)
+                return []
+            })
     }
 
     /**
@@ -61,23 +73,30 @@ export class MiscStatsComponent {
         return this.axios
             .get(`30d/rank/${this.countryRankRange}/countries`)
             .then((response) => {
-                return parseOutput(response.data);
+                const nonFlagged: CountryRankList = parseOutput(response.data)
+                for (const country of nonFlagged) {
+                    country.name = `${country}: ${this.countryCode2Flag(country.name)}`
+                }
+                console.log(nonFlagged)
+                return nonFlagged
             })
             .catch((err) => {
-                console.error(err);
-                return [];
-            });
+                console.error(err)
+                return []
+            })
     }
 
     /**
-     * Update all metrics and sets the values of the user agent metrics and country ranks.
+     * Transform a country code to a flag emoji.
+     * Seen here: https://dev.to/jorik/country-code-to-flag-emoji-a21
+     * @returns The corresponding flag as emoji.
      */
-    updateAllMetrics(): void {
-        Promise.all([this.get30DayUserAgents(), this.getCountryRanks()]).then((values) => {
-            this.userAgentMetrics = values[0];
-            this.countryRanks = values[1];
-            this.loading = false;
-            this.lastUpdated = getNow();
-        });
+    private countryCode2Flag(countryCode: string): string {
+        const codePoints = countryCode
+            .toUpperCase()
+            .split("")
+            // @ts-ignore
+            .map((char) => 127397 + char.charCodeAt())
+        return String.fromCodePoint(...codePoints)
     }
 }

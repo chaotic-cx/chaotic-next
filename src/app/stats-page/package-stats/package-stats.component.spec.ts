@@ -1,22 +1,22 @@
-import { ComponentFixture, TestBed } from "@angular/core/testing";
+import { ComponentFixture, TestBed } from "@angular/core/testing"
 
-import { PackageStatsComponent } from "./package-stats.component";
+import { PackageStatsComponent } from "./package-stats.component"
 
 describe("PackageStatsComponent", () => {
-    let component: PackageStatsComponent;
-    let fixture: ComponentFixture<PackageStatsComponent>;
+    let component: PackageStatsComponent
+    let fixture: ComponentFixture<PackageStatsComponent>
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [PackageStatsComponent],
-        }).compileComponents();
+        }).compileComponents()
 
-        fixture = TestBed.createComponent(PackageStatsComponent);
-        component = fixture.componentInstance;
-        fixture.detectChanges();
-    });
+        fixture = TestBed.createComponent(PackageStatsComponent)
+        component = fixture.componentInstance
+        fixture.detectChanges()
+    })
 
     it("should create", () => {
-        expect(component).toBeTruthy();
-    });
-});
+        expect(component).toBeTruthy()
+    })
+})
