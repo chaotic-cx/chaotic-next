@@ -26,14 +26,14 @@
                 type="search"
                 [(ngModel)]="searchPackage"
                 name="searchPackage"
-                class="block w-full p-4 ps-10 text-sm text-red border border-red rounded-lg bg-surface0 focus:ring-blue focus:border-flamingo"
+                class="block w-full p-4 ps-10 text-sm text-maroon border bg-surface0 border-red text-input rounded-lg focus:border-red focus:bg-surface1"
                 placeholder="Search for a specific package..."
                 required
             />
             <button
                 (click)="updateDisplay()"
                 type="submit"
-                class="text-text absolute end-2.5 bottom-2.5 bg-red hover:bg-green focus:ring-4 focus:outline-none focus:ring-blue font-medium rounded-lg text-sm px-4 py-2"
+                class="text-text absolute end-2.5 bottom-2.5 bg-red font-medium rounded-lg text-sm px-4 py-2"
             >
                 Search
             </button>
@@ -44,7 +44,7 @@
             <div role="status">
                 <svg
                     aria-hidden="true"
-                    class="ml-96 mr-96 inline w-12 h-12 text-text animate-spin fill-red"
+                    class="inline w-12 h-12 text-text animate-spin fill-red"
                     viewBox="0 0 100 101"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
@@ -64,29 +64,27 @@
     }
 
     @if (packageMetrics.downloads > 0 && packageMetrics.user_agents !== []) {
-        <div class="md:container flex md:mx-auto my-10 px-5">
-            <table class="table-auto p-20 md:mx-auto bg-maroon rounded-xl">
+        <h2 class="p-4 text-center text-mauve border-surface2 my-5">Total downloads last month: {{ packageMetrics.downloads }}</h2>
+        <div class="md:container flex md:mx-auto">
+            <table
+                class="table-auto md:mx-auto bg-surface0 border-surface2 border-separate">
                 <thead>
-                    <tr>
-                        <th class="px-20 py-5">Total count</th>
-                        <th class="px-20 py-5">User agents</th>
-                        <th class="px-20 py-5">User agent count</th>
-                    </tr>
+                <tr>
+                    <th class="p-4 border text-mauve border-surface2">User agents</th>
+                    <th class="p-4 border text-mauve border-surface2">User agent count</th>
+                </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td class="text-center px-10">{{ packageMetrics.downloads }}</td>
-                        <td class="text-center px-10">
-                            @for (agent of packageMetrics.user_agents; track agent) {
-                                {{ agent.count }}<br />
-                            }
-                        </td>
-                        <td class="text-center px-10">
-                            @for (agent of packageMetrics.user_agents; track agent) {
-                                {{ agent.name }}<br />
-                            }
-                        </td>
-                    </tr>
+                    @for (agent of packageMetrics.user_agents; track agent) {
+                        <tr>
+                            <td class="p-4 border text-center text-text border-surface2">
+                                {{ agent.count }}<br/>
+                            </td>
+                            <td class="border text-center text-text border-surface2">
+                                {{ agent.name }}<br/>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
