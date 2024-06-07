@@ -3,7 +3,7 @@
         <div class="md:container md:mx-auto mx-auto text-center" role="status">
             <svg
                 aria-hidden="true"
-                class="ml-96 mr-96 inline w-12 h-12 text-gray-200 animate-spin dark:text-gray-600 fill-red"
+                class="inline w-12 h-12 text-gray-200 animate-spin fill-red"
                 viewBox="0 0 100 101"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -23,12 +23,12 @@
 </div>
 
 @if (lastUpdated !== "Stats are currently loading..." && countryRanks.length > 0 && userAgentMetrics.length > 0) {
-    <p class="my-4 text-lg text-orange-300 text-center">Last updated: {{ lastUpdated }}</p>
+    <p class="my-4 text-lg text-mauve text-center">Last updated: {{ lastUpdated }}</p>
     <div class="container flex-auto flex">
         <div class="md:container md:mx-auto py-10">
             <h3 class="text-2xl text-violet-500 font-extrabold text-center">Useragent 30 day ranking</h3>
             <div class="md:container flex md:mx-auto my-10">
-                <table class="table-auto p-20 md:mx-auto bg-violet-400 rounded-xl">
+                <table class="table-auto p-20 md:mx-auto bg-surface0 rounded-xl">
                     <thead>
                         <tr>
                             <th class="px-20 py-5">Count</th>
@@ -52,9 +52,9 @@
         </div>
 
         <div class="md:container md:mx-auto py-10">
-            <h3 class="text-2xl text-violet-500 font-extrabold text-center">Countries 30 day ranking</h3>
+            <h3 class="text-2xl text-mauve font-extrabold text-center">Countries 30 day ranking</h3>
             <div class="md:container flex md:mx-auto my-10">
-                <table class="table-auto p-20 md:mx-auto bg-violet-400 rounded-xl">
+                <table class="table-auto p-20 md:mx-auto bg-surface0 rounded-xl">
                     <thead>
                         <tr>
                             <th class="px-20 py-5">Count</th>
@@ -79,8 +79,8 @@
     </div>
 }
 @if (lastUpdated !== "Stats are currently loading..." && userAgentMetrics.length === 0 && countryRanks.length === 0) {
-    <div class="md:container md:mx-auto">
-        <p class="my-4 text-lg text-orange-300 text-center">
+    <div class="md:container md:mx-auto px-5 pt-5">
+        <p class="my-4 text-lg text-red text-center">
             Seemingly there has been an issue with fetching the required data 😔️
         </p>
     </div>
