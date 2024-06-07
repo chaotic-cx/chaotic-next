@@ -23,10 +23,10 @@ import { CAUR_METRICS_URL } from "../types";
 })
 export class StatsPage {
     currentView: string = "search";
-    total30dUsers: string = "0";
+    total30dUsers: string = "loading... ☕️";
 
-    ngOnInit(): void {
-        void this.get30DayUsers();
+    async ngOnInit(): Promise<void> {
+        this.total30dUsers = await this.get30DayUsers();
     }
 
     /**
@@ -54,7 +54,7 @@ export class StatsPage {
             })
             .catch((err) => {
                 console.error(err);
-                return "0";
+                return "failed to load users count 😔";
             });
     }
 }

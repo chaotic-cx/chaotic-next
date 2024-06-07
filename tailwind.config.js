@@ -23,5 +23,5 @@ module.exports = {
             body: ['"Fira Sans"'],
         },
     },
-    plugins: [require("flowbite/plugin"), require("@catppuccin/tailwindcss"), require('autoprefixer'),],
+    plugins: [require("flowbite/plugin"), require("@catppuccin/tailwindcss"), require("autoprefixer")],
 };
