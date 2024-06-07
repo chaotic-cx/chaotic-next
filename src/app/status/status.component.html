@@ -1,15 +1,13 @@
 <div class="chaotic-container-regular bg-base">
     <div>
         <h1 class="text-4xl text-maroon font-extrabold text-center">Status</h1>
-        <p class="my-4 text-lg text-subtext0 text-center">
-            This page shows the status of the Chaotic-AUR infrastructure.
-        </p>
-        <p class="my-4 text-lg text-subtext0 text-center">Last updated: {{ lastUpdated }}</p>
+        <p class="my-4 text-lg text-text text-center">This page shows the status of the Chaotic-AUR infrastructure.</p>
+        <p class="my-4 text-lg text-text text-center">Last updated: {{ lastUpdated }}</p>
     </div>
 
     @if (currentQueue.length > 0) {
         <div class="container mr-auto ml-auto pt-10">
-            <h3 class="text-3xl text-center font-bold text-subtext0 pt-5 pb-10">Current queue stats</h3>
+            <h3 class="text-3xl text-center font-bold text-text pt-5 pb-10">Current queue stats</h3>
             @for (queue of currentQueue; track queue) {
                 <div class="grid grid-cols-1 md:grid-cols-6 gap-x-0 mt-3 mb-3">
                     <div class="place-self-auto bg-surface0 p-4 rounded-l-2xl">
@@ -34,7 +32,7 @@
     }
     @if (currentPackages.length > 0) {
         <div class="container mr-auto ml-auto pt-10">
-            <h3 class="text-3xl text-center font-bold text-subtext0 pt-5 pb-10">Current queued package information</h3>
+            <h3 class="text-3xl text-center font-bold text-text pt-5 pb-10">Current queued package information</h3>
             @for (pkg of currentPackages; track pkg) {
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-x-0 mt-3 mb-3">
                     <div class="place-self-auto bg-surface0 p-4 rounded-l-2xl">
@@ -69,12 +67,12 @@
 
     <div class="container ml-auto mr-auto p-5">
         <h3 class="text-3xl text-center font-bold text-maroon pb-5">Queue metrics</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-0 gap-y-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-l-2xl">
                 <h4 class="text-2xl text-center text-green">Database - completed</h4>
                 <p class="text-center text-green">{{ currentMetrics.database_queue.completed }}</p>
             </div>
-            <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-l-2xl">
+            <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-r-2xl">
                 <h4 class="text-2xl text-center text-red">Database - failed</h4>
                 <p class="text-center text-red">{{ currentMetrics.database_queue.failed }}</p>
             </div>
@@ -82,7 +80,7 @@
                 <h4 class="text-2xl text-center text-green">Builder - completed</h4>
                 <p class="text-center text-green">{{ currentMetrics.builder_queue.completed }}</p>
             </div>
-            <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-l-2xl">
+            <div class="bg-surface0 pt-4 pb-4 rounded-2xl md:rounded-r-2xl">
                 <h4 class="text-2xl text-center text-red">Builder - failed</h4>
                 <p class="text-center text-red">{{ currentMetrics.builder_queue.failed }}</p>
             </div>

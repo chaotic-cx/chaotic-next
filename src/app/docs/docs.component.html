@@ -1,57 +1,51 @@
 <div class="chaotic-container-regular mx-5">
-    <h1 class="text-mauve">Setup</h1>
-    <ul class="text-subtext0 chaotic-list-regular">
-        <p>First, install the primary key - it can then be used to install our keyring and mirrorlist.</p>
-        <code class="command"> pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com</code
-        ><br />
-        <code class="command"> pacman-key --lsign-key 3056513887B78AEB</code
-        ><br />
-        <code class="command"> pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' </code>
+    <h1 class="text-4xl text-maroon font-extrabold text-center">Documentation</h1>
+    <h2 class="text-2xl text-maroon my-5">Setup</h2>
 
-        <code class="command">
-            pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
-        </code>
+    <ul class="text-text chaotic-list-regular">
+        <p>We start by retrieving the primary key to enable the installation of our keyring and mirror list:</p>
+        <pre class="py-5"><code [highlight]="installRepo" language="shell"></code></pre>
 
-        <p>Append (adding to the <strong>end</strong> of the file) to <code>/etc/pacman.conf</code>:</p>
-        <code
-            >[chaotic-aur]<br />
-            Include = /etc/pacman.d/chaotic-mirrorlist
-        </code>
+        <p>Then, we append (adding at the end) the following to <i>/etc/pacman.conf</i>:</p>
+        <pre class="py-5"><code [highlight]="appendRepo" language="shell"></code></pre>
     </ul>
 </div>
 
 <div class="chaotic-container-regular mx-5">
-    <h2 class="text-mauve">Recommendations:</h2>
-    <ul class="chaotic-list-regular text-subtext0">
+    <h2 class="text-2xl text-maroon my-5">Recommendations</h2>
+    <ul class="text-text chaotic-list-regular">
         <li id="note-powerpill">
             You may want to use
-            <a target="_blank" rel="noopener" href="https://wiki.archlinux.org/index.php/Powerpill">powerpill</a>
+            <a class="text-mauve" target="_blank" rel="noopener" href="https://wiki.archlinux.org/index.php/Powerpill"
+                >powerpill</a
+            >
             to download from all mirrors simultaneously. We recommend doing updates this way:
-            <code> sudo pacman -Sy &#x26;&#x26; sudo powerpill -Su &#x26;&#x26; paru -Su</code>.<br />
-            Make sure to insert all mirrors in your <code>pacman.conf</code> or use <code>chaotic-mirrorlist</code> with
-            all of them active if using powerpill.
+            <pre class="pl-5 py-5"><code [highlight]="powerpillUsage" language="shell"></code></pre>
+            Make sure to insert all mirrors in your <i>pacman.conf</i> or use <i>chaotic-mirrorlist</i> with all of them
+            active if using powerpill.
         </li>
         <li id="note-repossorting">
             If you are using other third party repositories, we recommend putting Chaotic-AUR
-            <strong>prior to them </strong> in <code>/etc/pacman.conf</code>. Since we update most packages hourly and
-            follow AUR PKGBUILDs, this repository is more suitable as first option when downloading packages.
+            <strong>prior to them </strong> in <i>/etc/pacman.conf</i>. Since we update most packages hourly and follow
+            AUR PKGBUILDs, this repository is more suitable as first option when downloading packages.
         </li>
         <li id="note-ignorepkg">
             If you need to omit a package update to use locally built ones (e.g: with native optimizations),
-            <a href="https://www.archlinux.org/pacman/pacman.conf.5.html" target="_blank" rel="noopener">you can</a>
-            add '<code>IgnorePkg = ...</code>' to repo's section in
-            <code>/etc/pacman.conf</code>
+            <a
+                class="text-mauve"
+                href="https://www.archlinux.org/pacman/pacman.conf.5.html"
+                target="_blank"
+                rel="noopener"
+                >you can add the following</a
+            >
+            <i>/etc/pacman.conf</i>:
+            <pre class="pl-5 py-5"><code [highlight]="ignorePkg" language="shell"></code></pre>
         </li>
         <li>
             You can pick the repository which to download a package from like this:
-            <code class="command"> pacman -S chaotic-aur/dxvk-mingw-git</code>. Some AUR helpers support it too, e.g:
-            <code> paru -S aur/firefox-hg</code>
-        </li>
-        <li>
-            There is also a mirror for IPFS users by the
-            <a target="_blank" rel="noopener" href="https://github.com/RubenKelevra/pacman.store"
-                >pacman.store project</a
-            >. It can be found in the mirrorlist and is commented out by default.
+            <pre class="pl-5 py-5"><code [highlight]="installPackage" language="shell"></code></pre>
+            Some AUR helpers like paru support this syntax as well.
+            <pre class="pl-5 py-5"><code [highlight]="installPackageParu" language="shell"></code></pre>
         </li>
         <li>You must have the multilib repository enabled.</li>
     </ul>

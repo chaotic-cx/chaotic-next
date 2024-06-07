@@ -1,6 +1,6 @@
 <div>
     @if (loading) {
-        <div class="md:container md:mx-auto mx-auto text-center" role="status">
+        <div class="md:container md:mx-auto mx-auto text-center p-5" role="status">
             <svg
                 aria-hidden="true"
                 class="inline w-12 h-12 text-gray-200 animate-spin fill-red"
@@ -25,22 +25,22 @@
 @if (lastUpdated !== "Stats are currently loading..." && globalPackageMetrics.length > 0) {
     <p class="my-4 text-lg text-mauve text-center">Last updated: {{ lastUpdated }}</p>
     <div class="md:container md:mx-auto py-10">
-        <h3 class="text-2xl text-violet-500 font-extrabold text-center">Package 30 day ranking</h3>
+        <h3 class="text-2xl tex-maroon font-extrabold text-center">Package 30 day ranking</h3>
         <div class="md:container flex md:mx-auto my-10">
             <table class="table-auto p-20 md:mx-auto bg-surface0 rounded-xl">
                 <thead>
                     <tr>
-                        <th class="px-20 py-5">Count</th>
-                        <th class="px-20 py-5">Name</th>
+                        <th class="px-20 py-5 text-maroon">Count</th>
+                        <th class="px-20 py-5 tex-maroon">Name</th>
                     </tr>
                 </thead>
                 <tbody>
                     @for (pkg of globalPackageMetrics; track pkg) {
                         <tr>
-                            <td class="text-center px-10">
+                            <td class="text-center text-text px-10">
                                 {{ pkg.count }}
                             </td>
-                            <td class="text-center px-10">
+                            <td class="text-center text-text px-10">
                                 {{ pkg.name }}
                             </td>
                         </tr>

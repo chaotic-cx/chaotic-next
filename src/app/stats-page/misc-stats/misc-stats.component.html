@@ -1,6 +1,6 @@
 <div>
     @if (loading) {
-        <div class="md:container md:mx-auto mx-auto text-center" role="status">
+        <div class="md:container md:mx-auto mx-auto text-center p-5" role="status">
             <svg
                 aria-hidden="true"
                 class="inline w-12 h-12 text-gray-200 animate-spin fill-red"
@@ -52,22 +52,22 @@
         </div>
 
         <div class="md:container md:mx-auto py-10">
-            <h3 class="text-2xl text-mauve font-extrabold text-center">Countries 30 day ranking</h3>
+            <h3 class="text-2xl text-maroon font-extrabold text-center">Countries 30 day ranking</h3>
             <div class="md:container flex md:mx-auto my-10">
                 <table class="table-auto p-20 md:mx-auto bg-surface0 rounded-xl">
                     <thead>
                         <tr>
-                            <th class="px-20 py-5">Count</th>
-                            <th class="px-20 py-5">Country</th>
+                            <th class="px-20 py-5 text-mauve">Count</th>
+                            <th class="px-20 py-5 text-mauve">Country</th>
                         </tr>
                     </thead>
                     <tbody>
                         @for (country of countryRanks; track country) {
                             <tr>
-                                <td class="text-center px-10">
+                                <td class="text-center text-text px-10">
                                     {{ country.count }}
                                 </td>
-                                <td class="text-center px-10">
+                                <td class="text-center text-text px-10">
                                     {{ country.name }}
                                 </td>
                             </tr>

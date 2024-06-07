@@ -3,11 +3,12 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
 import { initFlowbite } from "flowbite";
 import { isPlatformBrowser, NgOptimizedImage } from "@angular/common";
 import { StatusComponent } from "./status/status.component";
+import { Highlight, HighlightAuto } from "ngx-highlightjs";
 
 @Component({
     selector: "app-root",
     standalone: true,
-    imports: [RouterOutlet, StatusComponent, RouterLink, RouterLinkActive, NgOptimizedImage],
+    imports: [RouterOutlet, StatusComponent, RouterLink, RouterLinkActive, NgOptimizedImage, Highlight],
     templateUrl: "./app.component.html",
     styleUrl: "./app.component.css",
     encapsulation: ViewEncapsulation.None,

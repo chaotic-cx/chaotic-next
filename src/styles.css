@@ -1,3 +1,4 @@
+@import "@catppuccin/highlightjs/css/catppuccin.variables.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -18,56 +19,8 @@ body {
     }
 }
 
-.chaotic-h1 {
-    @apply text-center text-6xl chaotic-text-color-mocha-maroon font-extrabold my-10;
-}
-
-.chaotic-h2 {
-    @apply text-center text-4xl chaotic-text-color-mocha-maroon font-extrabold my-10;
-}
-
-.chaotic-h3 {
-    @apply text-center text-2xl chaotic-text-color-mocha-maroon font-bold my-10;
-}
-
 .chaotic-list-regular {
     @apply px-10 md:px-32 lg:px-48 block space-y-1  list-disc list-inside  my-4 text-lg text-left;
-}
-
-.chaotic-text-color-regular {
-    color: var(--ctp-mocha-text);
-}
-
-.chaotic-text-color-subtext1 {
-    color: var(--ctp-mocha-subtext1);
-}
-
-.chaotic-text-color-peach {
-    color: var(--ctp-mocha-peach);
-}
-
-.chaotic-background-mocha-maroon {
-    background-color: var(--ctp-mocha-maroon);
-}
-
-.chaotic-background-surface0 {
-    background-color: var(--ctp-mocha-surface0);
-}
-
-.hover\:chaotic-text-color-maroon:hover {
-    color: var(--ctp-mocha-maroon);
-}
-
-.chaotic-background-mocha-mauve {
-    background-color: var(--ctp-mocha-mauve);
-}
-
-.chaotic-background-mocha-rosewater {
-    background-color: var(--ctp-mocha-rosewater);
-}
-
-.chaotic-text-color-mocha-maroon {
-    color: var(--ctp-mocha-maroon);
 }
 
 .chaotic-container-regular {
@@ -88,10 +41,61 @@ body {
     box-shadow: 0 0 252px 0 rgba(--ctp-mocha-maroon-rgb, 0.9);
 }
 
-.chaotic-navbar {
-    color: var(--ctp-mocha-mauve);
+.hljs-copy-wrapper {
+    position: relative;
+    overflow: hidden;
 }
 
-.chaotic-navbar:hover {
-    color: var(--ctp-mocha-maroon);
+.hljs-copy-wrapper:hover .hljs-copy-button,
+.hljs-copy-button:focus {
+    transform: translateX(0);
+}
+
+.hljs-copy-button {
+    position: absolute;
+    transform: translateX(calc(100% + 1.125em));
+    top: 1em;
+    right: 1em;
+    width: 2rem;
+    height: 2rem;
+    text-indent: -9999px;
+    border-radius: 0.25rem;
+    border: 1px solid #ffffff22;
+    @apply bg-surface0;
+    background-image: url('data:image/svg+xml;utf-8,<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M6 5C5.73478 5 5.48043 5.10536 5.29289 5.29289C5.10536 5.48043 5 5.73478 5 6V20C5 20.2652 5.10536 20.5196 5.29289 20.7071C5.48043 20.8946 5.73478 21 6 21H18C18.2652 21 18.5196 20.8946 18.7071 20.7071C18.8946 20.5196 19 20.2652 19 20V6C19 5.73478 18.8946 5.48043 18.7071 5.29289C18.5196 5.10536 18.2652 5 18 5H16C15.4477 5 15 4.55228 15 4C15 3.44772 15.4477 3 16 3H18C18.7956 3 19.5587 3.31607 20.1213 3.87868C20.6839 4.44129 21 5.20435 21 6V20C21 20.7957 20.6839 21.5587 20.1213 22.1213C19.5587 22.6839 18.7957 23 18 23H6C5.20435 23 4.44129 22.6839 3.87868 22.1213C3.31607 21.5587 3 20.7957 3 20V6C3 5.20435 3.31607 4.44129 3.87868 3.87868C4.44129 3.31607 5.20435 3 6 3H8C8.55228 3 9 3.44772 9 4C9 4.55228 8.55228 5 8 5H6Z" fill="white"/><path fill-rule="evenodd" clip-rule="evenodd" d="M7 3C7 1.89543 7.89543 1 9 1H15C16.1046 1 17 1.89543 17 3V5C17 6.10457 16.1046 7 15 7H9C7.89543 7 7 6.10457 7 5V3ZM15 3H9V5H15V3Z" fill="white"/></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    transition:
+        background-color 200ms ease,
+        transform 200ms ease-out;
+}
+
+.hljs-copy-button:hover {
+    border-color: #ffffff44;
+}
+
+.hljs-copy-button:active {
+    border-color: #ffffff66;
+}
+
+.hljs-copy-button[data-copied="true"] {
+    text-indent: 0;
+    width: auto;
+    background-image: none;
+}
+
+@media (prefers-reduced-motion) {
+    .hljs-copy-button {
+        transition: none;
+    }
+}
+
+.hljs-copy-alert {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
 }
