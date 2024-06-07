@@ -23,7 +23,7 @@ import { PackageStatsComponent } from "./package-stats/package-stats.component"
 })
 export class StatsPage {
     currentView: string = "search"
-    total30dUsers: string = "loading... ☕️"
+    total30dUsers: string = "loading ... ☕️"
 
     async ngOnInit(): Promise<void> {
         this.total30dUsers = await this.get30DayUsers()
