@@ -1,8 +1,10 @@
 <div class="chaotic-container-regular bg-base">
     <div>
         <h1 class="text-center text-4xl font-extrabold text-maroon">Status</h1>
-        <p class="my-4 text-center text-lg text-text">This page shows the status of the Chaotic-AUR infrastructure.</p>
-        <p class="my-4 text-center text-lg text-text">Last updated: {{ lastUpdated }}</p>
+        <p class="my-4 px-10 text-center text-lg text-text"
+            >This page shows the status of the Chaotic-AUR infrastructure.</p
+        >
+        <p class="my-4 px-10 text-center text-lg text-text">Last updated: {{ lastUpdated }}</p>
     </div>
 
     @if (currentQueue.length > 0) {

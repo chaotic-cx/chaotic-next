@@ -17,6 +17,11 @@ export class AboutComponent {
             role: "Lead Maintainer",
         },
         {
+            name: "TNE",
+            github: "JustTNE",
+            role: "Infra maintainer",
+        },
+        {
             name: "Pedro H. Lara Campos",
             github: "PedroHLC",
             role: "Founder",
@@ -25,11 +30,6 @@ export class AboutComponent {
             name: "Paulo Matias",
             github: "thotypous",
             role: "Former TU, Co-founder",
-        },
-        {
-            name: "TNE",
-            github: "JustTNE",
-            role: "Sysadmin",
         },
         {
             name: "Technetium1",
