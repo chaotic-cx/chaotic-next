@@ -34,12 +34,12 @@ export class AboutComponent {
         {
             name: "Technetium1",
             github: "technetium1",
-            role: "General package maintenance",
+            role: "Package maintenance",
         },
         {
             name: "xiota",
             github: "xiota",
-            role: "General package maintenance",
+            role: "Package maintenance",
         },
         {
             name: "SolarAquarion",
@@ -54,17 +54,17 @@ export class AboutComponent {
         {
             name: "João Figueiredo",
             github: "IslandC0der",
-            role: "KDE's -git packages",
+            role: "KDE git packages",
         },
         {
             name: "Alexjp",
             github: "alexjp",
-            role: "KDE's git packages",
+            role: "KDE git packages",
         },
         {
             name: "Rustem B.",
             github: "RustemB",
-            role: "General package maintenance",
+            role: "Package maintenance",
         },
     ];
 

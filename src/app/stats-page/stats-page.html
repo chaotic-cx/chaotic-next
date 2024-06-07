@@ -1,22 +1,16 @@
-<div class="mocha bg-base">
+<div class="bg-base">
     <div>
-        <h1 class="text-4xl chaotic-h1 font-extrabold text-center">Stats</h1>
-        <p class="my-4 text-lg chaotic-text-color-regular text-center">
-            This page general package stats collected by our router
-        </p>
-        <p class="my-4 text-lg chaotic-text-color-regular text-center">
-            Total users over the last months: {{ total30dUsers }}
-        </p>
-        <p class="my-4 text-xs chaotic-text-color-regular text-center">
-            (Yes, stats can still take quite long to load as of now)
-        </p>
+        <h1 class="text-4xl text-maroon font-extrabold text-center">Stats</h1>
+        <p class="my-4 text-lg text-subtext0 text-center">This page general package stats collected by our router</p>
+        <p class="my-4 text-lg text-subtext0 text-center">Total users over the last months: {{ total30dUsers }}</p>
+        <p class="my-4 text-xs text-subtext0 text-center">(Yes, stats can still take quite long to load as of now)</p>
         <div class="container items-center mx-auto text-center pt-5 pb-20">
             <div class="inline-flex rounded-md shadow-sm" role="group">
                 <button
                     (click)="changeDisplay($event)"
                     id="button-search"
                     type="button"
-                    class="px-4 py-2 text-sm font-medium chaotic-text-color-peach chaotic-background-surface0 border border-red rounded-s-lg hover:chaotic-grow-s hover:text-blue-700 focus:z-10 hover:text-base hover:bg dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:text-white dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white"
+                    class="px-4 py-2 text-sm font-medium text-mauve bg-surface0 border border-red rounded-s-lg hover:chaotic-grow-s hover:text-green focus:z-10"
                 >
                     Package search
                 </button>
@@ -24,7 +18,7 @@
                     (click)="changeDisplay($event)"
                     id="button-pkgstats"
                     type="button"
-                    class="px-4 py-2 text-sm font-medium chaotic-text-color-peach chaotic-background-surface0 border-t border-b border-red hover:chaotic-grow-s focus:z-10 hover:text-base dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:text-white hover:text-lavender dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white"
+                    class="px-4 py-2 text-sm font-medium text-mauve bg-surface0 border border-red hover:chaotic-grow-s hover:text-green focus:z-10"
                 >
                     Global package stats
                 </button>
@@ -32,7 +26,7 @@
                     (click)="changeDisplay($event)"
                     id="button-miscstats"
                     type="button"
-                    class="px-4 py-2 text-sm font-medium chaotic-text-color-peach chaotic-background-surface0 border border-red rounded-e-lg hover:chaotic-grow-s focus:z-10 hover:text-base dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:text-white dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white"
+                    class="px-4 py-2 text-sm font-medium text-mauve bg-surface0 border border-red rounded-r-lg hover:chaotic-grow-s hover:text-green focus:z-10"
                 >
                     Misc stats
                 </button>

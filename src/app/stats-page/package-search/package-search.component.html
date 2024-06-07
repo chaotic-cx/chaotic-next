@@ -1,13 +1,11 @@
-<div class="md:container md:mx-aut">
-    <h3 class="text-2xl chaotic-text-color-mocha-maroon font-extrabold text-center">Search for a specific package</h3>
+<div class="md:container md:mx-auto px-5">
+    <h3 class="text-2xl text-maroon font-extrabold text-center">Search for a specific package</h3>
     <form class="max-w-md mx-auto">
-        <label for="input-search-package" class="mb-2 text-sm font-medium text-red sr-only dark:text-white"
-            >Search</label
-        >
+        <label for="input-search-package" class="mb-2 text-sm font-medium text-base sr-only">Search</label>
         <div class="relative pt-5">
-            <div class="absolute inset-y-0 start-0 flex align-middle items-center ps-3 pointer-events-none">
+            <div class="absolute inset-y-0 start-0 flex align-middle pt-5 items-center ps-3 pointer-events-none">
                 <svg
-                    class="w-4 h-4 text-red dark:text-gray-400"
+                    class="w-4 h-4 text-red"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -28,25 +26,25 @@
                 type="search"
                 [(ngModel)]="searchPackage"
                 name="searchPackage"
-                class="block w-full p-4 ps-10 text-sm text-red border border-red rounded-lg chaotic-background-surface0 focus:ring-blue-500 focus:border-flamingo dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                class="block w-full p-4 ps-10 text-sm text-red border border-red rounded-lg bg-surface0 focus:ring-blue focus:border-flamingo"
                 placeholder="Search for a specific package..."
                 required
             />
             <button
                 (click)="updateDisplay()"
                 type="submit"
-                class="text-white absolute end-2.5 bottom-2.5 bg-red hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                class="text-subtext0 absolute end-2.5 bottom-2.5 bg-red hover:bg-green focus:ring-4 focus:outline-none focus:ring-blue font-medium rounded-lg text-sm px-4 py-2"
             >
                 Search
             </button>
         </div>
     </form>
     @if (loading) {
-        <div class="md:container md:mx-auto text-center py-10">
+        <div class="chaotic-container-regular mx-auto text-center p-10">
             <div role="status">
                 <svg
                     aria-hidden="true"
-                    class="ml-96 mr-96 inline w-12 h-12 text-gray-200 animate-spin dark:text-gray-600 fill-red"
+                    class="ml-96 mr-96 inline w-12 h-12 text-subtext0 animate-spin fill-red"
                     viewBox="0 0 100 101"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
@@ -66,8 +64,8 @@
     }
 
     @if (packageMetrics.downloads > 0 && packageMetrics.user_agents !== []) {
-        <div class="md:container flex md:mx-auto my-10">
-            <table class="table-auto p-20 md:mx-auto chaotic-background-mocha-maroon rounded-xl">
+        <div class="md:container flex md:mx-auto my-10 px-5">
+            <table class="table-auto p-20 md:mx-auto bg-maroon rounded-xl">
                 <thead>
                     <tr>
                         <th class="px-20 py-5">Total count</th>
@@ -95,8 +93,8 @@
     }
 </div>
 @if (initialSearchDone && !loading && packageMetrics.downloads === 0 && packageMetrics.user_agents.length === 0) {
-    <div class="md:container md:mx-auto py-10">
-        <p class="my-4 text-lg text-orange-300 text-center">
+    <div class="md:container md:mx-auto px-5 pt-5">
+        <p class="my-4 text-lg text-red text-center">
             Seemingly there has been an issue with fetching the required data 😔️
         </p>
     </div>
