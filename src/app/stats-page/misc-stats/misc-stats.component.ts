@@ -75,7 +75,7 @@ export class MiscStatsComponent {
             .then((response) => {
                 const nonFlagged: CountryRankList = parseOutput(response.data)
                 for (const country of nonFlagged) {
-                    country.name = `${country}: ${this.countryCode2Flag(country.name)}`
+                    country.name = `${country.name}: ${this.countryCode2Flag(country.name)}`
                 }
                 console.log(nonFlagged)
                 return nonFlagged
