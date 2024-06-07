@@ -24,7 +24,7 @@ export class AboutComponent {
         {
             name: "Paulo Matias",
             github: "thotypous",
-            role: "Past Trusted User, Co-founder",
+            role: "Former TU, Co-founder",
         },
         {
             name: "TNE",
