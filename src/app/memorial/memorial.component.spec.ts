@@ -1,22 +1,22 @@
-import { ComponentFixture, TestBed } from "@angular/core/testing";
+import { ComponentFixture, TestBed } from "@angular/core/testing"
 
-import { MemorialComponent } from "./memorial.component";
+import { MemorialComponent } from "./memorial.component"
 
 describe("MemorialComponent", () => {
-    let component: MemorialComponent;
-    let fixture: ComponentFixture<MemorialComponent>;
+    let component: MemorialComponent
+    let fixture: ComponentFixture<MemorialComponent>
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [MemorialComponent],
-        }).compileComponents();
+        }).compileComponents()
 
-        fixture = TestBed.createComponent(MemorialComponent);
-        component = fixture.componentInstance;
-        fixture.detectChanges();
-    });
+        fixture = TestBed.createComponent(MemorialComponent)
+        component = fixture.componentInstance
+        fixture.detectChanges()
+    })
 
     it("should create", () => {
-        expect(component).toBeTruthy();
-    });
-});
+        expect(component).toBeTruthy()
+    })
+})

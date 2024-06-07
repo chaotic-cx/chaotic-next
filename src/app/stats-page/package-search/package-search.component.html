@@ -1,11 +1,11 @@
-<div class="md:container md:mx-auto p-5">
-    <h3 class="text-2xl text-maroon font-extrabold text-center">Search for a specific package</h3>
-    <form class="max-w-md mx-auto">
-        <label for="input-search-package" class="mb-2 text-sm font-medium text-base sr-only">Search</label>
+<div class="p-5 md:container md:mx-auto">
+    <h3 class="text-center text-2xl font-extrabold text-maroon">Search for a specific package</h3>
+    <form class="mx-auto max-w-md">
+        <label class="sr-only mb-2 text-base text-sm font-medium" for="input-search-package">Search</label>
         <div class="relative pt-5">
-            <div class="absolute inset-y-0 start-0 flex align-middle pt-5 items-center ps-3 pointer-events-none">
+            <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 pt-5 align-middle">
                 <svg
-                    class="w-4 h-4 text-red"
+                    class="h-4 w-4 text-red"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -22,29 +22,29 @@
             </div>
 
             <input
+                class="text-input block w-full rounded-lg border border-red bg-surface0 p-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1"
                 id="input-search-package"
-                type="search"
                 [(ngModel)]="searchPackage"
+                type="search"
                 name="searchPackage"
-                class="block w-full p-4 ps-10 text-sm text-maroon border bg-surface0 border-red text-input rounded-lg focus:border-red focus:bg-surface1"
                 placeholder="Search for a specific package..."
                 required
             />
             <button
+                class="absolute bottom-2.5 end-2.5 rounded-lg bg-red px-4 py-2 text-sm font-medium text-text"
                 (click)="updateDisplay()"
                 type="submit"
-                class="text-text absolute end-2.5 bottom-2.5 bg-red font-medium rounded-lg text-sm px-4 py-2"
             >
                 Search
             </button>
         </div>
     </form>
     @if (loading) {
-        <div class="chaotic-container-regular mx-auto text-center p-10">
+        <div class="chaotic-container-regular mx-auto p-10 text-center">
             <div role="status">
                 <svg
+                    class="inline h-12 w-12 animate-spin fill-red text-text"
                     aria-hidden="true"
-                    class="inline w-12 h-12 text-text animate-spin fill-red"
                     viewBox="0 0 100 101"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
@@ -64,22 +64,22 @@
     }
 
     @if (packageMetrics.downloads > 0 && packageMetrics.user_agents !== []) {
-        <h2 class="p-4 text-center text-mauve border-surface2 my-5">
+        <h2 class="my-5 border-surface2 p-4 text-center text-mauve">
             Total downloads last month: {{ packageMetrics.downloads }}
         </h2>
-        <div class="md:container flex md:mx-auto md:max-w-screen-md">
-            <table class="table-auto md:mx-auto md:w-full bg-surface0 border-surface2 border-separate">
+        <div class="flex md:container md:mx-auto md:max-w-screen-md">
+            <table class="table-auto border-separate border-surface2 bg-surface0 md:mx-auto md:w-full">
                 <thead>
                     <tr>
-                        <th class="p-4 border text-mauve border-surface2">User agents</th>
-                        <th class="p-4 border text-mauve border-surface2">User agent count</th>
+                        <th class="border border-surface2 p-4 text-mauve">User agents</th>
+                        <th class="border border-surface2 p-4 text-mauve">User agent count</th>
                     </tr>
                 </thead>
                 <tbody>
                     @for (agent of packageMetrics.user_agents; track agent) {
                         <tr>
-                            <td class="p-4 border text-center text-text border-surface2">{{ agent.count }}<br /></td>
-                            <td class="p-4 border text-center text-text border-surface2">{{ agent.name }}<br /></td>
+                            <td class="border border-surface2 p-4 text-center text-text">{{ agent.count }}<br /></td>
+                            <td class="border border-surface2 p-4 text-center text-text">{{ agent.name }}<br /></td>
                         </tr>
                     }
                 </tbody>
@@ -88,8 +88,8 @@
     }
 </div>
 @if (initialSearchDone && !loading && packageMetrics.downloads === 0 && packageMetrics.user_agents.length === 0) {
-    <div class="md:container md:mx-auto px-5 pt-5">
-        <p class="my-4 text-lg text-red text-center">
+    <div class="px-5 pt-5 md:container md:mx-auto">
+        <p class="my-4 text-center text-lg text-red">
             Seemingly there has been an issue with fetching the required data 😔️
         </p>
     </div>

@@ -1,8 +1,8 @@
 <div class="chaotic-container-regular mx-5">
-    <h1 class="text-4xl text-maroon font-extrabold text-center">Documentation</h1>
-    <h2 class="text-2xl text-maroon my-5">Setup</h2>
+    <h1 class="text-center text-4xl font-extrabold text-maroon">Documentation</h1>
+    <h2 class="my-5 text-2xl text-maroon">Setup</h2>
 
-    <ul class="text-text chaotic-list-regular">
+    <ul class="chaotic-list-regular text-text">
         <p>We start by retrieving the primary key to enable the installation of our keyring and mirror list:</p>
         <pre class="py-5"><code [highlight]="installRepo" language="shell"></code></pre>
 
@@ -12,15 +12,15 @@
 </div>
 
 <div class="chaotic-container-regular mx-5">
-    <h2 class="text-2xl text-maroon my-5">Recommendations</h2>
-    <ul class="text-text chaotic-list-regular">
+    <h2 class="my-5 text-2xl text-maroon">Recommendations</h2>
+    <ul class="chaotic-list-regular text-text">
         <li id="note-powerpill">
             You may want to use
             <a class="text-mauve" target="_blank" rel="noopener" href="https://wiki.archlinux.org/index.php/Powerpill"
                 >powerpill</a
             >
             to download from all mirrors simultaneously. We recommend doing updates this way:
-            <pre class="pl-5 py-5"><code [highlight]="powerpillUsage" language="shell"></code></pre>
+            <pre class="py-5 pl-5"><code [highlight]="powerpillUsage" language="shell"></code></pre>
             Make sure to insert all mirrors in your <i>pacman.conf</i> or use <i>chaotic-mirrorlist</i> with all of them
             active if using powerpill.
         </li>
@@ -39,13 +39,13 @@
                 >you can add the following</a
             >
             <i>/etc/pacman.conf</i>:
-            <pre class="pl-5 py-5"><code [highlight]="ignorePkg" language="shell"></code></pre>
+            <pre class="py-5 pl-5"><code [highlight]="ignorePkg" language="shell"></code></pre>
         </li>
         <li>
             You can pick the repository which to download a package from like this:
-            <pre class="pl-5 py-5"><code [highlight]="installPackage" language="shell"></code></pre>
+            <pre class="py-5 pl-5"><code [highlight]="installPackage" language="shell"></code></pre>
             Some AUR helpers like paru support this syntax as well.
-            <pre class="pl-5 py-5"><code [highlight]="installPackageParu" language="shell"></code></pre>
+            <pre class="py-5 pl-5"><code [highlight]="installPackageParu" language="shell"></code></pre>
         </li>
         <li>You must have the multilib repository enabled.</li>
     </ul>

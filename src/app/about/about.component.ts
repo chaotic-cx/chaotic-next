@@ -1,6 +1,6 @@
-import { Component } from "@angular/core";
-import { TeamList } from "../types";
-import { NgOptimizedImage } from "@angular/common";
+import { NgOptimizedImage } from "@angular/common"
+import { Component } from "@angular/core"
+import { TeamList } from "../types"
 
 @Component({
     selector: "app-about",
@@ -66,12 +66,12 @@ export class AboutComponent {
             github: "RustemB",
             role: "Package maintenance",
         },
-    ];
+    ]
 
     constructor() {
         // Construct avatar URLs
         for (const member of this.team) {
-            member.avatarUrl = `https://github.com/${member.github}.png`;
+            member.avatarUrl = `https://github.com/${member.github}.png`
         }
     }
 }

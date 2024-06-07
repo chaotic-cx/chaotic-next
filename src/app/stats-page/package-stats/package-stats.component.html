@@ -1,11 +1,11 @@
-<div class="md:container md:mx-auto p-5">
-    <h3 class="text-2xl text-maroon font-extrabold text-center">Package downloads last month</h3>
+<div class="p-5 md:container md:mx-auto">
+    <h3 class="text-center text-2xl font-extrabold text-maroon">Package downloads last month</h3>
     <div>
         @if (loading) {
-            <div class="md:container md:mx-auto mx-auto text-center p-5 mt-5" role="status">
+            <div class="mx-auto mt-5 p-5 text-center md:container md:mx-auto" role="status">
                 <svg
+                    class="inline h-12 w-12 animate-spin fill-red text-gray-200"
                     aria-hidden="true"
-                    class="inline w-12 h-12 text-gray-200 animate-spin fill-red"
                     viewBox="0 0 100 101"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
@@ -25,22 +25,22 @@
     </div>
 
     @if (lastUpdated !== "Stats are currently loading..." && globalPackageMetrics.length > 0) {
-        <h2 class="p-4 text-center text-mauve border-surface2">Last updated: {{ lastUpdated }}</h2>
-        <div class="md:container md:max-w-screen-md pb-10">
-            <table class="table-auto mx-auto bg-surface0 md:w-full border-surface2 border-separate">
+        <h2 class="border-surface2 p-4 text-center text-mauve">Last updated: {{ lastUpdated }}</h2>
+        <div class="pb-10 md:container md:max-w-screen-md">
+            <table class="mx-auto table-auto border-separate border-surface2 bg-surface0 md:w-full">
                 <thead>
                     <tr>
-                        <th class="p-4 border text-mauve border-surface2">Count</th>
-                        <th class="p-4 border text-mauve border-surface2">Name</th>
+                        <th class="border border-surface2 p-4 text-mauve">Count</th>
+                        <th class="border border-surface2 p-4 text-mauve">Name</th>
                     </tr>
                 </thead>
                 <tbody>
                     @for (pkg of globalPackageMetrics; track pkg) {
                         <tr>
-                            <td class="p-4 border text-center text-text border-surface2">
+                            <td class="border border-surface2 p-4 text-center text-text">
                                 {{ pkg.count }}
                             </td>
-                            <td class="p-4 border text-center text-text border-surface2">
+                            <td class="border border-surface2 p-4 text-center text-text">
                                 {{ pkg.name }}
                             </td>
                         </tr>
@@ -50,8 +50,8 @@
         </div>
     }
     @if (lastUpdated !== "Stats are currently loading..." && globalPackageMetrics.length === 0) {
-        <div class="md:container md:mx-auto px-5 pt-5">
-            <p class="my-4 text-lg text-red text-center">
+        <div class="px-5 pt-5 md:container md:mx-auto">
+            <p class="my-4 text-center text-lg text-red">
                 Seemingly there has been an issue with fetching the required data 😔️
             </p>
         </div>

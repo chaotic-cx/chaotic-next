@@ -1,5 +1,5 @@
-import { Component } from "@angular/core";
-import { NgOptimizedImage } from "@angular/common";
+import { NgOptimizedImage } from "@angular/common"
+import { Component } from "@angular/core"
 
 @Component({
     selector: "app-memorial",
@@ -42,7 +42,7 @@ export class MemorialComponent {
         "virusz4274.png",
         "vnepogodin.png",
         "zany130.png",
-    ];
+    ]
     terms: string[] = [
         "AvinashReddy3108.png",
         "ahmubashshir.png",
@@ -70,31 +70,31 @@ export class MemorialComponent {
         "vnepogodin.png",
         "x11guy.png",
         "zoe.png",
-    ];
-    desktopLinks: string[] = [];
-    termLinks: string[] = [];
-    specialTreatmentDesktops: string[] = ["alexjp.jpg", "fcinq.jpg", "virusz4274.png"];
-    specialTreatmentTerms: string[] = ["kenny.jpg", "rohit-arm.jpg", "snowdan.jpg"];
+    ]
+    desktopLinks: string[] = []
+    termLinks: string[] = []
+    specialTreatmentDesktops: string[] = ["alexjp.jpg", "fcinq.jpg", "virusz4274.png"]
+    specialTreatmentTerms: string[] = ["kenny.jpg", "rohit-arm.jpg", "snowdan.jpg"]
 
     constructor() {
         for (const filename of this.desktops) {
-            const baseUrl = "https://raw.githubusercontent.com/chaotic-aur/memorial/main/desktops/";
+            const baseUrl = "https://raw.githubusercontent.com/chaotic-aur/memorial/main/desktops/"
             if (
                 !this.specialTreatmentDesktops.some((item) => {
-                    return item === filename;
+                    return item === filename
                 })
             ) {
-                this.desktopLinks.push(baseUrl + filename);
+                this.desktopLinks.push(baseUrl + filename)
             }
         }
         for (const filename of this.terms) {
-            const baseUrl = "https://raw.githubusercontent.com/chaotic-aur/memorial/main/terms/";
+            const baseUrl = "https://raw.githubusercontent.com/chaotic-aur/memorial/main/terms/"
             if (
                 !this.specialTreatmentTerms.some((item) => {
-                    return item === filename;
+                    return item === filename
                 })
             ) {
-                this.termLinks.push(baseUrl + filename);
+                this.termLinks.push(baseUrl + filename)
             }
         }
     }

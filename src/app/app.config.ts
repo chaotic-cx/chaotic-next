@@ -1,8 +1,8 @@
-import { ApplicationConfig, provideZoneChangeDetection } from "@angular/core";
-import { provideRouter } from "@angular/router";
-import { provideHighlightOptions } from "ngx-highlightjs";
-import { routes } from "./app.routes";
-import { provideClientHydration } from "@angular/platform-browser";
+import { ApplicationConfig, provideZoneChangeDetection } from "@angular/core"
+import { provideClientHydration } from "@angular/platform-browser"
+import { provideRouter } from "@angular/router"
+import { provideHighlightOptions } from "ngx-highlightjs"
+import { routes } from "./app.routes"
 
 export const appConfig: ApplicationConfig = {
     providers: [
@@ -16,4 +16,4 @@ export const appConfig: ApplicationConfig = {
             },
         }),
     ],
-};
+}

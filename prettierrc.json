@@ -1,9 +1,9 @@
 {
-    "eslintIntegration": true,
     "htmlWhitespaceSensitivity": "strict",
-    "parser": "typescript",
     "plugins": [
         "prettier-plugin-organize-imports",
+        "prettier-plugin-css-order",
+        "prettier-plugin-organize-attributes",
         "prettier-plugin-tailwindcss"
     ],
     "proseWrap": "always",

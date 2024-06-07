@@ -1,12 +1,12 @@
-import { RouterModule, Routes } from "@angular/router";
-import { StatusComponent } from "./status/status.component";
-import { NgModule } from "@angular/core";
-import { HomeComponent } from "./home/home.component";
-import { MemorialComponent } from "./memorial/memorial.component";
-import { AboutComponent } from "./about/about.component";
-import { DocsComponent } from "./docs/docs.component";
-import { StatsPage } from "./stats-page/stats-page";
-import { NotFoundComponent } from "./not-found/not-found.component";
+import { NgModule } from "@angular/core"
+import { RouterModule, Routes } from "@angular/router"
+import { AboutComponent } from "./about/about.component"
+import { DocsComponent } from "./docs/docs.component"
+import { HomeComponent } from "./home/home.component"
+import { MemorialComponent } from "./memorial/memorial.component"
+import { NotFoundComponent } from "./not-found/not-found.component"
+import { StatsPage } from "./stats-page/stats-page"
+import { StatusComponent } from "./status/status.component"
 
 export const routes: Routes = [
     {
@@ -45,7 +45,7 @@ export const routes: Routes = [
         path: "**",
         redirectTo: "not-found",
     },
-];
+]
 
 @NgModule({
     imports: [RouterModule.forRoot(routes)],

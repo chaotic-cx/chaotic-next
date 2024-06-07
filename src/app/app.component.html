@@ -1,18 +1,18 @@
-<div class="h-max mocha">
+;<div class="mocha h-max">
     <nav class="bg-base pb-10">
-        <div class="xl:max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4 text-xl">
-            <a href="https://aur.chaotic.cx" class="flex items-center space-x-3 rtl:space-x-reverse">
-                <span class="self-center text-mauve text-2xl font-semibold whitespace-nowrap">Chaotic-AUR</span>
+        <div class="mx-auto flex flex-wrap items-center justify-between p-4 text-xl xl:max-w-screen-xl">
+            <a class="flex items-center space-x-3 rtl:space-x-reverse" href="https://aur.chaotic.cx">
+                <span class="self-center whitespace-nowrap text-2xl font-semibold text-mauve">Chaotic-AUR</span>
             </a>
             <button
+                class="inline-flex h-10 w-10 items-center justify-center rounded-lg p-2 text-sm text-mauve focus:outline-none focus:ring-2 focus:ring-teal md:hidden"
                 data-collapse-toggle="navbar-default"
                 type="button"
-                class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-mauve rounded-lg md:hidden focus:outline-none focus:ring-2 focus:ring-teal"
                 aria-controls="navbar-default"
                 aria-expanded="false"
             >
                 <svg
-                    class="w-5 h-5"
+                    class="h-5 w-5"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -29,62 +29,68 @@
             </button>
             <div class="hidden w-full md:block md:w-auto" id="navbar-default">
                 <ul
-                    class="font-medium flex flex-col p-4 md:p-0 mt-4 rounded-lg md:flex-row md:space-x-8 rtl:space-x-reverse md:mt-0 md:border-0 bg-base"
+                    class="mt-4 flex flex-col rounded-lg bg-base p-4 font-medium md:mt-0 md:flex-row md:space-x-8 md:border-0 md:p-0 rtl:space-x-reverse"
                 >
                     <li>
                         <a
+                            class="md block rounded px-3 py-2 text-mauve hover:bg-red hover:text-base md:border-0 md:p-0 md:hover:bg-transparent md:hover:text-maroon"
                             routerLink=""
                             routerLinkActive="active"
                             ariaCurrentWhenActive="page"
-                            class="block py-2 px-3 text-mauve rounded hover:bg-red hover:text-base md:hover:bg-transparent md:border-0 md md:hover:text-maroon md:p-0"
                             aria-current="page"
-                            >Home</a
                         >
+                            Home
+                        </a>
                     </li>
                     <li>
                         <a
+                            class="block rounded px-3 py-2 text-mauve hover:bg-red hover:text-base md:border-0 md:p-0 md:hover:bg-transparent md:hover:text-maroon"
                             routerLink="docs"
                             routerLinkActive="active"
                             ariaCurrentWhenActive="page"
-                            class="block py-2 px-3 text-mauve rounded hover:bg-red hover:text-base md:hover:bg-transparent md:hover:text-maroon md:border-0 md:p-0"
-                            >Docs</a
                         >
+                            Docs
+                        </a>
                     </li>
                     <li>
                         <a
+                            class="block rounded px-3 py-2 text-mauve hover:bg-red hover:text-base md:border-0 md:p-0 md:hover:bg-transparent md:hover:text-maroon"
                             routerLink="status"
                             routerLinkActive="active"
                             ariaCurrentWhenActive="page"
-                            class="block py-2 px-3 text-mauve rounded hover:bg-red hover:text-base md:hover:bg-transparent md:hover:text-maroon md:border-0 md:p-0"
-                            >Build Status</a
                         >
+                            Build Status
+                        </a>
                     </li>
                     <li>
                         <a
+                            class="block rounded px-3 py-2 text-mauve hover:bg-red hover:text-base md:border-0 md:p-0 md:hover:bg-transparent md:hover:text-maroon"
                             routerLink="stats"
                             routerLinkActive="active"
                             ariaCurrentWhenActive="page"
-                            class="block py-2 px-3 text-mauve rounded hover:bg-red hover:text-base md:hover:bg-transparent md:hover:text-maroon md:border-0 md:p-0"
-                            >Package Stats</a
                         >
+                            Package Stats
+                        </a>
                     </li>
                     <li>
                         <a
+                            class="block rounded px-3 py-2 text-mauve hover:bg-red hover:text-base md:border-0 md:p-0 md:hover:bg-transparent md:hover:text-maroon"
                             routerLink="memorial"
                             routerLinkActive="active"
                             ariaCurrentWhenActive="page"
-                            class="block py-2 px-3 text-mauve rounded hover:bg-red hover:text-base md:hover:bg-transparent md:hover:text-maroon md:border-0 md:p-0"
-                            >Memorial</a
                         >
+                            Memorial
+                        </a>
                     </li>
                     <li>
                         <a
+                            class="block rounded px-3 py-2 text-mauve hover:bg-red hover:text-base md:border-0 md:p-0 md:hover:bg-transparent md:hover:text-maroon"
                             routerLink="about"
                             routerLinkActive="active"
                             ariaCurrentWhenActive="page"
-                            class="block py-2 px-3 text-mauve rounded hover:bg-red hover:text-base md:hover:bg-transparent md:border-0 md:hover:text-maroon md:p-0"
-                            >About</a
                         >
+                            About
+                        </a>
                     </li>
                 </ul>
             </div>

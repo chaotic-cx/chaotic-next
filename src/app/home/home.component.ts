@@ -1,8 +1,8 @@
-import { Component } from "@angular/core";
-import { NgOptimizedImage } from "@angular/common";
-import { RouterLink, RouterLinkActive } from "@angular/router";
-import { ChaoticAttractorComponent } from "../chaotic-attractor/chaotic-attractor.component";
-import { MirrorMapComponent } from "../mirror-map/mirror-map.component";
+import { NgOptimizedImage } from "@angular/common"
+import { Component } from "@angular/core"
+import { RouterLink, RouterLinkActive } from "@angular/router"
+import { ChaoticAttractorComponent } from "../chaotic-attractor/chaotic-attractor.component"
+import { MirrorMapComponent } from "../mirror-map/mirror-map.component"
 
 @Component({
     selector: "app-home",

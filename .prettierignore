@@ -1,6 +1,7 @@
-*.yml
-.github
+/*.yml
+/.github
 /coverage
 /dist
+/public/aizawa
 node_modules
 pnpm-lock.yaml
