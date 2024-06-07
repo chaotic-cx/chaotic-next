@@ -64,25 +64,22 @@
     }
 
     @if (packageMetrics.downloads > 0 && packageMetrics.user_agents !== []) {
-        <h2 class="p-4 text-center text-mauve border-surface2 my-5">Total downloads last month: {{ packageMetrics.downloads }}</h2>
-        <div class="md:container flex md:mx-auto">
-            <table
-                class="table-auto md:mx-auto bg-surface0 border-surface2 border-separate">
+        <h2 class="p-4 text-center text-mauve border-surface2 my-5">
+            Total downloads last month: {{ packageMetrics.downloads }}
+        </h2>
+        <div class="md:container flex md:mx-auto md:max-w-screen-md">
+            <table class="table-auto md:mx-auto md:w-full bg-surface0 border-surface2 border-separate">
                 <thead>
-                <tr>
-                    <th class="p-4 border text-mauve border-surface2">User agents</th>
-                    <th class="p-4 border text-mauve border-surface2">User agent count</th>
-                </tr>
+                    <tr>
+                        <th class="p-4 border text-mauve border-surface2">User agents</th>
+                        <th class="p-4 border text-mauve border-surface2">User agent count</th>
+                    </tr>
                 </thead>
                 <tbody>
                     @for (agent of packageMetrics.user_agents; track agent) {
                         <tr>
-                            <td class="p-4 border text-center text-text border-surface2">
-                                {{ agent.count }}<br/>
-                            </td>
-                            <td class="border text-center text-text border-surface2">
-                                {{ agent.name }}<br/>
-                            </td>
+                            <td class="p-4 border text-center text-text border-surface2">{{ agent.count }}<br /></td>
+                            <td class="p-4 border text-center text-text border-surface2">{{ agent.name }}<br /></td>
                         </tr>
                     }
                 </tbody>

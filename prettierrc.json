@@ -2,7 +2,10 @@
     "eslintIntegration": true,
     "htmlWhitespaceSensitivity": "strict",
     "parser": "typescript",
-    "plugins": ["prettier-plugin-organize-imports"],
+    "plugins": [
+        "prettier-plugin-organize-imports",
+        "prettier-plugin-tailwindcss"
+    ],
     "proseWrap": "always",
     "semi": false,
     "tabWidth": 4

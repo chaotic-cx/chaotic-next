@@ -37,7 +37,15 @@ export class MiscStatsComponent {
         return this.axios
             .get("30d/user-agents")
             .then((response) => {
-                return parseOutput(response.data).slice(30);
+                // We don't want to display >30 user agents
+                const rightAmount = parseOutput(response.data).slice(0, 30);
+                // and also not too long user agent strings as that breaks visuals
+                for (const entry of rightAmount) {
+                    if (entry.name.length > 50) {
+                        entry.name = entry.name.substring(0, 50) + "...";
+                    }
+                }
+                return rightAmount;
             })
             .catch((err) => {
                 console.error(err);
