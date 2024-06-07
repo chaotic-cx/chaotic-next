@@ -1,24 +1,11 @@
+/* Catppuccin variables and fonts */
 @import "@catppuccin/palette/css/catppuccin.css";
 @import "@catppuccin/highlightjs/css/catppuccin.variables.css";
+
+/* TailwindCSS */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-}
-
-body {
-    background-color: #1e1e2e !important;
-}
-
-@layer base {
-    @font-face {
-        font-style: normal;
-        font-weight: 400;
-        font-family: "Fira Sans";
-        font-display: swap;
-    }
-}
 
 @layer components {
     /* Work around https://github.com/tailwindlabs/tailwindcss/discussions/8679#discussioncomment-8686149 */
@@ -34,6 +21,25 @@ body {
     }
 }
 
+/* Global CSS */
+body {
+    background-color: #1e1e2e !important;
+    font-style: normal;
+    font-weight: 400;
+    font-family: "Fira Sans", sans-serif;
+}
+code,
+pre,
+tt,
+kbd,
+samp {
+    font-style: normal;
+    font-weight: 400;
+    font-family: "JetBrains Mono", monospace;
+    font-optical-sizing: auto;
+}
+
+/*`Custom classes`*/
 .chaotic-list-regular {
     @apply my-4 block list-inside list-disc space-y-1 px-10 text-left text-lg md:px-32 lg:px-48;
 }
@@ -54,6 +60,11 @@ body {
     -webkit-box-shadow: 0 0 252px 0 rgba(--ctp-mocha-maroon-rgb, 0.9);
     -moz-box-shadow: 0 0 252px 0 rgba(--ctp-mocha-maroon-rgb, 0.9);
     box-shadow: 0 0 252px 0 rgba(--ctp-mocha-maroon-rgb, 0.9);
+}
+
+/* Highlight.js */
+.hljs-number {
+    @apply text-text !important;
 }
 
 .hljs-copy-wrapper {
