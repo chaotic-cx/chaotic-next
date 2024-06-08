@@ -1,11 +1,12 @@
 import { Component } from "@angular/core"
 import { Axios } from "axios"
+import { DeployLogComponent } from "../deploy-log/deploy-log.component"
 import { CAUR_API_URL, CurrentPackages, CurrentQueue, PackagesObject, StatsObject } from "../types"
 
 @Component({
     selector: "app-status",
     standalone: true,
-    imports: [],
+    imports: [DeployLogComponent],
     templateUrl: "./status.component.html",
     styleUrl: "./status.component.css",
 })

@@ -86,3 +86,10 @@ export interface TgMessage {
     link: string
 }
 export type TgMessageList = TgMessage[]
+
+export interface Deployment {
+    date: string
+    name: string
+    repo: string
+}
+export type DeploymentList = Deployment[]

@@ -42,6 +42,9 @@ export class NewsChannelComponent {
      * @private
      */
     private parseTgMessage(messages: any[]): any[] {
+        for (const message of messages) {
+            message.date = new Date(message.date * 1000).toDateString()
+        }
         return messages.slice(0, 5)
     }
 }
