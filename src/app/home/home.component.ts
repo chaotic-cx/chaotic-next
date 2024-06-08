@@ -4,11 +4,19 @@ import { RouterLink, RouterLinkActive } from "@angular/router"
 import { flavors } from "@catppuccin/palette"
 import { ChaoticAttractorComponent } from "../chaotic-attractor/chaotic-attractor.component"
 import { MirrorMapComponent } from "../mirror-map/mirror-map.component"
+import { NewsChannelComponent } from "../news-channel/news-channel.component"
 
 @Component({
     selector: "app-home",
     standalone: true,
-    imports: [NgOptimizedImage, RouterLink, RouterLinkActive, ChaoticAttractorComponent, MirrorMapComponent],
+    imports: [
+        NgOptimizedImage,
+        RouterLink,
+        RouterLinkActive,
+        ChaoticAttractorComponent,
+        MirrorMapComponent,
+        NewsChannelComponent,
+    ],
     templateUrl: "./home.component.html",
     styleUrl: "./home.component.css",
 })
