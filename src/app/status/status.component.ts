@@ -77,7 +77,6 @@ export class StatusComponent {
                             arch: Object.values(currentPackages[index])[0].arch,
                             srcrepo: Object.values(currentPackages[index])[0].srcrepo,
                             time: pkgTime,
-                            repo_files: Object.values(currentPackages[index])[0].repo_files,
                         })
                     }
                 }

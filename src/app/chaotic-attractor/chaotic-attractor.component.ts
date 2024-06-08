@@ -39,6 +39,13 @@ export class ChaoticAttractorComponent {
     }
 
     /**
+     * Open the applet in a new tab.
+     */
+    openApplet(): void {
+        window.location.href = "https://aur.chaotic.cx/aizawa"
+    }
+
+    /**
      * Check if the platform is a browser and then checks if the iframe URL exists.
      * @param platformId The platform ID.
      * @private
