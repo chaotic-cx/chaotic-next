@@ -1,9 +1,9 @@
 <div class="chaotic-container-regular0">
-    <div [style.width.px]="300" class="container">
+    <div class="container" [style.width.px]="300">
         <app-chaotic-attractor></app-chaotic-attractor>
     </div>
 
-    <div class="container mx-auto items-center p-10 text-center">
+    <div class="chaotic-container-regular mx-auto items-center p-10 text-center">
         <h1
             class="mb-4 text-xl font-extrabold leading-none tracking-tight text-maroon dark:text-white md:text-3xl lg:text-4xl"
         >
@@ -17,40 +17,30 @@
             >
             packages 👨🏻‍💻
         </h1>
-        <p
-            (click)="toggleTheme()"
-            class="my-6 text-lg font-normal text-text dark:text-gray-400 sm:px-16 lg:text-xl xl:px-48"
-        >
+        <p class="my-6 text-lg font-normal text-text dark:text-gray-400 sm:px-16 lg:text-xl xl:px-48">
             Compiling AUR packages for you so you don't have to!
         </p>
-        <a
-            ariaCurrentWhenActive="page"
-            class="inline-flex items-center justify-center rounded-lg bg-mauve px-5 py-3 text-center text-base font-medium transition ease-in-out hover:scale-125 hover:bg-maroon focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900"
-            routerLink="docs"
-            routerLinkActive="active"
-        >
-            How to make use of it
-            <svg
-                aria-hidden="true"
-                class="ms-2 h-3.5 w-3.5 rtl:rotate-180"
-                fill="none"
-                viewBox="0 0 14 10"
-                xmlns="http://www.w3.org/2000/svg"
+        <div class="flex justify-center">
+            <a
+                class="mr-3 inline-flex items-center justify-center rounded-lg bg-mauve px-5 py-3 text-center text-base font-medium transition ease-in-out hover:scale-125 hover:bg-maroon focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900"
+                ariaCurrentWhenActive="page"
+                routerLink="docs"
+                routerLinkActive="active"
             >
-                <path
-                    d="M1 5h12m0 0L9 1m4 4L9 9"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                />
-            </svg>
-        </a>
+                Start using now
+            </a>
+            <a
+                class="ml-3 inline-flex rounded-lg bg-mauve px-5 py-3 text-center text-base font-medium transition ease-in-out hover:scale-125 hover:bg-maroon focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900"
+                (click)="toggleTheme()"
+            >
+                Toggle theme
+            </a>
+        </div>
     </div>
-    <div class="container my-20">
+    <div class="chaotic-container-regular my-20">
         <app-news-channel></app-news-channel>
     </div>
-    <div class="container my-20">
+    <div class="chaotic-container-regular my-20">
         <app-mirror-map></app-mirror-map>
     </div>
 </div>
