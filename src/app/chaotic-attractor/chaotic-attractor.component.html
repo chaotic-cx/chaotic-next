@@ -1,7 +1,7 @@
-@if (displayInteractive) {
+@if (displayInteractive && !isMobile) {
     <iframe class="mx-3 my-3 rounded-3xl" #iframe [src]="urlSafe"></iframe>
 }
-@if (!displayInteractive) {
+@if (!displayInteractive || isMobile) {
     <img
         class="mx-3 my-3 rounded-3xl"
         ngSrc="../public/assets/logo.png"

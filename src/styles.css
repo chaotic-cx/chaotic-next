@@ -40,7 +40,7 @@ samp {
 
 /*`Custom classes`*/
 .chaotic-list-regular {
-    @apply my-4 block list-inside list-disc space-y-1 px-10 text-left text-lg md:px-32 lg:px-48;
+    @apply my-4 block list-inside list-disc space-y-1 text-left text-lg;
 }
 
 .chaotic-container-regular {
