@@ -1,5 +1,5 @@
 @if (displayInteractive && !isMobile) {
-    <iframe class="mx-3 my-3 rounded-3xl" #iframe [src]="urlSafe" (dblclick)="openApplet()"></iframe>
+    <iframe class="my-3 rounded-3xl" #iframe [src]="urlSafe" (dblclick)="openApplet()"></iframe>
 }
 @if (!displayInteractive || isMobile) {
     <img
