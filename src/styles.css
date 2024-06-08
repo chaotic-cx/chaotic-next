@@ -44,7 +44,7 @@ samp {
 }
 
 .chaotic-container-regular {
-    @apply container mx-auto max-w-screen-xl text-center align-middle;
+    @apply container mx-auto max-w-screen-xl px-5 text-center align-middle md:px-10 lg:px-20;
 }
 
 .hover\:chaotic-grow-l:hover {

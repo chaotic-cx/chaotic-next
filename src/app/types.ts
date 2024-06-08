@@ -67,6 +67,7 @@ export const CAUR_API_URL: string = "https://builds.garudalinux.org/api/"
 export const CAUR_MAP_URL: string = "https://status.chaotic.cx/map"
 export const CAUR_HOME_URL: string = "https://caur-frontend.pages.dev/"
 export const CAUR_PRIMARY_KEY: string = "3056513887B78AEB"
+export const CAUR_TG_API_URL: string = "http://localhost:3000/"
 
 export interface TeamMember {
     name: string
@@ -76,3 +77,12 @@ export interface TeamMember {
     occupation?: string
 }
 export type TeamList = TeamMember[]
+
+export interface TgMessage {
+    date: number
+    content: string
+    author: string
+    view_count: number
+    link: string
+}
+export type TgMessageList = TgMessage[]
