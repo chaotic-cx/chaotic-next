@@ -39,7 +39,6 @@ export interface CurrentPackage {
     arch: string
     srcrepo: string
     time: string
-    repo_files: string
 }
 export type CurrentPackages = CurrentPackage[]
 

@@ -36,6 +36,11 @@ samp {
     font-weight: 400;
     font-family: "JetBrains Mono", monospace;
     font-optical-sizing: auto;
+    @apply text-sm;
+}
+
+li {
+    list-style-position: outside;
 }
 
 /*`Custom classes`*/

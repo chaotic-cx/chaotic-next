@@ -1,11 +1,13 @@
 <div class="chaotic-container-regular">
     <div class="pb-5 md:px-20">
-        <h3 class="pb-5 text-center text-2xl font-semibold text-mauve">Mirror map 🌐</h3>
+        <h3 class="pb-5 text-center text-2xl font-semibold text-mauve">Mirror map</h3>
         <a class="text-text"
             >This map shows our current mirrors and which one will be used if our geo-mirror is used. The one right in
-            the middle of the map is our CDN mirror, which is hosted in Cloudflare R2 and therefore globally
-            available.</a
-        >
+            the middle of the map is our CDN mirror, which is hosted in Cloudflare R2 and therefore globally available.
+            <a class="text-mauve" href="https://status.chaotic.cx/map" rel="noopener" target="_blank"
+                >Full screen view 🔎</a
+            >
+        </a>
     </div>
     <iframe class="rounded-3xl" #iframe [src]="urlSafe"></iframe>
 </div>
