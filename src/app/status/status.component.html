@@ -67,35 +67,5 @@
         </div>
     }
 
-    <div class="container ml-auto mr-auto p-5">
-        <h3 class="pb-5 text-center text-3xl font-bold text-maroon">Queue metrics</h3>
-        <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <div class="rounded-2xl bg-surface0 pb-4 pt-4 md:rounded-l-2xl">
-                <h4 class="text-center text-2xl text-green">Database - completed</h4>
-                <p class="text-center text-green">{{ currentMetrics.database_queue.completed }}</p>
-            </div>
-            <div class="rounded-2xl bg-surface0 pb-4 pt-4 md:rounded-r-2xl">
-                <h4 class="text-center text-2xl text-red">Database - failed</h4>
-                <p class="text-center text-red">{{ currentMetrics.database_queue.failed }}</p>
-            </div>
-            <div class="rounded-2xl bg-surface0 pb-4 pt-4 md:rounded-l-2xl">
-                <h4 class="text-center text-2xl text-green">Builder - completed</h4>
-                <p class="text-center text-green">{{ currentMetrics.builder_queue.completed }}</p>
-            </div>
-            <div class="rounded-2xl bg-surface0 pb-4 pt-4 md:rounded-r-2xl">
-                <h4 class="text-center text-2xl text-red">Builder - failed</h4>
-                <p class="text-center text-red">{{ currentMetrics.builder_queue.failed }}</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="container mx-auto mb-5 items-center">
-        <button
-            class="hover:chaotic-grow-l rounded-lg bg-mauve px-5 py-2.5 text-base text-sm font-medium focus:outline-none"
-            (click)="updateAll()"
-            type="button"
-        >
-            Refresh
-        </button>
-    </div>
+    <app-deploy-log></app-deploy-log>
 </div>

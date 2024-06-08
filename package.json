@@ -35,6 +35,7 @@
         "express": "^4.19.2",
         "flowbite": "^2.3.0",
         "highlight.js": "^11.9.0",
+        "javascript-time-ago": "^2.5.10",
         "ngx-highlightjs": "^12.0.0",
         "prettier-plugin-tailwindcss": "^0.6.1",
         "rxjs": "~7.8.1",
