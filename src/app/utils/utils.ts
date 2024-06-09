@@ -25,3 +25,13 @@ export function parseOutput(input: string): any[] {
 export function getNow(): string {
     return new Date().toLocaleString("en-GB", { timeZone: "UTC" })
 }
+
+/**
+ * Check if the user is on a mobile device.
+ * https://dev.to/timhuang/a-simple-way-to-detect-if-browser-is-on-a-mobile-device-with-javascript-44j3
+ * @returns True if the user is on a mobile device, false otherwise.
+ * @private
+ */
+export function checkIfMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
