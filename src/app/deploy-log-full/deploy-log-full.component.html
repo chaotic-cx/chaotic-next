@@ -19,6 +19,12 @@
         >
             Show logs
         </button>
+        @if (requestedTooMany) {
+            <p class="pt-5 text-center text-red"
+                >You requested more logs than we currently have. Showing the max amount of
+                {{ latestDeployments.length }}.</p
+            >
+        }
         <ol class="relative pt-5">
             <li class="mb-10">
                 @for (deployment of latestDeployments; track deployment) {
@@ -30,7 +36,7 @@
                                 deployment.date
                             }}</time>
                             <div class="lex text-sm font-normal text-text"
-                                >Deployed <a class="text-maroon">{{ deployment.name }}</a> to
+                                >{{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> to
                                 <span class="font-semibold text-red">{{ deployment.repo }}</span></div
                             >
                         </div>
