@@ -1,6 +1,8 @@
 import { NgOptimizedImage } from "@angular/common"
 import { Component, ElementRef, OnInit, Renderer2, ViewEncapsulation } from "@angular/core"
 import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router"
+import TimeAgo from "javascript-time-ago"
+import en from "javascript-time-ago/locale/en"
 import { Highlight } from "ngx-highlightjs"
 import { StatusComponent } from "./status/status.component"
 
@@ -22,5 +24,6 @@ export class AppComponent implements OnInit {
 
     ngOnInit(): void {
         this.renderer.setStyle(this.el.nativeElement.ownerDocument.body, "backgroundColor", "#1e1e2e")
+        TimeAgo.addDefaultLocale(en)
     }
 }

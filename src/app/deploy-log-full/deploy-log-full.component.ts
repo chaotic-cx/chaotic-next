@@ -1,7 +1,5 @@
 import { Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
-import TimeAgo from "javascript-time-ago"
-import en from "javascript-time-ago/locale/en"
 import { DeploymentList } from "../types"
 import { getDeployments, parseTgMessage } from "../utils/utils"
 
@@ -16,10 +14,6 @@ export class DeployLogFullComponent {
     latestDeployments: DeploymentList = []
     logAmount: number | undefined
 
-    constructor() {
-        TimeAgo.addDefaultLocale(en)
-    }
-
     async ngAfterViewInit(): Promise<void> {
         void this.updateLogAmount(100)
     }
@@ -30,6 +24,11 @@ export class DeployLogFullComponent {
 
     async getNewAmount(): Promise<void> {
         // @ts-ignore
-        void this.updateLogAmount(parseInt(this.logAmount))
+        if (/^[0-9]*$/.test(this.logAmount)) {
+            // @ts-ignore
+            void this.updateLogAmount(parseInt(this.logAmount))
+        } else {
+            alert("Please enter a valid number")
+        }
     }
 }
