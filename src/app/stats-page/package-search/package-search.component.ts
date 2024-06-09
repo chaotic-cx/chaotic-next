@@ -25,12 +25,16 @@ export class PackageSearchComponent {
     }
 
     updateDisplay(): void {
-        this.loading = true
-        this.getSpecificPackageMetrics().then((result) => {
-            this.packageMetrics = result
-            this.loading = false
-            this.initialSearchDone = true
-        })
+        if (/^[0-9|a-zA-Z]*$/.test(this.searchPackage)) {
+            this.loading = true
+            this.getSpecificPackageMetrics().then((result) => {
+                this.packageMetrics = result
+                this.loading = false
+                this.initialSearchDone = true
+            })
+        } else {
+            alert("This does not look like a valid package name!")
+        }
     }
 
     /**
