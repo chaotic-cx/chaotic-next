@@ -1,4 +1,4 @@
-<div class="p-5 md:container md:mx-auto">
+<div class="chaotic-container-regular p-5 md:mx-auto">
     <h3 class="text-center text-2xl font-extrabold text-maroon">Packages & country ranks</h3>
     <div>
         @if (loading) {
@@ -25,26 +25,24 @@
     </div>
 
     @if (lastUpdated !== "Stats are currently loading..." && countryRanks.length > 0 && userAgentMetrics.length > 0) {
-        <div class="container m-5 md:max-w-screen-xl">
+        <div class="chaotic-container-regular">
             <h2 class="p-4 text-center text-mauve">Last updated: {{ lastUpdated }}</h2>
-            <div class="p-5 md:container md:flex md:max-w-screen-md">
-                <div class="md:mx-auto">
-                    <table
-                        class="mx-auto table-auto border-separate rounded-2xl border-surface2 bg-surface0 p-5 md:w-full"
-                    >
+            <div class="md:mr-5 md:flex">
+                <div class="w-full">
+                    <table class="w-full table-auto rounded-2xl bg-surface0">
                         <thead>
                             <tr>
-                                <th class="border border-surface2 p-4 text-mauve">Count</th>
-                                <th class="border border-surface2 p-4 text-mauve">Name</th>
+                                <th class="p-4 text-mauve">Count</th>
+                                <th class="p-4 text-mauve">Name</th>
                             </tr>
                         </thead>
                         <tbody>
                             @for (userAgent of userAgentMetrics; track userAgent) {
-                                <tr>
-                                    <td class="border border-surface2 p-4 text-center text-text">
+                                <tr class="odd:bg-surface1 even:bg-surface0">
+                                    <td class="p-4 text-center text-text">
                                         {{ userAgent.count }}
                                     </td>
-                                    <td class="border border-surface2 p-4 text-center text-text">
+                                    <td class="p-4 text-center text-text">
                                         {{ userAgent.name }}
                                     </td>
                                 </tr>
@@ -52,23 +50,21 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="md:mx-auto">
-                    <table
-                        class="mx-auto table-auto border-separate rounded-2xl border-surface2 bg-surface0 p-5 md:w-full"
-                    >
+                <div class="mt-5 w-full md:ml-5 md:mt-0 md:flex">
+                    <table class="w-full table-auto rounded-2xl bg-surface0 p-5">
                         <thead>
                             <tr>
-                                <th class="border border-surface2 p-4 text-mauve">Count</th>
-                                <th class="border border-surface2 p-4 text-mauve">Country</th>
+                                <th class="p-4 text-mauve">Count</th>
+                                <th class="p-4 text-mauve">Country</th>
                             </tr>
                         </thead>
                         <tbody>
                             @for (country of countryRanks; track country) {
-                                <tr>
-                                    <td class="border border-surface2 p-4 text-center text-text">
+                                <tr class="odd:bg-surface1 even:bg-surface0">
+                                    <td class="p-4 text-center text-text">
                                         {{ country.count }}
                                     </td>
-                                    <td class="border border-surface2 p-4 text-center text-text">
+                                    <td class="p-4 text-center text-text">
                                         {{ country.name }}
                                     </td>
                                 </tr>
@@ -82,7 +78,7 @@
     @if (
         lastUpdated !== "Stats are currently loading..." && userAgentMetrics.length === 0 && countryRanks.length === 0
     ) {
-        <div class="px-5 pt-5 md:container md:mx-auto">
+        <div class="chaotic-container-regular">
             <p class="my-4 text-center text-lg text-red">
                 Seemingly there has been an issue with fetching the required data 😔️
             </p>
