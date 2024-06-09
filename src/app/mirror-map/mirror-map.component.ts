@@ -1,6 +1,5 @@
 import { Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from "@angular/core"
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
-import iframeResizer from "@iframe-resizer/parent"
 import { CAUR_MAP_URL } from "../types"
 
 @Component({
@@ -21,11 +20,5 @@ export class MirrorMapComponent {
         public sanitizer: DomSanitizer,
     ) {
         this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
-    }
-
-    ngAfterViewInit(): void {
-        this.iframe.nativeElement.onload = () => {
-            iframeResizer({ license: "GPLv3" }, this.iframe.nativeElement)
-        }
     }
 }
