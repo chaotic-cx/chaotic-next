@@ -25,6 +25,7 @@
                 class="text-input block w-full rounded-lg border border-red bg-surface0 p-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1"
                 id="input-search-package"
                 [(ngModel)]="searchPackage"
+                (keyup.enter)="updateDisplay()"
                 name="searchPackage"
                 placeholder="Search for a specific package..."
                 required
