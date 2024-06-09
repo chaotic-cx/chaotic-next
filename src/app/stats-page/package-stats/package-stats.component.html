@@ -25,22 +25,22 @@
     </div>
 
     @if (lastUpdated !== "Stats are currently loading..." && globalPackageMetrics.length > 0) {
-        <h2 class="border-surface2 p-4 text-center text-mauve">Last updated: {{ lastUpdated }}</h2>
-        <div class="pb-10 md:container md:max-w-screen-md">
-            <table class="mx-auto table-auto border-separate border-surface2 bg-surface0 md:w-full">
+        <h2 class="p-4 text-center text-mauve">Last updated: {{ lastUpdated }}</h2>
+        <div class="px-5 pb-10 md:container md:max-w-screen-md">
+            <table class="w-full table-auto rounded-2xl bg-surface0">
                 <thead>
                     <tr>
-                        <th class="border border-surface2 p-4 text-mauve">Count</th>
-                        <th class="border border-surface2 p-4 text-mauve">Name</th>
+                        <th class="p-4 text-mauve">Count</th>
+                        <th class="p-4 text-mauve">Name</th>
                     </tr>
                 </thead>
                 <tbody>
                     @for (pkg of globalPackageMetrics; track pkg) {
-                        <tr>
-                            <td class="border border-surface2 p-4 text-center text-text">
+                        <tr class="odd:bg-surface1 even:bg-surface0">
+                            <td class="p-4 text-center text-text">
                                 {{ pkg.count }}
                             </td>
-                            <td class="border border-surface2 p-4 text-center text-text">
+                            <td class="p-4 text-center text-text">
                                 {{ pkg.name }}
                             </td>
                         </tr>
