@@ -12,8 +12,7 @@
         "lint:check": "eslint .",
         "lint:write": "eslint --fix .",
         "pre-commit": "lint-staged",
-        "prepare": "husky",
-        "serve:ssr:chaotic-frontend": "node dist/chaotic-frontend/server/server.mjs"
+        "prepare": "husky"
     },
     "private": true,
     "dependencies": {
@@ -26,13 +25,13 @@
         "@angular/platform-browser-dynamic": "^18.0.2",
         "@angular/platform-server": "^18.0.2",
         "@angular/router": "^18.0.2",
-        "@angular/ssr": "^18.0.3",
         "@catppuccin/palette": "^1.2.0",
         "@fortawesome/free-solid-svg-icons": "^6.5.2",
         "@iframe-resizer/parent": "^5.0.2",
         "@types/iframe-resizer": "^3.5.13",
         "axios": "^1.7.2",
         "express": "^4.19.2",
+        "flowbite": "^2.3.0",
         "highlight.js": "^11.9.0",
         "javascript-time-ago": "^2.5.10",
         "ngx-highlightjs": "^12.0.0",
