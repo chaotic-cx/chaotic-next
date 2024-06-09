@@ -1,7 +1,7 @@
 import { Component } from "@angular/core"
 import { Axios } from "axios"
 import { CAUR_METRICS_URL, PackageRankList } from "../../types"
-import { getNow, parseOutput } from "../../utils/utils"
+import { getNow } from "../../utils/utils"
 
 @Component({
     selector: "app-package-stats",
@@ -49,7 +49,7 @@ export class PackageStatsComponent {
         return this.axios
             .get(`30d/rank/${this.packageMetricRange}/packages`)
             .then((response) => {
-                return parseOutput(response.data)
+                return JSON.parse(response.data)
             })
             .catch((err) => {
                 console.error(err)
