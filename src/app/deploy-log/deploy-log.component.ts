@@ -1,4 +1,5 @@
 import { Component } from "@angular/core"
+import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
 import TimeAgo from "javascript-time-ago"
 import en from "javascript-time-ago/locale/en"
@@ -8,7 +9,7 @@ import { getDeployments, parseTgMessage } from "../utils/utils"
 @Component({
     selector: "app-deploy-log",
     standalone: true,
-    imports: [RouterLink],
+    imports: [RouterLink, FormsModule],
     templateUrl: "./deploy-log.component.html",
     styleUrl: "./deploy-log.component.css",
 })
