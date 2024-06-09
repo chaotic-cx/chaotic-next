@@ -30,7 +30,7 @@ export class NewsChannelComponent {
         })
 
         return axios
-            .get("telegram/news")
+            .get("news")
             .then((response) => {
                 return JSON.parse(response.data)
             })

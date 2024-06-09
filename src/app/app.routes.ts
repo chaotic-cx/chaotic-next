@@ -1,6 +1,7 @@
 import { NgModule } from "@angular/core"
 import { RouterModule, Routes } from "@angular/router"
 import { AboutComponent } from "./about/about.component"
+import { DeployLogFullComponent } from "./deploy-log-full/deploy-log-full.component"
 import { DocsComponent } from "./docs/docs.component"
 import { HomeComponent } from "./home/home.component"
 import { MemorialComponent } from "./memorial/memorial.component"
@@ -16,6 +17,10 @@ export const routes: Routes = [
     {
         path: "status",
         component: StatusComponent,
+    },
+    {
+        path: "deploy-log",
+        component: DeployLogFullComponent,
     },
     {
         path: "memorial",
