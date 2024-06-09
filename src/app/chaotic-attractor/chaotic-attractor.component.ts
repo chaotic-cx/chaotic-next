@@ -3,6 +3,7 @@ import { Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from "@angular/
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
 import iframeResizer from "@iframe-resizer/parent"
 import { CAUR_HOME_URL } from "../types"
+import { checkIfMobile } from "../utils/utils"
 
 @Component({
     selector: "app-chaotic-attractor",
@@ -29,7 +30,7 @@ export class ChaoticAttractorComponent {
     ) {
         this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
         this.checkIfExists(platformId)
-        this.isMobile = this.checkIfMobile()
+        this.isMobile = checkIfMobile()
     }
 
     ngAfterViewInit(): void {
@@ -59,15 +60,5 @@ export class ChaoticAttractorComponent {
                 this.displayInteractive = false
             }
         }
-    }
-
-    /**
-     * Check if the user is on a mobile device.
-     * https://dev.to/timhuang/a-simple-way-to-detect-if-browser-is-on-a-mobile-device-with-javascript-44j3
-     * @returns True if the user is on a mobile device, false otherwise.
-     * @private
-     */
-    private checkIfMobile() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
     }
 }

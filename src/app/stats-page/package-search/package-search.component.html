@@ -64,26 +64,28 @@
     }
 
     @if (packageMetrics.downloads > 0 && packageMetrics.user_agents !== []) {
-        <h2 class="my-5 border-surface2 p-4 text-center text-mauve">
-            Total downloads last month: {{ packageMetrics.downloads }}
-        </h2>
-        <div class="flex md:container md:mx-auto md:max-w-screen-md">
-            <table class="table-auto border-separate border-surface2 bg-surface0 md:mx-auto md:w-full">
-                <thead>
-                    <tr>
-                        <th class="border border-surface2 p-4 text-mauve">User agents</th>
-                        <th class="border border-surface2 p-4 text-mauve">User agent count</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (agent of packageMetrics.user_agents; track agent) {
-                        <tr>
-                            <td class="border border-surface2 p-4 text-center text-text">{{ agent.count }}<br /></td>
-                            <td class="border border-surface2 p-4 text-center text-text">{{ agent.name }}<br /></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="chaotic-container-regular">
+            <h2 class="p-4 text-center text-mauve">Total downloads last month: {{ packageMetrics.downloads }}</h2>
+            <div class="px-5 pb-10 md:container md:max-w-screen-md">
+                <div class="w-full">
+                    <table class="w-full table-auto rounded-2xl bg-surface0">
+                        <thead>
+                            <tr>
+                                <th class="p-4 text-mauve">User agents</th>
+                                <th class="p-4 text-mauve">User agent count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (agent of packageMetrics.user_agents; track agent) {
+                                <tr class="odd:bg-surface1 even:bg-surface0">
+                                    <td class="p-4 text-center text-text">{{ agent.count }}</td>
+                                    <td class="p-4 text-center text-text">{{ agent.name }}</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     }
 </div>
