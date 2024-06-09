@@ -1,7 +1,7 @@
 import { Component } from "@angular/core"
 import { Axios } from "axios"
 import { CAUR_METRICS_URL, CountryRankList, UserAgentList } from "../../types"
-import { getNow, parseOutput } from "../../utils/utils"
+import { getNow } from "../../utils/utils"
 
 @Component({
     selector: "app-misc-stats",
@@ -50,7 +50,7 @@ export class MiscStatsComponent {
             .get("30d/user-agents")
             .then((response) => {
                 // We don't want to display >30 user agents
-                const rightAmount = parseOutput(response.data).slice(0, 30)
+                const rightAmount = JSON.parse(response.data).slice(0, 30)
                 // and also not too long user agent strings as that breaks visuals
                 for (const entry of rightAmount) {
                     if (entry.name.length > 50) {
@@ -71,13 +71,13 @@ export class MiscStatsComponent {
      */
     private async getCountryRanks(): Promise<CountryRankList> {
         return this.axios
-            .get(`30d/rank/${this.countryRankRange}/countries`)
+            .get(`30d/rank/30/countries`)
             .then((response) => {
-                const nonFlagged: CountryRankList = parseOutput(response.data)
-                for (const country of nonFlagged) {
+                const jsonParsed: CountryRankList = JSON.parse(response.data)
+                for (const country of jsonParsed) {
                     country.name = `${country.name}  ${this.countryCode2Flag(country.name)}`
                 }
-                return nonFlagged
+                return jsonParsed
             })
             .catch((err) => {
                 console.error(err)
