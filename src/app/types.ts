@@ -65,7 +65,7 @@ export const CAUR_BACKEND_URL: string = "https://builds.garudalinux.org/backend"
 export const CAUR_METRICS_URL: string = `${CAUR_BACKEND_URL}/metrics/`
 export const CAUR_API_URL: string = "https://builds.garudalinux.org/api/"
 export const CAUR_MAP_URL: string = "https://status.chaotic.cx/map"
-export const CAUR_HOME_URL: string = "https://caur-frontend.pages.dev/"
+export const CAUR_HOME_URL: string = "https://aur.chaotic.cx/"
 export const CAUR_PRIMARY_KEY: string = "3056513887B78AEB"
 export const CAUR_TG_API_URL: string = `${CAUR_BACKEND_URL}/telegram/`
 
