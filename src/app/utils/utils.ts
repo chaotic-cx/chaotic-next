@@ -1,6 +1,13 @@
 import { Axios } from "axios"
 import TimeAgo from "javascript-time-ago"
-import { CAUR_TG_API_URL, CountNameObject, DeploymentList, TgMessageList, UserAgentList } from "../types"
+import {
+    CAUR_TG_API_URL,
+    CountNameObject,
+    DeploymentList,
+    DeploymentType,
+    TgMessageList,
+    UserAgentList,
+} from "../types"
 
 /**
  * Parse the output of the non-single line metrics.
@@ -42,29 +49,44 @@ export function checkIfMobile() {
 /**
  * Parse the Telegram messages to make it usable for the website.
  * @param messages The TgMessageList array to parse.
+ * @param type The type of deployment to parse, e.g., all, failed, succeeded.
  * @returns The parsed DeploymentList array.
  */
-export function parseTgMessage(messages: TgMessageList): DeploymentList {
+export function parseDeployments(messages: TgMessageList, type: DeploymentType): DeploymentList {
     const timeAgo = new TimeAgo("en-US")
-
     const deploymentList: DeploymentList = []
+
     for (const message of messages) {
-        // No point in displaying failed deployment notifications
-        if (!message.content.startsWith("📣")) {
+        const pkg: string = message.content.split("> ")[1].split(" - logs")[0]
+        const date = timeAgo.format(message.date * 1000, "round")
+        let repo: string
+        let deploymentType: DeploymentType
+
+        if (
+            (type === DeploymentType.SUCCESS || type === DeploymentType.ALL) &&
+            message.content.includes("deployment to")
+        ) {
+            repo = String(message.content.split("deployment to ")[1]).split(":")[0]
+            deploymentType = DeploymentType.SUCCESS
+        } else if (
+            (type === DeploymentType.FAILED || type === DeploymentType.ALL) &&
+            message.content.includes("failed")
+        ) {
+            repo = String(message.content.split("Build for ")[1]).split(" failed")[0]
+            deploymentType = DeploymentType.FAILED
+        } else {
             continue
         }
-        const pkg = message.content.split("> ")[1]
 
-        // The case was required to work around .split being undefined
-        const repo = String(message.content.split("deployment to ")[1]).split(":")[0]
-
-        // Generate passed time in a human-readable format
-        const date = timeAgo.format(message.date * 1000, "round")
         deploymentList.push({
             date: date,
             name: pkg,
             repo: repo,
+            type: deploymentType,
         })
+        // The case was required to work around .split being undefined
+
+        // Generate passed time in a human-readable format
     }
     return deploymentList
 }
@@ -73,14 +95,27 @@ export function parseTgMessage(messages: TgMessageList): DeploymentList {
  * Get the latest news from the Telegram channel.
  * @returns The latest news as a list of TgMessage.
  */
-export async function getDeployments(amount: number): Promise<TgMessageList> {
+export async function getDeployments(amount: number, type: DeploymentType): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
         timeout: 1000,
     })
 
+    let requestString
+    switch (type) {
+        case DeploymentType.ALL:
+            requestString = ""
+            break
+        case DeploymentType.FAILED:
+            requestString = "/failed"
+            break
+        case DeploymentType.SUCCESS:
+            requestString = "/succeeded"
+            break
+    }
+
     return axios
-        .get(`deployments/${amount}`)
+        .get(`deployments${requestString}/${amount}`)
         .then((response) => {
             return JSON.parse(response.data)
         })

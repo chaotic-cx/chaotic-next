@@ -91,5 +91,12 @@ export interface Deployment {
     date: string
     name: string
     repo: string
+    type?: DeploymentType
+    string?: string
 }
 export type DeploymentList = Deployment[]
+export enum DeploymentType {
+    ALL,
+    SUCCESS,
+    FAILED,
+}

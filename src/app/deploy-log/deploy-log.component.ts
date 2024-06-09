@@ -1,8 +1,8 @@
 import { Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
-import { DeploymentList } from "../types"
-import { getDeployments, parseTgMessage } from "../utils/utils"
+import { DeploymentList, DeploymentType } from "../types"
+import { getDeployments, parseDeployments } from "../utils/utils"
 
 @Component({
     selector: "app-deploy-log",
@@ -15,15 +15,18 @@ export class DeployLogComponent {
     latestDeployments: DeploymentList = []
 
     async ngAfterViewInit(): Promise<void> {
-        this.latestDeployments = parseTgMessage(await getDeployments(30))
+        this.latestDeployments = parseDeployments(
+            await getDeployments(30, DeploymentType.SUCCESS),
+            DeploymentType.SUCCESS,
+        )
     }
 
     /**
      * Check for new deployments and update the list.
      */
     async checkNewDeployments(): Promise<void> {
-        const newList = parseTgMessage(await getDeployments(30))
-        if (newList.length !== this.latestDeployments.length) {
+        const newList = parseDeployments(await getDeployments(30, DeploymentType.SUCCESS), DeploymentType.SUCCESS)
+        if (newList !== this.latestDeployments) {
             this.latestDeployments = newList
         }
     }
