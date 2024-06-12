@@ -1,0 +1,7 @@
+{
+    "htmlWhitespaceSensitivity": "strict",
+    "plugins": ["prettier-plugin-organize-imports"],
+    "proseWrap": "always",
+    "semi": false,
+    "tabWidth": 4
+}
