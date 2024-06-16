@@ -35,7 +35,7 @@ export class StatsPage implements OnInit {
      * @param event
      */
     changeDisplay(event: any) {
-        this.currentView = event.srcElement.id.split("-")[1]
+        this.currentView = event.target.id.split("-")[1]
     }
 
     /**
