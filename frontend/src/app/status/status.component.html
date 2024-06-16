@@ -4,15 +4,38 @@
         <p class="my-4 px-10 text-center text-lg text-text"
             >This page shows the status of the Chaotic-AUR infrastructure.</p
         >
-        <p class="my-4 px-10 text-center text-lg text-text">Last updated: {{ lastUpdated }}</p>
+        <p class="my-4 px-10 text-center text-lg text-text"
+            >Last updated: <a class="text-maroon">{{ lastUpdated }}</a>
+        </p>
+    </div>
+
+    <div class="container mx-auto my-5 items-center">
+        <button
+            (click)="updateAll()"
+            class="hover:chaotic-grow-l mr-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+            type="button"
+        >
+            Refresh status
+        </button>
+        <button
+            (click)="headToFullDeployments()"
+            class="hover:chaotic-grow-l ml-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+            type="button"
+        >
+            Full deploy log
+        </button>
     </div>
 
     @if (currentQueue.length !== 0) {
-        <div class="chaotic-container-regular pt-5">
-            <h3 class="pb-10 pt-5 text-center text-2xl font-bold text-maroon">Current queue stats</h3>
+        <div class="md:px-10 pt-5">
+            <h3 class="py-5 text-center text-xl font-bold text-mauve">Current queue stats</h3>
             @for (queue of currentQueue; track queue) {
-                <div class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3">
-                    <div class="place-self-auto rounded-t-xl bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none">
+                <div
+                    class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm"
+                >
+                    <div
+                        class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
+                    >
                         <h4 class="text-center text-2xl text-mauve">Status</h4>
                         <p class="my-2 text-center text-text">{{ queue.status }}</p>
                     </div>
@@ -32,37 +55,26 @@
                     </div>
                 </div>
             }
-        </div>
-    }
-    @if (currentPackages.length > 0) {
-        <div class="chaotic-container-regular pt-5">
-            <h3 class="py-5 text-center text-2xl font-bold text-maroon">Current queued package information</h3>
-
-            @for (pkg of currentPackages; track pkg) {
-                <div class="mx-auto my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3">
-                    <div class="place-self-auto rounded-t-2xl bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none">
-                        <h4 class="text-center text-xl text-mauve">Name</h4>
-                        <p class="my-2 text-center text-text">{{ pkg.name }}</p>
-                    </div>
-                    <div class="bg-surface0 p-4">
-                        <h4 class="text-center text-xl text-mauve">Queued at</h4>
-                        <p class="my-2 text-center text-text">{{ pkg.time }}</p>
-                    </div>
-                    <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
-                        <h4 class="text-center text-xl text-mauve">Target repo</h4>
-                        <div class="my-2 grid grid-cols-1 gap-5">
-                            <p class="text-s text-center text-text">{{ pkg.srcrepo }}</p>
-                        </div>
-                    </div>
-                </div>
+            @if (fullLength > 50) {
+                <button
+                    (click)="showFullList()"
+                    class="hover:chaotic-grow-l ml-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+                    type="button"
+                >
+                    {{ showFullPackages ? "Hide full list" : "Show full list" }}
+                </button>
             }
         </div>
     }
-    @if (currentQueue.length === 0) {
+
+    @if (currentQueue.length === 0 && lastUpdated !== "loading ... ☕️") {
         <div class="container my-auto px-5">
-            <h3 class="py-10 text-center text-xl font-bold text-mauve">There are currently no ongoing builds 😴</h3>
+            <h3 class="pb-10 text-center text-xl font-bold text-mauve">There are currently no ongoing builds 😴</h3>
         </div>
     }
 
-    <app-deploy-log></app-deploy-log>
+    <div>
+        <h3 class="pb-5 pt-10 text-center text-xl font-bold text-mauve">Latest successful deployments</h3>
+        <app-deploy-log></app-deploy-log>
+    </div>
 </div>
