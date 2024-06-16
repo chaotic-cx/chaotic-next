@@ -8,58 +8,60 @@
     </div>
 
     @if (currentQueue.length !== 0) {
-    <div class="chaotic-container-regular pt-5">
-        <h3 class="pb-10 pt-5 text-center text-2xl font-bold text-maroon">Current queue stats</h3>
-        @for (queue of currentQueue; track queue) {
-        <div class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3">
-            <div class="place-self-auto rounded-t-xl bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none">
-                <h4 class="text-center text-2xl text-mauve">Status</h4>
-                <p class="my-2 text-center text-text">{{ queue.status }}</p>
-            </div>
-            <div class="bg-surface0 p-4">
-                <h4 class="text-center text-xl text-mauve">Count</h4>
-                <p class="my-2 text-center text-text">{{ queue["count"] }}</p>
-            </div>
-            <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
-                <h4 class="text-center text-xl text-mauve">Packages</h4>
-                <div class="my-2 grid grid-cols-1 gap-5">
-                    <p class="text-s text-center text-text">
-                        @for (pkg of queue["packages"]; track pkg) {
-                        {{ pkg }}<br />
-                        }
-                    </p>
+        <div class="chaotic-container-regular pt-5">
+            <h3 class="pb-10 pt-5 text-center text-2xl font-bold text-maroon">Current queue stats</h3>
+            @for (queue of currentQueue; track queue) {
+                <div class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3">
+                    <div class="place-self-auto rounded-t-xl bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none">
+                        <h4 class="text-center text-2xl text-mauve">Status</h4>
+                        <p class="my-2 text-center text-text">{{ queue.status }}</p>
+                    </div>
+                    <div class="bg-surface0 p-4">
+                        <h4 class="text-center text-xl text-mauve">Count</h4>
+                        <p class="my-2 text-center text-text">{{ queue["count"] }}</p>
+                    </div>
+                    <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
+                        <h4 class="text-center text-xl text-mauve">Packages</h4>
+                        <div class="my-2 grid grid-cols-1 gap-5">
+                            <p class="text-s text-center text-text">
+                                @for (pkg of queue["packages"]; track pkg) {
+                                    {{ pkg }}<br />
+                                }
+                            </p>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            }
         </div>
-        }
-    </div>
-    } @if (currentPackages.length > 0) {
-    <div class="chaotic-container-regular pt-5">
-        <h3 class="py-5 text-center text-2xl font-bold text-maroon">Current queued package information</h3>
+    }
+    @if (currentPackages.length > 0) {
+        <div class="chaotic-container-regular pt-5">
+            <h3 class="py-5 text-center text-2xl font-bold text-maroon">Current queued package information</h3>
 
-        @for (pkg of currentPackages; track pkg) {
-        <div class="mx-auto my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3">
-            <div class="place-self-auto rounded-t-2xl bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none">
-                <h4 class="text-center text-xl text-mauve">Name</h4>
-                <p class="my-2 text-center text-text">{{ pkg.name }}</p>
-            </div>
-            <div class="bg-surface0 p-4">
-                <h4 class="text-center text-xl text-mauve">Queued at</h4>
-                <p class="my-2 text-center text-text">{{ pkg.time }}</p>
-            </div>
-            <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
-                <h4 class="text-center text-xl text-mauve">Target repo</h4>
-                <div class="my-2 grid grid-cols-1 gap-5">
-                    <p class="text-s text-center text-text">{{ pkg.srcrepo }}</p>
+            @for (pkg of currentPackages; track pkg) {
+                <div class="mx-auto my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3">
+                    <div class="place-self-auto rounded-t-2xl bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none">
+                        <h4 class="text-center text-xl text-mauve">Name</h4>
+                        <p class="my-2 text-center text-text">{{ pkg.name }}</p>
+                    </div>
+                    <div class="bg-surface0 p-4">
+                        <h4 class="text-center text-xl text-mauve">Queued at</h4>
+                        <p class="my-2 text-center text-text">{{ pkg.time }}</p>
+                    </div>
+                    <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
+                        <h4 class="text-center text-xl text-mauve">Target repo</h4>
+                        <div class="my-2 grid grid-cols-1 gap-5">
+                            <p class="text-s text-center text-text">{{ pkg.srcrepo }}</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            }
         </div>
-        }
-    </div>
-    } @if (currentQueue.length === 0) {
-    <div class="container my-auto px-5">
-        <h3 class="py-10 text-center text-xl font-bold text-mauve">There are currently no ongoing builds 😴</h3>
-    </div>
+    }
+    @if (currentQueue.length === 0) {
+        <div class="container my-auto px-5">
+            <h3 class="py-10 text-center text-xl font-bold text-mauve">There are currently no ongoing builds 😴</h3>
+        </div>
     }
 
     <app-deploy-log></app-deploy-log>

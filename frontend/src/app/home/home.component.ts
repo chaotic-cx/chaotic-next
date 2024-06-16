@@ -23,7 +23,10 @@ import { NewsChannelComponent } from "../news-channel/news-channel.component"
 export class HomeComponent {
     currentTheme = "mocha"
 
-    constructor(private el: ElementRef, private renderer: Renderer2) {}
+    constructor(
+        private el: ElementRef,
+        private renderer: Renderer2,
+    ) {}
     toggleTheme(): void {
         const appCtp = document.getElementById("app-ctp")
         // @ts-ignore
@@ -38,7 +41,7 @@ export class HomeComponent {
                 this.renderer.setStyle(
                     this.el.nativeElement.ownerDocument.body,
                     "backgroundColor",
-                    flavors.latte.colors.base.hex
+                    flavors.latte.colors.base.hex,
                 )
                 break
             case "latte":
@@ -48,7 +51,7 @@ export class HomeComponent {
                 this.renderer.setStyle(
                     this.el.nativeElement.ownerDocument.body,
                     "backgroundColor",
-                    flavors.frappe.colors.base.hex
+                    flavors.frappe.colors.base.hex,
                 )
                 break
             case "frappe":
@@ -58,7 +61,7 @@ export class HomeComponent {
                 this.renderer.setStyle(
                     this.el.nativeElement.ownerDocument.body,
                     "backgroundColor",
-                    flavors.macchiato.colors.base.hex
+                    flavors.macchiato.colors.base.hex,
                 )
                 break
             case "macchiato":
@@ -68,7 +71,7 @@ export class HomeComponent {
                 this.renderer.setStyle(
                     this.el.nativeElement.ownerDocument.body,
                     "backgroundColor",
-                    flavors.mocha.colors.base.hex
+                    flavors.mocha.colors.base.hex,
                 )
         }
     }

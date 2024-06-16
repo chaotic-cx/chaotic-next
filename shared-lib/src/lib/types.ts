@@ -14,17 +14,6 @@ export const CAUR_METRICS_URL = "https://metrics.chaotic.cx/"
 export const CAUR_ALLOWED_CORS = ["https://aur.chaotic.cx", "https://caur-frontend-pages.dev"]
 export const CAUR_BACKEND_PORT = 3000
 
-export interface metricsObject {
-    builder_queue: {
-        completed: number
-        failed: number
-    }
-    database_queue: {
-        completed: number
-        failed: number
-    }
-}
-
 export type StatsObject = Record<
     string,
     {

@@ -6,26 +6,26 @@
             class="chaotic-container-regular mb-20 grid grid-cols-2 items-stretch gap-10 md:grid-cols-3 lg:grid-cols-4"
         >
             @for (member of team; track member) {
-            <div class="h-auto max-w-96 rounded-lg bg-surface0 shadow">
-                <div class="flex flex-col items-center pb-10">
-                    <img
-                        class="my-5 h-24 w-24 rounded-full shadow-lg"
-                        ngSrc="{{ member.avatarUrl }}"
-                        height="96"
-                        width="96"
-                        alt="{{ member.name }} avatar"
-                    />
-                    <h5 class="text-l mb-1 font-medium text-peach">{{ member.name }}</h5>
-                    <span class="text-sm text-peach">{{ member.role }}</span>
-                    <div class="mt-4 flex md:mt-6">
-                        <a
-                            class="chaotic-grow-l hover:chaotic-grow-l inline-flex items-center rounded-lg bg-maroon px-4 py-2 text-center text-sm font-medium text-crust focus:outline-none focus:ring-4 focus:ring-green"
-                            href="https://github.com/{{ member.github }}"
-                            >GitHub</a
-                        >
+                <div class="h-auto max-w-96 rounded-lg bg-surface0 shadow">
+                    <div class="flex flex-col items-center pb-10">
+                        <img
+                            class="my-5 h-24 w-24 rounded-full shadow-lg"
+                            ngSrc="{{ member.avatarUrl }}"
+                            height="96"
+                            width="96"
+                            alt="{{ member.name }} avatar"
+                        />
+                        <h5 class="text-l mb-1 font-medium text-peach">{{ member.name }}</h5>
+                        <span class="text-sm text-peach">{{ member.role }}</span>
+                        <div class="mt-4 flex md:mt-6">
+                            <a
+                                class="chaotic-grow-l hover:chaotic-grow-l inline-flex items-center rounded-lg bg-maroon px-4 py-2 text-center text-sm font-medium text-crust focus:outline-none focus:ring-4 focus:ring-green"
+                                href="https://github.com/{{ member.github }}"
+                                >GitHub</a
+                            >
+                        </div>
                     </div>
                 </div>
-            </div>
             }
         </div>
         <h3 class="my-10 text-center text-2xl font-bold text-maroon">Information about build nodes</h3>

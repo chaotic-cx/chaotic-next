@@ -25,19 +25,19 @@ export class DeployLogFullComponent implements AfterViewInit {
             case DeploymentType.ALL:
                 this.latestDeployments = parseDeployments(
                     await getDeployments(amount, this.currentType),
-                    this.currentType
+                    this.currentType,
                 )
                 break
             case DeploymentType.SUCCESS:
                 this.latestDeployments = parseDeployments(
                     await getDeployments(amount, this.currentType),
-                    this.currentType
+                    this.currentType,
                 )
                 break
             case DeploymentType.FAILED:
                 this.latestDeployments = parseDeployments(
                     await getDeployments(amount, this.currentType),
-                    this.currentType
+                    this.currentType,
                 )
                 break
         }
