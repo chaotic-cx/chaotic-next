@@ -34969,7 +34969,7 @@ export type $FunctionInputByName = {
 export type $FunctionName = keyof $FunctionResultByName
 
 export type Invoke = <T extends $FunctionName>(
-    query: { readonly _: T } & $FunctionInputByName[T]
+    query: { readonly _: T } & $FunctionInputByName[T],
 ) => Promise<$FunctionResultByName[T]>
 
 export type $SyncFunctionName =
@@ -35003,5 +35003,5 @@ export type $SyncFunctionName =
     | "testReturnError"
 
 export type Execute = <T extends $SyncFunctionName>(
-    query: { readonly _: T } & $FunctionInputByName[T]
+    query: { readonly _: T } & $FunctionInputByName[T],
 ) => error | $FunctionResultByName[T]

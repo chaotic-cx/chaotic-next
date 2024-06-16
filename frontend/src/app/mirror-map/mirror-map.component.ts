@@ -15,7 +15,10 @@ export class MirrorMapComponent {
     // @ts-ignore
     @ViewChild("iframe", { static: false }) iframe: ElementRef
 
-    constructor(@Inject(PLATFORM_ID) platformId: Object, public sanitizer: DomSanitizer) {
+    constructor(
+        @Inject(PLATFORM_ID) platformId: Object,
+        public sanitizer: DomSanitizer,
+    ) {
         this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
     }
 }

@@ -21,7 +21,7 @@
         </button>
         @if (requestedTooMany) {
             <p class="pt-5 text-center text-red"
-            >You requested more logs than we currently have. Showing the max amount of
+                >You requested more logs than we currently have. Showing the max amount of
                 {{ latestDeployments.length }}.</p
             >
         }
@@ -32,12 +32,11 @@
                         <div
                             class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex"
                         >
-                            <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0">{{
-                                    deployment.date
-                                }}
+                            <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0"
+                                >{{ deployment.date }}
                             </time>
                             <div class="lex text-sm font-normal text-text"
-                            >{{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> to
+                                >{{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> to
                                 <span class="font-semibold text-red">{{ deployment.repo }}</span></div
                             >
                         </div>

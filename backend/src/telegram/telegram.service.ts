@@ -1,5 +1,5 @@
 import { CACHE_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, TgMessage, TgMessageList } from "@./shared-lib"
-import { Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
+import { CACHE_MANAGER, Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
 import * as tdl from "tdl"
@@ -135,7 +135,7 @@ export class TelegramService {
         id: string,
         desiredCount: number,
         // eslint-disable-next-line @typescript-eslint/ban-types
-        process?: Function
+        process?: Function,
     ): Promise<TgMessage[]> {
         await this.getAllChats()
         let extractedMessages: TgMessage[] = []

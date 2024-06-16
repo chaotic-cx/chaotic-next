@@ -16,7 +16,7 @@ export class DeployLogComponent implements AfterViewInit {
     async ngAfterViewInit(): Promise<void> {
         this.latestDeployments = parseDeployments(
             await getDeployments(30, DeploymentType.SUCCESS),
-            DeploymentType.SUCCESS
+            DeploymentType.SUCCESS,
         )
     }
 
