@@ -14,12 +14,15 @@ export class ChaoticAttractorComponent {
     // Many thanks for adapting the original applet and letting us use it!
     // Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
     // Copyright (c) 2018 Juan Carlos Ponce Campuzano
-    url = CAUR_HOME_URL + "aizawa"
+    url = CAUR_HOME_URL + "aizawa/index.html"
     urlSafe: SafeResourceUrl
     displayInteractive = true
     isMobile = false
 
-    constructor(@Inject(PLATFORM_ID) platformId: object, public sanitizer: DomSanitizer) {
+    constructor(
+        @Inject(PLATFORM_ID) platformId: object,
+        public sanitizer: DomSanitizer,
+    ) {
         this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
         this.checkIfExists(platformId)
         this.isMobile = checkIfMobile()
@@ -29,7 +32,7 @@ export class ChaoticAttractorComponent {
      * Open the applet in a new tab.
      */
     openApplet(): void {
-        window.location.href = "https://aur.chaotic.cx/aizawa"
+        window.location.href = this.url;
     }
 
     /**

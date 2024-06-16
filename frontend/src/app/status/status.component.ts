@@ -29,7 +29,7 @@ export class StatusComponent {
     constructor() {
         this.axios = new Axios({
             baseURL: CAUR_API_URL,
-            timeout: 1000,
+            timeout: 5000,
         })
         this.lastUpdated = new Date().toLocaleString("en-GB", { timeZone: "UTC" })
         void this.updateAll()
@@ -70,7 +70,7 @@ export class StatusComponent {
                     for (const index in currentPackages) {
                         const pkgTime = new Date(Object.values(currentPackages[index])[0].timestamp).toLocaleString(
                             "en-GB",
-                            { timeZone: "UTC" }
+                            { timeZone: "UTC" },
                         )
                         this.currentPackages.push({
                             name: Object.keys(currentPackages[index])[0],
