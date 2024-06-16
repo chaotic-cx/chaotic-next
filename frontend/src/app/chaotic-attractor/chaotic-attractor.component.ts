@@ -1,5 +1,5 @@
 import { CAUR_HOME_URL, checkIfMobile } from "@./shared-lib"
-import { isPlatformBrowser, NgOptimizedImage } from "@angular/common"
+import { NgOptimizedImage, isPlatformBrowser } from "@angular/common"
 import { Component, Inject, PLATFORM_ID } from "@angular/core"
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
 
@@ -32,7 +32,7 @@ export class ChaoticAttractorComponent {
      * Open the applet in a new tab.
      */
     openApplet(): void {
-        window.location.href = this.url;
+        window.location.href = this.url
     }
 
     /**
