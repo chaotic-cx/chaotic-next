@@ -1,5 +1,5 @@
 import { CAUR_API_URL, CurrentQueue, StatsObject } from "@./shared-lib"
-import { Component } from "@angular/core"
+import { AfterViewInit, Component } from "@angular/core"
 import { Axios } from "axios"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
 
@@ -10,30 +10,34 @@ import { DeployLogComponent } from "../deploy-log/deploy-log.component"
     templateUrl: "./status.component.html",
     styleUrl: "./status.component.css",
 })
-export class StatusComponent {
-    axios: Axios
+export class StatusComponent implements AfterViewInit {
     currentQueue: CurrentQueue = []
     fullLength = 0
-    fullQueue: CurrentQueue = []
-    lastUpdated = "loading ... ☕️"
+    lastUpdated: string | undefined
+    loading = true
     showFullPackages = false
 
-    constructor() {
-        this.axios = new Axios({
-            baseURL: CAUR_API_URL,
-            timeout: 5000,
-        })
-        void this.updateAll()
+    ngAfterViewInit(): void {
+        void this.getQueueStats()
     }
 
     /*
      * Get the current queue stats from the Chaotic backend
      */
     async getQueueStats(): Promise<void> {
-        this.axios
+        this.loading = true
+        this.lastUpdated = undefined
+        const returnQueue: CurrentQueue = []
+
+        const axios = new Axios({
+            baseURL: CAUR_API_URL,
+            timeout: 10000,
+        })
+        axios
             .get("queue/stats")
             .then((response) => {
                 const currentQueue: StatsObject = JSON.parse(response.data)
+                console.log(currentQueue)
                 if (currentQueue.length > 0) {
                     for (const index in currentQueue) {
                         const nameWithoutRepo: string[] = []
@@ -42,39 +46,39 @@ export class StatusComponent {
                                 nameWithoutRepo.push(pkg.split("/")[1])
                             }
                         })
-                        this.fullQueue.push({
+                        returnQueue.push({
                             status: Object.keys(currentQueue[index])[0],
                             count: Object.values(currentQueue[index])[0].count,
                             packages: nameWithoutRepo,
                         })
                     }
                 }
+
+                // Calculate the full length of the queue
+                let length = 0
+                returnQueue.forEach((queue) => {
+                    length += queue.count
+                })
+                this.fullLength = length
+
+                // If the full list is too long, shorten it.
+                if (this.fullLength >= 50 && !this.showFullPackages) {
+                    returnQueue.forEach((queue) => {
+                        if (queue.packages.length > 50) {
+                            queue.packages.splice(50)
+                            queue.packages.push("...")
+                        }
+                    })
+                }
+
+                // Finally, update the component's state
+                this.lastUpdated = new Date().toLocaleString("en-GB", { timeZone: "UTC" })
+                this.currentQueue = returnQueue
+                this.loading = false
             })
             .catch((err) => {
                 console.error(err)
             })
-    }
-
-    /**
-     * Update all stats while ensuring the list of packages is not too huge.
-     */
-    async updateAll(): Promise<void> {
-        await this.getQueueStats()
-        this.lastUpdated = new Date().toLocaleString("en-GB", { timeZone: "UTC" })
-
-        // Create a non-referenced copy of the full list. This can likely be done better.
-        this.currentQueue = JSON.parse(JSON.stringify(this.fullQueue))
-        this.fullQueue.forEach((item) => (this.fullLength += item.count))
-
-        // If the full list is too long, shorten it.
-        if (this.fullLength !== undefined && this.fullLength >= 50) {
-            this.currentQueue.forEach((queue) => {
-                if (queue.packages.length > 50) {
-                    queue.packages.splice(49)
-                    queue.packages.push("...")
-                }
-            })
-        }
     }
 
     /**
@@ -87,13 +91,12 @@ export class StatusComponent {
     /**
      * Replace currentList with fullList. For people who want to display the full list.
      */
-    async showFullList(): Promise<void> {
-        // Create a non-referenced copy of the full list. This can likely be done better.
+    showFullList(): void {
         if (!this.showFullPackages) {
-            this.currentQueue = JSON.parse(JSON.stringify(this.fullQueue))
+            void this.getQueueStats()
             this.showFullPackages = true
         } else {
-            await this.updateAll()
+            void this.getQueueStats()
             this.showFullPackages = false
         }
     }

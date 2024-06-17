@@ -9,6 +9,7 @@
         "test:watch": "nx run-many --target=test --all --watch",
         "start": "nx run-many --target=serve --all",
         "build": "nx run-many --target=build --all",
+        "proxy": "lcp --proxyUrl https://builds.garudalinux.org",
         "start:backend": "nx run backend:serve",
         "start:home": "nx run frontend:serve"
     },
@@ -61,6 +62,7 @@
         "jest-environment-node": "^29.7.0",
         "jest-preset-angular": "~14.1.0",
         "lint-staged": "^15.2.7",
+        "local-cors-proxy": "^1.1.0",
         "ngx-highlightjs": "^12.0.0",
         "nx": "19.3.0",
         "prettier": "^3.3.2",
@@ -69,7 +71,7 @@
         "prettier-plugin-organize-imports": "^3.2.4",
         "prettier-plugin-tailwindcss": "^0.6.4",
         "tailwindcss": "^3.4.4",
-        "ts-jest": "^29.1.4",
+        "ts-jest": "^29.1.5",
         "ts-node": "10.9.1",
         "typescript": "~5.4.5",
         "webpack-cli": "^5.1.4"

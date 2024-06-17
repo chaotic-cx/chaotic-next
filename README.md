@@ -18,6 +18,24 @@ nx serve frontend
 nx serve backend
 ```
 
+## Running a local CORS enabled API proxy
+
+To run a local CORS enabled API proxy, change the following constants in the `types.ts` file of the shared libs to the
+following values:
+
+```typescript
+export const CAUR_BACKEND_URL = "http://localhost:8010/proxy/backend"
+export const CAUR_API_URL = "http://localhost:8010/proxy/api"`
+```
+
+and run the following command afterward:
+
+```bash
+pnpm proxy
+```
+
+This will allow using the production API without CORS issues.
+
 ## Integrate with editors
 
 Enhance your Nx experience by installing [Nx Console](https://nx.dev/nx-console) for your favorite editor. Nx Console
