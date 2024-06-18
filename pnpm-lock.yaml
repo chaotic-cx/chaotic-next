@@ -61,7 +61,7 @@ dependencies:
     version: 7.8.1
   tdl:
     specifier: ^8.0.0
-    version: 8.0.0
+    version: 8.0.1
   tslib:
     specifier: ^2.6.3
     version: 2.6.3
@@ -13621,8 +13621,8 @@ packages:
       yallist: 4.0.0
     dev: true
 
-  /tdl@8.0.0:
-    resolution: {integrity: sha512-Jah9OTlaEWpwffMbufDa+l/LK2EWE9FO/TxdFyXPra0z+TqXoaRVRAWlhjkPvCVaJb7PADUF6XnPMVxqHruMfw==}
+  /tdl@8.0.1:
+    resolution: {integrity: sha512-DzwZ96tXZfTC4YueQWXuJUJt4YLIMBSZY7JydxQpRU8X/My+tYY7t8OnG0zZBG468UroEhjTAlTk/y4hcFvkyQ==}
     engines: {node: '>=16.14.0'}
     requiresBuild: true
     dependencies:
