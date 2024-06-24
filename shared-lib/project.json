@@ -7,12 +7,17 @@
     "targets": {
         "build": {
             "executor": "@nx/js:tsc",
-            "outputs": ["{options.outputPath}"],
+            "outputs": [
+                "{options.outputPath}"
+            ],
             "options": {
                 "outputPath": "dist/shared-lib",
                 "main": "shared-lib/src/index.ts",
                 "tsConfig": "shared-lib/tsconfig.lib.json",
-                "assets": ["shared-lib/*.md"]
+                "assets": [
+                    "shared-lib/*.md"
+                ],
+                "generatePackageJson": true
             }
         }
     }
