@@ -5,6 +5,11 @@
     "projectType": "application",
     "tags": [],
     "targets": {
+        "build": {
+            "options": {
+                "generatePackageJson": true
+            }
+        },
         "serve": {
             "executor": "@nx/js:node",
             "defaultConfiguration": "development",
