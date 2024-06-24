@@ -105,6 +105,8 @@ export enum DeploymentType {
     ALL,
     SUCCESS,
     FAILED,
+    TIMEOUT,
+    CLEANUP
 }
 
 export interface CountNameObject {

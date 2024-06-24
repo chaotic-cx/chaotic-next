@@ -41,16 +41,15 @@ export class DeployLogFullComponent implements AfterViewInit {
                 )
                 break
         }
-        // Show if we requested too many deployments
-        if (this.latestDeployments.length < amount) {
-            this.requestedTooMany = true
-        } else {
-            this.requestedTooMany = false
-        }
 
+        // Show if we requested too many deployments
+        this.requestedTooMany = this.latestDeployments.length < amount;
         this.constructStrings()
     }
 
+    /**
+     * Check for whether input is a valid number.
+     */
     async getNewAmount(): Promise<void> {
         if (this.logAmount !== undefined) {
             // @ts-ignore
@@ -67,12 +66,22 @@ export class DeployLogFullComponent implements AfterViewInit {
      */
     constructStrings(): void {
         for (const index in this.latestDeployments) {
-            if (this.latestDeployments[index].type === DeploymentType.SUCCESS) {
-                this.latestDeployments[index].string = `Deployed`
-            } else if (this.latestDeployments[index].type === DeploymentType.FAILED) {
-                this.latestDeployments[index].string = `Failed deploying`
-            } else {
-                this.latestDeployments[index].string = `Unknown status of deployment`
+            switch (this.latestDeployments[index].type) {
+                case DeploymentType.SUCCESS:
+                    this.latestDeployments[index].string = `Deployed`
+                    break
+                case DeploymentType.FAILED:
+                    this.latestDeployments[index].string = `Failed deploying`
+                    break
+                case DeploymentType.TIMEOUT:
+                    this.latestDeployments[index].string = `Timed out during deployment of`
+                    break
+                case DeploymentType.CLEANUP:
+                    this.latestDeployments[index].string = `Cleanup job ran for`
+                    break
+                default:
+                    this.latestDeployments[index].string = `Unknown status for`
+                    break
             }
         }
     }

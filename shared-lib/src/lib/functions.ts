@@ -16,7 +16,7 @@ export function parseOutput(input: string): any[] {
         if (!isNaN(count)) {
             returningArray.push({
                 name: name ?? "Unknown",
-                count,
+                count
             })
         }
     }
@@ -50,10 +50,17 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
     const deploymentList: DeploymentList = []
 
     for (const message of messages) {
-        const pkg: string = String(message.content).split("> ")[1].split(" - logs")[0]
-        const date = timeAgo.format(parseInt(message.date) * 1000, "round")
+        let pkg: string;
         let repo: string
         let deploymentType: DeploymentType
+
+        if (String(message.content).includes("Cleanup")) {
+            pkg = ""
+        } else {
+            pkg = String(message.content).split("> ")[1].split(" - logs")[0]
+        }
+
+        const date = timeAgo.format(parseInt(message.date) * 1000, "round")
 
         if (
             (type === DeploymentType.SUCCESS || type === DeploymentType.ALL) &&
@@ -63,10 +70,22 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
             deploymentType = DeploymentType.SUCCESS
         } else if (
             (type === DeploymentType.FAILED || type === DeploymentType.ALL) &&
+            String(message.content).includes("timeout")
+        ) {
+            repo = String(message.content).split("Build for ")[1].split(" failed")[0]
+            deploymentType = DeploymentType.TIMEOUT
+        } else if (
+            (type === DeploymentType.FAILED || type === DeploymentType.ALL) &&
             String(message.content).includes("failed")
         ) {
             repo = String(message.content).split("Build for ")[1].split(" failed")[0]
             deploymentType = DeploymentType.FAILED
+        } else if (
+            (type === DeploymentType.CLEANUP || type === DeploymentType.ALL) &&
+            String(message.content).includes("Cleanup")
+        ) {
+            repo = String(message.content).split("Cleanup job for ")[1].split(" ")[0]
+            deploymentType = DeploymentType.CLEANUP
         } else {
             continue
         }
@@ -75,11 +94,8 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
             date: date,
             name: pkg,
             repo: repo,
-            type: deploymentType,
+            type: deploymentType
         })
-        // The case was required to work around .split being undefined
-
-        // Generate passed time in a human-readable format
     }
     return deploymentList
 }
@@ -91,7 +107,7 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
 export async function getDeployments(amount: number, type: DeploymentType): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
-        timeout: 1000,
+        timeout: 1000
     })
 
     let requestString
@@ -100,15 +116,17 @@ export async function getDeployments(amount: number, type: DeploymentType): Prom
             requestString = ""
             break
         case DeploymentType.FAILED:
-            requestString = "/failed"
+            requestString = "failed"
             break
         case DeploymentType.SUCCESS:
-            requestString = "/succeeded"
+            requestString = "succeeded"
             break
     }
 
+    console.log(amount, type)
+
     return axios
-        .get(`deployments${requestString}/${amount}`)
+        .get(`deployments/${requestString}${amount}`)
         .then((response) => {
             return JSON.parse(response.data)
         })
