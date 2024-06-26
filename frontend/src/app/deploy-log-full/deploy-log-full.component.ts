@@ -23,6 +23,7 @@ export class DeployLogFullComponent implements AfterViewInit {
     logAmount: number | undefined
     requestedTooMany = false
     currentType: DeploymentType = DeploymentType.ALL
+    firstLoad = true
     protected readonly headToFullDeployments = headToFullDeployments
 
     async ngAfterViewInit(): Promise<void> {
@@ -37,7 +38,7 @@ export class DeployLogFullComponent implements AfterViewInit {
     async updateLogAmount(amount: number) {
         const newDeployments = parseDeployments(await getDeployments(amount, this.currentType), this.currentType)
 
-        if (newDeployments[0].date !== this.latestDeployments[0].date) {
+        if (this.latestDeployments.length === 0 || newDeployments[0].name !== this.latestDeployments[0]?.name) {
             this.latestDeployments = newDeployments
 
             // Show if we requested too many deployments
@@ -46,11 +47,14 @@ export class DeployLogFullComponent implements AfterViewInit {
 
             // Show a notification for a short time
             const notification = document.getElementById("toast-deployment")
-            if (notification) {
+            if (notification && !this.firstLoad) {
                 notification.classList.remove("invisible")
                 setTimeout((): void => {
                     notification.classList.add("invisible")
                 }, 20000)
+            }
+            if (this.firstLoad) {
+                this.firstLoad = false
             }
         }
     }
