@@ -16,7 +16,7 @@ export function parseOutput(input: string): any[] {
         if (!isNaN(count)) {
             returningArray.push({
                 name: name ?? "Unknown",
-                count
+                count,
             })
         }
     }
@@ -50,9 +50,10 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
     const deploymentList: DeploymentList = []
 
     for (const message of messages) {
-        let pkg: string;
+        let pkg: string
         let repo: string
         let deploymentType: DeploymentType
+        const log = message.log
 
         if (String(message.content).includes("Cleanup")) {
             pkg = ""
@@ -94,7 +95,8 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
             date: date,
             name: pkg,
             repo: repo,
-            type: deploymentType
+            type: deploymentType,
+            log: log,
         })
     }
     return deploymentList
@@ -107,13 +109,13 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
 export async function getDeployments(amount: number, type: DeploymentType): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
-        timeout: 1000
+        timeout: 1000,
     })
 
     let requestString
     switch (type as DeploymentType) {
         case DeploymentType.ALL:
-            requestString = ""
+            requestString = "all"
             break
         case DeploymentType.FAILED:
             requestString = "failed"
@@ -126,9 +128,6 @@ export async function getDeployments(amount: number, type: DeploymentType): Prom
             break
         case DeploymentType.CLEANUP:
             requestString = "cleanup"
-            break
-        default:
-            requestString = ""
             break
     }
 

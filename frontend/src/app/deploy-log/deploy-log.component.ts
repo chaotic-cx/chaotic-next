@@ -24,7 +24,10 @@ export class DeployLogComponent implements AfterViewInit {
      * Check for new deployments and update the list.
      */
     async checkNewDeployments(): Promise<void> {
-        const newList = parseDeployments(await getDeployments(30, DeploymentType.SUCCESS), DeploymentType.SUCCESS)
+        const newList: DeploymentList = parseDeployments(
+            await getDeployments(30, DeploymentType.SUCCESS),
+            DeploymentType.SUCCESS,
+        )
         if (newList !== this.latestDeployments) {
             this.latestDeployments = newList
         }

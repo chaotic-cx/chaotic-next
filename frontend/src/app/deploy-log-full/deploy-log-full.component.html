@@ -8,33 +8,28 @@
             class="text-input mx-auto block w-full rounded-lg border border-red bg-surface0 p-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
             id="input-log-amount"
             name="logamount"
-            placeholder="Amount of logs to show..."
+            placeholder="Amount of logs to show... (default 50)"
             required
             type="search"
         />
 
-        <div class=" py-2.5 mt-2.5">
-            <ul class="items-center mx-auto max-w-2xl text-sm font-medium text-text border border-mauve bg-surface0 rounded-lg sm:flex">
+        <div class="py-2.5 mt-2.5">
+            <ul
+                class="items-center mx-auto max-w-2xl text-sm font-medium text-text border border-mauve bg-surface0 rounded-lg sm:flex"
+            >
                 <li class="w-full border-b border-mauve sm:border-b-0 sm:border-r">
                     <div class="flex items-center ps-3">
                         <input
                             (change)="changeDeploymentType($event)"
-                            class="w-4 h-4  border-mauve focus:ring-mauve text-text" id="horizontal-list-radio-all"
-                            name="list-radio" type="radio"
-                            value="0">
-                        <label class="w-full py-3 ms-2 text-sm font-medium text-text"
-                               for="horizontal-list-radio-all">All 🌍</label>
-                    </div>
-                </li>
-                <li class="w-full border-b border-mauve sm:border-b-0 sm:border-r">
-                    <div class="flex items-center ps-3">
-                        <input
-                            (change)="changeDeploymentType($event)"
-                            class="w-4 h-4  border-mauve focus:ring-mauve text-text"
-                            id="horizontal-list-radio-success" name="list-radio" type="radio"
-                            value="1">
-                        <label class="w-full py-3 ms-2 text-sm font-medium text-text"
-                               for="horizontal-list-radio-success">Success 📣</label>
+                            class="w-4 h-4 border-mauve focus:ring-mauve text-text"
+                            id="horizontal-list-radio-all"
+                            name="list-radio"
+                            type="radio"
+                            value="0"
+                        />
+                        <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-all"
+                            >All 🌍</label
+                        >
                     </div>
                 </li>
                 <li class="w-full border-b border-mauve sm:border-b-0 sm:border-r">
@@ -42,21 +37,48 @@
                         <input
                             (change)="changeDeploymentType($event)"
                             class="w-4 h-4 border-mauve focus:ring-mauve text-text"
-                            id="horizontal-list-radio-failed" name="list-radio" type="radio"
-                            value="2">
-                        <label class="w-full py-3 ms-2 text-sm font-medium text-text"
-                               for="horizontal-list-radio-failed">Failed 🚫</label>
+                            id="horizontal-list-radio-success"
+                            name="list-radio"
+                            type="radio"
+                            value="1"
+                        />
+                        <label
+                            class="w-full py-3 ms-2 text-sm font-medium text-text"
+                            for="horizontal-list-radio-success"
+                            >Success 📣</label
+                        >
+                    </div>
+                </li>
+                <li class="w-full border-b border-mauve sm:border-b-0 sm:border-r">
+                    <div class="flex items-center ps-3">
+                        <input
+                            (change)="changeDeploymentType($event)"
+                            class="w-4 h-4 border-mauve focus:ring-mauve text-text"
+                            id="horizontal-list-radio-failed"
+                            name="list-radio"
+                            type="radio"
+                            value="2"
+                        />
+                        <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-failed"
+                            >Failed 🚫</label
+                        >
                     </div>
                 </li>
                 <li class="w-full">
                     <div class="flex items-center ps-3">
                         <input
                             (change)="changeDeploymentType($event)"
-                            class="w-4 h-4  border-mauve focus:ring-mauve text-text"
-                            id="horizontal-list-radio-timeout" name="list-radio" type="radio"
-                            value="3">
-                        <label class="w-full py-3 ms-2 text-sm font-medium text-text"
-                               for="horizontal-list-radio-timeout">Timed out ⏳</label>
+                            class="w-4 h-4 border-mauve focus:ring-mauve text-text"
+                            id="horizontal-list-radio-timeout"
+                            name="list-radio"
+                            type="radio"
+                            value="3"
+                        />
+                        <label
+                            class="w-full py-3 ms-2 text-sm font-medium text-text"
+                            for="horizontal-list-radio-timeout"
+                            >Timed out ⏳</label
+                        >
                     </div>
                 </li>
             </ul>
@@ -71,7 +93,7 @@
         </button>
         @if (requestedTooMany) {
             <p class="pt-5 text-center text-red"
-            >You requested more logs than we currently have. Showing the max amount of
+                >You requested more logs than we currently have. Showing the max amount of
                 {{ latestDeployments.length }}.</p
             >
         }
@@ -84,12 +106,15 @@
                             class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex"
                         >
                             <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0"
-                            >{{ deployment.date }}
+                                >{{ deployment.date }}
                             </time>
                             <div class="lex text-sm font-normal text-text"
-                            >{{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> to
-                                <span class="font-semibold text-red">{{ deployment.repo }}</span></div
-                            >
+                                >{{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> to
+                                <span class="font-semibold text-red">{{ deployment.repo }}</span>
+                                @if (deployment.log) {
+                                    - <a class="text-yellow" href="{{ deployment.log }}">view log</a>
+                                }
+                            </div>
                         </div>
                     </li>
                 }
