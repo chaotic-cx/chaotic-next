@@ -12,7 +12,7 @@ export class TelegramController {
         return this.telegramService.getNews()
     }
 
-    @Get("deployments/:amount")
+    @Get("deployments/all/:amount")
     getTelegram(@Param() params: any): any {
         return this.telegramService.getDeployments(params.amount)
     }

@@ -7,7 +7,7 @@ import { FormsModule } from "@angular/forms"
     standalone: true,
     imports: [FormsModule],
     templateUrl: "./deploy-log-full.component.html",
-    styleUrl: "./deploy-log-full.component.css"
+    styleUrl: "./deploy-log-full.component.css",
 })
 export class DeployLogFullComponent implements AfterViewInit {
     latestDeployments: DeploymentList = []
@@ -20,10 +20,7 @@ export class DeployLogFullComponent implements AfterViewInit {
     }
 
     async updateLogAmount(amount: number) {
-        this.latestDeployments = parseDeployments(
-            await getDeployments(amount, this.currentType),
-            this.currentType
-        )
+        this.latestDeployments = parseDeployments(await getDeployments(amount, this.currentType), this.currentType)
 
         // Show if we requested too many deployments
         this.requestedTooMany = this.latestDeployments.length < amount
@@ -42,7 +39,7 @@ export class DeployLogFullComponent implements AfterViewInit {
                 alert("Please enter a valid number")
             }
         } else {
-            alert("Please enter a number")
+            await this.updateLogAmount(50)
         }
     }
 

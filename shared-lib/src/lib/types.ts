@@ -87,6 +87,7 @@ export interface TgMessage {
     view_count?: number
     link?: string
     id: number
+    log?: string
 }
 
 export type TgMessageList = TgMessage[]
@@ -97,6 +98,7 @@ export interface Deployment {
     repo: string
     type?: DeploymentType
     string?: string
+    log?: string
 }
 
 export type DeploymentList = Deployment[]
@@ -106,7 +108,7 @@ export enum DeploymentType {
     SUCCESS,
     FAILED,
     TIMEOUT,
-    CLEANUP
+    CLEANUP,
 }
 
 export interface CountNameObject {

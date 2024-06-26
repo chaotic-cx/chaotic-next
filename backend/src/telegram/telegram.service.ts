@@ -1,5 +1,5 @@
 import { CACHE_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, TgMessage, TgMessageList } from "@./shared-lib"
-import { Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
+import { CACHE_MANAGER, Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
 import * as tdl from "tdl"
@@ -21,7 +21,7 @@ export class TelegramService {
                 apiHash: TELEGRAM_API_HASH,
                 databaseEncryptionKey: TELEGRAM_DB_ENCRYPTION_KEY,
                 databaseDirectory: "./tdlib/db",
-                filesDirectory: "./tdlib/files"
+                filesDirectory: "./tdlib/files",
             })
             Logger.log("Telegram client started!", "TelegramService")
         } else {
@@ -121,7 +121,7 @@ export class TelegramService {
         id: string,
         desiredCount: number,
         // eslint-disable-next-line @typescript-eslint/ban-types
-        process?: Function
+        process?: Function,
     ): Promise<TgMessage[]> {
         await this.getAllChats()
         let extractedMessages: TgMessage[] = []
@@ -138,7 +138,7 @@ export class TelegramService {
             author: lastMessage.author_signature,
             view_count: lastMessage.interaction_info.view_count,
             link: await this.getMessageLink(lastMessage.chat_id, lastMessage.id),
-            id: lastMessage.id
+            id: lastMessage.id,
         })
         let from = lastMessage.id
 
@@ -146,7 +146,7 @@ export class TelegramService {
             const newMessages = await this.getChatHistory({ chat: id, from: from })
             for (const message of newMessages.messages) {
                 if (
-                    // Some messages seemingly don't have content, lets filter those out
+                    // Some messages seemingly don't have content, let's filter those out
                     Object.hasOwn(message, "content") &&
                     Object.hasOwn(message.content, "text")
                 ) {
@@ -156,7 +156,8 @@ export class TelegramService {
                         author: message.author_signature,
                         view_count: message.interaction_info.view_count,
                         link: await this.getMessageLink(message.chat_id, message.id),
-                        id: message.id
+                        id: message.id,
+                        log: this.getLogLink(message.content.text),
                     })
                 }
             }
@@ -182,7 +183,7 @@ export class TelegramService {
 
         // Ensure we don't return more messages than desired, which can happen if
         // we receive messages up to the default limit of 50 (tdlib dynamically
-        // seems to optimize the actually returned amount of messages)
+        // seems to optimize the actually returned number of messages)
         return extractedMessages.slice(0, desiredCount)
     }
 
@@ -194,7 +195,7 @@ export class TelegramService {
     private async getAllChats(): Promise<any> {
         return await this.tgClient.invoke({
             _: "getChats",
-            limit: 50
+            limit: 50,
         })
     }
 
@@ -209,9 +210,30 @@ export class TelegramService {
         const linkObject = await this.tgClient.invoke({
             _: "getMessageLink",
             chat_id: chat,
-            message_id: message
+            message_id: message,
         })
         return linkObject.link
+    }
+
+    /**
+     * Extract links to logfiles from a specific chat
+     * @param messageText The Telegram message object to parse
+     * @returns The log link as string or undefined
+     * @private
+     */
+    private getLogLink(messageText: any): string | undefined {
+        // The first one is usually bold, the second one is the link we need
+        // Likely very infancy code used to prevent an undefined crash.
+        if (
+            messageText.entities[1] !== undefined &&
+            messageText.entities[1].type !== undefined &&
+            messageText.entities[1].type.url !== undefined &&
+            messageText.entities[1].type.url.includes("https")
+        ) {
+            return messageText.entities[1].type.url
+        } else {
+            return undefined
+        }
     }
 
     /**
@@ -226,7 +248,7 @@ export class TelegramService {
             chat_id: params.chat,
             from_message_id: params.from ? params.from : undefined,
             limit: params.limit ? params.limit : 50,
-            offset: params.offset ? params.offset : undefined
+            offset: params.offset ? params.offset : undefined,
         })
     }
 
