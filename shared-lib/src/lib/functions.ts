@@ -69,7 +69,7 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
             repo = String(String(message.content).split("deployment to ")[1]).split(":")[0]
             deploymentType = DeploymentType.SUCCESS
         } else if (
-            (type === DeploymentType.FAILED || type === DeploymentType.ALL) &&
+            (type === DeploymentType.TIMEOUT || type === DeploymentType.ALL) &&
             String(message.content).includes("timeout")
         ) {
             repo = String(message.content).split("Build for ")[1].split(" failed")[0]
