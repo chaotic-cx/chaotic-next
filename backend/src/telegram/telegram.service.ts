@@ -20,8 +20,8 @@ export class TelegramService {
                 apiId: parseInt(TELEGRAM_API_ID),
                 apiHash: TELEGRAM_API_HASH,
                 databaseEncryptionKey: TELEGRAM_DB_ENCRYPTION_KEY,
-                databaseDirectory: "./backend/tdlib/db",
-                filesDirectory: "./backend/tdlib/files"
+                databaseDirectory: "./tdlib/db",
+                filesDirectory: "./tdlib/files"
             })
             Logger.log("Telegram client started!", "TelegramService")
         } else {
