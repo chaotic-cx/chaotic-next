@@ -88,5 +88,6 @@ export class DeployLogFullComponent implements AfterViewInit {
                 this.currentType = DeploymentType.TIMEOUT
                 break
         }
+        void this.getNewAmount()
     }
 }
