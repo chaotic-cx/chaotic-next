@@ -1,5 +1,5 @@
 import { CACHE_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, TgMessage, TgMessageList } from "@./shared-lib"
-import { CACHE_MANAGER, Cache } from "@nestjs/cache-manager"
+import { Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
 import * as tdl from "tdl"
@@ -21,7 +21,7 @@ export class TelegramService {
                 apiHash: TELEGRAM_API_HASH,
                 databaseEncryptionKey: TELEGRAM_DB_ENCRYPTION_KEY,
                 databaseDirectory: "./backend/tdlib/db",
-                filesDirectory: "./backend/tdlib/files",
+                filesDirectory: "./backend/tdlib/files"
             })
             Logger.log("Telegram client started!", "TelegramService")
         } else {
@@ -82,46 +82,32 @@ export class TelegramService {
      * Get the latest succeeded deployments from the CAUR Telegram channel
      * @param amount The amount of messages to retrieve
      */
-    async getSucceeded(amount: any) {
-        const cacheKey = `tgSucceededDeployments-${amount}`
-        let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
-        if (!data) {
-            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, parseInt(amount), (messages: TgMessageList) => {
-                const onlySucceeded: TgMessageList = []
-                for (const message of messages) {
-                    if (!String(message.content).startsWith("📣")) {
-                        continue
-                    }
-                    onlySucceeded.push(message)
-                }
-                return onlySucceeded
-            })
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
-        }
-        return data
+    async getSucceeded(amount: any): Promise<TgMessageList> {
+        return await this.getTgMessages("tgSucceededDeployments", amount, "📣")
     }
 
     /**
      * Get the latest failed deployments from the CAUR Telegram channel
      * @param amount The amount of messages to retrieve
      */
-    async getFailed(amount: any) {
-        const cacheKey = `tgFailedDeployments-${amount}`
-        let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
-        if (!data) {
-            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, parseInt(amount), (messages: TgMessageList) => {
-                const onlyFailed: TgMessageList = []
-                for (const message of messages) {
-                    if (!String(message.content).startsWith("🚫")) {
-                        continue
-                    }
-                    onlyFailed.push(message)
-                }
-                return onlyFailed
-            })
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
-        }
-        return data
+    async getFailed(amount: any): Promise<TgMessageList> {
+        return await this.getTgMessages("tgFailedDeployments", amount, "🚫")
+    }
+
+    /**
+     * Get the latest timed out builds from the CAUR Telegram channel
+     * @param amount The number of messages to retrieve
+     */
+    async getTimedOut(amount: any): Promise<TgMessageList> {
+        return await this.getTgMessages("tgTimedOutDeployments", amount, "⏳")
+    }
+
+    /**
+     * Get the latest cleanup jobs from the CAUR Telegram channel
+     * @param amount The number of messages to retrieve
+     */
+    async getCleanupJobs(amount: any): Promise<TgMessageList> {
+        return await this.getTgMessages("tgCleanupJobs", amount, "✅")
     }
 
     /**
@@ -135,7 +121,7 @@ export class TelegramService {
         id: string,
         desiredCount: number,
         // eslint-disable-next-line @typescript-eslint/ban-types
-        process?: Function,
+        process?: Function
     ): Promise<TgMessage[]> {
         await this.getAllChats()
         let extractedMessages: TgMessage[] = []
@@ -152,7 +138,7 @@ export class TelegramService {
             author: lastMessage.author_signature,
             view_count: lastMessage.interaction_info.view_count,
             link: await this.getMessageLink(lastMessage.chat_id, lastMessage.id),
-            id: lastMessage.id,
+            id: lastMessage.id
         })
         let from = lastMessage.id
 
@@ -170,7 +156,7 @@ export class TelegramService {
                         author: message.author_signature,
                         view_count: message.interaction_info.view_count,
                         link: await this.getMessageLink(message.chat_id, message.id),
-                        id: message.id,
+                        id: message.id
                     })
                 }
             }
@@ -205,10 +191,10 @@ export class TelegramService {
      * of a specific chat
      * @private
      */
-    private async getAllChats() {
+    private async getAllChats(): Promise<any> {
         return await this.tgClient.invoke({
             _: "getChats",
-            limit: 50,
+            limit: 50
         })
     }
 
@@ -223,7 +209,7 @@ export class TelegramService {
         const linkObject = await this.tgClient.invoke({
             _: "getMessageLink",
             chat_id: chat,
-            message_id: message,
+            message_id: message
         })
         return linkObject.link
     }
@@ -240,7 +226,26 @@ export class TelegramService {
             chat_id: params.chat,
             from_message_id: params.from ? params.from : undefined,
             limit: params.limit ? params.limit : 50,
-            offset: params.offset ? params.offset : undefined,
+            offset: params.offset ? params.offset : undefined
         })
+    }
+
+    private async getTgMessages(cacheKeyId: string, amount: string, startsWith: string): Promise<TgMessageList> {
+        const cacheKey = `${cacheKeyId}-${amount}`
+        let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
+        if (!data) {
+            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, parseInt(amount), (messages: TgMessageList) => {
+                const extractedMessages: TgMessageList = []
+                for (const message of messages) {
+                    if (!String(message.content).startsWith(startsWith)) {
+                        continue
+                    }
+                    extractedMessages.push(message)
+                }
+                return extractedMessages
+            })
+            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+        }
+        return data
     }
 }

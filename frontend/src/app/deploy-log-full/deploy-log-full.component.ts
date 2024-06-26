@@ -7,43 +7,26 @@ import { FormsModule } from "@angular/forms"
     standalone: true,
     imports: [FormsModule],
     templateUrl: "./deploy-log-full.component.html",
-    styleUrl: "./deploy-log-full.component.css",
+    styleUrl: "./deploy-log-full.component.css"
 })
 export class DeployLogFullComponent implements AfterViewInit {
     latestDeployments: DeploymentList = []
-    latestDeploymentStrings: string[] = []
     logAmount: number | undefined
     requestedTooMany = false
-    currentType = DeploymentType.ALL
+    currentType: DeploymentType = DeploymentType.ALL
 
     async ngAfterViewInit(): Promise<void> {
         void this.updateLogAmount(50)
     }
 
     async updateLogAmount(amount: number) {
-        switch (this.currentType) {
-            case DeploymentType.ALL:
-                this.latestDeployments = parseDeployments(
-                    await getDeployments(amount, this.currentType),
-                    this.currentType,
-                )
-                break
-            case DeploymentType.SUCCESS:
-                this.latestDeployments = parseDeployments(
-                    await getDeployments(amount, this.currentType),
-                    this.currentType,
-                )
-                break
-            case DeploymentType.FAILED:
-                this.latestDeployments = parseDeployments(
-                    await getDeployments(amount, this.currentType),
-                    this.currentType,
-                )
-                break
-        }
+        this.latestDeployments = parseDeployments(
+            await getDeployments(amount, this.currentType),
+            this.currentType
+        )
 
         // Show if we requested too many deployments
-        this.requestedTooMany = this.latestDeployments.length < amount;
+        this.requestedTooMany = this.latestDeployments.length < amount
         this.constructStrings()
     }
 
@@ -58,6 +41,8 @@ export class DeployLogFullComponent implements AfterViewInit {
             } else {
                 alert("Please enter a valid number")
             }
+        } else {
+            alert("Please enter a number")
         }
     }
 
@@ -83,6 +68,28 @@ export class DeployLogFullComponent implements AfterViewInit {
                     this.latestDeployments[index].string = `Unknown status for`
                     break
             }
+        }
+    }
+
+    /**
+     * Change the deployment type to query. Certainly not a very fancy way, but works for now.
+     * @param $event
+     */
+    changeDeploymentType($event: Event): void {
+        // @ts-ignore
+        switch ($event.target.value) {
+            case "0":
+                this.currentType = DeploymentType.ALL
+                break
+            case "1":
+                this.currentType = DeploymentType.SUCCESS
+                break
+            case "2":
+                this.currentType = DeploymentType.FAILED
+                break
+            case "3":
+                this.currentType = DeploymentType.TIMEOUT
+                break
         }
     }
 }

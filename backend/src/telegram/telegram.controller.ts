@@ -27,6 +27,16 @@ export class TelegramController {
         return this.telegramService.getFailed(params.amount)
     }
 
+    @Get("deployments/timeout/:amount")
+    getTimedOut(@Param() params: any): any {
+        return this.telegramService.getTimedOut(params.amount)
+    }
+
+    @Get("deployments/cleanup/:amount")
+    getCleanupJobs(@Param() params: any): any {
+        return this.telegramService.getCleanupJobs(params.amount)
+    }
+
     @Get("deauth")
     deAuth(): any {
         return this.telegramService.deAuth()

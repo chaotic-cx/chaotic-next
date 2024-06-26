@@ -111,7 +111,7 @@ export async function getDeployments(amount: number, type: DeploymentType): Prom
     })
 
     let requestString
-    switch (type) {
+    switch (type as DeploymentType) {
         case DeploymentType.ALL:
             requestString = ""
             break
@@ -121,12 +121,19 @@ export async function getDeployments(amount: number, type: DeploymentType): Prom
         case DeploymentType.SUCCESS:
             requestString = "succeeded"
             break
+        case DeploymentType.TIMEOUT:
+            requestString = "timeout"
+            break
+        case DeploymentType.CLEANUP:
+            requestString = "cleanup"
+            break
+        default:
+            requestString = ""
+            break
     }
 
-    console.log(amount, type)
-
     return axios
-        .get(`deployments/${requestString}${amount}`)
+        .get(`deployments/${requestString}/${amount}`)
         .then((response) => {
             return JSON.parse(response.data)
         })
