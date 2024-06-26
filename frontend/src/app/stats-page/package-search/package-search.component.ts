@@ -25,7 +25,7 @@ export class PackageSearchComponent {
     }
 
     updateDisplay(): void {
-        if (/^[0-9|a-zA-Z]*$/.test(this.searchPackage)) {
+        if (/^[0-9|a-zA-Z-]*$/.test(this.searchPackage)) {
             this.loading = true
             this.getSpecificPackageMetrics().then((result) => {
                 this.packageMetrics = result

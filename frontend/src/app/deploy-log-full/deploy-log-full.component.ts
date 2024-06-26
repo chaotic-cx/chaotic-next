@@ -1,11 +1,20 @@
-import { DeploymentList, DeploymentType, getDeployments, parseDeployments } from "@./shared-lib"
+import {
+    CACHE_TELEGRAM_TTL,
+    DeploymentList,
+    DeploymentType,
+    getDeployments,
+    headToFullDeployments,
+    parseDeployments,
+    startShortPolling,
+} from "@./shared-lib"
 import { AfterViewInit, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
+import { RouterLink } from "@angular/router"
 
 @Component({
     selector: "app-deploy-log-full",
     standalone: true,
-    imports: [FormsModule],
+    imports: [FormsModule, RouterLink],
     templateUrl: "./deploy-log-full.component.html",
     styleUrl: "./deploy-log-full.component.css",
 })
@@ -14,17 +23,36 @@ export class DeployLogFullComponent implements AfterViewInit {
     logAmount: number | undefined
     requestedTooMany = false
     currentType: DeploymentType = DeploymentType.ALL
+    protected readonly headToFullDeployments = headToFullDeployments
 
     async ngAfterViewInit(): Promise<void> {
         void this.updateLogAmount(50)
+
+        // Poll for new deployments every 30 seconds (which is the time the backend caches requests)
+        startShortPolling(CACHE_TELEGRAM_TTL, async () => {
+            await this.getNewAmount()
+        })
     }
 
     async updateLogAmount(amount: number) {
-        this.latestDeployments = parseDeployments(await getDeployments(amount, this.currentType), this.currentType)
+        const newDeployments = parseDeployments(await getDeployments(amount, this.currentType), this.currentType)
 
-        // Show if we requested too many deployments
-        this.requestedTooMany = this.latestDeployments.length < amount
-        this.constructStrings()
+        if (newDeployments[0].date !== this.latestDeployments[0].date) {
+            this.latestDeployments = newDeployments
+
+            // Show if we requested too many deployments
+            this.requestedTooMany = this.latestDeployments.length < amount
+            this.constructStrings()
+
+            // Show a notification for a short time
+            const notification = document.getElementById("toast-deployment")
+            if (notification) {
+                notification.classList.remove("invisible")
+                setTimeout((): void => {
+                    notification.classList.add("invisible")
+                }, 20000)
+            }
+        }
     }
 
     /**

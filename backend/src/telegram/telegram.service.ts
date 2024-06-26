@@ -1,4 +1,4 @@
-import { CACHE_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, TgMessage, TgMessageList } from "@./shared-lib"
+import { CACHE_TELEGRAM_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, TgMessage, TgMessageList } from "@./shared-lib"
 import { CACHE_MANAGER, Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
@@ -39,7 +39,7 @@ export class TelegramService {
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
         if (!data) {
             data = await this.extractMessages(CAUR_NEWS_ID, 30)
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+            await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL)
         }
         return data
     }
@@ -54,7 +54,7 @@ export class TelegramService {
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
         if (!data) {
             data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, parseInt(amount))
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+            await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL)
         }
         return data
     }
@@ -266,7 +266,7 @@ export class TelegramService {
                 }
                 return extractedMessages
             })
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+            await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL)
         }
         return data
     }

@@ -1,4 +1,4 @@
-import { CACHE_TTL, CAUR_METRICS_URL, parseOutput, SpecificPackageMetrics } from "@./shared-lib"
+import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, parseOutput, SpecificPackageMetrics } from "@./shared-lib"
 import { Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
 import { Inject, Injectable } from "@nestjs/common"
 import { Axios } from "axios"
@@ -31,7 +31,7 @@ export class MetricsService {
                     console.error(err)
                     return []
                 })
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+            await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL)
         }
         return data
     }
@@ -53,7 +53,7 @@ export class MetricsService {
                     console.error(err)
                     return []
                 })
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+            await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL)
         }
         return data
     }
@@ -82,7 +82,7 @@ export class MetricsService {
                     console.error(err)
                     return metrics
                 })
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+            await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL)
         }
         return data
     }
@@ -105,7 +105,7 @@ export class MetricsService {
                     console.error(err)
                     return []
                 })
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+            await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL)
         }
         return data
     }
@@ -129,7 +129,7 @@ export class MetricsService {
                     console.error(err)
                     return []
                 })
-            await this.cacheManager.set(cacheKey, data, CACHE_TTL)
+            await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL)
         }
         return data
     }

@@ -140,3 +140,21 @@ export async function getDeployments(amount: number, type: DeploymentType): Prom
             console.error(err)
         })
 }
+
+/**
+ * Poll for new deployments.
+ * @param interval
+ * @param func The function to call.
+ */
+export function startShortPolling(interval: any, func: () => void): void {
+    let initialInterval
+    interval = setInterval(func, interval)
+    clearInterval(initialInterval)
+}
+
+/**
+ * Redirect to the full deployment log.
+ */
+export function headToFullDeployments(): void {
+    window.location.href = "./deploy-log"
+}

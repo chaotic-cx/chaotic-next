@@ -1,4 +1,4 @@
-import { CAUR_TG_API_URL, TgMessageList, checkIfMobile } from "@./shared-lib"
+import { CAUR_TG_API_URL, checkIfMobile, TgMessageList } from "@./shared-lib"
 import { AfterViewInit, Component } from "@angular/core"
 import { Axios } from "axios"
 
