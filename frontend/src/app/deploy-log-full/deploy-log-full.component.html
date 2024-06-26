@@ -3,6 +3,7 @@
         <h1 class="text-center text-4xl font-extrabold text-maroon">Deployment log</h1>
         <p class="my-4 px-10 text-center text-lg text-text">Shows the last deployed packages.</p>
         <input
+            (focusout)="getNewAmount()"
             (keyup.enter)="getNewAmount()"
             [(ngModel)]="logAmount"
             class="text-input mx-auto block w-full rounded-lg border border-red bg-surface0 p-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
@@ -121,5 +122,14 @@
                 }
             </li>
         </ol>
+    </div>
+    <div
+        class="fixed invisible flex items-center w-full max-w-xs p-4 space-x-4 text-text bg-surface0 divide-x rtl:divide-x-reverse divide-red rounded-lg shadow bottom-5 left-5 space-x"
+        id="toast-deployment"
+        role="alert"
+    >
+        <div class="text-sm font-normal"
+            >New deployment event! <a (click)="headToFullDeployments()" class="text-mauve">Check out.</a></div
+        >
     </div>
 </div>

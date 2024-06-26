@@ -9,10 +9,11 @@ export const CAUR_PRIMARY_KEY = "3056513887B78AEB"
 export const CAUR_TG_API_URL = `${CAUR_BACKEND_URL}/telegram/`
 export const CAUR_DEPLOY_LOG_ID = "-1002151616973"
 export const CAUR_NEWS_ID = "-1001293714071"
-export const CACHE_TTL = 60 * 5 * 1000
+export const CACHE_ROUTER_TTL = 60 * 5 * 1000
 export const CAUR_METRICS_URL = "https://metrics.chaotic.cx/"
 export const CAUR_ALLOWED_CORS = ["https://aur.chaotic.cx", "https://caur-frontend-pages.dev"]
 export const CAUR_BACKEND_PORT = 3000
+export const CACHE_TELEGRAM_TTL = 30 * 1000
 
 export type StatsObject = Record<
     string,

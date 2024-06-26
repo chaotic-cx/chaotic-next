@@ -1,4 +1,4 @@
-import { CAUR_API_URL, CurrentQueue, StatsObject } from "@./shared-lib"
+import { CAUR_API_URL, CurrentQueue, headToFullDeployments, StatsObject } from "@./shared-lib"
 import { AfterViewInit, Component } from "@angular/core"
 import { Axios } from "axios"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
@@ -16,6 +16,7 @@ export class StatusComponent implements AfterViewInit {
     lastUpdated: string | undefined
     loading = true
     showFullPackages = false
+    protected readonly headToFullDeployments = headToFullDeployments
 
     ngAfterViewInit(): void {
         void this.getQueueStats()
@@ -79,13 +80,6 @@ export class StatusComponent implements AfterViewInit {
             .catch((err) => {
                 console.error(err)
             })
-    }
-
-    /**
-     * Redirect to the full deployment log.
-     */
-    headToFullDeployments(): void {
-        window.location.href = "./deploy-log"
     }
 
     /**
