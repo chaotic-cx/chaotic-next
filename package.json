@@ -10,7 +10,7 @@
         "test:watch": "nx run-many --target=test --all --watch",
         "start": "nx run-many --target=serve --all",
         "build": "nx run-many --target=build --all",
-        "proxy": "lcp --proxyUrl https://builds.garudalinux.org",
+        "proxy": "lcp --proxyUrl https://builds.garudalinux.org/backend",
         "start:backend": "nx run backend:serve",
         "start:home": "nx run frontend:serve"
     },
