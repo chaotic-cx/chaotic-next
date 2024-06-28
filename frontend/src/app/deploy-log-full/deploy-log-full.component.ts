@@ -3,9 +3,8 @@ import {
     DeploymentList,
     DeploymentType,
     getDeployments,
-    headToFullDeployments,
     parseDeployments,
-    startShortPolling,
+    startShortPolling
 } from "@./shared-lib"
 import { AfterViewInit, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
@@ -20,43 +19,34 @@ import { RouterLink } from "@angular/router"
 })
 export class DeployLogFullComponent implements AfterViewInit {
     latestDeployments: DeploymentList = []
+    shownDeployments: DeploymentList = []
     logAmount: number | undefined
     requestedTooMany = false
     currentType: DeploymentType = DeploymentType.ALL
-    firstLoad = true
-    protected readonly headToFullDeployments = headToFullDeployments
+    searchterm: string | undefined
+    isFiltered = false
 
     async ngAfterViewInit(): Promise<void> {
-        void this.updateLogAmount(50)
+        await this.updateLogAmount(50)
+        void this.showDeployments()
 
         // Poll for new deployments every 30 seconds (which is the time the backend caches requests)
         startShortPolling(CACHE_TELEGRAM_TTL, async () => {
-            await this.getNewAmount()
+            await this.updateLogAmount(this.logAmount ?? 100)
+            void this.showDeployments()
         })
     }
 
-    async updateLogAmount(amount: number) {
-        const newDeployments = parseDeployments(await getDeployments(amount, this.currentType), this.currentType)
+    /**
+     * Update the list/number of deployments to show.
+     * @param amount The number of deployments to request from the backend
+     */
+    async updateLogAmount(amount: number): Promise<void> {
+        this.latestDeployments = parseDeployments(await getDeployments(amount, this.currentType), this.currentType)
+        this.requestedTooMany = this.latestDeployments.length < amount
 
-        if (this.latestDeployments.length === 0 || newDeployments[0].name !== this.latestDeployments[0]?.name) {
-            this.latestDeployments = newDeployments
-
-            // Show if we requested too many deployments
-            this.requestedTooMany = this.latestDeployments.length < amount
-            this.constructStrings()
-
-            // Show a notification for a short time
-            const notification = document.getElementById("toast-deployment")
-            if (notification && !this.firstLoad) {
-                notification.classList.remove("invisible")
-                setTimeout((): void => {
-                    notification.classList.add("invisible")
-                }, 20000)
-            }
-            if (this.firstLoad) {
-                this.firstLoad = false
-            }
-        }
+        // Parse the strings for the UI and write them to the list
+        this.constructStrings()
     }
 
     /**
@@ -67,11 +57,13 @@ export class DeployLogFullComponent implements AfterViewInit {
             // @ts-ignore
             if (/^[0-9]*$/.test(this.logAmount)) {
                 await this.updateLogAmount(this.logAmount)
+                void this.showDeployments()
             } else {
                 alert("Please enter a valid number")
             }
         } else {
-            await this.updateLogAmount(50)
+            await this.updateLogAmount(100)
+            void this.showDeployments()
         }
     }
 
@@ -121,5 +113,28 @@ export class DeployLogFullComponent implements AfterViewInit {
                 break
         }
         void this.getNewAmount()
+    }
+
+    /**
+     * Show deployments based on the current search term (if any). Shows all deployments if no search term is present.
+     */
+    async showDeployments(): Promise<void> {
+        const toFilter: DeploymentList = this.latestDeployments
+
+        if (this.searchterm && this.searchterm !== "" && !this.isFiltered) {
+            this.shownDeployments = toFilter.filter((deployment) => {
+                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
+            })
+            this.isFiltered = true
+        } else if (this.searchterm && this.searchterm !== "" && this.isFiltered) {
+            // We are already filtering, so we need it to filter the full list again
+            this.shownDeployments = toFilter.filter((deployment) => {
+                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
+            })
+            this.isFiltered = false
+        } else {
+            // None of the previous cases applied, we need to show all logs
+            this.shownDeployments = toFilter
+        }
     }
 }
