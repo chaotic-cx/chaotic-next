@@ -1,18 +1,9 @@
 <div class="chaotic-container-regular">
     <div class="chaotic-container-regular">
         <h1 class="text-center text-4xl font-extrabold text-maroon">Deployment log</h1>
-        <p class="my-4 px-10 text-center text-lg text-text">Shows the last deployed packages.</p>
-        <input
-            (focusout)="getNewAmount()"
-            (keyup.enter)="getNewAmount()"
-            [(ngModel)]="logAmount"
-            class="text-input mx-auto block w-full rounded-lg border border-red bg-surface0 p-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
-            id="input-log-amount"
-            name="logamount"
-            placeholder="Amount of logs to show (default 50)"
-            required
-            type="search"
-        />
+        <p class="my-4 px-10 text-center text-lg text-text"
+            >Shows the last deployed packages and allows searching the entire history.</p
+        >
 
         <div class="py-2.5 mt-2.5">
             <ul
@@ -86,13 +77,31 @@
             </ul>
         </div>
 
-        <button
-            (click)="getNewAmount()"
-            class="hover:chaotic-grow-l ml-2.5 rounded-lg bg-maroon px-5 py-2.5 mt-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
-            type="button"
-        >
-            Show logs
-        </button>
+        <div class="container md:flex my-5 justify-center">
+            <input
+                (focusout)="getNewAmount()"
+                (keyup.enter)="getNewAmount()"
+                [(ngModel)]="logAmount"
+                class="text-input mx-auto my-1 md:mx-1 block w-full rounded-lg border border-red bg-surface0 py-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
+                id="input-log-amount"
+                name="logamount"
+                placeholder="Number of logs to show (default 100)"
+                required
+                type="search"
+            />
+            <input
+                (focusout)="showDeployments()"
+                (keyup.enter)="showDeployments()"
+                [(ngModel)]="searchterm"
+                class="text-input mx-auto md:mx-1 my-1 block w-full rounded-lg border border-red bg-surface0 py-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
+                id="input-search"
+                name="searchterm"
+                placeholder="Search for a package name"
+                required
+                type="search"
+            />
+        </div>
+
         @if (requestedTooMany) {
             <p class="pt-5 text-center text-red"
                 >You requested more logs than we currently have. Showing the max amount of
@@ -100,9 +109,9 @@
             >
         }
 
-        <ol class="relative pt-5">
+        <ol class="relative pt-2.5">
             <li class="mb-10">
-                @for (deployment of latestDeployments; track deployment) {
+                @for (deployment of shownDeployments; track deployment) {
                     <li>
                         <div
                             class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex"
@@ -122,12 +131,5 @@
                 }
             </li>
         </ol>
-    </div>
-    <div
-        class="fixed invisible flex items-center w-full max-w-xs p-4 space-x-4 text-text bg-surface0 divide-x rtl:divide-x-reverse divide-red rounded-lg shadow bottom-5 left-5 space-x"
-        id="toast-deployment"
-        role="alert"
-    >
-        <div class="text-sm font-normal">New deployment event!</div>
     </div>
 </div>
