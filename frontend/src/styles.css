@@ -26,6 +26,7 @@ body {
     font-style: normal;
     font-weight: 400;
     font-family: "Fira Sans", sans-serif;
+    @apply text-sm selection:bg-mauve selection:text-base;
 }
 code,
 pre,
@@ -36,7 +37,7 @@ samp {
     font-weight: 400;
     font-family: "JetBrains Mono", monospace;
     font-optical-sizing: auto;
-    @apply text-sm;
+    @apply text-sm selection:bg-mauve selection:text-base;
 }
 
 li {
