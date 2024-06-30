@@ -12,6 +12,7 @@ export const CAUR_HOME_URL = "https://aur.chaotic.cx/"
 export const CAUR_MAP_URL = "https://status.chaotic.cx/map"
 export const CAUR_METRICS_URL = "https://metrics.chaotic.cx/"
 export const CAUR_NEWS_ID = "-1001293714071"
+export const CAUR_PKG_LIST_URL = "https://builds.garudalinux.org/chaotic-v4/pkgs.files.txt"
 export const CAUR_PRIMARY_KEY = "3056513887B78AEB"
 export const CAUR_TG_API_URL = `${CAUR_BACKEND_URL}/telegram/`
 
@@ -121,3 +122,12 @@ export interface UserAgentMetric {
     name: string
     count: number
 }
+
+export interface PkgListRetObject {
+    pkglist: string
+}
+export interface PkgListEntry {
+    name: string
+    fullString: string
+}
+export type PkgList = PkgListEntry[]

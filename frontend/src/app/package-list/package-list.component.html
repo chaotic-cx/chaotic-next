@@ -1,0 +1,30 @@
+<div class="chaotic-container-regular">
+    <div class="chaotic-container-regular">
+        <h1 class="text-center text-4xl font-extrabold text-maroon">Package List</h1>
+        <p class="my-4 px-10 text-center text-lg text-text">
+            This package shows all packages currently deployed in Chaotic-AUR and their corresponding package names.
+        </p>
+        <p class="my-4 px-10 text-center text-lg text-text">
+            Total packages: <a class="text-red">{{ packageList.length }}</a>
+        </p>
+
+        <ol class="relative pt-2.5">
+            <li class="mb-10">
+                @for (deployment of packageList; track deployment) {
+                    <li>
+                        <div
+                            class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex"
+                        >
+                            <div class="lex text-sm font-bold text-maroon">
+                                <a>{{ deployment.name }}</a>
+                            </div>
+                            <a class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0">
+                                {{ deployment.fullString }}
+                            </a>
+                        </div>
+                    </li>
+                }
+            </li>
+        </ol>
+    </div>
+</div>

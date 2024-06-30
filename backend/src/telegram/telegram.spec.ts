@@ -1,6 +1,6 @@
 import { TelegramModule } from "./telegram.module"
 
-describe("Metrics", () => {
+describe("Telegram", () => {
     it("should be defined", () => {
         expect(new TelegramModule()).toBeDefined()
     })

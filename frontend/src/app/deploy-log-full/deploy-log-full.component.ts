@@ -4,7 +4,7 @@ import {
     DeploymentType,
     getDeployments,
     parseDeployments,
-    startShortPolling
+    startShortPolling,
 } from "@./shared-lib"
 import { AfterViewInit, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
