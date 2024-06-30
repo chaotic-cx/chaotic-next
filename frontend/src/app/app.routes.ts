@@ -6,6 +6,7 @@ import { DocsComponent } from "./docs/docs.component"
 import { HomeComponent } from "./home/home.component"
 import { MemorialComponent } from "./memorial/memorial.component"
 import { NotFoundComponent } from "./not-found/not-found.component"
+import { PackageListComponent } from "./package-list/package-list.component"
 import { StatsPage } from "./stats-page/stats-page"
 import { StatusComponent } from "./status/status.component"
 
@@ -44,6 +45,11 @@ export const routes: Routes = [
         title: "Package Stats",
         path: "stats",
         component: StatsPage,
+    },
+    {
+        title: "Package List",
+        path: "package-list",
+        component: PackageListComponent,
     },
     {
         title: "Not Found",
