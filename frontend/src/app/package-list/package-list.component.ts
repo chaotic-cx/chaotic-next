@@ -2,20 +2,23 @@ import { CAUR_BACKEND_URL, PkgList } from "@./shared-lib"
 import { CommonModule } from "@angular/common"
 import { HttpClient } from "@angular/common/http"
 import { Component } from "@angular/core"
-import { ReactiveFormsModule } from "@angular/forms"
+import { FormsModule, ReactiveFormsModule } from "@angular/forms"
 
 @Component({
     selector: "app-package-list",
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [CommonModule, ReactiveFormsModule, FormsModule],
     templateUrl: "./package-list.component.html",
-    styleUrl: "./package-list.component.css",
+    styleUrl: "./package-list.component.css"
 })
 export class PackageListComponent {
     packageList: any[] = []
+    loading = true
+    searchTerm: string | undefined
+    searchResults: any[] = []
 
     constructor(private httpClient: HttpClient) {
-        this.getPkgList()
+        void this.getPkgList()
     }
 
     /**
@@ -38,17 +41,24 @@ export class PackageListComponent {
 
             pkgArray.push({
                 name: pkgname,
-                fullString: pkg,
+                fullString: pkg
             })
         })
 
         return pkgArray
     }
 
-    getPkgList = (): void => {
+    async getPkgList(): Promise<void> {
         this.httpClient.get(`${CAUR_BACKEND_URL}/misc/pkglist`).subscribe((res): void => {
             // @ts-ignore
             this.packageList = this.parsePkgList(res.pkglist)
+            this.loading = false
         })
+    }
+
+    async searchPackage(): Promise<void> {
+        this.loading = true
+        this.searchResults = this.packageList.filter((pkg) => pkg.name.includes(this.searchTerm))
+        this.loading = false
     }
 }
