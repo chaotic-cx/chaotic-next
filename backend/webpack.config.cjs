@@ -14,6 +14,7 @@ module.exports = {
             assets: [],
             optimization: false,
             outputHashing: "none",
+            generatePackageJson: true,
         }),
     ],
 }
