@@ -1,15 +1,15 @@
 import { CAUR_API_URL, CurrentQueue, StatsObject } from "@./shared-lib"
 import { AfterViewInit, Component } from "@angular/core"
+import { Router } from "@angular/router"
 import { Axios } from "axios"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
-import { Router } from "@angular/router"
 
 @Component({
     selector: "app-status",
     standalone: true,
     imports: [DeployLogComponent],
     templateUrl: "./status.component.html",
-    styleUrl: "./status.component.css"
+    styleUrl: "./status.component.css",
 })
 export class StatusComponent implements AfterViewInit {
     currentQueue: CurrentQueue = []
@@ -18,8 +18,7 @@ export class StatusComponent implements AfterViewInit {
     loading = true
     showFullPackages = false
 
-    constructor(private router: Router) {
-    }
+    constructor(private router: Router) {}
 
     ngAfterViewInit(): void {
         void this.getQueueStats()
@@ -35,7 +34,7 @@ export class StatusComponent implements AfterViewInit {
 
         const axios = new Axios({
             baseURL: CAUR_API_URL,
-            timeout: 10000
+            timeout: 10000,
         })
         axios
             .get("queue/stats")
@@ -53,7 +52,7 @@ export class StatusComponent implements AfterViewInit {
                         returnQueue.push({
                             status: Object.keys(currentQueue[index])[0],
                             count: Object.values(currentQueue[index])[0].count,
-                            packages: nameWithoutRepo
+                            packages: nameWithoutRepo,
                         })
                     }
                 }

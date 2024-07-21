@@ -1,5 +1,5 @@
 <div class="chaotic-container-regular0">
-    <div class="container md:max-w-sm" [style.width.%]="70">
+    <div [style.width.%]="70" class="container md:max-w-sm">
         <app-chaotic-attractor></app-chaotic-attractor>
     </div>
 
@@ -20,16 +20,16 @@
         </p>
         <div class="flex justify-center">
             <a
-                class="mr-3 inline-flex items-center justify-center rounded-lg bg-maroon px-5 py-3 text-center text-base font-medium transition ease-in-out hover:scale-125 hover:bg-mauve"
                 ariaCurrentWhenActive="page"
+                class="mr-3 inline-flex items-center justify-center rounded-lg bg-maroon px-5 py-3 text-center text-base font-medium transition ease-in-out hover:scale-125 hover:bg-mauve"
                 routerLink="docs"
                 routerLinkActive="active"
             >
                 Start using now
             </a>
             <a
-                class="ml-3 inline-flex rounded-lg bg-maroon px-5 py-3 text-center text-base font-medium transition ease-in-out hover:scale-125 hover:bg-mauve"
                 (click)="toggleTheme()"
+                class="ml-3 inline-flex rounded-lg bg-maroon px-5 py-3 text-center text-base font-medium transition ease-in-out hover:scale-125 hover:bg-mauve"
             >
                 Toggle theme
             </a>
