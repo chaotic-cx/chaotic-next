@@ -1,4 +1,4 @@
-import { CAUR_CACHED_METRICS_URL } from "@./shared-lib"
+import { CAUR_CACHED_METRICS_URL, loadTheme } from "@./shared-lib"
 import { isPlatformBrowser, NgOptimizedImage } from "@angular/common"
 import { HttpClient } from "@angular/common/http"
 import {
@@ -9,7 +9,7 @@ import {
     OnInit,
     PLATFORM_ID,
     Renderer2,
-    ViewEncapsulation,
+    ViewEncapsulation
 } from "@angular/core"
 import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router"
 import { initFlowbite } from "flowbite"
@@ -24,7 +24,7 @@ import { StatusComponent } from "./status/status.component"
     imports: [RouterOutlet, StatusComponent, RouterLink, RouterLinkActive, NgOptimizedImage, Highlight],
     templateUrl: "./app.component.html",
     styleUrl: "./app.component.css",
-    encapsulation: ViewEncapsulation.None,
+    encapsulation: ViewEncapsulation.None
 })
 export class AppComponent implements OnInit, AfterViewInit {
     title = "aur.chaotic.cx"
@@ -33,11 +33,16 @@ export class AppComponent implements OnInit, AfterViewInit {
         @Inject(PLATFORM_ID) private platformId: object,
         private el: ElementRef,
         private httpClient: HttpClient,
-        private renderer: Renderer2,
-    ) {}
+        private renderer: Renderer2
+    ) {
+    }
 
     ngOnInit(): void {
-        this.renderer.setStyle(this.el.nativeElement.ownerDocument.body, "backgroundColor", "#1e1e2e")
+        const theme = localStorage.getItem("theme")
+        if (theme) {
+            loadTheme(theme, this.renderer, this.el)
+        }
+
         TimeAgo.addDefaultLocale(en)
 
         if (isPlatformBrowser(this.platformId)) {
@@ -53,7 +58,7 @@ export class AppComponent implements OnInit, AfterViewInit {
             "30d/packages",
             "30d/rank/30/packages",
             "30d/rank/30/countries",
-            "30d/user-agents",
+            "30d/user-agents"
         ]
         routesToPreCache.forEach((route) => {
             this.httpClient.get(CAUR_CACHED_METRICS_URL + route)

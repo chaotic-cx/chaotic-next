@@ -1,6 +1,8 @@
 import { Axios } from "axios"
 import TimeAgo from "javascript-time-ago"
 import { CAUR_TG_API_URL, CountNameObject, DeploymentList, DeploymentType, TgMessageList, UserAgentList } from "./types"
+import { CatppuccinFlavor, flavors } from "@catppuccin/palette"
+import { ElementRef, Renderer2 } from "@angular/core"
 
 /**
  * Parse the output of the non-single line metrics.
@@ -16,7 +18,7 @@ export function parseOutput(input: string): any[] {
         if (!isNaN(count)) {
             returningArray.push({
                 name: name ?? "Unknown",
-                count,
+                count
             })
         }
     }
@@ -96,7 +98,7 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
             name: pkg,
             repo: repo,
             type: deploymentType,
-            log: log,
+            log: log
         })
     }
     return deploymentList
@@ -109,7 +111,7 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
 export async function getDeployments(amount: number, type: DeploymentType): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
-        timeout: 1000,
+        timeout: 1000
     })
 
     let requestString
@@ -153,8 +155,28 @@ export function startShortPolling(interval: any, func: () => void): void {
 }
 
 /**
- * Redirect to the full deployment log.
+ * Loads the selected theme.
+ * @param theme The theme to load (one of CatppuccinFlavor).
+ * @param renderer The renderer to use.
+ * @param el The element to apply the theme to.
  */
-export function headToFullDeployments(): void {
-    window.location.href = "./deploy-log"
+export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
+    const appCtp = document.getElementById("app-ctp")
+    if (appCtp === null) return
+    if (appCtp.classList.contains(theme)) {
+        return theme
+    }
+
+    appCtp.classList.remove("mocha", "latte", "frappe", "macchiato")
+    appCtp.classList.add(theme)
+
+    const flavor = theme as unknown as CatppuccinFlavor
+    // @ts-expect-error - this is always valid color
+    const flavorColor = flavors[flavor].colors.base.hex
+    renderer.setStyle(
+        el.nativeElement.ownerDocument.body,
+        "backgroundColor",
+        flavorColor
+    )
+    return theme
 }
