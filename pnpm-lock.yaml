@@ -55,7 +55,7 @@ importers:
         version: 5.7.3
       prebuilt-tdlib:
         specifier: ^0.1008033.0
-        version: 0.1008033.0
+        version: 0.1008033.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -2101,22 +2101,22 @@ packages:
   '@popperjs/core@2.11.8':
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
 
-  '@prebuilt-tdlib/darwin@0.1008033.0':
-    resolution: {integrity: sha512-py7lTyK3uz2XrSEGPNhAQp2pstA66t+SzgR9y9gFN8phEi9nxdVKGk8sdWWOktTaMcNCWv769bFTKdqJVj3jnw==}
+  '@prebuilt-tdlib/darwin@0.1008033.1':
+    resolution: {integrity: sha512-Bg/9KO7qYivshKYS8Hdo1aZdbcfCSVnxypwXDS9z4aRUNRN4zm5QpV5WBEv3pdqEZ9pleir3kR3KVVoSVFzVNg==}
     os: [darwin]
 
-  '@prebuilt-tdlib/linux-arm64-glibc@0.1008033.0':
-    resolution: {integrity: sha512-zviGmIFRooZ60F/rCMXOZiDTP6f3aCHgfXah4JU+0naBeeapORMIVXjikad8rJ9IWPB1RLGJ3hfP7VjHKF9zWA==}
+  '@prebuilt-tdlib/linux-arm64-glibc@0.1008033.1':
+    resolution: {integrity: sha512-vgf5RRQ2hYNEY2i2+Jdtpk7KSCrkFBPFBF7qfflmDFyn6jUhSmR3AKJsObRCrK2+WFqhcOlfqmqs7rgDS0xFcw==}
     cpu: [arm64]
     os: [linux]
 
-  '@prebuilt-tdlib/linux-x64-glibc@0.1008033.0':
-    resolution: {integrity: sha512-bI/SvF93ENQyizEjO/jNMH95JDPAst3QNPTBbDcymu8bExMmujJNUAU7AkFL43e76iYN3trbnzljwlRSsM95QA==}
+  '@prebuilt-tdlib/linux-x64-glibc@0.1008033.1':
+    resolution: {integrity: sha512-uqPY91G5eYq/NwSX8RWrAjwchreQHySUGOK88BVfNWH7pXBe53U3d8rfTcnhAElD/YTI1PoADxh2Lr1JSgMaWw==}
     cpu: [x64]
     os: [linux]
 
-  '@prebuilt-tdlib/win32-x64@0.1008033.0':
-    resolution: {integrity: sha512-VxPbTixVzRaP2HQUFlRi8XBBITr3/QdXEM8IHEpo7NRRV5a2IgDQzIRkw95//Zom5Lu/3fzWkVHxg1K2GnlBGw==}
+  '@prebuilt-tdlib/win32-x64@0.1008033.1':
+    resolution: {integrity: sha512-VI2RoOgHZZnb/ZZTs6WIJ7isXmUZ7DH9Q0UykRUg9UOabRCKaUQduudQe/WhpyWe/K0z4pEJDEvjSptTaTrVWw==}
     cpu: [x64]
     os: [win32]
 
@@ -6022,8 +6022,8 @@ packages:
     resolution: {integrity: sha512-0vzE+lAiG7hZl1/9I8yzKLx3aR9Xbof3fBHKunvMfOCYAtMhrsnccJY2iTURb9EZd5+pLuiNV9/c/GZJOHsgIw==}
     engines: {node: ^10 || ^12 || >=14}
 
-  prebuilt-tdlib@0.1008033.0:
-    resolution: {integrity: sha512-AF2C7206q7SHeSmRJWx4q3MNM7baA7FsZkWavR4lE6lR/NKV6eN+sM2Y+zUS6JEm7M/ushrbmKPTJOfMIdMTCQ==}
+  prebuilt-tdlib@0.1008033.1:
+    resolution: {integrity: sha512-ztFHpPO52OduA1SIAWewg3pa9nqqKs5hE8N3yTVAYHUeYNl3zeRwNuLAerXv2MojgksCNq+nZz7Yl4LXBWKd+g==}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -10813,16 +10813,16 @@ snapshots:
 
   '@popperjs/core@2.11.8': {}
 
-  '@prebuilt-tdlib/darwin@0.1008033.0':
+  '@prebuilt-tdlib/darwin@0.1008033.1':
     optional: true
 
-  '@prebuilt-tdlib/linux-arm64-glibc@0.1008033.0':
+  '@prebuilt-tdlib/linux-arm64-glibc@0.1008033.1':
     optional: true
 
-  '@prebuilt-tdlib/linux-x64-glibc@0.1008033.0':
+  '@prebuilt-tdlib/linux-x64-glibc@0.1008033.1':
     optional: true
 
-  '@prebuilt-tdlib/win32-x64@0.1008033.0':
+  '@prebuilt-tdlib/win32-x64@0.1008033.1':
     optional: true
 
   '@rollup/plugin-node-resolve@15.2.3(rollup@4.19.0)':
@@ -15226,12 +15226,12 @@ snapshots:
       picocolors: 1.0.1
       source-map-js: 1.2.0
 
-  prebuilt-tdlib@0.1008033.0:
+  prebuilt-tdlib@0.1008033.1:
     optionalDependencies:
-      '@prebuilt-tdlib/darwin': 0.1008033.0
-      '@prebuilt-tdlib/linux-arm64-glibc': 0.1008033.0
-      '@prebuilt-tdlib/linux-x64-glibc': 0.1008033.0
-      '@prebuilt-tdlib/win32-x64': 0.1008033.0
+      '@prebuilt-tdlib/darwin': 0.1008033.1
+      '@prebuilt-tdlib/linux-arm64-glibc': 0.1008033.1
+      '@prebuilt-tdlib/linux-x64-glibc': 0.1008033.1
+      '@prebuilt-tdlib/win32-x64': 0.1008033.1
 
   prelude-ls@1.2.1: {}
 
