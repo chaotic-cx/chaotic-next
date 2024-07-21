@@ -15,9 +15,7 @@
 
     .text-input {
         @apply autofill-text;
-        /* set text colour (white) */
         @apply autofill:shadow-[inset_0_0_0px_1000px_var(--ctp-mocha-surface0)];
-        /* set 'background' colour (black)*/
     }
 }
 

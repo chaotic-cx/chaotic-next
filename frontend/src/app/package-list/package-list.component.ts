@@ -9,7 +9,7 @@ import { FormsModule, ReactiveFormsModule } from "@angular/forms"
     standalone: true,
     imports: [CommonModule, ReactiveFormsModule, FormsModule],
     templateUrl: "./package-list.component.html",
-    styleUrl: "./package-list.component.css"
+    styleUrl: "./package-list.component.css",
 })
 export class PackageListComponent {
     packageList: any[] = []
@@ -41,7 +41,7 @@ export class PackageListComponent {
 
             pkgArray.push({
                 name: pkgname,
-                fullString: pkg
+                fullString: pkg,
             })
         })
 

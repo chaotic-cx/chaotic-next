@@ -1,10 +1,10 @@
+import { loadTheme } from "@./shared-lib"
 import { NgOptimizedImage } from "@angular/common"
 import { AfterViewInit, Component, ElementRef, Renderer2 } from "@angular/core"
 import { RouterLink, RouterLinkActive } from "@angular/router"
 import { ChaoticAttractorComponent } from "../chaotic-attractor/chaotic-attractor.component"
 import { MirrorMapComponent } from "../mirror-map/mirror-map.component"
 import { NewsChannelComponent } from "../news-channel/news-channel.component"
-import { loadTheme } from "@./shared-lib"
 
 @Component({
     selector: "app-home",
@@ -15,19 +15,18 @@ import { loadTheme } from "@./shared-lib"
         RouterLinkActive,
         ChaoticAttractorComponent,
         MirrorMapComponent,
-        NewsChannelComponent
+        NewsChannelComponent,
     ],
     templateUrl: "./home.component.html",
-    styleUrl: "./home.component.css"
+    styleUrl: "./home.component.css",
 })
 export class HomeComponent implements AfterViewInit {
     currentTheme: undefined | string = "mocha"
 
     constructor(
         private el: ElementRef,
-        private renderer: Renderer2
-    ) {
-    }
+        private renderer: Renderer2,
+    ) {}
 
     ngAfterViewInit(): void {
         const savedTheme = localStorage.getItem("theme")
