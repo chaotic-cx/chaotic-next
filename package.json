@@ -93,7 +93,7 @@
         "@nestjs/platform-express": "^10.3.10",
         "axios": "^1.7.2",
         "cache-manager": "^5.7.3",
-        "prebuilt-tdlib": "^0.1008030.0",
+        "prebuilt-tdlib": "^0.1008033.0",
         "reflect-metadata": "^0.2.2",
         "rxjs": "~7.8.1",
         "tdl": "^8.0.1",
