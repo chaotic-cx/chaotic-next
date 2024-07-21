@@ -1,14 +1,15 @@
-import { CAUR_API_URL, CurrentQueue, headToFullDeployments, StatsObject } from "@./shared-lib"
+import { CAUR_API_URL, CurrentQueue, StatsObject } from "@./shared-lib"
 import { AfterViewInit, Component } from "@angular/core"
 import { Axios } from "axios"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
+import { Router } from "@angular/router"
 
 @Component({
     selector: "app-status",
     standalone: true,
     imports: [DeployLogComponent],
     templateUrl: "./status.component.html",
-    styleUrl: "./status.component.css",
+    styleUrl: "./status.component.css"
 })
 export class StatusComponent implements AfterViewInit {
     currentQueue: CurrentQueue = []
@@ -16,7 +17,9 @@ export class StatusComponent implements AfterViewInit {
     lastUpdated: string | undefined
     loading = true
     showFullPackages = false
-    protected readonly headToFullDeployments = headToFullDeployments
+
+    constructor(private router: Router) {
+    }
 
     ngAfterViewInit(): void {
         void this.getQueueStats()
@@ -32,7 +35,7 @@ export class StatusComponent implements AfterViewInit {
 
         const axios = new Axios({
             baseURL: CAUR_API_URL,
-            timeout: 10000,
+            timeout: 10000
         })
         axios
             .get("queue/stats")
@@ -50,7 +53,7 @@ export class StatusComponent implements AfterViewInit {
                         returnQueue.push({
                             status: Object.keys(currentQueue[index])[0],
                             count: Object.values(currentQueue[index])[0].count,
-                            packages: nameWithoutRepo,
+                            packages: nameWithoutRepo
                         })
                     }
                 }
@@ -93,5 +96,12 @@ export class StatusComponent implements AfterViewInit {
             void this.getQueueStats()
             this.showFullPackages = false
         }
+    }
+
+    /**
+     * Redirect to the full deployments page using the Angular router.
+     */
+    headToFullDeployments() {
+        void this.router.navigate([`/deploy-log`])
     }
 }

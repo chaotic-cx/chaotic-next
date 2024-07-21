@@ -1,10 +1,10 @@
 import { NgOptimizedImage } from "@angular/common"
-import { Component, ElementRef, Renderer2 } from "@angular/core"
+import { AfterViewInit, Component, ElementRef, Renderer2 } from "@angular/core"
 import { RouterLink, RouterLinkActive } from "@angular/router"
-import { flavors } from "@catppuccin/palette"
 import { ChaoticAttractorComponent } from "../chaotic-attractor/chaotic-attractor.component"
 import { MirrorMapComponent } from "../mirror-map/mirror-map.component"
 import { NewsChannelComponent } from "../news-channel/news-channel.component"
+import { loadTheme } from "@./shared-lib"
 
 @Component({
     selector: "app-home",
@@ -15,64 +15,54 @@ import { NewsChannelComponent } from "../news-channel/news-channel.component"
         RouterLinkActive,
         ChaoticAttractorComponent,
         MirrorMapComponent,
-        NewsChannelComponent,
+        NewsChannelComponent
     ],
     templateUrl: "./home.component.html",
-    styleUrl: "./home.component.css",
+    styleUrl: "./home.component.css"
 })
-export class HomeComponent {
-    currentTheme = "mocha"
+export class HomeComponent implements AfterViewInit {
+    currentTheme: undefined | string = "mocha"
 
     constructor(
         private el: ElementRef,
-        private renderer: Renderer2,
-    ) {}
+        private renderer: Renderer2
+    ) {
+    }
+
+    ngAfterViewInit(): void {
+        const savedTheme = localStorage.getItem("theme")
+        if (savedTheme) {
+            this.currentTheme = savedTheme
+        }
+    }
+
     toggleTheme(): void {
         const appCtp = document.getElementById("app-ctp")
-        // @ts-ignore
+
+        if (appCtp === null) return
         const classList = appCtp.classList
 
         // Need to change this if classes every get changed or rearranged
         switch (this.currentTheme) {
             case "mocha":
                 classList.remove("mocha")
-                classList.add("latte")
-                this.currentTheme = "latte"
-                this.renderer.setStyle(
-                    this.el.nativeElement.ownerDocument.body,
-                    "backgroundColor",
-                    flavors.latte.colors.base.hex,
-                )
+                this.currentTheme = loadTheme("latte", this.renderer, this.el)
+                localStorage.setItem("theme", "latte")
                 break
             case "latte":
                 classList.remove("latte")
-                classList.add("frappe")
-                this.currentTheme = "frappe"
-                this.renderer.setStyle(
-                    this.el.nativeElement.ownerDocument.body,
-                    "backgroundColor",
-                    flavors.frappe.colors.base.hex,
-                )
+                this.currentTheme = loadTheme("frappe", this.renderer, this.el)
+                localStorage.setItem("theme", "frappe")
                 break
             case "frappe":
                 classList.remove("frappe")
-                classList.add("macchiato")
-                this.currentTheme = "macchiato"
-                this.renderer.setStyle(
-                    this.el.nativeElement.ownerDocument.body,
-                    "backgroundColor",
-                    flavors.macchiato.colors.base.hex,
-                )
+                this.currentTheme = loadTheme("macchiato", this.renderer, this.el)
+                localStorage.setItem("theme", "macchiato")
                 break
             case "macchiato":
                 classList.remove("macchiato")
-                classList.add("mocha")
-                this.currentTheme = "mocha"
-                this.renderer.setStyle(
-                    this.el.nativeElement.ownerDocument.body,
-                    "backgroundColor",
-                    flavors.mocha.colors.base.hex,
-                )
+                this.currentTheme = loadTheme("mocha", this.renderer, this.el)
+                localStorage.setItem("theme", "mocha")
         }
     }
 }
