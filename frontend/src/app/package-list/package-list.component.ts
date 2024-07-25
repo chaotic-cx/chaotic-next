@@ -1,4 +1,4 @@
-import { CAUR_BACKEND_URL, PkgList } from "@./shared-lib"
+import { CAUR_BACKEND_URL, CAUR_PKG_URL, PkgList } from "@./shared-lib"
 import { CommonModule } from "@angular/common"
 import { HttpClient } from "@angular/common/http"
 import { Component } from "@angular/core"
@@ -16,6 +16,7 @@ export class PackageListComponent {
     loading = true
     searchTerm: string | undefined
     searchResults: any[] = []
+    protected readonly CAUR_PKG_URL = CAUR_PKG_URL
 
     constructor(private httpClient: HttpClient) {
         void this.getPkgList()
