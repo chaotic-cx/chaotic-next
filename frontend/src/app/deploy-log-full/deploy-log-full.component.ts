@@ -125,6 +125,20 @@ export class DeployLogFullComponent implements AfterViewInit {
             this.shownDeployments = toFilter.filter((deployment) => {
                 return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
             })
+
+            if (this.shownDeployments.length > 0) {
+                return
+            }
+
+            // If we have no results, we need to fetch more
+            let resultAmount = this.logAmount ? this.logAmount * 2 : 200
+            while (this.shownDeployments.length === 0 || resultAmount > 2000) {
+                await this.updateLogAmount(resultAmount)
+                this.shownDeployments = toFilter.filter((deployment) => {
+                    return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
+                })
+                resultAmount *= 2
+            }
             this.isFiltered = true
         } else if (this.searchterm && this.searchterm !== "" && this.isFiltered) {
             // We are already filtering, so we need it to filter the full list again
