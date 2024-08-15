@@ -6,6 +6,9 @@ COPY . /build
 
 # Enable the use of pnpm and compile the backend
 RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Workaround for nx post-install hanging
+RUN pnpm install --ignore-scripts nx
 RUN pnpm install
 RUN pnpx nx run backend:build
 
