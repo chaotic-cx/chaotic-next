@@ -52,7 +52,7 @@
         "@typescript-eslint/parser": "7.18.0",
         "@typescript-eslint/utils": "7.18.0",
         "autoprefixer": "^10.4.20",
-        "eslint": "~8.57.0",
+        "eslint": "~9.11.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-prettier": "^5.2.1",
         "flowbite": "^2.5.1",
