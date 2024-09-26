@@ -10,6 +10,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Workaround for nx post-install hanging
 RUN pnpm install --ignore-scripts nx
 RUN pnpm install
+RUN pnpx nx reset
 RUN pnpx nx run backend:build
 
 FROM node:22-bookworm-slim
