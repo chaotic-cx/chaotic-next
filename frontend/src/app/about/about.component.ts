@@ -1,4 +1,4 @@
-import { TeamList } from "@./shared-lib"
+import type { TeamList } from "@./shared-lib"
 import { NgOptimizedImage } from "@angular/common"
 import { Component } from "@angular/core"
 

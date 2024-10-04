@@ -14,5 +14,8 @@ async function bootstrap() {
 }
 
 bootstrap().then(() => {
-    Logger.log(`🚀 Application is running on: http://localhost:${CAUR_BACKEND_PORT}`, "Bootstrap")
+    Logger.log(
+        `🚀 Application is running on: http://localhost:${CAUR_BACKEND_PORT}`,
+        "Bootstrap",
+    )
 })

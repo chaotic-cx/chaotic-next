@@ -1,4 +1,4 @@
-import { PkgListRetObject } from "@./shared-lib"
+import type { PkgListRetObject } from "@./shared-lib"
 import { CacheInterceptor } from "@nestjs/cache-manager"
 import { Controller, Get, UseInterceptors } from "@nestjs/common"
 import { MiscService } from "./misc.service"

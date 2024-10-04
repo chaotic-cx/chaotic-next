@@ -1,5 +1,5 @@
 import { CAUR_MAP_URL } from "@./shared-lib"
-import { Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from "@angular/core"
+import { Component, type ElementRef, Inject, PLATFORM_ID, ViewChild } from "@angular/core"
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
 
 @Component({

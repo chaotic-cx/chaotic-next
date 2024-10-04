@@ -1,8 +1,11 @@
-import { MessageContent } from "./tdlib-types"
+import type { MessageContent } from "./tdlib-types"
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000
 export const CACHE_TELEGRAM_TTL = 30 * 1000
-export const CAUR_ALLOWED_CORS = ["https://aur.chaotic.cx", "https://caur-frontend-pages.dev"]
+export const CAUR_ALLOWED_CORS = [
+    "https://aur.chaotic.cx",
+    "https://caur-frontend-pages.dev",
+]
 export const CAUR_API_URL = "https://builds.garudalinux.org/api/"
 export const CAUR_BACKEND_PORT = 3000
 export const CAUR_BACKEND_URL = "https://builds.garudalinux.org/backend"
@@ -12,7 +15,8 @@ export const CAUR_HOME_URL = "https://aur.chaotic.cx/"
 export const CAUR_MAP_URL = "https://status.chaotic.cx/map"
 export const CAUR_METRICS_URL = "https://metrics.chaotic.cx/"
 export const CAUR_NEWS_ID = "-1001293714071"
-export const CAUR_PKG_LIST_URL = "https://builds.garudalinux.org/repos/chaotic-aur/pkgs.files.txt"
+export const CAUR_PKG_LIST_URL =
+    "https://builds.garudalinux.org/repos/chaotic-aur/pkgs.files.txt"
 export const CAUR_PKG_URL = "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/"
 export const CAUR_PRIMARY_KEY = "3056513887B78AEB"
 export const CAUR_TG_API_URL = `${CAUR_BACKEND_URL}/telegram/`
@@ -20,6 +24,7 @@ export const CAUR_TG_API_URL = `${CAUR_BACKEND_URL}/telegram/`
 export type StatsObject = Record<
     string,
     {
+        nodes?: string[]
         count: number
         packages: (string | undefined)[]
     }
@@ -38,6 +43,7 @@ export type PackagesObject = Record<
 export interface QueueStatus {
     status: string
     count: number
+    nodes?: string[]
     packages: (string | undefined)[]
 }
 
@@ -98,6 +104,7 @@ export type TgMessageList = TgMessage[]
 export interface Deployment {
     date: string
     name: string
+    node?: RegExpMatchArray | null | string
     repo: string
     type?: DeploymentType
     string?: string
@@ -107,11 +114,11 @@ export interface Deployment {
 export type DeploymentList = Deployment[]
 
 export enum DeploymentType {
-    ALL,
-    SUCCESS,
-    FAILED,
-    TIMEOUT,
-    CLEANUP,
+    ALL = 0,
+    SUCCESS = 1,
+    FAILED = 2,
+    TIMEOUT = 3,
+    CLEANUP = 4,
 }
 
 export interface CountNameObject {

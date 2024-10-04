@@ -1,4 +1,4 @@
-import { CAUR_API_URL, CurrentQueue, StatsObject } from "@./shared-lib"
+import { CAUR_API_URL, type CurrentQueue, type StatsObject } from "@./shared-lib"
 import { AfterViewInit, Component } from "@angular/core"
 import { Router } from "@angular/router"
 import { Axios } from "axios"
@@ -40,19 +40,21 @@ export class StatusComponent implements AfterViewInit {
             .get("queue/stats")
             .then((response) => {
                 const currentQueue: StatsObject = JSON.parse(response.data)
-                console.log(currentQueue)
                 if (currentQueue.length > 0) {
                     for (const index in currentQueue) {
                         const nameWithoutRepo: string[] = []
-                        Object.values(currentQueue[index])[0].packages.forEach((pkg): void => {
-                            if (pkg !== undefined) {
-                                nameWithoutRepo.push(pkg.split("/")[1])
-                            }
-                        })
+                        Object.values(currentQueue[index])[0].packages.forEach(
+                            (pkg): void => {
+                                if (pkg !== undefined) {
+                                    nameWithoutRepo.push(pkg.split("/")[2])
+                                }
+                            },
+                        )
                         returnQueue.push({
                             status: Object.keys(currentQueue[index])[0],
                             count: Object.values(currentQueue[index])[0].count,
                             packages: nameWithoutRepo,
+                            nodes: Object.values(currentQueue[index])[0].nodes,
                         })
                     }
                 }
@@ -75,7 +77,9 @@ export class StatusComponent implements AfterViewInit {
                 }
 
                 // Finally, update the component's state
-                this.lastUpdated = new Date().toLocaleString("en-GB", { timeZone: "UTC" })
+                this.lastUpdated = new Date().toLocaleString("en-GB", {
+                    timeZone: "UTC",
+                })
                 this.currentQueue = returnQueue
                 this.loading = false
             })

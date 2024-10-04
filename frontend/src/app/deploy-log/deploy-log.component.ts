@@ -1,12 +1,12 @@
 import {
     CACHE_TELEGRAM_TTL,
-    DeploymentList,
+    type DeploymentList,
     DeploymentType,
     getDeployments,
     parseDeployments,
     startShortPolling,
 } from "@./shared-lib"
-import { AfterViewInit, Component } from "@angular/core"
+import { type AfterViewInit, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
 

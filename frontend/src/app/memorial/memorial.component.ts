@@ -73,12 +73,21 @@ export class MemorialComponent {
     ]
     desktopLinks: string[] = []
     termLinks: string[] = []
-    specialTreatmentDesktops: string[] = ["alexjp.jpg", "fcinq.jpg", "virusz4274.png"]
-    specialTreatmentTerms: string[] = ["kenny.jpg", "rohit-arm.jpg", "snowdan.jpg"]
+    specialTreatmentDesktops: string[] = [
+        "alexjp.jpg",
+        "fcinq.jpg",
+        "virusz4274.png",
+    ]
+    specialTreatmentTerms: string[] = [
+        "kenny.jpg",
+        "rohit-arm.jpg",
+        "snowdan.jpg",
+    ]
 
     constructor() {
         for (const filename of this.desktops) {
-            const baseUrl = "https://raw.githubusercontent.com/chaotic-aur/memorial/main/desktops/"
+            const baseUrl =
+                "https://raw.githubusercontent.com/chaotic-aur/memorial/main/desktops/"
             if (
                 !this.specialTreatmentDesktops.some((item) => {
                     return item === filename
@@ -88,7 +97,8 @@ export class MemorialComponent {
             }
         }
         for (const filename of this.terms) {
-            const baseUrl = "https://raw.githubusercontent.com/chaotic-aur/memorial/main/terms/"
+            const baseUrl =
+                "https://raw.githubusercontent.com/chaotic-aur/memorial/main/terms/"
             if (
                 !this.specialTreatmentTerms.some((item) => {
                     return item === filename
