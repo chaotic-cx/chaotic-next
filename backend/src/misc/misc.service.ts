@@ -1,4 +1,4 @@
-import { CAUR_PKG_LIST_URL, PkgListRetObject } from "@./shared-lib"
+import { CAUR_PKG_LIST_URL, type PkgListRetObject } from "@./shared-lib"
 import { Injectable } from "@nestjs/common"
 import { Axios } from "axios"
 
@@ -12,8 +12,10 @@ export class MiscService {
             baseURL: "",
             timeout: 1000,
         })
-        return axios.get(CAUR_PKG_LIST_URL).then((response): PkgListRetObject => {
-            return { pkglist: response.data }
-        })
+        return axios
+            .get(CAUR_PKG_LIST_URL)
+            .then((response): PkgListRetObject => {
+                return { pkglist: response.data }
+            })
     }
 }

@@ -1,12 +1,12 @@
 import {
     CACHE_TELEGRAM_TTL,
-    DeploymentList,
+    type DeploymentList,
     DeploymentType,
     getDeployments,
     parseDeployments,
     startShortPolling,
 } from "@./shared-lib"
-import { AfterViewInit, Component } from "@angular/core"
+import { type AfterViewInit, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
 
@@ -42,7 +42,10 @@ export class DeployLogFullComponent implements AfterViewInit {
      * @param amount The number of deployments to request from the backend
      */
     async updateLogAmount(amount: number): Promise<void> {
-        this.latestDeployments = parseDeployments(await getDeployments(amount, this.currentType), this.currentType)
+        this.latestDeployments = parseDeployments(
+            await getDeployments(amount, this.currentType),
+            this.currentType,
+        )
         this.requestedTooMany = this.latestDeployments.length < amount
 
         // Parse the strings for the UI and write them to the list
@@ -80,7 +83,8 @@ export class DeployLogFullComponent implements AfterViewInit {
                     this.latestDeployments[index].string = `Failed deploying`
                     break
                 case DeploymentType.TIMEOUT:
-                    this.latestDeployments[index].string = `Timed out during deployment of`
+                    this.latestDeployments[index].string =
+                        `Timed out during deployment of`
                     break
                 case DeploymentType.CLEANUP:
                     this.latestDeployments[index].string = `Cleanup job ran for`
@@ -123,7 +127,9 @@ export class DeployLogFullComponent implements AfterViewInit {
 
         if (this.searchterm && this.searchterm !== "" && !this.isFiltered) {
             this.shownDeployments = toFilter.filter((deployment) => {
-                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
+                return deployment.name
+                    .toLowerCase()
+                    .includes(this.searchterm?.toLowerCase() ?? "")
             })
 
             if (this.shownDeployments.length > 0) {
@@ -135,15 +141,23 @@ export class DeployLogFullComponent implements AfterViewInit {
             while (this.shownDeployments.length === 0 || resultAmount > 2000) {
                 await this.updateLogAmount(resultAmount)
                 this.shownDeployments = toFilter.filter((deployment) => {
-                    return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
+                    return deployment.name
+                        .toLowerCase()
+                        .includes(this.searchterm?.toLowerCase() ?? "")
                 })
                 resultAmount *= 2
             }
             this.isFiltered = true
-        } else if (this.searchterm && this.searchterm !== "" && this.isFiltered) {
+        } else if (
+            this.searchterm &&
+            this.searchterm !== "" &&
+            this.isFiltered
+        ) {
             // We are already filtering, so we need it to filter the full list again
             this.shownDeployments = toFilter.filter((deployment) => {
-                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
+                return deployment.name
+                    .toLowerCase()
+                    .includes(this.searchterm?.toLowerCase() ?? "")
             })
             this.isFiltered = false
         } else {

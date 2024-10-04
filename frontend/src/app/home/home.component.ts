@@ -55,7 +55,11 @@ export class HomeComponent implements AfterViewInit {
                 break
             case "frappe":
                 classList.remove("frappe")
-                this.currentTheme = loadTheme("macchiato", this.renderer, this.el)
+                this.currentTheme = loadTheme(
+                    "macchiato",
+                    this.renderer,
+                    this.el,
+                )
                 localStorage.setItem("theme", "macchiato")
                 break
             case "macchiato":

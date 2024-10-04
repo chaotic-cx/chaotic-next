@@ -1,5 +1,5 @@
-import { CACHE_TELEGRAM_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, TgMessage, TgMessageList } from "@./shared-lib"
-import { CACHE_MANAGER, Cache } from "@nestjs/cache-manager"
+import { CACHE_TELEGRAM_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, type TgMessage, type TgMessageList } from "@./shared-lib"
+import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
 import * as tdl from "tdl"
@@ -17,7 +17,7 @@ export class TelegramService {
 
         if (TELEGRAM_API_ID !== "" && TELEGRAM_API_HASH !== "" && TELEGRAM_DB_ENCRYPTION_KEY !== "") {
             this.tgClient = tdl.createClient({
-                apiId: parseInt(TELEGRAM_API_ID),
+                apiId: Number.parseInt(TELEGRAM_API_ID),
                 apiHash: TELEGRAM_API_HASH,
                 databaseEncryptionKey: TELEGRAM_DB_ENCRYPTION_KEY,
                 databaseDirectory: "./tdlib/db",
@@ -53,7 +53,7 @@ export class TelegramService {
         const cacheKey = `tgDeployments-${amount}`
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
         if (!data) {
-            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, parseInt(amount))
+            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, Number.parseInt(amount))
             await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL)
         }
         return data
@@ -256,7 +256,7 @@ export class TelegramService {
         const cacheKey = `${cacheKeyId}-${amount}`
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
         if (!data) {
-            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, parseInt(amount), (messages: TgMessageList) => {
+            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, Number.parseInt(amount), (messages: TgMessageList) => {
                 const extractedMessages: TgMessageList = []
                 for (const message of messages) {
                     if (!String(message.content).startsWith(startsWith)) {

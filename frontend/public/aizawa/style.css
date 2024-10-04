@@ -8,14 +8,7 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 1);
-    font-family:
-        Optima,
-        Segoe,
-        Segoe UI,
-        Candara,
-        Calibri,
-        Arial,
-        sans-serif !important;
+    font-family: Optima, Segoe, Segoe UI, Candara, Calibri, Arial, sans-serif !important;
     font-style: normal;
     font-variant: normal;
     font-weight: 400;

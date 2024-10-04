@@ -1,5 +1,10 @@
-import { CAUR_CACHED_METRICS_URL, CountryRankList, UserAgentList, getNow } from "@./shared-lib"
-import { AfterViewInit, Component } from "@angular/core"
+import {
+    CAUR_CACHED_METRICS_URL,
+    type CountryRankList,
+    type UserAgentList,
+    getNow,
+} from "@./shared-lib"
+import { type AfterViewInit, Component } from "@angular/core"
 import { Axios } from "axios"
 
 @Component({
@@ -32,12 +37,14 @@ export class MiscStatsComponent implements AfterViewInit {
      * Update all metrics and sets the values of the user agent metrics and country ranks.
      */
     updateAllMetrics(): void {
-        Promise.all([this.get30DayUserAgents(), this.getCountryRanks()]).then((values) => {
-            this.userAgentMetrics = values[0]
-            this.countryRanks = values[1]
-            this.loading = false
-            this.lastUpdated = getNow()
-        })
+        Promise.all([this.get30DayUserAgents(), this.getCountryRanks()]).then(
+            (values) => {
+                this.userAgentMetrics = values[0]
+                this.countryRanks = values[1]
+                this.loading = false
+                this.lastUpdated = getNow()
+            },
+        )
     }
 
     /**

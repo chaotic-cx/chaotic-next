@@ -1,5 +1,5 @@
 import { CAUR_CACHED_METRICS_URL } from "@./shared-lib"
-import { Component, OnInit } from "@angular/core"
+import { Component, type OnInit } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink, RouterLinkActive } from "@angular/router"
 import { Axios } from "axios"

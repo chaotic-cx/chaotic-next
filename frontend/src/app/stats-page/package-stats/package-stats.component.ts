@@ -1,5 +1,9 @@
-import { CAUR_CACHED_METRICS_URL, PackageRankList, getNow } from "@./shared-lib"
-import { AfterViewInit, Component } from "@angular/core"
+import {
+    CAUR_CACHED_METRICS_URL,
+    type PackageRankList,
+    getNow,
+} from "@./shared-lib"
+import { type AfterViewInit, Component } from "@angular/core"
 import { Axios } from "axios"
 
 @Component({

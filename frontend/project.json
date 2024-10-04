@@ -22,7 +22,11 @@
                 ],
                 "styles": ["frontend/src/styles.css"],
                 "scripts": [],
-                "allowedCommonJsDependencies": ["form-data", "proxy-from-env", "follow-redirects"],
+                "allowedCommonJsDependencies": [
+                    "form-data",
+                    "proxy-from-env",
+                    "follow-redirects"
+                ],
                 "outputPath": "dist/frontend"
             },
             "configurations": {
