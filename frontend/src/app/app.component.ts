@@ -1,5 +1,5 @@
 import { CAUR_CACHED_METRICS_URL, loadTheme } from "@./shared-lib"
-import { isPlatformBrowser, NgOptimizedImage } from "@angular/common"
+import { NgOptimizedImage, isPlatformBrowser } from "@angular/common"
 import { HttpClient } from "@angular/common/http"
 import {
     AfterViewInit,
@@ -9,7 +9,7 @@ import {
     OnInit,
     PLATFORM_ID,
     Renderer2,
-    ViewEncapsulation
+    ViewEncapsulation,
 } from "@angular/core"
 import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router"
 import { initFlowbite } from "flowbite"

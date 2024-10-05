@@ -1,5 +1,5 @@
-import { Injectable, Logger, NestMiddleware } from "@nestjs/common"
-import { NextFunction, Request, Response } from "express"
+import { Injectable, Logger, type NestMiddleware } from "@nestjs/common"
+import type { NextFunction, Request, Response } from "express"
 
 @Injectable()
 export class HttpLoggerMiddleware implements NestMiddleware {
@@ -7,7 +7,7 @@ export class HttpLoggerMiddleware implements NestMiddleware {
 
     use(request: Request, response: Response, next: NextFunction): void {
         // Prepare timing request answer
-        const startAt: [number, number] = process.hrtime();
+        const startAt: [number, number] = process.hrtime()
 
         // Prepare logging request
         setImmediate(async () => {
@@ -25,19 +25,19 @@ export class HttpLoggerMiddleware implements NestMiddleware {
         let body = {}
         const chunks = []
         const oldEnd = response.end
-        response.end = ((chunk: any) => {
+        response.end = (chunk: any) => {
             if (chunk) {
                 chunks.push(Buffer.from(chunk))
             }
             body = Buffer.concat(chunks).toString("utf8")
             return oldEnd.call(response, body)
-        })
+        }
 
         // Log response
         response.on("finish", async () => {
-            const contentLength = response.get('content-length');
-            const diff = process.hrtime(startAt);
-            const responseTime = diff[0] * 1e3 + diff[1] * 1e-6;
+            const contentLength = response.get("content-length")
+            const diff = process.hrtime(startAt)
+            const responseTime = diff[0] * 1e3 + diff[1] * 1e-6
 
             return setTimeout(() => {
                 const responseLog = {

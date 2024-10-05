@@ -1,4 +1,4 @@
-import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, parseOutput, type SpecificPackageMetrics } from "@./shared-lib"
+import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, type SpecificPackageMetrics, parseOutput } from "@./shared-lib"
 import { type Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { Axios } from "axios"
@@ -22,7 +22,7 @@ export class MetricsService {
      */
     async thirtyDayUsers() {
         Logger.debug("thirtyDayUsers requested", "MetricsService")
-        
+
         const cacheKey = "thirtyDayUsers"
         let data = await this.cacheManager.get(cacheKey)
         if (!data) {

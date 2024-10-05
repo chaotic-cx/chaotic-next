@@ -21,30 +21,37 @@ export const CAUR_PKG_URL = "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/"
 export const CAUR_PRIMARY_KEY = "3056513887B78AEB"
 export const CAUR_TG_API_URL = `${CAUR_BACKEND_URL}/telegram/`
 
-export type StatsObject = Record<
-    string,
-    {
-        nodes?: string[]
-        count: number
-        packages: (string | undefined)[]
-    }
->[]
-
 export type PackagesObject = Record<
     string,
     {
         arch: string
+        build_class: number
+        repo_files?: string
         srcrepo: string
-        timestamp: string
-        repo_files: string
+        timestamp: number
     }
 >[]
+
+export type StatsObject = {
+    active: {
+        count: number
+        packages: { name: string; node: string }[]
+    }
+    waiting: {
+        count: number
+        packages: { name: string }[]
+    }
+    idle: {
+        count: number
+        nodes: string[]
+    }
+}
 
 export interface QueueStatus {
     status: string
     count: number
     nodes?: string[]
-    packages: (string | undefined)[]
+    packages?: (string | undefined)[]
 }
 
 export type CurrentQueue = QueueStatus[]
@@ -134,8 +141,10 @@ export interface UserAgentMetric {
 export interface PkgListRetObject {
     pkglist: string
 }
+
 export interface PkgListEntry {
     name: string
     fullString: string
 }
+
 export type PkgList = PkgListEntry[]
