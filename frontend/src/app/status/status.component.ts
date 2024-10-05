@@ -9,7 +9,7 @@ import { DeployLogComponent } from "../deploy-log/deploy-log.component"
     standalone: true,
     imports: [DeployLogComponent],
     templateUrl: "./status.component.html",
-    styleUrl: "./status.component.css",
+    styleUrl: "./status.component.css"
 })
 export class StatusComponent implements AfterViewInit {
     currentQueue: CurrentQueue = []
@@ -17,6 +17,7 @@ export class StatusComponent implements AfterViewInit {
     lastUpdated: string | undefined
     loading = true
     showFullPackages = false
+    nothingGoingOn = false
 
     constructor(private router: Router) {}
 
@@ -34,7 +35,7 @@ export class StatusComponent implements AfterViewInit {
 
         const axios = new Axios({
             baseURL: CAUR_API_URL,
-            timeout: 10000,
+            timeout: 10000
         })
         axios
             .get("queue/stats")
@@ -43,18 +44,23 @@ export class StatusComponent implements AfterViewInit {
                 if (currentQueue.length > 0) {
                     for (const index in currentQueue) {
                         const nameWithoutRepo: string[] = []
+                        const nodes = Object.values(currentQueue[index])[0].nodes ? Object.values(currentQueue[index])[0].nodes!.map((node) => {
+                            return node.match(/(.*(?=-\w+$))/)![0]
+                        }) : undefined
+
                         Object.values(currentQueue[index])[0].packages.forEach(
                             (pkg): void => {
                                 if (pkg !== undefined) {
                                     nameWithoutRepo.push(pkg.split("/")[2])
                                 }
-                            },
+                            }
                         )
+
                         returnQueue.push({
                             status: Object.keys(currentQueue[index])[0],
                             count: Object.values(currentQueue[index])[0].count,
                             packages: nameWithoutRepo,
-                            nodes: Object.values(currentQueue[index])[0].nodes,
+                            nodes: nodes
                         })
                     }
                 }
@@ -78,8 +84,21 @@ export class StatusComponent implements AfterViewInit {
 
                 // Finally, update the component's state
                 this.lastUpdated = new Date().toLocaleString("en-GB", {
-                    timeZone: "UTC",
+                    timeZone: "UTC"
                 })
+
+                let changed = false
+                returnQueue.forEach((queue) => {
+                    if (queue.count > 0) {
+                        this.nothingGoingOn = false
+                    } else {
+                        if (!changed) {
+                            this.nothingGoingOn = true
+                            changed = true
+                        }
+                    }
+                })
+
                 this.currentQueue = returnQueue
                 this.loading = false
             })
