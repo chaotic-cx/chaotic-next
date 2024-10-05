@@ -1,5 +1,5 @@
 import { CACHE_TELEGRAM_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, type TgMessage, type TgMessageList } from "@./shared-lib"
-import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager"
+import { type Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
 import * as tdl from "tdl"
@@ -23,7 +23,7 @@ export class TelegramService {
                 databaseDirectory: "./tdlib/db",
                 filesDirectory: "./tdlib/files",
             })
-            Logger.log("Telegram client started!", "TelegramService")
+            Logger.log("Telegram client started", "TelegramService")
         } else {
             Logger.error("Telegram client not started! Please provide correct secrets in .env file.")
         }
@@ -34,6 +34,8 @@ export class TelegramService {
      * @returns The parsed latest news from the CAUR Telegram channel
      */
     async getNews(): Promise<TgMessage[]> {
+        Logger.debug("getNews requested", "TelegramService")
+
         // Cache the news for 60 seconds
         const cacheKey = "tgNews"
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
@@ -49,6 +51,8 @@ export class TelegramService {
      * @returns The parsed latest deployments from the CAUR Telegram channel
      */
     async getDeployments(amount: any): Promise<TgMessage[]> {
+        Logger.debug("getDeployments requested", "TelegramService")
+
         // Cache the news for 60 seconds
         const cacheKey = `tgDeployments-${amount}`
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
@@ -80,7 +84,7 @@ export class TelegramService {
 
     /**
      * Get the latest succeeded deployments from the CAUR Telegram channel
-     * @param amount The amount of messages to retrieve
+     * @param amount The number of messages to retrieve
      */
     async getSucceeded(amount: any): Promise<TgMessageList> {
         return await this.getTgMessages("tgSucceededDeployments", amount, "📣")
@@ -88,10 +92,10 @@ export class TelegramService {
 
     /**
      * Get the latest failed deployments from the CAUR Telegram channel
-     * @param amount The amount of messages to retrieve
+     * @param amount The number of messages to retrieve
      */
     async getFailed(amount: any): Promise<TgMessageList> {
-        return await this.getTgMessages("tgFailedDeployments", amount, "🚫")
+        return await this.getTgMessages("tgFailedDeployments", amount, "🚨")
     }
 
     /**
@@ -99,7 +103,7 @@ export class TelegramService {
      * @param amount The number of messages to retrieve
      */
     async getTimedOut(amount: any): Promise<TgMessageList> {
-        return await this.getTgMessages("tgTimedOutDeployments", amount, "⏳")
+        return await this.getTgMessages("getTimedOut", amount, "⏳")
     }
 
     /**
@@ -253,7 +257,7 @@ export class TelegramService {
     }
 
     private async getTgMessages(cacheKeyId: string, amount: string, startsWith: string): Promise<TgMessageList> {
-        const cacheKey = `${cacheKeyId}-${amount}`
+            const cacheKey = `${cacheKeyId}-${amount}`
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
         if (!data) {
             data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, Number.parseInt(amount), (messages: TgMessageList) => {

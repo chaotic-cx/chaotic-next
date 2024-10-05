@@ -8,7 +8,7 @@ import {
     type DeploymentList,
     DeploymentType,
     type TgMessageList,
-    type UserAgentList,
+    type UserAgentList
 } from "./types"
 
 /**
@@ -25,7 +25,7 @@ export function parseOutput(input: string): any[] {
         if (!isNaN(count)) {
             returningArray.push({
                 name: name ?? "Unknown",
-                count,
+                count
             })
         }
     }
@@ -46,7 +46,7 @@ export function getNow(): string {
  */
 export function checkIfMobile() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent,
+        navigator.userAgent
     )
 }
 
@@ -58,7 +58,7 @@ export function checkIfMobile() {
  */
 export function parseDeployments(
     messages: TgMessageList,
-    type: DeploymentType,
+    type: DeploymentType
 ): DeploymentList {
     const timeAgo = new TimeAgo("en-US")
     const deploymentList: DeploymentList = []
@@ -78,7 +78,7 @@ export function parseDeployments(
 
         const date = timeAgo.format(
             Number.parseInt(message.date) * 1000,
-            "round",
+            "round"
         )
 
         if (
@@ -86,10 +86,10 @@ export function parseDeployments(
             String(message.content).includes("deployment to")
         ) {
             const buildRepo = String(
-                String(message.content).split("deployment to ")[1],
+                String(message.content).split("deployment to ")[1]
             )
-            node = buildRepo.match(/\b.*(?=-\w{5})\b/)
-                ? buildRepo.match(/\b[\w-]+(?=-\w{5})\b/)![0]
+            node = buildRepo.match(/from\s(.*)/)
+                ? buildRepo.match(/from\s([\w-]*)/)![1]
                 : "unknown"
             repo = buildRepo.split(" from")[0]
             deploymentType = DeploymentType.SUCCESS
@@ -106,10 +106,10 @@ export function parseDeployments(
             String(message.content).includes("Failed")
         ) {
             const buildRepo = String(
-                String(message.content).split("Failed deploying to ")[1],
+                String(message.content).split("Failed deploying to ")[1]
             )
-            node = buildRepo.match(/\b.*(?=-\w{5})\b/)
-                ? buildRepo.match(/\b[\w-]+(?=-\w{5})\b/)![0]
+            node = buildRepo.match(/on\s(.*)/)
+                ? buildRepo.match(/on\s([\w-]*)/)![1]
                 : "unknown"
             repo = buildRepo.split(" on")[0]
             deploymentType = DeploymentType.FAILED
@@ -131,7 +131,7 @@ export function parseDeployments(
             repo: repo,
             type: deploymentType,
             log: log ? log.split(":")[1] : undefined,
-            node: node,
+            node: node
         })
     }
     return deploymentList
@@ -143,11 +143,11 @@ export function parseDeployments(
  */
 export async function getDeployments(
     amount: number,
-    type: DeploymentType,
+    type: DeploymentType
 ): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
-        timeout: 1000,
+        timeout: 1000
     })
 
     let requestString
@@ -212,7 +212,7 @@ export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
     renderer.setStyle(
         el.nativeElement.ownerDocument.body,
         "backgroundColor",
-        flavorColor,
+        flavorColor
     )
     return theme
 }

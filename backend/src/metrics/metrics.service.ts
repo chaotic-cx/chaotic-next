@@ -1,6 +1,6 @@
-import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, type SpecificPackageMetrics, parseOutput } from "@./shared-lib"
-import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager"
-import { Inject, Injectable } from "@nestjs/common"
+import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, parseOutput, type SpecificPackageMetrics } from "@./shared-lib"
+import { type Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
+import { Inject, Injectable, Logger } from "@nestjs/common"
 import { Axios } from "axios"
 
 @Injectable()
@@ -12,6 +12,8 @@ export class MetricsService {
             baseURL: CAUR_METRICS_URL,
             timeout: 100000,
         })
+
+        Logger.log("MetricsService initialized", "MetricsService")
     }
 
     /**
@@ -19,6 +21,8 @@ export class MetricsService {
      * @returns The 30d user count from Chaotic-AUR router
      */
     async thirtyDayUsers() {
+        Logger.debug("thirtyDayUsers requested", "MetricsService")
+        
         const cacheKey = "thirtyDayUsers"
         let data = await this.cacheManager.get(cacheKey)
         if (!data) {
@@ -41,6 +45,8 @@ export class MetricsService {
      * @returns The 30d user agents list from Chaotic-AUR router
      */
     async thirtyDayUserAgents() {
+        Logger.debug("thirtyDayUsersAgents requested", "MetricsService")
+
         const cacheKey = "thirtyDayUserAgents"
         let data = await this.cacheManager.get(cacheKey)
         if (!data) {
@@ -64,6 +70,8 @@ export class MetricsService {
      * @returns The metrics of the specific package from Chaotic-AUR router
      */
     async thirtyDayPackage(param: any) {
+        Logger.debug("thirtyDayPackage requested", "MetricsService")
+
         const cacheKey = `thirtyDayPackage-${param}`
         let data = await this.cacheManager.get(cacheKey)
         if (!data) {
@@ -93,6 +101,8 @@ export class MetricsService {
      * @returns The rank of countries from Chaotic-AUR router
      */
     async rankCountries(range: any) {
+        Logger.debug("rankCountries requested", "MetricsService")
+
         const cacheKey = `rankCountries-${range}`
         let data = await this.cacheManager.get(cacheKey)
         if (!data) {
@@ -116,6 +126,8 @@ export class MetricsService {
      * @returns The rank of packages from Chaotic-AUR router
      */
     async rankPackages(range: any) {
+        Logger.debug("rankCountries requested", "MetricsService")
+
         const cacheKey = `rankPackages-${range}`
         let data = await this.cacheManager.get(cacheKey)
         await this.cacheManager.reset()
