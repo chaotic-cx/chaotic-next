@@ -1,14 +1,22 @@
-import { CAUR_API_URL, type CurrentQueue, startShortPolling, type StatsObject } from "@./shared-lib"
+import {
+    CAUR_API_URL,
+    CAUR_REPO_API_URL,
+    type CurrentQueue,
+    GitLabPipeline,
+    startShortPolling,
+    type StatsObject
+} from "@./shared-lib"
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { Router } from "@angular/router"
 import { Axios } from "axios"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
 import { LiveLogComponent } from "../live-log/live-log.component"
+import { DatePipe } from "@angular/common"
 
 @Component({
     selector: "app-status",
     standalone: true,
-    imports: [DeployLogComponent, LiveLogComponent],
+    imports: [DeployLogComponent, LiveLogComponent, DatePipe],
     templateUrl: "./status.component.html",
     styleUrl: "./status.component.css"
 })
@@ -20,6 +28,7 @@ export class StatusComponent implements AfterViewInit {
     showFullPackages = false
     nothingGoingOn = false
     Object = Object
+    pipelines: GitLabPipeline[] = []
     liveLog: undefined | string = undefined
     displayLiveLog: boolean = true
 
@@ -29,11 +38,36 @@ export class StatusComponent implements AfterViewInit {
 
     async ngAfterViewInit(): Promise<void> {
         void this.getQueueStats(false)
+        void this.getPipelines()
 
         startShortPolling(5000, async (): Promise<void> => {
             await this.getQueueStats(true)
+            await this.getPipelines()
         })
     }
+
+    /**
+     * Get current pipeline status
+     */
+    async getPipelines() {
+        const axios = new Axios({
+            baseURL: CAUR_REPO_API_URL,
+            timeout: 10000
+        })
+
+        axios
+            .get("/pipelines")
+            .then((response) => {
+                const data = (JSON.parse(response.data) as GitLabPipeline[])
+                const relevant = data.filter((pipeline: GitLabPipeline) => pipeline.status === ("running" || "pending"))
+                console.log(relevant)
+                this.pipelines = relevant
+            })
+            .catch((err) => {
+                console.error(err)
+            })
+    }
+
 
     /*
      * Get the current queue stats from the Chaotic backend
@@ -48,7 +82,7 @@ export class StatusComponent implements AfterViewInit {
             baseURL: CAUR_API_URL,
             timeout: 10000
         })
-        
+
         axios
             .get("queue/stats")
             .then((response) => {

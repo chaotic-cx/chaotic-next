@@ -1,15 +1,14 @@
-import {
-    CAUR_TG_API_URL,
-    type TgMessageList,
-    checkIfMobile,
-} from "@./shared-lib"
+import { CAUR_TG_API_URL, checkIfMobile, type TgMessageList } from "@./shared-lib"
 import { type AfterViewInit, Component } from "@angular/core"
 import { Axios } from "axios"
+import { DatePipe } from "@angular/common"
 
 @Component({
     selector: "app-news-channel",
     standalone: true,
-    imports: [],
+    imports: [
+        DatePipe
+    ],
     templateUrl: "./news-channel.component.html",
     styleUrl: "./news-channel.component.css",
 })
