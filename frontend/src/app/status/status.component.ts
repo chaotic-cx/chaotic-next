@@ -1,15 +1,16 @@
 import { CAUR_API_URL, type CurrentQueue, type StatsObject } from "@./shared-lib"
-import { AfterViewInit, Component } from "@angular/core"
+import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { Router } from "@angular/router"
 import { Axios } from "axios"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
+import { LiveLogComponent } from "../live-log/live-log.component"
 
 @Component({
     selector: "app-status",
     standalone: true,
-    imports: [DeployLogComponent],
+    imports: [DeployLogComponent, LiveLogComponent],
     templateUrl: "./status.component.html",
-    styleUrl: "./status.component.css",
+    styleUrl: "./status.component.css"
 })
 export class StatusComponent implements AfterViewInit {
     currentQueue: CurrentQueue = []
@@ -19,8 +20,12 @@ export class StatusComponent implements AfterViewInit {
     showFullPackages = false
     nothingGoingOn = false
     Object = Object
+    liveLog: undefined | string = undefined
+    displayLiveLog: boolean = true
 
-    constructor(private router: Router) {}
+    constructor(private cdr: ChangeDetectorRef, private router: Router) {
+        this.displayLiveLog = localStorage.getItem("displayLiveLog") === "true"
+    }
 
     ngAfterViewInit(): void {
         void this.getQueueStats()
@@ -36,7 +41,7 @@ export class StatusComponent implements AfterViewInit {
 
         const axios = new Axios({
             baseURL: CAUR_API_URL,
-            timeout: 10000,
+            timeout: 10000
         })
         axios
             .get("queue/stats")
@@ -62,7 +67,7 @@ export class StatusComponent implements AfterViewInit {
                                 packages: nameWithoutRepo,
                                 build_class: build_class,
                                 nodes: nodes,
-                                liveLogUrl: liveLogUrl,
+                                liveLogUrl: liveLogUrl
                             })
                             break
                         case "waiting":
@@ -74,7 +79,7 @@ export class StatusComponent implements AfterViewInit {
                                 status: "waiting",
                                 count: currentQueue.waiting.count,
                                 packages: nameWithoutRepo,
-                                build_class: build_class,
+                                build_class: build_class
                             })
                             break
                         case "idle":
@@ -82,7 +87,7 @@ export class StatusComponent implements AfterViewInit {
                                 status: "idle",
                                 count: currentQueue.idle.count,
                                 nodes: currentQueue.idle.nodes.map((node) => node.name),
-                                build_class: currentQueue.idle.nodes.map((node) => node.build_class),
+                                build_class: currentQueue.idle.nodes.map((node) => node.build_class)
                             })
                             break
                     }
@@ -107,10 +112,20 @@ export class StatusComponent implements AfterViewInit {
 
                 // Finally, update the component's state
                 this.lastUpdated = new Date().toLocaleString("en-GB", {
-                    timeZone: "UTC",
+                    timeZone: "UTC"
                 })
 
-                this.nothingGoingOn = returnQueue.length === 0
+                this.nothingGoingOn = returnQueue.findIndex((queue) => queue.status !== "idle" && queue.count > 0) === -1
+                if (!this.nothingGoingOn) {
+                    const activeQueue = returnQueue.find((queue) => queue.status === "active")
+                    this.liveLog = undefined
+                    this.liveLog = activeQueue!.liveLogUrl![0]
+                } else {
+                    this.liveLog = undefined
+                }
+
+                this.cdr.detectChanges()
+
                 this.currentQueue = returnQueue
                 this.loading = false
             })
@@ -139,7 +154,19 @@ export class StatusComponent implements AfterViewInit {
         void this.router.navigate([`/deploy-log`])
     }
 
+    /**
+     * Redirect to the live log. We aren’t using the router because this link
+     * is dynamic, and I didn't find out how to make routerLinks external without
+     * hardcoding them.
+     */
     routeTo(liveLogUrl: string) {
         window.location.href = liveLogUrl ? liveLogUrl : ""
+    }
+
+    toggleLiveLog() {
+        this.displayLiveLog = !this.displayLiveLog
+        this.cdr.detectChanges()
+
+        localStorage.setItem("displayLiveLog", this.displayLiveLog.toString())
     }
 }
