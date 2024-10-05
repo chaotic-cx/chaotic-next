@@ -46,6 +46,7 @@ export class StatusComponent implements AfterViewInit {
                     const nameWithoutRepo: string[] = []
                     const build_class: (string | number)[] = []
                     const nodes: string[] = []
+                    const liveLogUrl: string[] = []
 
                     switch (queue) {
                         case "active":
@@ -53,6 +54,7 @@ export class StatusComponent implements AfterViewInit {
                                 nameWithoutRepo.push(pkg.name.split("/")[2])
                                 build_class.push(pkg.build_class)
                                 nodes.push(pkg.node)
+                                liveLogUrl.push(pkg.liveLog ? pkg.liveLog : "")
                             })
                             returnQueue.push({
                                 status: "active",
@@ -60,6 +62,7 @@ export class StatusComponent implements AfterViewInit {
                                 packages: nameWithoutRepo,
                                 build_class: build_class,
                                 nodes: nodes,
+                                liveLogUrl: liveLogUrl,
                             })
                             break
                         case "waiting":
@@ -134,5 +137,9 @@ export class StatusComponent implements AfterViewInit {
      */
     headToFullDeployments() {
         void this.router.navigate([`/deploy-log`])
+    }
+
+    routeTo(liveLogUrl: string) {
+        window.location.href = liveLogUrl ? liveLogUrl : ""
     }
 }

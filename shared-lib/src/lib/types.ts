@@ -34,7 +34,12 @@ export type PackagesObject = Record<
 export type StatsObject = {
     active: {
         count: number
-        packages: { name: string; node: string; build_class: number | string }[]
+        packages: {
+            liveLog?: string;
+            name: string;
+            node: string;
+            build_class: number | string
+        }[]
     }
     waiting: {
         count: number
@@ -52,6 +57,7 @@ export interface QueueStatus {
     nodes?: string[] | { name: string; build_class: number }[]
     packages?: (string | undefined)[]
     build_class?: (string | number)[]
+    liveLogUrl?: string[]
 }
 
 export type CurrentQueue = QueueStatus[]
