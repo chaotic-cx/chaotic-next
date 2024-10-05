@@ -9,7 +9,7 @@ import { DeployLogComponent } from "../deploy-log/deploy-log.component"
     standalone: true,
     imports: [DeployLogComponent],
     templateUrl: "./status.component.html",
-    styleUrl: "./status.component.css"
+    styleUrl: "./status.component.css",
 })
 export class StatusComponent implements AfterViewInit {
     currentQueue: CurrentQueue = []
@@ -18,6 +18,7 @@ export class StatusComponent implements AfterViewInit {
     loading = true
     showFullPackages = false
     nothingGoingOn = false
+    Object = Object
 
     constructor(private router: Router) {}
 
@@ -35,70 +36,79 @@ export class StatusComponent implements AfterViewInit {
 
         const axios = new Axios({
             baseURL: CAUR_API_URL,
-            timeout: 10000
+            timeout: 10000,
         })
         axios
             .get("queue/stats")
             .then((response) => {
                 const currentQueue: StatsObject = JSON.parse(response.data)
-                if (currentQueue.length > 0) {
-                    for (const index in currentQueue) {
-                        const nameWithoutRepo: string[] = []
-                        const nodes = Object.values(currentQueue[index])[0].nodes ? Object.values(currentQueue[index])[0].nodes!.map((node) => {
-                            return node.match(/(.*(?=-\w+$))/)![0]
-                        }) : undefined
+                const totalNodes = currentQueue["idle"].nodes
 
-                        Object.values(currentQueue[index])[0].packages.forEach(
-                            (pkg): void => {
-                                if (pkg !== undefined) {
-                                    nameWithoutRepo.push(pkg.split("/")[2])
-                                }
-                            }
-                        )
+                for (const queue of Object.keys(currentQueue)) {
+                    const nameWithoutRepo: string[] = []
+                    const nodes: string[] = []
 
-                        returnQueue.push({
-                            status: Object.keys(currentQueue[index])[0],
-                            count: Object.values(currentQueue[index])[0].count,
-                            packages: nameWithoutRepo,
-                            nodes: nodes
-                        })
+                    switch (queue) {
+                        case "active":
+                            currentQueue.active.packages.forEach(
+                                (pkg): void => {
+                                    nameWithoutRepo.push(pkg.name.split("/")[2])
+                                    nodes.push(pkg.node)
+                                },
+                            )
+                            returnQueue.push({
+                                status: "active",
+                                count: currentQueue.active.count,
+                                packages: nameWithoutRepo,
+                                nodes: nodes,
+                            })
+                            totalNodes.push(...nodes)
+                            break
+                        case "waiting":
+                            currentQueue.waiting.packages.forEach(
+                                (pkg): void => {
+                                    nameWithoutRepo.push(pkg.name.split("/")[2])
+                                },
+                            )
+                            returnQueue.push({
+                                status: "waiting",
+                                count: currentQueue.waiting.count,
+                                packages: nameWithoutRepo,
+                            })
+                            break
+                        case "idle":
+                            returnQueue.push({
+                                status: "idle",
+                                count: currentQueue.idle.count,
+                                nodes: nodes,
+                            })
+                            break
                     }
                 }
 
                 // Calculate the full length of the queue
                 let length = 0
                 returnQueue.forEach((queue) => {
-                    length += queue.count
+                    if (queue.packages) length += queue.count
                 })
                 this.fullLength = length
 
                 // If the full list is too long, shorten it.
                 if (this.fullLength >= 50 && !this.showFullPackages) {
                     returnQueue.forEach((queue) => {
-                        if (queue.packages.length > 50) {
-                            queue.packages.splice(50)
-                            queue.packages.push("...")
+                        if (queue.packages && queue.packages.length > 50) {
+                            queue.packages?.splice(50)
+                            queue.packages?.push("...")
                         }
                     })
                 }
 
                 // Finally, update the component's state
                 this.lastUpdated = new Date().toLocaleString("en-GB", {
-                    timeZone: "UTC"
+                    timeZone: "UTC",
                 })
 
-                let changed = false
-                returnQueue.forEach((queue) => {
-                    if (queue.count > 0) {
-                        this.nothingGoingOn = false
-                    } else {
-                        if (!changed) {
-                            this.nothingGoingOn = true
-                            changed = true
-                        }
-                    }
-                })
-
+                this.nothingGoingOn = returnQueue.length === 0
                 this.currentQueue = returnQueue
                 this.loading = false
             })

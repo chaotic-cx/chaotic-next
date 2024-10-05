@@ -1,5 +1,5 @@
 import { CACHE_TELEGRAM_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, type TgMessage, type TgMessageList } from "@./shared-lib"
-import { type Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
+import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
 import * as tdl from "tdl"
@@ -257,19 +257,23 @@ export class TelegramService {
     }
 
     private async getTgMessages(cacheKeyId: string, amount: string, startsWith: string): Promise<TgMessageList> {
-            const cacheKey = `${cacheKeyId}-${amount}`
+        const cacheKey = `${cacheKeyId}-${amount}`
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
         if (!data) {
-            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, Number.parseInt(amount), (messages: TgMessageList) => {
-                const extractedMessages: TgMessageList = []
-                for (const message of messages) {
-                    if (!String(message.content).startsWith(startsWith)) {
-                        continue
+            data = await this.extractMessages(
+                CAUR_DEPLOY_LOG_ID,
+                Number.parseInt(amount),
+                (messages: TgMessageList) => {
+                    const extractedMessages: TgMessageList = []
+                    for (const message of messages) {
+                        if (!String(message.content).startsWith(startsWith)) {
+                            continue
+                        }
+                        extractedMessages.push(message)
                     }
-                    extractedMessages.push(message)
-                }
-                return extractedMessages
-            })
+                    return extractedMessages
+                },
+            )
             await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL)
         }
         return data
