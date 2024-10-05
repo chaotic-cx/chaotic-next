@@ -1,4 +1,4 @@
-import { CAUR_API_URL, type CurrentQueue, type StatsObject } from "@./shared-lib"
+import { CAUR_API_URL, type CurrentQueue, startShortPolling, type StatsObject } from "@./shared-lib"
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { Router } from "@angular/router"
 import { Axios } from "axios"
@@ -27,22 +27,28 @@ export class StatusComponent implements AfterViewInit {
         this.displayLiveLog = localStorage.getItem("displayLiveLog") === "true"
     }
 
-    ngAfterViewInit(): void {
-        void this.getQueueStats()
+    async ngAfterViewInit(): Promise<void> {
+        void this.getQueueStats(false)
+
+        startShortPolling(5000, async (): Promise<void> => {
+            await this.getQueueStats(true)
+        })
     }
 
     /*
      * Get the current queue stats from the Chaotic backend
+     * @param inBackground Whether the request is in the background or not
      */
-    async getQueueStats(): Promise<void> {
-        this.loading = true
-        this.lastUpdated = undefined
-        const returnQueue: CurrentQueue = []
+    async getQueueStats(inBackground: boolean): Promise<void> {
+        this.loading = !inBackground
+        if (!inBackground) this.lastUpdated = undefined
 
+        const returnQueue: CurrentQueue = []
         const axios = new Axios({
             baseURL: CAUR_API_URL,
             timeout: 10000
         })
+        
         axios
             .get("queue/stats")
             .then((response) => {
@@ -118,8 +124,10 @@ export class StatusComponent implements AfterViewInit {
                 this.nothingGoingOn = returnQueue.findIndex((queue) => queue.status !== "idle" && queue.count > 0) === -1
                 if (!this.nothingGoingOn) {
                     const activeQueue = returnQueue.find((queue) => queue.status === "active")
-                    this.liveLog = undefined
-                    this.liveLog = activeQueue!.liveLogUrl![0]
+                    if (this.liveLog !== activeQueue!.liveLogUrl![0]) {
+                        this.liveLog = undefined
+                        this.liveLog = activeQueue!.liveLogUrl![0]
+                    }
                 } else {
                     this.liveLog = undefined
                 }
@@ -139,10 +147,10 @@ export class StatusComponent implements AfterViewInit {
      */
     showFullList(): void {
         if (!this.showFullPackages) {
-            void this.getQueueStats()
+            void this.getQueueStats(false)
             this.showFullPackages = true
         } else {
-            void this.getQueueStats()
+            void this.getQueueStats(false)
             this.showFullPackages = false
         }
     }
