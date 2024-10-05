@@ -24,11 +24,20 @@
         </button>
         <button
             (click)="headToFullDeployments()"
-            class="hover:chaotic-grow-l ml-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+            class="hover:chaotic-grow-l ml-2.5 mr-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
             type="button"
         >
             Full deploy log
         </button>
+        @if (!nothingGoingOn) {
+            <button
+                (click)="toggleLiveLog()"
+                class="hover:chaotic-grow-l mr-2.5 ml-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+                type="button"
+            >
+                {{ displayLiveLog ? "Hide" : "Show" }} live log
+            </button>
+        }
     </div>
 
     <div>
@@ -55,103 +64,105 @@
         }
     </div>
 
-    @if (!nothingGoingOn) {
-        <div class="chaotic-container-regular my-5">
-            <h3 class="py-5 text-center text-xl font-bold text-mauve">Current queue stats</h3>
-            @for (queue of Object.values(currentQueue); track queue) {
-                @if (queue.status !== "idle" && queue.count > 0) {
-                    <div
-                        class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm"
-                    >
-                        <div
-                            class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
-                        >
-                            <h4 class="text-center text-2xl text-mauve">Status</h4>
-                            <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
-                        </div>
-                        @if (queue.status === "waiting" && queue.count > 0) {
-                            <div class="bg-surface0 p-4">
-                                <h4 class="text-center text-xl text-mauve">Count</h4>
-                                <p class="my-2 text-center text-text">{{ queue.count }}</p>
-                            </div>
-                        }
-                        @if (queue.status === "active" && queue.packages && queue.packages.length > 0) {
-                            <div class="bg-surface0 p-4">
-                                <h4 class="text-center text-xl text-mauve">Nodes</h4>
-                                <p class="text-s my-2 text-center text-text">
-                                    @for (pkg of queue.packages; track pkg) {
-                                        {{ queue.nodes![$index] }} <a
-                                            class="text-rosewater"
-                                        >({{ queue.packages ? queue.packages : undefined }})</a><br />
-                                    }
-                                </p>
-                            </div>
-                        }
-                        @if (queue.count > 0) {
-                            <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
-                                <h4 class="text-center text-xl text-mauve">Packages</h4>
-                                <div class="my-2 grid grid-cols-1 gap-5">
-                                    <p class="text-s text-center text-sapphire">
-                                        @for (pkg of queue.packages; track pkg) {
-                                            {{ pkg }} <a class="text-rosewater"
-                                                         (click)="routeTo(queue.liveLogUrl![$index])">
-                                                (class {{ queue.build_class![$index] }})
-                                                {{ queue.status === "active" ? " ↗" : "" }}</a>
-                                            <br />
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                @if (queue.status === "idle" && queue.nodes!.length > 0) {
-                    <div
-                        class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm"
-                    >
-                        <div
-                            class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
-                        >
-                            <h4 class="text-center text-2xl text-mauve">Status</h4>
-                            <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
-                        </div>
-                        @if (queue.nodes && queue.nodes.length > 0) {
-                            <div class="bg-surface0 p-4">
-                                <h4 class="text-center text-xl text-mauve">Nodes</h4>
-                                <p class="text-s my-2 text-center text-sapphire">
-                                    @for (node of queue.nodes; track node) {
-                                        {{ node }}
-                                    }
-                                </p>
-                            </div>
-                            <div class="bg-surface0 p-4">
-                                <h4 class="text-center text-xl text-mauve">Build class</h4>
-                                <p class="text-s my-2 text-center text-rosewater">
-                                    @for (node of queue.build_class; track node) {
-                                        {{ node }}
-                                    }
-                                </p>
-                            </div>
-                        }
-                    </div>
-                }
-            }
-            @if (fullLength > 50) {
-                <button
-                    (click)="showFullList()"
-                    class="hover:chaotic-grow-l ml-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
-                    type="button"
-                >
-                    {{ showFullPackages ? "Hide full list" : "Show full list" }}
-                </button>
-            }
+    @if (liveLog !== undefined && displayLiveLog) {
+        <div>
+            <app-live-log [url]="liveLog"></app-live-log>
         </div>
     }
+    <div class="chaotic-container-regular my-5">
+        <h3 class="py-5 text-center text-xl font-bold text-mauve">Current queue stats</h3>
+        @for (queue of Object.values(currentQueue); track queue) {
+            @if (queue.status !== "idle" && queue.count > 0) {
+                <div
+                    class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm"
+                >
+                    <div
+                        class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
+                    >
+                        <h4 class="text-center text-2xl text-mauve">Status</h4>
+                        <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
+                    </div>
+                    @if (queue.status === "waiting" && queue.count > 0) {
+                        <div class="bg-surface0 p-4">
+                            <h4 class="text-center text-xl text-mauve">Count</h4>
+                            <p class="my-2 text-center text-text">{{ queue.count }}</p>
+                        </div>
+                    }
+                    @if (queue.status === "active" && queue.packages && queue.packages.length > 0) {
+                        <div class="bg-surface0 p-4">
+                            <h4 class="text-center text-xl text-mauve">Nodes</h4>
+                            <p class="text-s my-2 text-center text-text">
+                                @for (pkg of queue.packages; track pkg) {
+                                    {{ queue.nodes![$index] }} <a
+                                        class="text-rosewater"
+                                    >({{ queue.packages ? queue.packages : undefined }})</a><br />
+                                }
+                            </p>
+                        </div>
+                    }
+                    @if (queue.count > 0) {
+                        <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
+                            <h4 class="text-center text-xl text-mauve">Packages</h4>
+                            <div class="my-2 grid grid-cols-1 gap-5">
+                                <p class="text-s text-center text-sapphire">
+                                    @for (pkg of queue.packages; track pkg) {
+                                        {{ pkg }} <a class="text-rosewater"
+                                                     (click)="routeTo(queue.liveLogUrl![$index])">
+                                            (class {{ queue.build_class![$index] }})
+                                            {{ queue.status === "active" ? " ↗" : "" }}</a>
+                                        <br />
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            @if (queue.status === "idle" && queue.count > 0) {
+                <div
+                    class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm"
+                >
+                    <div
+                        class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
+                    >
+                        <h4 class="text-center text-2xl text-mauve">Status</h4>
+                        <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
+                    </div>
+                    @if (queue.nodes && queue.nodes.length > 0) {
+                        <div class="bg-surface0 p-4">
+                            <h4 class="text-center text-xl text-mauve">Nodes</h4>
+                            <p class="text-s my-2 text-center text-sapphire">
+                                @for (node of queue.nodes; track node) {
+                                    {{ node }}
+                                }
+                            </p>
+                        </div>
+                        <div class="bg-surface0 p-4">
+                            <h4 class="text-center text-xl text-mauve">Build class</h4>
+                            <p class="text-s my-2 text-center text-rosewater">
+                                @for (node of queue.build_class; track node) {
+                                    {{ node }}
+                                }
+                            </p>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        @if (fullLength > 50) {
+            <button
+                (click)="showFullList()"
+                class="hover:chaotic-grow-l ml-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+                type="button"
+            >
+                {{ showFullPackages ? "Hide full list" : "Show full list" }}
+            </button>
+        }
+    </div>
 
     @if (nothingGoingOn && !loading) {
         <div class="container my-auto p-5">
             <h3 class="pb-5 text-center text-xl font-bold text-mauve">There are currently no ongoing builds 😴</h3>
-            <p class="text-center text-lg text-text">Idle builders:</p>
         </div>
     }
 
