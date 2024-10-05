@@ -15,8 +15,7 @@ export const CAUR_HOME_URL = "https://aur.chaotic.cx/"
 export const CAUR_MAP_URL = "https://status.chaotic.cx/map"
 export const CAUR_METRICS_URL = "https://metrics.chaotic.cx/"
 export const CAUR_NEWS_ID = "-1001293714071"
-export const CAUR_PKG_LIST_URL =
-    "https://builds.garudalinux.org/repos/chaotic-aur/pkgs.files.txt"
+export const CAUR_PKG_LIST_URL = "https://builds.garudalinux.org/repos/chaotic-aur/pkgs.files.txt"
 export const CAUR_PKG_URL = "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/"
 export const CAUR_PRIMARY_KEY = "3056513887B78AEB"
 export const CAUR_TG_API_URL = `${CAUR_BACKEND_URL}/telegram/`
@@ -35,23 +34,24 @@ export type PackagesObject = Record<
 export type StatsObject = {
     active: {
         count: number
-        packages: { name: string; node: string }[]
+        packages: { name: string; node: string; build_class: number | string }[]
     }
     waiting: {
         count: number
-        packages: { name: string }[]
+        packages: { name: string; build_class: number }[]
     }
     idle: {
         count: number
-        nodes: string[]
+        nodes: { name: string; build_class: number }[]
     }
 }
 
 export interface QueueStatus {
     status: string
     count: number
-    nodes?: string[]
+    nodes?: string[] | { name: string; build_class: number }[]
     packages?: (string | undefined)[]
+    build_class?: (string | number)[]
 }
 
 export type CurrentQueue = QueueStatus[]

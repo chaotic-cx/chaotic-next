@@ -2,15 +2,15 @@
     <div>
         <h1 class="text-center text-4xl font-extrabold text-maroon">Build Status</h1>
         <p class="my-4 px-10 text-center text-lg text-text"
-            >This page shows the status of the Chaotic-AUR infrastructure.</p
+        >This page shows the status of the Chaotic-AUR infrastructure.</p
         >
         <p class="my-4 px-10 text-center text-lg text-red"
-            >Disclaimer: the data shown here corresponds to our in-progress
+        >Disclaimer: the data shown here corresponds to our in-progress
             <a class="text-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds">infra 4.0</a>, NOT the live
             Chaotic-AUR repo.</p
         >
         <p class="my-4 px-10 text-center text-lg text-text"
-            >Last updated: <a class="text-maroon">{{ lastUpdated ? lastUpdated : "loading ... ☕️" }}</a>
+        >Last updated: <a class="text-maroon">{{ lastUpdated ? lastUpdated : "loading ... ☕️" }}</a>
         </p>
     </div>
 
@@ -69,18 +69,19 @@
                             <h4 class="text-center text-2xl text-mauve">Status</h4>
                             <p class="my-2 text-center text-text">{{ queue.status }}</p>
                         </div>
-                        @if (!queue.nodes) {
+                        @if (queue.status === "waiting") {
                             <div class="bg-surface0 p-4">
                                 <h4 class="text-center text-xl text-mauve">Count</h4>
-                                <p class="my-2 text-center text-text">{{ queue["count"] }}</p>
+                                <p class="my-2 text-center text-text">{{ queue.count }}</p>
                             </div>
                         }
-                        @if (queue.nodes && queue.nodes.length > 0) {
+                        @if (queue.status === "active" && queue.packages && queue.packages.length > 0) {
                             <div class="bg-surface0 p-4">
                                 <h4 class="text-center text-xl text-mauve">Nodes</h4>
                                 <p class="text-s my-2 text-center text-text">
-                                    @for (node of queue.nodes; track node) {
-                                        {{ node }} ({{ queue.packages ? queue.packages : [$index] }})<br />
+                                    @for (pkg of queue.packages; track pkg) {
+                                        {{ queue.nodes![$index] }} <a
+                                            class="text-rosewater">({{ queue.packages ? queue.packages : undefined }})</a><br />
                                     }
                                 </p>
                             </div>
@@ -90,7 +91,8 @@
                             <div class="my-2 grid grid-cols-1 gap-5">
                                 <p class="text-s text-center text-text">
                                     @for (pkg of queue.packages; track pkg) {
-                                        {{ pkg }}<br />
+                                        {{ pkg }} <a class="text-rosewater">(class {{ queue.build_class![$index] }})</a>
+                                        <br />
                                     }
                                 </p>
                             </div>
@@ -112,9 +114,15 @@
                                 <h4 class="text-center text-xl text-mauve">Nodes</h4>
                                 <p class="text-s my-2 text-center text-text">
                                     @for (node of queue.nodes; track node) {
-                                        {{ node }}<br />
+                                        {{ node }}
                                     }
                                 </p>
+                            </div>
+                            <div class="bg-surface0 p-4">
+                                <h4 class="text-center text-xl text-mauve">Build class</h4>
+                                @for (node of queue.build_class; track node) {
+                                    {{ node }}<br />
+                                }
                             </div>
                         }
                     </div>
