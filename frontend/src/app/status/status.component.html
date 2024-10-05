@@ -17,14 +17,14 @@
     <div class="container mx-auto my-5 items-center">
         <button
             (click)="getQueueStats(false); getPipelines()"
-            class="hover:chaotic-grow-l mr-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+            class="hover:chaotic-grow-l md:mr-2.5 mr-0 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
             type="button"
         >
             Refresh status
         </button>
         <button
             (click)="headToFullDeployments()"
-            class="hover:chaotic-grow-l ml-2.5 mr-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+            class="hover:chaotic-grow-l ml-2.5 mr-2.5 mt-2.5 md:mt-0  rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
             type="button"
         >
             Full deploy log
@@ -32,7 +32,7 @@
         @if (!nothingGoingOn) {
             <button
                 (click)="toggleLiveLog()"
-                class="hover:chaotic-grow-l mr-2.5 ml-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+                class="hover:chaotic-grow-l md:ml-2.5 ml-0 mt-2.5 md:mt-0 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
                 type="button"
             >
                 {{ displayLiveLog ? "Hide" : "Show" }} live log
@@ -164,7 +164,7 @@
                     <div
                         class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
                     >
-                        <h4 class="text-center text-2xl text-mauve">Status</h4>
+                        <h4 class="text-center text-xl text-mauve">Status</h4>
                         <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
                     </div>
                     @if (queue.nodes && queue.nodes.length > 0) {
