@@ -55,8 +55,8 @@
         }
     </div>
 
-    @if (currentQueue.length > 0) {
-        <div class="md:px-10 pt-5">
+    @if (!nothingGoingOn) {
+        <div class="container my-auto px-5 pt-5">
             <h3 class="py-5 text-center text-xl font-bold text-mauve">Current queue stats</h3>
             @for (queue of currentQueue; track queue) {
                 <div
@@ -108,7 +108,7 @@
         </div>
     }
 
-    @if (currentQueue.length === 0 && !loading) {
+    @if (nothingGoingOn && !loading) {
         <div class="container my-auto px-5 pt-5">
             <h3 class="pb-5 text-center text-xl font-bold text-mauve">There are currently no ongoing builds 😴</h3>
         </div>
