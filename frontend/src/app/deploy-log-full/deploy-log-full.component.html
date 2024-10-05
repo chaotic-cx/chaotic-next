@@ -2,10 +2,11 @@
     <div class="chaotic-container-regular">
         <h1 class="text-center text-4xl font-extrabold text-maroon">Deployment log</h1>
         <p class="my-4 px-10 text-center text-lg text-text"
-            >Shows the last deployed packages and allows searching the entire history.</p
+        >Shows the last deployed packages and allows searching the entire history.
+            Click the repo name for viewing the source repository.</p
         >
         <p class="my-4 px-10 text-center text-lg text-red"
-            >Disclaimer: the data shown here corresponds to our in-progress
+        >Disclaimer: the data shown here corresponds to our in-progress
             <a class="text-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds">infra 4.0</a>, NOT the live
             Chaotic-AUR repo.</p
         >
@@ -26,7 +27,7 @@
                             value="0"
                         />
                         <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-all"
-                            >All 🌍</label
+                        >All 🌍</label
                         >
                     </div>
                 </li>
@@ -43,7 +44,7 @@
                         <label
                             class="w-full py-3 ms-2 text-sm font-medium text-text"
                             for="horizontal-list-radio-success"
-                            >Success 📣</label
+                        >Success 📣</label
                         >
                     </div>
                 </li>
@@ -58,7 +59,7 @@
                             value="2"
                         />
                         <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-failed"
-                            >Failed 🚫</label
+                        >Failed 🚫</label
                         >
                     </div>
                 </li>
@@ -75,7 +76,7 @@
                         <label
                             class="w-full py-3 ms-2 text-sm font-medium text-text"
                             for="horizontal-list-radio-timeout"
-                            >Timed out ⏳</label
+                        >Timed out ⏳</label
                         >
                     </div>
                 </li>
@@ -109,7 +110,7 @@
 
         @if (requestedTooMany) {
             <p class="pt-5 text-center text-red"
-                >You requested more logs than we currently have. Showing the max amount of
+            >You requested more logs than we currently have. Showing the max amount of
                 {{ latestDeployments.length }}.</p
             >
         }
@@ -122,12 +123,14 @@
                             class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex"
                         >
                             <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0"
-                                >{{ deployment.date }}
+                            >{{ deployment.date }}
                             </time>
                             <div class="lex text-sm font-normal text-text"
-                                >{{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> from
+                            >{{ deployment.string }} <a class="text-maroon"
+                                                        href="{{ deployment.sourceUrl }}">{{ deployment.name }}</a> from
                                 <a class="text-rosewater">{{ deployment.node }}</a> to
-                                <span class="font-semibold text-red">{{ deployment.repo }}</span>
+                                <a class="font-semibold text-red"
+                                   href="{{ deployment.sourceUrl }}">{{ deployment.repo }}</a>
                                 @if (deployment.log) {
                                     - <a class="text-yellow" href="{{ deployment.log }}">view log</a>
                                 }

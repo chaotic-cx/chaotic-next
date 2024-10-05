@@ -18,6 +18,8 @@ export const CAUR_NEWS_ID = "-1001293714071"
 export const CAUR_PKG_LIST_URL = "https://builds.garudalinux.org/repos/chaotic-aur/pkgs.files.txt"
 export const CAUR_PKG_URL = "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/"
 export const CAUR_PRIMARY_KEY = "3056513887B78AEB"
+export const CAUR_REPO_URL = "https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/"
+export const CAUR_REPO_URL_GARUDA = "https://gitlab.com/garuda-linux/pkgbuilds/-/tree/main/"
 export const CAUR_TG_API_URL = `${CAUR_BACKEND_URL}/telegram/`
 
 export type PackagesObject = Record<
@@ -115,6 +117,7 @@ export interface TgMessage {
 export type TgMessageList = TgMessage[]
 
 export interface Deployment {
+    sourceUrl?: string
     date: string
     name: string
     node?: RegExpMatchArray | null | string

@@ -2,11 +2,12 @@ import {
     CACHE_TELEGRAM_TTL,
     type DeploymentList,
     DeploymentType,
+    generateRepoUrl,
     getDeployments,
     parseDeployments,
-    startShortPolling,
+    startShortPolling
 } from "@./shared-lib"
-import { type AfterViewInit, Component } from "@angular/core"
+import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
 
@@ -15,7 +16,7 @@ import { RouterLink } from "@angular/router"
     standalone: true,
     imports: [FormsModule, RouterLink],
     templateUrl: "./deploy-log-full.component.html",
-    styleUrl: "./deploy-log-full.component.css",
+    styleUrl: "./deploy-log-full.component.css"
 })
 export class DeployLogFullComponent implements AfterViewInit {
     latestDeployments: DeploymentList = []
@@ -25,6 +26,9 @@ export class DeployLogFullComponent implements AfterViewInit {
     currentType: DeploymentType = DeploymentType.ALL
     searchterm: string | undefined
     isFiltered = false
+
+    constructor(private cdr: ChangeDetectorRef) {
+    }
 
     async ngAfterViewInit(): Promise<void> {
         await this.updateLogAmount(50)
@@ -44,12 +48,13 @@ export class DeployLogFullComponent implements AfterViewInit {
     async updateLogAmount(amount: number): Promise<void> {
         this.latestDeployments = parseDeployments(
             await getDeployments(amount, this.currentType),
-            this.currentType,
+            this.currentType
         )
         this.requestedTooMany = this.latestDeployments.length < amount
 
         // Parse the strings for the UI and write them to the list
         this.constructStrings()
+        this.cdr.detectChanges()
     }
 
     /**
@@ -93,6 +98,9 @@ export class DeployLogFullComponent implements AfterViewInit {
                     this.latestDeployments[index].string = `Unknown status for`
                     break
             }
+
+            // Add source URL
+            this.latestDeployments[index].sourceUrl = generateRepoUrl(this.latestDeployments[index])
         }
     }
 

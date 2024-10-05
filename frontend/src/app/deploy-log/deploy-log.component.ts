@@ -2,11 +2,12 @@ import {
     CACHE_TELEGRAM_TTL,
     type DeploymentList,
     DeploymentType,
+    generateRepoUrl,
     getDeployments,
     parseDeployments,
-    startShortPolling,
+    startShortPolling
 } from "@./shared-lib"
-import { type AfterViewInit, Component } from "@angular/core"
+import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
 
@@ -19,6 +20,8 @@ import { RouterLink } from "@angular/router"
 })
 export class DeployLogComponent implements AfterViewInit {
     latestDeployments: DeploymentList = []
+
+    constructor(private cdr: ChangeDetectorRef) {}
 
     async ngAfterViewInit(): Promise<void> {
         this.latestDeployments = parseDeployments(
@@ -41,7 +44,11 @@ export class DeployLogComponent implements AfterViewInit {
             DeploymentType.SUCCESS,
         )
         if (newList[0].date !== this.latestDeployments[0].date) {
+            for (const deployment of newList) {
+                deployment.sourceUrl = generateRepoUrl(deployment)
+            }
             this.latestDeployments = newList
+            this.cdr.detectChanges()
         }
     }
 }
