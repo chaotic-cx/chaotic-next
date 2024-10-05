@@ -42,45 +42,44 @@ export class StatusComponent implements AfterViewInit {
             .get("queue/stats")
             .then((response) => {
                 const currentQueue: StatsObject = JSON.parse(response.data)
-                const totalNodes = currentQueue["idle"].nodes
-
                 for (const queue of Object.keys(currentQueue)) {
                     const nameWithoutRepo: string[] = []
+                    const build_class: (string | number)[] = []
                     const nodes: string[] = []
 
                     switch (queue) {
                         case "active":
-                            currentQueue.active.packages.forEach(
-                                (pkg): void => {
-                                    nameWithoutRepo.push(pkg.name.split("/")[2])
-                                    nodes.push(pkg.node)
-                                },
-                            )
+                            currentQueue.active.packages.forEach((pkg): void => {
+                                nameWithoutRepo.push(pkg.name.split("/")[2])
+                                build_class.push(pkg.build_class)
+                                nodes.push(pkg.node)
+                            })
                             returnQueue.push({
                                 status: "active",
                                 count: currentQueue.active.count,
                                 packages: nameWithoutRepo,
+                                build_class: build_class,
                                 nodes: nodes,
                             })
-                            totalNodes.push(...nodes)
                             break
                         case "waiting":
-                            currentQueue.waiting.packages.forEach(
-                                (pkg): void => {
-                                    nameWithoutRepo.push(pkg.name.split("/")[2])
-                                },
-                            )
+                            currentQueue.waiting.packages.forEach((pkg): void => {
+                                nameWithoutRepo.push(pkg.name.split("/")[2])
+                                build_class.push(pkg.build_class)
+                            })
                             returnQueue.push({
                                 status: "waiting",
                                 count: currentQueue.waiting.count,
                                 packages: nameWithoutRepo,
+                                build_class: build_class,
                             })
                             break
                         case "idle":
                             returnQueue.push({
                                 status: "idle",
                                 count: currentQueue.idle.count,
-                                nodes: nodes,
+                                nodes: currentQueue.idle.nodes.map((node) => node.name),
+                                build_class: currentQueue.idle.nodes.map((node) => node.build_class),
                             })
                             break
                     }
