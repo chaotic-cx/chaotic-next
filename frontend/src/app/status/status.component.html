@@ -56,10 +56,10 @@
     </div>
 
     @if (!nothingGoingOn) {
-        <div class="my-auto md:mx-10 mx-5 pt-5">
+        <div class="chaotic-container-regular my-5">
             <h3 class="py-5 text-center text-xl font-bold text-mauve">Current queue stats</h3>
             @for (queue of Object.values(currentQueue); track queue) {
-                @if (queue.status !== "idle") {
+                @if (queue.status !== "idle" && queue.count > 0) {
                     <div
                         class="my-3 grid grid-cols-1 gap-x-0 md:grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm"
                     >
@@ -67,12 +67,12 @@
                             class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
                         >
                             <h4 class="text-center text-2xl text-mauve">Status</h4>
-                            <p class="my-2 text-center text-text">{{ queue.status }}</p>
+                            <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
                         </div>
-                        @if (queue.status === "waiting") {
+                        @if (queue.status === "waiting" && queue.count > 0) {
                             <div class="bg-surface0 p-4">
                                 <h4 class="text-center text-xl text-mauve">Count</h4>
-                                <p class="my-2 text-center text-text">{{ queue.count }}</p>
+                                <p class="my-2 text-center text-sapphire">{{ queue.count }}</p>
                             </div>
                         }
                         @if (queue.status === "active" && queue.packages && queue.packages.length > 0) {
@@ -81,22 +81,26 @@
                                 <p class="text-s my-2 text-center text-text">
                                     @for (pkg of queue.packages; track pkg) {
                                         {{ queue.nodes![$index] }} <a
-                                            class="text-rosewater">({{ queue.packages ? queue.packages : undefined }})</a><br />
+                                            class="text-rosewater">({{ queue.packages ? queue.packages : undefined }}
+                                            )</a><br />
                                     }
                                 </p>
                             </div>
                         }
-                        <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
-                            <h4 class="text-center text-xl text-mauve">Packages</h4>
-                            <div class="my-2 grid grid-cols-1 gap-5">
-                                <p class="text-s text-center text-text">
-                                    @for (pkg of queue.packages; track pkg) {
-                                        {{ pkg }} <a class="text-rosewater">(class {{ queue.build_class![$index] }})</a>
-                                        <br />
-                                    }
-                                </p>
+                        @if (queue.count > 0) {
+                            <div class="rounded-b-2xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
+                                <h4 class="text-center text-xl text-mauve">Packages</h4>
+                                <div class="my-2 grid grid-cols-1 gap-5">
+                                    <p class="text-s text-center text-sapphire">
+                                        @for (pkg of queue.packages; track pkg) {
+                                            {{ pkg }} <a class="text-rosewater">(class {{ queue.build_class![$index] }}
+                                                )</a>
+                                            <br />
+                                        }
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        }
                     </div>
                 }
                 @if (queue.status === "idle" && queue.nodes!.length > 0) {
@@ -107,12 +111,12 @@
                             class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
                         >
                             <h4 class="text-center text-2xl text-mauve">Status</h4>
-                            <p class="my-2 text-center text-text">{{ queue.status }}</p>
+                            <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
                         </div>
                         @if (queue.nodes && queue.nodes.length > 0) {
                             <div class="bg-surface0 p-4">
                                 <h4 class="text-center text-xl text-mauve">Nodes</h4>
-                                <p class="text-s my-2 text-center text-text">
+                                <p class="text-s my-2 text-center text-sapphire">
                                     @for (node of queue.nodes; track node) {
                                         {{ node }}
                                     }
@@ -120,9 +124,11 @@
                             </div>
                             <div class="bg-surface0 p-4">
                                 <h4 class="text-center text-xl text-mauve">Build class</h4>
-                                @for (node of queue.build_class; track node) {
-                                    {{ node }}<br />
-                                }
+                                <p class="text-s my-2 text-center text-rosewater">
+                                    @for (node of queue.build_class; track node) {
+                                        {{ node }}
+                                    }
+                                </p>
                             </div>
                         }
                     </div>
