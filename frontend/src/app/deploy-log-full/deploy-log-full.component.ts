@@ -1,15 +1,24 @@
-import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib"
+import {
+    CACHE_TELEGRAM_TTL,
+    type DeploymentList,
+    DeploymentType,
+} from "@./shared-lib"
 import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
-import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions"
+import {
+    generateRepoUrl,
+    getDeployments,
+    parseDeployments,
+    startShortPolling,
+} from "../functions"
 
 @Component({
     selector: "app-deploy-log-full",
     standalone: true,
     imports: [FormsModule, RouterLink],
     templateUrl: "./deploy-log-full.component.html",
-    styleUrl: "./deploy-log-full.component.css"
+    styleUrl: "./deploy-log-full.component.css",
 })
 export class DeployLogFullComponent implements AfterViewInit {
     latestDeployments: DeploymentList = []
@@ -19,10 +28,9 @@ export class DeployLogFullComponent implements AfterViewInit {
     currentType: DeploymentType = DeploymentType.ALL
     searchterm: string | undefined
     isFiltered = false
-    loading: boolean = true
+    loading = true
 
-    constructor(private cdr: ChangeDetectorRef) {
-    }
+    constructor(private cdr: ChangeDetectorRef) {}
 
     async ngAfterViewInit(): Promise<void> {
         await this.updateLogAmount(50)
@@ -40,7 +48,11 @@ export class DeployLogFullComponent implements AfterViewInit {
      * @param amount The number of deployments to request from the backend
      */
     async updateLogAmount(amount: number): Promise<void> {
-        const newDeployments = await getDeployments(amount, this.currentType, this.loading)
+        const newDeployments = await getDeployments(
+            amount,
+            this.currentType,
+            this.loading,
+        )
 
         if (newDeployments === null) {
             this.loading = false
@@ -49,7 +61,7 @@ export class DeployLogFullComponent implements AfterViewInit {
 
         this.latestDeployments = parseDeployments(
             newDeployments,
-            this.currentType
+            this.currentType,
         )
         this.requestedTooMany = this.latestDeployments.length < amount
 
@@ -102,7 +114,9 @@ export class DeployLogFullComponent implements AfterViewInit {
             }
 
             // Add source URL
-            this.latestDeployments[index].sourceUrl = generateRepoUrl(this.latestDeployments[index])
+            this.latestDeployments[index].sourceUrl = generateRepoUrl(
+                this.latestDeployments[index],
+            )
         }
     }
 

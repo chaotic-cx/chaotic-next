@@ -14,7 +14,7 @@ export function parseOutput(input: string): any[] {
         if (!isNaN(count)) {
             returningArray.push({
                 name: name ?? "Unknown",
-                count
+                count,
             })
         }
     }

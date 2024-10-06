@@ -1,19 +1,25 @@
-import { CAUR_API_URL, CAUR_REPO_API_URL, type CurrentQueue, GitLabPipeline, type StatsObject } from "@./shared-lib"
+import {
+    CAUR_API_URL,
+    CAUR_REPO_API_URL,
+    type CurrentQueue,
+    GitLabPipeline,
+    type StatsObject,
+} from "@./shared-lib"
+import { DatePipe } from "@angular/common"
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { Router } from "@angular/router"
 import { Axios } from "axios"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
-import { LiveLogComponent } from "../live-log/live-log.component"
-import { DatePipe } from "@angular/common"
-import { BuildClassPipe } from "../pipes/build-class.pipe"
 import { startShortPolling } from "../functions"
+import { LiveLogComponent } from "../live-log/live-log.component"
+import { BuildClassPipe } from "../pipes/build-class.pipe"
 
 @Component({
     selector: "app-status",
     standalone: true,
     imports: [DeployLogComponent, LiveLogComponent, DatePipe, BuildClassPipe],
     templateUrl: "./status.component.html",
-    styleUrl: "./status.component.css"
+    styleUrl: "./status.component.css",
 })
 export class StatusComponent implements AfterViewInit {
     currentQueue: CurrentQueue = []
@@ -25,11 +31,14 @@ export class StatusComponent implements AfterViewInit {
     Object = Object
     pipelines: GitLabPipeline[] = []
     liveLog: undefined | string = undefined
-    displayLiveLog: boolean = true
-    activeBuilds: number = 0
-    currentBuild: number = 0
+    displayLiveLog = true
+    activeBuilds = 0
+    currentBuild = 0
 
-    constructor(private cdr: ChangeDetectorRef, private router: Router) {
+    constructor(
+        private cdr: ChangeDetectorRef,
+        private router: Router,
+    ) {
         this.displayLiveLog = localStorage.getItem("displayLiveLog") === "true"
     }
 
@@ -49,20 +58,22 @@ export class StatusComponent implements AfterViewInit {
     async getPipelines() {
         const axios = new Axios({
             baseURL: CAUR_REPO_API_URL,
-            timeout: 10000
+            timeout: 10000,
         })
 
         axios
             .get("/pipelines")
             .then((response) => {
-                const data = (JSON.parse(response.data) as GitLabPipeline[])
-                this.pipelines = data.filter((pipeline: GitLabPipeline) => pipeline.status === ("running" || "pending"))
+                const data = JSON.parse(response.data) as GitLabPipeline[]
+                this.pipelines = data.filter(
+                    (pipeline: GitLabPipeline) =>
+                        pipeline.status === ("running" || "pending"),
+                )
             })
             .catch((err) => {
                 console.error(err)
             })
     }
-
 
     /*
      * Get the current queue stats from the Chaotic backend
@@ -75,7 +86,7 @@ export class StatusComponent implements AfterViewInit {
         const returnQueue: CurrentQueue = []
         const axios = new Axios({
             baseURL: CAUR_API_URL,
-            timeout: 10000
+            timeout: 10000,
         })
 
         axios
@@ -90,39 +101,49 @@ export class StatusComponent implements AfterViewInit {
 
                     switch (queue) {
                         case "active":
-                            currentQueue.active.packages.forEach((pkg): void => {
-                                nameWithoutRepo.push(pkg.name.split("/")[2])
-                                build_class.push(pkg.build_class)
-                                nodes.push(pkg.node)
-                                liveLogUrl.push(pkg.liveLog ? pkg.liveLog : "")
-                            })
+                            currentQueue.active.packages.forEach(
+                                (pkg): void => {
+                                    nameWithoutRepo.push(pkg.name.split("/")[2])
+                                    build_class.push(pkg.build_class)
+                                    nodes.push(pkg.node)
+                                    liveLogUrl.push(
+                                        pkg.liveLog ? pkg.liveLog : "",
+                                    )
+                                },
+                            )
                             returnQueue.push({
                                 status: "active",
                                 count: currentQueue.active.count,
                                 packages: nameWithoutRepo,
                                 build_class: build_class,
                                 nodes: nodes,
-                                liveLogUrl: liveLogUrl
+                                liveLogUrl: liveLogUrl,
                             })
                             break
                         case "waiting":
-                            currentQueue.waiting.packages.forEach((pkg): void => {
-                                nameWithoutRepo.push(pkg.name.split("/")[2])
-                                build_class.push(pkg.build_class)
-                            })
+                            currentQueue.waiting.packages.forEach(
+                                (pkg): void => {
+                                    nameWithoutRepo.push(pkg.name.split("/")[2])
+                                    build_class.push(pkg.build_class)
+                                },
+                            )
                             returnQueue.push({
                                 status: "waiting",
                                 count: currentQueue.waiting.count,
                                 packages: nameWithoutRepo,
-                                build_class: build_class
+                                build_class: build_class,
                             })
                             break
                         case "idle":
                             returnQueue.push({
                                 status: "idle",
                                 count: currentQueue.idle.count,
-                                nodes: currentQueue.idle.nodes.map((node) => node.name),
-                                build_class: currentQueue.idle.nodes.map((node) => node.build_class)
+                                nodes: currentQueue.idle.nodes.map(
+                                    (node) => node.name,
+                                ),
+                                build_class: currentQueue.idle.nodes.map(
+                                    (node) => node.build_class,
+                                ),
                             })
                             break
                     }
@@ -147,26 +168,45 @@ export class StatusComponent implements AfterViewInit {
 
                 // Finally, update the component's state
                 this.lastUpdated = new Date().toLocaleString("en-GB", {
-                    timeZone: "UTC"
+                    timeZone: "UTC",
                 })
 
                 // Check if there is nothing going on
-                this.nothingGoingOn = returnQueue.findIndex((queue) => queue.status !== "idle" && queue.count > 0) === -1
+                this.nothingGoingOn =
+                    returnQueue.findIndex(
+                        (queue) => queue.status !== "idle" && queue.count > 0,
+                    ) === -1
 
                 // Check if there is a live log to display and handle changes accordingly
                 if (!this.nothingGoingOn) {
-
-                    const activeQueue = returnQueue.find((queue) => queue.status === "active")
+                    const activeQueue = returnQueue.find(
+                        (queue) => queue.status === "active",
+                    )
                     const savedLog = localStorage.getItem("currentBuild")
-                    const prevLogExists = activeQueue!.liveLogUrl![Number(this.currentBuild)] !== undefined
-                    const refersToValidLogIndex = activeQueue!.liveLogUrl![Number(this.currentBuild)] !== undefined
+                    const prevLogExists =
+                        activeQueue!.liveLogUrl![Number(this.currentBuild)] !==
+                        undefined
+                    const refersToValidLogIndex =
+                        activeQueue!.liveLogUrl![Number(this.currentBuild)] !==
+                        undefined
 
-                    if (savedLog !== null && prevLogExists && refersToValidLogIndex) {
-                        this.liveLog = activeQueue!.liveLogUrl![Number(savedLog)]
-                    } else if (!refersToValidLogIndex && activeQueue!.liveLogUrl![0] !== undefined) {
+                    if (
+                        savedLog !== null &&
+                        prevLogExists &&
+                        refersToValidLogIndex
+                    ) {
+                        this.liveLog =
+                            activeQueue!.liveLogUrl![Number(savedLog)]
+                    } else if (
+                        !refersToValidLogIndex &&
+                        activeQueue!.liveLogUrl![0] !== undefined
+                    ) {
                         this.liveLog = activeQueue!.liveLogUrl![0]
                         this.currentBuild = 0
-                        localStorage.setItem("currentBuild", this.currentBuild.toString())
+                        localStorage.setItem(
+                            "currentBuild",
+                            this.currentBuild.toString(),
+                        )
                     }
                     this.activeBuilds = activeQueue!.liveLogUrl!.length
                 } else {
@@ -225,10 +265,12 @@ export class StatusComponent implements AfterViewInit {
      * Show the next live log of the active builds.
      */
     toggleLogStream(): void {
-        const activeQueue = this.currentQueue.find((queue) => queue.status === "active")
+        const activeQueue = this.currentQueue.find(
+            (queue) => queue.status === "active",
+        )
         if (!activeQueue) return
 
-        if ((this.currentBuild + 2) <= this.activeBuilds) {
+        if (this.currentBuild + 2 <= this.activeBuilds) {
             this.currentBuild++
             this.liveLog = activeQueue.liveLogUrl![this.currentBuild]
             localStorage.setItem("currentBuild", this.currentBuild.toString())

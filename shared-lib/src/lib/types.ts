@@ -4,7 +4,7 @@ export const CACHE_ROUTER_TTL = 60 * 5 * 1000
 export const CACHE_TELEGRAM_TTL = 30 * 1000
 export const CAUR_ALLOWED_CORS = [
     "https://aur.chaotic.cx",
-    "https://caur-frontend-pages.dev"
+    "https://caur-frontend-pages.dev",
 ]
 export const CAUR_API_URL = "https://builds.garudalinux.org/api/"
 export const CAUR_BACKEND_PORT = 3000
@@ -16,12 +16,15 @@ export const CAUR_LOGS_URL = "https://builds.garudalinux.org/logs/logs.html"
 export const CAUR_MAP_URL = "https://status.chaotic.cx/map"
 export const CAUR_METRICS_URL = "https://metrics.chaotic.cx/"
 export const CAUR_NEWS_ID = "-1001293714071"
-export const CAUR_PKG_LIST_URL = "https://builds.garudalinux.org/repos/chaotic-aur/pkgs.files.txt"
+export const CAUR_PKG_LIST_URL =
+    "https://builds.garudalinux.org/repos/chaotic-aur/pkgs.files.txt"
 export const CAUR_PKG_URL = "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/"
 export const CAUR_PRIMARY_KEY = "3056513887B78AEB"
 export const CAUR_REPO_API_URL = `https://gitlab.com/api/v4/projects/54867625/`
-export const CAUR_REPO_URL = "https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/"
-export const CAUR_REPO_URL_GARUDA = "https://gitlab.com/garuda-linux/pkgbuilds/-/tree/main/"
+export const CAUR_REPO_URL =
+    "https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/"
+export const CAUR_REPO_URL_GARUDA =
+    "https://gitlab.com/garuda-linux/pkgbuilds/-/tree/main/"
 export const CAUR_TG_API_URL = `${CAUR_BACKEND_URL}/telegram/`
 
 export type PackagesObject = Record<
@@ -39,9 +42,9 @@ export type StatsObject = {
     active: {
         count: number
         packages: {
-            liveLog?: string;
-            name: string;
-            node: string;
+            liveLog?: string
+            name: string
+            node: string
             build_class: number | string
         }[]
     }
@@ -161,15 +164,15 @@ export interface PkgListEntry {
 export type PkgList = PkgListEntry[]
 
 export interface GitLabPipeline {
-    created_at: string,
-    id: number,
-    iid: number,
+    created_at: string
+    id: number
+    iid: number
     name: string
-    project_id: number,
-    ref: string,
-    sha: string,
-    source: string,
-    status: string,
-    updated_at: string,
-    web_url: string,
+    project_id: number
+    ref: string
+    sha: string
+    source: string
+    status: string
+    updated_at: string
+    web_url: string
 }
