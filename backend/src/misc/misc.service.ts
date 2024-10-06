@@ -15,7 +15,7 @@ export class MiscService {
     async getPkgList(): Promise<PkgListRetObject> {
         const axios = new Axios({
             baseURL: "",
-            timeout: 1000,
+            timeout: 10000,
         })
         return axios
             .get(CAUR_PKG_LIST_URL)

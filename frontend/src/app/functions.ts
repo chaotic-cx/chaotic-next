@@ -180,7 +180,7 @@ export async function getDeployments(
 ): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
-        timeout: 1000
+        timeout: 10000
     })
 
     let requestString

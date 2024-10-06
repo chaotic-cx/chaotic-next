@@ -11,7 +11,7 @@ export class MetricsService {
     constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {
         this.axios = new Axios({
             baseURL: CAUR_METRICS_URL,
-            timeout: 100000,
+            timeout: 10000,
         })
 
         Logger.log("MetricsService initialized", "MetricsService")

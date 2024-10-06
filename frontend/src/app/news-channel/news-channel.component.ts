@@ -29,7 +29,7 @@ export class NewsChannelComponent implements AfterViewInit {
     async getNews(): Promise<TgMessageList> {
         const axios = new Axios({
             baseURL: CAUR_TG_API_URL,
-            timeout: 1000,
+            timeout: 10000,
         })
 
         return axios

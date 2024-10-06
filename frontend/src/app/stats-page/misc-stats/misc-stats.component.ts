@@ -21,7 +21,7 @@ export class MiscStatsComponent implements AfterViewInit {
     constructor() {
         this.axios = new Axios({
             baseURL: CAUR_CACHED_METRICS_URL,
-            timeout: 100000,
+            timeout: 10000,
         })
     }
 
