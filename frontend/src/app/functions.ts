@@ -6,12 +6,12 @@ import {
     Deployment,
     DeploymentList,
     DeploymentType,
-    TgMessageList
+    TgMessageList,
 } from "@./shared-lib"
 import { ElementRef, Renderer2 } from "@angular/core"
 import { CatppuccinFlavor, flavors } from "@catppuccin/palette"
-import TimeAgo from "javascript-time-ago"
 import { Axios } from "axios"
+import TimeAgo from "javascript-time-ago"
 
 /**
  * Poll for new deployments.
@@ -46,7 +46,7 @@ export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
     renderer.setStyle(
         el.nativeElement.ownerDocument.body,
         "backgroundColor",
-        flavorColor
+        flavorColor,
     )
     return theme
 }
@@ -58,9 +58,9 @@ export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
  */
 export function generateRepoUrl(deployment: Deployment): string | undefined {
     if (deployment.repo.match(/chaotic-aur$/) !== null) {
-        return deployment.sourceUrl = `${CAUR_REPO_URL}`
+        return (deployment.sourceUrl = `${CAUR_REPO_URL}`)
     } else if (deployment.repo.match(/garuda$/) !== null) {
-        return deployment.sourceUrl = `${CAUR_REPO_URL_GARUDA}`
+        return (deployment.sourceUrl = `${CAUR_REPO_URL_GARUDA}`)
     }
     return undefined
 }
@@ -79,7 +79,7 @@ export function getNow(): string {
  */
 export function checkIfMobile() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
+        navigator.userAgent,
     )
 }
 
@@ -91,7 +91,7 @@ export function checkIfMobile() {
  */
 export function parseDeployments(
     messages: TgMessageList,
-    type: DeploymentType
+    type: DeploymentType,
 ): DeploymentList {
     const timeAgo = new TimeAgo("en-US")
     const deploymentList: DeploymentList = []
@@ -111,7 +111,7 @@ export function parseDeployments(
 
         const date = timeAgo.format(
             Number.parseInt(message.date) * 1000,
-            "round"
+            "round",
         )
 
         if (
@@ -119,7 +119,7 @@ export function parseDeployments(
             String(message.content).includes("deployment to")
         ) {
             const buildRepo = String(
-                String(message.content).split("deployment to ")[1]
+                String(message.content).split("deployment to ")[1],
             )
             node = buildRepo.match(/on\s(.*)/)
                 ? buildRepo.match(/on\s([\w-]*)/)![1]
@@ -139,7 +139,7 @@ export function parseDeployments(
             String(message.content).includes("Failed")
         ) {
             const buildRepo = String(
-                String(message.content).split("Failed deploying to ")[1]
+                String(message.content).split("Failed deploying to ")[1],
             )
             node = buildRepo.match(/on\s(.*)/)
                 ? buildRepo.match(/on\s([\w-]*)/)![1]
@@ -164,7 +164,7 @@ export function parseDeployments(
             repo: repo,
             type: deploymentType,
             log: log ? toLiveLog(log.split(":")[1]) : undefined,
-            node: node
+            node: node,
         })
     }
     return deploymentList
@@ -177,11 +177,11 @@ export function parseDeployments(
 export async function getDeployments(
     amount: number,
     type: DeploymentType,
-    loading?: boolean
+    loading?: boolean,
 ): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
-        timeout: 10000
+        timeout: 10000,
     })
 
     let requestString

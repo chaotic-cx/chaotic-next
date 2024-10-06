@@ -6,7 +6,7 @@ import {
     Input,
     OnChanges,
     PLATFORM_ID,
-    ViewChild
+    ViewChild,
 } from "@angular/core"
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
 
@@ -15,7 +15,7 @@ import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
     standalone: true,
     imports: [],
     templateUrl: "./live-log.component.html",
-    styleUrl: "./live-log.component.css"
+    styleUrl: "./live-log.component.css",
 })
 export class LiveLogComponent implements AfterViewInit, OnChanges {
     @Input() url: string | undefined
@@ -25,14 +25,18 @@ export class LiveLogComponent implements AfterViewInit, OnChanges {
 
     constructor(
         @Inject(PLATFORM_ID) platformId: Object,
-        public sanitizer: DomSanitizer
+        public sanitizer: DomSanitizer,
     ) {
-        this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url ? this.url : "")
+        this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(
+            this.url ? this.url : "",
+        )
     }
 
     ngAfterViewInit(): void {
         if (this.url) {
-            this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
+            this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(
+                this.url,
+            )
         } else {
             console.error("No URL provided for live log")
         }
@@ -41,11 +45,13 @@ export class LiveLogComponent implements AfterViewInit, OnChanges {
     ngOnChanges(): void {
         if (this.url) {
             // This is a workaround to force the iframe to reload with the new URL
-            this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
-            this.showIframe = false;
+            this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(
+                this.url,
+            )
+            this.showIframe = false
             setTimeout(() => {
-                this.showIframe = true;
-            }, 50);
+                this.showIframe = true
+            }, 50)
         } else {
             console.error("No URL provided for live log")
         }

@@ -1,4 +1,8 @@
-import { CAUR_CACHED_METRICS_URL, type CountryRankList, type UserAgentList } from "@./shared-lib"
+import {
+    CAUR_CACHED_METRICS_URL,
+    type CountryRankList,
+    type UserAgentList,
+} from "@./shared-lib"
 import { type AfterViewInit, Component } from "@angular/core"
 import { Axios } from "axios"
 import { getNow } from "../../functions"

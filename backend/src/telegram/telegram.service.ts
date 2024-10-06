@@ -1,4 +1,10 @@
-import { CACHE_TELEGRAM_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, type TgMessage, type TgMessageList } from "@./shared-lib"
+import {
+    CACHE_TELEGRAM_TTL,
+    CAUR_DEPLOY_LOG_ID,
+    CAUR_NEWS_ID,
+    type TgMessage,
+    type TgMessageList,
+} from "@./shared-lib"
 import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
@@ -13,9 +19,14 @@ export class TelegramService {
 
         const TELEGRAM_API_HASH = process.env.TELEGRAM_API_HASH || ""
         const TELEGRAM_API_ID = process.env.TELEGRAM_API_ID || ""
-        const TELEGRAM_DB_ENCRYPTION_KEY = process.env.TELEGRAM_DB_ENCRYPTION_KEY || ""
+        const TELEGRAM_DB_ENCRYPTION_KEY =
+            process.env.TELEGRAM_DB_ENCRYPTION_KEY || ""
 
-        if (TELEGRAM_API_ID !== "" && TELEGRAM_API_HASH !== "" && TELEGRAM_DB_ENCRYPTION_KEY !== "") {
+        if (
+            TELEGRAM_API_ID !== "" &&
+            TELEGRAM_API_HASH !== "" &&
+            TELEGRAM_DB_ENCRYPTION_KEY !== ""
+        ) {
             this.tgClient = tdl.createClient({
                 apiId: Number.parseInt(TELEGRAM_API_ID),
                 apiHash: TELEGRAM_API_HASH,
@@ -25,7 +36,9 @@ export class TelegramService {
             })
             Logger.log("Telegram client started", "TelegramService")
         } else {
-            Logger.error("Telegram client not started! Please provide correct secrets in .env file.")
+            Logger.error(
+                "Telegram client not started! Please provide correct secrets in .env file.",
+            )
         }
     }
 
@@ -38,7 +51,8 @@ export class TelegramService {
 
         // Cache the news for 60 seconds
         const cacheKey = "tgNews"
-        let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
+        let data: TgMessage[] | undefined =
+            await this.cacheManager.get(cacheKey)
         if (!data) {
             data = await this.extractMessages(CAUR_NEWS_ID, 30)
             await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL)
@@ -55,9 +69,13 @@ export class TelegramService {
 
         // Cache the news for 60 seconds
         const cacheKey = `tgDeployments-${amount}`
-        let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
+        let data: TgMessage[] | undefined =
+            await this.cacheManager.get(cacheKey)
         if (!data) {
-            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, Number.parseInt(amount))
+            data = await this.extractMessages(
+                CAUR_DEPLOY_LOG_ID,
+                Number.parseInt(amount),
+            )
             await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL)
         }
         return data
@@ -132,22 +150,32 @@ export class TelegramService {
 
         // Get the first message ID as a reference point, which is not the channel creation
         // message. This one was seemingly not valid as a reference point.
-        const firstMessage = (await this.getChatHistory({ chat: id, offset: -2, from: 1 })).messages[0].id
+        const firstMessage = (
+            await this.getChatHistory({ chat: id, offset: -2, from: 1 })
+        ).messages[0].id
 
         // Get the last message ID to start looping, while ensuring to push it into the array
-        const lastMessage = (await this.getChatHistory({ chat: id, from: 0, limit: 1 })).messages[0]
+        const lastMessage = (
+            await this.getChatHistory({ chat: id, from: 0, limit: 1 })
+        ).messages[0]
         extractedMessages.push({
             date: lastMessage.date,
             content: lastMessage.content.text.text,
             author: lastMessage.author_signature,
             view_count: lastMessage.interaction_info.view_count,
-            link: await this.getMessageLink(lastMessage.chat_id, lastMessage.id),
+            link: await this.getMessageLink(
+                lastMessage.chat_id,
+                lastMessage.id,
+            ),
             id: lastMessage.id,
         })
         let from = lastMessage.id
 
         while (extractedMessages.length < desiredCount) {
-            const newMessages = await this.getChatHistory({ chat: id, from: from })
+            const newMessages = await this.getChatHistory({
+                chat: id,
+                from: from,
+            })
             for (const message of newMessages.messages) {
                 if (
                     // Some messages seemingly don't have content, let's filter those out
@@ -159,7 +187,10 @@ export class TelegramService {
                         content: message.content.text.text,
                         author: message.author_signature,
                         view_count: message.interaction_info.view_count,
-                        link: await this.getMessageLink(message.chat_id, message.id),
+                        link: await this.getMessageLink(
+                            message.chat_id,
+                            message.id,
+                        ),
                         id: message.id,
                         log: this.getLogLink(message.content.text),
                     })
@@ -171,7 +202,10 @@ export class TelegramService {
             // Break if the first message is found, no point in continuing. We need to
             // check this before filtering the messages though.
             let foundFirst = false
-            if (extractedMessages.find((m) => m.id === firstMessage) !== undefined) {
+            if (
+                extractedMessages.find((m) => m.id === firstMessage) !==
+                undefined
+            ) {
                 foundFirst = true
             }
 
@@ -210,7 +244,10 @@ export class TelegramService {
      * @returns The message link as string
      * @private
      */
-    private async getMessageLink(chat: number, message: number): Promise<string> {
+    private async getMessageLink(
+        chat: number,
+        message: number,
+    ): Promise<string> {
         const linkObject = await this.tgClient.invoke({
             _: "getMessageLink",
             chat_id: chat,
@@ -246,7 +283,12 @@ export class TelegramService {
      * @returns The chat history
      * @private
      */
-    private async getChatHistory(params: { chat: string; from?: number; limit?: number; offset?: number }) {
+    private async getChatHistory(params: {
+        chat: string
+        from?: number
+        limit?: number
+        offset?: number
+    }) {
         return this.tgClient.invoke({
             _: "getChatHistory",
             chat_id: params.chat,
@@ -256,9 +298,14 @@ export class TelegramService {
         })
     }
 
-    private async getTgMessages(cacheKeyId: string, amount: string, startsWith: string): Promise<TgMessageList> {
+    private async getTgMessages(
+        cacheKeyId: string,
+        amount: string,
+        startsWith: string,
+    ): Promise<TgMessageList> {
         const cacheKey = `${cacheKeyId}-${amount}`
-        let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey)
+        let data: TgMessage[] | undefined =
+            await this.cacheManager.get(cacheKey)
         if (!data) {
             data = await this.extractMessages(
                 CAUR_DEPLOY_LOG_ID,

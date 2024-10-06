@@ -1,5 +1,9 @@
-import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, type SpecificPackageMetrics } from "@./shared-lib"
-import { type Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
+import {
+    CACHE_ROUTER_TTL,
+    CAUR_METRICS_URL,
+    type SpecificPackageMetrics,
+} from "@./shared-lib"
+import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { Axios } from "axios"
 import { parseOutput } from "../functions"
@@ -76,7 +80,10 @@ export class MetricsService {
         const cacheKey = `thirtyDayPackage-${param}`
         let data = await this.cacheManager.get(cacheKey)
         if (!data) {
-            const metrics: SpecificPackageMetrics = { downloads: 0, user_agents: [] }
+            const metrics: SpecificPackageMetrics = {
+                downloads: 0,
+                user_agents: [],
+            }
             metrics.name = param
             data = await Promise.all([
                 this.axios.get(`30d/package/${metrics.name}`),
