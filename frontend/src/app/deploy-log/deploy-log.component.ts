@@ -28,10 +28,16 @@ export class DeployLogComponent implements AfterViewInit {
             await getDeployments(30, DeploymentType.SUCCESS),
             DeploymentType.SUCCESS,
         )
+        for (const deployment of this.latestDeployments) {
+            deployment.sourceUrl = generateRepoUrl(deployment)
+        }
 
         // Poll for new deployments every 5 minutes (which is the time the backend caches requests)
         startShortPolling(CACHE_TELEGRAM_TTL, async () => {
             await this.checkNewDeployments()
+            for (const deployment of this.latestDeployments) {
+                deployment.sourceUrl = generateRepoUrl(deployment)
+            }
         })
     }
 
@@ -44,11 +50,8 @@ export class DeployLogComponent implements AfterViewInit {
             DeploymentType.SUCCESS,
         )
         if (newList[0].date !== this.latestDeployments[0].date) {
-            for (const deployment of newList) {
-                deployment.sourceUrl = generateRepoUrl(deployment)
-            }
             this.latestDeployments = newList
-            this.cdr.detectChanges()
         }
+        this.cdr.detectChanges()
     }
 }

@@ -65,7 +65,7 @@
     </div>
 
     @if (liveLog !== undefined && displayLiveLog) {
-        <div>
+        <div class="pt-5">
             <app-live-log [url]="liveLog"></app-live-log>
         </div>
     }
@@ -180,7 +180,7 @@
                             <h4 class="text-center text-xl text-mauve">Build class</h4>
                             <p class="text-s my-2 text-center text-rosewater">
                                 @for (node of queue.build_class; track node) {
-                                    {{ node }}<br />
+                                    {{ node | buildClass }}<br />
                                 }
                             </p>
                         </div>
