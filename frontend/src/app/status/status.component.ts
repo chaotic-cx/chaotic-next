@@ -32,6 +32,8 @@ export class StatusComponent implements AfterViewInit {
     pipelines: GitLabPipeline[] = []
     liveLog: undefined | string = undefined
     displayLiveLog: boolean = true
+    activeBuilds: number = 0
+    currentBuild: number = 0
 
     constructor(private cdr: ChangeDetectorRef, private router: Router) {
         this.displayLiveLog = localStorage.getItem("displayLiveLog") === "true"
@@ -157,10 +159,11 @@ export class StatusComponent implements AfterViewInit {
                 this.nothingGoingOn = returnQueue.findIndex((queue) => queue.status !== "idle" && queue.count > 0) === -1
                 if (!this.nothingGoingOn) {
                     const activeQueue = returnQueue.find((queue) => queue.status === "active")
-                    if (this.liveLog !== activeQueue!.liveLogUrl![0]) {
-                        this.liveLog = undefined
+                    if (this.liveLog !== activeQueue!.liveLogUrl![0] && this.currentBuild === 0) {
                         this.liveLog = activeQueue!.liveLogUrl![0]
+                        this.currentBuild = 0
                     }
+                    this.activeBuilds = activeQueue!.liveLogUrl!.length
                 } else {
                     this.liveLog = undefined
                 }
@@ -204,10 +207,29 @@ export class StatusComponent implements AfterViewInit {
         window.location.href = liveLogUrl ? liveLogUrl : ""
     }
 
+    /**
+     * Toggle the display of the live log. Saves the state in localStorage.
+     */
     toggleLiveLog() {
         this.displayLiveLog = !this.displayLiveLog
         this.cdr.detectChanges()
 
         localStorage.setItem("displayLiveLog", this.displayLiveLog.toString())
+    }
+
+    /**
+     * Show the next live log of the active builds.
+     */
+    toggleLogStream(): void {
+        const activeQueue = this.currentQueue.find((queue) => queue.status === "active")
+        if (!activeQueue) return
+
+        if ((this.currentBuild + 1) <= this.activeBuilds) {
+            this.currentBuild++
+            this.liveLog = activeQueue.liveLogUrl![this.currentBuild]
+        } else {
+            this.currentBuild = 0
+            this.liveLog = activeQueue.liveLogUrl![0]
+        }
     }
 }
