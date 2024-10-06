@@ -1,7 +1,8 @@
-import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, type SpecificPackageMetrics, parseOutput } from "@./shared-lib"
+import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, type SpecificPackageMetrics } from "@./shared-lib"
 import { type Cache, CACHE_MANAGER } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { Axios } from "axios"
+import { parseOutput } from "../functions"
 
 @Injectable()
 export class MetricsService {

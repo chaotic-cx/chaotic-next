@@ -1,7 +1,8 @@
-import { CAUR_HOME_URL, checkIfMobile } from "@./shared-lib"
-import { NgOptimizedImage, isPlatformBrowser } from "@angular/common"
+import { CAUR_HOME_URL } from "@./shared-lib"
+import { isPlatformBrowser, NgOptimizedImage } from "@angular/common"
 import { Component, Inject, PLATFORM_ID } from "@angular/core"
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
+import { checkIfMobile } from "../functions"
 
 @Component({
     selector: "app-chaotic-attractor",

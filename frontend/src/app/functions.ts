@@ -1,39 +1,67 @@
-import type { ElementRef, Renderer2 } from "@angular/core"
-import { type CatppuccinFlavor, flavors } from "@catppuccin/palette"
-import { Axios } from "axios"
-import TimeAgo from "javascript-time-ago"
 import {
     CAUR_REPO_URL,
     CAUR_REPO_URL_GARUDA,
     CAUR_TG_API_URL,
-    type CountNameObject,
     Deployment,
-    type DeploymentList,
+    DeploymentList,
     DeploymentType,
-    type TgMessageList,
-    type UserAgentList
-} from "./types"
+    TgMessageList
+} from "@./shared-lib"
+import { ElementRef, Renderer2 } from "@angular/core"
+import { CatppuccinFlavor, flavors } from "@catppuccin/palette"
+import TimeAgo from "javascript-time-ago"
+import { Axios } from "axios"
 
 /**
- * Parse the output of the non-single line metrics.
- * @param input The input to parse, usually text consisting of number, multiple whitespaces and a name.
- * @returns An array of objects containing the name and count of the metric.
+ * Poll for new deployments.
+ * @param interval
+ * @param func The function to call.
  */
-export function parseOutput(input: string): any[] {
-    const returningArray: UserAgentList | CountNameObject = []
-    const perLine = input.split("\n")
-    for (const line of perLine) {
-        const count = Number.parseInt(line.split(/ (.*)/)[0])
-        const name = line.replace(/^[0-9]*\s/, "")
-        if (!isNaN(count)) {
-            returningArray.push({
-                name: name ?? "Unknown",
-                count
-            })
-        }
-    }
-    return returningArray
+export function startShortPolling(interval: any, func: () => void): void {
+    let initialInterval
+    interval = setInterval(func, interval)
+    clearInterval(initialInterval)
 }
+
+/**
+ * Loads the selected theme.
+ * @param theme The theme to load (one of CatppuccinFlavor).
+ * @param renderer The renderer to use.
+ * @param el The element to apply the theme to.
+ */
+export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
+    const appCtp = document.getElementById("app-ctp")
+    if (appCtp === null) return
+    if (appCtp.classList.contains(theme)) {
+        return theme
+    }
+
+    appCtp.classList.remove("mocha", "latte", "frappe", "macchiato")
+    appCtp.classList.add(theme)
+
+    const flavor = theme as unknown as CatppuccinFlavor
+    // @ts-expect-error - this is always valid color
+    const flavorColor = flavors[flavor].colors.base.hex
+    renderer.setStyle(
+        el.nativeElement.ownerDocument.body,
+        "backgroundColor",
+        flavorColor
+    )
+    return theme
+}
+
+/**
+ * Generate the URL for the repository.
+ * @param deployment The deployment to generate the URL for.
+ * @returns The URL for the repository, in which the PKGBUILD is located.
+ */
+export function generateRepoUrl(deployment: Deployment): string | undefined {
+    if (deployment.repo.match(/chaotic-aur$/) !== null) {
+        return deployment.sourceUrl = `${CAUR_REPO_URL}`
+    } else if (deployment.repo.match(/garuda$/) !== null) {
+        return deployment.sourceUrl = `${CAUR_REPO_URL_GARUDA}`
+    }
+    return undefined}
 
 /**
  * Get the current date and time in a human-readable format.
@@ -182,54 +210,3 @@ export async function getDeployments(
         })
 }
 
-/**
- * Poll for new deployments.
- * @param interval
- * @param func The function to call.
- */
-export function startShortPolling(interval: any, func: () => void): void {
-    let initialInterval
-    interval = setInterval(func, interval)
-    clearInterval(initialInterval)
-}
-
-/**
- * Loads the selected theme.
- * @param theme The theme to load (one of CatppuccinFlavor).
- * @param renderer The renderer to use.
- * @param el The element to apply the theme to.
- */
-export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
-    const appCtp = document.getElementById("app-ctp")
-    if (appCtp === null) return
-    if (appCtp.classList.contains(theme)) {
-        return theme
-    }
-
-    appCtp.classList.remove("mocha", "latte", "frappe", "macchiato")
-    appCtp.classList.add(theme)
-
-    const flavor = theme as unknown as CatppuccinFlavor
-    // @ts-expect-error - this is always valid color
-    const flavorColor = flavors[flavor].colors.base.hex
-    renderer.setStyle(
-        el.nativeElement.ownerDocument.body,
-        "backgroundColor",
-        flavorColor
-    )
-    return theme
-}
-
-/**
- * Generate the URL for the repository.
- * @param deployment The deployment to generate the URL for.
- * @returns The URL for the repository, in which the PKGBUILD is located.
- */
-export function generateRepoUrl(deployment: Deployment): string | undefined {
-    if (deployment.repo.match(/chaotic-aur$/) !== null) {
-        return deployment.sourceUrl = `${CAUR_REPO_URL}`
-    } else if (deployment.repo.match(/garuda$/) !== null) {
-        return deployment.sourceUrl = `${CAUR_REPO_URL_GARUDA}`
-    }
-    return undefined
-}

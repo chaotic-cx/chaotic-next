@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 /**
- *  @file highlight-copy.js
  *  @author Arron Hunt <arronjhunt@gmail.com>
  *  @copyright Copyright 2021. All rights reserved.
  */

@@ -1,8 +1,9 @@
-import { CAUR_PRIMARY_KEY, CopyButtonPlugin } from "@./shared-lib"
+import { CAUR_PRIMARY_KEY } from "@./shared-lib"
 import { isPlatformBrowser } from "@angular/common"
 import { type AfterViewInit, Component, Inject, PLATFORM_ID } from "@angular/core"
 import hljs from "highlight.js"
 import { Highlight } from "ngx-highlightjs"
+import { CopyButtonPlugin } from "./hljs-copybutton"
 
 @Component({
     selector: "app-docs",
