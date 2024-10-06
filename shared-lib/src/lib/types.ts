@@ -1,4 +1,4 @@
-import type { MessageContent } from "./tdlib-types"
+import { MessageContent } from "./tdlib-types"
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000
 export const CACHE_TELEGRAM_TTL = 30 * 1000

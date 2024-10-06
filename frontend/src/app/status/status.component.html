@@ -143,7 +143,7 @@
                                 @for (pkg of queue.packages; track pkg) {
                                     {{ queue.nodes![$index] }} <a
                                         class="text-rosewater"
-                                    >({{ queue.packages ? queue.packages : undefined }})</a><br />
+                                    >({{ queue.packages ? queue.packages[$index] : undefined }})</a><br />
                                 }
                             </p>
                         </div>

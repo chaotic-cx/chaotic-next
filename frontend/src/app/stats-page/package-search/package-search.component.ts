@@ -1,7 +1,4 @@
-import {
-    CAUR_CACHED_METRICS_URL,
-    type SpecificPackageMetrics,
-} from "@./shared-lib"
+import { CAUR_CACHED_METRICS_URL, type SpecificPackageMetrics } from "@./shared-lib"
 import { Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { Axios } from "axios"
@@ -23,7 +20,7 @@ export class PackageSearchComponent {
     constructor() {
         this.axios = new Axios({
             baseURL: CAUR_CACHED_METRICS_URL,
-            timeout: 100000,
+            timeout: 10000,
         })
     }
 
