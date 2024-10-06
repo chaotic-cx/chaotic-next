@@ -126,12 +126,12 @@
                             >{{ deployment.date }}
                             </time>
                             <div class="lex text-sm font-normal text-text"
-                            >{{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> from
-                                <a class="text-rosewater">{{ deployment.node }}</a> to
+                            >{{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a>
+                                from <a class="text-rosewater">{{ deployment.node }}</a> to
                                 <a class="font-semibold text-red"
                                    href="{{ deployment.sourceUrl }}">{{ deployment.repo }}</a>
                                 @if (deployment.log) {
-                                    - <a class="text-yellow" href="{{ deployment.log }}">view log</a>
+                                    - <a class="text-yellow" href="{{ deployment.log }}">log ↗</a>
                                 }
                             </div>
                         </div>

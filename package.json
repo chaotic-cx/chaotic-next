@@ -89,6 +89,8 @@
         "@angular/router": "18.2.6",
         "@eslint/eslintrc": "^3.1.0",
         "@eslint/js": "^9.11.1",
+        "@fontsource/fira-sans": "^5.1.0",
+        "@fontsource/jetbrains-mono": "^5.1.1",
         "@nestjs/cache-manager": "^2.2.2",
         "@nestjs/common": "^10.4.4",
         "@nestjs/config": "^3.2.3",

@@ -12,7 +12,7 @@ export const CAUR_BACKEND_URL = "https://builds.garudalinux.org/backend"
 export const CAUR_CACHED_METRICS_URL = `${CAUR_BACKEND_URL}/metrics/`
 export const CAUR_DEPLOY_LOG_ID = "-1002151616973"
 export const CAUR_HOME_URL = "https://aur.chaotic.cx/"
-export const CAUR_LOGS_URL = "https://builds.garudalinux.org/logs/logs.html?id="
+export const CAUR_LOGS_URL = "https://builds.garudalinux.org/logs/logs.html"
 export const CAUR_MAP_URL = "https://status.chaotic.cx/map"
 export const CAUR_METRICS_URL = "https://metrics.chaotic.cx/"
 export const CAUR_NEWS_ID = "-1001293714071"
