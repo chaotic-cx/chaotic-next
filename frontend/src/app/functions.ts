@@ -1,4 +1,5 @@
 import {
+    CAUR_LOGS_URL,
     CAUR_REPO_URL,
     CAUR_REPO_URL_GARUDA,
     CAUR_TG_API_URL,
@@ -61,7 +62,8 @@ export function generateRepoUrl(deployment: Deployment): string | undefined {
     } else if (deployment.repo.match(/garuda$/) !== null) {
         return deployment.sourceUrl = `${CAUR_REPO_URL_GARUDA}`
     }
-    return undefined}
+    return undefined
+}
 
 /**
  * Get the current date and time in a human-readable format.
@@ -161,7 +163,7 @@ export function parseDeployments(
             name: pkg,
             repo: repo,
             type: deploymentType,
-            log: log ? log.split(":")[1] : undefined,
+            log: log ? toLiveLog(log.split(":")[1]) : undefined,
             node: node
         })
     }
@@ -210,3 +212,26 @@ export async function getDeployments(
         })
 }
 
+/**
+ * Parses a static log URL to a live log URL.
+ * From: /logs/api/logs/strawberry-git/1728221997487
+ * To: /logs/logs.html?timestamp=1728139106459&id=kodi-git
+ * @param url The static log URL.
+ * @returns The live log URL.
+ */
+export function toLiveLog(url: string): string {
+    const splitUrl = url.split("/")
+    const timestamp = splitUrl.pop()
+    const id = splitUrl.pop()
+
+    let finalUrl = CAUR_LOGS_URL
+    if (timestamp !== undefined) {
+        finalUrl += `?timestamp=${timestamp}`
+    }
+    if (id !== undefined && timestamp !== undefined) {
+        finalUrl += `&id=${id}`
+    } else if (id !== undefined) {
+        finalUrl += `?id=${id}`
+    }
+    return finalUrl
+}

@@ -11,19 +11,14 @@
                         >{{ deployment.date }}
                         </time>
                         <div class="lex text-sm font-normal text-text"
-                        >Deployed <a class="text-maroon"
-                                     (mouseover)="isHidden = !isHidden"
-                                     (mouseout)="isHidden = !isHidden"
-                                     href="{{ deployment.log ? deployment.log : undefined }}">{{ deployment.name }}{{ deployment.log ? " ↗" : "" }}</a> from
-                            <a class="text-rosewater">{{ deployment.node }}</a> to
+                        >Deployed <a class="text-maroon">
+                            {{ deployment.name }}</a> from <a class="text-rosewater">{{ deployment.node }}</a> to
                             <a href="{{ deployment.sourceUrl }} "
                                class="font-semibold text-red">{{ deployment.repo }}</a>
+                            @if (deployment.log) {
+                                - <a class="text-yellow" href="{{ deployment.log }}">log ↗</a>
+                            }
                         </div>
-                        @if (!isHidden) {
-                            <div class="hidden" id="log">
-                                <pre class="text-xs font-normal text-text">This shows the latest log.</pre>
-                            </div>
-                        }
                     </div>
                 </li>
             }

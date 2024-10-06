@@ -1,6 +1,8 @@
 /* Catppuccin variables and fonts */
 @import "@catppuccin/palette/css/catppuccin.css";
 @import "@catppuccin/highlightjs/css/catppuccin.variables.css";
+@import "@fontsource/jetbrains-mono";
+@import "@fontsource/fira-sans";
 
 /* TailwindCSS */
 @tailwind base;
@@ -33,7 +35,7 @@ kbd,
 samp {
     font-style: normal;
     font-weight: 400;
-    font-family: "JetBrains Mono", monospace;
+    font-family: "JetBrains Monop", monospace;
     font-optical-sizing: auto;
     @apply text-sm selection:bg-mauve selection:text-base;
 }
