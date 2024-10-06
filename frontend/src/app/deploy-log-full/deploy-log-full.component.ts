@@ -19,6 +19,7 @@ export class DeployLogFullComponent implements AfterViewInit {
     currentType: DeploymentType = DeploymentType.ALL
     searchterm: string | undefined
     isFiltered = false
+    loading: boolean = true
 
     constructor(private cdr: ChangeDetectorRef) {
     }
@@ -39,8 +40,15 @@ export class DeployLogFullComponent implements AfterViewInit {
      * @param amount The number of deployments to request from the backend
      */
     async updateLogAmount(amount: number): Promise<void> {
+        const newDeployments = await getDeployments(amount, this.currentType, this.loading)
+
+        if (newDeployments === null) {
+            this.loading = false
+            return
+        }
+
         this.latestDeployments = parseDeployments(
-            await getDeployments(amount, this.currentType),
+            newDeployments,
             this.currentType
         )
         this.requestedTooMany = this.latestDeployments.length < amount
@@ -61,6 +69,7 @@ export class DeployLogFullComponent implements AfterViewInit {
                 void this.showDeployments()
             } else {
                 alert("Please enter a valid number")
+                this.loading = false
             }
         } else {
             await this.updateLogAmount(100)
@@ -102,8 +111,10 @@ export class DeployLogFullComponent implements AfterViewInit {
      * @param $event
      */
     changeDeploymentType($event: Event): void {
-        // @ts-ignore
-        switch ($event.target.value) {
+        const target = $event.target as HTMLSelectElement
+        this.loading = true
+
+        switch (target.value) {
             case "0":
                 this.currentType = DeploymentType.ALL
                 break
@@ -165,5 +176,7 @@ export class DeployLogFullComponent implements AfterViewInit {
             // None of the previous cases applied, we need to show all logs
             this.shownDeployments = toFilter
         }
+
+        this.loading = false
     }
 }
