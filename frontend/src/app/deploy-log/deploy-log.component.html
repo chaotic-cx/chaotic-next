@@ -14,9 +14,9 @@
                         >Deployed <a class="text-maroon"
                                      (mouseover)="isHidden = !isHidden"
                                      (mouseout)="isHidden = !isHidden"
-                                     href="{{ CAUR_LOGS_URL + deployment.name }}">{{ deployment.name }}</a> from
+                                     href="{{ deployment.log ? deployment.log : undefined }}">{{ deployment.name }}{{ deployment.log ? " ↗" : "" }}</a> from
                             <a class="text-rosewater">{{ deployment.node }}</a> to
-                            <a href="{{ deployment.sourceUrl }}"
+                            <a href="{{ deployment.sourceUrl }} "
                                class="font-semibold text-red">{{ deployment.repo }}</a>
                         </div>
                         @if (!isHidden) {
