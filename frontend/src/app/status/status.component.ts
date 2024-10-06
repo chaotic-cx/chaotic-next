@@ -155,12 +155,15 @@ export class StatusComponent implements AfterViewInit {
 
                 // Check if there is a live log to display and handle changes accordingly
                 if (!this.nothingGoingOn) {
+
                     const activeQueue = returnQueue.find((queue) => queue.status === "active")
                     const savedLog = localStorage.getItem("currentBuild")
+                    const prevLogExists = activeQueue!.liveLogUrl![Number(this.currentBuild)] !== undefined
+                    const refersToValidLogIndex = activeQueue!.liveLogUrl![Number(this.currentBuild)] !== undefined
 
-                    if (savedLog !== null && activeQueue!.liveLogUrl![Number(savedLog)] !== undefined && this.liveLog !== activeQueue!.liveLogUrl![Number(savedLog)]) {
+                    if (savedLog !== null && prevLogExists && refersToValidLogIndex) {
                         this.liveLog = activeQueue!.liveLogUrl![Number(savedLog)]
-                    } else if (activeQueue!.liveLogUrl![0] !== undefined) {
+                    } else if (!refersToValidLogIndex && activeQueue!.liveLogUrl![0] !== undefined) {
                         this.liveLog = activeQueue!.liveLogUrl![0]
                         this.currentBuild = 0
                         localStorage.setItem("currentBuild", this.currentBuild.toString())
