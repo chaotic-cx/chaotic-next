@@ -92,19 +92,19 @@
                     (click)="routeTo(pipeline.web_url)"
                 >
                     <div
-                        class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
+                        class="place-self-auto rounded-xl border-mauve bg-surface0 p-4"
                     >
                         <h4 class="text-center text-xl text-mauve">Status</h4>
                         <p class="my-2 text-center text-maroon">{{ pipeline.status }} ↗</p>
                     </div>
                     <div
-                        class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-none md:rounded-r-none"
+                        class="place-self-auto border-mauve bg-surface0 p-4"
                     >
                         <h4 class="text-center text-xl text-mauve">Trigger</h4>
                         <p class="my-2 text-center text-rosewater">{{ pipeline.source }}</p>
                     </div>
                     <div
-                        class="place-self-auto rounded-t-xl rounded-b-xl rounded- border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-2x"
+                        class="place-self-auto rounded-xl rounded- border-mauve bg-surface0 p-4"
                     >
                         <h4 class="text-center text-xl text-mauve">Created at</h4>
                         <p class="my-2 text-center text-sapphire">{{ pipeline.created_at | date: 'medium' }}</p>
@@ -122,22 +122,22 @@
         @for (queue of Object.values(currentQueue); track queue) {
             @if (queue.status !== "idle" && queue.count > 0) {
                 <div
-                    class="my-3 grid grid-cols-3 gap-x-0 border border-mauve bg-surface0 rounded-lg shadow-sm"
+                    class="my-3 grid grid-cols-3 gap-x-0 border border-mauve bg-surface0 shadow-sm"
                 >
                     <div
-                        class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
+                        class="place-self-auto rounded-xl border-mauve bg-surface0 p-4"
                     >
                         <h4 class="text-center text-xl text-mauve">Status</h4>
                         <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
                     </div>
                     @if (queue.status === "waiting" && queue.count > 0) {
-                        <div class="bg-surface0 p-4">
+                        <div class="bg-surface0 p-4 rounded-xl">
                             <h4 class="text-center text-xl text-mauve">Count</h4>
                             <p class="my-2 text-center text-text">{{ queue.count }}</p>
                         </div>
                     }
                     @if (queue.status === "active" && queue.packages && queue.packages.length > 0) {
-                        <div class="bg-surface0 p-4">
+                        <div class="bg-surface0 p-4 rounded-xl">
                             <h4 class="text-center text-xl text-mauve">Nodes</h4>
                             <p class="text-s my-2 text-center text-text">
                                 @for (pkg of queue.packages; track pkg) {
@@ -149,7 +149,7 @@
                         </div>
                     }
                     @if (queue.count > 0) {
-                        <div class="rounded-b-xl bg-surface0 p-4 md:rounded-l-none md:rounded-r-2xl">
+                        <div class="rounded-xl bg-surface0 p-4">
                             <h4 class="text-center text-xl text-mauve">Packages</h4>
                             <div class="my-2 grid grid-cols-1 gap-5">
                                 <p class="text-s text-center text-sapphire">
@@ -168,16 +168,16 @@
             }
             @if (queue.status === "idle" && queue.count > 0) {
                 <div
-                    class="my-3 grid grid-cols-3 gap-x-0 border border-mauve bg-surface0 rounded-lg shadow-sm"
+                    class="my-3 grid grid-cols-3 gap-x-0 border border-mauve bg-surface0 rounded-xl shadow-sm"
                 >
                     <div
-                        class="place-self-auto rounded-t-xl border-mauve bg-surface0 p-4 md:rounded-l-2xl md:rounded-r-none"
+                        class="place-self-auto rounded-xl border-mauve bg-surface0 p-4"
                     >
                         <h4 class="text-center text-xl text-mauve">Status</h4>
                         <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
                     </div>
                     @if (queue.nodes && queue.nodes.length > 0) {
-                        <div class="bg-surface0 p-4">
+                        <div class="bg-surface0 p-4 rounded-xl">
                             <h4 class="text-center text-xl text-mauve">Nodes</h4>
                             <p class="text-s my-2 text-center text-rosewater">
                                 @for (node of queue.nodes; track node) {
@@ -185,7 +185,7 @@
                                 }
                             </p>
                         </div>
-                        <div class="bg-surface0 p-4 rounded-b-xl rounded-t-xl">
+                        <div class="bg-surface0 p-4 rounded-xl">
                             <h4 class="text-center text-xl text-mauve">Build class</h4>
                             <p class="text-s my-2 text-center text-sapphire">
                                 @for (node of queue.build_class; track node) {
