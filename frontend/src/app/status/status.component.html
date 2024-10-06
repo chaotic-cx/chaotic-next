@@ -37,6 +37,15 @@
             >
                 {{ displayLiveLog ? "Hide" : "Show" }} live log
             </button>
+            @if (activeBuilds > 1) {
+                <button
+                    (click)="toggleLogStream()"
+                    class="hover:chaotic-grow-l md:ml-2.5 ml-0 mt-2.5 md:mt-0 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+                    type="button"
+                >
+                    Next build log
+                </button>
+            }
         }
     </div>
 
