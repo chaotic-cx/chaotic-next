@@ -226,9 +226,9 @@ export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
  * @returns The URL for the repository, in which the PKGBUILD is located.
  */
 export function generateRepoUrl(deployment: Deployment): string | undefined {
-    if (deployment.repo === "chaotic-aur") {
+    if (deployment.repo.match(/chaotic-aur$/) !== null) {
         return deployment.sourceUrl = `${CAUR_REPO_URL}`
-    } else if (deployment.repo === "garuda") {
+    } else if (deployment.repo.match(/garuda$/) !== null) {
         return deployment.sourceUrl = `${CAUR_REPO_URL_GARUDA}`
     }
     return undefined

@@ -12,11 +12,12 @@ import { Axios } from "axios"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
 import { LiveLogComponent } from "../live-log/live-log.component"
 import { DatePipe } from "@angular/common"
+import { BuildClassPipe } from "../pipes/build-class.pipe"
 
 @Component({
     selector: "app-status",
     standalone: true,
-    imports: [DeployLogComponent, LiveLogComponent, DatePipe],
+    imports: [DeployLogComponent, LiveLogComponent, DatePipe, BuildClassPipe],
     templateUrl: "./status.component.html",
     styleUrl: "./status.component.css"
 })
