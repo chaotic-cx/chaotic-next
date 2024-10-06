@@ -1,15 +1,8 @@
-import {
-    CACHE_TELEGRAM_TTL,
-    type DeploymentList,
-    DeploymentType,
-    generateRepoUrl,
-    getDeployments,
-    parseDeployments,
-    startShortPolling
-} from "@./shared-lib"
+import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib"
 import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
+import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions"
 
 @Component({
     selector: "app-deploy-log-full",

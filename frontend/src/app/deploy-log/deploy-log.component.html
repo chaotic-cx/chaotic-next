@@ -11,11 +11,19 @@
                         >{{ deployment.date }}
                         </time>
                         <div class="lex text-sm font-normal text-text"
-                        >Deployed <a class="text-maroon">{{ deployment.name }}</a> from
+                        >Deployed <a class="text-maroon"
+                                     (mouseover)="isHidden = !isHidden"
+                                     (mouseout)="isHidden = !isHidden"
+                                     href="{{ CAUR_LOGS_URL + deployment.name }}">{{ deployment.name }}</a> from
                             <a class="text-rosewater">{{ deployment.node }}</a> to
                             <a href="{{ deployment.sourceUrl }}"
                                class="font-semibold text-red">{{ deployment.repo }}</a>
                         </div>
+                        @if (!isHidden) {
+                            <div class="hidden" id="log">
+                                <pre class="text-xs font-normal text-text">This shows the latest log.</pre>
+                            </div>
+                        }
                     </div>
                 </li>
             }

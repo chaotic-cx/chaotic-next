@@ -1,10 +1,10 @@
-import { loadTheme } from "@./shared-lib"
 import { NgOptimizedImage } from "@angular/common"
 import { AfterViewInit, Component, ElementRef, Renderer2 } from "@angular/core"
 import { RouterLink, RouterLinkActive } from "@angular/router"
 import { ChaoticAttractorComponent } from "../chaotic-attractor/chaotic-attractor.component"
 import { MirrorMapComponent } from "../mirror-map/mirror-map.component"
 import { NewsChannelComponent } from "../news-channel/news-channel.component"
+import { loadTheme } from "../functions"
 
 @Component({
     selector: "app-home",

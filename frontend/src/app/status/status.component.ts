@@ -1,11 +1,4 @@
-import {
-    CAUR_API_URL,
-    CAUR_REPO_API_URL,
-    type CurrentQueue,
-    GitLabPipeline,
-    startShortPolling,
-    type StatsObject
-} from "@./shared-lib"
+import { CAUR_API_URL, CAUR_REPO_API_URL, type CurrentQueue, GitLabPipeline, type StatsObject } from "@./shared-lib"
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { Router } from "@angular/router"
 import { Axios } from "axios"
@@ -13,6 +6,7 @@ import { DeployLogComponent } from "../deploy-log/deploy-log.component"
 import { LiveLogComponent } from "../live-log/live-log.component"
 import { DatePipe } from "@angular/common"
 import { BuildClassPipe } from "../pipes/build-class.pipe"
+import { startShortPolling } from "../functions"
 
 @Component({
     selector: "app-status",
