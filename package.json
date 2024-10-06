@@ -26,7 +26,7 @@
         "@angular/cli": "~18.2.7",
         "@angular/compiler-cli": "18.2.6",
         "@angular/language-service": "18.2.6",
-        "@catppuccin/highlightjs": "^0.2.2",
+        "@catppuccin/highlightjs": "^1.0.0",
         "@catppuccin/palette": "^1.4.0",
         "@catppuccin/tailwindcss": "^0.1.6",
         "@nestjs/schematics": "^10.1.4",
