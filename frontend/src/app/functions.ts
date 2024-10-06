@@ -121,10 +121,10 @@ export function parseDeployments(
             const buildRepo = String(
                 String(message.content).split("deployment to ")[1]
             )
-            node = buildRepo.match(/from\s(.*)/)
-                ? buildRepo.match(/from\s([\w-]*)/)![1]
+            node = buildRepo.match(/on\s(.*)/)
+                ? buildRepo.match(/on\s([\w-]*)/)![1]
                 : "unknown"
-            repo = buildRepo.split(" from")[0]
+            repo = buildRepo.split(" from")[0].split(" on")[0]
             deploymentType = DeploymentType.SUCCESS
         } else if (
             (type === DeploymentType.TIMEOUT || type === DeploymentType.ALL) &&
@@ -176,7 +176,8 @@ export function parseDeployments(
  */
 export async function getDeployments(
     amount: number,
-    type: DeploymentType
+    type: DeploymentType,
+    loading?: boolean
 ): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
@@ -209,6 +210,7 @@ export async function getDeployments(
         })
         .catch((err) => {
             console.error(err)
+            return null
         })
 }
 
