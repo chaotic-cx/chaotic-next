@@ -32,7 +32,7 @@
         @if (!nothingGoingOn) {
             <button
                 (click)="toggleLiveLog()"
-                class="hover:chaotic-grow-l md:ml-2.5 ml-0 mt-2.5 md:mt-0 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+                class="hover:chaotic-grow-l md:ml-2.5 ml-0 mt-2.5 mr-2.5 md:mt-0 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
                 type="button"
             >
                 {{ displayLiveLog ? "Hide" : "Show" }} live log
@@ -82,10 +82,9 @@
     @if (pipelines.length > 0) {
         <div class="chaotic-container-regular my-5">
             <h3 class="pt-10 text-center text-xl font-bold text-mauve">Running pipelines</h3>
-            <p class="my-4 px-10 text-center text-lg text-text"
+            <p class="my-4 md:px-10 text-center text-lg text-text"
             >These are regularly checking every package in the PKGBUILDs repositories for source changes.
-                New packages will be queued once this process finishes.</p
-            >
+                New packages will be queued once this process finishes.</p>
             @for (pipeline of pipelines; track pipeline) {
                 <div
                     class="my-3 grid gap-x-0 grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm cursor-pointer"
@@ -116,13 +115,13 @@
 
     <div class="chaotic-container-regular my-5">
         <h3 class="pt-10 text-center text-xl font-bold text-mauve">Current queue stats</h3>
-        <p class="my-4 px-10 text-center text-lg text-text"
+        <p class="my-4 md:px-10 text-center text-lg text-text"
         >Waiting packages will be allocated to a fitting builder as soon as it becomes free.</p
         >
         @for (queue of Object.values(currentQueue); track queue) {
             @if (queue.status !== "idle" && queue.count > 0) {
                 <div
-                    class="my-3 grid grid-cols-3 gap-x-0 border border-mauve bg-surface0 shadow-sm"
+                    class="my-3 grid grid-cols-3 gap-x-0 border rounded-xl border-mauve bg-surface0 shadow-sm"
                 >
                     <div
                         class="place-self-auto rounded-xl border-mauve bg-surface0 p-4"
@@ -141,9 +140,7 @@
                             <h4 class="text-center text-xl text-mauve">Nodes</h4>
                             <p class="text-s my-2 text-center text-text">
                                 @for (pkg of queue.packages; track pkg) {
-                                    {{ queue.nodes![$index] }} <a
-                                        class="text-rosewater"
-                                    >({{ queue.packages ? queue.packages[$index] : undefined }})</a><br />
+                                    <a class="text-rosewater">{{ queue.nodes![$index] }}</a><br />
                                 }
                             </p>
                         </div>

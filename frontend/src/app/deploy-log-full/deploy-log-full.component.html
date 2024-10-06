@@ -109,14 +109,13 @@
         </div>
 
         @if (requestedTooMany) {
-            <p class="pt-5 text-center text-red"
+            <p class="text-center text-red"
             >You requested more logs than we currently have. Showing the max amount of
-                {{ latestDeployments.length }}.</p
-            >
+                {{ latestDeployments.length }}.</p>
         }
 
         @if (loading) {
-            <div class="mx-auto mt-5 p-5 text-center md:container md:mx-auto" role="status">
+            <div class="mx-auto p-5 text-center md:container md:mx-auto" role="status">
                 <svg
                     class="inline h-12 w-12 animate-spin fill-red text-gray-200"
                     aria-hidden="true"
