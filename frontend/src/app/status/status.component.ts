@@ -156,21 +156,28 @@ export class StatusComponent implements AfterViewInit {
                     timeZone: "UTC"
                 })
 
+                // Check if there is nothing going on
                 this.nothingGoingOn = returnQueue.findIndex((queue) => queue.status !== "idle" && queue.count > 0) === -1
+
+                // Check if there is a live log to display and handle changes accordingly
                 if (!this.nothingGoingOn) {
                     const activeQueue = returnQueue.find((queue) => queue.status === "active")
-                    if (this.liveLog !== activeQueue!.liveLogUrl![0] && this.currentBuild === 0) {
+                    const savedLog = localStorage.getItem("currentBuild")
+
+                    if (savedLog !== null && activeQueue!.liveLogUrl![Number(savedLog)] !== undefined && this.liveLog !== activeQueue!.liveLogUrl![Number(savedLog)]) {
+                        this.liveLog = activeQueue!.liveLogUrl![Number(savedLog)]
+                    } else if (activeQueue!.liveLogUrl![0] !== undefined) {
                         this.liveLog = activeQueue!.liveLogUrl![0]
                         this.currentBuild = 0
+                        localStorage.setItem("currentBuild", this.currentBuild.toString())
                     }
                     this.activeBuilds = activeQueue!.liveLogUrl!.length
                 } else {
                     this.liveLog = undefined
                 }
 
-                this.cdr.detectChanges()
-
                 this.currentQueue = returnQueue
+                this.cdr.detectChanges()
                 this.loading = false
             })
             .catch((err) => {
@@ -224,12 +231,14 @@ export class StatusComponent implements AfterViewInit {
         const activeQueue = this.currentQueue.find((queue) => queue.status === "active")
         if (!activeQueue) return
 
-        if ((this.currentBuild + 1) <= this.activeBuilds) {
+        if ((this.currentBuild + 2) <= this.activeBuilds) {
             this.currentBuild++
             this.liveLog = activeQueue.liveLogUrl![this.currentBuild]
+            localStorage.setItem("currentBuild", this.currentBuild.toString())
         } else {
             this.currentBuild = 0
             this.liveLog = activeQueue.liveLogUrl![0]
+            localStorage.setItem("currentBuild", this.currentBuild.toString())
         }
     }
 }
