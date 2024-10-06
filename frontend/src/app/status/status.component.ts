@@ -59,9 +59,7 @@ export class StatusComponent implements AfterViewInit {
             .get("/pipelines")
             .then((response) => {
                 const data = (JSON.parse(response.data) as GitLabPipeline[])
-                const relevant = data.filter((pipeline: GitLabPipeline) => pipeline.status === ("running" || "pending"))
-                console.log(relevant)
-                this.pipelines = relevant
+                this.pipelines = data.filter((pipeline: GitLabPipeline) => pipeline.status === ("running" || "pending"))
             })
             .catch((err) => {
                 console.error(err)
