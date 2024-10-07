@@ -105,6 +105,7 @@ export class TelegramService {
      * @param amount The number of messages to retrieve
      */
     async getSucceeded(amount: any): Promise<TgMessageList> {
+        Logger.debug("getSucceeded requested", "TelegramService")
         return await this.getTgMessages("tgSucceededDeployments", amount, "📣")
     }
 
@@ -113,6 +114,7 @@ export class TelegramService {
      * @param amount The number of messages to retrieve
      */
     async getFailed(amount: any): Promise<TgMessageList> {
+        Logger.debug("getFailed requested", "TelegramService")
         return await this.getTgMessages("tgFailedDeployments", amount, "🚨")
     }
 
@@ -121,6 +123,7 @@ export class TelegramService {
      * @param amount The number of messages to retrieve
      */
     async getTimedOut(amount: any): Promise<TgMessageList> {
+        Logger.debug("getTimedOut requested", "TelegramService")
         return await this.getTgMessages("getTimedOut", amount, "⏳")
     }
 
@@ -129,6 +132,7 @@ export class TelegramService {
      * @param amount The number of messages to retrieve
      */
     async getCleanupJobs(amount: any): Promise<TgMessageList> {
+        Logger.debug("getCleanupJobs requested", "TelegramService")
         return await this.getTgMessages("tgCleanupJobs", amount, "✅")
     }
 
@@ -147,6 +151,7 @@ export class TelegramService {
     ): Promise<TgMessage[]> {
         await this.getAllChats()
         let extractedMessages: TgMessage[] = []
+        Logger.debug(`Extracting messages from chat ${id}`, "TelegramService")
 
         // Get the first message ID as a reference point, which is not the channel creation
         // message. This one was seemingly not valid as a reference point.
@@ -231,6 +236,7 @@ export class TelegramService {
      * @private
      */
     private async getAllChats(): Promise<any> {
+        Logger.debug("Getting all chats", "TelegramService")
         return await this.tgClient.invoke({
             _: "getChats",
             limit: 50,
@@ -248,6 +254,10 @@ export class TelegramService {
         chat: number,
         message: number,
     ): Promise<string> {
+        Logger.debug(
+            `Getting message link for chat ${chat} and message ${message}`,
+            "TelegramService",
+        )
         const linkObject = await this.tgClient.invoke({
             _: "getMessageLink",
             chat_id: chat,
@@ -265,16 +275,10 @@ export class TelegramService {
     private getLogLink(messageText: any): string | undefined {
         // The first one is usually bold, the second one is the link we need
         // Likely very infancy code used to prevent an undefined crash.
-        if (
-            messageText.entities[1] !== undefined &&
-            messageText.entities[1].type !== undefined &&
-            messageText.entities[1].type.url !== undefined &&
-            messageText.entities[1].type.url.includes("https")
-        ) {
+        if (messageText?.entities[1]?.type?.url?.includes("https")) {
             return messageText.entities[1].type.url
-        } else {
-            return undefined
         }
+        return undefined
     }
 
     /**
@@ -289,6 +293,10 @@ export class TelegramService {
         limit?: number
         offset?: number
     }) {
+        Logger.debug(
+            `Getting chat history for chat ${params.chat}`,
+            "TelegramService",
+        )
         return this.tgClient.invoke({
             _: "getChatHistory",
             chat_id: params.chat,
@@ -303,10 +311,19 @@ export class TelegramService {
         amount: string,
         startsWith: string,
     ): Promise<TgMessageList> {
+        Logger.debug(
+            `getTgMessages requested for ${cacheKeyId}, trying to serve from cache`,
+            "TelegramService",
+        )
         const cacheKey = `${cacheKeyId}-${amount}`
         let data: TgMessage[] | undefined =
             await this.cacheManager.get(cacheKey)
+
         if (!data) {
+            Logger.debug(
+                `Fetching ${cacheKeyId} messages, no cache available`,
+                "TelegramService",
+            )
             data = await this.extractMessages(
                 CAUR_DEPLOY_LOG_ID,
                 Number.parseInt(amount),

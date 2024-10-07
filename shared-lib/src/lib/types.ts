@@ -1,7 +1,7 @@
 import { MessageContent } from "./tdlib-types"
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000
-export const CACHE_TELEGRAM_TTL = 30 * 1000
+export const CACHE_TELEGRAM_TTL = 120 * 1000
 export const CAUR_ALLOWED_CORS = [
     "https://aur.chaotic.cx",
     "https://caur-frontend-pages.dev",
@@ -20,7 +20,7 @@ export const CAUR_PKG_LIST_URL =
     "https://builds.garudalinux.org/repos/chaotic-aur/pkgs.files.txt"
 export const CAUR_PKG_URL = "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/"
 export const CAUR_PRIMARY_KEY = "3056513887B78AEB"
-export const CAUR_REPO_API_URL = `https://gitlab.com/api/v4/projects/54867625/`
+export const CAUR_REPO_API_URL = "https://gitlab.com/api/v4/projects/54867625/"
 export const CAUR_REPO_URL =
     "https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/"
 export const CAUR_REPO_URL_GARUDA =
@@ -75,8 +75,6 @@ export interface CurrentPackage {
     srcrepo: string
     time: string
 }
-
-export type CurrentPackages = CurrentPackage[]
 
 export interface SpecificPackageMetrics {
     name?: string
