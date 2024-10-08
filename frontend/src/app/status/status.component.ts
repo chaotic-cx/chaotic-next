@@ -95,7 +95,7 @@ export class StatusComponent implements AfterViewInit {
                 const currentQueue: StatsObject = JSON.parse(response.data)
                 for (const queue of Object.keys(currentQueue)) {
                     const nameWithoutRepo: string[] = []
-                    const build_class: (string | number)[] = []
+                    const build_class: (null | number)[] = []
                     const nodes: string[] = []
                     const liveLogUrl: string[] = []
 

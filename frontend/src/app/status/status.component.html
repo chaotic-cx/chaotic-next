@@ -106,7 +106,7 @@
                         class="place-self-auto rounded-xl rounded- border-mauve bg-surface0 p-4"
                     >
                         <h4 class="text-center text-xl text-mauve">Created at</h4>
-                        <p class="my-2 text-center text-sapphire">{{ pipeline.created_at | date: 'medium' }}</p>
+                        <p class="my-2 text-center text-yellow">{{ pipeline.created_at | date: 'medium' }}</p>
                     </div>
                 </div>
             }
@@ -140,7 +140,8 @@
                             <h4 class="text-center text-xl text-mauve">Nodes</h4>
                             <p class="text-s my-2 text-center text-text">
                                 @for (pkg of queue.packages; track pkg) {
-                                    <a class="text-rosewater">{{ queue.nodes![$index] }}</a><br />
+                                    <a class="text-rosewater">{{ queue.nodes![$index] }}</a>
+                                    <br />
                                 }
                             </p>
                         </div>
@@ -149,11 +150,10 @@
                         <div class="rounded-xl bg-surface0 p-4">
                             <h4 class="text-center text-xl text-mauve">Packages</h4>
                             <div class="my-2 grid grid-cols-1 gap-5">
-                                <p class="text-s text-center text-sapphire">
+                                <p class="text-s text-center text-yellow">
                                     @for (pkg of queue.packages; track pkg) {
-                                        {{ pkg }} <a class="text-rosewater cursor-pointer"
-                                                     (click)="routeTo(queue.liveLogUrl![$index])">
-                                            (class {{ queue.build_class![$index] }})
+                                        {{ pkg }} <a class="text-sky cursor-pointer"
+                                                     (click)="routeTo(queue.liveLogUrl![$index])">class {{ queue.build_class![$index] !== null ? (queue.build_class![$index] | buildClass) : "Custom" }}
                                             {{ queue.status === "active" ? " ↗" : "" }}</a>
                                         <br />
                                     }
@@ -184,7 +184,7 @@
                         </div>
                         <div class="bg-surface0 p-4 rounded-xl">
                             <h4 class="text-center text-xl text-mauve">Build class</h4>
-                            <p class="text-s my-2 text-center text-sapphire">
+                            <p class="text-s my-2 text-center text-sky">
                                 @for (node of queue.build_class; track node) {
                                     {{ node | buildClass }}<br />
                                 }
