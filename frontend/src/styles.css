@@ -22,6 +22,10 @@
 }
 
 /* Global CSS */
+html {
+    scrollbar-color: var(--ctp-mocha-maroon) var(--ctp-mocha-surface0);
+}
+
 body {
     font-style: normal;
     font-weight: 400;
