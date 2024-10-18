@@ -39,7 +39,7 @@ kbd,
 samp {
     font-style: normal;
     font-weight: 400;
-    font-family: "JetBrains Monop", monospace;
+    font-family: "JetBrains Mono", monospace;
     font-optical-sizing: auto;
     @apply text-sm selection:bg-mauve selection:text-base;
 }
