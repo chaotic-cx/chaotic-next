@@ -118,8 +118,8 @@ importers:
         specifier: 18.2.8
         version: 18.2.8
       '@catppuccin/highlightjs':
-        specifier: ^0.2.2
-        version: 0.2.2
+        specifier: ^1.0.0
+        version: 1.0.0
       '@catppuccin/palette':
         specifier: ^1.4.0
         version: 1.4.0
@@ -1222,8 +1222,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@catppuccin/highlightjs@0.2.2':
-    resolution: {integrity: sha512-ez8X2MCFSBY14hc7Gw7z8Labzcm9n1yq5cAvGohakv3Z9utx6HrgB2YxugX5WXWw+W/Bdltor84iFUlDuaNF0Q==}
+  '@catppuccin/highlightjs@1.0.0':
+    resolution: {integrity: sha512-Cq0b5pNkzAxTf7QwXkGcMnfEawOdaJP9wQJNsLO1PCqml+NgMe7mOknH3l/j/0Q3bgjijm+N26B8BAYiv18oQg==}
 
   '@catppuccin/palette@1.4.0':
     resolution: {integrity: sha512-Npdg/QFeMAEbRVlnJqc1xE3i7NI4liSq4tTTXk4U/L3vPEiqw3bZQJRLYjuP0Vq2AEDNS5H5Li+lk27c38sP4g==}
@@ -9758,7 +9758,7 @@ snapshots:
   '@biomejs/cli-win32-x64@1.9.3':
     optional: true
 
-  '@catppuccin/highlightjs@0.2.2': {}
+  '@catppuccin/highlightjs@1.0.0': {}
 
   '@catppuccin/palette@1.4.0': {}
 
