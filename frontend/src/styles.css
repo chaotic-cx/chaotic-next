@@ -1,6 +1,6 @@
 /* Catppuccin variables and fonts */
 @import "@catppuccin/palette/css/catppuccin.css";
-@import "@catppuccin/highlightjs/css/catppuccin.variables.css";
+@import "@catppuccin/highlightjs/css/catppuccin-variables.css";
 @import "@fontsource/jetbrains-mono";
 @import "@fontsource/fira-sans";
 
