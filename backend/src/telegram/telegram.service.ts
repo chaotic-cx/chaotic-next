@@ -67,15 +67,20 @@ export class TelegramService {
     async getDeployments(amount: any): Promise<TgMessage[]> {
         Logger.debug("getDeployments requested", "TelegramService")
 
+        let actualFetch: number
+        if (!Number.isFinite(amount)) {
+            Logger.error("Invalid amount requested", "TelegramService")
+            actualFetch = 1000
+        } else {
+            actualFetch = Number.parseInt(amount)
+        }
+
         // Cache the news for 60 seconds
-        const cacheKey = `tgDeployments-${amount}`
+        const cacheKey = `tgDeployments-${actualFetch}`
         let data: TgMessage[] | undefined =
             await this.cacheManager.get(cacheKey)
         if (!data) {
-            data = await this.extractMessages(
-                CAUR_DEPLOY_LOG_ID,
-                Number.parseInt(amount),
-            )
+            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, actualFetch)
             await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL)
         }
         return data
@@ -148,6 +153,7 @@ export class TelegramService {
         desiredCount: number,
         process?: Function,
     ): Promise<TgMessage[]> {
+        Logger.debug(`Getting ${desiredCount} messages`, "TelegramService")
         await this.getAllChats()
         let extractedMessages: TgMessage[] = []
 
