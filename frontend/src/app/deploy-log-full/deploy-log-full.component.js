@@ -3,12 +3,7 @@ import { ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
 import { __decorate, __metadata } from "tslib"
-import {
-    generateRepoUrl,
-    getDeployments,
-    parseDeployments,
-    startShortPolling,
-} from "../functions"
+import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions"
 import { ToastComponent } from "../toast/toast.component"
 let DeployLogFullComponent = class DeployLogFullComponent {
     constructor(cdr) {
@@ -36,19 +31,12 @@ let DeployLogFullComponent = class DeployLogFullComponent {
      * @param amount The number of deployments to request from the backend
      */
     async updateLogAmount(amount) {
-        const newDeployments = await getDeployments(
-            amount,
-            this.currentType,
-            this.loading,
-        )
+        const newDeployments = await getDeployments(amount, this.currentType, this.loading)
         if (newDeployments === null) {
             this.loading = false
             return
         }
-        this.latestDeployments = parseDeployments(
-            newDeployments,
-            this.currentType,
-        )
+        this.latestDeployments = parseDeployments(newDeployments, this.currentType)
         this.requestedTooMany = this.latestDeployments.length < amount
         // Parse the strings for the UI and write them to the list
         this.constructStrings()
@@ -59,15 +47,11 @@ let DeployLogFullComponent = class DeployLogFullComponent {
      */
     async getNewAmount() {
         if (this.logAmount !== undefined) {
-            if (
-                /^[0-9]*$/.test(this.logAmount.toString()) &&
-                this.logAmount < 2000
-            ) {
+            if (/^[0-9]*$/.test(this.logAmount.toString()) && this.logAmount < 2000) {
                 await this.updateLogAmount(this.logAmount)
                 void this.showDeployments()
             } else if (this.logAmount >= 2000) {
-                this.toastText =
-                    "Stop trying to fuck up our backend by overloading it, thanks!"
+                this.toastText = "Stop trying to fuck up our backend by overloading it, thanks!"
                 this.showToast = true
                 setTimeout()
                 this.loading = false
@@ -94,8 +78,7 @@ let DeployLogFullComponent = class DeployLogFullComponent {
                     this.latestDeployments[index].string = "Failed deploying"
                     break
                 case DeploymentType.TIMEOUT:
-                    this.latestDeployments[index].string =
-                        "Timed out during deployment of"
+                    this.latestDeployments[index].string = "Timed out during deployment of"
                     break
                 case DeploymentType.CLEANUP:
                     this.latestDeployments[index].string = "Cleanup job ran for"
@@ -105,9 +88,7 @@ let DeployLogFullComponent = class DeployLogFullComponent {
                     break
             }
             // Add source URL
-            this.latestDeployments[index].sourceUrl = generateRepoUrl(
-                this.latestDeployments[index],
-            )
+            this.latestDeployments[index].sourceUrl = generateRepoUrl(this.latestDeployments[index])
         }
     }
     /**
@@ -140,9 +121,7 @@ let DeployLogFullComponent = class DeployLogFullComponent {
         const toFilter = this.latestDeployments
         if (this.searchterm && this.searchterm !== "" && !this.isFiltered) {
             this.shownDeployments = toFilter.filter((deployment) => {
-                return deployment.name
-                    .toLowerCase()
-                    .includes(this.searchterm?.toLowerCase() ?? "")
+                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
             })
             if (this.shownDeployments.length > 0) {
                 return
@@ -152,23 +131,15 @@ let DeployLogFullComponent = class DeployLogFullComponent {
             while (this.shownDeployments.length === 0 || resultAmount > 2000) {
                 await this.updateLogAmount(resultAmount)
                 this.shownDeployments = toFilter.filter((deployment) => {
-                    return deployment.name
-                        .toLowerCase()
-                        .includes(this.searchterm?.toLowerCase() ?? "")
+                    return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
                 })
                 resultAmount *= 2
             }
             this.isFiltered = true
-        } else if (
-            this.searchterm &&
-            this.searchterm !== "" &&
-            this.isFiltered
-        ) {
+        } else if (this.searchterm && this.searchterm !== "" && this.isFiltered) {
             // We are already filtering, so we need it to filter the full list again
             this.shownDeployments = toFilter.filter((deployment) => {
-                return deployment.name
-                    .toLowerCase()
-                    .includes(this.searchterm?.toLowerCase() ?? "")
+                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
             })
             this.isFiltered = false
         } else {

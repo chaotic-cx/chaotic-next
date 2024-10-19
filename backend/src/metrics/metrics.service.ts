@@ -1,8 +1,4 @@
-import {
-    CACHE_ROUTER_TTL,
-    CAUR_METRICS_URL,
-    type SpecificPackageMetrics,
-} from "@./shared-lib"
+import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, type SpecificPackageMetrics } from "@./shared-lib"
 import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { Axios } from "axios"

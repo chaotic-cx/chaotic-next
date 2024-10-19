@@ -62,23 +62,11 @@ function initSketch() {
             return
         }
 
-        points.push(
-            new p5.Vector(
-                attractor.scale * p.x,
-                attractor.scale * p.y,
-                attractor.scale * p.z,
-            ),
-        )
+        points.push(new p5.Vector(attractor.scale * p.x, attractor.scale * p.y, attractor.scale * p.z))
     }
     const m = 2
     for (var i = 0; i < numMax; i++) {
-        particles[i] = new Particle(
-            random(-m, m),
-            random(-m, m),
-            random(0, m),
-            t,
-            h,
-        )
+        particles[i] = new Particle(random(-m, m), random(-m, m), random(0, m), t, h)
     }
 }
 
@@ -144,25 +132,10 @@ function draw() {
             const p = particles[i]
             p.update()
             p.display()
-            if (
-                p.x > 8 ||
-                p.y > 8 ||
-                p.z > 8 ||
-                p.x < -8 ||
-                p.y < -8 ||
-                p.z < -8
-            ) {
+            if (p.x > 8 || p.y > 8 || p.z > 8 || p.x < -8 || p.y < -8 || p.z < -8) {
                 particles.splice(i, 1)
                 currentParticle--
-                particles.push(
-                    new Particle(
-                        random(-5, 5),
-                        random(-5, 5),
-                        random(0, 5),
-                        t,
-                        h,
-                    ),
-                )
+                particles.push(new Particle(random(-5, 5), random(-5, 5), random(0, 5), t, h))
             }
         }
     }
@@ -188,11 +161,9 @@ function randomCurve() {
     initSketch()
 }
 
-const componentFX = (t, x, y, z) =>
-    parDef.Speed * ((z - attractor.b) * x - attractor.d * y) //Change this function
+const componentFX = (t, x, y, z) => parDef.Speed * ((z - attractor.b) * x - attractor.d * y) //Change this function
 
-const componentFY = (t, x, y, z) =>
-    parDef.Speed * (attractor.d * x + (z - attractor.b) * y) //Change this function
+const componentFY = (t, x, y, z) => parDef.Speed * (attractor.d * x + (z - attractor.b) * y) //Change this function
 
 const componentFZ = (t, x, y, z) =>
     parDef.Speed *
@@ -208,42 +179,12 @@ function rungeKutta(time, x, y, z, h) {
     const j1 = componentFY(time, x, y, z)
     const i1 = componentFZ(time, x, y, z)
 
-    const k2 = componentFX(
-        time + (1 / 2) * h,
-        x + (1 / 2) * h * k1,
-        y + (1 / 2) * h * j1,
-        z + (1 / 2) * h * i1,
-    )
-    const j2 = componentFY(
-        time + (1 / 2) * h,
-        x + (1 / 2) * h * k1,
-        y + (1 / 2) * h * j1,
-        z + (1 / 2) * h * i1,
-    )
-    const i2 = componentFZ(
-        time + (1 / 2) * h,
-        x + (1 / 2) * h * k1,
-        y + (1 / 2) * h * j1,
-        z + (1 / 2) * h * i1,
-    )
-    const k3 = componentFX(
-        time + (1 / 2) * h,
-        x + (1 / 2) * h * k2,
-        y + (1 / 2) * h * j2,
-        z + (1 / 2) * h * i2,
-    )
-    const j3 = componentFY(
-        time + (1 / 2) * h,
-        x + (1 / 2) * h * k2,
-        y + (1 / 2) * h * j2,
-        z + (1 / 2) * h * i2,
-    )
-    const i3 = componentFZ(
-        time + (1 / 2) * h,
-        x + (1 / 2) * h * k2,
-        y + (1 / 2) * h * j2,
-        z + (1 / 2) * h * i2,
-    )
+    const k2 = componentFX(time + (1 / 2) * h, x + (1 / 2) * h * k1, y + (1 / 2) * h * j1, z + (1 / 2) * h * i1)
+    const j2 = componentFY(time + (1 / 2) * h, x + (1 / 2) * h * k1, y + (1 / 2) * h * j1, z + (1 / 2) * h * i1)
+    const i2 = componentFZ(time + (1 / 2) * h, x + (1 / 2) * h * k1, y + (1 / 2) * h * j1, z + (1 / 2) * h * i1)
+    const k3 = componentFX(time + (1 / 2) * h, x + (1 / 2) * h * k2, y + (1 / 2) * h * j2, z + (1 / 2) * h * i2)
+    const j3 = componentFY(time + (1 / 2) * h, x + (1 / 2) * h * k2, y + (1 / 2) * h * j2, z + (1 / 2) * h * i2)
+    const i3 = componentFZ(time + (1 / 2) * h, x + (1 / 2) * h * k2, y + (1 / 2) * h * j2, z + (1 / 2) * h * i2)
     const k4 = componentFX(time + h, x + h * k3, y + h * j3, z + h * i3)
     const j4 = componentFY(time + h, x + h * k3, y + h * j3, z + h * i3)
     const i4 = componentFZ(time + h, x + h * k3, y + h * j3, z + h * i3)
@@ -317,11 +258,7 @@ class AizawaAttractor {
         var ny = this.speed * (this.d * x + (z - this.b) * y)
         var nz =
             this.speed *
-            (this.c +
-                this.a * z -
-                (z * z * z) / 3 -
-                (x * x + y * y) * (1 + this.e * z) +
-                this.f * z * x * x * x)
+            (this.c + this.a * z - (z * z * z) / 3 - (x * x + y * y) * (1 + this.e * z) + this.f * z * x * x * x)
 
         x += this.h * nx
         y += this.h * ny

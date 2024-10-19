@@ -27,16 +27,12 @@ export class LiveLogComponent implements AfterViewInit, OnChanges {
         @Inject(PLATFORM_ID) platformId: Object,
         public sanitizer: DomSanitizer,
     ) {
-        this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(
-            this.url ? this.url : "",
-        )
+        this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url ? this.url : "")
     }
 
     ngAfterViewInit(): void {
         if (this.url) {
-            this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(
-                this.url,
-            )
+            this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
         } else {
             console.error("No URL provided for live log")
         }
@@ -45,9 +41,7 @@ export class LiveLogComponent implements AfterViewInit, OnChanges {
     ngOnChanges(): void {
         if (this.url) {
             // This is a workaround to force the iframe to reload with the new URL
-            this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(
-                this.url,
-            )
+            this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
             this.showIframe = false
             setTimeout(() => {
                 this.showIframe = true

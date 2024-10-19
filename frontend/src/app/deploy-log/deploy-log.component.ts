@@ -1,17 +1,8 @@
-import {
-    CACHE_TELEGRAM_TTL,
-    type DeploymentList,
-    DeploymentType,
-} from "@./shared-lib"
+import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib"
 import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
-import {
-    generateRepoUrl,
-    getDeployments,
-    parseDeployments,
-    startShortPolling,
-} from "../functions"
+import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions"
 import { ToastComponent } from "../toast/toast.component"
 
 @Component({

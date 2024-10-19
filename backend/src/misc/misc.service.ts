@@ -17,10 +17,8 @@ export class MiscService {
             baseURL: "",
             timeout: 10000,
         })
-        return axios
-            .get(CAUR_PKG_LIST_URL)
-            .then((response): PkgListRetObject => {
-                return { pkglist: response.data }
-            })
+        return axios.get(CAUR_PKG_LIST_URL).then((response): PkgListRetObject => {
+            return { pkglist: response.data }
+        })
     }
 }

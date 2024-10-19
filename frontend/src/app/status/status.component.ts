@@ -1,10 +1,4 @@
-import {
-    CAUR_API_URL,
-    CAUR_REPO_API_URL,
-    type CurrentQueue,
-    GitLabPipeline,
-    type StatsObject,
-} from "@./shared-lib"
+import { CAUR_API_URL, CAUR_REPO_API_URL, type CurrentQueue, GitLabPipeline, type StatsObject } from "@./shared-lib"
 import { DatePipe } from "@angular/common"
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { Router } from "@angular/router"
@@ -65,10 +59,7 @@ export class StatusComponent implements AfterViewInit {
             .get("/pipelines")
             .then((response) => {
                 const data = JSON.parse(response.data) as GitLabPipeline[]
-                this.pipelines = data.filter(
-                    (pipeline: GitLabPipeline) =>
-                        pipeline.status === ("running" || "pending"),
-                )
+                this.pipelines = data.filter((pipeline: GitLabPipeline) => pipeline.status === ("running" || "pending"))
             })
             .catch((err) => {
                 console.error(err)
@@ -93,7 +84,6 @@ export class StatusComponent implements AfterViewInit {
             .get("queue/stats")
             .then((response) => {
                 const currentQueue: StatsObject = JSON.parse(response.data)
-                console.log(currentQueue)
                 for (const queue of Object.keys(currentQueue)) {
                     const nameWithoutRepo: string[] = []
                     const build_class: (null | number)[] = []
@@ -102,16 +92,12 @@ export class StatusComponent implements AfterViewInit {
 
                     switch (queue) {
                         case "active":
-                            currentQueue.active.packages.forEach(
-                                (pkg): void => {
-                                    nameWithoutRepo.push(pkg.name.split("/")[2])
-                                    build_class.push(pkg.build_class)
-                                    nodes.push(pkg.node)
-                                    liveLogUrl.push(
-                                        pkg.liveLog ? pkg.liveLog : "",
-                                    )
-                                },
-                            )
+                            currentQueue.active.packages.forEach((pkg): void => {
+                                nameWithoutRepo.push(pkg.name.split("/")[2])
+                                build_class.push(pkg.build_class)
+                                nodes.push(pkg.node)
+                                liveLogUrl.push(pkg.liveLog ? pkg.liveLog : "")
+                            })
                             returnQueue.push({
                                 status: "active",
                                 count: currentQueue.active.count,
@@ -122,12 +108,10 @@ export class StatusComponent implements AfterViewInit {
                             })
                             break
                         case "waiting":
-                            currentQueue.waiting.packages.forEach(
-                                (pkg): void => {
-                                    nameWithoutRepo.push(pkg.name.split("/")[2])
-                                    build_class.push(pkg.build_class)
-                                },
-                            )
+                            currentQueue.waiting.packages.forEach((pkg): void => {
+                                nameWithoutRepo.push(pkg.name.split("/")[2])
+                                build_class.push(pkg.build_class)
+                            })
                             returnQueue.push({
                                 status: "waiting",
                                 count: currentQueue.waiting.count,
@@ -139,12 +123,8 @@ export class StatusComponent implements AfterViewInit {
                             returnQueue.push({
                                 status: "idle",
                                 count: currentQueue.idle.count,
-                                nodes: currentQueue.idle.nodes.map(
-                                    (node) => node.name,
-                                ),
-                                build_class: currentQueue.idle.nodes.map(
-                                    (node) => node.build_class,
-                                ),
+                                nodes: currentQueue.idle.nodes.map((node) => node.name),
+                                build_class: currentQueue.idle.nodes.map((node) => node.build_class),
                             })
                             break
                     }
@@ -172,40 +152,21 @@ export class StatusComponent implements AfterViewInit {
 
                 // Check if there is nothing going on
                 this.nothingGoingOn =
-                    returnQueue.findIndex(
-                        (queue) => queue.status !== "idle" && queue.count > 0,
-                    ) === -1
+                    returnQueue.findIndex((queue) => queue.status !== "idle" && queue.count > 0) === -1
 
                 // Check if there is a live log to display and handle changes accordingly
                 if (!this.nothingGoingOn) {
-                    const activeQueue = returnQueue.find(
-                        (queue) => queue.status === "active",
-                    )
+                    const activeQueue = returnQueue.find((queue) => queue.status === "active")
                     const savedLog = localStorage.getItem("currentBuild")
-                    const prevLogExists =
-                        activeQueue!.liveLogUrl![Number(this.currentBuild)] !==
-                        undefined
-                    const refersToValidLogIndex =
-                        activeQueue!.liveLogUrl![Number(this.currentBuild)] !==
-                        undefined
+                    const prevLogExists = activeQueue!.liveLogUrl![Number(this.currentBuild)] !== undefined
+                    const refersToValidLogIndex = activeQueue!.liveLogUrl![Number(this.currentBuild)] !== undefined
 
-                    if (
-                        savedLog !== null &&
-                        prevLogExists &&
-                        refersToValidLogIndex
-                    ) {
-                        this.liveLog =
-                            activeQueue!.liveLogUrl![Number(savedLog)]
-                    } else if (
-                        !refersToValidLogIndex &&
-                        activeQueue!.liveLogUrl![0] !== undefined
-                    ) {
+                    if (savedLog !== null && prevLogExists && refersToValidLogIndex) {
+                        this.liveLog = activeQueue!.liveLogUrl![Number(savedLog)]
+                    } else if (!refersToValidLogIndex && activeQueue!.liveLogUrl![0] !== undefined) {
                         this.liveLog = activeQueue!.liveLogUrl![0]
                         this.currentBuild = 0
-                        localStorage.setItem(
-                            "currentBuild",
-                            this.currentBuild.toString(),
-                        )
+                        localStorage.setItem("currentBuild", this.currentBuild.toString())
                     }
                     this.activeBuilds = activeQueue!.liveLogUrl!.length
                 } else {
@@ -264,9 +225,7 @@ export class StatusComponent implements AfterViewInit {
      * Show the next live log of the active builds.
      */
     toggleLogStream(): void {
-        const activeQueue = this.currentQueue.find(
-            (queue) => queue.status === "active",
-        )
+        const activeQueue = this.currentQueue.find((queue) => queue.status === "active")
         if (!activeQueue) return
 
         if (this.currentBuild + 2 <= this.activeBuilds) {

@@ -1,17 +1,8 @@
-import {
-    CACHE_TELEGRAM_TTL,
-    type DeploymentList,
-    DeploymentType,
-} from "@./shared-lib"
+import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib"
 import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
-import {
-    generateRepoUrl,
-    getDeployments,
-    parseDeployments,
-    startShortPolling,
-} from "../functions"
+import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions"
 import { ToastComponent } from "../toast/toast.component"
 
 @Component({
@@ -51,21 +42,14 @@ export class DeployLogFullComponent implements AfterViewInit {
      * @param amount The number of deployments to request from the backend
      */
     async updateLogAmount(amount: number): Promise<void> {
-        const newDeployments = await getDeployments(
-            amount,
-            this.currentType,
-            this.loading,
-        )
+        const newDeployments = await getDeployments(amount, this.currentType, this.loading)
 
         if (newDeployments === null) {
             this.loading = false
             return
         }
 
-        this.latestDeployments = parseDeployments(
-            newDeployments,
-            this.currentType,
-        )
+        this.latestDeployments = parseDeployments(newDeployments, this.currentType)
         this.requestedTooMany = this.latestDeployments.length < amount
 
         // Parse the strings for the UI and write them to the list
@@ -78,15 +62,11 @@ export class DeployLogFullComponent implements AfterViewInit {
      */
     async getNewAmount(): Promise<void> {
         if (this.logAmount !== undefined) {
-            if (
-                /^[0-9]*$/.test(this.logAmount.toString()) &&
-                this.logAmount < 2000
-            ) {
+            if (/^[0-9]*$/.test(this.logAmount.toString()) && this.logAmount <= 500) {
                 await this.updateLogAmount(this.logAmount)
                 void this.showDeployments()
-            } else if (this.logAmount >= 2000) {
-                this.toastText =
-                    "Stop trying to fuck up our backend by overloading it, thanks!"
+            } else if (this.logAmount > 500) {
+                this.toastText = "Won't fetch more than 500 messages to not overload the backend!"
                 this.showToast = true
                 setTimeout(() => {
                     this.showToast = false
@@ -119,8 +99,7 @@ export class DeployLogFullComponent implements AfterViewInit {
                     this.latestDeployments[index].string = "Failed deploying"
                     break
                 case DeploymentType.TIMEOUT:
-                    this.latestDeployments[index].string =
-                        "Timed out during deployment of"
+                    this.latestDeployments[index].string = "Timed out during deployment of"
                     break
                 case DeploymentType.CLEANUP:
                     this.latestDeployments[index].string = "Cleanup job ran for"
@@ -131,9 +110,7 @@ export class DeployLogFullComponent implements AfterViewInit {
             }
 
             // Add source URL
-            this.latestDeployments[index].sourceUrl = generateRepoUrl(
-                this.latestDeployments[index],
-            )
+            this.latestDeployments[index].sourceUrl = generateRepoUrl(this.latestDeployments[index])
         }
     }
 
@@ -170,9 +147,7 @@ export class DeployLogFullComponent implements AfterViewInit {
 
         if (this.searchterm && this.searchterm !== "" && !this.isFiltered) {
             this.shownDeployments = toFilter.filter((deployment) => {
-                return deployment.name
-                    .toLowerCase()
-                    .includes(this.searchterm?.toLowerCase() ?? "")
+                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
             })
 
             if (this.shownDeployments.length > 0) {
@@ -184,23 +159,15 @@ export class DeployLogFullComponent implements AfterViewInit {
             while (this.shownDeployments.length === 0 || resultAmount > 2000) {
                 await this.updateLogAmount(resultAmount)
                 this.shownDeployments = toFilter.filter((deployment) => {
-                    return deployment.name
-                        .toLowerCase()
-                        .includes(this.searchterm?.toLowerCase() ?? "")
+                    return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
                 })
                 resultAmount *= 2
             }
             this.isFiltered = true
-        } else if (
-            this.searchterm &&
-            this.searchterm !== "" &&
-            this.isFiltered
-        ) {
+        } else if (this.searchterm && this.searchterm !== "" && this.isFiltered) {
             // We are already filtering, so we need it to filter the full list again
             this.shownDeployments = toFilter.filter((deployment) => {
-                return deployment.name
-                    .toLowerCase()
-                    .includes(this.searchterm?.toLowerCase() ?? "")
+                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
             })
             this.isFiltered = false
         } else {

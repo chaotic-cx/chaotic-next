@@ -10,10 +10,7 @@ import { TelegramController } from "./telegram/telegram.controller"
 import { TelegramService } from "./telegram/telegram.service"
 
 @Module({
-    imports: [
-        ConfigModule.forRoot({ envFilePath: ".env" }),
-        CacheModule.register(),
-    ],
+    imports: [ConfigModule.forRoot({ envFilePath: ".env" }), CacheModule.register()],
     controllers: [TelegramController, MetricsController, MiscController],
     providers: [TelegramService, MetricsService, MiscService],
 })

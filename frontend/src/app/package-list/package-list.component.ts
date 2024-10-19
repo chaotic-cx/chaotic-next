@@ -50,20 +50,16 @@ export class PackageListComponent {
     }
 
     async getPkgList(): Promise<void> {
-        this.httpClient
-            .get(`${CAUR_BACKEND_URL}/misc/pkglist`)
-            .subscribe((res): void => {
-                // @ts-ignore
-                this.packageList = this.parsePkgList(res.pkglist)
-                this.loading = false
-            })
+        this.httpClient.get(`${CAUR_BACKEND_URL}/misc/pkglist`).subscribe((res): void => {
+            // @ts-ignore
+            this.packageList = this.parsePkgList(res.pkglist)
+            this.loading = false
+        })
     }
 
     async searchPackage(): Promise<void> {
         this.loading = true
-        this.searchResults = this.packageList.filter((pkg) =>
-            pkg.name.includes(this.searchTerm),
-        )
+        this.searchResults = this.packageList.filter((pkg) => pkg.name.includes(this.searchTerm))
         this.loading = false
     }
 }
