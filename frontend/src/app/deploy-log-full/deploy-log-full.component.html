@@ -1,6 +1,6 @@
 <div class="chaotic-container-regular">
     <div class="chaotic-container-regular">
-        <h1 class="text-center text-4xl font-extrabold text-maroon">Deployment log</h1>
+        <h1 class="text-center text-2xl font-extrabold text-maroon">Deployment log</h1>
         <p class="my-4 px-10 text-center text-lg text-text">
             Shows the last deployed packages and allows searching the entire history. Click the repo name for viewing
             the source repository.
@@ -101,13 +101,6 @@
                 type="search"
             />
         </div>
-
-        @if (requestedTooMany) {
-            <p class="text-center text-red">
-                You requested more logs than we currently have. Showing the max amount of
-                {{ latestDeployments.length }}.
-            </p>
-        }
 
         @if (loading) {
             <div class="mx-auto p-5 text-center md:container md:mx-auto" role="status">
