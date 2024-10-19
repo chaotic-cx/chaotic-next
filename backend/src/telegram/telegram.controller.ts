@@ -1,5 +1,11 @@
 import { CacheInterceptor } from "@nestjs/cache-manager"
-import { Controller, Get, Param, UseInterceptors } from "@nestjs/common"
+import {
+    Controller,
+    Get,
+    Param,
+    ParseIntPipe,
+    UseInterceptors,
+} from "@nestjs/common"
 import { TelegramService } from "./telegram.service"
 
 @Controller("telegram")
@@ -13,28 +19,28 @@ export class TelegramController {
     }
 
     @Get("deployments/all/:amount")
-    getTelegram(@Param() params: any): any {
-        return this.telegramService.getDeployments(params.amount)
+    getTelegram(@Param("amount", ParseIntPipe) amount: number): any {
+        return this.telegramService.getDeployments(amount)
     }
 
     @Get("deployments/succeeded/:amount")
-    getSucceeded(@Param() params: any): any {
-        return this.telegramService.getSucceeded(params.amount)
+    getSucceeded(@Param("amount", ParseIntPipe) amount: number): any {
+        return this.telegramService.getSucceeded(amount)
     }
 
     @Get("deployments/failed/:amount")
-    getFailed(@Param() params: any): any {
-        return this.telegramService.getFailed(params.amount)
+    getFailed(@Param("amount", ParseIntPipe) amount: number): any {
+        return this.telegramService.getFailed(amount)
     }
 
     @Get("deployments/timeout/:amount")
-    getTimedOut(@Param() params: any): any {
-        return this.telegramService.getTimedOut(params.amount)
+    getTimedOut(@Param("amount", ParseIntPipe) amount: number): any {
+        return this.telegramService.getTimedOut(amount)
     }
 
     @Get("deployments/cleanup/:amount")
-    getCleanupJobs(@Param() params: any): any {
-        return this.telegramService.getCleanupJobs(params.amount)
+    getCleanupJobs(@Param("amount", ParseIntPipe) amount: number): any {
+        return this.telegramService.getCleanupJobs(amount)
     }
 
     @Get("deauth")

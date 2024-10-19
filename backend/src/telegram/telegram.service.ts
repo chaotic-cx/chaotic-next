@@ -68,9 +68,11 @@ export class TelegramService {
         Logger.debug("getDeployments requested", "TelegramService")
 
         let actualFetch: number
-        if (!Number.isFinite(amount)) {
+        Logger.debug("Amount requested: " + amount, "TelegramService")
+
+        if (!Number.isFinite(amount) || Number.parseInt(amount) > 500) {
             Logger.error("Invalid amount requested", "TelegramService")
-            actualFetch = 1000
+            actualFetch = 500
         } else {
             actualFetch = Number.parseInt(amount)
         }
@@ -109,7 +111,7 @@ export class TelegramService {
      * Get the latest succeeded deployments from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
      */
-    async getSucceeded(amount: any): Promise<TgMessageList> {
+    async getSucceeded(amount: number): Promise<TgMessageList> {
         Logger.debug("getSucceeded requested", "TelegramService")
         return await this.getTgMessages("tgSucceededDeployments", amount, "📣")
     }
@@ -118,7 +120,7 @@ export class TelegramService {
      * Get the latest failed deployments from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
      */
-    async getFailed(amount: any): Promise<TgMessageList> {
+    async getFailed(amount: number): Promise<TgMessageList> {
         Logger.debug("getFailed requested", "TelegramService")
         return await this.getTgMessages("tgFailedDeployments", amount, "🚨")
     }
@@ -127,7 +129,7 @@ export class TelegramService {
      * Get the latest timed out builds from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
      */
-    async getTimedOut(amount: any): Promise<TgMessageList> {
+    async getTimedOut(amount: number): Promise<TgMessageList> {
         Logger.debug("getTimedOut requested", "TelegramService")
         return await this.getTgMessages("getTimedOut", amount, "⏳")
     }
@@ -136,7 +138,7 @@ export class TelegramService {
      * Get the latest cleanup jobs from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
      */
-    async getCleanupJobs(amount: any): Promise<TgMessageList> {
+    async getCleanupJobs(amount: number): Promise<TgMessageList> {
         Logger.debug("getCleanupJobs requested", "TelegramService")
         return await this.getTgMessages("tgCleanupJobs", amount, "✅")
     }
@@ -145,7 +147,7 @@ export class TelegramService {
      * Extract messages from a Telegram message object
      * @param id The chat ID
      * @param desiredCount The desired count of messages
-     * @param process Optional function to process the messages, eg. for filtering
+     * @param process Optional function to process the messages, e.g., for filtering
      * @private
      */
     private async extractMessages(
@@ -304,7 +306,7 @@ export class TelegramService {
 
     private async getTgMessages(
         cacheKeyId: string,
-        amount: string,
+        amount: number,
         startsWith: string,
     ): Promise<TgMessageList> {
         Logger.debug(
@@ -322,7 +324,7 @@ export class TelegramService {
             )
             data = await this.extractMessages(
                 CAUR_DEPLOY_LOG_ID,
-                Number.parseInt(amount),
+                amount,
                 (messages: TgMessageList) => {
                     const extractedMessages: TgMessageList = []
                     for (const message of messages) {
