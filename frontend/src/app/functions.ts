@@ -43,11 +43,7 @@ export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
     const flavor = theme as unknown as CatppuccinFlavor
     // @ts-expect-error - this is always valid color
     const flavorColor = flavors[flavor].colors.base.hex
-    renderer.setStyle(
-        el.nativeElement.ownerDocument.body,
-        "backgroundColor",
-        flavorColor,
-    )
+    renderer.setStyle(el.nativeElement.ownerDocument.body, "backgroundColor", flavorColor)
     return theme
 }
 
@@ -78,9 +74,7 @@ export function getNow(): string {
  * @returns True if the user is on a mobile device, false otherwise.
  */
 export function checkIfMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent,
-    )
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 }
 
 /**
@@ -89,10 +83,7 @@ export function checkIfMobile() {
  * @param type The type of deployment to parse, e.g., all, failed, succeeded.
  * @returns The parsed DeploymentList array.
  */
-export function parseDeployments(
-    messages: TgMessageList,
-    type: DeploymentType,
-): DeploymentList {
+export function parseDeployments(messages: TgMessageList, type: DeploymentType): DeploymentList {
     const timeAgo = new TimeAgo("en-US")
     const deploymentList: DeploymentList = []
 
@@ -109,50 +100,35 @@ export function parseDeployments(
             pkg = String(message.content).split("> ")[1].split(" - logs")[0]
         }
 
-        const date = timeAgo.format(
-            Number.parseInt(message.date) * 1000,
-            "round",
-        )
+        const date = timeAgo.format(Number.parseInt(message.date) * 1000, "round")
 
         if (
             (type === DeploymentType.SUCCESS || type === DeploymentType.ALL) &&
             String(message.content).includes("deployment to")
         ) {
-            const buildRepo = String(
-                String(message.content).split("deployment to ")[1],
-            )
-            node = buildRepo.match(/on\s(.*)/)
-                ? buildRepo.match(/on\s([\w-]*)/)![1]
-                : "unknown"
+            const buildRepo = String(String(message.content).split("deployment to ")[1])
+            node = buildRepo.match(/on\s(.*)/) ? buildRepo.match(/on\s([\w-]*)/)![1] : "unknown"
             repo = buildRepo.split(" from")[0].split(" on")[0]
             deploymentType = DeploymentType.SUCCESS
         } else if (
             (type === DeploymentType.TIMEOUT || type === DeploymentType.ALL) &&
             String(message.content).includes("timeout")
         ) {
-            repo = String(message.content)
-                .split("Build for ")[1]
-                .split(" failed")[0]
+            repo = String(message.content).split("Build for ")[1].split(" failed")[0]
             deploymentType = DeploymentType.TIMEOUT
         } else if (
             (type === DeploymentType.FAILED || type === DeploymentType.ALL) &&
             String(message.content).includes("Failed")
         ) {
-            const buildRepo = String(
-                String(message.content).split("Failed deploying to ")[1],
-            )
-            node = buildRepo.match(/on\s(.*)/)
-                ? buildRepo.match(/on\s([\w-]*)/)![1]
-                : "unknown"
+            const buildRepo = String(String(message.content).split("Failed deploying to ")[1])
+            node = buildRepo.match(/on\s(.*)/) ? buildRepo.match(/on\s([\w-]*)/)![1] : "unknown"
             repo = buildRepo.split(" on")[0]
             deploymentType = DeploymentType.FAILED
         } else if (
             (type === DeploymentType.CLEANUP || type === DeploymentType.ALL) &&
             String(message.content).includes("Cleanup")
         ) {
-            repo = String(message.content)
-                .split("Cleanup job for ")[1]
-                .split(" ")[0]
+            repo = String(message.content).split("Cleanup job for ")[1].split(" ")[0]
             deploymentType = DeploymentType.CLEANUP
         } else {
             continue
@@ -174,11 +150,7 @@ export function parseDeployments(
  * Get the latest news from the Telegram channel.
  * @returns The latest news as a list of TgMessage.
  */
-export async function getDeployments(
-    amount: number,
-    type: DeploymentType,
-    loading?: boolean,
-): Promise<TgMessageList> {
+export async function getDeployments(amount: number, type: DeploymentType, loading?: boolean): Promise<TgMessageList> {
     const axios = new Axios({
         baseURL: CAUR_TG_API_URL,
         timeout: 10000,

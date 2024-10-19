@@ -1,11 +1,5 @@
 import { CacheInterceptor } from "@nestjs/cache-manager"
-import {
-    Controller,
-    Get,
-    Param,
-    ParseIntPipe,
-    UseInterceptors,
-} from "@nestjs/common"
+import { Controller, Get, Param, ParseIntPipe, UseInterceptors } from "@nestjs/common"
 import { TelegramService } from "./telegram.service"
 
 @Controller("telegram")

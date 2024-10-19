@@ -1,7 +1,4 @@
-import {
-    CAUR_CACHED_METRICS_URL,
-    type SpecificPackageMetrics,
-} from "@./shared-lib"
+import { CAUR_CACHED_METRICS_URL, type SpecificPackageMetrics } from "@./shared-lib"
 import { Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { Axios } from "axios"
