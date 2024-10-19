@@ -168,3 +168,10 @@ export interface GitLabPipeline {
     updated_at: string;
     web_url: string;
 }
+
+export interface MenuBarLink {
+    title: string;
+    routerLink?: string;
+    url?: string;
+}
+export type MenuBarLinks = MenuBarLink[];
