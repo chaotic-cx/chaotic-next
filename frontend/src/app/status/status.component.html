@@ -1,11 +1,12 @@
 <div class="chaotic-container-regular bg-base">
     <div>
         <h1 class="text-center text-4xl font-extrabold text-maroon">Build Status</h1>
-        <p class="my-4 px-10 text-center text-lg text-text"
-        >This page shows the status of the Chaotic-AUR infrastructure.</p
-        >
-        <p class="my-4 px-10 text-center text-lg text-text"
-        >Last updated: <a class="text-maroon">{{ lastUpdated ? (lastUpdated | date: 'medium') : "loading ... ☕️" }}</a>
+        <p class="my-4 px-10 text-center text-lg text-text">
+            This page shows the status of the Chaotic-AUR infrastructure.
+        </p>
+        <p class="my-4 px-10 text-center text-lg text-text">
+            Last updated:
+            <a class="text-maroon">{{ lastUpdated ? (lastUpdated | date: "medium") : "loading ... ☕️" }}</a>
         </p>
     </div>
 
@@ -19,7 +20,7 @@
         </button>
         <button
             (click)="headToFullDeployments()"
-            class="hover:chaotic-grow-l ml-2.5 mr-2.5 mt-2.5 md:mt-0  rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+            class="hover:chaotic-grow-l ml-2.5 mr-2.5 mt-2.5 md:mt-0 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
             type="button"
         >
             Full deploy log
@@ -77,31 +78,26 @@
     @if (pipelines.length > 0) {
         <div class="chaotic-container-regular my-5">
             <h3 class="pt-10 text-center text-xl font-bold text-mauve">Running pipelines</h3>
-            <p class="my-4 md:px-10 text-center text-lg text-text"
-            >These are regularly checking every package in the PKGBUILDs repositories for source changes.
-                New packages will be queued once this process finishes.</p>
+            <p class="my-4 md:px-10 text-center text-lg text-text">
+                These are regularly checking every package in the PKGBUILDs repositories for source changes. New
+                packages will be queued once this process finishes.
+            </p>
             @for (pipeline of pipelines; track pipeline) {
                 <div
                     class="my-3 grid gap-x-0 grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm cursor-pointer"
                     (click)="routeTo(pipeline.web_url)"
                 >
-                    <div
-                        class="place-self-auto rounded-xl border-mauve bg-surface0 p-4"
-                    >
+                    <div class="place-self-auto rounded-xl border-mauve bg-surface0 p-4">
                         <h4 class="text-center text-xl text-mauve">Status</h4>
                         <p class="my-2 text-center text-maroon">{{ pipeline.status }} ↗</p>
                     </div>
-                    <div
-                        class="place-self-auto border-mauve bg-surface0 p-4"
-                    >
+                    <div class="place-self-auto border-mauve bg-surface0 p-4">
                         <h4 class="text-center text-xl text-mauve">Trigger</h4>
                         <p class="my-2 text-center text-rosewater">{{ pipeline.source }}</p>
                     </div>
-                    <div
-                        class="place-self-auto rounded-xl rounded- border-mauve bg-surface0 p-4"
-                    >
+                    <div class="place-self-auto rounded-xl rounded- border-mauve bg-surface0 p-4">
                         <h4 class="text-center text-xl text-mauve">Created at</h4>
-                        <p class="my-2 text-center text-yellow">{{ pipeline.created_at | date: 'medium' }}</p>
+                        <p class="my-2 text-center text-yellow">{{ pipeline.created_at | date: "medium" }}</p>
                     </div>
                 </div>
             }
@@ -110,17 +106,13 @@
 
     <div class="chaotic-container-regular my-5">
         <h3 class="pt-10 text-center text-xl font-bold text-mauve">Current queue stats</h3>
-        <p class="my-4 md:px-10 text-center text-lg text-text"
-        >Waiting packages will be allocated to a fitting builder as soon as it becomes free.</p
-        >
+        <p class="my-4 md:px-10 text-center text-lg text-text">
+            Waiting packages will be allocated to a fitting builder as soon as it becomes free.
+        </p>
         @for (queue of Object.values(currentQueue); track queue) {
             @if (queue.status !== "idle" && queue.count > 0) {
-                <div
-                    class="my-3 grid grid-cols-3 gap-x-0 border rounded-xl border-mauve bg-surface0 shadow-sm"
-                >
-                    <div
-                        class="place-self-auto rounded-xl border-mauve bg-surface0 p-4"
-                    >
+                <div class="my-3 grid grid-cols-3 gap-x-0 border rounded-xl border-mauve bg-surface0 shadow-sm">
+                    <div class="place-self-auto rounded-xl border-mauve bg-surface0 p-4">
                         <h4 class="text-center text-xl text-mauve">Status</h4>
                         <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
                     </div>
@@ -147,9 +139,16 @@
                             <div class="my-2 grid grid-cols-1 gap-5">
                                 <p class="text-s text-center text-yellow">
                                     @for (pkg of queue.packages; track pkg) {
-                                        {{ pkg }} <a class="text-sky cursor-pointer"
-                                                     (click)="routeTo(queue.liveLogUrl![$index])">class {{ queue.build_class![$index] !== null ? (queue.build_class![$index] | buildClass) : "Custom" }}
-                                            {{ queue.status === "active" ? " ↗" : "" }}</a>
+                                        {{ pkg }}
+                                        <a class="text-sky cursor-pointer" (click)="routeTo(queue.liveLogUrl![$index])"
+                                            >class
+                                            {{
+                                                queue.build_class![$index] !== null
+                                                    ? (queue.build_class![$index] | buildClass)
+                                                    : "Custom"
+                                            }}
+                                            {{ queue.status === "active" ? " ↗" : "" }}</a
+                                        >
                                         <br />
                                     }
                                 </p>
@@ -159,12 +158,8 @@
                 </div>
             }
             @if (queue.status === "idle" && queue.count > 0) {
-                <div
-                    class="my-3 grid grid-cols-3 gap-x-0 border border-mauve bg-surface0 rounded-xl shadow-sm"
-                >
-                    <div
-                        class="place-self-auto rounded-xl border-mauve bg-surface0 p-4"
-                    >
+                <div class="my-3 grid grid-cols-3 gap-x-0 border border-mauve bg-surface0 rounded-xl shadow-sm">
+                    <div class="place-self-auto rounded-xl border-mauve bg-surface0 p-4">
                         <h4 class="text-center text-xl text-mauve">Status</h4>
                         <p class="my-2 text-center text-maroon">{{ queue.status }}</p>
                     </div>
