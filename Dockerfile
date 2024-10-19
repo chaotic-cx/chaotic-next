@@ -10,7 +10,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Workaround for nx post-install hanging
 RUN pnpm install --ignore-scripts nx
 RUN pnpm install
-RUN pnpx nx run backend:build
+RUN pnpm exec nx run backend:build
 
 # Generate node_modules containing nx-generated package.json for less used space
 WORKDIR /build/dist/backend

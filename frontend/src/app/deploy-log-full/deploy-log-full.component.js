@@ -1,11 +1,8 @@
-import {
-    CACHE_TELEGRAM_TTL,
-    type DeploymentList,
-    DeploymentType,
-} from "@./shared-lib"
-import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
+import { CACHE_TELEGRAM_TTL, DeploymentType } from "@./shared-lib"
+import { ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
+import { __decorate, __metadata } from "tslib"
 import {
     generateRepoUrl,
     getDeployments,
@@ -13,70 +10,54 @@ import {
     startShortPolling,
 } from "../functions"
 import { ToastComponent } from "../toast/toast.component"
-
-@Component({
-    selector: "app-deploy-log-full",
-    standalone: true,
-    imports: [FormsModule, RouterLink, ToastComponent],
-    templateUrl: "./deploy-log-full.component.html",
-    styleUrl: "./deploy-log-full.component.css",
-})
-export class DeployLogFullComponent implements AfterViewInit {
-    currentType: DeploymentType = DeploymentType.ALL
-    isFiltered = false
-    latestDeployments: DeploymentList = []
-    loading = true
-    logAmount: number | undefined
-    requestedTooMany = false
-    searchterm: string | undefined
-    showToast = false
-    shownDeployments: DeploymentList = []
-    toastText = ""
-
-    constructor(private cdr: ChangeDetectorRef) {}
-
-    async ngAfterViewInit(): Promise<void> {
+let DeployLogFullComponent = class DeployLogFullComponent {
+    constructor(cdr) {
+        this.cdr = cdr
+        this.currentType = DeploymentType.ALL
+        this.isFiltered = false
+        this.latestDeployments = []
+        this.loading = true
+        this.requestedTooMany = false
+        this.showToast = false
+        this.shownDeployments = []
+        this.toastText = ""
+    }
+    async ngAfterViewInit() {
         await this.updateLogAmount(50)
         void this.showDeployments()
-
         // Poll for new deployments every 30 seconds (which is the time the backend caches requests)
         startShortPolling(CACHE_TELEGRAM_TTL, async () => {
             await this.updateLogAmount(this.logAmount ?? 100)
             void this.showDeployments()
         })
     }
-
     /**
      * Update the list/number of deployments to show.
      * @param amount The number of deployments to request from the backend
      */
-    async updateLogAmount(amount: number): Promise<void> {
+    async updateLogAmount(amount) {
         const newDeployments = await getDeployments(
             amount,
             this.currentType,
             this.loading,
         )
-
         if (newDeployments === null) {
             this.loading = false
             return
         }
-
         this.latestDeployments = parseDeployments(
             newDeployments,
             this.currentType,
         )
         this.requestedTooMany = this.latestDeployments.length < amount
-
         // Parse the strings for the UI and write them to the list
         this.constructStrings()
         this.cdr.detectChanges()
     }
-
     /**
      * Check for whether input is a valid number.
      */
-    async getNewAmount(): Promise<void> {
+    async getNewAmount() {
         if (this.logAmount !== undefined) {
             if (
                 /^[0-9]*$/.test(this.logAmount.toString()) &&
@@ -88,16 +69,11 @@ export class DeployLogFullComponent implements AfterViewInit {
                 this.toastText =
                     "Stop trying to fuck up our backend by overloading it, thanks!"
                 this.showToast = true
-                setTimeout(() => {
-                    this.showToast = false
-                }, 5000)
+                setTimeout()
                 this.loading = false
             } else {
                 this.toastText = "Please enter a valid number!"
                 this.showToast = true
-                setTimeout(() => {
-                    this.showToast = false
-                }, 5000)
                 this.loading = false
             }
         } else {
@@ -105,11 +81,10 @@ export class DeployLogFullComponent implements AfterViewInit {
             void this.showDeployments()
         }
     }
-
     /**
      * Construct strings to show in the UI for all currently loaded deployments.
      */
-    constructStrings(): void {
+    constructStrings() {
         for (const index in this.latestDeployments) {
             switch (this.latestDeployments[index].type) {
                 case DeploymentType.SUCCESS:
@@ -129,22 +104,19 @@ export class DeployLogFullComponent implements AfterViewInit {
                     this.latestDeployments[index].string = "Unknown status for"
                     break
             }
-
             // Add source URL
             this.latestDeployments[index].sourceUrl = generateRepoUrl(
                 this.latestDeployments[index],
             )
         }
     }
-
     /**
      * Change the deployment type to query. Certainly not a very fancy way, but works for now.
      * @param $event
      */
-    changeDeploymentType($event: Event): void {
-        const target = $event.target as HTMLSelectElement
+    changeDeploymentType($event) {
+        const target = $event.target
         this.loading = true
-
         switch (target.value) {
             case "0":
                 this.currentType = DeploymentType.ALL
@@ -161,24 +133,20 @@ export class DeployLogFullComponent implements AfterViewInit {
         }
         void this.getNewAmount()
     }
-
     /**
      * Show deployments based on the current search term (if any). Shows all deployments if no search term is present.
      */
-    async showDeployments(): Promise<void> {
-        const toFilter: DeploymentList = this.latestDeployments
-
+    async showDeployments() {
+        const toFilter = this.latestDeployments
         if (this.searchterm && this.searchterm !== "" && !this.isFiltered) {
             this.shownDeployments = toFilter.filter((deployment) => {
                 return deployment.name
                     .toLowerCase()
                     .includes(this.searchterm?.toLowerCase() ?? "")
             })
-
             if (this.shownDeployments.length > 0) {
                 return
             }
-
             // If we have no results, we need to fetch more
             let resultAmount = this.logAmount ? this.logAmount * 2 : 200
             while (this.shownDeployments.length === 0 || resultAmount > 2000) {
@@ -207,7 +175,21 @@ export class DeployLogFullComponent implements AfterViewInit {
             // None of the previous cases applied, we need to show all logs
             this.shownDeployments = toFilter
         }
-
         this.loading = false
     }
 }
+DeployLogFullComponent = __decorate(
+    [
+        Component({
+            selector: "app-deploy-log-full",
+            standalone: true,
+            imports: [FormsModule, RouterLink, ToastComponent],
+            templateUrl: "./deploy-log-full.component.html",
+            styleUrl: "./deploy-log-full.component.css",
+        }),
+        __metadata("design:paramtypes", [ChangeDetectorRef]),
+    ],
+    DeployLogFullComponent,
+)
+export { DeployLogFullComponent }
+//# sourceMappingURL=deploy-log-full.component.js.map

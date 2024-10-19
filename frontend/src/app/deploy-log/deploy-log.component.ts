@@ -12,17 +12,17 @@ import {
     parseDeployments,
     startShortPolling,
 } from "../functions"
+import { ToastComponent } from "../toast/toast.component"
 
 @Component({
     selector: "app-deploy-log",
     standalone: true,
-    imports: [RouterLink, FormsModule],
+    imports: [RouterLink, FormsModule, ToastComponent],
     templateUrl: "./deploy-log.component.html",
     styleUrl: "./deploy-log.component.css",
 })
 export class DeployLogComponent implements AfterViewInit {
     latestDeployments: DeploymentList = []
-    isHidden: any
 
     constructor(private cdr: ChangeDetectorRef) {}
 
