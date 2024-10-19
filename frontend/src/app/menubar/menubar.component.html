@@ -45,14 +45,14 @@
                         <li>
                             <a
                                 href="{{ item.url }}"
-                                class="block text-lg py-2 px-3 text-maroon rounded hover:bg-surface0 hover:text-mauve md:hover:bg-transparent md:hover:text-mauve md:p-0"
+                                class="block text-xl py-2 px-3 text-maroon rounded hover:bg-surface0 hover:text-mauve md:hover:bg-transparent md:hover:text-mauve md:p-0"
                                 >{{ item.title }}</a
                             >
                         </li>
                     } @else if (item.routerLink !== undefined) {
                         <li [routerLink]="item.routerLink">
                             <a
-                                class="cursor-pointer block text-lg py-2 px-3 text-maroon rounded hover:bg-surface0 hover:text-mauve md:hover:bg-transparent md:hover:text-mauve md:p-0"
+                                class="cursor-pointer block text-xl  py-2 px-3 text-maroon rounded hover:bg-surface0 hover:text-mauve md:hover:bg-transparent md:hover:text-mauve md:p-0"
                                 >{{ item.title }}</a
                             >
                         </li>

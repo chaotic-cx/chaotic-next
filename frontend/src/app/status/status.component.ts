@@ -24,7 +24,7 @@ import { BuildClassPipe } from "../pipes/build-class.pipe"
 export class StatusComponent implements AfterViewInit {
     currentQueue: CurrentQueue = []
     fullLength = 0
-    lastUpdated: string | undefined
+    lastUpdated: Date | undefined
     loading = true
     showFullPackages = false
     nothingGoingOn = false
@@ -93,6 +93,7 @@ export class StatusComponent implements AfterViewInit {
             .get("queue/stats")
             .then((response) => {
                 const currentQueue: StatsObject = JSON.parse(response.data)
+                console.log(currentQueue)
                 for (const queue of Object.keys(currentQueue)) {
                     const nameWithoutRepo: string[] = []
                     const build_class: (null | number)[] = []
@@ -167,9 +168,7 @@ export class StatusComponent implements AfterViewInit {
                 }
 
                 // Finally, update the component's state
-                this.lastUpdated = new Date().toLocaleString("en-GB", {
-                    timeZone: "UTC",
-                })
+                this.lastUpdated = new Date()
 
                 // Check if there is nothing going on
                 this.nothingGoingOn =
