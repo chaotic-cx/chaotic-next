@@ -1,4 +1,4 @@
-import { Pipe, PipeTransform } from "@angular/core";
+import { Pipe, PipeTransform } from "@angular/core"
 
 @Pipe({
     name: "buildClass",
@@ -8,31 +8,31 @@ export class BuildClassPipe implements PipeTransform {
     transform(value: null | number): unknown {
         switch (value) {
             case 0:
-                return "0 (None)";
+                return "0 (None)"
             case 1:
-                return "1 (None)";
+                return "1 (None)"
             case 2:
-                return "2 (Light)";
+                return "2 (Light)"
             case 3:
-                return "3 (Light)";
+                return "3 (Light)"
             case 4:
-                return "4 (Light)";
+                return "4 (Light)"
             case 5:
-                return "5 (Medium)";
+                return "5 (Medium)"
             case 6:
-                return "6 (Medium)";
+                return "6 (Medium)"
             case 7:
-                return "7 (Heavy)";
+                return "7 (Heavy)"
             case 8:
-                return "8 (Heavy)";
+                return "8 (Heavy)"
             case 9:
-                return "9 (Very Heavy)";
+                return "9 (Very Heavy)"
             case 10:
-                return "10 (Very Heavy)";
+                return "10 (Very Heavy)"
             case null:
-                return "Custom";
+                return "Custom"
             default:
-                return value;
+                return value
         }
     }
 }

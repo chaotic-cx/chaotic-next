@@ -146,12 +146,10 @@ export class TelegramService {
     private async extractMessages(
         id: string,
         desiredCount: number,
-        // eslint-disable-next-line @typescript-eslint/ban-types
         process?: Function,
     ): Promise<TgMessage[]> {
         await this.getAllChats()
         let extractedMessages: TgMessage[] = []
-        Logger.debug(`Extracting messages from chat ${id}`, "TelegramService")
 
         // Get the first message ID as a reference point, which is not the channel creation
         // message. This one was seemingly not valid as a reference point.
@@ -159,7 +157,7 @@ export class TelegramService {
             await this.getChatHistory({ chat: id, offset: -2, from: 1 })
         ).messages[0].id
 
-        // Get the last message ID to start looping, while ensuring to push it into the array
+        // Get the last message ID to start looping while ensuring to push it into the array
         const lastMessage = (
             await this.getChatHistory({ chat: id, from: 0, limit: 1 })
         ).messages[0]
@@ -205,7 +203,7 @@ export class TelegramService {
             from = extractedMessages[extractedMessages.length - 1].id
 
             // Break if the first message is found, no point in continuing. We need to
-            // check this before filtering the messages though.
+            // check this before filtering the messages, though.
             let foundFirst = false
             if (
                 extractedMessages.find((m) => m.id === firstMessage) !==
@@ -254,10 +252,6 @@ export class TelegramService {
         chat: number,
         message: number,
     ): Promise<string> {
-        Logger.debug(
-            `Getting message link for chat ${chat} and message ${message}`,
-            "TelegramService",
-        )
         const linkObject = await this.tgClient.invoke({
             _: "getMessageLink",
             chat_id: chat,
@@ -293,10 +287,6 @@ export class TelegramService {
         limit?: number
         offset?: number
     }) {
-        Logger.debug(
-            `Getting chat history for chat ${params.chat}`,
-            "TelegramService",
-        )
         return this.tgClient.invoke({
             _: "getChatHistory",
             chat_id: params.chat,

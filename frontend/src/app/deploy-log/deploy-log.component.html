@@ -1,5 +1,4 @@
-<div class="chaotic-container-regular"
->
+<div class="chaotic-container-regular">
     <ol class="relative">
         <li class="mb-10">
             @for (deployment of latestDeployments; track deployment) {
@@ -8,13 +7,14 @@
                         class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex"
                     >
                         <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0"
-                        >{{ deployment.date }}
+                            >{{ deployment.date }}
                         </time>
-                        <div class="lex text-sm font-normal text-text"
-                        >Deployed <a class="text-maroon">
-                            {{ deployment.name }}</a> from <a class="text-rosewater">{{ deployment.node }}</a> to
-                            <a href="{{ deployment.sourceUrl }} "
-                               class="font-semibold text-red">{{ deployment.repo }}</a>
+                        <div class="lex text-sm font-normal text-text">
+                            Deployed <a class="text-maroon"> {{ deployment.name }}</a> from
+                            <a class="text-rosewater">{{ deployment.node }}</a> to
+                            <a href="{{ deployment.sourceUrl }} " class="font-semibold text-red">{{
+                                deployment.repo
+                            }}</a>
                             @if (deployment.log) {
                                 - <a class="text-yellow" href="{{ deployment.log }}">log ↗</a>
                             }

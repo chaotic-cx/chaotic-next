@@ -1,12 +1,12 @@
-import { MenuBarLinks } from "@./shared-lib";
-import { NgClass, NgStyle } from "@angular/common";
-import { Component } from "@angular/core";
-import { RouterLink } from "@angular/router";
+import { MenuBarLinks } from "@./shared-lib"
+import { NgClass, NgOptimizedImage, NgStyle } from "@angular/common"
+import { Component } from "@angular/core"
+import { RouterLink } from "@angular/router"
 
 @Component({
     selector: "app-menubar",
     standalone: true,
-    imports: [NgClass, NgStyle, RouterLink],
+    imports: [NgClass, NgStyle, RouterLink, NgOptimizedImage],
     templateUrl: "./menubar.component.html",
     styleUrl: "./menubar.component.css",
 })
@@ -40,5 +40,5 @@ export class MenubarComponent {
             title: "About",
             routerLink: "/about",
         },
-    ];
+    ]
 }
