@@ -2,21 +2,21 @@ import { CACHE_TELEGRAM_TTL, CAUR_DEPLOY_LOG_ID, CAUR_NEWS_ID, type TgMessage, t
 import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { getTdjson } from "prebuilt-tdlib"
-import * as tdl from "tdl"
+import { Client, configure, createClient } from "tdl"
 
 @Injectable()
 export class TelegramService {
-    protected readonly tgClient: any
+    protected readonly tgClient: Client
 
     constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {
-        tdl.configure({ tdjson: getTdjson() })
+        configure({ tdjson: getTdjson() })
 
         const TELEGRAM_API_HASH = process.env.TELEGRAM_API_HASH || ""
         const TELEGRAM_API_ID = process.env.TELEGRAM_API_ID || ""
         const TELEGRAM_DB_ENCRYPTION_KEY = process.env.TELEGRAM_DB_ENCRYPTION_KEY || ""
 
         if (TELEGRAM_API_ID !== "" && TELEGRAM_API_HASH !== "" && TELEGRAM_DB_ENCRYPTION_KEY !== "") {
-            this.tgClient = tdl.createClient({
+            this.tgClient = createClient({
                 apiId: Number.parseInt(TELEGRAM_API_ID),
                 apiHash: TELEGRAM_API_HASH,
                 databaseEncryptionKey: TELEGRAM_DB_ENCRYPTION_KEY,
@@ -48,19 +48,20 @@ export class TelegramService {
 
     /**
      * Get the latest deployments from the CAUR Telegram channel
+     * @param amount The number of messages to retrieve
      * @returns The parsed latest deployments from the CAUR Telegram channel
      */
-    async getDeployments(amount: any): Promise<TgMessage[]> {
+    async getDeployments(amount: number): Promise<TgMessage[]> {
         Logger.debug("getDeployments requested", "TelegramService")
 
         let actualFetch: number
-        Logger.debug("Amount requested: " + amount, "TelegramService")
+        Logger.debug(`Amount requested: ${amount}`, "TelegramService")
 
-        if (!Number.isFinite(amount) || Number.parseInt(amount) > 500) {
+        if (amount > 2000) {
             Logger.error("Invalid amount requested", "TelegramService")
-            actualFetch = 500
+            actualFetch = 2000
         } else {
-            actualFetch = Number.parseInt(amount)
+            actualFetch = amount
         }
 
         // Cache the news for 60 seconds
@@ -86,10 +87,9 @@ export class TelegramService {
     /**
      * Logout the Telegram client
      */
-    deAuth(): void {
-        this.tgClient.logout.then(() => {
-            Logger.log("Logged out!", "TelegramService")
-        })
+    async deAuth(): Promise<void> {
+        await this.tgClient.close()
+        Logger.log("Logged out!", "TelegramService")
     }
 
     /**
@@ -184,7 +184,13 @@ export class TelegramService {
             // Break if the first message is found, no point in continuing. We need to
             // check this before filtering the messages, though.
             let foundFirst = false
-            if (extractedMessages.find((m) => m.id === firstMessage) !== undefined) {
+            if (
+                extractedMessages.find((m) => m.id === firstMessage) !== undefined ||
+                // Check for the "Ohayo" message, which is one of the last messages of the pre-infra 4.0 era.
+                // This should prevent deadlocking the loop because the number of pre-infra 4.0 messages is
+                // just too high to eventually reach the end timely.
+                extractedMessages.find((m) => m.content.toString().includes("Ohayo") !== undefined)
+            ) {
                 foundFirst = true
             }
 
@@ -270,9 +276,9 @@ export class TelegramService {
         let actualFetch: number
         Logger.debug(`Amount requested: ${amount}`, "TelegramService")
 
-        if (!Number.isFinite(amount) || amount > 500) {
+        if (amount > 2000) {
             Logger.error("Invalid amount requested", "TelegramService")
-            actualFetch = 500
+            actualFetch = 2000
         } else {
             actualFetch = amount
         }

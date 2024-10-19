@@ -6,6 +6,4 @@ import { MiscService } from "./misc.service"
     controllers: [MiscController],
     providers: [MiscService],
 })
-export class MiscModule {
-    constructor() {}
-}
+export class MiscModule {}
