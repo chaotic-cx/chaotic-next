@@ -1,29 +1,25 @@
-import { CAUR_CACHED_METRICS_URL, type CountryRankList, type UserAgentList } from "@./shared-lib"
+import { type CountryRankList, type UserAgentList } from "@./shared-lib"
+import { DatePipe } from "@angular/common"
 import { type AfterViewInit, Component } from "@angular/core"
-import { Axios } from "axios"
-import { getNow } from "../../functions"
+import { AppService } from "../../app.service"
 
 @Component({
     selector: "app-misc-stats",
     standalone: true,
-    imports: [],
+    imports: [DatePipe],
     templateUrl: "./misc-stats.component.html",
     styleUrl: "./misc-stats.component.css",
 })
 export class MiscStatsComponent implements AfterViewInit {
     loading = true
-    lastUpdated = "Stats are currently loading..."
+    lastUpdated: string | Date = "Stats are currently loading..."
     userAgentMetrics: UserAgentList = []
     countryRanks: CountryRankList = []
     countryRankRange = 30
-    protected axios: Axios
+    rankActive = true
+    userAgentActive = true
 
-    constructor() {
-        this.axios = new Axios({
-            baseURL: CAUR_CACHED_METRICS_URL,
-            timeout: 10000,
-        })
-    }
+    constructor(private appService: AppService) {}
 
     ngAfterViewInit(): void {
         this.updateAllMetrics()
@@ -33,56 +29,57 @@ export class MiscStatsComponent implements AfterViewInit {
      * Update all metrics and sets the values of the user agent metrics and country ranks.
      */
     updateAllMetrics(): void {
-        Promise.all([this.get30DayUserAgents(), this.getCountryRanks()]).then((values) => {
-            this.userAgentMetrics = values[0]
-            this.countryRanks = values[1]
-            this.loading = false
-            this.lastUpdated = getNow()
-        })
+        this.get30DayUserAgents()
+        this.getCountryRanks()
     }
 
     /**
      * Query the number of user agents in the last 30 days.
      * @returns The number of user agents in the last 30 days.
      */
-    private async get30DayUserAgents(): Promise<UserAgentList> {
-        return this.axios
-            .get("30d/user-agents")
-            .then((response) => {
+    private get30DayUserAgents(): void {
+        this.userAgentActive = true
+        this.appService.get30dayUserAgents().subscribe({
+            next: (data) => {
                 // We don't want to display >30 user agents
-                const rightAmount = JSON.parse(response.data).slice(0, 30)
+                const rightAmount = data.slice(0, 30)
                 // and also not too long user agent strings as that breaks visuals
                 for (const entry of rightAmount) {
                     if (entry.name.length > 50) {
-                        entry.name = entry.name.substring(0, 50) + "..."
+                        entry.name = `${entry.name.substring(0, 50)}...`
                     }
                 }
-                return rightAmount
-            })
-            .catch((err) => {
+
+                this.userAgentMetrics = rightAmount
+                this.userAgentActive = false
+                this.loading = this.rankActive
+                this.lastUpdated = new Date()
+            },
+            error: (err) => {
                 console.error(err)
-                return []
-            })
+            },
+        })
     }
 
     /**
      * Query the country ranks.
-     * @returns The country ranking list.
      */
-    private async getCountryRanks(): Promise<CountryRankList> {
-        return this.axios
-            .get(`30d/rank/30/countries`)
-            .then((response) => {
-                const jsonParsed: CountryRankList = JSON.parse(response.data)
-                for (const country of jsonParsed) {
+    private getCountryRanks(): void {
+        this.rankActive = true
+        this.appService.getCountryRanks().subscribe({
+            next: (data) => {
+                for (const country of data) {
                     country.name = `${country.name}  ${this.countryCode2Flag(country.name)}`
                 }
-                return jsonParsed
-            })
-            .catch((err) => {
+                this.countryRanks = data
+                this.rankActive = false
+                this.loading = this.userAgentActive
+                this.lastUpdated = new Date()
+            },
+            error: (err) => {
                 console.error(err)
-                return []
-            })
+            },
+        })
     }
 
     /**

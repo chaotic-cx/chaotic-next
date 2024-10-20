@@ -10,8 +10,9 @@ import {
 } from "@./shared-lib"
 import { ElementRef, Renderer2 } from "@angular/core"
 import { CatppuccinFlavor, flavors } from "@catppuccin/palette"
-import { Axios } from "axios"
 import TimeAgo from "javascript-time-ago"
+import { lastValueFrom } from "rxjs"
+import { AppService } from "./app.service"
 
 /**
  * Poll for new deployments.
@@ -150,13 +151,12 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
  * Get the latest news from the Telegram channel.
  * @returns The latest news as a list of TgMessage.
  */
-export async function getDeployments(amount: number, type: DeploymentType, loading?: boolean): Promise<TgMessageList> {
-    const axios = new Axios({
-        baseURL: CAUR_TG_API_URL,
-        timeout: 10000,
-    })
-
-    let requestString
+export async function getDeployments(
+    amount: number,
+    type: DeploymentType,
+    appService: AppService,
+): Promise<TgMessageList> {
+    let requestString: string
     switch (type as DeploymentType) {
         case DeploymentType.ALL:
             requestString = "all"
@@ -175,15 +175,8 @@ export async function getDeployments(amount: number, type: DeploymentType, loadi
             break
     }
 
-    return axios
-        .get(`deployments/${requestString}/${amount}`)
-        .then((response) => {
-            return JSON.parse(response.data)
-        })
-        .catch((err) => {
-            console.error(err)
-            return null
-        })
+    const url = `${CAUR_TG_API_URL}/deployments/${requestString}/${amount}`
+    return lastValueFrom(appService.getDeployments(url))
 }
 
 /**

@@ -1,5 +1,5 @@
 import { CAUR_MAP_URL } from "@./shared-lib"
-import { Component, type ElementRef, Inject, PLATFORM_ID, ViewChild } from "@angular/core"
+import { Component, type ElementRef, ViewChild } from "@angular/core"
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
 
 @Component({
@@ -15,10 +15,7 @@ export class MirrorMapComponent {
     // @ts-ignore
     @ViewChild("iframe", { static: false }) iframe: ElementRef
 
-    constructor(
-        @Inject(PLATFORM_ID) platformId: Object,
-        public sanitizer: DomSanitizer,
-    ) {
+    constructor(public sanitizer: DomSanitizer) {
         this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url)
     }
 }

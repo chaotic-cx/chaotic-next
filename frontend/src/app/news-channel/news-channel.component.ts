@@ -1,7 +1,8 @@
-import { CAUR_TG_API_URL, type TgMessageList } from "@./shared-lib"
+import { type TgMessageList } from "@./shared-lib"
 import { DatePipe } from "@angular/common"
 import { type AfterViewInit, Component } from "@angular/core"
-import { Axios } from "axios"
+import { lastValueFrom } from "rxjs"
+import { AppService } from "../app.service"
 import { checkIfMobile } from "../functions"
 
 @Component({
@@ -12,8 +13,10 @@ import { checkIfMobile } from "../functions"
     styleUrl: "./news-channel.component.css",
 })
 export class NewsChannelComponent implements AfterViewInit {
-    latestNews: any[] = []
+    latestNews: TgMessageList = []
     isMobile = false
+
+    constructor(private appService: AppService) {}
 
     async ngAfterViewInit(): Promise<void> {
         this.latestNews = this.parseTgMessage(await this.getNews())
@@ -25,19 +28,7 @@ export class NewsChannelComponent implements AfterViewInit {
      * @returns The latest news as a list of TgMessage.
      */
     async getNews(): Promise<TgMessageList> {
-        const axios = new Axios({
-            baseURL: CAUR_TG_API_URL,
-            timeout: 10000,
-        })
-
-        return axios
-            .get("news")
-            .then((response) => {
-                return JSON.parse(response.data)
-            })
-            .catch((err) => {
-                console.error(err)
-            })
+        return lastValueFrom(this.appService.getNews())
     }
 
     /**
@@ -45,14 +36,13 @@ export class NewsChannelComponent implements AfterViewInit {
      * @param messages The TgMessageList array to parse.
      * @private
      */
-    private parseTgMessage(messages: any[]): any[] {
+    private parseTgMessage(messages: TgMessageList): TgMessageList {
         for (const message of messages) {
-            message.date = new Date(message.date * 1000).toDateString()
+            message.date = new Date(Number(message.date) * 1000).toDateString()
         }
         if (this.isMobile) {
             return messages.slice(0, 3)
-        } else {
-            return messages.slice(0, 5)
         }
+        return messages.slice(0, 5)
     }
 }
