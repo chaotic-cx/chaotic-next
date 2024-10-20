@@ -1,8 +1,8 @@
-import { CAUR_BACKEND_URL, CAUR_PKG_URL, type PkgList } from "@./shared-lib"
+import { CAUR_PKG_URL, type PkgList } from "@./shared-lib"
 import { CommonModule } from "@angular/common"
-import { HttpClient } from "@angular/common/http"
 import { Component } from "@angular/core"
 import { FormsModule, ReactiveFormsModule } from "@angular/forms"
+import { AppService } from "../app.service"
 
 @Component({
     selector: "app-package-list",
@@ -12,13 +12,13 @@ import { FormsModule, ReactiveFormsModule } from "@angular/forms"
     styleUrl: "./package-list.component.css",
 })
 export class PackageListComponent {
-    packageList: any[] = []
+    packageList: PkgList = []
     loading = true
     searchTerm: string | undefined
-    searchResults: any[] = []
+    searchResults: PkgList = []
     protected readonly CAUR_PKG_URL = CAUR_PKG_URL
 
-    constructor(private httpClient: HttpClient) {
+    constructor(private appService: AppService) {
         void this.getPkgList()
     }
 
@@ -33,33 +33,42 @@ export class PackageListComponent {
     parsePkgList = (pkgList: string): PkgList => {
         const pkgArray: PkgList = []
 
-        pkgList.split(/\n/g).forEach((pkg: string): void => {
-            if (pkg === "" || pkg.includes("pkg.tar.zst.sig")) return
+        const toParse = pkgList.split(/\n/g)
+        for (const pkg of toParse) {
+            if (pkg === "" || pkg.includes("pkg.tar.zst.sig")) continue
 
             // At the time of writing this, the following regex reliably caught the package name
-            // this *might* change in the future depending on whether out of norm packages are added.
+            // this *might* change in the future depending on whether out-of-norm packages are added.
             const pkgname = pkg.split(/(-|-r|.r|-v)[0-9]/, 1)[0]
 
             pkgArray.push({
                 name: pkgname,
                 fullString: pkg,
             })
-        })
+        }
 
         return pkgArray
     }
 
     async getPkgList(): Promise<void> {
-        this.httpClient.get(`${CAUR_BACKEND_URL}/misc/pkglist`).subscribe((res): void => {
-            // @ts-ignore
-            this.packageList = this.parsePkgList(res.pkglist)
-            this.loading = false
+        this.appService.getPkgList().subscribe({
+            next: (res): void => {
+                this.packageList = this.parsePkgList(res.pkglist)
+                this.loading = false
+            },
+            error: (err): void => {
+                console.error(err)
+                this.loading = false
+            },
         })
     }
 
     async searchPackage(): Promise<void> {
         this.loading = true
-        this.searchResults = this.packageList.filter((pkg) => pkg.name.includes(this.searchTerm))
+        const searchFor = this.searchTerm
+        if (searchFor !== undefined) {
+            this.searchResults = this.packageList.filter((pkg) => pkg.name.includes(searchFor))
+        }
         this.loading = false
     }
 }

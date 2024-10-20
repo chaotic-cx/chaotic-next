@@ -2,6 +2,7 @@ import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shar
 import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
 import { RouterLink } from "@angular/router"
+import { AppService } from "../app.service"
 import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions"
 import { ToastComponent } from "../toast/toast.component"
 
@@ -15,11 +16,14 @@ import { ToastComponent } from "../toast/toast.component"
 export class DeployLogComponent implements AfterViewInit {
     latestDeployments: DeploymentList = []
 
-    constructor(private cdr: ChangeDetectorRef) {}
+    constructor(
+        private appService: AppService,
+        private cdr: ChangeDetectorRef,
+    ) {}
 
     async ngAfterViewInit(): Promise<void> {
         this.latestDeployments = parseDeployments(
-            await getDeployments(30, DeploymentType.SUCCESS),
+            await getDeployments(30, DeploymentType.SUCCESS, this.appService),
             DeploymentType.SUCCESS,
         )
         for (const deployment of this.latestDeployments) {
@@ -40,7 +44,7 @@ export class DeployLogComponent implements AfterViewInit {
      */
     async checkNewDeployments(): Promise<void> {
         const newList: DeploymentList = parseDeployments(
-            await getDeployments(30, DeploymentType.SUCCESS),
+            await getDeployments(30, DeploymentType.SUCCESS, this.appService),
             DeploymentType.SUCCESS,
         )
         if (newList[0].date !== this.latestDeployments[0].date) {

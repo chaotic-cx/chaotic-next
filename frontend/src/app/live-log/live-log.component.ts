@@ -1,13 +1,4 @@
-import {
-    AfterViewInit,
-    Component,
-    type ElementRef,
-    Inject,
-    Input,
-    OnChanges,
-    PLATFORM_ID,
-    ViewChild,
-} from "@angular/core"
+import { AfterViewInit, Component, type ElementRef, Input, OnChanges, ViewChild } from "@angular/core"
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser"
 
 @Component({
@@ -23,10 +14,7 @@ export class LiveLogComponent implements AfterViewInit, OnChanges {
     showIframe = true
     urlSafe: SafeResourceUrl
 
-    constructor(
-        @Inject(PLATFORM_ID) platformId: Object,
-        public sanitizer: DomSanitizer,
-    ) {
+    constructor(public sanitizer: DomSanitizer) {
         this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(this.url ? this.url : "")
     }
 

@@ -1,7 +1,7 @@
-import { CAUR_CACHED_METRICS_URL, type SpecificPackageMetrics } from "@./shared-lib"
+import { type SpecificPackageMetrics } from "@./shared-lib"
 import { Component } from "@angular/core"
 import { FormsModule } from "@angular/forms"
-import { Axios } from "axios"
+import { AppService } from "../../app.service"
 
 @Component({
     selector: "app-package-search",
@@ -15,40 +15,25 @@ export class PackageSearchComponent {
     loading = false
     searchPackage = ""
     initialSearchDone = false
-    protected axios: Axios
 
-    constructor() {
-        this.axios = new Axios({
-            baseURL: CAUR_CACHED_METRICS_URL,
-            timeout: 10000,
-        })
-    }
+    constructor(private appService: AppService) {}
 
     updateDisplay(): void {
         if (/^[0-9|a-zA-Z-]*$/.test(this.searchPackage)) {
             this.loading = true
-            this.getSpecificPackageMetrics().then((result) => {
-                this.packageMetrics = result
-                this.loading = false
-                this.initialSearchDone = true
+            this.appService.getSpecificPackageMetrics(this.searchPackage).subscribe({
+                next: (result) => {
+                    this.packageMetrics = result
+                    this.loading = false
+                    this.initialSearchDone = true
+                },
+                error: (err) => {
+                    console.error(err)
+                    this.loading = false
+                },
             })
         } else {
             alert("This does not look like a valid package name!")
         }
-    }
-
-    /**
-     * Query the metrics for a specific package.
-     */
-    async getSpecificPackageMetrics(): Promise<SpecificPackageMetrics> {
-        return await this.axios
-            .get(`30d/package/${this.searchPackage}`)
-            .then((response) => {
-                return JSON.parse(response.data)
-            })
-            .catch((err) => {
-                console.error(err)
-                return []
-            })
     }
 }

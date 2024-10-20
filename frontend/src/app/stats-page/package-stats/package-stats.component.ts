@@ -1,12 +1,12 @@
-import { CAUR_CACHED_METRICS_URL, type PackageRankList } from "@./shared-lib"
+import { type PackageRankList } from "@./shared-lib"
+import { DatePipe } from "@angular/common"
 import { type AfterViewInit, Component } from "@angular/core"
-import { Axios } from "axios"
-import { getNow } from "../../functions"
+import { AppService } from "../../app.service"
 
 @Component({
     selector: "app-package-stats",
     standalone: true,
-    imports: [],
+    imports: [DatePipe],
     templateUrl: "./package-stats.component.html",
     styleUrl: "./package-stats.component.css",
 })
@@ -14,46 +14,31 @@ export class PackageStatsComponent implements AfterViewInit {
     packageMetricRange = 30
     globalPackageMetrics: PackageRankList = []
     loading = true
-    lastUpdated: string
-    axios: Axios
+    lastUpdated: Date | string
 
-    constructor() {
+    constructor(private appService: AppService) {
         this.lastUpdated = "Stats are currently loading..."
-        this.axios = new Axios({
-            baseURL: CAUR_CACHED_METRICS_URL,
-            timeout: 100000,
-        })
     }
 
     ngAfterViewInit(): void {
-        this.updateOverallMetrics()
-    }
-
-    /**
-     * Update all metrics on the page.
-     */
-    updateOverallMetrics(): void {
-        this.loading = true
-        this.getOverallPackageMetrics().then((result) => {
-            this.globalPackageMetrics = result
-            this.loading = false
-            this.lastUpdated = getNow()
-        })
+        void this.updateOverallMetrics()
     }
 
     /**
      * Query the overall package metrics.
-     * @returns The package ranking list.
      */
-    async getOverallPackageMetrics(): Promise<PackageRankList> {
-        return this.axios
-            .get(`30d/rank/${this.packageMetricRange}/packages`)
-            .then((response) => {
-                return JSON.parse(response.data)
-            })
-            .catch((err) => {
+    async updateOverallMetrics(): Promise<void> {
+        this.loading = true
+        this.appService.getOverallPackageStats(this.packageMetricRange).subscribe({
+            next: (data) => {
+                this.globalPackageMetrics = data
+                this.loading = false
+                this.lastUpdated = new Date()
+            },
+            error: (err) => {
                 console.error(err)
                 return []
-            })
+            },
+        })
     }
 }

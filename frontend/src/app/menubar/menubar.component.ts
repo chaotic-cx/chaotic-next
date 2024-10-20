@@ -17,12 +17,16 @@ export class MenubarComponent {
             routerLink: "/",
         },
         {
-            title: "Docs",
+            title: "Get Started",
             routerLink: "/docs",
         },
         {
-            title: "Status",
+            title: "Build Status",
             routerLink: "/status",
+        },
+        {
+            title: "Deploy log",
+            routerLink: "/deploy-log",
         },
         {
             title: "Package List",

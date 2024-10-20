@@ -1,8 +1,8 @@
-import { CAUR_API_URL, CAUR_REPO_API_URL, type CurrentQueue, GitLabPipeline, type StatsObject } from "@./shared-lib"
+import { type CurrentQueue, GitLabPipeline } from "@./shared-lib"
 import { DatePipe } from "@angular/common"
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
 import { Router } from "@angular/router"
-import { Axios } from "axios"
+import { AppService } from "../app.service"
 import { DeployLogComponent } from "../deploy-log/deploy-log.component"
 import { startShortPolling } from "../functions"
 import { LiveLogComponent } from "../live-log/live-log.component"
@@ -30,10 +30,15 @@ export class StatusComponent implements AfterViewInit {
     currentBuild = 0
 
     constructor(
+        private appService: AppService,
         private cdr: ChangeDetectorRef,
         private router: Router,
     ) {
-        this.displayLiveLog = localStorage.getItem("displayLiveLog") === "true"
+        const cachedState = localStorage.getItem("currentBuild")
+        if (cachedState !== null) this.currentBuild = Number(cachedState)
+
+        const cachedStateLiveLog = localStorage.getItem("displayLiveLog")
+        if (cachedStateLiveLog !== null) this.displayLiveLog = localStorage.getItem("displayLiveLog") === "true"
     }
 
     async ngAfterViewInit(): Promise<void> {
@@ -50,20 +55,14 @@ export class StatusComponent implements AfterViewInit {
      * Get current pipeline status
      */
     async getPipelines() {
-        const axios = new Axios({
-            baseURL: CAUR_REPO_API_URL,
-            timeout: 10000,
-        })
-
-        axios
-            .get("/pipelines")
-            .then((response) => {
-                const data = JSON.parse(response.data) as GitLabPipeline[]
+        this.appService.getPipelines().subscribe({
+            next: (data) => {
                 this.pipelines = data.filter((pipeline: GitLabPipeline) => pipeline.status === ("running" || "pending"))
-            })
-            .catch((err) => {
+            },
+            error: (err) => {
                 console.error(err)
-            })
+            },
+        })
     }
 
     /*
@@ -75,15 +74,9 @@ export class StatusComponent implements AfterViewInit {
         if (!inBackground) this.lastUpdated = undefined
 
         const returnQueue: CurrentQueue = []
-        const axios = new Axios({
-            baseURL: CAUR_API_URL,
-            timeout: 10000,
-        })
 
-        axios
-            .get("queue/stats")
-            .then((response) => {
-                const currentQueue: StatsObject = JSON.parse(response.data)
+        this.appService.getQueueStats().subscribe({
+            next: (currentQueue) => {
                 for (const queue of Object.keys(currentQueue)) {
                     const nameWithoutRepo: string[] = []
                     const build_class: (null | number)[] = []
@@ -176,10 +169,14 @@ export class StatusComponent implements AfterViewInit {
                 this.currentQueue = returnQueue
                 this.cdr.detectChanges()
                 this.loading = false
-            })
-            .catch((err) => {
+            },
+            error: (err) => {
                 console.error(err)
-            })
+            },
+            complete: () => {
+                this.loading = false
+            },
+        })
     }
 
     /**
@@ -198,8 +195,8 @@ export class StatusComponent implements AfterViewInit {
     /**
      * Redirect to the full deployments page using the Angular router.
      */
-    headToFullDeployments() {
-        void this.router.navigate([`/deploy-log`])
+    headToFullDeployments(): void {
+        void this.router.navigate(["/deploy-log"])
     }
 
     /**
@@ -207,14 +204,14 @@ export class StatusComponent implements AfterViewInit {
      * is dynamic, and I didn't find out how to make routerLinks external without
      * hardcoding them.
      */
-    routeTo(liveLogUrl: string) {
+    routeTo(liveLogUrl: string): void {
         window.location.href = liveLogUrl ? liveLogUrl : ""
     }
 
     /**
      * Toggle the display of the live log. Saves the state in localStorage.
      */
-    toggleLiveLog() {
+    toggleLiveLog(): void {
         this.displayLiveLog = !this.displayLiveLog
         this.cdr.detectChanges()
 
