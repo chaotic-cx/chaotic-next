@@ -1,10 +1,10 @@
-import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib"
-import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
-import { FormsModule } from "@angular/forms"
-import { RouterLink } from "@angular/router"
-import { AppService } from "../app.service"
-import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions"
-import { ToastComponent } from "../toast/toast.component"
+import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib";
+import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core";
+import { FormsModule } from "@angular/forms";
+import { RouterLink } from "@angular/router";
+import { AppService } from "../app.service";
+import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions";
+import { ToastComponent } from "../toast/toast.component";
 
 @Component({
     selector: "app-deploy-log-full",
@@ -14,16 +14,16 @@ import { ToastComponent } from "../toast/toast.component"
     styleUrl: "./deploy-log-full.component.css",
 })
 export class DeployLogFullComponent implements AfterViewInit {
-    currentType: DeploymentType = DeploymentType.ALL
-    isFiltered = false
-    latestDeployments: DeploymentList = []
-    loading = true
-    logAmount: number | undefined
-    searchterm: string | undefined
-    showToast = false
-    shownDeployments: DeploymentList = []
-    toastId!: number
-    toastText = ""
+    currentType: DeploymentType = DeploymentType.ALL;
+    isFiltered = false;
+    latestDeployments: DeploymentList = [];
+    loading = true;
+    logAmount: number | undefined;
+    searchterm: string | undefined;
+    showToast = false;
+    shownDeployments: DeploymentList = [];
+    toastId!: number;
+    toastText = "";
 
     constructor(
         private appService: AppService,
@@ -31,14 +31,14 @@ export class DeployLogFullComponent implements AfterViewInit {
     ) {}
 
     async ngAfterViewInit(): Promise<void> {
-        await this.updateLogAmount(50)
-        void this.showDeployments()
+        await this.updateLogAmount(100);
+        void this.showDeployments();
 
         // Poll for new deployments every 30 seconds (which is the time the backend caches requests)
         startShortPolling(CACHE_TELEGRAM_TTL, async () => {
-            await this.updateLogAmount(this.logAmount ?? 100)
-            void this.showDeployments()
-        })
+            await this.updateLogAmount(this.logAmount ?? 100);
+            void this.showDeployments();
+        });
     }
 
     /**
@@ -46,31 +46,31 @@ export class DeployLogFullComponent implements AfterViewInit {
      * @param amount The number of deployments to request from the backend
      */
     async updateLogAmount(amount: number): Promise<void> {
-        const newDeployments = await getDeployments(amount, this.currentType, this.appService)
+        const newDeployments = await getDeployments(amount, this.currentType, this.appService);
 
         if (newDeployments === null) {
-            this.loading = false
-            return
+            this.loading = false;
+            return;
         }
 
-        this.latestDeployments = parseDeployments(newDeployments, this.currentType)
+        this.latestDeployments = parseDeployments(newDeployments, this.currentType);
 
         this.toastText = `You requested too many. Showing the maximum ${this.latestDeployments.length} instead.
-        This is currently expected as we just migrated to infra 4.0 and log channel is building up new history.`
+        This is currently expected as we just migrated to infra 4.0 and log channel is building up new history.`;
 
-        if (this.showToast) clearTimeout(this.toastId)
-        this.showToast = true
+        if (this.showToast) clearTimeout(this.toastId);
+        this.showToast = true;
         this.toastId = setTimeout(
             () => {
-                this.showToast = false
+                this.showToast = false;
             },
             5000,
             "deploy-log-full-toast",
-        )
+        );
 
         // Parse the strings for the UI and write them to the list
-        this.constructStrings()
-        this.cdr.detectChanges()
+        this.constructStrings();
+        this.cdr.detectChanges();
     }
 
     /**
@@ -79,26 +79,26 @@ export class DeployLogFullComponent implements AfterViewInit {
     async getNewAmount(): Promise<void> {
         if (this.logAmount !== undefined) {
             if (/^[0-9]*$/.test(this.logAmount.toString()) && this.logAmount <= 2000) {
-                await this.updateLogAmount(this.logAmount)
-                void this.showDeployments()
+                await this.updateLogAmount(this.logAmount);
+                void this.showDeployments();
             } else if (this.logAmount > 2000) {
-                this.toastText = "Won't fetch more than 2000 messages to not overload the backend!"
-                this.showToast = true
+                this.toastText = "Won't fetch more than 2000 messages to not overload the backend!";
+                this.showToast = true;
                 setTimeout(() => {
-                    this.showToast = false
-                }, 5000)
-                this.loading = false
+                    this.showToast = false;
+                }, 5000);
+                this.loading = false;
             } else {
-                this.toastText = "Please enter a valid number!"
-                this.showToast = true
+                this.toastText = "Please enter a valid number!";
+                this.showToast = true;
                 setTimeout(() => {
-                    this.showToast = false
-                }, 5000)
-                this.loading = false
+                    this.showToast = false;
+                }, 5000);
+                this.loading = false;
             }
         } else {
-            await this.updateLogAmount(100)
-            void this.showDeployments()
+            await this.updateLogAmount(100);
+            void this.showDeployments();
         }
     }
 
@@ -109,24 +109,24 @@ export class DeployLogFullComponent implements AfterViewInit {
         for (const index in this.latestDeployments) {
             switch (this.latestDeployments[index].type) {
                 case DeploymentType.SUCCESS:
-                    this.latestDeployments[index].string = "Deployed"
-                    break
+                    this.latestDeployments[index].string = "Deployed";
+                    break;
                 case DeploymentType.FAILED:
-                    this.latestDeployments[index].string = "Failed deploying"
-                    break
+                    this.latestDeployments[index].string = "Failed deploying";
+                    break;
                 case DeploymentType.TIMEOUT:
-                    this.latestDeployments[index].string = "Timed out during deployment of"
-                    break
+                    this.latestDeployments[index].string = "Timed out during deployment of";
+                    break;
                 case DeploymentType.CLEANUP:
-                    this.latestDeployments[index].string = "Cleanup job ran for"
-                    break
+                    this.latestDeployments[index].string = "Cleanup job ran for";
+                    break;
                 default:
-                    this.latestDeployments[index].string = "Unknown status for"
-                    break
+                    this.latestDeployments[index].string = "Unknown status for";
+                    break;
             }
 
             // Add source URL
-            this.latestDeployments[index].sourceUrl = generateRepoUrl(this.latestDeployments[index])
+            this.latestDeployments[index].sourceUrl = generateRepoUrl(this.latestDeployments[index]);
         }
     }
 
@@ -135,62 +135,62 @@ export class DeployLogFullComponent implements AfterViewInit {
      * @param $event
      */
     changeDeploymentType($event: Event): void {
-        const target = $event.target as HTMLSelectElement
-        this.loading = true
+        const target = $event.target as HTMLSelectElement;
+        this.loading = true;
 
         switch (target.value) {
             case "0":
-                this.currentType = DeploymentType.ALL
-                break
+                this.currentType = DeploymentType.ALL;
+                break;
             case "1":
-                this.currentType = DeploymentType.SUCCESS
-                break
+                this.currentType = DeploymentType.SUCCESS;
+                break;
             case "2":
-                this.currentType = DeploymentType.FAILED
-                break
+                this.currentType = DeploymentType.FAILED;
+                break;
             case "3":
-                this.currentType = DeploymentType.TIMEOUT
-                break
+                this.currentType = DeploymentType.TIMEOUT;
+                break;
         }
-        void this.getNewAmount()
+        void this.getNewAmount();
     }
 
     /**
      * Show deployments based on the current search term (if any). Shows all deployments if no search term is present.
      */
     async showDeployments(): Promise<void> {
-        const toFilter: DeploymentList = this.latestDeployments
+        const toFilter: DeploymentList = this.latestDeployments;
 
         if (this.searchterm && this.searchterm !== "" && !this.isFiltered) {
             this.shownDeployments = toFilter.filter((deployment) => {
-                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
-            })
+                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "");
+            });
 
             if (this.shownDeployments.length > 0) {
-                return
+                return;
             }
 
             // If we have no results, we need to fetch more
-            let resultAmount = this.logAmount ? this.logAmount * 2 : 200
+            let resultAmount = this.logAmount ? this.logAmount * 2 : 200;
             while (this.shownDeployments.length === 0 || resultAmount > 2000) {
-                await this.updateLogAmount(resultAmount)
+                await this.updateLogAmount(resultAmount);
                 this.shownDeployments = toFilter.filter((deployment) => {
-                    return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
-                })
-                resultAmount *= 2
+                    return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "");
+                });
+                resultAmount *= 2;
             }
-            this.isFiltered = true
+            this.isFiltered = true;
         } else if (this.searchterm && this.searchterm !== "" && this.isFiltered) {
             // We are already filtering, so we need it to filter the full list again
             this.shownDeployments = toFilter.filter((deployment) => {
-                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "")
-            })
-            this.isFiltered = false
+                return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "");
+            });
+            this.isFiltered = false;
         } else {
             // None of the previous cases applied, we need to show all logs
-            this.shownDeployments = toFilter
+            this.shownDeployments = toFilter;
         }
 
-        this.loading = false
+        this.loading = false;
     }
 }

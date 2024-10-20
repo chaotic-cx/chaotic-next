@@ -32,9 +32,6 @@ importers:
       '@angular/router':
         specifier: 18.2.8
         version: 18.2.8(@angular/common@18.2.8(@angular/core@18.2.8(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.8(rxjs@7.8.1)(zone.js@0.14.10))(@angular/platform-browser@18.2.8(@angular/animations@18.2.8(@angular/core@18.2.8(rxjs@7.8.1)(zone.js@0.14.10)))(@angular/common@18.2.8(@angular/core@18.2.8(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.8(rxjs@7.8.1)(zone.js@0.14.10)))(rxjs@7.8.1)
-      '@biomejs/biome':
-        specifier: ^1.9.4
-        version: 1.9.4
       '@fontsource/fira-sans':
         specifier: ^5.1.0
         version: 5.1.0
@@ -111,6 +108,9 @@ importers:
       '@angular/language-service':
         specifier: 18.2.8
         version: 18.2.8
+      '@biomejs/biome':
+        specifier: ^1.9.4
+        version: 1.9.4
       '@catppuccin/highlightjs':
         specifier: 1.0.0
         version: 1.0.0
@@ -126,6 +126,9 @@ importers:
       '@eslint/js':
         specifier: ^9.13.0
         version: 9.13.0
+      '@gitopslovers/nx-biome':
+        specifier: ^1.5.0
+        version: 1.5.0
       '@nestjs/schematics':
         specifier: ^10.2.2
         version: 10.2.2(chokidar@3.6.0)(typescript@5.5.4)
@@ -240,6 +243,9 @@ importers:
       nx:
         specifier: 20.0.2
         version: 20.0.2(@swc-node/register@1.10.9(@swc/core@1.7.36(@swc/helpers@0.5.13))(@swc/types@0.1.13)(typescript@5.5.4))(@swc/core@1.7.36(@swc/helpers@0.5.13))
+      prettier:
+        specifier: ^3.3.3
+        version: 3.3.3
       tailwindcss:
         specifier: ^3.4.14
         version: 3.4.14(ts-node@10.9.2(@swc/core@1.7.36(@swc/helpers@0.5.13))(@types/node@22.7.6)(typescript@5.5.4))
@@ -1732,6 +1738,9 @@ packages:
 
   '@fontsource/jetbrains-mono@5.1.1':
     resolution: {integrity: sha512-5rwvmdQQpXev4LlBX1P+7h2dguu6iwW/9Npjde4+DEq+HgpVJI/7QY8DI1NVVFdvLtXZNP+vO2L/5BQED6FUhA==}
+
+  '@gitopslovers/nx-biome@1.5.0':
+    resolution: {integrity: sha512-RDYX+dd3o36+rqzpShr948LimCXjH9lJdATdQGTKtYcN2OL43LRb3R9MLzU/OqnGOrt1/6Hg92YJS3pLES68aw==}
 
   '@humanfs/core@0.19.0':
     resolution: {integrity: sha512-2cbWIHbZVEweE853g8jymffCA+NCMiuqeECeBBLm8dg2oFdjuGJhgN4UAbI+6v0CKbbhvtXA4qV8YR5Ji86nmw==}
@@ -10041,6 +10050,8 @@ snapshots:
   '@fontsource/fira-sans@5.1.0': {}
 
   '@fontsource/jetbrains-mono@5.1.1': {}
+
+  '@gitopslovers/nx-biome@1.5.0': {}
 
   '@humanfs/core@0.19.0': {}
 
