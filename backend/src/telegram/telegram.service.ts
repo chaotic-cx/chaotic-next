@@ -72,7 +72,7 @@ export class TelegramService {
         }
 
         // Cache the news for 60 seconds
-        const cacheKey = `tgDeployments-${actualFetch}`;
+        const cacheKey = `tgDeployments-${repo}-${actualFetch}`;
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey);
         if (!data) {
             data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, actualFetch, undefined, repo);
