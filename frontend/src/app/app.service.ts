@@ -8,14 +8,15 @@ import {
     GitLabPipeline,
     type PackageRankList,
     type PkgListRetObject,
+    RepositoryList,
     SpecificPackageMetrics,
     type StatsObject,
     TgMessageList,
     type UserAgentList,
-} from "@./shared-lib"
-import { HttpClient } from "@angular/common/http"
-import { Injectable } from "@angular/core"
-import { Observable } from "rxjs"
+} from "@./shared-lib";
+import { HttpClient } from "@angular/common/http";
+import { Injectable } from "@angular/core";
+import { Observable } from "rxjs";
 
 @Injectable({
     providedIn: "root",
@@ -24,42 +25,42 @@ export class AppService {
     constructor(private http: HttpClient) {}
 
     getPipelines(): Observable<GitLabPipeline[]> {
-        return this.http.get<GitLabPipeline[]>(`${CAUR_REPO_API_URL}/pipelines`)
+        return this.http.get<GitLabPipeline[]>(`${CAUR_REPO_API_URL}/pipelines`);
     }
 
     getQueueStats(): Observable<StatsObject> {
-        return this.http.get<StatsObject>(`${CAUR_API_URL}/queue/stats`)
+        return this.http.get<StatsObject>(`${CAUR_API_URL}/queue/stats`);
     }
 
-    getDeployments(url: string): Observable<TgMessageList> {
-        return this.http.get<TgMessageList>(url)
+    getDeployments(url: string, repo: RepositoryList): Observable<TgMessageList> {
+        return this.http.get<TgMessageList>(url, { params: { repo: repo } });
     }
 
     getNews(): Observable<TgMessageList> {
-        return this.http.get<TgMessageList>(`${CAUR_TG_API_URL}/news`)
+        return this.http.get<TgMessageList>(`${CAUR_TG_API_URL}/news`);
     }
 
     get30dayUsers(): Observable<string> {
-        return this.http.get<string>(`${CAUR_CACHED_METRICS_URL}/30d/users`)
+        return this.http.get<string>(`${CAUR_CACHED_METRICS_URL}/30d/users`);
     }
 
     getOverallPackageStats(packageMetricRange: number): Observable<PackageRankList> {
-        return this.http.get<PackageRankList>(`${CAUR_CACHED_METRICS_URL}/30d/rank/${packageMetricRange}/packages`)
+        return this.http.get<PackageRankList>(`${CAUR_CACHED_METRICS_URL}/30d/rank/${packageMetricRange}/packages`);
     }
 
     getSpecificPackageMetrics(packageName: string): Observable<SpecificPackageMetrics> {
-        return this.http.get<SpecificPackageMetrics>(`${CAUR_CACHED_METRICS_URL}/30d/package/${packageName}`)
+        return this.http.get<SpecificPackageMetrics>(`${CAUR_CACHED_METRICS_URL}/30d/package/${packageName}`);
     }
 
     get30dayUserAgents(): Observable<UserAgentList> {
-        return this.http.get<UserAgentList>(`${CAUR_CACHED_METRICS_URL}/30d/user-agents`)
+        return this.http.get<UserAgentList>(`${CAUR_CACHED_METRICS_URL}/30d/user-agents`);
     }
 
     getCountryRanks(): Observable<CountryRankList> {
-        return this.http.get<CountryRankList>(`${CAUR_CACHED_METRICS_URL}/30d/rank/30/countries`)
+        return this.http.get<CountryRankList>(`${CAUR_CACHED_METRICS_URL}/30d/rank/30/countries`);
     }
 
     getPkgList(): Observable<PkgListRetObject> {
-        return this.http.get<PkgListRetObject>(`${CAUR_BACKEND_URL}/misc/pkglist`)
+        return this.http.get<PkgListRetObject>(`${CAUR_BACKEND_URL}/misc/pkglist`);
     }
 }

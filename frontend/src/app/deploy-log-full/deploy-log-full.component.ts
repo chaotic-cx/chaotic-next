@@ -1,24 +1,34 @@
-import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib";
-import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core";
+import {
+    CACHE_TELEGRAM_TTL,
+    type DeploymentList,
+    DeploymentType,
+    Repository,
+    RepositoryList,
+    TgMessageList,
+} from "@./shared-lib";
+import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterLink } from "@angular/router";
 import { AppService } from "../app.service";
 import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions";
 import { ToastComponent } from "../toast/toast.component";
+import { TitleCasePipe, UpperCasePipe } from "@angular/common";
 
 @Component({
     selector: "app-deploy-log-full",
     standalone: true,
-    imports: [FormsModule, RouterLink, ToastComponent],
+    imports: [FormsModule, RouterLink, ToastComponent, UpperCasePipe, TitleCasePipe],
     templateUrl: "./deploy-log-full.component.html",
     styleUrl: "./deploy-log-full.component.css",
 })
 export class DeployLogFullComponent implements AfterViewInit {
+    protected readonly Repository = Repository;
     currentType: DeploymentType = DeploymentType.ALL;
     isFiltered = false;
     latestDeployments: DeploymentList = [];
     loading = true;
     logAmount: number | undefined;
+    repo: RepositoryList = "all";
     searchterm: string | undefined;
     showToast = false;
     shownDeployments: DeploymentList = [];
@@ -46,7 +56,13 @@ export class DeployLogFullComponent implements AfterViewInit {
      * @param amount The number of deployments to request from the backend
      */
     async updateLogAmount(amount: number): Promise<void> {
-        const newDeployments = await getDeployments(amount, this.currentType, this.appService);
+        this.loading = true;
+        const newDeployments: TgMessageList = await getDeployments(
+            amount,
+            this.currentType,
+            this.appService,
+            this.repo,
+        );
 
         if (newDeployments === null) {
             this.loading = false;
@@ -55,22 +71,10 @@ export class DeployLogFullComponent implements AfterViewInit {
 
         this.latestDeployments = parseDeployments(newDeployments, this.currentType);
 
-        this.toastText = `You requested too many. Showing the maximum ${this.latestDeployments.length} instead.
-        This is currently expected as we just migrated to infra 4.0 and log channel is building up new history.`;
-
-        if (this.showToast) clearTimeout(this.toastId);
-        this.showToast = true;
-        this.toastId = setTimeout(
-            () => {
-                this.showToast = false;
-            },
-            5000,
-            "deploy-log-full-toast",
-        );
-
         // Parse the strings for the UI and write them to the list
         this.constructStrings();
         this.cdr.detectChanges();
+        this.loading = false;
     }
 
     /**
@@ -159,10 +163,8 @@ export class DeployLogFullComponent implements AfterViewInit {
      * Show deployments based on the current search term (if any). Shows all deployments if no search term is present.
      */
     async showDeployments(): Promise<void> {
-        const toFilter: DeploymentList = this.latestDeployments;
-
         if (this.searchterm && this.searchterm !== "" && !this.isFiltered) {
-            this.shownDeployments = toFilter.filter((deployment) => {
+            this.shownDeployments = this.latestDeployments.filter((deployment) => {
                 return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "");
             });
 
@@ -171,26 +173,66 @@ export class DeployLogFullComponent implements AfterViewInit {
             }
 
             // If we have no results, we need to fetch more
+            this.loading = true;
             let resultAmount = this.logAmount ? this.logAmount * 2 : 200;
-            while (this.shownDeployments.length === 0 || resultAmount > 2000) {
+            while (this.shownDeployments.length === 0) {
                 await this.updateLogAmount(resultAmount);
-                this.shownDeployments = toFilter.filter((deployment) => {
+                this.shownDeployments = this.latestDeployments.filter((deployment) => {
                     return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "");
                 });
-                resultAmount *= 2;
+
+                // This is when we abort the mission
+                if (resultAmount === 2000) {
+                    break;
+                }
+
+                // Otherwise, keep trying. A correct max of 2000 is set to not overload the backend.
+                if (resultAmount * 2 > 2000) {
+                    resultAmount = 2000;
+                } else {
+                    resultAmount *= 2;
+                }
             }
             this.isFiltered = true;
+            this.loading = false;
         } else if (this.searchterm && this.searchterm !== "" && this.isFiltered) {
             // We are already filtering, so we need it to filter the full list again
-            this.shownDeployments = toFilter.filter((deployment) => {
+            this.shownDeployments = this.latestDeployments.filter((deployment) => {
                 return deployment.name.toLowerCase().includes(this.searchterm?.toLowerCase() ?? "");
             });
             this.isFiltered = false;
         } else {
             // None of the previous cases applied, we need to show all logs
-            this.shownDeployments = toFilter;
+            this.shownDeployments = this.latestDeployments;
+        }
+
+        if (
+            (this.searchterm !== "" &&
+                !this.isFiltered &&
+                this.logAmount === undefined &&
+                this.shownDeployments.length < 100) ||
+            (this.logAmount !== undefined && this.shownDeployments.length < this.logAmount)
+        ) {
+            this.toastText = `You requested too many. ${this.shownDeployments.length === 0 ? "No results are available" : `Showing the available amount of ${this.shownDeployments.length} instead`}.
+            This is currently expected as we just migrated to infra 4.0 and log channel is building up new history.`;
+
+            if (this.showToast) clearTimeout(this.toastId);
+            this.showToast = true;
+            this.toastId = setTimeout(
+                () => {
+                    this.showToast = false;
+                },
+                5000,
+                "deploy-log-full-toast",
+            );
         }
 
         this.loading = false;
+    }
+
+    async selectSpecificRepo(repo: string): Promise<void> {
+        this.repo = repo as RepositoryList;
+        await this.updateLogAmount(this.logAmount ?? 100);
+        void this.showDeployments();
     }
 }

@@ -2,6 +2,7 @@ import {
     CACHE_TELEGRAM_TTL,
     CAUR_DEPLOY_LOG_ID,
     CAUR_NEWS_ID,
+    RepositoryList,
     type TgMessage,
     type TgMessageList,
 } from "@./shared-lib";
@@ -55,9 +56,10 @@ export class TelegramService {
     /**
      * Get the latest deployments from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
+     * @param repo The repository to filter for
      * @returns The parsed latest deployments from the CAUR Telegram channel
      */
-    async getDeployments(amount: number): Promise<TgMessage[]> {
+    async getDeployments(amount: number, repo: RepositoryList): Promise<TgMessage[]> {
         Logger.debug("getDeployments requested", "TelegramService");
 
         let actualFetch: number;
@@ -74,7 +76,7 @@ export class TelegramService {
         const cacheKey = `tgDeployments-${actualFetch}`;
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey);
         if (!data) {
-            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, actualFetch);
+            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, actualFetch, undefined, repo);
             await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL);
         }
         return data;
@@ -101,37 +103,41 @@ export class TelegramService {
     /**
      * Get the latest succeeded deployments from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
+     * @param repo The repository to filter for
      */
-    async getSucceeded(amount: number): Promise<TgMessageList> {
+    async getSucceeded(amount: number, repo: RepositoryList): Promise<TgMessageList> {
         Logger.debug("getSucceeded requested", "TelegramService");
-        return await this.getTgMessages("tgSucceededDeployments", amount, "📣");
+        return await this.getTgMessages("tgSucceededDeployments", amount, "📣", repo);
     }
 
     /**
      * Get the latest failed deployments from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
+     * @param repo The repository to filter for
      */
-    async getFailed(amount: number): Promise<TgMessageList> {
+    async getFailed(amount: number, repo: RepositoryList): Promise<TgMessageList> {
         Logger.debug("getFailed requested", "TelegramService");
-        return await this.getTgMessages("tgFailedDeployments", amount, "🚨");
+        return await this.getTgMessages("tgFailedDeployments", amount, "🚨", repo);
     }
 
     /**
      * Get the latest timed out builds from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
+     * @param repo The repository to filter for
      */
-    async getTimedOut(amount: number): Promise<TgMessageList> {
+    async getTimedOut(amount: number, repo: RepositoryList): Promise<TgMessageList> {
         Logger.debug("getTimedOut requested", "TelegramService");
-        return await this.getTgMessages("getTimedOut", amount, "⏳");
+        return await this.getTgMessages("getTimedOut", amount, "⏳", repo);
     }
 
     /**
      * Get the latest cleanup jobs from the CAUR Telegram channel
      * @param amount The number of messages to retrieve
+     * @param repo The repository to filter for
      */
-    async getCleanupJobs(amount: number): Promise<TgMessageList> {
+    async getCleanupJobs(amount: number, repo: RepositoryList): Promise<TgMessageList> {
         Logger.debug("getCleanupJobs requested", "TelegramService");
-        return await this.getTgMessages("tgCleanupJobs", amount, "✅");
+        return await this.getTgMessages("tgCleanupJobs", amount, "✅", repo);
     }
 
     /**
@@ -139,12 +145,19 @@ export class TelegramService {
      * @param id The chat ID
      * @param desiredCount The desired count of messages
      * @param process Optional function to process the messages, e.g., for filtering
+     * @param repo The repository to filter for
+     * @returns The extracted messages
      * @private
      */
-    private async extractMessages(id: string, desiredCount: number, process?: Function): Promise<TgMessage[]> {
+    private async extractMessages(
+        id: string,
+        desiredCount: number,
+        process?: (messages: TgMessageList) => TgMessageList,
+        repo?: RepositoryList,
+    ): Promise<TgMessageList> {
         Logger.debug(`Getting ${desiredCount} messages`, "TelegramService");
         await this.getAllChats();
-        let extractedMessages: TgMessage[] = [];
+        let extractedMessages: TgMessageList = [];
 
         // Get the first message ID as a reference point, which is not the channel creation
         // message. This one was seemingly not valid as a reference point.
@@ -152,6 +165,7 @@ export class TelegramService {
 
         // Get the last message ID to start looping while ensuring to push it into the array
         const lastMessage = (await this.getChatHistory({ chat: id, from: 0, limit: 1 })).messages[0];
+
         extractedMessages.push({
             date: lastMessage.date,
             content: lastMessage.content.text.text,
@@ -169,6 +183,7 @@ export class TelegramService {
                 chat: id,
                 from: from,
             });
+
             for (const message of newMessages.messages) {
                 if (
                     // Some messages seemingly don't have content, let's filter those out
@@ -205,6 +220,13 @@ export class TelegramService {
             if (process) {
                 extractedMessages = process(extractedMessages);
             }
+            if (repo && repo !== "all") {
+                const regexTerm = `\\b${repo}\\b`;
+                const regex = new RegExp(regexTerm);
+                extractedMessages = extractedMessages.filter((message) => {
+                    return message.content.toString().match(regex) !== null;
+                });
+            }
 
             if (foundFirst) {
                 break;
@@ -222,7 +244,7 @@ export class TelegramService {
      * of a specific chat
      * @private
      */
-    private async getAllChats(): Promise<any> {
+    private async getAllChats(): Promise<void> {
         Logger.debug("Getting all chats", "TelegramService");
         return await this.tgClient.invoke({
             _: "getChats",
@@ -278,8 +300,25 @@ export class TelegramService {
         });
     }
 
-    private async getTgMessages(cacheKeyId: string, amount: number, startsWith: string): Promise<TgMessageList> {
-        Logger.debug(`getTgMessages requested for ${cacheKeyId}, trying to serve from cache`, "TelegramService");
+    /**
+     * Get the latest messages from the CAUR Telegram channel
+     * @param cacheKeyId The cache key ID getting checked before executing the request
+     * @param amount The number of messages to retrieve
+     * @param startsWith The string to filter the messages by
+     * @param repo The repository to filter for
+     * @returns The parsed latest messages from the CAUR Telegram channels
+     * @private
+     */
+    private async getTgMessages(
+        cacheKeyId: string,
+        amount: number,
+        startsWith: string,
+        repo: RepositoryList,
+    ): Promise<TgMessageList> {
+        Logger.debug(
+            `getTgMessages requested for ${cacheKeyId}-${repo}, trying to serve from cache`,
+            "TelegramService",
+        );
 
         let actualFetch: number;
         Logger.debug(`Amount requested: ${amount}`, "TelegramService");
@@ -291,21 +330,21 @@ export class TelegramService {
             actualFetch = amount;
         }
 
-        const cacheKey = `${cacheKeyId}-${actualFetch}`;
+        const cacheKey = `${cacheKeyId}-${actualFetch}-${repo}`;
         let data: TgMessage[] | undefined = await this.cacheManager.get(cacheKey);
 
         if (!data) {
             Logger.debug(`Fetching ${cacheKeyId} messages, no cache available`, "TelegramService");
-            data = await this.extractMessages(CAUR_DEPLOY_LOG_ID, actualFetch, (messages: TgMessageList) => {
-                const extractedMessages: TgMessageList = [];
-                for (const message of messages) {
-                    if (!String(message.content).startsWith(startsWith)) {
-                        continue;
-                    }
-                    extractedMessages.push(message);
-                }
-                return extractedMessages;
-            });
+            data = await this.extractMessages(
+                CAUR_DEPLOY_LOG_ID,
+                actualFetch,
+                (messages: TgMessageList) => {
+                    return messages.filter((message) => {
+                        return message.content.toString().startsWith(startsWith);
+                    });
+                },
+                repo,
+            );
             await this.cacheManager.set(cacheKey, data, CACHE_TELEGRAM_TTL);
         }
         return data;

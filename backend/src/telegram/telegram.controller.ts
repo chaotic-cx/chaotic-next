@@ -1,6 +1,7 @@
-import { CacheInterceptor } from "@nestjs/cache-manager"
-import { Controller, Get, Param, ParseIntPipe, UseInterceptors } from "@nestjs/common"
-import { TelegramService } from "./telegram.service"
+import { CacheInterceptor } from "@nestjs/cache-manager";
+import { Controller, Get, Param, ParseIntPipe, Query, UseInterceptors } from "@nestjs/common";
+import { TelegramService } from "./telegram.service";
+import { RepositoryList, TgMessageList } from "@./shared-lib";
 
 @Controller("telegram")
 @UseInterceptors(CacheInterceptor)
@@ -8,42 +9,57 @@ export class TelegramController {
     constructor(private telegramService: TelegramService) {}
 
     @Get("news")
-    getNews(): any {
-        return this.telegramService.getNews()
+    getNews(): Promise<TgMessageList> {
+        return this.telegramService.getNews();
     }
 
     @Get("deployments/all/:amount")
-    getTelegram(@Param("amount", ParseIntPipe) amount: number): any {
-        return this.telegramService.getDeployments(amount)
+    getTelegram(
+        @Param("amount", ParseIntPipe) amount: number,
+        @Query("repo") repo: RepositoryList,
+    ): Promise<TgMessageList> {
+        return this.telegramService.getDeployments(amount, repo);
     }
 
     @Get("deployments/succeeded/:amount")
-    getSucceeded(@Param("amount", ParseIntPipe) amount: number): any {
-        return this.telegramService.getSucceeded(amount)
+    getSucceeded(
+        @Param("amount", ParseIntPipe) amount: number,
+        @Query("repo") repo: RepositoryList,
+    ): Promise<TgMessageList> {
+        return this.telegramService.getSucceeded(amount, repo);
     }
 
     @Get("deployments/failed/:amount")
-    getFailed(@Param("amount", ParseIntPipe) amount: number): any {
-        return this.telegramService.getFailed(amount)
+    getFailed(
+        @Param("amount", ParseIntPipe) amount: number,
+        @Query("repo") repo: RepositoryList,
+    ): Promise<TgMessageList> {
+        return this.telegramService.getFailed(amount, repo);
     }
 
     @Get("deployments/timeout/:amount")
-    getTimedOut(@Param("amount", ParseIntPipe) amount: number): any {
-        return this.telegramService.getTimedOut(amount)
+    getTimedOut(
+        @Param("amount", ParseIntPipe) amount: number,
+        @Query("repo") repo: RepositoryList,
+    ): Promise<TgMessageList> {
+        return this.telegramService.getTimedOut(amount, repo);
     }
 
     @Get("deployments/cleanup/:amount")
-    getCleanupJobs(@Param("amount", ParseIntPipe) amount: number): any {
-        return this.telegramService.getCleanupJobs(amount)
+    getCleanupJobs(
+        @Param("amount", ParseIntPipe) amount: number,
+        @Query("repo") repo: RepositoryList,
+    ): Promise<TgMessageList> {
+        return this.telegramService.getCleanupJobs(amount, repo);
     }
 
     @Get("deauth")
-    deAuth(): any {
-        return this.telegramService.deAuth()
+    deAuth(): Promise<void> {
+        return this.telegramService.deAuth();
     }
 
     @Get("auth")
-    auth(): any {
-        return this.telegramService.doAuth()
+    auth(): void {
+        this.telegramService.doAuth();
     }
 }
