@@ -21,7 +21,7 @@
                             value="0"
                         />
                         <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-all"
-                        >All 🌍</label
+                            >All 🌍</label
                         >
                     </div>
                 </li>
@@ -38,7 +38,7 @@
                         <label
                             class="w-full py-3 ms-2 text-sm font-medium text-text"
                             for="horizontal-list-radio-success"
-                        >Success 📣</label
+                            >Success 📣</label
                         >
                     </div>
                 </li>
@@ -53,7 +53,7 @@
                             value="2"
                         />
                         <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-failed"
-                        >Failed 🚫</label
+                            >Failed 🚫</label
                         >
                     </div>
                 </li>
@@ -70,7 +70,7 @@
                         <label
                             class="w-full py-3 ms-2 text-sm font-medium text-text"
                             for="horizontal-list-radio-timeout"
-                        >Timed out ⏳</label
+                            >Timed out ⏳</label
                         >
                     </div>
                 </li>
@@ -100,10 +100,49 @@
                 required
                 type="search"
             />
+
+            <button
+                id="dropdownDelayButton"
+                data-dropdown-toggle="dropdownDelay"
+                data-dropdown-delay="500"
+                data-dropdown-trigger="hover"
+                class="mx-auto md:mx-1 my-1 w-full sm:w-1/2 rounded-lg sm:ps-5 sm:truncate sm:pr-2.5 text-left border border-red bg-surface0 py-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
+                type="button"
+            >
+                <svg
+                    class="h-2.5 mb-auto sm:mr-1 mr-2.5 inline-block"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 10 6"
+                >
+                    <path
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="m1 1 4 4 4-4"
+                    />
+                </svg>
+                Repo: {{ repo }}
+            </button>
+
+            <!-- Dropdown menu -->
+            <div id="dropdownDelay" class="z-10 hidden bg-surface0 divide-y divide-maroon rounded-lg shadow w-44">
+                <ul class="py-2 text-sm text-maroon" aria-labelledby="dropdownDelayButton">
+                    @for (repo of Repository; track repo) {
+                        <li>
+                            <a (click)="selectSpecificRepo(repo)" class="block px-4 py-2 hover:bg-surface1">{{
+                                repo
+                            }}</a>
+                        </li>
+                    }
+                </ul>
+            </div>
         </div>
 
         @if (loading) {
-            <div class="mx-auto p-5 text-center md:container md:mx-auto" role="status">
+            <div class="mx-auto p-5 mb-5 text-center md:container md:mx-auto" role="status">
                 <svg
                     class="inline h-12 w-12 animate-spin fill-red text-gray-200"
                     aria-hidden="true"
@@ -132,14 +171,14 @@
                             class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex"
                         >
                             <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0"
-                            >{{ deployment.date }}
+                                >{{ deployment.date }}
                             </time>
                             <div class="lex text-sm font-normal text-text">
                                 {{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> from
                                 <a class="text-rosewater">{{ deployment.node }}</a> to
                                 <a class="font-semibold text-red" href="{{ deployment.sourceUrl }}">{{
-                                        deployment.repo
-                                    }}</a>
+                                    deployment.repo
+                                }}</a>
                                 @if (deployment.log) {
                                     - <a class="text-yellow" href="{{ deployment.log }}">log ↗</a>
                                 }

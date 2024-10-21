@@ -1,10 +1,10 @@
-import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib"
-import { type AfterViewInit, ChangeDetectorRef, Component } from "@angular/core"
-import { FormsModule } from "@angular/forms"
-import { RouterLink } from "@angular/router"
-import { AppService } from "../app.service"
-import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions"
-import { ToastComponent } from "../toast/toast.component"
+import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from "@./shared-lib";
+import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core";
+import { FormsModule } from "@angular/forms";
+import { RouterLink } from "@angular/router";
+import { AppService } from "../app.service";
+import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions";
+import { ToastComponent } from "../toast/toast.component";
 
 @Component({
     selector: "app-deploy-log",
@@ -14,7 +14,7 @@ import { ToastComponent } from "../toast/toast.component"
     styleUrl: "./deploy-log.component.css",
 })
 export class DeployLogComponent implements AfterViewInit {
-    latestDeployments: DeploymentList = []
+    latestDeployments: DeploymentList = [];
 
     constructor(
         private appService: AppService,
@@ -23,20 +23,20 @@ export class DeployLogComponent implements AfterViewInit {
 
     async ngAfterViewInit(): Promise<void> {
         this.latestDeployments = parseDeployments(
-            await getDeployments(30, DeploymentType.SUCCESS, this.appService),
+            await getDeployments(30, DeploymentType.SUCCESS, this.appService, "all"),
             DeploymentType.SUCCESS,
-        )
+        );
         for (const deployment of this.latestDeployments) {
-            deployment.sourceUrl = generateRepoUrl(deployment)
+            deployment.sourceUrl = generateRepoUrl(deployment);
         }
 
         // Poll for new deployments every 5 minutes (which is the time the backend caches requests)
         startShortPolling(CACHE_TELEGRAM_TTL, async () => {
-            await this.checkNewDeployments()
+            await this.checkNewDeployments();
             for (const deployment of this.latestDeployments) {
-                deployment.sourceUrl = generateRepoUrl(deployment)
+                deployment.sourceUrl = generateRepoUrl(deployment);
             }
-        })
+        });
     }
 
     /**
@@ -44,12 +44,12 @@ export class DeployLogComponent implements AfterViewInit {
      */
     async checkNewDeployments(): Promise<void> {
         const newList: DeploymentList = parseDeployments(
-            await getDeployments(30, DeploymentType.SUCCESS, this.appService),
+            await getDeployments(30, DeploymentType.SUCCESS, this.appService, "all"),
             DeploymentType.SUCCESS,
-        )
+        );
         if (newList[0].date !== this.latestDeployments[0].date) {
-            this.latestDeployments = newList
+            this.latestDeployments = newList;
         }
-        this.cdr.detectChanges()
+        this.cdr.detectChanges();
     }
 }
