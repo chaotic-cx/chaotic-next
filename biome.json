@@ -137,7 +137,10 @@
             "onselectstart",
             "onmousewheel",
             "ononline"
-        ]
+        ],
+        "parser": {
+            "unsafeParameterDecoratorsEnabled": true
+        }
     },
     "overrides": [
         {
