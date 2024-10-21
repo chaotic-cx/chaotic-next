@@ -175,3 +175,6 @@ export interface MenuBarLink {
     url?: string;
 }
 export type MenuBarLinks = MenuBarLink[];
+
+export const Repository = ["chaotic-aur", "garuda", "all"] as const;
+export type RepositoryList = (typeof Repository)[number];

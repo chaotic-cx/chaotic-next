@@ -63,10 +63,9 @@ export class TelegramService {
         Logger.debug("getDeployments requested", "TelegramService");
 
         let actualFetch: number;
-        Logger.debug(`Amount requested: ${amount}`, "TelegramService");
 
         if (amount > 2000) {
-            Logger.error("Invalid amount requested", "TelegramService");
+            Logger.warn("Invalid amount requested", "TelegramService");
             actualFetch = 2000;
         } else {
             actualFetch = amount;
@@ -155,7 +154,6 @@ export class TelegramService {
         process?: (messages: TgMessageList) => TgMessageList,
         repo?: RepositoryList,
     ): Promise<TgMessageList> {
-        Logger.debug(`Getting ${desiredCount} messages`, "TelegramService");
         await this.getAllChats();
         let extractedMessages: TgMessageList = [];
 
@@ -290,7 +288,6 @@ export class TelegramService {
      * @private
      */
     private async getChatHistory(params: { chat: string; from?: number; limit?: number; offset?: number }) {
-        Logger.debug(`Getting chat history for ${params.chat}, ${params.from}`, "TelegramService");
         return this.tgClient.invoke({
             _: "getChatHistory",
             chat_id: params.chat,
@@ -321,10 +318,9 @@ export class TelegramService {
         );
 
         let actualFetch: number;
-        Logger.debug(`Amount requested: ${amount}`, "TelegramService");
 
         if (amount > 2000) {
-            Logger.error("Invalid amount requested", "TelegramService");
+            Logger.warn("Invalid amount requested", "TelegramService");
             actualFetch = 2000;
         } else {
             actualFetch = amount;

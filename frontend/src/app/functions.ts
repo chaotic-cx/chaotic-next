@@ -7,7 +7,7 @@ import {
     DeploymentList,
     DeploymentType,
     RepositoryList,
-    TgMessageList,
+    TgMessageList
 } from "@./shared-lib";
 import { ElementRef, Renderer2 } from "@angular/core";
 import { CatppuccinFlavor, flavors } from "@catppuccin/palette";
@@ -95,8 +95,6 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
         let node: RegExpMatchArray | null | string = "unknown";
         let deploymentType: DeploymentType;
         const log = message.log;
-
-        console.log(message);
 
         if (String(message.content).includes("Cleanup")) {
             pkg = "";
