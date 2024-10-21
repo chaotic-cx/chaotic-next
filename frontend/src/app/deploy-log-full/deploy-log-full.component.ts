@@ -1,13 +1,6 @@
-import {
-    CACHE_TELEGRAM_TTL,
-    type DeploymentList,
-    DeploymentType,
-    Repository,
-    RepositoryList,
-    TgMessageList,
-} from "@./shared-lib";
+import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType, Repository, TgMessageList } from "@./shared-lib";
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core";
-import { FormsModule } from "@angular/forms";
+import { FormControl, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { RouterLink } from "@angular/router";
 import { AppService } from "../app.service";
 import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions";
@@ -17,7 +10,7 @@ import { TitleCasePipe, UpperCasePipe } from "@angular/common";
 @Component({
     selector: "app-deploy-log-full",
     standalone: true,
-    imports: [FormsModule, RouterLink, ToastComponent, UpperCasePipe, TitleCasePipe],
+    imports: [FormsModule, RouterLink, ToastComponent, UpperCasePipe, TitleCasePipe, ReactiveFormsModule],
     templateUrl: "./deploy-log-full.component.html",
     styleUrl: "./deploy-log-full.component.css",
 })
@@ -28,7 +21,7 @@ export class DeployLogFullComponent implements AfterViewInit {
     latestDeployments: DeploymentList = [];
     loading = true;
     logAmount: number | undefined;
-    repo: RepositoryList = "all";
+    repo = new FormControl();
     searchterm: string | undefined;
     showToast = false;
     shownDeployments: DeploymentList = [];
@@ -41,6 +34,7 @@ export class DeployLogFullComponent implements AfterViewInit {
     ) {}
 
     async ngAfterViewInit(): Promise<void> {
+        this.repo.setValue("all");
         await this.updateLogAmount(100);
         void this.showDeployments();
 
@@ -61,7 +55,7 @@ export class DeployLogFullComponent implements AfterViewInit {
             amount,
             this.currentType,
             this.appService,
-            this.repo,
+            this.repo.getRawValue(),
         );
 
         if (newDeployments === null) {
@@ -228,10 +222,5 @@ export class DeployLogFullComponent implements AfterViewInit {
         }
 
         this.loading = false;
-    }
-
-    async selectSpecificRepo(repo: string): Promise<void> {
-        this.repo = repo as RepositoryList;
-        await this.getNewAmount();
     }
 }

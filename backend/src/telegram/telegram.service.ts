@@ -224,6 +224,12 @@ export class TelegramService {
                 extractedMessages = extractedMessages.filter((message) => {
                     return message.content.toString().match(regex) !== null;
                 });
+
+                // Weed out any pre infra 3.0 messages
+                extractedMessages = extractedMessages.filter((message) => {
+                    const regex = new RegExp(/[📣✅🚨⏳]/, "u");
+                    return message.content.toString().match(regex) !== null;
+                });
             }
 
             if (foundFirst) {
