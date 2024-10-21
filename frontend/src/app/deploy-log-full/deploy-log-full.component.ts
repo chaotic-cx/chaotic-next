@@ -232,7 +232,7 @@ export class DeployLogFullComponent implements AfterViewInit {
 
     async selectSpecificRepo(repo: string): Promise<void> {
         this.repo = repo as RepositoryList;
-        await this.updateLogAmount(this.logAmount ?? 100);
+        await this.getNewAmount();
         void this.showDeployments();
     }
 }
