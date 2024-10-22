@@ -7,7 +7,7 @@ import {
     DeploymentList,
     DeploymentType,
     RepositoryList,
-    TgMessageList
+    TgMessageList,
 } from "@./shared-lib";
 import { ElementRef, Renderer2 } from "@angular/core";
 import { CatppuccinFlavor, flavors } from "@catppuccin/palette";

@@ -6,11 +6,12 @@ import { AppService } from "../app.service";
 import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions";
 import { ToastComponent } from "../toast/toast.component";
 import { TitleCasePipe, UpperCasePipe } from "@angular/common";
+import { RepoPipe } from "../pipes/repo.pipe";
 
 @Component({
     selector: "app-deploy-log-full",
     standalone: true,
-    imports: [FormsModule, RouterLink, ToastComponent, UpperCasePipe, TitleCasePipe, ReactiveFormsModule],
+    imports: [FormsModule, RouterLink, ToastComponent, UpperCasePipe, TitleCasePipe, ReactiveFormsModule, RepoPipe],
     templateUrl: "./deploy-log-full.component.html",
     styleUrl: "./deploy-log-full.component.css",
 })
