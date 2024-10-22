@@ -1,7 +1,7 @@
 <div class="mocha h-max" id="app-ctp">
     <app-menubar></app-menubar>
-    <div class="mt-24 min-h-screen">
-        <router-outlet />
+    <div [@routerTransition]="prepareRoute(routerOutlet)" class="mt-24 min-h-screen">
+        <router-outlet #routerOutlet="outlet"></router-outlet>
     </div>
     <app-footer></app-footer>
 </div>

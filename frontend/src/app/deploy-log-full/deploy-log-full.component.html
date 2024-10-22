@@ -109,7 +109,7 @@
                     class="mx-auto my-1 sm:w-52 w-full rounded-lg text-left border border-red bg-surface0 py-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
                 >
                     @for (repo of Repository; track repo) {
-                        <option value="{{ repo }}">{{ repo | titlecase }}</option>
+                        <option value="{{ repo }}">{{ repo | repo }}</option>
                     }
                 </select>
             </form>
