@@ -1,4 +1,4 @@
-import { type CurrentQueue, GitLabPipeline } from "@./shared-lib";
+import type { CurrentQueue, GitLabPipeline } from "@./shared-lib";
 import { DatePipe } from "@angular/common";
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core";
 import { Router } from "@angular/router";
@@ -87,12 +87,12 @@ export class StatusComponent implements AfterViewInit {
 
                     switch (queue) {
                         case "active":
-                            currentQueue.active.packages.forEach((pkg): void => {
+                            for (const pkg of currentQueue.active.packages) {
                                 nameWithoutRepo.push(pkg.name.split("/")[2]);
                                 build_class.push(pkg.build_class);
                                 nodes.push(pkg.node);
                                 liveLogUrl.push(pkg.liveLog ? pkg.liveLog : "");
-                            });
+                            }
                             returnQueue.push({
                                 status: "active",
                                 count: currentQueue.active.count,
@@ -103,10 +103,10 @@ export class StatusComponent implements AfterViewInit {
                             });
                             break;
                         case "waiting":
-                            currentQueue.waiting.packages.forEach((pkg): void => {
+                            for (const pkg of currentQueue.waiting.packages) {
                                 nameWithoutRepo.push(pkg.name.split("/")[2]);
                                 build_class.push(pkg.build_class);
-                            });
+                            }
                             returnQueue.push({
                                 status: "waiting",
                                 count: currentQueue.waiting.count,
@@ -127,19 +127,19 @@ export class StatusComponent implements AfterViewInit {
 
                 // Calculate the full length of the queue
                 let length = 0;
-                returnQueue.forEach((queue) => {
+                for (const queue of returnQueue) {
                     if (queue.packages) length += queue.count;
-                });
+                }
                 this.fullLength = length;
 
                 // If the full list is too long, shorten it.
                 if (this.fullLength >= 50 && !this.showFullPackages) {
-                    returnQueue.forEach((queue) => {
+                    for (const queue of returnQueue) {
                         if (queue.packages && queue.packages.length > 50) {
                             queue.packages?.splice(50);
                             queue.packages?.push("...");
                         }
-                    });
+                    }
                 }
 
                 // Finally, update the component's state
@@ -190,21 +190,11 @@ export class StatusComponent implements AfterViewInit {
     }
 
     /**
-     * Redirect to the live log. We aren’t using the router because this link
-     * is dynamic, and I didn't find out how to make routerLinks external without
-     * hardcoding them.
-     */
-    routeTo(liveLogUrl: string): void {
-        window.location.href = liveLogUrl ? liveLogUrl : "";
-    }
-
-    /**
      * Toggle the display of the live log. Saves the state in localStorage.
      */
     toggleLiveLog(): void {
         this.displayLiveLog = !this.displayLiveLog;
         this.cdr.detectChanges();
-
         localStorage.setItem("displayLiveLog", this.displayLiveLog.toString());
     }
 
@@ -224,5 +214,6 @@ export class StatusComponent implements AfterViewInit {
             this.liveLog = activeQueue.liveLogUrl![0];
             localStorage.setItem("currentBuild", this.currentBuild.toString());
         }
+        this.cdr.detectChanges();
     }
 }

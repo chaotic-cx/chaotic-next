@@ -1,10 +1,10 @@
 <div class="chaotic-container-regular bg-base">
     <div>
         <h1 class="text-center text-2xl font-extrabold text-maroon">Build Status</h1>
-        <p class="my-4 px-10 text-center text-lg text-text">
+        <p class="my-4 px-5 md:px-10 text-center text-lg text-text">
             This page shows the status of the Chaotic-AUR infrastructure.
         </p>
-        <p class="my-4 px-10 text-center text-lg text-text">
+        <p class="my-4 px-5 md:px-10 text-center text-lg text-text">
             Last updated:
             <a class="text-maroon">{{ lastUpdated ? (lastUpdated | date: "medium") : "loading ... ☕️" }}</a>
         </p>
@@ -83,9 +83,9 @@
                 packages will be queued once this process finishes.
             </p>
             @for (pipeline of pipelines; track pipeline) {
+                <a href="{{ pipeline.web_url }}">
                 <div
                     class="my-3 grid gap-x-0 grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm cursor-pointer"
-                    (click)="routeTo(pipeline.web_url)"
                 >
                     <div class="place-self-auto rounded-xl border-mauve bg-surface0 p-4">
                         <h4 class="text-center text-xl text-mauve">Status</h4>
@@ -100,6 +100,7 @@
                         <p class="my-2 text-center text-yellow">{{ pipeline.created_at | date: "medium" }}</p>
                     </div>
                 </div>
+                </a>
             }
         </div>
     }
@@ -140,7 +141,7 @@
                                 <p class="text-s text-center text-yellow">
                                     @for (pkg of queue.packages; track pkg) {
                                         {{ pkg }}
-                                        <a class="text-sky cursor-pointer" (click)="routeTo(queue.liveLogUrl![$index])"
+                                        <a class="text-sky cursor-pointer" href="{{ queue.liveLogUrl![$index] }}"
                                             >class
                                             {{
                                                 queue.build_class![$index] !== null
