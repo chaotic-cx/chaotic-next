@@ -17,7 +17,7 @@ export class ChaoticAttractorComponent {
     // Copyright (c) 2018 Juan Carlos Ponce Campuzano
     url = CAUR_HOME_URL + "aizawa/index.html"
     urlSafe: SafeResourceUrl
-    displayInteractive = true
+    displayInteractive = false
     isMobile = false
 
     constructor(
