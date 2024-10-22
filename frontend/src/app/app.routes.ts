@@ -119,15 +119,29 @@ const fadeInFromDirection = (direction: string): (AnimationQueryMetadata | Anima
     ]),
 ];
 
+function forwardValues(): string {
+    let result = "";
+    for (let i = 0; i <= 8; i++) {
+        for (let j = i + 1; j <= 9; j++) {
+            result += `${i} => ${j}, `;
+        }
+    }
+    return result.slice(0, -2);
+}
+
+function backwardValues(): string {
+    let result = "";
+    for (let i = 9; i >= 0; i--) {
+        for (let j = i - 1; j >= 0; j--) {
+            result += `${i} => ${j}, `;
+        }
+    }
+    return result.slice(0, -2);
+}
+
 export const routeAnimations: AnimationTriggerMetadata = trigger("routerTransition", [
-    transition(
-        "0 => 1, 1 => 2, 2 => 3, 3 => 4, 4 => 5, 5 => 6, 6 => 7, 7 => 8, 8 => 9",
-        fadeInFromDirection("forward"),
-    ),
-    transition(
-        "9 => 8, 8 => 7, 7 => 6, 6 => 5, 5 => 4, 4 => 3, 3 => 2, 2 => 1, 1 => 0",
-        fadeInFromDirection("backward"),
-    ),
+    transition(forwardValues(), fadeInFromDirection("forward")),
+    transition(backwardValues(), fadeInFromDirection("backward")),
     transition("* => null", fade),
 ]);
 
