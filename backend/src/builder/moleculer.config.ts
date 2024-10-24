@@ -34,11 +34,14 @@ export const MoleculerConfigCommonService = {
     version: 1,
 };
 
-
-export function brokerConfig(nodeID: string, connection: any) {
+export function brokerConfig(nodeID: string, connection: any): any {
     return {
         logger: MoleculerConfigLog(process.env.NODE_ENV || "development"),
         nodeID: nodeID,
+        metadata: {
+            build_class: 0,
+            version: 1,
+        },
         transporter: {
             type: "Redis",
             options: {
@@ -48,5 +51,5 @@ export function brokerConfig(nodeID: string, connection: any) {
             },
         },
         ...MoleculerConfigCommon,
-    }
+    };
 }

@@ -1,63 +1,22 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { BuildStatus } from "../constants";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { BuildStatus } from "../types";
 
 @Entity()
 export class Builder {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column("varchar")
+    @Column({ type: "varchar", nullable: true })
     name: string;
 
-    @Column("varchar")
+    @Column({ type: "varchar", nullable: true })
     description: string;
 
-    @Column("char")
+    @Column({ type: "varchar", nullable: true })
     builderClass: string;
 
-    @Column("boolean")
+    @Column({ type: "boolean", nullable: true })
     isActive: boolean;
-
-    @OneToMany(() => Build, (build) => build.builder)
-    builds: Build[];
-}
-
-@Entity()
-export class Build {
-    @PrimaryGeneratedColumn()
-    id: number;
-
-    @Column('varchar')
-    pkgbase: string;
-
-    @Column('char')
-    buildClass: string;
-
-    @Column('char')
-    builderClass: string;
-
-    @ManyToOne(() => Builder, (builder) => builder.builds, { cascade: true })
-    builder: Builder
-
-    @Column('int')
-    repo: number;
-
-    @Column({type: 'enum', enum: BuildStatus, default: BuildStatus.SUCCESS})
-    status: BuildStatus
-
-    @CreateDateColumn()
-
-    @Column('char')
-    arch: string;
-
-    @Column('varchar')
-    logUrl: string;
-
-    @Column('char')
-    commit: string;
-
-    @Column('int')
-    timeToEnd: number;
 }
 
 @Entity()
@@ -68,6 +27,43 @@ export class Repo {
     @Column('varchar')
     name: string;
 
-    @Column('varchar')
+    @Column({type: "varchar", nullable: true})
     repoUrl: string;
+}
+
+@Entity()
+export class Build {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column('varchar')
+    pkgbase: string;
+
+    @Column({type: "varchar", nullable: true})
+    buildClass: string;
+
+    @ManyToOne(() => Builder, (builder) => builder.id, { cascade: true, nullable: true })
+    builder: Builder
+
+    @ManyToOne(() => Repo, (repo) => repo.id, { cascade: true, nullable: true })
+    repo: Repo
+
+    @Column({type: 'enum', enum: BuildStatus, default: BuildStatus.SUCCESS})
+    status: BuildStatus
+
+    @CreateDateColumn()
+
+    @Column({type: "varchar", nullable: true})
+    arch: string;
+
+    @Column({type: "varchar", nullable: true})
+    logUrl: string;
+    @Column({type: "varchar", nullable: true})
+    commit: string;
+
+    @Column({type: "float", nullable: true})
+    timeToEnd: number;
+
+    @Column({type: "boolean", nullable: true})
+    replaced: boolean;
 }

@@ -1,4 +1,4 @@
-import { CountNameObject, UserAgentList } from "@./shared-lib"
+import type { CountNameObject, UserAgentList } from "@./shared-lib";
 
 /**
  * Parse the output of the non-single line metrics.
@@ -19,4 +19,16 @@ export function parseOutput(input: string): { name: string; count: number }[] {
         }
     }
     return returningArray
+}
+
+/**
+ * Generate a node id for the moleculer broker.
+ * @returns A string containing the node id and a random string.
+ */
+export function generateNodeId(): string {
+    // This prevents broker shutdowns due to double ids in case we have overlapping nodeIds.
+    const randomString = Math.random().toString(36).substring(2, 7);
+
+    if (process.env.HOSTNAME) return `${process.env.HOSTNAME}-${randomString}`;
+    return `backend-${randomString}`;
 }
