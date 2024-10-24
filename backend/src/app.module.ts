@@ -14,21 +14,26 @@ import { TelegramController } from "./telegram/telegram.controller";
 import { TelegramService } from "./telegram/telegram.service";
 import { PG_OPTIONS } from "./constants";
 import { Build, Builder, Repo } from "./builder/builder.entity";
+import { RouterService } from "./router/router.service";
+import { RouterController } from "./router/router.controller";
+import { RouterModule } from "./router/router.module";
+import { RouterHit } from "./router/router.entity";
 
 @Module({
     imports: [
         BuilderModule,
         CacheModule.register(),
         ConfigModule.forRoot({ envFilePath: ".env" }),
+        RouterModule,
         TypeOrmModule.forRoot({
             type: "postgres",
             ...PG_OPTIONS,
-            entities: [Builder, Build, Repo],
+            entities: [Builder, Build, Repo, RouterHit],
             autoLoadEntities: true,
         }),
     ],
-    controllers: [TelegramController, MetricsController, MiscController, BuilderController],
-    providers: [TelegramService, MetricsService, MiscService, BuilderService],
+    controllers: [TelegramController, MetricsController, MiscController, BuilderController, RouterController],
+    providers: [TelegramService, MetricsService, MiscService, BuilderService, RouterService],
 })
 export class AppModule {
     configure(consumer: MiddlewareConsumer): void {
