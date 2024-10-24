@@ -1,9 +1,12 @@
+import type IORedis from "ioredis";
+import type { BrokerOptions, LoggerConfig, ServiceSchema } from "moleculer";
+
 export const MoleculerConfigCommon = {
     skipProcessEventRegistration: true,
     trackContext: true,
 };
 
-export function MoleculerConfigLog(NODE_ENV: string) {
+export function MoleculerConfigLog(NODE_ENV: string): LoggerConfig {
     const isProd = NODE_ENV === "production";
     return {
         type: "Console",
@@ -12,13 +15,12 @@ export function MoleculerConfigLog(NODE_ENV: string) {
             colors: true,
             formatter: "{timestamp} {level} {mod}: {msg}",
             level: {
-                "*": isProd ? "warn" : "debug",
-                BROKER: isProd ? "warn" : "debug",
-                BUILD: isProd ? "info" : "debug",
-                CHAOTIC: isProd ? "info" : "debug",
-                NOTIFIER: isProd ? "warn" : "debug",
-                REGISTRY: isProd ? "warn" : "debug",
-                TRANSIT: isProd ? "warn" : "debug",
+                "*": isProd ? "error" : "debug",
+                BROKER: isProd ? "error" : "debug",
+                BUILD: isProd ? "error" : "debug",
+                NOTIFIER: isProd ? "error" : "debug",
+                REGISTRY: isProd ? "error" : "debug",
+                TRANSIT: isProd ? "error" : "debug",
                 TRANSPORTER: isProd ? "error" : "debug",
             },
             moduleColors: true,
@@ -27,19 +29,18 @@ export function MoleculerConfigLog(NODE_ENV: string) {
     };
 }
 
-export const MoleculerConfigCommonService = {
+export const MoleculerConfigCommonService: Partial<ServiceSchema> = {
     settings: {
         $noVersionPrefix: true,
     },
     version: 1,
 };
 
-export function brokerConfig(nodeID: string, connection: any): any {
+export function brokerConfig(nodeID: string, connection: IORedis): BrokerOptions {
     return {
         logger: MoleculerConfigLog(process.env.NODE_ENV || "development"),
         nodeID: nodeID,
         metadata: {
-            build_class: 0,
             version: 1,
         },
         transporter: {
