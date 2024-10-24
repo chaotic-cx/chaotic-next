@@ -34,3 +34,15 @@ export interface BuilderDbConnections {
     package: Repository<Package>;
     repo: Repository<Repo>;
 }
+
+export interface RouterHitBody {
+    country: string;
+    hostname: string;
+    ip: string;
+    pkgbase: string;
+    repo: string;
+    repo_arch: string;
+    timestamp: string;
+    user_agent: string;
+    version: string;
+}

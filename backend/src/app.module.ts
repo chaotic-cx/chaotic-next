@@ -23,7 +23,7 @@ import { RouterHit } from "./router/router.entity";
     imports: [
         BuilderModule,
         CacheModule.register(),
-        ConfigModule.forRoot({ envFilePath: ".env" }),
+        ConfigModule.forRoot({ envFilePath: ".env", isGlobal: true }),
         RouterModule,
         TypeOrmModule.forRoot({
             type: "postgres",
