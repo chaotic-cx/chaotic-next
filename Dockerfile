@@ -20,6 +20,7 @@ FROM node:22-bookworm-slim
 
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
+RUN apt-get update && apt-get install -y autossh
 COPY entry_point.sh /entry_point.sh
 RUN chmod +x /entry_point.sh
 COPY --from=builder /build/dist/backend /app
