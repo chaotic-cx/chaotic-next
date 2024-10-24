@@ -1,6 +1,9 @@
+import { Build, Builder, Repo } from "./builder/builder.entity";
+import { Repository } from "typeorm";
+
 export type BuildClass = string | number;
 
-export interface MoleculerEmitObject {
+export interface MoleculerBuildObject {
     arch: string;
     build_class: BuildClass;
     builder_name: string;
@@ -23,4 +26,10 @@ export enum BuildStatus {
     CANCELED = 5,
     CANCELED_REQUEUE = 6,
     SOFTWARE_FAILURE = 7,
+}
+
+export interface BuilderDbConnections {
+    build: Repository<Build>;
+    builder: Repository<Builder>;
+    repo: Repository<Repo>;
 }

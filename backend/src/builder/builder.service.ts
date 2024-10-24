@@ -6,7 +6,7 @@ import type { Repository } from "typeorm";
 import { generateNodeId } from "../functions";
 import { Build, Builder, Repo } from "./builder.entity";
 import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
-import type { MoleculerEmitObject } from "../types";
+import type { BuilderDbConnections, MoleculerBuildObject } from "../types";
 import { Mutex } from "async-mutex";
 
 @Injectable()
@@ -33,7 +33,7 @@ export class BuilderService {
             password: redisPassword,
         });
 
-        const dbConnections = {
+        const dbConnections: BuilderDbConnections = {
             build: this.buildRepository,
             builder: this.builderRepository,
             repo: this.repoRepository,
@@ -45,19 +45,12 @@ export class BuilderService {
             void this.broker.start();
         });
     }
-
-    async addBuilder(builder: Builder) {
-        Logger.debug("Creating builder");
-        Logger.log(builder, "Builder/Builder");
-        return this.builderRepository.save(builder);
-    }
 }
 
 /**
  * The metrics service that provides the metrics actions for other services to call.
  */
 export class BuilderDatabaseService extends Service {
-    private builderServiceLogger= this.broker.getLogger("BUILDER");
     private dbConnections: {
         build: Repository<Build>;
         builder: Repository<Builder>;
@@ -79,57 +72,9 @@ export class BuilderDatabaseService extends Service {
                 getMetrics: this.getMetrics,
             },
             events: {
-                "builds.success": {
+                "builds.*": {
                     group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
-                        this.logBuild(ctx);
-                    },
-                },
-                "builds.canceled-requeue": {
-                    group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
-                        this.logBuild(ctx);
-                    },
-                },
-                "builds.failed": {
-                    group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
-                        this.logBuild(ctx);
-                    },
-                },
-                "builds.skipped": {
-                    group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
-                        this.incCounterBuildSkipped(ctx);
-                    },
-                },
-                "builds.alreadyBuilt": {
-                    group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
-                        this.logBuild(ctx);
-                    },
-                },
-                "builds.timeout": {
-                    group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
-                        this.logBuild(ctx);
-                    },
-                },
-                "builds.replaced": {
-                    group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
-                        this.logBuild(ctx);
-                    },
-                },
-                "builds.canceled": {
-                    group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
-                        this.logBuild(ctx);
-                    },
-                },
-                "builds.softwareFailure": {
-                    group: "builds",
-                    handler(ctx: Context<MoleculerEmitObject>) {
+                    handler(ctx: Context<MoleculerBuildObject>) {
                         this.logBuild(ctx);
                     },
                 },
@@ -138,22 +83,14 @@ export class BuilderDatabaseService extends Service {
         });
 
         this.dbConnections = dbConnections;
-        this.builderServiceLogger.info("Created BuilderDatabaseService");
+        Logger.log("BuilderDatabaseService created", "Builder/BuilderDatabaseService");
     }
 
-    getMetrics(): void {
-        this.builderServiceLogger.info("Getting metrics");
-    }
+    async logBuild(ctx: Context): Promise<void> {
+        const params = ctx.params as MoleculerBuildObject;
 
-    async logBuild(ctx: Context) {
-        const params = ctx.params as MoleculerEmitObject;
-
-        const builder = await this.builderExists(params.builder_name);
-        const repo = await this.repoExists(params.target_repo);
-
-        Logger.debug(builder, "Builder/BuilderDatabaseService");
-        Logger.debug(repo, "Builder/BuilderDatabaseService");
-
+        const builder: Builder = await this.builderExists(params.builder_name);
+        const repo: Repo = await this.repoExists(params.target_repo);
         const build: Partial<Build> = {
             arch: params.arch,
             buildClass: params.build_class ? params.build_class.toString() : null,
@@ -168,14 +105,10 @@ export class BuilderDatabaseService extends Service {
         }
 
         try {
-            Logger.debug(await this.dbConnections.build.save(build), "Builder/BuilderDatabaseService");
-        } catch(err: any){
-            Logger.error(err, "Builder/BuilderDatabaseService");
-        }}
-
-    addBuilder(builder: Builder) {
-        this.builderServiceLogger.info(builder);
-        this.dbConnections.builder.save(builder);
+            Logger.debug(await this.dbConnections.build.save(build), "BuilderDatabaseService");
+        } catch(err: unknown){
+            Logger.error(err, "BuilderDatabaseService");
+        }
     }
 
     /**
@@ -187,11 +120,11 @@ export class BuilderDatabaseService extends Service {
     private async builderExists(name: string): Promise<Builder> {
         return await this.builderMutex.runExclusive(async () => {
             try {
-                const builders = await this.dbConnections.builder.find({ where: { name } });
-                let builderExists = builders.find((builder) => { return name === builder.name });
+                const builders: Builder[] = await this.dbConnections.builder.find({ where: { name } });
+                let builderExists: Builder = builders.find((builder) => { return name === builder.name });
 
                 if (builderExists === undefined) {
-                    this.builderServiceLogger.warn(`Builder ${name} not found in database, creating new entry`);
+                    Logger.warn(`Builder ${name} not found in database, creating new entry`, "BuilderDatabaseService");
                     builderExists = await this.dbConnections.builder.save({
                         name: name,
                         isActive: false,
@@ -200,8 +133,8 @@ export class BuilderDatabaseService extends Service {
                 }
 
                 return builderExists;
-            } catch(err: any) {
-                Logger.error(err, "Builder/BuilderDatabaseService");
+            } catch(err: unknown) {
+                Logger.error(err, "BuilderDatabaseService");
             }
         });
     }
@@ -215,19 +148,19 @@ export class BuilderDatabaseService extends Service {
     private async repoExists(name: string): Promise<Repo> {
         return await this.repoMutex.runExclusive(async () => {
             try {
-                const repos = await this.dbConnections.repo.find({ where: { name: name } });
-                let repoExists = repos.find((repo) => { return name === repo.name });
+                const repos: Repo[] = await this.dbConnections.repo.find({ where: { name: name } });
+                let repoExists: Repo = repos.find((repo) => { return name === repo.name });
 
                 if (repoExists === undefined) {
-                    this.builderServiceLogger.warn(`Repo ${name} not found in database, creating new entry`);
+                    Logger.warn(`Repo ${name} not found in database, creating new entry`, "BuilderDatabaseService");
                     repoExists = await this.dbConnections.repo.save({
                         name: name,
                     });
                 }
 
                 return repoExists;
-            } catch(err: any) {
-                Logger.error(err, "Builder/BuilderDatabaseService");
+            } catch(err: unknown) {
+                Logger.error(err, "BuilderDatabaseService");
             }
         });
     }
