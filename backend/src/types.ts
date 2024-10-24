@@ -1,5 +1,5 @@
-import { Build, Builder, Repo } from "./builder/builder.entity";
-import { Repository } from "typeorm";
+import type { Build, Builder, Package, Repo } from "./builder/builder.entity";
+import type { Repository } from "typeorm";
 
 export type BuildClass = string | number;
 
@@ -31,5 +31,6 @@ export enum BuildStatus {
 export interface BuilderDbConnections {
     build: Repository<Build>;
     builder: Repository<Builder>;
+    package: Repository<Package>;
     repo: Repository<Repo>;
 }

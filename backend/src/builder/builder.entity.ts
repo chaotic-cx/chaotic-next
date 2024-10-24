@@ -20,6 +20,18 @@ export class Builder {
 }
 
 @Entity()
+export class Package {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column('varchar')
+    pkgname: string;
+
+    @Column({type: "timestamp", nullable: true})
+    lastUpdated: string
+}
+
+@Entity()
 export class Repo {
     @PrimaryGeneratedColumn()
     id: number;
@@ -36,8 +48,8 @@ export class Build {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column('varchar')
-    pkgbase: string;
+    @ManyToOne(() => Package, (pkg) => pkg.id, { cascade: true })
+    pkgbase: Package;
 
     @Column({type: "varchar", nullable: true})
     buildClass: string;
