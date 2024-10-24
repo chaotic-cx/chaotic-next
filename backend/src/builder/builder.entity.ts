@@ -1,5 +1,7 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, type Repository } from "typeorm";
 import { BuildStatus } from "../types";
+import { Logger } from "@nestjs/common";
+import { Mutex } from "async-mutex";
 
 @Entity()
 export class Builder {
@@ -78,4 +80,92 @@ export class Build {
 
     @Column({type: "boolean", nullable: true})
     replaced: boolean;
+}
+
+
+// Mutexes to prevent double entries
+const pkgnameMutex = new Mutex();
+const builderMutex = new Mutex();
+const repoMutex = new Mutex();
+
+/**
+ * Check if a package exists in the database, if not create a new entry
+ * @param pkgname The name of the package
+ * @param connection The repository connection
+ * @returns The package object itself
+ */
+export async function pkgnameExists(pkgname: string, connection: Repository<Package>): Promise<Package> {
+    return pkgnameMutex.runExclusive(async () => {
+        try {
+            const packages: Package[] = await connection.find({ where: { pkgname } });
+            let packageExists: Package = packages.find((pkg) => { return pkgname === pkg.pkgname });
+
+            if (packageExists === undefined) {
+                Logger.warn(`Package ${pkgname} not found in database, creating new entry`, "BuilderDatabaseService");
+                packageExists = await connection.save({
+                    pkgname: pkgname,
+                });
+            } else {
+                Logger.debug(`Package ${pkgname} found in database`, "BuilderDatabaseService");
+            }
+
+            return packageExists;
+        } catch(err: unknown) {
+            Logger.error(err, "BuilderDatabaseService");
+        }
+    });
+}
+
+/**
+ * Check if a builder exists in the database, if not create a new entry
+ * @param name The name of the builder
+ * @param connection The repository connection
+ * @returns The builder object itself
+ */
+export async function builderExists(name: string, connection: Repository<Builder>): Promise<Builder> {
+    return builderMutex.runExclusive(async () => {
+        try {
+            const builders: Builder[] = await connection.find({ where: { name } });
+            let builderExists: Builder = builders.find((builder) => { return name === builder.name });
+
+            if (builderExists === undefined) {
+                Logger.warn(`Builder ${name} not found in database, creating new entry`, "BuilderDatabaseService");
+                builderExists = await connection.save({
+                    name: name,
+                    isActive: false,
+                    description: `Added on ${new Date().toISOString()}`
+                });
+            }
+
+            return builderExists;
+        } catch(err: unknown) {
+            Logger.error(err, "BuilderDatabaseService");
+        }
+    });
+}
+
+/**
+ * Check if a repo exists in the database, if not create a new entry
+ * @param name The name of the repo
+ * @param connection The repository connection
+ * @returns The repo object itself
+ */
+export async function repoExists(name: string, connection: Repository<Repo>): Promise<Repo> {
+    return repoMutex.runExclusive(async () => {
+        try {
+            const repos: Repo[] = await connection.find({ where: { name: name } });
+            let repoExists: Repo = repos.find((repo) => { return name === repo.name });
+
+            if (repoExists === undefined) {
+                Logger.warn(`Repo ${name} not found in database, creating new entry`, "BuilderDatabaseService");
+                repoExists = await connection.save({
+                    name: name,
+                });
+            }
+
+            return repoExists;
+        } catch(err: unknown) {
+            Logger.error(err, "BuilderDatabaseService");
+        }
+    });
 }

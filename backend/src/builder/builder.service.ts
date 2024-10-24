@@ -4,10 +4,9 @@ import IORedis from "ioredis";
 import { type Context, Service, ServiceBroker } from "moleculer";
 import type { Repository } from "typeorm";
 import { generateNodeId } from "../functions";
-import { Build, Builder, Package, Repo } from "./builder.entity";
+import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from "./builder.entity";
 import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
 import type { BuilderDbConnections, MoleculerBuildObject } from "../types";
-import { Mutex } from "async-mutex";
 import { REDIS_OPTIONS } from "../constants";
 
 @Injectable()
@@ -62,9 +61,6 @@ export class BuilderService {
  */
 export class BuilderDatabaseService extends Service {
     private dbConnections: BuilderDbConnections
-    private builderMutex = new Mutex();
-    private repoMutex = new Mutex();
-    private packageMutex = new Mutex();
 
     constructor(broker: ServiceBroker, dbConnections: BuilderDbConnections) {
         super(broker);
@@ -86,9 +82,9 @@ export class BuilderDatabaseService extends Service {
     async logBuild(ctx: Context): Promise<void> {
         const params = ctx.params as MoleculerBuildObject;
 
-        const builder: Builder = await this.builderExists(params.builder_name);
-        const repo: Repo = await this.repoExists(params.target_repo);
-        const pkg: Package = await this.pkgnameExists(params.pkgname);
+        const builder: Builder = await builderExists(params.builder_name, this.dbConnections.builder);
+        const repo: Repo = await repoExists(params.target_repo, this.dbConnections.repo);
+        const pkg: Package = await pkgnameExists(params.pkgname, this.dbConnections.package)
 
         pkg.lastUpdated = new Date().toISOString();
 
@@ -110,79 +106,5 @@ export class BuilderDatabaseService extends Service {
         } catch(err: unknown){
             Logger.error(err, "BuilderDatabaseService");
         }
-    }
-
-    private async pkgnameExists(pkgname: string): Promise<Package> {
-        return this.packageMutex.runExclusive(async () => {
-            try {
-                const packages: Package[] = await this.dbConnections.package.find({ where: { pkgname } });
-                let packageExists: Package = packages.find((pkg) => { return pkgname === pkg.pkgname });
-
-                if (packageExists === undefined) {
-                    Logger.warn(`Builder ${pkgname} not found in database, creating new entry`, "BuilderDatabaseService");
-                    packageExists = await this.dbConnections.package.save({
-                        pkgname: pkgname,
-                    });
-                }
-
-                return packageExists;
-            } catch(err: unknown) {
-                Logger.error(err, "BuilderDatabaseService");
-            }
-        });
-    }
-
-    /**
-     * Check if a builder exists in the database, if not create a new entry
-     * @param name The name of the builder
-     * @returns The builder object itself
-     * @private
-     */
-    private async builderExists(name: string): Promise<Builder> {
-        return this.builderMutex.runExclusive(async () => {
-            try {
-                const builders: Builder[] = await this.dbConnections.builder.find({ where: { name } });
-                let builderExists: Builder = builders.find((builder) => { return name === builder.name });
-
-                if (builderExists === undefined) {
-                    Logger.warn(`Builder ${name} not found in database, creating new entry`, "BuilderDatabaseService");
-                    builderExists = await this.dbConnections.builder.save({
-                        name: name,
-                        isActive: false,
-                        description: `Added on ${new Date().toISOString()}`
-                    });
-                }
-
-                return builderExists;
-            } catch(err: unknown) {
-                Logger.error(err, "BuilderDatabaseService");
-            }
-        });
-    }
-
-    /**
-     * Check if a repo exists in the database, if not create a new entry
-     * @param name The name of the repo
-     * @returns The repo object itself
-     * @private
-     */
-    private async repoExists(name: string): Promise<Repo> {
-        return this.repoMutex.runExclusive(async () => {
-            try {
-                const repos: Repo[] = await this.dbConnections.repo.find({ where: { name: name } });
-                let repoExists: Repo = repos.find((repo) => { return name === repo.name });
-
-                if (repoExists === undefined) {
-                    Logger.warn(`Repo ${name} not found in database, creating new entry`, "BuilderDatabaseService");
-                    repoExists = await this.dbConnections.repo.save({
-                        name: name,
-                    });
-                }
-
-                return repoExists;
-            } catch(err: unknown) {
-                Logger.error(err, "BuilderDatabaseService");
-            }
-        });
     }
 }

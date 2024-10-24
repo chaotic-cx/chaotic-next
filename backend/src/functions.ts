@@ -1,4 +1,5 @@
 import type { CountNameObject, UserAgentList } from "@./shared-lib";
+import type { ConfigService } from "@nestjs/config";
 
 /**
  * Parse the output of the non-single line metrics.
@@ -31,4 +32,17 @@ export function generateNodeId(): string {
 
     if (process.env.HOSTNAME) return `${process.env.HOSTNAME}-${randomString}`;
     return `backend-${randomString}`;
+}
+
+
+export function checkEnvironment(configService: ConfigService) {
+    const requiredEnvVars: string[] = [
+        'CAUR_PORT',
+    ];
+
+    for (const envVar of requiredEnvVars) {
+        if (!configService.get<string>(envVar)) {
+            throw Error(`Undefined environment variable: ${envVar}`);
+        }
+    }
 }
