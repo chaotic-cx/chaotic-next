@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: postgres
+    restart: always
+    network_mode: host
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: chaotic
+      POSTGRES_PASSWORD: chaotic
+      POSTGRES_USER: chaotic
+    volumes:
+      - ./dist/db:/var/lib/postgresql/data
