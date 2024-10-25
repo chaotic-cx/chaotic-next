@@ -20,6 +20,10 @@ export class RouterService {
         Logger.log("RouterService initialized", "RouterService");
     }
 
+    /**
+     * Save a router request to the database.
+     * @param body The request body containing at least repo and package properties
+     */
     async hitRouter(body: RouterHitBody): Promise<void> {
         if (body.repo === undefined || body.package === undefined) {
             throw new BadRequestException("Missing required fields");
@@ -36,7 +40,7 @@ export class RouterService {
             pkgbase: pkg,
             repo: repo,
             repo_arch: body.repo_arch,
-            timestamp: new Date(body.timestamp).toISOString(),
+            timestamp: new Date(Number(body.timestamp) * 1000).toISOString(),
             user_agent: body.user_agent,
             version: `${body.version}-${body.pkgrel}`,
         };

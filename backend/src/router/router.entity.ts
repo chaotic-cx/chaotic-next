@@ -60,7 +60,7 @@ export async function mirrorExists(name: string, connection: Repository<Mirror>)
             let mirrorExists: Mirror = mirrors.find((mirror) => { return name === mirror.hostname });
 
             if (mirrorExists === undefined) {
-                Logger.warn(`Mirror ${name} not found in database, creating new entry`, "RouterEntity");
+                Logger.log(`Mirror ${name} not found in database, creating new entry`, "RouterEntity");
                 mirrorExists = await connection.save({
                     hostname: name,
                 });
