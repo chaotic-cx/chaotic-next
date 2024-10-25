@@ -1,5 +1,16 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, type Repository } from "typeorm";
 import { Package, Repo } from "../builder/builder.entity";
+import { Logger } from "@nestjs/common";
+import { Mutex } from "async-mutex";
+
+@Entity()
+export class Mirror {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ type: "varchar" })
+    hostname: string;
+}
 
 @Entity()
 export class RouterHit {
@@ -15,8 +26,8 @@ export class RouterHit {
     @Column({ type: "varchar", nullable: true })
     ip: string;
 
-    @Column({ type: "varchar", nullable: true })
-    hostname: string;
+    @ManyToOne(() => Mirror, (mirror) => mirror.id, { cascade: true, nullable: true })
+    hostname: Mirror;
 
     @ManyToOne(() => Repo, (repo) => repo.id, { cascade: true, nullable: true })
     repo: Repo;
@@ -32,4 +43,32 @@ export class RouterHit {
 
     @Column({ type: "varchar", nullable: true })
     user_agent: string;
+}
+
+const mirrorMutex = new Mutex();
+
+/**
+ * Check if a mirror exists in the database, if not create a new entry
+ * @param name The name of the builder
+ * @param connection The repository connection
+ * @returns The mirror object itself
+ */
+export async function mirrorExists(name: string, connection: Repository<Mirror>): Promise<Mirror> {
+    return mirrorMutex.runExclusive(async () => {
+        try {
+            const mirrors: Mirror[] = await connection.find({ where: { hostname: name } });
+            let mirrorExists: Mirror = mirrors.find((mirror) => { return name === mirror.hostname });
+
+            if (mirrorExists === undefined) {
+                Logger.warn(`Mirror ${name} not found in database, creating new entry`, "RouterEntity");
+                mirrorExists = await connection.save({
+                    hostname: name,
+                });
+            }
+
+            return mirrorExists;
+        } catch(err: unknown) {
+            Logger.error(err, "RouterEntity");
+        }
+    });
 }
