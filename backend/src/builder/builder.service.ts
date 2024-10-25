@@ -84,13 +84,26 @@ export class BuilderDatabaseService extends Service {
      * @param ctx The Moleculer context object containing the build object
      */
     async logBuild(ctx: Context<MoleculerBuildObject>): Promise<void> {
+        if (ctx.eventName.match(/S+Histogram$/) !== null) return
+
         const params = ctx.params as MoleculerBuildObject;
+
+        // No point in logging if the required fields are missing. Database will throw an error anyway.
+        if (!params.builder_name || !params.target_repo || !params.pkgname) {
+            Logger.error("Missing required fields, throwing entry away", "BuilderDatabaseService");
+            return;
+        }
 
         const relations: [Builder, Repo, Package] = await Promise.all([
             builderExists(params.builder_name, this.dbConnections.builder),
             repoExists(params.target_repo, this.dbConnections.repo),
             pkgnameExists(params.pkgname, this.dbConnections.package),
         ]);
+
+        if (relations.includes(null)) {
+            Logger.error("Invalid relations, throwing entry away", "BuilderDatabaseService");
+            return;
+        }
 
         relations[2].lastUpdated = new Date().toISOString();
 
