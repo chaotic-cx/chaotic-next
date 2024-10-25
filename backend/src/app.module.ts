@@ -17,7 +17,7 @@ import { Build, Builder, Repo } from "./builder/builder.entity";
 import { RouterService } from "./router/router.service";
 import { RouterController } from "./router/router.controller";
 import { RouterModule } from "./router/router.module";
-import { RouterHit } from "./router/router.entity";
+import { Mirror, RouterHit } from "./router/router.entity";
 
 @Module({
     imports: [
@@ -28,7 +28,7 @@ import { RouterHit } from "./router/router.entity";
         TypeOrmModule.forRoot({
             type: "postgres",
             ...PG_OPTIONS,
-            entities: [Builder, Build, Repo, RouterHit],
+            entities: [Builder, Build, Repo, RouterHit, Mirror],
             autoLoadEntities: true,
         }),
     ],
