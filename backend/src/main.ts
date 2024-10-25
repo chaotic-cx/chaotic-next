@@ -5,6 +5,7 @@ import { AllExceptionsFilter } from "./all-exceptions/all-exceptions.filter";
 import { AppModule } from "./app.module";
 import { ConfigService } from "@nestjs/config";
 import { checkEnvironment } from "./functions";
+import { ExpressAdapter } from "@nestjs/platform-express";
 
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -13,7 +14,16 @@ async function bootstrap() {
         origin: CAUR_ALLOWED_CORS,
         methods: "GET",
     };
-    const app: INestApplication = await NestFactory.create(AppModule, { cors: corsOptions });
+
+    const expressAdapter = new ExpressAdapter();
+    const trustProxy: string = process.env.CAUR_TRUST_PROXY;
+
+    if (trustProxy !== undefined) {
+        expressAdapter.set("trust proxy", trustProxy);
+        Logger.log(`Trust proxy set to ${trustProxy}`, "Bootstrap");
+    }
+
+    const app: INestApplication = await NestFactory.create(AppModule, expressAdapter, { cors: corsOptions });
     const configService: ConfigService = app.get<ConfigService>(ConfigService);
     const { httpAdapter } = app.get(HttpAdapterHost);
 
@@ -21,12 +31,7 @@ async function bootstrap() {
     app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
     app.enableCors();
 
-    if (configService.get<string>("CAUR_TRUST_PROXY") !== undefined) {
-        app.getHttpServer().set("trust proxy", configService.get<string>("CAUR_TRUST_PROXY"));
-        Logger.log(`Trust proxy set to ${configService.get<string>("CAUR_TRUST_PROXY")}`, "Bootstrap");
-    }
-
-    await app.listen(configService.get<string>("CAUR_PORT"));
+    await app.listen(configService.get<string>("CAUR_PORT") || 3000);
 }
 
 bootstrap().then(() => {

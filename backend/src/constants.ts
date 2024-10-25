@@ -13,3 +13,18 @@ export const REDIS_OPTIONS = {
      port : Number(process.env.REDIS_PORT) || 6379,
      password:  process.env.REDIS_PASSWORD || ""
 }
+
+export const requiredEnvVars: string[] = [
+    'CAUR_PORT',
+    'CAUR_ROUTER_TOKEN',
+    'PG_DATABASE',
+    'PG_HOST',
+    'PG_PASSWORD',
+    'PG_USER',
+    'REDIS_PASSWORD',
+    'REDIS_SSH_HOST',
+    'REDIS_SSH_USER',
+    'TELEGRAM_API_HASH',
+    'TELEGRAM_API_ID',
+    'TELEGRAM_DB_ENCRYPTION_KEY',
+];

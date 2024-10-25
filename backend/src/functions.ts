@@ -1,5 +1,6 @@
 import type { CountNameObject, UserAgentList } from "@./shared-lib";
 import type { ConfigService } from "@nestjs/config";
+import { requiredEnvVars } from "./constants";
 
 /**
  * Parse the output of the non-single line metrics.
@@ -34,15 +35,14 @@ export function generateNodeId(): string {
     return `backend-${randomString}`;
 }
 
-
-export function checkEnvironment(configService: ConfigService) {
-    const requiredEnvVars: string[] = [
-        'CAUR_PORT',
-    ];
-
-    for (const envVar of requiredEnvVars) {
-        if (!configService.get<string>(envVar)) {
-            throw Error(`Undefined environment variable: ${envVar}`);
-        }
+/**
+ * Check if all required environment variables are set.
+ * If not, throw an error.
+ * @param configService The NestJs config service to check the environment variables with.
+ */
+export function checkEnvironment(configService: ConfigService): void {
+    const missingEnvVars: string[] = requiredEnvVars.filter((envVar) => !configService.get<string>(envVar));
+    if (missingEnvVars.length > 0) {
+        throw new Error(`Missing environment variables: ${missingEnvVars.join(", ")}`);
     }
 }
