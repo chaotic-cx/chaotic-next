@@ -10,19 +10,23 @@ import { type Cache, CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { getTdjson } from "prebuilt-tdlib";
 import { type Client, configure, createClient } from "tdl";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class TelegramService {
     protected readonly tgClient: Client;
 
-    constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {
+    constructor(
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
+        private configService: ConfigService,
+    ) {
         configure({ tdjson: getTdjson() });
 
-        const TELEGRAM_API_HASH = process.env.TELEGRAM_API_HASH || "";
-        const TELEGRAM_API_ID = process.env.TELEGRAM_API_ID || "";
-        const TELEGRAM_DB_ENCRYPTION_KEY = process.env.TELEGRAM_DB_ENCRYPTION_KEY || "";
+        const TELEGRAM_API_HASH = this.configService.get<string>("TELEGRAM_API_HASH") || "";
+        const TELEGRAM_API_ID = this.configService.get<string>("TELEGRAM_API_ID") || "";
+        const TELEGRAM_DB_ENCRYPTION_KEY = this.configService.get<string>("TELEGRAM_DB_ENCRYPTION_KEY") || "";
 
-        if (TELEGRAM_API_ID !== "" && TELEGRAM_API_HASH !== "" && TELEGRAM_DB_ENCRYPTION_KEY !== "") {
+        if ((TELEGRAM_API_ID && TELEGRAM_API_HASH && TELEGRAM_DB_ENCRYPTION_KEY) !== "") {
             this.tgClient = createClient({
                 apiId: Number.parseInt(TELEGRAM_API_ID),
                 apiHash: TELEGRAM_API_HASH,
@@ -85,10 +89,9 @@ export class TelegramService {
      * Authenticate the Telegram client, opens a prompt in the console window,
      * Certainly not optimal but functional
      */
-    doAuth(): void {
-        this.tgClient.login().then(() => {
-            Logger.log("Logged in!", "TelegramService");
-        });
+    async doAuth(): Promise<void> {
+        await this.tgClient.login();
+        Logger.log("Logged in!", "TelegramService");
     }
 
     /**
@@ -106,7 +109,7 @@ export class TelegramService {
      */
     async getSucceeded(amount: number, repo: RepositoryList): Promise<TgMessageList> {
         Logger.debug("getSucceeded requested", "TelegramService");
-        return await this.getTgMessages("tgSucceededDeployments", amount, "📣", repo);
+        return this.getTgMessages("tgSucceededDeployments", amount, "📣", repo);
     }
 
     /**
@@ -116,7 +119,7 @@ export class TelegramService {
      */
     async getFailed(amount: number, repo: RepositoryList): Promise<TgMessageList> {
         Logger.debug("getFailed requested", "TelegramService");
-        return await this.getTgMessages("tgFailedDeployments", amount, "🚨", repo);
+        return this.getTgMessages("tgFailedDeployments", amount, "🚨", repo);
     }
 
     /**
@@ -126,7 +129,7 @@ export class TelegramService {
      */
     async getTimedOut(amount: number, repo: RepositoryList): Promise<TgMessageList> {
         Logger.debug("getTimedOut requested", "TelegramService");
-        return await this.getTgMessages("getTimedOut", amount, "⏳", repo);
+        return this.getTgMessages("getTimedOut", amount, "⏳", repo);
     }
 
     /**
@@ -136,7 +139,7 @@ export class TelegramService {
      */
     async getCleanupJobs(amount: number, repo: RepositoryList): Promise<TgMessageList> {
         Logger.debug("getCleanupJobs requested", "TelegramService");
-        return await this.getTgMessages("tgCleanupJobs", amount, "✅", repo);
+        return this.getTgMessages("tgCleanupJobs", amount, "✅", repo);
     }
 
     /**
@@ -250,7 +253,7 @@ export class TelegramService {
      */
     private async getAllChats(): Promise<void> {
         Logger.debug("Getting all chats", "TelegramService");
-        return await this.tgClient.invoke({
+        return this.tgClient.invoke({
             _: "getChats",
             limit: 50,
         });

@@ -1,17 +1,16 @@
 import type IORedis from "ioredis";
 import type { BrokerOptions, LoggerConfig, ServiceSchema } from "moleculer";
 
-export const MoleculerConfigCommon = {
+export const MoleculerConfigCommon: Partial<BrokerOptions> = {
     skipProcessEventRegistration: true,
-    trackContext: true,
 };
 
 export function MoleculerConfigLog(NODE_ENV: string): LoggerConfig {
-    const isProd = NODE_ENV === "production";
+    const isProd: boolean = NODE_ENV === "production";
     return {
         type: "Console",
         options: {
-            autoPadding: true,
+            autoPadding: false,
             colors: true,
             formatter: "{timestamp} {level} {mod}: {msg}",
             level: {

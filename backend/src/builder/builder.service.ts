@@ -79,24 +79,30 @@ export class BuilderDatabaseService extends Service {
         Logger.log("BuilderDatabaseService created", "BuilderDatabaseService");
     }
 
-    async logBuild(ctx: Context): Promise<void> {
+    /**
+     * Logs a new build to the database.
+     * @param ctx The Moleculer context object containing the build object
+     */
+    async logBuild(ctx: Context<MoleculerBuildObject>): Promise<void> {
         const params = ctx.params as MoleculerBuildObject;
 
-        const builder: Builder = await builderExists(params.builder_name, this.dbConnections.builder);
-        const repo: Repo = await repoExists(params.target_repo, this.dbConnections.repo);
-        const pkg: Package = await pkgnameExists(params.pkgname, this.dbConnections.package)
+        const relations: [Builder, Repo, Package] = await Promise.all([
+            builderExists(params.builder_name, this.dbConnections.builder),
+            repoExists(params.target_repo, this.dbConnections.repo),
+            pkgnameExists(params.pkgname, this.dbConnections.package),
+        ]);
 
-        pkg.lastUpdated = new Date().toISOString();
+        relations[2].lastUpdated = new Date().toISOString();
 
         const build: Partial<Build> = {
             arch: params.arch,
             buildClass: params.build_class ? params.build_class.toString() : null,
-            builder: builder,
+            builder: relations[0],
             logUrl: params.logUrl,
             timeToEnd: params.duration,
             commit: params.commit.split(":")[0],
-            pkgbase: pkg,
-            repo: repo,
+            pkgbase: relations[2],
+            repo: relations[1],
             status: params.status,
             replaced: params.replaced,
         }
