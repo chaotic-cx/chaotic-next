@@ -14,26 +14,26 @@ import { Logger as PinoLogger } from "nestjs-pino";
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
 
 async function bootstrap() {
-    const corsOptions = {
-        origin: CAUR_ALLOWED_CORS,
-        methods: "GET",
-    };
-
     const fastifyAdapter = new FastifyAdapter({ logger: true });
-    const trustProxy: string = process.env.CAUR_TRUST_PROXY;
-
     const app: INestApplication = await NestFactory.create<NestFastifyApplication>(AppModule, fastifyAdapter, {
         bufferLogs: true,
     });
     app.useLogger(app.get(PinoLogger));
 
+    const configService: ConfigService = app.get<ConfigService>(ConfigService);
+    checkEnvironment(configService);
+
+    const trustProxy: string = configService.get<string>(process.env.CAUR_TRUST_PROXY);
     if (trustProxy !== undefined) {
         fastifyAdapter.options({ trustProxy: trustProxy });
     }
     fastifyAdapter.register(helmet);
 
-    const configService: ConfigService = app.get<ConfigService>(ConfigService);
-    checkEnvironment(configService);
+    const corsOptions = {
+        origin: CAUR_ALLOWED_CORS,
+        methods: "GET",
+    };
+    app.enableCors(corsOptions);
 
     const { httpAdapter } = app.get(HttpAdapterHost);
     app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
@@ -54,5 +54,5 @@ async function bootstrap() {
 }
 
 bootstrap().then(() => {
-    Logger.log("🚀 Application is running", "Bootstrap");
+    Logger.log("🚀 Application has started up", "Bootstrap");
 });
