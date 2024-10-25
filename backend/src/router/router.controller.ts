@@ -1,4 +1,4 @@
-import { Body, Controller, Logger, Post, Query } from "@nestjs/common";
+import { Body, Controller, Post, Query, UnauthorizedException } from "@nestjs/common";
 import { RouterService } from "./router.service";
 import type { RouterHitBody } from "../types";
 
@@ -9,12 +9,10 @@ export class RouterController {
     constructor(private routerService: RouterService) {}
 
     @Post("hit")
-    async hitRouter(@Body() body: RouterHitBody, @Query("token") token: string) {
+    async hitRouter(@Body() body: RouterHitBody, @Query("token") token: string): Promise<void> {
         if (token !== this.authToken) {
-            Logger.debug(`Invalid token: ${token} instead of ${this.authToken}`, "RouterController");
-            return "Invalid token";
+            throw new UnauthorizedException("Invalid token");
         }
-
         return this.routerService.hitRouter(body);
     }
 }

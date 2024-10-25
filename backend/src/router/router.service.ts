@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { RouterHit } from "./router.entity";
 import type { Repository } from "typeorm";
@@ -18,20 +18,26 @@ export class RouterService {
         Logger.log("RouterService initialized", "RouterService");
     }
 
-    async hitRouter(body: RouterHitBody) {
-        if (body.repo === undefined || body.pkgbase === undefined) {
-            return "Invalid request";
+    async hitRouter(body: RouterHitBody): Promise<void> {
+        if (body.repo === undefined || body.package === undefined) {
+            throw new BadRequestException("Missing required fields");
         }
 
-        const pkg = await pkgnameExists(body.pkgbase, this.packageRepo);
-        const repo = await repoExists(body.repo, this.repoRepo);
+        const pkg: Package = await pkgnameExists(body.package, this.packageRepo);
+        const repo: Repo = await repoExists(body.repo, this.repoRepo);
 
         const toSave: Partial<RouterHit> = {
-            ...body,
+            country: body.country,
+            hostname: body.hostname,
+            ip: body.ip,
             pkgbase: pkg,
             repo: repo,
+            repo_arch: body.repo_arch,
+            timestamp: new Date(body.timestamp).toISOString(),
+            user_agent: body.user_agent,
+            version: `${body.version}-${body.pkgrel}`,
         };
 
-        return this.routerRitRepo.save(toSave);
+        void this.routerRitRepo.save(toSave);
     }
 }
