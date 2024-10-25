@@ -54,6 +54,57 @@ export class BuilderService {
             Logger.error(err, "BuilderService");
         }
     }
+
+    /**
+     * Returns all builders from the database.
+     */
+    async getBuilders(options?: any): Promise<Builder[]> {
+        return this.builderRepository.find();
+    }
+
+    /**
+     * Returns all packages from the database.
+     */
+    async getPackages(options?: any): Promise<Package[]> {
+        return this.packageRepository.find();
+    }
+
+    /**
+     * Returns all repos from the database.
+     */
+    async getRepos(options?: any): Promise<Repo[]> {
+        return this.repoRepository.find();
+    }
+
+    /**
+     * Returns all builds from the database.
+     */
+    async getBuilds(options?: any): Promise<Build[]> {
+        Logger.debug(options, "BuilderService");
+        if (options) {
+            const query: any = {};
+            switch (true) {
+                case "builder" in options:
+                    query.builderId = options.builder;
+                    break;
+                case Object.hasOwn(options, "status"):
+                    query.status = options.status;
+                    break;
+                case Object.hasOwn(options, "replaced"):
+                    query.replaced = options.replaced;
+                    break;
+                case Object.hasOwn(options, "pkgname"):
+                    query.pkgname = options.pkgname;
+                    break;
+                default:
+                    Logger.error("Invalid option provided", "BuilderService");
+            }
+            Logger.debug(query, "BuilderService");
+            return this.buildRepository.findBy(query);
+        }
+        Logger.debug("No options provided", "BuilderService");
+        return this.buildRepository.find();
+    }
 }
 
 /**
