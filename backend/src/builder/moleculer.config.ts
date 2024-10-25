@@ -5,25 +5,12 @@ export const MoleculerConfigCommon: Partial<BrokerOptions> = {
     skipProcessEventRegistration: true,
 };
 
-export function MoleculerConfigLog(NODE_ENV: string): LoggerConfig {
-    const isProd: boolean = NODE_ENV === "production";
+export function MoleculerConfigLog(): LoggerConfig {
+    const isProd: boolean = process.env.NODE_ENV === "production";
     return {
-        type: "Console",
+        type: "Pino",
         options: {
-            autoPadding: false,
-            colors: true,
-            formatter: "{timestamp} {level} {mod}: {msg}",
-            level: {
-                "*": isProd ? "error" : "debug",
-                BROKER: isProd ? "error" : "debug",
-                BUILD: isProd ? "error" : "debug",
-                NOTIFIER: isProd ? "error" : "debug",
-                REGISTRY: isProd ? "error" : "debug",
-                TRANSIT: isProd ? "error" : "debug",
-                TRANSPORTER: isProd ? "error" : "debug",
-            },
-            moduleColors: true,
-            objectPrinter: null,
+            level: isProd ? "info" : "debug",
         },
     };
 }
@@ -37,7 +24,7 @@ export const MoleculerConfigCommonService: Partial<ServiceSchema> = {
 
 export function brokerConfig(nodeID: string, connection: IORedis): BrokerOptions {
     return {
-        logger: MoleculerConfigLog(process.env.NODE_ENV || "development"),
+        logger: MoleculerConfigLog(),
         nodeID: nodeID,
         metadata: {
             version: 1,
