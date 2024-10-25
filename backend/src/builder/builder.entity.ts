@@ -8,7 +8,7 @@ export class Builder {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ type: "varchar", nullable: true })
+    @Column({ type: "varchar" })
     name: string;
 
     @Column({ type: "varchar", nullable: true })
@@ -72,6 +72,7 @@ export class Build {
 
     @Column({type: "varchar", nullable: true})
     logUrl: string;
+
     @Column({type: "varchar", nullable: true})
     commit: string;
 

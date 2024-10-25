@@ -1,6 +1,6 @@
 import type { CountNameObject, UserAgentList } from "@./shared-lib";
 import type { ConfigService } from "@nestjs/config";
-import { requiredEnvVars } from "./constants";
+import { requiredEnvVarsDev, requiredEnvVarsProd } from "./constants";
 
 /**
  * Parse the output of the non-single line metrics.
@@ -41,7 +41,9 @@ export function generateNodeId(): string {
  * @param configService The NestJs config service to check the environment variables with.
  */
 export function checkEnvironment(configService: ConfigService): void {
-    const missingEnvVars: string[] = requiredEnvVars.filter((envVar) => !configService.get<string>(envVar));
+    const required: string[] = configService.get<string>("NODE_ENV") === "development" ? requiredEnvVarsDev : requiredEnvVarsProd;
+    const missingEnvVars: string[] = required.filter((envVar) => !configService.get<string>(envVar));
+
     if (missingEnvVars.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvVars.join(", ")}`);
     }

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Mirror, mirrorExists, RouterHit } from "./router.entity";
+import { Mirror, mirrorExists, RouterHit, type RouterHitColumns } from "./router.entity";
 import type { Repository } from "typeorm";
 import type { RouterHitBody } from "../types";
 import { Package, pkgnameExists, Repo, repoExists } from "../builder/builder.entity";
@@ -26,7 +26,7 @@ export class RouterService {
      */
     async hitRouter(body: RouterHitBody): Promise<void> {
         if ((body.repo || body.package) === undefined) {
-            throw new BadRequestException("Missing required fields");
+            throw new BadRequestException("Missing required fields, throwing entry away");
         }
 
         const relations: [Package, Repo, Mirror] = await Promise.all([
@@ -34,6 +34,10 @@ export class RouterService {
             await repoExists(body.repo, this.repoRepo),
             await mirrorExists(body.hostname, this.mirrorRepo),
         ]);
+
+        if (relations.includes(null)) {
+            throw new BadRequestException("Invalid relations, throwing entry away");
+        }
 
         const toSave: Partial<RouterHit> = {
             country: body.country,
@@ -48,5 +52,13 @@ export class RouterService {
         };
 
         void this.routerRitRepo.save(toSave);
+    }
+
+    getGeneralStats(days: number, type: RouterHitColumns): Promise<RouterHit[]> {
+        return this.routerRitRepo
+            .createQueryBuilder("router_hit")
+            .select(`router_hit.${type}`)
+            .where("router_hit.timestamp > :date", { date: new Date(Date.now() - days * 24 * 60 * 60 * 1000) })
+            .getMany();
     }
 }

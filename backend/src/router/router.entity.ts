@@ -72,3 +72,10 @@ export async function mirrorExists(name: string, connection: Repository<Mirror>)
         }
     });
 }
+
+export type RouterHitColumns = Omit<keyof RouterHit, "id">;
+export type MirrorColumns = Omit<keyof Mirror, "id">;
+
+export function isOfTypeRouterHitColumns(value: unknown): value is RouterHitColumns {
+    return Object.keys(RouterHit).includes(String(value));
+}
