@@ -1,6 +1,6 @@
 import { CacheModule } from "@nestjs/cache-manager";
-import { type MiddlewareConsumer, Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
+import { Logger, type MiddlewareConsumer, Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { BuilderController } from "./builder/builder.controller";
 import { BuilderModule } from "./builder/builder.module";
@@ -36,6 +36,18 @@ import { Mirror, RouterHit } from "./router/router.entity";
     providers: [TelegramService, MetricsService, MiscService, BuilderService, RouterService],
 })
 export class AppModule {
+    constructor(private configService: ConfigService) {
+        Logger.log("AppModule created", "AppModule");
+
+        if (this.configService.get<string>("NODE_ENV") === "development") {
+            Logger.overrideLogger(["debug", "error", "log", "verbose", "warn"]);
+            Logger.log("Development mode detected, enabled debug logs", "AppModule");
+        } else {
+            Logger.overrideLogger(["error", "log", "warn"]);
+            Logger.log("Production mode detected, disabled debug logs", "AppModule");
+        }
+    }
+
     configure(consumer: MiddlewareConsumer): void {
         consumer.apply(HttpLoggerMiddleware).forRoutes("*");
     }

@@ -25,20 +25,22 @@ export class RouterService {
      * @param body The request body containing at least repo and package properties
      */
     async hitRouter(body: RouterHitBody): Promise<void> {
-        if (body.repo === undefined || body.package === undefined) {
+        if ((body.repo || body.package) === undefined) {
             throw new BadRequestException("Missing required fields");
         }
 
-        const pkg: Package = await pkgnameExists(body.package, this.packageRepo);
-        const repo: Repo = await repoExists(body.repo, this.repoRepo);
-        const mirror: Mirror = await mirrorExists(body.hostname, this.mirrorRepo);
+        const relations: [Package, Repo, Mirror] = await Promise.all([
+            await pkgnameExists(body.package, this.packageRepo),
+            await repoExists(body.repo, this.repoRepo),
+            await mirrorExists(body.hostname, this.mirrorRepo),
+        ]);
 
         const toSave: Partial<RouterHit> = {
             country: body.country,
-            hostname: mirror,
+            hostname: relations[2],
             ip: body.ip,
-            pkgbase: pkg,
-            repo: repo,
+            pkgbase: relations[0],
+            repo: relations[1],
             repo_arch: body.repo_arch,
             timestamp: new Date(Number(body.timestamp) * 1000).toISOString(),
             user_agent: body.user_agent,
