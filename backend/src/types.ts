@@ -36,10 +36,12 @@ export interface BuilderDbConnections {
 }
 
 export interface RouterHitBody {
+    arch: string;
     country: string;
     hostname: string;
     ip: string;
-    pkgbase: string;
+    package: string;
+    pkgrel: string;
     repo: string;
     repo_arch: string;
     timestamp: string;

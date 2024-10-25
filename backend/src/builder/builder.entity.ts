@@ -101,17 +101,17 @@ export async function pkgnameExists(pkgname: string, connection: Repository<Pack
             let packageExists: Package = packages.find((pkg) => { return pkgname === pkg.pkgname });
 
             if (packageExists === undefined) {
-                Logger.warn(`Package ${pkgname} not found in database, creating new entry`, "BuilderDatabaseService");
+                Logger.warn(`Package ${pkgname} not found in database, creating new entry`, "BuilderEntity");
                 packageExists = await connection.save({
                     pkgname: pkgname,
                 });
             } else {
-                Logger.debug(`Package ${pkgname} found in database`, "BuilderDatabaseService");
+                Logger.debug(`Package ${pkgname} found in database`, "BuilderEntity");
             }
 
             return packageExists;
         } catch(err: unknown) {
-            Logger.error(err, "BuilderDatabaseService");
+            Logger.error(err, "BuilderEntity");
         }
     });
 }
@@ -129,7 +129,7 @@ export async function builderExists(name: string, connection: Repository<Builder
             let builderExists: Builder = builders.find((builder) => { return name === builder.name });
 
             if (builderExists === undefined) {
-                Logger.warn(`Builder ${name} not found in database, creating new entry`, "BuilderDatabaseService");
+                Logger.warn(`Builder ${name} not found in database, creating new entry`, "BuilderEntity");
                 builderExists = await connection.save({
                     name: name,
                     isActive: false,
@@ -139,7 +139,7 @@ export async function builderExists(name: string, connection: Repository<Builder
 
             return builderExists;
         } catch(err: unknown) {
-            Logger.error(err, "BuilderDatabaseService");
+            Logger.error(err, "BuilderEntity");
         }
     });
 }
@@ -157,7 +157,7 @@ export async function repoExists(name: string, connection: Repository<Repo>): Pr
             let repoExists: Repo = repos.find((repo) => { return name === repo.name });
 
             if (repoExists === undefined) {
-                Logger.warn(`Repo ${name} not found in database, creating new entry`, "BuilderDatabaseService");
+                Logger.warn(`Repo ${name} not found in database, creating new entry`, "BuilderEntity");
                 repoExists = await connection.save({
                     name: name,
                 });
@@ -165,7 +165,7 @@ export async function repoExists(name: string, connection: Repository<Repo>): Pr
 
             return repoExists;
         } catch(err: unknown) {
-            Logger.error(err, "BuilderDatabaseService");
+            Logger.error(err, "BuilderEntity");
         }
     });
 }
