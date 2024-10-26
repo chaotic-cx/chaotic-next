@@ -13,7 +13,8 @@
         "proxy-api": "lcp --proxyUrl https://builds.garudalinux.org/api",
         "proxy-be": "lcp --proxyUrl http://localhost:3000 --port 8011",
         "start:dev": "pnpm proxy-be & pnpm proxy-api & pnpm start | pino-pretty -cSt SYS:standard",
-        "start:backend": "nx run backend:serve | pino-pretty -cSt SYS:standard",
+        "start:be-hr": "source backend/.env && nest build --webpack --webpackPath backend/webpack-hmr.config.cjs --watch --path backend/tsconfig.json | pino-pretty -cSt SYS:standard",
+        "start:be-nx": "nx run backend:serve | pino-pretty -cSt SYS:standard",
         "start:home": "nx run frontend:serve"
     },
     "private": true,
@@ -34,6 +35,7 @@
         "@eslint/eslintrc": "^3.1.0",
         "@eslint/js": "^9.13.0",
         "@gitopslovers/nx-biome": "^1.5.0",
+        "@nestjs/cli": "^10.4.5",
         "@nestjs/schematics": "^10.2.2",
         "@nestjs/testing": "^10.4.6",
         "@nx/angular": "20.0.3",
@@ -71,11 +73,15 @@
         "nx": "20.0.3",
         "pino-pretty": "^11.3.0",
         "prettier": "^3.3.3",
+        "run-script-webpack-plugin": "^0.2.0",
         "tailwindcss": "^3.4.14",
         "ts-jest": "^29.2.5",
+        "ts-loader": "^9.5.1",
         "ts-node": "10.9.2",
         "typescript": "5.5.4",
-        "webpack-cli": "^5.1.4"
+        "webpack": "^5.95.0",
+        "webpack-cli": "^5.1.4",
+        "webpack-node-externals": "^3.0.0"
     },
     "dependencies": {
         "@angular/animations": "18.2.8",

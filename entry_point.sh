@@ -47,7 +47,7 @@ if [ -n "$REDIS_SSH_HOST" ]; then
     while ! nc -z localhost $REDIS_PORT; do
         sleep 1
     done
-    echo "Tunnel established"
+    echo "Tunnel established."
 fi
 
-exec node /app/main.js "$@"
+exec node /app/main.js "$@" | node_modules/.bin/pino-pretty -cSt SYS:standard

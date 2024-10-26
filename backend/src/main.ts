@@ -12,8 +12,9 @@ import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fa
 import { Logger as PinoLogger } from "nestjs-pino";
 
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
+declare const module: any;
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
     const fastifyAdapter = new FastifyAdapter({ logger: true });
     const app: INestApplication = await NestFactory.create<NestFastifyApplication>(AppModule, fastifyAdapter, {
         bufferLogs: true,
@@ -38,7 +39,9 @@ async function bootstrap() {
     const { httpAdapter } = app.get(HttpAdapterHost);
     app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
 
+    // Provide the Swagger API documentation at /api
     const config = new DocumentBuilder()
+        .setLicense("GPL-3.0", "https://www.gnu.org/licenses/gpl-3.0.html")
         .setTitle("Chaotic-AUR API")
         .setDescription("Chaotic-AUR API specification")
         .setVersion("1.0")
@@ -51,6 +54,12 @@ async function bootstrap() {
         configService.get<string>("CAUR_PORT") || 3000,
         configService.get<string>("CAUR_HOST") || "0.0.0.0",
     );
+
+    // Hot Module Replacement support
+    if (module.hot) {
+        module.hot.accept();
+        module.hot.dispose(() => app.close());
+    }
 }
 
 bootstrap().then(() => {

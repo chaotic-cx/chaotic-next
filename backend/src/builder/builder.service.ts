@@ -7,7 +7,7 @@ import { generateNodeId } from "../functions";
 import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from "./builder.entity";
 import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
 import type { BuilderDbConnections, MoleculerBuildObject } from "../types";
-import { REDIS_OPTIONS } from "../constants";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class BuilderService {
@@ -23,14 +23,17 @@ export class BuilderService {
         private repoRepository: Repository<Repo>,
         @InjectRepository(Package)
         private packageRepository: Repository<Package>,
+        private configService: ConfigService,
     ) {
-        Logger.log("BuilderService created", "BuilderService");
+        const redisPassword: string = this.configService.getOrThrow<string>("REDIS_PASSWORD");
+        const redisHost: string = this.configService.get<string>("REDIS_HOST") || "localhost";
+        const redisPort: number = this.configService.get<number>("REDIS_PORT") || 6379;
 
         try {
-            this.connection = new IORedis(REDIS_OPTIONS.port, REDIS_OPTIONS.host, {
+            this.connection = new IORedis(redisPort, redisHost, {
                 lazyConnect: true,
                 maxRetriesPerRequest: null,
-                password: REDIS_OPTIONS.password,
+                password: redisPassword,
             });
         } catch (err: unknown) {
             Logger.error(err, "BuilderService");
