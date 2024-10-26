@@ -16,6 +16,9 @@ RUN pnpm exec nx run backend:build
 WORKDIR /build/dist/backend
 RUN pnpm install --prod
 
+# To have a pretty log output without needing to include it in the app
+RUN pnpm install pino-pretty
+
 FROM node:22-bookworm-slim
 
 # Copy the compiled backend and the entry point script in a clean image

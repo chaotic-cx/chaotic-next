@@ -8,12 +8,6 @@ export const PG_OPTIONS = {
     synchronize: process.env.NODE_ENV === "development",
 };
 
-export const REDIS_OPTIONS = {
-     host: process.env.REDIS_HOST || "localhost",
-     port : Number(process.env.REDIS_PORT) || 6379,
-     password:  process.env.REDIS_PASSWORD || ""
-}
-
 export const requiredEnvVarsProd: string[] = [
     'CAUR_PORT',
     'CAUR_ROUTER_TOKEN',
