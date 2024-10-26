@@ -1,5 +1,5 @@
 import { CacheModule } from "@nestjs/cache-manager";
-import { Logger, Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { BuilderController } from "./builder/builder.controller";
@@ -11,39 +11,48 @@ import { MiscController } from "./misc/misc.controller";
 import { MiscService } from "./misc/misc.service";
 import { TelegramController } from "./telegram/telegram.controller";
 import { TelegramService } from "./telegram/telegram.service";
-import { PG_OPTIONS } from "./constants";
+import { IS_PROD, PG_OPTIONS } from "./constants";
 import { Build, Builder, Repo } from "./builder/builder.entity";
 import { RouterService } from "./router/router.service";
 import { RouterController } from "./router/router.controller";
 import { RouterModule } from "./router/router.module";
 import { Mirror, RouterHit } from "./router/router.entity";
 import { LoggerModule } from "nestjs-pino";
+import { AuthModule } from "./auth/auth.module";
+import { UsersModule } from "./users/users.module";
+import { User } from "./users/users.entity";
+import { AuthController } from "./auth/auth.controller";
+import { UsersService } from "./users/users.service";
+import { AuthService } from "./auth/auth.service";
 
 @Module({
     imports: [
+        AuthModule,
         BuilderModule,
         CacheModule.register({}),
         ConfigModule.forRoot({ envFilePath: ".env", isGlobal: true }),
-        LoggerModule.forRoot({}),
+        LoggerModule.forRoot({
+            pinoHttp: {
+                level: IS_PROD ? "info" : "debug",
+            },
+        }),
         RouterModule,
         TypeOrmModule.forRoot({
             type: "postgres",
             ...PG_OPTIONS,
-            entities: [Builder, Build, Repo, RouterHit, Mirror],
+            entities: [Builder, Build, Repo, RouterHit, Mirror, User],
             autoLoadEntities: true,
         }),
+        UsersModule,
     ],
-    controllers: [TelegramController, MetricsController, MiscController, BuilderController, RouterController],
-    providers: [TelegramService, MetricsService, MiscService, BuilderService, RouterService],
+    controllers: [
+        AuthController,
+        BuilderController,
+        MetricsController,
+        MiscController,
+        RouterController,
+        TelegramController,
+    ],
+    providers: [TelegramService, MetricsService, MiscService, BuilderService, RouterService, UsersService, AuthService],
 })
-export class AppModule {
-    constructor(private configService: ConfigService) {
-        if (this.configService.get<string>("NODE_ENV") !== "production") {
-            Logger.overrideLogger(["debug", "error", "log", "verbose", "warn"]);
-            Logger.log("Development mode detected, enabled debug logs", "AppModule");
-        } else {
-            Logger.overrideLogger(["error", "log", "warn"]);
-            Logger.log("Production mode detected, disabled debug logs", "AppModule");
-        }
-    }
-}
+export class AppModule {}

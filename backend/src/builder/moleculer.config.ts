@@ -1,16 +1,16 @@
 import type IORedis from "ioredis";
 import type { BrokerOptions, LoggerConfig, ServiceSchema } from "moleculer";
+import { IS_PROD } from "../constants";
 
 export const MoleculerConfigCommon: Partial<BrokerOptions> = {
     skipProcessEventRegistration: true,
 };
 
 export function MoleculerConfigLog(): LoggerConfig {
-    const isProd: boolean = process.env.NODE_ENV === "production";
     return {
         type: "Pino",
         options: {
-            level: isProd ? "info" : "debug",
+            level: IS_PROD ? "info" : "debug",
         },
     };
 }

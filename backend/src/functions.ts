@@ -1,6 +1,7 @@
 import type { CountNameObject, UserAgentList } from "@./shared-lib";
 import type { ConfigService } from "@nestjs/config";
 import { requiredEnvVarsDev, requiredEnvVarsProd } from "./constants";
+import * as bcrypt from "bcrypt";
 
 /**
  * Parse the output of the non-single line metrics.
@@ -8,19 +9,19 @@ import { requiredEnvVarsDev, requiredEnvVarsProd } from "./constants";
  * @returns An array of objects containing the name and count of the metric.
  */
 export function parseOutput(input: string): { name: string; count: number }[] {
-    const returningArray: UserAgentList | CountNameObject = []
-    const perLine = input.split("\n")
+    const returningArray: UserAgentList | CountNameObject = [];
+    const perLine = input.split("\n");
     for (const line of perLine) {
-        const count = Number.parseInt(line.split(/ (.*)/)[0])
-        const name = line.replace(/^[0-9]*\s/, "")
+        const count = Number.parseInt(line.split(/ (.*)/)[0]);
+        const name = line.replace(/^[0-9]*\s/, "");
         if (!Number.isNaN(count)) {
             returningArray.push({
                 name: name ?? "Unknown",
                 count,
-            })
+            });
         }
     }
-    return returningArray
+    return returningArray;
 }
 
 /**
@@ -41,10 +42,21 @@ export function generateNodeId(): string {
  * @param configService The NestJs config service to check the environment variables with.
  */
 export function checkEnvironment(configService: ConfigService): void {
-    const required: string[] = configService.get<string>("NODE_ENV") === "development" ? requiredEnvVarsDev : requiredEnvVarsProd;
+    const required: string[] =
+        configService.get<string>("NODE_ENV") === "development" ? requiredEnvVarsDev : requiredEnvVarsProd;
     const missingEnvVars: string[] = required.filter((envVar) => !configService.get<string>(envVar));
 
     if (missingEnvVars.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvVars.join(", ")}`);
     }
+}
+
+/**
+ * Get the password hash for a given password and crypt key.
+ * @param password The password to hash
+ * @returns The hashed password
+ */
+export async function getPasswordHash(password: string): Promise<string> {
+    const saltOrRounds = 10;
+    return bcrypt.hash(password, saltOrRounds);
 }
