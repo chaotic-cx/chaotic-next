@@ -26,11 +26,14 @@ export class Package {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column('varchar')
+    @Column("varchar")
     pkgname: string;
 
-    @Column({type: "timestamp", nullable: true})
-    lastUpdated: string
+    @Column({ type: "timestamp", nullable: true })
+    lastUpdated: string;
+
+    @Column({ type: "boolean", nullable: false, default: true })
+    isActive: boolean;
 }
 
 @Entity()
@@ -38,10 +41,10 @@ export class Repo {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column('varchar')
+    @Column("varchar")
     name: string;
 
-    @Column({type: "varchar", nullable: true})
+    @Column({ type: "varchar", nullable: true })
     repoUrl: string;
 }
 
@@ -53,36 +56,34 @@ export class Build {
     @ManyToOne(() => Package, (pkg) => pkg.id, { cascade: true })
     pkgbase: Package;
 
-    @Column({type: "varchar", nullable: true})
+    @Column({ type: "varchar", nullable: true })
     buildClass: string;
 
     @ManyToOne(() => Builder, (builder) => builder.id, { cascade: true, nullable: true })
-    builder: Builder
+    builder: Builder;
 
     @ManyToOne(() => Repo, (repo) => repo.id, { cascade: true, nullable: true })
-    repo: Repo
+    repo: Repo;
 
-    @Column({type: 'enum', enum: BuildStatus, default: BuildStatus.SUCCESS})
-    status: BuildStatus
+    @Column({ type: "enum", enum: BuildStatus, default: BuildStatus.SUCCESS })
+    status: BuildStatus;
 
     @CreateDateColumn()
-
-    @Column({type: "varchar", nullable: true})
+    @Column({ type: "varchar", nullable: true })
     arch: string;
 
-    @Column({type: "varchar", nullable: true})
+    @Column({ type: "varchar", nullable: true })
     logUrl: string;
 
-    @Column({type: "varchar", nullable: true})
+    @Column({ type: "varchar", nullable: true })
     commit: string;
 
-    @Column({type: "float", nullable: true})
+    @Column({ type: "float", nullable: true })
     timeToEnd: number;
 
-    @Column({type: "boolean", nullable: true})
+    @Column({ type: "boolean", nullable: true })
     replaced: boolean;
 }
-
 
 // Mutexes to prevent double entries
 const pkgnameMutex = new Mutex();
@@ -99,19 +100,23 @@ export async function pkgnameExists(pkgname: string, connection: Repository<Pack
     return pkgnameMutex.runExclusive(async () => {
         try {
             const packages: Package[] = await connection.find({ where: { pkgname } });
-            let packageExists: Package = packages.find((pkg) => { return pkgname === pkg.pkgname });
+            let packageExists: Package = packages.find((pkg) => {
+                return pkgname === pkg.pkgname;
+            });
 
             if (packageExists === undefined) {
                 Logger.log(`Package ${pkgname} not found in database, creating new entry`, "BuilderEntity");
                 packageExists = await connection.save({
                     pkgname: pkgname,
+                    lastUpdated: new Date().toISOString(),
+                    isActive: true,
                 });
             } else {
                 Logger.debug(`Package ${pkgname} found in database`, "BuilderEntity");
             }
 
             return packageExists;
-        } catch(err: unknown) {
+        } catch (err: unknown) {
             Logger.error(err, "BuilderEntity");
         }
     });
@@ -127,19 +132,21 @@ export async function builderExists(name: string, connection: Repository<Builder
     return builderMutex.runExclusive(async () => {
         try {
             const builders: Builder[] = await connection.find({ where: { name } });
-            let builderExists: Builder = builders.find((builder) => { return name === builder.name });
+            let builderExists: Builder = builders.find((builder) => {
+                return name === builder.name;
+            });
 
             if (builderExists === undefined) {
                 Logger.log(`Builder ${name} not found in database, creating new entry`, "BuilderEntity");
                 builderExists = await connection.save({
                     name: name,
                     isActive: false,
-                    description: `Added on ${new Date().toISOString()}`
+                    description: `Added on ${new Date().toISOString()}`,
                 });
             }
 
             return builderExists;
-        } catch(err: unknown) {
+        } catch (err: unknown) {
             Logger.error(err, "BuilderEntity");
         }
     });
@@ -155,7 +162,9 @@ export async function repoExists(name: string, connection: Repository<Repo>): Pr
     return repoMutex.runExclusive(async () => {
         try {
             const repos: Repo[] = await connection.find({ where: { name: name } });
-            let repoExists: Repo = repos.find((repo) => { return name === repo.name });
+            let repoExists: Repo = repos.find((repo) => {
+                return name === repo.name;
+            });
 
             if (repoExists === undefined) {
                 Logger.log(`Repo ${name} not found in database, creating new entry`, "BuilderEntity");
@@ -165,7 +174,7 @@ export async function repoExists(name: string, connection: Repository<Repo>): Pr
             }
 
             return repoExists;
-        } catch(err: unknown) {
+        } catch (err: unknown) {
             Logger.error(err, "BuilderEntity");
         }
     });

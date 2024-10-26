@@ -125,6 +125,9 @@ export class BuilderDatabaseService extends Service {
                 "builds.*"(ctx: Context<MoleculerBuildObject>) {
                     this.logBuild(ctx);
                 },
+                "database.removalCompleted"(ctx: Context<string[]>) {
+                    this.removeEntries(ctx);
+                },
             },
             ...MoleculerConfigCommonService,
         });
@@ -177,6 +180,28 @@ export class BuilderDatabaseService extends Service {
 
         try {
             Logger.debug(await this.dbConnections.build.save(build), "BuilderDatabaseService");
+        } catch (err: unknown) {
+            Logger.error(err, "BuilderDatabaseService");
+        }
+    }
+
+    /**
+     * Removes entries from the database.
+     * @param ctx The Moleculer context object containing the package names to remove
+     */
+    async removeEntries(ctx: Context<string[]>): Promise<void> {
+        const pkgbases = ctx.params as string[];
+
+        try {
+            for (const pkgbase of pkgbases) {
+                const pkg = await this.dbConnections.package.findOne({ where: { pkgname: pkgbase } });
+                if (pkg) {
+                    await this.dbConnections.package.update(pkg.id, {
+                        isActive: false,
+                        lastUpdated: new Date().toISOString(),
+                    });
+                }
+            }
         } catch (err: unknown) {
             Logger.error(err, "BuilderDatabaseService");
         }
