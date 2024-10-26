@@ -48,3 +48,21 @@ export interface RouterHitBody {
     user_agent: string;
     version: string;
 }
+
+export interface User {
+    username: string;
+    mail: string;
+    password: string;
+    role: UserRole;
+}
+export type Users = User[];
+
+export enum UserRole {
+    ROOT = 0,
+    READ = 1,
+}
+
+export interface LoginCredentials {
+    username: string;
+    password: string;
+}

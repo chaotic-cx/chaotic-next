@@ -114,7 +114,7 @@ export class BuilderService {
  * The metrics service that provides the metrics actions for other services to call.
  */
 export class BuilderDatabaseService extends Service {
-    private dbConnections: BuilderDbConnections
+    private dbConnections: BuilderDbConnections;
 
     constructor(broker: ServiceBroker, dbConnections: BuilderDbConnections) {
         super(broker);
@@ -122,8 +122,8 @@ export class BuilderDatabaseService extends Service {
         this.parseServiceSchema({
             name: "builderDatabaseService",
             events: {
-                "builds.*"(ctx:Context<MoleculerBuildObject>) {
-                        this.logBuild(ctx);
+                "builds.*"(ctx: Context<MoleculerBuildObject>) {
+                    this.logBuild(ctx);
                 },
             },
             ...MoleculerConfigCommonService,
@@ -138,7 +138,8 @@ export class BuilderDatabaseService extends Service {
      * @param ctx The Moleculer context object containing the build object
      */
     async logBuild(ctx: Context<MoleculerBuildObject>): Promise<void> {
-        if (ctx.eventName.match(/S+Histogram$/) !== null) return
+        // These events are not relevant as they miss required data
+        if (ctx.eventName.match(/Histogram$/) !== null) return;
 
         const params = ctx.params as MoleculerBuildObject;
 
@@ -172,11 +173,11 @@ export class BuilderDatabaseService extends Service {
             repo: relations[1],
             status: params.status,
             replaced: params.replaced,
-        }
+        };
 
         try {
             Logger.debug(await this.dbConnections.build.save(build), "BuilderDatabaseService");
-        } catch(err: unknown){
+        } catch (err: unknown) {
             Logger.error(err, "BuilderDatabaseService");
         }
     }
