@@ -121,7 +121,7 @@
         "nestjs-pino": "^4.1.0",
         "ngx-highlightjs": "^12.0.0",
         "pg": "^8.13.1",
-        "pino": "^8.21.0",
+        "pino": "^9.0.0",
         "pino-http": "^10.3.0",
         "prebuilt-tdlib": "^0.1008038.0",
         "reflect-metadata": "~0.2.2",
