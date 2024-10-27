@@ -99,7 +99,7 @@
         "@angular/router": "18.2.8",
         "@fastify/cors": "^10.0.1",
         "@fastify/helmet": "^11.1.1",
-        "@fastify/static": "^7.0.4",
+        "@fastify/static": "^8.0.0",
         "@fontsource/fira-sans": "^5.1.0",
         "@fontsource/jetbrains-mono": "^5.1.1",
         "@nestjs/axios": "^3.1.0",
