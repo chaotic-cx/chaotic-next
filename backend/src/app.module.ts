@@ -9,17 +9,16 @@ import { BuilderModule } from "./builder/builder.module";
 import appConfig from "./config/app.config";
 import { IS_PROD } from "./constants";
 import { dataSourceOptions } from "./data.source";
+import { MetricsModule } from "./metrics/metrics.module";
+import { MiscModule } from "./misc/misc.module";
 import { RouterModule } from "./router/router.module";
 import { TelegramModule } from "./telegram/telegram.module";
 import { UsersModule } from "./users/users.module";
-import { MetricsModule } from "./metrics/metrics.module";
-import { MiscModule } from "./misc/misc.module";
 
 @Module({
     imports: [
         AuthModule,
         BuilderModule,
-        CacheModule.register({}),
         ConfigModule.forRoot({ envFilePath: ".env", isGlobal: true, load: [appConfig] }),
         LoggerModule.forRoot({
             pinoHttp: {
