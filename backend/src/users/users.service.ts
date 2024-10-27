@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import type { Users } from "../types";
+import type { User as UserType, Users } from "../types";
 import { User, userExists } from "./users.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
@@ -41,13 +41,24 @@ export class UsersService {
      * @param auth
      * @param checkFor
      */
-    async checkIfUserExists(auth: string, checkFor: "mail" | "username"): Promise<User | null> {
+    async checkIfUserExists(auth: string, checkFor: "mail" | "username" | "githubId"): Promise<User | null> {
         Logger.debug(`Checking if user ${auth} exists`, "UsersService");
         switch (checkFor) {
             case "username":
                 return this.userRepository.findOne({ where: { name: auth } });
             case "mail":
                 return this.userRepository.findOne({ where: { mail: auth } });
+            case "githubId":
+                return this.userRepository.findOne({ where: { githubId: auth } });
         }
+    }
+
+    /**
+     * Create a new user in the database.
+     * @param user The user object to create
+     * @returns The new user object
+     */
+    async createUser(user: UserType): Promise<User> {
+        return userExists(user, this.userRepository);
     }
 }

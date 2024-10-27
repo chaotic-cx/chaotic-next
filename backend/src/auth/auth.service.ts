@@ -11,13 +11,20 @@ export class AuthService {
         private usersService: UsersService,
     ) {}
 
+    /**
+     * Sign in a user, a source of truth is the database.
+     * Will throw an error if the user doesn't exist or the password is incorrect.
+     * @param username User's username
+     * @param password User's password
+     * @returns Object containing access_token
+     */
     async signIn(username: string, password: string): Promise<{ access_token: string }> {
         const user: User = await this.usersService.checkIfUserExists(username, "username");
 
         if (!user) throw new UnauthorizedException("User doesn't exist");
 
         if (user?.password) {
-            const isMatch = await bcrypt.compare(password, user.password);
+            const isMatch: boolean = await bcrypt.compare(password, user.password);
             if (!isMatch) throw new UnauthorizedException("Invalid credentials");
         }
 

@@ -1,20 +1,9 @@
-import {
-    Body,
-    Controller,
-    Get,
-    Param,
-    ParseIntPipe,
-    Post,
-    Query,
-    UnauthorizedException,
-    UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UnauthorizedException } from "@nestjs/common";
 import { RouterService } from "./router.service";
 import type { RouterHitBody } from "../types";
 import { ConfigService } from "@nestjs/config";
 import type { RouterHit, RouterHitColumns } from "./router.entity";
 import { RouterHitColumPipe } from "./router.pipe";
-import { AuthGuard } from "../auth/auth.guard";
 
 @Controller("router")
 export class RouterController {
@@ -24,7 +13,7 @@ export class RouterController {
         private configService: ConfigService,
         private routerService: RouterService,
     ) {
-        this.authToken = this.configService.get<string>("CAUR_ROUTER_TOKEN") || "caur";
+        this.authToken = this.configService.getOrThrow<string>("router.token");
     }
 
     @Post("hit")
@@ -35,7 +24,6 @@ export class RouterController {
         return this.routerService.hitRouter(body);
     }
 
-    @UseGuards(AuthGuard)
     @Get("/:days/:type")
     async getRouterStats(
         @Param("type", RouterHitColumPipe) type: RouterHitColumns,
