@@ -1,5 +1,5 @@
 # Tdlib requires glibc, therefore alpine can't be used
-FROM node:22-bookworm-slim AS builder
+FROM node:23-slim AS builder
 
 WORKDIR /build
 COPY . /build
@@ -19,11 +19,14 @@ RUN pnpm install --prod
 # To have a pretty log output without needing to include it in the app
 RUN pnpm install pino-pretty
 
-FROM node:22-bookworm-slim
+FROM node:23-slim
 
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
-RUN apt-get update && apt-get install -y autossh netcat-openbsd
+RUN apt-get update && \
+  apt-get install --no-install-recommends -y autossh netcat-openbsd && \
+  rm -rf /var/lib/apt/lists/*
+
 COPY entry_point.sh /entry_point.sh
 RUN chmod +x /entry_point.sh
 COPY --from=builder /build/dist/backend /app

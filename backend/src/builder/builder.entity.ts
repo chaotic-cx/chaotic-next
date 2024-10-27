@@ -69,6 +69,8 @@ export class Build {
     status: BuildStatus;
 
     @CreateDateColumn()
+    timestamp: Date;
+
     @Column({ type: "varchar", nullable: true })
     arch: string;
 
