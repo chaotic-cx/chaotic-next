@@ -18,9 +18,6 @@ export class User {
     @Column({ type: "varchar", nullable: true })
     mail: string;
 
-    @Column({ type: "varchar", nullable: true })
-    githubId: string;
-
     @Column({ type: "enum", enum: UserRole, default: UserRole.ROOT })
     status: UserRole;
 }
