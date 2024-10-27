@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import { BuilderService } from "./builder.service";
 import type { Build, Builder, Package, Repo } from "./builder.entity";
+import { BuilderService } from "./builder.service";
 
 @Controller("builder")
 export class BuilderController {

@@ -1,8 +1,8 @@
+import { RepositoryList, TgMessageList } from "@./shared-lib";
 import { CacheInterceptor } from "@nestjs/cache-manager";
 import { Controller, Get, Param, ParseIntPipe, Query, UseInterceptors } from "@nestjs/common";
-import { TelegramService } from "./telegram.service";
-import { RepositoryList, TgMessageList } from "@./shared-lib";
 import { AllowAnonymous } from "../auth/anonymous.decorator";
+import { TelegramService } from "./telegram.service";
 
 @Controller("telegram")
 @UseInterceptors(CacheInterceptor)

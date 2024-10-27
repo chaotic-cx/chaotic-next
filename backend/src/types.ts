@@ -1,5 +1,5 @@
-import type { Build, Builder, Package, Repo } from "./builder/builder.entity";
 import type { Repository } from "typeorm";
+import type { Build, Builder, Package, Repo } from "./builder/builder.entity";
 
 export type BuildClass = string | number;
 

@@ -1,3 +1,14 @@
+import {
+    type AnimationGroupMetadata,
+    type AnimationQueryMetadata,
+    type AnimationTriggerMetadata,
+    animate,
+    group,
+    query,
+    style,
+    transition,
+    trigger,
+} from "@angular/animations";
 import { NgModule } from "@angular/core";
 import { RouterModule, type Routes } from "@angular/router";
 import { AboutComponent } from "./about/about.component";
@@ -10,17 +21,6 @@ import { NotFoundComponent } from "./not-found/not-found.component";
 import { PackageListComponent } from "./package-list/package-list.component";
 import { StatsPage } from "./stats-page/stats-page";
 import { StatusComponent } from "./status/status.component";
-import {
-    animate,
-    type AnimationGroupMetadata,
-    type AnimationQueryMetadata,
-    type AnimationTriggerMetadata,
-    group,
-    query,
-    style,
-    transition,
-    trigger,
-} from "@angular/animations";
 
 export const routes: Routes = [
     {

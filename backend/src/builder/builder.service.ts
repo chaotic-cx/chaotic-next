@@ -1,13 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import IORedis from "ioredis";
 import { type Context, Service, ServiceBroker } from "moleculer";
 import type { Repository } from "typeorm";
 import { generateNodeId } from "../functions";
-import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from "./builder.entity";
-import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
 import type { BuilderDbConnections, MoleculerBuildObject } from "../types";
-import { ConfigService } from "@nestjs/config";
+import { Build, Builder, Package, Repo, builderExists, pkgnameExists, repoExists } from "./builder.entity";
+import { MoleculerConfigCommonService, brokerConfig } from "./moleculer.config";
 
 @Injectable()
 export class BuilderService {

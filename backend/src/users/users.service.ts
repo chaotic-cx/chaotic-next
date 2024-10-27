@@ -1,9 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import type { User as UserType, Users } from "../types";
-import { User, userExists } from "./users.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
+import type { User as UserType, Users } from "../types";
+import { User, userExists } from "./users.entity";
 
 @Injectable()
 export class UsersService {

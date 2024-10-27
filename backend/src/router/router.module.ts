@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { Mirror, RouterHit } from "./router.entity";
-import { Package, Repo } from "../builder/builder.entity";
-import { RouterService } from "./router.service";
-import { RouterController } from "./router.controller";
 import { APP_GUARD } from "@nestjs/core";
+import { TypeOrmModule } from "@nestjs/typeorm";
 import { JwtGuard } from "../auth/jwt.auth.guard";
+import { Package, Repo } from "../builder/builder.entity";
+import { RouterController } from "./router.controller";
+import { Mirror, RouterHit } from "./router.entity";
+import { RouterService } from "./router.service";
 
 @Module({
     controllers: [RouterController],
