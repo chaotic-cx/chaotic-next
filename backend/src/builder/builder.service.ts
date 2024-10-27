@@ -6,8 +6,8 @@ import { type Context, Service, ServiceBroker } from "moleculer";
 import type { Repository } from "typeorm";
 import { generateNodeId } from "../functions";
 import type { BuilderDbConnections, MoleculerBuildObject } from "../types";
-import { Build, Builder, Package, Repo, builderExists, pkgnameExists, repoExists } from "./builder.entity";
-import { MoleculerConfigCommonService, brokerConfig } from "./moleculer.config";
+import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from "./builder.entity";
+import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
 
 @Injectable()
 export class BuilderService {
@@ -108,7 +108,51 @@ export class BuilderService {
         Logger.debug("No options provided", "BuilderService");
         return this.buildRepository.find();
     }
+
+    /**
+     * Returns statistics via a query.
+     */
+    async getStats(query: any): Promise<any> {
+        Logger.debug(query, "BuilderService");
+        return this.buildRepository.find(query);
+    }
+
+    /**
+     * Returns a build from the database.
+     * @param days The number of days to look back
+     * @returns The last n builds
+     */
+    async getLastBuilds(days: number): Promise<Build[]> {
+        return this.buildRepository
+            .createQueryBuilder("build")
+            .leftJoinAndSelect("build.pkgbase", "package")
+            .leftJoinAndSelect("build.builder", "builder")
+            .leftJoinAndSelect("build.repo", "repo")
+            .orderBy("build.timestamp", "DESC")
+            .limit(days)
+            .getMany();
+    }
+
+    /**
+     * Returns the last build for a specific package.
+     * @param options The package name, days to look back and offset
+     */
+    async getLastBuildsForPackage(options: { pkgname: string; days: number; offset?: number }): Promise<Build[]> {
+        if (!options.offset) options.offset = 0;
+
+        return this.buildRepository
+            .createQueryBuilder("build")
+            .leftJoinAndSelect("build.pkgbase", "package")
+            .leftJoinAndSelect("build.builder", "builder")
+            .leftJoinAndSelect("build.repo", "repo")
+            .where("package.pkgname = :pkgname", { pkgname: options.pkgname })
+            .orderBy("build.timestamp", "DESC")
+            .limit(options.days)
+            .offset(options.offset)
+            .getMany();
+    }
 }
+
 
 /**
  * The metrics service that provides the metrics actions for other services to call.
