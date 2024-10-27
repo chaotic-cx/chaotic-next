@@ -11,6 +11,7 @@ import { UsersModule } from "./users/users.module";
 import { TerminusModule } from "@nestjs/terminus";
 import { dataSourceOptions } from "./data.source";
 import appConfig from "./config/app.config";
+import { TelegramModule } from "./telegram/telegram.module";
 
 @Module({
     imports: [
@@ -24,6 +25,7 @@ import appConfig from "./config/app.config";
             },
         }),
         RouterModule,
+        TelegramModule,
         TerminusModule,
         TypeOrmModule.forRoot({ ...dataSourceOptions, autoLoadEntities: true }),
         UsersModule,
