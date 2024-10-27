@@ -98,7 +98,7 @@
         "@angular/platform-browser-dynamic": "18.2.8",
         "@angular/router": "18.2.8",
         "@fastify/cors": "^10.0.1",
-        "@fastify/helmet": "^11.1.1",
+        "@fastify/helmet": "^12.0.0",
         "@fastify/static": "^7.0.4",
         "@fontsource/fira-sans": "^5.1.0",
         "@fontsource/jetbrains-mono": "^5.1.1",
