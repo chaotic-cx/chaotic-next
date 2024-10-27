@@ -31,9 +31,9 @@ export class JwtStrategy extends PassportStrategy(BaseStrategy, "jwt") {
         if (!this.validAudiences.some((a) => a === payload.aud)) {
             throw new UnauthorizedException("Invalid audience");
         }
-
-        // This is available through your application as req.user
-        Logger.debug(`User with audience ${payload.aud} has been validated`, "JwtStrategy");
-        return {};
+        return {
+            sub: payload.sub,
+            scope: payload.scope,
+        };
     }
 }

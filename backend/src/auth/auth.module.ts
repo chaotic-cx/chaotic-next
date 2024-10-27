@@ -20,7 +20,7 @@ import { APP_GUARD } from "@nestjs/core";
         ConfigModule.forFeature(authConfig),
         JwtModule.register({
             global: true,
-            secret: process.env.CAUR_JWT_SECRET || "chaotic",
+            secret: process.env.CAUR_JWT_SECRET,
             signOptions: { expiresIn: "7d" },
         }),
         PassportModule.register({ defaultStrategy: ["jwt", "local"] }),

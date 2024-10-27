@@ -38,6 +38,7 @@ tdlib
 # System Files
 .DS_Store
 Thumbs.db
+core
 
 .nx/cache
 .nx/workspace-data

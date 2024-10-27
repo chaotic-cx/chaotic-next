@@ -25,9 +25,9 @@ export class BuilderService {
         private packageRepository: Repository<Package>,
         private configService: ConfigService,
     ) {
-        const redisPassword: string = this.configService.getOrThrow<string>("REDIS_PASSWORD");
-        const redisHost: string = this.configService.get<string>("REDIS_HOST") || "localhost";
-        const redisPort: number = this.configService.get<number>("REDIS_PORT") || 6379;
+        const redisPassword: string = this.configService.get<string | undefined>("redis.password");
+        const redisHost: string = this.configService.get<string>("redis.host");
+        const redisPort: number = this.configService.get<number>("redis.port");
 
         try {
             this.connection = new IORedis(redisPort, redisHost, {

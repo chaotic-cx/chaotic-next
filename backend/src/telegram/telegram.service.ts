@@ -22,15 +22,15 @@ export class TelegramService {
     ) {
         configure({ tdjson: getTdjson() });
 
-        const TELEGRAM_API_HASH = this.configService.getOrThrow<string>("telegram.hash") || "";
-        const TELEGRAM_API_ID = this.configService.getOrThrow<string>("telegram.appId") || "";
-        const TELEGRAM_DB_ENCRYPTION_KEY = this.configService.getOrThrow<string>("telegram.encryptionKey") || "";
+        const tgHash = this.configService.getOrThrow<string>("telegram.hash") || "";
+        const tgAppId = this.configService.getOrThrow<string>("telegram.appId") || "";
+        const tgEncryptionKey = this.configService.getOrThrow<string>("telegram.encryptionKey") || "";
 
-        if ((TELEGRAM_API_ID && TELEGRAM_API_HASH && TELEGRAM_DB_ENCRYPTION_KEY) !== "") {
+        if ((tgAppId && tgHash && tgEncryptionKey) !== "") {
             this.tgClient = createClient({
-                apiId: Number.parseInt(TELEGRAM_API_ID),
-                apiHash: TELEGRAM_API_HASH,
-                databaseEncryptionKey: TELEGRAM_DB_ENCRYPTION_KEY,
+                apiId: Number.parseInt(tgAppId),
+                apiHash: tgHash,
+                databaseEncryptionKey: tgEncryptionKey,
                 databaseDirectory: "./tdlib/db",
                 filesDirectory: "./tdlib/files",
             });
