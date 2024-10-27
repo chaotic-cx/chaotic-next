@@ -12,6 +12,8 @@ import { dataSourceOptions } from "./data.source";
 import { RouterModule } from "./router/router.module";
 import { TelegramModule } from "./telegram/telegram.module";
 import { UsersModule } from "./users/users.module";
+import { MetricsModule } from "./metrics/metrics.module";
+import { MiscModule } from "./misc/misc.module";
 
 @Module({
     imports: [
@@ -24,6 +26,8 @@ import { UsersModule } from "./users/users.module";
                 level: IS_PROD ? "info" : "debug",
             },
         }),
+        MetricsModule,
+        MiscModule,
         RouterModule,
         TelegramModule,
         TerminusModule,
