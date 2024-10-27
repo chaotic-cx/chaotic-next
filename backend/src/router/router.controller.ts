@@ -1,20 +1,12 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post } from "@nestjs/common";
 import { RouterService } from "./router.service";
 import type { RouterHitBody } from "../types";
-import { ConfigService } from "@nestjs/config";
 import type { RouterHit, RouterHitColumns } from "./router.entity";
 import { RouterHitColumPipe } from "./router.pipe";
 
 @Controller("router")
 export class RouterController {
-    authToken: string;
-
-    constructor(
-        private configService: ConfigService,
-        private routerService: RouterService,
-    ) {
-        this.authToken = this.configService.getOrThrow<string>("router.token");
-    }
+    constructor(private routerService: RouterService) {}
 
     @HttpCode(HttpStatus.OK)
     @Post("hit")

@@ -6,7 +6,7 @@ export const requiredEnvVarsProd: string[] = [
     "AUTH0_CLIENT_SECRET",
     "AUTH0_DOMAIN",
     "CAUR_PORT",
-    "CAUR_ROUTER_TOKEN",
+    "CAUR_HOST",
     "PG_DATABASE",
     "PG_HOST",
     "PG_PASSWORD",

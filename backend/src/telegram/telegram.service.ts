@@ -2,7 +2,7 @@ import {
     CACHE_TELEGRAM_TTL,
     CAUR_DEPLOY_LOG_ID,
     CAUR_NEWS_ID,
-    RepositoryList,
+    type RepositoryList,
     type TgMessage,
     type TgMessageList,
 } from "@./shared-lib";
@@ -22,9 +22,9 @@ export class TelegramService {
     ) {
         configure({ tdjson: getTdjson() });
 
-        const TELEGRAM_API_HASH = this.configService.get<string>("TELEGRAM_API_HASH") || "";
-        const TELEGRAM_API_ID = this.configService.get<string>("TELEGRAM_API_ID") || "";
-        const TELEGRAM_DB_ENCRYPTION_KEY = this.configService.get<string>("TELEGRAM_DB_ENCRYPTION_KEY") || "";
+        const TELEGRAM_API_HASH = this.configService.getOrThrow<string>("telegram.hash") || "";
+        const TELEGRAM_API_ID = this.configService.getOrThrow<string>("telegram.appId") || "";
+        const TELEGRAM_DB_ENCRYPTION_KEY = this.configService.getOrThrow<string>("telegram.encryptionKey") || "";
 
         if ((TELEGRAM_API_ID && TELEGRAM_API_HASH && TELEGRAM_DB_ENCRYPTION_KEY) !== "") {
             this.tgClient = createClient({
