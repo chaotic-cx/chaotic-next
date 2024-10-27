@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { Build, Builder, Package, Repo } from "./builder.entity";
-import { BuilderController } from "./builder.controller";
-import { BuilderService } from "./builder.service";
 import { ConfigModule } from "@nestjs/config";
+import { TypeOrmModule } from "@nestjs/typeorm";
 import builderConfig from "../config/builder.config";
+import { BuilderController } from "./builder.controller";
+import { Build, Builder, Package, Repo } from "./builder.entity";
+import { BuilderService } from "./builder.service";
 
 @Module({
     controllers: [BuilderController],

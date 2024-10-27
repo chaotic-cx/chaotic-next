@@ -1,8 +1,8 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post } from "@nestjs/common";
-import { RouterService } from "./router.service";
 import type { RouterHitBody } from "../types";
 import type { RouterHit, RouterHitColumns } from "./router.entity";
 import { RouterHitColumPipe } from "./router.pipe";
+import { RouterService } from "./router.service";
 
 @Controller("router")
 export class RouterController {

@@ -1,12 +1,12 @@
 import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType, Repository, TgMessageList } from "@./shared-lib";
+import { TitleCasePipe, UpperCasePipe } from "@angular/common";
 import { AfterViewInit, ChangeDetectorRef, Component } from "@angular/core";
 import { FormControl, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { RouterLink } from "@angular/router";
 import { AppService } from "../app.service";
 import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from "../functions";
-import { ToastComponent } from "../toast/toast.component";
-import { TitleCasePipe, UpperCasePipe } from "@angular/common";
 import { RepoPipe } from "../pipes/repo.pipe";
+import { ToastComponent } from "../toast/toast.component";
 
 @Component({
     selector: "app-deploy-log-full",

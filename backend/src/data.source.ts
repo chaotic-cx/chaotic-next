@@ -1,8 +1,8 @@
+import { DataSource, type DataSourceOptions } from "typeorm";
 import { Build, Builder, Repo } from "./builder/builder.entity";
+import { IS_PROD } from "./constants";
 import { Mirror, RouterHit } from "./router/router.entity";
 import { User } from "./users/users.entity";
-import { IS_PROD } from "./constants";
-import { DataSource, type DataSourceOptions } from "typeorm";
 
 export const dataSourceOptions: DataSourceOptions = {
     type: "postgres",

@@ -1,7 +1,7 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, type Repository } from "typeorm";
-import { Package, Repo } from "../builder/builder.entity";
 import { Logger } from "@nestjs/common";
 import { Mutex } from "async-mutex";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, type Repository } from "typeorm";
+import { Package, Repo } from "../builder/builder.entity";
 
 @Entity()
 export class Mirror {

@@ -1,7 +1,7 @@
 import type { CountNameObject, UserAgentList } from "@./shared-lib";
 import type { ConfigService } from "@nestjs/config";
-import { requiredEnvVarsDev, requiredEnvVarsProd } from "./constants";
 import * as bcrypt from "bcrypt";
+import { requiredEnvVarsDev, requiredEnvVarsProd } from "./constants";
 
 /**
  * Parse the output of the non-single line metrics.

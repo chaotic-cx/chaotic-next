@@ -1,7 +1,7 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, type Repository } from "typeorm";
-import { BuildStatus } from "../types";
 import { Logger } from "@nestjs/common";
 import { Mutex } from "async-mutex";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, type Repository } from "typeorm";
+import { BuildStatus } from "../types";
 
 @Entity()
 export class Builder {

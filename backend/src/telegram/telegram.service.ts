@@ -6,11 +6,11 @@ import {
     type TgMessage,
     type TgMessageList,
 } from "@./shared-lib";
-import { type Cache, CACHE_MANAGER } from "@nestjs/cache-manager";
+import { CACHE_MANAGER, type Cache } from "@nestjs/cache-manager";
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { getTdjson } from "prebuilt-tdlib";
 import { type Client, configure, createClient } from "tdl";
-import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class TelegramService {
@@ -230,7 +230,7 @@ export class TelegramService {
 
                 // Weed out any pre infra 3.0 messages
                 extractedMessages = extractedMessages.filter((message) => {
-                    const regex = new RegExp(/[📣✅🚨⏳]/, "u");
+                    const regex = new RegExp(/[📣✅🚨⏳]/u, "u");
                     return message.content.toString().match(regex) !== null;
                 });
             }

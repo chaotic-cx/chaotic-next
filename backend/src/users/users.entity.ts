@@ -1,8 +1,8 @@
-import { Column, Entity, type FindManyOptions, PrimaryGeneratedColumn, type Repository } from "typeorm";
-import { type User as UserType, UserRole } from "../types";
 import { Logger } from "@nestjs/common";
 import { Mutex } from "async-mutex";
+import { Column, Entity, type FindManyOptions, PrimaryGeneratedColumn, type Repository } from "typeorm";
 import { getPasswordHash } from "../functions";
+import { UserRole, type User as UserType } from "../types";
 
 @Entity()
 export class User {

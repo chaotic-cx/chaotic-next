@@ -3,16 +3,16 @@ import { isPlatformBrowser } from "@angular/common";
 import { HttpClient } from "@angular/common/http";
 import { AfterViewInit, Component, ElementRef, Inject, OnInit, PLATFORM_ID, Renderer2 } from "@angular/core";
 import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
+import { flavors } from "@catppuccin/palette";
 import { initFlowbite } from "flowbite";
 import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en";
 import { Highlight } from "ngx-highlightjs";
+import { routeAnimations } from "./app.routes";
 import { FooterComponent } from "./footer/footer.component";
 import { loadTheme } from "./functions";
 import { MenubarComponent } from "./menubar/menubar.component";
 import { StatusComponent } from "./status/status.component";
-import { routeAnimations } from "./app.routes";
-import { flavors } from "@catppuccin/palette";
 
 @Component({
     selector: "app-root",

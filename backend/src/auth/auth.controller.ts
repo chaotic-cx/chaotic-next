@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Post, UseGuards } from "@nestjs/common";
-import { AuthService } from "./auth.service";
 import type { LoginCredentials } from "../types";
+import { AuthService } from "./auth.service";
 import { LocalAuthGuard } from "./local.auth.guard";
 
 @Controller("auth")
