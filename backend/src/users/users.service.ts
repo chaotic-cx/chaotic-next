@@ -41,15 +41,13 @@ export class UsersService {
      * @param auth
      * @param checkFor
      */
-    async checkIfUserExists(auth: string, checkFor: "mail" | "username" | "githubId"): Promise<User | null> {
+    async checkIfUserExists(auth: string, checkFor: "mail" | "username"): Promise<User | null> {
         Logger.debug(`Checking if user ${auth} exists`, "UsersService");
         switch (checkFor) {
             case "username":
                 return this.userRepository.findOne({ where: { name: auth } });
             case "mail":
                 return this.userRepository.findOne({ where: { mail: auth } });
-            case "githubId":
-                return this.userRepository.findOne({ where: { githubId: auth } });
         }
     }
 
