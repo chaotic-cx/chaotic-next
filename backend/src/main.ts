@@ -50,10 +50,7 @@ async function bootstrap(): Promise<void> {
     const documentFactory = () => SwaggerModule.createDocument(app, config);
     SwaggerModule.setup("api", app, documentFactory);
 
-    await app.listen(
-        configService.get<string>("CAUR_PORT") || 3000,
-        configService.get<string>("CAUR_HOST") || "0.0.0.0",
-    );
+    await app.listen(configService.get<number>("app.port"), configService.get<string>("app.host"));
 
     // Hot Module Replacement support
     if (module.hot) {

@@ -5,11 +5,11 @@ import type { FastifyRequest } from "fastify";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-    jwtSecret: string;
+    private readonly jwtSecret: string;
 
     constructor(
-        private configService: ConfigService,
-        private jwtService: JwtService,
+        private readonly configService: ConfigService,
+        private readonly jwtService: JwtService,
     ) {
         this.jwtSecret = this.configService.get<string>("CAUR_JWT_SECRET");
     }
@@ -25,7 +25,7 @@ export class AuthGuard implements CanActivate {
         const request = context.switchToHttp().getRequest();
         const token = this.extractTokenFromHeader(request);
         if (!token) {
-            throw new UnauthorizedException();
+            throw new UnauthorizedException("Access token not provided");
         }
         try {
             Logger.debug("Verifying token", "AuthGuard");
@@ -33,7 +33,7 @@ export class AuthGuard implements CanActivate {
                 secret: this.jwtSecret,
             });
         } catch {
-            throw new UnauthorizedException();
+            throw new UnauthorizedException("Invalid access token");
         }
         return true;
     }
