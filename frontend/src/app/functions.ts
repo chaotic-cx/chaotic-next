@@ -7,21 +7,21 @@ import {
     type DeploymentList,
     DeploymentType,
     type RepositoryList,
-    type TgMessageList,
+    type TgMessageList
 } from "@./shared-lib";
-import { ElementRef, Renderer2 } from "@angular/core";
+import type { ElementRef, Renderer2 } from "@angular/core";
 import { type CatppuccinFlavor, flavors } from "@catppuccin/palette";
 import TimeAgo from "javascript-time-ago";
 import { lastValueFrom } from "rxjs";
-import { AppService } from "./app.service";
+import type { AppService } from "./app.service";
 
 /**
  * Poll for new deployments.
- * @param interval
+ * @param interval The interval to poll at.
  * @param func The function to call.
  */
 export function startShortPolling(interval: any, func: () => void): void {
-    let initialInterval;
+    let initialInterval: any;
     interval = setInterval(func, interval);
     clearInterval(initialInterval);
 }
@@ -208,6 +208,11 @@ export function toLiveLog(url: string): string {
     return finalUrl;
 }
 
+/**
+ * Convert the entities object of a Telegram message to HTML.
+ * @param ctx The context of the message.
+ * @returns A string containing the message as HTML.
+ */
 export function entityToHtml(ctx: any) {
     const text = ctx.msg?.text;
     const entities = ctx.msg?.entities;
@@ -218,7 +223,7 @@ export function entityToHtml(ctx: any) {
 
     let tags: { index: number; tag: string | undefined }[] = [];
 
-    entities.forEach((entity) => {
+    for (const entity of entities) {
         const startTag = getTag(entity, text);
         let searchTag = tags.filter((tag) => tag.index === entity.offset);
         if (searchTag.length > 0 && startTag) searchTag[0].tag += startTag;
@@ -228,7 +233,7 @@ export function entityToHtml(ctx: any) {
                 tag: startTag,
             });
 
-        const closeTag = startTag?.indexOf("<a ") === 0 ? "</a>" : "</" + startTag?.slice(1);
+        const closeTag = startTag?.indexOf("<a ") === 0 ? "</a>" : `</${startTag?.slice(1)}`;
         searchTag = tags.filter((tag) => tag.index === entity.offset + entity.length);
         if (searchTag.length > 0) searchTag[0].tag = closeTag + searchTag[0].tag;
         else
@@ -236,7 +241,8 @@ export function entityToHtml(ctx: any) {
                 index: entity.offset + entity.length,
                 tag: closeTag,
             });
-    });
+    }
+
     let html = "";
     for (let i = 0; i < text.length; i++) {
         const tag = tags.filter((tag) => tag.index === i);
@@ -254,21 +260,21 @@ const getTag = (entity: any, text: string) => {
 
     switch (entity.type) {
         case "bold":
-            return `<strong>`;
+            return "<strong>";
         case "text_link":
             return `<a href="${entity.url}" target="_blank">`;
         case "url":
             return `<a href="${entityText}" target="_blank">`;
         case "italic":
-            return `<em>`;
+            return "<em>";
         case "code":
-            return `<code>`;
+            return "<code>";
         case "strikethrough":
-            return `<s>`;
+            return "<s>";
         case "underline":
-            return `<u>`;
+            return "<u>";
         case "pre":
-            return `<pre>`;
+            return "<pre>";
         case "mention":
             return `<a href="https://t.me/${entityText.replace("@", "")}" target="_blank">`;
         case "email":
@@ -276,4 +282,6 @@ const getTag = (entity: any, text: string) => {
         case "phone_number":
             return `<a href="tel:${entityText}">`;
     }
+
+    return undefined;
 };
