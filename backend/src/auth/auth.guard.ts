@@ -11,7 +11,7 @@ export class AuthGuard implements CanActivate {
         private readonly configService: ConfigService,
         private readonly jwtService: JwtService,
     ) {
-        this.jwtSecret = this.configService.get<string>("CAUR_JWT_SECRET");
+        this.jwtSecret = this.configService.get<string>("auth.jwtSecret");
     }
 
     /**
@@ -20,13 +20,13 @@ export class AuthGuard implements CanActivate {
      * @returns True if the request is authorized, throws an exception otherwise.
      */
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        Logger.debug("Checking if request is authorized", "AuthGuard");
-
         const request = context.switchToHttp().getRequest();
         const token = this.extractTokenFromHeader(request);
+
         if (!token) {
             throw new UnauthorizedException("Access token not provided");
         }
+
         try {
             Logger.debug("Verifying token", "AuthGuard");
             request.user = await this.jwtService.verifyAsync(token, {
@@ -35,6 +35,7 @@ export class AuthGuard implements CanActivate {
         } catch {
             throw new UnauthorizedException("Invalid access token");
         }
+        
         return true;
     }
 
