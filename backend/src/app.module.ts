@@ -13,6 +13,7 @@ import { MiscModule } from "./misc/misc.module";
 import { RouterModule } from "./router/router.module";
 import { TelegramModule } from "./telegram/telegram.module";
 import { UsersModule } from "./users/users.module";
+import { ThrottlerModule } from "@nestjs/throttler";
 
 @Module({
     imports: [
@@ -29,6 +30,12 @@ import { UsersModule } from "./users/users.module";
         RouterModule,
         TelegramModule,
         TerminusModule,
+        ThrottlerModule.forRoot([
+            {
+                ttl: 60000,
+                limit: 100,
+            },
+        ]),
         TypeOrmModule.forRoot({ ...dataSourceOptions, autoLoadEntities: true }),
         UsersModule,
     ],

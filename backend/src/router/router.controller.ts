@@ -3,11 +3,13 @@ import type { RouterHitBody } from "../types";
 import type { RouterHit, RouterHitColumns } from "./router.entity";
 import { RouterHitColumPipe } from "./router.pipe";
 import { RouterService } from "./router.service";
+import { SkipThrottle } from "@nestjs/throttler";
 
 @Controller("router")
 export class RouterController {
     constructor(private routerService: RouterService) {}
 
+    @SkipThrottle()
     @HttpCode(HttpStatus.OK)
     @Post("hit")
     async hitRouter(@Body() body: RouterHitBody): Promise<void> {
