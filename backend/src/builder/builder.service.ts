@@ -82,74 +82,132 @@ export class BuilderService {
     /**
      * Returns all builds from the database.
      */
-    async getBuilds(options?: any): Promise<Build[]> {
-        Logger.debug(options, "BuilderService");
-        if (options) {
-            const query: any = {};
-            switch (true) {
-                case "builder" in options:
-                    query.builderId = options.builder;
-                    break;
-                case Object.hasOwn(options, "status"):
-                    query.status = options.status;
-                    break;
-                case Object.hasOwn(options, "replaced"):
-                    query.replaced = options.replaced;
-                    break;
-                case Object.hasOwn(options, "pkgname"):
-                    query.pkgname = options.pkgname;
-                    break;
-                default:
-                    Logger.error("Invalid option provided", "BuilderService");
-            }
-            Logger.debug(query, "BuilderService");
-            return this.buildRepository.findBy(query);
-        }
-        Logger.debug("No options provided", "BuilderService");
-        return this.buildRepository.find();
-    }
-
-    /**
-     * Returns statistics via a query.
-     */
-    async getStats(query: any): Promise<any> {
-        Logger.debug(query, "BuilderService");
-        return this.buildRepository.find(query);
-    }
-
-    /**
-     * Returns a build from the database.
-     * @param days The number of days to look back
-     * @returns The last n builds
-     */
-    async getLastBuilds(days: number): Promise<Build[]> {
+    async getBuilds(options?: { offset: number; amount: number; builder?: string }): Promise<Build[]> {
         return this.buildRepository
             .createQueryBuilder("build")
             .leftJoinAndSelect("build.pkgbase", "package")
             .leftJoinAndSelect("build.builder", "builder")
             .leftJoinAndSelect("build.repo", "repo")
-            .orderBy("build.timestamp", "DESC")
-            .limit(days)
+            .orderBy("build.id", "DESC")
+            .skip(options.offset)
+            .take(options.amount)
+            .getMany();
+    }
+
+    /**
+     * Returns a build from the database.
+     * @param options An object containing the amount to look back and the offset
+     * @returns The last n builds, unless an offset is provided
+     */
+    async getLastBuilds(options: { offset: number; amount: number }): Promise<Build[]> {
+        return this.buildRepository
+            .createQueryBuilder("build")
+            .leftJoinAndSelect("build.pkgbase", "package")
+            .leftJoinAndSelect("build.builder", "builder")
+            .leftJoinAndSelect("build.repo", "repo")
+            .orderBy("build.id", "DESC")
+            .skip(options.offset)
+            .take(options.amount)
             .getMany();
     }
 
     /**
      * Returns the last build for a specific package.
-     * @param options The package name, days to look back and offset
+     * @param options The package name, amount to look back and offset
+     * @returns The last n builds for a specific package
      */
-    async getLastBuildsForPackage(options: { pkgname: string; days: number; offset?: number }): Promise<Build[]> {
-        if (!options.offset) options.offset = 0;
-
+    async getLastBuildsForPackage(options: { pkgname: string; amount: number; offset: number }): Promise<Build[]> {
         return this.buildRepository
             .createQueryBuilder("build")
             .leftJoinAndSelect("build.pkgbase", "package")
             .leftJoinAndSelect("build.builder", "builder")
             .leftJoinAndSelect("build.repo", "repo")
             .where("package.pkgname = :pkgname", { pkgname: options.pkgname })
-            .orderBy("build.timestamp", "DESC")
-            .limit(options.days)
-            .offset(options.offset)
+            .orderBy("build.id", "DESC")
+            .skip(options.offset)
+            .take(options.amount)
             .getMany();
+    }
+
+    /**
+     * Returns the build count for a specific package.
+     * @param pkgname The package name to look for
+     * @returns The build count for a specific package
+     */
+    getLastBuildsCountForPackage(pkgname: string): Promise<number> {
+        return this.buildRepository.count({ where: { pkgbase: { pkgname } } });
+    }
+
+    /**
+     * Returns the build count for a specific package per day.
+     * @param options The package name and amount to look back, or the offset.
+     * @returns The build count for a specific package per day
+     */
+    async getBuildsCountByPkgnamePerDay(options: {
+        pkgname: string;
+        amount: number;
+        offset: number;
+    }): Promise<{ day: string; count: string }[]> {
+        const { id } = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
+        return this.buildRepository
+            .createQueryBuilder("build")
+            .select("DATE_TRUNC('day', build.timestamp) AS day")
+            .addSelect("COUNT(*) AS count")
+            .where("build.pkgbase = :id", { id })
+            .groupBy("day")
+            .orderBy("day", "DESC")
+            .skip(options.offset)
+            .take(options.amount)
+            .getRawMany();
+    }
+
+    /**
+     * Returns the most frequently built packages.
+     * @param options The amount and offset, optionally a numeric status, as an object.
+     * @returns The most frequently built packages
+     */
+    getPopularPackages(options: {
+        amount: number;
+        offset: number;
+        status: number;
+    }): Promise<{ pkgname: string; count: string }[]> {
+        if (options.status) {
+            return this.builderRepository
+                .createQueryBuilder("build")
+                .select("pkgbase.pkgname")
+                .addSelect("COUNT(*) AS count")
+                .innerJoin("build.pkgbase", "pkgbase")
+                .groupBy("pkgbase.pkgname")
+                .orderBy("count", "DESC")
+                .where("build.status = :status", { status: options.status })
+                .skip(options.offset)
+                .take(options.amount)
+                .getRawMany();
+        }
+        return this.buildRepository
+            .createQueryBuilder("build")
+            .select("pkgbase.pkgname")
+            .addSelect("COUNT(*) AS count")
+            .innerJoin("build.pkgbase", "pkgbase")
+            .groupBy("pkgbase.pkgname")
+            .orderBy("count", "DESC")
+            .skip(options.offset)
+            .take(options.amount)
+            .getRawMany();
+    }
+
+    /**
+     * Returns the number of builds per builder.
+     * @returns The number of builds per builder
+     */
+    getBuildsPerBuilder(): Promise<{ builderId: string; count: string }[]> {
+        return this.buildRepository
+            .createQueryBuilder("build")
+            .select("build.builder")
+            .addSelect("COUNT(*) AS count")
+            .innerJoin("build.builder", "builder")
+            .groupBy("build.builder")
+            .getRawMany();
     }
 }
 

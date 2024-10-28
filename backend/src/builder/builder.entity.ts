@@ -1,6 +1,16 @@
 import { Logger } from "@nestjs/common";
 import { Mutex } from "async-mutex";
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, type Repository } from "typeorm";
+import {
+    Column,
+    CreateDateColumn,
+    Entity,
+    type EntitySubscriberInterface,
+    EventSubscriber,
+    type InsertEvent,
+    ManyToOne,
+    PrimaryGeneratedColumn,
+    type Repository,
+} from "typeorm";
 import { BuildStatus } from "../types";
 
 @Entity()
@@ -19,6 +29,9 @@ export class Builder {
 
     @Column({ type: "boolean", nullable: true })
     isActive: boolean;
+
+    @Column({ type: "timestamp", nullable: true })
+    lastActive: Date;
 }
 
 @Entity()
@@ -85,6 +98,13 @@ export class Build {
 
     @Column({ type: "boolean", nullable: true })
     replaced: boolean;
+}
+
+@EventSubscriber()
+export class UpdateLastBuilderActive implements EntitySubscriberInterface<Build> {
+    beforeInsert(event: InsertEvent<Build>) {
+        event.entity.builder.lastActive = new Date()
+    }
 }
 
 // Mutexes to prevent double entries

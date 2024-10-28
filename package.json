@@ -15,7 +15,8 @@
         "start:dev": "pnpm proxy-be & pnpm proxy-api & pnpm start | pino-pretty -cSt SYS:standard",
         "start:be-hr": "source backend/.env && nest build --webpack --webpackPath backend/webpack-hmr.config.cjs --watch --path backend/tsconfig.json | pino-pretty -cSt SYS:HH:MM --ignore pid,hostname",
         "start:be-nx": "nx run backend:serve | pino-pretty -cSt SYS:standard",
-        "start:home": "nx run frontend:serve"
+        "start:home": "nx run frontend:serve",
+        "typeorm": "typeorm-ts-node-esm"
     },
     "private": true,
     "devDependencies": {
@@ -36,7 +37,7 @@
         "@eslint/js": "^9.13.0",
         "@gitopslovers/nx-biome": "^1.5.0",
         "@nestjs/cli": "^10.4.5",
-        "@nestjs/schematics": "^10.2.2",
+        "@nestjs/schematics": "^10.2.3",
         "@nestjs/testing": "^10.4.6",
         "@nx/angular": "20.0.3",
         "@nx/esbuild": "20.0.3",
