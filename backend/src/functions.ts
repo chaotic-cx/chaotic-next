@@ -60,3 +60,12 @@ export async function getPasswordHash(password: string): Promise<string> {
     const saltOrRounds = 10;
     return bcrypt.hash(password, saltOrRounds);
 }
+
+/**
+ *  Get the number of days in the past.
+ *  @param n The number of days to look back
+ *  @returns The date n days in the past
+ */
+export function nDaysInPast(n: number): Date {
+    return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+}
