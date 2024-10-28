@@ -113,6 +113,7 @@
         "@nestjs/platform-fastify": "^10.4.6",
         "@nestjs/swagger": "^7.4.2",
         "@nestjs/terminus": "^10.2.3",
+        "@nestjs/throttler": "^6.2.1",
         "@nestjs/typeorm": "^10.0.2",
         "async-mutex": "^0.5.0",
         "axios": "^1.7.7",
