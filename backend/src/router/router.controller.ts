@@ -3,7 +3,6 @@ import type { RouterHitBody } from "../types";
 import type { RouterHit, RouterHitColumns } from "./router.entity";
 import { RouterHitColumPipe } from "./router.pipe";
 import { RouterService } from "./router.service";
-import { AllowAnonymous } from "../auth/anonymous.decorator";
 
 @Controller("router")
 export class RouterController {
@@ -26,19 +25,31 @@ export class RouterController {
 
     @HttpCode(HttpStatus.OK)
     @Get("/country/:days")
-    async getRouterStatsDefault(@Param("days", ParseIntPipe) days: number): Promise<RouterHit[]> {
+    async getRouterStatsDefault(
+        @Param("days", ParseIntPipe) days: number,
+    ): Promise<{ country: string; count: number }[]> {
         return this.routerService.getCountryStats(days);
     }
 
     @HttpCode(HttpStatus.OK)
     @Get("/mirror/:days")
-    async getRouterStatsMirror(@Param("days", ParseIntPipe) days: number): Promise<RouterHit[]> {
+    async getRouterStatsMirror(
+        @Param("days", ParseIntPipe) days: number,
+    ): Promise<{ mirror: string; count: number }[]> {
         return this.routerService.getMirrorStats(days);
     }
 
     @HttpCode(HttpStatus.OK)
     @Get("/package/:days")
-    async getRouterStatsPackage(@Param("days", ParseIntPipe) days: number): Promise<RouterHit[]> {
+    async getRouterStatsPackage(
+        @Param("days", ParseIntPipe) days: number,
+    ): Promise<{ pkgbase: string; count: number }[]> {
         return this.routerService.getPackageStats(days);
+    }
+
+    @HttpCode(HttpStatus.OK)
+    @Get("/per-day/:days")
+    async getRouterStatsPerDay(@Param("days", ParseIntPipe) days: number): Promise<{ day: string; count: number }[]> {
+        return this.routerService.getPerDayStats(days);
     }
 }
