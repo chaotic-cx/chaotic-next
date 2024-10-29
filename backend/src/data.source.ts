@@ -14,6 +14,7 @@ export const dataSourceOptions: DataSourceOptions = {
     synchronize: !IS_PROD,
     entities: [Builder, Build, Repo, RouterHit, Mirror, User],
     migrations: [],
+    cache: true,
     extra: {
         ssl: process.env.SSL_MODE === "require" ? { rejectUnauthorized: false } : false,
     },

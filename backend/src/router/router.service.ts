@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
-import { Package, Repo, pkgnameExists, repoExists } from "../builder/builder.entity";
+import { Package, pkgnameExists, Repo, repoExists } from "../builder/builder.entity";
 import { nDaysInPast } from "../functions";
 import type { RouterHitBody } from "../types";
-import { Mirror, RouterHit, type RouterHitColumns, mirrorExists } from "./router.entity";
+import { Mirror, mirrorExists, RouterHit, type RouterHitColumns } from "./router.entity";
 
 @Injectable()
 export class RouterService {
@@ -65,6 +65,7 @@ export class RouterService {
             .createQueryBuilder("router_hit")
             .select(`router_hit.${type}`)
             .where("router_hit.timestamp > :date", { date: nDaysInPast(days) })
+            .cache(true)
             .getMany();
     }
 
@@ -81,6 +82,7 @@ export class RouterService {
             .where("router_hit.timestamp > :date", { date: nDaysInPast(days) })
             .groupBy("router_hit.country")
             .orderBy("count", "DESC")
+            .cache(true)
             .getRawMany();
     }
 
@@ -98,6 +100,7 @@ export class RouterService {
             .where("router_hit.timestamp > :date", { date: nDaysInPast(days) })
             .groupBy("mirror.hostname")
             .orderBy("count", "DESC")
+            .cache(true)
             .getRawMany();
     }
 
@@ -115,6 +118,7 @@ export class RouterService {
             .where("router_hit.timestamp > :date", { date: nDaysInPast(days) })
             .groupBy("package.pkgname")
             .orderBy("count", "DESC")
+            .cache(true)
             .getRawMany();
     }
 
@@ -131,6 +135,7 @@ export class RouterService {
             .where("router_hit.timestamp > :date", { date: nDaysInPast(days) })
             .groupBy("DATE(router_hit.timestamp)")
             .orderBy("date", "ASC")
+            .cache(true)
             .getRawMany();
     }
 }

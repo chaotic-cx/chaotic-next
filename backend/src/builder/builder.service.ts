@@ -6,8 +6,8 @@ import { type Context, Service, ServiceBroker } from "moleculer";
 import type { Repository } from "typeorm";
 import { generateNodeId } from "../functions";
 import type { BuilderDbConnections, MoleculerBuildObject } from "../types";
-import { Build, Builder, Package, Repo, builderExists, pkgnameExists, repoExists } from "./builder.entity";
-import { MoleculerConfigCommonService, brokerConfig } from "./moleculer.config";
+import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from "./builder.entity";
+import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
 
 @Injectable()
 export class BuilderService {
@@ -126,6 +126,7 @@ export class BuilderService {
             .orderBy("build.id", "DESC")
             .skip(options.offset)
             .take(options.amount)
+            .cache(true)
             .getMany();
     }
 
@@ -135,7 +136,7 @@ export class BuilderService {
      * @returns The build count for a specific package
      */
     getLastBuildsCountForPackage(pkgname: string): Promise<number> {
-        return this.buildRepository.count({ where: { pkgbase: { pkgname } } });
+        return this.buildRepository.count({ where: { pkgbase: { pkgname } }, cache: true });
     }
 
     /**
@@ -158,6 +159,7 @@ export class BuilderService {
             .orderBy("day", "DESC")
             .skip(options.offset)
             .take(options.amount)
+            .cache(true)
             .getRawMany();
     }
 
@@ -182,6 +184,7 @@ export class BuilderService {
                 .where("build.status = :status", { status: options.status })
                 .skip(options.offset)
                 .take(options.amount)
+                .cache(true)
                 .getRawMany();
         }
         return this.buildRepository
@@ -193,6 +196,7 @@ export class BuilderService {
             .orderBy("count", "DESC")
             .skip(options.offset)
             .take(options.amount)
+            .cache(true)
             .getRawMany();
     }
 
@@ -207,6 +211,7 @@ export class BuilderService {
             .addSelect("COUNT(*) AS count")
             .innerJoin("build.builder", "builder")
             .groupBy("build.builder")
+            .cache(true)
             .getRawMany();
     }
 }
