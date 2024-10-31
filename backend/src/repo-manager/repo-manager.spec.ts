@@ -1,7 +1,18 @@
-import { RepoManagerModule } from "./repo-manager.module";
+import { RepoManagerService } from "./repo-manager.service";
+import { Test, TestingModule } from "@nestjs/testing";
 
-describe("RepoManager", () => {
+describe("RepoManagerService", () => {
+    let service: RepoManagerService;
+
+    beforeEach(async () => {
+        const module: TestingModule = await Test.createTestingModule({
+            providers: [RepoManagerService],
+        }).compile();
+
+        service = module.get<RepoManagerService>(RepoManagerService);
+    });
+
     it("should be defined", () => {
-        expect(new RepoManagerModule()).toBeDefined();
+        expect(service).toBeDefined();
     });
 });
