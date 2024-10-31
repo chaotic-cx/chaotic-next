@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import IORedis from "ioredis";
 import { type Context, Service, ServiceBroker } from "moleculer";
-import type { Repository } from "typeorm";
+import { Repository } from "typeorm";
 import { generateNodeId } from "../functions";
 import type { BuilderDbConnections, MoleculerBuildObject } from "../types";
 import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from "./builder.entity";
@@ -13,6 +13,7 @@ import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
 export class BuilderService {
     private broker: ServiceBroker;
     private readonly connection: IORedis;
+    private readonly queryCaches: string[] = [];
 
     constructor(
         @InjectRepository(Build)
@@ -91,6 +92,7 @@ export class BuilderService {
             .orderBy("build.id", "DESC")
             .skip(options.offset)
             .take(options.amount)
+            .cache("builds_general", 30000)
             .getMany();
     }
 
@@ -108,6 +110,7 @@ export class BuilderService {
             .orderBy("build.id", "DESC")
             .skip(options.offset)
             .take(options.amount)
+            .cache("builds_latest", 30000)
             .getMany();
     }
 
@@ -126,7 +129,7 @@ export class BuilderService {
             .orderBy("build.id", "DESC")
             .skip(options.offset)
             .take(options.amount)
-            .cache(true)
+            .cache("builds_latest_pkg", 30000)
             .getMany();
     }
 
@@ -136,7 +139,10 @@ export class BuilderService {
      * @returns The build count for a specific package
      */
     getLastBuildsCountForPackage(pkgname: string): Promise<number> {
-        return this.buildRepository.count({ where: { pkgbase: { pkgname } }, cache: true });
+        return this.buildRepository.count({
+            where: { pkgbase: { pkgname } },
+            cache: { id: `builds_count_${pkgname}`, milliseconds: 30000 },
+        });
     }
 
     /**
@@ -159,7 +165,7 @@ export class BuilderService {
             .orderBy("day", "DESC")
             .skip(options.offset)
             .take(options.amount)
-            .cache(true)
+            .cache(`builds_${options.pkgname}_per_day`, 30000)
             .getRawMany();
     }
 
@@ -184,7 +190,6 @@ export class BuilderService {
                 .where("build.status = :status", { status: options.status })
                 .skip(options.offset)
                 .take(options.amount)
-                .cache(true)
                 .getRawMany();
         }
         return this.buildRepository
@@ -211,7 +216,7 @@ export class BuilderService {
             .addSelect("COUNT(*) AS count")
             .innerJoin("build.builder", "builder")
             .groupBy("build.builder")
-            .cache(true)
+            .cache("builds-per-builder", 30000)
             .getRawMany();
     }
 }

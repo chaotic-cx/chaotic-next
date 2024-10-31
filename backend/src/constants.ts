@@ -19,3 +19,5 @@ export const requiredEnvVarsProd: string[] = [
 ];
 
 export const requiredEnvVarsDev: string[] = ["PG_DATABASE", "PG_HOST", "PG_PASSWORD", "PG_USER", "REDIS_PASSWORD"];
+
+export const ARCH= "x86_64";
