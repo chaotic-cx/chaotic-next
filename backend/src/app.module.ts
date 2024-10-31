@@ -14,6 +14,7 @@ import { RouterModule } from "./router/router.module";
 import { UsersModule } from "./users/users.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { RepoManagerModule } from "./repo-manager/repo-manager.module";
+import { TelegramModule } from "./telegram/telegram.module";
 
 @Module({
     imports: [
@@ -29,7 +30,7 @@ import { RepoManagerModule } from "./repo-manager/repo-manager.module";
         MiscModule,
         RepoManagerModule,
         RouterModule,
-        // TelegramModule,
+        TelegramModule,
         TerminusModule,
         ThrottlerModule.forRoot([
             {
