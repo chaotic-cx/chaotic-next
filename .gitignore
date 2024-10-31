@@ -47,3 +47,4 @@ core
 
 # Local env files
 .env
+repos/
