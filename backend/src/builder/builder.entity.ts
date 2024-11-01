@@ -12,6 +12,7 @@ import {
     type Repository,
 } from "typeorm";
 import { BuildStatus } from "../types";
+import { RepoStatus } from "../interfaces/repo-manager";
 
 @Entity()
 export class Builder {
@@ -71,6 +72,15 @@ export class Repo {
 
     @Column({ type: "varchar", nullable: true })
     repoUrl: string;
+
+    @Column({ type: "boolean", default: true })
+    isActive: boolean;
+
+    @Column({ type: "int", nullable: true })
+    status: RepoStatus;
+
+    @Column({ type: "varchar", default: "main" })
+    gitRef: string;
 }
 
 @Entity()
@@ -145,8 +155,6 @@ export async function pkgnameExists(pkgname: string, connection: Repository<Pack
                     lastUpdated: new Date().toISOString(),
                     isActive: true,
                 });
-            } else {
-                Logger.debug(`Package ${pkgname} found in database`, "BuilderEntity");
             }
 
             return packageExists;

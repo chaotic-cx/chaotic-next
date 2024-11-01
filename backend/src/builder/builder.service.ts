@@ -270,7 +270,7 @@ export class BuilderDatabaseService extends Service {
             pkgnameExists(params.pkgname, this.dbConnections.package),
         ]);
 
-        if (relations.includes(null)) {
+        if (relations.includes(undefined)) {
             Logger.error("Invalid relations, throwing entry away", "BuilderDatabaseService");
             return;
         }
