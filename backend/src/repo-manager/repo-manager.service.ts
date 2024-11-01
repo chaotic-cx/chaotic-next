@@ -632,14 +632,6 @@ class RepoManager {
     private extractBaseAndVersion(lines: string): ParsedPackage {
         const completeVersion: string = lines.match(/(?<=%VERSION%\n)\S+/)[0];
         const splitVersion: string[] = completeVersion.split("-");
-
-        Logger.log(
-            `${completeVersion}`,
-            "RepoManager",
-            splitVersion,
-            Number(completeVersion.split("-")[splitVersion.length - 1]),
-        );
-
         return {
             base: lines.match(/(?<=%BASE%\n)\S+/)[0],
             version: completeVersion.split("-")[0],
