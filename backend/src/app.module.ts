@@ -11,9 +11,10 @@ import { dataSourceOptions } from "./data.source";
 import { MetricsModule } from "./metrics/metrics.module";
 import { MiscModule } from "./misc/misc.module";
 import { RouterModule } from "./router/router.module";
-import { TelegramModule } from "./telegram/telegram.module";
 import { UsersModule } from "./users/users.module";
 import { ThrottlerModule } from "@nestjs/throttler";
+import { RepoManagerModule } from "./repo-manager/repo-manager.module";
+import { TelegramModule } from "./telegram/telegram.module";
 
 @Module({
     imports: [
@@ -27,6 +28,7 @@ import { ThrottlerModule } from "@nestjs/throttler";
         }),
         MetricsModule,
         MiscModule,
+        RepoManagerModule,
         RouterModule,
         TelegramModule,
         TerminusModule,

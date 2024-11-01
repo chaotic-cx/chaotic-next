@@ -69,3 +69,17 @@ export async function getPasswordHash(password: string): Promise<string> {
 export function nDaysInPast(n: number): Date {
     return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
+
+/**
+ * Check if a given string is a valid URL.
+ * @param url The URL to check
+ * @returns True if the URL is valid, false otherwise
+ */
+export function isValidUrl(url: string): boolean {
+    try {
+        new URL(url);
+        return true;
+    } catch (err: unknown) {
+        return false;
+    }
+}
