@@ -6,13 +6,8 @@ import { AllowAnonymous } from "../auth/anonymous.decorator";
 export class RepoManagerController {
     constructor(private repoManager: RepoManagerService) {}
 
-    @Get("test")
-    test(): void {
-        this.repoManager.test();
-    }
-
-    @Get("update")
-    update(): void {
-        this.repoManager.testClonePush();
+    @Get("run")
+    run(): void {
+        void this.repoManager.run();
     }
 }
