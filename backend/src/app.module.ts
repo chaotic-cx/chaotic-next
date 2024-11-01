@@ -6,7 +6,6 @@ import { LoggerModule } from "nestjs-pino";
 import { AuthModule } from "./auth/auth.module";
 import { BuilderModule } from "./builder/builder.module";
 import appConfig from "./config/app.config";
-import { IS_PROD } from "./constants";
 import { dataSourceOptions } from "./data.source";
 import { MetricsModule } from "./metrics/metrics.module";
 import { MiscModule } from "./misc/misc.module";
@@ -22,9 +21,8 @@ import { TelegramModule } from "./telegram/telegram.module";
         BuilderModule,
         ConfigModule.forRoot({ envFilePath: ".env", isGlobal: true, load: [appConfig] }),
         LoggerModule.forRoot({
-            pinoHttp: {
-                level: IS_PROD ? "info" : "debug",
-            },
+            // By default, off, but can be enabled by setting HTTP_LOGGING=true
+            forRoutes: process.env.HTTP_LOGGING === "true" ? undefined : [],
         }),
         MetricsModule,
         MiscModule,

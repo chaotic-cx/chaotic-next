@@ -3,6 +3,7 @@ import { Build, Builder, Repo } from "./builder/builder.entity";
 import { IS_PROD } from "./constants";
 import { Mirror, RouterHit } from "./router/router.entity";
 import { User } from "./users/users.entity";
+import { ArchlinuxPackage, RepoManagerSettings } from "./repo-manager/repo-manager.entity";
 
 export const dataSourceOptions: DataSourceOptions = {
     type: "postgres",
@@ -12,7 +13,7 @@ export const dataSourceOptions: DataSourceOptions = {
     password: process.env.PG_PASSWORD || "chaotic",
     database: process.env.PG_DATABASE || "chaotic",
     synchronize: !IS_PROD,
-    entities: [Builder, Build, Repo, RouterHit, Mirror, User],
+    entities: [Builder, Build, Repo, RouterHit, Mirror, User, ArchlinuxPackage, RepoManagerSettings],
     migrations: [],
     cache: true,
     extra: {
