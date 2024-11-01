@@ -10,7 +10,7 @@ export enum RepoStatus {
     RUNNING = 2,
 }
 
-export interface RepoPackage {
+export interface ArchRepoToCheck {
     name: string;
     path: string;
     workDir: string;
@@ -21,4 +21,17 @@ export interface ParsedPackage {
     pkgrel: number;
     version: string;
     name: string;
+}
+
+export interface RepoSettings {
+    gitAuthor: string;
+    gitEmail: string;
+    gitUsername: string;
+    gitlabToken: string;
+    alwaysRebuild: { [key: string]: string };
+}
+
+export interface PkgnameVersion {
+    pkgname: string;
+    archVersion: string;
 }

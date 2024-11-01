@@ -1,25 +1,6 @@
 import { Column, Entity, PrimaryGeneratedColumn, Repository } from "typeorm";
-import { RepoStatus } from "../interfaces/repo-manager";
 import { Mutex } from "async-mutex";
 import { Logger } from "@nestjs/common";
-
-@Entity()
-export class RepoManRepo {
-    @PrimaryGeneratedColumn()
-    id: number;
-
-    @Column({ type: "varchar" })
-    name: string;
-
-    @Column({ type: "varchar" })
-    url: string;
-
-    @Column({ type: "int" })
-    status: RepoStatus;
-
-    @Column({ type: "varchar", nullable: true })
-    gitRef: string;
-}
 
 @Entity()
 export class ArchlinuxPackage {
@@ -31,6 +12,9 @@ export class ArchlinuxPackage {
 
     @Column({ type: "varchar", nullable: true })
     version: string;
+
+    @Column({ type: "int", nullable: true })
+    pkgrel: number;
 
     @Column({ type: "varchar", nullable: true })
     arch: string;
