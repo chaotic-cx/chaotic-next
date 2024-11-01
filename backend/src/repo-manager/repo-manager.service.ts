@@ -130,7 +130,7 @@ export class RepoManagerService {
 }
 
 class RepoManager {
-    status: RepoStatus = RepoStatus.INACTIVE;
+    status: RepoStatus
     private readonly cloneDir: string = path.join(process.cwd(), "repos");
     private readonly httpService: HttpService;
     private readonly archlinuxRepos: string[] = ["core", "extra"];
@@ -159,6 +159,7 @@ class RepoManager {
         this.httpService = httpService;
         this.dbConnections = dbConnections;
         this.repoManagerSettings = settings;
+        this.status = RepoStatus.INACTIVE;
         Logger.log("RepoManager initialized", "RepoManager");
     }
 

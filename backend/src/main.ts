@@ -15,7 +15,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || "development";
 declare const module: any;
 
 async function bootstrap(): Promise<void> {
-    const fastifyAdapter = new FastifyAdapter({ logger: true });
+    const fastifyAdapter = new FastifyAdapter();
     const app: INestApplication = await NestFactory.create<NestFastifyApplication>(AppModule, fastifyAdapter, {
         bufferLogs: true,
     });
@@ -51,5 +51,5 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().then(() => {
-    Logger.log("🚀 Application has started up", "Bootstrap");
+    Logger.log("🚀 Application has started up.", "Bootstrap");
 });
