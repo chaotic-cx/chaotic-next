@@ -60,6 +60,9 @@ export class Package {
 
     @Column({ type: "jsonb", nullable: true })
     metadata: string;
+
+    @Column({ type: "int", nullable: true })
+    pkgrel: number;
 }
 
 @Entity()
@@ -81,6 +84,9 @@ export class Repo {
 
     @Column({ type: "varchar", default: "main" })
     gitRef: string;
+
+    @Column({ type: "varchar", nullable: true })
+    dbPath: string;
 }
 
 @Entity()

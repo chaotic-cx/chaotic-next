@@ -1,9 +1,9 @@
 import { DataSource, type DataSourceOptions } from "typeorm";
 import { Build, Builder, Repo } from "./builder/builder.entity";
 import { IS_PROD } from "./constants";
+import { ArchlinuxPackage, RepoManagerSettings } from "./repo-manager/repo-manager.entity";
 import { Mirror, RouterHit } from "./router/router.entity";
 import { User } from "./users/users.entity";
-import { ArchlinuxPackage, RepoManagerSettings } from "./repo-manager/repo-manager.entity";
 
 export const dataSourceOptions: DataSourceOptions = {
     type: "postgres",
