@@ -12,6 +12,7 @@ import {
     type Repository,
 } from "typeorm";
 import { BuildStatus } from "../types";
+import { RepoStatus } from "../interfaces/repo-manager";
 
 @Entity()
 export class Builder {
@@ -47,6 +48,18 @@ export class Package {
 
     @Column({ type: "boolean", nullable: false, default: true })
     isActive: boolean;
+
+    @Column({ type: "varchar", nullable: true })
+    version: string;
+
+    @Column({ type: "int", nullable: true })
+    bumpCount: number;
+
+    @Column({ type: "jsonb", nullable: true })
+    bumpTriggers: { pkgname: string; archVersion: string }[];
+
+    @Column({ type: "jsonb", nullable: true })
+    metadata: string;
 }
 
 @Entity()
@@ -59,6 +72,15 @@ export class Repo {
 
     @Column({ type: "varchar", nullable: true })
     repoUrl: string;
+
+    @Column({ type: "boolean", default: true })
+    isActive: boolean;
+
+    @Column({ type: "int", nullable: true })
+    status: RepoStatus;
+
+    @Column({ type: "varchar", default: "main" })
+    gitRef: string;
 }
 
 @Entity()
@@ -133,8 +155,6 @@ export async function pkgnameExists(pkgname: string, connection: Repository<Pack
                     lastUpdated: new Date().toISOString(),
                     isActive: true,
                 });
-            } else {
-                Logger.debug(`Package ${pkgname} found in database`, "BuilderEntity");
             }
 
             return packageExists;
@@ -189,7 +209,7 @@ export async function repoExists(name: string, connection: Repository<Repo>): Pr
             });
 
             if (repoExists === undefined) {
-                Logger.log(`Repo ${name} not found in database, creating new entry`, "BuilderEntity");
+                Logger.log(`Repo ${name} not found in database, creating new entry`, "RepoEntity");
                 repoExists = await connection.save({
                     name: name,
                 });
@@ -197,7 +217,7 @@ export async function repoExists(name: string, connection: Repository<Repo>): Pr
 
             return repoExists;
         } catch (err: unknown) {
-            Logger.error(err, "BuilderEntity");
+            Logger.error(err, "RepoEntity");
         }
     });
 }
