@@ -1,3 +1,5 @@
+import { Package } from "../builder/builder.entity";
+
 export interface Repo {
     name: string;
     url: string;
@@ -10,7 +12,7 @@ export enum RepoStatus {
     RUNNING = 2,
 }
 
-export interface ArchRepoToCheck {
+export interface RepoWorkDir {
     name: string;
     path: string;
     workDir: string;
@@ -35,3 +37,11 @@ export interface PkgnameVersion {
     pkgname: string;
     archVersion: string;
 }
+
+export interface RepoUpdateRunParams {
+    archPkg: ParsedPackage;
+    configs: CiConfigs;
+    pkg: Package;
+}
+
+export type CiConfigs = { [key: string]: string };

@@ -10,4 +10,9 @@ export class RepoManagerController {
     run(): void {
         void this.repoManager.run();
     }
+
+    @Get("update-db")
+    updateChaoticVersions(): void {
+        void this.repoManager.updateChaoticVersions();
+    }
 }
