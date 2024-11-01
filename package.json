@@ -118,7 +118,7 @@
         "async-mutex": "^0.5.0",
         "axios": "^1.7.7",
         "bcrypt": "^5.1.1",
-        "cache-manager": "^5.7.6",
+        "cache-manager": "^6.0.0",
         "cron": "^3.1.8",
         "fastify": "^4.28.1",
         "flowbite": "^2.5.2",
