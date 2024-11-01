@@ -51,5 +51,5 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().then(() => {
-    Logger.log("🚀 Application has started up.", "Bootstrap");
+    Logger.log("🚀 Application has started up", "Bootstrap");
 });

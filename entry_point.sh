@@ -50,4 +50,4 @@ if [ -n "$REDIS_SSH_HOST" ]; then
     echo "Tunnel established."
 fi
 
-exec node /app/main.js "$@" | node_modules/.bin/pino-pretty -cSt SYS:yyyy-mm-dd HH:MM --ignore pid,hostname
+exec node /app/main.js "$@" | node_modules/.bin/pino-pretty -cSt SYS:HH:MM --ignore pid,hostname

@@ -9,7 +9,7 @@ import { ArchlinuxPackage, archPkgExists, RepoManagerSettings } from "./repo-man
 import * as os from "node:os";
 import * as tar from "tar";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { IsNull, Not, Repository } from "typeorm";
 import { ARCH } from "../constants";
 import { Package, pkgnameExists, Repo } from "../builder/builder.entity";
 import { ConfigService } from "@nestjs/config";
@@ -20,11 +20,7 @@ import { CronJob } from "cron";
 @Injectable()
 export class RepoManagerService {
     private repoManager: RepoManager;
-    private archlinuxDb: Repository<ArchlinuxPackage>;
-    private repo: Repository<Repo>;
-    private settings: Repository<RepoManagerSettings>;
     private repos: Repo[];
-    private activeRepos: Repo[] = [];
     private tasks: CronJob[] = [];
 
     constructor(
@@ -39,6 +35,7 @@ export class RepoManagerService {
         @InjectRepository(Package)
         private packageRepository: Repository<Package>,
     ) {
+        Logger.log("Initializing RepoManager service...", "RepoManager");
         const repoSettings: RepoSettings = {
             gitAuthor: this.configService.getOrThrow<string>("repoMan.gitAuthor"),
             gitEmail: this.configService.getOrThrow<string>("repoMan.gitEmail"),
@@ -49,89 +46,66 @@ export class RepoManagerService {
         this.repoManager = new RepoManager(
             this.httpService,
             {
-                archPkg: archlinuxPackageRepository,
-                settings: settingsRepository,
-                repo: repoRepository,
-                packages: packageRepository,
+                archPkg: this.archlinuxPackageRepository,
+                settings: this.settingsRepository,
+                repo: this.repoRepository,
+                packages: this.packageRepository,
             },
             repoSettings,
         );
-        this.archlinuxDb = archlinuxPackageRepository;
-        this.repo = repoRepository;
-        this.settings = settingsRepository;
         void this.init();
     }
 
     async init(): Promise<void> {
-        Logger.log("Initializing RepoManager service...", "RepoManager");
-
-        this.repos = await this.repo.find({ where: { isActive: true } });
+        this.repos = await this.repoRepository.find({ where: { isActive: true, repoUrl: Not(IsNull()) } });
         this.tasks.push(
             new CronJob(
                 this.configService.get<string>("repoMan.schedulerInterval"),
-                this.test, // onTick
+                this.run, // onTick
                 null, // onComplete
                 true, // start
                 "Europe/Berlin",
             ),
         );
 
-        Logger.log("RepoManager service initialized.", "RepoManager");
+        Logger.log(`RepoManager service initialized with ${this.repos.length} repos`, "RepoManager");
     }
 
-    async test() {
-        if (this.repoManager.status === RepoStatus.ACTIVE) {
-            Logger.warn("RepoManager is already active.", "RepoManager");
+    async run() {
+        if (this.repoManager?.status !== undefined && this.repoManager?.status === RepoStatus.ACTIVE) {
+            Logger.warn("RepoManager is already active, skipping run", "RepoManager");
             return;
         }
 
-        Logger.log("Starting RepoManager...", "RepoManager");
-        Logger.log(this.repos, "RepoManager");
+        // Timer to measure the time it takes to run the whole process
+        const start = new Date();
 
+        Logger.log("Starting checking packages for needed rebuilds...", "RepoManager");
         await this.repoManager.pullArchlinuxPackages();
-        for (const repo of this.repos) {
-            await this.repoManager.cloneRepo(repo);
+
+        if (!this.repoManager.changedArchPackages || this.repoManager.changedArchPackages.length === 0) {
+            Logger.log("No packages changed in Arch repos, skipping run", "RepoManager");
+            return;
         }
+
+        for (const repo of this.repos) {
+            await this.repoManager.startRun(repo);
+        }
+        Logger.log(
+            `Done checking packages for needed rebuilds after ${this.measureTime(start)} minutes`,
+            "RepoManager",
+        );
     }
 
-    async testClonePush() {
-        const repo = await this.repo.findOne({ where: { name: "chaotic-aur" } });
-
-        Logger.log("Cloning repo...", "RepoManager");
-        await git.clone({
-            fs,
-            http,
-            dir: "/tmp/chaotic-aur",
-            url: repo.repoUrl,
-        });
-        Logger.log("Cloned repo.", "RepoManager");
-        fs.appendFileSync("/tmp/chaotic-aur/test", "test");
-        await git.add({ fs, dir: "/tmp/chaotic-aur", filepath: "test" });
-
-        Logger.log("Committed changes.", "RepoManager");
-        await git.commit({
-            fs,
-            dir: "/tmp/chaotic-aur",
-            author: { name: "Chaotic Temeraire", email: "ci@chaotic.cx" },
-            message: "chore(test): test commit",
-        });
-        Logger.log((await git.log({ fs, dir: "/tmp/chaotic-aur" }))[0], "RepoManager");
-        await git.push({
-            fs,
-            http,
-            dir: "/tmp/chaotic-aur",
-            onAuth: () => ({
-                username: "oauth2",
-                password: this.configService.getOrThrow<string>("repoMan.gitlabToken"),
-            }),
-        });
-        Logger.log("Pushed changes to remote.", "RepoManager");
+    measureTime(start: Date): number {
+        const end = new Date();
+        return start.getHours() * 60 + end.getMinutes() - start.getHours() * 60 - end.getMinutes();
     }
 }
 
 class RepoManager {
-    status: RepoStatus
-    private readonly cloneDir: string = path.join(process.cwd(), "repos");
+    changedArchPackages?: ParsedPackage[];
+    status: RepoStatus = RepoStatus.INACTIVE;
     private readonly httpService: HttpService;
     private readonly archlinuxRepos: string[] = ["core", "extra"];
     private readonly archlinuxRepoUrl = (name: string) =>
@@ -144,7 +118,6 @@ class RepoManager {
         settings: Repository<RepoManagerSettings>;
     };
     private repoManagerSettings: RepoSettings;
-    private changedArchPackages?: ParsedPackage[];
 
     constructor(
         httpService: HttpService,
@@ -167,12 +140,8 @@ class RepoManager {
      * Clone a repository and check for packages that need to be rebuilt.
      * @param repo The repository to clone
      */
-    async cloneRepo(repo: Repo): Promise<void> {
-        if (!this.changedArchPackages || this.changedArchPackages.length === 0) {
-            Logger.error("No packages to check for rebuild triggers, skipping run.", "RepoManager");
-            return
-        }
-
+    async startRun(repo: Repo): Promise<void> {
+         Logger.log(`Checking repo ${repo.name} for rebuild triggers...`, "RepoManager");
         this.status = RepoStatus.ACTIVE;
         Logger.log(`Started cloning repo ${repo.name}`, "RepoManager");
 
@@ -224,14 +193,14 @@ class RepoManager {
                 const currentTriggersInDb: { pkgname: string; archVersion: string }[] = pkgInDb.bumpTriggers ?? [];
                 if (!configObj["CI_REBUILD_TRIGGERS"]) {
                     if (currentTriggersInDb.length > 0) {
-                        Logger.debug(`Removing rebuild triggers for ${pkgbaseDir} from database.`, "RepoManager");
+                        Logger.debug(`Removing rebuild triggers for ${pkgbaseDir} from database`, "RepoManager");
                         pkgInDb.bumpTriggers = null;
                     }
                     continue;
                 }
 
                 const rebuildTriggers: string[] = configObj["CI_REBUILD_TRIGGERS"].split(":");
-                Logger.log(`Found ${rebuildTriggers.length} rebuild triggers for ${pkgbaseDir}.`, "RepoManager");
+                Logger.log(`Found ${rebuildTriggers.length} rebuild triggers for ${pkgbaseDir}`, "RepoManager");
 
                 const rebuildPackages: ParsedPackage[] = this.changedArchPackages.filter((pkg) => {
                     return rebuildTriggers.includes(pkg.base);
@@ -241,7 +210,7 @@ class RepoManager {
                     needsRebuild.push({ pkg: rebuildPackage, configObj });
                 }
 
-                Logger.log(`Found ${needsRebuild.length} packages to rebuild for ${repo.name}.`, "RepoManager");
+                Logger.log(`Found ${needsRebuild.length} packages to rebuild in ${repo.name}`, "RepoManager");
             }
         }
 
@@ -270,7 +239,7 @@ class RepoManager {
             }
 
             alreadyBumped.set(repoPkg.pkgname, rebuildPackage.pkg.base);
-            Logger.log(`Rebuilding ${repoPkg.pkgname} because of ${rebuildPackage.pkg.base}.`, "RepoManager");
+            Logger.log(`Rebuilding ${repoPkg.pkgname} because of changed ${rebuildPackage.pkg.base}`, "RepoManager");
 
             if (!repoPkg.bumpTriggers) {
                 repoPkg.bumpTriggers = [{ pkgname: rebuildPackage.pkg.base, archVersion: rebuildPackage.pkg.version }];
@@ -306,17 +275,12 @@ class RepoManager {
         if (needsRebuild.length !== 0) {
             Logger.log(`Pushing changes to ${repo.name}`, "RepoManager");
             await this.pushChanges(repoDir, needsRebuild, repo);
-            for (const rebuildPackage of needsRebuild) {
-                const sendNow = rebuildPackage.configObj.pkg.bumpTriggers.find(
-                    (trigger: { pkgname: string; version: string }) => trigger.pkgname === rebuildPackage.pkg.base,
-                );
-            }
-            Logger.log(`Pushed changes to ${repo.name}`, "RepoManager");
         }
 
         Logger.log("Done checking for rebuild triggers", "RepoManager");
 
         this.cleanUp([repoDir, ...pkgbaseDirs]);
+        this.summarizeChanges(alreadyBumped);
         this.status = RepoStatus.INACTIVE;
     }
 
@@ -333,7 +297,7 @@ class RepoManager {
                 return new Promise<ArchRepoToCheck>(async (resolve, reject) => {
                     const repoUrl = this.archlinuxRepoUrl(repo);
                     const repoDir = path.join(tempDir, repo);
-                    Logger.debug(`Pulling database of ${repo}...`, "RepoManager");
+                    Logger.debug(`Pulling database for ${repo}...`, "RepoManager");
                     try {
                         const dbDownload: AxiosResponse = await this.httpService.axiosRef({
                             url: repoUrl,
@@ -344,7 +308,7 @@ class RepoManager {
                         fs.mkdirSync(repoDir, { recursive: true });
                         fs.writeFileSync(path.join(repoDir, `${repo}.db.tar.gz`), fileData);
 
-                        Logger.debug(`Done pulling database of ${repo}.`, "RepoManager");
+                        Logger.debug(`Done pulling database of ${repo}`, "RepoManager");
                         resolve({ path: path.join(repoDir, `${repo}.db.tar.gz`), name: repo, workDir: repoDir });
                     } catch (err: unknown) {
                         Logger.error(err, "RepoManager");
@@ -354,7 +318,7 @@ class RepoManager {
             }),
         );
 
-        Logger.debug("Done pulling all databases.", "RepoManager");
+        Logger.debug("Done pulling all databases", "RepoManager");
         this.changedArchPackages = await this.parseArchlinuxDatabase(
             downloads.map((download): ArchRepoToCheck => (download.status === "fulfilled" ? download.value : null)),
         );
@@ -383,7 +347,7 @@ class RepoManager {
                 });
             }),
         );
-        Logger.log("Done extracting databases.", "RepoManager");
+        Logger.log("Done extracting databases", "RepoManager");
 
         const currentArchVersions: ParsedPackage[] = [];
         const actualWorkDirs: ArchRepoToCheck[] = workDirsPromises.map(
@@ -442,7 +406,7 @@ class RepoManager {
             result.push(pkg);
         }
 
-        Logger.log(`Done determining changed packages, in total ${result.length} packages changed.`, "RepoManager");
+        Logger.log(`Done determining changed packages, in total ${result.length} packages changed`, "RepoManager");
 
         return result;
     }
@@ -501,11 +465,11 @@ class RepoManager {
      * @private
      */
     private async pushChanges(repoDir: string, needsRebuild: { configObj: any; pkg: ParsedPackage }[], repo: Repo) {
+        Logger.log("Committing changes and pushing back to repo...", "RepoManager");
         for (const rebuildPackage of needsRebuild) {
             try {
                 const repoPkg = rebuildPackage.configObj.pkg as Package;
                 await git.add({ fs, dir: repoDir, filepath: path.join(repoPkg.pkgname, ".CI", "config") });
-                Logger.debug(`Added ${repoPkg.pkgname} to git`, "RepoManager");
                 await git.commit({
                     fs,
                     dir: repoDir,
@@ -516,9 +480,6 @@ class RepoManager {
                 Logger.error(err, "RepoManager");
             }
         }
-
-        Logger.log("Committed changes.", "RepoManager");
-        Logger.log((await git.log({ fs, dir: repoDir }))[0], "RepoManager");
 
         try {
             const pushResult: PushResult = await git.push({
@@ -540,15 +501,15 @@ class RepoManager {
                     dir: repoDir,
                     ref: "main",
                     onAuth: () => ({
-                        username: "oauth2",
+                        username: this.repoManagerSettings.gitUsername,
                         password: this.repoManagerSettings.gitlabToken,
                     }),
                 });
                 if (!pushResult.ok) {
-                    throw new Error("Failed pushing.");
+                    throw new Error("Failed pushing");
                 }
             } else {
-                Logger.debug("Pushed changes to remote.", "RepoManager");
+                Logger.log(`Pushed changes to ${repo.name}`, "RepoManager");
             }
         } catch (err: unknown) {
             Logger.error(err, "RepoManager");
@@ -565,5 +526,23 @@ class RepoManager {
                 fs.rmSync(dir, { recursive: true });
             }
         } catch (err: unknown) {}
+    }
+
+    /**
+     * Summarize the changes of the run.
+     */
+    summarizeChanges(alreadyBumped: Map<string, string>): void {
+        Logger.log("Summarizing changes:", "RepoManager");
+        Logger.log(`In total, ${alreadyBumped.size} packages got bumped`, "RepoManager");
+        if (this.changedArchPackages.length === 0) {
+            Logger.log("No packages changed in Arch repos", "RepoManager");
+            return;
+        } else {
+            Logger.log(`In total, ${this.changedArchPackages.length} packages changed in Arch repos`, "RepoManager");
+        }
+
+        for (const [pkgname, base] of alreadyBumped.entries()) {
+            Logger.log(`Bumped ${pkgname} due to ${base}`, "RepoManager");
+        }
     }
 }
