@@ -24,7 +24,7 @@ FROM node:23-slim
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
 RUN apt-get update && \
-  apt-get install --no-install-recommends -y autossh netcat-openbsd && \
+  apt-get install --no-install-recommends -y autossh netcat-openbsd zstd && \
   rm -rf /var/lib/apt/lists/*
 
 COPY entry_point.sh /entry_point.sh
