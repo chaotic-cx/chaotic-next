@@ -249,6 +249,7 @@ export class BuilderDatabaseService extends Service {
             ...MoleculerConfigCommonService,
         });
 
+        this.repoManagerService = repoManagerService;
         this.dbConnections = dbConnections;
         Logger.log("BuilderDatabaseService created", "BuilderDatabaseService");
     }
