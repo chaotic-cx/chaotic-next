@@ -15,4 +15,9 @@ export class RepoManagerController {
     updateChaoticVersions(): void {
         void this.repoManager.updateChaoticVersions();
     }
+
+    @Get("rebuild")
+    checkGlobalRebuildTriggers(): void {
+        void this.repoManager.checkGlobalRebuildTriggers();
+    }
 }
