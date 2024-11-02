@@ -684,8 +684,6 @@ class RepoManager {
     private tryMatch(regex: string, source: string): string {
         const regExp = new RegExp(regex);
         if (!regExp.test(source)) return undefined;
-
-        Logger.log(source.match(regExp)[0]);
         return source.match(regExp)[0];
     }
 
