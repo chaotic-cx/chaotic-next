@@ -5,9 +5,10 @@ import IORedis from "ioredis";
 import { type Context, Service, ServiceBroker } from "moleculer";
 import { Repository } from "typeorm";
 import { generateNodeId } from "../functions";
-import type { BuilderDbConnections, MoleculerBuildObject } from "../types";
+import { BuilderDbConnections, BuildStatus, MoleculerBuildObject } from "../types";
 import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from "./builder.entity";
 import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
+import { RepoManagerService } from "../repo-manager/repo-manager.service";
 
 @Injectable()
 export class BuilderService {
@@ -25,6 +26,7 @@ export class BuilderService {
         @InjectRepository(Package)
         private packageRepository: Repository<Package>,
         private configService: ConfigService,
+        private repoManagerService: RepoManagerService,
     ) {
         const redisPassword: string = this.configService.get<string | undefined>("redis.password");
         const redisHost: string = this.configService.get<string>("redis.host");
@@ -51,7 +53,9 @@ export class BuilderService {
         try {
             this.connection.connect().then(() => {
                 this.broker = new ServiceBroker(brokerConfig(generateNodeId(), this.connection));
-                this.broker.createService(new BuilderDatabaseService(this.broker, dbConnections));
+                this.broker.createService(
+                    new BuilderDatabaseService(this.broker, dbConnections, this.repoManagerService),
+                );
                 void this.broker.start();
             });
         } catch (err: unknown) {
@@ -227,8 +231,9 @@ export class BuilderService {
  */
 export class BuilderDatabaseService extends Service {
     private dbConnections: BuilderDbConnections;
+    private repoManagerService: RepoManagerService;
 
-    constructor(broker: ServiceBroker, dbConnections: BuilderDbConnections) {
+    constructor(broker: ServiceBroker, dbConnections: BuilderDbConnections, repoManagerService: RepoManagerService) {
         super(broker);
 
         this.parseServiceSchema({
@@ -271,7 +276,7 @@ export class BuilderDatabaseService extends Service {
         ]);
 
         if (relations.includes(undefined)) {
-            Logger.error("Invalid relations, throwing entry away", "BuilderDatabaseService");
+            Logger.error("Invalid relations or database is not available, throwing entry away", "BuilderDatabaseService");
             return;
         }
 
@@ -289,6 +294,11 @@ export class BuilderDatabaseService extends Service {
             status: params.status,
             replaced: params.replaced,
         };
+
+        // Update the chaotic versions, as they changed with new successful builds
+        if (params.status === BuildStatus.SUCCESS) {
+            void this.repoManagerService.updateChaoticVersions();
+        }
 
         try {
             Logger.debug(await this.dbConnections.build.save(build), "BuilderDatabaseService");
