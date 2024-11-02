@@ -45,10 +45,12 @@ export class RepoManagerService {
 
     async init(): Promise<void> {
         this.repos = await this.repoRepository.find({ where: { isActive: true, repoUrl: Not(IsNull()) } });
+
+        const runWithThis = this.run.bind(this);
         this.tasks.push(
             new CronJob(
                 this.configService.get<string>("repoMan.schedulerInterval"),
-                this.run, // onTick
+                runWithThis, // onTick
                 null, // onComplete
                 true, // start
                 "Europe/Berlin",
