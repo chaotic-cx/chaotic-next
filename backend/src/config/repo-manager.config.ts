@@ -1,7 +1,7 @@
 import { registerAs } from "@nestjs/config";
 
 export default registerAs("repoMan", () => ({
-    alwaysRebuild: process.env.REPOMANAGER_ALWAYS_REBUILD ?? "{}",
+    alwaysRebuild: process.env.REPOMANAGER_ALWAYS_REBUILD ?? "[]",
     gitAuthor: process.env.GIT_AUTHOR ?? "Chaotic Temeraire",
     gitEmail: process.env.GIT_EMAIL ?? "ci@chaotic.cx",
     gitUsername: process.env.GIT_USERNAME ?? "git",

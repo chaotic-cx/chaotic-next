@@ -47,7 +47,7 @@ export interface RepoSettings {
     gitEmail: string;
     gitUsername: string;
     gitlabToken: string;
-    alwaysRebuild: { [key: string]: string };
+    alwaysRebuild: string[];
 }
 
 export interface PkgnameVersion {
@@ -62,3 +62,19 @@ export interface RepoUpdateRunParams {
 }
 
 export type CiConfigs = { [key: string]: string };
+
+export interface GlobalRebuildTriggerParams {
+    bumpedDeps: ParsedPackage[];
+    pkg: Package;
+    deps: string[];
+}
+
+export interface GlobalRebuildTriggerBump {
+    packages: RepoUpdateRunParams[];
+    repoDir: string;
+}
+
+export interface BumpResult {
+    bumped: Map<string, string>;
+    repo: string;
+}
