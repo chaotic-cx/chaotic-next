@@ -177,7 +177,7 @@ class RepoManager {
             repo: Repository<Repo>;
             packages: Repository<Package>;
         },
-        settings: RepoSettings,
+        settings: RepoSettings
     ) {
         this.httpService = httpService;
         this.dbConnections = dbConnections;
@@ -210,7 +210,7 @@ class RepoManager {
                     dir: repoDir,
                     url: repo.repoUrl,
                     ref: repo.gitRef ? repo.gitRef : "main",
-                    singleBranch: true,
+                    singleBranch: true
                 });
             }
         } catch (err: unknown) {
@@ -254,7 +254,7 @@ class RepoManager {
     private async checkRebuildTriggers(
         pkgbaseDirs: string[],
         repoDir: string,
-        repo: Repo,
+        repo: Repo
     ): Promise<RepoUpdateRunParams[]> {
         const needsRebuild: { archPkg: ParsedPackage; configs: any; pkg: Package }[] = [];
 
@@ -321,7 +321,7 @@ class RepoManager {
             if (alreadyBumped.has(param.pkg.pkgname)) {
                 Logger.warn(
                     `Already bumped via ${alreadyBumped.get(param.pkg.pkgname)}, skipping ${param.pkg.pkgname}`,
-                    "RepoManager",
+                    "RepoManager"
                 );
                 continue;
             }
@@ -351,7 +351,7 @@ class RepoManager {
                 if (!param.pkg.bumpTriggers.find((trigger) => trigger.pkgname === param.archPkg.base)) {
                     param.pkg.bumpTriggers.push({
                         pkgname: param.archPkg.base,
-                        archVersion: param.archPkg.version,
+                        archVersion: param.archPkg.version
                     });
                 } else {
                     param.pkg.bumpTriggers = param.pkg.bumpTriggers.map((trigger) => {
@@ -371,7 +371,7 @@ class RepoManager {
             for (const [key, value] of Object.entries(param.configs)) {
                 if (key === "pkg" || (key || value) === undefined) continue;
                 fs.writeFileSync(path.join(repoDir, param.pkg.pkgname, ".CI", "config"), `${key}=${value}\n`, {
-                    flag: "a",
+                    flag: "a"
                 });
             }
         }
@@ -397,13 +397,13 @@ class RepoManager {
                 } catch (err: unknown) {
                     Logger.error(err, "RepoManager");
                 }
-            }),
+            })
         );
 
         Logger.debug("Done pulling all databases", "RepoManager");
         const currentArchVersions = await this.parsePacmanDatabases(
             downloads.map((download): RepoWorkDir => (download.status === "fulfilled" ? download.value : null)),
-            "tar.gz",
+            "tar.gz"
         );
         this.changedArchPackages = await this.determineChangedPackages(currentArchVersions);
     }
@@ -419,7 +419,7 @@ class RepoManager {
         const downloads = await Promise.allSettled(
             repos.map(async (repo) => {
                 return await this.pullDatabases(repo.dbPath, tempDir, "chaotic-aur", "tar.zst");
-            }),
+            })
         );
 
         Logger.debug("Done pulling all Chaotic-AUR databases", "RepoManager");
@@ -444,8 +444,9 @@ class RepoManager {
                 }
                 chaoticPkg.version = pkg.version;
                 chaoticPkg.isActive = true;
+                chaoticPkg.metadata = JSON.stringify(pkg.metaData);
                 void this.dbConnections.packages.save(chaoticPkg);
-            }),
+            })
         );
         Logger.log("Finished updating Chaotic database versions", "RepoManager");
 
@@ -474,7 +475,7 @@ class RepoManager {
         const dbDownload: AxiosResponse = await this.httpService.axiosRef({
             url: dbUrl,
             method: "GET",
-            responseType: "arraybuffer",
+            responseType: "arraybuffer"
         });
         const fileData: Buffer = Buffer.from(dbDownload.data, "binary");
         fs.mkdirSync(repoDir, { recursive: true });
@@ -498,7 +499,7 @@ class RepoManager {
      */
     private async parsePacmanDatabases(
         databases: RepoWorkDir[],
-        dbType: "tar.gz" | "tar.zst",
+        dbType: "tar.gz" | "tar.zst"
     ): Promise<ParsedPackage[]> {
         Logger.log("Started extracting databases...", "RepoManager");
         const workDirsPromises: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
@@ -529,13 +530,13 @@ class RepoManager {
                         reject(err);
                     }
                 });
-            }),
+            })
         );
         Logger.log("Done extracting databases", "RepoManager");
 
         const currentPackageVersions: ParsedPackage[] = [];
         const actualWorkDirs: RepoWorkDir[] = workDirsPromises.map(
-            (workDir): RepoWorkDir => (workDir.status === "fulfilled" ? workDir.value : null),
+            (workDir): RepoWorkDir => (workDir.status === "fulfilled" ? workDir.value : null)
         );
 
         Logger.log("Started parsing databases...", "RepoManager");
@@ -618,7 +619,7 @@ class RepoManager {
 
         Logger.debug(
             `Parsed package ${pkgbaseWithVersions.base}, ${pkgbaseWithVersions.version}-${pkgbaseWithVersions.pkgrel}`,
-            "RepoManager",
+            "RepoManager"
         );
 
         return pkgbaseWithVersions;
@@ -632,23 +633,60 @@ class RepoManager {
     private extractBaseAndVersion(lines: string): ParsedPackage {
         const completeVersion: string = lines.match(/(?<=%VERSION%\n)\S+/)[0];
         const splitVersion: string[] = completeVersion.split("-");
-        const deps = lines.match(/(?<=%DEPENDS%\n)([\s\S]*)(?=\n{2}%)/)[0].split("\n");
-        const makedeps = lines.match(/(?<=%MAKEDEPENDS%\n)([\s\S]*)(?=\n{2}%)/)[0].split("\n");
-        const buildDate = lines.match(/(?<=%BUILDDATE%\n)\S+/)[0];
-        const provides = lines.match(/(?<=%MAKEDEPENDS%\n)([\s\S]*)(?=\n{2}%)/)[0].split("\n");
-        const conflicts = lines.match(/(?<=%CONFLICTS%\n)\S+/)[0];
-        const replaces = lines.match(/(?<=%REPLACES%\n)\S+/)[0];
-        const makeDepends: string[] = lines
-            .match(/(?<=%MAKEDEPENDS%\n)([\s\S]*?)(?=\n%|$)/g)[0]
-            .trim()
-            .split("\n");
+        const base = lines.match(/(?<=%BASE%\n)\S+/)[0];
+        const buildDate = lines.match(/(?<=%BUILDDATE%\n)\S+/);
+        const checkDepends = this.tryMatch("(?<=%CHECKDEPENDS%\\n)[\\s\\S]*?(?=\\n{2})", lines);
+        const conflicts = this.tryMatch("(?<=%CONFLICTS%\\n)[\\s\\S]*?(?=\n{2})", lines);
+        const deps = this.tryMatch("(?<=%DEPENDS%\\n)[\\s\\S]*?(?=\\n{2})", lines);
+        const desc = lines.match(/(?<=%DESC%\n)[\s\S]*?(?=\n{2})/);
+        const filename = lines.match(/(?<=%FILENAME%\n)\S+/);
+        const license = lines.match(/(?<=%LICENSE%\n)\S+/);
+        const makeDeps = this.tryMatch("(?<=%MAKEDEPENDS%\\n)[\\s\\S]*?(?=\\n{2})", lines);
+        const name = lines.match(/(?<=%NAME%\n)\S+/)[0];
+        const optDeps = this.tryMatch("(?<=%OPTDEPENDS%\\n)[\\s\\S]*?(?=\\n{2})", lines);
+        const packager = lines.match(/(?<=%PACKAGER%\n).+$/);
+        const pkgrel = Number(completeVersion.split("-")[splitVersion.length - 1]);
+        const provides = this.tryMatch("(?<=%PROVIDES%\\n)[\\s\\S]*?(?=\\n{2})", lines);
+        const replaces = this.tryMatch("(?<=%REPLACES%\\n)[\\s\\S]*?(?=\\n{2})", lines);
+        const url = lines.match(/(?<=%URL%\n)\S+/);
+        const version = completeVersion.split("-")[0];
 
         return {
-            base: lines.match(/(?<=%BASE%\n)\S+/)[0],
-            version: completeVersion.split("-")[0],
-            pkgrel: Number(completeVersion.split("-")[splitVersion.length - 1]),
-            name: lines.match(/(?<=%NAME%\n)\S+/)[0],
+            base,
+            version,
+            pkgrel,
+            name,
+            metaData: {
+                buildDate: buildDate ? buildDate[0] : undefined,
+                checkDepends: checkDepends ? checkDepends.split("\n") : undefined,
+                conflicts: conflicts ? conflicts.split("\n") : undefined,
+                deps: deps ? deps.split("\n") : undefined,
+                license: license ? license[0] : undefined,
+                filename: filename ? filename[0] : undefined,
+                makeDeps: makeDeps ? makeDeps.split("\n") : undefined,
+                optDeps: optDeps ? optDeps.split("\n") : undefined,
+                packager: packager ? packager[0] : undefined,
+                desc: desc ? desc[0] : undefined,
+                provides: provides ? provides.split("\n") : undefined,
+                replaces: replaces ? replaces.split("\n") : undefined,
+                url: url ? url[0] : undefined
+            }
         };
+    }
+
+    /**
+     * Try to match a regex in a source string without failing if the regex is not found.
+     * @param regex The regex to match
+     * @param source The source string to match the regex in
+     * @returns The first matched string or undefined
+     * @private
+     */
+    private tryMatch(regex: string, source: string): string {
+        const regExp = new RegExp(regex);
+        if (!regExp.test(source)) return undefined;
+
+        Logger.log(source.match(regExp)[0]);
+        return source.match(regExp)[0];
     }
 
     /**
@@ -665,7 +703,7 @@ class RepoManager {
             archPkg: ParsedPackage;
             pkg: Package;
         }[],
-        repo: Repo,
+        repo: Repo
     ) {
         Logger.log("Committing changes and pushing back to repo...", "RepoManager");
         for (const param of needsRebuild) {
@@ -675,7 +713,7 @@ class RepoManager {
                     fs,
                     dir: repoDir,
                     author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
-                    message: `chore(${param.pkg.pkgname}): ${param.archPkg.base} update -> increased pkgrel`,
+                    message: `chore(${param.pkg.pkgname}): ${param.archPkg.base} update -> increased pkgrel`
                 });
             } catch (err: unknown) {
                 Logger.error(err, "RepoManager");
@@ -689,8 +727,8 @@ class RepoManager {
                 dir: repoDir,
                 onAuth: () => ({
                     username: this.repoManagerSettings.gitUsername,
-                    password: this.repoManagerSettings.gitlabToken,
-                }),
+                    password: this.repoManagerSettings.gitlabToken
+                })
             });
 
             Logger.log(`Pushed changes to ${repo.name}`, "RepoManager");
@@ -708,6 +746,7 @@ class RepoManager {
             for (const dir of dirs) {
                 fs.rmSync(dir, { recursive: true });
             }
-        } catch (err: unknown) {}
+        } catch (err: unknown) {
+        }
     }
 }

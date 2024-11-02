@@ -23,6 +23,23 @@ export interface ParsedPackage {
     pkgrel: number;
     version: string;
     name: string;
+    metaData: ParsedPackageMetadata;
+}
+
+export interface ParsedPackageMetadata {
+    buildDate: string;
+    checkDepends?: string[];
+    conflicts?: string[];
+    deps?: string[];
+    filename: string;
+    license?: string;
+    makeDeps?: string[];
+    optDeps?: string[];
+    packager?: string;
+    desc?: string;
+    provides?: string[];
+    replaces?: string[];
+    url?: string;
 }
 
 export interface RepoSettings {
