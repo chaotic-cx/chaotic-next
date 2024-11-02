@@ -438,7 +438,7 @@ class RepoManager {
 
                 // Account for already bumped packages
                 if (pkg.pkgrel.toString().match(/\./)) {
-                    chaoticPkg.pkgrel = Number(pkg.pkgrel.toFixed())
+                    chaoticPkg.pkgrel = Number(pkg.pkgrel.toFixed());
                 } else {
                     chaoticPkg.pkgrel = pkg.pkgrel;
                 }
@@ -632,6 +632,17 @@ class RepoManager {
     private extractBaseAndVersion(lines: string): ParsedPackage {
         const completeVersion: string = lines.match(/(?<=%VERSION%\n)\S+/)[0];
         const splitVersion: string[] = completeVersion.split("-");
+        const deps = lines.match(/(?<=%DEPENDS%\n)([\s\S]*)(?=\n{2}%)/)[0].split("\n");
+        const makedeps = lines.match(/(?<=%MAKEDEPENDS%\n)([\s\S]*)(?=\n{2}%)/)[0].split("\n");
+        const buildDate = lines.match(/(?<=%BUILDDATE%\n)\S+/)[0];
+        const provides = lines.match(/(?<=%MAKEDEPENDS%\n)([\s\S]*)(?=\n{2}%)/)[0].split("\n");
+        const conflicts = lines.match(/(?<=%CONFLICTS%\n)\S+/)[0];
+        const replaces = lines.match(/(?<=%REPLACES%\n)\S+/)[0];
+        const makeDepends: string[] = lines
+            .match(/(?<=%MAKEDEPENDS%\n)([\s\S]*?)(?=\n%|$)/g)[0]
+            .trim()
+            .split("\n");
+
         return {
             base: lines.match(/(?<=%BASE%\n)\S+/)[0],
             version: completeVersion.split("-")[0],

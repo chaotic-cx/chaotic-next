@@ -14,7 +14,7 @@ export class UsersService {
         private userRepository: Repository<User>,
         private configService: ConfigService,
     ) {
-        const usersConfig = this.configService.get<string>("CAUR_USERS");
+        const usersConfig = this.configService.get<string>("users.users");
         try {
             if (usersConfig) {
                 this.users = JSON.parse(usersConfig);
