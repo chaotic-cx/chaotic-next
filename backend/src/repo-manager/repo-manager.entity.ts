@@ -39,6 +39,7 @@ export class RepoManagerSettings {
 }
 
 const packageMutex = new Mutex();
+const settingsMutex = new Mutex();
 
 /**
  * Check if a package exists in the database, if not create a new entry
@@ -69,6 +70,37 @@ export async function archPkgExists(
             }
 
             return packageExists as ArchlinuxPackage;
+        } catch (err: unknown) {
+            Logger.error(err, "RepoManagerEntity");
+        }
+    });
+}
+
+/**
+ * Check if a setting exists in the database, if not create a new entry
+ * @param key The key to check
+ * @param connection The repository connection
+ */
+export function repoSettingsExists(
+    key: string,
+    connection: Repository<RepoManagerSettings>,
+): Promise<RepoManagerSettings> {
+    return settingsMutex.runExclusive(async () => {
+        try {
+            const settings: RepoManagerSettings[] = await connection.find({ where: { key } });
+            let settingExists: Partial<RepoManagerSettings> = settings.find((oneSetting) => {
+                return oneSetting.key === key;
+            });
+
+            if (settingExists === undefined) {
+                Logger.log(`Setting ${key} not found in database, creating new entry`, "RepoManagerEntity");
+                settingExists = await connection.save({
+                    key,
+                    value: "",
+                });
+            }
+
+            return settingExists as RepoManagerSettings;
         } catch (err: unknown) {
             Logger.error(err, "RepoManagerEntity");
         }

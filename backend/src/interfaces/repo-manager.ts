@@ -48,7 +48,7 @@ export interface RepoSettings {
     gitEmail: string;
     gitUsername: string;
     gitlabToken: string;
-    alwaysRebuild: string[];
+    globalTriggers: string[];
 }
 
 export interface RepoUpdateRunParams {
