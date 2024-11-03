@@ -6,8 +6,7 @@ import http from "isomorphic-git/http/node";
 import git from "isomorphic-git";
 import {
     BumpResult,
-    GlobalRebuildTriggerBump,
-    GlobalRebuildTriggerParams,
+    PackageConfig,
     ParsedPackage,
     ParsedPackageMetadata,
     RepoSettings,
@@ -116,28 +115,7 @@ export class RepoManagerService {
             results.push(result);
         }
 
-        const globalTriggerResults: BumpResult[] = [];
-        const globalRebuildTriggers: Map<Package, ParsedPackage> = await repoManager.checkGlobalRebuildTriggers();
-        if (globalRebuildTriggers.size > 0) {
-            Logger.log("Global rebuild triggers found, starting global rebuild...", "RepoManager");
-            const bumpParams: GlobalRebuildTriggerBump[] =
-                await repoManager.prepareGlobalTriggerBump(globalRebuildTriggers);
-
-            for (const repo of bumpParams) {
-                const repoName = repo.repoDir.split("/").pop();
-                const prevResults: BumpResult = results.find((result) => result.repo === repoName);
-                const bumpResults: Map<string, string> = await repoManager.bumpPackages(
-                    repo.packages,
-                    repo.repoDir,
-                    prevResults.bumped,
-                );
-                globalTriggerResults.push({ repo: repoName, bumped: bumpResults });
-            }
-        } else {
-            Logger.log("No global rebuild triggers found", "RepoManager");
-        }
-
-        this.summarizeChanges(results, repoManager, globalTriggerResults);
+        this.summarizeChanges(results, repoManager);
     }
 
     /**
@@ -168,7 +146,7 @@ export class RepoManagerService {
     /**
      * Summarize the changes of the run.
      */
-    summarizeChanges(results: BumpResult[], repoManager: RepoManager, globalTriggerResults: BumpResult[]): void {
+    summarizeChanges(results: BumpResult[], repoManager: RepoManager): void {
         Logger.log("Summarizing changes:", "RepoManager");
         Logger.log(`In total, ${repoManager.changedArchPackages.length} Arch package(s) were changed`, "RepoManager");
 
@@ -186,35 +164,11 @@ export class RepoManagerService {
                 }
             }
         }
-
-        if (globalTriggerResults.length > 0) {
-            for (const result of globalTriggerResults) {
-                if (!result || result.bumped.size === 0) {
-                    Logger.log(`No packages affected in global triggers`, "RepoManager");
-                    continue;
-                }
-                Logger.log(`Bumped packages in global triggers:`, "RepoManager");
-                for (const [pkg, base] of result.bumped.entries()) {
-                    Logger.log(` - ${pkg} bumped via ${base}`, "RepoManager");
-                }
-            }
-        }
-    }
-
-    async checkGlobalRebuildTriggers() {
-        let repoManager: RepoManager;
-        if (!this.repoManager) {
-            repoManager = this.createRepoManager();
-        } else {
-            repoManager = this.repoManager;
-        }
-        this.repos = await this.repoRepository.find({ where: { isActive: true, dbPath: Not(IsNull()) } });
-        await repoManager.checkGlobalRebuildTriggers();
     }
 }
 
 class RepoManager {
-    changedArchPackages?: ParsedPackage[];
+    changedArchPackages?: ArchlinuxPackage[];
     status: RepoStatus = RepoStatus.INACTIVE;
     private readonly httpService: HttpService;
     private readonly archlinuxRepos: string[] = ["core", "extra"];
@@ -271,7 +225,6 @@ class RepoManager {
         }
 
         // Now is a good time to check for updated Chaotic-AUR versions. To be triggered with each build success soon
-        await this.updateChaoticDatabaseVersions([repo]);
         const bumpedPackages: Map<string, string> = await this.bumpPackages(needsRebuild, repoDir);
 
         Logger.log(`Pushing changes to ${repo.name}`, "RepoManager");
@@ -296,28 +249,54 @@ class RepoManager {
         repoDir: string,
         repo: Repo,
     ): Promise<RepoUpdateRunParams[]> {
-        const needsRebuild: { archPkg: ParsedPackage; configs: any; pkg: Package }[] = [];
+        const needsRebuild: { archPkg: ArchlinuxPackage; configs: any; pkg: Package }[] = [];
 
         for (const pkgbaseDir of pkgbaseDirs) {
+            let archRebuildPkg: ArchlinuxPackage[];
             const configFile = path.join(repoDir, pkgbaseDir, ".CI", "config");
+
             if (fs.existsSync(configFile)) {
-                const pkgConfig = await this.readPackageConfig(configFile, pkgbaseDir);
-                const archRebuildPkg: ParsedPackage[] = this.changedArchPackages.filter((pkg) => {
-                    return pkgConfig.rebuildTriggers?.includes(pkg.base);
+                const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
+                const metadata: ParsedPackageMetadata = JSON.parse(pkgConfig.pkgInDb.metadata);
+                let dbObject: ArchlinuxPackage;
+
+                archRebuildPkg = this.changedArchPackages.filter((pkg) => {
+                    return pkgConfig.rebuildTriggers?.includes(pkg.pkgname);
                 });
 
                 if (archRebuildPkg.length === 0) {
-                    Logger.log(`No packages causing a rebuild for ${pkgbaseDir}`, "RepoManager");
-                    continue;
+                    // If no trigger was found in explicit triggers, let's check for global triggers
+                    for (const globalTrigger of this.repoManagerSettings.alwaysRebuild) {
+                        if (metadata?.deps?.includes(globalTrigger)) {
+                            dbObject = await this.dbConnections.archPkg.findOne({
+                                where: { pkgname: globalTrigger },
+                            });
+                            Logger.log(
+                                `Rebuilding ${pkgbaseDir} because of global trigger ${globalTrigger}`,
+                                "RepoManager",
+                            );
+                            needsRebuild.push({
+                                archPkg: dbObject,
+                                configs: pkgConfig.configs,
+                                pkg: pkgConfig.pkgInDb,
+                            });
+                        }
+                    }
+                } else {
+                    dbObject = await this.dbConnections.archPkg.findOne({
+                        where: { pkgname: archRebuildPkg[0].pkgname },
+                    });
+                    Logger.debug(`Rebuilding ${pkgbaseDir} because of explicit trigger ${dbObject.pkgname}`, "RepoManager");
+                    needsRebuild.push({
+                        archPkg: dbObject,
+                        configs: pkgConfig.configs,
+                        pkg: pkgConfig.pkgInDb,
+                    });
                 }
-
-                // One trigger is enough, no need to bump twice for the same package
-                needsRebuild.push({ archPkg: archRebuildPkg[0], configs: pkgConfig.configs, pkg: pkgConfig.pkgInDb });
-
-                Logger.log(`Found ${needsRebuild.length} packages to rebuild in ${repo.name}`, "RepoManager");
             }
         }
 
+        Logger.log(`Found ${needsRebuild.length} packages to rebuild in ${repo.name}`, "RepoManager");
         return needsRebuild;
     }
 
@@ -325,29 +304,22 @@ class RepoManager {
      * Bump the packages in the database.
      * @param needsRebuild The packages that need to be rebuilt
      * @param repoDir The directory of the repository
-     * @param prevResults Optional map of already bumped packages
      * @returns A map of the packages that were bumped
      */
     async bumpPackages(
         needsRebuild: RepoUpdateRunParams[],
         repoDir: string,
-        prevResults?: Map<string, string>,
     ): Promise<Map<string, string>> {
         const alreadyBumped = new Map<string, string>();
+
+        Logger.debug(needsRebuild, "RepoManager");
 
         for (const param of needsRebuild) {
             Logger.log(`Checking if ${param.pkg.pkgname} was already bumped`, "RepoManager");
 
-            let archPkg: string;
-            if (typeof param.archPkg === "string") {
-                archPkg = param.archPkg;
-            } else {
-                archPkg = param.archPkg.base;
-            }
-
-            if (alreadyBumped.has(param.pkg.pkgname) || prevResults?.has(param.pkg.pkgname)) {
+            if (alreadyBumped.has(param.pkg.pkgname)) {
                 Logger.warn(
-                    `Already bumped via ${alreadyBumped.get(param.pkg.pkgname)}, skipping ${param.pkg.pkgname}`,
+                    `Already bumped via ${alreadyBumped.get(param.archPkg.pkgname)}, skipping ${param.pkg.pkgname}`,
                     "RepoManager",
                 );
                 continue;
@@ -369,20 +341,20 @@ class RepoManager {
                 param.configs["CI_PACKAGE_BUMP"] = `${param.pkg.version}-${param.pkg.pkgrel}/1`;
             }
 
-            Logger.log(`Rebuilding ${param.pkg.pkgname} because of changed ${archPkg}`, "RepoManager");
-            alreadyBumped.set(param.pkg.pkgname, archPkg);
+            Logger.log(`Rebuilding ${param.pkg.pkgname} because of changed ${param.archPkg.pkgname}`, "RepoManager");
+            alreadyBumped.set(param.pkg.pkgname, param.archPkg.pkgname);
 
             if (!param.pkg.bumpTriggers) {
-                param.pkg.bumpTriggers = [{ pkgname: archPkg, archVersion: param.pkg.version }];
+                param.pkg.bumpTriggers = [{ pkgname: param.archPkg.pkgname, archVersion: param.pkg.version }];
             } else {
-                if (!param.pkg.bumpTriggers.find((trigger) => trigger.pkgname === archPkg)) {
+                if (!param.pkg.bumpTriggers.find((trigger) => trigger.pkgname === param.archPkg.pkgname)) {
                     param.pkg.bumpTriggers.push({
-                        pkgname: archPkg,
+                        pkgname: param.archPkg.pkgname,
                         archVersion: param.archPkg.version,
                     });
                 } else {
                     param.pkg.bumpTriggers = param.pkg.bumpTriggers.map((trigger) => {
-                        if (trigger.pkgname === archPkg) {
+                        if (trigger.pkgname === param.archPkg.pkgname) {
                             trigger.archVersion = param.archPkg.version;
                         }
                         return trigger;
@@ -589,22 +561,24 @@ class RepoManager {
      * @param currentArchVersions The current versions of the packages
      * @returns An array of packages that have changed
      */
-    private async determineChangedPackages(currentArchVersions: ParsedPackage[]): Promise<ParsedPackage[]> {
+    private async determineChangedPackages(currentArchVersions: ParsedPackage[]): Promise<ArchlinuxPackage[]> {
         if (currentArchVersions.length === 0) {
             Logger.error("No packages found in databases", "RepoManager");
             return;
         }
 
         // We are only interested in the base packages
-        currentArchVersions.filter((pkg) => {
-            return pkg.base === pkg.name;
+        const pkgbases = currentArchVersions.filter((pkg) => {
+            return pkg.name === pkg.name;
         });
 
-        const result: ParsedPackage[] = [];
+        const result: ArchlinuxPackage[] = [];
 
         Logger.log("Started determining changed packages...", "RepoManager");
-        for (const pkg of currentArchVersions) {
-            const archPkg: ArchlinuxPackage = await archPkgExists(pkg, this.dbConnections.archPkg);
+
+        let archPkg: ArchlinuxPackage;
+        for (const pkg of pkgbases) {
+            archPkg = await archPkgExists(pkg, this.dbConnections.archPkg);
 
             if (archPkg.version && archPkg.version === pkg.version) {
                 continue;
@@ -615,7 +589,7 @@ class RepoManager {
             archPkg.arch = ARCH;
             archPkg.pkgrel = pkg.pkgrel;
             void this.dbConnections.archPkg.save(archPkg);
-            result.push(pkg);
+            result.push(archPkg);
         }
 
         Logger.log(`Done determining changed packages, in total ${result.length} package(s) changed`, "RepoManager");
@@ -725,7 +699,7 @@ class RepoManager {
         repoDir: string,
         needsRebuild: {
             configs: any;
-            archPkg: ParsedPackage;
+            archPkg: ArchlinuxPackage;
             pkg: Package;
         }[],
         repo: Repo,
@@ -738,7 +712,7 @@ class RepoManager {
                     fs,
                     dir: repoDir,
                     author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
-                    message: `chore(${param.pkg.pkgname}): ${param.archPkg.base} update -> increased pkgrel`,
+                    message: `chore(${param.pkg.pkgname}): ${param.archPkg.pkgname} update -> increased pkgrel\n\n  - ${param.archPkg.version} -> ${param.pkg.version}-${param.pkg.pkgrel}`,
                 });
             } catch (err: unknown) {
                 Logger.error(err, "RepoManager");
@@ -775,76 +749,27 @@ class RepoManager {
     }
 
     /**
-     * Check for packages to bump because of our globally defined rebuild triggers
-     * @returns A map of packages that need to be bumped
-     */
-    async checkGlobalRebuildTriggers(): Promise<Map<Package, ParsedPackage>> {
-        if (!this.changedArchPackages || this.changedArchPackages.length === 0) {
-            Logger.log("No packages changed in Arch repos, skipping run", "RepoManager");
-            return;
-        }
-
-        Logger.log("Checking for global rebuild triggers...", "RepoManager");
-
-        const activePackages: Package[] = await this.dbConnections.packages.find({
-            where: { isActive: true, metadata: Not(IsNull()) },
-        });
-
-        const affectedPackages: GlobalRebuildTriggerParams[] = activePackages.map((pkg): GlobalRebuildTriggerParams => {
-            const metadata: ParsedPackageMetadata = JSON.parse(pkg.metadata);
-            const depsInBumpedPackages: ParsedPackage[] = this.changedArchPackages?.filter((archPkg) => {
-                return metadata.deps?.includes(archPkg.base);
-            });
-
-            if (!metadata.deps || depsInBumpedPackages?.length === 0) return;
-            return {
-                pkg,
-                deps: metadata.deps,
-                bumpedDeps: depsInBumpedPackages,
-            };
-        });
-
-        const result = new Map<Package, ParsedPackage>();
-        for (const affectedPkg of affectedPackages) {
-            Logger.log(
-                `Rebuilding ${affectedPkg.pkg.pkgname} because of changed ${affectedPkg.bumpedDeps[0].base}`,
-                "RepoManager",
-            );
-
-            const archPkg: ParsedPackage = this.changedArchPackages.find(
-                (archPkg) => archPkg.base === affectedPkg.bumpedDeps[0].base,
-            );
-            result.set(affectedPkg.pkg, archPkg);
-        }
-
-        return result;
-    }
-
-    /**
      * Read the package config file and return the configs and rebuild triggers.
      * @param configFile The path to the config file
      * @param pkgbaseDir The directory of the package
      * @returns An object containing the configs, rebuild triggers, and the package in the database
      * @private
      */
-    private async readPackageConfig(configFile: fs.PathLike, pkgbaseDir: string) {
+    private async readPackageConfig(configFile: fs.PathLike, pkgbaseDir: string): Promise<PackageConfig> {
         const pkgInDb: Package = await pkgnameExists(pkgbaseDir, this.dbConnections.packages);
         const currentTriggersInDb: { pkgname: string; archVersion: string }[] = pkgInDb.bumpTriggers ?? [];
-        const configText = fs.readFileSync(configFile, "utf8");
+        const configText: string = fs.readFileSync(configFile, "utf8");
         let configLines: string[];
 
-        if (!configText || configText === "") {
+        if (configText || configText !== "") {
             configLines = configText.split("\n");
         }
 
         const configs = {};
         let rebuildTriggers: string[];
 
-        Logger.log(`Reading config file for ${pkgbaseDir}`, "RepoManager");
-
         if (configLines && configLines.length > 0) {
             for (const line of configLines) {
-                Logger.log(`Found config line: ${line}`, "RepoManager");
                 const [key, value] = line.split("=");
                 configs[key] = value;
             }
@@ -866,25 +791,6 @@ class RepoManager {
         }
 
         return { configs, rebuildTriggers, pkgInDb };
-    }
-
-    async prepareGlobalTriggerBump(pkgs: Map<Package, ParsedPackage>): Promise<GlobalRebuildTriggerBump[]> {
-        const needsRebuild: GlobalRebuildTriggerBump[] = [];
-
-        for (const repo of this.repoDirs) {
-            const entry: { archPkg: ParsedPackage; configs: any; pkg: Package }[] = [];
-
-            for (const [pkg, archPkg] of pkgs.entries()) {
-                if (fs.existsSync(path.join(repo, pkg.pkgname, ".CI", "config"))) {
-                    const configFile = path.join(repo, pkg.pkgname, ".CI", "config");
-                    const pkgConfig = await this.readPackageConfig(configFile, path.join(repo, pkg.pkgname));
-                    entry.push({ archPkg, configs: pkgConfig.configs, pkg: pkgConfig.pkgInDb });
-                }
-            }
-            needsRebuild.push({ packages: entry, repoDir: repo });
-        }
-
-        return needsRebuild;
     }
 
     /**

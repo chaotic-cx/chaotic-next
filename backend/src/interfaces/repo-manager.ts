@@ -1,4 +1,5 @@
 import { Package } from "../builder/builder.entity";
+import { ArchlinuxPackage } from "../repo-manager/repo-manager.entity";
 
 export interface Repo {
     name: string;
@@ -50,31 +51,21 @@ export interface RepoSettings {
     alwaysRebuild: string[];
 }
 
-export interface PkgnameVersion {
-    pkgname: string;
-    archVersion: string;
-}
-
 export interface RepoUpdateRunParams {
-    archPkg: ParsedPackage;
+    archPkg: ArchlinuxPackage;
     configs: CiConfigs;
     pkg: Package;
 }
 
 export type CiConfigs = { [key: string]: string };
 
-export interface GlobalRebuildTriggerParams {
-    bumpedDeps: ParsedPackage[];
-    pkg: Package;
-    deps: string[];
-}
-
-export interface GlobalRebuildTriggerBump {
-    packages: RepoUpdateRunParams[];
-    repoDir: string;
-}
-
 export interface BumpResult {
     bumped: Map<string, string>;
     repo: string;
+}
+
+export interface PackageConfig {
+    configs: CiConfigs;
+    pkgInDb: Package;
+    rebuildTriggers: string[];
 }
