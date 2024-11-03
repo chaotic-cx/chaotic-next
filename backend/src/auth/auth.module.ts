@@ -15,7 +15,7 @@ import { LocalStrategy } from "./local.strategy";
 
 @Module({
     controllers: [AuthController],
-    exports: [TypeOrmModule, PassportModule, JwtStrategy],
+    exports: [TypeOrmModule, PassportModule, JwtStrategy, AuthService],
     imports: [
         ConfigModule.forFeature(authConfig),
         JwtModule.register({

@@ -6,8 +6,9 @@ import { TelegramController } from "./telegram.controller";
 import { TelegramService } from "./telegram.service";
 
 @Module({
-    imports: [CacheModule.register(), ConfigModule.forFeature(telegramConfig)],
     controllers: [TelegramController],
+    exports: [TelegramService],
+    imports: [CacheModule.register(), ConfigModule.forFeature(telegramConfig)],
     providers: [TelegramService],
 })
 export class TelegramModule {}

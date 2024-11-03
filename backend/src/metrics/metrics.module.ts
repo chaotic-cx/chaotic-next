@@ -4,8 +4,9 @@ import { MetricsController } from "./metrics.controller";
 import { MetricsService } from "./metrics.service";
 
 @Module({
-    imports: [CacheModule.register()],
     controllers: [MetricsController],
+    exports: [MetricsService],
+    imports: [CacheModule.register()],
     providers: [MetricsService],
 })
 export class MetricsModule {}
