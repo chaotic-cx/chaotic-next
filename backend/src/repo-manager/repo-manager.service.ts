@@ -343,7 +343,7 @@ class RepoManager {
             const relevantEntry = globalConfigLines.find((line) => line.startsWith("CI_REBUILD_TRIGGERS"));
 
             if (relevantEntry) {
-                return JSON.parse(relevantEntry.split("=")[1]);
+                return relevantEntry.split("=")[1].replaceAll(/"/g, "").split(":");
             } else {
                 return [];
             }
