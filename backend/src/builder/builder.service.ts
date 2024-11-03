@@ -1,10 +1,10 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import IORedis from "ioredis";
 import { type Context, Service, ServiceBroker } from "moleculer";
 import { Repository } from "typeorm";
-import { generateNodeId } from "../functions";
+import { generateNodeId, nDaysInPast } from "../functions";
 import { BuilderDbConnections, BuildStatus, MoleculerBuildObject } from "../types";
 import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from "./builder.entity";
 import { brokerConfig, MoleculerConfigCommonService } from "./moleculer.config";
@@ -14,7 +14,6 @@ import { RepoManagerService } from "../repo-manager/repo-manager.service";
 export class BuilderService {
     private broker: ServiceBroker;
     private readonly connection: IORedis;
-    private readonly queryCaches: string[] = [];
 
     constructor(
         @InjectRepository(Build)
@@ -67,21 +66,21 @@ export class BuilderService {
      * Returns all builders from the database.
      */
     async getBuilders(options?: any): Promise<Builder[]> {
-        return this.builderRepository.find();
+        return this.builderRepository.find({ cache: { id: "builders-general", milliseconds: 30000 } });
     }
 
     /**
      * Returns all packages from the database.
      */
     async getPackages(options?: any): Promise<Package[]> {
-        return this.packageRepository.find();
+        return this.packageRepository.find({ cache: { id: "packages-general", milliseconds: 30000 } });
     }
 
     /**
      * Returns all repos from the database.
      */
     async getRepos(options?: any): Promise<Repo[]> {
-        return this.repoRepository.find();
+        return this.repoRepository.find({ cache: { id: "repos-general", milliseconds: 30000 } });
     }
 
     /**
@@ -96,7 +95,7 @@ export class BuilderService {
             .orderBy("build.id", "DESC")
             .skip(options.offset)
             .take(options.amount)
-            .cache("builds_general", 30000)
+            .cache(`builds-general-${options.builder}-${options.amount}-${options.offset}`, 30000)
             .getMany();
     }
 
@@ -114,7 +113,7 @@ export class BuilderService {
             .orderBy("build.id", "DESC")
             .skip(options.offset)
             .take(options.amount)
-            .cache("builds_latest", 30000)
+            .cache(`builds-latest-${options.amount}-${options.offset}`, 30000)
             .getMany();
     }
 
@@ -133,7 +132,7 @@ export class BuilderService {
             .orderBy("build.id", "DESC")
             .skip(options.offset)
             .take(options.amount)
-            .cache("builds_latest_pkg", 30000)
+            .cache(`builds-latest-pkg-${options.pkgname}-${options.amount}-${options.offset}`, 30000)
             .getMany();
     }
 
@@ -159,17 +158,21 @@ export class BuilderService {
         amount: number;
         offset: number;
     }): Promise<{ day: string; count: string }[]> {
-        const { id } = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
+        const requestedPackage = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
+        if (!requestedPackage) {
+            throw new NotFoundException("Package not found");
+        }
+
         return this.buildRepository
             .createQueryBuilder("build")
             .select("DATE_TRUNC('day', build.timestamp) AS day")
             .addSelect("COUNT(*) AS count")
-            .where("build.pkgbase = :id", { id })
+            .where("build.pkgbase = :id", { id: requestedPackage.id })
             .groupBy("day")
             .orderBy("day", "DESC")
             .skip(options.offset)
             .take(options.amount)
-            .cache(`builds_${options.pkgname}_per_day`, 30000)
+            .cache(`builds-${options.pkgname}-per-day-${options.amount}-${options.offset}`, 30000)
             .getRawMany();
     }
 
@@ -194,6 +197,7 @@ export class BuilderService {
                 .where("build.status = :status", { status: options.status })
                 .skip(options.offset)
                 .take(options.amount)
+                .cache(`popular-packages-${options.amount}-${options.offset}-${options.status}`, 30000)
                 .getRawMany();
         }
         return this.buildRepository
@@ -205,6 +209,7 @@ export class BuilderService {
             .orderBy("count", "DESC")
             .skip(options.offset)
             .take(options.amount)
+            .cache(`popular-packages-${options.amount}-${options.offset}`, 30000)
             .cache(true)
             .getRawMany();
     }
@@ -223,8 +228,49 @@ export class BuilderService {
             .cache("builds-per-builder", 30000)
             .getRawMany();
     }
-}
 
+    getBuildsPerDay(options: { days: number }): Promise<{ day: string; count: string }[]> {
+        return this.buildRepository
+            .createQueryBuilder("build")
+            .select("DATE_TRUNC('day', build.timestamp) AS day")
+            .addSelect("COUNT(*) AS count")
+            .groupBy("day")
+            .orderBy("day", "DESC")
+            .take(options.days)
+            .cache(`builds-per-day-${options.days}`, 30000)
+            .getRawMany();
+    }
+
+    /**
+     * Returns the number of builds per package.
+     * @param options The amount to look back
+     * @returns The number of builds per package
+     */
+    getBuildsPerPackage(options?: { days: number }): Promise<{ pkgbase: string; count: string }[]> {
+        if (!options?.days) {
+            return this.buildRepository
+                .createQueryBuilder("build")
+                .select("pkgbase.pkgname AS pkgbase")
+                .addSelect("COUNT(*) AS count")
+                .innerJoin("build.pkgbase", "pkgbase")
+                .groupBy("pkgbase.pkgname")
+                .orderBy("count", "DESC")
+                .cache(`builds-per-package`, 30000)
+                .getRawMany();
+        } else {
+            return this.buildRepository
+                .createQueryBuilder("build")
+                .select("pkgbase.pkgname AS pkgbase")
+                .addSelect("COUNT(*) AS count")
+                .innerJoin("build.pkgbase", "pkgbase")
+                .where("build.timestamp > :date", { date: nDaysInPast(options.days) })
+                .groupBy("pkgbase.pkgname")
+                .orderBy("count", "DESC")
+                .cache(`builds-per-package-${options.days}`, 30000)
+                .getRawMany();
+        }
+    }
+}
 
 /**
  * The metrics service that provides the metrics actions for other services to call.
@@ -277,7 +323,10 @@ export class BuilderDatabaseService extends Service {
         ]);
 
         if (relations.includes(undefined)) {
-            Logger.error("Invalid relations or database is not available, throwing entry away", "BuilderDatabaseService");
+            Logger.error(
+                "Invalid relations or database is not available, throwing entry away",
+                "BuilderDatabaseService",
+            );
             return;
         }
 
@@ -296,7 +345,7 @@ export class BuilderDatabaseService extends Service {
             replaced: params.replaced,
         };
 
-        // Update the chaotic versions, as they changed with new successful builds
+        // Update the chaotic versions as they changed with new successful builds
         if (params.status === BuildStatus.SUCCESS) {
             void this.repoManagerService.updateChaoticVersions();
         }

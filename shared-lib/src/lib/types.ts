@@ -4,7 +4,6 @@ export const CACHE_ROUTER_TTL = 60 * 5 * 1000;
 export const CACHE_TELEGRAM_TTL = 120 * 1000;
 export const CAUR_ALLOWED_CORS = ["https://aur.chaotic.cx", "https://caur-frontend-pages.dev"];
 export const CAUR_API_URL = "https://builds.garudalinux.org/api";
-export const CAUR_BACKEND_PORT = 3000;
 export const CAUR_BACKEND_URL = "https://builds.garudalinux.org/backend";
 export const CAUR_CACHED_METRICS_URL = `${CAUR_BACKEND_URL}/metrics`;
 export const CAUR_DEPLOY_LOG_ID = "-1001402311166";

@@ -65,7 +65,22 @@ export class BuilderController {
     }
 
     @AllowAnonymous()
-    @Get("count/:pkgname")
+    @Get("count/days")
+    async getBuildsPerPackage(
+    ): Promise<{ pkgbase: string; count: string }[]> {
+        return this.builderService.getBuildsPerPackage();
+    }
+
+    @AllowAnonymous()
+    @Get("count/days/:days")
+    async getBuildsPerPackageWithDays(
+        @Param("days", ParseIntPipe) days: number,
+    ): Promise<{ pkgbase: string; count: string }[]> {
+        return this.builderService.getBuildsPerPackage({ days });
+    }
+
+    @AllowAnonymous()
+    @Get("count/package/:pkgname")
     async getLatestBuildsCountByPkgname(@Param("pkgname") pkgname: string): Promise<number> {
         return this.builderService.getLastBuildsCountForPackage(pkgname);
     }
@@ -98,5 +113,25 @@ export class BuilderController {
     async getBuildersAmount(): Promise<{ builderId: string; count: string }[]> {
         return this.builderService.getBuildsPerBuilder();
     }
-}
 
+    @AllowAnonymous()
+    @Get("per-day/pkgname/:pkgname/:days")
+    async getBuildsPerDayDefault(
+        @Param("pkgname") pkgname: string,
+        @Param("days", ParseIntPipe) days: number,
+        @Query("offset", new ParseIntPipe({ optional: true })) offset: number,
+    ): Promise<
+        {
+            day: string;
+            count: string;
+        }[]
+    > {
+        return this.builderService.getBuildsCountByPkgnamePerDay({ offset, pkgname, amount: days });
+    }
+
+    @AllowAnonymous()
+    @Get("per-day/:days")
+    async getBuildsPerDay(@Param("days", ParseIntPipe) days: number): Promise<{ day: string; count: string }[]> {
+        return this.builderService.getBuildsPerDay({ days: days });
+    }
+}
