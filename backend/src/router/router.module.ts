@@ -1,16 +1,16 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Package, Repo } from "../builder/builder.entity";
 import { RouterController } from "./router.controller";
 import { Mirror, RouterHit } from "./router.entity";
 import { RouterService } from "./router.service";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerBehindProxyGuard } from "../api/throttler-behind-proxy.guard";
+import { BuilderModule } from "../builder/builder.module";
 
 @Module({
     controllers: [RouterController],
-    exports: [TypeOrmModule],
-    imports: [TypeOrmModule.forFeature([RouterHit, Package, Repo, Mirror])],
+    exports: [RouterService, TypeOrmModule],
+    imports: [BuilderModule, TypeOrmModule.forFeature([RouterHit, Mirror])],
     providers: [
         RouterService,
         {
