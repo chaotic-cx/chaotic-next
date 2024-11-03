@@ -21,4 +21,4 @@ export const dataSourceOptions: DataSourceOptions = {
     },
 };
 
-export const appDataSource = new DataSource(dataSourceOptions);
+export const appDataSource: DataSource = new DataSource(dataSourceOptions);
