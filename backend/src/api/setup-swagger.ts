@@ -1,5 +1,5 @@
 import type { INestApplication } from "@nestjs/common";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { DocumentBuilder, OpenAPIObject, SwaggerModule } from "@nestjs/swagger";
 
 export function provideSwagger(app: INestApplication): void {
     const config = new DocumentBuilder()
@@ -7,8 +7,8 @@ export function provideSwagger(app: INestApplication): void {
         .setTitle("Chaotic-AUR API")
         .setDescription("Chaotic-AUR API specification")
         .setVersion("1.0")
-        .addTag("chaotic-aur")
+        .setContact("Chaotic-AUR developers", "https://aur.chaotic.cx/about", "root@chaotic.cx")
         .build();
-    const documentFactory = () => SwaggerModule.createDocument(app, config);
+    const documentFactory = (): OpenAPIObject => SwaggerModule.createDocument(app, config);
     SwaggerModule.setup("api", app, documentFactory);
 }
