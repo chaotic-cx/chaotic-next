@@ -111,7 +111,7 @@
         "@nestjs/jwt": "^10.2.0",
         "@nestjs/passport": "^10.0.3",
         "@nestjs/platform-fastify": "^10.4.6",
-        "@nestjs/swagger": "^7.4.2",
+        "@nestjs/swagger": "^8.0.1",
         "@nestjs/terminus": "^10.2.3",
         "@nestjs/throttler": "^6.2.1",
         "@nestjs/typeorm": "^10.0.2",
