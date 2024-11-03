@@ -65,24 +65,36 @@ export class RepoManagerService {
         );
 
         const globalTriggers: string[] = JSON.parse(this.configService.get<string>("repoMan.globalTriggers"));
-        if (globalTriggers && globalTriggers.length > 0) {
-            const existingSettings = await repoSettingsExists("globalTriggers", this.settingsRepository);
-            if (existingSettings) {
-                const existing: string[] = JSON.parse(existingSettings.value);
+        const existingSettings = await repoSettingsExists("globalTriggers", this.settingsRepository);
 
-                for (const key of existing) {
-                    if (!globalTriggers.includes(key)) {
-                        globalTriggers.push(key);
+        try {
+            if (globalTriggers && globalTriggers.length > 0) {
+                if (existingSettings) {
+                    const existing: string[] = JSON.parse(existingSettings.value);
+
+                    for (const key of existing) {
+                        if (!globalTriggers.includes(key)) {
+                            globalTriggers.push(key);
+                        }
                     }
-                }
 
-                await this.settingsRepository.update(
-                    { key: "alwaysRebuild" },
-                    { value: JSON.stringify(globalTriggers) },
-                );
+                    await this.settingsRepository.update(
+                        { key: "alwaysRebuild" },
+                        { value: JSON.stringify(globalTriggers) },
+                    );
+                } else {
+                    await this.settingsRepository.save({
+                        key: "globalTriggers",
+                        value: JSON.stringify(globalTriggers),
+                    });
+                }
             } else {
-                await this.settingsRepository.save({ key: "globalTriggers", value: JSON.stringify(globalTriggers) });
+                if (existingSettings) {
+                    globalTriggers.push(...JSON.parse(existingSettings.value));
+                }
             }
+        } catch (err: unknown) {
+            Logger.error(err, "RepoManager");
         }
 
         this.repoManager = this.createRepoManager(globalTriggers);
@@ -259,6 +271,8 @@ class RepoManager {
         repo: Repo,
     ): Promise<RepoUpdateRunParams[]> {
         const needsRebuild: { archPkg: ArchlinuxPackage; configs: any; pkg: Package }[] = [];
+        const globalTriggersFromCiConfig: string[] = await this.checkGlobalTriggers(repoDir);
+        const allGlobalTriggers = [...this.repoManagerSettings.globalTriggers, ...globalTriggersFromCiConfig];
 
         for (const pkgbaseDir of pkgbaseDirs) {
             let archRebuildPkg: ArchlinuxPackage[];
@@ -275,13 +289,16 @@ class RepoManager {
 
                 if (archRebuildPkg.length === 0) {
                     // If no trigger was found in explicit triggers, let's check for global triggers
-                    for (const globalTrigger of this.repoManagerSettings.globalTriggers) {
-                        if (metadata?.deps?.includes(globalTrigger)) {
+                    const globalArchRebuildPkg = this.changedArchPackages.filter((pkg) => {
+                        return allGlobalTriggers.includes(pkg.pkgname);
+                    })
+                    for (const globalTrigger of globalArchRebuildPkg) {
+                        if (metadata?.deps?.includes(globalTrigger.pkgname)) {
                             dbObject = await this.dbConnections.archPkg.findOne({
-                                where: { pkgname: globalTrigger },
+                                where: { pkgname: globalTrigger.pkgname },
                             });
                             Logger.log(
-                                `Rebuilding ${pkgbaseDir} because of global trigger ${globalTrigger}`,
+                                `Rebuilding ${pkgbaseDir} because of global trigger ${globalTrigger.pkgname}`,
                                 "RepoManager",
                             );
                             needsRebuild.push({
@@ -289,6 +306,7 @@ class RepoManager {
                                 configs: pkgConfig.configs,
                                 pkg: pkgConfig.pkgInDb,
                             });
+                            break;
                         }
                     }
                 } else {
@@ -313,6 +331,29 @@ class RepoManager {
     }
 
     /**
+     * Check for global triggers in the global CI config file
+     * @param repoDir The directory of the repository
+     * @returns An array of global triggers
+     */
+    async checkGlobalTriggers(repoDir: string): Promise<string[]> {
+        try {
+            const globalConfigFile = path.join(repoDir, ".ci", "config");
+            const globalConfig = fs.readFileSync(globalConfigFile, "utf8");
+            const globalConfigLines = globalConfig.split("\n");
+            const relevantEntry = globalConfigLines.find((line) => line.startsWith("CI_REBUILD_TRIGGERS"));
+
+            if (relevantEntry) {
+                return JSON.parse(relevantEntry.split("=")[1]);
+            } else {
+                return [];
+            }
+        } catch (err: unknown) {
+            Logger.error(err, "RepoManager");
+            return [];
+        }
+    }
+
+    /**
      * Bump the packages in the database.
      * @param needsRebuild The packages that need to be rebuilt
      * @param repoDir The directory of the repository
@@ -324,6 +365,9 @@ class RepoManager {
         Logger.debug(needsRebuild, "RepoManager");
 
         for (const param of needsRebuild) {
+            // Skip -bin packages, they are not compiled against system libraries usually
+            if (param.pkg.pkgname.endsWith("-bin")) continue;
+
             Logger.log(`Checking if ${param.pkg.pkgname} was already bumped`, "RepoManager");
 
             if (alreadyBumped.has(param.pkg.pkgname)) {
@@ -333,8 +377,6 @@ class RepoManager {
                 );
                 continue;
             }
-
-            Logger.log(param.configs["CI_PACKAGE_BUMP"], "RepoManager");
 
             if (param.configs["CI_PACKAGE_BUMP"]) {
                 const [version, bumpCount] = param.configs["CI_PACKAGE_BUMP"].split("/");
