@@ -347,7 +347,12 @@ export class BuilderDatabaseService extends Service {
 
         // Update the chaotic versions as they changed with new successful builds
         if (params.status === BuildStatus.SUCCESS) {
-            void this.repoManagerService.updateChaoticVersions();
+            try {
+                await this.repoManagerService.updateChaoticVersions();
+                await this.repoManagerService.eventuallyBumpAffected(build);
+            } catch(err: unknown) {
+                Logger.error(err, "RepoManager")
+            }
         }
 
         try {
