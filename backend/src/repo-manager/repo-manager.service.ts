@@ -19,7 +19,7 @@ import * as os from "node:os";
 import { InjectRepository } from "@nestjs/typeorm";
 import { IsNull, Not, Repository } from "typeorm";
 import { ARCH } from "../constants";
-import { Package, pkgnameExists, Repo } from "../builder/builder.entity";
+import { Build, Package, pkgnameExists, Repo } from "../builder/builder.entity";
 import { ConfigService } from "@nestjs/config";
 import { AxiosResponse } from "axios";
 import { isValidUrl } from "../functions";
@@ -186,6 +186,22 @@ export class RepoManagerService {
             }
         }
     }
+
+    /**
+     * Bump packages depending on a single Build output.
+     * @param build The build object
+     * @returns A promise that resolves when the bumping is done
+     */
+    async eventuallyBumpAffected(build: Partial<Build>) {
+        const result: BumpResult[] = [
+            {
+                bumped: await this.repoManager.checkPackageDepsAfterDeployment(build),
+                repo: build.repo.name,
+            },
+        ];
+
+        this.summarizeChanges(result, this.repoManager);
+    }
 }
 
 /**
@@ -262,6 +278,8 @@ class RepoManager {
         const bumpedPackages: Map<string, string> = await this.bumpPackages(needsRebuild, repoDir);
 
         Logger.log(`Pushing changes to ${repo.name}`, "RepoManager");
+
+        // @ts-expect-error I specifically ensured this won't hit any regular packages..
         await this.pushChanges(repoDir, needsRebuild, repo);
 
         Logger.debug("Done checking for rebuild triggers, cleaning up", "RepoManager");
@@ -1014,6 +1032,67 @@ class RepoManager {
 
             Logger.debug(`Found ${result.length} packages providing shared objects`, "RepoManager");
             return result;
+        } catch (err: unknown) {
+            Logger.error(err, "RepoManager");
+        }
+    }
+
+    /**
+     * Check the dependencies of a package after deployment and bump the packages that depend on it.
+     * Intended to be used after a package has been deployed.
+     * @param build The build object of the package that was deployed
+     * @returns A map of the bumped package
+     */
+    async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<Map<string, string>> {
+        try {
+            const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
+            const needsRebuild: RepoUpdateRunParams[] = [];
+            const repoDir = this.repoDirs.find((repo) => fs.existsSync(path.join(repo, build.pkgbase.pkgname)));
+
+            for (const pkg of allPackages) {
+                if (pkg.bumpTriggers) {
+                    if (pkg.bumpTriggers.find((trigger) => trigger.pkgname === build.pkgbase.pkgname)) {
+                        const configs = await this.readPackageConfig(
+                            path.join(repoDir, pkg.pkgname, ".CI", "config"),
+                            pkg.pkgname,
+                        );
+                        needsRebuild.push({
+                            configs: configs.configs,
+                            pkg,
+                            archPkg: build.pkgbase,
+                        });
+                        Logger.debug(
+                            `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in triggers`,
+                            "RepoManager",
+                        );
+                    }
+                }
+
+                if (pkg.metadata) {
+                    const metadata = JSON.parse(pkg.metadata) as ParsedPackageMetadata;
+                    if (metadata.deps) {
+                        for (const dep of metadata.deps) {
+                            if (dep === build.pkgbase.pkgname) {
+                                const configs = await this.readPackageConfig(
+                                    path.join(repoDir, pkg.pkgname, ".CI", "config"),
+                                    pkg.pkgname,
+                                );
+                                needsRebuild.push({
+                                    configs: configs.configs,
+                                    pkg,
+                                    archPkg: build.pkgbase,
+                                });
+                                Logger.debug(
+                                    `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in deps`,
+                                    "RepoManager",
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            return await this.bumpPackages(needsRebuild, repoDir);
         } catch (err: unknown) {
             Logger.error(err, "RepoManager");
         }

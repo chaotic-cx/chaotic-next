@@ -52,7 +52,7 @@ export interface RepoSettings {
 }
 
 export interface RepoUpdateRunParams {
-    archPkg: ArchlinuxPackage;
+    archPkg: ArchlinuxPackage | Package;
     configs: CiConfigs;
     pkg: Package;
 }
