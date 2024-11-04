@@ -21,6 +21,9 @@ import { TelegramModule } from "./telegram/telegram.module";
         BuilderModule,
         ConfigModule.forRoot({ envFilePath: ".env", isGlobal: true, load: [appConfig] }),
         LoggerModule.forRoot({
+            pinoHttp: {
+                level: process.env.LOG_LEVEL || "info",
+            },
             // By default, off, but can be enabled by setting HTTP_LOGGING=true
             forRoutes: process.env.HTTP_LOGGING === "true" ? undefined : [],
         }),

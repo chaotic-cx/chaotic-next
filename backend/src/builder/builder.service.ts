@@ -373,6 +373,7 @@ export class BuilderDatabaseService extends Service {
                         lastUpdated: new Date().toISOString(),
                     });
                 }
+                Logger.log(`Removed ${pkgbase} from the database active records`, "BuilderDatabaseService");
             }
         } catch (err: unknown) {
             Logger.error(err, "BuilderDatabaseService");
