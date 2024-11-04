@@ -168,10 +168,13 @@ export class RepoManagerService {
      * Summarize the changes of the run.
      */
     summarizeChanges(results: BumpResult[], repoManager: RepoManager): void {
-        Logger.log("Summarizing changes:", "RepoManager");
-        Logger.log(`In total, ${repoManager.changedArchPackages.length} Arch package(s) were changed`, "RepoManager");
-
+        if (!results || !repoManager) return;
         if (results.length > 0) {
+            Logger.log("Summarizing changes:", "RepoManager");
+            Logger.log(
+                `In total, ${repoManager.changedArchPackages.length} Arch package(s) were changed`,
+                "RepoManager",
+            );
             for (const result of results) {
                 if (!result.bumped || result?.bumped?.size === 0) {
                     Logger.log(`No packages affected in ${result.repo}`, "RepoManager");
@@ -200,7 +203,9 @@ export class RepoManagerService {
             },
         ];
 
-        this.summarizeChanges(result, this.repoManager);
+        if (result.length > 0) {
+            this.summarizeChanges(result, this.repoManager);
+        }
     }
 }
 
