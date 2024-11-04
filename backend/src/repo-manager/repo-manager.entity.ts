@@ -24,6 +24,9 @@ export class ArchlinuxPackage {
 
     @Column({ type: "varchar", nullable: true })
     previousVersion: string;
+
+    @Column({ type: "jsonb", nullable: true })
+    metadata: string;
 }
 
 @Entity()
