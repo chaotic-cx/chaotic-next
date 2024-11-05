@@ -183,7 +183,7 @@ export class RepoManagerService {
         if (!results || !repoManager) return;
         Logger.log("Summarizing changes:", "RepoManager");
 
-        if (repoManager.changedArchPackages.length > 0) {
+        if (repoManager.changedArchPackages && repoManager.changedArchPackages?.length > 0) {
             Logger.log(
                 `In total, ${repoManager.changedArchPackages.length} Arch package(s) were changed`,
                 "RepoManager",
