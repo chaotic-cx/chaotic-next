@@ -2,6 +2,7 @@ import type { CountNameObject, UserAgentList } from "@./shared-lib";
 import type { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
 import { requiredEnvVarsDev, requiredEnvVarsProd } from "./constants";
+import { BumpType } from "./interfaces/repo-manager";
 
 /**
  * Parse the output of the non-single line metrics.
@@ -81,5 +82,20 @@ export function isValidUrl(url: string): boolean {
         return true;
     } catch (err: unknown) {
         return false;
+    }
+}
+
+export function bumpTypeToText(type: BumpType): string {
+    switch (type) {
+        case BumpType.EXPLICIT:
+            return "explicitly";
+        case BumpType.GLOBAL:
+            return "globally";
+        case BumpType.FROM_DEPS:
+            return "via Arch dependencies";
+        case BumpType.FROM_DEPS_CHAOTIC:
+            return "via Chaotic dependencies";
+        default:
+            return "Unknown";
     }
 }

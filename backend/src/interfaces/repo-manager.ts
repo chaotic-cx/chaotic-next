@@ -53,14 +53,16 @@ export interface RepoSettings {
 
 export interface RepoUpdateRunParams {
     archPkg: ArchlinuxPackage | Package;
+    bumpType: BumpType;
     configs: CiConfigs;
     pkg: Package;
+    triggerFrom: TriggerType;
 }
 
 export type CiConfigs = { [key: string]: string };
 
 export interface BumpResult {
-    bumped: Map<string, string>;
+    bumped: PackageBumpEntry[];
     repo: string;
 }
 
@@ -68,4 +70,24 @@ export interface PackageConfig {
     configs: CiConfigs;
     pkgInDb: Package;
     rebuildTriggers: string[];
+}
+
+export interface PackageBumpEntry {
+    pkg: Package;
+    bumpType: BumpType;
+    trigger: number;
+    triggerName?: string;
+    triggerFrom: TriggerType;
+}
+
+export enum BumpType {
+    EXPLICIT = 0,
+    GLOBAL = 1,
+    FROM_DEPS = 2,
+    FROM_DEPS_CHAOTIC = 3,
+}
+
+export enum TriggerType {
+    ARCH = 0,
+    CHAOTIC = 1,
 }

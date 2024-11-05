@@ -6,6 +6,8 @@ import http from "isomorphic-git/http/node";
 import git from "isomorphic-git";
 import {
     BumpResult,
+    BumpType,
+    PackageBumpEntry,
     PackageConfig,
     ParsedPackage,
     ParsedPackageMetadata,
@@ -13,8 +15,15 @@ import {
     RepoStatus,
     RepoUpdateRunParams,
     RepoWorkDir,
+    TriggerType,
 } from "../interfaces/repo-manager";
-import { ArchlinuxPackage, archPkgExists, RepoManagerSettings, repoSettingsExists } from "./repo-manager.entity";
+import {
+    ArchlinuxPackage,
+    archPkgExists,
+    PackageBump,
+    RepoManagerSettings,
+    repoSettingsExists,
+} from "./repo-manager.entity";
 import * as os from "node:os";
 import { InjectRepository } from "@nestjs/typeorm";
 import { IsNull, Not, Repository } from "typeorm";
@@ -22,7 +31,7 @@ import { ARCH } from "../constants";
 import { Build, Package, pkgnameExists, Repo } from "../builder/builder.entity";
 import { ConfigService } from "@nestjs/config";
 import { AxiosResponse } from "axios";
-import { isValidUrl } from "../functions";
+import { bumpTypeToText, isValidUrl } from "../functions";
 import { CronJob } from "cron";
 import util from "node:util";
 import { exec } from "node:child_process";
@@ -45,6 +54,8 @@ export class RepoManagerService {
         private settingsRepository: Repository<RepoManagerSettings>,
         @InjectRepository(Package)
         private packageRepository: Repository<Package>,
+        @InjectRepository(PackageBump)
+        private packageBumpRepository: Repository<PackageBump>,
     ) {
         Logger.log("Initializing RepoManager service...", "RepoManager");
         void this.init();
@@ -156,9 +167,10 @@ export class RepoManagerService {
             this.httpService,
             {
                 archPkg: this.archlinuxPackageRepository,
-                settings: this.settingsRepository,
-                repo: this.repoRepository,
+                packageBump: this.packageBumpRepository,
                 packages: this.packageRepository,
+                repo: this.repoRepository,
+                settings: this.settingsRepository,
             },
             repoSettings,
         );
@@ -169,23 +181,26 @@ export class RepoManagerService {
      */
     summarizeChanges(results: BumpResult[], repoManager: RepoManager): void {
         if (!results || !repoManager) return;
-        if (results.length > 0) {
-            Logger.log("Summarizing changes:", "RepoManager");
+        Logger.log("Summarizing changes:", "RepoManager");
+
+        if (repoManager.changedArchPackages.length > 0) {
             Logger.log(
                 `In total, ${repoManager.changedArchPackages.length} Arch package(s) were changed`,
                 "RepoManager",
             );
-            for (const result of results) {
-                if (!result.bumped || result?.bumped?.size === 0) {
-                    Logger.log(`No packages affected in ${result.repo}`, "RepoManager");
-                    continue;
-                }
-                if (result.repo) {
-                    Logger.log(`Bumped packages in ${result.repo}:`, "RepoManager");
-                }
-                for (const [pkg, base] of result.bumped.entries()) {
-                    Logger.log(` - ${pkg} bumped via ${base}`, "RepoManager");
-                }
+        }
+
+        for (const result of results) {
+            if (!result.bumped || result?.bumped?.length === 0) {
+                Logger.log(`No packages affected in ${result.repo}`, "RepoManager");
+                continue;
+            }
+            if (result.repo) {
+                Logger.log(`Bumped packages in ${result.repo}:`, "RepoManager");
+            }
+            for (const res of result.bumped) {
+                const bumpType = bumpTypeToText(res.bumpType);
+                Logger.log(` - ${res.pkg.pkgname} bumped ${bumpType} (${res.triggerName})`, "RepoManager");
             }
         }
     }
@@ -231,6 +246,7 @@ class RepoManager {
         `https://arch.mirror.constant.com/${name}/os/x86_64/${name}.db.tar.gz`;
     private readonly dbConnections: {
         archPkg: Repository<ArchlinuxPackage>;
+        packageBump: Repository<PackageBump>;
         packages: Repository<Package>;
         repo: Repository<any>;
         settings: Repository<RepoManagerSettings>;
@@ -244,9 +260,10 @@ class RepoManager {
         httpService: HttpService,
         dbConnections: {
             archPkg: Repository<ArchlinuxPackage>;
-            settings: Repository<RepoManagerSettings>;
-            repo: Repository<Repo>;
+            packageBump: Repository<PackageBump>;
             packages: Repository<Package>;
+            repo: Repository<Repo>;
+            settings: Repository<RepoManagerSettings>;
         },
         settings: RepoSettings,
     ) {
@@ -262,7 +279,7 @@ class RepoManager {
      * @param repo The repository to clone
      * @returns An object containing the bumped packages as a map and the repository name
      */
-    async startRun(repo: Repo): Promise<{ bumped: Map<string, string>; repo: string }> {
+    async startRun(repo: Repo): Promise<{ bumped: PackageBumpEntry[]; repo: string }> {
         Logger.log(`Checking repo ${repo.name} for rebuild triggers...`, "RepoManager");
         Logger.debug(`Started cloning repo ${repo.name}`, "RepoManager");
 
@@ -280,11 +297,11 @@ class RepoManager {
             this.status = RepoStatus.INACTIVE;
             return { repo: repo.name, bumped: undefined };
         }
-        const bumpedPackages: Map<string, string> = await this.bumpPackages(needsRebuild, repoDir);
+        const bumpedPackages: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
 
         Logger.log(`Pushing changes to ${repo.name}`, "RepoManager");
 
-        // @ts-expect-error I specifically ensured this won't hit any regular packages..
+        // @ts-expect-error I specifically ensured this won't hit any regular packages
         await this.pushChanges(repoDir, needsRebuild, repo);
 
         Logger.debug("Done checking for rebuild triggers, cleaning up", "RepoManager");
@@ -306,7 +323,7 @@ class RepoManager {
         repoDir: string,
         repo: Repo,
     ): Promise<RepoUpdateRunParams[]> {
-        const needsRebuild: { archPkg: ArchlinuxPackage; configs: any; pkg: Package }[] = [];
+        const needsRebuild: RepoUpdateRunParams[] = [];
 
         // Enhance the global triggers with the ones from the global CI config file
         const globalTriggersFromCiConfig: string[] = await this.checkGlobalTriggers(repoDir);
@@ -324,8 +341,6 @@ class RepoManager {
         for (const pkgbaseDir of pkgbaseDirs) {
             let archRebuildPkg: ArchlinuxPackage[];
             const configFile = path.join(repoDir, pkgbaseDir, ".CI", "config");
-            if (!fs.existsSync(configFile)) Logger.warn(`No config file found in ${pkgbaseDir}`, "RepoManager");
-
             const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
             const metadata: ParsedPackageMetadata = JSON.parse(pkgConfig.pkgInDb.metadata);
             let dbObject: ArchlinuxPackage;
@@ -342,6 +357,8 @@ class RepoManager {
                     archPkg: dbObject,
                     configs: pkgConfig.configs,
                     pkg: pkgConfig.pkgInDb,
+                    bumpType: BumpType.EXPLICIT,
+                    triggerFrom: TriggerType.ARCH,
                 });
 
                 Logger.debug(`Rebuilding ${pkgbaseDir} because of explicit trigger ${dbObject.pkgname}`, "RepoManager");
@@ -360,6 +377,8 @@ class RepoManager {
                         archPkg: dbObject,
                         configs: pkgConfig.configs,
                         pkg: pkgConfig.pkgInDb,
+                        bumpType: BumpType.GLOBAL,
+                        triggerFrom: TriggerType.ARCH,
                     });
 
                     Logger.log(
@@ -392,6 +411,8 @@ class RepoManager {
                         archPkg: trigger.pkg,
                         configs: pkgConfig.configs,
                         pkg: pkgConfig.pkgInDb,
+                        bumpType: BumpType.FROM_DEPS,
+                        triggerFrom: TriggerType.ARCH,
                     });
 
                     Logger.debug(
@@ -435,19 +456,18 @@ class RepoManager {
      * @param repoDir The directory of the repository
      * @returns A map of the packages that were bumped
      */
-    async bumpPackages(needsRebuild: RepoUpdateRunParams[], repoDir: string): Promise<Map<string, string>> {
-        const alreadyBumped = new Map<string, string>();
-
-        Logger.debug(needsRebuild, "RepoManager");
+    async bumpPackages(needsRebuild: RepoUpdateRunParams[], repoDir: string): Promise<PackageBumpEntry[]> {
+        const alreadyBumped: PackageBumpEntry[] = [];
 
         for (const param of needsRebuild) {
             // Skip -bin packages, they are not compiled against system libraries usually
             if (param.pkg.pkgname.endsWith("-bin")) continue;
 
             // We don't want to bump twice, either
-            if (alreadyBumped.has(param.pkg.pkgname)) {
+            const existingEntry = alreadyBumped.find((entry) => entry.pkg.pkgname === param.pkg.pkgname);
+            if (existingEntry && typeof existingEntry.trigger !== "number" && "pkgname" in existingEntry.trigger) {
                 Logger.warn(
-                    `Already bumped via ${alreadyBumped.get(param.pkg.pkgname)}, skipping ${param.pkg.pkgname}`,
+                    `Already bumped via ${existingEntry.triggerName}, skipping ${param.pkg.pkgname}`,
                     "RepoManager",
                 );
                 continue;
@@ -456,7 +476,13 @@ class RepoManager {
             await this.bumpSinglePackage(repoDir, param.pkg.pkgname);
 
             Logger.log(`Rebuilding ${param.pkg.pkgname} because of changed ${param.archPkg.pkgname}`, "RepoManager");
-            alreadyBumped.set(param.pkg.pkgname, param.archPkg.pkgname);
+            alreadyBumped.push({
+                pkg: param.pkg,
+                bumpType: param.bumpType,
+                trigger: param.archPkg.id,
+                triggerFrom: param.triggerFrom,
+                triggerName: param.archPkg.pkgname,
+            });
 
             if (!param.pkg.bumpTriggers) {
                 param.pkg.bumpTriggers = [{ pkgname: param.archPkg.pkgname, archVersion: param.pkg.version }];
@@ -477,6 +503,15 @@ class RepoManager {
             }
 
             void this.dbConnections.packages.save(param.pkg);
+
+            // We need to update the package in the database to reflect the new bump
+            const bumpEntry: PackageBumpEntry = {
+                pkg: param.pkg,
+                bumpType: param.bumpType,
+                trigger: param.archPkg.id,
+                triggerFrom: param.triggerFrom,
+            };
+            void this.dbConnections.packageBump.save(bumpEntry);
         }
 
         return alreadyBumped;
@@ -704,7 +739,10 @@ class RepoManager {
             if (pkg.base === pkg.name) result.push(archPkg);
         }
 
-        Logger.debug(`Done determining changed packages, in total ${result.length} package(s) changed`, "RepoManager");
+        Logger.debug(
+            `Done determining changed packages, in total ${result.length ? result.length : 0} package(s) changed`,
+            "RepoManager",
+        );
         return result;
     }
 
@@ -996,9 +1034,13 @@ class RepoManager {
             pkgConfig.configs["CI_PACKAGE_BUMP"] = `${pkgConfig.pkgInDb.version}-${pkgConfig.pkgInDb.pkgrel}/1`;
         }
 
+        // Cleanup and ensure we have a .CI directory to write to
         if (fs.existsSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, ".CI", "config"))) {
             fs.rmSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, ".CI", "config"));
+        } else if (!fs.existsSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, ".CI"))) {
+            fs.mkdirSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, ".CI"));
         }
+
         for (const [key, value] of Object.entries(pkgConfig.configs)) {
             try {
                 if (key === "pkg" || (key || value) === undefined) continue;
@@ -1048,7 +1090,7 @@ class RepoManager {
      * @param build The build object of the package that was deployed
      * @returns A map of the bumped package
      */
-    async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<Map<string, string>> {
+    async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<PackageBumpEntry[]> {
         try {
             const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
             const needsRebuild: RepoUpdateRunParams[] = [];
@@ -1065,6 +1107,8 @@ class RepoManager {
                             configs: configs.configs,
                             pkg,
                             archPkg: build.pkgbase,
+                            bumpType: BumpType.EXPLICIT,
+                            triggerFrom: TriggerType.CHAOTIC,
                         });
                         Logger.debug(
                             `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in triggers`,
@@ -1086,6 +1130,8 @@ class RepoManager {
                                     configs: configs.configs,
                                     pkg,
                                     archPkg: build.pkgbase,
+                                    bumpType: BumpType.FROM_DEPS_CHAOTIC,
+                                    triggerFrom: TriggerType.CHAOTIC,
                                 });
                                 Logger.debug(
                                     `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in deps`,

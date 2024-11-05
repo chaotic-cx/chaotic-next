@@ -3,7 +3,7 @@ import { RepoManagerController } from "./repo-manager.controller";
 import { RepoManagerService } from "./repo-manager.service";
 import { HttpModule } from "@nestjs/axios";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { ArchlinuxPackage, RepoManagerSettings } from "./repo-manager.entity";
+import { ArchlinuxPackage, PackageBump, RepoManagerSettings } from "./repo-manager.entity";
 import { ConfigModule } from "@nestjs/config";
 import repoManagerConfig from "../config/repo-manager.config";
 import { BuilderModule } from "../builder/builder.module";
@@ -15,7 +15,7 @@ import { BuilderModule } from "../builder/builder.module";
         forwardRef(() => BuilderModule),
         ConfigModule.forFeature(repoManagerConfig),
         HttpModule,
-        TypeOrmModule.forFeature([ArchlinuxPackage, RepoManagerSettings]),
+        TypeOrmModule.forFeature([ArchlinuxPackage, RepoManagerSettings, PackageBump]),
     ],
     providers: [RepoManagerService],
 })

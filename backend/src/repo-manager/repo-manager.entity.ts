@@ -1,6 +1,8 @@
-import { Column, Entity, PrimaryGeneratedColumn, Repository } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, Repository } from "typeorm";
 import { Mutex } from "async-mutex";
 import { Logger } from "@nestjs/common";
+import { BumpType, TriggerType } from "../interfaces/repo-manager";
+import { Package } from "../builder/builder.entity";
 
 @Entity()
 export class ArchlinuxPackage {
@@ -39,6 +41,29 @@ export class RepoManagerSettings {
 
     @Column({ type: "varchar" })
     value: string;
+}
+
+@Entity()
+export class PackageBump {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ type: "enum", enum: BumpType })
+    bumpType: BumpType;
+
+    @ManyToOne(() => Package, (pkg) => pkg.id, { cascade: true })
+    pkg: Package
+
+    // Reference a pkg.id from the Package or ArchlinuxPackage entities, resolved
+    // By the triggerFrom field
+    @Column({ type: "int" })
+    trigger: number;
+
+    @Column({ type: "enum", enum: TriggerType })
+    triggerFrom: TriggerType;
+
+    @CreateDateColumn()
+    timestamp: Date;
 }
 
 const packageMutex = new Mutex();
