@@ -92,3 +92,11 @@ export enum TriggerType {
     ARCH = 0,
     CHAOTIC = 1,
 }
+
+export interface BumpLogEntry {
+    bumpType: BumpType;
+    pkgname: string;
+    trigger: string;
+    triggerFrom: TriggerType;
+    timestamp: string;
+}

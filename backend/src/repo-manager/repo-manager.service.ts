@@ -6,6 +6,7 @@ import { Stats } from "node:fs";
 import http from "isomorphic-git/http/node";
 import git from "isomorphic-git";
 import {
+    BumpLogEntry,
     BumpResult,
     BumpType,
     PackageBumpEntry,
@@ -212,13 +213,49 @@ export class RepoManagerService {
     /**
      * Bump packages depending on a single Build output.
      * @param build The build object
-     * @returns A promise that resolves when the bumping is done
+     * @returns A Build object promise that resolves when the bumping is done
      */
     async eventuallyBumpAffected(build: Partial<Build>) {
         const result: BumpResult[] = [await this.repoManager.checkPackageDepsAfterDeployment(build)];
         if (result.length > 0) {
             this.summarizeChanges(result, this.repoManager);
         }
+    }
+
+    /**
+     * Get the bump logs.
+     * @param options The options for the bump logs, current amount, and skip
+     * @returns An array of bump log entries
+     */
+    async getBumpLogs(options: { amount: number; skip: number }): Promise<BumpLogEntry[]> {
+        if (!options.amount) options.amount = 100;
+        if (!options.skip) options.skip = 0;
+
+        const result: BumpLogEntry[] = [];
+        const logEntries: PackageBump[] = await this.packageBumpRepository.find({
+            take: options.amount,
+            skip: options.skip,
+            relations: ["pkg"],
+        });
+
+        for (const logEntry of logEntries) {
+            const entry: Partial<BumpLogEntry> = {};
+            if (logEntry.triggerFrom === TriggerType.ARCH) {
+                const trigger = await this.archlinuxPackageRepository.findOne({ where: { id: logEntry.trigger } });
+                entry.trigger = trigger.pkgname;
+            } else if (logEntry.triggerFrom === TriggerType.CHAOTIC) {
+                const trigger = await this.packageRepository.findOne({ where: { id: logEntry.trigger } });
+                entry.trigger = trigger.pkgname;
+            }
+            entry.bumpType = logEntry.bumpType;
+            entry.timestamp = logEntry.timestamp.toISOString();
+            entry.triggerFrom = logEntry.triggerFrom;
+            entry.pkgname = logEntry.pkg.pkgname;
+
+            result.push(entry as BumpLogEntry);
+        }
+
+        return result;
     }
 }
 
@@ -297,8 +334,6 @@ class RepoManager {
         const bumpedPackages: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
 
         Logger.log(`Pushing changes to ${repo.name}`, "RepoManager");
-
-        // @ts-expect-error I specifically ensured this won't hit any regular packages
         await this.pushChanges(repoDir, needsRebuild, repo);
 
         Logger.debug("Done checking for rebuild triggers, cleaning up", "RepoManager");
@@ -847,15 +882,7 @@ class RepoManager {
      * @param repo The repository object
      * @private
      */
-    private async pushChanges(
-        repoDir: string,
-        needsRebuild: {
-            configs: any;
-            archPkg: ArchlinuxPackage;
-            pkg: Package;
-        }[],
-        repo: Repo,
-    ): Promise<void> {
+    async pushChanges(repoDir: string, needsRebuild: RepoUpdateRunParams[], repo: Repo): Promise<void> {
         Logger.log("Committing changes and pushing back to repo...", "RepoManager");
         for (const param of needsRebuild) {
             try {
@@ -1141,6 +1168,8 @@ class RepoManager {
             }
 
             const bumped: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
+            await this.pushChanges(repoDir, needsRebuild, build.repo);
+
             return {
                 repo: build.repo.name,
                 bumped: bumped,
