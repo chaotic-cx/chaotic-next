@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import path from "node:path";
 import * as fs from "node:fs";
+import { Stats } from "node:fs";
 import http from "isomorphic-git/http/node";
 import git from "isomorphic-git";
 import {
@@ -178,16 +179,19 @@ export class RepoManagerService {
 
     /**
      * Summarize the changes of the run.
+     * @param results An array of results of the run
+     * @param repoManager The RepoManager instance
      */
     summarizeChanges(results: BumpResult[], repoManager: RepoManager): void {
         if (!results || !repoManager) return;
-        Logger.log("Summarizing changes:", "RepoManager");
 
-        if (repoManager.changedArchPackages && repoManager.changedArchPackages?.length > 0) {
+        if (results.find((result) => result.origin === TriggerType.ARCH) && repoManager.changedArchPackages) {
             Logger.log(
-                `In total, ${repoManager.changedArchPackages.length} Arch package(s) were changed`,
+                `Run was triggered by Arch package updates, ${repoManager.changedArchPackages.length} Arch package(s) were changed`,
                 "RepoManager",
             );
+        } else if (results.find((result) => result.origin === TriggerType.CHAOTIC)) {
+            Logger.log("Run was triggered by a Chaotic-AUR package update", "RepoManager");
         }
 
         for (const result of results) {
@@ -196,11 +200,11 @@ export class RepoManagerService {
                 continue;
             }
             if (result.repo) {
-                Logger.log(`Bumped packages in ${result.repo}:`, "RepoManager");
-            }
-            for (const res of result.bumped) {
-                const bumpType = bumpTypeToText(res.bumpType);
-                Logger.log(` - ${res.pkg.pkgname} bumped ${bumpType} (${res.triggerName})`, "RepoManager");
+                Logger.log(`Bumped package(s) in ${result.repo}:`, "RepoManager");
+                for (const res of result.bumped) {
+                    const bumpType: string = bumpTypeToText(res.bumpType);
+                    Logger.log(` - ${res.pkg.pkgname} bumped ${bumpType} (${res.triggerName})`, "RepoManager");
+                }
             }
         }
     }
@@ -211,13 +215,7 @@ export class RepoManagerService {
      * @returns A promise that resolves when the bumping is done
      */
     async eventuallyBumpAffected(build: Partial<Build>) {
-        const result: BumpResult[] = [
-            {
-                bumped: await this.repoManager.checkPackageDepsAfterDeployment(build),
-                repo: build.repo.name,
-            },
-        ];
-
+        const result: BumpResult[] = [await this.repoManager.checkPackageDepsAfterDeployment(build)];
         if (result.length > 0) {
             this.summarizeChanges(result, this.repoManager);
         }
@@ -279,12 +277,12 @@ class RepoManager {
      * @param repo The repository to clone
      * @returns An object containing the bumped packages as a map and the repository name
      */
-    async startRun(repo: Repo): Promise<{ bumped: PackageBumpEntry[]; repo: string }> {
+    async startRun(repo: Repo): Promise<BumpResult> {
         Logger.log(`Checking repo ${repo.name} for rebuild triggers...`, "RepoManager");
         Logger.debug(`Started cloning repo ${repo.name}`, "RepoManager");
 
         this.status = RepoStatus.ACTIVE;
-        const repoDir = await this.createRepoDir(repo);
+        const repoDir: string = await this.createRepoDir(repo);
 
         Logger.debug(`Done cloning ${repo.name}`, "RepoManager");
         Logger.debug("Started checking for rebuild triggers...", "RepoManager");
@@ -293,9 +291,8 @@ class RepoManager {
         const needsRebuild: RepoUpdateRunParams[] = await this.checkRebuildTriggers(pkgbaseDirs, repoDir, repo);
 
         if (!needsRebuild || needsRebuild.length === 0) {
-            Logger.log(`No packages need to be rebuilt in ${repo.name}`, "RepoManager");
             this.status = RepoStatus.INACTIVE;
-            return { repo: repo.name, bumped: undefined };
+            return { repo: repo.name, bumped: [], origin: TriggerType.ARCH };
         }
         const bumpedPackages: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
 
@@ -308,7 +305,7 @@ class RepoManager {
         this.cleanUp([repoDir, ...pkgbaseDirs]);
         this.status = RepoStatus.INACTIVE;
 
-        return { repo: repo.name, bumped: bumpedPackages };
+        return { repo: repo.name, bumped: bumpedPackages, origin: TriggerType.ARCH };
     }
 
     /**
@@ -368,7 +365,7 @@ class RepoManager {
             // If no trigger was found in explicit triggers, let's check for global triggers
             for (const globalTrigger of globalArchRebuildPkg) {
                 if (metadata?.deps?.includes(globalTrigger.pkgname)) {
-                    Logger.debug("Found global trigger by name AND it is in deps", "RepoManager");
+                    Logger.debug("Found global trigger by name and it is in deps", "RepoManager");
 
                     dbObject = await this.dbConnections.archPkg.findOne({
                         where: { pkgname: globalTrigger.pkgname },
@@ -521,11 +518,11 @@ class RepoManager {
      * Pull the Archlinux databases and fill the changedArchPackages array with the packages that have changed.
      */
     async pullArchlinuxPackages(): Promise<void> {
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "chaotic-"));
+        const tempDir: string = fs.mkdtempSync(path.join(os.tmpdir(), "chaotic-"));
         Logger.log(`Started pulling Archlinux databases...`, "RepoManager");
         Logger.debug(`Created temporary directory ${tempDir}`, "RepoManager");
 
-        const downloads = await Promise.allSettled(
+        const downloads: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
             this.archlinuxRepos.map(async (repo) => {
                 const repoUrl = this.archlinuxRepoUrl(repo);
                 const repoDir = path.join(tempDir, repo);
@@ -551,13 +548,13 @@ class RepoManager {
      * Update the database with the versions of our packages and set any non-existing packages to inactive.
      */
     async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "chaotic-"));
-        const repoNames = repos.map((repo) => repo.name);
+        const tempDir: string = fs.mkdtempSync(path.join(os.tmpdir(), "chaotic-"));
+        const repoNames: string[] = repos.map((repo) => repo.name);
 
         Logger.log(`Updating database of ${repoNames.join(", ")}...`, "RepoManager");
         Logger.debug(`Created temporary directory ${tempDir}`, "RepoManager");
 
-        const downloads = await Promise.allSettled(
+        const downloads: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
             repos.map(async (repo): Promise<RepoWorkDir> => {
                 return await this.pullDatabases(repo.dbPath, tempDir, "chaotic-aur", "tar.zst");
             }),
@@ -663,7 +660,7 @@ class RepoManager {
                         Logger.debug(`Unpacking database ${repo.path}`, "RepoManager");
                         // Use native tar due to lack of support for tar.zst in node tar
                         const execPromising = util.promisify(exec);
-                        const { stdout, stderr } = await execPromising(`tar -xf ${repo.path} -C ${workDir}`);
+                        const { stderr } = await execPromising(`tar -xf ${repo.path} -C ${workDir}`);
 
                         if (stderr) {
                             Logger.error(stderr, "RepoManager");
@@ -753,7 +750,7 @@ class RepoManager {
      */
     getDirectories(srcPath: string): string[] {
         return fs.readdirSync(srcPath).filter((file) => {
-            const dir = fs.statSync(path.join(srcPath, file));
+            const dir: Stats = fs.statSync(path.join(srcPath, file));
             return (dir.isDirectory() && !file.startsWith(".")) || file === ".CI";
         });
     }
@@ -766,8 +763,8 @@ class RepoManager {
     private parsePackageDesc(descFile: string): ParsedPackage {
         let pkgbaseWithVersions: ParsedPackage;
         try {
-            const fileData = fs.readFileSync(descFile);
-            const lines = fileData.toString();
+            const fileData: Buffer = fs.readFileSync(descFile);
+            const lines: string = fileData.toString();
             pkgbaseWithVersions = this.extractBaseAndVersion(lines);
 
             Logger.debug(
@@ -944,7 +941,7 @@ class RepoManager {
                 rebuildTriggers = [];
             } else {
                 rebuildTriggers = configs["CI_REBUILD_TRIGGERS"].split(":");
-                Logger.log(`Found ${rebuildTriggers.length} rebuild triggers for ${pkgbaseDir}`, "RepoManager");
+                Logger.log(`Found ${rebuildTriggers.length} rebuild trigger(s) for ${pkgbaseDir}`, "RepoManager");
             }
         } catch (err: unknown) {
             Logger.error(err, "RepoManager");
@@ -1021,7 +1018,7 @@ class RepoManager {
     async bumpSinglePackage(repoDir: string, pkgname: string): Promise<void> {
         const pkgConfig = await this.readPackageConfig(path.join(repoDir, pkgname, ".CI", "config"), pkgname);
         if (pkgConfig.configs["CI_PACKAGE_BUMP"]) {
-            const [version, bumpCount] = pkgConfig.configs["CI_PACKAGE_BUMP"].split("/");
+            const bumpCount = pkgConfig.configs["CI_PACKAGE_BUMP"].split("/")[1];
             const newVer = `${pkgConfig.pkgInDb.version}-${pkgConfig.pkgInDb.pkgrel}`;
 
             if (bumpCount) {
@@ -1090,16 +1087,16 @@ class RepoManager {
      * @param build The build object of the package that was deployed
      * @returns A map of the bumped package
      */
-    async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<PackageBumpEntry[]> {
+    async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<BumpResult> {
         try {
             const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
             const needsRebuild: RepoUpdateRunParams[] = [];
-            const repoDir = this.repoDirs.find((repo) => fs.existsSync(path.join(repo, build.pkgbase.pkgname)));
+            const repoDir: string = this.repoDirs.find((repo) => fs.existsSync(path.join(repo, build.pkgbase.pkgname)));
 
             for (const pkg of allPackages) {
                 if (pkg.bumpTriggers) {
                     if (pkg.bumpTriggers.find((trigger) => trigger.pkgname === build.pkgbase.pkgname)) {
-                        const configs = await this.readPackageConfig(
+                        const configs: PackageConfig = await this.readPackageConfig(
                             path.join(repoDir, pkg.pkgname, ".CI", "config"),
                             pkg.pkgname,
                         );
@@ -1143,7 +1140,12 @@ class RepoManager {
                 }
             }
 
-            return await this.bumpPackages(needsRebuild, repoDir);
+            const bumped: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
+            return {
+                repo: build.repo.name,
+                bumped: bumped,
+                origin: TriggerType.CHAOTIC,
+            };
         } catch (err: unknown) {
             Logger.error(err, "RepoManager");
         }

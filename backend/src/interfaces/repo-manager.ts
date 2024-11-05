@@ -64,6 +64,7 @@ export type CiConfigs = { [key: string]: string };
 export interface BumpResult {
     bumped: PackageBumpEntry[];
     repo: string;
+    origin: TriggerType;
 }
 
 export interface PackageConfig {
