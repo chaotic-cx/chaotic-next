@@ -15,6 +15,7 @@ export interface MoleculerBuildObject {
     status?: BuildStatus;
     target_repo: string;
     timestamp: number;
+    namcapAnalysis?: string;
 }
 
 export enum BuildStatus {

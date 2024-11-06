@@ -9,6 +9,7 @@ import {
     BumpLogEntry,
     BumpResult,
     BumpType,
+    NamcapAnalysis,
     PackageBumpEntry,
     PackageConfig,
     ParsedPackage,
@@ -256,6 +257,87 @@ export class RepoManagerService {
         }
 
         return result;
+    }
+
+    /**
+     * Process namcap analysis, if available, and save it to the database.
+     * @param build The build object
+     * @param namcapAnalysis The namcap analysis output
+     */
+    async processNamcapAnalysis(build: Build, namcapAnalysis: string): Promise<void> {
+        if (!namcapAnalysis) return;
+
+        const finalAnalysis: Partial<NamcapAnalysis> = {
+            "dependency-detected-satisfied": [],
+            "dependency-implicitly-satisfied": [],
+            "depends-by-namcap-sight": [],
+            "libdepends-by-namcap-sight": [],
+            "libdepends-detected-not-included": [],
+            "libprovides-by-namcap-sight": [],
+            "link-level-dependence": [],
+        };
+        const relevantRules: string[] = Object.keys(finalAnalysis);
+
+        try {
+            let namcapLines: string[] = namcapAnalysis.split("\n");
+            for (const line of namcapLines) {
+                const lineSplit = line.split(": ")[1];
+                if (!lineSplit) continue;
+
+                const [rule, result] = lineSplit.split(" ");
+                if (!relevantRules.includes(rule)) continue;
+
+                switch (rule) {
+                    case "dependency-detected-satisfied": {
+                        const key = result.split(" ")[0];
+                        if (key) finalAnalysis[rule].push(key);
+                        break;
+                    }
+                    case "dependency-implicitly-satisfied": {
+                        const key = result.split(" ")[0];
+                        if (key) finalAnalysis[rule].push(key);
+                        break;
+                    }
+                    case "depends-by-namcap-sight": {
+                        const depends = result.split(" ")[0];
+                        const depsText = depends.match(/(?<=\()[^)]+(?=\))/);
+                        if (!depsText) break;
+                        finalAnalysis[rule] = depsText[0].split(" ");
+                        break;
+                    }
+                    case "libdepends-by-namcap-sight": {
+                        const libDepends = result.split(" ")[0];
+                        const libDepsText = libDepends.match(/(?<=\()[^)]+(?=\))/);
+                        if (!libDepsText) break;
+                        finalAnalysis[rule] = libDepsText[0].split(" ");
+                        break;
+                    }
+                    case "libdepends-detected-not-included": {
+                        const key = result.split(" ")[0];
+                        if (key) finalAnalysis[rule].push(key);
+                        break;
+                    }
+                    case "libprovides-by-namcap-sight": {
+                        const libProvides = result.split(" ")[0];
+                        const libProvidesText = libProvides.match(/(?<=\()[^)]+(?=\))/);
+                        if (!libProvidesText) break;
+                        finalAnalysis[rule] = libProvidesText[0].split(" ");
+                        break;
+                    }
+                    case "link-level-dependence": {
+                        const key = result.split(" ")[0];
+                        if (key) finalAnalysis[rule].push(key);
+                        break;
+                    }
+                }
+            }
+
+            const pkg: Package = build.pkgbase;
+            pkg.namcapAnalysis = finalAnalysis;
+            void this.packageRepository.save(pkg);
+        } catch (err: unknown) {
+            Logger.error(err, "RepoManager");
+        }
     }
 }
 
