@@ -241,6 +241,54 @@ export class BuilderService {
             .getRawMany();
     }
 
+    async getStatusOfBuilds(options: { days: number }): Promise<{ status: string; count: string }[]> {
+        return await this.buildRepository
+            .createQueryBuilder("build")
+            .select("build.status")
+            .addSelect("COUNT(*) AS count")
+            .groupBy("build.status")
+            .orderBy("count", "DESC")
+            .cache(`status-of-builds-${options.days}`, 30000)
+            .getRawMany();
+    }
+
+    async getCountPerDay(options: { days: number; offset: number }): Promise<{ day: string; count: string }[]> {
+        return await this.buildRepository
+            .createQueryBuilder("build")
+            .select("DATE_TRUNC('day', build.timestamp) AS day")
+            .addSelect("COUNT(*) AS count")
+            .groupBy("day")
+            .orderBy("day", "DESC")
+            .cache(`count-per-day-${options.days}-${options.offset}`, 30000)
+            .take(options.days ?? 30)
+            .skip(options.offset ?? 0)
+            .getRawMany();
+    }
+
+    async downloadBuildsPerDay(options: { days: number; offset: number }): Promise<{ day: string; count: string }[]> {
+        return await this.buildRepository
+            .createQueryBuilder("build")
+            .select("DATE_TRUNC('day', build.timestamp) AS day")
+            .addSelect("COUNT(*) AS count")
+            .groupBy("day")
+            .orderBy("day", "DESC")
+            .cache(`build-counts-per-day-${options.days}`, 30000)
+            .take(options.days ?? 30)
+            .skip(options.offset ?? 0)
+            .getRawMany();
+    }
+
+    async getBuildsPerRepo(): Promise<{ repo: string; count: string }[]> {
+        return await this.buildRepository
+            .createQueryBuilder("build")
+            .select("repo.name AS repo")
+            .addSelect("COUNT(*) AS count")
+            .innerJoin("build.repo", "repo")
+            .groupBy("build.repo")
+            .cache(`builds-per-repo`, 30000)
+            .getRawMany();
+    }
+
     /**
      * Returns the number of builds per package.
      * @param options The amount to look back
@@ -269,6 +317,47 @@ export class BuilderService {
                 .cache(`builds-per-package-${options.days}`, 30000)
                 .getRawMany();
         }
+    }
+
+    /**
+     * Returns the average build time per status.
+     * @returns The average build time per status
+     */
+    async getAverageBuildTimePerStatus(): Promise<{ status: string; average_build_time: string }[]> {
+        return await this.buildRepository
+            .createQueryBuilder("build")
+            .select('AVG("timeToEnd") AS average_build_time')
+            .addSelect("status")
+            .where('"timeToEnd" IS NOT NULL')
+            .groupBy("status")
+            .orderBy("average_build_time", "DESC")
+            .cache(`average-build-time-per-status`, 30000)
+            .getRawMany();
+    }
+
+    /**
+     * Returns the latest builds.
+     * @param options The amount and offset
+     * @returns The latest builds with commit URL, commit hash, time to end, package name, and version
+     */
+    async getLatestBuilds(options: {
+        amount: number;
+        offset: number;
+    }): Promise<{ logUrl: string; commit: string; timeToEnd: string; pkgname: string; version: string }[]> {
+        return await this.buildRepository
+            .createQueryBuilder("build")
+            .select('b."logUrl"')
+            .addSelect('b."commit"')
+            .addSelect('b."timeToEnd"')
+            .addSelect('p."pkgname"')
+            .addSelect('p."version"')
+            .from(Build, "b")
+            .innerJoin("b.pkgbase", "p")
+            .orderBy('p."lastUpdated"', "DESC")
+            .take(options.amount ?? 100)
+            .skip(options.offset ?? 0)
+            .cache(`latest-builds`, 30000)
+            .getRawMany();
     }
 }
 
