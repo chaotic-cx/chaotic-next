@@ -156,7 +156,7 @@ export class RepoManagerService {
      * Create a new RepoManager instance.
      * @returns A new RepoManager instance
      */
-    createRepoManager(globalTriggers?: string[]): RepoManager {
+    createRepoManager(globalTriggers?: string[], globalBlackList?: string[]): RepoManager {
         const repoSettings: RepoSettings = {
             gitAuthor: this.configService.getOrThrow<string>("repoMan.gitAuthor"),
             gitEmail: this.configService.getOrThrow<string>("repoMan.gitEmail"),
@@ -164,6 +164,8 @@ export class RepoManagerService {
             gitlabToken: this.configService.getOrThrow<string>("repoMan.gitlabToken"),
             globalTriggers:
                 globalTriggers ?? JSON.parse(this.configService.getOrThrow<string>("repoMan.globalTriggers")),
+            globalBlacklist:
+                globalBlackList ?? JSON.parse(this.configService.getOrThrow<string>("repoMan.globalBlacklist")),
         };
 
         return new RepoManager(
@@ -439,11 +441,16 @@ class RepoManager {
     ): Promise<RepoUpdateRunParams[]> {
         const needsRebuild: RepoUpdateRunParams[] = [];
 
-        // Enhance the global triggers with the ones from the global CI config file
-        const globalTriggersFromCiConfig: string[] = await this.checkGlobalTriggers(repoDir);
-        const allGlobalTriggers = [...this.repoManagerSettings.globalTriggers, ...globalTriggersFromCiConfig];
-        const globalArchRebuildPkg = this.changedArchPackages.filter((pkg) => {
-            return allGlobalTriggers.includes(pkg.pkgname);
+        // Enhance the global triggers with the ones from the global CI config file,
+        // additionally process blocklisted packages
+        const globalTriggerList: { list: string[]; blacklist: string[] } = await this.checkGlobalTriggers(repoDir);
+        const allGlobalTriggers: string[] = [...this.repoManagerSettings.globalTriggers, ...globalTriggerList.list];
+        const allGlobalBlacklist: string[] = [
+            ...this.repoManagerSettings.globalBlacklist,
+            ...globalTriggerList.blacklist,
+        ];
+        const globalArchRebuildPkg: ArchlinuxPackage[] = this.changedArchPackages.filter((pkg) => {
+            return allGlobalTriggers.includes(pkg.pkgname) && !allGlobalBlacklist.includes(pkg.pkgname);
         });
 
         // Additionally, filter out the .so providing Arch packages from our changed package list
@@ -454,7 +461,7 @@ class RepoManager {
 
         for (const pkgbaseDir of pkgbaseDirs) {
             let archRebuildPkg: ArchlinuxPackage[];
-            const configFile = path.join(repoDir, pkgbaseDir, ".CI", "config");
+            const configFile: string = path.join(repoDir, pkgbaseDir, ".CI", "config");
             const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
             const metadata: ParsedPackageMetadata = JSON.parse(pkgConfig.pkgInDb.metadata);
             let dbObject: ArchlinuxPackage;
@@ -578,22 +585,29 @@ class RepoManager {
      * @param repoDir The directory of the repository
      * @returns An array of global triggers
      */
-    async checkGlobalTriggers(repoDir: string): Promise<string[]> {
+    async checkGlobalTriggers(repoDir: string): Promise<{ list: string[]; blacklist: string[] }> {
+        const result = {
+            list: [],
+            blacklist: [],
+        };
+
         try {
             const globalConfigFile = path.join(repoDir, ".ci", "config");
             const globalConfig = fs.readFileSync(globalConfigFile, "utf8");
             const globalConfigLines = globalConfig.split("\n");
             const relevantEntry = globalConfigLines.find((line) => line.startsWith("CI_REBUILD_TRIGGERS"));
+            const relevantEntryBlacklist = globalConfigLines.find((line) => line.startsWith("CI_REBUILD_BLACKLIST"));
 
             if (relevantEntry) {
-                return relevantEntry.split("=")[1].replaceAll(/"/g, "").split(":");
-            } else {
-                return [];
+                result.list = relevantEntry.split("=")[1].replaceAll(/"/g, "").split(":");
+            }
+            if (relevantEntryBlacklist) {
+                result.blacklist = relevantEntryBlacklist.split("=")[1].replaceAll(/"/g, "").split(":");
             }
         } catch (err: unknown) {
             Logger.error(err, "RepoManager");
-            return [];
         }
+        return result;
     }
 
     /**
@@ -606,11 +620,11 @@ class RepoManager {
         const alreadyBumped: PackageBumpEntry[] = [];
 
         for (const param of needsRebuild) {
-            // Skip -bin packages, they are not compiled against system libraries usually
+            // Skip -bin packages, they are not usually compiled against system libraries
             if (param.pkg.pkgname.endsWith("-bin")) continue;
 
             // We don't want to bump twice, either
-            const existingEntry = alreadyBumped.find((entry) => entry.pkg.pkgname === param.pkg.pkgname);
+            const existingEntry: PackageBumpEntry = alreadyBumped.find((entry) => entry.pkg.pkgname === param.pkg.pkgname);
             if (existingEntry && typeof existingEntry.trigger !== "number" && "pkgname" in existingEntry.trigger) {
                 Logger.warn(
                     `Already bumped via ${existingEntry.triggerName}, skipping ${param.pkg.pkgname}`,
@@ -1001,12 +1015,13 @@ class RepoManager {
         for (const param of needsRebuild) {
             try {
                 const bumpReason: string = bumpTypeToText(param.bumpType, 2);
+                const packageText: string = param.triggerFrom === TriggerType.ARCH ? "Arch package" : "Chaotic package";
                 await git.add({ fs, dir: repoDir, filepath: path.join(param.pkg.pkgname, ".CI", "config") });
                 await git.commit({
                     fs,
                     dir: repoDir,
                     author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
-                    message: `chore(${param.pkg.pkgname}): bump ${param.archPkg.pkgname}, ${bumpReason} trigger\n\n - Arch package version ${param.archPkg.version}`,
+                    message: `chore(${param.pkg.pkgname}): bump ${param.archPkg.pkgname}, ${bumpReason} trigger\n\n - ${packageText} version ${param.archPkg.version}`,
                 });
             } catch (err: any) {
                 Logger.error(err, "RepoManager");
