@@ -86,6 +86,7 @@ export enum BumpType {
     GLOBAL = 1,
     FROM_DEPS = 2,
     FROM_DEPS_CHAOTIC = 3,
+    NAMCAP = 4,
 }
 
 export enum TriggerType {
