@@ -85,15 +85,25 @@ export function isValidUrl(url: string): boolean {
     }
 }
 
-export function bumpTypeToText(type: BumpType): string {
+/**
+ * Transform a BumpType from the BumpType enum to text.
+ * @param type The BumpType to transform
+ * @param phrase What kind of grammatical structure to use
+ * @returns The BumpType as text
+ */
+export function bumpTypeToText(type: BumpType, phrase: 1 | 2 = 1): string {
     switch (type) {
         case BumpType.EXPLICIT:
+            if (phrase === 2) return "explicit";
             return "explicitly";
         case BumpType.GLOBAL:
+            if (phrase === 2) return "global";
             return "globally";
         case BumpType.FROM_DEPS:
+            if (phrase === 2) return "Arch dependency";
             return "via Arch dependencies";
         case BumpType.FROM_DEPS_CHAOTIC:
+            if (phrase === 2) return "Chaotic dependency";
             return "via Chaotic dependencies";
         default:
             return "Unknown";
