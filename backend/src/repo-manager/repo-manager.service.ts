@@ -886,15 +886,29 @@ class RepoManager {
         Logger.log("Committing changes and pushing back to repo...", "RepoManager");
         for (const param of needsRebuild) {
             try {
+                const bumpReason: string = bumpTypeToText(param.bumpType, 2);
                 await git.add({ fs, dir: repoDir, filepath: path.join(param.pkg.pkgname, ".CI", "config") });
                 await git.commit({
                     fs,
                     dir: repoDir,
                     author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
-                    message: `chore(${param.pkg.pkgname}): ${param.archPkg.pkgname} update -> increased pkgrel\n\n  - ${param.archPkg.version} -> ${param.pkg.version}-${param.pkg.pkgrel}`,
+                    message: `chore(${param.pkg.pkgname}): bump ${param.archPkg.pkgname}, ${bumpReason} trigger\n\n - Arch package version ${param.archPkg.version}`,
                 });
-            } catch (err: unknown) {
+            } catch (err: any) {
                 Logger.error(err, "RepoManager");
+
+                // We might have a push conflict, let's try to resolve it
+                if (err.type === "PushRejectedError") {
+                    await git.pull({
+                        fs,
+                        http,
+                        dir: repoDir,
+                        onAuth: () => ({
+                            username: this.repoManagerSettings.gitUsername,
+                            password: this.repoManagerSettings.gitlabToken,
+                        }),
+                    });
+                }
             }
         }
 
@@ -1118,7 +1132,37 @@ class RepoManager {
         try {
             const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
             const needsRebuild: RepoUpdateRunParams[] = [];
-            const repoDir: string = this.repoDirs.find((repo) => fs.existsSync(path.join(repo, build.pkgbase.pkgname)));
+            let repoDir: string | undefined = this.repoDirs.find((repo) =>
+                fs.existsSync(path.join(repo, build.pkgbase.pkgname)),
+            );
+
+            // Pull any changes that might have occurred in the meantime,
+            // if no repoDir is found, we need to clone the repo
+            try {
+                if (!repoDir) {
+                    repoDir = await this.createRepoDir(build.repo);
+                } else {
+                    await git.pull({
+                        fs,
+                        http,
+                        dir: repoDir,
+                        onAuth: () => ({
+                            username: this.repoManagerSettings.gitUsername,
+                            password: this.repoManagerSettings.gitlabToken,
+                        }),
+                    });
+                }
+            } catch (err: any) {
+                Logger.error(err, "RepoManager");
+
+                // Isomorphic-git does not support rebases. Let's wipe the repo dir and clone it
+                try {
+                    fs.rmSync(repoDir, { recursive: true });
+                    repoDir = await this.createRepoDir(build.repo);
+                } catch (err: unknown) {
+                    Logger.error(err, "RepoManager");
+                }
+            }
 
             for (const pkg of allPackages) {
                 if (pkg.bumpTriggers) {
@@ -1168,7 +1212,10 @@ class RepoManager {
             }
 
             const bumped: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
-            await this.pushChanges(repoDir, needsRebuild, build.repo);
+
+            if (bumped.length > 0) {
+                await this.pushChanges(repoDir, needsRebuild, build.repo);
+            }
 
             return {
                 repo: build.repo.name,
