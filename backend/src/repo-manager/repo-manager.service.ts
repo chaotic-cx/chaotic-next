@@ -985,6 +985,7 @@ class RepoManager {
                         fs,
                         http,
                         dir: repoDir,
+                        author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
                         onAuth: () => ({
                             username: this.repoManagerSettings.gitUsername,
                             password: this.repoManagerSettings.gitlabToken,
@@ -1228,6 +1229,7 @@ class RepoManager {
                         fs,
                         http,
                         dir: repoDir,
+                        author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
                         onAuth: () => ({
                             username: this.repoManagerSettings.gitUsername,
                             password: this.repoManagerSettings.gitlabToken,
