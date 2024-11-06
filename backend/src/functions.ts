@@ -105,6 +105,9 @@ export function bumpTypeToText(type: BumpType, phrase: 1 | 2 = 1): string {
         case BumpType.FROM_DEPS_CHAOTIC:
             if (phrase === 2) return "Chaotic dependency";
             return "via Chaotic dependencies";
+        case BumpType.NAMCAP:
+            if (phrase === 2) return "Namcap analysis";
+            return "via Namcap analysis";
         default:
             return "Unknown";
     }

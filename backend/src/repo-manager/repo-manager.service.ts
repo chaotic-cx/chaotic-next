@@ -83,7 +83,7 @@ export class RepoManagerService {
 
         try {
             if (globalTriggers && globalTriggers.length > 0) {
-                if (existingSettings) {
+                if (existingSettings?.value) {
                     const existing: string[] = JSON.parse(existingSettings.value);
 
                     for (const key of existing) {
@@ -458,6 +458,7 @@ class RepoManager {
             const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
             const metadata: ParsedPackageMetadata = JSON.parse(pkgConfig.pkgInDb.metadata);
             let dbObject: ArchlinuxPackage;
+            let foundTrigger = false;
 
             archRebuildPkg = this.changedArchPackages.filter((pkg) => {
                 return pkgConfig.rebuildTriggers?.includes(pkg.pkgname);
@@ -499,11 +500,13 @@ class RepoManager {
                         `Rebuilding ${pkgbaseDir} because of global trigger ${globalTrigger.pkgname}`,
                         "RepoManager",
                     );
+
+                    foundTrigger = true;
                     break;
                 }
             }
 
-            if (soProvidingArchPackages.length > 0 && metadata?.deps) {
+            if (!foundTrigger && soProvidingArchPackages.length > 0 && metadata?.deps) {
                 const trigger = soProvidingArchPackages.find((soProviding) => {
                     const hasSoDep = metadata?.deps?.some((dep) => {
                         const pkgNoSo = dep.split(".so")[0];
@@ -533,6 +536,35 @@ class RepoManager {
                         `Rebuilding ${pkgbaseDir} because of changed shared library ${trigger.pkg.pkgname}`,
                         "RepoManager",
                     );
+                }
+            }
+
+            if (!foundTrigger && pkgConfig.pkgInDb.namcapAnalysis) {
+                const namcapAnalysis: Partial<NamcapAnalysis> = pkgConfig.pkgInDb.namcapAnalysis;
+                const relevantKeys = ["libdepends-by-namcap-sight", "link-level-dependence"];
+
+                for (const key of relevantKeys) {
+                    let trigger: ArchlinuxPackage;
+                    if (namcapAnalysis[key]) {
+                        for (const depPkg of namcapAnalysis[key]) {
+                            trigger = this.changedArchPackages.find((pkg) => pkg.pkgname === depPkg);
+                        }
+                    }
+                    if (trigger) {
+                        needsRebuild.push({
+                            archPkg: trigger,
+                            configs: pkgConfig.configs,
+                            pkg: pkgConfig.pkgInDb,
+                            bumpType: BumpType.NAMCAP,
+                            triggerFrom: TriggerType.ARCH,
+                        });
+
+                        Logger.debug(
+                            `Rebuilding ${pkgbaseDir} because of namcap detected library dep ${trigger.pkgname}`,
+                            "RepoManager",
+                        );
+                        break;
+                    }
                 }
             }
         }
@@ -1266,7 +1298,35 @@ class RepoManager {
                             `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in triggers`,
                             "RepoManager",
                         );
+                        continue;
                     }
+                }
+
+                if (pkg.namcapAnalysis) {
+                    const namcapAnalysis = pkg.namcapAnalysis;
+                    const relevantKeys = ["libdepends-by-namcap-sight"];
+
+                    for (const key of relevantKeys) {
+                        if (namcapAnalysis[key].includes(build.pkgbase.pkgname)) {
+                            const configs: PackageConfig = await this.readPackageConfig(
+                                path.join(repoDir, pkg.pkgname, ".CI", "config"),
+                                pkg.pkgname,
+                            );
+                            needsRebuild.push({
+                                configs: configs.configs,
+                                pkg,
+                                archPkg: build.pkgbase,
+                                bumpType: BumpType.NAMCAP,
+                                triggerFrom: TriggerType.CHAOTIC,
+                            });
+                            Logger.debug(
+                                `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in namcap analysis`,
+                                "RepoManager",
+                            );
+                            break;
+                        }
+                    }
+                    continue;
                 }
 
                 if (pkg.metadata) {
