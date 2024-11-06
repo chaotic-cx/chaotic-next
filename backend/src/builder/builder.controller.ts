@@ -10,19 +10,19 @@ export class BuilderController {
     @AllowAnonymous()
     @Get("builders")
     async getBuilders(): Promise<Builder[]> {
-        return this.builderService.getBuilders();
+        return await this.builderService.getBuilders();
     }
 
     @AllowAnonymous()
     @Get("packages")
     async getPackages(): Promise<Package[]> {
-        return this.builderService.getPackages();
+        return await this.builderService.getPackages();
     }
 
     @AllowAnonymous()
     @Get("repos")
     async getRepos(): Promise<Repo[]> {
-        return this.builderService.getRepos();
+        return await this.builderService.getRepos();
     }
 
     @AllowAnonymous()
@@ -32,7 +32,7 @@ export class BuilderController {
         @Query("offset", new ParseIntPipe({ optional: true })) offset = 0,
         @Query("amount", new ParseIntPipe({ optional: true })) amount = 50,
     ): Promise<Build[]> {
-        return this.builderService.getBuilds({ builder, offset, amount });
+        return await this.builderService.getBuilds({ builder, offset, amount });
     }
 
     @AllowAnonymous()
@@ -41,7 +41,7 @@ export class BuilderController {
         @Query("amount", new ParseIntPipe({ optional: true })) amount = 50,
         @Query("offset", new ParseIntPipe({ optional: true })) offset = 0,
     ): Promise<Build[]> {
-        return this.builderService.getLastBuilds({ amount, offset });
+        return await this.builderService.getLastBuilds({ amount, offset });
     }
 
     @AllowAnonymous()
@@ -51,7 +51,7 @@ export class BuilderController {
         @Query("offset", new ParseIntPipe({ optional: true })) offset = 0,
         @Query("amount", new ParseIntPipe({ optional: true })) amount = 30,
     ): Promise<Build[]> {
-        return this.builderService.getLastBuildsForPackage({ pkgname, amount, offset });
+        return await this.builderService.getLastBuildsForPackage({ pkgname, amount, offset });
     }
 
     @AllowAnonymous()
@@ -61,14 +61,13 @@ export class BuilderController {
         @Param("days", ParseIntPipe) days: number,
         @Query("offset", new ParseIntPipe({ optional: true })) offset = 0,
     ): Promise<Build[]> {
-        return this.builderService.getLastBuildsForPackage({ pkgname, amount: days, offset });
+        return await this.builderService.getLastBuildsForPackage({ pkgname, amount: days, offset });
     }
 
     @AllowAnonymous()
     @Get("count/days")
-    async getBuildsPerPackage(
-    ): Promise<{ pkgbase: string; count: string }[]> {
-        return this.builderService.getBuildsPerPackage();
+    async getBuildsPerPackage(): Promise<{ pkgbase: string; count: string }[]> {
+        return await this.builderService.getBuildsPerPackage();
     }
 
     @AllowAnonymous()
@@ -76,13 +75,13 @@ export class BuilderController {
     async getBuildsPerPackageWithDays(
         @Param("days", ParseIntPipe) days: number,
     ): Promise<{ pkgbase: string; count: string }[]> {
-        return this.builderService.getBuildsPerPackage({ days });
+        return await this.builderService.getBuildsPerPackage({ days });
     }
 
     @AllowAnonymous()
     @Get("count/package/:pkgname")
     async getLatestBuildsCountByPkgname(@Param("pkgname") pkgname: string): Promise<number> {
-        return this.builderService.getLastBuildsCountForPackage(pkgname);
+        return await this.builderService.getLastBuildsCountForPackage(pkgname);
     }
 
     @AllowAnonymous()
@@ -92,7 +91,7 @@ export class BuilderController {
         @Param("amount", new ParseIntPipe({ optional: true })) amount = 50,
         @Query("offset", new ParseIntPipe({ optional: true })) offset = 0,
     ): Promise<{ day: string; count: string }[]> {
-        return this.builderService.getBuildsCountByPkgnamePerDay({ pkgname, amount, offset });
+        return await this.builderService.getBuildsCountByPkgnamePerDay({ pkgname, amount, offset });
     }
 
     @AllowAnonymous()
@@ -102,7 +101,7 @@ export class BuilderController {
         @Query("offset", new ParseIntPipe({ optional: true })) offset = 0,
         @Query("status", new ParseIntPipe({ optional: true })) status?: number,
     ): Promise<{ pkgname: string; count: string }[]> {
-        return this.builderService.getPopularPackages({ amount, offset, status });
+        return await this.builderService.getPopularPackages({ amount, offset, status });
     }
 
     /**
@@ -111,7 +110,7 @@ export class BuilderController {
     @AllowAnonymous()
     @Get("builders/amount")
     async getBuildersAmount(): Promise<{ builderId: string; count: string }[]> {
-        return this.builderService.getBuildsPerBuilder();
+        return await this.builderService.getBuildsPerBuilder();
     }
 
     @AllowAnonymous()
@@ -126,12 +125,32 @@ export class BuilderController {
             count: string;
         }[]
     > {
-        return this.builderService.getBuildsCountByPkgnamePerDay({ offset, pkgname, amount: days });
+        return await this.builderService.getBuildsCountByPkgnamePerDay({ offset, pkgname, amount: days });
     }
 
     @AllowAnonymous()
     @Get("per-day/:days")
     async getBuildsPerDay(@Param("days", ParseIntPipe) days: number): Promise<{ day: string; count: string }[]> {
-        return this.builderService.getBuildsPerDay({ days: days });
+        return await this.builderService.getBuildsPerDay({ days: days });
+    }
+
+    @AllowAnonymous()
+    @Get("latest/url/:amount")
+    async getLatestBuildsByPkgnameWithUrls(
+        @Param("amount", new ParseIntPipe({ optional: true })) amount = 50,
+        @Query("offset", new ParseIntPipe({ optional: true })) offset = 0,
+    ): Promise<{ commit: string; logUrl: string; pkgname: string; timeToEnd: string; version: string }[]> {
+        return await this.builderService.getLatestBuilds({ amount, offset });
+    }
+
+    @AllowAnonymous()
+    @Get("average/time")
+    async getAverageBuildTimePerStatus(): Promise<
+        {
+            average_build_time: string;
+            status: string;
+        }[]
+    > {
+        return await this.builderService.getAverageBuildTimePerStatus();
     }
 }

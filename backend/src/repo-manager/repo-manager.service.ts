@@ -624,7 +624,9 @@ class RepoManager {
             if (param.pkg.pkgname.endsWith("-bin")) continue;
 
             // We don't want to bump twice, either
-            const existingEntry: PackageBumpEntry = alreadyBumped.find((entry) => entry.pkg.pkgname === param.pkg.pkgname);
+            const existingEntry: PackageBumpEntry = alreadyBumped.find(
+                (entry) => entry.pkg.pkgname === param.pkg.pkgname,
+            );
             if (existingEntry && typeof existingEntry.trigger !== "number" && "pkgname" in existingEntry.trigger) {
                 Logger.warn(
                     `Already bumped via ${existingEntry.triggerName}, skipping ${param.pkg.pkgname}`,
