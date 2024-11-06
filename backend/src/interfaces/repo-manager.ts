@@ -48,6 +48,7 @@ export interface RepoSettings {
     gitEmail: string;
     gitUsername: string;
     gitlabToken: string;
+    globalBlacklist: string[];
     globalTriggers: string[];
 }
 
