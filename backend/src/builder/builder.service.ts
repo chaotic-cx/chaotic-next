@@ -348,10 +348,13 @@ export class BuilderDatabaseService extends Service {
         // Update the chaotic versions as they changed with new successful builds
         if (params.status === BuildStatus.SUCCESS) {
             try {
-                await this.repoManagerService.updateChaoticVersions();
-                await this.repoManagerService.eventuallyBumpAffected(build);
-            } catch(err: unknown) {
-                Logger.error(err, "RepoManager")
+                await Promise.allSettled([
+                    this.repoManagerService.updateChaoticVersions(),
+                    this.repoManagerService.eventuallyBumpAffected(build),
+                    this.repoManagerService.processNamcapAnalysis(build as Build, params.namcapAnalysis),
+                ]);
+            } catch (err: unknown) {
+                Logger.error(err, "RepoManager");
             }
         }
 

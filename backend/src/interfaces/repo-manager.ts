@@ -100,3 +100,13 @@ export interface BumpLogEntry {
     triggerFrom: TriggerType;
     timestamp: string;
 }
+
+export interface NamcapAnalysis {
+    "dependency-detected-satisfied": string[];
+    "dependency-implicitly-satisfied": string[];
+    "depends-by-namcap-sight": string[];
+    "libdepends-by-namcap-sight": string[];
+    "libdepends-detected-not-included": string[];
+    "libprovides-by-namcap-sight": string[];
+    "link-level-dependence": string[];
+}

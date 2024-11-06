@@ -12,7 +12,7 @@ import {
     type Repository,
 } from "typeorm";
 import { BuildStatus } from "../types";
-import { RepoStatus } from "../interfaces/repo-manager";
+import { NamcapAnalysis, RepoStatus } from "../interfaces/repo-manager";
 
 @Entity()
 export class Builder {
@@ -63,6 +63,9 @@ export class Package {
 
     @Column({ type: "int", nullable: true })
     pkgrel: number;
+
+    @Column({ type: "jsonb", nullable: true })
+    namcapAnalysis: Partial<NamcapAnalysis>
 }
 
 @Entity()
