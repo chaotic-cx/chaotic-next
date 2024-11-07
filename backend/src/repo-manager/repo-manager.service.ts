@@ -341,6 +341,90 @@ export class RepoManagerService {
             Logger.error(err, "RepoManager");
         }
     }
+
+    async readNamcap() {
+        try {
+            const initialMemory = process.memoryUsage();
+            Logger.log(initialMemory, "RepoManager");
+            fs.readdir("/namcap", "utf8", async (err, files) => {
+                Logger.log(files.length, "RepoManager");
+                for (const file of files) {
+                    const fileContent = fs.readFileSync(`/namcap/${file}`, "utf8");
+                    const namcapLines = fileContent.split("\n");
+                    const namcapAnalysis: Partial<NamcapAnalysis> = {
+                        "dependency-detected-satisfied": [],
+                        "dependency-implicitly-satisfied": [],
+                        "depends-by-namcap-sight": [],
+                        "libdepends-by-namcap-sight": [],
+                        "libdepends-detected-not-included": [],
+                        "libprovides-by-namcap-sight": [],
+                        "link-level-dependence": [],
+                    };
+                    const relevantRules: string[] = Object.keys(namcapAnalysis);
+
+                    Logger.log(`Processing namcap analysis for ${file}`, "RepoManager");
+
+                    let name: string;
+                    let pkg: Package;
+
+                    for (const line of namcapLines) {
+                        const [cname, lineSplit] = line.split(": ");
+                        name = cname.split(" ")[0];
+
+                        if (!pkg) pkg = await this.packageRepository.findOne({ where: { pkgname: name } });
+                        if (!lineSplit || !pkg) continue;
+
+                        const [rule, result] = lineSplit.split(" ");
+                        if (!relevantRules.includes(rule)) continue;
+
+                        switch (rule) {
+                            case "dependency-detected-satisfied": {
+                                const key = result.split(" ")[0];
+                                if (key) namcapAnalysis[rule].push(key);
+                                break;
+                            }
+                            case "dependency-implicitly-satisfied": {
+                                const key = result.split(" ")[0];
+                                if (key) namcapAnalysis[rule].push(key);
+                                break;
+                            }
+                            case "depends-by-namcap-sight": {
+                                const depends = result.split(" ")[0];
+                                const depsText = depends.match(/(?<=\()[^)]+(?=\))/);
+                                if (!depsText) break;
+                                namcapAnalysis[rule] = depsText[0].split(" ");
+                                break;
+                            }
+                            case "libdepends-by-namcap-sight": {
+                                const libDepends = result.split(" ")[0];
+                                const libDepsText = libDepends.match(/(?<=\()[^)]+(?=\))/);
+                                if (!libDepsText) break;
+                                namcapAnalysis[rule] = libDepsText[0].split(" ");
+                                break;
+                            }
+                            case "libdepends-detected-not-included": {
+                                const key = result.split(" ")[0];
+                                if (key) namcapAnalysis[rule].push(key);
+                                break;
+                            }
+                            case "libprovides-by-namcap-sight": {
+                                const libProvides = result.split(" ")[0];
+                                const libProvidesText = libProvides.match(/(?<=\()[^)]+(?=\))/);
+                                if (!libProvidesText) break;
+                                namcapAnalysis[rule] = libProvidesText[0].split(" ");
+                            }
+                        }
+                    }
+
+                    if (!pkg) continue;
+                    pkg.namcapAnalysis = namcapAnalysis;
+                    this.packageRepository.save(pkg);
+                }
+            });
+        } catch (err) {
+            Logger.error(err, "RepoManager");
+        }
+    }
 }
 
 /**
@@ -1094,7 +1178,7 @@ class RepoManager {
             }
         } catch (err: unknown) {}
 
-        const configs = {};
+        let configs = {};
         let rebuildTriggers: string[];
 
         if (configLines && configLines.length > 0) {
@@ -1211,7 +1295,11 @@ class RepoManager {
             fs.mkdirSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, ".CI"));
         }
 
-        for (const [key, value] of Object.entries(pkgConfig.configs)) {
+        // Prevent CI uselessly rewriting config files because of non-alphabetic order
+        const writeBack: [string, string][] = Object.entries(pkgConfig.configs);
+        writeBack.sort((a, b) => a[0].localeCompare(b[0]));
+
+        for (const [key, value] of writeBack) {
             try {
                 if (key === "pkg" || (key || value) === undefined) continue;
                 fs.writeFileSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, ".CI", "config"), `${key}=${value}\n`, {
@@ -1320,7 +1408,7 @@ class RepoManager {
                 }
 
                 if (pkg.namcapAnalysis) {
-                    const namcapAnalysis = pkg.namcapAnalysis;
+                    const namcapAnalysis: Partial<NamcapAnalysis> = pkg.namcapAnalysis;
                     const relevantKeys = ["libdepends-by-namcap-sight"];
 
                     for (const key of relevantKeys) {
@@ -1341,32 +1429,6 @@ class RepoManager {
                                 "RepoManager",
                             );
                             break;
-                        }
-                    }
-                    continue;
-                }
-
-                if (pkg.metadata) {
-                    const metadata = JSON.parse(pkg.metadata) as ParsedPackageMetadata;
-                    if (metadata.deps) {
-                        for (const dep of metadata.deps) {
-                            if (dep === build.pkgbase.pkgname) {
-                                const configs = await this.readPackageConfig(
-                                    path.join(repoDir, pkg.pkgname, ".CI", "config"),
-                                    pkg.pkgname,
-                                );
-                                needsRebuild.push({
-                                    configs: configs.configs,
-                                    pkg,
-                                    archPkg: build.pkgbase,
-                                    bumpType: BumpType.FROM_DEPS_CHAOTIC,
-                                    triggerFrom: TriggerType.CHAOTIC,
-                                });
-                                Logger.debug(
-                                    `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in deps`,
-                                    "RepoManager",
-                                );
-                            }
                         }
                     }
                 }

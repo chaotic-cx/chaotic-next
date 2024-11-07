@@ -15,4 +15,9 @@ export class RepoManagerController {
     updateChaoticVersions(): void {
         void this.repoManager.updateChaoticVersions();
     }
+    
+    @Get("read-namcap")
+    readNamcap(): void {
+        void this.repoManager.readNamcap();
+    }
 }
