@@ -110,5 +110,6 @@ export interface NamcapAnalysis {
     "libdepends-by-namcap-sight": string[];
     "libdepends-detected-not-included": string[];
     "libprovides-by-namcap-sight": string[];
+    "library-no-package-associated": string[];
     "link-level-dependence": string[];
 }
