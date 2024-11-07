@@ -276,6 +276,7 @@ export class RepoManagerService {
             "libdepends-by-namcap-sight": [],
             "libdepends-detected-not-included": [],
             "libprovides-by-namcap-sight": [],
+            "library-no-package-associated": [],
             "link-level-dependence": [],
         };
         const relevantRules: string[] = Object.keys(finalAnalysis);
@@ -331,6 +332,11 @@ export class RepoManagerService {
                         if (key) finalAnalysis[rule].push(key);
                         break;
                     }
+                    case "library-no-package-associated": {
+                        const key = result.split(" ")[0];
+                        if (key) finalAnalysis[rule].push(key);
+                        break;
+                    }
                 }
             }
 
@@ -342,15 +348,16 @@ export class RepoManagerService {
         }
     }
 
-    async readNamcap() {
+    /**
+     * Helper function for quickly filling the database with namcap analysis.
+     */
+    async readNamcap(): Promise<void> {
         try {
-            const initialMemory = process.memoryUsage();
-            Logger.log(initialMemory, "RepoManager");
             fs.readdir("/namcap", "utf8", async (err, files) => {
                 Logger.log(files.length, "RepoManager");
                 for (const file of files) {
-                    const fileContent = fs.readFileSync(`/namcap/${file}`, "utf8");
-                    const namcapLines = fileContent.split("\n");
+                    const fileContent: string = fs.readFileSync(`/namcap/${file}`, "utf8");
+                    const namcapLines: string[] = fileContent.split("\n");
                     const namcapAnalysis: Partial<NamcapAnalysis> = {
                         "dependency-detected-satisfied": [],
                         "dependency-implicitly-satisfied": [],
@@ -358,6 +365,7 @@ export class RepoManagerService {
                         "libdepends-by-namcap-sight": [],
                         "libdepends-detected-not-included": [],
                         "libprovides-by-namcap-sight": [],
+                        "library-no-package-associated": [],
                         "link-level-dependence": [],
                     };
                     const relevantRules: string[] = Object.keys(namcapAnalysis);
@@ -391,14 +399,14 @@ export class RepoManagerService {
                             case "depends-by-namcap-sight": {
                                 const depends = result.split(" ")[0];
                                 const depsText = depends.match(/(?<=\()[^)]+(?=\))/);
-                                if (!depsText) break;
+                                if (!depsText) continue;
                                 namcapAnalysis[rule] = depsText[0].split(" ");
                                 break;
                             }
                             case "libdepends-by-namcap-sight": {
                                 const libDepends = result.split(" ")[0];
                                 const libDepsText = libDepends.match(/(?<=\()[^)]+(?=\))/);
-                                if (!libDepsText) break;
+                                if (!libDepsText) continue;
                                 namcapAnalysis[rule] = libDepsText[0].split(" ");
                                 break;
                             }
@@ -412,13 +420,24 @@ export class RepoManagerService {
                                 const libProvidesText = libProvides.match(/(?<=\()[^)]+(?=\))/);
                                 if (!libProvidesText) break;
                                 namcapAnalysis[rule] = libProvidesText[0].split(" ");
+                                break;
+                            }
+                            case "link-level-dependence": {
+                                const key = result.split(" ")[0];
+                                if (key) namcapAnalysis[rule].push(key);
+                                break;
+                            }
+                            case "library-no-package-associated": {
+                                const key = result.split(" ")[0];
+                                if (key) namcapAnalysis[rule].push(key);
+                                break;
                             }
                         }
                     }
 
                     if (!pkg) continue;
                     pkg.namcapAnalysis = namcapAnalysis;
-                    this.packageRepository.save(pkg);
+                    void this.packageRepository.save(pkg);
                 }
             });
         } catch (err) {

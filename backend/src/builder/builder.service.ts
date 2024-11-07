@@ -265,7 +265,7 @@ export class BuilderService {
             .getRawMany();
     }
 
-    async downloadBuildsPerDay(options: { days: number; offset: number }): Promise<{ day: string; count: string }[]> {
+    async buildsPerDay(options: { days: number; offset: number }): Promise<{ day: string; count: string }[]> {
         return await this.buildRepository
             .createQueryBuilder("build")
             .select("DATE_TRUNC('day', build.timestamp) AS day")
