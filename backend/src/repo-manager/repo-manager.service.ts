@@ -29,7 +29,7 @@ import {
 } from "./repo-manager.entity";
 import * as os from "node:os";
 import { InjectRepository } from "@nestjs/typeorm";
-import { IsNull, Not, Repository } from "typeorm";
+import { IsNull, MoreThanOrEqual, Not, Repository } from "typeorm";
 import { ARCH } from "../constants";
 import { Build, Package, pkgnameExists, Repo } from "../builder/builder.entity";
 import { ConfigService } from "@nestjs/config";
@@ -79,7 +79,10 @@ export class RepoManagerService {
         );
 
         const globalTriggers: string[] = JSON.parse(this.configService.get<string>("repoMan.globalTriggers"));
-        const existingSettings = await repoSettingsExists("globalTriggers", this.settingsRepository);
+        const existingSettings: RepoManagerSettings = await repoSettingsExists(
+            "globalTriggers",
+            this.settingsRepository,
+        );
 
         try {
             if (globalTriggers && globalTriggers.length > 0) {
@@ -244,10 +247,12 @@ export class RepoManagerService {
         for (const logEntry of logEntries) {
             const entry: Partial<BumpLogEntry> = {};
             if (logEntry.triggerFrom === TriggerType.ARCH) {
-                const trigger = await this.archlinuxPackageRepository.findOne({ where: { id: logEntry.trigger } });
+                const trigger: ArchlinuxPackage = await this.archlinuxPackageRepository.findOne({
+                    where: { id: logEntry.trigger },
+                });
                 entry.trigger = trigger.pkgname;
             } else if (logEntry.triggerFrom === TriggerType.CHAOTIC) {
-                const trigger = await this.packageRepository.findOne({ where: { id: logEntry.trigger } });
+                const trigger: Package = await this.packageRepository.findOne({ where: { id: logEntry.trigger } });
                 entry.trigger = trigger.pkgname;
             }
             entry.bumpType = logEntry.bumpType;
@@ -465,7 +470,7 @@ class RepoManager {
 
     private readonly archlinuxRepos: string[] = ["core", "extra"];
     private readonly archlinuxRepoUrl = (name: string) =>
-        `https://arch.mirror.constant.com/${name}/os/x86_64/${name}.db.tar.gz`;
+        `https://arch.mirror.constant.com/${name}/os/x86_64/${name}.files`;
     private readonly dbConnections: {
         archPkg: Repository<ArchlinuxPackage>;
         packageBump: Repository<PackageBump>;
@@ -566,7 +571,7 @@ class RepoManager {
             let archRebuildPkg: ArchlinuxPackage[];
             const configFile: string = path.join(repoDir, pkgbaseDir, ".CI", "config");
             const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
-            const metadata: ParsedPackageMetadata = JSON.parse(pkgConfig.pkgInDb.metadata);
+            const metadata: ParsedPackageMetadata = pkgConfig.pkgInDb.metadata;
             let dbObject: ArchlinuxPackage;
             let foundTrigger = false;
 
@@ -575,11 +580,10 @@ class RepoManager {
             });
 
             if (archRebuildPkg.length > 0) {
-                dbObject = await this.dbConnections.archPkg.findOne({
-                    where: { pkgname: archRebuildPkg[0].pkgname },
-                });
                 needsRebuild.push({
-                    archPkg: dbObject,
+                    archPkg: await this.dbConnections.archPkg.findOne({
+                        where: { pkgname: archRebuildPkg[0].pkgname },
+                    }),
                     configs: pkgConfig.configs,
                     pkg: pkgConfig.pkgInDb,
                     bumpType: BumpType.EXPLICIT,
@@ -593,13 +597,10 @@ class RepoManager {
             // If no trigger was found in explicit triggers, let's check for global triggers
             for (const globalTrigger of globalArchRebuildPkg) {
                 if (metadata?.deps?.includes(globalTrigger.pkgname)) {
-                    Logger.debug("Found global trigger by name and it is in deps", "RepoManager");
-
-                    dbObject = await this.dbConnections.archPkg.findOne({
-                        where: { pkgname: globalTrigger.pkgname },
-                    });
                     needsRebuild.push({
-                        archPkg: dbObject,
+                        archPkg: await this.dbConnections.archPkg.findOne({
+                            where: { pkgname: globalTrigger.pkgname },
+                        }),
                         configs: pkgConfig.configs,
                         pkg: pkgConfig.pkgInDb,
                         bumpType: BumpType.GLOBAL,
@@ -610,7 +611,6 @@ class RepoManager {
                         `Rebuilding ${pkgbaseDir} because of global trigger ${globalTrigger.pkgname}`,
                         "RepoManager",
                     );
-
                     foundTrigger = true;
                     break;
                 }
@@ -651,13 +651,27 @@ class RepoManager {
 
             if (!foundTrigger && pkgConfig.pkgInDb.namcapAnalysis) {
                 const namcapAnalysis: Partial<NamcapAnalysis> = pkgConfig.pkgInDb.namcapAnalysis;
-                const relevantKeys = ["libdepends-by-namcap-sight", "link-level-dependence"];
+                const relevantKeys = [
+                    "dependency-detected-satisfied",
+                    "libdepends-by-namcap-sight",
+                    "libdepends-detected-not-included",
+                    "library-no-package-associated",
+                    "link-level-dependence",
+                ];
 
                 for (const key of relevantKeys) {
                     let trigger: ArchlinuxPackage;
                     if (namcapAnalysis[key]) {
                         for (const depPkg of namcapAnalysis[key]) {
-                            trigger = this.changedArchPackages.find((pkg) => pkg.pkgname === depPkg);
+                            const foundSoProvider: {
+                                pkg: ArchlinuxPackage;
+                                provides: string[];
+                            } = soProvidingArchPackages.find((pkg) => pkg.provides?.includes(depPkg));
+
+                            if (foundSoProvider) {
+                                trigger = foundSoProvider.pkg;
+                                break;
+                            }
                         }
                     }
                     if (trigger) {
@@ -721,10 +735,36 @@ class RepoManager {
      */
     async bumpPackages(needsRebuild: RepoUpdateRunParams[], repoDir: string): Promise<PackageBumpEntry[]> {
         const alreadyBumped: PackageBumpEntry[] = [];
+        const date = new Date();
+        date.setDate(date.getDate() - 1);
+
+        const packageBumpsLastDay: PackageBump[] = await this.dbConnections.packageBump.find({
+            where: { timestamp: MoreThanOrEqual(date) },
+            order: { timestamp: "DESC" },
+        });
+
+        Logger.log(`Found ${packageBumpsLastDay.length} bumps in the last day`, "RepoManager");
+
+        // Let's only consider Chaotic rebuilds for now, as Arch ones usually don't occur as often (-git packages)
+        const relevantBumps: PackageBump[] = packageBumpsLastDay.filter((bump) => {
+            return bump.triggerFrom === TriggerType.CHAOTIC;
+        });
 
         for (const param of needsRebuild) {
-            // Skip -bin packages, they are not usually compiled against system libraries
-            if (param.pkg.pkgname.endsWith("-bin")) continue;
+            // Skip binary packages, they are not usually compiled against system libraries
+            if (
+                param.pkg.pkgname.includes("-bin") ||
+                param.pkg.pkgname.includes("-appimage") ||
+                param.pkg.pkgname.includes("-snap")
+            )
+                continue;
+
+            // We also don't want to rebuild packages that have already been bumped within a day
+            const needsSkip = relevantBumps.find((bump) => bump.pkg.id === param.pkg.id) !== undefined;
+            if (needsSkip) {
+                Logger.warn(`Already bumped ${param.pkg.pkgname}, skipping`, "RepoManager");
+                continue;
+            }
 
             // We don't want to bump twice, either
             const existingEntry: PackageBumpEntry = alreadyBumped.find(
@@ -796,7 +836,7 @@ class RepoManager {
                 const repoDir = path.join(tempDir, repo);
                 Logger.debug(`Pulling database for ${repo}...`, "RepoManager");
                 try {
-                    return await this.pullDatabases(repoUrl, repoDir, repo, "tar.gz");
+                    return await this.pullDatabases(repoUrl, repoDir, repo);
                 } catch (err: unknown) {
                     Logger.error(err, "RepoManager");
                 }
@@ -807,7 +847,6 @@ class RepoManager {
 
         const currentArchVersions: ParsedPackage[] = await this.parsePacmanDatabases(
             downloads.map((download): RepoWorkDir => (download.status === "fulfilled" ? download.value : null)),
-            "tar.gz",
         );
         this.changedArchPackages = await this.determineChangedPackages(currentArchVersions);
     }
@@ -824,7 +863,7 @@ class RepoManager {
 
         const downloads: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
             repos.map(async (repo): Promise<RepoWorkDir> => {
-                return await this.pullDatabases(repo.dbPath, tempDir, "chaotic-aur", "tar.zst");
+                return await this.pullDatabases(repo.dbPath, tempDir, `${repo.name}`);
             }),
         );
 
@@ -835,7 +874,7 @@ class RepoManager {
                 workDirs.push(download.value);
             }
         }
-        const currentChaoticVersions: ParsedPackage[] = await this.parsePacmanDatabases(workDirs, "tar.zst");
+        const currentChaoticVersions: ParsedPackage[] = await this.parsePacmanDatabases(workDirs);
 
         Logger.debug("Updating Chaotic database versions...", "RepoManager");
         await Promise.allSettled(
@@ -850,7 +889,7 @@ class RepoManager {
                 }
                 chaoticPkg.version = pkg.version;
                 chaoticPkg.isActive = true;
-                chaoticPkg.metadata = JSON.stringify(pkg.metaData);
+                chaoticPkg.metadata = pkg.metaData;
                 void this.dbConnections.packages.save(chaoticPkg);
             }),
         );
@@ -874,10 +913,9 @@ class RepoManager {
      * @param dbUrl The URL of the database
      * @param repoDir The directory of the repository
      * @param repo The repository object
-     * @param dbType The archive type of the database
      * @returns An object containing the path, name, and workDir of the repository
      */
-    async pullDatabases(dbUrl: string, repoDir: string, repo: any, dbType: "tar.gz" | "tar.zst"): Promise<RepoWorkDir> {
+    async pullDatabases(dbUrl: string, repoDir: string, repo: any): Promise<RepoWorkDir> {
         const dbDownload: AxiosResponse = await this.httpService.axiosRef({
             url: dbUrl,
             method: "GET",
@@ -887,15 +925,9 @@ class RepoManager {
         fs.mkdirSync(repoDir, { recursive: true });
 
         try {
-            if (dbType === "tar.zst") {
-                fs.writeFileSync(path.join(repoDir, `${repo}.db.tar.zst`), fileData);
-                Logger.debug(`Done pulling database of ${repo}`, "RepoManager");
-                return { path: path.join(repoDir, `${repo}.db.tar.zst`), name: repo, workDir: repoDir };
-            } else if (dbType === "tar.gz") {
-                fs.writeFileSync(path.join(repoDir, `${repo}.db.tar.gz`), fileData);
-                Logger.debug(`Done pulling database of ${repo}`, "RepoManager");
-                return { path: path.join(repoDir, `${repo}.db.tar.gz`), name: repo, workDir: repoDir };
-            }
+            fs.writeFileSync(path.join(repoDir, `${repo}.files`), fileData);
+            Logger.debug(`Done pulling database of ${repo}`, "RepoManager");
+            return { path: path.join(repoDir, `${repo}.files`), name: repo, workDir: repoDir };
         } catch (err: unknown) {
             Logger.error(err, "RepoManager");
         }
@@ -904,26 +936,16 @@ class RepoManager {
     /**
      * Parse the Archlinux databases and return the packages that are relevant for the repository.
      * @param databases The databases to parse as RepoWorkDir objects
-     * @param dbType The archive type of the database
      * @returns An array of packages that have changed
      */
-    private async parsePacmanDatabases(
-        databases: RepoWorkDir[],
-        dbType: "tar.gz" | "tar.zst",
-    ): Promise<ParsedPackage[]> {
+    private async parsePacmanDatabases(databases: RepoWorkDir[]): Promise<ParsedPackage[]> {
         Logger.debug("Started extracting databases...", "RepoManager");
         const workDirsPromises: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
             databases.map((repo): Promise<RepoWorkDir> => {
                 return new Promise<RepoWorkDir>(async (resolve, reject) => {
                     try {
                         if (!repo.path) reject("Path is null");
-                        let workDir: string;
-
-                        if (dbType === "tar.zst") {
-                            workDir = repo.path.replace(/\/[^\/]+\.db\.tar\.zst$/, "");
-                        } else if (dbType === "tar.gz") {
-                            workDir = repo.path.replace(/\/[^\/]+\.db\.tar\.gz$/, "");
-                        }
+                        const workDir = repo.path.replace(/\/[^\/]+\.files$/, "");
 
                         Logger.debug(`Unpacking database ${repo.path}`, "RepoManager");
                         // Use native tar due to lack of support for tar.zst in node tar
@@ -955,11 +977,13 @@ class RepoManager {
             const allPkgDirs: string[] = this.getDirectories(dir.path);
             const relevantFiles = allPkgDirs.map((pkgDir) => {
                 const pkg = pkgDir.replace(new RegExp(currentPathRegex), "");
-                return { descFile: path.join(dir.path, pkg, "desc") };
+                return { descFile: path.join(dir.path, pkg, "desc"), filesFile: path.join(dir.path, pkg, "files") };
             });
 
             for (const file of relevantFiles) {
-                currentPackageVersions.push(this.parsePackageDesc(file.descFile));
+                const currentPackageVersion: Partial<ParsedPackage> = this.parsePackageDesc(file.descFile);
+                currentPackageVersion.metaData.soNameList = this.parsePackageFiles(file.filesFile);
+                currentPackageVersions.push(currentPackageVersion as ParsedPackage);
             }
         }
 
@@ -1027,18 +1051,14 @@ class RepoManager {
      * Parse the desc file of a package and return the relevant information.
      * @param descFile The path to the desc file
      * @returns The parsed package information as an ParsePackage object
+     * @private
      */
-    private parsePackageDesc(descFile: string): ParsedPackage {
-        let pkgbaseWithVersions: ParsedPackage;
+    private parsePackageDesc(descFile: string): Partial<ParsedPackage> {
+        let pkgbaseWithVersions: Partial<ParsedPackage>;
         try {
             const fileData: Buffer = fs.readFileSync(descFile);
             const lines: string = fileData.toString();
             pkgbaseWithVersions = this.extractBaseAndVersion(lines);
-
-            Logger.debug(
-                `Parsed package ${pkgbaseWithVersions.base}, ${pkgbaseWithVersions.version}-${pkgbaseWithVersions.pkgrel}`,
-                "RepoManager",
-            );
         } catch (err) {
             return pkgbaseWithVersions;
         }
@@ -1047,11 +1067,34 @@ class RepoManager {
     }
 
     /**
+     * Parse the files file of a package and return the shared object names.
+     * @param filesFile The path to the files file
+     * @returns An array of shared object names
+     * @private
+     */
+    private parsePackageFiles(filesFile: string): string[] {
+        let soNameList: string[] = [];
+        try {
+            const fileData: string = fs.readFileSync(filesFile, "utf-8");
+            soNameList = fileData
+                .toString()
+                .split("\n")
+                .filter((line) => !!line.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/))
+                .map((line) => line.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/)[0]);
+        } catch (err: unknown) {
+            Logger.error(err, "RepoManager");
+        }
+
+        return soNameList;
+    }
+
+    /**
      * Extract the base and version from a desc file string.
      * @param lines The lines of the desc file
      * @returns The parsed package information as an ParsePackage object
+     * @private
      */
-    private extractBaseAndVersion(lines: string): ParsedPackage {
+    private extractBaseAndVersion(lines: string): Partial<ParsedPackage> {
         const completeVersion: string = lines.match(/(?<=%VERSION%\n)\S+/)[0];
         const splitVersion: string[] = completeVersion.split("-");
         const base = lines.match(/(?<=%BASE%\n)\S+/)[0];
@@ -1117,33 +1160,37 @@ class RepoManager {
      */
     async pushChanges(repoDir: string, needsRebuild: RepoUpdateRunParams[], repo: Repo): Promise<void> {
         Logger.log("Committing changes and pushing back to repo...", "RepoManager");
+
+        let commitMessage = `chore(bump): `;
+        let commitBody = "";
+        let counter = 0;
         for (const param of needsRebuild) {
             try {
                 const bumpReason: string = bumpTypeToText(param.bumpType, 2);
-                const packageText: string = param.triggerFrom === TriggerType.ARCH ? "Arch package" : "Chaotic package";
                 await git.add({ fs, dir: repoDir, filepath: path.join(param.pkg.pkgname, ".CI", "config") });
-                await git.commit({
-                    fs,
-                    dir: repoDir,
-                    author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
-                    message: `chore(${param.pkg.pkgname}): bump ${param.archPkg.pkgname}, ${bumpReason} trigger\n\n - ${packageText} version ${param.archPkg.version}`,
-                });
+
+                commitMessage += `${param.pkg.pkgname} `;
+                commitBody += `- ${param.pkg.pkgname}: ${bumpReason}\n`;
+
+                if (counter === 2) {
+                    commitMessage += `\n\n${commitBody}`;
+
+                    await git.commit({
+                        fs,
+                        dir: repoDir,
+                        author: {
+                            name: this.repoManagerSettings.gitAuthor,
+                            email: this.repoManagerSettings.gitEmail,
+                        },
+                        message: commitMessage,
+                    });
+
+                    counter = 0;
+                    commitMessage = `chore(bump): `;
+                    commitBody = "";
+                }
             } catch (err: any) {
                 Logger.error(err, "RepoManager");
-
-                // We might have a push conflict, let's try to resolve it
-                if (err.type === "PushRejectedError") {
-                    await git.pull({
-                        fs,
-                        http,
-                        dir: repoDir,
-                        author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
-                        onAuth: () => ({
-                            username: this.repoManagerSettings.gitUsername,
-                            password: this.repoManagerSettings.gitlabToken,
-                        }),
-                    });
-                }
             }
         }
 
@@ -1159,7 +1206,7 @@ class RepoManager {
             });
 
             Logger.debug(`Pushed changes to ${repo.name}`, "RepoManager");
-        } catch (err: unknown) {
+        } catch (err: any) {
             Logger.error(err, "RepoManager");
         }
     }
@@ -1371,6 +1418,7 @@ class RepoManager {
         try {
             const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
             const needsRebuild: RepoUpdateRunParams[] = [];
+            const soNameList: string[] = build.pkgbase.metadata.soNameList;
             let repoDir: string | undefined = this.repoDirs.find((repo) =>
                 fs.existsSync(path.join(repo, build.pkgbase.pkgname)),
             );
@@ -1405,12 +1453,31 @@ class RepoManager {
             }
 
             for (const pkg of allPackages) {
+                const configs: PackageConfig = await this.readPackageConfig(
+                    path.join(repoDir, pkg.pkgname, ".CI", "config"),
+                    pkg.pkgname,
+                );
+
+                if (
+                    (pkg.metadata.deps && pkg.metadata.deps.includes(build.pkgbase.pkgname)) ||
+                    soNameList.find((soName) => pkg.metadata.deps.includes(soName))
+                ) {
+                    needsRebuild.push({
+                        configs: configs.configs,
+                        pkg,
+                        archPkg: build.pkgbase,
+                        bumpType: BumpType.FROM_DEPS,
+                        triggerFrom: TriggerType.CHAOTIC,
+                    });
+                    Logger.debug(
+                        `Rebuilding ${pkg.pkgname} because of changed dependency ${build.pkgbase.pkgname}`,
+                        "RepoManager",
+                    );
+                    continue;
+                }
+
                 if (pkg.bumpTriggers) {
                     if (pkg.bumpTriggers.find((trigger) => trigger.pkgname === build.pkgbase.pkgname)) {
-                        const configs: PackageConfig = await this.readPackageConfig(
-                            path.join(repoDir, pkg.pkgname, ".CI", "config"),
-                            pkg.pkgname,
-                        );
                         needsRebuild.push({
                             configs: configs.configs,
                             pkg,
@@ -1419,7 +1486,7 @@ class RepoManager {
                             triggerFrom: TriggerType.CHAOTIC,
                         });
                         Logger.debug(
-                            `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in triggers`,
+                            `Rebuilding ${pkg.pkgname} because of explicit trigger ${build.pkgbase.pkgname}`,
                             "RepoManager",
                         );
                         continue;
@@ -1428,27 +1495,32 @@ class RepoManager {
 
                 if (pkg.namcapAnalysis) {
                     const namcapAnalysis: Partial<NamcapAnalysis> = pkg.namcapAnalysis;
-                    const relevantKeys = ["libdepends-by-namcap-sight"];
+                    const relevantKeys = [
+                        "dependency-detected-satisfied",
+                        "libdepends-by-namcap-sight",
+                        "libdepends-detected-not-included",
+                        "library-no-package-associated",
+                        "link-level-dependence",
+                    ];
 
                     for (const key of relevantKeys) {
-                        if (namcapAnalysis[key].includes(build.pkgbase.pkgname)) {
-                            const configs: PackageConfig = await this.readPackageConfig(
-                                path.join(repoDir, pkg.pkgname, ".CI", "config"),
-                                pkg.pkgname,
-                            );
-                            needsRebuild.push({
-                                configs: configs.configs,
-                                pkg,
-                                archPkg: build.pkgbase,
-                                bumpType: BumpType.NAMCAP,
-                                triggerFrom: TriggerType.CHAOTIC,
-                            });
-                            Logger.debug(
-                                `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in namcap analysis`,
-                                "RepoManager",
-                            );
-                            break;
-                        }
+                        const includesSoName: boolean = namcapAnalysis[key]?.find((dep: string) => {
+                            return soNameList.includes(dep);
+                        });
+                        if (!includesSoName) continue;
+
+                        needsRebuild.push({
+                            configs: configs.configs,
+                            pkg,
+                            archPkg: build.pkgbase,
+                            bumpType: BumpType.NAMCAP,
+                            triggerFrom: TriggerType.CHAOTIC,
+                        });
+                        Logger.debug(
+                            `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in namcap analysis`,
+                            "RepoManager",
+                        );
+                        break;
                     }
                 }
             }

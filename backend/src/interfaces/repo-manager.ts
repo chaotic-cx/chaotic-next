@@ -32,14 +32,15 @@ export interface ParsedPackageMetadata {
     checkDepends?: string[];
     conflicts?: string[];
     deps?: string[];
+    desc?: string;
     filename: string;
     license?: string;
     makeDeps?: string[];
     optDeps?: string[];
     packager?: string;
-    desc?: string;
     provides?: string[];
     replaces?: string[];
+    soNameList?: string[];
     url?: string;
 }
 
