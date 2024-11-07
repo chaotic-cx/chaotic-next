@@ -12,7 +12,7 @@ import {
     type Repository,
 } from "typeorm";
 import { BuildStatus } from "../types";
-import { NamcapAnalysis, RepoStatus } from "../interfaces/repo-manager";
+import { NamcapAnalysis, ParsedPackageMetadata, RepoStatus } from "../interfaces/repo-manager";
 
 @Entity()
 export class Builder {
@@ -59,7 +59,7 @@ export class Package {
     bumpTriggers: { pkgname: string; archVersion: string }[];
 
     @Column({ type: "jsonb", nullable: true })
-    metadata: string;
+    metadata: ParsedPackageMetadata;
 
     @Column({ type: "int", nullable: true })
     pkgrel: number;
