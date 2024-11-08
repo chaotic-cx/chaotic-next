@@ -742,6 +742,7 @@ class RepoManager {
         const packageBumpsLastDay: PackageBump[] = await this.dbConnections.packageBump.find({
             where: { timestamp: MoreThanOrEqual(date) },
             order: { timestamp: "DESC" },
+            relations: ["pkg"]
         });
 
         Logger.log(`Found ${packageBumpsLastDay.length} bumps in the last day`, "RepoManager");
