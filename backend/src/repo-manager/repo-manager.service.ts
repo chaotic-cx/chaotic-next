@@ -169,6 +169,7 @@ export class RepoManagerService {
                 globalTriggers ?? JSON.parse(this.configService.getOrThrow<string>("repoMan.globalTriggers")),
             globalBlacklist:
                 globalBlackList ?? JSON.parse(this.configService.getOrThrow<string>("repoMan.globalBlacklist")),
+            regenDatabase: this.configService.getOrThrow("repoMan.regenDatabase"),
         };
 
         return new RepoManager(
@@ -572,7 +573,6 @@ class RepoManager {
             const configFile: string = path.join(repoDir, pkgbaseDir, ".CI", "config");
             const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
             const metadata: ParsedPackageMetadata = pkgConfig.pkgInDb.metadata;
-            let dbObject: ArchlinuxPackage;
             let foundTrigger = false;
 
             archRebuildPkg = this.changedArchPackages.filter((pkg) => {
@@ -590,7 +590,7 @@ class RepoManager {
                     triggerFrom: TriggerType.ARCH,
                 });
 
-                Logger.debug(`Rebuilding ${pkgbaseDir} because of explicit trigger ${dbObject.pkgname}`, "RepoManager");
+                Logger.debug(`Rebuilding ${pkgbaseDir} because of explicit trigger ${archRebuildPkg[0].pkgname}`, "RepoManager");
                 continue;
             }
 
@@ -667,6 +667,7 @@ class RepoManager {
                                 pkg: ArchlinuxPackage;
                                 provides: string[];
                             } = soProvidingArchPackages.find((pkg) => pkg.provides?.includes(depPkg));
+
 
                             if (foundSoProvider) {
                                 trigger = foundSoProvider.pkg;
@@ -1009,18 +1010,20 @@ class RepoManager {
         for (const pkg of currentArchVersions) {
             archPkg = await archPkgExists(pkg, this.dbConnections.archPkg);
 
-            if (archPkg.version && archPkg.version === pkg.version) {
+            if (!this.repoManagerSettings.regenDatabase && archPkg.version && archPkg.version === pkg.version) {
                 continue;
             }
 
-            Logger.log(`Package ${pkg.name} has changed, updating records`, "RepoManager");
-
-            archPkg.previousVersion = archPkg.version;
-            archPkg.lastUpdated = new Date().toISOString();
+            // If we update records, don't
+            if (!this.repoManagerSettings.regenDatabase) {
+                Logger.log(`Package ${pkg.name} has changed, updating records`, "RepoManager");
+                archPkg.previousVersion = archPkg.version;
+                archPkg.lastUpdated = new Date();
+            }
             archPkg.version = pkg.version;
             archPkg.arch = ARCH;
             archPkg.pkgrel = pkg.pkgrel;
-            archPkg.metadata = JSON.stringify(pkg.metaData);
+            archPkg.metadata = pkg.metaData;
 
             void this.dbConnections.archPkg.save(archPkg);
 
@@ -1067,7 +1070,7 @@ class RepoManager {
     }
 
     /**
-     * Parse the files file of a package and return the shared object names.
+     * Parse the .files file of a package and return the shared object names.
      * @param filesFile The path to the files file
      * @returns An array of shared object names
      * @private
@@ -1388,7 +1391,7 @@ class RepoManager {
         try {
             for (const archPkg of packages) {
                 if (archPkg.metadata) {
-                    const metadata = JSON.parse(archPkg.metadata) as ParsedPackageMetadata;
+                    const metadata: ParsedPackageMetadata = archPkg.metadata;
                     if (metadata.provides) {
                         for (const provided of metadata.provides) {
                             if (provided.match(/\.so=\d+-\d+/)) {

@@ -1,7 +1,7 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, Repository } from "typeorm";
 import { Mutex } from "async-mutex";
 import { Logger } from "@nestjs/common";
-import { BumpType, TriggerType } from "../interfaces/repo-manager";
+import { BumpType, ParsedPackageMetadata, TriggerType } from "../interfaces/repo-manager";
 import { Package } from "../builder/builder.entity";
 
 @Entity()
@@ -22,13 +22,13 @@ export class ArchlinuxPackage {
     arch: string;
 
     @Column({ type: "timestamp", nullable: true })
-    lastUpdated: string;
+    lastUpdated: Date;
 
     @Column({ type: "varchar", nullable: true })
     previousVersion: string;
 
     @Column({ type: "jsonb", nullable: true })
-    metadata: string;
+    metadata: ParsedPackageMetadata;
 }
 
 @Entity()
