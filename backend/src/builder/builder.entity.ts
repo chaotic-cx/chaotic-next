@@ -90,6 +90,9 @@ export class Repo {
 
     @Column({ type: "varchar", nullable: true })
     dbPath: string;
+
+    @Column({ type: "varchar", nullable: true })
+    apiToken: string
 }
 
 @Entity()
