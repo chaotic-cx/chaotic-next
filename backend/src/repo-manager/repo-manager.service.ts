@@ -590,7 +590,11 @@ class RepoManager {
                     triggerFrom: TriggerType.ARCH,
                 });
 
-                Logger.debug(`Rebuilding ${pkgbaseDir} because of explicit trigger ${archRebuildPkg[0].pkgname}`, "RepoManager");
+                Logger.debug(
+                    `Rebuilding ${pkgbaseDir} because of explicit trigger ${archRebuildPkg[0].pkgname}`,
+                    "RepoManager",
+                );
+                foundTrigger = true;
                 continue;
             }
 
@@ -646,6 +650,7 @@ class RepoManager {
                         `Rebuilding ${pkgbaseDir} because of changed shared library ${trigger.pkg.pkgname}`,
                         "RepoManager",
                     );
+                    foundTrigger = true;
                 }
             }
 
@@ -668,7 +673,6 @@ class RepoManager {
                                 provides: string[];
                             } = soProvidingArchPackages.find((pkg) => pkg.provides?.includes(depPkg));
 
-
                             if (foundSoProvider) {
                                 trigger = foundSoProvider.pkg;
                                 break;
@@ -688,6 +692,7 @@ class RepoManager {
                             `Rebuilding ${pkgbaseDir} because of namcap detected library dep ${trigger.pkgname}`,
                             "RepoManager",
                         );
+                        foundTrigger = true;
                         break;
                     }
                 }
@@ -742,7 +747,7 @@ class RepoManager {
         const packageBumpsLastDay: PackageBump[] = await this.dbConnections.packageBump.find({
             where: { timestamp: MoreThanOrEqual(date) },
             order: { timestamp: "DESC" },
-            relations: ["pkg"]
+            relations: ["pkg"],
         });
 
         Logger.log(`Found ${packageBumpsLastDay.length} bumps in the last day`, "RepoManager");
@@ -757,14 +762,16 @@ class RepoManager {
             if (
                 param.pkg.pkgname.includes("-bin") ||
                 param.pkg.pkgname.includes("-appimage") ||
-                param.pkg.pkgname.includes("-snap")
+                param.pkg.pkgname.includes("-snap") ||
+                param.pkg.pkgname.includes("-support") ||
+                param.pkg.pkgname.includes("-meta")
             )
                 continue;
 
             // We also don't want to rebuild packages that have already been bumped within a day
             const needsSkip = relevantBumps.find((bump) => bump.pkg.id === param.pkg.id) !== undefined;
             if (needsSkip) {
-                Logger.warn(`Already bumped ${param.pkg.pkgname}, skipping`, "RepoManager");
+                Logger.warn(`Already bumped ${param.pkg.pkgname} during the last day, skipping`, "RepoManager");
                 continue;
             }
 
@@ -772,7 +779,7 @@ class RepoManager {
             const existingEntry: PackageBumpEntry = alreadyBumped.find(
                 (entry) => entry.pkg.pkgname === param.pkg.pkgname,
             );
-            if (existingEntry && typeof existingEntry.trigger !== "number" && "pkgname" in existingEntry.trigger) {
+            if (existingEntry) {
                 Logger.warn(
                     `Already bumped via ${existingEntry.triggerName}, skipping ${param.pkg.pkgname}`,
                     "RepoManager",
