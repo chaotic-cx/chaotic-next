@@ -51,6 +51,7 @@ export interface RepoSettings {
     gitlabToken: string;
     globalBlacklist: string[];
     globalTriggers: string[];
+    regenDatabase: boolean;
 }
 
 export interface RepoUpdateRunParams {
