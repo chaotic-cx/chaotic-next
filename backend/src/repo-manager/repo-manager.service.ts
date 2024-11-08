@@ -38,6 +38,7 @@ import { bumpTypeToText, isValidUrl } from "../functions";
 import { CronJob } from "cron";
 import util from "node:util";
 import { exec } from "node:child_process";
+import { AES } from "crypto-js";
 
 @Injectable()
 export class RepoManagerService {
@@ -83,6 +84,20 @@ export class RepoManagerService {
             "globalTriggers",
             this.settingsRepository,
         );
+
+        // We explicitly want to encrypt API tokens if they are prefixed with "CLEAR:"
+        try {
+            const reposWithTokens = await this.repoRepository.find({where: {apiToken: Not(IsNull())}})
+            const dbKey = this.configService.getOrThrow("app.dbKey")
+            for (const repo of reposWithTokens) {
+                if (repo.apiToken.startsWith("CLEAR:")) {
+                    repo.apiToken = AES.encrypt(repo.apiToken.split(":")[1], dbKey).toString()
+                }
+                Logger.log(`Encrypted token for repo ${repo.name}`)
+            }
+        } catch(err: unknown) {
+            Logger.error(err, "RepoManager")
+        }
 
         try {
             if (globalTriggers && globalTriggers.length > 0) {
@@ -182,6 +197,7 @@ export class RepoManagerService {
                 settings: this.settingsRepository,
             },
             repoSettings,
+            this.configService,
         );
     }
 
@@ -480,6 +496,7 @@ class RepoManager {
         settings: Repository<RepoManagerSettings>;
     };
     private readonly httpService: HttpService;
+    private readonly configService: ConfigService
 
     private repoDirs: string[] = [];
     private repoManagerSettings: RepoSettings;
@@ -494,10 +511,12 @@ class RepoManager {
             settings: Repository<RepoManagerSettings>;
         },
         settings: RepoSettings,
+        configService: ConfigService
     ) {
         this.httpService = httpService;
         this.dbConnections = dbConnections;
         this.repoManagerSettings = settings;
+        this.configService = configService;
         this.status = RepoStatus.INACTIVE;
         Logger.log("RepoManager initialized", "RepoManager");
     }
@@ -1206,13 +1225,14 @@ class RepoManager {
         }
 
         try {
+            const token = AES.decrypt(repo.apiToken, this.configService.getOrThrow("app.dbKey")).toString()
             await git.push({
                 fs,
                 http,
                 dir: repoDir,
                 onAuth: () => ({
                     username: this.repoManagerSettings.gitUsername,
-                    password: this.repoManagerSettings.gitlabToken,
+                    password: token,
                 }),
             });
 
@@ -1440,6 +1460,7 @@ class RepoManager {
                 if (!repoDir) {
                     repoDir = await this.createRepoDir(build.repo);
                 } else {
+                    const token = AES.decrypt(build.repo.apiToken, this.configService.getOrThrow("app.dbKey")).toString()
                     await git.pull({
                         fs,
                         http,
@@ -1447,7 +1468,7 @@ class RepoManager {
                         author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
                         onAuth: () => ({
                             username: this.repoManagerSettings.gitUsername,
-                            password: this.repoManagerSettings.gitlabToken,
+                            password: token,
                         }),
                     });
                 }
