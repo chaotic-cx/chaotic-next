@@ -7,11 +7,10 @@
     "tags": [],
     "targets": {
         "build": {
-            "executor": "@angular-devkit/build-angular:browser",
-            "outputs": ["{options.outputPath}"],
+            "executor": "@angular-devkit/build-angular:application",
+            "outputs": ["{options.outputPath.base}"],
             "options": {
                 "index": "frontend/src/index.html",
-                "main": "frontend/src/main.ts",
                 "polyfills": ["zone.js"],
                 "tsConfig": "frontend/tsconfig.app.json",
                 "assets": [
@@ -22,8 +21,10 @@
                 ],
                 "styles": ["frontend/src/styles.css"],
                 "scripts": [],
-                "allowedCommonJsDependencies": ["form-data", "proxy-from-env", "follow-redirects"],
-                "outputPath": "dist/frontend"
+                "outputPath": {
+                    "base": "dist/frontend"
+                },
+                "browser": "frontend/src/main.ts"
             },
             "configurations": {
                 "production": {
@@ -42,9 +43,7 @@
                     "outputHashing": "all"
                 },
                 "development": {
-                    "buildOptimizer": false,
                     "optimization": false,
-                    "vendorChunk": true,
                     "extractLicenses": false,
                     "sourceMap": true,
                     "namedChunks": true
