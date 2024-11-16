@@ -33,12 +33,11 @@ import { IsNull, MoreThanOrEqual, Not, Repository } from "typeorm";
 import { ARCH } from "../constants";
 import { Build, Package, pkgnameExists, Repo } from "../builder/builder.entity";
 import { ConfigService } from "@nestjs/config";
-import { AxiosResponse } from "axios";
-import { bumpTypeToText, isValidUrl } from "../functions";
+import type { AxiosResponse } from "axios";
+import { bumpTypeToText, decryptAes, encryptAes, isValidUrl } from "../functions";
 import { CronJob } from "cron";
 import util from "node:util";
 import { exec } from "node:child_process";
-import { AES } from "crypto-js";
 
 @Injectable()
 export class RepoManagerService {
@@ -87,33 +86,37 @@ export class RepoManagerService {
 
         // We explicitly want to encrypt API tokens if they are prefixed with "CLEAR:"
         try {
-            const reposWithTokens = await this.repoRepository.find({where: {apiToken: Not(IsNull())}})
-            const dbKey = this.configService.getOrThrow("app.dbKey")
+            const reposWithTokens = await this.repoRepository.find({ where: { apiToken: Not(IsNull()) } });
+            const dbKey = this.configService.getOrThrow("app.dbKey");
             for (const repo of reposWithTokens) {
                 if (repo.apiToken.startsWith("CLEAR:")) {
-                    repo.apiToken = AES.encrypt(repo.apiToken.split(":")[1], dbKey).toString()
+                    const token = repo.apiToken.split(":")[1];
+                    repo.apiToken = encryptAes(token, dbKey);
+                    await this.repoRepository.save(repo);
                 }
-                Logger.log(`Encrypted token for repo ${repo.name}`)
+                Logger.log(`Encrypted token for repo ${repo.name}`);
             }
-        } catch(err: unknown) {
-            Logger.error(err, "RepoManager")
+        } catch (err: unknown) {
+            Logger.error(err, "RepoManager");
         }
 
         try {
             if (globalTriggers && globalTriggers.length > 0) {
                 if (existingSettings?.value) {
-                    const existing: string[] = JSON.parse(existingSettings.value);
-
-                    for (const key of existing) {
-                        if (!globalTriggers.includes(key)) {
-                            globalTriggers.push(key);
+                    try {
+                        Logger.log(existingSettings);
+                        const existing: string[] = JSON.parse(existingSettings.value);
+                        for (const key of existing) {
+                            if (!globalTriggers.includes(key)) {
+                                globalTriggers.push(key);
+                            }
                         }
-                    }
 
-                    await this.settingsRepository.update(
-                        { key: "alwaysRebuild" },
-                        { value: JSON.stringify(globalTriggers) },
-                    );
+                        await this.settingsRepository.update(
+                            { key: "alwaysRebuild" },
+                            { value: JSON.stringify(globalTriggers) },
+                        );
+                    } catch (err: unknown) {}
                 } else {
                     await this.settingsRepository.save({
                         key: "globalTriggers",
@@ -122,7 +125,9 @@ export class RepoManagerService {
                 }
             } else {
                 if (existingSettings) {
-                    globalTriggers.push(...JSON.parse(existingSettings.value));
+                    try {
+                        globalTriggers.push(...JSON.parse(existingSettings.value));
+                    } catch (err: unknown) {}
                 }
             }
         } catch (err: unknown) {
@@ -179,7 +184,6 @@ export class RepoManagerService {
             gitAuthor: this.configService.getOrThrow<string>("repoMan.gitAuthor"),
             gitEmail: this.configService.getOrThrow<string>("repoMan.gitEmail"),
             gitUsername: this.configService.getOrThrow<string>("repoMan.gitUsername"),
-            gitlabToken: this.configService.getOrThrow<string>("repoMan.gitlabToken"),
             globalTriggers:
                 globalTriggers ?? JSON.parse(this.configService.getOrThrow<string>("repoMan.globalTriggers")),
             globalBlacklist:
@@ -496,7 +500,7 @@ class RepoManager {
         settings: Repository<RepoManagerSettings>;
     };
     private readonly httpService: HttpService;
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService;
 
     private repoDirs: string[] = [];
     private repoManagerSettings: RepoSettings;
@@ -511,7 +515,7 @@ class RepoManager {
             settings: Repository<RepoManagerSettings>;
         },
         settings: RepoSettings,
-        configService: ConfigService
+        configService: ConfigService,
     ) {
         this.httpService = httpService;
         this.dbConnections = dbConnections;
@@ -639,39 +643,41 @@ class RepoManager {
                 }
             }
 
-            if (!foundTrigger && soProvidingArchPackages.length > 0 && metadata?.deps) {
-                const trigger = soProvidingArchPackages.find((soProviding) => {
-                    const hasSoDep = metadata?.deps?.some((dep) => {
-                        const pkgNoSo = dep.split(".so")[0];
+            // if (!foundTrigger && soProvidingArchPackages.length > 0 && metadata?.deps) {
+            //     const trigger = soProvidingArchPackages.find((soProviding) => {
+            //         const hasSoDep = metadata?.deps?.some((dep) => {
+            //             const pkgNoSo = dep.split(".so")[0];
+            //
+            //             // TODO: probably too sensitive and causing too many builds
+            //             return soProviding.provides.some(
+            //                 (pkg) => pkg.includes(pkgNoSo) || soProviding.pkg.pkgname.includes(pkgNoSo),
+            //             );
+            //         });
+            //
+            //         if (hasSoDep) {
+            //             Logger.debug(`Found shared library trigger ${soProviding.pkg.pkgname} by name`, "RepoManager");
+            //             return true;
+            //         }
+            //         return false;
+            //     });
+            //     if (trigger) {
+            //         needsRebuild.push({
+            //             archPkg: trigger.pkg,
+            //             configs: pkgConfig.configs,
+            //             pkg: pkgConfig.pkgInDb,
+            //             bumpType: BumpType.FROM_DEPS,
+            //             triggerFrom: TriggerType.ARCH,
+            //         });
+            //
+            //         Logger.debug(
+            //             `Rebuilding ${pkgbaseDir} because of changed shared library ${trigger.pkg.pkgname}`,
+            //             "RepoManager",
+            //         );
+            //         foundTrigger = true;
+            //     }
+            // }
 
-                        // TODO: probably too sensitive and causing too many builds
-                        return soProviding.provides.some(
-                            (pkg) => pkg.includes(pkgNoSo) || soProviding.pkg.pkgname.includes(pkgNoSo),
-                        );
-                    });
-
-                    if (hasSoDep) {
-                        Logger.debug(`Found shared library trigger ${soProviding.pkg.pkgname} by name`, "RepoManager");
-                        return true;
-                    }
-                    return false;
-                });
-                if (trigger) {
-                    needsRebuild.push({
-                        archPkg: trigger.pkg,
-                        configs: pkgConfig.configs,
-                        pkg: pkgConfig.pkgInDb,
-                        bumpType: BumpType.FROM_DEPS,
-                        triggerFrom: TriggerType.ARCH,
-                    });
-
-                    Logger.debug(
-                        `Rebuilding ${pkgbaseDir} because of changed shared library ${trigger.pkg.pkgname}`,
-                        "RepoManager",
-                    );
-                    foundTrigger = true;
-                }
-            }
+            Logger.debug(pkgConfig.pkgInDb.namcapAnalysis);
 
             if (!foundTrigger && pkgConfig.pkgInDb.namcapAnalysis) {
                 const namcapAnalysis: Partial<NamcapAnalysis> = pkgConfig.pkgInDb.namcapAnalysis;
@@ -683,10 +689,14 @@ class RepoManager {
                     "link-level-dependence",
                 ];
 
+                Logger.debug(`searching shared lib for ${pkgConfig.pkgInDb.pkgname}`);
+                Logger.debug(namcapAnalysis);
+
                 for (const key of relevantKeys) {
                     let trigger: ArchlinuxPackage;
                     if (namcapAnalysis[key]) {
                         for (const depPkg of namcapAnalysis[key]) {
+                            Logger.debug(`${depPkg}`);
                             const foundSoProvider: {
                                 pkg: ArchlinuxPackage;
                                 provides: string[];
@@ -1225,7 +1235,7 @@ class RepoManager {
         }
 
         try {
-            const token = AES.decrypt(repo.apiToken, this.configService.getOrThrow("app.dbKey")).toString()
+            const token = decryptAes(repo.apiToken, this.configService.getOrThrow("app.dbKey"));
             await git.push({
                 fs,
                 http,
@@ -1460,7 +1470,7 @@ class RepoManager {
                 if (!repoDir) {
                     repoDir = await this.createRepoDir(build.repo);
                 } else {
-                    const token = AES.decrypt(build.repo.apiToken, this.configService.getOrThrow("app.dbKey")).toString()
+                    const token = decryptAes(build.repo.apiToken, this.configService.getOrThrow("app.dbKey"));
                     await git.pull({
                         fs,
                         http,
@@ -1490,9 +1500,12 @@ class RepoManager {
                     pkg.pkgname,
                 );
 
+                Logger.log(pkg.metadata, "CheckDeps");
+                Logger.log(soNameList, "CheckDeps");
+
                 if (
-                    (pkg.metadata.deps && pkg.metadata.deps.includes(build.pkgbase.pkgname)) ||
-                    soNameList.find((soName) => pkg.metadata.deps.includes(soName))
+                    pkg.metadata?.deps?.includes(build.pkgbase.pkgname) ||
+                    soNameList.find((soName) => pkg.metadata?.deps?.includes(soName))
                 ) {
                     needsRebuild.push({
                         configs: configs.configs,

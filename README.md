@@ -64,7 +64,6 @@ This will allow using the production API without CORS issues.
 - AUTH0_CLIENT_SECRET: Auth0 client secret
 - AUTH0_DOMAIN: Auth0 domain
 - CAUR_DEPLOY_LOG_ID: Telegram chat id for deploy logs
-- CAUR_GITLAB_TOKEN: Gitlab token for pushing to the repository
 - CAUR_JWT_SECRET: JWT secret for the backend
 - CAUR_NEWS_ID: Telegram chat id for news
 - CAUR_TRUST_PROXY: IP address of the proxy, if any
