@@ -1228,8 +1228,10 @@ class RepoManager {
                     counter = 0;
                     commitMessage = `chore(bump): `;
                     commitBody = "";
+                } else {
+                    counter++
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 Logger.error(err, "RepoManager");
             }
         }
@@ -1247,7 +1249,7 @@ class RepoManager {
             });
 
             Logger.debug(`Pushed changes to ${repo.name}`, "RepoManager");
-        } catch (err: any) {
+        } catch (err: unknown) {
             Logger.error(err, "RepoManager");
         }
     }
@@ -1285,7 +1287,7 @@ class RepoManager {
             }
         } catch (err: unknown) {}
 
-        let configs = {};
+        const configs = {};
         let rebuildTriggers: string[];
 
         if (configLines && configLines.length > 0) {
