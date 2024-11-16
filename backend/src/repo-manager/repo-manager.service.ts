@@ -1201,7 +1201,7 @@ class RepoManager {
     async pushChanges(repoDir: string, needsRebuild: RepoUpdateRunParams[], repo: Repo): Promise<void> {
         Logger.log("Committing changes and pushing back to repo...", "RepoManager");
 
-        let commitMessage = `chore(bump): `;
+        let commitMessage = "chore(bump): ";
         let commitBody = "";
         let counter = 0;
         for (const param of needsRebuild) {
@@ -1209,10 +1209,11 @@ class RepoManager {
                 const bumpReason: string = bumpTypeToText(param.bumpType, 2);
                 await git.add({ fs, dir: repoDir, filepath: path.join(param.pkg.pkgname, ".CI", "config") });
 
-                commitMessage += `${param.pkg.pkgname} `;
+                commitMessage += `${param.pkg.pkgname}, `;
                 commitBody += `- ${param.pkg.pkgname}: ${bumpReason}\n`;
 
-                if (counter === 2) {
+                if (counter % 2 === 0 || counter  === needsRebuild.length - 1) {
+                    commitMessage = commitMessage.slice(0, commitMessage.length - 2)
                     commitMessage += `\n\n${commitBody}`;
 
                     await git.commit({
@@ -1224,13 +1225,10 @@ class RepoManager {
                         },
                         message: commitMessage,
                     });
-
-                    counter = 0;
-                    commitMessage = `chore(bump): `;
+                    commitMessage = "chore(bump): ";
                     commitBody = "";
-                } else {
-                    counter++
                 }
+                counter++
             } catch (err: unknown) {
                 Logger.error(err, "RepoManager");
             }
