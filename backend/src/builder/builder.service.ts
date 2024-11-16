@@ -80,7 +80,11 @@ export class BuilderService {
      * Returns all repos from the database.
      */
     async getRepos(options?: any): Promise<Repo[]> {
-        return this.repoRepository.find({ cache: { id: "repos-general", milliseconds: 30000 } });
+        return this.repoRepository.find({
+            cache: { id: "repos-general", milliseconds: 30000 },
+            where: { isActive: true },
+            select: { id: true, name: true, repoUrl: true, gitRef: true, dbPath: true },
+        });
     }
 
     /**
