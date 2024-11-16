@@ -3,6 +3,7 @@ import type { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
 import { requiredEnvVarsDev, requiredEnvVarsProd } from "./constants";
 import { BumpType } from "./interfaces/repo-manager";
+import CryptoJs from "crypto-js";
 
 /**
  * Parse the output of the non-single line metrics.
@@ -111,4 +112,27 @@ export function bumpTypeToText(type: BumpType, phrase: 1 | 2 = 1): string {
         default:
             return "Unknown";
     }
+}
+
+/**
+ * Encrypts a value with a given key
+ * @param value Text to encrypt
+ * @param key Key to use
+ * @returns The AES encrypted string
+ */
+export function encryptAes(value: string, key: string) {
+    const encJson = CryptoJs.AES.encrypt(JSON.stringify(value), key).toString();
+    return CryptoJs.enc.Base64.stringify(CryptoJs.enc.Utf8.parse(encJson));
+}
+
+/**
+ * Decrypt a value with a given key
+ * @param value Text to decrypt
+ * @param key Key to use
+ * @returns The decrypted string
+ */
+export function decryptAes(value: string, key: string) {
+    const decData = CryptoJs.enc.Base64.parse(value).toString(CryptoJs.enc.Utf8);
+    const bytes = CryptoJs.AES.decrypt(decData, key).toString(CryptoJs.enc.Utf8);
+    return JSON.parse(bytes);
 }

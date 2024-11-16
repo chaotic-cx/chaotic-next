@@ -1,5 +1,5 @@
-import { Package } from "../builder/builder.entity";
-import { ArchlinuxPackage } from "../repo-manager/repo-manager.entity";
+import type { Package } from "../builder/builder.entity";
+import type { ArchlinuxPackage } from "../repo-manager/repo-manager.entity";
 
 export interface Repo {
     name: string;
@@ -48,7 +48,6 @@ export interface RepoSettings {
     gitAuthor: string;
     gitEmail: string;
     gitUsername: string;
-    gitlabToken: string;
     globalBlacklist: string[];
     globalTriggers: string[];
     regenDatabase: boolean;
