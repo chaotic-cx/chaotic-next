@@ -59,6 +59,7 @@ export interface RepoUpdateRunParams {
     configs: CiConfigs;
     pkg: Package;
     triggerFrom: TriggerType;
+    gotBumped?: boolean;
 }
 
 export type CiConfigs = { [key: string]: string };

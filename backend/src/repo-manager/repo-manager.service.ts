@@ -548,9 +548,10 @@ class RepoManager {
             return { repo: repo.name, bumped: [], origin: TriggerType.ARCH };
         }
         const bumpedPackages: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
+        const needsPush = needsRebuild.filter((entry) => entry.gotBumped === true);
 
         Logger.log(`Pushing changes to ${repo.name}`, "RepoManager");
-        await this.pushChanges(repoDir, needsRebuild, repo);
+        await this.pushChanges(repoDir, needsPush, repo);
 
         Logger.debug("Done checking for rebuild triggers, cleaning up", "RepoManager");
         this.cleanUp([repoDir, ...pkgbaseDirs]);
@@ -844,8 +845,10 @@ class RepoManager {
                     });
                 }
             }
-
             void this.dbConnections.packages.save(param.pkg);
+
+            // Indicate we bumped the package
+            param.gotBumped = true;
 
             // We need to update the package in the database to reflect the new bump
             const bumpEntry: PackageBumpEntry = {
@@ -1212,8 +1215,8 @@ class RepoManager {
                 commitMessage += `${param.pkg.pkgname}, `;
                 commitBody += `- ${param.pkg.pkgname}: ${bumpReason}\n`;
 
-                if (counter % 2 === 0 || counter  === needsRebuild.length - 1) {
-                    commitMessage = commitMessage.slice(0, commitMessage.length - 2)
+                if ((counter !== 0 && counter % 2 === 0) || counter === needsRebuild.length - 1) {
+                    commitMessage = commitMessage.slice(0, commitMessage.length - 2);
                     commitMessage += `\n\n${commitBody}`;
 
                     await git.commit({
@@ -1228,7 +1231,7 @@ class RepoManager {
                     commitMessage = "chore(bump): ";
                     commitBody = "";
                 }
-                counter++
+                counter++;
             } catch (err: unknown) {
                 Logger.error(err, "RepoManager");
             }
@@ -1404,8 +1407,7 @@ class RepoManager {
 
         // Prevent CI uselessly rewriting config files because of non-alphabetic order
         const writeBack: [string, string][] = Object.entries(pkgConfig.configs);
-        writeBack.sort((a, b) => a[0].localeCompare(b[0]));
-
+        writeBack.sort();
         for (const [key, value] of writeBack) {
             try {
                 if (key === "pkg" || (key || value) === undefined) continue;
