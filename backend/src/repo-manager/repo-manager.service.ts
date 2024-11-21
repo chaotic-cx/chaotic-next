@@ -678,8 +678,6 @@ class RepoManager {
             //     }
             // }
 
-            Logger.debug(pkgConfig.pkgInDb.namcapAnalysis);
-
             if (!foundTrigger && pkgConfig.pkgInDb.namcapAnalysis) {
                 const namcapAnalysis: Partial<NamcapAnalysis> = pkgConfig.pkgInDb.namcapAnalysis;
                 const relevantKeys = [
@@ -689,9 +687,6 @@ class RepoManager {
                     "library-no-package-associated",
                     "link-level-dependence",
                 ];
-
-                Logger.debug(`searching shared lib for ${pkgConfig.pkgInDb.pkgname}`);
-                Logger.debug(namcapAnalysis);
 
                 for (const key of relevantKeys) {
                     let trigger: ArchlinuxPackage;
