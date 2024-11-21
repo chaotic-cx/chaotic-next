@@ -868,7 +868,7 @@ class RepoManager {
      */
     async pullArchlinuxPackages(): Promise<void> {
         const tempDir: string = fs.mkdtempSync(path.join(os.tmpdir(), "chaotic-"));
-        Logger.log(`Started pulling Archlinux databases...`, "RepoManager");
+        Logger.log("Started pulling Archlinux databases...", "RepoManager");
         Logger.debug(`Created temporary directory ${tempDir}`, "RepoManager");
 
         const downloads: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
@@ -1573,9 +1573,10 @@ class RepoManager {
             }
 
             const bumped: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
+            const needsPush = needsRebuild.filter(entry => entry.gotBumped === true)
 
             if (bumped.length > 0) {
-                await this.pushChanges(repoDir, needsRebuild, build.repo);
+                await this.pushChanges(repoDir, needsPush, build.repo);
             }
 
             return {
