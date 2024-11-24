@@ -179,15 +179,15 @@ export class RepoManagerService {
      * Create a new RepoManager instance.
      * @returns A new RepoManager instance
      */
-    createRepoManager(globalTriggers?: string[], globalBlackList?: string[]): RepoManager {
+    createRepoManager(globalTriggers?: string[], globalBlocklist?: string[]): RepoManager {
         const repoSettings: RepoSettings = {
             gitAuthor: this.configService.getOrThrow<string>("repoMan.gitAuthor"),
             gitEmail: this.configService.getOrThrow<string>("repoMan.gitEmail"),
             gitUsername: this.configService.getOrThrow<string>("repoMan.gitUsername"),
             globalTriggers:
                 globalTriggers ?? JSON.parse(this.configService.getOrThrow<string>("repoMan.globalTriggers")),
-            globalBlacklist:
-                globalBlackList ?? JSON.parse(this.configService.getOrThrow<string>("repoMan.globalBlacklist")),
+            globalBlocklist:
+                globalBlocklist ?? JSON.parse(this.configService.getOrThrow<string>("repoMan.globalBlocklist")),
             regenDatabase: this.configService.getOrThrow("repoMan.regenDatabase"),
         };
 
@@ -578,12 +578,12 @@ class RepoManager {
         // additionally process blocklisted packages
         const globalTriggerList: { list: string[]; blacklist: string[] } = await this.checkGlobalTriggers(repoDir);
         const allGlobalTriggers: string[] = [...this.repoManagerSettings.globalTriggers, ...globalTriggerList.list];
-        const allGlobalBlacklist: string[] = [
-            ...this.repoManagerSettings.globalBlacklist,
+        const allGlobalBlocklist: string[] = [
+            ...this.repoManagerSettings.globalBlocklist,
             ...globalTriggerList.blacklist,
         ];
         const globalArchRebuildPkg: ArchlinuxPackage[] = this.changedArchPackages.filter((pkg) => {
-            return allGlobalTriggers.includes(pkg.pkgname) && !allGlobalBlacklist.includes(pkg.pkgname);
+            return allGlobalTriggers.includes(pkg.pkgname) && !allGlobalBlocklist.includes(pkg.pkgname);
         });
 
         // Additionally, filter out the .so providing Arch packages from our changed package list
@@ -766,8 +766,10 @@ class RepoManager {
      */
     async bumpPackages(needsRebuild: RepoUpdateRunParams[], repoDir: string): Promise<PackageBumpEntry[]> {
         const alreadyBumped: PackageBumpEntry[] = [];
+
+        // Set cooldown to one week by default, overridable via config
         const date = new Date();
-        date.setDate(date.getDate() - 1);
+        date.setDate(date.getDate() - this.configService.get("repoMan.bumpCooldown"));
 
         const packageBumpsLastDay: PackageBump[] = await this.dbConnections.packageBump.find({
             where: { timestamp: MoreThanOrEqual(date) },
@@ -775,7 +777,7 @@ class RepoManager {
             relations: ["pkg"],
         });
 
-        Logger.log(`Found ${packageBumpsLastDay.length} bumps in the last day`, "RepoManager");
+        Logger.log(`Found ${packageBumpsLastDay.length} bumps in the last ${this.configService.get("repoMan.bumpCooldown")} days`, "RepoManager");
 
         // Let's only consider Chaotic rebuilds for now, as Arch ones usually don't occur as often (-git packages)
         const relevantBumps: PackageBump[] = packageBumpsLastDay.filter((bump) => {
@@ -796,7 +798,7 @@ class RepoManager {
             // We also don't want to rebuild packages that have already been bumped within a day
             const needsSkip = relevantBumps.find((bump) => bump.pkg.id === param.pkg.id) !== undefined;
             if (needsSkip) {
-                Logger.warn(`Already bumped ${param.pkg.pkgname} during the last day, skipping`, "RepoManager");
+                Logger.warn(`Already bumped ${param.pkg.pkgname} during the last ${this.configService.get("repoMan.bumpCooldown")} days, skipping`, "RepoManager");
                 continue;
             }
 
@@ -1496,9 +1498,6 @@ class RepoManager {
                     path.join(repoDir, pkg.pkgname, ".CI", "config"),
                     pkg.pkgname,
                 );
-
-                Logger.log(pkg.metadata, "CheckDeps");
-                Logger.log(soNameList, "CheckDeps");
 
                 if (
                     pkg.metadata?.deps?.includes(build.pkgbase.pkgname) ||

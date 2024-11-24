@@ -48,7 +48,7 @@ export interface RepoSettings {
     gitAuthor: string;
     gitEmail: string;
     gitUsername: string;
-    globalBlacklist: string[];
+    globalBlocklist: string[];
     globalTriggers: string[];
     regenDatabase: boolean;
 }
