@@ -769,7 +769,8 @@ class RepoManager {
 
         // Set cooldown to one week by default, overridable via config
         const date = new Date();
-        date.setDate(date.getDate() - this.configService.get("repoMan.bumpCooldown"));
+        const daysInPast: number = this.configService.get<number>("repoMan.cooldownDays");
+        date.setDate(date.getDate() - daysInPast);
 
         const packageBumpsLastDay: PackageBump[] = await this.dbConnections.packageBump.find({
             where: { timestamp: MoreThanOrEqual(date) },
@@ -777,7 +778,7 @@ class RepoManager {
             relations: ["pkg"],
         });
 
-        Logger.log(`Found ${packageBumpsLastDay.length} bumps in the last ${this.configService.get("repoMan.bumpCooldown")} days`, "RepoManager");
+        Logger.log(`Found ${packageBumpsLastDay.length} bumps in the last ${daysInPast} day(s)`, "RepoManager");
 
         // Let's only consider Chaotic rebuilds for now, as Arch ones usually don't occur as often (-git packages)
         const relevantBumps: PackageBump[] = packageBumpsLastDay.filter((bump) => {
@@ -798,7 +799,7 @@ class RepoManager {
             // We also don't want to rebuild packages that have already been bumped within a day
             const needsSkip = relevantBumps.find((bump) => bump.pkg.id === param.pkg.id) !== undefined;
             if (needsSkip) {
-                Logger.warn(`Already bumped ${param.pkg.pkgname} during the last ${this.configService.get("repoMan.bumpCooldown")} days, skipping`, "RepoManager");
+                Logger.warn(`Already bumped ${param.pkg.pkgname} during the last ${this.configService.get("repoMan.bumpCooldown")} day(s), skipping`, "RepoManager");
                 continue;
             }
 
