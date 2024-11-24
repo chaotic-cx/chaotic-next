@@ -48,6 +48,7 @@ export class StatusComponent implements AfterViewInit {
         startShortPolling(5000, async (): Promise<void> => {
             await this.getQueueStats(true);
             await this.getPipelines();
+            console.log(this.currentQueue);
         });
     }
 

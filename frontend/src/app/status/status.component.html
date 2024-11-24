@@ -84,22 +84,22 @@
             </p>
             @for (pipeline of pipelines; track pipeline) {
                 <a href="{{ pipeline.web_url }}">
-                <div
-                    class="my-3 grid gap-x-0 grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm cursor-pointer"
-                >
-                    <div class="place-self-auto rounded-xl border-mauve bg-surface0 p-4">
-                        <h4 class="text-center text-xl text-mauve">Status</h4>
-                        <p class="my-2 text-center text-maroon">{{ pipeline.status }} ↗</p>
+                    <div
+                        class="my-3 grid gap-x-0 grid-cols-3 border border-mauve bg-surface0 rounded-lg shadow-sm cursor-pointer"
+                    >
+                        <div class="place-self-auto rounded-xl border-mauve bg-surface0 p-4">
+                            <h4 class="text-center text-xl text-mauve">Status</h4>
+                            <p class="my-2 text-center text-maroon">{{ pipeline.status }} ↗</p>
+                        </div>
+                        <div class="place-self-auto border-mauve bg-surface0 p-4">
+                            <h4 class="text-center text-xl text-mauve">Trigger</h4>
+                            <p class="my-2 text-center text-rosewater">{{ pipeline.source }}</p>
+                        </div>
+                        <div class="place-self-auto rounded-xl rounded- border-mauve bg-surface0 p-4">
+                            <h4 class="text-center text-xl text-mauve">Created at</h4>
+                            <p class="my-2 text-center text-yellow">{{ pipeline.created_at | date: "medium" }}</p>
+                        </div>
                     </div>
-                    <div class="place-self-auto border-mauve bg-surface0 p-4">
-                        <h4 class="text-center text-xl text-mauve">Trigger</h4>
-                        <p class="my-2 text-center text-rosewater">{{ pipeline.source }}</p>
-                    </div>
-                    <div class="place-self-auto rounded-xl rounded- border-mauve bg-surface0 p-4">
-                        <h4 class="text-center text-xl text-mauve">Created at</h4>
-                        <p class="my-2 text-center text-yellow">{{ pipeline.created_at | date: "medium" }}</p>
-                    </div>
-                </div>
                 </a>
             }
         </div>
@@ -141,7 +141,9 @@
                                 <p class="text-s text-center text-yellow">
                                     @for (pkg of queue.packages; track pkg) {
                                         {{ pkg }}
-                                        <a class="text-sky cursor-pointer" href="{{ queue.liveLogUrl![$index] }}"
+                                        <a
+                                            class="text-sky cursor-pointer"
+                                            href="{{ queue.liveLogUrl !== undefined ? queue.liveLogUrl![$index] : '' }}"
                                             >class
                                             {{
                                                 queue.build_class![$index] !== null
