@@ -98,7 +98,7 @@
         "@angular/platform-browser-dynamic": "18.2.13",
         "@angular/router": "18.2.13",
         "@fastify/cors": "^10.0.1",
-        "@fastify/helmet": "^11.1.1",
+        "@fastify/helmet": "^13.0.0",
         "@fastify/static": "^7.0.4",
         "@nestjs/axios": "^3.1.2",
         "@nestjs/cache-manager": "^2.3.0",
