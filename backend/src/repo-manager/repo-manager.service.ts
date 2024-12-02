@@ -488,6 +488,7 @@ export class RepoManagerService {
 class RepoManager {
     changedArchPackages?: ArchlinuxPackage[];
     status: RepoStatus = RepoStatus.INACTIVE;
+    statusDeploy: RepoStatus = RepoStatus.INACTIVE;
 
     private readonly archlinuxRepos: string[] = ["core", "extra"];
     private readonly archlinuxRepoUrl = (name: string) =>
@@ -534,6 +535,10 @@ class RepoManager {
         Logger.log(`Checking repo ${repo.name} for rebuild triggers...`, "RepoManager");
         Logger.debug(`Started cloning repo ${repo.name}`, "RepoManager");
 
+        if (this.status === RepoStatus.ACTIVE) {
+            Logger.warn("RepoManager is already active, skipping run", "RepoManager");
+            return { repo: repo.name, bumped: [], origin: TriggerType.ARCH };
+        }
         this.status = RepoStatus.ACTIVE;
         const repoDir: string = await this.createRepoDir(repo);
 
@@ -1456,6 +1461,12 @@ class RepoManager {
      * @returns A map of the bumped package
      */
     async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<BumpResult> {
+        if (this.statusDeploy === RepoStatus.ACTIVE) {
+            Logger.warn("Deployment is already in progress, skipping", "RepoManager");
+            return {repo: build.repo.name, bumped: [], origin: TriggerType.CHAOTIC};
+        }
+        this.statusDeploy = RepoStatus.ACTIVE
+
         try {
             const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
             const needsRebuild: RepoUpdateRunParams[] = [];
@@ -1573,6 +1584,8 @@ class RepoManager {
             if (bumped.length > 0) {
                 await this.pushChanges(repoDir, needsPush, build.repo);
             }
+
+            this.statusDeploy = RepoStatus.INACTIVE
 
             return {
                 repo: build.repo.name,
