@@ -30,8 +30,8 @@ To run a local CORS-enabled API proxy, change the following constants in the `ty
 following values:
 
 ```typescript
-export const CAUR_BACKEND_URL = "http://localhost:8010/proxy/backend"
-export const CAUR_API_URL = "http://localhost:8010/proxy/api"
+export const CAUR_BACKEND_URL = 'http://localhost:8010/proxy/backend';
+export const CAUR_API_URL = 'http://localhost:8010/proxy/api';
 ```
 
 and run the following command afterward:
