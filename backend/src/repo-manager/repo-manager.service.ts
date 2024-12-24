@@ -1031,7 +1031,9 @@ class RepoManager {
             }
         }
 
-        Logger.debug("Done parsing databases", "RepoManager");
+        Logger.debug("Done parsing databases, starting cleanup...", "RepoManager");
+        this.cleanUp(actualWorkDirs.map((dir) => dir.workDir));
+
         return currentPackageVersions;
     }
 
