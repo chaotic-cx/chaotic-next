@@ -1,6 +1,7 @@
 # compiled output
 dist
 tmp
+/backend/dist/db
 /out-tsc
 
 # dependencies
