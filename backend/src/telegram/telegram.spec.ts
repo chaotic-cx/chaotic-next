@@ -1,7 +1,7 @@
-import { TelegramModule } from "./telegram.module"
+import { TelegramModule } from './telegram.module';
 
-describe("Telegram", () => {
-    it("should be defined", () => {
-        expect(new TelegramModule()).toBeDefined()
-    })
-})
+describe('Telegram', () => {
+  it('should be defined', () => {
+    expect(new TelegramModule()).toBeDefined();
+  });
+});

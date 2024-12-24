@@ -1,14 +1,14 @@
 {
-    "extends": ["../biome.json"],
-    "linter": {
-        "enabled": true,
-        "rules": {
-            "recommended": true
-        }
-    },
-    "javascript": {
-        "parser": {
-            "unsafeParameterDecoratorsEnabled": true
-        }
+  "extends": ["../biome.json"],
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
     }
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  }
 }

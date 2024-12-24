@@ -1,62 +1,62 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { InjectRepository } from "@nestjs/typeorm";
-import type { Repository } from "typeorm";
-import type { User as UserType, Users } from "../types";
-import { User, userExists } from "./users.entity";
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import type { Repository } from 'typeorm';
+import type { User as UserType, Users } from '../types';
+import { User, userExists } from './users.entity';
 
 @Injectable()
 export class UsersService {
-    users: Users = [];
+  users: Users = [];
 
-    constructor(
-        @InjectRepository(User)
-        private userRepository: Repository<User>,
-        private configService: ConfigService,
-    ) {
-        const usersConfig = this.configService.get<string>("users.users");
-        try {
-            if (usersConfig) {
-                this.users = JSON.parse(usersConfig);
-                Logger.log("Users sourced from environment", "UsersService");
-            } else {
-                Logger.log("No users found in configuration, using values from database, if present", "UsersService");
-            }
-        } catch (err: unknown) {
-            Logger.error(err, "UsersService");
-        }
-
-        void this.init();
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private configService: ConfigService,
+  ) {
+    const usersConfig = this.configService.get<string>('users.users');
+    try {
+      if (usersConfig) {
+        this.users = JSON.parse(usersConfig);
+        Logger.log('Users sourced from environment', 'UsersService');
+      } else {
+        Logger.log('No users found in configuration, using values from database, if present', 'UsersService');
+      }
+    } catch (err: unknown) {
+      Logger.error(err, 'UsersService');
     }
 
-    async init(): Promise<void> {
-        for (const user of this.users) {
-            await userExists(user, this.userRepository);
-        }
-        Logger.log("UsersService initialized", "UsersService");
-    }
+    void this.init();
+  }
 
-    /**
-     * Check if a user exists in the database.
-     * @param auth
-     * @param checkFor
-     */
-    async checkIfUserExists(auth: string, checkFor: "mail" | "username"): Promise<User | null> {
-        Logger.debug(`Checking if user ${auth} exists`, "UsersService");
-        switch (checkFor) {
-            case "username":
-                return this.userRepository.findOne({ where: { name: auth } });
-            case "mail":
-                return this.userRepository.findOne({ where: { mail: auth } });
-        }
+  async init(): Promise<void> {
+    for (const user of this.users) {
+      await userExists(user, this.userRepository);
     }
+    Logger.log('UsersService initialized', 'UsersService');
+  }
 
-    /**
-     * Create a new user in the database.
-     * @param user The user object to create
-     * @returns The new user object
-     */
-    async createUser(user: UserType): Promise<User> {
-        return userExists(user, this.userRepository);
+  /**
+   * Check if a user exists in the database.
+   * @param auth
+   * @param checkFor
+   */
+  async checkIfUserExists(auth: string, checkFor: 'mail' | 'username'): Promise<User | null> {
+    Logger.debug(`Checking if user ${auth} exists`, 'UsersService');
+    switch (checkFor) {
+      case 'username':
+        return this.userRepository.findOne({ where: { name: auth } });
+      case 'mail':
+        return this.userRepository.findOne({ where: { mail: auth } });
     }
+  }
+
+  /**
+   * Create a new user in the database.
+   * @param user The user object to create
+   * @returns The new user object
+   */
+  async createUser(user: UserType): Promise<User> {
+    return userExists(user, this.userRepository);
+  }
 }

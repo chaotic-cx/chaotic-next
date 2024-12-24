@@ -1,5 +1,5 @@
-import { registerAs } from "@nestjs/config";
+import { registerAs } from '@nestjs/config';
 
-export default registerAs("users", () => ({
-    users: process.env.CAUR_USERS ?? "[]",
+export default registerAs('users', () => ({
+  users: process.env.CAUR_USERS ?? '[]',
 }));
