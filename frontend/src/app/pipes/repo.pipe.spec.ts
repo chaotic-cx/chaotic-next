@@ -1,8 +1,8 @@
-import { RepoPipe } from "./repo.pipe";
+import { RepoPipe } from './repo.pipe';
 
-describe("RepoPipe", () => {
-    it("create an instance", () => {
-        const pipe = new RepoPipe();
-        expect(pipe).toBeTruthy();
-    });
+describe('RepoPipe', () => {
+  it('create an instance', () => {
+    const pipe = new RepoPipe();
+    expect(pipe).toBeTruthy();
+  });
 });

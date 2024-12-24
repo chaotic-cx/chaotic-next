@@ -1,14 +1,14 @@
 @if (displayInteractive && !isMobile) {
-    <iframe class="my-3 rounded-3xl" [src]="urlSafe"></iframe>
+  <iframe class="my-3 rounded-3xl" [src]="urlSafe"></iframe>
 }
 @if (!displayInteractive || isMobile) {
-    <img
-        class="my-3 rounded-3xl cursor-pointer"
-        (click)="openApplet()"
-        ngSrc="./assets/logo.webp"
-        alt="Chaotic-AUR logo"
-        priority="true"
-        width="400"
-        height="400"
-    />
+  <img
+    class="my-3 rounded-3xl cursor-pointer"
+    (click)="openApplet()"
+    ngSrc="./assets/logo.webp"
+    alt="Chaotic-AUR logo"
+    priority="true"
+    width="400"
+    height="400"
+  />
 }

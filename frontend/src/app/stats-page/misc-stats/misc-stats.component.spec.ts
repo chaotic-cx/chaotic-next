@@ -1,22 +1,22 @@
-import { type ComponentFixture, TestBed } from "@angular/core/testing"
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { MiscStatsComponent } from "./misc-stats.component"
+import { MiscStatsComponent } from './misc-stats.component';
 
-describe("MiscStatsComponent", () => {
-    let component: MiscStatsComponent
-    let fixture: ComponentFixture<MiscStatsComponent>
+describe('MiscStatsComponent', () => {
+  let component: MiscStatsComponent;
+  let fixture: ComponentFixture<MiscStatsComponent>;
 
-    beforeEach(async () => {
-        await TestBed.configureTestingModule({
-            imports: [MiscStatsComponent],
-        }).compileComponents()
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [MiscStatsComponent],
+    }).compileComponents();
 
-        fixture = TestBed.createComponent(MiscStatsComponent)
-        component = fixture.componentInstance
-        fixture.detectChanges()
-    })
+    fixture = TestBed.createComponent(MiscStatsComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
 
-    it("should create", () => {
-        expect(component).toBeTruthy()
-    })
-})
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});

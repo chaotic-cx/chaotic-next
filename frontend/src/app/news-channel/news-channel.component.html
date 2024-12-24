@@ -1,19 +1,19 @@
 @if (latestNews.length > 0) {
-    <div class="chaotic-container-regular">
-        <h3 class="pb-10 text-center text-2xl font-semibold text-mauve">Latest Chaotic-AUR news 📣</h3>
+  <div class="chaotic-container-regular">
+    <h3 class="pb-10 text-center text-2xl font-semibold text-mauve">Latest Chaotic-AUR news 📣</h3>
 
-        @for (message of latestNews; track message) {
-            <div class="mb-4 rounded-lg border border-maroon bg-surface0 p-5 hover:bg-surface1">
-                <time class="text-lg font-semibold text-mauve">{{ message.date | date: "longDate" }} </time>
-                <a class="block items-center p-3 sm:flex" href="{{ message.link }}">
-                    <div class="text-text">
-                        <div class="text-sm font-normal">"{{ message.content }}"</div>
-                    </div>
-                </a>
-                <span class="items-center text-xs font-normal text-gray-500">
-                    Posted by {{ message.author }} with {{ message.view_count }} views
-                </span>
-            </div>
-        }
-    </div>
+    @for (message of latestNews; track message) {
+      <div class="mb-4 rounded-lg border border-maroon bg-surface0 p-5 hover:bg-surface1">
+        <time class="text-lg font-semibold text-mauve">{{ message.date | date: 'longDate' }} </time>
+        <a class="block items-center p-3 sm:flex" href="{{ message.link }}">
+          <div class="text-text">
+            <div class="text-sm font-normal">"{{ message.content }}"</div>
+          </div>
+        </a>
+        <span class="items-center text-xs font-normal text-gray-500">
+          Posted by {{ message.author }} with {{ message.view_count }} views
+        </span>
+      </div>
+    }
+  </div>
 }

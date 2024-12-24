@@ -1,22 +1,22 @@
-import { type ComponentFixture, TestBed } from "@angular/core/testing"
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { DeployLogComponent } from "./deploy-log.component"
+import { DeployLogComponent } from './deploy-log.component';
 
-describe("DeployLogComponent", () => {
-    let component: DeployLogComponent
-    let fixture: ComponentFixture<DeployLogComponent>
+describe('DeployLogComponent', () => {
+  let component: DeployLogComponent;
+  let fixture: ComponentFixture<DeployLogComponent>;
 
-    beforeEach(async () => {
-        await TestBed.configureTestingModule({
-            imports: [DeployLogComponent],
-        }).compileComponents()
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [DeployLogComponent],
+    }).compileComponents();
 
-        fixture = TestBed.createComponent(DeployLogComponent)
-        component = fixture.componentInstance
-        fixture.detectChanges()
-    })
+    fixture = TestBed.createComponent(DeployLogComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
 
-    it("should create", () => {
-        expect(component).toBeTruthy()
-    })
-})
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});

@@ -1,41 +1,41 @@
 <div class="chaotic-container-regular bg-base">
-    <div class="chaotic-container-regular">
-        <div class="mb-5 text-center">
-            <h2 class="text-2xl font-extrabold text-maroon">Memorial - 2024 edition</h2>
-            <p class="my-4 text-lg text-text">
-                Three years passed since the the
-                <a class="text-maroon" routerLink="/memorial">
-                    third birthday of Chaotic-AUR and celebrating it with a memorial of screenshots</a
-                >. This time, we are celebrating the sixth birthday of Chaotic-AUR with another round of community
-                contributions and the release of our
-                <a class="text-maroon" href="https://gitlab.com/chaotic-aur/pkgbuilds"> new build system infra 4.0 🎉</a>.
-            </p>
-        </div>
-        <div class="grid mt-10 grid-cols-2 gap-10">
-            @for (link of termLinks; track link) {
-                <a href="{{ link }}">
-                    <img
-                        class="hover:chaotic-grow-s h-auto max-w-full rounded-lg"
-                        ngSrc="{{ link }}"
-                        width="800"
-                        height="600"
-                        alt="Terminal screenshot"
-                    />
-                </a>
-            }
-        </div>
-        <div class="mt-5 grid grid-cols-1 content-center gap-10">
-            @for (link of desktopLinks; track link) {
-                <a href="{{ link }}">
-                    <img
-                        class="hover:chaotic-grow-s h-auto max-w-full rounded-lg"
-                        ngSrc="{{ link }}"
-                        width="1980"
-                        height="1280"
-                        alt="Terminal screenshot"
-                    />
-                </a>
-            }
-        </div>
+  <div class="chaotic-container-regular">
+    <div class="mb-5 text-center">
+      <h2 class="text-2xl font-extrabold text-maroon">Memorial - 2024 edition</h2>
+      <p class="my-4 text-lg text-text">
+        Three years passed since the the
+        <a class="text-maroon" routerLink="/memorial">
+          third birthday of Chaotic-AUR and celebrating it with a memorial of screenshots</a
+        >. This time, we are celebrating the sixth birthday of Chaotic-AUR with another round of community contributions
+        and the release of our
+        <a class="text-maroon" href="https://gitlab.com/chaotic-aur/pkgbuilds"> new build system infra 4.0 🎉</a>.
+      </p>
     </div>
+    <div class="grid mt-10 grid-cols-2 gap-10">
+      @for (link of termLinks; track link) {
+        <a href="{{ link }}">
+          <img
+            class="hover:chaotic-grow-s h-auto max-w-full rounded-lg"
+            ngSrc="{{ link }}"
+            width="800"
+            height="600"
+            alt="Terminal screenshot"
+          />
+        </a>
+      }
+    </div>
+    <div class="mt-5 grid grid-cols-1 content-center gap-10">
+      @for (link of desktopLinks; track link) {
+        <a href="{{ link }}">
+          <img
+            class="hover:chaotic-grow-s h-auto max-w-full rounded-lg"
+            ngSrc="{{ link }}"
+            width="1980"
+            height="1280"
+            alt="Terminal screenshot"
+          />
+        </a>
+      }
+    </div>
+  </div>
 </div>
