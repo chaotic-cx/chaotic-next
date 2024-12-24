@@ -1,5 +1,4 @@
 # compiled output
-backend/dist
 dist
 tmp
 /out-tsc
@@ -14,31 +13,25 @@ node_modules
 .c9/
 *.launch
 .settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 
 # misc
+.angular
+.direnv
+.github
+.nx
+.vscode
 /.sass-cache
 /connect.lock
 /coverage
 /libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
 /typings
 core
+db
+npm-debug.log
+repos
+testem.log
+yarn-error.log
 
 # System Files
 .DS_Store
 Thumbs.db
-
-.nx/cache
-.nx/workspace-data
-
-.angular
