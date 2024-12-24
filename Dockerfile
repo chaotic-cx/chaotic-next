@@ -5,7 +5,7 @@ WORKDIR /build
 COPY . /build
 
 # Enable the use of pnpm and compile the backend
-RUN corepack enable pnpm \
+RUN corepack enable pnpm && \
     pnpm install --ignore-scripts --no-optional && \
     pnpm exec nx run backend:build
 
@@ -19,7 +19,7 @@ FROM node:23-slim
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
 RUN apt-get update && \
-  apt-get install --no-install-recommends -y autossh=1.4g-1+b1 netcat-openbsd=1.219-1 zstd=0.4-1 && \
+  apt-get install --no-install-recommends -y autossh=1.4g-1+b1 netcat-openbsd=1.219-1 zst=0.4-1 && \
   rm -rf /var/lib/apt/lists/*
 
 COPY entry_point.sh /entry_point.sh
