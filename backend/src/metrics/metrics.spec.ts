@@ -1,7 +1,7 @@
-import { MetricsModule } from "./metrics.module"
+import { MetricsModule } from './metrics.module';
 
-describe("Metrics", () => {
-    it("should be defined", () => {
-        expect(new MetricsModule()).toBeDefined()
-    })
-})
+describe('Metrics', () => {
+  it('should be defined', () => {
+    expect(new MetricsModule()).toBeDefined();
+  });
+});

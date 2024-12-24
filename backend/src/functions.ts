@@ -1,9 +1,9 @@
-import type { CountNameObject, UserAgentList } from "@./shared-lib";
-import type { ConfigService } from "@nestjs/config";
-import * as bcrypt from "bcrypt";
-import { requiredEnvVarsDev, requiredEnvVarsProd } from "./constants";
-import { BumpType } from "./interfaces/repo-manager";
-import CryptoJs from "crypto-js";
+import type { CountNameObject, UserAgentList } from '@./shared-lib';
+import type { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+import { requiredEnvVarsDev, requiredEnvVarsProd } from './constants';
+import { BumpType } from './interfaces/repo-manager';
+import CryptoJs from 'crypto-js';
 
 /**
  * Parse the output of the non-single line metrics.
@@ -11,19 +11,19 @@ import CryptoJs from "crypto-js";
  * @returns An array of objects containing the name and count of the metric.
  */
 export function parseOutput(input: string): { name: string; count: number }[] {
-    const returningArray: UserAgentList | CountNameObject = [];
-    const perLine = input.split("\n");
-    for (const line of perLine) {
-        const count = Number.parseInt(line.split(/ (.*)/)[0]);
-        const name = line.replace(/^[0-9]*\s/, "");
-        if (!Number.isNaN(count)) {
-            returningArray.push({
-                name: name ?? "Unknown",
-                count,
-            });
-        }
+  const returningArray: UserAgentList | CountNameObject = [];
+  const perLine = input.split('\n');
+  for (const line of perLine) {
+    const count = Number.parseInt(line.split(/ (.*)/)[0]);
+    const name = line.replace(/^[0-9]*\s/, '');
+    if (!Number.isNaN(count)) {
+      returningArray.push({
+        name: name ?? 'Unknown',
+        count,
+      });
     }
-    return returningArray;
+  }
+  return returningArray;
 }
 
 /**
@@ -31,11 +31,11 @@ export function parseOutput(input: string): { name: string; count: number }[] {
  * @returns A string containing the node id and a random string.
  */
 export function generateNodeId(): string {
-    // This prevents broker shutdowns due to double ids in case we have overlapping nodeIds.
-    const randomString = Math.random().toString(36).substring(2, 7);
+  // This prevents broker shutdowns due to double ids in case we have overlapping nodeIds.
+  const randomString = Math.random().toString(36).substring(2, 7);
 
-    if (process.env.HOSTNAME) return `${process.env.HOSTNAME}-${randomString}`;
-    return `backend-${randomString}`;
+  if (process.env.HOSTNAME) return `${process.env.HOSTNAME}-${randomString}`;
+  return `backend-${randomString}`;
 }
 
 /**
@@ -44,13 +44,13 @@ export function generateNodeId(): string {
  * @param configService The NestJs config service to check the environment variables with.
  */
 export function checkEnvironment(configService: ConfigService): void {
-    const required: string[] =
-        configService.get<string>("NODE_ENV") === "development" ? requiredEnvVarsDev : requiredEnvVarsProd;
-    const missingEnvVars: string[] = required.filter((envVar) => !configService.get<string>(envVar));
+  const required: string[] =
+    configService.get<string>('NODE_ENV') === 'development' ? requiredEnvVarsDev : requiredEnvVarsProd;
+  const missingEnvVars: string[] = required.filter((envVar) => !configService.get<string>(envVar));
 
-    if (missingEnvVars.length > 0) {
-        throw new Error(`Missing environment variables: ${missingEnvVars.join(", ")}`);
-    }
+  if (missingEnvVars.length > 0) {
+    throw new Error(`Missing environment variables: ${missingEnvVars.join(', ')}`);
+  }
 }
 
 /**
@@ -59,8 +59,8 @@ export function checkEnvironment(configService: ConfigService): void {
  * @returns The hashed password
  */
 export async function getPasswordHash(password: string): Promise<string> {
-    const saltOrRounds = 10;
-    return bcrypt.hash(password, saltOrRounds);
+  const saltOrRounds = 10;
+  return bcrypt.hash(password, saltOrRounds);
 }
 
 /**
@@ -69,7 +69,7 @@ export async function getPasswordHash(password: string): Promise<string> {
  *  @returns The date n days in the past
  */
 export function nDaysInPast(n: number): Date {
-    return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
 
 /**
@@ -78,12 +78,12 @@ export function nDaysInPast(n: number): Date {
  * @returns True if the URL is valid, false otherwise
  */
 export function isValidUrl(url: string): boolean {
-    try {
-        new URL(url);
-        return true;
-    } catch (err: unknown) {
-        return false;
-    }
+  try {
+    new URL(url);
+    return true;
+  } catch (err: unknown) {
+    return false;
+  }
 }
 
 /**
@@ -93,25 +93,25 @@ export function isValidUrl(url: string): boolean {
  * @returns The BumpType as text
  */
 export function bumpTypeToText(type: BumpType, phrase: 1 | 2 = 1): string {
-    switch (type) {
-        case BumpType.EXPLICIT:
-            if (phrase === 2) return "explicit";
-            return "explicitly";
-        case BumpType.GLOBAL:
-            if (phrase === 2) return "global";
-            return "globally";
-        case BumpType.FROM_DEPS:
-            if (phrase === 2) return "Arch dependency";
-            return "via Arch dependencies";
-        case BumpType.FROM_DEPS_CHAOTIC:
-            if (phrase === 2) return "Chaotic dependency";
-            return "via Chaotic dependencies";
-        case BumpType.NAMCAP:
-            if (phrase === 2) return "Namcap analysis";
-            return "via Namcap analysis";
-        default:
-            return "Unknown";
-    }
+  switch (type) {
+    case BumpType.EXPLICIT:
+      if (phrase === 2) return 'explicit';
+      return 'explicitly';
+    case BumpType.GLOBAL:
+      if (phrase === 2) return 'global';
+      return 'globally';
+    case BumpType.FROM_DEPS:
+      if (phrase === 2) return 'Arch dependency';
+      return 'via Arch dependencies';
+    case BumpType.FROM_DEPS_CHAOTIC:
+      if (phrase === 2) return 'Chaotic dependency';
+      return 'via Chaotic dependencies';
+    case BumpType.NAMCAP:
+      if (phrase === 2) return 'Namcap analysis';
+      return 'via Namcap analysis';
+    default:
+      return 'Unknown';
+  }
 }
 
 /**
@@ -121,8 +121,8 @@ export function bumpTypeToText(type: BumpType, phrase: 1 | 2 = 1): string {
  * @returns The AES encrypted string
  */
 export function encryptAes(value: string, key: string) {
-    const encJson = CryptoJs.AES.encrypt(JSON.stringify(value), key).toString();
-    return CryptoJs.enc.Base64.stringify(CryptoJs.enc.Utf8.parse(encJson));
+  const encJson = CryptoJs.AES.encrypt(JSON.stringify(value), key).toString();
+  return CryptoJs.enc.Base64.stringify(CryptoJs.enc.Utf8.parse(encJson));
 }
 
 /**
@@ -132,7 +132,7 @@ export function encryptAes(value: string, key: string) {
  * @returns The decrypted string
  */
 export function decryptAes(value: string, key: string) {
-    const decData = CryptoJs.enc.Base64.parse(value).toString(CryptoJs.enc.Utf8);
-    const bytes = CryptoJs.AES.decrypt(decData, key).toString(CryptoJs.enc.Utf8);
-    return JSON.parse(bytes);
+  const decData = CryptoJs.enc.Base64.parse(value).toString(CryptoJs.enc.Utf8);
+  const bytes = CryptoJs.AES.decrypt(decData, key).toString(CryptoJs.enc.Utf8);
+  return JSON.parse(bytes);
 }

@@ -1,7 +1,7 @@
-import { MiscModule } from "./misc.module"
+import { MiscModule } from './misc.module';
 
-describe("Metrics", () => {
-    it("should be defined", () => {
-        expect(new MiscModule()).toBeDefined()
-    })
-})
+describe('Metrics', () => {
+  it('should be defined', () => {
+    expect(new MiscModule()).toBeDefined();
+  });
+});

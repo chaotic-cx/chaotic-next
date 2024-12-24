@@ -1,2 +1,2 @@
-export * from "./lib/tdlib-types"
-export * from "./lib/types"
+export * from './lib/tdlib-types';
+export * from './lib/types';
