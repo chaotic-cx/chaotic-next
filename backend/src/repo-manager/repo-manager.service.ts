@@ -153,7 +153,7 @@ export class RepoManagerService {
     }
 
     Logger.log('Starting checking packages for needed rebuilds...', 'RepoManager');
-    await this.repoManager.pullArchlinuxPackages();
+    const workDirs: RepoWorkDir[] = await this.repoManager.pullArchlinuxPackages();
 
     if (!this.repoManager.changedArchPackages || this.repoManager.changedArchPackages.length === 0) {
       Logger.log('No packages changed in Arch repos, skipping run', 'RepoManager');
@@ -166,6 +166,7 @@ export class RepoManagerService {
       results.push(result);
     }
 
+    void this.repoManager.cleanUp(workDirs.map((dir) => dir.workDir));
     this.summarizeChanges(results, this.repoManager);
   }
 
@@ -853,7 +854,7 @@ class RepoManager {
   /**
    * Pull the Archlinux databases and fill the changedArchPackages array with the packages that have changed.
    */
-  async pullArchlinuxPackages(): Promise<void> {
+  async pullArchlinuxPackages(): Promise<RepoWorkDir[]> {
     const tempDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'chaotic-'));
     Logger.log('Started pulling Archlinux databases...', 'RepoManager');
     Logger.debug(`Created temporary directory ${tempDir}`, 'RepoManager');
@@ -877,6 +878,8 @@ class RepoManager {
       downloads.map((download): RepoWorkDir => (download.status === 'fulfilled' ? download.value : null)),
     );
     this.changedArchPackages = await this.determineChangedPackages(currentArchVersions);
+
+    return downloads.map((download): RepoWorkDir => (download.status === 'fulfilled' ? download.value : null));
   }
 
   /**
@@ -1015,9 +1018,7 @@ class RepoManager {
       }
     }
 
-    Logger.debug('Done parsing databases, starting cleanup...', 'RepoManager');
-    this.cleanUp(actualWorkDirs.map((dir) => dir.workDir));
-
+    Logger.debug('Done parsing databases', 'RepoManager');
     return currentPackageVersions;
   }
 
