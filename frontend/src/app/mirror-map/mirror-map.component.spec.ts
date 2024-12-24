@@ -1,22 +1,22 @@
-import { type ComponentFixture, TestBed } from "@angular/core/testing"
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { MirrorMapComponent } from "./mirror-map.component"
+import { MirrorMapComponent } from './mirror-map.component';
 
-describe("MirrorMapComponent", () => {
-    let component: MirrorMapComponent
-    let fixture: ComponentFixture<MirrorMapComponent>
+describe('MirrorMapComponent', () => {
+  let component: MirrorMapComponent;
+  let fixture: ComponentFixture<MirrorMapComponent>;
 
-    beforeEach(async () => {
-        await TestBed.configureTestingModule({
-            imports: [MirrorMapComponent],
-        }).compileComponents()
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [MirrorMapComponent],
+    }).compileComponents();
 
-        fixture = TestBed.createComponent(MirrorMapComponent)
-        component = fixture.componentInstance
-        fixture.detectChanges()
-    })
+    fixture = TestBed.createComponent(MirrorMapComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
 
-    it("should create", () => {
-        expect(component).toBeTruthy()
-    })
-})
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});

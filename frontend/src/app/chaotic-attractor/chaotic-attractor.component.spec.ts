@@ -1,22 +1,22 @@
-import { type ComponentFixture, TestBed } from "@angular/core/testing"
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ChaoticAttractorComponent } from "./chaotic-attractor.component"
+import { ChaoticAttractorComponent } from './chaotic-attractor.component';
 
-describe("ChaoticAttractorComponent", () => {
-    let component: ChaoticAttractorComponent
-    let fixture: ComponentFixture<ChaoticAttractorComponent>
+describe('ChaoticAttractorComponent', () => {
+  let component: ChaoticAttractorComponent;
+  let fixture: ComponentFixture<ChaoticAttractorComponent>;
 
-    beforeEach(async () => {
-        await TestBed.configureTestingModule({
-            imports: [ChaoticAttractorComponent],
-        }).compileComponents()
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ChaoticAttractorComponent],
+    }).compileComponents();
 
-        fixture = TestBed.createComponent(ChaoticAttractorComponent)
-        component = fixture.componentInstance
-        fixture.detectChanges()
-    })
+    fixture = TestBed.createComponent(ChaoticAttractorComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
 
-    it("should create", () => {
-        expect(component).toBeTruthy()
-    })
-})
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
