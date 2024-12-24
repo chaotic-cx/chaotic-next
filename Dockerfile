@@ -6,12 +6,13 @@ COPY . /build
 
 # Enable the use of pnpm and compile the backend
 RUN corepack enable pnpm && \
-    pnpm install --ignore-scripts --no-optional && \
+    pnpm install --ignore-scripts nx && \
+    pnpm install && \
     pnpm exec nx run backend:build
 
 # Generate node_modules containing nx-generated package.json for less used space
 WORKDIR /build/dist/backend
-RUN pnpm install --ignore-scripts --no-optional --prod && \
+RUN pnpm install --prod && \
     pnpm install pino-pretty
 
 FROM node:23-slim
