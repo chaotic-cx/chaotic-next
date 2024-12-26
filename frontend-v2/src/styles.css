@@ -1,0 +1,65 @@
+@import 'primeicons/primeicons.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* You can add global styles to this file, and also import other style files */
+body {
+  font-style: normal;
+  font-weight: 400;
+  font-family: 'Fira Sans', sans-serif;
+}
+
+code,
+pre,
+tt,
+kbd,
+samp {
+  font-style: normal;
+  font-weight: 400;
+  font-family: 'JetBrains Mono', monospace;
+  font-optical-sizing: auto;
+}
+
+/*`Custom classes`*/
+.chaotic-list-regular {
+  @apply my-4 block list-inside list-disc space-y-1 text-left text-lg;
+}
+
+.chaotic-container-regular {
+  @apply container mx-auto max-w-screen-xl px-5 text-center align-middle md:px-10 lg:px-20;
+}
+
+.hover\:chaotic-grow-l:hover {
+  @apply transition ease-in-out hover:scale-125;
+}
+
+.hover\:chaotic-grow-s:hover {
+  @apply transition ease-in-out hover:scale-105;
+}
+
+.layout-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: calc(100% - var(--p-scrollbar-width, 0px));
+  z-index: 1100;
+  transition:
+    background-color 0.5s,
+    border-color 0.5s;
+  border-bottom: 1px solid transparent;
+}
+
+.layout-topbar-inner {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.layout-topbar-inner {
+  height: 4rem;
+  padding: 0 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
