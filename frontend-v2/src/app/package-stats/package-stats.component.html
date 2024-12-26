@@ -1,0 +1,36 @@
+<div>
+  <p-auto-complete
+    [forceSelection]="true"
+    [suggestions]="currentSuggestions"
+    (completeMethod)="search($event)"
+  ></p-auto-complete>
+  <div class="card">
+    <p-tabs value="0">
+      <p-tablist>
+        <p-tab value="0">Search</p-tab>
+        <p-tab value="1">Global stats</p-tab>
+        <p-tab value="2">Misc stats</p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel value="0">
+          <div class="flex">
+            <chaotic-chart-countries></chaotic-chart-countries>
+            <chaotic-chart-useragent></chaotic-chart-useragent>
+          </div>
+        </p-tabpanel>
+        <p-tabpanel value="1">
+          <chaotic-chart-downloads></chaotic-chart-downloads>
+        </p-tabpanel>
+        <p-tabpanel value="2">
+          <p class="m-0">
+            At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti
+            atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique
+            sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum
+            facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil
+            impedit quo minus.
+          </p>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+</div>

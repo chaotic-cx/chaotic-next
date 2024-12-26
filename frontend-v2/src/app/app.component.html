@@ -1,0 +1,6 @@
+<div class="h-max">
+  <chaotic-menubar></chaotic-menubar>
+  <div [@routerTransition]="prepareRoute(routerOutlet)" class="mt-24 min-h-screen">
+    <router-outlet #routerOutlet="outlet"></router-outlet>
+  </div>
+</div>

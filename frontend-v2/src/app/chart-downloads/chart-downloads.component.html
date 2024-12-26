@@ -1,0 +1,19 @@
+<div>
+  <div class="card flex justify-center">
+    <p-chart type="bar" [data]="chartData" [options]="options" class="w-full" />
+  </div>
+  <div class="center">
+    <p-floatlabel variant="on">
+      <p-inputnumber
+        [(ngModel)]="amount"
+        mode="decimal"
+        [showButtons]="true"
+        inputId="minmaxDownloads"
+        [min]="0"
+        [max]="200"
+      >
+      </p-inputnumber>
+      <label for="minmaxDownloads">Amount of packages to show</label>
+    </p-floatlabel>
+  </div>
+</div>

@@ -1,0 +1,80 @@
+<p-table
+  #pkgTable
+  [value]="packageList"
+  dataKey="id"
+  [rows]="25"
+  [rowsPerPageOptions]="[25, 50, 100, 200]"
+  [loading]="loading"
+  [paginator]="true"
+  [globalFilterFields]="['name', 'metadata.desc', 'metadata.url']"
+>
+  <ng-template #caption>
+    <div class="flex">
+      <p-button label="Clear" [outlined]="true" icon="pi pi-filter-slash" (click)="clear(pkgTable)" />
+      <p-iconfield iconPosition="left" class="ml-auto">
+        <p-inputicon>
+          <i class="pi pi-search"></i>
+        </p-inputicon>
+        <input pInputText type="text" (input)="globalFilter($event.target)" placeholder="Search keyword" />
+      </p-iconfield>
+    </div>
+  </ng-template>
+  <ng-template #header>
+    <tr>
+      <th style="min-width: 15rem">
+        <div class="flex items-center">
+          Name
+          <p-columnFilter type="text" field="pkgname" display="menu" />
+        </div>
+      </th>
+      <th style="min-width: 15rem">
+        <div class="flex items-center">
+          Version
+          <p-columnFilter type="text" field="version" display="menu" />
+        </div>
+      </th>
+      <th style="min-width: 15rem">
+        <div class="flex items-center">
+          Date
+          <p-columnFilter type="date" field="lastUpdated" display="menu" />
+        </div>
+      </th>
+      <th style="min-width: 10rem">
+        <div class="flex items-center">
+          Description
+          <p-columnFilter type="text" field="metadata.desc" display="menu" />
+        </div>
+      </th>
+      <th style="min-width: 15rem">
+        <div class="flex items-center">
+          Homepage
+          <p-columnFilter type="text" field="metadata.url" display="menu" />
+        </div>
+      </th>
+    </tr>
+  </ng-template>
+  <ng-template pTemplate="body" let-pkg>
+    <tr>
+      <td>
+        <span class="ml-1 align-middle">{{ pkg?.pkgname }}</span>
+      </td>
+      <td>
+        <span class="ml-1 align-middle">{{ pkg?.version }}-{{ pkg?.pkgrel }}</span>
+      </td>
+      <td>
+        <span class="ml-1 align-middle">{{ pkg?.lastUpdated | date }}</span>
+      </td>
+      <td>
+        <span class="ml-1 align-middle">{{ pkg?.metadata?.desc }}</span>
+      </td>
+      <td>
+        <span class="ml-1 align-middle">{{ pkg?.metadata?.url }}</span>
+      </td>
+    </tr>
+  </ng-template>
+  <ng-template #emptymessage>
+    <tr>
+      <td colspan="7">No packages found.</td>
+    </tr>
+  </ng-template>
+</p-table>
