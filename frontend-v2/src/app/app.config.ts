@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { providePrimeNG } from 'primeng/config';
+import { provideGarudaNG } from '@garudalinux/core';
 import { Catppuccin } from './theme';
 import { provideHighlightOptions } from 'ngx-highlightjs';
 
@@ -17,15 +17,18 @@ export const appConfig: ApplicationConfig = {
       },
     }),
     provideHttpClient(withInterceptorsFromDi()),
-    providePrimeNG({
-      theme: {
-        preset: Catppuccin,
-        options: {
-          darkModeSelector: '.dark-mode',
+    provideGarudaNG(
+      {},
+      {
+        theme: {
+          preset: Catppuccin,
+          options: {
+            darkModeSelector: '.dark-mode',
+          },
         },
+        ripple: true,
       },
-      ripple: true,
-    }),
+    ),
     provideRouter(routes),
     provideZoneChangeDetection({ eventCoalescing: true }),
   ],

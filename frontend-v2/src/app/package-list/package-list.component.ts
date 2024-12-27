@@ -27,6 +27,7 @@ import { retry } from 'rxjs';
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
+  providers: [MessageService],
 })
 export class PackageListComponent implements OnInit {
   packageList: any;

@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, inject, ViewChild } from '@angular/core';
 import { MenubarModule } from 'primeng/menubar';
 import { MenuItem } from 'primeng/api';
 import { Button } from 'primeng/button';
@@ -11,8 +11,14 @@ import { RouterLink } from '@angular/router';
   templateUrl: './menubar.component.html',
   styleUrl: './menubar.component.css',
 })
-export class MenubarComponent {
+export class MenubarComponent implements AfterViewInit {
   @ViewChild('darkToggle') darkToggle!: HTMLElement;
+
+  private cdr = inject(ChangeDetectorRef);
+
+  ngAfterViewInit() {
+    this.cdr.detectChanges();
+  }
 
   items: MenuItem[] = [
     {
