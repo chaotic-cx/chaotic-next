@@ -7,12 +7,14 @@ import { TableModule } from 'primeng/table';
 import { Fieldset } from 'primeng/fieldset';
 import { TruncatePipe } from '../pipes/truncate.pipe';
 import { ScrollPanel } from 'primeng/scrollpanel';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'chaotic-newsfeed',
   imports: [CommonModule, TableModule, Fieldset, TruncatePipe, ScrollPanel],
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
+  providers: [MessageService],
 })
 export class NewsfeedComponent implements OnInit {
   newsList: TgMessageList = [];

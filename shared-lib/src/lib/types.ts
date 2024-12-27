@@ -101,7 +101,7 @@ export interface TeamMember {
 export type TeamList = TeamMember[];
 
 export interface TgMessage {
-  date: string;
+  date: number;
   content: MessageContent[];
   author?: string;
   view_count?: number;

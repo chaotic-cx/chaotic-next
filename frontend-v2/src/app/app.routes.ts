@@ -14,6 +14,7 @@ import { RouterModule, type Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
 import { PackageListComponent } from './package-list/package-list.component';
 import { PackageStatsComponent } from './package-stats/package-stats.component';
+import { DeployLogComponent } from './deploy-log/deploy-log.component';
 
 export const routes: Routes = [
   {
@@ -37,7 +38,7 @@ export const routes: Routes = [
   {
     title: 'Deploy Log',
     path: 'deploy-log',
-    component: PackageListComponent,
+    component: DeployLogComponent,
     data: { animationState: '4' },
   },
   {
