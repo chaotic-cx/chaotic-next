@@ -2,6 +2,7 @@
 
 # compiled output
 dist
+jest.config.js
 tmp
 /out-tsc
 
@@ -53,5 +54,6 @@ Thumbs.db
 # Local env files
 .env
 .pre-commit-config.yaml
+.wrangler
 repos/
 tdlib/
