@@ -37,7 +37,8 @@ export class NewsChannelComponent implements AfterViewInit {
    */
   private parseTgMessage(messages: TgMessageList): TgMessageList {
     for (const message of messages) {
-      message.date = new Date(Number(message.date) * 1000).toDateString();
+      // hack
+      message.date = new Date(message.date * 1000).toDateString() as unknown as number;
     }
     if (this.isMobile) {
       return messages.slice(0, 3);

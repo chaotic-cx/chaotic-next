@@ -105,7 +105,7 @@ export function parseDeployments(messages: TgMessageList, type: DeploymentType):
       pkg = String(message.content).split('> ')[1].split(' - logs')[0];
     }
 
-    const date = timeAgo.format(Number.parseInt(message.date) * 1000, 'round');
+    const date = timeAgo.format(message.date * 1000, 'round');
 
     if (
       (type === DeploymentType.SUCCESS || type === DeploymentType.ALL) &&

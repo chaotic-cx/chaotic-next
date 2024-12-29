@@ -1,4 +1,4 @@
-<div>
+<div class="chaotic-container-wide">
   <p-auto-complete
     [forceSelection]="true"
     [suggestions]="currentSuggestions"
@@ -13,9 +13,13 @@
       </p-tablist>
       <p-tabpanels>
         <p-tabpanel value="0">
-          <div class="flex">
-            <chaotic-chart-countries></chaotic-chart-countries>
-            <chaotic-chart-useragent></chaotic-chart-useragent>
+          <div class="flex flex-grow flex-">
+            <p-card header="Country list" [style]="{ width: '100%', overflow: 'hidden' }">
+              <chaotic-chart-countries></chaotic-chart-countries>
+            </p-card>
+            <p-card header="User agents" [style]="{ width: '100%', overflow: 'hidden' }">
+              <chaotic-chart-useragent></chaotic-chart-useragent>
+            </p-card>
           </div>
         </p-tabpanel>
         <p-tabpanel value="1">

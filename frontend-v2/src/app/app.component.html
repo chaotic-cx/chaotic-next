@@ -1,6 +1,9 @@
 <div class="h-max">
-  <chaotic-menubar></chaotic-menubar>
-  <div [@routerTransition]="prepareRoute(routerOutlet)" class="mt-24 min-h-screen">
-    <router-outlet #routerOutlet="outlet"></router-outlet>
-  </div>
+  <garuda-shell [menuItems]="items">
+    <img garudaShellBarStart ngSrc="assets/logo.webp" width="28" height="28" alt="logo" />
+    <div class="mt-5" [@routerTransition]="prepareRoute(routerOutlet)">
+      <router-outlet #routerOutlet="outlet"></router-outlet>
+    </div>
+    <p-scroll-top></p-scroll-top>
+  </garuda-shell>
 </div>
