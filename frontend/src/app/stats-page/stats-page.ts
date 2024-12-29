@@ -1,6 +1,5 @@
 import { Component, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AppService } from '../app.service';
 import { MiscStatsComponent } from './misc-stats/misc-stats.component';
 import { PackageSearchComponent } from './package-search/package-search.component';
@@ -8,14 +7,7 @@ import { PackageStatsComponent } from './package-stats/package-stats.component';
 
 @Component({
   selector: 'app-stats-page',
-  imports: [
-    FormsModule,
-    PackageSearchComponent,
-    PackageStatsComponent,
-    MiscStatsComponent,
-    RouterLink,
-    RouterLinkActive,
-  ],
+  imports: [FormsModule, PackageSearchComponent, PackageStatsComponent, MiscStatsComponent],
   templateUrl: './stats-page.html',
   styleUrl: './stats-page.css',
 })

@@ -15,6 +15,9 @@ import { HomeComponent } from './home/home.component';
 import { PackageListComponent } from './package-list/package-list.component';
 import { PackageStatsComponent } from './package-stats/package-stats.component';
 import { DeployLogComponent } from './deploy-log/deploy-log.component';
+import { BuildStatusComponent } from './build-status/build-status.component';
+import { DocsComponent } from './docs/docs.component';
+import { AboutComponent } from './about/about.component';
 
 export const routes: Routes = [
   {
@@ -26,13 +29,13 @@ export const routes: Routes = [
   {
     title: 'Get Started',
     path: 'docs',
-    component: PackageListComponent,
+    component: DocsComponent,
     data: { animationState: '2' },
   },
   {
     title: 'Build Status',
     path: 'status',
-    component: PackageListComponent,
+    component: BuildStatusComponent,
     data: { animationState: '3' },
   },
   {
@@ -62,7 +65,7 @@ export const routes: Routes = [
   {
     title: 'About',
     path: 'about',
-    component: PackageListComponent,
+    component: AboutComponent,
     data: { animationState: '8' },
   },
   {

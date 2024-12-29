@@ -5,20 +5,13 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideGarudaNG } from '@garudalinux/core';
 import { Catppuccin } from './theme';
-import { provideHighlightOptions } from 'ngx-highlightjs';
+import { provideSFConfig } from 'ngx-highlight-js';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAnimationsAsync(),
-    provideHighlightOptions({
-      coreLibraryLoader: () => import('highlight.js/lib/core'),
-      languages: {
-        shell: () => import('highlight.js/lib/languages/shell'),
-      },
-    }),
-    provideHttpClient(withInterceptorsFromDi()),
     provideGarudaNG(
-      {},
+      { font: 'Fira Sans' },
       {
         theme: {
           preset: Catppuccin,
@@ -29,7 +22,9 @@ export const appConfig: ApplicationConfig = {
         ripple: true,
       },
     ),
+    provideHttpClient(withInterceptorsFromDi()),
     provideRouter(routes),
+    provideSFConfig({ lang: 'shell' }),
     provideZoneChangeDetection({ eventCoalescing: true }),
   ],
 };

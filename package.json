@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@angular/animations": "19.0.5",
+    "@angular/cdk": "^19.0.4",
     "@angular/common": "19.0.5",
     "@angular/compiler": "19.0.5",
     "@angular/core": "19.0.5",
@@ -40,7 +41,7 @@
     "@fastify/cors": "^10.0.1",
     "@fastify/helmet": "^11.1.1",
     "@fastify/static": "^7.0.4",
-    "@garudalinux/core": "^0.0.2",
+    "@garudalinux/core": "~0.1.0",
     "@nestjs/axios": "^3.1.3",
     "@nestjs/cache-manager": "^2.3.0",
     "@nestjs/common": "^10.4.15",
@@ -71,7 +72,7 @@
     "jwks-rsa": "^3.1.0",
     "moleculer": "^0.14.35",
     "nestjs-pino": "^4.2.0",
-    "ngx-highlightjs": "^12.0.0",
+    "ngx-highlight-js": "^19.0.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
@@ -122,7 +123,7 @@
     "@nx/workspace": "20.3.0",
     "@schematics/angular": "19.0.6",
     "@swc-node/register": "~1.10.9",
-    "@swc/core": "~1.10.2",
+    "@swc/core": "~1.10.3",
     "@swc/helpers": "~0.5.15",
     "@types/auth0": "^3.3.10",
     "@types/bcrypt": "^5.0.2",
@@ -143,7 +144,7 @@
     "jest-environment-jsdom": "29.7.0",
     "jest-environment-node": "^29.7.0",
     "jest-preset-angular": "14.4.2",
-    "lint-staged": "^15.2.11",
+    "lint-staged": "^15.3.0",
     "local-cors-proxy": "^1.1.0",
     "nx": "20.3.0",
     "pino-pretty": "^11.3.0",
@@ -157,9 +158,10 @@
     "typescript": "5.6.3",
     "webpack": "^5.97.1",
     "webpack-cli": "^6.0.1",
-    "webpack-node-externals": "^3.0.0"
+    "webpack-node-externals": "^3.0.0",
+    "wrangler": "^3.99.0"
   },
-  "packageManager": "pnpm@10.0.0-rc.0+sha512.bce495587126f9a37d64150bf80dcf9bd96f0d64cfd450c9b1a7e5bf2cfc81aef3d50178f259855351c872905a240861a55031652c81e8a11665bfa65f6a1dc2",
+  "packageManager": "pnpm@10.0.0-rc.2+sha512.b6e59b96f90ca92449ac2f6dca9b430880448fc97d21f0fa9200e3d5ddb5289ad535255400554f7f3486e2d60058492161aaa9b58828e81f50c096718be9d156",
   "engines": {
     "npm": "^23"
   }

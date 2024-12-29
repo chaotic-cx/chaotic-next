@@ -5,11 +5,14 @@ import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
 import { CAUR_CACHED_METRICS_URL } from '@./shared-lib';
 import { HttpClient } from '@angular/common/http';
-import { MenubarComponent } from './menubar/menubar.component';
 import { routeAnimations } from './app.routes';
+import { ShellComponent } from '@garudalinux/core';
+import { MenuItem } from 'primeng/api';
+import { NgOptimizedImage } from '@angular/common';
+import { ScrollTop } from 'primeng/scrolltop';
 
 @Component({
-  imports: [RouterModule, MenubarComponent],
+  imports: [RouterModule, ShellComponent, NgOptimizedImage, ScrollTop],
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
@@ -22,6 +25,49 @@ export class AppComponent implements OnInit {
     private httpClient: HttpClient,
     private primeng: PrimeNG,
   ) {}
+
+  items: MenuItem[] = [
+    {
+      icon: 'pi pi-home',
+      label: 'Home',
+      routerLink: '/',
+    },
+    {
+      icon: 'pi pi-question',
+      label: 'Get Started',
+      routerLink: '/docs',
+    },
+    {
+      icon: 'pi pi-gauge',
+      label: 'Build Status',
+      routerLink: '/status',
+    },
+    {
+      icon: 'pi pi-receipt',
+      label: 'Deploy log',
+      routerLink: '/deploy-log',
+    },
+    {
+      icon: 'pi pi-table',
+      label: 'Package List',
+      routerLink: '/package-list',
+    },
+    {
+      icon: 'pi pi-chart-bar',
+      label: 'Package Stats',
+      routerLink: '/stats',
+    },
+    {
+      icon: 'pi pi-trophy',
+      label: 'Memorial v2',
+      routerLink: '/memorial-v2',
+    },
+    {
+      icon: 'pi pi-user',
+      label: 'About',
+      routerLink: '/about',
+    },
+  ];
 
   ngOnInit() {
     TimeAgo.addDefaultLocale(en);

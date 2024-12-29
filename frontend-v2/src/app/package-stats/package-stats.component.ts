@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppService } from '../app.service';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
@@ -9,9 +9,10 @@ import { ChartDownloadsComponent } from '../chart-downloads/chart-downloads.comp
 import { FormsModule } from '@angular/forms';
 import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { retry } from 'rxjs';
-import { MessageService } from 'primeng/api';
+import { FilterService, MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { MessageModule } from 'primeng/message';
+import { Card } from 'primeng/card';
 
 @Component({
   selector: 'chaotic-package-stats',
@@ -29,6 +30,7 @@ import { MessageModule } from 'primeng/message';
     AutoComplete,
     ToastModule,
     MessageModule,
+    Card,
   ],
   templateUrl: './package-stats.component.html',
   styleUrl: './package-stats.component.css',
@@ -40,11 +42,13 @@ export class PackageStatsComponent implements OnInit {
   totalUsers = signal<string>('Loading...');
   loading = true;
 
+  filterService = inject(FilterService);
+
   search(event: AutoCompleteCompleteEvent) {
     if (event.query.length < 3) return;
 
     if (/^[0-9|a-zA-Z-]*$/.test(event.query)) {
-      this.currentSuggestions = this.suggestionPool().filter((item) => item.includes(event.query));
+      this.currentSuggestions = this.filterService.filters['contains'](this.suggestionPool(), event.query);
     } else {
       this.messageService.add({
         severity: 'warning',

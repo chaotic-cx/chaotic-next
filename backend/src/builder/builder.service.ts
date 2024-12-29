@@ -106,17 +106,31 @@ export class BuilderService {
    * @param options An object containing the amount to look back and the offset
    * @returns The last n builds, unless an offset is provided
    */
-  async getLastBuilds(options: { offset: number; amount: number }): Promise<Build[]> {
-    return this.buildRepository
-      .createQueryBuilder('build')
-      .leftJoinAndSelect('build.pkgbase', 'package')
-      .leftJoinAndSelect('build.builder', 'builder')
-      .leftJoinAndSelect('build.repo', 'repo')
-      .orderBy('build.id', 'DESC')
-      .skip(options.offset)
-      .take(options.amount)
-      .cache(`builds-latest-${options.amount}-${options.offset}`, 30000)
-      .getMany();
+  async getLastBuilds(options: { offset: number; amount: number; status?: BuildStatus }): Promise<Build[]> {
+    if (!options.status) {
+      return await this.buildRepository
+        .createQueryBuilder('build')
+        .leftJoinAndSelect('build.pkgbase', 'package')
+        .leftJoinAndSelect('build.builder', 'builder')
+        .leftJoinAndSelect('build.repo', 'repo')
+        .orderBy('build.id', 'DESC')
+        .skip(options.offset)
+        .take(options.amount)
+        .cache(`builds-latest-${options.amount}-${options.offset}`, 30000)
+        .getMany();
+    } else {
+      return await this.buildRepository
+        .createQueryBuilder('build')
+        .leftJoinAndSelect('build.pkgbase', 'package')
+        .leftJoinAndSelect('build.builder', 'builder')
+        .leftJoinAndSelect('build.repo', 'repo')
+        .where('build.status = :status', { status: options.status })
+        .orderBy('build.id', 'DESC')
+        .skip(options.offset)
+        .take(options.amount)
+        .cache(`builds-latest-${options.status}-${options.amount}-${options.offset}`, 30000)
+        .getMany();
+    }
   }
 
   /**

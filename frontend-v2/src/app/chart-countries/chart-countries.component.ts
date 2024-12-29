@@ -7,10 +7,11 @@ import { FormsModule } from '@angular/forms';
 import { InputNumber } from 'primeng/inputnumber';
 import { FloatLabel } from 'primeng/floatlabel';
 import { MessageService } from 'primeng/api';
+import { FluidModule } from 'primeng/fluid';
 
 @Component({
   selector: 'chaotic-chart-countries',
-  imports: [CommonModule, UIChart, FormsModule, InputNumber, FloatLabel],
+  imports: [CommonModule, UIChart, FormsModule, InputNumber, FloatLabel, FluidModule],
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
 })
@@ -35,6 +36,7 @@ export class ChartCountriesComponent implements OnInit {
   ngOnInit(): void {
     this.getCountryRanks();
   }
+
   /**
    * Query the country ranks.
    */

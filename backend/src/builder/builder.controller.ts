@@ -2,6 +2,7 @@ import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { AllowAnonymous } from '../auth/anonymous.decorator';
 import type { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
+import { BuildStatus } from '@./shared-lib';
 
 @Controller('builder')
 export class BuilderController {
@@ -40,8 +41,9 @@ export class BuilderController {
   async getLatestBuilds(
     @Query('amount', new ParseIntPipe({ optional: true })) amount = 50,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
+    @Query('status', new ParseIntPipe({ optional: true })) status?: BuildStatus,
   ): Promise<Build[]> {
-    return await this.builderService.getLastBuilds({ amount, offset });
+    return await this.builderService.getLastBuilds({ amount, offset, status });
   }
 
   @AllowAnonymous()

@@ -2,6 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  Build,
+  BuildStatus,
   CAUR_API_URL,
   CAUR_BACKEND_URL,
   CAUR_CACHED_METRICS_URL,
@@ -10,7 +12,6 @@ import {
   type CountryRankList,
   GitLabPipeline,
   type PackageRankList,
-  type PkgListRetObject,
   RepositoryList,
   SpecificPackageMetrics,
   type StatsObject,
@@ -60,11 +61,16 @@ export class AppService {
     return this.http.get<CountryRankList>(`${CAUR_CACHED_METRICS_URL}/30d/rank/30/countries`);
   }
 
-  getPkgList(): Observable<PkgListRetObject> {
-    return this.http.get<PkgListRetObject>(`${CAUR_BACKEND_URL}/misc/pkglist`);
-  }
-
   getPackageList(): Observable<any> {
     return this.http.get<any>(`${CAUR_BACKEND_URL}/builder/packages`);
+  }
+
+  getPackageBuilds(amount: number, status?: BuildStatus): Observable<Build[]> {
+    let params: { [key: string]: string } = { amount: amount.toString() };
+    if (status) params['status'] = status.toString();
+
+    return this.http.get<Build[]>(`${CAUR_BACKEND_URL}/builder/builds`, {
+      params,
+    });
   }
 }

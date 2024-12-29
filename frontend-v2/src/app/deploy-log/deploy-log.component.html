@@ -1,1 +1,106 @@
-<p>deploy-log works!</p>
+<div class="chaotic-container-wide">
+  <p-table
+    #deployTable
+    [value]="packageList"
+    dataKey="id"
+    [rows]="25"
+    [rowsPerPageOptions]="[25, 50, 100, 200]"
+    [loading]="loading"
+    [paginator]="true"
+    [globalFilterFields]="['build.pkgbase.pkgname', 'build.builder.name', 'build.repo.name']"
+    sortField="timestamp"
+    [sortOrder]="-1"
+  >
+    <ng-template #caption>
+      <div class="flex">
+        <p-button label="Clear" [outlined]="true" icon="pi pi-filter-slash" (click)="clear(deployTable)" />
+        <p-iconfield iconPosition="left" class="ml-auto">
+          <p-inputicon>
+            <i class="pi pi-search"></i>
+          </p-inputicon>
+          <input pInputText type="text" (input)="globalFilter($event.target)" placeholder="Search keyword" />
+        </p-iconfield>
+      </div>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th>
+          <div class="flex items-center">
+            Package name
+            <p-columnFilter type="text" field="pkgbase.pkgname" display="menu" />
+          </div>
+        </th>
+        <th>
+          <div class="flex items-center">
+            Builder
+            <p-columnFilter type="text" field="builder.name" display="menu" />
+          </div>
+        </th>
+        <th>
+          <div class="flex items-center">
+            Repository
+            <p-columnFilter type="text" field="repo.name" display="menu" />
+          </div>
+        </th>
+        <th>
+          <div class="flex items-center">
+            Outcome
+            <p-columnFilter type="text" field="statusText" display="menu" />
+          </div>
+        </th>
+        <th>
+          <div class="flex items-center">Log URL</div>
+        </th>
+        <th pSortableColumn="timeToEnd">Duration&nbsp;<p-sortIcon field="timeToEnd" /></th>
+        <th pSortableColumn="timestamp">
+          <div class="flex items-center">Time of finish&nbsp;<p-sortIcon field="timestamp" /></div>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-untypedBuild>
+      <ng-container *ngIf="typed(untypedBuild) as build">
+        <tr>
+          <td>
+            <span class="ml-1 align-middle">{{ build.pkgbase.pkgname }}</span>
+          </td>
+          <td>
+            <span class="ml-1 align-middle">{{ build.builder?.name }}</span>
+          </td>
+          <td>
+            <span class="ml-1 align-middle">{{ build.repo?.name }}</span>
+          </td>
+          <td>
+            <i
+              class="pi"
+              [ngClass]="{
+                'text-green-500 pi-check-circle': build.statusText === 'success',
+                'text-green-300 pi-check': build.statusText === 'already-built',
+                'text-gray-500 pi-angle-double-right': build.statusText === 'skipped',
+                'text-red-500 pi-exclamation-circle': build.statusText === 'failure',
+                'text-red-700 pi-hourglass': build.statusText === 'timeout',
+                'text-orange-500 pi-ban': build.statusText === 'canceled',
+                'text-orange-200 pi-replay': build.statusText === 'canceled-requeue',
+                'text-red-900 pi-exclamation-triangle': build.statusText === 'software-failure',
+              }"
+            ></i>
+            <span class="ml-1 align-middle">{{ build.statusText }}</span>
+          </td>
+          <td>
+            <span class="ml-1 align-middle" [innerHTML]="build.logUrl | logurl"></span>
+          </td>
+          <td>
+            <span class="ml-1 align-middle">{{ build.timeToEnd | duration }}</span>
+          </td>
+          <td>
+            <span class="ml-1 align-middle">{{ build.timestamp | date: 'short' }}</span>
+          </td>
+        </tr>
+      </ng-container>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="7">No packages found.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
