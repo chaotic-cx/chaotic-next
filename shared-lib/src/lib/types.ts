@@ -2,7 +2,13 @@ import type { MessageContent } from './tdlib-types';
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000;
 export const CACHE_TELEGRAM_TTL = 120 * 1000;
-export const CAUR_ALLOWED_CORS = ['https://aur.chaotic.cx', 'https://caur-frontend-pages.dev'];
+export const CAUR_ALLOWED_CORS = [
+  'https://aur.chaotic.cx',
+  'https://caur-frontend-pages.dev',
+  'https://v2.caur-frontend.pages.dev/',
+];
+//export const CAUR_API_URL = 'http://localhost:8010/proxy';
+//export const CAUR_BACKEND_URL = 'http://localhost:8011/proxy';
 export const CAUR_API_URL = 'https://builds.garudalinux.org/api';
 export const CAUR_BACKEND_URL = 'https://builds.garudalinux.org/backend';
 export const CAUR_CACHED_METRICS_URL = `${CAUR_BACKEND_URL}/metrics`;
@@ -173,7 +179,124 @@ export interface MenuBarLink {
   routerLink?: string;
   url?: string;
 }
+
 export type MenuBarLinks = MenuBarLink[];
 
 export const Repository = ['chaotic-aur', 'garuda', 'all'];
 export type RepositoryList = (typeof Repository)[number];
+
+export interface Builder {
+  id: number;
+  name: string;
+  description?: string;
+  builderClass?: string;
+  isActive?: boolean;
+  lastActive?: Date;
+}
+
+export interface Package {
+  id: number;
+  pkgname: string;
+  lastUpdated?: string;
+  isActive: boolean;
+  version?: string;
+  bumpCount?: number;
+  bumpTriggers?: { pkgname: string; archVersion: string }[];
+  metadata?: ParsedPackageMetadata;
+  pkgrel?: number;
+  namcapAnalysis?: Partial<NamcapAnalysis>;
+}
+
+export interface Repo {
+  id: number;
+  name: string;
+  repoUrl?: string;
+  isActive: boolean;
+  status?: RepoStatus;
+  gitRef: string;
+  dbPath?: string;
+  apiToken?: string;
+}
+
+export interface Build {
+  id: number;
+  pkgbase: Package;
+  buildClass?: string;
+  builder?: Builder;
+  repo?: Repo;
+  status: BuildStatus;
+  statusText: string;
+  timestamp: Date;
+  arch?: string;
+  logUrl?: string;
+  commit?: string;
+  timeToEnd?: number;
+  replaced?: boolean;
+}
+export type BuildClass = string | number;
+
+export enum BuildStatus {
+  SUCCESS = 0,
+  ALREADY_BUILT = 1,
+  SKIPPED = 2,
+  FAILED = 3,
+  TIMED_OUT = 4,
+  CANCELED = 5,
+  CANCELED_REQUEUE = 6,
+  SOFTWARE_FAILURE = 7,
+}
+
+export enum RepoStatus {
+  ACTIVE = 0,
+  INACTIVE = 1,
+  RUNNING = 2,
+}
+
+export interface ParsedPackageMetadata {
+  buildDate: string;
+  checkDepends?: string[];
+  conflicts?: string[];
+  deps?: string[];
+  desc?: string;
+  filename: string;
+  license?: string;
+  makeDeps?: string[];
+  optDeps?: string[];
+  packager?: string;
+  provides?: string[];
+  replaces?: string[];
+  soNameList?: string[];
+  url?: string;
+}
+
+export enum BumpType {
+  EXPLICIT = 0,
+  GLOBAL = 1,
+  FROM_DEPS = 2,
+  FROM_DEPS_CHAOTIC = 3,
+  NAMCAP = 4,
+}
+
+export enum TriggerType {
+  ARCH = 0,
+  CHAOTIC = 1,
+}
+
+export interface BumpLogEntry {
+  bumpType: BumpType;
+  pkgname: string;
+  trigger: string;
+  triggerFrom: TriggerType;
+  timestamp: string;
+}
+
+export interface NamcapAnalysis {
+  'dependency-detected-satisfied': string[];
+  'dependency-implicitly-satisfied': string[];
+  'depends-by-namcap-sight': string[];
+  'libdepends-by-namcap-sight': string[];
+  'libdepends-detected-not-included': string[];
+  'libprovides-by-namcap-sight': string[];
+  'library-no-package-associated': string[];
+  'link-level-dependence': string[];
+}
