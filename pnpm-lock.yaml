@@ -94,7 +94,7 @@ importers:
         version: 5.7.6
       cron:
         specifier: ^3.3.1
-        version: 3.3.1
+        version: 3.3.2
       crypto-js:
         specifier: ^4.2.0
         version: 4.2.0
@@ -4372,8 +4372,8 @@ packages:
   cron@3.2.1:
     resolution: {integrity: sha512-w2n5l49GMmmkBFEsH9FIDhjZ1n1QgTMOCMGuQtOXs5veNiosZmso6bQGuqOJSYAXXrG84WQFVneNk+Yt0Ua9iw==}
 
-  cron@3.3.1:
-    resolution: {integrity: sha512-KpvuzJEbeTMTfLsXhUuDfsFYr8s5roUlLKb4fa68GszWrA4783C7q6m9yj4vyc6neyD/V9e0YiADSX2c+yRDXg==}
+  cron@3.3.2:
+    resolution: {integrity: sha512-7o2PH9vKRd4PxB8c2GsHRozfHYT+gIhZG0DI+vzGOdWo42mofO/ooYnyU0CCh27aKzCrUKMAwAwi7xJ84xKSug==}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -13536,7 +13536,7 @@ snapshots:
       '@types/luxon': 3.4.2
       luxon: 3.5.0
 
-  cron@3.3.1:
+  cron@3.3.2:
     dependencies:
       '@types/luxon': 3.4.2
       luxon: 3.5.0
