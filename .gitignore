@@ -4,6 +4,8 @@
 dist
 jest.config.js
 tmp
+/frontend/src/**/*.js
+/frontend-v2/src/**/*.js
 /out-tsc
 
 # dependencies

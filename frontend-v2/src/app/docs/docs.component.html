@@ -1,0 +1,89 @@
+<div highlight-js mode="default" class="chaotic-container-regular">
+  <h1 class="text-center text-2xl font-extrabold text-maroon">Documentation</h1>
+
+  <div class="mt-5">
+    <p-panel header="Setup">
+      <div class="chaotic-panel">
+        We start by retrieving the primary key to enable the installation of our keyring and mirror list.
+      </div>
+      <div>
+        <pre class="whitespace-pre-wrap py-5 text-base"><code [innerHtml]="installRepo"
+                                                               language="shell"></code></pre>
+        <p>Then, we append (adding at the end) the following to <i>/etc/pacman.conf</i>:</p>
+        <pre class="whitespace-pre-wrap py-5"><code [innerHtml]="appendRepo" language="shell"></code>
+      </pre>
+      </div>
+    </p-panel>
+  </div>
+
+  <div class="mt-5">
+    <p-panel header="Package builds">
+      <div class="chaotic-panel">
+        To see whether a package was already deployed after the last update on AUR, you can check the
+        <a class="text-mauve" href="./deploy-log" rel="noopener" target="_blank">deploy log</a>
+        . <br />
+        The always latest log of a deployment can be found on
+        <a class="text-mauve" href="./deploy-log-full" rel="noopener" target="_blank">this page</a>. You can always
+        report such failures on our
+        <a class="text-mauve" href="https://github.com/chaotic-aur/packages" rel="noopener" target="_blank"
+          >packages repository</a
+        >
+        by creating a new issue.
+      </div>
+    </p-panel>
+  </div>
+
+  <div class="mt-5">
+    <p-panel header="Recommendations">
+      <div class="chaotic-panel">
+        You may want to use
+        <a class="text-mauve" href="https://wiki.archlinux.org/index.php/Powerpill" rel="noopener" target="_blank"
+          >powerpill</a
+        >
+        to download from all mirrors simultaneously if you are living in non-first-world countries. <br />
+        Besides downloading multiple packages, it splits a single one in parts and distributes all connections through
+        the enabled mirrors. <br />
+        This is why it is still better in such areas, where CDNs aren't well established. We recommend using it as
+        follows:
+        <pre class="whitespace-pre-wrap py-5 pl-5"><code [innerHtml]="powerpillUsage"
+                                                         language="shell"></code></pre>
+        Make sure to insert all mirrors in your <i>pacman.conf</i> or use <i>chaotic-mirrorlist</i> with all of them
+        active if using powerpill.
+        <p-divider />
+
+        If you need to omit a package update to use locally built ones (e.g: with native optimizations),
+        <a class="text-mauve" href="https://www.archlinux.org/pacman/pacman.conf.5.html" rel="noopener" target="_blank"
+          >you can add the following</a
+        >
+        to <i>/etc/pacman.conf</i>:
+        <pre class="whitespace-pre-wrap py-5 pl-5"><code [innerHtml]="ignorePkg" language="shell"></code></pre>
+
+        <p-divider />
+
+        You can pick the repository from which to download a package like this:
+        <pre class="whitespace-pre-wrap py-5 pl-5"><code [innerHtml]="installPackage"
+                                                         language="shell"></code></pre>
+        Some AUR helpers like
+        <a class="text-mauve" href="https://github.com/Morganamilo/paru" rel="noopener" target="_blank">paru</a>
+        support this syntax as well.
+        <pre class="whitespace-pre-wrap py-5 pl-5"><code [innerHtml]="installPackageParu"
+                                                         language="shell"></code></pre>
+
+        <p-divider />
+        <a>You must have the multilib repository enabled.</a>
+      </div>
+    </p-panel>
+  </div>
+
+  <div class="mt-5">
+    <p-panel header="Further information">
+      <div class="chaotic-panel">
+        For deeper insight concerning our build system, you may consult the
+        <a class="text-mauve" href="https://chaotic-manager.pages.dev" rel="noopener" target="_blank"
+          >Chaotic Manager</a
+        >
+        documentation.
+      </div>
+    </p-panel>
+  </div>
+</div>

@@ -1,32 +1,39 @@
-import { ChangeDetectorRef, Component, effect, inject, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { FloatLabel } from 'primeng/floatlabel';
-import { InputNumber } from 'primeng/inputnumber';
-import { UIChart } from 'primeng/chart';
 import { FormsModule } from '@angular/forms';
 import type { PackageRankList } from '@./shared-lib';
 import { AppService } from '../app.service';
-import { MessageService } from 'primeng/api';
+import { MessageToastService } from '@garudalinux/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { UIChart } from 'primeng/chart';
+import { FloatLabel } from 'primeng/floatlabel';
+import { InputNumber } from 'primeng/inputnumber';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { ToastModule } from 'primeng/toast';
 
 @Component({
   selector: 'chaotic-chart-downloads',
-  imports: [CommonModule, FloatLabel, InputNumber, UIChart, FormsModule],
+  imports: [CommonModule, FormsModule, UIChart, FloatLabel, InputNumber, ProgressBarModule, ToastModule],
   templateUrl: './chart-downloads.component.html',
   styleUrl: './chart-downloads.component.css',
+  providers: [MessageToastService],
 })
-export class ChartDownloadsComponent {
+export class ChartDownloadsComponent implements OnInit {
   chartData: any;
+  isWide = true;
   options: any;
   platformId = inject(PLATFORM_ID);
   amount = signal<number>(50);
 
   globalPackageMetrics: PackageRankList = [];
+  progressbarValues: { value: number; label: string; count: number }[] = [];
 
-  constructor(
-    private appService: AppService,
-    private cdr: ChangeDetectorRef,
-    private messageService: MessageService,
-  ) {
+  private readonly appService = inject(AppService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly observer = inject(BreakpointObserver);
+
+  constructor() {
     effect(() => {
       this.updatePackageMetrics();
       this.initChart();
@@ -34,6 +41,15 @@ export class ChartDownloadsComponent {
   }
 
   ngOnInit(): void {
+    this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
+      this.isWide = !state.matches;
+      if (this.isWide) {
+        this.amount.set(50);
+        this.initChart();
+      } else {
+        this.amount.set(20);
+      }
+    });
     this.updatePackageMetrics();
   }
 
@@ -44,16 +60,17 @@ export class ChartDownloadsComponent {
     this.appService.getOverallPackageStats(this.amount()).subscribe({
       next: (data) => {
         this.globalPackageMetrics = data;
-        this.initChart();
+        console.log(data);
+        if (this.isWide) {
+          this.initChart();
+        } else {
+          this.getProgressBarValues(data);
+          this.cdr.markForCheck();
+        }
       },
       error: (err) => {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to load downloads chart data',
-        });
+        this.messageToastService.error('Error', 'Failed to load downloads chart data');
         console.error(err);
-        return [];
       },
     });
   }
@@ -77,6 +94,7 @@ export class ChartDownloadsComponent {
       }
 
       this.options = {
+        indexAxis: 'y',
         plugins: {
           legend: {
             labels: {
@@ -88,5 +106,14 @@ export class ChartDownloadsComponent {
       };
       this.cdr.markForCheck();
     }
+  }
+
+  private getProgressBarValues(pkg: PackageRankList) {
+    const values = [];
+    for (const pkg of this.globalPackageMetrics) {
+      const relativeCount = (pkg.count / this.globalPackageMetrics[0].count) * 100;
+      values.push({ value: relativeCount, label: pkg.name, count: pkg.count });
+    }
+    this.progressbarValues = values;
   }
 }

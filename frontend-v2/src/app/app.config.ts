@@ -4,8 +4,8 @@ import { routes } from './app.routes';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideGarudaNG } from '@garudalinux/core';
-import { Catppuccin } from './theme';
 import { provideSFConfig } from 'ngx-highlight-js';
+import { CatppuccinV2 } from './mytheme';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -14,7 +14,7 @@ export const appConfig: ApplicationConfig = {
       { font: 'Fira Sans' },
       {
         theme: {
-          preset: Catppuccin,
+          preset: CatppuccinV2,
           options: {
             darkModeSelector: '.dark-mode',
           },
