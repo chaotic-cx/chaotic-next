@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppService } from '../app.service';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
@@ -9,10 +9,9 @@ import { ChartDownloadsComponent } from '../chart-downloads/chart-downloads.comp
 import { FormsModule } from '@angular/forms';
 import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { retry } from 'rxjs';
-import { FilterService, MessageService } from 'primeng/api';
-import { ToastModule } from 'primeng/toast';
-import { MessageModule } from 'primeng/message';
+import { FilterService } from 'primeng/api';
 import { Card } from 'primeng/card';
+import { MessageToastService } from '@garudalinux/core';
 
 @Component({
   selector: 'chaotic-package-stats',
@@ -28,13 +27,11 @@ import { Card } from 'primeng/card';
     ChartDownloadsComponent,
     FormsModule,
     AutoComplete,
-    ToastModule,
-    MessageModule,
     Card,
   ],
   templateUrl: './package-stats.component.html',
   styleUrl: './package-stats.component.css',
-  providers: [MessageService],
+  providers: [MessageToastService],
 })
 export class PackageStatsComponent implements OnInit {
   suggestionPool = signal<string[]>([]);
@@ -42,7 +39,9 @@ export class PackageStatsComponent implements OnInit {
   totalUsers = signal<string>('Loading...');
   loading = true;
 
-  filterService = inject(FilterService);
+  private readonly appService = inject(AppService);
+  private readonly filterService = inject(FilterService);
+  private readonly messageToastService = inject(MessageToastService);
 
   search(event: AutoCompleteCompleteEvent) {
     if (event.query.length < 3) return;
@@ -50,20 +49,9 @@ export class PackageStatsComponent implements OnInit {
     if (/^[0-9|a-zA-Z-]*$/.test(event.query)) {
       this.currentSuggestions = this.filterService.filters['contains'](this.suggestionPool(), event.query);
     } else {
-      this.messageService.add({
-        severity: 'warning',
-        summary: 'Invalid input',
-        detail: 'This does not look like a valid package name!',
-        key: 'pkgname-invalid',
-      });
+      this.messageToastService.warn('Invalid input', 'This does not look like a valid package name!');
     }
   }
-
-  constructor(
-    private appService: AppService,
-    private cdr: ChangeDetectorRef,
-    private messageService: MessageService,
-  ) {}
 
   async ngOnInit(): Promise<void> {
     void this.get30DayUsers();
@@ -85,11 +73,7 @@ export class PackageStatsComponent implements OnInit {
           );
         },
         error: (err) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to load suggestions',
-          });
+          this.messageToastService.error('Error', 'Failed to load suggestions');
           console.error(err);
         },
       });
@@ -107,11 +91,7 @@ export class PackageStatsComponent implements OnInit {
           this.totalUsers.set(res);
         },
         error: (err) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to users count',
-          });
+          this.messageToastService.error('Error', 'Failed to load users count');
           console.error(err);
         },
       });
@@ -127,16 +107,14 @@ export class PackageStatsComponent implements OnInit {
       .subscribe({
         next: (result) => {
           this.packageMetrics = result;
-          this.loading = false;
           this.initialSearchDone = true;
         },
         error: (err) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to load package data',
-          });
+          this.messageToastService.error('Error', 'Failed to load package data');
           console.error(err);
+        },
+        complete: () => {
+          this.loading = false;
         },
       });
   }

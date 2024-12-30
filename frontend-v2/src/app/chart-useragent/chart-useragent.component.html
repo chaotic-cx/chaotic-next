@@ -1,16 +1,18 @@
 <div class="card flex justify-center">
-  <p-chart type="pie" [data]="chartData" [options]="options" [responsive]="true" class="w-full md:w-[25rem]" />
+  <p-chart type="pie" [data]="chartData" [options]="options" [responsive]="true" class="max-w-2xl w-[50rem]" />
 </div>
-<div class="center">
-  <p-floatlabel variant="on">
-    <p-inputnumber
-      [(ngModel)]="amount"
-      mode="decimal"
-      [showButtons]="true"
-      inputId="minmaxCountry"
-      [min]="0"
-      [max]="30"
-    ></p-inputnumber>
-    <label for="minmaxCountry">Amount of user agents</label>
-  </p-floatlabel>
+<div class="center mt-10">
+  <div>
+    <p-floatlabel variant="on">
+      <p-inputnumber
+        [(ngModel)]="amount"
+        mode="decimal"
+        [showButtons]="true"
+        inputId="minmaxCountry"
+        [min]="0"
+        [max]="30"
+      ></p-inputnumber>
+      <label for="minmaxCountry">Amount of user agents</label>
+    </p-floatlabel>
+  </div>
 </div>

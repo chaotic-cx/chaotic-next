@@ -6,14 +6,16 @@ import type { CountryRankList } from '@./shared-lib';
 import { FormsModule } from '@angular/forms';
 import { InputNumber } from 'primeng/inputnumber';
 import { FloatLabel } from 'primeng/floatlabel';
-import { MessageService } from 'primeng/api';
 import { FluidModule } from 'primeng/fluid';
+import { MessageToastService } from '@garudalinux/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
 
 @Component({
   selector: 'chaotic-chart-countries',
   imports: [CommonModule, UIChart, FormsModule, InputNumber, FloatLabel, FluidModule],
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
+  providers: [MessageToastService],
 })
 export class ChartCountriesComponent implements OnInit {
   chartData: any;
@@ -21,19 +23,23 @@ export class ChartCountriesComponent implements OnInit {
   platformId = inject(PLATFORM_ID);
   amount = signal<number>(15);
 
+  private readonly appService = inject(AppService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly observer = inject(BreakpointObserver);
+
   countryRanks: CountryRankList = [];
 
-  constructor(
-    private appService: AppService,
-    private cdr: ChangeDetectorRef,
-    private messageService: MessageService,
-  ) {
+  constructor() {
     effect(() => {
       this.initChart();
     });
   }
 
   ngOnInit(): void {
+    this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
+      this.amount.set(state.matches ? 5 : 15);
+    });
     this.getCountryRanks();
   }
 
@@ -50,11 +56,7 @@ export class ChartCountriesComponent implements OnInit {
         this.initChart();
       },
       error: (err) => {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to load country chart data',
-        });
+        this.messageToastService.error('Error', 'Failed to load country chart data');
         console.error(err);
       },
     });

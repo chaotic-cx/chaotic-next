@@ -1,19 +1,45 @@
 <div>
-  <div class="card flex justify-center">
-    <p-chart type="bar" [data]="chartData" [options]="options" class="w-full" />
-  </div>
-  <div class="center">
-    <p-floatlabel variant="on">
-      <p-inputnumber
-        [(ngModel)]="amount"
-        mode="decimal"
-        [showButtons]="true"
-        inputId="minmaxDownloads"
-        [min]="0"
-        [max]="200"
-      >
-      </p-inputnumber>
-      <label for="minmaxDownloads">Amount of packages to show</label>
-    </p-floatlabel>
-  </div>
+  @if (isWide) {
+    <div class="card flex justify-center">
+      <p-chart type="bar" [data]="chartData" [options]="options" class="w-full" />
+    </div>
+    <div class="center mt-10">
+      <p-floatlabel variant="on">
+        <p-inputnumber
+          [(ngModel)]="amount"
+          mode="decimal"
+          [showButtons]="true"
+          inputId="minmaxDownloads"
+          [min]="0"
+          [max]="200"
+        >
+        </p-inputnumber>
+        <label for="minmaxDownloads">Amount of packages to show</label>
+      </p-floatlabel>
+    </div>
+  } @else {
+    <div class="card h-auto justify-center">
+      @for (download of progressbarValues; track download.label) {
+        <p-progress-bar [value]="download.value">
+          <ng-template #content>
+            <span>{{ download.label }}: {{ download.count }}</span>
+          </ng-template>
+        </p-progress-bar>
+      }
+    </div>
+    <div class="center mt-10">
+      <p-floatlabel variant="on">
+        <p-inputnumber
+          [(ngModel)]="amount"
+          mode="decimal"
+          [showButtons]="true"
+          inputId="minmaxDownloads"
+          [min]="0"
+          [max]="200"
+        >
+        </p-inputnumber>
+        <label for="minmaxDownloads">Amount of packages to show</label>
+      </p-floatlabel>
+    </div>
+  }
 </div>

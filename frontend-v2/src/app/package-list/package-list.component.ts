@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, ViewChild } from '@angular/core';
 import { Table, TableModule } from 'primeng/table';
 import { AppService } from '../app.service';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -9,10 +9,9 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { TagModule } from 'primeng/tag';
 import { DatePipe, NgIf } from '@angular/common';
 import { Button } from 'primeng/button';
-import { MessageService } from 'primeng/api';
 import { retry } from 'rxjs';
 import { Package } from '@./shared-lib';
-import { ToastModule } from 'primeng/toast';
+import { MessageToastService } from '@garudalinux/core';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -27,23 +26,20 @@ import { ToastModule } from 'primeng/toast';
     DatePipe,
     Button,
     NgIf,
-    ToastModule,
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
-  providers: [MessageService],
+  providers: [MessageToastService],
 })
-export class PackageListComponent implements OnInit, AfterViewInit {
+export class PackageListComponent implements OnInit {
   packageList: any;
   loading = true;
   searchValue: string | undefined;
 
   @ViewChild('pkgTable') pkgTable!: Table;
 
-  constructor(
-    private appService: AppService,
-    private messageService: MessageService,
-  ) {}
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly appService = inject(AppService);
 
   async ngOnInit() {
     this.appService
@@ -52,28 +48,15 @@ export class PackageListComponent implements OnInit, AfterViewInit {
       .subscribe({
         next: (data) => {
           this.packageList = data;
-          this.loading = false;
         },
         error: (err) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to package list',
-          });
+          this.messageToastService.error('Error', 'Failed to package list');
           console.error(err);
+        },
+        complete: () => {
           this.loading = false;
         },
       });
-  }
-
-  ngAfterViewInit() {
-    setTimeout(() => {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to package list',
-      });
-    }, 1000);
   }
 
   clear(table: Table) {

@@ -6,13 +6,15 @@ import { InputNumber } from 'primeng/inputnumber';
 import { UIChart } from 'primeng/chart';
 import { FormsModule } from '@angular/forms';
 import { FloatLabel } from 'primeng/floatlabel';
-import { MessageService } from 'primeng/api';
+import { MessageToastService } from '@garudalinux/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
 
 @Component({
   selector: 'chaotic-chart-useragent',
   imports: [CommonModule, InputNumber, UIChart, FormsModule, FloatLabel],
   templateUrl: './chart-useragent.component.html',
   styleUrl: './chart-useragent.component.css',
+  providers: [MessageToastService],
 })
 export class ChartUseragentComponent implements OnInit {
   chartData: any;
@@ -22,17 +24,21 @@ export class ChartUseragentComponent implements OnInit {
 
   userAgentMetrics: UserAgentList = [];
 
-  constructor(
-    private appService: AppService,
-    private cdr: ChangeDetectorRef,
-    private messageService: MessageService,
-  ) {
+  private readonly appService = inject(AppService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly observer = inject(BreakpointObserver);
+
+  constructor() {
     effect(() => {
       this.initChart();
     });
   }
 
   ngOnInit() {
+    this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
+      this.amount.set(state.matches ? 5 : 10);
+    });
     this.get30DayUserAgents();
   }
 
@@ -56,11 +62,7 @@ export class ChartUseragentComponent implements OnInit {
         this.initChart();
       },
       error: (err) => {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to load user agent chart data',
-        });
+        this.messageToastService.error('Error', 'Failed to load user agent chart data');
         console.error(err);
       },
     });

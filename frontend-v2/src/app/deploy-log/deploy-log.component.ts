@@ -2,24 +2,23 @@ import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { Table, TableModule } from 'primeng/table';
 import { AppService } from '../app.service';
 import { CommonModule } from '@angular/common';
-import { MessageService } from 'primeng/api';
 import { retry } from 'rxjs';
 import { Button } from 'primeng/button';
 import { InputIcon } from 'primeng/inputicon';
 import { IconField } from 'primeng/iconfield';
 import { InputText } from 'primeng/inputtext';
-import { ToastModule } from 'primeng/toast';
 import { Build } from '@./shared-lib';
 import { OutcomePipe } from '../pipes/outcome.pipe';
 import { LogurlPipe } from '../pipes/logurl.pipe';
 import { DurationPipe } from '../pipes/duration.pipe';
+import { MessageToastService } from '@garudalinux/core';
 
 @Component({
   selector: 'chaotic-deploy-log',
-  imports: [CommonModule, TableModule, Button, InputIcon, IconField, InputText, ToastModule, LogurlPipe, DurationPipe],
+  imports: [CommonModule, TableModule, Button, InputIcon, IconField, InputText, LogurlPipe, DurationPipe],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
-  providers: [MessageService, OutcomePipe],
+  providers: [MessageToastService, OutcomePipe],
 })
 export class DeployLogComponent implements OnInit {
   packageList: Build[] = [];
@@ -30,10 +29,8 @@ export class DeployLogComponent implements OnInit {
 
   @ViewChild('pkgTable') pkgTable!: Table;
 
-  constructor(
-    private appService: AppService,
-    private messageService: MessageService,
-  ) {}
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
 
   ngOnInit() {
     this.appService
@@ -50,15 +47,12 @@ export class DeployLogComponent implements OnInit {
             return build;
           });
           this.packageList = data;
-          this.loading = false;
         },
         error: (err) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to build list',
-          });
+          this.messageToastService.error('Error', 'Failed to fetch package list');
           console.error(err);
+        },
+        complete: () => {
           this.loading = false;
         },
       });

@@ -1,0 +1,3 @@
+::ng-deep div > .p-panel-header {
+  display: none;
+}

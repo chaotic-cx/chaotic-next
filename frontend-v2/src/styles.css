@@ -10,6 +10,10 @@ body {
   @apply m-2;
 }
 
+html {
+  background-color: #24262d;
+}
+
 .chaotic-list-regular {
   @apply my-4 block list-inside list-disc space-y-1 text-left text-lg;
 }
@@ -27,11 +31,37 @@ body {
 }
 
 .chaotic-container-wide {
-  @apply container mx-auto px-2.5 text-center align-middle;
+  width: calc(100vw - 2rem);
+  @apply container text-center align-middle;
+}
+
+.chaotic-container-wide-center {
+  @apply container mx-auto text-center align-middle;
 }
 
 .chaotic-container-regular {
-  @apply container mx-auto md:max-w-[80%] px-2.5 text-center align-middle;
+  @apply container mx-auto md:max-w-[80%] px-2 text-center align-middle;
+}
+
+.p-panel {
+  backdrop-filter: blur(16px) saturate(115%);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
+}
+
+.content-wrapper {
+  container-type: inline-size;
+  width: 100%;
+  max-width: calc(2 * var(--padding-body) + var(--website-max-width));
+  padding: var(--space-md) var(--padding-body);
+  margin-inline: auto;
+}
+
+.blur-card {
+  backdrop-filter: blur(16px) saturate(115%);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
+  background-color: rgba(24, 24, 37, 0.82);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.125);
 }
 
 .hover\:chaotic-grow-l:hover {
@@ -40,6 +70,15 @@ body {
 
 .hover\:chaotic-grow-s:hover {
   @apply transition ease-in-out hover:scale-105;
+}
+
+.p-datatable {
+  width: calc(100vw - 2rem);
+}
+
+.p-progress-bar {
+  width: calc(100vw - 20rem);
+  height: 25px;
 }
 
 /* Highlight.js */
