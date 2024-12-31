@@ -1,15 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterModule, RouterOutlet } from '@angular/router';
-import { PrimeNG } from 'primeng/config';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
-import { CAUR_CACHED_METRICS_URL } from '@./shared-lib';
 import { HttpClient } from '@angular/common/http';
 import { routeAnimations } from './app.routes';
 import { ShellComponent } from '@garudalinux/core';
 import { MenuItem } from 'primeng/api';
 import { NgOptimizedImage } from '@angular/common';
 import { ScrollTop } from 'primeng/scrolltop';
+import { APP_CONFIG } from '../environments/app-config.token';
+import { EnvironmentModel } from '../environments/environment.model';
 
 @Component({
   imports: [RouterModule, ShellComponent, NgOptimizedImage, ScrollTop],
@@ -21,10 +21,8 @@ import { ScrollTop } from 'primeng/scrolltop';
 export class AppComponent implements OnInit {
   title = 'Chaotic-AUR';
 
-  constructor(
-    private httpClient: HttpClient,
-    private primeng: PrimeNG,
-  ) {}
+  private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
+  private readonly httpClient = inject(HttpClient);
 
   items: MenuItem[] = [
     {
@@ -82,7 +80,7 @@ export class AppComponent implements OnInit {
       '30d/user-agents',
     ];
     for (const route of routesToPreCache) {
-      this.httpClient.get(CAUR_CACHED_METRICS_URL + route);
+      this.httpClient.get(this.appConfig.cachedMetricsUrl + route);
     }
   }
 

@@ -1,4 +1,4 @@
-import { CAUR_LOGS_URL, CAUR_REPO_URL, CAUR_REPO_URL_GARUDA, type Deployment } from '@./shared-lib';
+import { type Deployment } from '@./shared-lib';
 
 /**
  * Poll for new deployments.
@@ -14,15 +14,22 @@ export function startShortPolling(interval: any, func: () => void): void {
 /**
  * Generate the URL for the repository.
  * @param deployment The deployment to generate the URL for.
+ * @param repoUrls The URLs for the repositories, derived from appConfig
  * @returns The URL for the repository, in which the PKGBUILD is located.
  */
-export function generateRepoUrl(deployment: Deployment): string | undefined {
+export function generateRepoUrl(
+  deployment: Deployment,
+  repoUrls: {
+    garuda: string;
+    chaotic: string;
+  },
+): string | undefined {
   if (deployment.repo.match(/chaotic-aur$/) !== null) {
-    deployment.sourceUrl = CAUR_REPO_URL;
+    deployment.sourceUrl = repoUrls.chaotic;
     return deployment.sourceUrl;
   }
   if (deployment.repo.match(/garuda$/) !== null) {
-    deployment.sourceUrl = CAUR_REPO_URL_GARUDA;
+    deployment.sourceUrl = repoUrls.garuda;
     return deployment.sourceUrl;
   }
   return undefined;
@@ -49,14 +56,15 @@ export function checkIfMobile() {
  * From: /logs/api/logs/strawberry-git/1728221997487
  * To: /logs/logs.html?timestamp=1728139106459&id=kodi-git
  * @param url The static log URL.
+ * @param logsUrl Base log URL, derived from appConfig
  * @returns The live log URL.
  */
-export function toLiveLog(url: string): string {
+export function toLiveLog(url: string, logsUrl: string): string {
   const splitUrl = url.split('/');
   const timestamp = splitUrl.pop();
   const id = splitUrl.pop();
 
-  let finalUrl = CAUR_LOGS_URL;
+  let finalUrl = logsUrl;
   if (timestamp !== undefined) {
     finalUrl += `?timestamp=${timestamp}`;
   }

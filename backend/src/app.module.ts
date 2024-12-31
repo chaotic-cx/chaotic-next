@@ -8,7 +8,6 @@ import { BuilderModule } from './builder/builder.module';
 import appConfig from './config/app.config';
 import { dataSourceOptions } from './data.source';
 import { MetricsModule } from './metrics/metrics.module';
-import { MiscModule } from './misc/misc.module';
 import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
 import { UsersModule } from './users/users.module';
@@ -29,7 +28,6 @@ import { ScheduleModule } from '@nestjs/schedule';
       forRoutes: process.env.HTTP_LOGGING === 'true' ? undefined : [],
     }),
     MetricsModule,
-    MiscModule,
     RepoManagerModule,
     RouterModule,
     ScheduleModule.forRoot(),

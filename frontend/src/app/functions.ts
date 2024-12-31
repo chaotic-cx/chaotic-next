@@ -1,16 +1,10 @@
 import {
-  CAUR_LOGS_URL,
-  CAUR_REPO_URL,
-  CAUR_REPO_URL_GARUDA,
-  CAUR_TG_API_URL,
   type Deployment,
   type DeploymentList,
   DeploymentType,
   type RepositoryList,
   type TgMessageList,
 } from '@./shared-lib';
-import type { ElementRef, Renderer2 } from '@angular/core';
-import { type CatppuccinFlavor, flavors } from '@catppuccin/palette';
 import TimeAgo from 'javascript-time-ago';
 import { lastValueFrom } from 'rxjs';
 import type { AppService } from './app.service';
@@ -27,40 +21,24 @@ export function startShortPolling(interval: any, func: () => void): void {
 }
 
 /**
- * Loads the selected theme.
- * @param theme The theme to load (one of CatppuccinFlavor).
- * @param renderer The renderer to use.
- * @param el The element to apply the theme to.
- */
-export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
-  const appCtp = document.getElementById('app-ctp');
-  if (appCtp === null) return;
-  if (appCtp.classList.contains(theme)) {
-    return theme;
-  }
-
-  appCtp.classList.remove('mocha', 'latte', 'frappe', 'macchiato');
-  appCtp.classList.add(theme);
-
-  const flavor = theme as unknown as CatppuccinFlavor;
-  // @ts-expect-error - this is always a valid color
-  const flavorColor = flavors[flavor].colors.base.hex;
-  renderer.setStyle(el.nativeElement.ownerDocument.body, 'backgroundColor', flavorColor);
-  return theme;
-}
-
-/**
  * Generate the URL for the repository.
  * @param deployment The deployment to generate the URL for.
+ * @param repoUrls The URLs for the repositories, derived from appConfig
  * @returns The URL for the repository, in which the PKGBUILD is located.
  */
-export function generateRepoUrl(deployment: Deployment): string | undefined {
+export function generateRepoUrl(
+  deployment: Deployment,
+  repoUrls: {
+    garuda: string;
+    chaotic: string;
+  },
+): string | undefined {
   if (deployment.repo.match(/chaotic-aur$/) !== null) {
-    deployment.sourceUrl = CAUR_REPO_URL;
+    deployment.sourceUrl = repoUrls.chaotic;
     return deployment.sourceUrl;
   }
   if (deployment.repo.match(/garuda$/) !== null) {
-    deployment.sourceUrl = CAUR_REPO_URL_GARUDA;
+    deployment.sourceUrl = repoUrls.garuda;
     return deployment.sourceUrl;
   }
   return undefined;
