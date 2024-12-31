@@ -6,6 +6,7 @@ import {
   BuildStatus,
   type CountryRankList,
   GitLabPipeline,
+  Package,
   type PackageRankList,
   SpecificPackageMetrics,
   type StatsObject,
@@ -54,8 +55,8 @@ export class AppService {
     return this.http.get<CountryRankList>(`${this.appConfig.cachedMetricsUrl}/30d/rank/30/countries`);
   }
 
-  getPackageList(): Observable<any> {
-    return this.http.get<any>(`${this.appConfig.backendUrl}/builder/packages`);
+  getPackageList(): Observable<Package[]> {
+    return this.http.get<Package[]>(`${this.appConfig.backendUrl}/builder/packages`);
   }
 
   getPackageBuilds(amount: number, status?: BuildStatus): Observable<Build[]> {

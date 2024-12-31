@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -29,5 +29,6 @@ export const appConfig: ApplicationConfig = {
     provideSFConfig({ lang: 'shell' }),
     provideZoneChangeDetection({ eventCoalescing: true }),
     { provide: APP_CONFIG, useValue: environment },
+    { provide: LOCALE_ID, useValue: 'en-GB' },
   ],
 };

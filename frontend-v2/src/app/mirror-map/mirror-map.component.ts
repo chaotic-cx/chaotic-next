@@ -5,7 +5,6 @@ import { EnvironmentModel } from '../../environments/environment.model';
 
 @Component({
   selector: 'chaotic-mirror-map',
-  imports: [],
   templateUrl: './mirror-map.component.html',
   styleUrl: './mirror-map.component.css',
 })
