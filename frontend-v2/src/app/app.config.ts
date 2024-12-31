@@ -6,6 +6,8 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { provideGarudaNG } from '@garudalinux/core';
 import { provideSFConfig } from 'ngx-highlight-js';
 import { CatppuccinV2 } from './mytheme';
+import { APP_CONFIG } from '../environments/app-config.token';
+import { environment } from '../environments/environment.dev';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -26,5 +28,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideSFConfig({ lang: 'shell' }),
     provideZoneChangeDetection({ eventCoalescing: true }),
+    { provide: APP_CONFIG, useValue: environment },
   ],
 };

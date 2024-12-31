@@ -1,6 +1,7 @@
 const { createGlobPatternsForDependencies } = require('@nx/angular/tailwind');
 const { join } = require('path');
 const tailwindPrimeUi = require('tailwindcss-primeui');
+const tailwindCatppuccin = require('@catppuccin/tailwindcss');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -8,5 +9,5 @@ module.exports = {
   theme: {
     extend: {},
   },
-  plugins: [tailwindPrimeUi],
+  plugins: [tailwindCatppuccin({ defaultFlavour: 'mocha' }), tailwindPrimeUi],
 };
