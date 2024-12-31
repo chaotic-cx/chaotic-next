@@ -1,5 +1,5 @@
 <div highlight-js mode="default" class="chaotic-container-regular">
-  <h1 class="text-center text-2xl font-extrabold text-maroon">Documentation</h1>
+  <h1 class="text-maroon text-center text-2xl font-extrabold">Documentation</h1>
 
   <div class="mt-5">
     <p-panel header="Setup">
@@ -9,6 +9,7 @@
       <div>
         <pre class="whitespace-pre-wrap py-5 text-base"><code [innerHtml]="installRepo"
                                                                language="shell"></code></pre>
+        <br />
         <p>Then, we append (adding at the end) the following to <i>/etc/pacman.conf</i>:</p>
         <pre class="whitespace-pre-wrap py-5"><code [innerHtml]="appendRepo" language="shell"></code>
       </pre>
@@ -18,13 +19,11 @@
 
   <div class="mt-5">
     <p-panel header="Package builds">
-      <div class="chaotic-panel">
+      <div class="chaotic-panel text-md">
         To see whether a package was already deployed after the last update on AUR, you can check the
-        <a class="text-mauve" href="./deploy-log" rel="noopener" target="_blank">deploy log</a>
-        . <br />
-        The always latest log of a deployment can be found on
-        <a class="text-mauve" href="./deploy-log-full" rel="noopener" target="_blank">this page</a>. You can always
-        report such failures on our
+        <a class="text-mauve" href="./deploy-log" rel="noopener" target="_blank">deploy log</a>.
+        <br />
+        You can always report such failures on our
         <a class="text-mauve" href="https://github.com/chaotic-aur/packages" rel="noopener" target="_blank"
           >packages repository</a
         >

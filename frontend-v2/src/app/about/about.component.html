@@ -1,7 +1,7 @@
 <div class="chaotic-container-regular bg-base">
   <div>
     <p-panel>
-      <p class="text-justify text-text mx-5 mt-5">
+      <p class="text-text mx-5 mt-5 text-justify">
         Chaotic-AUR is a repository that provides a large number of packages for Arch Linux. It is a community-driven
         repository that is not officially supported by Arch Linux. The repository is maintained by a team of volunteers
         who work to provide up-to-date packages for Arch Linux users.
@@ -14,7 +14,7 @@
           <div class="grid grid-cols-2 items-stretch gap-10 md:grid-cols-3 lg:grid-cols-4">
             @for (member of team; track member) {
               <p-card>
-                <h3 class="text-center text-lg font-bold text-maroon pb-5">{{ member.name }}</h3>
+                <h3 class="text-maroon pb-5 text-center text-lg font-bold">{{ member.name }}</h3>
                 <div class="flex flex-col items-center pb-5">
                   <img
                     class="my-5 h-24 w-24 rounded-full shadow-lg"
@@ -23,7 +23,7 @@
                     width="200"
                     alt="{{ member.name }} avatar"
                   />
-                  <span class="text-sm text-peach">{{ member.role }}</span>
+                  <span class="text-peach text-sm">{{ member.role }}</span>
                   <a class="mt-5" href="https://github.com/{{ member.github }}" rel="noopener noreferrer">
                     <i pRipple class="pi pi-github" style="font-size: 1.5rem"></i>
                   </a>
@@ -47,7 +47,7 @@
                       width="200"
                       alt="{{ member.name }} avatar"
                     />
-                    <span class="text-sm text-peach">{{ member.role }}</span>
+                    <span class="text-peach text-sm">{{ member.role }}</span>
                     <a class="mt-5" href="https://github.com/{{ member.github }}" rel="noopener noreferrer">
                       <i pRipple class="pi pi-github" style="font-size: 1.5rem"></i>
                     </a>

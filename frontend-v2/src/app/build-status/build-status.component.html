@@ -14,11 +14,11 @@
                 <i
                   class="pi"
                   [ngClass]="{
-                    'text-green-500 pi-check-circle': pipeline.status === 'success',
-                    'text-orange-500 pi-ban': pipeline.status === 'canceled',
-                    'text-red-500 pi-exclamation-circle': pipeline.status === 'failed',
-                    'text-gray-500 pi-angle-double-right': pipeline.status === 'skipped',
-                    'text-orange-200 pi-spin pi-spinner': pipeline.status === 'running',
+                    'pi-check-circle text-green-500': pipeline.status === 'success',
+                    'pi-ban text-orange-500': pipeline.status === 'canceled',
+                    'pi-exclamation-circle text-red-500': pipeline.status === 'failed',
+                    'pi-angle-double-right text-gray-500': pipeline.status === 'skipped',
+                    'pi-spin pi-spinner text-orange-200': pipeline.status === 'running',
                   }"
                 ></i>
                 <span class="ml-1">
@@ -60,7 +60,7 @@
               </p-table>
 
               <ng-template #footer>
-                <div class="flex gap-4 mt-1"></div>
+                <div class="mt-1 flex gap-4"></div>
               </ng-template>
             </p-card>
           </div>
@@ -92,7 +92,7 @@
                 </ng-template>
               </p-table>
               <ng-template #footer>
-                <div class="flex gap-4 mt-1"></div>
+                <div class="mt-1 flex gap-4"></div>
               </ng-template>
             </p-card>
           </div>
@@ -128,7 +128,7 @@
                 </ng-template>
               </p-table>
               <ng-template #footer>
-                <div class="flex gap-4 mt-1"></div>
+                <div class="mt-1 flex gap-4"></div>
               </ng-template>
             </p-card>
           </div>
@@ -195,7 +195,7 @@
                   </p-table>
 
                   <ng-template #footer>
-                    <div class="flex gap-4 mt-1"></div>
+                    <div class="mt-1 flex gap-4"></div>
                   </ng-template>
                 </p-card>
               </div>
@@ -223,7 +223,7 @@
                     </ng-template>
                   </p-table>
                   <ng-template #footer>
-                    <div class="flex gap-4 mt-1"></div>
+                    <div class="mt-1 flex gap-4"></div>
                   </ng-template>
                 </p-card>
               </div>
@@ -255,7 +255,7 @@
                     </ng-template>
                   </p-table>
                   <ng-template #footer>
-                    <div class="flex gap-4 mt-1"></div>
+                    <div class="mt-1 flex gap-4"></div>
                   </ng-template>
                 </p-card>
               </div>
@@ -277,11 +277,11 @@
                   <i
                     class="pi"
                     [ngClass]="{
-                      'text-green-500 pi-check-circle': pipeline.status === 'success',
-                      'text-orange-500 pi-ban': pipeline.status === 'canceled',
-                      'text-red-500 pi-exclamation-circle': pipeline.status === 'failed',
-                      'text-gray-500 pi-angle-double-right': pipeline.status === 'skipped',
-                      'text-orange-200 pi-spin pi-spinner': pipeline.status === 'running',
+                      'pi-check-circle text-green-500': pipeline.status === 'success',
+                      'pi-ban text-orange-500': pipeline.status === 'canceled',
+                      'pi-exclamation-circle text-red-500': pipeline.status === 'failed',
+                      'pi-angle-double-right text-gray-500': pipeline.status === 'skipped',
+                      'pi-spin pi-spinner text-orange-200': pipeline.status === 'running',
                     }"
                   ></i>
                   <span class="ml-1">
