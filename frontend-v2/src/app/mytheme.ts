@@ -1,9 +1,8 @@
-import { ApplicationConfig } from '@angular/core';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeng/themes/aura';
 import { definePreset } from '@primeng/themes';
+import * as flavors from '@catppuccin/palette';
 
+const mocha = flavors.flavors.mocha;
 export const CatppuccinV2 = definePreset(Aura, {
   primitive: {
     borderRadius: {
@@ -424,10 +423,10 @@ export const CatppuccinV2 = definePreset(Aura, {
           950: '#08080c',
         },
         primary: {
-          color: '#8839ef',
-          contrastColor: '#ffffff',
-          hoverColor: '{primary.600}',
-          activeColor: '{primary.700}',
+          color: '#cba6f7',
+          contrastColor: '#b4befe',
+          hoverColor: '#eba0ac',
+          activeColor: '#fab387',
         },
         highlight: {
           background: '{primary.50}',
@@ -461,7 +460,7 @@ export const CatppuccinV2 = definePreset(Aura, {
           shadow: '0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgba(18, 18, 23, 0.05)',
         },
         text: {
-          color: '#4c4f69',
+          color: '#cdd6f4',
           hoverColor: '{surface.text.800}',
           mutedColor: '{surface.text.500}',
           hoverMutedColor: '{surface.text.600}',
@@ -549,23 +548,23 @@ export const CatppuccinV2 = definePreset(Aura, {
           950: '#08080c',
         },
         primary: {
-          color: '{primary.400}',
-          contrastColor: '{surface.900}',
-          hoverColor: '{primary.300}',
-          activeColor: '{primary.200}',
+          color: '#cba6f7',
+          contrastColor: '#292c3c',
+          hoverColor: '#eba0ac',
+          activeColor: '#fab387',
         },
         highlight: {
-          background: 'color-mix(in srgb, {primary.400}, transparent 84%)',
-          focusBackground: 'color-mix(in srgb, {primary.400}, transparent 76%)',
-          color: 'rgba(255,255,255,.87)',
-          focusColor: 'rgba(255,255,255,.87)',
+          background: '{content.background}',
+          focusBackground: '{content.background}',
+          color: 'rgba(235, 160, 172, .87)',
+          focusColor: 'rgb(235, 160, 172)',
         },
         mask: {
           background: 'rgba(0,0,0,0.6)',
           color: '{surface.200}',
         },
         formField: {
-          background: '{surface.950}',
+          background: '#11111b',
           disabledBackground: '{surface.700}',
           filledBackground: '{surface.800}',
           filledHoverBackground: '{surface.800}',
@@ -587,12 +586,12 @@ export const CatppuccinV2 = definePreset(Aura, {
         },
         text: {
           color: '{surface.0}',
-          hoverColor: '{surface.0}',
-          mutedColor: '{surface.400}',
-          hoverMutedColor: '{surface.300}',
+          hoverColor: mocha.colors.maroon,
+          mutedColor: '#45475a',
+          hoverMutedColor: '#313244',
         },
         content: {
-          background: '{surface.900}',
+          background: 'rgba(24, 24, 37, 0.8)',
           hoverBackground: '{surface.800}',
           borderColor: '{surface.700}',
           color: '{text.color}',

@@ -3,3 +3,7 @@ iframe {
   min-width: 100%;
   height: 300px;
 }
+
+::ng-deep img {
+  border-radius: 40px;
+}

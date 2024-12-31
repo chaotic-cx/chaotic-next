@@ -1,4 +1,4 @@
-<div class="chaotic-container-wide-center">
+<div class="chaotic-container-wide">
   <p-table
     #deployTable
     [value]="packageList"
@@ -73,14 +73,14 @@
             <i
               class="pi"
               [ngClass]="{
-                'text-green-500 pi-check-circle': build.statusText === 'success',
-                'text-green-300 pi-check': build.statusText === 'already-built',
-                'text-gray-500 pi-angle-double-right': build.statusText === 'skipped',
-                'text-red-500 pi-exclamation-circle': build.statusText === 'failure',
-                'text-red-700 pi-hourglass': build.statusText === 'timeout',
-                'text-orange-500 pi-ban': build.statusText === 'canceled',
-                'text-orange-200 pi-replay': build.statusText === 'canceled-requeue',
-                'text-red-900 pi-exclamation-triangle': build.statusText === 'software-failure',
+                'pi-check-circle text-green-500': build.statusText === 'success',
+                'pi-check text-green-300': build.statusText === 'already-built',
+                'pi-angle-double-right text-gray-500': build.statusText === 'skipped',
+                'pi-exclamation-circle text-red-500': build.statusText === 'failure',
+                'pi-hourglass text-red-700': build.statusText === 'timeout',
+                'pi-ban text-orange-500': build.statusText === 'canceled',
+                'pi-replay text-orange-200': build.statusText === 'canceled-requeue',
+                'pi-exclamation-triangle text-red-900': build.statusText === 'software-failure',
               }"
             ></i>
             <span class="ml-1 align-middle">{{ build.statusText }}</span>
