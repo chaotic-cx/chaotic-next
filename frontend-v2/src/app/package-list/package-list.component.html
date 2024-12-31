@@ -30,10 +30,10 @@
             <p-sortIcon field="pkgname" />
           </div>
         </th>
-        <th style="min-width: 15rem">
+        <th style="min-width: 10rem">
           <div class="flex items-center">Version</div>
         </th>
-        <th pSortableColumn="lastUpdated" style="min-width: 15rem">
+        <th pSortableColumn="lastUpdated" style="min-width: 10rem">
           <div class="flex items-center">
             Last updated&nbsp;
             <p-sortIcon field="lastUpdated" />
@@ -42,8 +42,14 @@
         <th style="min-width: 10rem">
           <div class="flex items-center">Description</div>
         </th>
-        <th style="min-width: 15rem">
+        <th style="min-width: 15rem; max-width: 20rem">
           <div class="flex items-center">Homepage</div>
+        </th>
+        <th style="min-width: 5rem">
+          <div class="flex items-center">Active</div>
+        </th>
+        <th style="min-width: 5rem">
+          <div class="flex items-center">PKGBUILD</div>
         </th>
       </tr>
     </ng-template>
@@ -51,19 +57,74 @@
       <ng-container *ngIf="typed(unTypedPkg) as pkg">
         <tr>
           <td>
-            <span class="ml-1 align-middle">{{ pkg?.pkgname }}</span>
+            <span
+              [ngClass]="{
+                'text-gray-500': !pkg.isActive,
+              }"
+              class="ml-1 align-middle"
+              >{{ pkg.pkgname }}</span
+            >
           </td>
           <td>
-            <span class="ml-1 align-middle">{{ pkg?.version }}-{{ pkg?.pkgrel }}</span>
+            <span
+              [ngClass]="{
+                'text-gray-500': !pkg.isActive,
+              }"
+              class="ml-1 align-middle"
+              >{{ pkg.version }}-{{ pkg.pkgrel }}</span
+            >
           </td>
           <td>
-            <span class="ml-1 align-middle">{{ pkg?.lastUpdated | date: 'short' }}</span>
+            <span
+              [ngClass]="{
+                'text-gray-500': !pkg.isActive,
+              }"
+              class="ml-1 align-middle"
+              >{{ pkg.lastUpdated | date: 'short' }}</span
+            >
           </td>
           <td>
-            <span class="ml-1 align-middle">{{ pkg?.metadata?.desc }}</span>
+            <span
+              [ngClass]="{
+                'text-gray-500': !pkg.isActive,
+              }"
+              class="ml-1 align-middle"
+              >{{ pkg.metadata?.desc }}</span
+            >
           </td>
           <td>
-            <span class="ml-1 align-middle">{{ pkg?.metadata?.url }}</span>
+            <span
+              [ngClass]="{
+                'text-gray-500': !pkg.isActive,
+              }"
+              class="ml-1 align-middle"
+              [innerHtml]="pkg.metadata?.url | stripPrefix"
+            ></span>
+          </td>
+          <td>
+            <i
+              class="pi"
+              [ngClass]="{
+                'pi-check-circle text-green-500': pkg.isActive,
+                'pi-trash text-gray-500': !pkg.isActive,
+              }"
+            ></i>
+          </td>
+          <td>
+            @if (pkg.isActive) {
+              <p-button
+                class="h-10"
+                (click)="openPkgbuild(pkg)"
+                [ngClass]="{
+                  'text-gray-500': !pkg.isActive,
+                }"
+                pButton
+                type="button"
+                label="Source"
+              />
+            } @else {
+              <span class="ml-1 align-middle text-gray-500">N/A</span>
+            }
           </td>
         </tr>
       </ng-container>
