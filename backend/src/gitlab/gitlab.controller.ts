@@ -5,6 +5,7 @@ import { InMemoryCache } from '../cache.source';
 import { MINUTE } from 'nestjs-omacache';
 import { PipelineWebhook } from './interfaces';
 import { ConfigService } from '@nestjs/config';
+import { PipelineWithExternalStatus } from '@./shared-lib';
 
 @Controller('gitlab')
 export class GitlabController {
@@ -27,12 +28,12 @@ export class GitlabController {
   @InMemoryCache({
     key: 'some',
     kind: 'temporal',
-    ttl: 10 * MINUTE,
+    ttl: MINUTE,
     paramIndex: [0],
   })
   @AllowAnonymous()
   @Get('pipelines/:page')
-  async getPipelines(@Param('page', ParseIntPipe) page?: number) {
+  async getPipelines(@Param('page', ParseIntPipe) page?: number): Promise<PipelineWithExternalStatus[]> {
     return await this.gitlabService.getLastPipelines({ page });
   }
 }
