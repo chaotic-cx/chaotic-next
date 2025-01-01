@@ -1,11 +1,12 @@
 import type { MessageContent } from './tdlib-types';
+import { CommitStatusSchema, PipelineSchema } from '@gitbeaker/rest';
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000;
 export const CACHE_TELEGRAM_TTL = 120 * 1000;
 export const CAUR_ALLOWED_CORS = [
   'https://aur.chaotic.cx',
   'https://caur-frontend-pages.dev',
-  'https://v2.caur-frontend.pages.dev/',
+  'https://v2.caur-frontend.pages.dev',
 ];
 //export const CAUR_API_URL = 'http://localhost:8010/proxy';
 //export const CAUR_BACKEND_URL = 'http://localhost:8011/proxy';
@@ -233,6 +234,7 @@ export interface Build {
   timeToEnd?: number;
   replaced?: boolean;
 }
+
 export type BuildClass = string | number;
 
 export enum BuildStatus {
@@ -299,4 +301,9 @@ export interface NamcapAnalysis {
   'libprovides-by-namcap-sight': string[];
   'library-no-package-associated': string[];
   'link-level-dependence': string[];
+}
+
+export interface PipelineWithExternalStatus {
+  commit: CommitStatusSchema[];
+  pipeline: PipelineSchema;
 }
