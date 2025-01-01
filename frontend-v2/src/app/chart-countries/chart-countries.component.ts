@@ -5,14 +5,16 @@ import { UIChart } from 'primeng/chart';
 import type { CountryRankList } from '@./shared-lib';
 import { FormsModule } from '@angular/forms';
 import { InputNumber } from 'primeng/inputnumber';
-import { FloatLabel } from 'primeng/floatlabel';
 import { FluidModule } from 'primeng/fluid';
 import { MessageToastService } from '@garudalinux/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { flavors } from '@catppuccin/palette';
+import { CatppuccinFlavors } from '../theme';
+import { shuffleArray } from '../functions';
 
 @Component({
   selector: 'chaotic-chart-countries',
-  imports: [CommonModule, UIChart, FormsModule, InputNumber, FloatLabel, FluidModule],
+  imports: [CommonModule, UIChart, FormsModule, InputNumber, FluidModule],
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
   providers: [MessageToastService],
@@ -78,15 +80,14 @@ export class ChartCountriesComponent implements OnInit {
 
   initChart(): void {
     if (isPlatformBrowser(this.platformId)) {
-      const documentStyle: CSSStyleDeclaration = getComputedStyle(document.documentElement);
-      const textColor: string = documentStyle.color;
       const relevantData = this.countryRanks.slice(0, this.amount());
       this.chartData = {
         labels: [],
         datasets: [
           {
             data: [],
-            label: 'Country',
+            label: 'Router hits',
+            backgroundColor: shuffleArray(CatppuccinFlavors),
           },
         ],
       };
@@ -100,7 +101,7 @@ export class ChartCountriesComponent implements OnInit {
           legend: {
             labels: {
               usePointStyle: true,
-              color: textColor,
+              color: flavors.mocha.colors.text.hex,
             },
           },
         },

@@ -1,32 +1,33 @@
-<chaotic-title title="Build status" subtitle="Currently running pipelines and build queue"> </chaotic-title>
+<chaotic-title title="Build status" subtitle="Currently running pipelines and build queue"></chaotic-title>
 
 <div class="chaotic-container-wide-center md:chaotic-container-regular">
-  <chaotic-pipelines></chaotic-pipelines>
   @if (isWide) {
     <div class="flex">
-      <p-card header="Pipelines">
+      <p-card header="Pipelines" class="md:w-1/4">
         <div class="mt-5">
-          <p-timeline [value]="pipelines">
+          <p-timeline [value]="pipelineWithStatus">
             <ng-template #opposite let-unTypedPipeline>
               <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                <small class="text-surface-500 dark:text-surface-400">{{ pipeline.created_at | date: 'short' }}</small>
+                <small class="text-surface-500 dark:text-surface-400">{{
+                  pipeline.pipeline.created_at | date: 'short'
+                }}</small>
               </ng-container>
             </ng-template>
             <ng-template #content let-unTypedPipeline>
               <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                <i
-                  class="pi"
-                  [ngClass]="{
-                    'pi-check-circle text-green-500': pipeline.status === 'success',
-                    'pi-ban text-orange-500': pipeline.status === 'canceled',
-                    'pi-exclamation-circle text-red-500': pipeline.status === 'failed',
-                    'pi-angle-double-right text-gray-500': pipeline.status === 'skipped',
-                    'pi-spin pi-spinner text-orange-200': pipeline.status === 'running',
-                  }"
-                ></i>
-                <span class="ml-1">
-                  <a [href]="pipeline.web_url">{{ pipeline.status }}</a>
-                </span>
+                <div (click)="showDialog(pipeline.pipeline.id)" class="cursor-pointer">
+                  <i
+                    class="pi"
+                    [ngClass]="{
+                      'pi-check-circle text-green': pipeline.pipeline.status === 'success',
+                      'pi-exclamation-circle text-red': pipeline.pipeline.status.includes('failed'),
+                      'pi-spin pi-spinner text-peach': pipeline.pipeline.status === 'running',
+                    }"
+                  ></i>
+                  <span class="ml-1">
+                    <a>{{ pipeline.pipeline.status }}</a>
+                  </span>
+                </div>
               </ng-container>
             </ng-template>
           </p-timeline>
@@ -34,14 +35,14 @@
       </p-card>
       <div class="mx-auto">
         @if (activeQueue.length > 0) {
-          <div>
+          <div class="md:w-1/4">
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
                 <img alt="Card" class="w-full" src="https://primefaces.org/cdn/primeng/images/card-ng.jpg" />
               </ng-template>
               <ng-template #title>Active builds</ng-template>
               <ng-template #subtitle>These are currently ongoing builds</ng-template>
-              <p-table [value]="activeQueue" [tableStyle]="{ 'min-width': '15rem' }">
+              <p-table [value]="activeQueue">
                 <ng-template #header>
                   <tr>
                     <th>Name</th>
@@ -80,7 +81,7 @@
               </ng-template>
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
-              <p-table [value]="waitingQueue" [tableStyle]="{ 'min-width': '15rem' }">
+              <p-table [value]="waitingQueue">
                 <ng-template #header>
                   <tr>
                     <th>Name</th>
@@ -137,7 +138,7 @@
           </div>
         }
       </div>
-      <p-card header="Latest deployments">
+      <p-card header="Latest deployments" class="md:w-1/4">
         <div class="mt-5">
           <p-timeline [value]="latestDeployments">
             <ng-template #opposite let-untypedDeployment>
@@ -267,29 +268,29 @@
         </p-tabpanel>
         <p-tabpanel value="1">
           <div class="chaotic-tab-content">
-            <p-timeline [value]="pipelines">
+            <p-timeline [value]="pipelineWithStatus">
               <ng-template #opposite let-unTypedPipeline>
                 <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
                   <small class="text-surface-500 dark:text-surface-400">{{
-                    pipeline.created_at | date: 'short'
+                    pipeline.pipeline.created_at | date: 'short'
                   }}</small>
                 </ng-container>
               </ng-template>
               <ng-template #content let-unTypedPipeline>
                 <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                  <i
-                    class="pi"
-                    [ngClass]="{
-                      'pi-check-circle text-green-500': pipeline.status === 'success',
-                      'pi-ban text-orange-500': pipeline.status === 'canceled',
-                      'pi-exclamation-circle text-red-500': pipeline.status === 'failed',
-                      'pi-angle-double-right text-gray-500': pipeline.status === 'skipped',
-                      'pi-spin pi-spinner text-orange-200': pipeline.status === 'running',
-                    }"
-                  ></i>
-                  <span class="ml-1">
-                    <a [href]="pipeline.web_url">{{ pipeline.status }}</a>
-                  </span>
+                  <div (click)="showDialog(pipeline.pipeline.id)" class="cursor-pointer">
+                    <i
+                      class="pi"
+                      [ngClass]="{
+                        'pi-check-circle text-green': pipeline.pipeline.status === 'success',
+                        'pi-exclamation-circle text-red': pipeline.pipeline.status.includes('failed'),
+                        'pi-spin pi-spinner text-peach': pipeline.pipeline.status === 'running',
+                      }"
+                    ></i>
+                    <span class="ml-1">
+                      <a>{{ pipeline.pipeline.status }}</a>
+                    </span>
+                  </div>
                 </ng-container>
               </ng-template>
             </p-timeline>
@@ -321,3 +322,68 @@
     </p-tabs>
   }
 </div>
+@if (dialogData) {
+  <p-dialog header="Pipeline details" [modal]="true" [(visible)]="dialogVisible" [style]="{ width: '90vw' }">
+    <div class="mb-5 ml-2.5">
+      <p>Source: {{ dialogData.pipeline.source }}</p>
+      <p>Created at: {{ dialogData.pipeline.created_at | date: 'short' }}</p>
+      <p>
+        Web URL: <a class="text-mauve" [href]="dialogData.pipeline.web_url">{{ dialogData.pipeline.web_url }}</a>
+      </p>
+      <p>
+        Commit:
+        <a class="text-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/{{ dialogData.pipeline.sha }}">{{
+          dialogData.pipeline.sha
+        }}</a>
+      </p>
+    </div>
+    @if (dialogData.commit.length > 0) {
+      <p-table
+        [value]="dialogData.commit"
+        dataKey="id"
+        sortField="finished_at"
+        [sortOrder]="-1"
+        [tableStyle]="{ width: '100%' }"
+      >
+        <ng-template #header>
+          <tr>
+            <th>Package</th>
+            <th>Started</th>
+            <th>Finished</th>
+            <th>Status</th>
+            <th>Message</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-job>
+          <tr>
+            <td>
+              <a class="text-mauve" [href]="job.target_url">{{ job.name }}</a>
+            </td>
+            <td>{{ job.started_at | date: 'short' }}</td>
+            <td>{{ job.finished_at | date: 'short' }}</td>
+            <td>
+              <i
+                class="pi"
+                [ngClass]="{
+                  'pi-check-circle text-green': job.status === 'success',
+                  'pi-exclamation-circle text-red': job.status === 'failed',
+                  'pi-spin pi-spinner text-peach': job.status === 'running',
+                  'pi-clock text-surface0': job.status === 'pending',
+                  'pi-info-circle text-text': job.status === 'canceled',
+                }"
+              ></i>
+              {{ job.status }}
+            </td>
+            <td>{{ job.description }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    } @else {
+      <p>There are no jobs in this pipeline (yet).</p>
+      <p>
+        Have a look at <a class="text-mauve" [href]="dialogData.pipeline.web_url">web UI</a> to look into details
+        instead!
+      </p>
+    }
+  </p-dialog>
+}

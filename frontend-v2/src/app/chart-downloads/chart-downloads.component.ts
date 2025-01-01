@@ -6,14 +6,14 @@ import { AppService } from '../app.service';
 import { MessageToastService } from '@garudalinux/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { UIChart } from 'primeng/chart';
-import { FloatLabel } from 'primeng/floatlabel';
 import { InputNumber } from 'primeng/inputnumber';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { ToastModule } from 'primeng/toast';
+import { flavors } from '@catppuccin/palette';
 
 @Component({
   selector: 'chaotic-chart-downloads',
-  imports: [CommonModule, FormsModule, UIChart, FloatLabel, InputNumber, ProgressBarModule, ToastModule],
+  imports: [CommonModule, FormsModule, UIChart, InputNumber, ProgressBarModule, ToastModule],
   templateUrl: './chart-downloads.component.html',
   styleUrl: './chart-downloads.component.css',
   providers: [MessageToastService],
@@ -60,7 +60,6 @@ export class ChartDownloadsComponent implements OnInit {
     this.appService.getOverallPackageStats(this.amount()).subscribe({
       next: (data) => {
         this.globalPackageMetrics = data;
-        console.log(data);
         if (this.isWide) {
           this.initChart();
         } else {
@@ -77,14 +76,14 @@ export class ChartDownloadsComponent implements OnInit {
 
   initChart(): void {
     if (isPlatformBrowser(this.platformId)) {
-      const documentStyle: CSSStyleDeclaration = getComputedStyle(document.documentElement);
-      const textColor: string = documentStyle.color;
       this.chartData = {
         labels: [],
         datasets: [
           {
             data: [],
-            label: 'Package',
+            label: 'Download count',
+            backgroundColor: [flavors.mocha.colors.lavender.hex],
+            innerHeight: 100,
           },
         ],
       };
@@ -95,11 +94,13 @@ export class ChartDownloadsComponent implements OnInit {
 
       this.options = {
         indexAxis: 'y',
+        maintainAspectRatio: false,
+        aspectRatio: 0.4,
         plugins: {
           legend: {
             labels: {
               usePointStyle: true,
-              color: textColor,
+              color: flavors.mocha.colors.text.hex,
             },
           },
         },

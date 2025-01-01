@@ -153,3 +153,18 @@ const getTag = (entity: any, text: string) => {
 
   return undefined;
 };
+
+/**
+ * Shuffle an array.
+ * @param array The array to shuffle.
+ * @returns The shuffled array.
+ */
+export function shuffleArray(array: any[]): any[] {
+  for (let i = array.length - 1; i >= 0; i--) {
+    const j: number = Math.floor(Math.random() * (i + 1));
+    const temp: any = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
+  return array;
+}

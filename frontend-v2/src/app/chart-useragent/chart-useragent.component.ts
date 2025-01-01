@@ -5,13 +5,15 @@ import { AppService } from '../app.service';
 import { InputNumber } from 'primeng/inputnumber';
 import { UIChart } from 'primeng/chart';
 import { FormsModule } from '@angular/forms';
-import { FloatLabel } from 'primeng/floatlabel';
 import { MessageToastService } from '@garudalinux/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { flavors } from '@catppuccin/palette';
+import { shuffleArray } from '../functions';
+import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-useragent',
-  imports: [CommonModule, InputNumber, UIChart, FormsModule, FloatLabel],
+  imports: [CommonModule, InputNumber, UIChart, FormsModule],
   templateUrl: './chart-useragent.component.html',
   styleUrl: './chart-useragent.component.css',
   providers: [MessageToastService],
@@ -70,15 +72,14 @@ export class ChartUseragentComponent implements OnInit {
 
   initChart(): void {
     if (isPlatformBrowser(this.platformId)) {
-      const documentStyle: CSSStyleDeclaration = getComputedStyle(document.documentElement);
-      const textColor: string = documentStyle.color;
       const relevantData = this.userAgentMetrics.slice(0, this.amount());
       this.chartData = {
         labels: [],
         datasets: [
           {
             data: [],
-            label: 'Country',
+            label: 'Router hits',
+            backgroundColor: shuffleArray(CatppuccinFlavors),
           },
         ],
       };
@@ -92,7 +93,7 @@ export class ChartUseragentComponent implements OnInit {
           legend: {
             labels: {
               usePointStyle: true,
-              color: textColor,
+              color: flavors.mocha.colors.text.hex,
             },
           },
         },
