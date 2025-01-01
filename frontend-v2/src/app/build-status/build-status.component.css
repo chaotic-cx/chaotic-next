@@ -1,0 +1,7 @@
+.p-datatable-table {
+  width: unset !important;
+}
+
+::ng-deep .p-datatable {
+  width: unset !important;
+}

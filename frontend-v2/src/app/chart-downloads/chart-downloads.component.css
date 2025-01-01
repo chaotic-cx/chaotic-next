@@ -1,0 +1,4 @@
+::ng-deep .p-progressbar-value {
+  background: var(--ctp-mocha-lavender) !important;
+  border-radius: var(--p-border-radius-md);
+}

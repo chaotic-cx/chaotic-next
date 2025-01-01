@@ -1,17 +1,18 @@
-<p-floatlabel variant="on">
+<div>
   <p-auto-complete
+    #autoComplete
     [forceSelection]="true"
     [suggestions]="currentSuggestions"
     (completeMethod)="search($event)"
     (onSelect)="updateDisplay($event.value)"
-    inputId="searchPackage"
+    placeholder="Search a package name"
   ></p-auto-complete>
-  <label for="searchPackage">Search a package</label>
-</p-floatlabel>
-
+</div>
 <div class="min-h-footer">
   @if (!initialSearchDone) {
-    <i class="pi pi-search text-maroon mt-36 text-center" style="font-size: 15rem"></i>
+    <div class="mx-auto">
+      <i class="pi pi-search text-maroon mt-36" style="font-size: 10rem"></i>
+    </div>
   }
   <p-table [value]="data" [tableStyle]="{ width: '100%', 'margin-top': '20px' }" [loading]="loading()">
     <ng-template #body let-dataset>

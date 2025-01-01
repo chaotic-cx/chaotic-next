@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { FilterService } from 'primeng/api';
@@ -9,11 +9,10 @@ import { retry } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
-import { FloatLabel } from 'primeng/floatlabel';
 
 @Component({
   selector: 'chaotic-search-package',
-  imports: [CommonModule, AutoComplete, TableModule, PackageDetailKeyPipe, UnixDatePipe, FloatLabel],
+  imports: [CommonModule, AutoComplete, TableModule, PackageDetailKeyPipe, UnixDatePipe],
   templateUrl: './search-package.component.html',
   styleUrl: './search-package.component.css',
   providers: [FilterService],
@@ -24,6 +23,8 @@ export class SearchPackageComponent implements OnInit {
   packageData!: Package;
   initialSearchDone = false;
   loading = signal<boolean>(false);
+
+  @ViewChild('autoComplete') autoComplete!: AutoComplete;
 
   data: { key: string; value: any }[] = [];
 
@@ -42,8 +43,10 @@ export class SearchPackageComponent implements OnInit {
       this.currentSuggestions = this.suggestionPool().filter((name) =>
         this.filterService.filters['contains'](name, event.query),
       );
+      console.log(this.autoComplete);
+      this.autoComplete.inputStyleClass = '';
     } else {
-      this.messageToastService.warn('Invalid input', 'This does not look like a valid package name!');
+      this.autoComplete.inputStyleClass = 'ng-invalid ng-dirty';
     }
   }
 

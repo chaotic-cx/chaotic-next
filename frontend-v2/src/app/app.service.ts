@@ -2,20 +2,20 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  Build,
-  BuildStatus,
+  type Build,
+  type BuildStatus,
   type CountryRankList,
-  GitLabPipeline,
-  Package,
+  type GitLabPipeline,
+  type Package,
   type PackageRankList,
-  SpecificPackageMetrics,
+  type PipelineWithExternalStatus,
+  type SpecificPackageMetrics,
   type StatsObject,
-  TgMessageList,
+  type TgMessageList,
   type UserAgentList,
 } from '@./shared-lib';
 import { APP_CONFIG } from '../environments/app-config.token';
-import { EnvironmentModel } from '../environments/environment.model';
-import { JobSchema, PipelineSchema } from '@gitbeaker/rest';
+import { type EnvironmentModel } from '../environments/environment.model';
 
 @Injectable({
   providedIn: 'root',
@@ -25,41 +25,11 @@ export class AppService {
   private readonly http = inject(HttpClient);
 
   getPipelines(): Observable<GitLabPipeline[]> {
-    return this.http.get<GitLabPipeline[]>(`${this.appConfig.repoApiUrl}/pipelines`);
+    return this.http.get<GitLabPipeline[]>(`${this.appConfig.repoApiUrl}/pipelines?per_page=50`);
   }
 
-  getStatusChecks(page: number): Observable<
-    {
-      successs: {
-        jobs: JobSchema[];
-        pipeline: PipelineSchema;
-      };
-      failure: {
-        jobs: JobSchema[];
-        pipeline: PipelineSchema;
-      };
-      cancelled: {
-        jobs: JobSchema[];
-        pipeline: PipelineSchema;
-      };
-    }[]
-  > {
-    return this.http.get<
-      {
-        successs: {
-          jobs: JobSchema[];
-          pipeline: PipelineSchema;
-        };
-        failure: {
-          jobs: JobSchema[];
-          pipeline: PipelineSchema;
-        };
-        cancelled: {
-          jobs: JobSchema[];
-          pipeline: PipelineSchema;
-        };
-      }[]
-    >(`${this.appConfig.backendUrl}/gitlab/pipelines/${page}`);
+  getStatusChecks(page: number): Observable<PipelineWithExternalStatus[]> {
+    return this.http.get<PipelineWithExternalStatus[]>(`${this.appConfig.backendUrl}/gitlab/pipelines/${page}`);
   }
 
   getQueueStats(): Observable<StatsObject> {

@@ -10,28 +10,7 @@
       </div>
     </ng-template>
     <p class="m-0">
-      <a href="{{ pipeline.pipeline.web_url }}" class="text-sky">{{ pipeline.pipeline.created_at }}</a>
+      <a href="{{ pipeline.pipeline.web_url }}" class="text-sky">{{ pipeline.pipeline.created_at | date }}</a>
     </p>
-    <p-table [value]="pipeline.jobs" [tableStyle]="{ 'min-width': '50rem' }">
-      <ng-template #header>
-        <tr>
-          <th>Package</th>
-          <th>Started</th>
-          <th>Finished</th>
-          <th>Duration</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </ng-template>
-      <ng-template #body let-job>
-        <tr>
-          <td>{{ job.name }}</td>
-          <td>{{ job.started_at }}</td>
-          <td>{{ job.finished_at }}</td>
-          <td>{{ job.duration }}</td>
-          <td>{{ job.status }}</td>
-        </tr>
-      </ng-template>
-    </p-table>
   </p-fieldset>
 }

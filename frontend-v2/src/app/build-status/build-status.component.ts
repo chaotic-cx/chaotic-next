@@ -1,6 +1,6 @@
-import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Build, BuildClass, BuildStatus, GitLabPipeline } from '@./shared-lib';
+import { Build, BuildClass, BuildStatus, PipelineWithExternalStatus } from '@./shared-lib';
 import { Timeline } from 'primeng/timeline';
 import { Card } from 'primeng/card';
 import { TableModule } from 'primeng/table';
@@ -11,8 +11,8 @@ import { retry } from 'rxjs';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { MessageToastService } from '@garudalinux/core';
-import { PipelinesComponent } from '../pipelines/pipelines.component';
 import { TitleComponent } from '../title/title.component';
+import { Dialog } from 'primeng/dialog';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -27,8 +27,8 @@ import { TitleComponent } from '../title/title.component';
     Tab,
     TabPanels,
     TabPanel,
-    PipelinesComponent,
     TitleComponent,
+    Dialog,
   ],
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
@@ -38,7 +38,6 @@ export class BuildStatusComponent implements OnInit {
   isWide!: boolean;
   lastUpdated: Date | undefined;
   loading = true;
-  pipelines: GitLabPipeline[] = [];
   latestDeployments!: Build[];
   activeQueue: {
     name: string;
@@ -59,6 +58,10 @@ export class BuildStatusComponent implements OnInit {
   cdr = inject(ChangeDetectorRef);
   messageToastService = inject(MessageToastService);
   observer = inject(BreakpointObserver);
+
+  dialogData!: PipelineWithExternalStatus;
+  dialogVisible = signal<boolean>(false);
+  pipelineWithStatus!: PipelineWithExternalStatus[];
 
   async ngOnInit(): Promise<void> {
     this.observer.observe(`(max-width: 1100px)`).subscribe((state) => {
@@ -94,12 +97,29 @@ export class BuildStatusComponent implements OnInit {
    * Get current pipeline status
    */
   async getPipelines() {
-    this.appService.getPipelines().subscribe({
-      next: (data) => {
-        this.pipelines = data;
+    this.appService.getStatusChecks(1).subscribe({
+      next: (pipelines) => {
+        for (const pipeline of pipelines) {
+          if (pipeline.pipeline.status === 'failed') {
+            let failedJobs = 0;
+            for (const job of pipeline.commit) {
+              if (job.status === 'failed') {
+                failedJobs++;
+              }
+              job.name = job.name.split(': ')[1];
+            }
+            pipeline.pipeline.status = `${failedJobs}/${pipeline.commit.length} failed`;
+          } else if (pipeline.pipeline.status === 'canceled') {
+            pipeline.pipeline.status = 'success';
+          }
+        }
+        this.pipelineWithStatus = pipelines;
       },
       error: (err) => {
         console.error(err);
+      },
+      complete: () => {
+        this.loading = false;
       },
     });
   }
@@ -169,11 +189,18 @@ export class BuildStatusComponent implements OnInit {
     });
   }
 
-  typed(value: any): GitLabPipeline {
+  typed(value: any): PipelineWithExternalStatus {
     return value;
   }
 
   typedDeployment(untypedDeployment: Build) {
     return untypedDeployment;
+  }
+
+  showDialog(pipelineId: number) {
+    this.dialogData = this.pipelineWithStatus.find(
+      (pipeline) => pipeline.pipeline.id === pipelineId,
+    ) as PipelineWithExternalStatus;
+    this.dialogVisible.set(true);
   }
 }

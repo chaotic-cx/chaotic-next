@@ -2,10 +2,11 @@ import { Component } from '@angular/core';
 import { Card } from 'primeng/card';
 import { Image } from 'primeng/image';
 import { AnimateOnScroll } from 'primeng/animateonscroll';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-memorial',
-  imports: [Card, Image, AnimateOnScroll],
+  imports: [Card, Image, AnimateOnScroll, TitleComponent],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
 })

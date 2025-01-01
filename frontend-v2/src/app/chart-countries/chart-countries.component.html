@@ -1,17 +1,13 @@
-<div class="card flex justify-center">
+<div class="card mb-10 flex justify-center">
   <p-chart type="pie" [data]="chartData" [options]="options" [responsive]="true" class="w-[50rem] max-w-2xl" />
 </div>
-<div class="center mt-10">
-  <p-floatlabel variant="on">
-    <p-inputnumber
-      [(ngModel)]="amount"
-      mode="decimal"
-      [showButtons]="true"
-      inputId="minmaxCountry"
-      [min]="0"
-      [max]="30"
-    >
-    </p-inputnumber>
-    <label for="minmaxCountry">Amount of countries</label>
-  </p-floatlabel>
-</div>
+<p-inputnumber
+  [(ngModel)]="amount"
+  mode="decimal"
+  [showButtons]="true"
+  inputId="minmaxCountry"
+  [min]="0"
+  [max]="30"
+  placeholder="Amount of countries to show"
+>
+</p-inputnumber>

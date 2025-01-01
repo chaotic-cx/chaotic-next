@@ -74,8 +74,7 @@ html {
   backdrop-filter: blur(16px) saturate(115%);
   -webkit-backdrop-filter: blur(16px) saturate(115%);
   background-color: rgba(24, 24, 37, 0.82);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.125);
+  border-radius: 10px;
 }
 
 .hover\:chaotic-grow-l:hover {
