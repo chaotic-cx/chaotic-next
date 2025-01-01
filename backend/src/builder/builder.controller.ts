@@ -21,6 +21,12 @@ export class BuilderController {
   }
 
   @AllowAnonymous()
+  @Get('package/:name')
+  async getPackage(@Param('name') name: string): Promise<Package> {
+    return await this.builderService.getPackage(name);
+  }
+
+  @AllowAnonymous()
   @Get('repos')
   async getRepos(): Promise<Repo[]> {
     return await this.builderService.getRepos();

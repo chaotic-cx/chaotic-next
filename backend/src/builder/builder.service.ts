@@ -379,6 +379,10 @@ export class BuilderService {
       .cache(`latest-builds`, 30000)
       .getRawMany();
   }
+
+  async getPackage(name: string) {
+    return await this.packageRepository.findOne({ where: { pkgname: name } });
+  }
 }
 
 /**
