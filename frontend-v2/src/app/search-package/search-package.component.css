@@ -1,0 +1,7 @@
+::ng-deep .p-datatable {
+  width: unset;
+}
+
+.min-h-footer {
+  min-height: 80vh;
+}

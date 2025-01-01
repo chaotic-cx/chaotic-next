@@ -18,6 +18,9 @@ import { DeployLogComponent } from './deploy-log/deploy-log.component';
 import { BuildStatusComponent } from './build-status/build-status.component';
 import { DocsComponent } from './docs/docs.component';
 import { AboutComponent } from './about/about.component';
+import { MemorialComponent } from './memorial/memorial.component';
+import { NotFoundComponent } from './not-found/not-found.component';
+import { MemorialV2Component } from './memorial-v2/memorial-v2.component';
 
 export const routes: Routes = [
   {
@@ -59,7 +62,7 @@ export const routes: Routes = [
   {
     title: 'Memorial 2024',
     path: 'memorial-v2',
-    component: PackageListComponent,
+    component: MemorialV2Component,
     data: { animationState: '7' },
   },
   {
@@ -71,13 +74,13 @@ export const routes: Routes = [
   {
     title: 'Memorial 2021',
     path: 'memorial',
-    component: PackageListComponent,
+    component: MemorialComponent,
     data: { animationState: 'null' },
   },
   {
     title: 'Not Found',
     path: 'not-found',
-    component: PackageListComponent,
+    component: NotFoundComponent,
     data: { animationState: 'null' },
   },
   {

@@ -15,6 +15,7 @@ import { MessageToastService } from '@garudalinux/core';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { APP_CONFIG } from 'frontend-v2/src/environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -32,6 +33,7 @@ import { EnvironmentModel } from '../../environments/environment.model';
     StripPrefixPipe,
     ButtonDirective,
     NgClass,
+    TitleComponent,
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',

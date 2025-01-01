@@ -11,9 +11,10 @@ import { ScrollTop } from 'primeng/scrolltop';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { EnvironmentModel } from '../environments/environment.model';
 import localeEnGb from '@angular/common/locales/en-GB';
+import { FooterComponent } from './footer/footer.component';
 
 @Component({
-  imports: [RouterModule, ShellComponent, NgOptimizedImage, ScrollTop],
+  imports: [RouterModule, ShellComponent, NgOptimizedImage, ScrollTop, FooterComponent],
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',

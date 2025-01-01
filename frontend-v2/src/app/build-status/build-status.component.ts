@@ -11,10 +11,25 @@ import { retry } from 'rxjs';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { MessageToastService } from '@garudalinux/core';
+import { PipelinesComponent } from '../pipelines/pipelines.component';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-build-status',
-  imports: [CommonModule, Timeline, Card, TableModule, BuildClassPipe, Tabs, TabList, Tab, TabPanels, TabPanel],
+  imports: [
+    CommonModule,
+    Timeline,
+    Card,
+    TableModule,
+    BuildClassPipe,
+    Tabs,
+    TabList,
+    Tab,
+    TabPanels,
+    TabPanel,
+    PipelinesComponent,
+    TitleComponent,
+  ],
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
   providers: [MessageToastService],

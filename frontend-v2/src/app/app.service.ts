@@ -15,6 +15,7 @@ import {
 } from '@./shared-lib';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { EnvironmentModel } from '../environments/environment.model';
+import { JobSchema, PipelineSchema } from '@gitbeaker/rest';
 
 @Injectable({
   providedIn: 'root',
@@ -25,6 +26,40 @@ export class AppService {
 
   getPipelines(): Observable<GitLabPipeline[]> {
     return this.http.get<GitLabPipeline[]>(`${this.appConfig.repoApiUrl}/pipelines`);
+  }
+
+  getStatusChecks(page: number): Observable<
+    {
+      successs: {
+        jobs: JobSchema[];
+        pipeline: PipelineSchema;
+      };
+      failure: {
+        jobs: JobSchema[];
+        pipeline: PipelineSchema;
+      };
+      cancelled: {
+        jobs: JobSchema[];
+        pipeline: PipelineSchema;
+      };
+    }[]
+  > {
+    return this.http.get<
+      {
+        successs: {
+          jobs: JobSchema[];
+          pipeline: PipelineSchema;
+        };
+        failure: {
+          jobs: JobSchema[];
+          pipeline: PipelineSchema;
+        };
+        cancelled: {
+          jobs: JobSchema[];
+          pipeline: PipelineSchema;
+        };
+      }[]
+    >(`${this.appConfig.backendUrl}/gitlab/pipelines/${page}`);
   }
 
   getQueueStats(): Observable<StatsObject> {
@@ -57,6 +92,10 @@ export class AppService {
 
   getPackageList(): Observable<Package[]> {
     return this.http.get<Package[]>(`${this.appConfig.backendUrl}/builder/packages`);
+  }
+
+  getPackage(name: string): Observable<Package> {
+    return this.http.get<Package>(`${this.appConfig.backendUrl}/builder/package/${name}`);
   }
 
   getPackageBuilds(amount: number, status?: BuildStatus): Observable<Build[]> {
