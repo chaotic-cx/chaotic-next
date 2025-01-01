@@ -3,12 +3,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { PipelineWebhook } from './interfaces';
+import { PipelineWithExternalStatus } from '@./shared-lib';
 
 @Injectable()
 export class GitlabService {
-  PIPELINE_URL = 'https://gitlab.com/api/v4/projects/:id/pipelines';
-  STATUS_URL = 'https://gitlab.com/api/v4/projects/:id/repository/commits/:commit/statuses';
-
   api = new Gitlab({
     token: this.configService.getOrThrow<string>('CAUR_GITLAB_TOKEN'),
   });
@@ -16,7 +14,6 @@ export class GitlabService {
   private readonly chaoticId = this.configService.getOrThrow<string>('CAUR_GITLAB_ID_CAUR');
   private readonly garudaId = this.configService.getOrThrow<string>('CAUR_GITLAB_ID_GARUDA');
   private readonly botEmail = this.configService.getOrThrow<string>('CAUR_AUTO_COMMIT_AUTHOR');
-  private readonly gitlabWebhookToken = this.configService.getOrThrow<string>('CAUR_GITLAB_WEBHOOK_TOKEN');
 
   constructor(
     private readonly configService: ConfigService,
@@ -44,71 +41,26 @@ export class GitlabService {
     });
   }
 
-  async getLastPipelines(options: { page?: number }) {
-    const fetchPromises: Promise<{ commit: CommitStatusSchema[]; pipeline: PipelineSchema }>[] = [];
-    const returnValue = {
-      succeeded: [],
-      failed: [],
-      cancelled: [],
-    };
-
+  async getLastPipelines(options: { page?: number }): Promise<PipelineWithExternalStatus[]> {
     try {
-      const succeededPipelines: Promise<PipelineSchema[]> = this.api.Pipelines.all(this.chaoticId, {
-        maxPages: 1,
-        page: options.page,
-        status: 'success',
-      });
-      const failedPipelines: Promise<PipelineSchema[]> = this.api.Pipelines.all(this.chaoticId, {
-        maxPages: 1,
-        page: options.page,
-        status: 'failed',
-      });
-      const cancelledPipelines: Promise<PipelineSchema[]> = this.api.Pipelines.all(this.chaoticId, {
-        maxPages: 1,
-        page: options.page,
-        status: 'canceled',
-      });
+      const fetchPromises: Promise<{ commit: CommitStatusSchema[]; pipeline: PipelineSchema }>[] = [];
 
-      const [succeeded, failed, cancelled] = await Promise.all([
-        succeededPipelines,
-        failedPipelines,
-        cancelledPipelines,
-      ]);
+      let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
+        maxPages: 1,
+        page: options.page,
+        perPage: 50,
+      });
+      allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
 
-      for (const pipeline of succeeded) {
-        this.getCommitStatus(pipeline, fetchPromises);
-      }
-      for (const pipeline of failed) {
-        this.getCommitStatus(pipeline, fetchPromises);
-      }
-      for (const pipeline of cancelled) {
+      for (const pipeline of allPipelines) {
         this.getCommitStatus(pipeline, fetchPromises);
       }
 
       const promiseResults = await Promise.all(fetchPromises);
-
-      for (const { commit, pipeline } of promiseResults) {
-        switch (pipeline.status) {
-          case 'success':
-            returnValue.succeeded.push({ pipeline, commit });
-            break;
-          case 'failed':
-            returnValue.failed.push({ pipeline, commit });
-            break;
-          case 'canceled':
-            returnValue.cancelled.push({ pipeline, commit });
-            break;
-        }
-      }
-      Logger.debug(returnValue, 'GitlabService');
-      returnValue.succeeded.sort((a, b) => b.pipeline.id - a.pipeline.id);
-      returnValue.failed.sort((a, b) => b.pipeline.id - a.pipeline.id);
-      returnValue.cancelled.sort((a, b) => b.pipeline.id - a.pipeline.id);
+      return promiseResults.sort((a, b) => b.pipeline.id - a.pipeline.id);
     } catch (err) {
       Logger.error(err, 'GitlabService');
     }
-
-    return returnValue;
   }
 
   private getCommitStatus(
@@ -121,8 +73,9 @@ export class GitlabService {
     promiseArray.push(
       new Promise((resolve) => {
         this.api.Commits.allStatuses(this.chaoticId, pipeline.sha).then((statuses) => {
+          const onlyExternal: CommitStatusSchema[] = statuses.filter((status) => this.isExternalStage(status.name));
           resolve({
-            commit: statuses.filter((status) => this.isExternalStage(status.name)),
+            commit: onlyExternal.filter((status) => status.pipeline_id === pipeline.id),
             pipeline,
           });
         });
