@@ -47,6 +47,12 @@ importers:
       '@garudalinux/core':
         specifier: ^0.2.0
         version: 0.2.0(ogrilvjh7m2z6lp7uwlfc7t3py)
+      '@gitbeaker/core':
+        specifier: ^41.3.0
+        version: 41.3.0
+      '@gitbeaker/rest':
+        specifier: ^41.3.0
+        version: 41.3.0
       '@nestjs/axios':
         specifier: ^3.1.3
         version: 3.1.3(@nestjs/common@10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1))(axios@1.7.9(debug@4.4.0))(rxjs@7.8.1)
@@ -134,6 +140,9 @@ importers:
       moleculer:
         specifier: ^0.14.35
         version: 0.14.35(debug@4.4.0)(encoding@0.1.13)(ioredis@5.4.2)(log4js@6.9.1)(pino@8.21.0)
+      nestjs-omacache:
+        specifier: ^1.1.6
+        version: 1.1.6(@nestjs/common@10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.15)(cache-manager@5.7.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       nestjs-pino:
         specifier: ^4.2.0
         version: 4.2.0(@nestjs/common@10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1))(pino-http@10.3.0)
@@ -2048,6 +2057,18 @@ packages:
       '@playwright/test': ^1.49.1
       jest-preset-angular: ~14.4.2
       primeng: ^19.0.2
+
+  '@gitbeaker/core@41.3.0':
+    resolution: {integrity: sha512-ZPy0v71WTSKdELLhG5FkMCxIWCJwRpA7QkvnULiE36sIynQE0WwBNux+GPjjEh6xQ6PfBAB4E/1Uu2YZXiJlNg==}
+    engines: {node: '>=18.20.0'}
+
+  '@gitbeaker/requester-utils@41.3.0':
+    resolution: {integrity: sha512-sNVlp32uaieQ+Giovlu1GJ8hY9jMhY//f3WMHct2GV0U74PkSsixQgQv9XuRKgZalk2uI12iJrBY7gnAA5N8/w==}
+    engines: {node: '>=18.20.0'}
+
+  '@gitbeaker/rest@41.3.0':
+    resolution: {integrity: sha512-l1jEloxQ4/SCdOjv9ryfbZEvvF90GFllLxULbHiLPI72rAHCjxWtjAdeQXddkvfw/LYCw7CFyu+M9Okt/IjsgA==}
+    engines: {node: '>=18.20.0'}
 
   '@gitopslovers/nx-biome@1.5.0':
     resolution: {integrity: sha512-RDYX+dd3o36+rqzpShr948LimCXjH9lJdATdQGTKtYcN2OL43LRb3R9MLzU/OqnGOrt1/6Hg92YJS3pLES68aw==}
@@ -6821,6 +6842,15 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
+  nestjs-omacache@1.1.6:
+    resolution: {integrity: sha512-DAtS7y6JQEQEeQIkhY4wIPWLSCzgbsLZ8ACC3yQz51nHJ1emvjIrDLg8pEzSF7Z2hiOnTtN4TbUyDrc6I2KH3w==}
+    peerDependencies:
+      '@nestjs/common': '>=8'
+      '@nestjs/core': '>=8'
+      cache-manager: <=5
+      reflect-metadata: ^0.1.12
+      rxjs: ^7.0.0
+
   nestjs-pino@4.2.0:
     resolution: {integrity: sha512-+YpNb+ZyWq+vZqhMLRGyV8838n/sjdvLsHjPjmw+yW8+hnE9yVP50MdehtGcHA9d7z2XVccT/GUp8pI1U+nDvA==}
     engines: {node: '>= 14'}
@@ -7249,6 +7279,10 @@ packages:
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
+
+  picomatch-browser@2.2.6:
+    resolution: {integrity: sha512-0ypsOQt9D4e3hziV8O4elD9uN0z/jtUEfxVRtNaAAtXIyUx9m/SzlO020i8YNL2aL/E6blOvvHQcin6HZlFy/w==}
+    engines: {node: '>=8.6'}
 
   picomatch@2.3.1:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
@@ -7797,6 +7831,9 @@ packages:
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
+
+  rate-limiter-flexible@4.0.1:
+    resolution: {integrity: sha512-2/dGHpDFpeA0+755oUkW+EKyklqLS9lu0go9pDsbhqQjZcxfRyJ6LA4JI0+HAdZ2bemD/oOjUeZQB2lCZqXQfQ==}
 
   raw-body@2.5.2:
     resolution: {integrity: sha512-8zGqypfENjCIqGhgXToC8aB2r7YrBX+AQAfIPs/Mlk+BtPTztOvTS01NRW/3Eh60J+a48lt8qsCzirQ6loCVfA==}
@@ -9181,6 +9218,9 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  xcase@2.0.1:
+    resolution: {integrity: sha512-UmFXIPU+9Eg3E9m/728Bii0lAIuoc+6nbrNUKaRPJOFp91ih44qqGlWtxMB6kXFrRD6po+86ksHM5XHCfk6iPw==}
 
   xml-name-validator@4.0.0:
     resolution: {integrity: sha512-ICP2e+jsHvAj2E2lIHxa5tjXRlKDJo4IdvPvCXbXQGdzSfmSpNVyIKMvoZHjDY9DP0zV17iI85o90vRFXNccRw==}
@@ -10904,6 +10944,24 @@ snapshots:
       jest-preset-angular: 14.4.2(@angular/compiler-cli@19.0.5(@angular/compiler@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(typescript@5.6.3))(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(@angular/platform-browser-dynamic@19.0.5(@angular/common@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/compiler@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(@angular/platform-browser@19.0.5(@angular/animations@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/common@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))))(@babel/core@7.26.0)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.26.0))(jest@29.7.0(@types/node@22.10.2)(ts-node@10.9.2(@swc/core@1.10.4(@swc/helpers@0.5.15))(@types/node@22.10.2)(typescript@5.6.3)))(typescript@5.6.3)
       primeng: 19.0.2(aztdthhn2eql7smtl5zhzf47xm)
       tslib: 2.8.1
+
+  '@gitbeaker/core@41.3.0':
+    dependencies:
+      '@gitbeaker/requester-utils': 41.3.0
+      qs: 6.13.1
+      xcase: 2.0.1
+
+  '@gitbeaker/requester-utils@41.3.0':
+    dependencies:
+      picomatch-browser: 2.2.6
+      qs: 6.13.1
+      rate-limiter-flexible: 4.0.1
+      xcase: 2.0.1
+
+  '@gitbeaker/rest@41.3.0':
+    dependencies:
+      '@gitbeaker/core': 41.3.0
+      '@gitbeaker/requester-utils': 41.3.0
 
   '@gitopslovers/nx-biome@1.5.0': {}
 
@@ -16629,6 +16687,15 @@ snapshots:
 
   neo-async@2.6.2: {}
 
+  nestjs-omacache@1.1.6(@nestjs/common@10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.15)(cache-manager@5.7.6)(reflect-metadata@0.2.2)(rxjs@7.8.1):
+    dependencies:
+      '@nestjs/common': 10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      '@nestjs/core': 10.4.15(@nestjs/common@10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/platform-express@10.4.6)(encoding@0.1.13)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      cache-manager: 5.7.6
+      lru-cache: 10.4.3
+      reflect-metadata: 0.2.2
+      rxjs: 7.8.1
+
   nestjs-pino@4.2.0(@nestjs/common@10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1))(pino-http@10.3.0):
     dependencies:
       '@nestjs/common': 10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1)
@@ -17129,6 +17196,8 @@ snapshots:
 
   picocolors@1.1.1: {}
 
+  picomatch-browser@2.2.6: {}
+
   picomatch@2.3.1: {}
 
   picomatch@4.0.1: {}
@@ -17606,6 +17675,8 @@ snapshots:
       safe-buffer: 5.2.1
 
   range-parser@1.2.1: {}
+
+  rate-limiter-flexible@4.0.1: {}
 
   raw-body@2.5.2:
     dependencies:
@@ -19198,6 +19269,8 @@ snapshots:
       signal-exit: 3.0.7
 
   ws@8.18.0: {}
+
+  xcase@2.0.1: {}
 
   xml-name-validator@4.0.0: {}
 
