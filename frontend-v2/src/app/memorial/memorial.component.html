@@ -1,0 +1,42 @@
+<div class="chaotic-container-regular bg-base">
+  <div class="mb-5 text-center">
+    <h2 class="text-maroon text-2xl font-extrabold">Memorial</h2>
+    <p class="text-text my-4 text-lg">
+      These screenshots have been collected by the community as celebration of the 3rd birthday of Chaotic-AUR.
+    </p>
+  </div>
+  <div class="5xl:grid-cols-6 mt-10 grid grid-cols-2 gap-10 md:grid-cols-4">
+    @for (link of termLinks; track link) {
+      <p-card class="h-max">
+        <p-image
+          alt="Terminal screenshot"
+          class="hover:chaotic-grow-s animate-duration-1000 h-auto max-w-full rounded-lg"
+          pAnimateOnScroll
+          enterClass="animate-fadein"
+          leaveClass="animate-fadeout"
+          [once]="false"
+          [preview]="true"
+          [src]="link"
+        />
+      </p-card>
+    }
+  </div>
+  <div class="5xl:grid-cols-4 mt-5 grid grid-cols-1 content-center gap-10 md:grid-cols-2">
+    @for (link of desktopLinks; track link) {
+      <a href="{{ link }}">
+        <p-card class="h-max">
+          <p-image
+            alt="Terminal screenshot"
+            class="hover:chaotic-grow-s animate-duration-1000 h-auto max-w-full rounded-lg"
+            pAnimateOnScroll
+            enterClass="animate-fadein"
+            leaveClass="animate-fadeout"
+            [once]="false"
+            [preview]="true"
+            [src]="link"
+          />
+        </p-card>
+      </a>
+    }
+  </div>
+</div>

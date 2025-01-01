@@ -7,12 +7,13 @@ import { Panel } from 'primeng/panel';
 import { Divider } from 'primeng/divider';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-docs',
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
-  imports: [HighlightJsDirective, Panel, Divider],
+  imports: [HighlightJsDirective, Panel, Divider, TitleComponent],
 })
 export class DocsComponent implements OnInit {
   isBrowser = true;

@@ -54,6 +54,14 @@ html {
   -webkit-backdrop-filter: blur(5px) saturate(115%);
 }
 
+.p-menubar-item-icon {
+  color: var(--ctp-mocha-mauve) !important;
+}
+
+.p-menubar-item-icon-active-color {
+  color: var(--ctp-mocha-maroon) !important;
+}
+
 .content-wrapper {
   container-type: inline-size;
   width: 100%;

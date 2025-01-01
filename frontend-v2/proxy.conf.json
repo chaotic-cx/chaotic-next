@@ -9,7 +9,7 @@
     "logLevel": "debug"
   },
   "/backend": {
-    "target": "https://builds.garudalinux.org/backend",
+    "target": "http://localhost:3000",
     "secure": false,
     "pathRewrite": {
       "^/backend": ""

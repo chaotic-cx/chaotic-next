@@ -12,10 +12,21 @@ import { OutcomePipe } from '../pipes/outcome.pipe';
 import { LogurlPipe } from '../pipes/logurl.pipe';
 import { DurationPipe } from '../pipes/duration.pipe';
 import { MessageToastService } from '@garudalinux/core';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-deploy-log',
-  imports: [CommonModule, TableModule, Button, InputIcon, IconField, InputText, LogurlPipe, DurationPipe],
+  imports: [
+    CommonModule,
+    TableModule,
+    Button,
+    InputIcon,
+    IconField,
+    InputText,
+    LogurlPipe,
+    DurationPipe,
+    TitleComponent,
+  ],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
   providers: [MessageToastService, OutcomePipe],

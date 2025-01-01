@@ -1,4 +1,7 @@
-<div class="chaotic-container-wide md:chaotic-container-regular">
+<chaotic-title title="Build status" subtitle="Currently running pipelines and build queue"> </chaotic-title>
+
+<div class="chaotic-container-wide-center md:chaotic-container-regular">
+  <chaotic-pipelines></chaotic-pipelines>
   @if (isWide) {
     <div class="flex">
       <p-card header="Pipelines">

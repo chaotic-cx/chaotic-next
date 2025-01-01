@@ -7,6 +7,7 @@ import { Card } from 'primeng/card';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
 import { Divider } from 'primeng/divider';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-about',
@@ -20,6 +21,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
     AccordionHeader,
     AccordionContent,
     Divider,
+    TitleComponent,
   ],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',

@@ -5,9 +5,9 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideGarudaNG } from '@garudalinux/core';
 import { provideSFConfig } from 'ngx-highlight-js';
-import { CatppuccinV2 } from './mytheme';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { environment } from '../environments/environment.dev';
+import { Catppuccin } from './theme';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -16,7 +16,7 @@ export const appConfig: ApplicationConfig = {
       { font: 'Fira Sans' },
       {
         theme: {
-          preset: CatppuccinV2,
+          preset: Catppuccin,
           options: {
             darkModeSelector: '.dark-mode',
           },

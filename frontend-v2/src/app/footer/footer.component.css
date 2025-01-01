@@ -1,0 +1,5 @@
+.chaotic-footer {
+  height: 20px;
+  @apply mt-16;
+  width: 100%;
+}
