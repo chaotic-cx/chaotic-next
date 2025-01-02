@@ -1,17 +1,18 @@
 <chaotic-title title="Deployment log" subtitle="The most recent deployments to Chaotic-AUR-managed repositories.">
 </chaotic-title>
 
-<div class="chaotic-container-wide">
+<div class="chaotic-container-wide table-container">
   <p-table
     #deployTable
-    [value]="packageList"
     dataKey="id"
+    sortField="timestamp"
+    id="deployTable"
+    [value]="packageList"
     [rows]="25"
     [rowsPerPageOptions]="[25, 50, 100, 200]"
     [loading]="loading"
     [paginator]="true"
     [globalFilterFields]="['pkgbase.pkgname', 'builder.name', 'repo.name']"
-    sortField="timestamp"
     [sortOrder]="-1"
   >
     <ng-template #caption>
@@ -82,14 +83,14 @@
             <i
               class="pi"
               [ngClass]="{
-                'pi-check-circle text-green-500': build.statusText === 'success',
-                'pi-check text-green-300': build.statusText === 'already-built',
-                'pi-angle-double-right text-gray-500': build.statusText === 'skipped',
-                'pi-exclamation-circle text-red-500': build.statusText === 'failure',
-                'pi-hourglass text-red-700': build.statusText === 'timeout',
-                'pi-ban text-orange-500': build.statusText === 'canceled',
-                'pi-replay text-orange-200': build.statusText === 'canceled-requeue',
-                'pi-exclamation-triangle text-red-900': build.statusText === 'software-failure',
+                'pi-check-circle text-green': build.statusText === 'success',
+                'pi-check text-sapphire': build.statusText === 'already-built',
+                'pi-angle-double-right text-text': build.statusText === 'skipped',
+                'pi-exclamation-circle text-red': build.statusText === 'failure',
+                'pi-hourglass text-maroon': build.statusText === 'timeout',
+                'pi-ban text-peach': build.statusText === 'canceled',
+                'pi-replay text-yellow': build.statusText === 'canceled-requeue',
+                'pi-exclamation-triangle text-blue': build.statusText === 'software-failure',
               }"
             ></i>
             <span class="ml-1 align-middle">{{ build.statusText }}</span>

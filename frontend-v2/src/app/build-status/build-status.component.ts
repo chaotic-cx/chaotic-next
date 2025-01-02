@@ -16,6 +16,7 @@ import { Dialog } from 'primeng/dialog';
 import { Tooltip } from 'primeng/tooltip';
 import { Skeleton } from 'primeng/skeleton';
 import { Mutex } from 'async-mutex';
+import { Ripple } from 'primeng/ripple';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -34,6 +35,7 @@ import { Mutex } from 'async-mutex';
     Dialog,
     Tooltip,
     Skeleton,
+    Ripple,
   ],
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
@@ -108,7 +110,7 @@ export class BuildStatusComponent implements OnInit {
     await new Promise<void>((resolve, reject) => {
       this.appService
         .getPackageBuilds(20, BuildStatus.SUCCESS)
-        .pipe(retry({ delay: 5000, count: 5 }))
+        .pipe(retry({ delay: 5000, count: 3 }))
         .subscribe({
           next: (data) => {
             this.latestDeployments = data;
@@ -133,7 +135,7 @@ export class BuildStatusComponent implements OnInit {
     await new Promise<void>((resolve, reject) => {
       this.appService
         .getStatusChecks()
-        .pipe(retry({ delay: 5000, count: 5 }))
+        .pipe(retry({ delay: 5000, count: 3 }))
         .subscribe({
           next: (pipelines) => {
             for (const pipeline of pipelines) {
@@ -152,6 +154,9 @@ export class BuildStatusComponent implements OnInit {
               for (const job of pipeline.commit) {
                 job.name = job.name.split(': ')[1];
               }
+            }
+            if (pipelines.length > 20) {
+              pipelines = pipelines.slice(0, 20);
             }
             this.pipelineWithStatus.set(pipelines);
           },
@@ -180,7 +185,7 @@ export class BuildStatusComponent implements OnInit {
     await new Promise<void>((resolve, reject) => {
       this.appService
         .getQueueStats()
-        .pipe(retry({ delay: 5000, count: 5 }))
+        .pipe(retry({ delay: 5000, count: 3 }))
         .subscribe({
           next: (currentQueue) => {
             for (const queue of Object.keys(currentQueue)) {

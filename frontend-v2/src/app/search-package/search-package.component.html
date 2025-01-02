@@ -4,6 +4,7 @@
     [suggestions]="currentSuggestions"
     (completeMethod)="search($event)"
     (onSelect)="updateDisplay($event.value)"
+    [autofocus]="true"
     placeholder="Search a package name"
   ></p-auto-complete>
 </div>
@@ -13,7 +14,7 @@
       <i class="pi pi-search text-maroon mt-36" style="font-size: 10rem"></i>
     </div>
   }
-  <p-table [value]="data" [tableStyle]="{ width: '100%', 'margin-top': '20px' }" [loading]="loading()">
+  <p-table [value]="data" [tableStyle]="{ width: '100%', 'margin-top': '20px' }">
     <ng-template #body let-dataset>
       <tr>
         <td>{{ dataset.key | packageDetailKey }}</td>
@@ -26,15 +27,19 @@
         } @else if (dataset.key === 'buildDate') {
           <td>{{ dataset.value | unixDate }}</td>
         } @else if (dataset.key === 'lastUpdated') {
-          <td>{{ dataset.value | date }}</td>
+          <td>{{ dataset.value | date: 'short' }}</td>
         } @else if (typeof dataset.value !== "string" && dataset.value?.length > 0) {
           <td>
-            <ul>
-              <li *ngFor="let item of dataset.value">- {{ item }}</li>
-            </ul>
+            @if (dataset.value.length > 1) {
+              <ul class="chaotic-list-regular">
+                <li *ngFor="let item of dataset.value">{{ item }}</li>
+              </ul>
+            } @else {
+              <span>{{ dataset.value[0] }}</span>
+            }
           </td>
-        } @else if (!dataset.value) {
-          <td class="text-gray-500">N/A</td>
+        } @else if (!dataset.value || dataset.value?.length === 0) {
+          <td class="text-text">n/a</td>
         } @else {
           <td>{{ dataset.value }}</td>
         }

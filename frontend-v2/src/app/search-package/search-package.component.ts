@@ -23,7 +23,6 @@ export class SearchPackageComponent implements OnInit {
   currentSuggestions: string[] = [];
   packageData!: Package;
   initialSearchDone = false;
-  loading = signal<boolean>(false);
 
   @ViewChild('autoComplete') autoComplete!: AutoComplete;
 
@@ -62,7 +61,7 @@ export class SearchPackageComponent implements OnInit {
   getSuggestions() {
     this.appService
       .getPackageList()
-      .pipe(retry({ delay: 2000 }))
+      .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (data) => {
           this.suggestionPool.set(data.map((pkg) => pkg.pkgname));
@@ -75,17 +74,21 @@ export class SearchPackageComponent implements OnInit {
   }
 
   updateDisplay(query: string): void {
-    this.loading.set(true);
     this.data = [];
 
     this.appService
       .getPackage(query)
-      .pipe(retry({ delay: 2000 }))
+      .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (result) => {
           this.packageData = result;
           const data = this.packageData as Record<string, any>;
+
+          data['version'] = `${data['version']}-${data['pkgrel']}`;
+          delete data['pkgrel'];
+
           for (const key in data) {
+            if (key === 'isActive') continue;
             if (data[key] && typeof data[key] !== 'object') {
               this.data.push({ key, value: data[key] });
             } else if (data[key] && typeof data[key] === 'object') {
@@ -94,20 +97,21 @@ export class SearchPackageComponent implements OnInit {
               }
             }
           }
-
           this.initialSearchDone = true;
         },
         error: (err) => {
           this.messageToastService.error('Error', 'Failed to load package metrics');
           console.error(err);
         },
-        complete: () => {
-          this.loading.set(false);
-        },
       });
     this.appService.getSpecificPackageMetrics(query).subscribe({
       next: (result) => {
-        this.data.push({ key: 'downloads', value: result.downloads });
+        if (this.data.filter((d) => d.key === 'downloads')) {
+          const key: number = this.data.findIndex((d) => d.key === 'downloads');
+          this.data[key].value = result.downloads;
+        } else {
+          this.data.push({ key: 'downloads', value: result.downloads });
+        }
       },
       error: (err) => {
         this.messageToastService.error('Error', 'Failed to load package data');

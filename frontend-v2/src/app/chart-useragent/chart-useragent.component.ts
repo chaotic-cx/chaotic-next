@@ -10,6 +10,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { flavors } from '@catppuccin/palette';
 import { shuffleArray } from '../functions';
 import { CatppuccinFlavors } from '../theme';
+import { retry } from 'rxjs';
 
 @Component({
   selector: 'chaotic-chart-useragent',
@@ -49,25 +50,28 @@ export class ChartUseragentComponent implements OnInit {
    * @returns The number of user agents in the last 30 days.
    */
   private get30DayUserAgents(): void {
-    this.appService.get30dayUserAgents().subscribe({
-      next: (data) => {
-        // We don't want to display >30 user agents
-        const rightAmount = data.slice(0, 30);
-        // and also not too long user agent strings as that breaks visuals
-        for (const entry of rightAmount) {
-          if (entry.name.length > 50) {
-            entry.name = `${entry.name.substring(0, 50)}...`;
+    this.appService
+      .get30dayUserAgents()
+      .pipe(retry({ count: 3, delay: 5000 }))
+      .subscribe({
+        next: (data) => {
+          // We don't want to display >30 user agents
+          const rightAmount = data.slice(0, 30);
+          // and also not too long user agent strings as that breaks visuals
+          for (const entry of rightAmount) {
+            if (entry.name.length > 50) {
+              entry.name = `${entry.name.substring(0, 50)}...`;
+            }
           }
-        }
 
-        this.userAgentMetrics = rightAmount;
-        this.initChart();
-      },
-      error: (err) => {
-        this.messageToastService.error('Error', 'Failed to load user agent chart data');
-        console.error(err);
-      },
-    });
+          this.userAgentMetrics = rightAmount;
+          this.initChart();
+        },
+        error: (err) => {
+          this.messageToastService.error('Error', 'Failed to load user agent chart data');
+          console.error(err);
+        },
+      });
   }
 
   initChart(): void {
@@ -92,9 +96,11 @@ export class ChartUseragentComponent implements OnInit {
         plugins: {
           legend: {
             labels: {
-              usePointStyle: true,
+              usePointStyle: false,
               color: flavors.mocha.colors.text.hex,
+              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
             },
+            position: 'top',
           },
         },
       };

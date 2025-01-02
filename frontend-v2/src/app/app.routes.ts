@@ -11,76 +11,66 @@ import {
 } from '@angular/animations';
 import { NgModule } from '@angular/core';
 import { RouterModule, type Routes } from '@angular/router';
-import { HomeComponent } from './home/home.component';
-import { PackageListComponent } from './package-list/package-list.component';
-import { PackageStatsComponent } from './package-stats/package-stats.component';
-import { DeployLogComponent } from './deploy-log/deploy-log.component';
-import { BuildStatusComponent } from './build-status/build-status.component';
-import { DocsComponent } from './docs/docs.component';
-import { AboutComponent } from './about/about.component';
-import { MemorialComponent } from './memorial/memorial.component';
-import { NotFoundComponent } from './not-found/not-found.component';
-import { MemorialV2Component } from './memorial-v2/memorial-v2.component';
 
 export const routes: Routes = [
   {
     title: 'Chaotic-AUR',
     path: '',
-    component: HomeComponent,
+    loadComponent: () => import('./home/home.component').then((c) => c.HomeComponent),
     data: { animationState: '1' },
   },
   {
     title: 'Get Started',
     path: 'docs',
-    component: DocsComponent,
+    loadComponent: () => import('./docs/docs.component').then((c) => c.DocsComponent),
     data: { animationState: '2' },
   },
   {
     title: 'Build Status',
     path: 'status',
-    component: BuildStatusComponent,
+    loadComponent: () => import('./build-status/build-status.component').then((c) => c.BuildStatusComponent),
     data: { animationState: '3' },
   },
   {
     title: 'Deploy Log',
     path: 'deploy-log',
-    component: DeployLogComponent,
+    loadComponent: () => import('./deploy-log/deploy-log.component').then((c) => c.DeployLogComponent),
     data: { animationState: '4' },
   },
   {
     title: 'Package List',
     path: 'package-list',
-    component: PackageListComponent,
+    loadComponent: () => import('./package-list/package-list.component').then((c) => c.PackageListComponent),
     data: { animationState: '5' },
   },
   {
     title: 'Package Stats',
     path: 'stats',
-    component: PackageStatsComponent,
+    loadComponent: () => import('./package-stats/package-stats.component').then((c) => c.PackageStatsComponent),
     data: { animationState: '6' },
   },
   {
     title: 'Memorial 2024',
     path: 'memorial-v2',
-    component: MemorialV2Component,
+    loadComponent: () => import('./memorial-v2/memorial-v2.component').then((c) => c.MemorialV2Component),
     data: { animationState: '7' },
   },
   {
     title: 'About',
     path: 'about',
-    component: AboutComponent,
+    loadComponent: () => import('./about/about.component').then((c) => c.AboutComponent),
     data: { animationState: '8' },
   },
   {
     title: 'Memorial 2021',
     path: 'memorial',
-    component: MemorialComponent,
+    loadComponent: () => import('./memorial/memorial.component').then((c) => c.MemorialComponent),
     data: { animationState: 'null' },
   },
   {
     title: 'Not Found',
     path: 'not-found',
-    component: NotFoundComponent,
+    loadComponent: () => import('./not-found/not-found.component').then((c) => c.NotFoundComponent),
     data: { animationState: 'null' },
   },
   {

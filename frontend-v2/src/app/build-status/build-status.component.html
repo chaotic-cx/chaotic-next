@@ -19,7 +19,7 @@
               </ng-template>
               <ng-template #content let-unTypedPipeline>
                 <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                  <div (click)="showDialog(pipeline.pipeline.id)" class="cursor-pointer">
+                  <div pRipple (click)="showDialog(pipeline.pipeline.id)" class="cursor-pointer">
                     <i
                       class="pi"
                       [ngClass]="{
@@ -36,7 +36,7 @@
               </ng-template>
             </p-timeline>
           } @else {
-            <div *ngFor="let item of createRange(20)" class="my-3">
+            <div *ngFor="let item of createRange(22)" class="my-3">
               <p-skeleton width="100%" height="4rem"></p-skeleton>
             </div>
           }
@@ -73,7 +73,7 @@
                     <td>{{ pkg.node }}</td>
                     <td pTooltip="{{ pkg.build_class | buildClass }}" tooltipPosition="top">{{ pkg.build_class }}</td>
                     <td>
-                      <a href="{{ pkg.liveLogUrl }}"
+                      <a pRipple href="{{ pkg.liveLogUrl }}"
                         >click <i class="pi pi-external-link text-mauve align-middle" style="font-size: 0.6rem"></i>
                       </a>
                     </td>
@@ -99,7 +99,14 @@
               </ng-template>
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
-              <p-table [value]="waitingQueue">
+              <p-table
+                [value]="waitingQueue"
+                [rows]="12"
+                [rowsPerPageOptions]="[12, 20, 30]"
+                [sortOrder]="1"
+                [paginator]="waitingQueue.length > 10"
+                sortField="name"
+              >
                 <ng-template #header>
                   <tr>
                     <th>Name</th>
@@ -131,7 +138,7 @@
               </ng-template>
               <ng-template #title>Idle builders</ng-template>
               <ng-template #subtitle>Currently idle builders</ng-template>
-              <p-table [value]="idleQueue" [tableStyle]="{ 'min-width': '15rem' }">
+              <p-table [value]="idleQueue" [sortOrder]="1" sortField="name">
                 <ng-template #header>
                   <tr>
                     <th>Name</th>
@@ -165,7 +172,7 @@
               </ng-template>
               <ng-template #content let-untypedDeployment>
                 <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
-                  <a [href]="deployment.logUrl"
+                  <a pRipple [href]="deployment.logUrl"
                     >{{ deployment.pkgbase.pkgname }}
                     <br />
                     <a class="text-subtext1 text-xs">({{ deployment.repo?.name }})</a>
@@ -174,7 +181,7 @@
               </ng-template>
             </p-timeline>
           } @else {
-            <div *ngFor="let item of createRange(20)" class="my-3">
+            <div *ngFor="let item of createRange(22)" class="my-3">
               <p-skeleton width="100%" height="4rem"></p-skeleton>
             </div>
           }
@@ -206,7 +213,7 @@
                   </ng-template>
                   <ng-template #title>Active builds</ng-template>
                   <ng-template #subtitle>These are currently ongoing builds</ng-template>
-                  <p-table [value]="activeQueue" [tableStyle]="{ 'min-width': '15rem' }">
+                  <p-table [value]="activeQueue" [sortOrder]="1" sortField="name">
                     <ng-template #header>
                       <tr>
                         <th>Name</th>
@@ -223,7 +230,7 @@
                           {{ pkg.build_class }}
                         </td>
                         <td>
-                          <a href="{{ pkg.liveLogUrl }}"
+                          <a pRipple href="{{ pkg.liveLogUrl }}"
                             >click <i class="pi pi-external-link text-mauve align-middle" style="font-size: 0.6rem"></i>
                           </a>
                         </td>
@@ -244,7 +251,14 @@
                   </ng-template>
                   <ng-template #title>Waiting builds</ng-template>
                   <ng-template #subtitle>These are currently queued builds</ng-template>
-                  <p-table [value]="waitingQueue" [tableStyle]="{ 'min-width': '15rem' }">
+                  <p-table
+                    [value]="waitingQueue"
+                    [rows]="12"
+                    [rowsPerPageOptions]="[12, 20, 30]"
+                    [sortOrder]="1"
+                    [paginator]="waitingQueue.length > 10"
+                    sortField="name"
+                  >
                     <ng-template #header>
                       <tr>
                         <th>Name</th>
@@ -276,7 +290,7 @@
                   </ng-template>
                   <ng-template #title>Idle builders</ng-template>
                   <ng-template #subtitle>Currently idle builders</ng-template>
-                  <p-table [value]="idleQueue" [tableStyle]="{ 'min-width': '15rem' }">
+                  <p-table [value]="idleQueue" [sortOrder]="1" sortField="name">
                     <ng-template #header>
                       <tr>
                         <th>Name</th>
@@ -311,7 +325,7 @@
                 </ng-template>
                 <ng-template #content let-unTypedPipeline>
                   <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                    <div (click)="showDialog(pipeline.pipeline.id)" class="cursor-pointer">
+                    <div pRipple (click)="showDialog(pipeline.pipeline.id)" class="cursor-pointer">
                       <i
                         class="pi"
                         [ngClass]="{
@@ -348,7 +362,7 @@
                 <ng-template #content let-untypedDeployment>
                   <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
                     <span>
-                      <a [href]="deployment.logUrl">{{ deployment.pkgbase.pkgname }}</a
+                      <a pRipple [href]="deployment.logUrl">{{ deployment.pkgbase.pkgname }}</a
                       ><br />
                       <a class="text-sm">({{ deployment.repo?.name }})</a>
                     </span>

@@ -56,7 +56,7 @@ export class PackageListComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.appService
       .getPackageList()
-      .pipe(retry({ delay: 2000 }))
+      .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (data: Package[]) => {
           this.packageList = data.filter((pkg) => pkg.version);
