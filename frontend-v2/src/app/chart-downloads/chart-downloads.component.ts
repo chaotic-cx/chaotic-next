@@ -10,6 +10,7 @@ import { InputNumber } from 'primeng/inputnumber';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { ToastModule } from 'primeng/toast';
 import { flavors } from '@catppuccin/palette';
+import { retry } from 'rxjs';
 
 @Component({
   selector: 'chaotic-chart-downloads',
@@ -57,21 +58,24 @@ export class ChartDownloadsComponent implements OnInit {
    * Query the overall package metrics.
    */
   updatePackageMetrics(): void {
-    this.appService.getOverallPackageStats(this.amount()).subscribe({
-      next: (data) => {
-        this.globalPackageMetrics = data;
-        if (this.isWide) {
-          this.initChart();
-        } else {
-          this.getProgressBarValues(data);
-          this.cdr.markForCheck();
-        }
-      },
-      error: (err) => {
-        this.messageToastService.error('Error', 'Failed to load downloads chart data');
-        console.error(err);
-      },
-    });
+    this.appService
+      .getOverallPackageStats(this.amount())
+      .pipe(retry({ count: 3, delay: 5000 }))
+      .subscribe({
+        next: (data) => {
+          this.globalPackageMetrics = data;
+          if (this.isWide) {
+            this.initChart();
+          } else {
+            this.getProgressBarValues(data);
+            this.cdr.markForCheck();
+          }
+        },
+        error: (err) => {
+          this.messageToastService.error('Error', 'Failed to load downloads chart data');
+          console.error(err);
+        },
+      });
   }
 
   initChart(): void {
@@ -99,8 +103,9 @@ export class ChartDownloadsComponent implements OnInit {
         plugins: {
           legend: {
             labels: {
-              usePointStyle: true,
+              usePointStyle: false,
               color: flavors.mocha.colors.text.hex,
+              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
             },
           },
         },

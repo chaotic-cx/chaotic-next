@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+  <url>
+    <loc>https://aur.chaotic.cx/</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>1.00</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/docs</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/about</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/stats</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/package-list</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/deploy-log</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/status</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/httpclient</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/memorial-v2</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.80</priority>
+  </url>
+
+</urlset>

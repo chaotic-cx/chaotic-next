@@ -1,20 +1,20 @@
 <chaotic-title
   title="Package list"
   subtitle="This is the list of currently deployed, as well as historically built packages."
->
-</chaotic-title>
+></chaotic-title>
 
-<div class="chaotic-container-wide">
+<div class="chaotic-container-wide table-container">
   <p-table
     #pkgTable
-    [value]="packageList"
     dataKey="id"
+    sortField="pkgname"
+    id="pkgTable"
+    [value]="packageList"
     [rows]="25"
     [rowsPerPageOptions]="[25, 50, 100, 200]"
     [loading]="loading"
     [paginator]="true"
     [globalFilterFields]="['name', 'metadata.desc', 'metadata.url']"
-    sortField="pkgname"
     [sortOrder]="1"
   >
     <ng-template #caption>
@@ -71,7 +71,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-gray-500': !pkg.isActive,
+                'text-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.pkgname }}</span
@@ -80,7 +80,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-gray-500': !pkg.isActive,
+                'text-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.version }}-{{ pkg.pkgrel }}</span
@@ -89,7 +89,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-gray-500': !pkg.isActive,
+                'text-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.lastUpdated | date: 'short' }}</span
@@ -98,7 +98,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-gray-500': !pkg.isActive,
+                'text-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.metadata?.desc }}</span
@@ -107,7 +107,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-gray-500': !pkg.isActive,
+                'text-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               [innerHtml]="pkg.metadata?.url | stripPrefix"
@@ -117,8 +117,8 @@
             <i
               class="pi"
               [ngClass]="{
-                'pi-check-circle text-green-500': pkg.isActive,
-                'pi-trash text-gray-500': !pkg.isActive,
+                'pi-check-circle text-green': pkg.isActive,
+                'pi-trash text-surface0': !pkg.isActive,
               }"
             ></i>
           </td>
@@ -128,14 +128,14 @@
                 class="h-10"
                 (click)="openPkgbuild(pkg)"
                 [ngClass]="{
-                  'text-gray-500': !pkg.isActive,
+                  'text-surface0': !pkg.isActive,
                 }"
                 pButton
                 type="button"
                 label="Source"
               />
             } @else {
-              <span class="ml-1 align-middle text-gray-500">N/A</span>
+              <span class="text-surface0 ml-1 align-middle">N/A</span>
             }
           </td>
         </tr>

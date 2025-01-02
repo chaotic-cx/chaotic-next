@@ -13,7 +13,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideAnimationsAsync(),
     provideGarudaNG(
-      { font: 'Fira Sans' },
+      { font: 'Inter' },
       {
         theme: {
           preset: Catppuccin,

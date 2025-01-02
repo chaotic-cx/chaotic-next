@@ -1,16 +1,3 @@
-::ng-deep .p-datatable {
-  width: unset;
-}
-
 .min-h-footer {
   min-height: 80vh;
-}
-
-::ng-deep .p-autocomplete-option {
-  background: var(--ctp-mocha-base);
-}
-
-::ng-deep .p-autocomplete-list {
-  background: var(--ctp-mocha-crust);
-  border-radius: var(--p-autocomplete-border-radius);
 }

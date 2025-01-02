@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://aur.chaotic.cx/sitemap.xml

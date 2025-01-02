@@ -19,10 +19,11 @@ export class DocsComponent implements OnInit {
   isBrowser = true;
   installRepo: string;
   appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';
-  installPackage = 'pacman -S chaotic-aur/mesa-tkg-git';
-  installPackageParu = 'paru -S chaotic-aur/firefox-hg';
-  powerpillUsage = 'sudo pacman -Sy\nsudo powerpill -Su\nparu -Su';
+  installPackage = '$ sudo pacman -S chaotic-aur/mesa-tkg-git';
+  installPackageParu = '$ paru -S chaotic-aur/firefox-hg';
+  powerpillUsage = '$ sudo pacman -Sy\n$ sudo powerpill -Su\n$ paru -Su';
   ignorePkg = 'IgnorePkg = ...';
+  syncMirrors = '$ sudo pacman -Sy\n$ sudo pacman -Su ungoogled-chromium';
 
   appConfig: EnvironmentModel = inject(APP_CONFIG);
   platformId = inject(PLATFORM_ID);
@@ -31,10 +32,10 @@ export class DocsComponent implements OnInit {
     // Prevent document is not defined errors during building / SSR
     this.isBrowser = isPlatformBrowser(this.platformId);
     this.installRepo =
-      `pacman-key --recv-key ${this.appConfig.primaryKey} --keyserver keyserver.ubuntu.com\n` +
-      `pacman-key --lsign-key ${this.appConfig.primaryKey}\n` +
-      "pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
-      "pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'\n";
+      `$ sudo pacman-key --recv-key ${this.appConfig.primaryKey} --keyserver keyserver.ubuntu.com\n` +
+      `$ sudo pacman-key --lsign-key ${this.appConfig.primaryKey}\n` +
+      "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
+      "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'\n";
   }
 
   ngOnInit() {

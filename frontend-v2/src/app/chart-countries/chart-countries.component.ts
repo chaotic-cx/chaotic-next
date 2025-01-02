@@ -11,6 +11,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { flavors } from '@catppuccin/palette';
 import { CatppuccinFlavors } from '../theme';
 import { shuffleArray } from '../functions';
+import { retry } from 'rxjs';
 
 @Component({
   selector: 'chaotic-chart-countries',
@@ -49,19 +50,22 @@ export class ChartCountriesComponent implements OnInit {
    * Query the country ranks.
    */
   private getCountryRanks(): void {
-    this.appService.getCountryRanks().subscribe({
-      next: (data) => {
-        for (const country of data) {
-          country.name = `${country.name}  ${this.countryCode2Flag(country.name)}`;
-        }
-        this.countryRanks = data;
-        this.initChart();
-      },
-      error: (err) => {
-        this.messageToastService.error('Error', 'Failed to load country chart data');
-        console.error(err);
-      },
-    });
+    this.appService
+      .getCountryRanks()
+      .pipe(retry({ count: 3, delay: 5000 }))
+      .subscribe({
+        next: (data) => {
+          for (const country of data) {
+            country.name = `${country.name}  ${this.countryCode2Flag(country.name)}`;
+          }
+          this.countryRanks = data;
+          this.initChart();
+        },
+        error: (err) => {
+          this.messageToastService.error('Error', 'Failed to load country chart data');
+          console.error(err);
+        },
+      });
   }
 
   /**
@@ -100,9 +104,11 @@ export class ChartCountriesComponent implements OnInit {
         plugins: {
           legend: {
             labels: {
-              usePointStyle: true,
+              usePointStyle: false,
               color: flavors.mocha.colors.text.hex,
+              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
             },
+            position: 'right',
           },
         },
       };

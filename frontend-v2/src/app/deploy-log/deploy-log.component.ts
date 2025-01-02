@@ -14,6 +14,7 @@ import { DurationPipe } from '../pipes/duration.pipe';
 import { MessageToastService } from '@garudalinux/core';
 import { TitleComponent } from '../title/title.component';
 import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'chaotic-deploy-log',
@@ -27,6 +28,7 @@ import { ActivatedRoute, Router } from '@angular/router';
     LogurlPipe,
     DurationPipe,
     TitleComponent,
+    FormsModule,
   ],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
@@ -47,9 +49,17 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
   private readonly router = inject(Router);
 
   ngOnInit() {
+    if (this.route.snapshot.queryParams['amount']) {
+      this.amount.set(this.route.snapshot.queryParams['amount']);
+    }
+
+    this.getDeployments();
+  }
+
+  getDeployments(): void {
     this.appService
       .getPackageBuilds(this.amount())
-      .pipe(retry({ delay: 2000 }))
+      .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (data: Build[]) => {
           data.map((build) => {
