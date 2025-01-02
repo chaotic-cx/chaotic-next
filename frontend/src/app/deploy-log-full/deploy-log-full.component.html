@@ -1,54 +1,54 @@
 <div class="chaotic-container-regular">
   <div class="chaotic-container-regular">
-    <h1 class="text-center text-2xl font-extrabold text-maroon">Deployment log</h1>
-    <p class="my-4 md:px-10 text-center text-lg text-text">
+    <h1 class="text-maroon text-center text-2xl font-extrabold">Deployment log</h1>
+    <p class="text-text my-4 text-center text-lg md:px-10">
       Shows the last deployed packages and allows searching the entire history. Click the repo name for viewing the
       source repository.
     </p>
-    <div class="py-2.5 mt-2.5">
+    <div class="mt-2.5 py-2.5">
       <ul
-        class="items-center mx-auto max-w-2xl text-sm font-medium text-text border border-mauve bg-surface0 rounded-lg sm:flex"
+        class="text-text border-mauve bg-surface0 mx-auto max-w-2xl items-center rounded-lg border text-sm font-medium sm:flex"
       >
-        <li class="w-full border-b border-mauve sm:border-b-0 sm:border-r">
+        <li class="border-mauve w-full border-b sm:border-b-0 sm:border-r">
           <div class="flex items-center ps-3">
             <input
               (change)="changeDeploymentType($event)"
               checked
-              class="w-4 h-4 border-mauve focus:ring-mauve text-text"
+              class="border-mauve focus:ring-mauve text-text h-4 w-4"
               id="horizontal-list-radio-all"
               name="list-radio"
               type="radio"
               value="0"
             />
-            <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-all">All 🌍</label>
+            <label class="text-text ms-2 w-full py-3 text-sm font-medium" for="horizontal-list-radio-all">All 🌍</label>
           </div>
         </li>
-        <li class="w-full border-b border-mauve sm:border-b-0 sm:border-r">
+        <li class="border-mauve w-full border-b sm:border-b-0 sm:border-r">
           <div class="flex items-center ps-3">
             <input
               (change)="changeDeploymentType($event)"
-              class="w-4 h-4 border-mauve focus:ring-mauve text-text"
+              class="border-mauve focus:ring-mauve text-text h-4 w-4"
               id="horizontal-list-radio-success"
               name="list-radio"
               type="radio"
               value="1"
             />
-            <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-success"
+            <label class="text-text ms-2 w-full py-3 text-sm font-medium" for="horizontal-list-radio-success"
               >Success 📣</label
             >
           </div>
         </li>
-        <li class="w-full border-b border-mauve sm:border-b-0 sm:border-r">
+        <li class="border-mauve w-full border-b sm:border-b-0 sm:border-r">
           <div class="flex items-center ps-3">
             <input
               (change)="changeDeploymentType($event)"
-              class="w-4 h-4 border-mauve focus:ring-mauve text-text"
+              class="border-mauve focus:ring-mauve text-text h-4 w-4"
               id="horizontal-list-radio-failed"
               name="list-radio"
               type="radio"
               value="2"
             />
-            <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-failed"
+            <label class="text-text ms-2 w-full py-3 text-sm font-medium" for="horizontal-list-radio-failed"
               >Failed 🚫</label
             >
           </div>
@@ -57,13 +57,13 @@
           <div class="flex items-center ps-3">
             <input
               (change)="changeDeploymentType($event)"
-              class="w-4 h-4 border-mauve focus:ring-mauve text-text"
+              class="border-mauve focus:ring-mauve text-text h-4 w-4"
               id="horizontal-list-radio-timeout"
               name="list-radio"
               type="radio"
               value="3"
             />
-            <label class="w-full py-3 ms-2 text-sm font-medium text-text" for="horizontal-list-radio-timeout"
+            <label class="text-text ms-2 w-full py-3 text-sm font-medium" for="horizontal-list-radio-timeout"
               >Timed out ⏳</label
             >
           </div>
@@ -71,12 +71,12 @@
       </ul>
     </div>
 
-    <div class="container md:flex my-5 justify-center">
+    <div class="container my-5 justify-center md:flex">
       <input
         (focusout)="getNewAmount()"
         (keyup.enter)="getNewAmount()"
         [(ngModel)]="logAmount"
-        class="text-input mx-auto my-1 md:mx-1 block w-full rounded-lg border border-red bg-surface0 py-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
+        class="text-input border-red bg-surface0 text-maroon focus:border-red focus:bg-surface1 mx-auto my-1 block w-full max-w-md rounded-lg border py-4 ps-10 text-sm md:mx-1"
         id="input-log-amount"
         name="logamount"
         placeholder="Number of logs to show (default 100)"
@@ -87,7 +87,7 @@
         (focusout)="showDeployments()"
         (keyup.enter)="showDeployments()"
         [(ngModel)]="searchterm"
-        class="text-input mx-auto md:mx-1 my-1 block w-full rounded-lg border border-red bg-surface0 py-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
+        class="text-input border-red bg-surface0 text-maroon focus:border-red focus:bg-surface1 mx-auto my-1 block w-full max-w-md rounded-lg border py-4 ps-10 text-sm md:mx-1"
         id="input-search"
         name="searchterm"
         placeholder="Search for a package name"
@@ -100,7 +100,7 @@
           id="select-theme"
           [formControl]="repo"
           (change)="getNewAmount()"
-          class="mx-auto my-1 sm:w-52 w-full rounded-lg text-left border border-red bg-surface0 py-4 ps-10 text-sm text-maroon focus:border-red focus:bg-surface1 max-w-md"
+          class="border-red bg-surface0 text-maroon focus:border-red focus:bg-surface1 mx-auto my-1 w-full max-w-md rounded-lg border py-4 ps-10 text-left text-sm sm:w-52"
         >
           @for (repo of Repository; track repo) {
             <option value="{{ repo }}">{{ repo | repo }}</option>
@@ -110,9 +110,9 @@
     </div>
 
     @if (loading) {
-      <div class="mx-auto p-5 mb-5 text-center md:container md:mx-auto" role="status">
+      <div class="mx-auto mb-5 p-5 text-center md:container md:mx-auto" role="status">
         <svg
-          class="inline h-12 w-12 animate-spin fill-red text-gray-200"
+          class="fill-red inline h-12 w-12 animate-spin text-gray-200"
           aria-hidden="true"
           viewBox="0 0 100 101"
           fill="none"
@@ -135,12 +135,12 @@
       <li class="mb-10">
         @for (deployment of shownDeployments; track deployment) {
           <li>
-            <div class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex">
-              <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0">{{ deployment.date }} </time>
-              <div class="lex text-sm font-normal text-text">
+            <div class="border-mauve bg-surface0 items-center justify-between rounded-lg border p-4 shadow-sm sm:flex">
+              <time class="text-text mb-1 text-xs font-normal sm:order-last sm:mb-0">{{ deployment.date }} </time>
+              <div class="lex text-text text-sm font-normal">
                 {{ deployment.string }} <a class="text-maroon">{{ deployment.name }}</a> from
                 <a class="text-rosewater">{{ deployment.node }}</a> to
-                <a class="font-semibold text-red" href="{{ deployment.sourceUrl }}">{{ deployment.repo }}</a>
+                <a class="text-red font-semibold" href="{{ deployment.sourceUrl }}">{{ deployment.repo }}</a>
                 @if (deployment.log) {
                   - <a class="text-yellow" href="{{ deployment.log }}">log ↗</a>
                 }

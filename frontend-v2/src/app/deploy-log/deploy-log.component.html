@@ -1,4 +1,4 @@
-<chaotic-title title="Deployment log" subtitle="The most recent deployments to Chaotic-AUR-managed repositories">
+<chaotic-title title="Deployment log" subtitle="The most recent deployments to Chaotic-AUR-managed repositories.">
 </chaotic-title>
 
 <div class="chaotic-container-wide">
@@ -10,7 +10,7 @@
     [rowsPerPageOptions]="[25, 50, 100, 200]"
     [loading]="loading"
     [paginator]="true"
-    [globalFilterFields]="['build.pkgbase.pkgname', 'build.builder.name', 'build.repo.name']"
+    [globalFilterFields]="['pkgbase.pkgname', 'builder.name', 'repo.name']"
     sortField="timestamp"
     [sortOrder]="-1"
   >
@@ -21,7 +21,13 @@
           <p-inputicon>
             <i class="pi pi-search"></i>
           </p-inputicon>
-          <input pInputText type="text" (input)="globalFilter($event.target)" placeholder="Search keyword" />
+          <input
+            pInputText
+            type="text"
+            [value]="searchValue()"
+            (input)="globalFilter($event.target)"
+            placeholder="Search keyword"
+          />
         </p-iconfield>
       </div>
     </ng-template>

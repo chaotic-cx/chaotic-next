@@ -11,6 +11,7 @@ import { MessageToastService } from '@garudalinux/core';
 import { TitleComponent } from '../title/title.component';
 import { SearchPackageComponent } from '../search-package/search-package.component';
 import { retry } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'chaotic-package-stats',
@@ -34,14 +35,25 @@ import { retry } from 'rxjs';
   providers: [MessageToastService],
 })
 export class PackageStatsComponent implements OnInit {
-  loading = true;
+  loading = signal<boolean>(false);
   totalUsers = signal<string>('Loading...');
+  currentTab = '0';
 
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   async ngOnInit(): Promise<void> {
     void this.get30DayUsers();
+
+    if (this.route.snapshot.fragment === 'globals') {
+      this.currentTab = '1';
+    } else if (this.route.snapshot.fragment === 'downloads') {
+      this.currentTab = '2';
+    } else {
+      void this.router.navigate([], { fragment: 'search', queryParamsHandling: 'merge' });
+    }
   }
 
   /**
@@ -60,5 +72,19 @@ export class PackageStatsComponent implements OnInit {
           console.error(err);
         },
       });
+  }
+
+  changeTab($event: string | number) {
+    switch ($event) {
+      case '0':
+        void this.router.navigate([], { fragment: 'search', queryParamsHandling: 'replace' });
+        break;
+      case '1':
+        void this.router.navigate([], { fragment: 'downloads', queryParamsHandling: 'replace' });
+        break;
+      case '2':
+        void this.router.navigate([], { fragment: 'globals', queryParamsHandling: 'replace' });
+        break;
+    }
   }
 }

@@ -13,6 +13,9 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { MessageToastService } from '@garudalinux/core';
 import { TitleComponent } from '../title/title.component';
 import { Dialog } from 'primeng/dialog';
+import { Tooltip } from 'primeng/tooltip';
+import { Skeleton } from 'primeng/skeleton';
+import { Mutex } from 'async-mutex';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -29,15 +32,22 @@ import { Dialog } from 'primeng/dialog';
     TabPanel,
     TitleComponent,
     Dialog,
+    Tooltip,
+    Skeleton,
   ],
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
   providers: [MessageToastService],
 })
 export class BuildStatusComponent implements OnInit {
-  isWide!: boolean;
-  lastUpdated: Date | undefined;
-  loading = true;
+  isWide = signal<boolean>(true);
+  lastUpdated = signal<Date | undefined>(undefined);
+  loadingQueue = signal<boolean>(true);
+  loadingDeployments = signal<boolean>(true);
+  loadingPipelines = signal<boolean>(true);
+
+  updateMutex = new Mutex();
+
   latestDeployments!: Build[];
   activeQueue: {
     name: string;
@@ -59,68 +69,104 @@ export class BuildStatusComponent implements OnInit {
   messageToastService = inject(MessageToastService);
   observer = inject(BreakpointObserver);
 
-  dialogData!: PipelineWithExternalStatus;
+  dialogData = signal<PipelineWithExternalStatus>({} as PipelineWithExternalStatus);
   dialogVisible = signal<boolean>(false);
-  pipelineWithStatus!: PipelineWithExternalStatus[];
+  pipelineWithStatus = signal<PipelineWithExternalStatus[]>([]);
 
   async ngOnInit(): Promise<void> {
     this.observer.observe(`(max-width: 1100px)`).subscribe((state) => {
-      this.isWide = !state.matches;
+      this.isWide.set(!state.matches);
     });
 
-    this.appService
-      .getPackageBuilds(20, BuildStatus.SUCCESS)
-      .pipe(retry({ delay: 2000 }))
-      .subscribe({
-        next: (data) => {
-          this.latestDeployments = data;
-        },
-        error: (err) => {
-          this.messageToastService.error('Error', 'Failed to fetch latest deployments');
-          console.error(err);
-        },
-        complete: () => {
-          this.loading = false;
-        },
-      });
+    void this.updateAll(false);
 
-    void this.getQueueStats(false);
-    void this.getPipelines();
+    startShortPolling(15000, async (): Promise<void> => {
+      void this.updateAll(true);
+    });
+  }
 
-    startShortPolling(5000, async (): Promise<void> => {
-      await this.getQueueStats(true);
-      await this.getPipelines();
+  /**
+   * Update all the data on the page and set the last updated time
+   */
+  async updateAll(inBackground = false): Promise<void> {
+    void this.updateMutex.runExclusive(async () => {
+      await Promise.all([
+        this.getQueueStats(inBackground),
+        this.getPipelines(inBackground),
+        this.getPackageBuilds(inBackground),
+      ]);
+      this.lastUpdated.set(new Date());
+    });
+  }
+
+  /**
+   * Get the latest deployments
+   */
+  async getPackageBuilds(inBackground = false): Promise<void> {
+    this.loadingDeployments.set(!inBackground);
+
+    await new Promise<void>((resolve, reject) => {
+      this.appService
+        .getPackageBuilds(20, BuildStatus.SUCCESS)
+        .pipe(retry({ delay: 5000, count: 5 }))
+        .subscribe({
+          next: (data) => {
+            this.latestDeployments = data;
+          },
+          error: (err) => {
+            this.messageToastService.error('Error', 'Failed to fetch latest deployments');
+            console.error(err);
+          },
+          complete: () => {
+            this.loadingDeployments.set(false);
+          },
+        });
     });
   }
 
   /**
    * Get current pipeline status
    */
-  async getPipelines() {
-    this.appService.getStatusChecks(1).subscribe({
-      next: (pipelines) => {
-        for (const pipeline of pipelines) {
-          if (pipeline.pipeline.status === 'failed') {
-            let failedJobs = 0;
-            for (const job of pipeline.commit) {
-              if (job.status === 'failed') {
-                failedJobs++;
+  async getPipelines(inBackground = false): Promise<void> {
+    this.loadingPipelines.set(!inBackground);
+
+    await new Promise<void>((resolve, reject) => {
+      this.appService
+        .getStatusChecks()
+        .pipe(retry({ delay: 5000, count: 5 }))
+        .subscribe({
+          next: (pipelines) => {
+            for (const pipeline of pipelines) {
+              if (pipeline.pipeline.status === 'failed') {
+                let failedJobs = 0;
+                for (const job of pipeline.commit) {
+                  if (job.status === 'failed') {
+                    failedJobs++;
+                  }
+                }
+                pipeline.pipeline.status = `${failedJobs}/${pipeline.commit.length} failed`;
+              } else if (pipeline.pipeline.status === 'canceled') {
+                pipeline.pipeline.status = 'success';
               }
-              job.name = job.name.split(': ')[1];
+
+              for (const job of pipeline.commit) {
+                job.name = job.name.split(': ')[1];
+              }
             }
-            pipeline.pipeline.status = `${failedJobs}/${pipeline.commit.length} failed`;
-          } else if (pipeline.pipeline.status === 'canceled') {
-            pipeline.pipeline.status = 'success';
-          }
-        }
-        this.pipelineWithStatus = pipelines;
-      },
-      error: (err) => {
-        console.error(err);
-      },
-      complete: () => {
-        this.loading = false;
-      },
+            this.pipelineWithStatus.set(pipelines);
+          },
+          error: (err) => {
+            if (!inBackground) {
+              this.messageToastService.error('Error', 'Failed to fetch pipeline status');
+            }
+            console.error(err);
+            reject(err);
+          },
+          complete: () => {
+            this.loadingPipelines.set(false);
+            resolve();
+          },
+        });
     });
   }
 
@@ -129,63 +175,70 @@ export class BuildStatusComponent implements OnInit {
    * @param inBackground Whether the request is in the background or not
    */
   async getQueueStats(inBackground: boolean): Promise<void> {
-    this.loading = !inBackground;
-    if (!inBackground) this.lastUpdated = undefined;
+    this.loadingQueue.set(!inBackground);
 
-    this.appService.getQueueStats().subscribe({
-      next: (currentQueue) => {
-        for (const queue of Object.keys(currentQueue)) {
-          switch (queue) {
-            case 'active': {
-              const tableData = [];
-              for (const pkg of currentQueue.active.packages) {
-                tableData.push({
-                  name: pkg.name.split('/')[2],
-                  build_class: pkg.build_class as BuildClass,
-                  node: pkg.node,
-                  liveLogUrl: pkg.liveLog ? pkg.liveLog : '',
-                });
+    await new Promise<void>((resolve, reject) => {
+      this.appService
+        .getQueueStats()
+        .pipe(retry({ delay: 5000, count: 5 }))
+        .subscribe({
+          next: (currentQueue) => {
+            for (const queue of Object.keys(currentQueue)) {
+              switch (queue) {
+                case 'active': {
+                  const tableData = [];
+                  for (const pkg of currentQueue.active.packages) {
+                    tableData.push({
+                      name: pkg.name.split('/')[2],
+                      build_class: pkg.build_class as BuildClass,
+                      node: pkg.node,
+                      liveLogUrl: pkg.liveLog ? pkg.liveLog : '',
+                    });
+                  }
+                  this.activeQueue = tableData;
+                  break;
+                }
+                case 'waiting': {
+                  const tableData = [];
+                  for (const pkg of currentQueue.waiting.packages) {
+                    tableData.push({
+                      name: pkg.name.split('/')[2],
+                      build_class: pkg.build_class as BuildClass,
+                    });
+                  }
+                  this.waitingQueue = tableData;
+                  break;
+                }
+                case 'idle': {
+                  const tableData = [];
+                  for (const node of currentQueue.idle.nodes) {
+                    tableData.push({
+                      name: node.name,
+                      build_class: node.build_class as BuildClass,
+                    });
+                  }
+                  this.idleQueue = tableData;
+                  break;
+                }
               }
-              this.activeQueue = tableData;
-              break;
             }
-            case 'waiting': {
-              const tableData = [];
-              for (const pkg of currentQueue.waiting.packages) {
-                tableData.push({
-                  name: pkg.name.split('/')[2],
-                  build_class: pkg.build_class as BuildClass,
-                });
-              }
-              this.waitingQueue = tableData;
-              break;
-            }
-            case 'idle': {
-              const tableData = [];
-              for (const node of currentQueue.idle.nodes) {
-                tableData.push({
-                  name: node.name,
-                  build_class: node.build_class as BuildClass,
-                });
-              }
-              this.idleQueue = tableData;
-              break;
-            }
-          }
-        }
 
-        // Finally, update the component's state
-        this.lastUpdated = new Date();
-        this.cdr.detectChanges();
-        this.loading = false;
-      },
-      error: (err) => {
-        this.messageToastService.error('Error', 'Failed to fetch queue stats');
-        console.error(err);
-      },
-      complete: () => {
-        this.loading = false;
-      },
+            // Finally, update the component's state
+            this.lastUpdated.set(new Date());
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            if (!inBackground) {
+              this.messageToastService.error('Error', 'Failed to fetch queue stats');
+            }
+            console.error(err);
+            reject(err);
+          },
+          complete: () => {
+            this.loadingQueue.set(false);
+            resolve();
+          },
+        });
     });
   }
 
@@ -198,9 +251,13 @@ export class BuildStatusComponent implements OnInit {
   }
 
   showDialog(pipelineId: number) {
-    this.dialogData = this.pipelineWithStatus.find(
-      (pipeline) => pipeline.pipeline.id === pipelineId,
-    ) as PipelineWithExternalStatus;
+    this.dialogData.set(
+      this.pipelineWithStatus()!.find((pipeline) => pipeline.pipeline.id === pipelineId) as PipelineWithExternalStatus,
+    );
     this.dialogVisible.set(true);
+  }
+
+  createRange(number: number): number[] {
+    return new Array(number).fill(0).map((n, index) => index + 1);
   }
 }

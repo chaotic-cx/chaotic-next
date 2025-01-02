@@ -5,7 +5,6 @@ import { Ripple } from 'primeng/ripple';
 import { Panel } from 'primeng/panel';
 import { Card } from 'primeng/card';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
-import { Divider } from 'primeng/divider';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TitleComponent } from '../title/title.component';
 
@@ -20,7 +19,6 @@ import { TitleComponent } from '../title/title.component';
     AccordionPanel,
     AccordionHeader,
     AccordionContent,
-    Divider,
     TitleComponent,
   ],
   templateUrl: './about.component.html',

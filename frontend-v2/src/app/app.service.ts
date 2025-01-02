@@ -5,7 +5,6 @@ import {
   type Build,
   type BuildStatus,
   type CountryRankList,
-  type GitLabPipeline,
   type Package,
   type PackageRankList,
   type PipelineWithExternalStatus,
@@ -24,12 +23,8 @@ export class AppService {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly http = inject(HttpClient);
 
-  getPipelines(): Observable<GitLabPipeline[]> {
-    return this.http.get<GitLabPipeline[]>(`${this.appConfig.repoApiUrl}/pipelines?per_page=50`);
-  }
-
-  getStatusChecks(page: number): Observable<PipelineWithExternalStatus[]> {
-    return this.http.get<PipelineWithExternalStatus[]>(`${this.appConfig.backendUrl}/gitlab/pipelines/${page}`);
+  getStatusChecks(): Observable<PipelineWithExternalStatus[]> {
+    return this.http.get<PipelineWithExternalStatus[]>(`${this.appConfig.backendUrl}/gitlab/pipelines`);
   }
 
   getQueueStats(): Observable<StatsObject> {

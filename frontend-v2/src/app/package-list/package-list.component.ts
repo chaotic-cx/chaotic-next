@@ -1,4 +1,4 @@
-import { Component, inject, LOCALE_ID, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, inject, LOCALE_ID, OnInit, ViewChild } from '@angular/core';
 import { Table, TableModule } from 'primeng/table';
 import { AppService } from '../app.service';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -16,6 +16,7 @@ import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { APP_CONFIG } from 'frontend-v2/src/environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { TitleComponent } from '../title/title.component';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -39,18 +40,20 @@ import { TitleComponent } from '../title/title.component';
   styleUrl: './package-list.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
 })
-export class PackageListComponent implements OnInit {
+export class PackageListComponent implements OnInit, AfterViewInit {
   loading = true;
   packageList!: Package[];
-  searchValue: string | undefined;
+  searchValue: string = '';
 
   @ViewChild('pkgTable') pkgTable!: Table;
 
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
-  async ngOnInit() {
+  ngOnInit() {
     this.appService
       .getPackageList()
       .pipe(retry({ delay: 2000 }))
@@ -68,6 +71,13 @@ export class PackageListComponent implements OnInit {
       });
   }
 
+  ngAfterViewInit() {
+    if (this.route.snapshot.queryParams['search']) {
+      this.pkgTable.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
+      this.searchValue = this.route.snapshot.queryParams['search'];
+    }
+  }
+
   clear(table: Table) {
     table.clear();
     this.searchValue = '';
@@ -77,6 +87,7 @@ export class PackageListComponent implements OnInit {
     if (!target) return;
     const input = target as HTMLInputElement;
     this.pkgTable.filterGlobal(input.value, 'contains');
+    void this.router.navigate([], { queryParams: { search: input.value } });
   }
 
   typed(value: any): Package {
@@ -84,7 +95,6 @@ export class PackageListComponent implements OnInit {
   }
 
   openPkgbuild(pkg: Package) {
-    // Open URL
     window.open(`${this.appConfig.repoUrl}/${pkg.pkgname}`, '_blank');
   }
 }

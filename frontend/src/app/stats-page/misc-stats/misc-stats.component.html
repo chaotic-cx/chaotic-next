@@ -1,10 +1,10 @@
 <div class="chaotic-container-regular p-5 md:mx-auto">
-  <h3 class="text-center text-2xl font-extrabold text-maroon">Packages & country ranks</h3>
+  <h3 class="text-maroon text-center text-2xl font-extrabold">Packages & country ranks</h3>
   <div>
     @if (loading) {
       <div class="mx-auto mt-5 p-5 text-center md:container md:mx-auto" role="status">
         <svg
-          class="inline h-12 w-12 animate-spin fill-red text-gray-200"
+          class="fill-red inline h-12 w-12 animate-spin text-gray-200"
           aria-hidden="true"
           viewBox="0 0 100 101"
           fill="none"
@@ -26,23 +26,23 @@
 
   @if (lastUpdated !== 'Stats are currently loading...' && countryRanks.length > 0 && userAgentMetrics.length > 0) {
     <div class="chaotic-container-regular">
-      <h2 class="p-4 text-center text-mauve">Last updated: {{ lastUpdated | date }}</h2>
+      <h2 class="text-mauve p-4 text-center">Last updated: {{ lastUpdated | date }}</h2>
       <div class="md:mr-5 md:flex">
         <div class="w-full">
-          <table class="w-full table-auto rounded-2xl bg-surface0">
+          <table class="bg-surface0 w-full table-auto rounded-2xl">
             <thead>
               <tr>
-                <th class="p-4 text-mauve">Count</th>
-                <th class="p-4 text-mauve">Name</th>
+                <th class="text-mauve p-4">Count</th>
+                <th class="text-mauve p-4">Name</th>
               </tr>
             </thead>
             <tbody>
               @for (userAgent of userAgentMetrics; track userAgent) {
                 <tr class="odd:bg-surface1 even:bg-surface0">
-                  <td class="p-4 text-center text-text">
+                  <td class="text-text p-4 text-center">
                     {{ userAgent.count }}
                   </td>
-                  <td class="p-4 text-center text-text md:whitespace-nowrap">
+                  <td class="text-text p-4 text-center md:whitespace-nowrap">
                     {{ userAgent.name }}
                   </td>
                 </tr>
@@ -51,20 +51,20 @@
           </table>
         </div>
         <div class="mt-5 w-full md:ml-5 md:mt-0 md:flex">
-          <table class="w-full table-auto rounded-2xl bg-surface0 p-5">
+          <table class="bg-surface0 w-full table-auto rounded-2xl p-5">
             <thead>
               <tr>
-                <th class="p-4 text-mauve">Count</th>
-                <th class="p-4 text-mauve">Country</th>
+                <th class="text-mauve p-4">Count</th>
+                <th class="text-mauve p-4">Country</th>
               </tr>
             </thead>
             <tbody>
               @for (country of countryRanks; track country) {
                 <tr class="odd:bg-surface1 even:bg-surface0">
-                  <td class="p-4 text-center text-text">
+                  <td class="text-text p-4 text-center">
                     {{ country.count }}
                   </td>
-                  <td class="p-4 text-center text-text">
+                  <td class="text-text p-4 text-center">
                     {{ country.name }}
                   </td>
                 </tr>
@@ -77,7 +77,7 @@
   }
   @if (lastUpdated !== 'Stats are currently loading...' && userAgentMetrics.length === 0 && countryRanks.length === 0) {
     <div class="chaotic-container-regular">
-      <p class="my-4 text-center text-lg text-red">
+      <p class="text-red my-4 text-center text-lg">
         Seemingly there has been an issue with fetching the required data 😔️
       </p>
     </div>

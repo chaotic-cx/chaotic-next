@@ -3,12 +3,12 @@
     <li class="mb-10">
       @for (deployment of latestDeployments; track deployment) {
         <li>
-          <div class="items-center justify-between rounded-lg border border-mauve bg-surface0 p-4 shadow-sm sm:flex">
-            <time class="mb-1 text-xs font-normal text-text sm:order-last sm:mb-0">{{ deployment.date }} </time>
-            <div class="lex text-sm font-normal text-text">
+          <div class="border-mauve bg-surface0 items-center justify-between rounded-lg border p-4 shadow-sm sm:flex">
+            <time class="text-text mb-1 text-xs font-normal sm:order-last sm:mb-0">{{ deployment.date }} </time>
+            <div class="lex text-text text-sm font-normal">
               Deployed <a class="text-maroon"> {{ deployment.name }}</a> from
               <a class="text-rosewater">{{ deployment.node }}</a> to
-              <a href="{{ deployment.sourceUrl }} " class="font-semibold text-red">{{ deployment.repo }}</a>
+              <a href="{{ deployment.sourceUrl }} " class="text-red font-semibold">{{ deployment.repo }}</a>
               @if (deployment.log) {
                 - <a class="text-yellow" href="{{ deployment.log }}">log ↗</a>
               }
@@ -22,7 +22,7 @@
 <div class="chaotic-container-regular mx-auto my-5 items-center">
   <button
     (click)="checkNewDeployments()"
-    class="hover:chaotic-grow-l mr-2.5 rounded-lg bg-maroon px-5 py-2.5 text-base text-sm font-medium hover:bg-mauve focus:outline-none"
+    class="hover:chaotic-grow-l bg-maroon hover:bg-mauve mr-2.5 rounded-lg px-5 py-2.5 text-base text-sm font-medium focus:outline-none"
     type="button"
   >
     Refresh deploy list
