@@ -1,9 +1,8 @@
-import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
-import { PipelineWebhook } from './interfaces';
 import { PipelineWithExternalStatus } from '@./shared-lib';
+import { Mutex } from 'async-mutex';
 
 @Injectable()
 export class GitlabService {
@@ -11,65 +10,51 @@ export class GitlabService {
     token: this.configService.getOrThrow<string>('CAUR_GITLAB_TOKEN'),
   });
 
+  updateMutex = new Mutex();
+
   private readonly chaoticId = this.configService.getOrThrow<string>('CAUR_GITLAB_ID_CAUR');
   private readonly garudaId = this.configService.getOrThrow<string>('CAUR_GITLAB_ID_GARUDA');
-  private readonly botEmail = this.configService.getOrThrow<string>('CAUR_AUTO_COMMIT_AUTHOR');
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
-  ) {}
+  constructor(private readonly configService: ConfigService) {}
 
   private isExternalStage(name: string): boolean {
     return name.startsWith('chaotic-aur:') || name.startsWith('garuda:');
   }
 
-  updatePipelineCache(body: PipelineWebhook) {
-    Logger.log('Pipeline webhook received', 'GitlabService');
-    Logger.log(body, 'GitlabService');
+  /**
+   * Get the last GitLab pipelines for the chaotic-aur.
+   * @returns The last pipelines with their external statuses (aka build logs)
+   */
+  async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
+    return await this.updateMutex.runExclusive(async () => {
+      try {
+        const fetchPromises: Promise<{ commit: CommitStatusSchema[]; pipeline: PipelineSchema }>[] = [];
 
-    const pages = [1, 2, 3, 4];
-    pages.map((page) => {
-      this.httpService.get(`/gitlab/pipelines/${page}`).subscribe({
-        next: (response) => {
-          Logger.log(response.data, 'GitlabService');
-        },
-        error: (err) => {
-          Logger.error(err, 'GitlabService');
-        },
-      });
+        let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
+          maxPages: 1,
+          page: 1,
+          perPage: 50,
+        });
+        allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
+
+        for (const pipeline of allPipelines) {
+          this.getCommitStatus(pipeline, fetchPromises);
+        }
+
+        const promiseResults = await Promise.all(fetchPromises);
+        return promiseResults.sort((a, b) => b.pipeline.id - a.pipeline.id);
+      } catch (err) {
+        Logger.error(err, 'GitlabService');
+      }
     });
   }
 
-  async getLastPipelines(options: { page?: number }): Promise<PipelineWithExternalStatus[]> {
-    try {
-      const fetchPromises: Promise<{ commit: CommitStatusSchema[]; pipeline: PipelineSchema }>[] = [];
-
-      let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
-        maxPages: 1,
-        page: options.page,
-        perPage: 50,
-      });
-      allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
-
-      for (const pipeline of allPipelines) {
-        this.getCommitStatus(pipeline, fetchPromises);
-      }
-
-      const promiseResults = await Promise.all(fetchPromises);
-      return promiseResults.sort((a, b) => b.pipeline.id - a.pipeline.id);
-    } catch (err) {
-      Logger.error(err, 'GitlabService');
-    }
-  }
-
-  private getCommitStatus(
-    pipeline: PipelineSchema,
-    promiseArray: Promise<{
-      commit: CommitStatusSchema[];
-      pipeline: PipelineSchema;
-    }>[],
-  ) {
+  /**
+   * Get the commit status for a pipeline, pushing the promise to the array of promises
+   * @param pipeline The pipeline to get the status for
+   * @param promiseArray The array of promises to push the new promise to
+   */
+  private getCommitStatus(pipeline: PipelineSchema, promiseArray: Promise<PipelineWithExternalStatus>[]) {
     promiseArray.push(
       new Promise((resolve) => {
         this.api.Commits.allStatuses(this.chaoticId, pipeline.sha).then((statuses) => {
