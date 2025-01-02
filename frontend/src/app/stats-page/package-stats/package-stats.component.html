@@ -1,10 +1,10 @@
 <div class="mb-10 p-5 md:container md:mx-auto">
-  <h3 class="text-center text-2xl font-extrabold text-maroon">Package downloads last month</h3>
+  <h3 class="text-maroon text-center text-2xl font-extrabold">Package downloads last month</h3>
   <div>
     @if (loading) {
       <div class="mx-auto mt-5 p-5 text-center md:container md:mx-auto" role="status">
         <svg
-          class="inline h-12 w-12 animate-spin fill-red text-gray-200"
+          class="fill-red inline h-12 w-12 animate-spin text-gray-200"
           aria-hidden="true"
           viewBox="0 0 100 101"
           fill="none"
@@ -25,22 +25,22 @@
   </div>
 
   @if (lastUpdated !== 'Stats are currently loading...' && globalPackageMetrics.length > 0) {
-    <h2 class="p-4 text-center text-mauve">Last updated: {{ lastUpdated | date }}</h2>
+    <h2 class="text-mauve p-4 text-center">Last updated: {{ lastUpdated | date }}</h2>
     <div class="px-5 pb-10 md:container md:max-w-screen-md">
-      <table class="w-full table-auto rounded-2xl bg-surface0">
+      <table class="bg-surface0 w-full table-auto rounded-2xl">
         <thead>
           <tr>
-            <th class="p-4 text-mauve">Count</th>
-            <th class="p-4 text-mauve">Name</th>
+            <th class="text-mauve p-4">Count</th>
+            <th class="text-mauve p-4">Name</th>
           </tr>
         </thead>
         <tbody>
           @for (pkg of globalPackageMetrics; track pkg) {
             <tr class="odd:bg-surface1 even:bg-surface0">
-              <td class="p-4 text-center text-text">
+              <td class="text-text p-4 text-center">
                 {{ pkg.count }}
               </td>
-              <td class="p-4 text-center text-text">
+              <td class="text-text p-4 text-center">
                 {{ pkg.name }}
               </td>
             </tr>
@@ -51,7 +51,7 @@
   }
   @if (lastUpdated !== 'Stats are currently loading...' && globalPackageMetrics.length === 0) {
     <div class="px-5 pt-5 md:container md:mx-auto">
-      <p class="my-4 text-center text-lg text-red">
+      <p class="text-red my-4 text-center text-lg">
         Seemingly there has been an issue with fetching the required data 😔️
       </p>
     </div>

@@ -1,11 +1,11 @@
 <div class="chaotic-container-regular bg-base">
   <div class="mb-5 text-center">
-    <h2 class="text-2xl font-extrabold text-maroon">Memorial</h2>
-    <p class="my-4 text-lg text-text">
+    <h2 class="text-maroon text-2xl font-extrabold">Memorial</h2>
+    <p class="text-text my-4 text-lg">
       These screenshots have been collected by the community as celebration of the 3rd birthday of Chaotic-AUR.
     </p>
   </div>
-  <div class="grid grid-cols-2 mt-10 gap-10 md:grid-cols-4 5xl:grid-cols-6">
+  <div class="5xl:grid-cols-6 mt-10 grid grid-cols-2 gap-10 md:grid-cols-4">
     @for (link of termLinks; track link) {
       <a href="{{ link }}">
         <img
@@ -18,7 +18,7 @@
       </a>
     }
   </div>
-  <div class="mt-5 grid grid-cols-1 content-center gap-10 md:grid-cols-2 5xl:grid-cols-4">
+  <div class="5xl:grid-cols-4 mt-5 grid grid-cols-1 content-center gap-10 md:grid-cols-2">
     @for (link of desktopLinks; track link) {
       <a href="{{ link }}">
         <img

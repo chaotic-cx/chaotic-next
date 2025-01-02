@@ -1,4 +1,4 @@
-<div class="background h-max">
+<div class="background min-h-dvh">
   <garuda-shell [menuItems]="items">
     <img garudaShellBarStart ngSrc="assets/logo.webp" width="28" height="28" alt="logo" />
     <div class="mt-5" [@routerTransition]="prepareRoute(routerOutlet)">
@@ -6,5 +6,5 @@
     </div>
     <p-scroll-top></p-scroll-top>
   </garuda-shell>
-  <chaotic-footer></chaotic-footer>
 </div>
+<chaotic-footer></chaotic-footer>

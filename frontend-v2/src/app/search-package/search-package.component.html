@@ -1,7 +1,6 @@
 <div>
   <p-auto-complete
     #autoComplete
-    [forceSelection]="true"
     [suggestions]="currentSuggestions"
     (completeMethod)="search($event)"
     (onSelect)="updateDisplay($event.value)"

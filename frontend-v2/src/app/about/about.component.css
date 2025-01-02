@@ -1,3 +1,7 @@
-::ng-deep div > .p-panel-header {
-  display: none;
+.p-accordionpanel:not(.p-disabled).p-accordionpanel-active > .p-accordionheader {
+  color: var(--ctp-mocha-maroon);
+}
+
+.p-accordionheader {
+  color: var(--ctp-mocha-text);
 }

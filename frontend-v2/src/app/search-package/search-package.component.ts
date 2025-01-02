@@ -9,6 +9,7 @@ import { retry } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'chaotic-search-package',
@@ -31,9 +32,17 @@ export class SearchPackageComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly filterService = inject(FilterService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   async ngOnInit(): Promise<void> {
     this.getSuggestions();
+
+    this.route.queryParams.subscribe((params) => {
+      if (params['search'] && /^[0-9|a-zA-Z-]*$/.test(params['search'])) {
+        this.updateDisplay(params['search']);
+      }
+    });
   }
 
   search(event: AutoCompleteCompleteEvent) {
@@ -43,8 +52,8 @@ export class SearchPackageComponent implements OnInit {
       this.currentSuggestions = this.suggestionPool().filter((name) =>
         this.filterService.filters['contains'](name, event.query),
       );
-      console.log(this.autoComplete);
       this.autoComplete.inputStyleClass = '';
+      void this.router.navigate(['/stats'], { queryParams: { search: event.query } });
     } else {
       this.autoComplete.inputStyleClass = 'ng-invalid ng-dirty';
     }

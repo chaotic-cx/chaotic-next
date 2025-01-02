@@ -1,8 +1,11 @@
 <div class="chaotic-container-wide-center">
-  <chaotic-title title="Package stats" subtitle="Area for package statistics and other fun stuff."> </chaotic-title>
+  <chaotic-title
+    title="Package stats"
+    subtitleHtml="Area for package statistics and other fun stuff.<br>Total users last month: {{ totalUsers() }}"
+  ></chaotic-title>
 
   <div>
-    <p-tabs class="blur-card" value="0">
+    <p-tabs [(value)]="currentTab" (valueChange)="changeTab($event)" class="blur-card">
       <p-tablist>
         <p-tab value="0">Search</p-tab>
         <p-tab value="1">Globals</p-tab>

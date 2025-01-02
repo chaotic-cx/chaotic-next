@@ -6,9 +6,9 @@
   >
   </chaotic-title>
   <div>
-    <div class="mt-5">
-      @if (isWide) {
-        <p-panel>
+    <div class="chaotic-panel mt-5">
+      <p-panel header="Team members">
+        @if (isWide) {
           <div class="grid grid-cols-2 items-stretch gap-10 md:grid-cols-3 lg:grid-cols-4">
             @for (member of team; track member) {
               <p-card>
@@ -29,9 +29,7 @@
               </p-card>
             }
           </div>
-        </p-panel>
-      } @else {
-        <p-panel>
+        } @else {
           <p-accordion [value]="0">
             @for (member of team; track member.name) {
               <p-accordion-panel [value]="$index">
@@ -54,17 +52,20 @@
               </p-accordion-panel>
             }
           </p-accordion>
-        </p-panel>
-      }
+        }
+      </p-panel>
     </div>
 
-    <div class="mt-5">
+    <div class="chaotic-panel mt-5">
       <p-panel header="Build nodes">
         <ul class="chaotic-list-regular text-text">
           <li>
             Most packages available in this repo are automatically built from their respective
             <a class="text-mauve" href="https://aur.archlinux.org" rel="noopener" target="_blank">AUR</a>
-            source package. However there are a few exceptions, check
+            source package.
+          </li>
+          <li>
+            However there are a few exceptions, check
             <a class="text-mauve" href="https://github.com/chaotic-aur/packages">our package repository</a>
             to find out which ones.
           </li>
@@ -94,7 +95,7 @@
             Feel free to create issues to suggest enhancements, flag database corruptions, and all other requests:
             <a class="text-mauve" href="https://github.com/chaotic-aur/packages/issues" rel="noopener" target="_blank"
               >issues</a
-            ><br />
+            >
           </li>
           <li>Please report build bugs to the AUR package maintainers.</li>
         </ul>
@@ -108,12 +109,11 @@
             We have a few mirrors available for you to use. You can find the list of mirrors and their status
             <a class="text-mauve" href="https://status.chaotic.cx/map" rel="noopener" target="_blank">here</a>.
           </li>
-          <p>If you want to host a mirror yourself, please get in contact with us in some way.</p>
-          <p>
-            We prefer
-            <a class="text-mauve" href="https://syncthing.net/" rel="noopener" target="_blank">Syncthing</a> as method
-            for distributing our files
-          </p>
+          <li>If you want to host a mirror yourself, please get in contact with us in some way.</li>
+          <li>
+            We prefer <a class="text-mauve" href="https://syncthing.net/" rel="noopener" target="_blank">Syncthing</a>
+            as method for distributing our files
+          </li>
         </ul>
       </p-panel>
     </div>
@@ -189,42 +189,42 @@
 
     <div class="mt-5">
       <p-panel header="Special thanks">
-        <div>
-          <p>All our current and past mirror providers</p>
-          <p-divider />
-          <p>Librewish (Shrinivas Kumbhar) - Former Co-maintainer, Garuda Linux founder</p>
-          <p-divider />
-          <p>Garuda Linux staffers</p>
-          <p-divider />
-          <a class="text-mauve" href="https://github.com/Tk-Glitch" rel="noopener" target="_blank">Tk-Glitch (TkG)</a>;
-          <p-divider />
-          <a class="text-mauve" href="https://github.com/Kodehawa" rel="noopener" target="_blank">Kodehawa</a>;
-          <p-divider />
-          <a class="text-mauve" href="https://aur.archlinux.org/account/figue" rel="noopener" target="_blank">Figue</a>;
-          <p-divider />
-          <a class="text-mauve" href="https://github.com/benjamimgois" rel="noopener" target="_blank">Benjamim Gois</a>;
-          <p-divider layout="vertical" />
-          <p>
+        <ul class="chaotic-list-regular text-text">
+          <li>Librewish (Shrinivas Kumbhar) - Former Co-maintainer, Garuda Linux founder</li>
+          <li>Garuda Linux staffers</li>
+          <li>All our current and past mirror providers</li>
+          <li>
+            <a class="text-mauve" href="https://github.com/Tk-Glitch" rel="noopener" target="_blank">Tk-Glitch (TkG)</a>
+          </li>
+          <li><a class="text-mauve" href="https://github.com/Kodehawa" rel="noopener" target="_blank">Kodehawa</a></li>
+          <li>
+            <a class="text-mauve" href="https://aur.archlinux.org/account/figue" rel="noopener" target="_blank">
+              Figue
+            </a>
+          </li>
+          <li>
+            <a class="text-mauve" href="https://github.com/benjamimgois" rel="noopener" target="_blank">
+              Benjamim Gois
+            </a>
+          </li>
+          <li>
             Dr Juan Carlos Ponce Campuzano, creator of the Aizawa applet and our logo
             <a class="text-mauve" href="https://www.patreon.com/jcponce" rel="noopener" target="_blank"
               >(check his Patreon)</a
             >
-          </p>
-          <p-divider />
-          Frogging Family and Linux Gaming Dev Discord servers;
-          <p-divider />
-          André,
-          <p-divider />
-          <a class="text-mauve" href="https://github.com/olivatooo" rel="noopener" target="_blank">Gabriel Olivato</a>
-          and Maiser
-          <p-divider />
-          AUR package maintainers; ArchLinux TUs and staffers
-          <p-divider />
-          And everybody who somehow helped with all the projects we are pre-building! 🤗
-        </div>
+          </li>
+          <li>Frogging Family and Linux Gaming Dev Discord servers</li>
+          <li>
+            André,
+            <a class="text-mauve" href="https://github.com/olivatooo" rel="noopener" target="_blank">Gabriel Olivato</a>
+            and Maiser
+          </li>
+          <li>AUR package maintainers, ArchLinux TUs and staffers</li>
+          <li>And everybody who somehow helped with all the projects we are pre-building! 🤗</li>
+        </ul>
       </p-panel>
     </div>
-    <div class="chaotic-container-regular my-10 px-10 text-left md:px-40 lg:px-48">
+    <div class="my-10 px-2.5">
       <a class="text-subtext0">
         In memory of our colleague Rustem Bakirov. A proactive co-maintainer who in Dec/2021 left us at the age of 20.
       </a>

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { Table, TableModule } from 'primeng/table';
 import { AppService } from '../app.service';
 import { CommonModule } from '@angular/common';
@@ -13,6 +13,7 @@ import { LogurlPipe } from '../pipes/logurl.pipe';
 import { DurationPipe } from '../pipes/duration.pipe';
 import { MessageToastService } from '@garudalinux/core';
 import { TitleComponent } from '../title/title.component';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'chaotic-deploy-log',
@@ -31,17 +32,19 @@ import { TitleComponent } from '../title/title.component';
   styleUrl: './deploy-log.component.css',
   providers: [MessageToastService, OutcomePipe],
 })
-export class DeployLogComponent implements OnInit {
+export class DeployLogComponent implements OnInit, AfterViewInit {
   packageList: Build[] = [];
   loading = true;
-  searchValue: string | undefined;
+  searchValue = signal<string>('');
   amount = signal<number>(4000);
   outcomePipe = inject(OutcomePipe);
 
-  @ViewChild('pkgTable') pkgTable!: Table;
+  @ViewChild('deployTable') deployTable!: Table;
 
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   ngOnInit() {
     this.appService
@@ -69,15 +72,24 @@ export class DeployLogComponent implements OnInit {
       });
   }
 
+  ngAfterViewInit() {
+    if (this.route.snapshot.queryParams['search']) {
+      this.deployTable.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
+      this.searchValue.set(this.route.snapshot.queryParams['search']);
+    }
+  }
+
   clear(table: Table) {
     table.clear();
-    this.searchValue = '';
+    this.searchValue.set('');
+    void this.router.navigate([], { queryParams: { search: '' } });
   }
 
   globalFilter(target: EventTarget | null) {
     if (!target) return;
     const input = target as HTMLInputElement;
-    this.pkgTable.filterGlobal(input.value, 'contains');
+    this.deployTable.filterGlobal(input.value, 'contains');
+    void this.router.navigate([], { queryParams: { search: input.value } });
   }
 
   typed(value: any): Build {
