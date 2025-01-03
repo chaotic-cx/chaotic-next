@@ -11,13 +11,13 @@ import {
   type PipelineWithExternalStatus,
   type SpecificPackageMetrics,
   type StatsObject,
-  type TgMessageList,
   type UserAgentList,
 } from '@./shared-lib';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
 import { Meta } from '@angular/platform-browser';
 import { updateSeoTags } from './functions';
+import { Message } from './newsfeed/interfaces';
 
 @Injectable({
   providedIn: 'root',
@@ -34,8 +34,8 @@ export class AppService {
     return this.http.get<StatsObject>(`${this.appConfig.apiUrl}/queue/stats`);
   }
 
-  getNews(): Observable<TgMessageList> {
-    return this.http.get<TgMessageList>(`${this.appConfig.tgApiUrl}/news`);
+  getNews(): Observable<Message[]> {
+    return this.http.get<Message[]>(`/news.json`);
   }
 
   get30dayUsers(): Observable<string> {

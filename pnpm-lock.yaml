@@ -167,9 +167,6 @@ importers:
       pino-http:
         specifier: ^10.3.0
         version: 10.3.0
-      prebuilt-tdlib:
-        specifier: ^0.1008041.0
-        version: 0.1008041.0
       primeicons:
         specifier: ^7.0.0
         version: 7.0.0
@@ -185,9 +182,6 @@ importers:
       tailwindcss-primeui:
         specifier: ^0.3.4
         version: 0.3.4(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.10.4(@swc/helpers@0.5.15))(@types/node@22.10.2)(typescript@5.6.3)))
-      tdl:
-        specifier: ^8.0.2
-        version: 8.0.2
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
@@ -243,9 +237,6 @@ importers:
       '@eslint/js':
         specifier: ^9.17.0
         version: 9.17.0
-      '@gitopslovers/nx-biome':
-        specifier: ^1.5.0
-        version: 1.5.0
       '@nestjs/cli':
         specifier: ^10.4.9
         version: 10.4.9(@swc/core@1.10.4(@swc/helpers@0.5.15))(esbuild@0.24.2)(webpack-cli@6.0.1)
@@ -2073,9 +2064,6 @@ packages:
     resolution: {integrity: sha512-l1jEloxQ4/SCdOjv9ryfbZEvvF90GFllLxULbHiLPI72rAHCjxWtjAdeQXddkvfw/LYCw7CFyu+M9Okt/IjsgA==}
     engines: {node: '>=18.20.0'}
 
-  '@gitopslovers/nx-biome@1.5.0':
-    resolution: {integrity: sha512-RDYX+dd3o36+rqzpShr948LimCXjH9lJdATdQGTKtYcN2OL43LRb3R9MLzU/OqnGOrt1/6Hg92YJS3pLES68aw==}
-
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
     engines: {node: '>=18.18.0'}
@@ -3181,31 +3169,6 @@ packages:
     resolution: {integrity: sha512-Ky+BVzPz8pL6PQxHqNRW1k3mIyv933LML7HktS8uik0bUXNCdPhoS/kLihiO1tMf/egaJb4IutXd7UywvXEW+g==}
     engines: {node: '>=18'}
     hasBin: true
-
-  '@prebuilt-tdlib/darwin-arm64@0.1008041.0':
-    resolution: {integrity: sha512-5VCPIVebmj5eRGDveFoQgJT9XK/JFVVpOPSSvEZtRqQcgEvAddipH8MT/+E6QQl/+2/GuufOnyF8saVqIyLOGQ==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@prebuilt-tdlib/darwin-x64@0.1008041.0':
-    resolution: {integrity: sha512-RN6lZkDyHDfnPz/gxltL+rB4JxRzNjYBK7+xgsqZNvnnOmE1u3G/sUwaFwmgHzjXnh9fZ2/E/ygfN50b8H3lLA==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@prebuilt-tdlib/linux-arm64-glibc@0.1008041.0':
-    resolution: {integrity: sha512-pLF7snR5Ise+38oVkItlsle/89PFlLAgIzA/Nc0pNhK/Bzubq6yNpbvGzS+IDVDoNYKVxBNLJwV7zAXEe738pA==}
-    cpu: [arm64]
-    os: [linux]
-
-  '@prebuilt-tdlib/linux-x64-glibc@0.1008041.0':
-    resolution: {integrity: sha512-t9/h/KnaeV6y6WmTxTuYuueS4rakWYYjQcbkhsInJlojZaUdwfvH3hX81WPb/dig2IDpU/3tWHfToefnOEI4Uw==}
-    cpu: [x64]
-    os: [linux]
-
-  '@prebuilt-tdlib/win32-x64@0.1008041.0':
-    resolution: {integrity: sha512-80yHuWadJ7ENXTWbwjCEqbaFWDWj1pAKDCFQsSw4WR3gjIhvKb9LGszj5MTBGLFOeXIPwuGuQxa3N0POknIQYg==}
-    cpu: [x64]
-    os: [win32]
 
   '@primeng/themes@19.0.2':
     resolution: {integrity: sha512-rPLSUkoW6M36Jjd27XD0biiT6C0VdRx024he6ZRgGpFH5WrnKDJPbbzCdLNFF7JCvEgmBHWEDwnmpHgywjrn2g==}
@@ -6936,10 +6899,6 @@ packages:
     resolution: {integrity: sha512-s+w+rBWnpTMwSFbaE0UXsRlg7hU4FjekKU4eyAih5T8nJuNZT1nNsskXpxmeqSK9UzkBl6UgRlnKc8hz8IEqOw==}
     hasBin: true
 
-  node-gyp-build@4.8.4:
-    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
-    hasBin: true
-
   node-gyp@11.0.0:
     resolution: {integrity: sha512-zQS+9MTTeCMgY0F3cWPyJyRFAkVltQ1uXm+xXu/ES6KFgC6Czo1Seb9vQW2wNxSX2OrDTiqL0ojtkFxBQ0ypIw==}
     engines: {node: ^18.17.0 || >=20.5.0}
@@ -7690,9 +7649,6 @@ packages:
   postgres-interval@1.2.0:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
-
-  prebuilt-tdlib@0.1008041.0:
-    resolution: {integrity: sha512-9uk2uQ5pRGykaAR+tOaWFAhtmJvsjmHE6LjBcj8u6w/rgtIxyVqI/RRmXDY/06r4nTDnKtLHsvvFribCKaWBSA==}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -8572,10 +8528,6 @@ packages:
   tar@7.4.3:
     resolution: {integrity: sha512-5S7Va8hKfV7W5U6g3aYxXmlPoZVAwUMy9AOKyF2fVuZa2UD3qZjg578OrLRt8PcNN1PleVaL/5/yYATNL0ICUw==}
     engines: {node: '>=18'}
-
-  tdl@8.0.2:
-    resolution: {integrity: sha512-KYxlJ4eao7FUu91U1dCDkaHmK70JAyZ1KqitkKqpPC7rxAiXWhaYxddWvt84UxIYoWbgdd0B70FYJ4p/YqpFCA==}
-    engines: {node: '>=16.14.0'}
 
   terser-webpack-plugin@5.3.11:
     resolution: {integrity: sha512-RVCsMfuD0+cTt3EwX8hSl2Ks56EbFHWmhluwcqoPKtBnfjiT6olaq7PRIRfhyU8nnC2MrnDrBLfrD/RGE+cVXQ==}
@@ -11015,8 +10967,6 @@ snapshots:
       '@gitbeaker/core': 41.3.0
       '@gitbeaker/requester-utils': 41.3.0
 
-  '@gitopslovers/nx-biome@1.5.0': {}
-
   '@humanfs/core@0.19.1': {}
 
   '@humanfs/node@0.16.6':
@@ -12535,21 +12485,6 @@ snapshots:
   '@playwright/test@1.49.1':
     dependencies:
       playwright: 1.49.1
-
-  '@prebuilt-tdlib/darwin-arm64@0.1008041.0':
-    optional: true
-
-  '@prebuilt-tdlib/darwin-x64@0.1008041.0':
-    optional: true
-
-  '@prebuilt-tdlib/linux-arm64-glibc@0.1008041.0':
-    optional: true
-
-  '@prebuilt-tdlib/linux-x64-glibc@0.1008041.0':
-    optional: true
-
-  '@prebuilt-tdlib/win32-x64@0.1008041.0':
-    optional: true
 
   '@primeng/themes@19.0.2':
     dependencies:
@@ -16827,7 +16762,8 @@ snapshots:
   node-addon-api@6.1.0:
     optional: true
 
-  node-addon-api@7.1.1: {}
+  node-addon-api@7.1.1:
+    optional: true
 
   node-emoji@1.11.0:
     dependencies:
@@ -16845,8 +16781,6 @@ snapshots:
     dependencies:
       detect-libc: 2.0.3
     optional: true
-
-  node-gyp-build@4.8.4: {}
 
   node-gyp@11.0.0:
     dependencies:
@@ -17674,14 +17608,6 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
-
-  prebuilt-tdlib@0.1008041.0:
-    optionalDependencies:
-      '@prebuilt-tdlib/darwin-arm64': 0.1008041.0
-      '@prebuilt-tdlib/darwin-x64': 0.1008041.0
-      '@prebuilt-tdlib/linux-arm64-glibc': 0.1008041.0
-      '@prebuilt-tdlib/linux-x64-glibc': 0.1008041.0
-      '@prebuilt-tdlib/win32-x64': 0.1008041.0
 
   prelude-ls@1.2.1: {}
 
@@ -18578,14 +18504,6 @@ snapshots:
       minizlib: 3.0.1
       mkdirp: 3.0.1
       yallist: 5.0.0
-
-  tdl@8.0.2:
-    dependencies:
-      debug: 4.4.0
-      node-addon-api: 7.1.1
-      node-gyp-build: 4.8.4
-    transitivePeerDependencies:
-      - supports-color
 
   terser-webpack-plugin@5.3.11(@swc/core@1.10.4(@swc/helpers@0.5.15))(esbuild@0.24.0)(webpack@5.96.1(@swc/core@1.10.4(@swc/helpers@0.5.15))(esbuild@0.24.0)(webpack-cli@6.0.1)):
     dependencies:

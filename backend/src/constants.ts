@@ -13,9 +13,6 @@ export const requiredEnvVarsProd: string[] = [
   'REDIS_PASSWORD',
   'REDIS_SSH_HOST',
   'REDIS_SSH_USER',
-  'TELEGRAM_API_HASH',
-  'TELEGRAM_API_ID',
-  'TELEGRAM_DB_ENCRYPTION_KEY',
 ];
 
 export const requiredEnvVarsDev: string[] = ['PG_DATABASE', 'PG_HOST', 'PG_PASSWORD', 'PG_USER', 'REDIS_PASSWORD'];

@@ -1,0 +1,3277 @@
+[
+  {
+    "id": 604,
+    "type": "message",
+    "date": "2021-03-29T17:08:21",
+    "date_unixtime": "1617030501",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      "Our mirrors across the globe: ",
+      {
+        "type": "link",
+        "text": "https://www.google.com/maps/d/viewer?mid=1vSjZ00MF07r3zPQX7RR7nnxJH4mEv7V7"
+      }
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Our mirrors across the globe: "
+      },
+      {
+        "type": "link",
+        "text": "https://www.google.com/maps/d/viewer?mid=1vSjZ00MF07r3zPQX7RR7nnxJH4mEv7V7"
+      }
+    ]
+  },
+  {
+    "id": 606,
+    "type": "message",
+    "date": "2021-04-01T19:38:47",
+    "date_unixtime": "1617298727",
+    "edited": "2021-04-01T19:39:38",
+    "edited_unixtime": "1617298778",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      " \n\nWe recently looked how the X11 vs Wayland scope is in Linux and decided that, it's not worth fighting for. Linux is not worth your time. Thinking of that we just pushed ",
+      {
+        "type": "code",
+        "text": "chaotic-windows"
+      },
+      " in repos. An electron-based windows-distribution, where we'll be investing all our time and focus.\n\nHow to migrate:\n",
+      {
+        "type": "pre",
+        "text": "sudo pacman -Sy\nsudo powerpill -Su chaotic-windows\nenv windows95\n\n",
+        "language": ""
+      },
+      {
+        "type": "bold",
+        "text": "NOTE: It does not support Wayland nor Pipewire right now"
+      }
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      {
+        "type": "plain",
+        "text": " \n\nWe recently looked how the X11 vs Wayland scope is in Linux and decided that, it's not worth fighting for. Linux is not worth your time. Thinking of that we just pushed "
+      },
+      {
+        "type": "code",
+        "text": "chaotic-windows"
+      },
+      {
+        "type": "plain",
+        "text": " in repos. An electron-based windows-distribution, where we'll be investing all our time and focus.\n\nHow to migrate:\n"
+      },
+      {
+        "type": "pre",
+        "text": "sudo pacman -Sy\nsudo powerpill -Su chaotic-windows\nenv windows95\n\n",
+        "language": ""
+      },
+      {
+        "type": "bold",
+        "text": "NOTE: It does not support Wayland nor Pipewire right now"
+      }
+    ]
+  },
+  {
+    "id": 607,
+    "type": "service",
+    "date": "2021-04-02T03:27:53",
+    "date_unixtime": "1617326873",
+    "actor": "Chaotic-AUR",
+    "actor_id": "channel1293714071",
+    "action": "delete_group_photo",
+    "text": "",
+    "text_entities": []
+  },
+  {
+    "id": 608,
+    "type": "message",
+    "date": "2021-04-02T03:29:00",
+    "date_unixtime": "1617326940",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "reply_to_message_id": 606,
+    "text": "In case someone didn't understand, that was an April's Fools post. I'm removing that package right now.",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "In case someone didn't understand, that was an April's Fools post. I'm removing that package right now."
+      }
+    ]
+  },
+  {
+    "id": 609,
+    "type": "message",
+    "date": "2021-05-01T17:44:17",
+    "date_unixtime": "1619883857",
+    "edited": "2021-05-01T18:05:04",
+    "edited_unixtime": "1619885104",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      "  ",
+      {
+        "type": "hashtag",
+        "text": "#MIRRORS"
+      },
+      " \nWe're welcoming two new mirrors:\n* EasyLee is replacing Var's mirror in Netherlands, thanks ",
+      {
+        "type": "text_link",
+        "text": "Eric\n",
+        "href": "https://github.com/erickochen"
+      },
+      "* Ptr1337 is now available as de-3-mirror, thanks ",
+      {
+        "type": "text_link",
+        "text": "Ptr1337\n\n",
+        "href": "https://github.com/ptr1337"
+      },
+      "Update your ",
+      {
+        "type": "code",
+        "text": "chaotic-mirrorlist"
+      },
+      " to ",
+      {
+        "type": "code",
+        "text": "20210501-1"
+      },
+      ", and remember to watch out if the update won't get stuck with the suffix ",
+      {
+        "type": "code",
+        "text": ".pacnew"
+      },
+      ".\nOr, if you prefer to handle it manually: ",
+      {
+        "type": "link",
+        "text": "https://aur.chaotic.cx/mirrorlist.txt"
+      }
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      {
+        "type": "plain",
+        "text": "  "
+      },
+      {
+        "type": "hashtag",
+        "text": "#MIRRORS"
+      },
+      {
+        "type": "plain",
+        "text": " \nWe're welcoming two new mirrors:\n* EasyLee is replacing Var's mirror in Netherlands, thanks "
+      },
+      {
+        "type": "text_link",
+        "text": "Eric\n",
+        "href": "https://github.com/erickochen"
+      },
+      {
+        "type": "plain",
+        "text": "* Ptr1337 is now available as de-3-mirror, thanks "
+      },
+      {
+        "type": "text_link",
+        "text": "Ptr1337\n\n",
+        "href": "https://github.com/ptr1337"
+      },
+      {
+        "type": "plain",
+        "text": "Update your "
+      },
+      {
+        "type": "code",
+        "text": "chaotic-mirrorlist"
+      },
+      {
+        "type": "plain",
+        "text": " to "
+      },
+      {
+        "type": "code",
+        "text": "20210501-1"
+      },
+      {
+        "type": "plain",
+        "text": ", and remember to watch out if the update won't get stuck with the suffix "
+      },
+      {
+        "type": "code",
+        "text": ".pacnew"
+      },
+      {
+        "type": "plain",
+        "text": ".\nOr, if you prefer to handle it manually: "
+      },
+      {
+        "type": "link",
+        "text": "https://aur.chaotic.cx/mirrorlist.txt"
+      }
+    ]
+  },
+  {
+    "id": 611,
+    "type": "message",
+    "date": "2021-05-10T14:37:57",
+    "date_unixtime": "1620650277",
+    "edited": "2021-05-11T01:14:31",
+    "edited_unixtime": "1620688471",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      "For those asking why the \"chaotic-mirrorlist\" and \"chaotic-keyring\" disappeared from AUR:\n",
+      {
+        "type": "link",
+        "text": "https://lists.archlinux.org/pipermail/aur-requests/2021-May/052472.html"
+      },
+      "\n",
+      {
+        "type": "link",
+        "text": "https://lists.archlinux.org/pipermail/aur-requests/2021-May/052864.html"
+      },
+      "\n\nThey're now mirrored here:\n",
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-aur/pkgbuild-chaotic-mirrorlist"
+      },
+      "\n",
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-aur/pkgbuild-chaotic-keyring"
+      },
+      "\n\nSorry for the inconvenience, but those are AUR rules and are out of our reach...\n\n",
+      {
+        "type": "bold",
+        "text": "EDIT"
+      },
+      ": More explanation in this thread: ",
+      {
+        "type": "link",
+        "text": "https://lists.archlinux.org/pipermail/aur-general/2021-May/036195.html"
+      },
+      "\n\n",
+      {
+        "type": "bold",
+        "text": "EDIT2:"
+      },
+      " One of the chaotic's user did try to counter-argument them: ",
+      {
+        "type": "link",
+        "text": "https://bbs.archlinux.org/viewtopic.php?pid=1972121"
+      },
+      " (require account to see it now)"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "For those asking why the \"chaotic-mirrorlist\" and \"chaotic-keyring\" disappeared from AUR:\n"
+      },
+      {
+        "type": "link",
+        "text": "https://lists.archlinux.org/pipermail/aur-requests/2021-May/052472.html"
+      },
+      {
+        "type": "plain",
+        "text": "\n"
+      },
+      {
+        "type": "link",
+        "text": "https://lists.archlinux.org/pipermail/aur-requests/2021-May/052864.html"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nThey're now mirrored here:\n"
+      },
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-aur/pkgbuild-chaotic-mirrorlist"
+      },
+      {
+        "type": "plain",
+        "text": "\n"
+      },
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-aur/pkgbuild-chaotic-keyring"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nSorry for the inconvenience, but those are AUR rules and are out of our reach...\n\n"
+      },
+      {
+        "type": "bold",
+        "text": "EDIT"
+      },
+      {
+        "type": "plain",
+        "text": ": More explanation in this thread: "
+      },
+      {
+        "type": "link",
+        "text": "https://lists.archlinux.org/pipermail/aur-general/2021-May/036195.html"
+      },
+      {
+        "type": "plain",
+        "text": "\n\n"
+      },
+      {
+        "type": "bold",
+        "text": "EDIT2:"
+      },
+      {
+        "type": "plain",
+        "text": " One of the chaotic's user did try to counter-argument them: "
+      },
+      {
+        "type": "link",
+        "text": "https://bbs.archlinux.org/viewtopic.php?pid=1972121"
+      },
+      {
+        "type": "plain",
+        "text": " (require account to see it now)"
+      }
+    ]
+  },
+  {
+    "id": 612,
+    "type": "message",
+    "date": "2021-05-10T14:40:15",
+    "date_unixtime": "1620650415",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "reply_to_message_id": 603,
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#UPDATE"
+      },
+      "\n\nWe got one of those back, so we're back to hourly builds! Package adoption is still slow as we don't have 100% of our processing power back."
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#UPDATE"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nWe got one of those back, so we're back to hourly builds! Package adoption is still slow as we don't have 100% of our processing power back."
+      }
+    ]
+  },
+  {
+    "id": 613,
+    "type": "message",
+    "date": "2021-05-15T21:06:06",
+    "date_unixtime": "1621105566",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#INTERRUPTION"
+      },
+      "\n\nOur database got corrupt in a Btrfs bug. It will take some time to re-index all packages. We hope to have it back to normal in 5 hrs."
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#INTERRUPTION"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nOur database got corrupt in a Btrfs bug. It will take some time to re-index all packages. We hope to have it back to normal in 5 hrs."
+      }
+    ]
+  },
+  {
+    "id": 614,
+    "type": "message",
+    "date": "2021-05-15T22:22:59",
+    "date_unixtime": "1621110179",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "reply_to_message_id": 613,
+    "text": "Everything's back to normal",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Everything's back to normal"
+      }
+    ]
+  },
+  {
+    "id": 616,
+    "type": "message",
+    "date": "2021-05-17T01:45:57",
+    "date_unixtime": "1621208757",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#MIRRORS"
+      },
+      " \n\nWe have a new mirror in Germany ran by redgloboli.\nUpdate your ",
+      {
+        "type": "code",
+        "text": "chaotic-mirrorlist"
+      },
+      " to ",
+      {
+        "type": "code",
+        "text": "20210516-1"
+      },
+      ", and remember to watch out if the update won't get stuck with the suffix ",
+      {
+        "type": "code",
+        "text": ".pacnew"
+      },
+      ".\nOr, if you prefer to handle it manually: ",
+      {
+        "type": "code",
+        "text": "https://aur.chaotic.cx/mirrorlist.txt"
+      }
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#MIRRORS"
+      },
+      {
+        "type": "plain",
+        "text": " \n\nWe have a new mirror in Germany ran by redgloboli.\nUpdate your "
+      },
+      {
+        "type": "code",
+        "text": "chaotic-mirrorlist"
+      },
+      {
+        "type": "plain",
+        "text": " to "
+      },
+      {
+        "type": "code",
+        "text": "20210516-1"
+      },
+      {
+        "type": "plain",
+        "text": ", and remember to watch out if the update won't get stuck with the suffix "
+      },
+      {
+        "type": "code",
+        "text": ".pacnew"
+      },
+      {
+        "type": "plain",
+        "text": ".\nOr, if you prefer to handle it manually: "
+      },
+      {
+        "type": "code",
+        "text": "https://aur.chaotic.cx/mirrorlist.txt"
+      }
+    ]
+  },
+  {
+    "id": 617,
+    "type": "message",
+    "date": "2021-05-17T17:26:12",
+    "date_unixtime": "1621265172",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#TKG"
+      },
+      "\n\nHello everybody,\n\nFollowing the release of GCC11 in ArchLinux's core repository, the idea now is to follow the official ArchLinux's project trend and have everything optimized for \"x86-64-v3\" or falling back to the \"v1\".\n\nAs the first move, we're now dropping all \"architecture-specific\" packages of the beloved \"linux-tkg\". You'll find in the repo either the generic one (e.g: \"linux-tkg-bmq\"), and a v3-optimized one (e.g: \"linux-tkg-bmq-generic_v3\").\n\nThanks to that PDS and CFS builds are back!\n\n",
+      {
+        "type": "bold",
+        "text": "NOTE:"
+      },
+      " In the future, once ArchLinux has the new v3 repos working well, we'll then move the v3-optimized under our v3 repos without the \"-generic_v3\" suffix."
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#TKG"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nHello everybody,\n\nFollowing the release of GCC11 in ArchLinux's core repository, the idea now is to follow the official ArchLinux's project trend and have everything optimized for \"x86-64-v3\" or falling back to the \"v1\".\n\nAs the first move, we're now dropping all \"architecture-specific\" packages of the beloved \"linux-tkg\". You'll find in the repo either the generic one (e.g: \"linux-tkg-bmq\"), and a v3-optimized one (e.g: \"linux-tkg-bmq-generic_v3\").\n\nThanks to that PDS and CFS builds are back!\n\n"
+      },
+      {
+        "type": "bold",
+        "text": "NOTE:"
+      },
+      {
+        "type": "plain",
+        "text": " In the future, once ArchLinux has the new v3 repos working well, we'll then move the v3-optimized under our v3 repos without the \"-generic_v3\" suffix."
+      }
+    ]
+  },
+  {
+    "id": 619,
+    "type": "message",
+    "date": "2021-06-21T19:01:29",
+    "date_unixtime": "1624294889",
+    "edited": "2021-06-21T19:02:48",
+    "edited_unixtime": "1624294968",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#MAINTAINANCE"
+      },
+      "\n\nPlease note, the primary node will be offline for the following hours. Don't expect package updates. Meanwhile, mirrors will keep providing packages built until now."
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#MAINTAINANCE"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nPlease note, the primary node will be offline for the following hours. Don't expect package updates. Meanwhile, mirrors will keep providing packages built until now."
+      }
+    ]
+  },
+  {
+    "id": 620,
+    "type": "message",
+    "date": "2021-06-22T03:23:49",
+    "date_unixtime": "1624325029",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "reply_to_message_id": 619,
+    "text": "Everything's back online, resuming builds...",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Everything's back online, resuming builds..."
+      }
+    ]
+  },
+  {
+    "id": 621,
+    "type": "message",
+    "date": "2021-06-24T16:06:00",
+    "date_unixtime": "1624543560",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      "If you're running on keys problems ",
+      {
+        "type": "bold",
+        "text": "while updating"
+      },
+      ", run:\n",
+      {
+        "type": "code",
+        "text": "sudo pacman-key --populate chaotic\nsudo pacman -Sy chaotic-keyring\nsudo pacman -Su\n"
+      },
+      "\n\nIf you're running with keys problem while ",
+      {
+        "type": "bold",
+        "text": "first installing"
+      },
+      " chaotic, rely on Ubuntu's Keyserver, like:\n",
+      {
+        "type": "code",
+        "text": "pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com"
+      }
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "If you're running on keys problems "
+      },
+      {
+        "type": "bold",
+        "text": "while updating"
+      },
+      {
+        "type": "plain",
+        "text": ", run:\n"
+      },
+      {
+        "type": "code",
+        "text": "sudo pacman-key --populate chaotic\nsudo pacman -Sy chaotic-keyring\nsudo pacman -Su\n"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nIf you're running with keys problem while "
+      },
+      {
+        "type": "bold",
+        "text": "first installing"
+      },
+      {
+        "type": "plain",
+        "text": " chaotic, rely on Ubuntu's Keyserver, like:\n"
+      },
+      {
+        "type": "code",
+        "text": "pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com"
+      }
+    ]
+  },
+  {
+    "id": 622,
+    "type": "message",
+    "date": "2021-07-16T23:30:15",
+    "date_unixtime": "1626471015",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#MIRRORS"
+      },
+      " \n\nWe have a new mirror in India ran by ",
+      {
+        "type": "text_link",
+        "text": "virusz4274",
+        "href": "http://github.com/virusz4274"
+      },
+      ".\nUpdate your ",
+      {
+        "type": "code",
+        "text": "chaotic-mirrorlist"
+      },
+      " to ",
+      {
+        "type": "code",
+        "text": "20210716-1"
+      },
+      ", and remember to watch out if the update won't get stuck with the suffix ",
+      {
+        "type": "code",
+        "text": ".pacnew"
+      },
+      ".\nOr, if you prefer to handle it manually: ",
+      {
+        "type": "code",
+        "text": "https://aur.chaotic.cx/mirrorlist.txt"
+      }
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#MIRRORS"
+      },
+      {
+        "type": "plain",
+        "text": " \n\nWe have a new mirror in India ran by "
+      },
+      {
+        "type": "text_link",
+        "text": "virusz4274",
+        "href": "http://github.com/virusz4274"
+      },
+      {
+        "type": "plain",
+        "text": ".\nUpdate your "
+      },
+      {
+        "type": "code",
+        "text": "chaotic-mirrorlist"
+      },
+      {
+        "type": "plain",
+        "text": " to "
+      },
+      {
+        "type": "code",
+        "text": "20210716-1"
+      },
+      {
+        "type": "plain",
+        "text": ", and remember to watch out if the update won't get stuck with the suffix "
+      },
+      {
+        "type": "code",
+        "text": ".pacnew"
+      },
+      {
+        "type": "plain",
+        "text": ".\nOr, if you prefer to handle it manually: "
+      },
+      {
+        "type": "code",
+        "text": "https://aur.chaotic.cx/mirrorlist.txt"
+      }
+    ]
+  },
+  {
+    "id": 623,
+    "type": "message",
+    "date": "2021-08-06T15:05:12",
+    "date_unixtime": "1628255112",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": "I accidentally broke the default gateway, everything will 404 while I fix it...",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "I accidentally broke the default gateway, everything will 404 while I fix it..."
+      }
+    ]
+  },
+  {
+    "id": 624,
+    "type": "message",
+    "date": "2021-08-06T15:26:29",
+    "date_unixtime": "1628256389",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "reply_to_message_id": 623,
+    "text": "Should be fixed",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Should be fixed"
+      }
+    ]
+  },
+  {
+    "id": 625,
+    "type": "message",
+    "date": "2021-08-16T20:12:20",
+    "date_unixtime": "1629137540",
+    "edited": "2021-08-16T20:12:53",
+    "edited_unixtime": "1629137573",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "photo": "photos/photo_5@16-08-2021_20-12-20.jpg",
+    "width": 584,
+    "height": 164,
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#WINE"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#PROTON"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#MANUAL"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#INTERVENTION"
+      },
+      "\n\nWine upstream is moving to Vista+ user folder architecture, if you use proton-ge or proton-tkg, you might want to delete the compatdata of your games.\n\n",
+      {
+        "type": "text_link",
+        "text": "Watch GloriousEggroll old tutorial",
+        "href": "https://www.youtube.com/watch?v=uxWJ1xvowMk"
+      }
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#WINE"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#PROTON"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#MANUAL"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#INTERVENTION"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nWine upstream is moving to Vista+ user folder architecture, if you use proton-ge or proton-tkg, you might want to delete the compatdata of your games.\n\n"
+      },
+      {
+        "type": "text_link",
+        "text": "Watch GloriousEggroll old tutorial",
+        "href": "https://www.youtube.com/watch?v=uxWJ1xvowMk"
+      }
+    ]
+  },
+  {
+    "id": 626,
+    "type": "message",
+    "date": "2021-08-21T18:01:35",
+    "date_unixtime": "1629561695",
+    "edited": "2021-08-21T18:01:45",
+    "edited_unixtime": "1629561705",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      "To have a better community experience, more inclusive and respectful, we now have adopted a CoC: ",
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-aur/code-of-conduct"
+      },
+      "\n\nWe expect all the community members and staffers to respect it."
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "To have a better community experience, more inclusive and respectful, we now have adopted a CoC: "
+      },
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-aur/code-of-conduct"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nWe expect all the community members and staffers to respect it."
+      }
+    ]
+  },
+  {
+    "id": 627,
+    "type": "message",
+    "date": "2021-08-31T18:56:49",
+    "date_unixtime": "1630429009",
+    "edited": "2021-08-31T18:56:18",
+    "edited_unixtime": "1630428978",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#TKG"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#KERNELS"
+      },
+      "\n\nToday we're building 5.14 ",
+      {
+        "type": "code",
+        "text": "linux-tkg-{pds,bmq,cacule}"
+      },
+      " and 5.13 ",
+      {
+        "type": "code",
+        "text": "linux-tkg-muqss"
+      },
+      ". CFS ones are already in 5.14.\n\n",
+      {
+        "type": "bold",
+        "text": "Note"
+      },
+      ": There isn't bcachefs and fsync in 5.14 yet (but there is futext2)."
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#ANNOUNCEMENT"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#TKG"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#KERNELS"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nToday we're building 5.14 "
+      },
+      {
+        "type": "code",
+        "text": "linux-tkg-{pds,bmq,cacule}"
+      },
+      {
+        "type": "plain",
+        "text": " and 5.13 "
+      },
+      {
+        "type": "code",
+        "text": "linux-tkg-muqss"
+      },
+      {
+        "type": "plain",
+        "text": ". CFS ones are already in 5.14.\n\n"
+      },
+      {
+        "type": "bold",
+        "text": "Note"
+      },
+      {
+        "type": "plain",
+        "text": ": There isn't bcachefs and fsync in 5.14 yet (but there is futext2)."
+      }
+    ]
+  },
+  {
+    "id": 628,
+    "type": "message",
+    "date": "2021-10-13T14:31:43",
+    "date_unixtime": "1634128303",
+    "edited": "2021-10-13T14:53:37",
+    "edited_unixtime": "1634129617",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      "We're currently experiencing issues with the router and CDN. Sorry for the inconvenience.\n\n",
+      {
+        "type": "bold",
+        "text": "EDIT"
+      },
+      ": Updates in comments."
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "We're currently experiencing issues with the router and CDN. Sorry for the inconvenience.\n\n"
+      },
+      {
+        "type": "bold",
+        "text": "EDIT"
+      },
+      {
+        "type": "plain",
+        "text": ": Updates in comments."
+      }
+    ]
+  },
+  {
+    "id": 629,
+    "type": "message",
+    "date": "2021-10-18T22:33:26",
+    "date_unixtime": "1634589206",
+    "edited": "2022-10-03T13:33:27",
+    "edited_unixtime": "1664796807",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      "Chaotic-AUR turns three years old! 🥳\n\n\nThat may not be a long road for a human, but it has been quite a journey:\n\n  -  We now have between 65k and 70k users per month;\n  -  Chaotic-AUR now offers more than 2470 packages;\n  -  Our Mirrorlist grew to 15 mirrors (including a CDN one);\n  -  Our single builder got replaced by several distributed servers;\n  -  We got a domain and enabled an intelligent geo-mirror to govern it;\n  -  There is more than one distro recommending us.\n\n\n",
+      {
+        "type": "bold",
+        "text": "And to commemorate this special date, we're asking for your help to build a memorial"
+      },
+      ": 📚\n\n   - We just built a package called ",
+      {
+        "type": "code",
+        "text": "chaotic-neofetch-git"
+      },
+      ", go ahead and install it;\n   - Then you can run the executable: ",
+      {
+        "type": "code",
+        "text": "chaotic-neofetch"
+      },
+      " (you can use ",
+      {
+        "type": "code",
+        "text": "--frog"
+      },
+      ", or ",
+      {
+        "type": "code",
+        "text": "--garuda"
+      },
+      " for extra sauces)\n   - Screenshot your desktop or just the terminal, and then send it to us:\n   - By email: ",
+      {
+        "type": "code",
+        "text": "memorial@chaotic.cx\n"
+      },
+      "   - By telegram: ",
+      {
+        "type": "mention",
+        "text": "@chaotic_aur_sac"
+      },
+      " (or reply this post, or DM ",
+      {
+        "type": "mention",
+        "text": "@pedrohlc"
+      },
+      ")\n   - By PR: ",
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-aur/memorial"
+      },
+      "\n\n\nMy special thanks to everybody that helped us this last year, especially the Chaotic-AUR staff—also, thanks to everyone that provided good ideas and suggestions in the chat."
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Chaotic-AUR turns three years old! 🥳\n\n\nThat may not be a long road for a human, but it has been quite a journey:\n\n  -  We now have between 65k and 70k users per month;\n  -  Chaotic-AUR now offers more than 2470 packages;\n  -  Our Mirrorlist grew to 15 mirrors (including a CDN one);\n  -  Our single builder got replaced by several distributed servers;\n  -  We got a domain and enabled an intelligent geo-mirror to govern it;\n  -  There is more than one distro recommending us.\n\n\n"
+      },
+      {
+        "type": "bold",
+        "text": "And to commemorate this special date, we're asking for your help to build a memorial"
+      },
+      {
+        "type": "plain",
+        "text": ": 📚\n\n   - We just built a package called "
+      },
+      {
+        "type": "code",
+        "text": "chaotic-neofetch-git"
+      },
+      {
+        "type": "plain",
+        "text": ", go ahead and install it;\n   - Then you can run the executable: "
+      },
+      {
+        "type": "code",
+        "text": "chaotic-neofetch"
+      },
+      {
+        "type": "plain",
+        "text": " (you can use "
+      },
+      {
+        "type": "code",
+        "text": "--frog"
+      },
+      {
+        "type": "plain",
+        "text": ", or "
+      },
+      {
+        "type": "code",
+        "text": "--garuda"
+      },
+      {
+        "type": "plain",
+        "text": " for extra sauces)\n   - Screenshot your desktop or just the terminal, and then send it to us:\n   - By email: "
+      },
+      {
+        "type": "code",
+        "text": "memorial@chaotic.cx\n"
+      },
+      {
+        "type": "plain",
+        "text": "   - By telegram: "
+      },
+      {
+        "type": "mention",
+        "text": "@chaotic_aur_sac"
+      },
+      {
+        "type": "plain",
+        "text": " (or reply this post, or DM "
+      },
+      {
+        "type": "mention",
+        "text": "@pedrohlc"
+      },
+      {
+        "type": "plain",
+        "text": ")\n   - By PR: "
+      },
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-aur/memorial"
+      },
+      {
+        "type": "plain",
+        "text": "\n\n\nMy special thanks to everybody that helped us this last year, especially the Chaotic-AUR staff—also, thanks to everyone that provided good ideas and suggestions in the chat."
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "❤"
+      }
+    ]
+  },
+  {
+    "id": 630,
+    "type": "message",
+    "date": "2021-10-22T16:49:52",
+    "date_unixtime": "1634914192",
+    "edited": "2021-10-22T16:49:32",
+    "edited_unixtime": "1634914172",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "reply_to_message_id": 629,
+    "text": "We'll be extending the submissions until tomorrow's night.",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "We'll be extending the submissions until tomorrow's night."
+      }
+    ]
+  },
+  {
+    "id": 631,
+    "type": "message",
+    "date": "2021-11-20T23:58:00",
+    "date_unixtime": "1637449080",
+    "edited": "2021-11-20T23:58:03",
+    "edited_unixtime": "1637449083",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": "I would like to inform everyone that I have asked Nico to take over as the project's main maintainer.\n\nFor more than a year, Nico has been proving his value in answering all requests, keeping the builders working, and finding new mirrors and resources. I'm confident he's more than capable of replacing me, and wish him the best of luck.\n\nI won't be leaving the staff, I'm just giving the project space to grow. From now on, please consider Nico's GPG keys the root one, signing our keyring and mirrorlist.\n\nCongratulations to Nico. And a big hug to chaotic's current 85k users!",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "I would like to inform everyone that I have asked Nico to take over as the project's main maintainer.\n\nFor more than a year, Nico has been proving his value in answering all requests, keeping the builders working, and finding new mirrors and resources. I'm confident he's more than capable of replacing me, and wish him the best of luck.\n\nI won't be leaving the staff, I'm just giving the project space to grow. From now on, please consider Nico's GPG keys the root one, signing our keyring and mirrorlist.\n\nCongratulations to Nico. And a big hug to chaotic's current 85k users!"
+      }
+    ]
+  },
+  {
+    "id": 632,
+    "type": "message",
+    "date": "2021-12-12T17:40:38",
+    "date_unixtime": "1639327238",
+    "edited": "2021-12-12T17:48:31",
+    "edited_unixtime": "1639327711",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "Hey guys! We have a new mirror located in France, provided by ",
+      {
+        "type": "mention",
+        "text": "@sorcerer420"
+      },
+      "'s IRC network 🥳 \nMake sure to update your chaotic-mirrorlist & edit it accordingly if you want to force the usage of mirror 😊 if you are using the geo-mirror and live close to Paris, you will automatically be using the mirror."
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Hey guys! We have a new mirror located in France, provided by "
+      },
+      {
+        "type": "mention",
+        "text": "@sorcerer420"
+      },
+      {
+        "type": "plain",
+        "text": "'s IRC network 🥳 \nMake sure to update your chaotic-mirrorlist & edit it accordingly if you want to force the usage of mirror 😊 if you are using the geo-mirror and live close to Paris, you will automatically be using the mirror."
+      }
+    ]
+  },
+  {
+    "id": 633,
+    "type": "message",
+    "date": "2021-12-13T21:29:26",
+    "date_unixtime": "1639427366",
+    "edited": "2021-12-13T21:29:31",
+    "edited_unixtime": "1639427371",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      {
+        "type": "hashtag",
+        "text": "#INTERVENTION"
+      },
+      " ",
+      {
+        "type": "hashtag",
+        "text": "#PYTHON"
+      },
+      " \n\nLately the Python 3.10 update hit the Arch repos which means a lot of package rebuilds needed to be done. You can do ",
+      {
+        "type": "code",
+        "text": "sudo pacman -S $(pacman -Qoq /usr/lib/python3.9)"
+      },
+      " to reinstall all affected packages."
+    ],
+    "text_entities": [
+      {
+        "type": "hashtag",
+        "text": "#INTERVENTION"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "hashtag",
+        "text": "#PYTHON"
+      },
+      {
+        "type": "plain",
+        "text": " \n\nLately the Python 3.10 update hit the Arch repos which means a lot of package rebuilds needed to be done. You can do "
+      },
+      {
+        "type": "code",
+        "text": "sudo pacman -S $(pacman -Qoq /usr/lib/python3.9)"
+      },
+      {
+        "type": "plain",
+        "text": " to reinstall all affected packages."
+      }
+    ]
+  },
+  {
+    "id": 634,
+    "type": "message",
+    "date": "2022-02-02T19:01:20",
+    "date_unixtime": "1643824880",
+    "edited": "2022-02-02T19:01:23",
+    "edited_unixtime": "1643824883",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "What's up everyone! I'm happy to announce that ",
+      {
+        "type": "mention",
+        "text": "@edu4rdt"
+      },
+      " recently joined the builders 🥳\nIn order, it might be a necessary to update the ",
+      {
+        "type": "code",
+        "text": "chaotic-keyring"
+      },
+      " before other packages as the new signing key is needed for some packages."
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "What's up everyone! I'm happy to announce that "
+      },
+      {
+        "type": "mention",
+        "text": "@edu4rdt"
+      },
+      {
+        "type": "plain",
+        "text": " recently joined the builders 🥳\nIn order, it might be a necessary to update the "
+      },
+      {
+        "type": "code",
+        "text": "chaotic-keyring"
+      },
+      {
+        "type": "plain",
+        "text": " before other packages as the new signing key is needed for some packages."
+      }
+    ]
+  },
+  {
+    "id": 635,
+    "type": "message",
+    "date": "2022-02-15T19:30:04",
+    "date_unixtime": "1644949804",
+    "edited": "2022-02-15T19:43:23",
+    "edited_unixtime": "1644950603",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": "A little heads up for people experiencing issues with DKMS module updates: today Arch pushed the long awaited GCC/Binutils/Glibc to core repos. By now, we rebuilt most kernels using the new GCC so reinstalling those updated packages will fix the warnings. Cheers! 😌",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "A little heads up for people experiencing issues with DKMS module updates: today Arch pushed the long awaited GCC/Binutils/Glibc to core repos. By now, we rebuilt most kernels using the new GCC so reinstalling those updated packages will fix the warnings. Cheers! 😌"
+      }
+    ]
+  },
+  {
+    "id": 636,
+    "type": "message",
+    "date": "2022-02-22T18:53:30",
+    "date_unixtime": "1645552410",
+    "edited": "2022-02-23T20:34:55",
+    "edited_unixtime": "1645644895",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": "Hey people 👋 \nYou might have noticed that updates were no longer pushed since Saturday - this is due to a full repo rebuild we started with the goal of a general cleanup and having everything compiled with the new toolchain. Initially, the plan was to freeze the mirrors and be done with it yesterday but things are taking longer than expected. Our mirrors will resume syncing once a missing set of packages has been fixed 😊 \nIt's also worth noting that some packages will return at a later date while some others won't return at all due to compilation issues or PKGBUILDs being gone from AUR 👀\n\nUpdate: the mirrors are fully synced up again 👌",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Hey people 👋 \nYou might have noticed that updates were no longer pushed since Saturday - this is due to a full repo rebuild we started with the goal of a general cleanup and having everything compiled with the new toolchain. Initially, the plan was to freeze the mirrors and be done with it yesterday but things are taking longer than expected. Our mirrors will resume syncing once a missing set of packages has been fixed 😊 \nIt's also worth noting that some packages will return at a later date while some others won't return at all due to compilation issues or PKGBUILDs being gone from AUR 👀\n\nUpdate: the mirrors are fully synced up again 👌"
+      }
+    ]
+  },
+  {
+    "id": 637,
+    "type": "message",
+    "date": "2022-05-04T18:20:08",
+    "date_unixtime": "1651681208",
+    "edited": "2022-07-02T16:56:55",
+    "edited_unixtime": "1656773815",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "It is now possible to use an IPFS mirror thanks to the ",
+      {
+        "type": "text_link",
+        "text": "pacman.store",
+        "href": "https://github.com/RubenKelevra/pacman.store/releases/tag/2022.05.04"
+      },
+      " project providing it! The address can be found in the updated mirrorlist (of course disabled by default) while usage instructions can be found on the ",
+      {
+        "type": "text_link",
+        "text": "projects git repo",
+        "href": "https://github.com/RubenKelevra/pacman.store/#usage"
+      },
+      " 🚀"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "It is now possible to use an IPFS mirror thanks to the "
+      },
+      {
+        "type": "text_link",
+        "text": "pacman.store",
+        "href": "https://github.com/RubenKelevra/pacman.store/releases/tag/2022.05.04"
+      },
+      {
+        "type": "plain",
+        "text": " project providing it! The address can be found in the updated mirrorlist (of course disabled by default) while usage instructions can be found on the "
+      },
+      {
+        "type": "text_link",
+        "text": "projects git repo",
+        "href": "https://github.com/RubenKelevra/pacman.store/#usage"
+      },
+      {
+        "type": "plain",
+        "text": " 🚀"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "🔥"
+      }
+    ]
+  },
+  {
+    "id": 638,
+    "type": "message",
+    "date": "2022-06-02T16:44:50",
+    "date_unixtime": "1654181090",
+    "edited": "2022-06-02T21:18:11",
+    "edited_unixtime": "1654197491",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "Hello everyone! 👋🏻\nI hope you are alright and feeling fine! During the last few hours, a major repository cleanup & a lot of package fixes took place. The cleanup had the goal of spending less time building these packages & wasting less energy. \n\nMost of the removed packages concerned the ",
+      {
+        "type": "code",
+        "text": "garuda-builder"
+      },
+      " routines - here a lot of the listed packages were in fact not used anymore by respective maintainers, making them redundant. Some other packages were either severely outdated or not building anymore for a longer period of time.\n\nThis might have the side effect of also having removed a few packages that other people were using (as the packages were never requested since they were available already). If you are wondering why a package is suddenly marked as ",
+      {
+        "type": "italic",
+        "text": "\"foreign\""
+      },
+      " if it wasn't before, it is very likely that the cleanup was causing it. \n\nDon't be afraid, we can easily add them back (given they build successfully) - just open up an ",
+      {
+        "type": "text_link",
+        "text": "issue at our packages repo",
+        "href": "https://github.com/chaotic-aur/packages/"
+      },
+      " and we will handle the rest! 😊\n\nAt this point, since we never really had a proper announcement, I would also like to thank ",
+      {
+        "type": "mention",
+        "text": "@Technetium1"
+      },
+      " and ",
+      {
+        "type": "mention",
+        "text": "@alex_j_p"
+      },
+      " for helping out with package maintenance and ",
+      {
+        "type": "mention",
+        "text": "@itsTyrion"
+      },
+      " and ",
+      {
+        "type": "mention",
+        "text": "@shrirangkahale"
+      },
+      " for providing their mirrors. ☺️\n\nFinally, 5.18 TKG kernel builds are getting started soon, the toolbox was still building 5.17 ones until now. That's it for now, have a nice time! 🐱"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Hello everyone! 👋🏻\nI hope you are alright and feeling fine! During the last few hours, a major repository cleanup & a lot of package fixes took place. The cleanup had the goal of spending less time building these packages & wasting less energy. \n\nMost of the removed packages concerned the "
+      },
+      {
+        "type": "code",
+        "text": "garuda-builder"
+      },
+      {
+        "type": "plain",
+        "text": " routines - here a lot of the listed packages were in fact not used anymore by respective maintainers, making them redundant. Some other packages were either severely outdated or not building anymore for a longer period of time.\n\nThis might have the side effect of also having removed a few packages that other people were using (as the packages were never requested since they were available already). If you are wondering why a package is suddenly marked as "
+      },
+      {
+        "type": "italic",
+        "text": "\"foreign\""
+      },
+      {
+        "type": "plain",
+        "text": " if it wasn't before, it is very likely that the cleanup was causing it. \n\nDon't be afraid, we can easily add them back (given they build successfully) - just open up an "
+      },
+      {
+        "type": "text_link",
+        "text": "issue at our packages repo",
+        "href": "https://github.com/chaotic-aur/packages/"
+      },
+      {
+        "type": "plain",
+        "text": " and we will handle the rest! 😊\n\nAt this point, since we never really had a proper announcement, I would also like to thank "
+      },
+      {
+        "type": "mention",
+        "text": "@Technetium1"
+      },
+      {
+        "type": "plain",
+        "text": " and "
+      },
+      {
+        "type": "mention",
+        "text": "@alex_j_p"
+      },
+      {
+        "type": "plain",
+        "text": " for helping out with package maintenance and "
+      },
+      {
+        "type": "mention",
+        "text": "@itsTyrion"
+      },
+      {
+        "type": "plain",
+        "text": " and "
+      },
+      {
+        "type": "mention",
+        "text": "@shrirangkahale"
+      },
+      {
+        "type": "plain",
+        "text": " for providing their mirrors. ☺️\n\nFinally, 5.18 TKG kernel builds are getting started soon, the toolbox was still building 5.17 ones until now. That's it for now, have a nice time! 🐱"
+      }
+    ]
+  },
+  {
+    "id": 639,
+    "type": "message",
+    "date": "2022-07-30T17:51:09",
+    "date_unixtime": "1659196269",
+    "edited": "2022-08-01T16:59:08",
+    "edited_unixtime": "1659365948",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "Sup everyone! 👋🏻\nWe have some cool news regarding a (massive) bunch of new mirrors thanks to ",
+      {
+        "type": "mention",
+        "text": "@edu4rdshl"
+      },
+      ", ",
+      {
+        "type": "mention",
+        "text": "@ayulauffer"
+      },
+      " and ",
+      {
+        "type": "mention",
+        "text": "@alissonlauffer"
+      },
+      "! 🎉😁\nThe new locations are as follows:\n",
+      {
+        "type": "code",
+        "text": "- Arizona, USA\n- Australia\n- Brazil 2\n- Canada 2\n- Chile\n- Finland\n- Hong Kong\n- New York, USA\n- Saudi Arabia\n- Taipei City\n- United Arab Emirates\n- Virginia, USA 2\n"
+      },
+      "As usual, our ",
+      {
+        "type": "code",
+        "text": "geo-mirror"
+      },
+      " will route requests to the nearest location automatically, for those who prefer to do it manually there is the updated ",
+      {
+        "type": "code",
+        "text": "chaotic-mirrorlist"
+      },
+      ".\nCheers! 🧑🏻‍💻"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Sup everyone! 👋🏻\nWe have some cool news regarding a (massive) bunch of new mirrors thanks to "
+      },
+      {
+        "type": "mention",
+        "text": "@edu4rdshl"
+      },
+      {
+        "type": "plain",
+        "text": ", "
+      },
+      {
+        "type": "mention",
+        "text": "@ayulauffer"
+      },
+      {
+        "type": "plain",
+        "text": " and "
+      },
+      {
+        "type": "mention",
+        "text": "@alissonlauffer"
+      },
+      {
+        "type": "plain",
+        "text": "! 🎉😁\nThe new locations are as follows:\n"
+      },
+      {
+        "type": "code",
+        "text": "- Arizona, USA\n- Australia\n- Brazil 2\n- Canada 2\n- Chile\n- Finland\n- Hong Kong\n- New York, USA\n- Saudi Arabia\n- Taipei City\n- United Arab Emirates\n- Virginia, USA 2\n"
+      },
+      {
+        "type": "plain",
+        "text": "As usual, our "
+      },
+      {
+        "type": "code",
+        "text": "geo-mirror"
+      },
+      {
+        "type": "plain",
+        "text": " will route requests to the nearest location automatically, for those who prefer to do it manually there is the updated "
+      },
+      {
+        "type": "code",
+        "text": "chaotic-mirrorlist"
+      },
+      {
+        "type": "plain",
+        "text": ".\nCheers! 🧑🏻‍💻"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 19,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 9,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "🤩"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "👏"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "💩"
+      }
+    ]
+  },
+  {
+    "id": 640,
+    "type": "message",
+    "date": "2022-08-01T08:46:48",
+    "date_unixtime": "1659336408",
+    "edited": "2022-08-01T08:51:22",
+    "edited_unixtime": "1659336682",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "forwarded_from": "TNE",
+    "text": [
+      "Did some codering today and came up with a fancy lil project\n\nEver wondered where the chaotic mirrors are and which one is used? Well now you can know!\n",
+      {
+        "type": "link",
+        "text": "https://status.chaotic.cx/map"
+      },
+      "\nAlso super great if you want to consider hosting a mirror wink wink"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Did some codering today and came up with a fancy lil project\n\nEver wondered where the chaotic mirrors are and which one is used? Well now you can know!\n"
+      },
+      {
+        "type": "link",
+        "text": "https://status.chaotic.cx/map"
+      },
+      {
+        "type": "plain",
+        "text": "\nAlso super great if you want to consider hosting a mirror wink wink"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 19,
+        "emoji": "👍"
+      }
+    ]
+  },
+  {
+    "id": 641,
+    "type": "message",
+    "date": "2022-08-24T01:27:59",
+    "date_unixtime": "1661297279",
+    "edited": "2022-08-24T02:08:20",
+    "edited_unixtime": "1661299700",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      "We're aware of connection issues in our main router, we're investing it, expect instability in all mirrors and .chaotic.cx domain.\n\n",
+      {
+        "type": "bold",
+        "text": "UPDATE:"
+      },
+      " Problem bypassed!"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "We're aware of connection issues in our main router, we're investing it, expect instability in all mirrors and .chaotic.cx domain.\n\n"
+      },
+      {
+        "type": "bold",
+        "text": "UPDATE:"
+      },
+      {
+        "type": "plain",
+        "text": " Problem bypassed!"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 12,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 3,
+        "emoji": "👏"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "⚡"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "❤"
+      }
+    ]
+  },
+  {
+    "id": 642,
+    "type": "service",
+    "date": "2022-08-24T02:18:50",
+    "date_unixtime": "1661300330",
+    "actor": "Chaotic-AUR",
+    "actor_id": "channel1293714071",
+    "action": "pin_message",
+    "message_id": 641,
+    "text": "",
+    "text_entities": []
+  },
+  {
+    "id": 643,
+    "type": "message",
+    "date": "2022-11-07T21:19:50",
+    "date_unixtime": "1667852390",
+    "edited": "2022-11-07T21:21:17",
+    "edited_unixtime": "1667852477",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "It is time for another announcement! I hope everyone is feeling good ☺️\nAfter having performed a full repository rebuild due to OpenSSL 3 hitting the Arch repositories, a few packages aren't yet back. We are ",
+      {
+        "type": "text_link",
+        "text": "tracking the progress",
+        "href": "https://github.com/chaotic-aur/packages/issues/2086"
+      },
+      " in this GitHub issue! 📑"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "It is time for another announcement! I hope everyone is feeling good ☺️\nAfter having performed a full repository rebuild due to OpenSSL 3 hitting the Arch repositories, a few packages aren't yet back. We are "
+      },
+      {
+        "type": "text_link",
+        "text": "tracking the progress",
+        "href": "https://github.com/chaotic-aur/packages/issues/2086"
+      },
+      {
+        "type": "plain",
+        "text": " in this GitHub issue! 📑"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 9,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "🔥"
+      }
+    ]
+  },
+  {
+    "id": 645,
+    "type": "message",
+    "date": "2022-12-24T19:07:48",
+    "date_unixtime": "1671905268",
+    "edited": "2022-12-24T19:08:22",
+    "edited_unixtime": "1671905302",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": "A merry Christmas to everyone! Have a nice time and take care of yourselves🎄🎁🤗",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "A merry Christmas to everyone! Have a nice time and take care of yourselves🎄🎁🤗"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 26,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 8,
+        "emoji": "🎉"
+      },
+      {
+        "type": "emoji",
+        "count": 4,
+        "emoji": "👍"
+      }
+    ]
+  },
+  {
+    "id": 646,
+    "type": "message",
+    "date": "2023-01-28T09:50:40",
+    "date_unixtime": "1674895840",
+    "edited": "2023-01-28T09:53:31",
+    "edited_unixtime": "1674896011",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "Hello everyone! 🤗\nWe have a new ",
+      {
+        "type": "text_link",
+        "text": "statuspage ",
+        "href": "https://uptimes.chaotic.cx/"
+      },
+      "powered by Upptime! 🎉 Being completely driven by GitHub actions, it is also able to automatically create issues and tag the corresponding maintainer in case of outages. Its repo can be found ",
+      {
+        "type": "text_link",
+        "text": "here",
+        "href": "https://github.com/chaotic-aur/chaotic-uptimes"
+      },
+      ". 👀"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Hello everyone! 🤗\nWe have a new "
+      },
+      {
+        "type": "text_link",
+        "text": "statuspage ",
+        "href": "https://uptimes.chaotic.cx/"
+      },
+      {
+        "type": "plain",
+        "text": "powered by Upptime! 🎉 Being completely driven by GitHub actions, it is also able to automatically create issues and tag the corresponding maintainer in case of outages. Its repo can be found "
+      },
+      {
+        "type": "text_link",
+        "text": "here",
+        "href": "https://github.com/chaotic-aur/chaotic-uptimes"
+      },
+      {
+        "type": "plain",
+        "text": ". 👀"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 12,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 6,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "😍"
+      }
+    ]
+  },
+  {
+    "id": 647,
+    "type": "message",
+    "date": "2023-03-30T12:44:24",
+    "date_unixtime": "1680173064",
+    "edited": "2023-03-30T12:44:52",
+    "edited_unixtime": "1680173092",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "Chaotic-CDN is back! A big thanks to ",
+      {
+        "type": "mention",
+        "text": "@makzk"
+      },
+      " for providing a mirror in Chile as well as ",
+      {
+        "type": "mention",
+        "text": "@ayulauffer"
+      },
+      " for providing Silky.Network mirrors! ❤️\n\nOur ",
+      {
+        "type": "text_link",
+        "text": "mirror map ",
+        "href": "https://status.chaotic.cx/map"
+      },
+      "has become pretty green again😊"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Chaotic-CDN is back! A big thanks to "
+      },
+      {
+        "type": "mention",
+        "text": "@makzk"
+      },
+      {
+        "type": "plain",
+        "text": " for providing a mirror in Chile as well as "
+      },
+      {
+        "type": "mention",
+        "text": "@ayulauffer"
+      },
+      {
+        "type": "plain",
+        "text": " for providing Silky.Network mirrors! ❤️\n\nOur "
+      },
+      {
+        "type": "text_link",
+        "text": "mirror map ",
+        "href": "https://status.chaotic.cx/map"
+      },
+      {
+        "type": "plain",
+        "text": "has become pretty green again😊"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 14,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "👏"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "👌"
+      }
+    ]
+  },
+  {
+    "id": 650,
+    "type": "message",
+    "date": "2023-04-24T16:06:30",
+    "date_unixtime": "1682345190",
+    "edited": "2023-04-24T16:26:44",
+    "edited_unixtime": "1682346404",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": [
+      "Officially releasing ",
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-cx/nyx"
+      },
+      " today\n\nIt works for any distro with ",
+      {
+        "type": "code",
+        "text": "nix"
+      },
+      "  package manager installed, though Linux-only (no Darwin) and the modules are NixOS-only. Includes daily bumped ",
+      {
+        "type": "code",
+        "text": "gamescope_git"
+      },
+      ", ",
+      {
+        "type": "code",
+        "text": "mesa_git"
+      },
+      ", ",
+      {
+        "type": "code",
+        "text": "sway_git"
+      },
+      ", ",
+      {
+        "type": "code",
+        "text": "yuzu-early-access_git"
+      },
+      ".\n\nFor non-nixers, you can run any of these things without installing system-wide, like: ",
+      {
+        "type": "code",
+        "text": "nix run github:chaotic-cx/nyx/nyxpkgs-unstable#gamescope_git -- -w 1920 -h 1080 -W 3440 -H 1440 -b vkcube"
+      },
+      "\n\nUpdates on a separated tg channel: ",
+      {
+        "type": "mention",
+        "text": "@chaotic_nyx"
+      }
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Officially releasing "
+      },
+      {
+        "type": "link",
+        "text": "https://github.com/chaotic-cx/nyx"
+      },
+      {
+        "type": "plain",
+        "text": " today\n\nIt works for any distro with "
+      },
+      {
+        "type": "code",
+        "text": "nix"
+      },
+      {
+        "type": "plain",
+        "text": "  package manager installed, though Linux-only (no Darwin) and the modules are NixOS-only. Includes daily bumped "
+      },
+      {
+        "type": "code",
+        "text": "gamescope_git"
+      },
+      {
+        "type": "plain",
+        "text": ", "
+      },
+      {
+        "type": "code",
+        "text": "mesa_git"
+      },
+      {
+        "type": "plain",
+        "text": ", "
+      },
+      {
+        "type": "code",
+        "text": "sway_git"
+      },
+      {
+        "type": "plain",
+        "text": ", "
+      },
+      {
+        "type": "code",
+        "text": "yuzu-early-access_git"
+      },
+      {
+        "type": "plain",
+        "text": ".\n\nFor non-nixers, you can run any of these things without installing system-wide, like: "
+      },
+      {
+        "type": "code",
+        "text": "nix run github:chaotic-cx/nyx/nyxpkgs-unstable#gamescope_git -- -w 1920 -h 1080 -W 3440 -H 1440 -b vkcube"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nUpdates on a separated tg channel: "
+      },
+      {
+        "type": "mention",
+        "text": "@chaotic_nyx"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 13,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "❤"
+      }
+    ]
+  },
+  {
+    "id": 651,
+    "type": "message",
+    "date": "2023-05-04T15:53:26",
+    "date_unixtime": "1683208406",
+    "edited": "2023-05-04T15:53:39",
+    "edited_unixtime": "1683208419",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": "We are aware of the python 3.11 bump, we're rebuilding stuff already, there are a lot of packages please be patient.\n\nIf stuff fails, please rebuild them from AUR (specify \"aur/\" to your helper, like \"paru -S aur/python-mydarilingpackage\"), most python packages are light, or wait a little more before upgrading.",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "We are aware of the python 3.11 bump, we're rebuilding stuff already, there are a lot of packages please be patient.\n\nIf stuff fails, please rebuild them from AUR (specify \"aur/\" to your helper, like \"paru -S aur/python-mydarilingpackage\"), most python packages are light, or wait a little more before upgrading."
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 11,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 7,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "🔥"
+      }
+    ]
+  },
+  {
+    "id": 652,
+    "type": "message",
+    "date": "2023-05-17T07:28:27",
+    "date_unixtime": "1684301307",
+    "edited": "2023-05-17T07:33:44",
+    "edited_unixtime": "1684301624",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "Hello chaotic community 🤗\n\nSome of you might have noticed a new username among our maintainers lately - therefore I'd like to officially welcome ",
+      {
+        "type": "mention",
+        "text": "@stackofprimes"
+      },
+      " (",
+      {
+        "type": "text_link",
+        "text": "xiota",
+        "href": "https://github.com/xiota"
+      },
+      "), who is going to help with general package maintenance 🥳\nThey already initiated a massive cleanup of broken / obsolete packages as well as a lot of package fixes which also means having more space for other applications 🎉"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Hello chaotic community 🤗\n\nSome of you might have noticed a new username among our maintainers lately - therefore I'd like to officially welcome "
+      },
+      {
+        "type": "mention",
+        "text": "@stackofprimes"
+      },
+      {
+        "type": "plain",
+        "text": " ("
+      },
+      {
+        "type": "text_link",
+        "text": "xiota",
+        "href": "https://github.com/xiota"
+      },
+      {
+        "type": "plain",
+        "text": "), who is going to help with general package maintenance 🥳\nThey already initiated a massive cleanup of broken / obsolete packages as well as a lot of package fixes which also means having more space for other applications 🎉"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 13,
+        "emoji": "🎉"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "🤝"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "👏"
+      }
+    ]
+  },
+  {
+    "id": 653,
+    "type": "message",
+    "date": "2023-05-21T19:48:53",
+    "date_unixtime": "1684691333",
+    "edited": "2023-05-21T19:49:16",
+    "edited_unixtime": "1684691356",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "The Arch Linux project announces that they are retiring the ",
+      {
+        "type": "code",
+        "text": "community "
+      },
+      "repo since Chaotic-AUR got it covered. It's mirrors are currently in progress of being synced to reflect those changes 🚀\n",
+      {
+        "type": "bot_command",
+        "text": "/s"
+      },
+      ""
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "The Arch Linux project announces that they are retiring the "
+      },
+      {
+        "type": "code",
+        "text": "community "
+      },
+      {
+        "type": "plain",
+        "text": "repo since Chaotic-AUR got it covered. It's mirrors are currently in progress of being synced to reflect those changes 🚀\n"
+      },
+      {
+        "type": "bot_command",
+        "text": "/s"
+      },
+      {
+        "type": "plain",
+        "text": ""
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 21,
+        "emoji": "😁"
+      },
+      {
+        "type": "emoji",
+        "count": 5,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "👍"
+      }
+    ]
+  },
+  {
+    "id": 654,
+    "type": "message",
+    "date": "2023-06-15T20:58:40",
+    "date_unixtime": "1686855520",
+    "edited": "2023-06-16T20:48:51",
+    "edited_unixtime": "1686941331",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nico 🐉🔥",
+    "text": [
+      "One of our signing keys expired today, causing packages to fail to install with the key being marked as \"",
+      {
+        "type": "code",
+        "text": "is unknown trust"
+      },
+      "\" - we are aware of this and try to get it fixed as soon as possible, while also ensuring a condition like this does not occur again! 🔧\n\nUpdate: we are back to regular business."
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "One of our signing keys expired today, causing packages to fail to install with the key being marked as \""
+      },
+      {
+        "type": "code",
+        "text": "is unknown trust"
+      },
+      {
+        "type": "plain",
+        "text": "\" - we are aware of this and try to get it fixed as soon as possible, while also ensuring a condition like this does not occur again! 🔧\n\nUpdate: we are back to regular business."
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 27,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 7,
+        "emoji": "😭"
+      },
+      {
+        "type": "emoji",
+        "count": 5,
+        "emoji": "👨‍💻"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "💩"
+      }
+    ]
+  },
+  {
+    "id": 655,
+    "type": "message",
+    "date": "2024-04-07T12:36:41",
+    "date_unixtime": "1712486201",
+    "edited": "2024-04-07T12:38:49",
+    "edited_unixtime": "1712486329",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ 🐉🔥",
+    "text": [
+      "Whats up everyone! A lot of time passed since our last announcement. As usual, we hope everyone is feeling fine ☺️ \n\nThe reason for this announcement is the EOL of ",
+      {
+        "type": "code",
+        "text": "linux-tkg"
+      },
+      " kernel builds in our repository. Since we used to provide these since the early beginning, we felt that an announcement explaining the reasoning behind this decision was necessary. The main reasons are:\n- Introduced maintenance burden due to missing options in the kernel config. Since these were missing from time to time, user input was necessary to continue the build process. No other kernel showed this kind of behaviour and confirming the use of the default option for all kernel variants is a quite time consuming and annoying task. Opening issues every time this happens is also unsustainable long-term.\n- Maintainers making use of it moved to",
+      {
+        "type": "code",
+        "text": " linux-cachyos"
+      },
+      " variants and therefore don't need ",
+      {
+        "type": "code",
+        "text": "linux-tkg"
+      },
+      " anymore. \n- Not having a dedicated builder for these packages anymore. During the last months, they were built on demand to not introduce too much load to the main builder. This means builds were sometimes happening too late (or stalled due to the previously mentioned kernel config issues because we can't babysit the process for multiple hours)\n\nAs an alternative, we can recommend the",
+      {
+        "type": "code",
+        "text": " linux-cachyos"
+      },
+      " kernel variants of ",
+      {
+        "type": "mention",
+        "text": "@ptr1337"
+      },
+      ". They have proven to be great kernels. In case of popular demand, we also might add additional variants of this kernel 😊"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Whats up everyone! A lot of time passed since our last announcement. As usual, we hope everyone is feeling fine ☺️ \n\nThe reason for this announcement is the EOL of "
+      },
+      {
+        "type": "code",
+        "text": "linux-tkg"
+      },
+      {
+        "type": "plain",
+        "text": " kernel builds in our repository. Since we used to provide these since the early beginning, we felt that an announcement explaining the reasoning behind this decision was necessary. The main reasons are:\n- Introduced maintenance burden due to missing options in the kernel config. Since these were missing from time to time, user input was necessary to continue the build process. No other kernel showed this kind of behaviour and confirming the use of the default option for all kernel variants is a quite time consuming and annoying task. Opening issues every time this happens is also unsustainable long-term.\n- Maintainers making use of it moved to"
+      },
+      {
+        "type": "code",
+        "text": " linux-cachyos"
+      },
+      {
+        "type": "plain",
+        "text": " variants and therefore don't need "
+      },
+      {
+        "type": "code",
+        "text": "linux-tkg"
+      },
+      {
+        "type": "plain",
+        "text": " anymore. \n- Not having a dedicated builder for these packages anymore. During the last months, they were built on demand to not introduce too much load to the main builder. This means builds were sometimes happening too late (or stalled due to the previously mentioned kernel config issues because we can't babysit the process for multiple hours)\n\nAs an alternative, we can recommend the"
+      },
+      {
+        "type": "code",
+        "text": " linux-cachyos"
+      },
+      {
+        "type": "plain",
+        "text": " kernel variants of "
+      },
+      {
+        "type": "mention",
+        "text": "@ptr1337"
+      },
+      {
+        "type": "plain",
+        "text": ". They have proven to be great kernels. In case of popular demand, we also might add additional variants of this kernel 😊"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 26,
+        "emoji": "👍"
+      }
+    ]
+  },
+  {
+    "id": 656,
+    "type": "message",
+    "date": "2024-06-09T20:36:02",
+    "date_unixtime": "1717958162",
+    "edited": "2024-06-09T20:40:37",
+    "edited_unixtime": "1717958437",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ 🐉🔥",
+    "text": [
+      "Hello, everyone 🤗\n\nWe have some interesting news to share  - Chaotic-AUR's ",
+      {
+        "type": "text_link",
+        "text": "new website",
+        "href": "https://aur.chaotic.cx/"
+      },
+      " just went live 🎉\nWhat started as a project to learn and improve Angular and Typescript skills quickly evolved into a useful tool for all Chaotic-AUR users and maintainers 😄 Not only is our ",
+      {
+        "type": "text_link",
+        "text": "memorial",
+        "href": "https://aur.chaotic.cx/memorial"
+      },
+      " finally in place, but we can also show basic stats about packages and deployments. While we have a dedicated channel for news and deployments, these channels haven't been easily available to non-Telegram users. This changes today 😊 An important note about the deploy logs: these show the deployments of our currently in-development infra 4.0 as a preparation for its launch - the pilot phase is currently in progress. The features of the website will eventually be expanded in the future, as soon as we have more monitoring set up for our new build system 🧐\n\nPS: If you find any issues with the website don't hesitate to report them to ",
+      {
+        "type": "mention",
+        "text": "@dr460nf1r3"
+      },
+      " 👾"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Hello, everyone 🤗\n\nWe have some interesting news to share  - Chaotic-AUR's "
+      },
+      {
+        "type": "text_link",
+        "text": "new website",
+        "href": "https://aur.chaotic.cx/"
+      },
+      {
+        "type": "plain",
+        "text": " just went live 🎉\nWhat started as a project to learn and improve Angular and Typescript skills quickly evolved into a useful tool for all Chaotic-AUR users and maintainers 😄 Not only is our "
+      },
+      {
+        "type": "text_link",
+        "text": "memorial",
+        "href": "https://aur.chaotic.cx/memorial"
+      },
+      {
+        "type": "plain",
+        "text": " finally in place, but we can also show basic stats about packages and deployments. While we have a dedicated channel for news and deployments, these channels haven't been easily available to non-Telegram users. This changes today 😊 An important note about the deploy logs: these show the deployments of our currently in-development infra 4.0 as a preparation for its launch - the pilot phase is currently in progress. The features of the website will eventually be expanded in the future, as soon as we have more monitoring set up for our new build system 🧐\n\nPS: If you find any issues with the website don't hesitate to report them to "
+      },
+      {
+        "type": "mention",
+        "text": "@dr460nf1r3"
+      },
+      {
+        "type": "plain",
+        "text": " 👾"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 25,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 3,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 3,
+        "emoji": "👏"
+      }
+    ]
+  },
+  {
+    "id": 657,
+    "type": "message",
+    "date": "2024-10-06T11:49:33",
+    "date_unixtime": "1728208173",
+    "edited": "2024-10-06T14:34:16",
+    "edited_unixtime": "1728218056",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ 🐉🔥",
+    "text": [
+      "Chaotic-AUR turns six years old on October 18! 🥳\n\nIt has been three years since ",
+      {
+        "type": "text_link",
+        "text": "celebrating Chaotic-AUR's birthday",
+        "href": "https://t.me/chaotic_aur/629"
+      },
+      " with a memorial. \nWe would love to repeat this occasion this year, as it's the exactly double the years as the last time! ☺️\n\nLet's see what happened in the meantime 🕵\n\n  - Our user count is currently around 107k per month;\n  - The amount of offered packages is roughly 3400 (after a big cleanup happening)\n  - Active mirror count decreased to 12, but the CDN-mirror is powered by blazing-fast Cloudflare R2 these days\n  - The website got a complete rewrite and now offers a lot of useful functionality, such as viewing ",
+      {
+        "type": "text_link",
+        "text": "package lists",
+        "href": "https://aur.chaotic.cx/package-list"
+      },
+      " and ",
+      {
+        "type": "text_link",
+        "text": "stats",
+        "href": "https://aur.chaotic.cx/stats"
+      },
+      ", ",
+      {
+        "type": "text_link",
+        "text": "build processes",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      ", and more information\n  - Though not directly Chaotic-AUR-related, the Chaotic-CX spaces gained a new project via ",
+      {
+        "type": "text_link",
+        "text": "Chaotic Nyx",
+        "href": "https://nyx.chaotic.cx/"
+      },
+      "\n  - And there is something else really cool coming up at the day the birthday takes place (you might guess what it is - it's been hinted at in several places 😋) ! Stay tuned! 😇\n\nThis time, we will also be collecting screenshots of terminals and desktops showing ",
+      {
+        "type": "code",
+        "text": "fastfetch"
+      },
+      " with the Chaotic-AUR logo. To take part in this special day, the following is needed:\n\n  - ",
+      {
+        "type": "code",
+        "text": "fastfetch"
+      },
+      " (get it via Arch repos)\n  - The ",
+      {
+        "type": "text_link",
+        "text": "Chaotic-AUR logo",
+        "href": "https://github.com/chaotic-cx/memorial-v2/blob/main/logo.png"
+      },
+      "\n  - Run fastfetch like that: ",
+      {
+        "type": "code",
+        "text": "fastfetch --logo ~/Downloads/logo.png --logo-width 45"
+      },
+      ", replacing the location with the location the logo has been downloaded to, and width with something that makes the image fit the height of your fastfetch output\n  - Take a screenshot and either add a PR to the ",
+      {
+        "type": "text_link",
+        "text": "memorial repo",
+        "href": "https://github.com/chaotic-cx/memorial-v2"
+      },
+      ", send it to ",
+      {
+        "type": "email",
+        "text": "memorial@chaotic.cx"
+      },
+      ", ",
+      {
+        "type": "mention",
+        "text": "@dr460nf1r3"
+      },
+      " or the ",
+      {
+        "type": "text_link",
+        "text": "group chat",
+        "href": "https://t.me/chaotic_aur_sac"
+      },
+      "\n\nSubmissions will close on October 18, the day the birthday takes place.\n\nA big thanks to everyone helping us with achieving the things we did during the last years. It certainly wouldn't be the same without you! ❤️"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Chaotic-AUR turns six years old on October 18! 🥳\n\nIt has been three years since "
+      },
+      {
+        "type": "text_link",
+        "text": "celebrating Chaotic-AUR's birthday",
+        "href": "https://t.me/chaotic_aur/629"
+      },
+      {
+        "type": "plain",
+        "text": " with a memorial. \nWe would love to repeat this occasion this year, as it's the exactly double the years as the last time! ☺️\n\nLet's see what happened in the meantime 🕵\n\n  - Our user count is currently around 107k per month;\n  - The amount of offered packages is roughly 3400 (after a big cleanup happening)\n  - Active mirror count decreased to 12, but the CDN-mirror is powered by blazing-fast Cloudflare R2 these days\n  - The website got a complete rewrite and now offers a lot of useful functionality, such as viewing "
+      },
+      {
+        "type": "text_link",
+        "text": "package lists",
+        "href": "https://aur.chaotic.cx/package-list"
+      },
+      {
+        "type": "plain",
+        "text": " and "
+      },
+      {
+        "type": "text_link",
+        "text": "stats",
+        "href": "https://aur.chaotic.cx/stats"
+      },
+      {
+        "type": "plain",
+        "text": ", "
+      },
+      {
+        "type": "text_link",
+        "text": "build processes",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      {
+        "type": "plain",
+        "text": ", and more information\n  - Though not directly Chaotic-AUR-related, the Chaotic-CX spaces gained a new project via "
+      },
+      {
+        "type": "text_link",
+        "text": "Chaotic Nyx",
+        "href": "https://nyx.chaotic.cx/"
+      },
+      {
+        "type": "plain",
+        "text": "\n  - And there is something else really cool coming up at the day the birthday takes place (you might guess what it is - it's been hinted at in several places 😋) ! Stay tuned! 😇\n\nThis time, we will also be collecting screenshots of terminals and desktops showing "
+      },
+      {
+        "type": "code",
+        "text": "fastfetch"
+      },
+      {
+        "type": "plain",
+        "text": " with the Chaotic-AUR logo. To take part in this special day, the following is needed:\n\n  - "
+      },
+      {
+        "type": "code",
+        "text": "fastfetch"
+      },
+      {
+        "type": "plain",
+        "text": " (get it via Arch repos)\n  - The "
+      },
+      {
+        "type": "text_link",
+        "text": "Chaotic-AUR logo",
+        "href": "https://github.com/chaotic-cx/memorial-v2/blob/main/logo.png"
+      },
+      {
+        "type": "plain",
+        "text": "\n  - Run fastfetch like that: "
+      },
+      {
+        "type": "code",
+        "text": "fastfetch --logo ~/Downloads/logo.png --logo-width 45"
+      },
+      {
+        "type": "plain",
+        "text": ", replacing the location with the location the logo has been downloaded to, and width with something that makes the image fit the height of your fastfetch output\n  - Take a screenshot and either add a PR to the "
+      },
+      {
+        "type": "text_link",
+        "text": "memorial repo",
+        "href": "https://github.com/chaotic-cx/memorial-v2"
+      },
+      {
+        "type": "plain",
+        "text": ", send it to "
+      },
+      {
+        "type": "email",
+        "text": "memorial@chaotic.cx"
+      },
+      {
+        "type": "plain",
+        "text": ", "
+      },
+      {
+        "type": "mention",
+        "text": "@dr460nf1r3"
+      },
+      {
+        "type": "plain",
+        "text": " or the "
+      },
+      {
+        "type": "text_link",
+        "text": "group chat",
+        "href": "https://t.me/chaotic_aur_sac"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nSubmissions will close on October 18, the day the birthday takes place.\n\nA big thanks to everyone helping us with achieving the things we did during the last years. It certainly wouldn't be the same without you! ❤️"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 20,
+        "emoji": "👏"
+      },
+      {
+        "type": "emoji",
+        "count": 15,
+        "emoji": "🎉"
+      },
+      {
+        "type": "emoji",
+        "count": 7,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "🍾"
+      }
+    ]
+  },
+  {
+    "id": 658,
+    "type": "message",
+    "date": "2024-10-15T08:00:58",
+    "date_unixtime": "1728972058",
+    "edited": "2024-10-15T08:01:02",
+    "edited_unixtime": "1728972062",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ 🐉🔥",
+    "text": "Three days are left for memorial submissions! ☺️",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Three days are left for memorial submissions! ☺️"
+      }
+    ]
+  },
+  {
+    "id": 659,
+    "type": "message",
+    "date": "2024-10-18T20:19:16",
+    "date_unixtime": "1729275556",
+    "edited": "2024-10-18T20:29:07",
+    "edited_unixtime": "1729276147",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ 🐉🔥",
+    "text": [
+      "Today is a special day because it marks the 6th birthday of this project, as well as the day when the next big evolution of our build tools finally goes live. \n\nWhile we already highlighted the most prominent changes between ",
+      {
+        "type": "text_link",
+        "text": "those three years in our previous post",
+        "href": "https://t.me/chaotic_aur/657"
+      },
+      ", it is a pleasure to be officially announcing our new build system, also called ",
+      {
+        "type": "bold",
+        "text": "infra 4.0"
+      },
+      " ☺️ This is the end of a journey that took more than half a year to finally be filling close to all Chaotic-AUR build requirements. While this is primarily a solution written for Chaotic-AUR, it is still a generic solution everyone wanting to compile PKGBUILDs on smaller or larger scale can adopt. \n\nWhy would we need a new build system if the old one was working well? The question is easy: the pre-assumptions the previous infra had, like inhomogeneous builder landscapes lead to some drawbacks (while serving a really good job for many years nevertheless!). One of them is that we continually need to run routines to check packages for new updates, another one being unable to control the allocation of builds to individual builders. \nThis time, we were able to work with different pre-assumptions, which allowed us to optimize the entire process to a great extent. The fact that we've been running the entire load of Chaotic-AUR in our infra 4.0 test environment on our main builder besides the regular builds is a great example of how efficient it has become. \n\nSince the entire process consists of ",
+      {
+        "type": "text_link",
+        "text": "GitLab CI pipelines",
+        "href": "https://github.com/chaotic-cx/chaotic-repository-template/"
+      },
+      " and a ",
+      {
+        "type": "text_link",
+        "text": "central instance for managing build processes",
+        "href": "https://gitlab.com/garuda-linux/tools/chaotic-manager"
+      },
+      " after they have been scheduled by the pipelines, it is also much easier for users to figure out when packages were updated, as well as being able to inspect logs for multiple revisions of builds. This also means that our well-known packages repository is now ",
+      {
+        "type": "text_link",
+        "text": "mainly operated on GitLab CI due to making",
+        "href": "https://gitlab.com/chaotic-aur/pkgbuilds"
+      },
+      " use of their CI tools. To preserve issues and comment histories, the \"old\" repository will be kept as a read-only mirror of the main repository, and also kept open for issues and bug reports.\n\nThere are many other changes and new features, like:\n- Builds getting scheduled on demand (read: whenever an AUR package changes and CI pipelines pull in the updated files, or someone pushes a change to a locally maintained package) rather than with every routine run\n- Live logs can be opened either via the pipeline's external stages, as well as being presented on our ",
+      {
+        "type": "text_link",
+        "text": "status page of the website",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      ". If you always wanted to watch your Ungoogled Chromium build logs in real-time - now it is possible 😎\n- Build queues are visible to the public, also on the ",
+      {
+        "type": "text_link",
+        "text": "status page",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      "\n- Support of build for multiple repos at once\n- Saving/Restoring build queue state on builder/manager shutdown\n- Dependency trees\n- Automated lib bumps (which are not enabled for most packages, as adding deps is a manual process. The plan is to enable this for more packages in the following months)\n- No more split repos for packages and interference - the repo now consists of folders, one for each pkgbase. Inside it, you may find a ",
+      {
+        "type": "code",
+        "text": ".CI"
+      },
+      " folder with interferes and further builds configurations\n- Being able to maintain a PKGBUILD on Chaotic-AURs repo, and pushing it back to AUR automatically, whenever a new change gets pushed. This opens a door for AUR packages to be community-maintained via PRs (looking at you, ",
+      {
+        "type": "code",
+        "text": "proton-ge-custom"
+      },
+      "!) \n- The state present in the packages repo fully reflects the state of the repository. Packages not present will automatically be removed\n- Being able to review non-trivial package updates (which is opt-in and turned off for Chaotic-AUR. Might explore the idea of a reviewed/trusted subset of packages in the future)\n\nFor everyone wanting to take a closer look inside, ",
+      {
+        "type": "text_link",
+        "text": "dedicated documentation is available here",
+        "href": "https://chaotic-manager.pages.dev/"
+      },
+      ".\n\nAt this point, I want to especially thank two people, who played a major role in making this possible.\n- ",
+      {
+        "type": "text_link",
+        "text": "TNE",
+        "href": "https://github.com/JustTne"
+      },
+      ", whose ideas and visions ensured all of it became as efficient as it turned out. \n- ",
+      {
+        "type": "text_link",
+        "text": "xiota",
+        "href": "https://github.com/xiota"
+      },
+      " , who did close to all of the heavy lifting regarding porting our current set of packages to v4 and provided feedback on build processes and existing issues"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Today is a special day because it marks the 6th birthday of this project, as well as the day when the next big evolution of our build tools finally goes live. \n\nWhile we already highlighted the most prominent changes between "
+      },
+      {
+        "type": "text_link",
+        "text": "those three years in our previous post",
+        "href": "https://t.me/chaotic_aur/657"
+      },
+      {
+        "type": "plain",
+        "text": ", it is a pleasure to be officially announcing our new build system, also called "
+      },
+      {
+        "type": "bold",
+        "text": "infra 4.0"
+      },
+      {
+        "type": "plain",
+        "text": " ☺️ This is the end of a journey that took more than half a year to finally be filling close to all Chaotic-AUR build requirements. While this is primarily a solution written for Chaotic-AUR, it is still a generic solution everyone wanting to compile PKGBUILDs on smaller or larger scale can adopt. \n\nWhy would we need a new build system if the old one was working well? The question is easy: the pre-assumptions the previous infra had, like inhomogeneous builder landscapes lead to some drawbacks (while serving a really good job for many years nevertheless!). One of them is that we continually need to run routines to check packages for new updates, another one being unable to control the allocation of builds to individual builders. \nThis time, we were able to work with different pre-assumptions, which allowed us to optimize the entire process to a great extent. The fact that we've been running the entire load of Chaotic-AUR in our infra 4.0 test environment on our main builder besides the regular builds is a great example of how efficient it has become. \n\nSince the entire process consists of "
+      },
+      {
+        "type": "text_link",
+        "text": "GitLab CI pipelines",
+        "href": "https://github.com/chaotic-cx/chaotic-repository-template/"
+      },
+      {
+        "type": "plain",
+        "text": " and a "
+      },
+      {
+        "type": "text_link",
+        "text": "central instance for managing build processes",
+        "href": "https://gitlab.com/garuda-linux/tools/chaotic-manager"
+      },
+      {
+        "type": "plain",
+        "text": " after they have been scheduled by the pipelines, it is also much easier for users to figure out when packages were updated, as well as being able to inspect logs for multiple revisions of builds. This also means that our well-known packages repository is now "
+      },
+      {
+        "type": "text_link",
+        "text": "mainly operated on GitLab CI due to making",
+        "href": "https://gitlab.com/chaotic-aur/pkgbuilds"
+      },
+      {
+        "type": "plain",
+        "text": " use of their CI tools. To preserve issues and comment histories, the \"old\" repository will be kept as a read-only mirror of the main repository, and also kept open for issues and bug reports.\n\nThere are many other changes and new features, like:\n- Builds getting scheduled on demand (read: whenever an AUR package changes and CI pipelines pull in the updated files, or someone pushes a change to a locally maintained package) rather than with every routine run\n- Live logs can be opened either via the pipeline's external stages, as well as being presented on our "
+      },
+      {
+        "type": "text_link",
+        "text": "status page of the website",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      {
+        "type": "plain",
+        "text": ". If you always wanted to watch your Ungoogled Chromium build logs in real-time - now it is possible 😎\n- Build queues are visible to the public, also on the "
+      },
+      {
+        "type": "text_link",
+        "text": "status page",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      {
+        "type": "plain",
+        "text": "\n- Support of build for multiple repos at once\n- Saving/Restoring build queue state on builder/manager shutdown\n- Dependency trees\n- Automated lib bumps (which are not enabled for most packages, as adding deps is a manual process. The plan is to enable this for more packages in the following months)\n- No more split repos for packages and interference - the repo now consists of folders, one for each pkgbase. Inside it, you may find a "
+      },
+      {
+        "type": "code",
+        "text": ".CI"
+      },
+      {
+        "type": "plain",
+        "text": " folder with interferes and further builds configurations\n- Being able to maintain a PKGBUILD on Chaotic-AURs repo, and pushing it back to AUR automatically, whenever a new change gets pushed. This opens a door for AUR packages to be community-maintained via PRs (looking at you, "
+      },
+      {
+        "type": "code",
+        "text": "proton-ge-custom"
+      },
+      {
+        "type": "plain",
+        "text": "!) \n- The state present in the packages repo fully reflects the state of the repository. Packages not present will automatically be removed\n- Being able to review non-trivial package updates (which is opt-in and turned off for Chaotic-AUR. Might explore the idea of a reviewed/trusted subset of packages in the future)\n\nFor everyone wanting to take a closer look inside, "
+      },
+      {
+        "type": "text_link",
+        "text": "dedicated documentation is available here",
+        "href": "https://chaotic-manager.pages.dev/"
+      },
+      {
+        "type": "plain",
+        "text": ".\n\nAt this point, I want to especially thank two people, who played a major role in making this possible.\n- "
+      },
+      {
+        "type": "text_link",
+        "text": "TNE",
+        "href": "https://github.com/JustTne"
+      },
+      {
+        "type": "plain",
+        "text": ", whose ideas and visions ensured all of it became as efficient as it turned out. \n- "
+      },
+      {
+        "type": "text_link",
+        "text": "xiota",
+        "href": "https://github.com/xiota"
+      },
+      {
+        "type": "plain",
+        "text": " , who did close to all of the heavy lifting regarding porting our current set of packages to v4 and provided feedback on build processes and existing issues"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 22,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 6,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 4,
+        "emoji": "👏"
+      }
+    ]
+  },
+  {
+    "id": 660,
+    "type": "message",
+    "date": "2024-10-18T20:19:18",
+    "date_unixtime": "1729275558",
+    "edited": "2024-10-18T20:19:59",
+    "edited_unixtime": "1729275599",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ 🐉🔥",
+    "text": [
+      "And of course, a heartfelt thank you goes out to the rest of the team and our community. \nThe submissions for our new memorial have closed and the result is ",
+      {
+        "type": "text_link",
+        "text": "available here",
+        "href": "https://aur.chaotic.cx/memorial-v2"
+      },
+      ". Thanks to everyone who contributed to it ☺️\n\nWe hope you guys enjoy the new stuff announced today. On to many more years! 🍻❤️"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "And of course, a heartfelt thank you goes out to the rest of the team and our community. \nThe submissions for our new memorial have closed and the result is "
+      },
+      {
+        "type": "text_link",
+        "text": "available here",
+        "href": "https://aur.chaotic.cx/memorial-v2"
+      },
+      {
+        "type": "plain",
+        "text": ". Thanks to everyone who contributed to it ☺️\n\nWe hope you guys enjoy the new stuff announced today. On to many more years! 🍻❤️"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 15,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "👍"
+      }
+    ]
+  },
+  {
+    "id": 661,
+    "type": "message",
+    "date": "2024-11-09T20:07:42",
+    "date_unixtime": "1731179262",
+    "edited": "2024-11-09T20:08:57",
+    "edited_unixtime": "1731179337",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": "Sorry guys, we needed to set our router into \"Under attack\" mode after 500k requests come knocking at our door.\n\nWho could it be now? 🎷",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Sorry guys, we needed to set our router into \"Under attack\" mode after 500k requests come knocking at our door.\n\nWho could it be now? 🎷"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 21,
+        "emoji": "😨"
+      }
+    ]
+  },
+  {
+    "id": 662,
+    "type": "message",
+    "date": "2024-11-09T20:53:50",
+    "date_unixtime": "1731182030",
+    "edited": "2024-11-09T20:54:03",
+    "edited_unixtime": "1731182043",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "reply_to_message_id": 661,
+    "file": "(File not included. Change data exporting settings to download.)",
+    "file_name": "nothing_to_see_here_naked_gun.gif.mp4",
+    "thumbnail": "(File not included. Change data exporting settings to download.)",
+    "media_type": "animation",
+    "mime_type": "video/mp4",
+    "duration_seconds": 5,
+    "width": 320,
+    "height": 182,
+    "text": "",
+    "text_entities": [],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 17,
+        "emoji": "🤣"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "👍"
+      }
+    ]
+  },
+  {
+    "id": 663,
+    "type": "message",
+    "date": "2024-11-09T20:54:30",
+    "date_unixtime": "1731182070",
+    "edited": "2024-11-09T20:54:57",
+    "edited_unixtime": "1731182097",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "PedroHLC",
+    "text": "Under attack disabled, traffic should be normal (except if you were part of the abnormal requests)",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Under attack disabled, traffic should be normal (except if you were part of the abnormal requests)"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 10,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 5,
+        "emoji": "🥰"
+      },
+      {
+        "type": "emoji",
+        "count": 5,
+        "emoji": "🎉"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "❤"
+      }
+    ]
+  },
+  {
+    "id": 664,
+    "type": "message",
+    "date": "2024-11-17T20:39:28",
+    "date_unixtime": "1731872368",
+    "edited": "2024-11-17T20:46:40",
+    "edited_unixtime": "1731872800",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": "I'm happy to announce that we are now able to handle up to 30x more requests/sec via our router than before 📈\nAfter the recent outage steps have been taken to optimize it, effectively ending up in a Typescript rewrite. \nSpecial thanks going to TNE, who implemented the changes! 🚀",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "I'm happy to announce that we are now able to handle up to 30x more requests/sec via our router than before 📈\nAfter the recent outage steps have been taken to optimize it, effectively ending up in a Typescript rewrite. \nSpecial thanks going to TNE, who implemented the changes! 🚀"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 14,
+        "emoji": "🥰"
+      },
+      {
+        "type": "emoji",
+        "count": 9,
+        "emoji": "🎉"
+      },
+      {
+        "type": "emoji",
+        "count": 5,
+        "emoji": "⚡"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "💯"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "❤"
+      }
+    ]
+  },
+  {
+    "id": 665,
+    "type": "message",
+    "date": "2024-12-25T09:10:00",
+    "date_unixtime": "1735114200",
+    "edited": "2024-12-25T09:10:31",
+    "edited_unixtime": "1735114231",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": "Merry Christmas to everyone out there! 🎄🤗 may all of you have a wonderful vacation.",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Merry Christmas to everyone out there! 🎄🤗 may all of you have a wonderful vacation."
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 24,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 14,
+        "emoji": "🎄"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "🥰"
+      }
+    ]
+  }
+]

@@ -12,7 +12,6 @@ import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
 import { UsersModule } from './users/users.module';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { TelegramModule } from './telegram/telegram.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GitlabModule } from './gitlab/gitlab.module';
 
@@ -32,7 +31,6 @@ import { GitlabModule } from './gitlab/gitlab.module';
     RepoManagerModule,
     RouterModule,
     ScheduleModule.forRoot(),
-    TelegramModule,
     TerminusModule,
     ThrottlerModule.forRoot([
       {

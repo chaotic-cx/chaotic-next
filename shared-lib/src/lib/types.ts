@@ -1,16 +1,12 @@
-import type { MessageContent } from './tdlib-types';
-import { CommitStatusSchema, PipelineSchema } from '@gitbeaker/rest';
+import type { CommitStatusSchema, PipelineSchema } from '@gitbeaker/rest';
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000;
-export const CACHE_TELEGRAM_TTL = 120 * 1000;
 export const CAUR_ALLOWED_CORS = [
   'https://aur.chaotic.cx',
   'https://caur-frontend-pages.dev',
   'https://v2.caur-frontend.pages.dev',
 ];
-export const CAUR_DEPLOY_LOG_ID = '-1001402311166';
 export const CAUR_METRICS_URL = 'https://metrics.chaotic.cx/';
-export const CAUR_NEWS_ID = '-1001293714071';
 
 export type StatsObject = {
   active: {
@@ -31,17 +27,6 @@ export type StatsObject = {
     nodes: { name: string; build_class: number }[];
   };
 };
-
-export interface QueueStatus {
-  status: string;
-  count: number;
-  nodes?: string[] | { name: string; build_class: number }[];
-  packages?: (string | undefined)[];
-  build_class?: (number | null)[];
-  liveLogUrl?: string[];
-}
-
-export type CurrentQueue = QueueStatus[];
 
 export interface SpecificPackageMetrics {
   name?: string;
@@ -74,18 +59,6 @@ export interface TeamMember {
 
 export type TeamList = TeamMember[];
 
-export interface TgMessage {
-  date: number;
-  content: MessageContent[];
-  author?: string;
-  view_count?: number;
-  link?: string;
-  id: number;
-  log?: string;
-}
-
-export type TgMessageList = TgMessage[];
-
 export interface Deployment {
   sourceUrl?: string;
   date: string;
@@ -96,8 +69,6 @@ export interface Deployment {
   string?: string;
   log?: string;
 }
-
-export type DeploymentList = Deployment[];
 
 export enum DeploymentType {
   ALL = 0,
@@ -117,41 +88,7 @@ export interface UserAgentMetric {
   count: number;
 }
 
-export interface PkgListRetObject {
-  pkglist: string;
-}
-
-export interface PkgListEntry {
-  name: string;
-  fullString: string;
-}
-
-export type PkgList = PkgListEntry[];
-
-export interface GitLabPipeline {
-  created_at: string;
-  id: number;
-  iid: number;
-  name: string;
-  project_id: number;
-  ref: string;
-  sha: string;
-  source: string;
-  status: string;
-  updated_at: string;
-  web_url: string;
-}
-
-export interface MenuBarLink {
-  title: string;
-  routerLink?: string;
-  url?: string;
-}
-
-export type MenuBarLinks = MenuBarLink[];
-
 export const Repository = ['chaotic-aur', 'garuda', 'all'];
-export type RepositoryList = (typeof Repository)[number];
 
 export interface Builder {
   id: number;
@@ -236,27 +173,6 @@ export interface ParsedPackageMetadata {
   replaces?: string[];
   soNameList?: string[];
   url?: string;
-}
-
-export enum BumpType {
-  EXPLICIT = 0,
-  GLOBAL = 1,
-  FROM_DEPS = 2,
-  FROM_DEPS_CHAOTIC = 3,
-  NAMCAP = 4,
-}
-
-export enum TriggerType {
-  ARCH = 0,
-  CHAOTIC = 1,
-}
-
-export interface BumpLogEntry {
-  bumpType: BumpType;
-  pkgname: string;
-  trigger: string;
-  triggerFrom: TriggerType;
-  timestamp: string;
 }
 
 export interface NamcapAnalysis {
