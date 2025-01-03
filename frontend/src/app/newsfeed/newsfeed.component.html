@@ -2,11 +2,21 @@
   <h2 class="text-maroon my-5 text-center text-2xl font-bold">
     <i class="pi-info-circle pi" style="font-size: 1.25rem"></i> Latest news
   </h2>
-  <p-scroll-panel [style]="{ width: '80%', height: '800px', 'margin-left': 'auto', 'margin-right': 'auto' }">
-    @for (news of newsList; track news) {
-      <p-fieldset class="mx-auto" legend="{{ news.data.author }} on {{ news.data.date | date: 'short' }}">
-        <p [innerHTML]="news.html"></p>
-      </p-fieldset>
-    }
-  </p-scroll-panel>
+  @if (isWide()) {
+    <p-scroll-panel [style]="{ height: '800px', 'margin-left': 'auto', 'margin-right': 'auto', 'max-width': '80%' }">
+      @for (news of newsList; track news) {
+        <p-fieldset class="mx-auto" legend="{{ news.data.author }} on {{ news.data.date | date: 'short' }}">
+          <p [innerHTML]="news.html"></p>
+        </p-fieldset>
+      }
+    </p-scroll-panel>
+  } @else {
+    <p-scroll-panel [style]="{ height: '800px', 'margin-left': '0.5rem', 'margin-right': '0.5rem' }">
+      @for (news of newsList; track news) {
+        <p-fieldset class="mx-auto" legend="{{ news.data.author }} on {{ news.data.date | date: 'short' }}">
+          <p [innerHTML]="news.html"></p>
+        </p-fieldset>
+      }
+    </p-scroll-panel>
+  }
 </div>
