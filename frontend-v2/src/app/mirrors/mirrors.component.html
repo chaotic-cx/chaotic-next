@@ -1,50 +1,74 @@
 <div class="chaotic-container-regular">
-  <chaotic-title title="Mirrors" subtitle="Down for everyone or just me?"></chaotic-title>
+  <chaotic-title
+    title="Mirrors"
+    subtitleHtml="Down for everyone or just me? <i class='text-maroon pi pi-search'></i>"
+  ></chaotic-title>
 
-  <p-table [value]="mirrorData.mirrors" [loading]="loading()">
-    <ng-template #header>
-      <tr>
-        <th>Subdomain</th>
-        <th>Approximate Position</th>
-        <th>Last update</th>
-        <th>Healthy</th>
-        <th>Geo active</th>
-      </tr>
-    </ng-template>
-    <ng-template #body let-mirror>
-      <tr>
-        <td>{{ mirror.subdomain }}</td>
-        <td>
-          <a href="https://www.openstreetmap.org/#map=6/{{ mirror.latlon[0] }}/{{ mirror.latlon[1] }}">
-            {{ mirror.latlon.join(', ') }}
-          </a>
-        </td>
-        @if (mirror.last_update !== 0) {
-          <td>{{ mirror.last_update | date: 'short' }}</td>
-        } @else {
-          <td>Very dead</td>
-        }
-        <td>
-          <i
-            class="pi"
-            [ngClass]="{
-              'pi-check-circle text-green': mirror.healthy,
-              'pi-exclamation-circle text-red': !mirror.healthy,
-            }"
-          ></i>
-          {{ mirror.healthy }}
-        </td>
-        <td>
-          <i
-            class="pi"
-            [ngClass]="{
-              'pi-check-circle text-green': mirror.geo_active,
-              'pi-times text-subtext0': !mirror.geo_active,
-            }"
-          ></i>
-          {{ mirror.geo_active }}
-        </td>
-      </tr>
-    </ng-template>
-  </p-table>
+  <div class="mx-auto w-full px-4 pb-5 lg:w-3/4 xl:w-1/2">
+    <p class="ml-5 text-left">Besides the mirrors found below, we have 2 more mirrors available:</p>
+    <ul class="chaotic-list-regular text-text list-disc">
+      <li>
+        <a class="text-mauve" href="https://cdn-mirror.chaotic.cx" rel="noopener" target="_blank">CDN mirror</a>: This
+        mirror is hosted at
+        <a
+          class="text-mauve"
+          href="https://www.cloudflare.com/developer-platform/products/r2/"
+          rel="noopener"
+          target="_blank"
+          >Cloudflare R2</a
+        >
+        and therefore globally distributed.
+      </li>
+      <li>
+        <a class="text-mauve" href="https://geo-mirror.chaotic.cx" rel="noopener" target="_blank">GEO mirror</a>: This
+        one automatically routes your requests to the closest mirror.
+      </li>
+      <li>If you want to host a mirror yourself, please get in contact with us in some way.</li>
+    </ul>
+  </div>
+  <div>
+    <p-table [value]="mirrorData.mirrors" [loading]="loading()">
+      <ng-template #header>
+        <tr>
+          <th>Subdomain</th>
+          <th>Approximate Position</th>
+          <th>Last update</th>
+          <th>Health</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-mirror>
+        <tr>
+          <td>
+            {{ mirror.subdomain }}
+            @if (mirror.geo_active) {
+              <i
+                pTooltip="The geo mirror routes your requests to this mirror."
+                tooltipPosition="right"
+                class="pi pi-globe text-blue"
+              ></i>
+            }
+          </td>
+          <td>
+            <a href="https://www.openstreetmap.org/#map=6/{{ mirror.latlon[0] }}/{{ mirror.latlon[1] }}">
+              {{ mirror.latlon.join(', ') }}
+            </a>
+          </td>
+          @if (mirror.last_update !== 0) {
+            <td>{{ mirror.last_update | date: 'short' }}</td>
+          } @else {
+            <td>Totally unavailable</td>
+          }
+          <td>
+            <i
+              class="pi"
+              [ngClass]="{
+                'pi-check-circle text-green': mirror.healthy,
+                'pi-exclamation-circle text-red': !mirror.healthy,
+              }"
+            ></i>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
 </div>

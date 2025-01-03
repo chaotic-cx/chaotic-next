@@ -8,10 +8,11 @@ import { retry } from 'rxjs';
 import { Mirror, MirrorData, MirrorSelf } from '@./shared-lib';
 import { TableModule } from 'primeng/table';
 import { MessageToastService } from '@garudalinux/core';
+import { Tooltip } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-mirrors',
-  imports: [CommonModule, TitleComponent, TableModule],
+  imports: [CommonModule, TitleComponent, TableModule, Tooltip],
   templateUrl: './mirrors.component.html',
   styleUrl: './mirrors.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
