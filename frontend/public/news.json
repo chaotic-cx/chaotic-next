@@ -3273,5 +3273,100 @@
         "emoji": "🥰"
       }
     ]
+  },
+  {
+    "id": 666,
+    "type": "message",
+    "date": "2025-01-03T20:53:07",
+    "date_unixtime": "1735933987",
+    "edited": "2025-01-03T20:53:10",
+    "edited_unixtime": "1735933990",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": [
+      "While it hasn't been half a year since the last rework of our website, another one just reached production 😌\n\nThis time the focus was pretty much on improving the way we retrieve information, as well as enhancing the amount of information shown to end users and maintainers while improving the look and feel to be more modern than before. \n\nSome highlights include: \n- A new ",
+      {
+        "type": "text_link",
+        "text": "mirror page",
+        "href": "https://aur.chaotic.cx/mirrors"
+      },
+      " showing the router's data (the same as the map uses)\n- Enhanced ",
+      {
+        "type": "text_link",
+        "text": "statistics pages",
+        "href": "https://aur.chaotic.cx/stats"
+      },
+      ", using ChartJS for visualization (these seem to be glitchy at times, but this apparently happens in official examples as well) \n- Much more overall data is available for ",
+      {
+        "type": "text_link",
+        "text": "packages",
+        "href": "https://aur.chaotic.cx/packages"
+      },
+      ", ",
+      {
+        "type": "text_link",
+        "text": "deployment logs",
+        "href": "https://aur.chaotic.cx/deployments"
+      },
+      " and other places\n- All dependencies on the Telegram API in the backend has been dropped. The news feeds is served as static file instead, and deploy logs come from our database\n- Speed should be improved as well, thanks to better ways of obtaining data and lazy loading\n- The news feed received real, and proper formatting\n- ",
+      {
+        "type": "text_link",
+        "text": "Build status",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      " now shows ongoing pipelines, and allows retrieving status updates for build processes (e.g., \"waiting for builder\")\n- Data is displayed using fully searchable tables\n- And of course, theming was tremendously improved! 🎨\n\nThings left to do include moving the backend to a speedier location (if stuff loads slowly, this is the reason) and maybe adding more charts for statistics 🧑‍💻"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "While it hasn't been half a year since the last rework of our website, another one just reached production 😌\n\nThis time the focus was pretty much on improving the way we retrieve information, as well as enhancing the amount of information shown to end users and maintainers while improving the look and feel to be more modern than before. \n\nSome highlights include: \n- A new "
+      },
+      {
+        "type": "text_link",
+        "text": "mirror page",
+        "href": "https://aur.chaotic.cx/mirrors"
+      },
+      {
+        "type": "plain",
+        "text": " showing the router's data (the same as the map uses)\n- Enhanced "
+      },
+      {
+        "type": "text_link",
+        "text": "statistics pages",
+        "href": "https://aur.chaotic.cx/stats"
+      },
+      {
+        "type": "plain",
+        "text": ", using ChartJS for visualization (these seem to be glitchy at times, but this apparently happens in official examples as well) \n- Much more overall data is available for "
+      },
+      {
+        "type": "text_link",
+        "text": "packages",
+        "href": "https://aur.chaotic.cx/packages"
+      },
+      {
+        "type": "plain",
+        "text": ", "
+      },
+      {
+        "type": "text_link",
+        "text": "deployment logs",
+        "href": "https://aur.chaotic.cx/deployments"
+      },
+      {
+        "type": "plain",
+        "text": " and other places\n- All dependencies on the Telegram API in the backend has been dropped. The news feeds is served as static file instead, and deploy logs come from our database\n- Speed should be improved as well, thanks to better ways of obtaining data and lazy loading\n- The news feed received real, and proper formatting\n- "
+      },
+      {
+        "type": "text_link",
+        "text": "Build status",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      {
+        "type": "plain",
+        "text": " now shows ongoing pipelines, and allows retrieving status updates for build processes (e.g., \"waiting for builder\")\n- Data is displayed using fully searchable tables\n- And of course, theming was tremendously improved! 🎨\n\nThings left to do include moving the backend to a speedier location (if stuff loads slowly, this is the reason) and maybe adding more charts for statistics 🧑‍💻"
+      }
+    ]
   }
 ]
