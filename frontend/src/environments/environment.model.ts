@@ -8,11 +8,9 @@ export interface EnvironmentModel {
   mapUrl: string;
   metricsUrl: string;
   mirrorsUrl: string;
-  newsId: string;
   pkgUrl: string;
   primaryKey: string;
   repoApiUrl: string;
   repoUrl: string;
   repoUrlGaruda: string;
-  tgApiUrl: string;
 }

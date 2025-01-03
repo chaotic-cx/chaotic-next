@@ -1,12 +1,12 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
-# compiled output
+# Compiled output
 dist
 tmp
 **.js
 out-tsc
 
-# dependencies
+# Dependencies
 node_modules
 
 # IDEs and editors
@@ -16,7 +16,6 @@ node_modules
 .c9/
 *.launch
 .settings
-*.sublime-workspace
 
 # IDE - VSCode
 .vscode/*
@@ -25,23 +24,15 @@ node_modules
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# misc
+# Misc
 .angular
 .direnv
-.github
 .nx
-.vscode
 .sass-cache
-connect.lock
 coverage
-libpeerconnection.log
 typings
 core
-db
-npm-debug.log
 repos
-testem.log
-yarn-error.log
 
 # System Files
 .DS_Store
@@ -55,4 +46,3 @@ Thumbs.db
 .env
 .pre-commit-config.yaml
 .wrangler
-tdlib

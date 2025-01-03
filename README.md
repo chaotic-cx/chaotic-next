@@ -5,7 +5,6 @@ Monorepo for all Java-/Typescript projects of Chaotic-AUR. Includes:
 - Part of repository management (.so lib bumps, up-to-date in-depth package data, etc..)
 - Router stats
 - Package, Router, Metrics API
-- Extracting messages from a Telegram news channel to display on the website
 - Chaotic-AURs website
 - Smaller helper functions / API
 
@@ -45,13 +44,12 @@ This will allow using the production API without CORS issues.
 
 ## Tech Stack
 
-- Angular
+- Angular (PrimeNG, GarudaNG)
 - NestJs (Fastify, Passport, TypeORM, Swagger)
 - Nx (Monorepo management)
 - Postgresql
 - Redis
 - TailwindCSS
-- Telegram API
 - TypeORM
 - Typescript
 
@@ -63,9 +61,7 @@ This will allow using the production API without CORS issues.
 - AUTH0_CLIENT_ID: Auth0 client id
 - AUTH0_CLIENT_SECRET: Auth0 client secret
 - AUTH0_DOMAIN: Auth0 domain
-- CAUR_DEPLOY_LOG_ID: Telegram chat id for deploy logs
 - CAUR_JWT_SECRET: JWT secret for the backend
-- CAUR_NEWS_ID: Telegram chat id for news
 - CAUR_TRUST_PROXY: IP address of the proxy, if any
 - CAUR_USERS: JSON object with user ids and roles
 - NODE_ENV: "production" / any other for dev (will enable TypeORM sync mode)
@@ -76,9 +72,6 @@ This will allow using the production API without CORS issues.
 - REDIS_PASSWORD: Redis password to connect with the Chaotic Manager (Moleculer microservice)
 - REDIS_SSH_HOST: Host of the Redis server, used for SSH port forwarding the Redis instance
 - REDIS_SSH_USER: User to use for SSH port forwarding the Redis instance
-- TELEGRAM_API_HASH: Telegram API hash
-- TELEGRAM_API_ID: Telegram API id
-- TELEGRAM_DB_ENCRYPTION_KEY: Encryption key for the Telegram database
 
 ## Database structure (as of November 2024)
 
