@@ -8,7 +8,7 @@ import { Divider } from 'primeng/divider';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { TitleComponent } from '../title/title.component';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Meta } from '@angular/platform-browser';
 import { updateSeoTags } from '../functions';
 
@@ -16,7 +16,7 @@ import { updateSeoTags } from '../functions';
   selector: 'chaotic-docs',
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
-  imports: [HighlightJsDirective, Panel, Divider, TitleComponent],
+  imports: [HighlightJsDirective, Panel, Divider, TitleComponent, RouterLink],
 })
 export class DocsComponent implements OnInit {
   isBrowser = true;

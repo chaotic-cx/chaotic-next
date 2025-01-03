@@ -32,14 +32,14 @@ export const routes: Routes = [
     data: { animationState: '3' },
   },
   {
-    title: 'Deploy log',
-    path: 'deploy-log',
+    title: 'Deployments',
+    path: 'deployments',
     loadComponent: () => import('./deploy-log/deploy-log.component').then((c) => c.DeployLogComponent),
     data: { animationState: '4' },
   },
   {
-    title: 'Package list',
-    path: 'package-list',
+    title: 'Packages',
+    path: 'packages',
     loadComponent: () => import('./package-list/package-list.component').then((c) => c.PackageListComponent),
     data: { animationState: '5' },
   },
