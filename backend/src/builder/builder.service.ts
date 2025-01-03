@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import IORedis from 'ioredis';
 import { type Context, Service, ServiceBroker } from 'moleculer';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { generateNodeId, nDaysInPast } from '../functions';
 import { BuilderDbConnections, BuildStatus, MoleculerBuildObject } from '../types';
 import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from './builder.entity';
@@ -71,7 +71,11 @@ export class BuilderService {
    * Returns all packages from the database.
    */
   async getPackages(options?: any): Promise<Package[]> {
-    return this.packageRepository.find({ cache: { id: 'packages-general', milliseconds: 30000 } });
+    return this.packageRepository.find({
+      cache: { id: 'packages-general', milliseconds: 30000 },
+      // Null would be packages requested via the router, which are not in the repository database
+      where: { version: Not(IsNull()) },
+    });
   }
 
   /**

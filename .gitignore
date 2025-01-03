@@ -2,20 +2,20 @@
 
 # compiled output
 dist
-jest.config.js
 tmp
-/out-tsc
+**.js
+out-tsc
 
 # dependencies
 node_modules
 
 # IDEs and editors
-/.idea
+.idea
 .project
 .classpath
 .c9/
 *.launch
-.settings/
+.settings
 *.sublime-workspace
 
 # IDE - VSCode
@@ -31,11 +31,11 @@ node_modules
 .github
 .nx
 .vscode
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-/typings
+.sass-cache
+connect.lock
+coverage
+libpeerconnection.log
+typings
 core
 db
 npm-debug.log
@@ -55,5 +55,4 @@ Thumbs.db
 .env
 .pre-commit-config.yaml
 .wrangler
-repos/
-tdlib/
+tdlib

@@ -43,10 +43,6 @@
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
     },
-    "lint-biome": {
-      "inputs": ["default", "{workspaceRoot}/biome.json"],
-      "cache": true
-    },
     "format": {
       "inputs": ["default", "{workspaceRoot}/.prettierrc"],
       "cache": true

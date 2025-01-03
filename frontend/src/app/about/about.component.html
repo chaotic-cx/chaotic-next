@@ -1,161 +1,251 @@
-<div class="chaotic-container-regular bg-base">
+<div class="chaotic-container-regular">
+  <chaotic-title
+    title="About us"
+    subtitleHtml="Chaotic-AUR is a repository that provides a large number of packages for Arch Linux.<br>
+         The repository is maintained by a team of volunteers who work to provide pre-compiled packages for their users."
+  >
+  </chaotic-title>
   <div>
-    <h1 class="text-center text-2xl font-extrabold text-maroon">About</h1>
-    <p class="my-4 px-10 pb-5 text-center text-lg text-text">Our team consists of these awesome people 🎉</p>
-    <div class="chaotic-container-regular mb-20 grid grid-cols-2 items-stretch gap-10 md:grid-cols-3 lg:grid-cols-4">
-      @for (member of team; track member) {
-        <div class="h-auto max-w-96 rounded-lg bg-surface0 shadow">
-          <div class="flex flex-col items-center pb-10">
-            <img
-              class="my-5 h-24 w-24 rounded-full shadow-lg"
-              ngSrc="{{ member.avatarUrl }}"
-              height="96"
-              width="96"
-              alt="{{ member.name }} avatar"
-            />
-            <h5 class="text-l mb-1 font-medium text-peach">{{ member.name }}</h5>
-            <span class="text-sm text-peach">{{ member.role }}</span>
-            <div class="mt-4 flex md:mt-6">
-              <a
-                class="chaotic-grow-l hover:chaotic-grow-l inline-flex items-center rounded-lg bg-maroon px-4 py-2 text-center text-sm font-medium text-crust focus:outline-none focus:ring-4 focus:ring-green"
-                href="https://github.com/{{ member.github }}"
-                >GitHub</a
-              >
-            </div>
+    <div class="chaotic-panel mt-5">
+      <p-panel header="Team members">
+        @if (isWide) {
+          <div class="grid grid-cols-2 items-stretch gap-10 md:grid-cols-3 lg:grid-cols-4">
+            @for (member of team; track member) {
+              <p-card>
+                <h3 class="text-maroon pb-5 text-center text-lg font-bold">{{ member.name }}</h3>
+                <div class="flex flex-col items-center pb-5">
+                  <img
+                    class="my-5 h-24 w-24 rounded-full shadow-lg"
+                    ngSrc="{{ member.avatarUrl }}"
+                    height="200"
+                    width="200"
+                    alt="{{ member.name }} avatar"
+                  />
+                  <span class="text-peach text-sm">{{ member.role }}</span>
+                  <a class="mt-5" href="https://github.com/{{ member.github }}" rel="noopener noreferrer">
+                    <i pRipple class="pi pi-github" style="font-size: 1.5rem"></i>
+                  </a>
+                </div>
+              </p-card>
+            }
           </div>
-        </div>
-      }
+        } @else {
+          <p-accordion [value]="0">
+            @for (member of team; track member.name) {
+              <p-accordion-panel [value]="$index">
+                <p-accordion-header>{{ member.name }}</p-accordion-header>
+                <p-accordion-content>
+                  <div class="flex flex-col items-center pb-5">
+                    <img
+                      class="my-5 h-24 w-24 rounded-full shadow-lg"
+                      ngSrc="{{ member.avatarUrl }}"
+                      height="200"
+                      width="200"
+                      alt="{{ member.name }} avatar"
+                    />
+                    <span class="text-peach text-sm">{{ member.role }}</span>
+                    <a class="mt-5" href="https://github.com/{{ member.github }}" rel="noopener noreferrer">
+                      <i pRipple class="pi pi-github" style="font-size: 1.5rem"></i>
+                    </a>
+                  </div>
+                </p-accordion-content>
+              </p-accordion-panel>
+            }
+          </p-accordion>
+        }
+      </p-panel>
     </div>
-    <h3 class="my-10 text-center text-2xl font-bold text-maroon">Information about build nodes</h3>
-  </div>
-  <div class="chaotic-container-regular">
-    <ul class="chaotic-list-regular text-text">
-      <li>
-        Most packages available in this repo are automatically built from their respective
-        <a class="text-mauve" href="https://aur.archlinux.org" rel="noopener" target="_blank">AUR</a>
-        source package. However there are a few exceptions, check
-        <a class="text-mauve" href="https://github.com/chaotic-aur/packages">our package repository</a>
-        to find out which ones.
-      </li>
-      <li>
-        The main node in is located in Hetzner's finnish datacenter and runs in one of
-        <a class="text-mauve" href="https://www.hetzner.com/dedicated-rootserver/ax102/" rel="noopener" target="_blank"
-          >these</a
-        >. The hardware is provided by Garuda Linux.
-      </li>
-      <li>
-        The second building cluster is a node in
-        <a class="text-mauve" href="https://www2.ufscar.br/" rel="noopener" target="_blank">UFSCar's</a>
-        datacenter which is hosted in São Carlos, São Paulo, Brazil.
-      </li>
-    </ul>
-    <h3 class="my-10 text-center text-2xl font-bold text-maroon">Reporting bugs</h3>
-    <ul class="chaotic-list-regular text-text">
-      <li>
-        Feel free to create issues to suggest enhancements, flag database corruptions, and all other requests:
-        <a class="text-mauve" href="https://github.com/chaotic-aur/packages/issues" rel="noopener" target="_blank"
-          >issues</a
-        ><br />
-      </li>
-      <li>Please report build bugs to the AUR package maintainers.</li>
-    </ul>
-  </div>
 
-  <div class="chaotic-container-regular">
-    <h3 class="my-10 text-center text-2xl font-bold text-maroon">Links</h3>
-    <ul class="chaotic-list-regular text-text">
-      <li>
-        Telegram channel with news and updates:
-        <a class="text-mauve" href="https://t.me/s/chaotic_aur" rel="noopener" target="_blank">t.me/s/chaotic_aur</a>
-      </li>
-      <li>
-        Our community group for on- and off topics: feel free to come by! 😊
-        <a class="text-mauve" href="https://t.me/s/chaotic_aur_sac" rel="noopener" target="_blank"
-          >t.me/s/chaotic_aur_sac</a
-        >
-      </li>
-      <li>
-        Our community group bridged with Matrix:
-        <a class="text-mauve" href="https://matrix.to/#/%23chaotic-aur:mozilla.org" rel="noopener" target="_blank"
-          >matrix.to/#/chaotic-aur:mozilla.org</a
-        >
-      </li>
-      <li>
-        Repository package list:
-        <a
-          class="text-mauve"
-          href="https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/"
-          rel="noopener"
-          target="_blank"
-          >pkgs.org</a
-        >
-      </li>
-      <li>
-        Main package directory (for manual downloads):
-        <a
-          class="text-mauve"
-          href="https://builds.garudalinux.org/repos/chaotic-aur/x86_64/"
-          rel="noopener"
-          target="_blank"
-          >downloads</a
-        >
-      </li>
-      <li>
-        Infra / toolbox source code:
-        <a class="text-mauve" href="https://github.com/chaotic-aur/toolbox" rel="noopener" target="_blank">GitHub</a>
-      </li>
-      <li>
-        Status page:
-        <a class="text-mauve" href="https://uptimes.chaotic.cx" rel="noopener" target="_blank">monitoring</a>
-      </li>
-      <li>
-        Latest logs:
-        <a
-          class="text-mauve"
-          href="https://builds.garudalinux.org/repos/chaotic-aur/logs/"
-          rel="noopener"
-          target="_blank"
-          >logfiles</a
-        >
-      </li>
-      <li>
-        Chaotic keys:
-        <a class="text-mauve" href="https://aur.chaotic.cx/chaotic.gpg" rel="noopener" target="_blank">keyring</a>
-      </li>
-    </ul>
-  </div>
+    <div class="chaotic-panel mt-5">
+      <p-panel header="Contact us">
+        <ul class="chaotic-list-regular text-text">
+          <li>Please use our issue trackers or the Telegram group, for general questions and support.</li>
+          <li>
+            If a matter needs to be discussed privately, feel free to pick any of those channels:
+            <a
+              class="text-mauve"
+              href="https://keyoxide.org/D245D484F3578CB17FD6DA6B67DB29BFF3C96757"
+              rel="noopener"
+              target="_blank"
+              >keyoxide.org/D245D484F3578CB17FD6DA6B67DB29BFF3C96757</a
+            >
+          </li>
+        </ul>
+      </p-panel>
+    </div>
 
-  <div class="chaotic-container-regular">
-    <h3 class="my-10 text-center text-2xl font-bold text-maroon">Special thanks</h3>
-    <ul class="chaotic-list-regular text-text">
-      <li>All our current and past mirror providers</li>
-      <li>Librewish (Shrinivas Kumbhar) - Former Co-maintainer, Garuda Linux founder</li>
-      <li>Garuda Linux staffers</li>
-      <li>
-        <a class="text-mauve" href="https://github.com/Tk-Glitch" rel="noopener" target="_blank">Tk-Glitch (TkG)</a>;
-        <a class="text-mauve" href="https://github.com/Kodehawa" rel="noopener" target="_blank">Kodehawa</a>;
-        <a class="text-mauve" href="https://aur.archlinux.org/account/figue" rel="noopener" target="_blank">Figue</a>;
-        <a class="text-mauve" href="https://github.com/benjamimgois" rel="noopener" target="_blank">Benjamim Gois</a>;
-      </li>
-      <li>
-        Dr Juan Carlos Ponce Campuzano, creator of the Aizawa applet and our logo
-        <a class="text-mauve" href="https://www.patreon.com/jcponce" rel="noopener" target="_blank"
-          >(check his Patreon)</a
-        >
-      </li>
-      <li>Frogging Family and Linux Gaming Dev Discord servers;</li>
-      <li>
-        André,
-        <a class="text-mauve" href="https://github.com/olivatooo" rel="noopener" target="_blank">Gabriel Olivato</a>
-        and Maiser
-      </li>
-      <li>AUR package maintainers; ArchLinux TUs and staffers</li>
-      <li>And everybody who somehow helped with all the projects we are pre-building! 🤗</li>
-    </ul>
-  </div>
-  <div class="chaotic-container-regular my-10 px-10 text-left md:px-40 lg:px-48">
-    <a class="text-subtext0">
-      In memory of our colleague Rustem Bakirov. A proactive co-maintainer who in Dec/2021 left us at the age of 20.
-    </a>
+    <div class="chaotic-panel mt-5">
+      <p-panel header="Build nodes">
+        <ul class="chaotic-list-regular text-text">
+          <li>
+            Most packages available in this repo are automatically built from their respective
+            <a class="text-mauve" href="https://aur.archlinux.org" rel="noopener" target="_blank">AUR</a>
+            source package.
+          </li>
+          <li>
+            However there are a few exceptions, check
+            <a class="text-mauve" href="https://github.com/chaotic-aur/packages">our package repository</a>
+            to find out which ones.
+          </li>
+          <li>
+            The main node in is located in Hetzner's finnish datacenter and runs in one of
+            <a
+              class="text-mauve"
+              href="https://www.hetzner.com/dedicated-rootserver/ax102/"
+              rel="noopener"
+              target="_blank"
+              >these</a
+            >. The hardware is provided by Garuda Linux.
+          </li>
+          <li>
+            The second building cluster is a node in
+            <a class="text-mauve" href="https://www2.ufscar.br/" rel="noopener" target="_blank">UFSCar's</a>
+            datacenter which is hosted in São Carlos, São Paulo, Brazil.
+          </li>
+        </ul>
+      </p-panel>
+    </div>
+
+    <div class="mt-5">
+      <p-panel header="Reporting bugs">
+        <ul class="chaotic-list-regular text-text">
+          <li>
+            Feel free to create issues to suggest enhancements, flag database corruptions, and all other requests:
+            <a class="text-mauve" href="https://github.com/chaotic-aur/packages/issues" rel="noopener" target="_blank"
+              >issues</a
+            >
+          </li>
+          <li>Please report build bugs to the AUR package maintainers.</li>
+        </ul>
+      </p-panel>
+    </div>
+
+    <div class="mt-5">
+      <p-panel header="Mirrors">
+        <ul class="chaotic-list-regular text-text">
+          <li>
+            We have a few mirrors available for you to use. You can find the list of mirrors and their status
+            <a class="text-mauve" href="https://status.chaotic.cx/map" rel="noopener" target="_blank">here</a>.
+          </li>
+          <li>If you want to host a mirror yourself, please get in contact with us in some way.</li>
+          <li>
+            We prefer <a class="text-mauve" href="https://syncthing.net/" rel="noopener" target="_blank">Syncthing</a>
+            as method for distributing our files.
+          </li>
+        </ul>
+      </p-panel>
+    </div>
+
+    <div class="mt-5">
+      <p-panel header="Useful links">
+        <ul class="chaotic-list-regular text-text">
+          <li>
+            Telegram channel with news and updates:
+            <a class="text-mauve" href="https://t.me/s/chaotic_aur" rel="noopener" target="_blank"
+              >t.me/s/chaotic_aur</a
+            >
+          </li>
+          <li>
+            Our community group for on- and off topics: feel free to come by! 😊
+            <a class="text-mauve" href="https://t.me/s/chaotic_aur_sac" rel="noopener" target="_blank"
+              >t.me/s/chaotic_aur_sac</a
+            >
+          </li>
+          <li>
+            Our community group bridged with Matrix:
+            <a class="text-mauve" href="https://matrix.to/#/%23chaotic-aur:mozilla.org" rel="noopener" target="_blank"
+              >matrix.to/#/chaotic-aur:mozilla.org</a
+            >
+          </li>
+          <li>
+            Repository package list:
+            <a
+              class="text-mauve"
+              href="https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/"
+              rel="noopener"
+              target="_blank"
+              >pkgs.org</a
+            >
+          </li>
+          <li>
+            Main package directory (for manual downloads):
+            <a
+              class="text-mauve"
+              href="https://builds.garudalinux.org/repos/chaotic-aur/x86_64/"
+              rel="noopener"
+              target="_blank"
+              >downloads</a
+            >
+          </li>
+          <li>
+            Infra / toolbox source code:
+            <a class="text-mauve" href="https://github.com/chaotic-aur/toolbox" rel="noopener" target="_blank"
+              >GitHub</a
+            >
+          </li>
+          <li>
+            Status page:
+            <a class="text-mauve" href="https://uptimes.chaotic.cx" rel="noopener" target="_blank">monitoring</a>
+          </li>
+          <li>
+            Latest logs:
+            <a
+              class="text-mauve"
+              href="https://builds.garudalinux.org/repos/chaotic-aur/logs/"
+              rel="noopener"
+              target="_blank"
+              >logfiles</a
+            >
+          </li>
+          <li>
+            Chaotic keys:
+            <a class="text-mauve" href="https://aur.chaotic.cx/chaotic.gpg" rel="noopener" target="_blank">keyring</a>
+          </li>
+        </ul>
+      </p-panel>
+    </div>
+
+    <div class="mt-5">
+      <p-panel header="Special thanks">
+        <ul class="chaotic-list-regular text-text">
+          <li>Librewish (Shrinivas Kumbhar) - Former Co-maintainer, Garuda Linux founder</li>
+          <li>Garuda Linux staffers</li>
+          <li>All our current and past mirror providers</li>
+          <li>
+            <a class="text-mauve" href="https://github.com/Tk-Glitch" rel="noopener" target="_blank">Tk-Glitch (TkG)</a>
+          </li>
+          <li><a class="text-mauve" href="https://github.com/Kodehawa" rel="noopener" target="_blank">Kodehawa</a></li>
+          <li>
+            <a class="text-mauve" href="https://aur.archlinux.org/account/figue" rel="noopener" target="_blank">
+              Figue
+            </a>
+          </li>
+          <li>
+            <a class="text-mauve" href="https://github.com/benjamimgois" rel="noopener" target="_blank">
+              Benjamim Gois
+            </a>
+          </li>
+          <li>
+            Dr Juan Carlos Ponce Campuzano, creator of the Aizawa applet and our logo
+            <a class="text-mauve" href="https://www.patreon.com/jcponce" rel="noopener" target="_blank"
+              >(check his Patreon)</a
+            >
+          </li>
+          <li>Frogging Family and Linux Gaming Dev Discord servers</li>
+          <li>
+            André,
+            <a class="text-mauve" href="https://github.com/olivatooo" rel="noopener" target="_blank">Gabriel Olivato</a>
+            and Maiser
+          </li>
+          <li>AUR package maintainers, ArchLinux TUs and staffers</li>
+          <li>And everybody who somehow helped with all the projects we are pre-building! 🤗</li>
+        </ul>
+      </p-panel>
+    </div>
+    <div class="my-10 px-2.5">
+      <a class="text-subtext0">
+        In memory of our colleague Rustem Bakirov. A proactive co-maintainer who in Dec/2021 left us at the age of 20.
+      </a>
+    </div>
   </div>
 </div>

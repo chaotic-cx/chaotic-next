@@ -1,0 +1,36 @@
+<div class="chaotic-container-wide-center">
+  <chaotic-title
+    title="Statistics and data"
+    subtitleHtml="Area for package statistics and other fun stuff.<br>Total users last month: {{ totalUsers() }}"
+  ></chaotic-title>
+
+  <div>
+    <p-tabs [(value)]="currentTab" (valueChange)="changeTab($event)" class="blur-card">
+      <p-tablist>
+        <p-tab value="0">Search</p-tab>
+        <p-tab value="1">Globals</p-tab>
+        <p-tab value="2">Downloads</p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel value="0">
+          <chaotic-search-package></chaotic-search-package>
+        </p-tabpanel>
+        <p-tabpanel value="1">
+          <div class="mb-8">
+            <p-card header="Country list" [style]="{ width: '100%', overflow: 'hidden' }">
+              <chaotic-chart-countries></chaotic-chart-countries>
+            </p-card>
+          </div>
+          <div class="mt-8">
+            <p-card header="User agents" [style]="{ width: '100%', overflow: 'hidden' }">
+              <chaotic-chart-useragent></chaotic-chart-useragent>
+            </p-card>
+          </div>
+        </p-tabpanel>
+        <p-tabpanel value="2">
+          <chaotic-chart-downloads></chaotic-chart-downloads>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+</div>
