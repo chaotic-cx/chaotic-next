@@ -37,7 +37,7 @@ import { Meta } from '@angular/platform-browser';
 })
 export class PackageStatsComponent implements OnInit {
   loading = signal<boolean>(false);
-  totalUsers = signal<string>('Loading... ☕');
+  totalUsers = signal<string>("<i class='text-maroon pi pi-hourglass'></i>");
   currentTab = '0';
 
   private readonly appService = inject(AppService);

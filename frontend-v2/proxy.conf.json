@@ -16,5 +16,14 @@
     },
     "changeOrigin": true,
     "logLevel": "debug"
+  },
+  "/router": {
+    "target": "https://status.chaotic.cx",
+    "secure": false,
+    "pathRewrite": {
+      "^/router": ""
+    },
+    "changeOrigin": true,
+    "logLevel": "debug"
   }
 }
