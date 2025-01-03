@@ -1,14 +1,16 @@
 import { CAUR_HOME_URL } from '@./shared-lib';
-import { NgOptimizedImage, isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { checkIfMobile } from '../functions';
+import { Image } from 'primeng/image';
+import { Ripple } from 'primeng/ripple';
 
 @Component({
-  selector: 'app-chaotic-attractor',
+  selector: 'chaotic-attractor',
   templateUrl: './chaotic-attractor.component.html',
   styleUrl: './chaotic-attractor.component.css',
-  imports: [NgOptimizedImage],
+  imports: [Image, Ripple],
 })
 export class ChaoticAttractorComponent {
   // Many thanks for adapting the original applet and letting us use it!

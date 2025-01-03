@@ -1,4 +1,4 @@
-import { type ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PackageListComponent } from './package-list.component';
 
 describe('PackageListComponent', () => {

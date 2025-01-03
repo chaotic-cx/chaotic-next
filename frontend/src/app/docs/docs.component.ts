@@ -1,40 +1,62 @@
-import { CAUR_PRIMARY_KEY } from '@./shared-lib';
 import { isPlatformBrowser } from '@angular/common';
-import { type AfterViewInit, Component, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import hljs from 'highlight.js';
-import { Highlight } from 'ngx-highlightjs';
 import { CopyButtonPlugin } from './hljs-copybutton';
+import { HighlightJsDirective } from 'ngx-highlight-js';
+import { Panel } from 'primeng/panel';
+import { Divider } from 'primeng/divider';
+import { APP_CONFIG } from '../../environments/app-config.token';
+import { EnvironmentModel } from '../../environments/environment.model';
+import { TitleComponent } from '../title/title.component';
+import { Router, RouterLink } from '@angular/router';
+import { Meta } from '@angular/platform-browser';
+import { updateSeoTags } from '../functions';
 
 @Component({
-  selector: 'app-docs',
+  selector: 'chaotic-docs',
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
-  imports: [Highlight],
+  imports: [HighlightJsDirective, Panel, Divider, TitleComponent, RouterLink],
 })
-export class DocsComponent implements AfterViewInit {
+export class DocsComponent implements OnInit {
   isBrowser = true;
-  installRepo =
-    `pacman-key --recv-key ${CAUR_PRIMARY_KEY} --keyserver keyserver.ubuntu.com\n` +
-    `pacman-key --lsign-key ${CAUR_PRIMARY_KEY}\n` +
-    "pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
-    "pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'\n";
+  installRepo: string;
   appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';
-  installPackage = 'pacman -S chaotic-aur/mesa-tkg-git';
-  installPackageParu = 'paru -S chaotic-aur/firefox-hg';
-  powerpillUsage = 'sudo pacman -Sy\nsudo powerpill -Su\nparu -Su';
+  installPackage = '$ sudo pacman -S chaotic-aur/mesa-tkg-git';
+  installPackageParu = '$ paru -S chaotic-aur/firefox-hg';
+  powerpillUsage = '$ sudo pacman -Sy\n$ sudo powerpill -Su\n$ paru -Su';
   ignorePkg = 'IgnorePkg = ...';
+  syncMirrors = '$ sudo pacman -Sy\n$ sudo pacman -Su ungoogled-chromium';
 
-  constructor(@Inject(PLATFORM_ID) platformId: Object) {
+  private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
+  private readonly meta = inject(Meta);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly router = inject(Router);
+
+  constructor() {
     // Prevent document is not defined errors during building / SSR
-    this.isBrowser = isPlatformBrowser(platformId);
+    this.isBrowser = isPlatformBrowser(this.platformId);
+    this.installRepo =
+      `$ sudo pacman-key --recv-key ${this.appConfig.primaryKey} --keyserver keyserver.ubuntu.com\n` +
+      `$ sudo pacman-key --lsign-key ${this.appConfig.primaryKey}\n` +
+      "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
+      "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'\n";
   }
 
-  ngAfterViewInit() {
+  ngOnInit() {
     if (this.isBrowser) {
       setTimeout(() => {
         hljs.addPlugin(new CopyButtonPlugin());
         hljs.highlightAll();
-      }, 200);
+      }, 500);
     }
+
+    updateSeoTags(
+      this.meta,
+      'Documentation',
+      'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
+      this.router.url,
+    );
   }
 }

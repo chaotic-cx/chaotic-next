@@ -26,15 +26,6 @@
       "options": {
         "jestConfig": "backend/jest.config.ts"
       }
-    },
-    "biome-lint": {
-      "executor": "@gitopslovers/nx-biome:biome-lint",
-      "outputs": ["{options.outputFile}"],
-      "options": {
-        "lintFilePatterns": ["backend/**/*.ts"],
-        "write": true,
-        "unsafe": false
-      }
     }
   }
 }

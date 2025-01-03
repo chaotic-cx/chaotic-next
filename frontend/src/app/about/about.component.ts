@@ -1,14 +1,38 @@
 import type { TeamList } from '@./shared-lib';
 import { NgOptimizedImage } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
+import { Ripple } from 'primeng/ripple';
+import { Panel } from 'primeng/panel';
+import { Card } from 'primeng/card';
+import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { TitleComponent } from '../title/title.component';
+import { Meta, Title } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { updateSeoTags } from '../functions';
 
 @Component({
-  selector: 'app-about',
-  imports: [NgOptimizedImage],
+  selector: 'chaotic-about',
+  imports: [
+    NgOptimizedImage,
+    Ripple,
+    Panel,
+    Card,
+    Accordion,
+    AccordionPanel,
+    AccordionHeader,
+    AccordionContent,
+    TitleComponent,
+  ],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',
 })
-export class AboutComponent {
+export class AboutComponent implements OnInit {
+  protected isWide: boolean = true;
+  private readonly meta = inject(Meta);
+  private readonly observer = inject(BreakpointObserver);
+  private readonly router = inject(Router);
+
   team: TeamList = [
     {
       name: 'Nico Jensch',
@@ -72,5 +96,19 @@ export class AboutComponent {
     for (const member of this.team) {
       member.avatarUrl = `https://github.com/${member.github}.png`;
     }
+  }
+
+  ngOnInit() {
+    updateSeoTags(
+      this.meta,
+      'About us',
+      'Learn more about the Chaotic-AUR team and project',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
+      this.router.url,
+    );
+
+    this.observer.observe(['(min-width: 768px)']).subscribe((result) => {
+      this.isWide = result.matches;
+    });
   }
 }

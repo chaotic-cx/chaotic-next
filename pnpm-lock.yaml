@@ -46,7 +46,7 @@ importers:
         version: 7.0.4
       '@garudalinux/core':
         specifier: ^0.2.0
-        version: 0.2.0(ogrilvjh7m2z6lp7uwlfc7t3py)
+        version: 0.2.0(d8c5bacd47ba8dfb2468d40f706409c4)
       '@gitbeaker/core':
         specifier: ^41.3.0
         version: 41.3.0
@@ -175,7 +175,7 @@ importers:
         version: 7.0.0
       primeng:
         specifier: ^19.0.2
-        version: 19.0.2(aztdthhn2eql7smtl5zhzf47xm)
+        version: 19.0.2(92b92adca913ce7d162f98c6210e37aa)
       reflect-metadata:
         specifier: ~0.2.2
         version: 0.2.2
@@ -257,7 +257,7 @@ importers:
         version: 10.4.15(@nestjs/common@10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.15)(@nestjs/platform-express@10.4.6)
       '@nx/angular':
         specifier: 20.3.0
-        version: 20.3.0(xyc6fa5iqgeq2k7fjz6ff5m2u4)
+        version: 20.3.0(d829175f0c6ba68594f42b441353b339)
       '@nx/esbuild':
         specifier: 20.3.0
         version: 20.3.0(@babel/traverse@7.26.4)(@swc-node/register@1.10.9(@swc/core@1.10.4(@swc/helpers@0.5.15))(@swc/types@0.1.17)(typescript@5.6.3))(@swc/core@1.10.4(@swc/helpers@0.5.15))(@types/node@22.10.2)(debug@4.4.0)(esbuild@0.24.2)(nx@20.3.0(@swc-node/register@1.10.9(@swc/core@1.10.4(@swc/helpers@0.5.15))(@swc/types@0.1.17)(typescript@5.6.3))(@swc/core@1.10.4(@swc/helpers@0.5.15))(debug@4.4.0))(typescript@5.6.3)
@@ -10988,13 +10988,13 @@ snapshots:
       fastq: 1.18.0
       glob: 10.4.5
 
-  '@garudalinux/core@0.2.0(ogrilvjh7m2z6lp7uwlfc7t3py)':
+  '@garudalinux/core@0.2.0(d8c5bacd47ba8dfb2468d40f706409c4)':
     dependencies:
       '@angular/core': 19.0.5(rxjs@7.8.1)(zone.js@0.15.0)
       '@angular/platform-browser': 19.0.5(@angular/animations@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/common@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))
       '@playwright/test': 1.49.1
       jest-preset-angular: 14.4.2(@angular/compiler-cli@19.0.5(@angular/compiler@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(typescript@5.6.3))(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(@angular/platform-browser-dynamic@19.0.5(@angular/common@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/compiler@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(@angular/platform-browser@19.0.5(@angular/animations@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/common@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))))(@babel/core@7.26.0)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.26.0))(jest@29.7.0(@types/node@22.10.2)(ts-node@10.9.2(@swc/core@1.10.4(@swc/helpers@0.5.15))(@types/node@22.10.2)(typescript@5.6.3)))(typescript@5.6.3)
-      primeng: 19.0.2(aztdthhn2eql7smtl5zhzf47xm)
+      primeng: 19.0.2(92b92adca913ce7d162f98c6210e37aa)
       tslib: 2.8.1
 
   '@gitbeaker/core@41.3.0':
@@ -11994,7 +11994,7 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  '@nx/angular@20.3.0(xyc6fa5iqgeq2k7fjz6ff5m2u4)':
+  '@nx/angular@20.3.0(d829175f0c6ba68594f42b441353b339)':
     dependencies:
       '@angular-devkit/build-angular': 19.0.6(@angular/compiler-cli@19.0.5(@angular/compiler@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(typescript@5.6.3))(@angular/compiler@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0)))(@rspack/core@1.1.8(@swc/helpers@0.5.15))(@swc/core@1.10.4(@swc/helpers@0.5.15))(@types/node@22.10.2)(chokidar@3.6.0)(debug@4.4.0)(jest-environment-jsdom@29.7.0)(jest@29.7.0(@types/node@22.10.2)(ts-node@10.9.2(@swc/core@1.10.4(@swc/helpers@0.5.15))(@types/node@22.10.2)(typescript@5.6.3)))(stylus@0.64.0)(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.10.4(@swc/helpers@0.5.15))(@types/node@22.10.2)(typescript@5.6.3)))(typescript@5.6.3)(vite@5.4.11(@types/node@22.10.2)(less@4.2.0)(sass@1.80.7)(stylus@0.64.0)(terser@5.36.0))(webpack-cli@6.0.1)
       '@angular-devkit/core': 19.0.6(chokidar@3.6.0)
@@ -17703,7 +17703,7 @@ snapshots:
 
   primeicons@7.0.0: {}
 
-  primeng@19.0.2(aztdthhn2eql7smtl5zhzf47xm):
+  primeng@19.0.2(92b92adca913ce7d162f98c6210e37aa):
     dependencies:
       '@angular/animations': 19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))
       '@angular/cdk': 19.0.4(@angular/common@19.0.5(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.5(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1)
