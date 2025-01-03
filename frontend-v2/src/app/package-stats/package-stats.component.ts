@@ -12,7 +12,7 @@ import { TitleComponent } from '../title/title.component';
 import { SearchPackageComponent } from '../search-package/search-package.component';
 import { retry } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Meta, Title } from '@angular/platform-browser';
+import { Meta } from '@angular/platform-browser';
 
 @Component({
   selector: 'chaotic-package-stats',
@@ -45,10 +45,16 @@ export class PackageStatsComponent implements OnInit {
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly titleService = inject(Title);
 
   async ngOnInit(): Promise<void> {
-    this.updateMetaTags();
+    this.appService.updateSeoTags(
+      this.meta,
+      'Statistics and data',
+      'Package and repository statistics for Chaotic-AUR',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics',
+      this.router.url,
+    );
+
     void this.get30DayUsers();
 
     if (this.route.snapshot.fragment === 'globals') {
@@ -90,14 +96,5 @@ export class PackageStatsComponent implements OnInit {
         void this.router.navigate([], { fragment: 'globals', queryParamsHandling: 'replace' });
         break;
     }
-  }
-
-  private updateMetaTags() {
-    this.titleService.setTitle('Chaotic-AUR - package stats');
-    this.meta.addTag({ name: 'description', content: 'Chaotic-AUR package and repository statistics' });
-    this.meta.addTag({ name: 'keywords', content: 'Chaotic-AUR, AUR, repository, Archlinux' });
-    this.meta.addTag({ property: 'og:title', content: 'Chaotic-AUR - package stats' });
-    this.meta.addTag({ property: 'og:description', content: 'Chaotic-AUR package and repository statistics' });
-    this.meta.addTag({ property: 'og:image', content: '/assets/logo.webp' });
   }
 }

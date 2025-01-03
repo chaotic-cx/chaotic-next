@@ -11,13 +11,10 @@
       <p-card class="h-max">
         <p-image
           alt="Terminal screenshot"
-          class="hover:chaotic-grow-s animate-duration-1000 h-auto max-w-full rounded-lg"
-          pAnimateOnScroll
-          enterClass="animate-fadein"
-          leaveClass="animate-fadeout"
-          [once]="false"
+          class="h-auto max-w-full rounded-lg"
           [preview]="true"
-          [src]="link"
+          [previewImageSrc]="link.preview"
+          [src]="link.full"
         />
       </p-card>
     }
@@ -28,13 +25,10 @@
         <p-card class="h-max">
           <p-image
             alt="Terminal screenshot"
-            class="hover:chaotic-grow-s animate-duration-1000 h-auto max-w-full rounded-lg"
-            pAnimateOnScroll
-            enterClass="animate-fadein"
-            leaveClass="animate-fadeout"
-            [once]="false"
+            class="h-auto max-w-full rounded-lg"
             [preview]="true"
-            [src]="link"
+            [previewImageSrc]="link.preview"
+            [src]="link.full"
           />
         </p-card>
       </a>

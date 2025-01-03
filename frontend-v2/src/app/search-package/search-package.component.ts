@@ -10,6 +10,7 @@ import { TableModule } from 'primeng/table';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Meta } from '@angular/platform-browser';
 
 @Component({
   selector: 'chaotic-search-package',
@@ -31,11 +32,20 @@ export class SearchPackageComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly filterService = inject(FilterService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   async ngOnInit(): Promise<void> {
     this.getSuggestions();
+
+    this.appService.updateSeoTags(
+      this.meta,
+      'Package search',
+      'Search packages available in the Chaotic-AUR repository',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search',
+      this.router.url,
+    );
 
     this.route.queryParams.subscribe((params) => {
       if (params['search'] && /^[0-9|a-zA-Z-]*$/.test(params['search'])) {

@@ -1,0 +1,50 @@
+<div class="chaotic-container-regular">
+  <chaotic-title title="Mirrors" subtitle="Down for everyone or just me?"></chaotic-title>
+
+  <p-table [value]="mirrorData.mirrors" [loading]="loading()">
+    <ng-template #header>
+      <tr>
+        <th>Subdomain</th>
+        <th>Approximate Position</th>
+        <th>Last update</th>
+        <th>Healthy</th>
+        <th>Geo active</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-mirror>
+      <tr>
+        <td>{{ mirror.subdomain }}</td>
+        <td>
+          <a href="https://www.openstreetmap.org/#map=6/{{ mirror.latlon[0] }}/{{ mirror.latlon[1] }}">
+            {{ mirror.latlon.join(', ') }}
+          </a>
+        </td>
+        @if (mirror.last_update !== 0) {
+          <td>{{ mirror.last_update | date: 'short' }}</td>
+        } @else {
+          <td>Very dead</td>
+        }
+        <td>
+          <i
+            class="pi"
+            [ngClass]="{
+              'pi-check-circle text-green': mirror.healthy,
+              'pi-exclamation-circle text-red': !mirror.healthy,
+            }"
+          ></i>
+          {{ mirror.healthy }}
+        </td>
+        <td>
+          <i
+            class="pi"
+            [ngClass]="{
+              'pi-check-circle text-green': mirror.geo_active,
+              'pi-times text-subtext0': !mirror.geo_active,
+            }"
+          ></i>
+          {{ mirror.geo_active }}
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

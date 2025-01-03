@@ -7,6 +7,9 @@ import { Card } from 'primeng/card';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TitleComponent } from '../title/title.component';
+import { Meta, Title } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { updateSeoTags } from '../functions';
 
 @Component({
   selector: 'chaotic-about',
@@ -26,7 +29,9 @@ import { TitleComponent } from '../title/title.component';
 })
 export class AboutComponent implements OnInit {
   protected isWide: boolean = true;
-  protected readonly observer = inject(BreakpointObserver);
+  private readonly meta = inject(Meta);
+  private readonly observer = inject(BreakpointObserver);
+  private readonly router = inject(Router);
 
   team: TeamList = [
     {
@@ -94,6 +99,14 @@ export class AboutComponent implements OnInit {
   }
 
   ngOnInit() {
+    updateSeoTags(
+      this.meta,
+      'About us',
+      'Learn more about the Chaotic-AUR team and project',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
+      this.router.url,
+    );
+
     this.observer.observe(['(min-width: 768px)']).subscribe((result) => {
       this.isWide = result.matches;
     });

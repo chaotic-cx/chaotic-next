@@ -17,6 +17,7 @@ import { APP_CONFIG } from 'frontend-v2/src/environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { TitleComponent } from '../title/title.component';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Meta, Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -50,10 +51,19 @@ export class PackageListComponent implements OnInit, AfterViewInit {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   ngOnInit() {
+    this.appService.updateSeoTags(
+      this.meta,
+      'Package list',
+      'List of all packages available in the Chaotic-AUR repository',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list',
+      this.router.url,
+    );
+
     this.appService
       .getPackageList()
       .pipe(retry({ delay: 5000, count: 3 }))

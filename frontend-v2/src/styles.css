@@ -105,9 +105,11 @@ samp {
   @apply transition ease-in-out hover:scale-105;
 }
 
-#pkgTable > .p-datatable,
-#deployTable > .p-datatable {
-  width: calc(100vw - 2rem);
+@media screen and (min-width: 720px) {
+  #pkgTable > .p-datatable,
+  #deployTable > .p-datatable {
+    width: calc(100vw - 2rem);
+  }
 }
 
 .p-progress-bar {

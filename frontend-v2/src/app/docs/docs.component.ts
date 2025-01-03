@@ -8,6 +8,9 @@ import { Divider } from 'primeng/divider';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { TitleComponent } from '../title/title.component';
+import { Router } from '@angular/router';
+import { Meta } from '@angular/platform-browser';
+import { updateSeoTags } from '../functions';
 
 @Component({
   selector: 'chaotic-docs',
@@ -25,8 +28,10 @@ export class DocsComponent implements OnInit {
   ignorePkg = 'IgnorePkg = ...';
   syncMirrors = '$ sudo pacman -Sy\n$ sudo pacman -Su ungoogled-chromium';
 
-  appConfig: EnvironmentModel = inject(APP_CONFIG);
-  platformId = inject(PLATFORM_ID);
+  private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
+  private readonly meta = inject(Meta);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly router = inject(Router);
 
   constructor() {
     // Prevent document is not defined errors during building / SSR
@@ -45,5 +50,13 @@ export class DocsComponent implements OnInit {
         hljs.highlightAll();
       }, 500);
     }
+
+    updateSeoTags(
+      this.meta,
+      'Documentation',
+      'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
+      this.router.url,
+    );
   }
 }

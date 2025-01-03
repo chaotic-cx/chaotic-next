@@ -274,3 +274,22 @@ export interface PipelineWithExternalStatus {
   commit: CommitStatusSchema[];
   pipeline: PipelineSchema;
 }
+
+export interface Mirror {
+  subdomain: string;
+  latlon: [number, number];
+  healthy: boolean;
+  last_update: number;
+  geo_active: boolean;
+}
+
+export interface MirrorSelf {
+  addr: string;
+  latlon: [number, number];
+  geo: string;
+}
+
+export interface MirrorData {
+  self: MirrorSelf;
+  mirrors: Mirror[];
+}

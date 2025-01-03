@@ -1,4 +1,5 @@
 import { type Deployment } from '@./shared-lib';
+import { Meta } from '@angular/platform-browser';
 
 /**
  * Poll for new deployments.
@@ -167,4 +168,23 @@ export function shuffleArray(array: any[]): any[] {
     array[j] = temp;
   }
   return array;
+}
+
+/**
+ * Update the meta tags for the current page.
+ */
+export function updateSeoTags(
+  meta: Meta,
+  title: string,
+  description: string,
+  keywords: string,
+  url: string,
+  image?: string,
+): void {
+  meta.updateTag({ name: 'description', content: description });
+  meta.updateTag({ name: 'keywords', content: keywords });
+  meta.updateTag({ property: 'og:title', content: title });
+  meta.updateTag({ property: 'og:description', content: description });
+  meta.updateTag({ property: 'og:url', content: url });
+  if (image) meta.updateTag({ property: 'og:image', content: image });
 }
