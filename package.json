@@ -80,13 +80,11 @@
     "pg": "^8.13.1",
     "pino": "^8.21.0",
     "pino-http": "^10.3.0",
-    "prebuilt-tdlib": "^0.1008041.0",
     "primeicons": "^7.0.0",
     "primeng": "^19.0.2",
     "reflect-metadata": "~0.2.2",
     "rxjs": "~7.8.1",
     "tailwindcss-primeui": "^0.3.4",
-    "tdl": "^8.0.2",
     "tslib": "^2.8.1",
     "typeorm": "^0.3.20",
     "zone.js": "0.15.0"
@@ -107,7 +105,6 @@
     "@catppuccin/tailwindcss": "^0.1.6",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.17.0",
-    "@gitopslovers/nx-biome": "^1.5.0",
     "@nestjs/cli": "^10.4.9",
     "@nestjs/schematics": "^10.2.3",
     "@nestjs/testing": "^10.4.15",
@@ -169,7 +166,6 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@biomejs/biome",
       "@nestjs/core",
       "@parcel/watcher",
       "@scarf/scarf",
@@ -179,8 +175,7 @@
       "lmdb",
       "msgpackr-extract",
       "nestjs-pino",
-      "nx",
-      "tdl"
+      "nx"
     ]
   }
 }

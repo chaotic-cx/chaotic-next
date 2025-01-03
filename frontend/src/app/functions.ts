@@ -1,5 +1,6 @@
 import { type Deployment } from '@./shared-lib';
 import { Meta } from '@angular/platform-browser';
+import { Message } from './newsfeed/interfaces';
 
 /**
  * Poll for new deployments.
@@ -53,87 +54,61 @@ export function checkIfMobile() {
 }
 
 /**
- * Parses a static log URL to a live log URL.
- * From: /logs/api/logs/strawberry-git/1728221997487
- * To: /logs/logs.html?timestamp=1728139106459&id=kodi-git
- * @param url The static log URL.
- * @param logsUrl Base log URL, derived from appConfig
- * @returns The live log URL.
- */
-export function toLiveLog(url: string, logsUrl: string): string {
-  const splitUrl = url.split('/');
-  const timestamp = splitUrl.pop();
-  const id = splitUrl.pop();
-
-  let finalUrl = logsUrl;
-  if (timestamp !== undefined) {
-    finalUrl += `?timestamp=${timestamp}`;
-  }
-  if (id !== undefined && timestamp !== undefined) {
-    finalUrl += `&id=${id}`;
-  } else if (id !== undefined) {
-    finalUrl += `?id=${id}`;
-  }
-  return finalUrl;
-}
-
-/**
- * Convert the entities object of a Telegram message to HTML.
- * @param ctx The context of the message.
+ * Convert the entity object of a Telegram message to HTML.
+ * @param message The Telegram message to convert.
  * @returns A string containing the message as HTML.
  */
-export function entityToHtml(ctx: any) {
-  const text = ctx.msg?.text;
-  const entities = ctx.msg?.entities;
-
-  if (!entities || !text) {
-    return text;
+export function entityToHtml(message: Message): string {
+  let returnValue = '';
+  if (!message.text) {
+    return '';
+  } else if (typeof message.text === 'string') {
+    returnValue = message.text;
+  } else {
+    returnValue = message.text
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item;
+        } else {
+          switch (item.type) {
+            case 'text_link':
+              return `<a class="text-mauve" href="${item.href}" target="_blank">${item.text}</a>`;
+            case 'bold':
+              return `<strong>${item.text}</strong>`;
+            case 'code':
+              return `<code>${item.text}</code>`;
+            case 'italic':
+              return `<em>${item.text}</em>`;
+            case 'pre':
+              return `<pre>${item.text}</pre>`;
+            case 'strikethrough':
+              return `<s>${item.text}</s>`;
+            case 'underline':
+              return `<u>${item.text}</u>`;
+            case 'mention':
+              return `<a class="text-mauve" href="https://t.me/${item.text.replace('@', '')}" target="_blank">${item.text}</a>`;
+            case 'email':
+              return `<a class="text-mauve" href="mailto:${item.text}">${item.text}</a>`;
+            case 'phone_number':
+              return `<a class="text-mauve" href="tel:${item.text}">${item.text}</a>`;
+            default:
+              return item.text;
+          }
+        }
+      })
+      .join('');
   }
-
-  let tags: { index: number; tag: string | undefined }[] = [];
-
-  for (const entity of entities) {
-    const startTag = getTag(entity, text);
-    let searchTag = tags.filter((tag) => tag.index === entity.offset);
-    if (searchTag.length > 0 && startTag) searchTag[0].tag += startTag;
-    else
-      tags.push({
-        index: entity.offset,
-        tag: startTag,
-      });
-
-    const closeTag = startTag?.indexOf('<a ') === 0 ? '</a>' : `</${startTag?.slice(1)}`;
-    searchTag = tags.filter((tag) => tag.index === entity.offset + entity.length);
-    if (searchTag.length > 0) searchTag[0].tag = closeTag + searchTag[0].tag;
-    else
-      tags.push({
-        index: entity.offset + entity.length,
-        tag: closeTag,
-      });
-  }
-
-  let html = '';
-  for (let i = 0; i < text.length; i++) {
-    const tag = tags.filter((tag) => tag.index === i);
-    tags = tags.filter((tag) => tag.index !== i);
-    if (tag.length > 0) html += tag[0].tag;
-    html += text[i];
-  }
-  if (tags.length > 0) html += tags[0].tag;
-
-  return html;
+  return returnValue.replaceAll('\n', '<br>');
 }
 
-const getTag = (entity: any, text: string) => {
-  const entityText = text.slice(entity.offset, entity.offset + entity.length);
-
+const getTag = (entity: any) => {
   switch (entity.type) {
     case 'bold':
       return '<strong>';
     case 'text_link':
-      return `<a href="${entity.url}" target="_blank">`;
+      return `<a href="${entity.href}" target="_blank">`;
     case 'url':
-      return `<a href="${entityText}" target="_blank">`;
+      return `<a href="${entity.text}" target="_blank">`;
     case 'italic':
       return '<em>';
     case 'code':
@@ -145,11 +120,11 @@ const getTag = (entity: any, text: string) => {
     case 'pre':
       return '<pre>';
     case 'mention':
-      return `<a href="https://t.me/${entityText.replace('@', '')}" target="_blank">`;
+      return `<a href="https://t.me/${entity.text.replace('@', '')}" target="_blank">`;
     case 'email':
-      return `<a href="mailto:${entityText}">`;
+      return `<a href="mailto:${entity.text}">`;
     case 'phone_number':
-      return `<a href="tel:${entityText}">`;
+      return `<a href="tel:${entity.text}">`;
   }
 
   return undefined;
