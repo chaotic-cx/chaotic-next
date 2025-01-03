@@ -21,7 +21,7 @@
     "start": "nx run-many --target=serve --all",
     "start:be-hr": "source backend/.env && nest build --webpack --webpackPath backend/webpack-hmr.config.cjs --watch --path backend/tsconfig.json | pino-pretty -cSt SYS:HH:MM --ignore pid,hostname",
     "start:be-nx": "nx run backend:serve | pino-pretty -cSt SYS:standard",
-    "start:home": "nx run frontend-v2:serve --proxy-config frontend-v2/proxy.conf.json",
+    "start:home": "nx run frontend:serve --proxy-config frontend/proxy.conf.json",
     "test": "nx run-many --target=test --all",
     "test:watch": "nx run-many --target=test --all --watch",
     "typeorm": "typeorm-ts-node-esm"
