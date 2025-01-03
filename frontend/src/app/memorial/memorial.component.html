@@ -1,33 +1,36 @@
-<div class="chaotic-container-regular bg-base">
-  <div class="mb-5 text-center">
-    <h2 class="text-2xl font-extrabold text-maroon">Memorial</h2>
-    <p class="my-4 text-lg text-text">
-      These screenshots have been collected by the community as celebration of the 3rd birthday of Chaotic-AUR.
-    </p>
-  </div>
-  <div class="grid grid-cols-2 mt-10 gap-10 md:grid-cols-4 5xl:grid-cols-6">
+<div class="chaotic-container-regular">
+  <chaotic-title
+    title="Memorial"
+    subtitle="These screenshots have been collected by the community as celebration of the 3rd birthday of Chaotic-AUR."
+  >
+  </chaotic-title>
+</div>
+<div class="chaotic-container-wide-center">
+  <div class="5xl:grid-cols-6 mt-10 grid grid-cols-2 gap-10 md:grid-cols-4">
     @for (link of termLinks; track link) {
-      <a href="{{ link }}">
-        <img
-          class="hover:chaotic-grow-s h-auto max-w-full rounded-lg"
-          ngSrc="{{ link }}"
-          width="800"
-          height="600"
+      <p-card class="h-max">
+        <p-image
           alt="Terminal screenshot"
+          class="h-auto max-w-full rounded-lg"
+          [preview]="true"
+          [previewImageSrc]="link.preview"
+          [src]="link.full"
         />
-      </a>
+      </p-card>
     }
   </div>
-  <div class="mt-5 grid grid-cols-1 content-center gap-10 md:grid-cols-2 5xl:grid-cols-4">
+  <div class="5xl:grid-cols-4 mt-5 grid grid-cols-1 content-center gap-10 md:grid-cols-2">
     @for (link of desktopLinks; track link) {
       <a href="{{ link }}">
-        <img
-          class="hover:chaotic-grow-s h-auto max-w-full rounded-lg"
-          ngSrc="{{ link }}"
-          width="1980"
-          height="1280"
-          alt="Terminal screenshot"
-        />
+        <p-card class="h-max">
+          <p-image
+            alt="Terminal screenshot"
+            class="h-auto max-w-full rounded-lg"
+            [preview]="true"
+            [previewImageSrc]="link.preview"
+            [src]="link.full"
+          />
+        </p-card>
       </a>
     }
   </div>

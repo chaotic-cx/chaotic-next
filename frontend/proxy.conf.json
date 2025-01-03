@@ -1,0 +1,29 @@
+{
+  "/api": {
+    "target": "https://builds.garudalinux.org/api",
+    "secure": false,
+    "pathRewrite": {
+      "^/api": ""
+    },
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/backend": {
+    "target": "https://builds.garudalinux.org/backend",
+    "secure": false,
+    "pathRewrite": {
+      "^/backend": ""
+    },
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/router": {
+    "target": "https://status.chaotic.cx",
+    "secure": false,
+    "pathRewrite": {
+      "^/router": ""
+    },
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

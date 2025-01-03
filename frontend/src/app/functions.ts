@@ -1,19 +1,5 @@
-import {
-  CAUR_LOGS_URL,
-  CAUR_REPO_URL,
-  CAUR_REPO_URL_GARUDA,
-  CAUR_TG_API_URL,
-  type Deployment,
-  type DeploymentList,
-  DeploymentType,
-  type RepositoryList,
-  type TgMessageList,
-} from '@./shared-lib';
-import type { ElementRef, Renderer2 } from '@angular/core';
-import { type CatppuccinFlavor, flavors } from '@catppuccin/palette';
-import TimeAgo from 'javascript-time-ago';
-import { lastValueFrom } from 'rxjs';
-import type { AppService } from './app.service';
+import { type Deployment } from '@./shared-lib';
+import { Meta } from '@angular/platform-browser';
 
 /**
  * Poll for new deployments.
@@ -27,40 +13,24 @@ export function startShortPolling(interval: any, func: () => void): void {
 }
 
 /**
- * Loads the selected theme.
- * @param theme The theme to load (one of CatppuccinFlavor).
- * @param renderer The renderer to use.
- * @param el The element to apply the theme to.
- */
-export function loadTheme(theme: string, renderer: Renderer2, el: ElementRef) {
-  const appCtp = document.getElementById('app-ctp');
-  if (appCtp === null) return;
-  if (appCtp.classList.contains(theme)) {
-    return theme;
-  }
-
-  appCtp.classList.remove('mocha', 'latte', 'frappe', 'macchiato');
-  appCtp.classList.add(theme);
-
-  const flavor = theme as unknown as CatppuccinFlavor;
-  // @ts-expect-error - this is always a valid color
-  const flavorColor = flavors[flavor].colors.base.hex;
-  renderer.setStyle(el.nativeElement.ownerDocument.body, 'backgroundColor', flavorColor);
-  return theme;
-}
-
-/**
  * Generate the URL for the repository.
  * @param deployment The deployment to generate the URL for.
+ * @param repoUrls The URLs for the repositories, derived from appConfig
  * @returns The URL for the repository, in which the PKGBUILD is located.
  */
-export function generateRepoUrl(deployment: Deployment): string | undefined {
+export function generateRepoUrl(
+  deployment: Deployment,
+  repoUrls: {
+    garuda: string;
+    chaotic: string;
+  },
+): string | undefined {
   if (deployment.repo.match(/chaotic-aur$/) !== null) {
-    deployment.sourceUrl = CAUR_REPO_URL;
+    deployment.sourceUrl = repoUrls.chaotic;
     return deployment.sourceUrl;
   }
   if (deployment.repo.match(/garuda$/) !== null) {
-    deployment.sourceUrl = CAUR_REPO_URL_GARUDA;
+    deployment.sourceUrl = repoUrls.garuda;
     return deployment.sourceUrl;
   }
   return undefined;
@@ -83,120 +53,19 @@ export function checkIfMobile() {
 }
 
 /**
- * Parse the Telegram messages to make it usable for the website.
- * @param messages The TgMessageList array to parse.
- * @param type The type of deployment to parse, e.g., all, failed, succeeded.
- * @returns The parsed DeploymentList array.
- */
-export function parseDeployments(messages: TgMessageList, type: DeploymentType): DeploymentList {
-  const timeAgo = new TimeAgo('en-US');
-  const deploymentList: DeploymentList = [];
-
-  for (const message of messages) {
-    let pkg: string;
-    let repo: string;
-    let node: RegExpMatchArray | null | string = 'unknown';
-    let deploymentType: DeploymentType;
-    const log = message.log;
-
-    if (String(message.content).includes('Cleanup')) {
-      pkg = '';
-    } else {
-      pkg = String(message.content).split('> ')[1].split(' - logs')[0];
-    }
-
-    const date = timeAgo.format(Number.parseInt(message.date) * 1000, 'round');
-
-    if (
-      (type === DeploymentType.SUCCESS || type === DeploymentType.ALL) &&
-      String(message.content).includes('deployment to')
-    ) {
-      const buildRepo = String(String(message.content).split('deployment to ')[1]);
-      node = buildRepo.match(/on\s(.*)/) ? buildRepo.match(/on\s([\w-]*)/)![1] : 'unknown';
-      repo = buildRepo.split(' from')[0].split(' on')[0];
-      deploymentType = DeploymentType.SUCCESS;
-    } else if (
-      (type === DeploymentType.TIMEOUT || type === DeploymentType.ALL) &&
-      String(message.content).includes('timeout')
-    ) {
-      repo = String(message.content).split('Build for ')[1].split(' failed')[0];
-      deploymentType = DeploymentType.TIMEOUT;
-    } else if (
-      (type === DeploymentType.FAILED || type === DeploymentType.ALL) &&
-      String(message.content).includes('Failed')
-    ) {
-      const buildRepo = String(String(message.content).split('Failed deploying to ')[1]);
-      node = buildRepo.match(/on\s(.*)/) ? buildRepo.match(/on\s([\w-]*)/)![1] : 'unknown';
-      repo = buildRepo.split(' on')[0];
-      deploymentType = DeploymentType.FAILED;
-    } else if (
-      (type === DeploymentType.CLEANUP || type === DeploymentType.ALL) &&
-      String(message.content).includes('Cleanup')
-    ) {
-      repo = String(message.content).split('Cleanup job for ')[1].split(' ')[0];
-      deploymentType = DeploymentType.CLEANUP;
-    } else {
-      continue;
-    }
-
-    deploymentList.push({
-      date: date,
-      name: pkg,
-      repo: repo,
-      type: deploymentType,
-      log: log ? toLiveLog(log.split(':')[1]) : undefined,
-      node: node,
-    });
-  }
-  return deploymentList;
-}
-
-/**
- * Get the latest news from the Telegram channel.
- * @returns The latest news as a list of TgMessage.
- */
-export async function getDeployments(
-  amount: number,
-  type: DeploymentType,
-  appService: AppService,
-  repo: RepositoryList,
-): Promise<TgMessageList> {
-  let requestString: string;
-  switch (type as DeploymentType) {
-    case DeploymentType.ALL:
-      requestString = 'all';
-      break;
-    case DeploymentType.FAILED:
-      requestString = 'failed';
-      break;
-    case DeploymentType.SUCCESS:
-      requestString = 'succeeded';
-      break;
-    case DeploymentType.TIMEOUT:
-      requestString = 'timeout';
-      break;
-    case DeploymentType.CLEANUP:
-      requestString = 'cleanup';
-      break;
-  }
-
-  const url = `${CAUR_TG_API_URL}/deployments/${requestString}/${amount}`;
-  return lastValueFrom(appService.getDeployments(url, repo));
-}
-
-/**
  * Parses a static log URL to a live log URL.
  * From: /logs/api/logs/strawberry-git/1728221997487
  * To: /logs/logs.html?timestamp=1728139106459&id=kodi-git
  * @param url The static log URL.
+ * @param logsUrl Base log URL, derived from appConfig
  * @returns The live log URL.
  */
-export function toLiveLog(url: string): string {
+export function toLiveLog(url: string, logsUrl: string): string {
   const splitUrl = url.split('/');
   const timestamp = splitUrl.pop();
   const id = splitUrl.pop();
 
-  let finalUrl = CAUR_LOGS_URL;
+  let finalUrl = logsUrl;
   if (timestamp !== undefined) {
     finalUrl += `?timestamp=${timestamp}`;
   }
@@ -285,3 +154,37 @@ const getTag = (entity: any, text: string) => {
 
   return undefined;
 };
+
+/**
+ * Shuffle an array.
+ * @param array The array to shuffle.
+ * @returns The shuffled array.
+ */
+export function shuffleArray(array: any[]): any[] {
+  for (let i = array.length - 1; i >= 0; i--) {
+    const j: number = Math.floor(Math.random() * (i + 1));
+    const temp: any = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
+  return array;
+}
+
+/**
+ * Update the meta tags for the current page.
+ */
+export function updateSeoTags(
+  meta: Meta,
+  title: string,
+  description: string,
+  keywords: string,
+  url: string,
+  image?: string,
+): void {
+  meta.updateTag({ name: 'description', content: description });
+  meta.updateTag({ name: 'keywords', content: keywords });
+  meta.updateTag({ property: 'og:title', content: title });
+  meta.updateTag({ property: 'og:description', content: description });
+  meta.updateTag({ property: 'og:url', content: url });
+  if (image) meta.updateTag({ property: 'og:image', content: image });
+}

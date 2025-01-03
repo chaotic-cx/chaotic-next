@@ -1,0 +1,11 @@
+.p-tab {
+  @apply mx-auto;
+}
+
+.p-tabpanels {
+  border-radius: 10px;
+}
+
+::ng-deep .p-tablist-tab-list {
+  border-radius: 10px !important;
+}

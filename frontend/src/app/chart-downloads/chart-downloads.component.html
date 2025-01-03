@@ -1,0 +1,35 @@
+<div>
+  @if (isWide) {
+    <div class="flex justify-center">
+      <p-chart type="bar" [data]="chartData" [options]="options" class="h-[50rem] w-full" />
+    </div>
+    <p-inputnumber
+      [(ngModel)]="amount"
+      mode="decimal"
+      [showButtons]="true"
+      inputId="minmaxDownloads"
+      [min]="0"
+      [max]="200"
+    >
+    </p-inputnumber>
+  } @else {
+    <div class="h-auto justify-center">
+      @for (download of progressbarValues; track download.label) {
+        <p-progress-bar [value]="download.value">
+          <ng-template #content>
+            <span>{{ download.label }}: {{ download.count }}</span>
+          </ng-template>
+        </p-progress-bar>
+      }
+    </div>
+    <p-inputnumber
+      [(ngModel)]="amount"
+      mode="decimal"
+      [showButtons]="true"
+      inputId="minmaxDownloads"
+      [min]="0"
+      [max]="200"
+    >
+    </p-inputnumber>
+  }
+</div>

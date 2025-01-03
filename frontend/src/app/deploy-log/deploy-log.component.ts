@@ -1,52 +1,118 @@
-import { CACHE_TELEGRAM_TTL, type DeploymentList, DeploymentType } from '@./shared-lib';
-import { AfterViewInit, ChangeDetectorRef, Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { AfterViewInit, Component, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Table, TableModule } from 'primeng/table';
 import { AppService } from '../app.service';
-import { generateRepoUrl, getDeployments, parseDeployments, startShortPolling } from '../functions';
+import { CommonModule } from '@angular/common';
+import { retry } from 'rxjs';
+import { Button } from 'primeng/button';
+import { InputIcon } from 'primeng/inputicon';
+import { IconField } from 'primeng/iconfield';
+import { InputText } from 'primeng/inputtext';
+import { Build } from '@./shared-lib';
+import { OutcomePipe } from '../pipes/outcome.pipe';
+import { LogurlPipe } from '../pipes/logurl.pipe';
+import { DurationPipe } from '../pipes/duration.pipe';
+import { MessageToastService } from '@garudalinux/core';
+import { TitleComponent } from '../title/title.component';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Meta, Title } from '@angular/platform-browser';
 
 @Component({
-  selector: 'app-deploy-log',
-  imports: [FormsModule],
+  selector: 'chaotic-deploy-log',
+  imports: [
+    CommonModule,
+    TableModule,
+    Button,
+    InputIcon,
+    IconField,
+    InputText,
+    LogurlPipe,
+    DurationPipe,
+    TitleComponent,
+    FormsModule,
+  ],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
+  providers: [MessageToastService, OutcomePipe],
 })
-export class DeployLogComponent implements AfterViewInit {
-  latestDeployments: DeploymentList = [];
+export class DeployLogComponent implements OnInit, AfterViewInit {
+  packageList: Build[] = [];
+  loading = true;
+  searchValue = signal<string>('');
+  amount = signal<number>(4000);
+  outcomePipe = inject(OutcomePipe);
 
-  constructor(
-    private appService: AppService,
-    private cdr: ChangeDetectorRef,
-  ) {}
+  @ViewChild('deployTable') deployTable!: Table;
 
-  async ngAfterViewInit(): Promise<void> {
-    this.latestDeployments = parseDeployments(
-      await getDeployments(30, DeploymentType.SUCCESS, this.appService, 'all'),
-      DeploymentType.SUCCESS,
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly meta = inject(Meta);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  ngOnInit() {
+    this.appService.updateSeoTags(
+      this.meta,
+      'Deploy log',
+      'Deploy log for the Chaotic-AUR repository',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR deploy log',
+      this.router.url,
     );
-    for (const deployment of this.latestDeployments) {
-      deployment.sourceUrl = generateRepoUrl(deployment);
+
+    if (this.route.snapshot.queryParams['amount']) {
+      this.amount.set(this.route.snapshot.queryParams['amount']);
     }
 
-    // Poll for new deployments every 5 minutes (which is the time the backend caches requests)
-    startShortPolling(CACHE_TELEGRAM_TTL, async () => {
-      await this.checkNewDeployments();
-      for (const deployment of this.latestDeployments) {
-        deployment.sourceUrl = generateRepoUrl(deployment);
-      }
-    });
+    this.getDeployments();
   }
 
-  /**
-   * Check for new deployments and update the list.
-   */
-  async checkNewDeployments(): Promise<void> {
-    const newList: DeploymentList = parseDeployments(
-      await getDeployments(30, DeploymentType.SUCCESS, this.appService, 'all'),
-      DeploymentType.SUCCESS,
-    );
-    if (newList[0].date !== this.latestDeployments[0].date) {
-      this.latestDeployments = newList;
+  getDeployments(): void {
+    this.appService
+      .getPackageBuilds(this.amount())
+      .pipe(retry({ delay: 5000, count: 3 }))
+      .subscribe({
+        next: (data: Build[]) => {
+          data.map((build) => {
+            build.statusText = this.outcomePipe.transform(build.status);
+            // Logs expire after 7 days of being stored inside Redis
+            if (new Date(build.timestamp).getTime() + 7 * 24 * 60 * 60 * 1000 < Date.now()) {
+              build.logUrl = 'purged';
+            }
+            return build;
+          });
+          this.packageList = data;
+        },
+        error: (err) => {
+          this.messageToastService.error('Error', 'Failed to fetch package list');
+          console.error(err);
+        },
+        complete: () => {
+          this.loading = false;
+        },
+      });
+  }
+
+  ngAfterViewInit() {
+    if (this.route.snapshot.queryParams['search']) {
+      this.deployTable.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
+      this.searchValue.set(this.route.snapshot.queryParams['search']);
     }
-    this.cdr.detectChanges();
+  }
+
+  clear(table: Table) {
+    table.clear();
+    this.searchValue.set('');
+    void this.router.navigate([], { queryParams: { search: '' } });
+  }
+
+  globalFilter(target: EventTarget | null) {
+    if (!target) return;
+    const input = target as HTMLInputElement;
+    this.deployTable.filterGlobal(input.value, 'contains');
+    void this.router.navigate([], { queryParams: { search: input.value } });
+  }
+
+  typed(value: any): Build {
+    return value;
   }
 }

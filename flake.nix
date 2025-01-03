@@ -84,9 +84,9 @@
               ${self.checks.${system}.pre-commit-check.shellHook}
 
               if [ ! -d node_modules ]; then
-                ${pkgs.pnpm}/bin/pnpm install
+                corepack pnpm install
               else
-                outcome=$(${pkgs.pnpm}/bin/pnpm install)
+                outcome=$(corepack pnpm install)
                 if  [[ !  "$outcome" =~ "Lockfile is up to date" ]]; then
                   echo "Dependencies have been updated"
                 fi
