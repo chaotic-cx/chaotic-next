@@ -26,12 +26,17 @@
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://aur.chaotic.cx/package-list</loc>
+    <loc>https://aur.chaotic.cx/packages</loc>
     <lastmod>2025-01-02T21:40:31+00:00</lastmod>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://aur.chaotic.cx/deploy-log</loc>
+    <loc>https://aur.chaotic.cx/deployments</loc>
+    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://aur.chaotic.cx/mirrors</loc>
     <lastmod>2025-01-02T21:40:31+00:00</lastmod>
     <priority>0.80</priority>
   </url>
@@ -41,7 +46,7 @@
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://aur.chaotic.cx/httpclient</loc>
+    <loc>https://aur.chaotic.cx/memorial</loc>
     <lastmod>2025-01-02T21:40:31+00:00</lastmod>
     <priority>0.80</priority>
   </url>
@@ -50,5 +55,4 @@
     <lastmod>2025-01-02T21:40:31+00:00</lastmod>
     <priority>0.80</priority>
   </url>
-
 </urlset>

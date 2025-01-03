@@ -46,13 +46,13 @@ export class AppComponent implements OnInit {
     },
     {
       icon: 'pi pi-receipt',
-      label: 'Deploy log',
-      routerLink: '/deploy-log',
+      label: 'Deployments',
+      routerLink: '/deployments',
     },
     {
       icon: 'pi pi-table',
-      label: 'Package list',
-      routerLink: '/package-list',
+      label: 'Packages',
+      routerLink: '/packages',
     },
     {
       icon: 'pi pi-chart-bar',
@@ -66,7 +66,7 @@ export class AppComponent implements OnInit {
     },
     {
       icon: 'pi pi-trophy',
-      label: 'Memorial v2',
+      label: 'Memorial',
       routerLink: '/memorial-v2',
     },
     {
