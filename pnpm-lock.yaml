@@ -48,11 +48,11 @@ importers:
         specifier: ^0.2.0
         version: 0.2.0(d8c5bacd47ba8dfb2468d40f706409c4)
       '@gitbeaker/core':
-        specifier: ^41.3.0
-        version: 41.3.0
+        specifier: ^42.0.0
+        version: 42.0.2
       '@gitbeaker/rest':
-        specifier: ^41.3.0
-        version: 41.3.0
+        specifier: ^42.0.0
+        version: 42.0.2
       '@nestjs/axios':
         specifier: ^3.1.3
         version: 3.1.3(@nestjs/common@10.4.15(reflect-metadata@0.2.2)(rxjs@7.8.1))(axios@1.7.9(debug@4.4.0))(rxjs@7.8.1)
@@ -2061,16 +2061,16 @@ packages:
       jest-preset-angular: ~14.4.2
       primeng: ^19.0.2
 
-  '@gitbeaker/core@41.3.0':
-    resolution: {integrity: sha512-ZPy0v71WTSKdELLhG5FkMCxIWCJwRpA7QkvnULiE36sIynQE0WwBNux+GPjjEh6xQ6PfBAB4E/1Uu2YZXiJlNg==}
+  '@gitbeaker/core@42.0.2':
+    resolution: {integrity: sha512-4RbOU+FZzzV7LDGgiOLoxQbOXAMDx+QYsoMRV8ZiuYYwN7+3oKUGt6W+bfQC1baDfwqwprjA1hlLwP+09PyFeQ==}
     engines: {node: '>=18.20.0'}
 
-  '@gitbeaker/requester-utils@41.3.0':
-    resolution: {integrity: sha512-sNVlp32uaieQ+Giovlu1GJ8hY9jMhY//f3WMHct2GV0U74PkSsixQgQv9XuRKgZalk2uI12iJrBY7gnAA5N8/w==}
+  '@gitbeaker/requester-utils@42.0.2':
+    resolution: {integrity: sha512-pLc8ZrFvnQW21ge58IDxNheLojZ5kIlj+tfr8fYMmgfw4vVQ0Y+qUZ84chb86zttOFWmvVAyrJufrf2487c+Pg==}
     engines: {node: '>=18.20.0'}
 
-  '@gitbeaker/rest@41.3.0':
-    resolution: {integrity: sha512-l1jEloxQ4/SCdOjv9ryfbZEvvF90GFllLxULbHiLPI72rAHCjxWtjAdeQXddkvfw/LYCw7CFyu+M9Okt/IjsgA==}
+  '@gitbeaker/rest@42.0.2':
+    resolution: {integrity: sha512-xDyUY3xQsAuHPgiS2/Nn3pSTEHZhduV7GypexjxoS8wRF6w5EXVqBy64nLUdd9hAHznxB4qF+1+AXF7likPiCw==}
     engines: {node: '>=18.20.0'}
 
   '@gitopslovers/nx-biome@1.5.0':
@@ -10997,23 +10997,23 @@ snapshots:
       primeng: 19.0.2(92b92adca913ce7d162f98c6210e37aa)
       tslib: 2.8.1
 
-  '@gitbeaker/core@41.3.0':
+  '@gitbeaker/core@42.0.2':
     dependencies:
-      '@gitbeaker/requester-utils': 41.3.0
+      '@gitbeaker/requester-utils': 42.0.2
       qs: 6.13.1
       xcase: 2.0.1
 
-  '@gitbeaker/requester-utils@41.3.0':
+  '@gitbeaker/requester-utils@42.0.2':
     dependencies:
       picomatch-browser: 2.2.6
       qs: 6.13.1
       rate-limiter-flexible: 4.0.1
       xcase: 2.0.1
 
-  '@gitbeaker/rest@41.3.0':
+  '@gitbeaker/rest@42.0.2':
     dependencies:
-      '@gitbeaker/core': 41.3.0
-      '@gitbeaker/requester-utils': 41.3.0
+      '@gitbeaker/core': 42.0.2
+      '@gitbeaker/requester-utils': 42.0.2
 
   '@gitopslovers/nx-biome@1.5.0': {}
 
