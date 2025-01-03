@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
-import { ButtonDirective, ButtonIcon, ButtonLabel } from 'primeng/button';
+import { ButtonDirective, ButtonLabel } from 'primeng/button';
 import { Ripple } from 'primeng/ripple';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { RouterLink } from '@angular/router';
@@ -19,7 +19,6 @@ import { BreakpointObserver } from '@angular/cdk/layout';
     MirrorMapComponent,
     RouterLink,
     NgOptimizedImage,
-    ButtonIcon,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
