@@ -17,6 +17,8 @@ import { Tooltip } from 'primeng/tooltip';
 import { Skeleton } from 'primeng/skeleton';
 import { Mutex } from 'async-mutex';
 import { Ripple } from 'primeng/ripple';
+import { Router } from '@angular/router';
+import { Meta } from '@angular/platform-browser';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -69,13 +71,23 @@ export class BuildStatusComponent implements OnInit {
   appService = inject(AppService);
   cdr = inject(ChangeDetectorRef);
   messageToastService = inject(MessageToastService);
+  meta = inject(Meta);
   observer = inject(BreakpointObserver);
+  router = inject(Router);
 
   dialogData = signal<PipelineWithExternalStatus>({} as PipelineWithExternalStatus);
   dialogVisible = signal<boolean>(false);
   pipelineWithStatus = signal<PipelineWithExternalStatus[]>([]);
 
   async ngOnInit(): Promise<void> {
+    this.appService.updateSeoTags(
+      this.meta,
+      'Build status',
+      'Current build status and queue information for Chaotic-AUR',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
+      this.router.url,
+    );
+
     this.observer.observe(`(max-width: 1100px)`).subscribe((state) => {
       this.isWide.set(!state.matches);
     });
@@ -97,6 +109,14 @@ export class BuildStatusComponent implements OnInit {
         this.getPipelines(inBackground),
         this.getPackageBuilds(inBackground),
       ]);
+
+      if (this.dialogVisible()) {
+        this.dialogData.set(
+          this.pipelineWithStatus()!.find(
+            (pipeline) => pipeline.pipeline.id === this.dialogData().pipeline.id,
+          ) as PipelineWithExternalStatus,
+        );
+      }
       this.lastUpdated.set(new Date());
     });
   }

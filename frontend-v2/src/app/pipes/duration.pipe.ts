@@ -5,8 +5,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class DurationPipe implements PipeTransform {
   transform(duration: number | undefined): string {
-    if (duration === undefined) {
-      return 'unknown';
+    if (!duration) {
+      return 'n/a';
     }
 
     // Duration is measured in minutes, so convert it to hours, minutes, and seconds

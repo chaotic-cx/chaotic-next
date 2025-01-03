@@ -7,6 +7,7 @@ export interface EnvironmentModel {
   logsUrl: string;
   mapUrl: string;
   metricsUrl: string;
+  mirrorsUrl: string;
   newsId: string;
   pkgUrl: string;
   primaryKey: string;

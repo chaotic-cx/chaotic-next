@@ -44,7 +44,8 @@
               "with": "frontend-v2/src/environments/environment.prod.ts"
             }
           ],
-          "outputHashing": "all"
+          "outputHashing": "all",
+          "optimization": true
         },
         "development": {
           "optimization": false,

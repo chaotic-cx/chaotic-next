@@ -101,12 +101,13 @@ export class ChartCountriesComponent implements OnInit {
       }
 
       this.options = {
+        chartArea: { right: 20, top: 0, width: '75%', height: '100%' },
         plugins: {
           legend: {
             labels: {
               usePointStyle: false,
               color: flavors.mocha.colors.text.hex,
-              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
+              family: 'Inter, Helvetica, Arial, sans-serif',
             },
             position: 'right',
           },

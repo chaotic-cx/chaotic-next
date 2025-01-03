@@ -15,6 +15,7 @@ import { MessageToastService } from '@garudalinux/core';
 import { TitleComponent } from '../title/title.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Meta, Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'chaotic-deploy-log',
@@ -45,10 +46,19 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
 
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   ngOnInit() {
+    this.appService.updateSeoTags(
+      this.meta,
+      'Deploy log',
+      'Deploy log for the Chaotic-AUR repository',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR deploy log',
+      this.router.url,
+    );
+
     if (this.route.snapshot.queryParams['amount']) {
       this.amount.set(this.route.snapshot.queryParams['amount']);
     }

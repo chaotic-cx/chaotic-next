@@ -12,7 +12,7 @@ import { APP_CONFIG } from '../environments/app-config.token';
 import { EnvironmentModel } from '../environments/environment.model';
 import localeEnGb from '@angular/common/locales/en-GB';
 import { FooterComponent } from './footer/footer.component';
-import { Meta, Title } from '@angular/platform-browser';
+import { Meta } from '@angular/platform-browser';
 
 @Component({
   imports: [RouterModule, ShellComponent, NgOptimizedImage, ScrollTop, FooterComponent],
@@ -27,7 +27,6 @@ export class AppComponent implements OnInit {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly httpClient = inject(HttpClient);
   private readonly meta = inject(Meta);
-  private readonly titleService = inject(Title);
 
   items: MenuItem[] = [
     {
@@ -36,13 +35,13 @@ export class AppComponent implements OnInit {
       routerLink: '/',
     },
     {
-      icon: 'pi pi-question',
-      label: 'Get Started',
+      icon: 'pi pi-book',
+      label: 'Get started',
       routerLink: '/docs',
     },
     {
       icon: 'pi pi-gauge',
-      label: 'Build Status',
+      label: 'Build status',
       routerLink: '/status',
     },
     {
@@ -52,13 +51,18 @@ export class AppComponent implements OnInit {
     },
     {
       icon: 'pi pi-table',
-      label: 'Package List',
+      label: 'Package list',
       routerLink: '/package-list',
     },
     {
       icon: 'pi pi-chart-bar',
-      label: 'Package Stats',
+      label: 'Statistics',
       routerLink: '/stats',
+    },
+    {
+      icon: 'pi pi-cloud-download',
+      label: 'Mirrors',
+      routerLink: '/mirrors',
     },
     {
       icon: 'pi pi-trophy',
@@ -67,7 +71,7 @@ export class AppComponent implements OnInit {
     },
     {
       icon: 'pi pi-user',
-      label: 'About',
+      label: 'About us',
       routerLink: '/about',
     },
   ];
@@ -102,15 +106,12 @@ export class AppComponent implements OnInit {
   }
 
   private updateMetaTags() {
-    this.titleService.setTitle('Chaotic-AUR - Home');
-
-    // Standard Meta Tags
     this.meta.addTag({ name: 'description', content: "Building packages for you, so you don't have to!" });
     this.meta.addTag({ name: 'keywords', content: 'Chaotic-AUR, AUR, repository, Archlinux' });
-
-    // Open Graph Meta Tags
-    this.meta.addTag({ property: 'og:title', content: 'Chaotic-AUR - Home' });
+    this.meta.addTag({ property: 'og:title', content: 'Chaotic-AUR - automated binary repo 👨🏻‍💻' });
     this.meta.addTag({ property: 'og:description', content: "Building packages for you, so you don't have to!" });
     this.meta.addTag({ property: 'og:image', content: '/assets/logo.webp' });
+    this.meta.addTag({ property: 'og:site_name', content: 'Chaotic-AUR' });
+    this.meta.addTag({ property: 'og:url', content: 'https://aur.chaotic.cx' });
   }
 }

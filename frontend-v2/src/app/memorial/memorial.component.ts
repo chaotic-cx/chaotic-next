@@ -1,16 +1,21 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { Card } from 'primeng/card';
 import { Image } from 'primeng/image';
-import { AnimateOnScroll } from 'primeng/animateonscroll';
 import { TitleComponent } from '../title/title.component';
+import { Meta } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { updateSeoTags } from '../functions';
 
 @Component({
   selector: 'chaotic-memorial',
-  imports: [Card, Image, AnimateOnScroll, TitleComponent],
+  imports: [Card, Image, TitleComponent],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
 })
-export class MemorialComponent {
+export class MemorialComponent implements OnInit {
+  private readonly meta = inject(Meta);
+  private readonly router = inject(Router);
+
   desktops: string[] = [
     'PROxZIMA.png',
     'alexjp.jpg',
@@ -73,8 +78,10 @@ export class MemorialComponent {
     'x11guy.png',
     'zoe.png',
   ];
-  desktopLinks: string[] = [];
-  termLinks: string[] = [];
+
+  desktopLinks: { full: string; preview: string }[] = [];
+  termLinks: { full: string; preview: string }[] = [];
+
   specialTreatmentDesktops: string[] = ['alexjp.jpg', 'fcinq.jpg', 'virusz4274.png'];
   specialTreatmentTerms: string[] = ['kenny.jpg', 'rohit-arm.jpg', 'snowdan.jpg'];
 
@@ -86,7 +93,7 @@ export class MemorialComponent {
           return item === filename;
         })
       ) {
-        this.desktopLinks.push(baseUrl + filename);
+        this.desktopLinks.push({ full: baseUrl + filename, preview: `/memorials/2021/desktops/${filename}.webp` });
       }
     }
     for (const filename of this.terms) {
@@ -96,8 +103,18 @@ export class MemorialComponent {
           return item === filename;
         })
       ) {
-        this.termLinks.push(baseUrl + filename);
+        this.termLinks.push({ full: baseUrl + filename, preview: `/memorials/2021/terminals/${filename}.webp` });
       }
     }
+  }
+
+  ngOnInit() {
+    updateSeoTags(
+      this.meta,
+      'Memorial',
+      'Memorial of Chaotic-AUR, celebrating the third birthday of Chaotic-AUR',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
+      this.router.url,
+    );
   }
 }

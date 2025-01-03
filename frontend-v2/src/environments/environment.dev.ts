@@ -9,6 +9,7 @@ export const environment: EnvironmentModel = {
   logsUrl: 'https://builds.garudalinux.org/logs/logs.html',
   mapUrl: 'https://status.chaotic.cx/map',
   metricsUrl: 'https://metrics.chaotic.cx/',
+  mirrorsUrl: 'https://status.chaotic.cx/mirrors.json',
   newsId: '-1001293714071',
   pkgUrl: 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/',
   primaryKey: '3056513887B78AEB',

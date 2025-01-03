@@ -5,6 +5,7 @@ import {
   type Build,
   type BuildStatus,
   type CountryRankList,
+  MirrorData,
   type Package,
   type PackageRankList,
   type PipelineWithExternalStatus,
@@ -15,6 +16,8 @@ import {
 } from '@./shared-lib';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
+import { Meta } from '@angular/platform-browser';
+import { updateSeoTags } from './functions';
 
 @Injectable({
   providedIn: 'root',
@@ -70,5 +73,16 @@ export class AppService {
     return this.http.get<Build[]>(`${this.appConfig.backendUrl}/builder/builds`, {
       params,
     });
+  }
+
+  /**
+   * Update the meta tags for the current page.
+   */
+  updateSeoTags(meta: Meta, title: string, description: string, keywords: string, url: string, image?: string): void {
+    updateSeoTags(meta, title, description, keywords, url, image);
+  }
+
+  getMirrorsStats(): Observable<MirrorData> {
+    return this.http.get<MirrorData>(this.appConfig.mirrorsUrl);
   }
 }

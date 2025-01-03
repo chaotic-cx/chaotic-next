@@ -18,7 +18,7 @@
     <ng-template #caption>
       <div class="flex">
         <p-button label="Clear" [outlined]="true" icon="pi pi-filter-slash" (click)="clear(deployTable)" />
-        <p-iconfield iconPosition="left" class="ml-auto">
+        <p-iconfield iconPosition="left" class="ml-2.5 sm:ml-auto">
           <p-inputicon>
             <i class="pi pi-search"></i>
           </p-inputicon>
@@ -28,6 +28,7 @@
             [value]="searchValue()"
             (input)="globalFilter($event.target)"
             placeholder="Search keyword"
+            class="w-full"
           />
         </p-iconfield>
       </div>
