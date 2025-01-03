@@ -63,7 +63,7 @@
     "chart.js": "^4.4.7",
     "cron": "^3.3.2",
     "crypto-js": "^4.2.0",
-    "fastify": "4.28.1",
+    "fastify": "4.29.0",
     "globals": "^15.14.0",
     "highlight.js": "^11.11.1",
     "ioredis": "^5.4.2",
