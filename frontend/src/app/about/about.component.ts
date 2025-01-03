@@ -7,7 +7,7 @@ import { Card } from 'primeng/card';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TitleComponent } from '../title/title.component';
-import { Meta, Title } from '@angular/platform-browser';
+import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { updateSeoTags } from '../functions';
 
@@ -94,7 +94,7 @@ export class AboutComponent implements OnInit {
   constructor() {
     // Construct avatar URLs
     for (const member of this.team) {
-      member.avatarUrl = `https://github.com/${member.github}.png`;
+      member.avatarUrl = `/assets/avatars/${member.github}.webp`;
     }
   }
 
