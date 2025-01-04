@@ -63,7 +63,8 @@
               class="pi"
               [ngClass]="{
                 'pi-check-circle text-green': mirror.healthy,
-                'pi-exclamation-circle text-red': !mirror.healthy,
+                'pi-exclamation-circle text-red': !mirror.healthy && !mirror.last_update,
+                'pi-fast-backward text-peach': !mirror.healthy && mirror.last_update,
               }"
             ></i>
           </td>
