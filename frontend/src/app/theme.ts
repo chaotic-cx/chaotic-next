@@ -1,6 +1,6 @@
-import Aura from '@primeng/themes/aura';
-import { definePreset } from '@primeng/themes';
 import * as flavors from '@catppuccin/palette';
+import { definePreset } from '@primeng/themes';
+import Aura from '@primeng/themes/aura';
 
 const mocha = flavors.flavors.mocha;
 export const Catppuccin = definePreset(Aura, {
@@ -376,6 +376,18 @@ export const Catppuccin = definePreset(Aura, {
             focusColor: '{surface.400}',
             activeColor: '{surface.400}',
           },
+        },
+      },
+    },
+  },
+  components: {
+    tooltip: {
+      colorScheme: {
+        light: {
+          background: mocha.colors.crust.hex,
+        },
+        dark: {
+          background: mocha.colors.crust.hex,
         },
       },
     },
