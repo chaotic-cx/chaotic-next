@@ -7,9 +7,10 @@
         We start by retrieving the primary key to enable the installation of our keyring and mirror list.
       </div>
       <div>
-        <pre (click)="copyText(installRepo)" class="whitespace-pre-wrap py-5 text-base">
-          <code [highlight]="installRepo" language="shell" pTooltip="Copy to clipboard"
-                tooltipPosition="top"></code><br></pre>
+        <pre (click)="copyText(installRepo)" class="whitespace-pre-wrap py-5 text-base"><code [highlight]="installRepo"
+                                                                                              language="shell"
+                                                                                              pTooltip="Copy to clipboard"
+                                                                                              tooltipPosition="top"></code><br></pre>
         <p-divider />
         <p>Then, we append (adding at the end) the following to <i>/etc/pacman.conf</i>:</p>
         <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(appendRepo)" [highlight]="appendRepo"
