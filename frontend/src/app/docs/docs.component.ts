@@ -1,22 +1,21 @@
-import { isPlatformBrowser } from '@angular/common';
-import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
-import hljs from 'highlight.js';
-import { CopyButtonPlugin } from './hljs-copybutton';
-import { HighlightJsDirective } from 'ngx-highlight-js';
-import { Panel } from 'primeng/panel';
+import { Component, inject, OnInit } from '@angular/core';
+import { Meta } from '@angular/platform-browser';
+import { Router, RouterLink } from '@angular/router';
+import { MessageToastService } from '@garudalinux/core';
+import { Highlight } from 'ngx-highlightjs';
 import { Divider } from 'primeng/divider';
+import { Panel } from 'primeng/panel';
+import { Tooltip } from 'primeng/tooltip';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
-import { TitleComponent } from '../title/title.component';
-import { Router, RouterLink } from '@angular/router';
-import { Meta } from '@angular/platform-browser';
 import { updateSeoTags } from '../functions';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-docs',
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
-  imports: [HighlightJsDirective, Panel, Divider, TitleComponent, RouterLink],
+  imports: [Panel, Divider, TitleComponent, RouterLink, Highlight, Tooltip],
 })
 export class DocsComponent implements OnInit {
   isBrowser = true;
@@ -29,28 +28,19 @@ export class DocsComponent implements OnInit {
   syncMirrors = '$ sudo pacman -Sy\n$ sudo pacman -Su ungoogled-chromium';
 
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
+  private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
-  private readonly platformId = inject(PLATFORM_ID);
   private readonly router = inject(Router);
 
   constructor() {
-    // Prevent document is not defined errors during building / SSR
-    this.isBrowser = isPlatformBrowser(this.platformId);
     this.installRepo =
       `$ sudo pacman-key --recv-key ${this.appConfig.primaryKey} --keyserver keyserver.ubuntu.com\n` +
       `$ sudo pacman-key --lsign-key ${this.appConfig.primaryKey}\n` +
       "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
-      "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'\n";
+      "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'";
   }
 
   ngOnInit() {
-    if (this.isBrowser) {
-      setTimeout(() => {
-        hljs.addPlugin(new CopyButtonPlugin());
-        hljs.highlightAll();
-      }, 500);
-    }
-
     updateSeoTags(
       this.meta,
       'Documentation',
@@ -58,5 +48,13 @@ export class DocsComponent implements OnInit {
       'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
       this.router.url,
     );
+  }
+
+  copyText(text: string) {
+    if (!navigator.clipboard) return;
+
+    navigator.clipboard.writeText(text.replaceAll('$ ', '')).then(() => {
+      this.messageToastService.info('Copied', 'The text has been copied to your clipboard');
+    });
   }
 }

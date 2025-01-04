@@ -73,7 +73,7 @@
     "moleculer": "^0.14.35",
     "nestjs-omacache": "^1.1.6",
     "nestjs-pino": "^4.2.0",
-    "ngx-highlight-js": "^19.0.0",
+    "ngx-highlightjs": "^13.0.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
@@ -99,7 +99,6 @@
     "@angular/cli": "~19.0.6",
     "@angular/compiler-cli": "19.0.5",
     "@angular/language-service": "19.0.5",
-    "@biomejs/biome": "^1.9.4",
     "@catppuccin/highlightjs": "1.0.0",
     "@catppuccin/palette": "^1.7.1",
     "@catppuccin/tailwindcss": "^0.1.6",
@@ -175,7 +174,8 @@
       "lmdb",
       "msgpackr-extract",
       "nestjs-pino",
-      "nx"
+      "nx",
+      "workerd"
     ]
   }
 }
