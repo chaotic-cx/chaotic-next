@@ -1,4 +1,4 @@
-<div highlight-js mode="default" class="chaotic-container-regular">
+<div class="chaotic-container-regular">
   <chaotic-title title="Documentation" subtitle="How to get started quickly."></chaotic-title>
 
   <div class="mt-5">
@@ -7,15 +7,19 @@
         We start by retrieving the primary key to enable the installation of our keyring and mirror list.
       </div>
       <div>
-        <pre class="whitespace-pre-wrap py-5 text-base"><code [innerHtml]="installRepo"
-                                                              language="shell"></code></pre>
-        <br />
+        <pre (click)="copyText(installRepo)" class="whitespace-pre-wrap py-5 text-base">
+          <code [highlight]="installRepo" language="shell" pTooltip="Copy to clipboard"
+                tooltipPosition="top"></code><br></pre>
+        <p-divider />
         <p>Then, we append (adding at the end) the following to <i>/etc/pacman.conf</i>:</p>
-        <pre class="whitespace-pre-wrap py-5"><code [innerHtml]="appendRepo" language="shell"></code>
-      </pre>
+        <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(appendRepo)" [highlight]="appendRepo"
+                                                    language="shell" pTooltip="Copy to clipboard"
+                                                    tooltipPosition="top"></code></pre>
+        <p-divider />
         <p>After syncing your mirror lists, the repository is ready to use!</p>
-        <pre class="whitespace-pre-wrap py-5"><code [innerHtml]="syncMirrors" language="shell"></code>
-      </pre>
+        <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(syncMirrors)" [highlight]="syncMirrors"
+                                                    language="shell" pTooltip="Copy to clipboard"
+                                                    tooltipPosition="top"></code></pre>
       </div>
     </p-panel>
   </div>
@@ -106,8 +110,9 @@
         the enabled mirrors. <br />
         This is why it is still better in such areas, where CDNs aren't well established. We recommend using it as
         follows:
-        <pre class="whitespace-pre-wrap py-5 pl-5"><code [innerHtml]="powerpillUsage"
-                                                         language="shell"></code></pre>
+        <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(powerpillUsage)" [highlight]="powerpillUsage"
+                                                         language="shell" pTooltip="Copy to clipboard"
+                                                         tooltipPosition="top"></code></pre>
         Make sure to insert all mirrors in your <i>pacman.conf</i> or use <i>chaotic-mirrorlist</i> with all of them
         active if using powerpill.
 
@@ -118,18 +123,23 @@
           >you can add the following</a
         >
         to <i>/etc/pacman.conf</i>:
-        <pre class="whitespace-pre-wrap py-5 pl-5"><code [innerHtml]="ignorePkg" language="shell"></code></pre>
+        <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(ignorePkg)" [innerHtml]="ignorePkg"
+                                                         language="shell" pTooltip="Copy to clipboard"
+                                                         tooltipPosition="top"></code></pre>
 
         <p-divider />
 
         You can pick the repository from which to download a package like this:
-        <pre class="whitespace-pre-wrap py-5 pl-5"><code [innerHtml]="installPackage"
-                                                         language="shell"></code></pre>
+        <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(installPackage)" [highlight]="installPackage"
+                                                         language="shell" pTooltip="Copy to clipboard"
+                                                         tooltipPosition="top"></code></pre>
         Some AUR helpers like
         <a class="text-mauve" href="https://github.com/Morganamilo/paru" rel="noopener" target="_blank">paru</a>
         support this syntax as well.
-        <pre class="whitespace-pre-wrap py-5 pl-5"><code [innerHtml]="installPackageParu"
-                                                         language="shell"></code></pre>
+        <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(installPackageParu)"
+                                                         [highlight]="installPackageParu"
+                                                         language="shell" pTooltip="Copy to clipboard"
+                                                         tooltipPosition="top"></code></pre>
 
         <p-divider />
         <a>You must have the multilib repository enabled.</a>

@@ -87,7 +87,7 @@
                 corepack pnpm install
               else
                 outcome=$(corepack pnpm install)
-                if  [[ !  "$outcome" =~ "Lockfile is up to date" ]]; then
+                if  [[ !  "$outcome" =~ "Already up to date" ]]; then
                   echo "Dependencies have been updated"
                 fi
               fi

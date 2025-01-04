@@ -8,7 +8,7 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "inlineSourceMap": true,
-    "lib": ["es2022", "dom"],
+    "lib": ["esnext", "dom"],
     "module": "esnext",
     "moduleResolution": "node",
     "paths": {
@@ -17,7 +17,7 @@
     "rootDir": ".",
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
-    "target": "es2022"
+    "target": "esnext"
   },
   "exclude": ["node_modules", "tmp"]
 }
