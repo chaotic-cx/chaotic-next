@@ -1,18 +1,18 @@
+import { NgOptimizedImage, registerLocaleData } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import localeEnGb from '@angular/common/locales/en-GB';
 import { Component, inject, OnInit } from '@angular/core';
+import { Meta } from '@angular/platform-browser';
 import { RouterModule, RouterOutlet } from '@angular/router';
+import { ShellComponent } from '@garudalinux/core';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
-import { HttpClient } from '@angular/common/http';
-import { routeAnimations } from './app.routes';
-import { ShellComponent } from '@garudalinux/core';
 import { MenuItem } from 'primeng/api';
-import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import { ScrollTop } from 'primeng/scrolltop';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { EnvironmentModel } from '../environments/environment.model';
-import localeEnGb from '@angular/common/locales/en-GB';
+import { routeAnimations } from './app.routes';
 import { FooterComponent } from './footer/footer.component';
-import { Meta } from '@angular/platform-browser';
 
 @Component({
   imports: [RouterModule, ShellComponent, NgOptimizedImage, ScrollTop, FooterComponent],
@@ -110,7 +110,7 @@ export class AppComponent implements OnInit {
     this.meta.addTag({ name: 'keywords', content: 'Chaotic-AUR, AUR, repository, Archlinux' });
     this.meta.addTag({ property: 'og:title', content: 'Chaotic-AUR - automated binary repo 👨🏻‍💻' });
     this.meta.addTag({ property: 'og:description', content: "Building packages for you, so you don't have to!" });
-    this.meta.addTag({ property: 'og:image', content: '/assets/logo.webp' });
+    this.meta.addTag({ property: 'og:image', content: '/assets/logo.png' });
     this.meta.addTag({ property: 'og:site_name', content: 'Chaotic-AUR' });
     this.meta.addTag({ property: 'og:url', content: 'https://aur.chaotic.cx' });
   }
