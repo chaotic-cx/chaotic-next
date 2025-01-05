@@ -130,7 +130,7 @@ importers:
         version: 5.4.2
       isomorphic-git:
         specifier: ^1.27.3
-        version: 1.27.3
+        version: 1.28.0
       javascript-time-ago:
         specifier: ^2.5.11
         version: 2.5.11
@@ -5839,8 +5839,8 @@ packages:
     resolution: {integrity: sha512-WhB9zCku7EGTj/HQQRz5aUQEUeoQZH2bWcltRErOpymJ4boYE6wL9Tbr23krRPSZ+C5zqNSrSw+Cc7sZZ4b7vg==}
     engines: {node: '>=0.10.0'}
 
-  isomorphic-git@1.27.3:
-    resolution: {integrity: sha512-pNUeske1tbFYAVSU/4cHryzEmr9XLCiIOL7Vr6JedCYnz6eMGpYf4f3KTnZYoHokuKyvq5JQ9BS2iksuH62zmw==}
+  isomorphic-git@1.28.0:
+    resolution: {integrity: sha512-UTzJUQeh8UlapWFOAQy0B6RHoEmcEG+UeYAvsYVnAHGQ/9+kJiexWpz6N1PL+M5cO7Mr9R9mKabVFuiFZHWHsw==}
     engines: {node: '>=12'}
     hasBin: true
 
@@ -15399,7 +15399,7 @@ snapshots:
 
   isobject@3.0.1: {}
 
-  isomorphic-git@1.27.3:
+  isomorphic-git@1.28.0:
     dependencies:
       async-lock: 1.4.1
       clean-git-ref: 2.0.1
