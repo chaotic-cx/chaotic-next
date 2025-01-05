@@ -1,8 +1,11 @@
-# Tdlib requires glibc, therefore alpine can't be used
-FROM node:23-slim AS builder
+FROM node:23-alpine AS builder
 
 WORKDIR /build
 COPY . /build
+
+# Bcrypt shenigans
+# hadolint ignore=DL3018
+RUN apk add --no-cache --virtual builds-deps build-base
 
 # Enable the use of pnpm and compile the backend
 RUN corepack enable pnpm && \
@@ -11,16 +14,19 @@ RUN corepack enable pnpm && \
 
 # Generate node_modules containing nx-generated package.json for less used space
 WORKDIR /build/dist/backend
+
+# Allow pnpm installing bcrypt .node files
+RUN sed -i 's&"main": "main.js"&"main": "main.js","pnpm": {"onlyBuiltDependencies": ["@nestjs/core","bcrypt","nestjs-pino"]}&g' package.json
+
+# Run the actual installation
 RUN pnpm install --prod && \
     pnpm install pino-pretty
 
-FROM node:23-slim
+FROM node:23-alpine
 
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
-RUN apt-get update && \
-  apt-get install --no-install-recommends -y autossh=1.4g-1+b1 netcat-openbsd=1.219-1 zstd=1.5.4+dfsg2-5 && \
-  rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache autossh=1.4g-r3 curl=8.11.1-r0 zstd=1.5.6-r2
 
 COPY entry_point.sh /entry_point.sh
 RUN chmod +x /entry_point.sh
@@ -34,9 +40,8 @@ LABEL org.opencontainers.image.authors="Nico Jensch <dr460nf1r3@chaotic.cx>"
 LABEL org.opencontainers.image.description="Backend for the Chaotic-AUR website and other smaller services"
 LABEL org.opencontainers.image.version="1.0"
 
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "nc", "-z", "localhost", "3000" ]
+HEALTHCHECK --interval=30s --timeout=15s --start-period=10s --retries=3 CMD [ "curl", "-sfI", "--connect-timeout 15", "http://127.0.0.1/builder/packages" ]
 
 EXPOSE 3000
-VOLUME ["/app/tdlib"]
 
 ENTRYPOINT ["/entry_point.sh"]

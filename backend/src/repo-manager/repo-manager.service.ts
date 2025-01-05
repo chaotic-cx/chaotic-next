@@ -1457,7 +1457,7 @@ class RepoManager {
     try {
       const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
       const needsRebuild: RepoUpdateRunParams[] = [];
-      const soNameList: string[] = build.pkgbase.metadata.soNameList;
+      const soNameList: string[] = build.pkgbase.metadata?.soNameList ?? [];
       let repoDir: string | undefined = this.repoDirs.find((repo) =>
         fs.existsSync(path.join(repo, build.pkgbase.pkgname)),
       );
@@ -1545,7 +1545,7 @@ class RepoManager {
 
           for (const key of relevantKeys) {
             const includesSoName: boolean = namcapAnalysis[key]?.find((dep: string) => {
-              return soNameList.includes(dep);
+              return soNameList?.includes(dep) ?? false;
             });
             if (!includesSoName) continue;
 
