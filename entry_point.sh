@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 set -e
 
 export REDIS_PORT="${REDIS_PORT:-6379}"
 
-function isRunning() {
+isRunning() {
   if [ ! -f /tmp/tunnel.pid ]; then
     return 1
   fi
