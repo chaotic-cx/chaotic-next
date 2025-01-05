@@ -77,7 +77,11 @@
       in rec {
         default = chaotic-next;
         chaotic-next = mkShell {
-          commands = [{package = "pre-commit";}];
+          commands = [
+            {package = "corepack_latest";}
+            {package = "nodejs_latest";}
+            {package = "pre-commit";}
+          ];
           devshell = {
             name = "chaotic-next";
             startup.preCommitHooks.text = ''
