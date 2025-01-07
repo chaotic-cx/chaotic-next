@@ -5,3 +5,7 @@
 ::ng-deep .p-datatable {
   width: unset !important;
 }
+
+.p-tab {
+  @apply mx-auto;
+}

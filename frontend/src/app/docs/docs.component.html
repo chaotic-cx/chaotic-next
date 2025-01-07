@@ -4,21 +4,56 @@
   <div class="mt-5">
     <p-panel header="Setup">
       <div class="chaotic-panel">
-        We start by retrieving the primary key to enable the installation of our keyring and mirror list.
+        We start by retrieving the
+        <a
+          class="text-mauve"
+          href="https://keyserver.ubuntu.com/pks/lookup?search=3056513887B78AEB&fingerprint=on&op=index"
+        >
+          primary key</a
+        >
+        to enable the installation of our keyring and mirror list.
       </div>
       <div>
-        <pre (click)="copyText(installRepo)" class="whitespace-pre-wrap py-5 text-base"><code [highlight]="installRepo"
+        <pre (click)="copyText(receiveKeys)" class="whitespace-pre-wrap py-5 text-base"><code [highlight]="receiveKeys"
                                                                                               language="shell"
                                                                                               pTooltip="Copy to clipboard"
                                                                                               tooltipPosition="top"></code><br></pre>
         <p-divider />
-        <p>Then, we append (adding at the end) the following to <i>/etc/pacman.conf</i>:</p>
+        <div class="chaotic-panel">
+          This allows us to install our
+          <a class="text-mauve" href="https://github.com/chaotic-aur/keyring" rel="noopener" target="_blank"
+            >chaotic-keyring</a
+          >
+          and
+          <a
+            class="text-mauve"
+            href="https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/chaotic-mirrorlist"
+            rel="noopener"
+            target="_blank"
+            >chaotic-mirrorlist</a
+          >
+          packages.
+        </div>
+        <div>
+          <pre (click)="copyText(installRepoPackages)" class="whitespace-pre-wrap py-5 text-base"><code
+          [highlight]="installRepoPackages"
+          language="shell"
+          pTooltip="Copy to clipboard"
+          tooltipPosition="top"></code><br></pre>
+          <p-divider />
+        </div>
+        <p>Then, we append (adding at the end) the following to <code>/etc/pacman.conf</code>:</p>
         <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(appendRepo)" [highlight]="appendRepo"
                                                     language="shell" pTooltip="Copy to clipboard"
                                                     tooltipPosition="top"></code></pre>
         <p-divider />
-        <p>After syncing your mirror lists, the repository is ready to use!</p>
+        <p>We recommend running a full system update along syncing our mirrorlist.</p>
         <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(syncMirrors)" [highlight]="syncMirrors"
+                                                    language="shell" pTooltip="Copy to clipboard"
+                                                    tooltipPosition="top"></code></pre>
+        <p-divider />
+        <p>After having completed this action, the repository is ready to use! 🚀</p>
+        <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(installPackage)" [highlight]="installPackage"
                                                     language="shell" pTooltip="Copy to clipboard"
                                                     tooltipPosition="top"></code></pre>
       </div>
@@ -123,7 +158,7 @@
         <a class="text-mauve" href="https://www.archlinux.org/pacman/pacman.conf.5.html" rel="noopener" target="_blank"
           >you can add the following</a
         >
-        to <i>/etc/pacman.conf</i>:
+        to <code>/etc/pacman.conf</code>:
         <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(ignorePkg)" [innerHtml]="ignorePkg"
                                                          language="shell" pTooltip="Copy to clipboard"
                                                          tooltipPosition="top"></code></pre>
@@ -131,7 +166,9 @@
         <p-divider />
 
         You can pick the repository from which to download a package like this:
-        <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(installPackage)" [highlight]="installPackage"
+        <pre
+          class="whitespace-pre-wrap py-5 pl-5"
+        ><code (click)="copyText(installPackageSpecific)" [highlight]="installPackageSpecific"
                                                          language="shell" pTooltip="Copy to clipboard"
                                                          tooltipPosition="top"></code></pre>
         Some AUR helpers like

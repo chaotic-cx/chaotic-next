@@ -380,7 +380,7 @@
     </p-tabs>
   }
 </div>
-@if (dialogData().pipeline?.source) {
+@if (dialogData().pipeline.source) {
   <p-dialog header="Pipeline details" [modal]="true" [(visible)]="dialogVisible" [style]="{ width: '90vw' }">
     <div class="mb-5 ml-2.5">
       <p>Source: {{ dialogData().pipeline.source }}</p>

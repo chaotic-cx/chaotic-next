@@ -20,7 +20,7 @@ export interface Message {
   from: string;
   from_id: string;
   author: string;
-  text: (string | TextEntity)[];
+  text: (string | TextEntity)[] | string;
   text_entities: TextEntity[];
   reactions: Reaction[];
 }

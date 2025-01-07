@@ -1,24 +1,24 @@
-import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Build, BuildClass, BuildStatus, PipelineWithExternalStatus } from '@./shared-lib';
-import { Timeline } from 'primeng/timeline';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { Meta } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { MessageToastService } from '@garudalinux/core';
+import { Mutex } from 'async-mutex';
 import { Card } from 'primeng/card';
+import { Dialog } from 'primeng/dialog';
+import { Ripple } from 'primeng/ripple';
+import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
-import { BuildClassPipe } from '../pipes/build-class.pipe';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { Timeline } from 'primeng/timeline';
+import { Tooltip } from 'primeng/tooltip';
+import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { startShortPolling } from '../functions';
-import { retry } from 'rxjs';
-import { BreakpointObserver } from '@angular/cdk/layout';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { MessageToastService } from '@garudalinux/core';
+import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
-import { Dialog } from 'primeng/dialog';
-import { Tooltip } from 'primeng/tooltip';
-import { Skeleton } from 'primeng/skeleton';
-import { Mutex } from 'async-mutex';
-import { Ripple } from 'primeng/ripple';
-import { Router } from '@angular/router';
-import { Meta } from '@angular/platform-browser';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -75,7 +75,10 @@ export class BuildStatusComponent implements OnInit {
   observer = inject(BreakpointObserver);
   router = inject(Router);
 
-  dialogData = signal<PipelineWithExternalStatus>({} as PipelineWithExternalStatus);
+  dialogData = signal<PipelineWithExternalStatus>({
+    pipeline: {},
+    commit: [],
+  } as unknown as PipelineWithExternalStatus); // Workaround for silencing Angular warning
   dialogVisible = signal<boolean>(false);
   pipelineWithStatus = signal<PipelineWithExternalStatus[]>([]);
 
