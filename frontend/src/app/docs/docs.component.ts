@@ -18,14 +18,17 @@ import { TitleComponent } from '../title/title.component';
   imports: [Panel, Divider, TitleComponent, RouterLink, Highlight, Tooltip],
 })
 export class DocsComponent implements OnInit {
-  isBrowser = true;
-  installRepo: string;
-  appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';
-  installPackage = '$ sudo pacman -S chaotic-aur/mesa-tkg-git';
-  installPackageParu = '$ paru -S chaotic-aur/firefox-hg';
-  powerpillUsage = '$ sudo pacman -Sy\n$ sudo powerpill -Su\n$ paru -Su';
-  ignorePkg = 'IgnorePkg = ...';
-  syncMirrors = '$ sudo pacman -Sy\n$ sudo pacman -Su ungoogled-chromium';
+  readonly appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';
+  readonly ignorePkg = 'IgnorePkg = ...';
+  readonly installPackage = '$ sudo pacman -S ungoogled-chromium';
+  readonly installPackageParu = '$ paru -S chaotic-aur/firefox-hg';
+  readonly installPackageSpecific = '$ sudo pacman -S chaotic-aur/mesa-tkg-git';
+  readonly installRepoPackages =
+    "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
+    "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'";
+  readonly powerpillUsage = '$ sudo pacman -Sy && sudo powerpill -Su && paru -Su';
+  readonly receiveKeys: string;
+  readonly syncMirrors = '$ sudo pacman -Syu';
 
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly messageToastService = inject(MessageToastService);
@@ -33,11 +36,9 @@ export class DocsComponent implements OnInit {
   private readonly router = inject(Router);
 
   constructor() {
-    this.installRepo =
+    this.receiveKeys =
       `$ sudo pacman-key --recv-key ${this.appConfig.primaryKey} --keyserver keyserver.ubuntu.com\n` +
-      `$ sudo pacman-key --lsign-key ${this.appConfig.primaryKey}\n` +
-      "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
-      "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'";
+      `$ sudo pacman-key --lsign-key ${this.appConfig.primaryKey}`;
   }
 
   ngOnInit() {
@@ -53,8 +54,14 @@ export class DocsComponent implements OnInit {
   copyText(text: string) {
     if (!navigator.clipboard) return;
 
-    navigator.clipboard.writeText(text.replaceAll('$ ', '')).then(() => {
-      this.messageToastService.info('Copied', 'The text has been copied to your clipboard');
-    });
+    navigator.clipboard
+      .writeText(text.replaceAll('$ ', ''))
+      .then(() => {
+        this.messageToastService.info('Copied', 'The text has been copied to your clipboard');
+      })
+      .catch((err) => {
+        this.messageToastService.error('Copied', 'Failed copying to clipboard');
+        console.error(err);
+      });
   }
 }
