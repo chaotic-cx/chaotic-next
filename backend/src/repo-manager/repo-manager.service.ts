@@ -1,10 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import path from 'node:path';
-import * as fs from 'node:fs';
-import { Stats } from 'node:fs';
-import http from 'isomorphic-git/http/node';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import type { AxiosResponse } from 'axios';
+import { CronJob } from 'cron';
 import git from 'isomorphic-git';
+import http from 'isomorphic-git/http/node';
+import { exec } from 'node:child_process';
+import * as fs from 'node:fs';
+import { PathLike, Stats } from 'node:fs';
+import { access, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import util from 'node:util';
+import { IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { Build, Package, pkgnameExists, Repo } from '../builder/builder.entity';
+import { ARCH } from '../constants';
+import { bumpTypeToText, decryptAes, encryptAes, isValidUrl, pathExists } from '../functions';
 import {
   BumpLogEntry,
   BumpResult,
@@ -27,17 +38,8 @@ import {
   RepoManagerSettings,
   repoSettingsExists,
 } from './repo-manager.entity';
-import * as os from 'node:os';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
-import { ARCH } from '../constants';
-import { Build, Package, pkgnameExists, Repo } from '../builder/builder.entity';
-import { ConfigService } from '@nestjs/config';
-import type { AxiosResponse } from 'axios';
-import { bumpTypeToText, decryptAes, encryptAes, isValidUrl } from '../functions';
-import { CronJob } from 'cron';
-import util from 'node:util';
-import { exec } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { F_OK } from 'node:constants';
 
 @Injectable()
 export class RepoManagerService {
@@ -372,93 +374,93 @@ export class RepoManagerService {
    */
   async readNamcap(): Promise<void> {
     try {
-      fs.readdir('/namcap', 'utf8', async (err, files) => {
-        Logger.log(files.length, 'RepoManager');
-        for (const file of files) {
-          const fileContent: string = fs.readFileSync(`/namcap/${file}`, 'utf8');
-          const namcapLines: string[] = fileContent.split('\n');
-          const namcapAnalysis: Partial<NamcapAnalysis> = {
-            'dependency-detected-satisfied': [],
-            'dependency-implicitly-satisfied': [],
-            'depends-by-namcap-sight': [],
-            'libdepends-by-namcap-sight': [],
-            'libdepends-detected-not-included': [],
-            'libprovides-by-namcap-sight': [],
-            'library-no-package-associated': [],
-            'link-level-dependence': [],
-          };
-          const relevantRules: string[] = Object.keys(namcapAnalysis);
+      const files: string[] = await readdir('/namcap');
+      Logger.log(files.length, 'RepoManager');
 
-          Logger.log(`Processing namcap analysis for ${file}`, 'RepoManager');
+      for (const file of files) {
+        const fileContent: string = await readFile(`/namcap/${file}`, 'utf8');
+        const namcapLines: string[] = fileContent.split('\n');
+        const namcapAnalysis: Partial<NamcapAnalysis> = {
+          'dependency-detected-satisfied': [],
+          'dependency-implicitly-satisfied': [],
+          'depends-by-namcap-sight': [],
+          'libdepends-by-namcap-sight': [],
+          'libdepends-detected-not-included': [],
+          'libprovides-by-namcap-sight': [],
+          'library-no-package-associated': [],
+          'link-level-dependence': [],
+        };
+        const relevantRules: string[] = Object.keys(namcapAnalysis);
 
-          let name: string;
-          let pkg: Package;
+        Logger.log(`Processing namcap analysis for ${file}`, 'RepoManager');
 
-          for (const line of namcapLines) {
-            const [cname, lineSplit] = line.split(': ');
-            name = cname.split(' ')[0];
+        let name: string;
+        let pkg: Package;
 
-            if (!pkg) pkg = await this.packageRepository.findOne({ where: { pkgname: name } });
-            if (!lineSplit || !pkg) continue;
+        for (const line of namcapLines) {
+          const [cname, lineSplit] = line.split(': ');
+          name = cname.split(' ')[0];
 
-            const [rule, result] = lineSplit.split(' ');
-            if (!relevantRules.includes(rule)) continue;
+          if (!pkg) pkg = await this.packageRepository.findOne({ where: { pkgname: name } });
+          if (!lineSplit || !pkg) continue;
 
-            switch (rule) {
-              case 'dependency-detected-satisfied': {
-                const key = result.split(' ')[0];
-                if (key) namcapAnalysis[rule].push(key);
-                break;
-              }
-              case 'dependency-implicitly-satisfied': {
-                const key = result.split(' ')[0];
-                if (key) namcapAnalysis[rule].push(key);
-                break;
-              }
-              case 'depends-by-namcap-sight': {
-                const depends = result.split(' ')[0];
-                const depsText = depends.match(/(?<=\()[^)]+(?=\))/);
-                if (!depsText) continue;
-                namcapAnalysis[rule] = depsText[0].split(' ');
-                break;
-              }
-              case 'libdepends-by-namcap-sight': {
-                const libDepends = result.split(' ')[0];
-                const libDepsText = libDepends.match(/(?<=\()[^)]+(?=\))/);
-                if (!libDepsText) continue;
-                namcapAnalysis[rule] = libDepsText[0].split(' ');
-                break;
-              }
-              case 'libdepends-detected-not-included': {
-                const key = result.split(' ')[0];
-                if (key) namcapAnalysis[rule].push(key);
-                break;
-              }
-              case 'libprovides-by-namcap-sight': {
-                const libProvides = result.split(' ')[0];
-                const libProvidesText = libProvides.match(/(?<=\()[^)]+(?=\))/);
-                if (!libProvidesText) break;
-                namcapAnalysis[rule] = libProvidesText[0].split(' ');
-                break;
-              }
-              case 'link-level-dependence': {
-                const key = result.split(' ')[0];
-                if (key) namcapAnalysis[rule].push(key);
-                break;
-              }
-              case 'library-no-package-associated': {
-                const key = result.split(' ')[0];
-                if (key) namcapAnalysis[rule].push(key);
-                break;
-              }
+          const [rule, result] = lineSplit.split(' ');
+          if (!relevantRules.includes(rule)) continue;
+
+          switch (rule) {
+            case 'dependency-detected-satisfied': {
+              const key = result.split(' ')[0];
+              if (key) namcapAnalysis[rule].push(key);
+              break;
+            }
+            case 'dependency-implicitly-satisfied': {
+              const key = result.split(' ')[0];
+              if (key) namcapAnalysis[rule].push(key);
+              break;
+            }
+            case 'depends-by-namcap-sight': {
+              const depends = result.split(' ')[0];
+              const depsText = depends.match(/(?<=\()[^)]+(?=\))/);
+              if (!depsText) continue;
+              namcapAnalysis[rule] = depsText[0].split(' ');
+              break;
+            }
+            case 'libdepends-by-namcap-sight': {
+              const libDepends = result.split(' ')[0];
+              const libDepsText = libDepends.match(/(?<=\()[^)]+(?=\))/);
+              if (!libDepsText) continue;
+              namcapAnalysis[rule] = libDepsText[0].split(' ');
+              break;
+            }
+            case 'libdepends-detected-not-included': {
+              const key = result.split(' ')[0];
+              if (key) namcapAnalysis[rule].push(key);
+              break;
+            }
+            case 'libprovides-by-namcap-sight': {
+              const libProvides = result.split(' ')[0];
+              const libProvidesText = libProvides.match(/(?<=\()[^)]+(?=\))/);
+              if (!libProvidesText) break;
+              namcapAnalysis[rule] = libProvidesText[0].split(' ');
+              break;
+            }
+            case 'link-level-dependence': {
+              const key = result.split(' ')[0];
+              if (key) namcapAnalysis[rule].push(key);
+              break;
+            }
+            case 'library-no-package-associated': {
+              const key = result.split(' ')[0];
+              if (key) namcapAnalysis[rule].push(key);
+              break;
             }
           }
-
-          if (!pkg) continue;
-          pkg.namcapAnalysis = namcapAnalysis;
-          void this.packageRepository.save(pkg);
         }
-      });
+
+        if (!pkg) continue;
+        pkg.namcapAnalysis = namcapAnalysis;
+        void this.packageRepository.save(pkg);
+      }
     } catch (err) {
       Logger.error(err, 'RepoManager');
     }
@@ -538,7 +540,7 @@ class RepoManager {
     Logger.debug(`Done cloning ${repo.name}`, 'RepoManager');
     Logger.debug('Started checking for rebuild triggers...', 'RepoManager');
 
-    const pkgbaseDirs: string[] = this.getDirectories(repoDir);
+    const pkgbaseDirs: string[] = await this.getDirectories(repoDir);
     const needsRebuild: RepoUpdateRunParams[] = await this.checkRebuildTriggers(pkgbaseDirs, repoDir, repo);
 
     if (!needsRebuild || needsRebuild.length === 0) {
@@ -733,7 +735,7 @@ class RepoManager {
 
     try {
       const globalConfigFile = path.join(repoDir, '.ci', 'config');
-      const globalConfig = fs.readFileSync(globalConfigFile, 'utf8');
+      const globalConfig = await readFile(globalConfigFile, 'utf8');
       const globalConfigLines = globalConfig.split('\n');
       const relevantEntry = globalConfigLines.find((line) => line.startsWith('CI_REBUILD_TRIGGERS'));
       const relevantEntryBlacklist = globalConfigLines.find((line) => line.startsWith('CI_REBUILD_BLACKLIST'));
@@ -855,7 +857,7 @@ class RepoManager {
    * Pull the Archlinux databases and fill the changedArchPackages array with the packages that have changed.
    */
   async pullArchlinuxPackages(): Promise<RepoWorkDir[]> {
-    const tempDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'chaotic-'));
+    const tempDir: string = await mkdtemp(path.join(tmpdir(), 'chaotic-'));
     Logger.log('Started pulling Archlinux databases...', 'RepoManager');
     Logger.debug(`Created temporary directory ${tempDir}`, 'RepoManager');
 
@@ -886,7 +888,7 @@ class RepoManager {
    * Update the database with the versions of our packages and set any non-existing packages to inactive.
    */
   async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
-    const tempDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'chaotic-'));
+    const tempDir: string = await mkdtemp(path.join(tmpdir(), 'chaotic-'));
     const repoNames: string[] = repos.map((repo) => repo.name);
 
     Logger.log(`Updating database of ${repoNames.join(', ')}...`, 'RepoManager');
@@ -953,10 +955,10 @@ class RepoManager {
       responseType: 'arraybuffer',
     });
     const fileData: Buffer = Buffer.from(dbDownload.data, 'binary');
-    fs.mkdirSync(repoDir, { recursive: true });
+    await mkdir(repoDir, { recursive: true });
 
     try {
-      fs.writeFileSync(path.join(repoDir, `${repo}.files`), fileData);
+      await writeFile(path.join(repoDir, `${repo}.files`), fileData);
       Logger.debug(`Done pulling database of ${repo}`, 'RepoManager');
       return { path: path.join(repoDir, `${repo}.files`), name: repo, workDir: repoDir };
     } catch (err: unknown) {
@@ -1005,15 +1007,15 @@ class RepoManager {
     Logger.debug('Started parsing databases...', 'RepoManager');
     for (const dir of actualWorkDirs) {
       const currentPathRegex = `/${dir.path}/`;
-      const allPkgDirs: string[] = this.getDirectories(dir.path);
+      const allPkgDirs: string[] = await this.getDirectories(dir.path);
       const relevantFiles = allPkgDirs.map((pkgDir) => {
         const pkg = pkgDir.replace(new RegExp(currentPathRegex), '');
         return { descFile: path.join(dir.path, pkg, 'desc'), filesFile: path.join(dir.path, pkg, 'files') };
       });
 
       for (const file of relevantFiles) {
-        const currentPackageVersion: Partial<ParsedPackage> = this.parsePackageDesc(file.descFile);
-        currentPackageVersion.metaData.soNameList = this.parsePackageFiles(file.filesFile);
+        const currentPackageVersion: Partial<ParsedPackage> = await this.parsePackageDesc(file.descFile);
+        currentPackageVersion.metaData.soNameList = await this.parsePackageFiles(file.filesFile);
         currentPackageVersions.push(currentPackageVersion as ParsedPackage);
       }
     }
@@ -1073,9 +1075,10 @@ class RepoManager {
    * @param srcPath The path to get the directories from
    * @returns An array of directories
    */
-  getDirectories(srcPath: string): string[] {
-    return fs.readdirSync(srcPath).filter((file) => {
-      const dir: Stats = fs.statSync(path.join(srcPath, file));
+  async getDirectories(srcPath: string): Promise<string[]> {
+    const pathContent: string[] = await readdir(srcPath);
+    return pathContent.filter(async (file) => {
+      const dir: Stats = await stat(path.join(srcPath, file));
       return (dir.isDirectory() && !file.startsWith('.')) || file === '.CI';
     });
   }
@@ -1086,10 +1089,10 @@ class RepoManager {
    * @returns The parsed package information as an ParsePackage object
    * @private
    */
-  private parsePackageDesc(descFile: string): Partial<ParsedPackage> {
+  private async parsePackageDesc(descFile: string): Promise<Partial<ParsedPackage>> {
     let pkgbaseWithVersions: Partial<ParsedPackage>;
     try {
-      const fileData: Buffer = fs.readFileSync(descFile);
+      const fileData: Buffer = await readFile(descFile);
       const lines: string = fileData.toString();
       pkgbaseWithVersions = this.extractBaseAndVersion(lines);
     } catch (err) {
@@ -1105,10 +1108,10 @@ class RepoManager {
    * @returns An array of shared object names
    * @private
    */
-  private parsePackageFiles(filesFile: string): string[] {
+  private async parsePackageFiles(filesFile: string): Promise<string[]> {
     let soNameList: string[] = [];
     try {
-      const fileData: string = fs.readFileSync(filesFile, 'utf-8');
+      const fileData: string = await readFile(filesFile, 'utf-8');
       soNameList = fileData
         .toString()
         .split('\n')
@@ -1252,7 +1255,7 @@ class RepoManager {
   cleanUp(dirs: string[]): void {
     try {
       for (const dir of dirs) {
-        fs.rmSync(dir, { recursive: true });
+        void rm(dir, { recursive: true });
       }
     } catch (err: unknown) {}
   }
@@ -1264,14 +1267,14 @@ class RepoManager {
    * @returns An object containing the configs, rebuild triggers, and the package in the database
    * @private
    */
-  async readPackageConfig(configFile: fs.PathLike, pkgbaseDir: string): Promise<PackageConfig> {
+  async readPackageConfig(configFile: PathLike, pkgbaseDir: string): Promise<PackageConfig> {
     const pkgInDb: Package = await pkgnameExists(pkgbaseDir, this.dbConnections.packages);
     const currentTriggersInDb: { pkgname: string; archVersion: string }[] = pkgInDb.bumpTriggers ?? [];
     let configText: string;
     let configLines: string[];
 
     try {
-      configText = fs.readFileSync(configFile, 'utf8');
+      configText = await readFile(configFile, 'utf8');
 
       if (configText || configText !== '') {
         configLines = configText.split('\n');
@@ -1315,24 +1318,23 @@ class RepoManager {
    * @private
    */
   private async createRepoDir(repo: Repo): Promise<string> {
-    const repoDir: string = fs.mkdtempSync(path.join(os.tmpdir(), repo.name));
+    const repoDir: string = await mkdtemp(path.join(tmpdir(), repo.name));
     try {
-      if (fs.existsSync(repoDir)) {
-        if (!isValidUrl(repo.repoUrl)) {
-          Logger.error(`Invalid URL for ${repo.name}`, 'RepoManager');
-        }
-
-        Logger.debug('Creating repos directory', 'RepoManager');
-        Logger.debug(`Cloning ${repo.name} from ${repo.repoUrl}`, 'RepoManager');
-        await git.clone({
-          fs,
-          http,
-          dir: repoDir,
-          url: repo.repoUrl,
-          ref: repo.gitRef ? repo.gitRef : 'main',
-          singleBranch: true,
-        });
+      await access(repoDir, F_OK);
+      if (!isValidUrl(repo.repoUrl)) {
+        Logger.error(`Invalid URL for ${repo.name}`, 'RepoManager');
       }
+
+      Logger.debug('Creating repos directory', 'RepoManager');
+      Logger.debug(`Cloning ${repo.name} from ${repo.repoUrl}`, 'RepoManager');
+      await git.clone({
+        fs,
+        http,
+        dir: repoDir,
+        url: repo.repoUrl,
+        ref: repo.gitRef ? repo.gitRef : 'main',
+        singleBranch: true,
+      });
     } catch (err: unknown) {
       Logger.error(err, 'RepoManager');
       throw new Error(err as string);
@@ -1350,7 +1352,7 @@ class RepoManager {
    * the array will contain only one object
    */
   async getPackageConfig(repoDir: string, pkgname?: string): Promise<PackageConfig[]> {
-    const pkgbaseFolders: string[] = this.getDirectories(repoDir);
+    const pkgbaseFolders: string[] = await this.getDirectories(repoDir);
     const result = [];
     if (pkgname) {
       const configFile = path.join(repoDir, pkgname, '.CI', 'config');
@@ -1389,10 +1391,10 @@ class RepoManager {
     }
 
     // Cleanup and ensure we have a .CI directory to write to
-    if (fs.existsSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'))) {
-      fs.rmSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'));
-    } else if (!fs.existsSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI'))) {
-      fs.mkdirSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI'));
+    if (await pathExists(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'))) {
+      await rm(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'));
+    } else if (!(await pathExists(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI')))) {
+      await mkdir(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI'), { recursive: true });
     }
 
     // Prevent CI uselessly rewriting config files because of non-alphabetic order
@@ -1401,7 +1403,7 @@ class RepoManager {
     for (const [key, value] of writeBack) {
       try {
         if (key === 'pkg' || (key || value) === undefined) continue;
-        fs.writeFileSync(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'), `${key}=${value}\n`, {
+        await writeFile(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'), `${key}=${value}\n`, {
           flag: 'a',
         });
       } catch (err: unknown) {
@@ -1458,9 +1460,14 @@ class RepoManager {
       const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
       const needsRebuild: RepoUpdateRunParams[] = [];
       const soNameList: string[] = build.pkgbase.metadata?.soNameList ?? [];
-      let repoDir: string | undefined = this.repoDirs.find((repo) =>
-        fs.existsSync(path.join(repo, build.pkgbase.pkgname)),
-      );
+      let repoDir: string | undefined = this.repoDirs.find((repo) => {
+        try {
+          access(path.join(repo, build.pkgbase.pkgname), F_OK);
+          return true;
+        } catch (err: unknown) {
+          return false;
+        }
+      });
 
       // Pull any changes that might have occurred in the meantime,
       // if no repoDir is found, we need to clone the repo
@@ -1485,7 +1492,7 @@ class RepoManager {
 
         // Isomorphic-git does not support rebases. Let's wipe the repo dir and clone it
         try {
-          fs.rmSync(repoDir, { recursive: true });
+          await rm(repoDir, { recursive: true });
           repoDir = await this.createRepoDir(build.repo);
         } catch (err: unknown) {
           Logger.error(err, 'RepoManager');
@@ -1582,5 +1589,9 @@ class RepoManager {
     } catch (err: unknown) {
       Logger.error(err, 'RepoManager');
     }
+  }
+
+  private hasVersionedSo(soDep: string): string | null {
+    return soDep.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/)[0];
   }
 }
