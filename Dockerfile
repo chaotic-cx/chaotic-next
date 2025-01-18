@@ -41,7 +41,7 @@ LABEL org.opencontainers.image.description="Backend for the Chaotic-AUR website 
 LABEL org.opencontainers.image.version="1.0"
 
 HEALTHCHECK --interval=30s --timeout=15s --start-period=10s --retries=3 \
-  CMD [ "curl", "-sfI", "--connect-timeout 15", "http://127.0.0.1:3000/builder/packages" ]
+  CMD curl -sfI --connect-timeout 15 http://127.0.0.1:3000/builder/packages || exit 1
 
 STOPSIGNAL SIGTERM
 
