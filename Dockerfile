@@ -9,7 +9,7 @@ RUN apk add --no-cache --virtual builds-deps build-base
 
 # Enable the use of pnpm and compile the backend
 RUN corepack enable pnpm && \
-    corepack use pnpm && \
+    corepack pnpm install && \
     pnpm exec nx run backend:build
 
 # Generate node_modules containing nx-generated package.json for less used space
@@ -26,7 +26,7 @@ FROM node:23-alpine
 
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
-RUN apk add --no-cache autossh=1.4g-r3 curl=8.11.1-r0 zstd=1.5.6-r2 bash=5.2.37-r0
+RUN apk add --no-cache autossh=1.4g-r3 curl=8.11.1-r0 zstd=1.5.6-r2 bash=5.2.37-r0 tar=1.35-r2
 
 COPY entry_point.sh /entry_point.sh
 RUN chmod +x /entry_point.sh
