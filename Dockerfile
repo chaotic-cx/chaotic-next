@@ -26,7 +26,7 @@ FROM node:23-alpine
 
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
-RUN apk add --no-cache autossh=1.4g-r3 curl=8.11.1-r0 zstd=1.5.6-r2
+RUN apk add --no-cache autossh=1.4g-r3 curl=8.11.1-r0 zstd=1.5.6-r2 bash=5.2.37-r0
 
 COPY entry_point.sh /entry_point.sh
 RUN chmod +x /entry_point.sh
@@ -40,7 +40,10 @@ LABEL org.opencontainers.image.authors="Nico Jensch <dr460nf1r3@chaotic.cx>"
 LABEL org.opencontainers.image.description="Backend for the Chaotic-AUR website and other smaller services"
 LABEL org.opencontainers.image.version="1.0"
 
-HEALTHCHECK --interval=30s --timeout=15s --start-period=10s --retries=3 CMD [ "curl", "-sfI", "--connect-timeout 15", "http://127.0.0.1/builder/packages" ]
+HEALTHCHECK --interval=30s --timeout=15s --start-period=10s --retries=3 \
+  CMD [ "curl", "-sfI", "--connect-timeout 15", "http://127.0.0.1:3000/builder/packages" ]
+
+STOPSIGNAL SIGTERM
 
 EXPOSE 3000
 
