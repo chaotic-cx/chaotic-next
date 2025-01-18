@@ -118,7 +118,7 @@
     "@nx/web": "20.3.0",
     "@nx/webpack": "20.3.0",
     "@nx/workspace": "20.3.0",
-    "@schematics/angular": "19.0.7",
+    "@schematics/angular": "19.1.2",
     "@swc-node/register": "~1.10.9",
     "@swc/core": "~1.10.6",
     "@swc/helpers": "~0.5.15",
