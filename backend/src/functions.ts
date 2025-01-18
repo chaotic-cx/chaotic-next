@@ -1,9 +1,11 @@
 import type { CountNameObject, UserAgentList } from '@./shared-lib';
 import type { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import CryptoJs from 'crypto-js';
+import constants from 'node:constants';
+import { access } from 'node:fs/promises';
 import { requiredEnvVarsDev, requiredEnvVarsProd } from './constants';
 import { BumpType } from './interfaces/repo-manager';
-import CryptoJs from 'crypto-js';
 
 /**
  * Parse the output of the non-single line metrics.
@@ -135,4 +137,18 @@ export function decryptAes(value: string, key: string) {
   const decData = CryptoJs.enc.Base64.parse(value).toString(CryptoJs.enc.Utf8);
   const bytes = CryptoJs.AES.decrypt(decData, key).toString(CryptoJs.enc.Utf8);
   return JSON.parse(bytes);
+}
+
+/**
+ * Check if a file exists
+ * @param path Path to the file
+ * @returns True if the file exists, false otherwise
+ */
+export async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
