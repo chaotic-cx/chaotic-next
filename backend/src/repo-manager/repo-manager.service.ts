@@ -168,7 +168,8 @@ export class RepoManagerService {
       results.push(result);
     }
 
-    void this.repoManager.cleanUp(workDirs.map((dir) => dir.workDir));
+    Logger.log('Cleaning up...', 'RepoManager');
+    await this.repoManager.cleanUp(workDirs.map((dir) => dir.workDir));
     this.summarizeChanges(results, this.repoManager);
   }
 
@@ -553,8 +554,8 @@ class RepoManager {
     Logger.log(`Pushing changes to ${repo.name}`, 'RepoManager');
     await this.pushChanges(repoDir, needsPush, repo);
 
-    Logger.debug('Done checking for rebuild triggers, cleaning up', 'RepoManager');
-    this.cleanUp([repoDir, ...pkgbaseDirs]);
+    Logger.log('Done checking for rebuild triggers, cleaning up', 'RepoManager');
+    await this.cleanUp([repoDir, ...pkgbaseDirs]);
     this.status = RepoStatus.INACTIVE;
 
     return { repo: repo.name, bumped: bumpedPackages, origin: TriggerType.ARCH };
@@ -1253,12 +1254,14 @@ class RepoManager {
    * Clean up the directories after the repo has been cloned and the packages have been checked.
    * @param dirs The directories to clean up
    */
-  cleanUp(dirs: string[]): void {
+  async cleanUp(dirs: string[]): Promise<void> {
     try {
       for (const dir of dirs) {
-        void rm(dir, { recursive: true });
+        await rm(dir, { recursive: true, force: true });
       }
-    } catch (err: unknown) {}
+    } catch (err: unknown) {
+      Logger.error(err, 'RepoManager/cleanup');
+    }
   }
 
   /**
