@@ -7,9 +7,11 @@ import { CronJob } from 'cron';
 import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/node';
 import { exec } from 'node:child_process';
+import { F_OK } from 'node:constants';
 import * as fs from 'node:fs';
 import { PathLike, Stats } from 'node:fs';
 import { access, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import util from 'node:util';
 import { IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
@@ -38,8 +40,6 @@ import {
   RepoManagerSettings,
   repoSettingsExists,
 } from './repo-manager.entity';
-import { tmpdir } from 'node:os';
-import { F_OK } from 'node:constants';
 
 @Injectable()
 export class RepoManagerService {
@@ -672,50 +672,49 @@ class RepoManager {
       //     }
       // }
 
-      if (!foundTrigger && pkgConfig.pkgInDb.namcapAnalysis) {
-        const namcapAnalysis: Partial<NamcapAnalysis> = pkgConfig.pkgInDb.namcapAnalysis;
-        const relevantKeys = [
-          'dependency-detected-satisfied',
-          'libdepends-by-namcap-sight',
-          'libdepends-detected-not-included',
-          'library-no-package-associated',
-          'link-level-dependence',
-        ];
-
-        for (const key of relevantKeys) {
-          let trigger: ArchlinuxPackage;
-          if (namcapAnalysis[key]) {
-            for (const depPkg of namcapAnalysis[key]) {
-              Logger.debug(`${depPkg}`);
-              const foundSoProvider: {
-                pkg: ArchlinuxPackage;
-                provides: string[];
-              } = soProvidingArchPackages.find((pkg) => pkg.provides?.includes(depPkg));
-
-              if (foundSoProvider) {
-                trigger = foundSoProvider.pkg;
-                break;
-              }
-            }
-          }
-          if (trigger) {
-            needsRebuild.push({
-              archPkg: trigger,
-              configs: pkgConfig.configs,
-              pkg: pkgConfig.pkgInDb,
-              bumpType: BumpType.NAMCAP,
-              triggerFrom: TriggerType.ARCH,
-            });
-
-            Logger.debug(
-              `Rebuilding ${pkgbaseDir} because of namcap detected library dep ${trigger.pkgname}`,
-              'RepoManager',
-            );
-            foundTrigger = true;
-            break;
-          }
-        }
-      }
+      // if (!foundTrigger && pkgConfig.pkgInDb.namcapAnalysis) {
+      //   const namcapAnalysis: Partial<NamcapAnalysis> = pkgConfig.pkgInDb.namcapAnalysis;
+      //   const relevantKeys = [
+      //     'dependency-detected-satisfied',
+      //     'libdepends-by-namcap-sight',
+      //     'libdepends-detected-not-included',
+      //     'link-level-dependence',
+      //   ];
+      //
+      //   for (const key of relevantKeys) {
+      //     let trigger: ArchlinuxPackage;
+      //     if (namcapAnalysis[key]) {
+      //       for (const depPkg of namcapAnalysis[key]) {
+      //         Logger.debug(`${depPkg}`);
+      //         const foundSoProvider: {
+      //           pkg: ArchlinuxPackage;
+      //           provides: string[];
+      //         } = soProvidingArchPackages.find((pkg) => pkg.provides?.includes(depPkg));
+      //
+      //         if (foundSoProvider) {
+      //           trigger = foundSoProvider.pkg;
+      //           break;
+      //         }
+      //       }
+      //     }
+      //     if (trigger) {
+      //       needsRebuild.push({
+      //         archPkg: trigger,
+      //         configs: pkgConfig.configs,
+      //         pkg: pkgConfig.pkgInDb,
+      //         bumpType: BumpType.NAMCAP,
+      //         triggerFrom: TriggerType.ARCH,
+      //       });
+      //
+      //       Logger.debug(
+      //         `Rebuilding ${pkgbaseDir} because of namcap detected library dep ${trigger.pkgname}`,
+      //         'RepoManager',
+      //       );
+      //       foundTrigger = true;
+      //       break;
+      //     }
+      //   }
+      // }
     }
 
     Logger.debug(`Found ${needsRebuild.length} packages to rebuild in ${repo.name}`, 'RepoManager');
@@ -1015,6 +1014,9 @@ class RepoManager {
 
       for (const file of relevantFiles) {
         const currentPackageVersion: Partial<ParsedPackage> = await this.parsePackageDesc(file.descFile);
+        if (!currentPackageVersion.metaData) {
+          currentPackageVersion.metaData = { buildDate: '', filename: '' };
+        }
         currentPackageVersion.metaData.soNameList = await this.parsePackageFiles(file.filesFile);
         currentPackageVersions.push(currentPackageVersion as ParsedPackage);
       }
@@ -1092,8 +1094,7 @@ class RepoManager {
   private async parsePackageDesc(descFile: string): Promise<Partial<ParsedPackage>> {
     let pkgbaseWithVersions: Partial<ParsedPackage>;
     try {
-      const fileData: Buffer = await readFile(descFile);
-      const lines: string = fileData.toString();
+      const lines: string = await readFile(descFile, 'utf-8');
       pkgbaseWithVersions = this.extractBaseAndVersion(lines);
     } catch (err) {
       return pkgbaseWithVersions;
@@ -1505,23 +1506,23 @@ class RepoManager {
           pkg.pkgname,
         );
 
-        if (
-          pkg.metadata?.deps?.includes(build.pkgbase.pkgname) ||
-          soNameList.find((soName) => pkg.metadata?.deps?.includes(soName))
-        ) {
-          needsRebuild.push({
-            configs: configs.configs,
-            pkg,
-            archPkg: build.pkgbase,
-            bumpType: BumpType.FROM_DEPS,
-            triggerFrom: TriggerType.CHAOTIC,
-          });
-          Logger.debug(
-            `Rebuilding ${pkg.pkgname} because of changed dependency ${build.pkgbase.pkgname}`,
-            'RepoManager',
-          );
-          continue;
-        }
+        // if (
+        //   pkg.metadata?.deps?.includes(build.pkgbase.pkgname) ||
+        //   soNameList.find((soName) => pkg.metadata?.deps?.includes(soName))
+        // ) {
+        //   needsRebuild.push({
+        //     configs: configs.configs,
+        //     pkg,
+        //     archPkg: build.pkgbase,
+        //     bumpType: BumpType.FROM_DEPS,
+        //     triggerFrom: TriggerType.CHAOTIC,
+        //   });
+        //   Logger.debug(
+        //     `Rebuilding ${pkg.pkgname} because of changed dependency ${build.pkgbase.pkgname}`,
+        //     'RepoManager',
+        //   );
+        //   continue;
+        // }
 
         if (pkg.bumpTriggers) {
           if (pkg.bumpTriggers.find((trigger) => trigger.pkgname === build.pkgbase.pkgname)) {
@@ -1540,36 +1541,36 @@ class RepoManager {
           }
         }
 
-        if (pkg.namcapAnalysis) {
-          const namcapAnalysis: Partial<NamcapAnalysis> = pkg.namcapAnalysis;
-          const relevantKeys = [
-            'dependency-detected-satisfied',
-            'libdepends-by-namcap-sight',
-            'libdepends-detected-not-included',
-            'library-no-package-associated',
-            'link-level-dependence',
-          ];
-
-          for (const key of relevantKeys) {
-            const includesSoName: boolean = namcapAnalysis[key]?.find((dep: string) => {
-              return soNameList?.includes(dep) ?? false;
-            });
-            if (!includesSoName) continue;
-
-            needsRebuild.push({
-              configs: configs.configs,
-              pkg,
-              archPkg: build.pkgbase,
-              bumpType: BumpType.NAMCAP,
-              triggerFrom: TriggerType.CHAOTIC,
-            });
-            Logger.debug(
-              `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in namcap analysis`,
-              'RepoManager',
-            );
-            break;
-          }
-        }
+        //   if (pkg.namcapAnalysis) {
+        //     const namcapAnalysis: Partial<NamcapAnalysis> = pkg.namcapAnalysis;
+        //     const relevantKeys = [
+        //       'dependency-detected-satisfied',
+        //       'libdepends-by-namcap-sight',
+        //       'libdepends-detected-not-included',
+        //       'library-no-package-associated',
+        //       'link-level-dependence',
+        //     ];
+        //
+        //     for (const key of relevantKeys) {
+        //       const includesSoName: boolean = namcapAnalysis[key]?.find((dep: string) => {
+        //         return soNameList?.includes(dep) ?? false;
+        //       });
+        //       if (!includesSoName) continue;
+        //
+        //       needsRebuild.push({
+        //         configs: configs.configs,
+        //         pkg,
+        //         archPkg: build.pkgbase,
+        //         bumpType: BumpType.NAMCAP,
+        //         triggerFrom: TriggerType.CHAOTIC,
+        //       });
+        //       Logger.debug(
+        //         `Rebuilding ${pkg.pkgname} because of ${build.pkgbase.pkgname} in namcap analysis`,
+        //         'RepoManager',
+        //       );
+        //       break;
+        //     }
+        //   }
       }
 
       const bumped: PackageBumpEntry[] = await this.bumpPackages(needsRebuild, repoDir);
