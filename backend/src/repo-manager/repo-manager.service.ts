@@ -1015,7 +1015,7 @@ class RepoManager {
 
       for (const file of relevantFiles) {
         const currentPackageVersion: Partial<ParsedPackage> = await this.parsePackageDesc(file.descFile);
-        if (!currentPackageVersion.metaData) {
+        if (!currentPackageVersion?.metaData) {
           currentPackageVersion.metaData = { buildDate: '', filename: '' };
         }
         currentPackageVersion.metaData.soNameList = await this.parsePackageFiles(file.filesFile);
@@ -1093,11 +1093,12 @@ class RepoManager {
    * @private
    */
   private async parsePackageDesc(descFile: string): Promise<Partial<ParsedPackage>> {
-    let pkgbaseWithVersions: Partial<ParsedPackage>;
+    let pkgbaseWithVersions: Partial<ParsedPackage> = {};
     try {
       const lines: string = await readFile(descFile, 'utf-8');
       pkgbaseWithVersions = this.extractBaseAndVersion(lines);
-    } catch (err) {
+    } catch (err: unknown) {
+      Logger.error(err, 'RepoManager/parsePackageDesc');
       return pkgbaseWithVersions;
     }
 
