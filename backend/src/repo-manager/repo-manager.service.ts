@@ -12,7 +12,7 @@ import * as fs from 'node:fs';
 import { PathLike, Stats } from 'node:fs';
 import { access, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { join } from 'node:path';
 import util from 'node:util';
 import { IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { Build, Package, pkgnameExists, Repo } from '../builder/builder.entity';
@@ -159,6 +159,7 @@ export class RepoManagerService {
 
     if (!this.repoManager.changedArchPackages || this.repoManager.changedArchPackages.length === 0) {
       Logger.log('No packages changed in Arch repos, skipping run', 'RepoManager');
+      await this.repoManager.cleanUp(workDirs.map((dir) => dir.workDir));
       return;
     }
 
@@ -168,7 +169,6 @@ export class RepoManagerService {
       results.push(result);
     }
 
-    Logger.log('Cleaning up...', 'RepoManager');
     await this.repoManager.cleanUp(workDirs.map((dir) => dir.workDir));
     this.summarizeChanges(results, this.repoManager);
   }
@@ -592,7 +592,7 @@ class RepoManager {
 
     for (const pkgbaseDir of pkgbaseDirs) {
       let archRebuildPkg: ArchlinuxPackage[];
-      const configFile: string = path.join(repoDir, pkgbaseDir, '.CI', 'config');
+      const configFile: string = join(repoDir, pkgbaseDir, '.CI', 'config');
       const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
       const metadata: ParsedPackageMetadata = pkgConfig.pkgInDb.metadata;
       let foundTrigger = false;
@@ -734,7 +734,7 @@ class RepoManager {
     };
 
     try {
-      const globalConfigFile = path.join(repoDir, '.ci', 'config');
+      const globalConfigFile = join(repoDir, '.ci', 'config');
       const globalConfig = await readFile(globalConfigFile, 'utf8');
       const globalConfigLines = globalConfig.split('\n');
       const relevantEntry = globalConfigLines.find((line) => line.startsWith('CI_REBUILD_TRIGGERS'));
@@ -857,14 +857,14 @@ class RepoManager {
    * Pull the Archlinux databases and fill the changedArchPackages array with the packages that have changed.
    */
   async pullArchlinuxPackages(): Promise<RepoWorkDir[]> {
-    const tempDir: string = await mkdtemp(path.join(tmpdir(), 'chaotic-'));
+    const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
     Logger.log('Started pulling Archlinux databases...', 'RepoManager');
     Logger.debug(`Created temporary directory ${tempDir}`, 'RepoManager');
 
     const downloads: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
       this.archlinuxRepos.map(async (repo) => {
         const repoUrl = this.archlinuxRepoUrl(repo);
-        const repoDir = path.join(tempDir, repo);
+        const repoDir = join(tempDir, repo);
         Logger.debug(`Pulling database for ${repo}...`, 'RepoManager');
         try {
           return await this.pullDatabases(repoUrl, repoDir, repo);
@@ -888,7 +888,7 @@ class RepoManager {
    * Update the database with the versions of our packages and set any non-existing packages to inactive.
    */
   async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
-    const tempDir: string = await mkdtemp(path.join(tmpdir(), 'chaotic-'));
+    const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
     const repoNames: string[] = repos.map((repo) => repo.name);
 
     Logger.log(`Updating database of ${repoNames.join(', ')}...`, 'RepoManager');
@@ -958,9 +958,9 @@ class RepoManager {
     await mkdir(repoDir, { recursive: true });
 
     try {
-      await writeFile(path.join(repoDir, `${repo}.files`), fileData);
+      await writeFile(join(repoDir, `${repo}.files`), fileData);
       Logger.debug(`Done pulling database of ${repo}`, 'RepoManager');
-      return { path: path.join(repoDir, `${repo}.files`), name: repo, workDir: repoDir };
+      return { path: join(repoDir, `${repo}.files`), name: repo, workDir: repoDir };
     } catch (err: unknown) {
       Logger.error(err, 'RepoManager');
     }
@@ -1010,7 +1010,7 @@ class RepoManager {
       const allPkgDirs: string[] = await this.getDirectories(dir.path);
       const relevantFiles = allPkgDirs.map((pkgDir) => {
         const pkg = pkgDir.replace(new RegExp(currentPathRegex), '');
-        return { descFile: path.join(dir.path, pkg, 'desc'), filesFile: path.join(dir.path, pkg, 'files') };
+        return { descFile: join(dir.path, pkg, 'desc'), filesFile: join(dir.path, pkg, 'files') };
       });
 
       for (const file of relevantFiles) {
@@ -1081,7 +1081,7 @@ class RepoManager {
   async getDirectories(srcPath: string): Promise<string[]> {
     const pathContent: string[] = await readdir(srcPath);
     return pathContent.filter(async (file) => {
-      const dir: Stats = await stat(path.join(srcPath, file));
+      const dir: Stats = await stat(join(srcPath, file));
       return (dir.isDirectory() && !file.startsWith('.')) || file === '.CI';
     });
   }
@@ -1205,7 +1205,7 @@ class RepoManager {
     for (const param of needsRebuild) {
       try {
         const bumpReason: string = bumpTypeToText(param.bumpType, 2);
-        await git.add({ fs, dir: repoDir, filepath: path.join(param.pkg.pkgname, '.CI', 'config') });
+        await git.add({ fs, dir: repoDir, filepath: join(param.pkg.pkgname, '.CI', 'config') });
 
         commitMessage += `${param.pkg.pkgname}, `;
         commitBody += `- ${param.pkg.pkgname}: ${bumpReason}\n`;
@@ -1255,6 +1255,7 @@ class RepoManager {
    * @param dirs The directories to clean up
    */
   async cleanUp(dirs: string[]): Promise<void> {
+    Logger.log('Cleaning up...', 'RepoManager');
     try {
       for (const dir of dirs) {
         await rm(dir, { recursive: true, force: true });
@@ -1322,7 +1323,7 @@ class RepoManager {
    * @private
    */
   private async createRepoDir(repo: Repo): Promise<string> {
-    const repoDir: string = await mkdtemp(path.join(tmpdir(), repo.name));
+    const repoDir: string = await mkdtemp(join(tmpdir(), repo.name));
     try {
       await access(repoDir, F_OK);
       if (!isValidUrl(repo.repoUrl)) {
@@ -1359,12 +1360,12 @@ class RepoManager {
     const pkgbaseFolders: string[] = await this.getDirectories(repoDir);
     const result = [];
     if (pkgname) {
-      const configFile = path.join(repoDir, pkgname, '.CI', 'config');
+      const configFile = join(repoDir, pkgname, '.CI', 'config');
       const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgname);
       result.push(pkgConfig);
     } else {
       for (const folder in pkgbaseFolders) {
-        const configFile = path.join(repoDir, folder, '.CI', 'config');
+        const configFile = join(repoDir, folder, '.CI', 'config');
         const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, folder);
         result.push(pkgConfig);
       }
@@ -1379,7 +1380,7 @@ class RepoManager {
    * @param pkgname The name of the package
    */
   async bumpSinglePackage(repoDir: string, pkgname: string): Promise<void> {
-    const pkgConfig = await this.readPackageConfig(path.join(repoDir, pkgname, '.CI', 'config'), pkgname);
+    const pkgConfig = await this.readPackageConfig(join(repoDir, pkgname, '.CI', 'config'), pkgname);
     if (pkgConfig.configs['CI_PACKAGE_BUMP']) {
       const bumpCount = pkgConfig.configs['CI_PACKAGE_BUMP'].split('/')[1];
       const newVer = `${pkgConfig.pkgInDb.version}-${pkgConfig.pkgInDb.pkgrel}`;
@@ -1395,10 +1396,10 @@ class RepoManager {
     }
 
     // Cleanup and ensure we have a .CI directory to write to
-    if (await pathExists(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'))) {
-      await rm(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'));
-    } else if (!(await pathExists(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI')))) {
-      await mkdir(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI'), { recursive: true });
+    if (await pathExists(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'))) {
+      await rm(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'));
+    } else if (!(await pathExists(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI')))) {
+      await mkdir(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI'), { recursive: true });
     }
 
     // Prevent CI uselessly rewriting config files because of non-alphabetic order
@@ -1407,7 +1408,7 @@ class RepoManager {
     for (const [key, value] of writeBack) {
       try {
         if (key === 'pkg' || (key || value) === undefined) continue;
-        await writeFile(path.join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'), `${key}=${value}\n`, {
+        await writeFile(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'), `${key}=${value}\n`, {
           flag: 'a',
         });
       } catch (err: unknown) {
@@ -1466,7 +1467,7 @@ class RepoManager {
       const soNameList: string[] = build.pkgbase.metadata?.soNameList ?? [];
       let repoDir: string | undefined = this.repoDirs.find((repo) => {
         try {
-          access(path.join(repo, build.pkgbase.pkgname), F_OK);
+          access(join(repo, build.pkgbase.pkgname), F_OK);
           return true;
         } catch (err: unknown) {
           return false;
@@ -1494,7 +1495,7 @@ class RepoManager {
       } catch (err: any) {
         Logger.error(err, 'RepoManager');
 
-        // Isomorphic-git does not support rebases. Let's wipe the repo dir and clone it
+        // Isomorphic-git does not support rebase. Let's wipe the repo dir and clone it
         try {
           await rm(repoDir, { recursive: true });
           repoDir = await this.createRepoDir(build.repo);
@@ -1505,7 +1506,7 @@ class RepoManager {
 
       for (const pkg of allPackages) {
         const configs: PackageConfig = await this.readPackageConfig(
-          path.join(repoDir, pkg.pkgname, '.CI', 'config'),
+          join(repoDir, pkg.pkgname, '.CI', 'config'),
           pkg.pkgname,
         );
 
@@ -1583,6 +1584,7 @@ class RepoManager {
         await this.pushChanges(repoDir, needsPush, build.repo);
       }
 
+      await this.cleanUp([repoDir]);
       this.statusDeploy = RepoStatus.INACTIVE;
 
       return {
