@@ -1,6 +1,7 @@
 import type { CommitStatusSchema, PipelineSchema } from '@gitbeaker/rest';
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000;
+export const CACHE_GITLAB_TTL = 10 * 1000;
 export const CAUR_ALLOWED_CORS = [
   'https://aur.chaotic.cx',
   'https://caur-frontend-pages.dev',

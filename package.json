@@ -72,7 +72,6 @@
     "javascript-time-ago": "^2.5.11",
     "jwks-rsa": "^3.1.0",
     "moleculer": "^0.14.35",
-    "nestjs-omacache": "^1.1.6",
     "nestjs-pino": "^4.3.0",
     "ngx-highlightjs": "^14.0.0",
     "passport": "^0.7.0",
