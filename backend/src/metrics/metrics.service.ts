@@ -1,5 +1,5 @@
 import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, type SpecificPackageMetrics } from '@./shared-lib';
-import { CACHE_MANAGER, type Cache } from '@nestjs/cache-manager';
+import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Axios } from 'axios';
 import { parseOutput } from '../functions';
@@ -134,7 +134,6 @@ export class MetricsService {
 
     const cacheKey = `rankPackages-${range}`;
     let data = await this.cacheManager.get(cacheKey);
-    await this.cacheManager.reset();
     if (!data) {
       data = await this.axios
         .get(`30d/rank/${range}/packages`)
