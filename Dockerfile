@@ -1,4 +1,4 @@
-FROM node:23-alpine AS builder
+FROM node:23-alpine3.21 AS builder
 
 WORKDIR /build
 COPY . /build
@@ -22,12 +22,22 @@ RUN sed -i 's&"main": "main.js"&"main": "main.js","pnpm": {"onlyBuiltDependencie
 RUN pnpm install --prod && \
     pnpm install pino-pretty
 
-FROM node:23-alpine
+FROM node:23-alpine3.21
+
+# renovate: datasource=repology depName=alpine_3_21/autossh
+ENV AUTOSSH_VERSION="1.4g-r3"
+# renovate: datasource=repology depName=alpine_3_21/curl
+ENV CURL_VERSION="8.11.1-r0"
+# renovate: datasource=repology depName=alpine_3_21/zstd
+ENV ZSTD_VERSION="1.5.6-r2"
+# renovate: datasource=repology depName=alpine_3_21/bash
+ENV BASH_VERSION="5.2.37-r0"
+# renovate: datasource=repology depName=alpine_3_21/tar
+ENV TAR_VERSION="1.35-r2"
 
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
-RUN apk add --no-cache autossh=1.4g-r3 curl=8.11.1-r0 zstd=1.5.6-r2 bash=5.2.37-r0 tar=1.35-r2
-
+RUN apk add --no-cache autossh=$AUTOSSH_VERSION curl=$CURL_VERSION zstd=$ZSTD_VERSION bash=$BASH_VERSION tar=$TAR_VERSION
 COPY entry_point.sh /entry_point.sh
 RUN chmod +x /entry_point.sh
 COPY --from=builder /build/dist/backend /app
