@@ -27,7 +27,7 @@ FROM node:23-alpine3.21
 # renovate: datasource=repology depName=alpine_3_21/autossh
 ENV AUTOSSH_VERSION="1.4g-r3"
 # renovate: datasource=repology depName=alpine_3_21/curl
-ENV CURL_VERSION="8.11.1-r0"
+ENV CURL_VERSION="8.12.1-r0"
 # renovate: datasource=repology depName=alpine_3_21/zstd
 ENV ZSTD_VERSION="1.5.6-r2"
 # renovate: datasource=repology depName=alpine_3_21/bash
