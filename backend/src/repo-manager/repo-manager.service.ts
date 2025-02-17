@@ -47,6 +47,7 @@ export class RepoManagerService {
   private repoManager: RepoManager;
   private repos: Repo[];
   private tasks: CronJob[] = [];
+  private workDirs: { dir: string; busy: boolean }[] = [];
 
   constructor(
     private configService: ConfigService,
@@ -95,8 +96,8 @@ export class RepoManagerService {
         }
         Logger.log(`Encrypted token for repo ${repo.name}`);
       }
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
 
     try {
@@ -112,7 +113,7 @@ export class RepoManagerService {
             }
 
             await this.settingsRepository.update({ key: 'alwaysRebuild' }, { value: JSON.stringify(globalTriggers) });
-          } catch (err: unknown) {}
+          } catch (err: any) {}
         } else {
           await this.settingsRepository.save({
             key: 'globalTriggers',
@@ -123,11 +124,11 @@ export class RepoManagerService {
         if (existingSettings) {
           try {
             globalTriggers.push(...JSON.parse(existingSettings.value));
-          } catch (err: unknown) {}
+          } catch (err: any) {}
         }
       }
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
 
     this.repoManager = this.createRepoManager(globalTriggers);
@@ -365,8 +366,8 @@ export class RepoManagerService {
       const pkg: Package = build.pkgbase;
       pkg.namcapAnalysis = finalAnalysis;
       void this.packageRepository.save(pkg);
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
   }
 
@@ -463,7 +464,7 @@ export class RepoManagerService {
         void this.packageRepository.save(pkg);
       }
     } catch (err) {
-      Logger.error(err, 'RepoManager');
+      Logger.error(err.message, 'RepoManager');
     }
   }
 }
@@ -746,8 +747,8 @@ class RepoManager {
       if (relevantEntryBlacklist) {
         result.blacklist = relevantEntryBlacklist.split('=')[1].replaceAll(/"/g, '').split(':');
       }
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
     return result;
   }
@@ -868,8 +869,8 @@ class RepoManager {
         Logger.debug(`Pulling database for ${repo}...`, 'RepoManager');
         try {
           return await this.pullDatabases(repoUrl, repoDir, repo);
-        } catch (err: unknown) {
-          Logger.error(err, 'RepoManager');
+        } catch (err: any) {
+          Logger.error(err.message, 'RepoManager');
         }
       }),
     );
@@ -961,8 +962,8 @@ class RepoManager {
       await writeFile(join(repoDir, `${repo}.files`), fileData);
       Logger.debug(`Done pulling database of ${repo}`, 'RepoManager');
       return { path: join(repoDir, `${repo}.files`), name: repo, workDir: repoDir };
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
   }
 
@@ -990,8 +991,8 @@ class RepoManager {
               reject(stderr);
             }
             resolve({ path: workDir, name: repo.name, workDir });
-          } catch (err: unknown) {
-            Logger.error(err, 'RepoManager');
+          } catch (err: any) {
+            Logger.error(err.message, 'RepoManager');
             reject(err);
           }
         });
@@ -1097,7 +1098,7 @@ class RepoManager {
     try {
       const lines: string = await readFile(descFile, 'utf-8');
       pkgbaseWithVersions = this.extractBaseAndVersion(lines);
-    } catch (err: unknown) {
+    } catch (err: any) {
       Logger.error(err, 'RepoManager/parsePackageDesc');
       return pkgbaseWithVersions;
     }
@@ -1120,8 +1121,8 @@ class RepoManager {
         .split('\n')
         .filter((line) => !!line.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/))
         .map((line) => line.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/)[0]);
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
 
     return soNameList;
@@ -1228,8 +1229,8 @@ class RepoManager {
           commitBody = '';
         }
         counter++;
-      } catch (err: unknown) {
-        Logger.error(err, 'RepoManager');
+      } catch (err: any) {
+        Logger.error(err.message, 'RepoManager');
       }
     }
 
@@ -1246,8 +1247,8 @@ class RepoManager {
       });
 
       Logger.debug(`Pushed changes to ${repo.name}`, 'RepoManager');
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
   }
 
@@ -1261,7 +1262,7 @@ class RepoManager {
       for (const dir of dirs) {
         await rm(dir, { recursive: true, force: true });
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       Logger.error(err, 'RepoManager/cleanup');
     }
   }
@@ -1285,7 +1286,7 @@ class RepoManager {
       if (configText || configText !== '') {
         configLines = configText.split('\n');
       }
-    } catch (err: unknown) {}
+    } catch (err: any) {}
 
     const configs = {};
     let rebuildTriggers: string[];
@@ -1309,8 +1310,8 @@ class RepoManager {
         rebuildTriggers = configs['CI_REBUILD_TRIGGERS'].split(':');
         Logger.log(`Found ${rebuildTriggers.length} rebuild trigger(s) for ${pkgbaseDir}`, 'RepoManager');
       }
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
 
     return { configs, rebuildTriggers, pkgInDb };
@@ -1341,8 +1342,8 @@ class RepoManager {
         ref: repo.gitRef ? repo.gitRef : 'main',
         singleBranch: true,
       });
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
       throw new Error(err as string);
     }
 
@@ -1412,8 +1413,8 @@ class RepoManager {
         await writeFile(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'), `${key}=${value}\n`, {
           flag: 'a',
         });
-      } catch (err: unknown) {
-        Logger.error(err, 'RepoManager');
+      } catch (err: any) {
+        Logger.error(err.message, 'RepoManager');
       }
     }
   }
@@ -1444,8 +1445,8 @@ class RepoManager {
 
       Logger.debug(`Found ${result.length} packages providing shared objects`, 'RepoManager');
       return result;
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
   }
 
@@ -1470,7 +1471,7 @@ class RepoManager {
         try {
           access(join(repo, build.pkgbase.pkgname), F_OK);
           return true;
-        } catch (err: unknown) {
+        } catch (err: any) {
           return false;
         }
       });
@@ -1494,14 +1495,14 @@ class RepoManager {
           });
         }
       } catch (err: any) {
-        Logger.error(err, 'RepoManager');
+        Logger.error(err.message, 'RepoManager');
 
         // Isomorphic-git does not support rebase. Let's wipe the repo dir and clone it
         try {
           await rm(repoDir, { recursive: true });
           repoDir = await this.createRepoDir(build.repo);
-        } catch (err: unknown) {
-          Logger.error(err, 'RepoManager');
+        } catch (err: any) {
+          Logger.error(err.message, 'RepoManager');
         }
       }
 
@@ -1593,8 +1594,8 @@ class RepoManager {
         bumped: bumped,
         origin: TriggerType.CHAOTIC,
       };
-    } catch (err: unknown) {
-      Logger.error(err, 'RepoManager');
+    } catch (err: any) {
+      Logger.error(err.message, 'RepoManager');
     }
   }
 
