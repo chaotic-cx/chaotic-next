@@ -913,6 +913,7 @@ class RepoManager {
     Logger.debug('Updating Chaotic database versions...', 'RepoManager');
     await Promise.allSettled(
       currentChaoticVersions.map(async (pkg) => {
+        if (!pkg.name) return;
         const chaoticPkg: Package = await pkgnameExists(pkg.name, this.dbConnections.packages);
 
         // Account for already bumped packages
@@ -1044,6 +1045,7 @@ class RepoManager {
 
     let archPkg: ArchlinuxPackage;
     for (const pkg of currentArchVersions) {
+      if (!pkg.name) continue;
       archPkg = await archPkgExists(pkg, this.dbConnections.archPkg);
 
       if (!this.repoManagerSettings.regenDatabase && archPkg.version && archPkg.version === pkg.version) {
