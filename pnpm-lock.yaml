@@ -37,7 +37,7 @@ importers:
         version: 19.1.4(@angular/common@19.1.4(@angular/core@19.1.4(rxjs@7.8.2)(zone.js@0.15.0))(rxjs@7.8.2))(@angular/core@19.1.4(rxjs@7.8.2)(zone.js@0.15.0))(@angular/platform-browser@19.1.4(@angular/animations@19.1.4(@angular/core@19.1.4(rxjs@7.8.2)(zone.js@0.15.0)))(@angular/common@19.1.4(@angular/core@19.1.4(rxjs@7.8.2)(zone.js@0.15.0))(rxjs@7.8.2))(@angular/core@19.1.4(rxjs@7.8.2)(zone.js@0.15.0)))(rxjs@7.8.2)
       '@fastify/cors':
         specifier: ^10.0.2
-        version: 10.0.2
+        version: 10.1.0
       '@fastify/helmet':
         specifier: ^13.0.1
         version: 13.0.1
@@ -1875,6 +1875,9 @@ packages:
 
   '@fastify/cors@10.0.2':
     resolution: {integrity: sha512-DGdxOG36sS/tZv1NFiCJGi7wGuXOSPL2CmNX5PbOVKx0C6LuIALRMrqLByHTCcX1Rbl8NJ9IWlJex32bzydvlw==}
+
+  '@fastify/cors@10.1.0':
+    resolution: {integrity: sha512-MZyBCBJtII60CU9Xme/iE4aEy8G7QpzGR8zkdXZkDFt7ElEMachbE61tfhAG/bvSaULlqlf0huMT12T7iqEmdQ==}
 
   '@fastify/error@4.0.0':
     resolution: {integrity: sha512-OO/SA8As24JtT1usTUTKgGH7uLvhfwZPwlptRi2Dp5P4KKmJI3gvsZ8MIHnNwDs4sLf/aai5LzTyl66xr7qMxA==}
@@ -6805,6 +6808,9 @@ packages:
   mnemonist@0.39.8:
     resolution: {integrity: sha512-vyWo2K3fjrUw8YeeZ1zF0fy6Mu59RHokURlld8ymdUPjMlD9EC9ov1/YPqTgqRvUN9nTr3Gqfz29LYAmu0PHPQ==}
 
+  mnemonist@0.40.0:
+    resolution: {integrity: sha512-kdd8AFNig2AD5Rkih7EPCXhu/iMvwevQFX/uEiGhZyPZi7fHqOoF4V4kHLpCfysxXMgQ4B52kdPMCwARshKvEg==}
+
   moleculer@0.14.35:
     resolution: {integrity: sha512-KB4qs0zNTjE9z7Bl27FFLPaWkAsUFJajF2njozJeor1phFCAYP5S1JsWOSrnUBTtsH7SX4gTw8tGRdcgh1eyVQ==}
     engines: {node: '>= 10.x.x'}
@@ -11429,6 +11435,11 @@ snapshots:
     dependencies:
       fastify-plugin: 5.0.1
       mnemonist: 0.39.8
+
+  '@fastify/cors@10.1.0':
+    dependencies:
+      fastify-plugin: 5.0.1
+      mnemonist: 0.40.0
 
   '@fastify/error@4.0.0': {}
 
@@ -17329,6 +17340,10 @@ snapshots:
       ufo: 1.5.4
 
   mnemonist@0.39.8:
+    dependencies:
+      obliterator: 2.0.5
+
+  mnemonist@0.40.0:
     dependencies:
       obliterator: 2.0.5
 
