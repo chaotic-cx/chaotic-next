@@ -2,7 +2,8 @@ import * as flavors from '@catppuccin/palette';
 import { definePreset } from '@primeng/themes';
 import Aura from '@primeng/themes/aura';
 
-const mocha = flavors.flavors.mocha;
+const { latte, mocha } = flavors.flavors;
+
 export const Catppuccin = definePreset(Aura, {
   primitive: {
     borderRadius: {
@@ -83,13 +84,6 @@ export const Catppuccin = definePreset(Aura, {
     mask: {
       transitionDuration: '0.15s',
     },
-    menubar: {
-      item: {
-        icon: {
-          color: mocha.colors.text.hex,
-        },
-      },
-    },
     navigation: {
       list: {
         padding: '0.25rem 0.25rem',
@@ -144,75 +138,75 @@ export const Catppuccin = definePreset(Aura, {
           950: '#08080c',
         },
         primary: {
-          color: '#cba6f7',
-          contrastColor: '#b4befe',
-          hoverColor: '#eba0ac',
-          activeColor: '#fab387',
+          color: latte.colors.mauve.hex,
+          contrastColor: latte.colors.surface0.hex,
+          hoverColor: latte.colors.maroon.hex,
+          activeColor: latte.colors.flamingo.hex,
         },
         highlight: {
-          background: '{primary.50}',
-          focusBackground: '{primary.100}',
-          color: '{primary.700}',
-          focusColor: '{primary.800}',
+          background: '{content.background}',
+          focusBackground: '{content.background}',
+          color: 'rgba(230, 69, 83, .87)',
+          focusColor: latte.colors.maroon.hex,
         },
         mask: {
-          background: 'rgba(0,0,0,0.4)',
+          background: 'rgba(220, 224, 232, .6)',
           color: '{surface.200}',
         },
         formField: {
-          background: '#eff1f5',
-          disabledBackground: '{surface.200}',
-          filledBackground: '{surface.50}',
-          filledHoverBackground: '{surface.50}',
-          filledFocusBackground: '{surface.50}',
-          borderColor: '{surface.300}',
-          hoverBorderColor: '{surface.400}',
+          background: latte.colors.crust.hex,
+          disabledBackground: '{surface.700}',
+          filledBackground: '{surface.800}',
+          filledHoverBackground: '{surface.800}',
+          filledFocusBackground: '{surface.800}',
+          borderColor: '{surface.600}',
+          hoverBorderColor: '{surface.500}',
           focusBorderColor: '{primary.color}',
-          invalidBorderColor: '#d20f39',
-          color: '{surface.700}',
-          disabledColor: '{surface.500}',
-          placeholderColor: '{surface.500}',
-          invalidPlaceholderColor: '#e64553',
-          floatLabelColor: '{surface.500}',
-          floatLabelFocusColor: '{primary.600}',
-          floatLabelActiveColor: '{surface.500}',
+          invalidBorderColor: latte.colors.peach.hex,
+          color: '{surface.0}',
+          disabledColor: '{surface.400}',
+          placeholderColor: '{surface.400}',
+          invalidPlaceholderColor: latte.colors.maroon.hex,
+          floatLabelColor: '{surface.400}',
+          floatLabelFocusColor: '{primary.color}',
+          floatLabelActiveColor: '{surface.400}',
           floatLabelInvalidColor: '{form.field.invalid.placeholder.color}',
           iconColor: '{surface.400}',
           shadow: '0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgba(18, 18, 23, 0.05)',
         },
         text: {
-          color: '#cdd6f4',
-          hoverColor: '{surface.text.800}',
-          mutedColor: '{surface.text.500}',
-          hoverMutedColor: '{surface.text.600}',
+          color: latte.colors.text.hex,
+          hoverColor: latte.colors.maroon.hex,
+          mutedColor: latte.colors.surface1.hex,
+          hoverMutedColor: latte.colors.surface0.hex,
         },
         content: {
-          background: '#ccd0da',
-          hoverBackground: '{surface.100}',
-          borderColor: '{surface.200}',
+          background: 'rgba(230, 233, 239, 0.8)',
+          hoverBackground: '{surface.800}',
+          borderColor: '{surface.700}',
           color: '{text.color}',
           hoverColor: '{text.hover.color}',
         },
         overlay: {
           select: {
-            background: '#eff1f5',
-            borderColor: '{surface.200}',
+            background: '{surface.900}',
+            borderColor: '{surface.700}',
             color: '{text.color}',
           },
           popover: {
-            background: '{surface.0}',
-            borderColor: '{surface.200}',
+            background: '{surface.900}',
+            borderColor: '{surface.700}',
             color: '{text.color}',
           },
           modal: {
-            background: '{surface.0}',
-            borderColor: '{surface.200}',
+            background: '{surface.900}',
+            borderColor: '{surface.700}',
             color: '{text.color}',
           },
         },
         list: {
           option: {
-            focusBackground: '{surface.100}',
+            focusBackground: '{surface.800}',
             selectedBackground: '{highlight.background}',
             selectedFocusBackground: '{highlight.focus.background}',
             color: '{text.color}',
@@ -220,8 +214,8 @@ export const Catppuccin = definePreset(Aura, {
             selectedColor: '{highlight.color}',
             selectedFocusColor: '{highlight.focus.color}',
             icon: {
-              color: '{surface.400}',
-              focusColor: '{surface.500}',
+              color: '{surface.500}',
+              focusColor: '{surface.400}',
             },
           },
           optionGroup: {
@@ -231,15 +225,15 @@ export const Catppuccin = definePreset(Aura, {
         },
         navigation: {
           item: {
-            focusBackground: '{surface.100}',
-            activeBackground: '{surface.100}',
+            focusBackground: '{surface.800}',
+            activeBackground: '{surface.800}',
             color: '{text.color}',
             focusColor: '{text.hover.color}',
             activeColor: '{text.hover.color}',
             icon: {
-              color: '{surface.400}',
-              focusColor: '{surface.500}',
-              activeColor: '{surface.500}',
+              color: '{surface.500}',
+              focusColor: '{surface.400}',
+              activeColor: '{surface.400}',
             },
           },
           submenuLabel: {
@@ -247,9 +241,9 @@ export const Catppuccin = definePreset(Aura, {
             color: '{text.muted.color}',
           },
           submenuIcon: {
-            color: '{surface.400}',
-            focusColor: '{surface.500}',
-            activeColor: '{surface.500}',
+            color: '{surface.500}',
+            focusColor: '{surface.400}',
+            activeColor: '{surface.400}',
           },
         },
       },
@@ -270,7 +264,7 @@ export const Catppuccin = definePreset(Aura, {
         },
         primary: {
           color: mocha.colors.mauve.hex,
-          contrastColor: '#292c3c',
+          contrastColor: mocha.colors.surface0.hex,
           hoverColor: mocha.colors.maroon.hex,
           activeColor: mocha.colors.flamingo.hex,
         },
@@ -278,14 +272,14 @@ export const Catppuccin = definePreset(Aura, {
           background: '{content.background}',
           focusBackground: '{content.background}',
           color: 'rgba(235, 160, 172, .87)',
-          focusColor: 'rgb(235, 160, 172)',
+          focusColor: mocha.colors.maroon.hex,
         },
         mask: {
-          background: 'rgba(0,0,0,0.6)',
+          background: 'rgba(17, 17, 27, 0.6)',
           color: '{surface.200}',
         },
         formField: {
-          background: '#11111b',
+          background: mocha.colors.crust.hex,
           disabledBackground: '{surface.700}',
           filledBackground: '{surface.800}',
           filledHoverBackground: '{surface.800}',
@@ -308,8 +302,8 @@ export const Catppuccin = definePreset(Aura, {
         text: {
           color: mocha.colors.text.hex,
           hoverColor: mocha.colors.maroon.hex,
-          mutedColor: '#45475a',
-          hoverMutedColor: '#313244',
+          mutedColor: mocha.colors.surface1.hex,
+          hoverMutedColor: mocha.colors.surface0.hex,
         },
         content: {
           background: 'rgba(24, 24, 37, 0.8)',
@@ -381,18 +375,314 @@ export const Catppuccin = definePreset(Aura, {
     },
   },
   components: {
-    tooltip: {
+    card: {
       colorScheme: {
         light: {
-          background: mocha.colors.crust.hex,
+          background: latte.colors.mantle.hex,
+          shadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+        },
+        dark: {
+          background: mocha.colors.mantle.hex,
+          shadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+        },
+      },
+    },
+    checkbox: {
+      colorScheme: {
+        light: {
+          background: latte.colors.crust.hex,
+          disabled: {
+            background: latte.colors.mantle.hex,
+          },
         },
         dark: {
           background: mocha.colors.crust.hex,
+          disabled: {
+            background: mocha.colors.mantle.hex,
+          },
+        },
+      },
+    },
+    drawer: {
+      colorScheme: {
+        light: {
+          background: latte.colors.mantle.hex,
+        },
+        dark: {
+          background: mocha.colors.mantle.hex,
+        },
+      },
+    },
+    inputtext: {
+      colorScheme: {
+        light: {
+          color: latte.colors.text.hex,
+        },
+        dark: {
+          color: mocha.colors.text.hex,
+        },
+      },
+    },
+    panel: {
+      colorScheme: {
+        light: {
+          background: latte.colors.base.hex,
+          border: {
+            color: latte.colors.crust.hex,
+            radius: '0.7rem',
+          },
+        },
+        dark: {
+          background: mocha.colors.base.hex,
+          border: {
+            color: mocha.colors.crust.hex,
+          },
+        },
+      },
+    },
+    dialog: {
+      colorScheme: {
+        light: {
+          background: latte.colors.base.hex,
+          border: {
+            color: latte.colors.crust.hex,
+          },
+        },
+        dark: {
+          background: mocha.colors.base.hex,
+          border: {
+            color: mocha.colors.crust.hex,
+          },
+        },
+      },
+    },
+    divider: {
+      colorScheme: {
+        light: {
+          border: {
+            color: latte.colors.surface0.hex,
+          },
+        },
+        dark: {
+          border: {
+            color: mocha.colors.surface0.hex,
+          },
+        },
+      },
+    },
+    menubar: {
+      colorScheme: {
+        light: {
+          item: {
+            color: latte.colors.mauve.hex,
+            active: {
+              color: latte.colors.maroon.hex,
+            },
+            focus: {
+              color: latte.colors.maroon.hex,
+              background: latte.colors.crust.hex,
+            },
+            icon: {
+              color: latte.colors.maroon.hex,
+              focus: {
+                color: latte.colors.mauve.hex,
+              },
+            },
+            submenu: {
+              icon: {
+                color: latte.colors.text.hex,
+              },
+            },
+          },
+        },
+        dark: {
+          item: {
+            color: mocha.colors.mauve.hex,
+            active: {
+              color: mocha.colors.maroon.hex,
+            },
+            focus: {
+              color: mocha.colors.maroon.hex,
+              background: mocha.colors.crust.hex,
+            },
+            icon: {
+              color: mocha.colors.maroon.hex,
+              focus: {
+                color: mocha.colors.mauve.hex,
+              },
+            },
+            submenu: {
+              icon: {
+                color: mocha.colors.text.hex,
+                active: {
+                  color: mocha.colors.maroon.hex,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    popover: {
+      colorscheme: {
+        light: {
+          background: latte.colors.crust.hex,
+          arrow: {
+            offset: '9.8rem',
+          },
+        },
+        dark: {
+          background: mocha.colors.crust.hex,
+          arrow: {
+            offset: '9.8rem',
+          },
         },
       },
     },
   },
+  progressspinner: {
+    colorScheme: {
+      light: {
+        color: {
+          1: latte.colors.maroon.hex,
+          2: latte.colors.flamingo.hex,
+          3: latte.colors.green.hex,
+          4: latte.colors.yellow.hex,
+        },
+      },
+      dark: {
+        color: {
+          1: mocha.colors.maroon.hex,
+          2: mocha.colors.flamingo.hex,
+          3: mocha.colors.green.hex,
+          4: mocha.colors.yellow.hex,
+        },
+      },
+    },
+  },
+  select: {
+    colorScheme: {
+      light: {
+        color: latte.colors.text.hex,
+        disabled: {
+          background: latte.colors.surface0.hex,
+        },
+        overlay: {
+          background: latte.colors.crust.hex,
+        },
+        option: {
+          focus: {
+            background: latte.colors.base.hex,
+          },
+          selected: {
+            background: latte.colors.surface0.hex,
+          },
+        },
+      },
+      dark: {
+        color: mocha.colors.text.hex,
+        disabled: {
+          background: mocha.colors.surface0.hex,
+        },
+        overlay: {
+          background: mocha.colors.crust.hex,
+        },
+        option: {
+          focus: {
+            background: mocha.colors.base.hex,
+          },
+          selected: {
+            background: mocha.colors.surface0.hex,
+          },
+        },
+      },
+    },
+  },
+  table: {
+    colorScheme: {
+      light: {
+        header: {
+          cell: {
+            hover: {
+              background: latte.colors.surface0.hex,
+            },
+          },
+        },
+      },
+      dark: {
+        header: {
+          cell: {
+            hover: {
+              background: mocha.colors.surface0.hex,
+            },
+          },
+        },
+      },
+    },
+  },
+  tooltip: {
+    colorScheme: {
+      light: {
+        background: latte.colors.crust.hex,
+      },
+      dark: {
+        background: mocha.colors.crust.hex,
+      },
+    },
+  },
 });
+
+export const CatppuccinXtermJs = {
+  light: {
+    background: latte.colors.base.hex,
+    black: latte.colors.surface1.hex,
+    blue: latte.colors.blue.hex,
+    brightBlack: latte.colors.surface1.hex,
+    brightBlue: latte.colors.blue.hex,
+    brightCyan: latte.colors.flamingo.hex,
+    brightGreen: latte.colors.green.hex,
+    brightMagenta: latte.colors.maroon.hex,
+    brightRed: latte.colors.red.hex,
+    brightWhite: latte.colors.text.hex,
+    brightYellow: latte.colors.yellow.hex,
+    cursor: latte.colors.text.hex,
+    cursorAccent: latte.colors.text.hex,
+    cyan: latte.colors.flamingo.hex,
+    foreground: latte.colors.text.hex,
+    green: latte.colors.green.hex,
+    magenta: latte.colors.maroon.hex,
+    red: latte.colors.red.hex,
+    white: latte.colors.text.hex,
+    yellow: latte.colors.yellow.hex,
+  },
+  dark: {
+    background: mocha.colors.base.hex,
+    black: mocha.colors.surface1.hex,
+    blue: mocha.colors.blue.hex,
+    brightBlack: mocha.colors.surface1.hex,
+    brightBlue: mocha.colors.blue.hex,
+    brightCyan: mocha.colors.flamingo.hex,
+    brightGreen: mocha.colors.green.hex,
+    brightMagenta: mocha.colors.maroon.hex,
+    brightRed: mocha.colors.red.hex,
+    brightWhite: mocha.colors.text.hex,
+    brightYellow: mocha.colors.yellow.hex,
+    cursor: mocha.colors.text.hex,
+    cursorAccent: mocha.colors.text.hex,
+    cyan: mocha.colors.flamingo.hex,
+    foreground: mocha.colors.text.hex,
+    green: mocha.colors.green.hex,
+    magenta: mocha.colors.maroon.hex,
+    red: mocha.colors.red.hex,
+    white: mocha.colors.text.hex,
+    yellow: mocha.colors.yellow.hex,
+  },
+};
+
+export const CatppuccinScrollbars = {
+  light: "#ccd0da rgba(230, 233, 239, 0.5)'",
+  dark: '#313244 rgba(24, 24, 37, 0.5)',
+};
 
 export const CatppuccinFlavors: string[] = [
   mocha.colors.blue.hex,

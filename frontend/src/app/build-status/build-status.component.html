@@ -12,9 +12,7 @@
             <p-timeline [value]="pipelineWithStatus()">
               <ng-template #opposite let-unTypedPipeline>
                 <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                  <small class="text-surface-500 dark:text-surface-400">{{
-                    pipeline.pipeline.created_at | date: 'short'
-                  }}</small>
+                  <small class="text-primary">{{ pipeline.pipeline.created_at | date: 'short' }}</small>
                 </ng-container>
               </ng-template>
               <ng-template #content let-unTypedPipeline>
@@ -165,9 +163,7 @@
             <p-timeline [value]="latestDeployments">
               <ng-template #opposite let-untypedDeployment>
                 <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
-                  <small class="text-surface-500 dark:text-surface-400">{{
-                    deployment.timestamp | date: 'short'
-                  }}</small>
+                  <small class="text-primary">{{ deployment.timestamp | date: 'short' }}</small>
                 </ng-container>
               </ng-template>
               <ng-template #content let-untypedDeployment>
@@ -318,9 +314,7 @@
               <p-timeline [value]="pipelineWithStatus()">
                 <ng-template #opposite let-unTypedPipeline>
                   <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                    <small class="text-surface-500 dark:text-surface-400">{{
-                      pipeline.pipeline.created_at | date: 'short'
-                    }}</small>
+                    <small class="text-primary">{{ pipeline.pipeline.created_at | date: 'short' }}</small>
                   </ng-container>
                 </ng-template>
                 <ng-template #content let-unTypedPipeline>
@@ -354,9 +348,7 @@
               <p-timeline [value]="latestDeployments">
                 <ng-template #opposite let-untypedDeployment>
                   <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
-                    <small class="text-surface-500 dark:text-surface-400">{{
-                      deployment.timestamp | date: 'short'
-                    }}</small>
+                    <small class="text-primary-emphasis-alt">{{ deployment.timestamp | date: 'short' }}</small>
                   </ng-container>
                 </ng-template>
                 <ng-template #content let-untypedDeployment>
