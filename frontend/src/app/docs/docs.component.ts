@@ -20,8 +20,8 @@ import { TitleComponent } from '../title/title.component';
 export class DocsComponent implements OnInit {
   readonly appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';
   readonly ignorePkg = 'IgnorePkg = ...';
-  readonly installPackage = '$ sudo pacman -S ungoogled-chromium';
-  readonly installPackageParu = '$ paru -S chaotic-aur/firefox-hg';
+  readonly installPackage = '$ sudo pacman -S firedragon';
+  readonly installPackageParu = '$ paru -S chaotic-aur/firefox-nightly';
   readonly installPackageSpecific = '$ sudo pacman -S chaotic-aur/mesa-tkg-git';
   readonly installRepoPackages =
     "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
