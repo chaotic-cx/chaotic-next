@@ -160,7 +160,6 @@ export class RepoManagerService {
 
     if (!this.repoManager.changedArchPackages || this.repoManager.changedArchPackages.length === 0) {
       Logger.log('No packages changed in Arch repos, skipping run', 'RepoManager');
-      await this.repoManager.cleanUp(workDirs.map((dir) => dir.workDir));
       return;
     }
 
@@ -170,7 +169,6 @@ export class RepoManagerService {
       results.push(result);
     }
 
-    await this.repoManager.cleanUp(workDirs.map((dir) => dir.workDir));
     this.summarizeChanges(results, this.repoManager);
   }
 
@@ -882,6 +880,7 @@ class RepoManager {
     );
     this.changedArchPackages = await this.determineChangedPackages(currentArchVersions);
 
+    await this.cleanUp([tempDir]);
     return downloads.map((download): RepoWorkDir => (download.status === 'fulfilled' ? download.value : null));
   }
 
