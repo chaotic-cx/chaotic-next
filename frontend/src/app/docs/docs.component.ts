@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
@@ -16,6 +16,7 @@ import { TitleComponent } from '../title/title.component';
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
   imports: [Panel, Divider, TitleComponent, RouterLink, Highlight, Tooltip],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DocsComponent implements OnInit {
   readonly appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';

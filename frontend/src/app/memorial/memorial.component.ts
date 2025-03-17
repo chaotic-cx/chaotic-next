@@ -1,16 +1,18 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { Card } from 'primeng/card';
-import { Image } from 'primeng/image';
-import { TitleComponent } from '../title/title.component';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { Card } from 'primeng/card';
+import { Image } from 'primeng/image';
+import { Skeleton } from 'primeng/skeleton';
 import { updateSeoTags } from '../functions';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-memorial',
-  imports: [Card, Image, TitleComponent],
+  imports: [Card, Image, TitleComponent, Skeleton],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MemorialComponent implements OnInit {
   private readonly meta = inject(Meta);

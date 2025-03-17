@@ -1,16 +1,25 @@
-import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
 import type { UserAgentList } from '@./shared-lib';
-import { AppService } from '../app.service';
-import { InputNumber } from 'primeng/inputnumber';
-import { UIChart } from 'primeng/chart';
-import { FormsModule } from '@angular/forms';
-import { MessageToastService } from '@garudalinux/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  effect,
+  inject,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
+import { MessageToastService } from '@garudalinux/core';
+import { UIChart } from 'primeng/chart';
+import { InputNumber } from 'primeng/inputnumber';
+import { retry } from 'rxjs';
+import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { CatppuccinFlavors } from '../theme';
-import { retry } from 'rxjs';
 
 @Component({
   selector: 'chaotic-chart-useragent',
@@ -18,6 +27,7 @@ import { retry } from 'rxjs';
   templateUrl: './chart-useragent.component.html',
   styleUrl: './chart-useragent.component.css',
   providers: [MessageToastService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartUseragentComponent implements OnInit {
   chartData: any;
@@ -41,6 +51,7 @@ export class ChartUseragentComponent implements OnInit {
   ngOnInit() {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
       this.amount.set(state.matches ? 5 : 10);
+      this.cdr.markForCheck();
     });
     this.get30DayUserAgents();
   }
@@ -71,6 +82,7 @@ export class ChartUseragentComponent implements OnInit {
           this.messageToastService.error('Error', 'Failed to load user agent chart data');
           console.error(err);
         },
+        complete: () => this.cdr.markForCheck(),
       });
   }
 
@@ -104,6 +116,7 @@ export class ChartUseragentComponent implements OnInit {
           },
         },
       };
+
       this.cdr.markForCheck();
     }
   }

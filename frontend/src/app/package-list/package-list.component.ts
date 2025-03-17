@@ -1,23 +1,32 @@
-import { AfterViewInit, Component, inject, LOCALE_ID, OnInit, ViewChild } from '@angular/core';
-import { Table, TableModule } from 'primeng/table';
-import { AppService } from '../app.service';
+import { Package } from '@./shared-lib';
+import { DatePipe, NgClass, NgIf } from '@angular/common';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  LOCALE_ID,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Meta } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MessageToastService } from '@garudalinux/core';
+import { Button, ButtonDirective } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
-import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { Table, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { DatePipe, NgClass, NgIf } from '@angular/common';
-import { Button, ButtonDirective } from 'primeng/button';
 import { retry } from 'rxjs';
-import { Package } from '@./shared-lib';
-import { MessageToastService } from '@garudalinux/core';
-import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
+import { AppService } from '../app.service';
+import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { TitleComponent } from '../title/title.component';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Meta } from '@angular/platform-browser';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -40,6 +49,7 @@ import { Meta } from '@angular/platform-browser';
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PackageListComponent implements OnInit, AfterViewInit {
   loading = true;
@@ -50,6 +60,7 @@ export class PackageListComponent implements OnInit, AfterViewInit {
 
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
@@ -70,6 +81,7 @@ export class PackageListComponent implements OnInit, AfterViewInit {
       .subscribe({
         next: (data: Package[]) => {
           this.packageList = data.filter((pkg) => pkg.version);
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.messageToastService.error('Error', 'Failed to package list');
@@ -85,12 +97,14 @@ export class PackageListComponent implements OnInit, AfterViewInit {
     if (this.route.snapshot.queryParams['search']) {
       this.pkgTable.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
       this.searchValue = this.route.snapshot.queryParams['search'];
+      this.cdr.markForCheck();
     }
   }
 
   clear(table: Table) {
     table.clear();
     this.searchValue = '';
+    this.cdr.markForCheck();
   }
 
   globalFilter(target: EventTarget | null) {

@@ -8,20 +8,7 @@
 <div class="chaotic-container-wide-center">
   <div class="5xl:grid-cols-6 mt-10 grid grid-cols-2 gap-10 md:grid-cols-4">
     @for (link of termLinks; track link) {
-      <p-card class="h-max">
-        <p-image
-          alt="Terminal screenshot"
-          class="h-auto max-w-full rounded-lg"
-          [preview]="true"
-          [previewImageSrc]="link.preview"
-          [src]="link.full"
-        />
-      </p-card>
-    }
-  </div>
-  <div class="5xl:grid-cols-4 mt-5 grid grid-cols-1 content-center gap-10 md:grid-cols-2">
-    @for (link of desktopLinks; track link) {
-      <a href="{{ link }}">
+      @defer (on viewport) {
         <p-card class="h-max">
           <p-image
             alt="Terminal screenshot"
@@ -31,7 +18,32 @@
             [src]="link.full"
           />
         </p-card>
-      </a>
+      } @placeholder {
+        <p-card class="h-max">
+          <p-skeleton width="100%" height="100%" class="rounded-lg" />
+        </p-card>
+      }
+    }
+  </div>
+  <div class="5xl:grid-cols-4 mt-5 grid grid-cols-1 content-center gap-10 md:grid-cols-2">
+    @for (link of desktopLinks; track link) {
+      @defer (on viewport) {
+        <a href="{{ link }}">
+          <p-card class="h-max">
+            <p-image
+              alt="Terminal screenshot"
+              class="h-auto max-w-full rounded-lg"
+              [preview]="true"
+              [previewImageSrc]="link.preview"
+              [src]="link.full"
+            />
+          </p-card>
+        </a>
+      } @placeholder {
+        <p-card class="h-max">
+          <p-skeleton width="100%" height="100%" class="rounded-lg" />
+        </p-card>
+      }
     }
   </div>
 </div>

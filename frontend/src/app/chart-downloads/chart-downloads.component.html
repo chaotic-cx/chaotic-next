@@ -1,5 +1,5 @@
 <div>
-  @if (isWide) {
+  @if (isWide()) {
     <div class="flex justify-center">
       <p-chart type="bar" [data]="chartData" [options]="options" class="h-[50rem] w-full" />
     </div>

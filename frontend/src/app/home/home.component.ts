@@ -1,12 +1,12 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { NgOptimizedImage } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { AnimateOnScrollModule } from 'primeng/animateonscroll';
 import { ButtonDirective, ButtonLabel } from 'primeng/button';
 import { Ripple } from 'primeng/ripple';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
-import { RouterLink } from '@angular/router';
-import { AnimateOnScrollModule } from 'primeng/animateonscroll';
-import { NgOptimizedImage } from '@angular/common';
-import { BreakpointObserver } from '@angular/cdk/layout';
+import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
 
 @Component({
   selector: 'chaotic-home',
@@ -22,14 +22,18 @@ import { BreakpointObserver } from '@angular/cdk/layout';
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomeComponent implements OnInit {
   isWide = signal<boolean>(true);
   observer = inject(BreakpointObserver);
 
+  private readonly cdr = inject(ChangeDetectorRef);
+
   ngOnInit() {
     this.observer.observe('(min-width: 768px)').subscribe((result) => {
       this.isWide.set(result.matches);
+      this.cdr.markForCheck();
     });
   }
 

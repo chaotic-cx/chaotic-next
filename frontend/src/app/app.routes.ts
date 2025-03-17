@@ -11,30 +11,34 @@ import {
 } from '@angular/animations';
 import { NgModule } from '@angular/core';
 import { RouterModule, type Routes } from '@angular/router';
+import { BuildStatusComponent } from './build-status/build-status.component';
+import { DeployLogComponent } from './deploy-log/deploy-log.component';
+import { DocsComponent } from './docs/docs.component';
+import { HomeComponent } from './home/home.component';
 
 export const routes: Routes = [
   {
     title: 'Chaotic-AUR',
     path: '',
-    loadComponent: () => import('./home/home.component').then((c) => c.HomeComponent),
+    component: HomeComponent,
     data: { animationState: '1' },
   },
   {
     title: 'Get started',
     path: 'docs',
-    loadComponent: () => import('./docs/docs.component').then((c) => c.DocsComponent),
+    component: DocsComponent,
     data: { animationState: '2' },
   },
   {
     title: 'Build status',
     path: 'status',
-    loadComponent: () => import('./build-status/build-status.component').then((c) => c.BuildStatusComponent),
+    component: BuildStatusComponent,
     data: { animationState: '3' },
   },
   {
     title: 'Deployments',
     path: 'deployments',
-    loadComponent: () => import('./deploy-log/deploy-log.component').then((c) => c.DeployLogComponent),
+    component: DeployLogComponent,
     data: { animationState: '4' },
   },
   {

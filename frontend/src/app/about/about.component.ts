@@ -1,15 +1,15 @@
 import type { TeamList } from '@./shared-lib';
-import { NgOptimizedImage } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
-import { Ripple } from 'primeng/ripple';
-import { Panel } from 'primeng/panel';
-import { Card } from 'primeng/card';
-import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { TitleComponent } from '../title/title.component';
+import { NgOptimizedImage } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
+import { Card } from 'primeng/card';
+import { Panel } from 'primeng/panel';
+import { Ripple } from 'primeng/ripple';
 import { updateSeoTags } from '../functions';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-about',
@@ -26,9 +26,10 @@ import { updateSeoTags } from '../functions';
   ],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AboutComponent implements OnInit {
-  protected isWide: boolean = true;
+  protected isWide = signal<boolean>(true);
   private readonly meta = inject(Meta);
   private readonly observer = inject(BreakpointObserver);
   private readonly router = inject(Router);
@@ -108,7 +109,7 @@ export class AboutComponent implements OnInit {
     );
 
     this.observer.observe(['(min-width: 768px)']).subscribe((result) => {
-      this.isWide = result.matches;
+      this.isWide.set(result.matches);
     });
   }
 }

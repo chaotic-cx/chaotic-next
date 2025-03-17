@@ -1,6 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
 import { Fieldset } from 'primeng/fieldset';
 import { ScrollPanel } from 'primeng/scrollpanel';
@@ -14,18 +14,21 @@ import { Message } from './interfaces';
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewsfeedComponent implements OnInit {
   isWide = signal<boolean>(true);
   newsList: { data: Message; html?: string }[] = [];
 
   private readonly appService = inject(AppService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
 
   async ngOnInit(): Promise<void> {
     this.observer.observe('(min-width: 768px)').subscribe((result) => {
       this.isWide.set(result.matches);
+      this.cdr.markForCheck();
     });
 
     this.appService.getNews().subscribe({
@@ -39,6 +42,8 @@ export class NewsfeedComponent implements OnInit {
         this.newsList.sort((a, b) => {
           return b.data.id - a.data.id;
         });
+
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.messageToastService.error('Error', 'Failed to fetch news');

@@ -1,17 +1,26 @@
-import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { AppService } from '../app.service';
-import { UIChart } from 'primeng/chart';
 import type { CountryRankList } from '@./shared-lib';
-import { FormsModule } from '@angular/forms';
-import { InputNumber } from 'primeng/inputnumber';
-import { FluidModule } from 'primeng/fluid';
-import { MessageToastService } from '@garudalinux/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  effect,
+  inject,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
-import { CatppuccinFlavors } from '../theme';
-import { shuffleArray } from '../functions';
+import { MessageToastService } from '@garudalinux/core';
+import { UIChart } from 'primeng/chart';
+import { FluidModule } from 'primeng/fluid';
+import { InputNumber } from 'primeng/inputnumber';
 import { retry } from 'rxjs';
+import { AppService } from '../app.service';
+import { shuffleArray } from '../functions';
+import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-countries',
@@ -19,6 +28,7 @@ import { retry } from 'rxjs';
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
   providers: [MessageToastService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartCountriesComponent implements OnInit {
   chartData: any;
@@ -42,6 +52,7 @@ export class ChartCountriesComponent implements OnInit {
   ngOnInit(): void {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
       this.amount.set(state.matches ? 5 : 15);
+      this.cdr.markForCheck();
     });
     this.getCountryRanks();
   }
@@ -65,6 +76,7 @@ export class ChartCountriesComponent implements OnInit {
           this.messageToastService.error('Error', 'Failed to load country chart data');
           console.error(err);
         },
+        complete: () => this.cdr.markForCheck(),
       });
   }
 
@@ -113,6 +125,7 @@ export class ChartCountriesComponent implements OnInit {
           },
         },
       };
+
       this.cdr.markForCheck();
     }
   }
