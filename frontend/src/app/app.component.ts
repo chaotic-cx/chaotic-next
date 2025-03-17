@@ -1,7 +1,7 @@
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import localeEnGb from '@angular/common/locales/en-GB';
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { ShellComponent } from '@garudalinux/core';
@@ -20,6 +20,7 @@ import { FooterComponent } from './footer/footer.component';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
   animations: [routeAnimations],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
   title = 'Chaotic-AUR';

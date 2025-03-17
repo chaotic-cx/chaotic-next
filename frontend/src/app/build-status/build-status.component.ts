@@ -1,7 +1,7 @@
 import { Build, BuildClass, BuildStatus, PipelineWithExternalStatus } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
@@ -42,6 +42,7 @@ import { TitleComponent } from '../title/title.component';
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
   providers: [MessageToastService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BuildStatusComponent implements OnInit {
   isWide = signal<boolean>(true);
@@ -93,6 +94,7 @@ export class BuildStatusComponent implements OnInit {
 
     this.observer.observe(`(max-width: 1100px)`).subscribe((state) => {
       this.isWide.set(!state.matches);
+      this.cdr.markForCheck();
     });
 
     void this.updateAll(false);
@@ -120,7 +122,9 @@ export class BuildStatusComponent implements OnInit {
           ) as PipelineWithExternalStatus,
         );
       }
+
       this.lastUpdated.set(new Date());
+      this.cdr.markForCheck();
     });
   }
 

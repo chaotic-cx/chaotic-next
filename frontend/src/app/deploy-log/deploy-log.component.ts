@@ -1,21 +1,30 @@
-import { AfterViewInit, Component, inject, OnInit, signal, ViewChild } from '@angular/core';
-import { Table, TableModule } from 'primeng/table';
-import { AppService } from '../app.service';
-import { CommonModule } from '@angular/common';
-import { retry } from 'rxjs';
-import { Button } from 'primeng/button';
-import { InputIcon } from 'primeng/inputicon';
-import { IconField } from 'primeng/iconfield';
-import { InputText } from 'primeng/inputtext';
 import { Build } from '@./shared-lib';
-import { OutcomePipe } from '../pipes/outcome.pipe';
-import { LogurlPipe } from '../pipes/logurl.pipe';
-import { DurationPipe } from '../pipes/duration.pipe';
-import { MessageToastService } from '@garudalinux/core';
-import { TitleComponent } from '../title/title.component';
-import { ActivatedRoute, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Meta, Title } from '@angular/platform-browser';
+import { Meta } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MessageToastService } from '@garudalinux/core';
+import { Button } from 'primeng/button';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { InputText } from 'primeng/inputtext';
+import { Table, TableModule } from 'primeng/table';
+import { retry } from 'rxjs';
+import { AppService } from '../app.service';
+import { DurationPipe } from '../pipes/duration.pipe';
+import { LogurlPipe } from '../pipes/logurl.pipe';
+import { OutcomePipe } from '../pipes/outcome.pipe';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-deploy-log',
@@ -34,6 +43,7 @@ import { Meta, Title } from '@angular/platform-browser';
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
   providers: [MessageToastService, OutcomePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeployLogComponent implements OnInit, AfterViewInit {
   packageList: Build[] = [];
@@ -45,6 +55,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
   @ViewChild('deployTable') deployTable!: Table;
 
   private readonly appService = inject(AppService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
@@ -61,6 +72,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
 
     if (this.route.snapshot.queryParams['amount']) {
       this.amount.set(this.route.snapshot.queryParams['amount']);
+      this.cdr.markForCheck();
     }
 
     this.getDeployments();
@@ -88,6 +100,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
         },
         complete: () => {
           this.loading = false;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -103,6 +116,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
     table.clear();
     this.searchValue.set('');
     void this.router.navigate([], { queryParams: { search: '' } });
+    this.cdr.markForCheck();
   }
 
   globalFilter(target: EventTarget | null) {
@@ -110,6 +124,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
     const input = target as HTMLInputElement;
     this.deployTable.filterGlobal(input.value, 'contains');
     void this.router.navigate([], { queryParams: { search: input.value } });
+    this.cdr.markForCheck();
   }
 
   typed(value: any): Build {

@@ -8,7 +8,7 @@
   <div>
     <div class="chaotic-panel mt-5">
       <p-panel header="Team members">
-        @if (isWide) {
+        @if (isWide()) {
           <div class="grid grid-cols-2 items-stretch gap-10 md:grid-cols-3 lg:grid-cols-4">
             @for (member of team; track member) {
               <p-card>

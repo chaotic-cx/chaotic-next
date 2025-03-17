@@ -1,18 +1,18 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AppService } from '../app.service';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { ChartCountriesComponent } from '../chart-countries/chart-countries.component';
-import { ChartUseragentComponent } from '../chart-useragent/chart-useragent.component';
-import { ChartDownloadsComponent } from '../chart-downloads/chart-downloads.component';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Card } from 'primeng/card';
-import { MessageToastService } from '@garudalinux/core';
-import { TitleComponent } from '../title/title.component';
-import { SearchPackageComponent } from '../search-package/search-package.component';
-import { retry } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
 import { Meta } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MessageToastService } from '@garudalinux/core';
+import { Card } from 'primeng/card';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { retry } from 'rxjs';
+import { AppService } from '../app.service';
+import { ChartCountriesComponent } from '../chart-countries/chart-countries.component';
+import { ChartDownloadsComponent } from '../chart-downloads/chart-downloads.component';
+import { ChartUseragentComponent } from '../chart-useragent/chart-useragent.component';
+import { SearchPackageComponent } from '../search-package/search-package.component';
+import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-package-stats',
@@ -34,6 +34,7 @@ import { Meta } from '@angular/platform-browser';
   templateUrl: './package-stats.component.html',
   styleUrl: './package-stats.component.css',
   providers: [MessageToastService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PackageStatsComponent implements OnInit {
   loading = signal<boolean>(false);
@@ -41,6 +42,7 @@ export class PackageStatsComponent implements OnInit {
   currentTab = '0';
 
   private readonly appService = inject(AppService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
@@ -76,6 +78,7 @@ export class PackageStatsComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.totalUsers.set(res);
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.messageToastService.error('Error', 'Failed to load users count');

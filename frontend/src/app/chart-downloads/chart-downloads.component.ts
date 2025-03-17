@@ -1,16 +1,25 @@
-import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import type { PackageRankList } from '@./shared-lib';
-import { AppService } from '../app.service';
-import { MessageToastService } from '@garudalinux/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  effect,
+  inject,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { flavors } from '@catppuccin/palette';
+import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from 'primeng/chart';
 import { InputNumber } from 'primeng/inputnumber';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { ToastModule } from 'primeng/toast';
-import { flavors } from '@catppuccin/palette';
 import { retry } from 'rxjs';
+import { AppService } from '../app.service';
 
 @Component({
   selector: 'chaotic-chart-downloads',
@@ -18,10 +27,11 @@ import { retry } from 'rxjs';
   templateUrl: './chart-downloads.component.html',
   styleUrl: './chart-downloads.component.css',
   providers: [MessageToastService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartDownloadsComponent implements OnInit {
   chartData: any;
-  isWide = true;
+  isWide = signal<boolean>(true);
   options: any;
   platformId = inject(PLATFORM_ID);
   amount = signal<number>(50);
@@ -43,8 +53,8 @@ export class ChartDownloadsComponent implements OnInit {
 
   ngOnInit(): void {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
-      this.isWide = !state.matches;
-      if (this.isWide) {
+      this.isWide.set(!state.matches);
+      if (this.isWide()) {
         this.amount.set(50);
         this.initChart();
       } else {
@@ -64,7 +74,7 @@ export class ChartDownloadsComponent implements OnInit {
       .subscribe({
         next: (data) => {
           this.globalPackageMetrics = data;
-          if (this.isWide) {
+          if (this.isWide()) {
             this.initChart();
           } else {
             this.getProgressBarValues(data);
@@ -75,6 +85,7 @@ export class ChartDownloadsComponent implements OnInit {
           this.messageToastService.error('Error', 'Failed to load downloads chart data');
           console.error(err);
         },
+        complete: () => this.cdr.markForCheck(),
       });
   }
 
@@ -110,6 +121,7 @@ export class ChartDownloadsComponent implements OnInit {
           },
         },
       };
+
       this.cdr.markForCheck();
     }
   }
@@ -117,9 +129,11 @@ export class ChartDownloadsComponent implements OnInit {
   private getProgressBarValues(pkg: PackageRankList) {
     const values = [];
     for (const pkg of this.globalPackageMetrics) {
-      const relativeCount = (pkg.count / this.globalPackageMetrics[0].count) * 100;
+      const relativeCount: number = (pkg.count / this.globalPackageMetrics[0].count) * 100;
       values.push({ value: relativeCount, label: pkg.name, count: pkg.count });
     }
+
     this.progressbarValues = values;
+    this.cdr.markForCheck();
   }
 }

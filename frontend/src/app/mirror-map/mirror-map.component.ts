@@ -1,4 +1,4 @@
-import { Component, type ElementRef, inject, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, type ElementRef, inject, ViewChild } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
@@ -7,6 +7,7 @@ import { EnvironmentModel } from '../../environments/environment.model';
   selector: 'chaotic-mirror-map',
   templateUrl: './mirror-map.component.html',
   styleUrl: './mirror-map.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MirrorMapComponent {
   urlSafe: SafeResourceUrl;
