@@ -46,7 +46,7 @@ importers:
         version: 8.1.1
       '@garudalinux/core':
         specifier: ^0.3.1
-        version: 0.3.1(e317dc4f71700e8855102ffc698854f3)
+        version: 0.3.1(ec91399a9c7961ac23ab2374e34e8cdd)
       '@gitbeaker/core':
         specifier: ^42.1.0
         version: 42.1.0
@@ -94,7 +94,7 @@ importers:
         version: 11.0.0(@nestjs/common@11.0.11(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.0.11(@nestjs/common@11.0.11(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.21(ioredis@5.6.0)(pg@8.14.1)(reflect-metadata@0.2.2)(ts-node@10.9.2(@swc/core@1.11.11(@swc/helpers@0.5.15))(@types/node@22.13.10)(typescript@5.8.2)))
       '@primeng/themes':
         specifier: ^19.0.9
-        version: 19.0.9
+        version: 19.0.10
       async-mutex:
         specifier: ^0.5.0
         version: 0.5.0
@@ -172,7 +172,7 @@ importers:
         version: 7.0.0
       primeng:
         specifier: ^19.0.9
-        version: 19.0.9(b4d51e28cd40d41b224c21c423bc69a2)
+        version: 19.0.10(b4d51e28cd40d41b224c21c423bc69a2)
       reflect-metadata:
         specifier: ~0.2.2
         version: 0.2.2
@@ -3183,8 +3183,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@primeng/themes@19.0.9':
-    resolution: {integrity: sha512-8oITYftt/0v6sXKth/6n1mEw4UY88acNow0/aAF5yi29N6cpBaOiH/MEvj4nCoYjNCCGUSFhPrGdkTJH/GNo6A==}
+  '@primeng/themes@19.0.10':
+    resolution: {integrity: sha512-2sQsl46q3720lbropItBh8WjK98itFlG4clBO36B/QDxv9Ic/7DLGxJCvKdMQP0bcVSX/y+99HwPu0JNNNkkoA==}
 
   '@primeuix/styled@0.3.2':
     resolution: {integrity: sha512-ColZes0+/WKqH4ob2x8DyNYf1NENpe5ZguOvx5yCLxaP8EIMVhLjWLO/3umJiDnQU4XXMLkn2mMHHw+fhTX/mw==}
@@ -7648,8 +7648,8 @@ packages:
   primeicons@7.0.0:
     resolution: {integrity: sha512-jK3Et9UzwzTsd6tzl2RmwrVY/b8raJ3QZLzoDACj+oTJ0oX7L9Hy+XnVwgo4QVKlKpnP/Ur13SXV/pVh4LzaDw==}
 
-  primeng@19.0.9:
-    resolution: {integrity: sha512-Y994f4JDsdjwe1uK1J8Gvq94Mk2qQfV+M1zdW+XClXHK8EXzZp7kvBzfrlk607valJmUhLr/5DxSkVfVQGZhxA==}
+  primeng@19.0.10:
+    resolution: {integrity: sha512-pVvywU6WoDtS6cwyGm5wyHp/RPqsqtTL3Z6eNgwsP7wMRpNYxVQB2W5ewF64byP8bqFqRQMWY2ZPj0lDeTQ/sA==}
     peerDependencies:
       '@angular/animations': ^19.0.0
       '@angular/cdk': ^19.0.0
@@ -10817,14 +10817,14 @@ snapshots:
       fastq: 1.19.1
       glob: 11.0.1
 
-  '@garudalinux/core@0.3.1(e317dc4f71700e8855102ffc698854f3)':
+  '@garudalinux/core@0.3.1(ec91399a9c7961ac23ab2374e34e8cdd)':
     dependencies:
       '@angular/common': 19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))(rxjs@7.8.2)
       '@angular/core': 19.2.2(rxjs@7.8.2)(zone.js@0.15.0)
       '@angular/platform-browser': 19.2.2(@angular/animations@19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0)))(@angular/common@19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))(rxjs@7.8.2))(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))
       '@playwright/test': 1.49.1
       jest-preset-angular: 14.5.3(@angular/compiler-cli@19.2.2(@angular/compiler@19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0)))(typescript@5.8.2))(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))(@angular/platform-browser-dynamic@19.2.2(@angular/common@19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))(rxjs@7.8.2))(@angular/compiler@19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0)))(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))(@angular/platform-browser@19.2.2(@angular/animations@19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0)))(@angular/common@19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))(rxjs@7.8.2))(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))))(@babel/core@7.26.10)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.26.10))(jest@29.7.0(@types/node@22.13.10)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.11.11(@swc/helpers@0.5.15))(@types/node@22.13.10)(typescript@5.8.2)))(jsdom@20.0.3)(typescript@5.8.2)
-      primeng: 19.0.9(b4d51e28cd40d41b224c21c423bc69a2)
+      primeng: 19.0.10(b4d51e28cd40d41b224c21c423bc69a2)
       tslib: 2.8.1
 
   '@gitbeaker/core@42.1.0':
@@ -12747,7 +12747,7 @@ snapshots:
     dependencies:
       playwright: 1.49.1
 
-  '@primeng/themes@19.0.9':
+  '@primeng/themes@19.0.10':
     dependencies:
       '@primeuix/styled': 0.3.2
 
@@ -17682,7 +17682,7 @@ snapshots:
 
   primeicons@7.0.0: {}
 
-  primeng@19.0.9(b4d51e28cd40d41b224c21c423bc69a2):
+  primeng@19.0.10(b4d51e28cd40d41b224c21c423bc69a2):
     dependencies:
       '@angular/animations': 19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))
       '@angular/cdk': 19.2.3(@angular/common@19.2.2(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))(rxjs@7.8.2))(@angular/core@19.2.2(rxjs@7.8.2)(zone.js@0.15.0))(rxjs@7.8.2)
