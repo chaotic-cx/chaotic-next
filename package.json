@@ -64,7 +64,7 @@
     "chokidar": "^4.0.3",
     "cron": "^4.1.0",
     "crypto-js": "^4.2.0",
-    "fastify": "5.2.1",
+    "fastify": "5.3.2",
     "globals": "^16.0.0",
     "highlight.js": "^11.11.1",
     "ioredis": "^5.6.0",
