@@ -3,7 +3,7 @@
   "assignees": ["dr460nf1r3"],
   "commitMessageAction": "update",
   "extends": [
-    "config:base",
+    "config:recommended",
     ":gitSignOff",
     ":ignoreModulesAndTests",
     ":semanticPrefixFixDepsChoreOthers",
@@ -39,16 +39,17 @@
       "matchPackageNames": ["typescript"]
     },
     {
-      "datasources": ["repology"],
-      "packagePatterns": ["^alpine_3_21/"],
+      "matchDatasources": ["repology"],
       "separateMajorMinor": false,
       "groupName": "Alpine packages",
-      "groupSlug": "alpine"
+      "groupSlug": "alpine",
+      "matchPackageNames": ["/^alpine_3_21//"]
     }
   ],
-  "regexManagers": [
+  "customManagers": [
     {
-      "fileMatch": ["(^|/)Dockerfile$"],
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\sENV .*?_VERSION=\"?(?<currentValue>.*?)\"?\\s"
       ],
