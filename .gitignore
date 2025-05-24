@@ -46,3 +46,5 @@ Thumbs.db
 .env
 .pre-commit-config.yaml
 .wrangler
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
