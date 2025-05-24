@@ -98,6 +98,10 @@ samp {
   height: 100%;
 }
 
+body > app-root > chaotic-footer > div > p-card > div {
+  height: unset !important;
+}
+
 .p-panel-header {
   @apply text-text !important;
 }
