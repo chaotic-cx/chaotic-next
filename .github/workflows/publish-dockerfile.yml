@@ -27,7 +27,7 @@ jobs:
                   password: ${{ secrets.GITHUB_TOKEN }}
             - name: Extract metadata (tags, labels) for Docker
               id: meta
-              uses: docker/metadata-action@906ecf0fc0a80f9110f79d9e6c04b1080f4a2621
+              uses: docker/metadata-action@b798ed8388581f6f002541048b6458ca2c4ba442
               with:
                   images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
             - name: Build and push Docker image
