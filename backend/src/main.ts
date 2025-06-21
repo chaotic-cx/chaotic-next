@@ -28,6 +28,10 @@ async function bootstrap(): Promise<void> {
   if (trustProxy !== undefined) {
     fastifyAdapter.options({ trustProxy: trustProxy });
   }
+
+  // https://github.com/fastify/fastify-helmet/issues/216
+  // https://stackoverflow.com/questions/78026420/type-of-fastifyhelmet-is-not-compatible-to-fastifyplugin-in-nest-js
+  // @ts-ignore this one is weird, but does not seem to cause issues other than a type mismatch, versions seem to be compatible
   fastifyAdapter.register(helmet);
 
   const corsOptions = {
