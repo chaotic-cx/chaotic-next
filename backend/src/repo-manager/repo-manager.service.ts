@@ -68,7 +68,9 @@ export class RepoManagerService {
   }
 
   async init(): Promise<void> {
-    this.repos = await this.repoRepository.find({ where: { isActive: true, repoUrl: Not(IsNull()) } });
+    this.repos = await this.repoRepository.find({
+      where: { isActive: true, repoUrl: Not(IsNull()) },
+    });
 
     const runWithThis = this.run.bind(this);
     this.tasks.push(
@@ -86,7 +88,9 @@ export class RepoManagerService {
 
     // We explicitly want to encrypt API tokens if they are prefixed with "CLEAR:"
     try {
-      const reposWithTokens = await this.repoRepository.find({ where: { apiToken: Not(IsNull()) } });
+      const reposWithTokens = await this.repoRepository.find({
+        where: { apiToken: Not(IsNull()) },
+      });
       const dbKey = this.configService.getOrThrow('app.dbKey');
       for (const repo of reposWithTokens) {
         if (repo.apiToken.startsWith('CLEAR:')) {
@@ -142,7 +146,9 @@ export class RepoManagerService {
    * and set any non-existing packages to inactive.
    */
   async updateChaoticVersions(): Promise<void> {
-    this.repos = await this.repoRepository.find({ where: { isActive: true, dbPath: Not(IsNull()) } });
+    this.repos = await this.repoRepository.find({
+      where: { isActive: true, dbPath: Not(IsNull()) },
+    });
     await this.repoManager.updateChaoticDatabaseVersions(this.repos);
   }
 
@@ -268,7 +274,9 @@ export class RepoManagerService {
         });
         entry.trigger = trigger.pkgname;
       } else if (logEntry.triggerFrom === TriggerType.CHAOTIC) {
-        const trigger: Package = await this.packageRepository.findOne({ where: { id: logEntry.trigger } });
+        const trigger: Package = await this.packageRepository.findOne({
+          where: { id: logEntry.trigger },
+        });
         entry.trigger = trigger.pkgname;
       }
       entry.bumpType = logEntry.bumpType;
@@ -401,7 +409,10 @@ export class RepoManagerService {
           const [cname, lineSplit] = line.split(': ');
           name = cname.split(' ')[0];
 
-          if (!pkg) pkg = await this.packageRepository.findOne({ where: { pkgname: name } });
+          if (!pkg)
+            pkg = await this.packageRepository.findOne({
+              where: { pkgname: name },
+            });
           if (!lineSplit || !pkg) continue;
 
           const [rule, result] = lineSplit.split(' ');
@@ -554,10 +565,14 @@ class RepoManager {
     await this.pushChanges(repoDir, needsPush, repo);
 
     Logger.log('Done checking for rebuild triggers, cleaning up', 'RepoManager');
-    await this.cleanUp([repoDir, ...pkgbaseDirs]);
+    await this.cleanUp([repoDir]);
     this.status = RepoStatus.INACTIVE;
 
-    return { repo: repo.name, bumped: bumpedPackages, origin: TriggerType.ARCH };
+    return {
+      repo: repo.name,
+      bumped: bumpedPackages,
+      origin: TriggerType.ARCH,
+    };
   }
 
   /**
@@ -961,7 +976,11 @@ class RepoManager {
     try {
       await writeFile(join(repoDir, `${repo}.files`), fileData);
       Logger.debug(`Done pulling database of ${repo}`, 'RepoManager');
-      return { path: join(repoDir, `${repo}.files`), name: repo, workDir: repoDir };
+      return {
+        path: join(repoDir, `${repo}.files`),
+        name: repo,
+        workDir: repoDir,
+      };
     } catch (err: any) {
       Logger.error(err.message, 'RepoManager');
     }
@@ -975,27 +994,25 @@ class RepoManager {
   private async parsePacmanDatabases(databases: RepoWorkDir[]): Promise<ParsedPackage[]> {
     Logger.debug('Started extracting databases...', 'RepoManager');
     const workDirsPromises: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
-      databases.map((repo): Promise<RepoWorkDir> => {
-        return new Promise<RepoWorkDir>(async (resolve, reject) => {
-          try {
-            if (!repo.path) reject('Path is null');
-            const workDir = repo.path.replace(/\/[^\/]+\.files$/, '');
+      databases.map(async (repo): Promise<RepoWorkDir> => {
+        try {
+          if (!repo.path) throw new Error('Path is null');
+          const workDir = repo.path.replace(/\/[^\/]+\.files$/, '');
 
-            Logger.debug(`Unpacking database ${repo.path}`, 'RepoManager');
-            // Use native tar due to lack of support for tar.zst in node tar
-            const execPromising = util.promisify(exec);
-            const { stderr } = await execPromising(`tar -xf ${repo.path} -C ${workDir}`);
+          Logger.debug(`Unpacking database ${repo.path}`, 'RepoManager');
+          // Use native tar due to lack of support for tar.zst in node tar
+          const execPromising = util.promisify(exec);
+          const { stderr } = await execPromising(`tar -xf ${repo.path} -C ${workDir}`);
 
-            if (stderr) {
-              Logger.error(stderr, 'RepoManager');
-              reject(stderr);
-            }
-            resolve({ path: workDir, name: repo.name, workDir });
-          } catch (err: any) {
-            Logger.error(err.message, 'RepoManager');
-            reject(err);
+          if (stderr) {
+            Logger.error(stderr, 'RepoManager');
+            throw new Error(stderr);
           }
-        });
+          return { path: workDir, name: repo.name, workDir };
+        } catch (err: any) {
+          Logger.error(err.message, 'RepoManager');
+          throw err;
+        }
       }),
     );
     Logger.debug('Done extracting databases', 'RepoManager');
@@ -1007,24 +1024,51 @@ class RepoManager {
 
     Logger.debug('Started parsing databases...', 'RepoManager');
     for (const dir of actualWorkDirs) {
-      const currentPathRegex = `/${dir.path}/`;
-      const allPkgDirs: string[] = await this.getDirectories(dir.path);
-      const relevantFiles = allPkgDirs.map((pkgDir) => {
-        const pkg = pkgDir.replace(new RegExp(currentPathRegex), '');
-        return { descFile: join(dir.path, pkg, 'desc'), filesFile: join(dir.path, pkg, 'files') };
-      });
+      if (!dir || !dir.path) {
+        Logger.warn('Skipping null or invalid work directory', 'RepoManager');
+        continue;
+      }
 
-      for (const file of relevantFiles) {
-        const currentPackageVersion: Partial<ParsedPackage> = await this.parsePackageDesc(file.descFile);
-        if (!currentPackageVersion?.metaData) {
-          currentPackageVersion.metaData = { buildDate: '', filename: '' };
+      try {
+        const currentPathRegex = `/${dir.path}/`;
+        const allPkgDirs: string[] = await this.getDirectories(dir.path);
+        Logger.debug(`Found ${allPkgDirs.length} package directories in ${dir.path}`, 'RepoManager');
+
+        const relevantFiles = allPkgDirs.map((pkgDir) => {
+          const pkg = pkgDir.replace(new RegExp(currentPathRegex), '');
+          return {
+            descFile: join(dir.path, pkg, 'desc'),
+            filesFile: join(dir.path, pkg, 'files'),
+          };
+        });
+
+        for (const file of relevantFiles) {
+          try {
+            const currentPackageVersion: Partial<ParsedPackage> = await this.parsePackageDesc(file.descFile);
+
+            // Only process packages that have valid metadata
+            if (currentPackageVersion && Object.keys(currentPackageVersion).length > 0) {
+              if (!currentPackageVersion?.metaData) {
+                currentPackageVersion.metaData = {
+                  buildDate: '',
+                  filename: '',
+                };
+              }
+              currentPackageVersion.metaData.soNameList = await this.parsePackageFiles(file.filesFile);
+              currentPackageVersions.push(currentPackageVersion as ParsedPackage);
+            }
+          } catch (fileErr: any) {
+            Logger.warn(`Error processing package files ${file.descFile}: ${fileErr.message}`, 'RepoManager');
+            continue;
+          }
         }
-        currentPackageVersion.metaData.soNameList = await this.parsePackageFiles(file.filesFile);
-        currentPackageVersions.push(currentPackageVersion as ParsedPackage);
+      } catch (dirErr: any) {
+        Logger.error(`Error processing directory ${dir.path}: ${dirErr.message}`, 'RepoManager');
+        continue;
       }
     }
 
-    await this.cleanUp(actualWorkDirs.map((dir) => dir.workDir));
+    await this.cleanUp(actualWorkDirs.filter((dir) => dir && dir.workDir).map((dir) => dir.workDir));
     Logger.debug('Done parsing databases', 'RepoManager');
     return currentPackageVersions;
   }
@@ -1083,10 +1127,18 @@ class RepoManager {
    */
   async getDirectories(srcPath: string): Promise<string[]> {
     const pathContent: string[] = await readdir(srcPath);
-    return pathContent.filter(async (file) => {
-      const dir: Stats = await stat(join(srcPath, file));
-      return (dir.isDirectory() && !file.startsWith('.')) || file === '.CI';
-    });
+    const results = await Promise.all(
+      pathContent.map(async (file) => {
+        try {
+          const dir: Stats = await stat(join(srcPath, file));
+          return (dir.isDirectory() && !file.startsWith('.')) || file === '.CI' ? file : null;
+        } catch (err: any) {
+          Logger.warn(`Error checking directory ${file}: ${err.message}`, 'RepoManager');
+          return null;
+        }
+      }),
+    );
+    return results.filter((file): file is string => file !== null);
   }
 
   /**
@@ -1098,10 +1150,23 @@ class RepoManager {
   private async parsePackageDesc(descFile: string): Promise<Partial<ParsedPackage>> {
     let pkgbaseWithVersions: Partial<ParsedPackage> = {};
     try {
+      // Check if the file exists and is a regular file before trying to read it
+      const fileStats = await stat(descFile);
+      if (!fileStats.isFile()) {
+        Logger.warn(`${descFile} is not a regular file, skipping`, 'RepoManager/parsePackageDesc');
+        return pkgbaseWithVersions;
+      }
+
       const lines: string = await readFile(descFile, 'utf-8');
       pkgbaseWithVersions = this.extractBaseAndVersion(lines);
     } catch (err: any) {
-      Logger.error(err, 'RepoManager/parsePackageDesc');
+      if (err.code === 'ENOENT') {
+        Logger.warn(`Desc file not found: ${descFile}`, 'RepoManager/parsePackageDesc');
+      } else if (err.code === 'ENOTDIR') {
+        Logger.warn(`Path component is not a directory: ${descFile}`, 'RepoManager/parsePackageDesc');
+      } else {
+        Logger.error(err, 'RepoManager/parsePackageDesc');
+      }
       return pkgbaseWithVersions;
     }
 
@@ -1117,6 +1182,13 @@ class RepoManager {
   private async parsePackageFiles(filesFile: string): Promise<string[]> {
     let soNameList: string[] = [];
     try {
+      // Check if the file exists and is a regular file before trying to read it
+      const fileStats = await stat(filesFile);
+      if (!fileStats.isFile()) {
+        Logger.warn(`${filesFile} is not a regular file, skipping`, 'RepoManager/parsePackageFiles');
+        return soNameList;
+      }
+
       const fileData: string = await readFile(filesFile, 'utf-8');
       soNameList = fileData
         .toString()
@@ -1124,9 +1196,14 @@ class RepoManager {
         .filter((line) => !!line.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/))
         .map((line) => line.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/)[0]);
     } catch (err: any) {
-      Logger.error(err.message, 'RepoManager');
+      if (err.code === 'ENOENT') {
+        Logger.warn(`Files file not found: ${filesFile}`, 'RepoManager/parsePackageFiles');
+      } else if (err.code === 'ENOTDIR') {
+        Logger.warn(`Path component is not a directory: ${filesFile}`, 'RepoManager/parsePackageFiles');
+      } else {
+        Logger.error(err, 'RepoManager/parsePackageFiles');
+      }
     }
-
     return soNameList;
   }
 
@@ -1209,7 +1286,11 @@ class RepoManager {
     for (const param of needsRebuild) {
       try {
         const bumpReason: string = bumpTypeToText(param.bumpType, 2);
-        await git.add({ fs, dir: repoDir, filepath: join(param.pkg.pkgname, '.CI', 'config') });
+        await git.add({
+          fs,
+          dir: repoDir,
+          filepath: join(param.pkg.pkgname, '.CI', 'config'),
+        });
 
         commitMessage += `${param.pkg.pkgname}, `;
         commitBody += `- ${param.pkg.pkgname}: ${bumpReason}\n`;
@@ -1260,12 +1341,28 @@ class RepoManager {
    */
   async cleanUp(dirs: string[]): Promise<void> {
     Logger.log('Cleaning up...', 'RepoManager');
-    try {
-      for (const dir of dirs) {
-        await rm(dir, { recursive: true, force: true });
+    for (const dir of dirs) {
+      if (!dir) {
+        Logger.warn('Skipping null or empty directory in cleanup', 'RepoManager');
+        continue;
       }
-    } catch (err: any) {
-      Logger.error(err, 'RepoManager/cleanup');
+
+      try {
+        // Check if directory exists before trying to remove it
+        const dirStats = await stat(dir);
+        if (dirStats.isDirectory()) {
+          await rm(dir, { recursive: true, force: true });
+          Logger.debug(`Cleaned up directory: ${dir}`, 'RepoManager');
+        } else {
+          Logger.warn(`Path is not a directory, skipping: ${dir}`, 'RepoManager');
+        }
+      } catch (err: any) {
+        if (err.code === 'ENOENT') {
+          Logger.debug(`Directory already removed or doesn't exist: ${dir}`, 'RepoManager');
+        } else {
+          Logger.error(`Failed to cleanup directory ${dir}: ${err.message}`, 'RepoManager/cleanup');
+        }
+      }
     }
   }
 
@@ -1403,7 +1500,9 @@ class RepoManager {
     if (await pathExists(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'))) {
       await rm(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI', 'config'));
     } else if (!(await pathExists(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI')))) {
-      await mkdir(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI'), { recursive: true });
+      await mkdir(join(repoDir, pkgConfig.pkgInDb.pkgname, '.CI'), {
+        recursive: true,
+      });
     }
 
     // Prevent CI uselessly rewriting config files because of non-alphabetic order
@@ -1466,17 +1565,22 @@ class RepoManager {
     this.statusDeploy = RepoStatus.ACTIVE;
 
     try {
-      const allPackages: Package[] = await this.dbConnections.packages.find({ where: { isActive: true } });
+      const allPackages: Package[] = await this.dbConnections.packages.find({
+        where: { isActive: true },
+      });
       const needsRebuild: RepoUpdateRunParams[] = [];
       const soNameList: string[] = build.pkgbase.metadata?.soNameList ?? [];
-      let repoDir: string | undefined = this.repoDirs.find((repo) => {
+      let repoDir: string | undefined;
+      for (const repo of this.repoDirs) {
         try {
-          access(join(repo, build.pkgbase.pkgname), F_OK);
-          return true;
+          await access(join(repo, build.pkgbase.pkgname), F_OK);
+          repoDir = repo;
+          break;
         } catch (err: any) {
-          return false;
+          // Directory doesn't exist, continue to next repo
+          continue;
         }
-      });
+      }
 
       // Pull any changes that might have occurred in the meantime,
       // if no repoDir is found, we need to clone the repo
@@ -1489,7 +1593,10 @@ class RepoManager {
             fs,
             http,
             dir: repoDir,
-            author: { name: this.repoManagerSettings.gitAuthor, email: this.repoManagerSettings.gitEmail },
+            author: {
+              name: this.repoManagerSettings.gitAuthor,
+              email: this.repoManagerSettings.gitEmail,
+            },
             onAuth: () => ({
               username: this.repoManagerSettings.gitUsername,
               password: token,
