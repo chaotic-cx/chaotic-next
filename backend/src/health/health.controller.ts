@@ -6,7 +6,9 @@ import {
   type MemoryHealthIndicator,
   type TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
+import { ApiTags, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 
+@ApiTags('health')
 @Controller('health')
 export class HealthController {
   constructor(
@@ -16,6 +18,8 @@ export class HealthController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get application health status including DB and memory.' })
+  @ApiOkResponse({ description: 'Health check result', type: Object })
   @HealthCheck()
   check(): Promise<HealthCheckResult> {
     return this.health.check([
