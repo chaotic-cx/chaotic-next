@@ -72,6 +72,18 @@ export class RepoManagerService {
       where: { isActive: true, repoUrl: Not(IsNull()) },
     });
 
+    // Add memory monitoring
+    setInterval(() => {
+      const memUsage = process.memoryUsage();
+      if (memUsage.heapUsed > 3 * 1024 * 1024 * 1024) { // 3GB threshold
+        Logger.warn(`High memory usage detected: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`, 'RepoManager');
+        if (global.gc) {
+          Logger.log('Triggering garbage collection', 'RepoManager');
+          global.gc();
+        }
+      }
+    }, 30000); // Check every 30 seconds
+
     const runWithThis = this.run.bind(this);
     this.tasks.push(
       new CronJob(
@@ -1042,24 +1054,44 @@ class RepoManager {
           };
         });
 
-        for (const file of relevantFiles) {
-          try {
-            const currentPackageVersion: Partial<ParsedPackage> = await this.parsePackageDesc(file.descFile);
+        // Process files in batches to prevent memory issues
+        const batchSize = 100;
+        for (let i = 0; i < relevantFiles.length; i += batchSize) {
+          const batch = relevantFiles.slice(i, i + batchSize);
+          
+          for (const file of batch) {
+            try {
+              const currentPackageVersion: Partial<ParsedPackage> = await this.parsePackageDesc(file.descFile);
 
-            // Only process packages that have valid metadata
-            if (currentPackageVersion && Object.keys(currentPackageVersion).length > 0) {
-              if (!currentPackageVersion?.metaData) {
-                currentPackageVersion.metaData = {
-                  buildDate: '',
-                  filename: '',
-                };
+              // Only process packages that have valid metadata
+              if (currentPackageVersion && Object.keys(currentPackageVersion).length > 0) {
+                if (!currentPackageVersion?.metaData) {
+                  currentPackageVersion.metaData = {
+                    buildDate: '',
+                    filename: '',
+                  };
+                }
+                currentPackageVersion.metaData.soNameList = await this.parsePackageFiles(file.filesFile);
+                currentPackageVersions.push(currentPackageVersion as ParsedPackage);
               }
-              currentPackageVersion.metaData.soNameList = await this.parsePackageFiles(file.filesFile);
-              currentPackageVersions.push(currentPackageVersion as ParsedPackage);
+            } catch (fileErr: any) {
+              Logger.warn(`Error processing package files ${file.descFile}: ${fileErr.message}`, 'RepoManager');
+              continue;
             }
-          } catch (fileErr: any) {
-            Logger.warn(`Error processing package files ${file.descFile}: ${fileErr.message}`, 'RepoManager');
-            continue;
+          }
+          
+          // Force garbage collection between batches and log memory usage
+          if (i % (batchSize * 5) === 0) {
+            const memUsage = process.memoryUsage();
+            Logger.debug(`Memory usage after processing ${i} packages: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`, 'RepoManager');
+            
+            // Force garbage collection if available
+            if (global.gc) {
+              global.gc();
+            }
+            
+            // Yield to event loop
+            await new Promise(resolve => setImmediate(resolve));
           }
         }
       } catch (dirErr: any) {
@@ -1070,6 +1102,8 @@ class RepoManager {
 
     await this.cleanUp(actualWorkDirs.filter((dir) => dir && dir.workDir).map((dir) => dir.workDir));
     Logger.debug('Done parsing databases', 'RepoManager');
+    Logger.log(`Total packages processed: ${currentPackageVersions.length}`, 'RepoManager');
+    
     return currentPackageVersions;
   }
 
