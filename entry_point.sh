@@ -70,7 +70,7 @@ function main() {
   init
 
   echo "Starting app..."
-  exec node /app/main.js "$@" &
+  exec node --max-old-space-size=8192 --optimize-for-size --expose-gc /app/main.js "$@" &
   NODE_PID=$!
   wait "$NODE_PID"
 }
