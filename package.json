@@ -118,7 +118,7 @@
     "@nx/web": "21.1.2",
     "@nx/webpack": "21.1.2",
     "@nx/workspace": "21.1.2",
-    "@schematics/angular": "^19.2.15",
+    "@schematics/angular": "^20.0.0",
     "@swc-node/register": "~1.10.10",
     "@swc/core": "~1.12.5",
     "@swc/helpers": "~0.5.17",
