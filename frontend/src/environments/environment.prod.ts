@@ -3,8 +3,8 @@ import { EnvironmentModel } from './environment.model';
 export const environment: EnvironmentModel = {
   production: true,
   apiUrl: 'https://builds.garudalinux.org/api',
-  backendUrl: 'https://builds.garudalinux.org/backend',
-  cachedMetricsUrl: 'https://builds.garudalinux.org/backend/metrics',
+  backendUrl: 'https://chaotic-backend.garudalinux.org',
+  cachedMetricsUrl: 'https://chaotic-backend.garudalinux.org/metrics',
   homeUrl: 'https://aur.chaotic.cx/',
   logsUrl: 'https://builds.garudalinux.org/logs/logs.html',
   mapUrl: 'https://status.chaotic.cx/map',
