@@ -54,7 +54,7 @@ import { TitleComponent } from '../title/title.component';
 export class PackageListComponent implements OnInit, AfterViewInit {
   readonly loading = signal<boolean>(true);
   packageList!: Package[];
-  searchValue: string = '';
+  searchValue = '';
 
   @ViewChild('pkgTable') pkgTable!: Table;
 

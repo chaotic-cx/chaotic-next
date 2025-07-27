@@ -10,8 +10,7 @@
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/jest.config.[jt]s",
       "!{projectRoot}/src/test-setup.[jt]s",
-      "!{projectRoot}/test-setup.[jt]s",
-      "!{projectRoot}/biome.json"
+      "!{projectRoot}/test-setup.[jt]s"
     ],
     "sharedGlobals": []
   },
@@ -44,7 +43,7 @@
       "inputs": ["production", "^production"]
     },
     "format": {
-      "inputs": ["default", "{workspaceRoot}/.prettierrc"],
+      "inputs": ["default", "{workspaceRoot}/.prettierrc.js"],
       "cache": true
     }
   },
@@ -124,7 +123,7 @@
       "plugin": "@nx/eslint/plugin",
       "options": {
         "targetName": "eslint:lint",
-        "extensions": ["ts", "tsx", "js", "jsx", "html", "vue"]
+        "extensions": ["ts", "js", "html"]
       }
     }
   ]

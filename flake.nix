@@ -41,15 +41,9 @@
             name = "alejandra";
           };
           commitizen.enable = true;
-          # Eslint pulls ~1GB of nix derivations, let's reuse node_modules instead
           eslint = {
-            description = "Run eslint";
             enable = true;
-            entry = ''
-              ${pkgs.pnpm}/bin/pnpm run lint
-            '';
-            name = "eslint";
-            pass_filenames = false;
+            settings.extensions = "\\.(ts|js|mjs|html)$";
           };
           flake-checker.enable = true;
           hadolint.enable = true;
