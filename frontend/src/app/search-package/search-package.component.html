@@ -28,11 +28,13 @@
           <td>{{ dataset.value | unixDate }}</td>
         } @else if (dataset.key === 'lastUpdated') {
           <td>{{ dataset.value | date: 'short' }}</td>
-        } @else if (typeof dataset.value !== "string" && dataset.value?.length > 0) {
+        } @else if (typeof dataset.value !== 'string' && dataset.value?.length > 0) {
           <td>
             @if (dataset.value.length > 1) {
               <ul class="chaotic-list-regular">
-                <li *ngFor="let item of dataset.value">{{ item }}</li>
+                @for (item of dataset.value; track item) {
+                  <li>{{ item }}</li>
+                }
               </ul>
             } @else {
               <span>{{ dataset.value[0] }}</span>

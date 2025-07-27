@@ -158,7 +158,6 @@ export class BuildStatusComponent implements OnInit {
    */
   async getPipelines(inBackground = false): Promise<void> {
     this.loadingPipelines.set(!inBackground);
-
     await new Promise<void>((resolve, reject) => {
       this.appService
         .getStatusChecks()
@@ -208,7 +207,6 @@ export class BuildStatusComponent implements OnInit {
    */
   async getQueueStats(inBackground: boolean): Promise<void> {
     this.loadingQueue.set(!inBackground);
-
     await new Promise<void>((resolve, reject) => {
       this.appService
         .getQueueStats()

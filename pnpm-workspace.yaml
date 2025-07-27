@@ -1,0 +1,18 @@
+---
+packages:
+  - libs
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - '@parcel/watcher'
+  - '@scarf/scarf'
+  - '@swc/core'
+  - '@tailwindcss/oxide'
+  - bcrypt
+  - esbuild
+  - lmdb
+  - msgpackr-extract
+  - nestjs-pino
+  - nx
+  - sharp
+  - unrs-resolver
+  - workerd

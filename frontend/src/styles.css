@@ -98,6 +98,29 @@ samp {
   height: 100%;
 }
 
+.p-inputtext,
+.p-button,
+.p-panel,
+.p-tabs,
+.p-datatable,
+.p-card,
+.table-container {
+  backdrop-filter: blur(4px);
+  --webkit-backdrop-filter: blur(4px);
+}
+
+.p-datatable-table-container {
+  @apply rounded-lg;
+}
+
+.p-component p-paginator {
+  @apply rounded-b-lg;
+}
+
+.p-datatable-header {
+  @apply rounded-t-lg;
+}
+
 body > app-root > chaotic-footer > div > p-card > div {
   height: unset !important;
 }
@@ -125,13 +148,6 @@ body > app-root > chaotic-footer > div > p-card > div {
   max-width: calc(2 * var(--padding-body) + var(--website-max-width));
   padding: var(--space-md) var(--padding-body);
   margin-inline: auto;
-}
-
-.blur-card {
-  backdrop-filter: blur(16px) saturate(115%);
-  -webkit-backdrop-filter: blur(16px) saturate(115%);
-  background-color: rgba(24, 24, 37, 0.82);
-  border-radius: 10px;
 }
 
 .hover\:chaotic-grow-l:hover {

@@ -6,6 +6,7 @@ tmp
 # dependencies
 node_modules
 pnpm-lock.yaml
+flake.lock
 
 # IDEs and editors
 /.idea

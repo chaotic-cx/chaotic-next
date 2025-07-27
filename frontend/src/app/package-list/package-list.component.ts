@@ -1,5 +1,5 @@
 import { Package } from '@./shared-lib';
-import { DatePipe, NgClass, NgIf } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -9,6 +9,7 @@ import {
   LOCALE_ID,
   OnInit,
   ViewChild,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
@@ -40,7 +41,6 @@ import { TitleComponent } from '../title/title.component';
     TagModule,
     DatePipe,
     Button,
-    NgIf,
     StripPrefixPipe,
     ButtonDirective,
     NgClass,
@@ -52,7 +52,7 @@ import { TitleComponent } from '../title/title.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PackageListComponent implements OnInit, AfterViewInit {
-  loading = true;
+  readonly loading = signal<boolean>(true);
   packageList!: Package[];
   searchValue: string = '';
 
@@ -88,7 +88,7 @@ export class PackageListComponent implements OnInit, AfterViewInit {
           console.error(err);
         },
         complete: () => {
-          this.loading = false;
+          this.loading.set(false);
         },
       });
   }
@@ -98,6 +98,19 @@ export class PackageListComponent implements OnInit, AfterViewInit {
       this.pkgTable.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
       this.searchValue = this.route.snapshot.queryParams['search'];
       this.cdr.markForCheck();
+    }
+    this.unsetRounding();
+  }
+
+  /**
+   * Remove the border radius from the datatable container elements.
+   */
+  private unsetRounding(): void {
+    const elements = document.querySelectorAll('.p-datatable-table-container');
+    for (const element of Array.from(elements)) {
+      if (element instanceof HTMLElement) {
+        element.style.borderRadius = '0';
+      }
     }
   }
 

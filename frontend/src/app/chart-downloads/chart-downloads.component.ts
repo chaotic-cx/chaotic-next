@@ -1,6 +1,6 @@
 import type { PackageRankList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -23,7 +23,7 @@ import { AppService } from '../app.service';
 
 @Component({
   selector: 'chaotic-chart-downloads',
-  imports: [CommonModule, FormsModule, UIChart, InputNumber, ProgressBarModule, ToastModule],
+  imports: [FormsModule, UIChart, InputNumber, ProgressBarModule, ToastModule],
   templateUrl: './chart-downloads.component.html',
   styleUrl: './chart-downloads.component.css',
   providers: [MessageToastService],

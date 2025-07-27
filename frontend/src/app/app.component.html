@@ -1,10 +1,10 @@
 <div class="background min-h-svh">
   <garuda-shell [menuItems]="items">
     <img garudaShellBarStart ngSrc="assets/logo_28.png" width="28" height="28" alt="logo" />
-    <div class="mt-5" [@routerTransition]="prepareRoute(routerOutlet)">
+    <div [@routerTransition]="prepareRoute(routerOutlet)" class="router-container">
       <router-outlet #routerOutlet="outlet"></router-outlet>
     </div>
-    <p-scroll-top></p-scroll-top>
+    <p-scroll-top [buttonProps]="{ rounded: true }"></p-scroll-top>
   </garuda-shell>
 </div>
 <chaotic-footer></chaotic-footer>

@@ -46,11 +46,12 @@ import { TitleComponent } from '../title/title.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeployLogComponent implements OnInit, AfterViewInit {
-  packageList: Build[] = [];
-  loading = true;
-  searchValue = signal<string>('');
-  amount = signal<number>(4000);
   outcomePipe = inject(OutcomePipe);
+  packageList: Build[] = [];
+
+  readonly loading = signal<boolean>(true);
+  readonly searchValue = signal<string>('');
+  readonly amount = signal<number>(4000);
 
   @ViewChild('deployTable') deployTable!: Table;
 
@@ -99,7 +100,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
           console.error(err);
         },
         complete: () => {
-          this.loading = false;
+          this.loading.set(false);
           this.cdr.markForCheck();
         },
       });
@@ -110,6 +111,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
       this.deployTable.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
       this.searchValue.set(this.route.snapshot.queryParams['search']);
     }
+    this.unsetRounding();
   }
 
   clear(table: Table) {
@@ -129,5 +131,17 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
 
   typed(value: any): Build {
     return value;
+  }
+
+  /**
+   * Remove the border radius from the datatable container elements.
+   */
+  private unsetRounding(): void {
+    const elements = document.querySelectorAll('.p-datatable-table-container');
+    for (const element of Array.from(elements)) {
+      if (element instanceof HTMLElement) {
+        element.style.borderRadius = '0';
+      }
+    }
   }
 }
