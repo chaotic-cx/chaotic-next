@@ -109,7 +109,13 @@ samp {
   --webkit-backdrop-filter: blur(4px);
 }
 
-.p-datatable-table-container {
+.table-container {
+  max-width: calc(100vw - 2rem);
+  @apply mx-auto;
+}
+
+.p-datatable-table-container,
+.p-datatable-mask {
   @apply rounded-lg;
 }
 
