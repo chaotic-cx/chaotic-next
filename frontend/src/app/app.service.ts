@@ -67,7 +67,7 @@ export class AppService {
   }
 
   getPackageBuilds(amount: number, status?: BuildStatus): Observable<Build[]> {
-    let params: { [key: string]: string } = { amount: amount.toString() };
+    const params: { [key: string]: string } = { amount: amount.toString() };
     if (status) params['status'] = status.toString();
 
     return this.http.get<Build[]>(`${this.appConfig.backendUrl}/builder/builds`, {

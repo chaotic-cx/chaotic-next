@@ -75,7 +75,8 @@ export class RepoManagerService {
     // Add memory monitoring
     setInterval(() => {
       const memUsage = process.memoryUsage();
-      if (memUsage.heapUsed > 3 * 1024 * 1024 * 1024) { // 3GB threshold
+      if (memUsage.heapUsed > 3 * 1024 * 1024 * 1024) {
+        // 3GB threshold
         Logger.warn(`High memory usage detected: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`, 'RepoManager');
         if (global.gc) {
           Logger.log('Triggering garbage collection', 'RepoManager');
@@ -129,7 +130,9 @@ export class RepoManagerService {
             }
 
             await this.settingsRepository.update({ key: 'alwaysRebuild' }, { value: JSON.stringify(globalTriggers) });
-          } catch (err: any) {}
+          } catch {
+            // ignore
+          }
         } else {
           await this.settingsRepository.save({
             key: 'globalTriggers',
@@ -140,7 +143,9 @@ export class RepoManagerService {
         if (existingSettings) {
           try {
             globalTriggers.push(...JSON.parse(existingSettings.value));
-          } catch (err: any) {}
+          } catch {
+            // ignore
+          }
         }
       }
     } catch (err: any) {
@@ -323,7 +328,7 @@ export class RepoManagerService {
     const relevantRules: string[] = Object.keys(finalAnalysis);
 
     try {
-      let namcapLines: string[] = namcapAnalysis.split('\n');
+      const namcapLines: string[] = namcapAnalysis.split('\n');
       for (const line of namcapLines) {
         const lineSplit = line.split(': ')[1];
         if (!lineSplit) continue;
@@ -617,13 +622,12 @@ class RepoManager {
     }[] = this.getSoProvidingPackages(this.changedArchPackages);
 
     for (const pkgbaseDir of pkgbaseDirs) {
-      let archRebuildPkg: ArchlinuxPackage[];
       const configFile: string = join(repoDir, pkgbaseDir, '.CI', 'config');
       const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
       const metadata: ParsedPackageMetadata = pkgConfig.pkgInDb.metadata;
       let foundTrigger = false;
 
-      archRebuildPkg = this.changedArchPackages.filter((pkg) => {
+      const archRebuildPkg: ArchlinuxPackage[] = this.changedArchPackages.filter((pkg) => {
         return pkgConfig.rebuildTriggers?.includes(pkg.pkgname);
       });
 
@@ -1009,7 +1013,7 @@ class RepoManager {
       databases.map(async (repo): Promise<RepoWorkDir> => {
         try {
           if (!repo.path) throw new Error('Path is null');
-          const workDir = repo.path.replace(/\/[^\/]+\.files$/, '');
+          const workDir = repo.path.replace(/\/[^/]+\.files$/, '');
 
           Logger.debug(`Unpacking database ${repo.path}`, 'RepoManager');
           // Use native tar due to lack of support for tar.zst in node tar
@@ -1058,7 +1062,7 @@ class RepoManager {
         const batchSize = 100;
         for (let i = 0; i < relevantFiles.length; i += batchSize) {
           const batch = relevantFiles.slice(i, i + batchSize);
-          
+
           for (const file of batch) {
             try {
               const currentPackageVersion: Partial<ParsedPackage> = await this.parsePackageDesc(file.descFile);
@@ -1079,19 +1083,22 @@ class RepoManager {
               continue;
             }
           }
-          
+
           // Force garbage collection between batches and log memory usage
           if (i % (batchSize * 5) === 0) {
             const memUsage = process.memoryUsage();
-            Logger.debug(`Memory usage after processing ${i} packages: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`, 'RepoManager');
-            
+            Logger.debug(
+              `Memory usage after processing ${i} packages: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
+              'RepoManager',
+            );
+
             // Force garbage collection if available
             if (global.gc) {
               global.gc();
             }
-            
+
             // Yield to event loop
-            await new Promise(resolve => setImmediate(resolve));
+            await new Promise((resolve) => setImmediate(resolve));
           }
         }
       } catch (dirErr: any) {
@@ -1103,7 +1110,7 @@ class RepoManager {
     await this.cleanUp(actualWorkDirs.filter((dir) => dir && dir.workDir).map((dir) => dir.workDir));
     Logger.debug('Done parsing databases', 'RepoManager');
     Logger.log(`Total packages processed: ${currentPackageVersions.length}`, 'RepoManager');
-    
+
     return currentPackageVersions;
   }
 
@@ -1227,8 +1234,8 @@ class RepoManager {
       soNameList = fileData
         .toString()
         .split('\n')
-        .filter((line) => !!line.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/))
-        .map((line) => line.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/)[0]);
+        .filter((line) => !!line.match(/(?=[\S/]+)\w[^/]+\.so\.?\d?/))
+        .map((line) => line.match(/(?=[\S/]+)\w[^/]+\.so\.?\d?/)[0]);
     } catch (err: any) {
       if (err.code === 'ENOENT') {
         Logger.warn(`Files file not found: ${filesFile}`, 'RepoManager/parsePackageFiles');
@@ -1419,7 +1426,9 @@ class RepoManager {
       if (configText || configText !== '') {
         configLines = configText.split('\n');
       }
-    } catch (err: any) {}
+    } catch {
+      // ignore
+    }
 
     const configs = {};
     let rebuildTriggers: string[];
@@ -1743,6 +1752,6 @@ class RepoManager {
   }
 
   private hasVersionedSo(soDep: string): string | null {
-    return soDep.match(/(?=[\S\/]+)\w[^\/]+\.so\.?\d?/)[0];
+    return soDep.match(/(?=[\S/]+)\w[^/]+\.so\.?\d?/)[0];
   }
 }

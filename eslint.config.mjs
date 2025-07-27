@@ -15,7 +15,7 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ['**/*', '**/node_modules'],
+    ignores: ['**/node_modules', 'dist/**', 'build/**', 'public/**'],
   },
   {
     plugins: {
@@ -48,7 +48,9 @@ export default [
   })),
   {
     files: ['**/*.ts', '**/*.tsx'],
-    rules: {},
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
   },
   ...compat.extends('plugin:@nx/javascript').map((config) => ({
     ...config,

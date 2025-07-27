@@ -26,6 +26,9 @@
       "options": {
         "jestConfig": "backend/jest.config.ts"
       }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
     }
   }
 }
