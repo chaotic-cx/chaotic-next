@@ -2,6 +2,10 @@
   width: unset !important;
 }
 
+.p-card {
+  background: unset;
+}
+
 ::ng-deep .p-datatable {
   width: unset !important;
 }

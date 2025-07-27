@@ -1,6 +1,6 @@
 import type { CountryRankList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -24,7 +24,7 @@ import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-countries',
-  imports: [CommonModule, UIChart, FormsModule, InputNumber, FluidModule],
+  imports: [UIChart, FormsModule, InputNumber, FluidModule],
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
   providers: [MessageToastService],

@@ -1,9 +1,8 @@
-import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
   selector: 'chaotic-title',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './title.component.html',
   styleUrl: './title.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

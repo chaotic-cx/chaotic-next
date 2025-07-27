@@ -2,6 +2,12 @@
   @apply mx-auto;
 }
 
+.p-card {
+  background: unset;
+  backdrop-filter: unset;
+  -webkit-backdrop-filter: unset;
+}
+
 .p-tabpanels {
   border-radius: 10px;
 }

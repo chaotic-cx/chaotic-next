@@ -1,6 +1,6 @@
 import type { UserAgentList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -23,7 +23,7 @@ import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-useragent',
-  imports: [CommonModule, InputNumber, UIChart, FormsModule],
+  imports: [InputNumber, UIChart, FormsModule],
   templateUrl: './chart-useragent.component.html',
   styleUrl: './chart-useragent.component.css',
   providers: [MessageToastService],

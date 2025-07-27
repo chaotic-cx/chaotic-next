@@ -12,7 +12,7 @@
     [value]="packageList"
     [rows]="25"
     [rowsPerPageOptions]="[25, 50, 100, 200]"
-    [loading]="loading"
+    [loading]="loading()"
     [paginator]="true"
     [globalFilterFields]="['pkgname', 'metadata.desc', 'metadata.url']"
     [sortOrder]="1"
@@ -67,7 +67,7 @@
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-unTypedPkg>
-      <ng-container *ngIf="typed(unTypedPkg) as pkg">
+      @if (typed(unTypedPkg); as pkg) {
         <tr>
           <td>
             <span
@@ -140,7 +140,7 @@
             }
           </td>
         </tr>
-      </ng-container>
+      }
     </ng-template>
     <ng-template #emptymessage>
       <tr>
