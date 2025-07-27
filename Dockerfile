@@ -1,4 +1,4 @@
-FROM node:23-alpine3.21 AS builder
+FROM node:23-alpine3.22 AS builder
 
 WORKDIR /build
 COPY . /build
@@ -12,28 +12,28 @@ RUN corepack enable pnpm && \
     corepack pnpm install && \
     pnpm exec nx run backend:build
 
+# Allow pnpm installing bcrypt .node files
+RUN cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml
+
 # Generate node_modules containing nx-generated package.json for less used space
 WORKDIR /build/dist/backend
-
-# Allow pnpm installing bcrypt .node files
-RUN sed -i 's&"main": "main.js"&"main": "main.js","pnpm": {"onlyBuiltDependencies": ["@nestjs/core","bcrypt","nestjs-pino"]}&g' package.json
 
 # Run the actual installation
 RUN pnpm install --prod && \
     pnpm install pino-pretty
 
-FROM node:23-alpine3.21
+FROM node:23-alpine3.22
 
-# renovate: datasource=repology depName=alpine_3_21/autossh
+# renovate: datasource=repology depName=alpine_3_22/autossh
 ENV AUTOSSH_VERSION="1.4g-r3"
-# renovate: datasource=repology depName=alpine_3_21/curl
-ENV CURL_VERSION="8.12.1-r1"
-# renovate: datasource=repology depName=alpine_3_21/zstd
-ENV ZSTD_VERSION="1.5.6-r2"
-# renovate: datasource=repology depName=alpine_3_21/bash
+# renovate: datasource=repology depName=alpine_3_22/curl
+ENV CURL_VERSION="8.14.1-r1"
+# renovate: datasource=repology depName=alpine_3_22/zstd
+ENV ZSTD_VERSION="1.5.7-r0"
+# renovate: datasource=repology depName=alpine_3_22/bash
 ENV BASH_VERSION="5.2.37-r0"
-# renovate: datasource=repology depName=alpine_3_21/tar
-ENV TAR_VERSION="1.35-r2"
+# renovate: datasource=repology depName=alpine_3_22/tar
+ENV TAR_VERSION="1.35-r3"
 
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
