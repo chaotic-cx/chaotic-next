@@ -19,6 +19,10 @@
   @apply ml-auto;
 }
 
+.garuda-shell-menubar {
+  @apply m-2;
+}
+
 /* Font */
 :root {
   font-family: Inter, sans-serif;
@@ -35,7 +39,7 @@
 
 /*`Custom classes`*/
 body {
-  @apply selection:bg-primary m-2 selection:text-surface-0;
+  @apply selection:bg-primary selection:text-surface-0;
   font-optical-sizing: auto;
 }
 
