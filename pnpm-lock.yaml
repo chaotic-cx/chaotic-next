@@ -7092,8 +7092,8 @@ packages:
     resolution: {integrity: sha512-UERzLsxzllchadvbPs5aolHh65ISpKpM+ccLbOJ8/vvpBKmAWf+la7dXFy7Mr0ySHbdHrFv5kGFCUHHe6GFEmw==}
     engines: {node: '>= 4.0.0'}
 
-  memfs@4.20.0:
-    resolution: {integrity: sha512-VKta4Y+0CPo0NvYMOE7vvhaNe4K5WTP077G1S4PS0h0joX0f15NosPT6y48rOpKLCh48nnlgY/TdRPwiKCIIkg==}
+  memfs@4.23.0:
+    resolution: {integrity: sha512-SucHN2lcWf0jrnw+jP6FoVW6l/zGJiXfNMdApZzG0x/0mAIMdwAeR5mjfsCH5U3BoqpUEtqzz+dSQSO0H/eqxg==}
     engines: {node: '>= 4.0.0'}
 
   merge-descriptors@1.0.3:
@@ -8282,8 +8282,8 @@ packages:
   process-warning@5.0.0:
     resolution: {integrity: sha512-a39t9ApHNx2L4+HBnQKqxxHNs1r7KF+Intd8Q/g1bUh6q0WIp9voPXJ/x0j+ZL45KF1pJd9+q2jLIRMfvEshkA==}
 
-  proj4@2.19.9:
-    resolution: {integrity: sha512-PDJmr70F9zjXz59mCCST6uYWdnxs58MSOi1C11XXCbgF6ZEe4hLSHBcbq3wkoN2RmbI2ACmwaM5N49PQl4pf9g==}
+  proj4@2.19.10:
+    resolution: {integrity: sha512-uL6/C6kA8+ncJAEDmUeV8PmNJcTlRLDZZa4/87CzRpb8My4p+Ame4LhC4G3H/77z2icVqcu3nNL9h5buSdnY+g==}
 
   promise-retry@2.0.1:
     resolution: {integrity: sha512-y+WKFlBR8BGXnsNlIHFGPZmyDf3DFMoLhaflAnyZgV6rG6xu+JwesTo2Q9R6XwYmtmwAFCkAk3e35jEdoeh/3g==}
@@ -16010,7 +16010,7 @@ snapshots:
   dotted-map@2.2.3:
     dependencies:
       '@turf/boolean-point-in-polygon': 6.5.0
-      proj4: 2.19.9
+      proj4: 2.19.10
 
   dunder-proto@1.0.1:
     dependencies:
@@ -18160,7 +18160,7 @@ snapshots:
     dependencies:
       fs-monkey: 1.1.0
 
-  memfs@4.20.0:
+  memfs@4.23.0:
     dependencies:
       '@jsonjoy.com/json-pack': 1.4.0(tslib@2.8.1)
       '@jsonjoy.com/util': 1.8.0(tslib@2.8.1)
@@ -19279,7 +19279,7 @@ snapshots:
 
   process-warning@5.0.0: {}
 
-  proj4@2.19.9:
+  proj4@2.19.10:
     dependencies:
       mgrs: 1.0.0
       wkt-parser: 1.5.2
@@ -20393,7 +20393,7 @@ snapshots:
       '@rspack/lite-tapable': 1.0.1
       chokidar: 3.6.0
       is-glob: 4.0.3
-      memfs: 4.20.0
+      memfs: 4.23.0
       minimatch: 9.0.5
       picocolors: 1.1.1
       typescript: 5.8.3
@@ -20739,7 +20739,7 @@ snapshots:
   webpack-dev-middleware@7.4.2(webpack@5.99.9(@swc/core@1.13.2(@swc/helpers@0.5.17))(esbuild@0.25.5)(webpack-cli@6.0.1)):
     dependencies:
       colorette: 2.0.20
-      memfs: 4.20.0
+      memfs: 4.23.0
       mime-types: 2.1.35
       on-finished: 2.4.1
       range-parser: 1.2.1
@@ -20750,7 +20750,7 @@ snapshots:
   webpack-dev-middleware@7.4.2(webpack@5.99.9(@swc/core@1.13.2(@swc/helpers@0.5.17))(esbuild@0.25.8)(webpack-cli@6.0.1)):
     dependencies:
       colorette: 2.0.20
-      memfs: 4.20.0
+      memfs: 4.23.0
       mime-types: 2.1.35
       on-finished: 2.4.1
       range-parser: 1.2.1
