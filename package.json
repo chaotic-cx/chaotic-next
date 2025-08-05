@@ -108,7 +108,7 @@
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.32.0",
     "@nestjs/cli": "^11.0.7",
-    "@nestjs/schematics": "11.0.5",
+    "@nestjs/schematics": "11.0.7",
     "@nestjs/testing": "^11.1.5",
     "@nx/angular": "21.3.7",
     "@nx/esbuild": "21.3.7",
@@ -121,7 +121,7 @@
     "@nx/web": "21.3.7",
     "@nx/webpack": "21.3.7",
     "@nx/workspace": "21.3.7",
-    "@schematics/angular": "20.1.3",
+    "@schematics/angular": "20.1.4",
     "@swc-node/register": "~1.10.10",
     "@swc/core": "~1.13.2",
     "@swc/helpers": "~0.5.17",
@@ -148,14 +148,14 @@
     "jest-util": "~30.0.0",
     "jsonc-eslint-parser": "^2.4.0",
     "lint-staged": "^16.1.2",
-    "nx": "21.3.9",
+    "nx": "21.3.11",
     "pino-pretty": "^13.0.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "run-script-webpack-plugin": "^0.2.3",
     "tailwindcss": "^3.4.17",
     "ts-auto-mock": "^3.7.4",
-    "ts-jest": "29.4.0",
+    "ts-jest": "29.4.1",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
@@ -164,7 +164,7 @@
     "webpack-node-externals": "^3.0.0",
     "wrangler": "^4.26.0"
   },
-  "packageManager": "pnpm@10.14.0-0+sha512.2cd47a0cbf5f1d1de7693a88307a0ede5be94e0d3b34853d800ee775efbea0650cb562b77605ec80bc8d925f5cd27c4dfe8bb04d3a0b76090784c664450d32d6",
+  "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748",
   "engines": {
     "npm": "^22"
   }
