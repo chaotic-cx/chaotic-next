@@ -19,7 +19,8 @@
   @apply ml-auto;
 }
 
-.garuda-shell-menubar {
+.garuda-shell-menubar,
+.garuda-shell__dropdown {
   @apply m-2;
 }
 
