@@ -52,10 +52,10 @@ importers:
         version: 1.0.0-rc.7(@catppuccin/palette@2.0.0-beta.1)(@primeuix/themes@1.2.3)
       '@gitbeaker/core':
         specifier: ^43.3.0
-        version: 43.3.0
+        version: 43.4.0
       '@gitbeaker/rest':
         specifier: ^43.3.0
-        version: 43.3.0
+        version: 43.4.0
       '@nestjs/axios':
         specifier: ^4.0.1
         version: 4.0.1(@nestjs/common@11.1.6(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.11.0(debug@4.4.1))(rxjs@7.8.2)
@@ -2048,16 +2048,16 @@ packages:
       '@catppuccin/palette': 2.0.0-beta.1
       '@primeuix/themes': ^1.2.1
 
-  '@gitbeaker/core@43.3.0':
-    resolution: {integrity: sha512-hORHoQnDFHKOuKDAL6qfFTom+eZvHNGTELuwQ22rFmqW9D3el2XQ+L/fcXEcyEysTGB49b2t2FtRf0Us5Et10g==}
+  '@gitbeaker/core@43.4.0':
+    resolution: {integrity: sha512-SN7/2raXQa99i/koOV5voQ3q5Pz9F8TkyECBDmY8lDrgufgf5QLfRvTVc1uRU/As543KCrPi2s/Hn+vZgwLdYw==}
     engines: {node: '>=18.20.0'}
 
-  '@gitbeaker/requester-utils@43.3.0':
-    resolution: {integrity: sha512-A5bQQAi8cH6qFTiyWWiAgtdM1XV8vRD3OPWs0jOpEIEbT+rWJZQRclo3dlKhcsiM+Gz4SRAylwBwUYszdjOzdw==}
+  '@gitbeaker/requester-utils@43.4.0':
+    resolution: {integrity: sha512-W15fZbLzEonMdqzz+/H3KmIByI3neUE2+HjnvnyMl5g4CHZuPCkj0boTkGRBH1c6ax1Fmdhz5vPv7OjRF274gQ==}
     engines: {node: '>=18.20.0'}
 
-  '@gitbeaker/rest@43.3.0':
-    resolution: {integrity: sha512-3plSNawPLgHSfJmbBGGzCT3kvKE5rqS4fhzTyQFfiwm/+NvOTxEIqMQ5wxaYWlonYfR/eUVp09sMig1nG9Isww==}
+  '@gitbeaker/rest@43.4.0':
+    resolution: {integrity: sha512-SmyBcC16+wNuAT77vcqk1gQr5ITC0yD4ln5/s7qplEC4U3hQtII/NKvpiygapMDrFF4GGA3GTCQAPQuUk22onw==}
     engines: {node: '>=18.20.0'}
 
   '@humanfs/core@0.19.1':
@@ -12335,23 +12335,23 @@ snapshots:
       '@primeuix/themes': 1.2.3
       tslib: 2.8.1
 
-  '@gitbeaker/core@43.3.0':
+  '@gitbeaker/core@43.4.0':
     dependencies:
-      '@gitbeaker/requester-utils': 43.3.0
+      '@gitbeaker/requester-utils': 43.4.0
       qs: 6.14.0
       xcase: 2.0.1
 
-  '@gitbeaker/requester-utils@43.3.0':
+  '@gitbeaker/requester-utils@43.4.0':
     dependencies:
       picomatch-browser: 2.2.6
       qs: 6.14.0
       rate-limiter-flexible: 4.0.1
       xcase: 2.0.1
 
-  '@gitbeaker/rest@43.3.0':
+  '@gitbeaker/rest@43.4.0':
     dependencies:
-      '@gitbeaker/core': 43.3.0
-      '@gitbeaker/requester-utils': 43.3.0
+      '@gitbeaker/core': 43.4.0
+      '@gitbeaker/requester-utils': 43.4.0
 
   '@humanfs/core@0.19.1': {}
 
