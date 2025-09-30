@@ -92,7 +92,7 @@ export class PackageStatsComponent implements OnInit {
       });
   }
 
-  changeTab($event: string | number) {
+  changeTab($event: string | number | undefined): void {
     switch ($event) {
       case '0':
         void this.router.navigate([], { fragment: 'search', queryParamsHandling: 'replace' });
