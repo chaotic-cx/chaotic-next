@@ -49,9 +49,13 @@
             }
           </td>
           <td>
-            <a href="https://www.openstreetmap.org/#map=6/{{ mirror.latlon[0] }}/{{ mirror.latlon[1] }}">
-              {{ mirror.latlon.join(', ') }}
-            </a>
+            @if (!mirror.latlon?.length || mirror.latlon?.length === 0) {
+              {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
+            } @else {
+              <a href="https://www.openstreetmap.org/#map=6/{{ mirror.latlon[0] }}/{{ mirror.latlon[1] }}">
+                {{ mirror.latlon.join(', ') }}
+              </a>
+            }
           </td>
           @if (mirror.last_update !== 0) {
             <td>{{ mirror.last_update | date: 'short' }}</td>
