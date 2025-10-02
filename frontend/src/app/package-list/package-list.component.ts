@@ -53,7 +53,7 @@ import { TitleComponent } from '../title/title.component';
 })
 export class PackageListComponent implements OnInit, AfterViewInit {
   readonly loading = signal<boolean>(true);
-  packageList!: Package[];
+  packageList!: (Package & { reponame: string })[];
   searchValue = '';
 
   @ViewChild('pkgTable') pkgTable!: Table;
@@ -79,7 +79,7 @@ export class PackageListComponent implements OnInit, AfterViewInit {
       .getPackageList()
       .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
-        next: (data: Package[]) => {
+        next: (data: (Package & { reponame: string })[]) => {
           this.packageList = data.filter((pkg) => pkg.version);
           this.cdr.markForCheck();
         },
@@ -127,11 +127,12 @@ export class PackageListComponent implements OnInit, AfterViewInit {
     void this.router.navigate([], { queryParams: { search: input.value } });
   }
 
-  typed(value: any): Package {
+  typed(value: any): Package & { reponame: string } {
     return value;
   }
 
-  openPkgbuild(pkg: Package) {
-    window.open(`${this.appConfig.repoUrl}/${pkg.pkgname}`, '_blank');
+  openPkgbuild(pkg: Package & { reponame: string }) {
+    const url: string = pkg.reponame === 'chaotic-aur' ? this.appConfig.repoUrl : this.appConfig.repoUrlGaruda;
+    window.open(`${url}/${pkg.pkgname}`, '_blank');
   }
 }

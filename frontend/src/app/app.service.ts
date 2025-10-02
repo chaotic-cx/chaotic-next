@@ -58,8 +58,8 @@ export class AppService {
     return this.http.get<CountryRankList>(`${this.appConfig.cachedMetricsUrl}/30d/rank/30/countries`);
   }
 
-  getPackageList(): Observable<Package[]> {
-    return this.http.get<Package[]>(`${this.appConfig.backendUrl}/builder/packages`);
+  getPackageList(): Observable<(Package & { reponame: string })[]> {
+    return this.http.get<(Package & { reponame: string })[]>(`${this.appConfig.backendUrl}/builder/packages?repo=true`);
   }
 
   getPackage(name: string): Observable<Package> {
