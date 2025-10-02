@@ -27,7 +27,7 @@ export class BuilderController {
     if (repo) {
       return await this.builderService.getPackagesWithRepo();
     } else {
-      await this.builderService.getPackages();
+      return await this.builderService.getPackages();
     }
   }
 
