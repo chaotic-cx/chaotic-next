@@ -76,7 +76,10 @@
           ></a>
         </a>
       </div>
-      <div class="animate-pulse mt-5 h-[800px] mx-auto rounded-3xl"></div>
+      <div
+        class="animate-pulse mt-5 mx-auto rounded-3xl"
+        [ngClass]="{ 'h-96': !isWide(), 'h-[800px]': isWide() }"
+      ></div>
     </div>
   }
 </div>
