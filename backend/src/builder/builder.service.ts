@@ -79,6 +79,27 @@ export class BuilderService {
   }
 
   /**
+   * Returns all packages with their latest associated repo from the database.
+   */
+  async getPackagesWithRepo(): Promise<Package[]> {
+    return await this.buildRepository.query(`
+        SELECT
+          p.*,
+          r.name AS repoName
+        FROM "package" p
+        LEFT JOIN (
+          SELECT DISTINCT ON (b."pkgbaseId", b."repoId") b.*
+          FROM "build" b
+          WHERE b."repoId" IS NOT NULL
+          ORDER BY b."pkgbaseId", b."repoId", b.timestamp DESC
+        ) b ON b."pkgbaseId" = p.id
+        LEFT JOIN "repo" r ON r.id = b."repoId"
+        WHERE p.version IS NOT NULL
+        ORDER BY p.pkgname, r.name;
+    `);
+  }
+
+  /**
    * Returns all repos from the database.
    */
   async getRepos(options?: any): Promise<Repo[]> {
