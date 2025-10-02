@@ -235,8 +235,8 @@ importers:
         specifier: ^2.0.0-beta.1
         version: 2.0.0-beta.1
       '@catppuccin/tailwindcss':
-        specifier: ^0.1.6
-        version: 0.1.6(tailwindcss@3.4.18(yaml@2.8.1))
+        specifier: ^1.0.0
+        version: 1.0.0
       '@eslint/eslintrc':
         specifier: ^3.3.1
         version: 3.3.1
@@ -1386,10 +1386,9 @@ packages:
   '@catppuccin/palette@2.0.0-beta.1':
     resolution: {integrity: sha512-FhTfw1xtM/rOW+COq20J66Ik+YHiRg240A38e2bYOwh8MDh2yZ/8I3S0+dU1brvytEN4tWtZwe340WrsJb9I8g==}
 
-  '@catppuccin/tailwindcss@0.1.6':
-    resolution: {integrity: sha512-V+Y0AwZ5SSyvOVAcDl7Ng30xy+m82OKnEJ+9+kcZZ7lRyXuZrAb2GScdq9XR3v+ggt8qiZ/G4TvaC9cJ88AAXA==}
-    peerDependencies:
-      tailwindcss: '>=3.0.0'
+  '@catppuccin/tailwindcss@1.0.0':
+    resolution: {integrity: sha512-l8pOlcYe2ncGd8a1gUmL5AHmKlxR2+CHuG5kt4Me6IZwzntW1DoLmj89BH+DcsPHBsdDGLrTSv35emlYyU3FeQ==}
+    engines: {node: '>=22.0.0'}
 
   '@cloudflare/kv-asset-handler@0.4.0':
     resolution: {integrity: sha512-+tv3z+SPp+gqTIcImN9o0hqE9xyfQjI1XD9pL6NuKjua9B1y7mNYv0S9cP+QEbA4ppVgGZEmKOvHX5G5Ei1CVA==}
@@ -12222,9 +12221,7 @@ snapshots:
 
   '@catppuccin/palette@2.0.0-beta.1': {}
 
-  '@catppuccin/tailwindcss@0.1.6(tailwindcss@3.4.18(yaml@2.8.1))':
-    dependencies:
-      tailwindcss: 3.4.18(yaml@2.8.1)
+  '@catppuccin/tailwindcss@1.0.0': {}
 
   '@cloudflare/kv-asset-handler@0.4.0':
     dependencies:

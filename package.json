@@ -104,7 +104,7 @@
     "@angular/language-service": "20.3.2",
     "@catppuccin/highlightjs": "^1.0.1",
     "@catppuccin/palette": "^2.0.0-beta.1",
-    "@catppuccin/tailwindcss": "^0.1.6",
+    "@catppuccin/tailwindcss": "^1.0.0",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.36.0",
     "@nestjs/cli": "^11.0.10",
