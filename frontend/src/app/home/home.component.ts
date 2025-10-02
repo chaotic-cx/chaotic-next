@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { NgOptimizedImage } from '@angular/common';
+import { NgClass, NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AnimateOnScrollModule } from 'primeng/animateonscroll';
@@ -19,6 +19,7 @@ import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
     MirrorMapComponent,
     RouterLink,
     NgOptimizedImage,
+    NgClass,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
