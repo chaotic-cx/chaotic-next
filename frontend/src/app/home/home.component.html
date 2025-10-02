@@ -10,6 +10,7 @@
         [priority]="true"
         [style]="isWide() ? 'width: 360px' : 'width: 80%'"
         (click)="openApplet()"
+        (keyup)="openApplet()"
       />
       <div class="text-maroon mb-10 mt-20 text-3xl font-bold">Chaotic-AUR</div>
       <div class="text-mauve my-10 text-4xl font-bold">Automated building repo for AUR packages 👨🏻‍💻</div>
@@ -36,18 +37,46 @@
   class="animate-duration-1000 mx-auto my-10"
   enterClass="animate-fadein"
   leaveClass="animate-fadeout"
-  [once]="false"
+  [once]="true"
 >
-  <chaotic-newsfeed></chaotic-newsfeed>
+  @defer (on viewport) {
+    <chaotic-newsfeed></chaotic-newsfeed>
+  } @placeholder {
+    <div class="mx-auto">
+      <h2 class="text-maroon my-5 text-center text-2xl font-bold">
+        <i class="pi-info-circle pi" style="font-size: 1.25rem"></i> Latest news
+      </h2>
+      <div
+        class="animate-pulse mt-5 mx-auto h-[800px] rounded-3xl"
+        [style]="isWide() ? 'max-width: 80%' : 'margin-left: 0.5rem; margin-right: 0.5rem'"
+      ></div>
+    </div>
+  }
 </div>
 <div
   pAnimateOnScroll
-  class="animate-duration-1000 mx-auto mb-10 mt-20"
+  class="animate-duration-1000 mx-auto mb-10 mt-40"
   enterClass="animate-fadein"
   leaveClass="animate-fadeout"
-  [once]="false"
+  [once]="true"
 >
-  @defer {
+  @defer (on viewport) {
     <chaotic-mirror-map></chaotic-mirror-map>
+  } @placeholder {
+    <div class="chaotic-container-regular">
+      <div class="pb-5 md:px-20">
+        <h3 class="text-maroon pb-5 text-center text-2xl font-bold">
+          <i class="pi pi-globe" style="font-size: 1.25rem"></i> Mirror map
+        </h3>
+        <a class="text-text"
+          >This map shows our current mirrors and which one will be used if our geo-mirror is used. The one right in the
+          middle of the map is our CDN mirror, which is hosted in Cloudflare R2 and therefore globally available.
+          <a class="text-mauve" href="https://status.chaotic.cx/map" rel="noopener" target="_blank"
+            >Alternative view <i class="pi pi-search text-maroon"></i
+          ></a>
+        </a>
+      </div>
+      <div class="animate-pulse mt-5 h-[800px] mx-auto rounded-3xl"></div>
+    </div>
   }
 </div>
