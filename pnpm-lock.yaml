@@ -151,10 +151,10 @@ importers:
         version: 3.2.0
       moleculer:
         specifier: ^0.14.35
-        version: 0.14.35(debug@4.4.3)(encoding@0.1.13)(ioredis@5.8.0)(log4js@6.9.1)(pino@9.12.0)
+        version: 0.14.35(debug@4.4.3)(encoding@0.1.13)(ioredis@5.8.0)(log4js@6.9.1)(pino@9.13.0)
       nestjs-pino:
         specifier: ^4.4.1
-        version: 4.4.1(@nestjs/common@11.1.6(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@10.5.0)(pino@9.12.0)(rxjs@7.8.2)
+        version: 4.4.1(@nestjs/common@11.1.6(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@10.5.0)(pino@9.13.0)(rxjs@7.8.2)
       ngx-highlightjs:
         specifier: ^14.0.1
         version: 14.0.1(@angular/cdk@20.2.5(@angular/common@20.3.2(@angular/core@20.3.2(@angular/compiler@20.3.2)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@20.3.2(@angular/compiler@20.3.2)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/common@20.3.2(@angular/core@20.3.2(@angular/compiler@20.3.2)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@20.3.2(@angular/compiler@20.3.2)(rxjs@7.8.2))(rxjs@7.8.2)
@@ -172,7 +172,7 @@ importers:
         version: 8.16.3
       pino:
         specifier: ^9.12.0
-        version: 9.12.0
+        version: 9.13.0
       pino-http:
         specifier: ^10.5.0
         version: 10.5.0
@@ -8241,8 +8241,8 @@ packages:
   pino-std-serializers@7.0.0:
     resolution: {integrity: sha512-e906FRY0+tV27iq4juKzSYPbUj2do2X2JX4EzSca1631EB2QJQUqGbDuERal7LCtOpxl6x3+nvo9NPZcmjkiFA==}
 
-  pino@9.12.0:
-    resolution: {integrity: sha512-0Gd0OezGvqtqMwgYxpL7P0pSHHzTJ0Lx992h+mNlMtRVfNnqweWmf0JmRWk5gJzHalyd2mxTzKjhiNbGS2Ztfw==}
+  pino@9.13.0:
+    resolution: {integrity: sha512-SpTXQhkQXekIKEe7c887S3lk3v90Q+/HVRZVyNAhe98PQc++6I5ec/R0pciH8/CciXjCoVZIZfRNicbC6KZgnw==}
     hasBin: true
 
   pirates@4.0.7:
@@ -17300,7 +17300,7 @@ snapshots:
       fast-json-stringify: 6.1.1
       find-my-way: 9.3.0
       light-my-request: 6.6.0
-      pino: 9.12.0
+      pino: 9.13.0
       process-warning: 5.0.0
       rfdc: 1.4.1
       secure-json-parse: 4.0.0
@@ -17318,7 +17318,7 @@ snapshots:
       fast-json-stringify: 6.1.1
       find-my-way: 9.3.0
       light-my-request: 6.6.0
-      pino: 9.12.0
+      pino: 9.13.0
       process-warning: 5.0.0
       rfdc: 1.4.1
       secure-json-parse: 4.0.0
@@ -19120,7 +19120,7 @@ snapshots:
 
   mkdirp@1.0.4: {}
 
-  moleculer@0.14.35(debug@4.4.3)(encoding@0.1.13)(ioredis@5.8.0)(log4js@6.9.1)(pino@9.12.0):
+  moleculer@0.14.35(debug@4.4.3)(encoding@0.1.13)(ioredis@5.8.0)(log4js@6.9.1)(pino@9.13.0):
     dependencies:
       args: 5.0.3
       eventemitter2: 6.4.9
@@ -19136,7 +19136,7 @@ snapshots:
       debug: 4.4.3
       ioredis: 5.8.0
       log4js: 6.9.1
-      pino: 9.12.0
+      pino: 9.13.0
     transitivePeerDependencies:
       - encoding
 
@@ -19202,10 +19202,10 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  nestjs-pino@4.4.1(@nestjs/common@11.1.6(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@10.5.0)(pino@9.12.0)(rxjs@7.8.2):
+  nestjs-pino@4.4.1(@nestjs/common@11.1.6(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@10.5.0)(pino@9.13.0)(rxjs@7.8.2):
     dependencies:
       '@nestjs/common': 11.1.6(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      pino: 9.12.0
+      pino: 9.13.0
       pino-http: 10.5.0
       rxjs: 7.8.2
 
@@ -19725,7 +19725,7 @@ snapshots:
   pino-http@10.5.0:
     dependencies:
       get-caller-file: 2.0.5
-      pino: 9.12.0
+      pino: 9.13.0
       pino-std-serializers: 7.0.0
       process-warning: 5.0.0
 
@@ -19747,7 +19747,7 @@ snapshots:
 
   pino-std-serializers@7.0.0: {}
 
-  pino@9.12.0:
+  pino@9.13.0:
     dependencies:
       atomic-sleep: 1.0.0
       on-exit-leak-free: 2.1.2
