@@ -1,7 +1,7 @@
-import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Logger, Param, ParseBoolPipe, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { AllowAnonymous } from '../auth/anonymous.decorator';
-import type { Build, Builder, Package, Repo } from './builder.entity';
+import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
 import { BuildStatus } from '@./shared-lib';
 
@@ -13,7 +13,7 @@ export class BuilderController {
   @AllowAnonymous()
   @Get('builders')
   @ApiOperation({ summary: 'Get all builders.' })
-  @ApiOkResponse({ description: 'List of builders', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'List of builders', type: Builder, isArray: true })
   async getBuilders(): Promise<Builder[]> {
     return await this.builderService.getBuilders();
   }
@@ -21,9 +21,14 @@ export class BuilderController {
   @AllowAnonymous()
   @Get('packages')
   @ApiOperation({ summary: 'Get all packages.' })
-  @ApiOkResponse({ description: 'List of packages', type: Object, isArray: true })
-  async getPackages(): Promise<Package[]> {
-    return await this.builderService.getPackages();
+  @ApiQuery({ name: 'repo', required: false, description: 'Add repo to information' })
+  @ApiOkResponse({ description: 'List of packages', type: Package, isArray: true })
+  async getPackages(@Query('repo', new ParseBoolPipe({ optional: true })) repo = false): Promise<Package[]> {
+    if (repo) {
+      return await this.builderService.getPackagesWithRepo();
+    } else {
+      await this.builderService.getPackages();
+    }
   }
 
   @AllowAnonymous()
@@ -38,7 +43,7 @@ export class BuilderController {
   @AllowAnonymous()
   @Get('repos')
   @ApiOperation({ summary: 'Get all repos.' })
-  @ApiOkResponse({ description: 'List of repos', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'List of repos', type: Repo, isArray: true })
   async getRepos(): Promise<Repo[]> {
     return await this.builderService.getRepos();
   }
@@ -49,7 +54,7 @@ export class BuilderController {
   @ApiQuery({ name: 'builder', required: false, description: 'Builder name' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
   @ApiQuery({ name: 'amount', required: false, description: 'Amount to return', type: Number })
-  @ApiOkResponse({ description: 'List of builds', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'List of builds', type: Build, isArray: true })
   async getBuilds(
     @Query('builder') builder: string,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
@@ -64,7 +69,7 @@ export class BuilderController {
   @ApiQuery({ name: 'amount', required: false, description: 'Amount to return', type: Number })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
   @ApiQuery({ name: 'status', required: false, description: 'Build status', type: Number })
-  @ApiOkResponse({ description: 'List of latest builds', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'List of latest builds', type: Build, isArray: true })
   async getLatestBuilds(
     @Query('amount', new ParseIntPipe({ optional: true })) amount = 50,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
@@ -79,7 +84,7 @@ export class BuilderController {
   @ApiParam({ name: 'pkgname', description: 'Package name' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
   @ApiQuery({ name: 'amount', required: false, description: 'Amount to return', type: Number })
-  @ApiOkResponse({ description: 'List of latest builds for package', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'List of latest builds for package', type: Build, isArray: true })
   async getLatestBuildsByPkgname(
     @Param('pkgname') pkgname: string,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
@@ -94,7 +99,7 @@ export class BuilderController {
   @ApiParam({ name: 'pkgname', description: 'Package name' })
   @ApiParam({ name: 'days', description: 'Number of days' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiOkResponse({ description: 'List of latest builds for package with limit', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'List of latest builds for package with limit', type: Build, isArray: true })
   async getLatestBuildsByPkgnameWithAmount(
     @Param('pkgname') pkgname: string,
     @Param('days', ParseIntPipe) days: number,
