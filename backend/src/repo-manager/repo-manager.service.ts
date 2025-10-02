@@ -623,7 +623,7 @@ class RepoManager {
 
     for (const pkgbaseDir of pkgbaseDirs) {
       const configFile: string = join(repoDir, pkgbaseDir, '.CI', 'config');
-      const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir);
+      const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgbaseDir, repo);
       const metadata: ParsedPackageMetadata = pkgConfig.pkgInDb.metadata;
       let foundTrigger = false;
 
@@ -837,7 +837,7 @@ class RepoManager {
         continue;
       }
 
-      await this.bumpSinglePackage(repoDir, param.pkg.pkgname);
+      await this.bumpSinglePackage(repoDir, param.pkg.pkgname, param.pkg.repo);
 
       Logger.log(`Rebuilding ${param.pkg.pkgname} because of changed ${param.archPkg.pkgname}`, 'RepoManager');
       alreadyBumped.push({
@@ -919,15 +919,15 @@ class RepoManager {
    * Update the database with the versions of our packages and set any non-existing packages to inactive.
    */
   async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
-    const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
     const repoNames: string[] = repos.map((repo) => repo.name);
 
     Logger.log(`Updating database of ${repoNames.join(', ')}...`, 'RepoManager');
-    Logger.debug(`Created temporary directory ${tempDir}`, 'RepoManager');
 
     const downloads: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
       repos.map(async (repo): Promise<RepoWorkDir> => {
-        return await this.pullDatabases(repo.dbPath, tempDir, `${repo.name}`);
+        const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
+        Logger.debug(`Created temporary directory ${tempDir}`, 'RepoManager');
+        return await this.pullDatabases(repo.dbPath, tempDir, repo.name);
       }),
     );
 
@@ -944,7 +944,8 @@ class RepoManager {
     await Promise.allSettled(
       currentChaoticVersions.map(async (pkg) => {
         if (!pkg.name) return;
-        const chaoticPkg: Package = await pkgnameExists(pkg.name, this.dbConnections.packages);
+        const repo: Repo = repos.find((r) => r.name === pkg.repoName);
+        const chaoticPkg: Package = await pkgnameExists(pkg.name, this.dbConnections.packages, repo);
 
         // Account for already bumped packages
         if (pkg.pkgrel.toString().match(/\./)) {
@@ -955,6 +956,7 @@ class RepoManager {
         chaoticPkg.version = pkg.version;
         chaoticPkg.isActive = true;
         chaoticPkg.metadata = pkg.metaData;
+        chaoticPkg.repo = repo;
         void this.dbConnections.packages.save(chaoticPkg);
       }),
     );
@@ -963,9 +965,17 @@ class RepoManager {
     // Lastly, set any non-existing packages to inactive. The database can contain inactive
     // packages that are not in the Chaotic-AUR database anymore.
     Logger.debug('Setting non-existing packages to inactive...', 'RepoManager');
-    const allChaoticVersionsInDb: Package[] = await this.dbConnections.packages.find({});
+    const allChaoticVersionsInDb: Package[] = await this.dbConnections.packages.find({
+      relations: ['repo'],
+    });
     for (const pkg of allChaoticVersionsInDb) {
-      if (!currentChaoticVersions.find((chaoticPkg) => chaoticPkg.name === pkg.pkgname)) {
+      if (
+        !currentChaoticVersions.some(
+          (chaoticPkg) => chaoticPkg.name === pkg.pkgname && pkg.repo?.name === chaoticPkg.repoName,
+        ) &&
+        pkg.isActive
+      ) {
+        Logger.log(`Setting ${pkg.pkgname} in repo ${pkg.repo.name} to inactive`, 'RepoManager');
         pkg.isActive = false;
         void this.dbConnections.packages.save(pkg);
       }
@@ -980,7 +990,7 @@ class RepoManager {
    * @param repo The repository object
    * @returns An object containing the path, name, and workDir of the repository
    */
-  async pullDatabases(dbUrl: string, repoDir: string, repo: any): Promise<RepoWorkDir> {
+  async pullDatabases(dbUrl: string, repoDir: string, repo: string): Promise<RepoWorkDir> {
     const dbDownload: AxiosResponse = await this.httpService.axiosRef({
       url: dbUrl,
       method: 'GET',
@@ -1055,6 +1065,7 @@ class RepoManager {
           return {
             descFile: join(dir.path, pkg, 'desc'),
             filesFile: join(dir.path, pkg, 'files'),
+            repo: dir.name,
           };
         });
 
@@ -1076,6 +1087,7 @@ class RepoManager {
                   };
                 }
                 currentPackageVersion.metaData.soNameList = await this.parsePackageFiles(file.filesFile);
+                currentPackageVersion.repoName = file.repo;
                 currentPackageVersions.push(currentPackageVersion as ParsedPackage);
               }
             } catch (fileErr: any) {
@@ -1411,11 +1423,12 @@ class RepoManager {
    * Read the package config file and return the configs and rebuild triggers.
    * @param configFile The path to the config file
    * @param pkgbaseDir The directory of the package
+   * @param repo The repository object
    * @returns An object containing the configs, rebuild triggers, and the package in the database
    * @private
    */
-  async readPackageConfig(configFile: PathLike, pkgbaseDir: string): Promise<PackageConfig> {
-    const pkgInDb: Package = await pkgnameExists(pkgbaseDir, this.dbConnections.packages);
+  async readPackageConfig(configFile: PathLike, pkgbaseDir: string, repo?: Repo): Promise<PackageConfig> {
+    const pkgInDb: Package = await pkgnameExists(pkgbaseDir, this.dbConnections.packages, repo);
     const currentTriggersInDb: { pkgname: string; archVersion: string }[] = pkgInDb.bumpTriggers ?? [];
     let configText: string;
     let configLines: string[];
@@ -1496,21 +1509,22 @@ class RepoManager {
   /**
    * Get the package config of a PKGBUILD folder.
    * @param repoDir The root directory of the repository
+   * @param repo The repository object
    * @param pkgname The name of the package, optional
    * @returns An array of PackageConfig objects, if a pkgname is provided,
    * the array will contain only one object
    */
-  async getPackageConfig(repoDir: string, pkgname?: string): Promise<PackageConfig[]> {
+  async getPackageConfig(repoDir: string, repo: Repo, pkgname?: string): Promise<PackageConfig[]> {
     const pkgbaseFolders: string[] = await this.getDirectories(repoDir);
     const result = [];
     if (pkgname) {
       const configFile = join(repoDir, pkgname, '.CI', 'config');
-      const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgname);
+      const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, pkgname, repo);
       result.push(pkgConfig);
     } else {
       for (const folder in pkgbaseFolders) {
         const configFile = join(repoDir, folder, '.CI', 'config');
-        const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, folder);
+        const pkgConfig: PackageConfig = await this.readPackageConfig(configFile, folder, repo);
         result.push(pkgConfig);
       }
     }
@@ -1522,9 +1536,10 @@ class RepoManager {
    * Bump a single package in the database and writes the new version to the package config.
    * @param repoDir The directory of the repository
    * @param pkgname The name of the package
+   * @param repo The repository object
    */
-  async bumpSinglePackage(repoDir: string, pkgname: string): Promise<void> {
-    const pkgConfig = await this.readPackageConfig(join(repoDir, pkgname, '.CI', 'config'), pkgname);
+  async bumpSinglePackage(repoDir: string, pkgname: string, repo: Repo): Promise<void> {
+    const pkgConfig = await this.readPackageConfig(join(repoDir, pkgname, '.CI', 'config'), pkgname, repo);
     if (pkgConfig.configs['CI_PACKAGE_BUMP']) {
       const bumpCount = pkgConfig.configs['CI_PACKAGE_BUMP'].split('/')[1];
       const newVer = `${pkgConfig.pkgInDb.version}-${pkgConfig.pkgInDb.pkgrel}`;
@@ -1662,6 +1677,7 @@ class RepoManager {
         const configs: PackageConfig = await this.readPackageConfig(
           join(repoDir, pkg.pkgname, '.CI', 'config'),
           pkg.pkgname,
+          build.repo,
         );
 
         // if (

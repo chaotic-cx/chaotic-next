@@ -28,6 +28,7 @@ import { EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { TitleComponent } from '../title/title.component';
+import { RepoNamePipe } from '../pipes/repo-name.pipe';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -45,6 +46,7 @@ import { TitleComponent } from '../title/title.component';
     ButtonDirective,
     NgClass,
     TitleComponent,
+    RepoNamePipe,
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
@@ -127,12 +129,12 @@ export class PackageListComponent implements OnInit, AfterViewInit {
     void this.router.navigate([], { queryParams: { search: input.value } });
   }
 
-  typed(value: any): Package & { reponame: string } {
+  typed(value: any): Package {
     return value;
   }
 
-  openPkgbuild(pkg: Package & { reponame: string }) {
-    const url: string = pkg.reponame === 'chaotic-aur' ? this.appConfig.repoUrl : this.appConfig.repoUrlGaruda;
+  openPkgbuild(pkg: Package) {
+    const url: string = pkg.repo === this.appConfig.repoId ? this.appConfig.repoUrl : this.appConfig.repoUrlGaruda;
     window.open(`${url}/${pkg.pkgname}`, '_blank');
   }
 }

@@ -111,6 +111,7 @@ export interface Package {
   metadata?: ParsedPackageMetadata;
   pkgrel?: number;
   namcapAnalysis?: Partial<NamcapAnalysis>;
+  repo?: number;
 }
 
 export interface Repo {

@@ -69,34 +69,17 @@ export class BuilderService {
 
   /**
    * Returns all packages from the database.
+   * @param options An object containing whether to include repo information or not
    */
-  async getPackages(options?: any): Promise<Package[]> {
+  async getPackages(options?: { repo: boolean }): Promise<Package[]> {
     return this.packageRepository.find({
       cache: { id: 'packages-general', milliseconds: 30000 },
+      loadRelationIds: true,
+      relations: options.repo ? ['repo'] : [],
       // Null would be packages requested via the router, which are not in the repository database
-      where: { version: Not(IsNull()) },
+      where: { version: Not(IsNull()), isActive: true },
+      order: { pkgname: 'ASC' },
     });
-  }
-
-  /**
-   * Returns all packages with their latest associated repo from the database.
-   */
-  async getPackagesWithRepo(): Promise<Package[]> {
-    return await this.buildRepository.query(`
-        SELECT
-          p.*,
-          r.name AS repoName
-        FROM "package" p
-        LEFT JOIN (
-          SELECT DISTINCT ON (b."pkgbaseId", b."repoId") b.*
-          FROM "build" b
-          WHERE b."repoId" IS NOT NULL
-          ORDER BY b."pkgbaseId", b."repoId", b.timestamp DESC
-        ) b ON b."pkgbaseId" = p.id
-        LEFT JOIN "repo" r ON r.id = b."repoId"
-        WHERE p.version IS NOT NULL
-        ORDER BY p.pkgname, r.name;
-    `);
   }
 
   /**
@@ -413,6 +396,9 @@ export class BuilderDatabaseService extends Service {
   private dbConnections: BuilderDbConnections;
   private repoManagerService: RepoManagerService;
 
+  busyUpdating = false;
+  scheduledUpdate = false;
+
   constructor(broker: ServiceBroker, dbConnections: BuilderDbConnections, repoManagerService: RepoManagerService) {
     super(broker);
 
@@ -440,9 +426,9 @@ export class BuilderDatabaseService extends Service {
    */
   async logBuild(ctx: Context<MoleculerBuildObject>): Promise<void> {
     // These events are not relevant as they miss required data
-    if (ctx.eventName.match(/Histogram$/) !== null) return;
+    if (ctx.eventName.endsWith('Histogram')) return;
 
-    const params = ctx.params as MoleculerBuildObject;
+    const params = ctx.params;
 
     // No point in logging if the required fields are missing. Database will throw an error anyway.
     if (!params.builder_name || !params.target_repo || !params.pkgname) {
@@ -450,18 +436,18 @@ export class BuilderDatabaseService extends Service {
       return;
     }
 
-    const relations: [Builder, Repo, Package] = await Promise.all([
+    const relations: [Builder, Repo] = await Promise.all([
       builderExists(params.builder_name, this.dbConnections.builder),
       repoExists(params.target_repo, this.dbConnections.repo),
-      pkgnameExists(params.pkgname, this.dbConnections.package),
     ]);
+    const pkg: Package = await pkgnameExists(params.pkgname, this.dbConnections.package, relations[1]);
 
     if (relations.includes(undefined)) {
       Logger.error('Invalid relations or database is not available, throwing entry away', 'BuilderDatabaseService');
       return;
     }
 
-    relations[2].lastUpdated = new Date().toISOString();
+    pkg.lastUpdated = new Date().toISOString();
 
     const build: Partial<Build> = {
       arch: params.arch,
@@ -470,7 +456,7 @@ export class BuilderDatabaseService extends Service {
       logUrl: params.logUrl,
       timeToEnd: params.duration,
       commit: params.commit.split(':')[0],
-      pkgbase: relations[2],
+      pkgbase: pkg,
       repo: relations[1],
       status: params.status,
       replaced: params.replaced,
@@ -479,11 +465,30 @@ export class BuilderDatabaseService extends Service {
     // Update the chaotic versions as they changed with new successful builds
     if (params.status === BuildStatus.SUCCESS) {
       try {
-        await Promise.allSettled([
-          this.repoManagerService.updateChaoticVersions(),
+        const promises: Promise<void>[] = [
           this.repoManagerService.eventuallyBumpAffected(build),
           this.repoManagerService.processNamcapAnalysis(build as Build, params.namcapAnalysis),
-        ]);
+        ];
+
+        if (this.busyUpdating === false) {
+          this.busyUpdating = true;
+          promises.push(
+            (async () => {
+              await this.repoManagerService.updateChaoticVersions();
+              if (this.scheduledUpdate) {
+                this.scheduledUpdate = false;
+                await this.repoManagerService.updateChaoticVersions();
+              } else {
+                this.scheduledUpdate = false;
+              }
+            })(),
+          );
+        } else {
+          Logger.warn('Scheduling Chaotic version update, another update is in progress', 'BuilderDatabaseService');
+          this.scheduledUpdate = true;
+        }
+
+        await Promise.allSettled(promises);
       } catch (err: unknown) {
         Logger.error(err, 'RepoManager');
       }

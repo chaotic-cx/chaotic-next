@@ -24,6 +24,7 @@ export interface ParsedPackage {
   pkgrel: number;
   version: string;
   name: string;
+  repoName: string;
   metaData: ParsedPackageMetadata;
 }
 

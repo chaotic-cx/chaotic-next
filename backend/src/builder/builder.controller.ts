@@ -24,11 +24,7 @@ export class BuilderController {
   @ApiQuery({ name: 'repo', required: false, description: 'Add repo to information' })
   @ApiOkResponse({ description: 'List of packages', type: Package, isArray: true })
   async getPackages(@Query('repo', new ParseBoolPipe({ optional: true })) repo = false): Promise<Package[]> {
-    if (repo) {
-      return await this.builderService.getPackagesWithRepo();
-    } else {
-      return await this.builderService.getPackages();
-    }
+    return await this.builderService.getPackages({ repo });
   }
 
   @AllowAnonymous()
