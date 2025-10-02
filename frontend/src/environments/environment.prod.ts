@@ -15,4 +15,6 @@ export const environment: EnvironmentModel = {
   repoApiUrl: 'https://gitlab.com/api/v4/projects/54867625',
   repoUrl: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/',
   repoUrlGaruda: 'https://gitlab.com/garuda-linux/pkgbuilds/-/tree/main/',
+  repoId: 1,
+  repoIdGaruda: 2,
 };

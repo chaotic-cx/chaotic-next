@@ -36,6 +36,33 @@ export class Builder {
 }
 
 @Entity()
+export class Repo {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column('varchar')
+  name: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  repoUrl: string;
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
+
+  @Column({ type: 'int', nullable: true })
+  status: RepoStatus;
+
+  @Column({ type: 'varchar', default: 'main' })
+  gitRef: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  dbPath: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  apiToken: string;
+}
+
+@Entity()
 export class Package {
   @PrimaryGeneratedColumn()
   id: number;
@@ -66,33 +93,9 @@ export class Package {
 
   @Column({ type: 'jsonb', nullable: true })
   namcapAnalysis: Partial<NamcapAnalysis>;
-}
 
-@Entity()
-export class Repo {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column('varchar')
-  name: string;
-
-  @Column({ type: 'varchar', nullable: true })
-  repoUrl: string;
-
-  @Column({ type: 'boolean', default: true })
-  isActive: boolean;
-
-  @Column({ type: 'int', nullable: true })
-  status: RepoStatus;
-
-  @Column({ type: 'varchar', default: 'main' })
-  gitRef: string;
-
-  @Column({ type: 'varchar', nullable: true })
-  dbPath: string;
-
-  @Column({ type: 'varchar', nullable: true })
-  apiToken: string;
+  @ManyToOne(() => Repo, (repo) => repo.id, { cascade: true, nullable: true })
+  repo: Repo;
 }
 
 @Entity()
@@ -150,20 +153,23 @@ const repoMutex = new Mutex();
  * Check if a package exists in the database, if not create a new entry
  * @param pkgname The name of the package
  * @param connection The repository connection
+ * @param repo The repo the package belongs to
  * @returns The package object itself
  */
-export async function pkgnameExists(pkgname: string, connection: Repository<Package>): Promise<Package> {
+export async function pkgnameExists(pkgname: string, connection: Repository<Package>, repo: Repo): Promise<Package> {
   return pkgnameMutex.runExclusive(async () => {
     try {
-      const packages: Package[] = await connection.find({ where: { pkgname } });
+      const packages: Package[] = await connection.find({ where: { pkgname }, relations: ['repo'] });
       let packageExists: Package = packages.find((pkg) => {
-        return pkgname === pkg.pkgname;
+        return pkg.repo?.name === repo.name;
       });
 
       if (packageExists === undefined) {
         Logger.log(`Package ${pkgname} not found in database, creating new entry`, 'BuilderEntity');
+        Logger.debug(`Associated repo: ${repo.name}`, 'BuilderEntity');
         packageExists = await connection.save({
           pkgname: pkgname,
+          repo: repo,
           lastUpdated: new Date().toISOString(),
           isActive: true,
         });

@@ -58,14 +58,11 @@
         <th style="min-width: 15rem; max-width: 20rem">
           <div class="flex items-center">Homepage</div>
         </th>
-        <th pSortableColumn="pkgname" style="min-width: 5rem">
+        <th pSortableColumn="repo" style="min-width: 5rem">
           <div class="flex items-center">
             Repository
-            <p-sortIcon field="pkgname" />
+            <p-sortIcon field="repo" />
           </div>
-        </th>
-        <th style="min-width: 5rem">
-          <div class="flex items-center">Active</div>
         </th>
         <th style="min-width: 5rem">
           <div class="flex items-center">PKGBUILD</div>
@@ -126,17 +123,8 @@
                 'text-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
-              >{{ pkg.reponame }}</span
+              >{{ pkg.repo | repoName }}</span
             >
-          </td>
-          <td>
-            <i
-              class="pi"
-              [ngClass]="{
-                'pi-check-circle text-green': pkg.isActive,
-                'pi-trash text-surface0': !pkg.isActive,
-              }"
-            ></i>
           </td>
           <td>
             @if (pkg.isActive) {

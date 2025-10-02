@@ -13,4 +13,6 @@ export interface EnvironmentModel {
   repoApiUrl: string;
   repoUrl: string;
   repoUrlGaruda: string;
+  repoId: number;
+  repoIdGaruda: number;
 }

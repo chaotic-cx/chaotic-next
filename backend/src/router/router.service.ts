@@ -30,11 +30,11 @@ export class RouterService {
       throw new BadRequestException('Missing required fields, throwing entry away');
     }
 
-    const relations: [Package, Repo, Mirror] = await Promise.all([
-      await pkgnameExists(body.package, this.packageRepo),
+    const relations: [Repo, Mirror] = await Promise.all([
       await repoExists(body.repo, this.repoRepo),
       await mirrorExists(body.hostname, this.mirrorRepo),
     ]);
+    const pkg: Package = await pkgnameExists(body.package, this.packageRepo, relations[0]);
 
     if (relations.includes(null)) {
       throw new BadRequestException('Invalid relations, throwing entry away');
@@ -42,10 +42,10 @@ export class RouterService {
 
     const toSave: Partial<RouterHit> = {
       country: body.country,
-      hostname: relations[2],
+      hostname: relations[1],
       ip: body.ip,
-      pkgbase: relations[0],
-      repo: relations[1],
+      pkgbase: pkg,
+      repo: relations[0],
       repo_arch: body.repo_arch,
       timestamp: new Date(Number(body.timestamp) * 1000).toISOString(),
       user_agent: body.user_agent,
