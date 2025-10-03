@@ -6,6 +6,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 export class LogurlPipe implements PipeTransform {
   transform(value: string | undefined): string {
     if (value === 'purged') return value;
-    return `<a href='${value}' class='pi pi-external-link'  target='_blank'> click</a>`;
+
+    return `<i class="pi pi-external-link text-mauve align-middle" style="font-size: 0.4rem !important;"> </i>
+       <a pRipple href='${value}' target='_blank'> click</a>`;
   }
 }
