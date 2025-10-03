@@ -8,14 +8,13 @@ import { ShellComponent } from '@garudalinux/core';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
 import { MenuItem } from 'primeng/api';
-import { ScrollTop } from 'primeng/scrolltop';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { EnvironmentModel } from '../environments/environment.model';
 import { routeAnimations } from './app.routes';
 import { FooterComponent } from './footer/footer.component';
 
 @Component({
-  imports: [RouterModule, ShellComponent, NgOptimizedImage, ScrollTop, FooterComponent],
+  imports: [RouterModule, ShellComponent, NgOptimizedImage, FooterComponent],
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
