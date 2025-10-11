@@ -1,6 +1,6 @@
 <div class="background min-h-svh">
   <garuda-shell [menuItems]="items" class="p-2">
-    <img garudaShellBarStart ngSrc="assets/logo_28.png" width="28" height="28" alt="logo" />
+    <img garudaShellBarStart ngSrc="/assets/logo_28.png" width="28" height="28" alt="logo" />
     <div [@routerTransition]="prepareRoute(routerOutlet)" class="router-container">
       <router-outlet #routerOutlet="outlet"></router-outlet>
     </div>

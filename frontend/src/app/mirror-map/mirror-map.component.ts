@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal } from '@angular/core';
-import { Dot, NgxMapComponent } from '@omnedia/ngx-map';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { Dot } from '@omnedia/ngx-map';
+import { NgxMapComponent } from '../dotted-map/ngx-map.component';
 import { AppService } from '../app.service';
 import { retry } from 'rxjs';
 import { flavors } from '@catppuccin/palette';
@@ -11,7 +12,7 @@ import { flavors } from '@catppuccin/palette';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgxMapComponent],
 })
-export class MirrorMapComponent {
+export class MirrorMapComponent implements OnInit {
   protected dots: Dot[] = [];
   protected readonly loading = signal<boolean>(true);
   protected readonly lineColor = flavors.mocha.colors.mauve.hex;
@@ -20,7 +21,7 @@ export class MirrorMapComponent {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  constructor() {
+  ngOnInit() {
     this.appService
       .getMirrorsStats()
       .pipe(retry({ count: 3, delay: 5000 }))

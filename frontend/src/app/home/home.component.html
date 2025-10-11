@@ -2,7 +2,7 @@
   <div class="surface-section mt-5 px-4 py-8 md:mt-10 md:px-6 lg:px-8">
     <div class="text-center">
       <img
-        ngSrc="assets/logo.svg"
+        ngSrc="/assets/logo.svg"
         alt="logo"
         class="mx-auto cursor-pointer"
         width="741"
@@ -27,20 +27,18 @@
         >
           Start right away
         </button>
+        <span
+          class="font-bold animate-bounce block mt-20 text-6xl text-primary pi pi-arrow-down"
+          style="font-size: 3rem"
+        ></span>
       </div>
     </div>
   </div>
 </div>
 
-<div
-  pAnimateOnScroll
-  class="animate-duration-1000 mx-auto my-10"
-  enterClass="animate-fadein"
-  leaveClass="animate-fadeout"
-  [once]="true"
->
+<div class="mx-auto sm:my-10 mt-40 mb-10">
   @defer (on viewport) {
-    <chaotic-newsfeed></chaotic-newsfeed>
+    <chaotic-newsfeed class="fade-in"></chaotic-newsfeed>
   } @placeholder {
     <div class="mx-auto">
       <h2 class="text-maroon my-5 text-center text-2xl font-bold">
@@ -53,15 +51,9 @@
     </div>
   }
 </div>
-<div
-  pAnimateOnScroll
-  class="animate-duration-1000 mx-auto mb-10 mt-40"
-  enterClass="animate-fadein"
-  leaveClass="animate-fadeout"
-  [once]="true"
->
+<div class="mx-auto mb-10 mt-40">
   @defer (on viewport) {
-    <chaotic-mirror-map></chaotic-mirror-map>
+    <chaotic-mirror-map class="fade-in"></chaotic-mirror-map>
   } @placeholder {
     <div class="chaotic-container-regular">
       <div class="pb-5 md:px-20">
@@ -78,7 +70,7 @@
       </div>
       <div
         class="animate-pulse mt-5 mx-auto rounded-3xl"
-        [ngClass]="{ 'h-96': !isWide(), 'h-[800px]': isWide() }"
+        [ngClass]="{ 'h-40': !isWide(), 'h-[800px]': isWide() }"
       ></div>
     </div>
   }
