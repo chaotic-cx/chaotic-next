@@ -1,0 +1,83 @@
+<div class="om-map" [ngClass]="styleClass" #OmMap>
+  <div class="om-map-svg" [innerHTML]="svgMap()"></div>
+  <svg class="om-map-overlay" viewBox="0 0 800 400">
+    @for (dot of dots(); track $index) {
+      <g>
+        <path
+          #animatedPath
+          [attr.d]="
+            createCurvedPath(projectPoint(dot.start.lat, dot.start.lng), projectPoint(dot.end.lat, dot.end.lng))
+          "
+          fill="none"
+          [attr.stroke]="lineColor"
+          stroke-width="1"
+          [attr.stroke-dasharray]="getPathLength($index)"
+          [attr.stroke-dashoffset]="getPathLength($index)"
+        >
+          @if (animated && isInView()) {
+            <animate
+              [id]="'omMapPathAnimation' + $index"
+              attributeName="stroke-dashoffset"
+              [attr.from]="getPathLength($index)"
+              [attr.to]="-1 * getPathLength($index)"
+              dur="2s"
+              [attr.begin]="dot.animationStart"
+            />
+          }
+          @if (!animated && isInView()) {
+            <animate
+              #animatedPathAnimation
+              [id]="'omMapPathAnimation' + $index"
+              attributeName="stroke-dashoffset"
+              [attr.from]="getPathLength($index)"
+              [attr.to]="0"
+              dur="1s"
+              [attr.begin]="0.5 * $index + 's'"
+              fill="freeze"
+            />
+          }
+        </path>
+      </g>
+      <g>
+        <circle
+          [attr.cx]="projectPoint(dot.start.lat, dot.start.lng).x"
+          [attr.cy]="projectPoint(dot.start.lat, dot.start.lng).y"
+          r="2"
+          [attr.fill]="lineColor"
+        />
+        <circle
+          [attr.cx]="projectPoint(dot.start.lat, dot.start.lng).x"
+          [attr.cy]="projectPoint(dot.start.lat, dot.start.lng).y"
+          r="2"
+          [attr.fill]="lineColor"
+          opacity="0.5"
+        >
+          @if (isInView()) {
+            <animate attributeName="r" from="2" to="8" dur="1.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" from="0.5" to="0" dur="1.5s" repeatCount="indefinite" />
+          }
+        </circle>
+      </g>
+      <g>
+        <circle
+          [attr.cx]="projectPoint(dot.end.lat, dot.end.lng).x"
+          [attr.cy]="projectPoint(dot.end.lat, dot.end.lng).y"
+          r="2"
+          [attr.fill]="lineColor"
+        />
+        <circle
+          [attr.cx]="projectPoint(dot.end.lat, dot.end.lng).x"
+          [attr.cy]="projectPoint(dot.end.lat, dot.end.lng).y"
+          r="2"
+          [attr.fill]="lineColor"
+          opacity="0.5"
+        >
+          @if (isInView()) {
+            <animate attributeName="r" from="2" to="8" dur="1.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" from="0.5" to="0" dur="1.5s" repeatCount="indefinite" />
+          }
+        </circle>
+      </g>
+    }
+  </svg>
+</div>

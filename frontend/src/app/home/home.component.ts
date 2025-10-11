@@ -3,7 +3,7 @@ import { NgClass, NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AnimateOnScrollModule } from 'primeng/animateonscroll';
-import { ButtonDirective, ButtonLabel } from 'primeng/button';
+import { ButtonDirective, ButtonIcon, ButtonLabel } from 'primeng/button';
 import { Ripple } from 'primeng/ripple';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
