@@ -102,6 +102,10 @@ samp {
   height: 100%;
 }
 
+p-scroll-top {
+  @apply z-[999] fixed;
+}
+
 .p-inputtext,
 .p-button,
 .p-panel,
