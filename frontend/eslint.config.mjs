@@ -1,26 +1,10 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { FlatCompat } from '@eslint/eslintrc';
-import js from '@eslint/js';
-import defaultExport from '../eslint.config.mjs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
-});
+import nx from '@nx/eslint-plugin';
+import baseConfig from '../eslint.config.mjs';
 
 export default [
-  {
-    ignores: ['!**/*'],
-  },
-  ...defaultExport,
-  ...compat.extends('plugin:@nx/angular', 'plugin:@angular-eslint/template/process-inline-templates').map((config) => ({
-    ...config,
-    files: ['**/*.ts'],
-  })),
+  ...baseConfig,
+  ...nx.configs['flat/angular'],
+  ...nx.configs['flat/angular-template'],
   {
     files: ['**/*.ts'],
 
@@ -29,27 +13,18 @@ export default [
         'error',
         {
           type: 'attribute',
-          prefix: 'app',
+          prefix: 'chaotic',
           style: 'camelCase',
         },
       ],
-
       '@angular-eslint/component-selector': [
         'error',
         {
           type: 'element',
-          prefix: 'app',
+          prefix: 'chaotic',
           style: 'kebab-case',
         },
       ],
     },
-  },
-  ...compat.extends('plugin:@nx/angular-template').map((config) => ({
-    ...config,
-    files: ['**/*.html'],
-  })),
-  {
-    files: ['**/*.html'],
-    rules: {},
   },
 ];

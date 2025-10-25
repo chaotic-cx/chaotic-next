@@ -1,37 +1,22 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { FlatCompat } from '@eslint/eslintrc';
-import js from '@eslint/js';
 import nx from '@nx/eslint-plugin';
-import globals from 'globals';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
-});
+import jsdoc from 'eslint-plugin-jsdoc';
 
 export default [
+  ...nx.configs['flat/base'],
+  ...nx.configs['flat/typescript'],
+  ...nx.configs['flat/javascript'],
+  ...jsdoc.configs['flat/recommended-mixed'],
   {
-    ignores: ['**/node_modules', 'dist/**', 'build/**', 'public/**'],
+    ignores: ['**/dist', '**/node_modules'],
   },
   {
-    plugins: {
-      '@nx': nx,
-    },
-  },
-  {
-    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
-
+    files: ['**/*.ts', '**/*.js'],
     rules: {
       '@nx/enforce-module-boundaries': [
         'error',
         {
           enforceBuildableLibDependency: true,
-          allow: [],
-
+          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
             {
               sourceTag: '*',
@@ -40,35 +25,36 @@ export default [
           ],
         },
       ],
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: ['variable', 'parameter'],
+          modifiers: ['destructured'],
+          format: null,
+        },
+        {
+          selector: ['class', 'typeLike'],
+          format: ['PascalCase'],
+        },
+        {
+          selector: ['function', 'method'],
+          format: ['camelCase'],
+          leadingUnderscore: 'forbid',
+        },
+        {
+          selector: 'variableLike',
+          format: ['camelCase'],
+          leadingUnderscore: 'forbid',
+        },
+        {
+          selector: 'interface',
+          format: ['PascalCase'],
+          custom: {
+            regex: '^I[A-Z]',
+            match: false,
+          },
+        },
+      ],
     },
-  },
-  ...compat.extends('plugin:@nx/typescript').map((config) => ({
-    ...config,
-    files: ['**/*.ts', '**/*.tsx'],
-  })),
-  {
-    files: ['**/*.ts', '**/*.tsx'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-  ...compat.extends('plugin:@nx/javascript').map((config) => ({
-    ...config,
-    files: ['**/*.js', '**/*.jsx'],
-  })),
-  {
-    files: ['**/*.js', '**/*.jsx'],
-    rules: {},
-  },
-  {
-    files: ['**/*.spec.ts', '**/*.spec.tsx', '**/*.spec.js', '**/*.spec.jsx'],
-
-    languageOptions: {
-      globals: {
-        ...globals.jest,
-      },
-    },
-
-    rules: {},
   },
 ];
