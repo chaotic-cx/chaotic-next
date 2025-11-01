@@ -518,11 +518,11 @@ export class BuilderDatabaseService extends Service {
         this.sseSubject$.next({
           data: {
             type: 'build',
-            package: build.pkgbase,
-            version: updatedPackage.version,
-            pkgrel: updatedPackage.pkgrel,
+            package: build.pkgbase.pkgname,
+            version: build.pkgbase.version,
+            pkgrel: build.pkgbase.pkgrel,
             duration: build.timeToEnd,
-            repo: build.repo,
+            repo: build.repo.name,
             status: build.status,
           },
         });
