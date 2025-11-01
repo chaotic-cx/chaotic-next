@@ -71,7 +71,7 @@ export class NewsfeedComponent implements OnInit {
           } else {
             switch (item.type) {
               case 'text_link':
-                return `<a class="text-mauve" href="${item.href}" target="_blank">${item.text}</a>`;
+                return `<a class="text-ctp-mauve" href="${item.href}" target="_blank">${item.text}</a>`;
               case 'bold':
                 return `<strong>${item.text}</strong>`;
               case 'code':
@@ -85,11 +85,11 @@ export class NewsfeedComponent implements OnInit {
               case 'underline':
                 return `<u>${item.text}</u>`;
               case 'mention':
-                return `<a class="text-mauve" href="https://t.me/${item.text.replace('@', '')}" target="_blank">${item.text}</a>`;
+                return `<a class="text-ctp-mauve" href="https://t.me/${item.text.replace('@', '')}" target="_blank">${item.text}</a>`;
               case 'email':
-                return `<a class="text-mauve" href="mailto:${item.text}">${item.text}</a>`;
+                return `<a class="text-ctp-mauve" href="mailto:${item.text}">${item.text}</a>`;
               case 'phone_number':
-                return `<a class="text-mauve" href="tel:${item.text}">${item.text}</a>`;
+                return `<a class="text-ctp-mauve" href="tel:${item.text}">${item.text}</a>`;
               default:
                 return item.text;
             }

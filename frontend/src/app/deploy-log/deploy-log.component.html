@@ -84,14 +84,14 @@
             <i
               class="pi"
               [ngClass]="{
-                'pi-check-circle text-green': build.statusText === 'success',
-                'pi-check text-sapphire': build.statusText === 'already-built',
-                'pi-angle-double-right text-text': build.statusText === 'skipped',
-                'pi-exclamation-circle text-red': build.statusText === 'failure',
-                'pi-hourglass text-maroon': build.statusText === 'timeout',
-                'pi-ban text-peach': build.statusText === 'canceled',
-                'pi-replay text-yellow': build.statusText === 'canceled-requeue',
-                'pi-exclamation-triangle text-blue': build.statusText === 'software-failure',
+                'pi-check-circle text-ctp-green': build.statusText === 'success',
+                'pi-check text-ctp-sapphire': build.statusText === 'already-built',
+                'pi-angle-double-right text-ctp-text': build.statusText === 'skipped',
+                'pi-exclamation-circle text-ctp-red': build.statusText === 'failure',
+                'pi-hourglass text-ctp-maroon': build.statusText === 'timeout',
+                'pi-ban text-ctp-peach': build.statusText === 'canceled',
+                'pi-replay text-ctp-yellow': build.statusText === 'canceled-requeue',
+                'pi-exclamation-triangle text-ctp-blue': build.statusText === 'software-failure',
               }"
             ></i>
             <span class="ml-1 align-middle">{{ build.statusText }}</span>

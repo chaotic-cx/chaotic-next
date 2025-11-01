@@ -37,7 +37,7 @@ export class MemorialV2Component implements OnInit {
   subtitle =
     'Three years passed since the the third birthday of Chaotic-AUR and celebrating it with a memorial of screenshots.<br>' +
     'This time, we are celebrating the sixth birthday of Chaotic-AUR with another round of community contributions ' +
-    'and the release of our <a class="text-maroon" href="https://gitlab.com/chaotic-aur/pkgbuilds"> new build system infra 4.0 🎉</a>';
+    'and the release of our <a class="text-ctp-maroon" href="https://gitlab.com/chaotic-aur/pkgbuilds"> new build system infra 4.0 🎉</a>';
 
   constructor() {
     for (const filename of this.desktops) {

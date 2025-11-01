@@ -11,7 +11,7 @@
 <div class="min-h-footer">
   @if (!initialSearchDone) {
     <div class="mx-auto">
-      <i class="pi pi-search text-maroon mt-36" style="font-size: 10rem"></i>
+      <i class="pi pi-search text-ctp-maroon mt-36" style="font-size: 10rem"></i>
     </div>
   }
   <p-table [value]="data" [tableStyle]="{ 'width': '100%', 'margin-top': '20px' }">
@@ -20,7 +20,7 @@
         <td>{{ dataset.key | packageDetailKey }}</td>
         @if (dataset.key === 'url') {
           <td>
-            <a [href]="dataset.value" target="_blank" class="text-mauve" rel="noopener noreferrer">{{
+            <a [href]="dataset.value" target="_blank" class="text-ctp-mauve" rel="noopener noreferrer">{{
               dataset.value
             }}</a>
           </td>
@@ -41,7 +41,7 @@
             }
           </td>
         } @else if (!dataset.value || dataset.value?.length === 0) {
-          <td class="text-text">n/a</td>
+          <td class="text-ctp-text">n/a</td>
         } @else {
           <td>{{ dataset.value }}</td>
         }

@@ -7,7 +7,7 @@
         <p>
           If a bug is present in a package, please report it to our
           <a
-            class="text-mauve"
+            class="text-ctp-mauve"
             href="https://github.com/chaotic-aur/packages/issues/new/choose"
             rel="noopener"
             target="_blank"
@@ -27,7 +27,7 @@
       <div class="chaotic-panel">
         We start by retrieving the
         <a
-          class="text-mauve"
+          class="text-ctp-mauve"
           href="https://keyserver.ubuntu.com/pks/lookup?search=3056513887B78AEB&fingerprint=on&op=index"
         >
           primary key</a
@@ -42,12 +42,12 @@
         <p-divider />
         <div class="chaotic-panel">
           This allows us to install our
-          <a class="text-mauve" href="https://github.com/chaotic-aur/keyring" rel="noopener" target="_blank"
+          <a class="text-ctp-mauve" href="https://github.com/chaotic-aur/keyring" rel="noopener" target="_blank"
             >chaotic-keyring</a
           >
           and
           <a
-            class="text-mauve"
+            class="text-ctp-mauve"
             href="https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/chaotic-mirrorlist"
             rel="noopener"
             target="_blank"
@@ -86,12 +86,12 @@
       <div class="chaotic-panel text-md">
         <p>
           To see whether a package was already deployed after the last update on AUR, you can check the
-          <a class="text-mauve" routerLink="../deployments">deploy log</a>.
+          <a class="text-ctp-mauve" routerLink="../deployments">deploy log</a>.
         </p>
         <p-divider />
         <p>
           You can always report build failures or broken packages via our
-          <a class="text-mauve" href="https://github.com/chaotic-aur/packages" rel="noopener" target="_blank"
+          <a class="text-ctp-mauve" href="https://github.com/chaotic-aur/packages" rel="noopener" target="_blank"
             >GitHub
           </a>
           repository by creating a new issue.
@@ -99,7 +99,7 @@
         <p-divider />
         <p>
           Our main repository is the one on
-          <a class="text-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds" rel="noopener" target="_blank"
+          <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds" rel="noopener" target="_blank"
             >GitLab
           </a>
           as the build system makes extensive use of its CI pipelines.
@@ -114,7 +114,7 @@
         <p>
           If you would like to see a new package added to Chaotic-AUR, please submit a new issue via our
           <a
-            class="text-mauve"
+            class="text-ctp-mauve"
             href="https://github.com/chaotic-aur/packages/issues/new/choose"
             rel="noopener"
             target="_blank"
@@ -124,7 +124,7 @@
         <br />
         <p>
           Before submitting the request, ensure searching for
-          <a class="text-mauve" href="https://github.com/chaotic-aur/packages/issues" rel="noopener" target="_blank"
+          <a class="text-ctp-mauve" href="https://github.com/chaotic-aur/packages/issues" rel="noopener" target="_blank"
             >existing issues</a
           >
           concerning the same package.<br />
@@ -134,7 +134,7 @@
         <p>
           Also, check whether the license permits distributing the software, as well as it not being part of our
           <a
-            class="text-mauve"
+            class="text-ctp-mauve"
             href="https://gitlab.com/chaotic-aur/pkgbuilds/-/blob/main/README.md#banished-and-rejected-packages-"
             rel="noopener"
             target="_blank"
@@ -149,7 +149,7 @@
     <p-panel header="Recommendations">
       <div class="chaotic-panel">
         You may want to use
-        <a class="text-mauve" href="https://wiki.archlinux.org/index.php/Powerpill" rel="noopener" target="_blank"
+        <a class="text-ctp-mauve" href="https://wiki.archlinux.org/index.php/Powerpill" rel="noopener" target="_blank"
           >powerpill</a
         >
         to download from all mirrors simultaneously if you are living in non-first-world countries. <br />
@@ -166,7 +166,11 @@
         <p-divider />
 
         If you need to omit a package update to use locally built ones (e.g: with native optimizations),
-        <a class="text-mauve" href="https://www.archlinux.org/pacman/pacman.conf.5.html" rel="noopener" target="_blank"
+        <a
+          class="text-ctp-mauve"
+          href="https://www.archlinux.org/pacman/pacman.conf.5.html"
+          rel="noopener"
+          target="_blank"
           >you can add the following</a
         >
         to <code>/etc/pacman.conf</code>:
@@ -183,7 +187,7 @@
                                                          language="shell" pTooltip="Copy to clipboard"
                                                          tooltipPosition="top"></code></pre>
         Some AUR helpers like
-        <a class="text-mauve" href="https://github.com/Morganamilo/paru" rel="noopener" target="_blank">paru</a>
+        <a class="text-ctp-mauve" href="https://github.com/Morganamilo/paru" rel="noopener" target="_blank">paru</a>
         support this syntax as well.
         <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(installPackageParu)"
                                                          [highlight]="installPackageParu"
@@ -200,7 +204,7 @@
     <p-panel header="Further information">
       <div class="chaotic-panel">
         For deeper insight concerning our build system, you may consult the
-        <a class="text-mauve" href="https://chaotic-manager.pages.dev" rel="noopener" target="_blank"
+        <a class="text-ctp-mauve" href="https://chaotic-manager.pages.dev" rel="noopener" target="_blank"
           >Chaotic Manager</a
         >
         documentation.
