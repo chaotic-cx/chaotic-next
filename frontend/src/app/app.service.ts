@@ -30,7 +30,7 @@ export class AppService {
   /**
    * Channel for instant updates regarding builds and pipeline status
    */
-  serverEvents: EventSource = new EventSource(`${this.appConfig.backendUrl}/builder/sse`);
+  serverEvents: EventSource = new EventSource(`${this.appConfig.backendUrl}/sse`);
 
   /**
    * Subject for SSE notifications

@@ -52,21 +52,6 @@ export class BuilderService {
       repo: this.repoRepository,
     };
 
-    setInterval(() => {
-      Logger.debug('asdasdsa');
-      this.eventService.sseEvents$.next({
-        data: {
-          type: 'build',
-          package: 'chaotic',
-          version: '1.2.2',
-          pkgrel: 1,
-          duration: 123123123123,
-          repo: 'chaotic-aur',
-          status: BuildStatus.SUCCESS,
-        },
-      });
-    }, 10000);
-
     try {
       this.connection.connect().then(() => {
         this.broker = new ServiceBroker(brokerConfig(generateNodeId(), this.connection));
