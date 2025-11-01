@@ -1,6 +1,8 @@
 <chaotic-title
   title="Build status"
-  subtitleHtml="Currently running pipelines and build queue.<br>Last updated: {{ lastUpdated() | date: 'short' }}"
+  subtitleHtml="Currently running pipelines and build queue.<br>Last updated: {{
+    buildStatusService.lastUpdated() | date: 'short'
+  }}"
 ></chaotic-title>
 
 <div class="chaotic-container-wide-center md:chaotic-container-regular">
@@ -8,8 +10,8 @@
     <div class="flex">
       <p-card header="Pipelines" class="md:w-1/4">
         <div class="mt-5">
-          @if (!loadingPipelines()) {
-            <p-timeline [value]="pipelineWithStatus()">
+          @if (!buildStatusService.loadingPipelines()) {
+            <p-timeline [value]="buildStatusService.pipelineWithStatus()">
               <ng-template #opposite let-unTypedPipeline>
                 <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
                   <small class="text-primary">{{ pipeline.pipeline.created_at | date: 'short' }}</small>
@@ -41,14 +43,14 @@
         </div>
       </p-card>
       <div class="mx-auto">
-        @if (loadingQueue()) {
+        @if (buildStatusService.loadingQueue()) {
           <div class="md:w-1/4">
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <p-skeleton height="30rem" />
             </p-card>
           </div>
         }
-        @if (activeQueue.length > 0) {
+        @if (buildStatusService.activeQueue.length > 0) {
           <div class="md:w-1/4">
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
@@ -56,7 +58,7 @@
               </ng-template>
               <ng-template #title>Active builds</ng-template>
               <ng-template #subtitle>These are currently ongoing builds</ng-template>
-              <p-table [value]="activeQueue">
+              <p-table [value]="buildStatusService.activeQueue">
                 <ng-template #header>
                   <tr>
                     <th>Name</th>
@@ -84,10 +86,10 @@
             </p-card>
           </div>
         }
-        @if (waitingQueue.length > 0) {
+        @if (buildStatusService.waitingQueue.length > 0) {
           <div
             [ngClass]="{
-              'mt-5': activeQueue.length > 0,
+              'mt-5': buildStatusService.activeQueue.length > 0,
             }"
           >
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
@@ -97,11 +99,11 @@
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
               <p-table
-                [value]="waitingQueue"
+                [value]="buildStatusService.waitingQueue"
                 [rows]="12"
                 [rowsPerPageOptions]="[12, 20, 30]"
                 [sortOrder]="1"
-                [paginator]="waitingQueue.length > 10"
+                [paginator]="buildStatusService.waitingQueue.length > 10"
                 sortField="name"
               >
                 <ng-template #header>
@@ -123,10 +125,10 @@
             </p-card>
           </div>
         }
-        @if (idleQueue.length > 0) {
+        @if (buildStatusService.idleQueue.length > 0) {
           <div
             [ngClass]="{
-              'mt-5': activeQueue.length > 0 || waitingQueue.length > 0,
+              'mt-5': buildStatusService.activeQueue.length > 0 || buildStatusService.waitingQueue.length > 0,
             }"
           >
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
@@ -135,7 +137,7 @@
               </ng-template>
               <ng-template #title>Idle builders</ng-template>
               <ng-template #subtitle>Currently idle builders</ng-template>
-              <p-table [value]="idleQueue" [sortOrder]="1" sortField="name">
+              <p-table [value]="buildStatusService.idleQueue" [sortOrder]="1" sortField="name">
                 <ng-template #header>
                   <tr>
                     <th>Name</th>
@@ -158,8 +160,8 @@
       </div>
       <p-card header="Latest deployments" class="md:w-1/4">
         <div class="mt-5">
-          @if (!loadingDeployments()) {
-            <p-timeline [value]="latestDeployments">
+          @if (!buildStatusService.loadingDeployments()) {
+            <p-timeline [value]="buildStatusService.latestDeployments">
               <ng-template #opposite let-untypedDeployment>
                 <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
                   <small class="text-primary">{{ deployment.timestamp | date: 'short' }}</small>
@@ -193,14 +195,14 @@
       <p-tabpanels>
         <p-tabpanel value="0">
           <div class="chaotic-tab-content">
-            @if (loadingQueue()) {
+            @if (buildStatusService.loadingQueue()) {
               <div class="md:w-1/4">
                 <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
                   <p-skeleton height="30rem" />
                 </p-card>
               </div>
             }
-            @if (activeQueue.length > 0) {
+            @if (buildStatusService.activeQueue.length > 0) {
               <div style="margin-top: 2.5rem">
                 <p-card [style]="{ width: '100%', overflow: 'hidden' }">
                   <ng-template #header>
@@ -208,7 +210,7 @@
                   </ng-template>
                   <ng-template #title>Active builds</ng-template>
                   <ng-template #subtitle>These are currently ongoing builds</ng-template>
-                  <p-table [value]="activeQueue" [sortOrder]="1" sortField="name">
+                  <p-table [value]="buildStatusService.activeQueue" [sortOrder]="1" sortField="name">
                     <ng-template #header>
                       <tr>
                         <th>Name</th>
@@ -237,7 +239,7 @@
                 </p-card>
               </div>
             }
-            @if (waitingQueue.length > 0) {
+            @if (buildStatusService.waitingQueue.length > 0) {
               <div style="margin-top: 2.5rem">
                 <p-card [style]="{ width: '100%', overflow: 'hidden' }">
                   <ng-template #header>
@@ -246,11 +248,11 @@
                   <ng-template #title>Waiting builds</ng-template>
                   <ng-template #subtitle>These are currently queued builds</ng-template>
                   <p-table
-                    [value]="waitingQueue"
+                    [value]="buildStatusService.waitingQueue"
                     [rows]="12"
                     [rowsPerPageOptions]="[12, 20, 30]"
                     [sortOrder]="1"
-                    [paginator]="waitingQueue.length > 10"
+                    [paginator]="buildStatusService.waitingQueue.length > 10"
                     sortField="name"
                   >
                     <ng-template #header>
@@ -272,10 +274,10 @@
                 </p-card>
               </div>
             }
-            @if (idleQueue.length > 0) {
+            @if (buildStatusService.idleQueue.length > 0) {
               <div
                 [ngClass]="{
-                  'mt-5': activeQueue.length > 0 || waitingQueue.length > 0,
+                  'mt-5': buildStatusService.activeQueue.length > 0 || buildStatusService.waitingQueue.length > 0,
                 }"
               >
                 <p-card [style]="{ width: '100%', overflow: 'hidden' }">
@@ -284,7 +286,7 @@
                   </ng-template>
                   <ng-template #title>Idle builders</ng-template>
                   <ng-template #subtitle>Currently idle builders</ng-template>
-                  <p-table [value]="idleQueue" [sortOrder]="1" sortField="name">
+                  <p-table [value]="buildStatusService.idleQueue" [sortOrder]="1" sortField="name">
                     <ng-template #header>
                       <tr>
                         <th>Name</th>
@@ -308,8 +310,8 @@
         </p-tabpanel>
         <p-tabpanel value="1">
           <div class="chaotic-tab-content">
-            @if (!loadingPipelines()) {
-              <p-timeline [value]="pipelineWithStatus()">
+            @if (!buildStatusService.loadingPipelines()) {
+              <p-timeline [value]="buildStatusService.pipelineWithStatus()">
                 <ng-template #opposite let-unTypedPipeline>
                   <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
                     <small class="text-primary">{{ pipeline.pipeline.created_at | date: 'short' }}</small>
@@ -342,8 +344,8 @@
         </p-tabpanel>
         <p-tabpanel value="2">
           <div class="chaotic-tab-content">
-            @if (!loadingDeployments()) {
-              <p-timeline [value]="latestDeployments">
+            @if (!buildStatusService.loadingDeployments()) {
+              <p-timeline [value]="buildStatusService.latestDeployments">
                 <ng-template #opposite let-untypedDeployment>
                   <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
                     <small class="text-primary-emphasis-alt">{{ deployment.timestamp | date: 'short' }}</small>

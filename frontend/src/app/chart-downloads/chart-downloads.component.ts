@@ -10,6 +10,7 @@ import {
   OnInit,
   PLATFORM_ID,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
@@ -20,6 +21,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { ToastModule } from 'primeng/toast';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
+import { PackageStatsService } from '../package-stats/package-stats.service';
 
 @Component({
   selector: 'chaotic-chart-downloads',
@@ -34,15 +36,13 @@ export class ChartDownloadsComponent implements OnInit {
   isWide = signal<boolean>(true);
   options: any;
   platformId = inject(PLATFORM_ID);
-  amount = signal<number>(50);
-
-  globalPackageMetrics: PackageRankList = [];
-  progressbarValues: { value: number; label: string; count: number }[] = [];
 
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
+
+  protected readonly packageStatsService = inject(PackageStatsService);
 
   constructor() {
     effect(() => {
@@ -55,13 +55,12 @@ export class ChartDownloadsComponent implements OnInit {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
       this.isWide.set(!state.matches);
       if (this.isWide()) {
-        this.amount.set(50);
+        this.packageStatsService.globalPackageMetricRange.set(50);
         this.initChart();
       } else {
-        this.amount.set(20);
+        this.packageStatsService.globalPackageMetricRange.set(20);
       }
     });
-    this.updatePackageMetrics();
   }
 
   /**
@@ -69,11 +68,11 @@ export class ChartDownloadsComponent implements OnInit {
    */
   updatePackageMetrics(): void {
     this.appService
-      .getOverallPackageStats(this.amount())
+      .getOverallPackageStats(untracked(this.packageStatsService.globalPackageMetricRange))
       .pipe(retry({ count: 3, delay: 5000 }))
       .subscribe({
         next: (data) => {
-          this.globalPackageMetrics = data;
+          this.packageStatsService.globalPackageMetrics.set(data);
           if (this.isWide()) {
             this.initChart();
           } else {
@@ -102,9 +101,11 @@ export class ChartDownloadsComponent implements OnInit {
           },
         ],
       };
-      for (const pkg in this.globalPackageMetrics) {
-        this.chartData.labels.push(this.globalPackageMetrics[pkg].name);
-        this.chartData.datasets[0].data.push(this.globalPackageMetrics[pkg].count);
+
+      const metrics = untracked(this.packageStatsService.globalPackageMetrics);
+      for (const pkg in metrics) {
+        this.chartData.labels.push(metrics[pkg].name);
+        this.chartData.datasets[0].data.push(metrics[pkg].count);
       }
 
       this.options = {
@@ -128,12 +129,13 @@ export class ChartDownloadsComponent implements OnInit {
 
   private getProgressBarValues(pkg: PackageRankList) {
     const values = [];
-    for (const pkg of this.globalPackageMetrics) {
-      const relativeCount: number = (pkg.count / this.globalPackageMetrics[0].count) * 100;
+    const metrics = untracked(this.packageStatsService.globalPackageMetrics);
+    for (const pkg of metrics) {
+      const relativeCount: number = (pkg.count / metrics[0].count) * 100;
       values.push({ value: relativeCount, label: pkg.name, count: pkg.count });
     }
 
-    this.progressbarValues = values;
+    this.packageStatsService.globalPackageProgressbarValues.set(values);
     this.cdr.markForCheck();
   }
 }

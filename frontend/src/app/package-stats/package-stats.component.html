@@ -2,12 +2,12 @@
   <chaotic-title
     title="Statistics and data"
     subtitleHtml="Area for package statistics and other fun stuff.<br>Total users last month: {{
-      totalUsers()
+      packageStatsService.totalUsers()
     }}<br>All stats shown here are currently relating to one month of data."
   ></chaotic-title>
 
   <div>
-    <p-tabs [(value)]="currentTab" (valueChange)="changeTab($event)">
+    <p-tabs [(value)]="packageStatsService.currentTab" (valueChange)="changeTab($event)">
       <p-tablist>
         <p-tab value="0">Search</p-tab>
         <p-tab value="1">Globals</p-tab>

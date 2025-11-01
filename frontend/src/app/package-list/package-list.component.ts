@@ -8,8 +8,7 @@ import {
   inject,
   LOCALE_ID,
   OnInit,
-  ViewChild,
-  signal,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
@@ -29,6 +28,7 @@ import { AppService } from '../app.service';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { TitleComponent } from '../title/title.component';
 import { RepoNamePipe } from '../pipes/repo-name.pipe';
+import { PackageListService } from './packge-list.service';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -54,12 +54,6 @@ import { RepoNamePipe } from '../pipes/repo-name.pipe';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PackageListComponent implements OnInit, AfterViewInit {
-  readonly loading = signal<boolean>(true);
-  packageList!: (Package & { reponame: string })[];
-  searchValue = '';
-
-  @ViewChild('pkgTable') pkgTable!: Table;
-
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -67,6 +61,9 @@ export class PackageListComponent implements OnInit, AfterViewInit {
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  protected readonly packageListService = inject(PackageListService);
+  protected readonly pkgTable = viewChild<Table>('pkgTable');
 
   ngOnInit() {
     this.appService.updateSeoTags(
@@ -82,7 +79,7 @@ export class PackageListComponent implements OnInit, AfterViewInit {
       .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (data: (Package & { reponame: string })[]) => {
-          this.packageList = data.filter((pkg) => pkg.version);
+          this.packageListService.packageList.set(data.filter((pkg) => pkg.version));
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -90,15 +87,15 @@ export class PackageListComponent implements OnInit, AfterViewInit {
           console.error(err);
         },
         complete: () => {
-          this.loading.set(false);
+          this.packageListService.loading.set(false);
         },
       });
   }
 
   ngAfterViewInit() {
     if (this.route.snapshot.queryParams['search']) {
-      this.pkgTable.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
-      this.searchValue = this.route.snapshot.queryParams['search'];
+      this.pkgTable()!.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
+      this.packageListService.searchValue.set(this.route.snapshot.queryParams['search']);
       this.cdr.markForCheck();
     }
     this.unsetRounding();
@@ -118,14 +115,14 @@ export class PackageListComponent implements OnInit, AfterViewInit {
 
   clear(table: Table) {
     table.clear();
-    this.searchValue = '';
+    this.packageListService.searchValue.set('');
     this.cdr.markForCheck();
   }
 
   globalFilter(target: EventTarget | null) {
     if (!target) return;
     const input = target as HTMLInputElement;
-    this.pkgTable.filterGlobal(input.value, 'contains');
+    this.pkgTable()!.filterGlobal(input.value, 'contains');
     void this.router.navigate([], { queryParams: { search: input.value } });
   }
 

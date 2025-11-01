@@ -1,11 +1,10 @@
-import { Build, BuildClass, BuildStatus, PipelineWithExternalStatus } from '@./shared-lib';
+import { Build, PipelineWithExternalStatus } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { Mutex } from 'async-mutex';
 import { Card } from 'primeng/card';
 import { Dialog } from 'primeng/dialog';
 import { Ripple } from 'primeng/ripple';
@@ -14,11 +13,11 @@ import { TableModule } from 'primeng/table';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { Timeline } from 'primeng/timeline';
 import { Tooltip } from 'primeng/tooltip';
-import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { BuildStatusService } from './build-status.service';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -45,31 +44,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BuildStatusComponent implements OnInit {
-  isWide = signal<boolean>(true);
-  lastUpdated = signal<Date | undefined>(undefined);
-  loadingQueue = signal<boolean>(true);
-  loadingDeployments = signal<boolean>(true);
-  loadingPipelines = signal<boolean>(true);
-
-  updateMutex = new Mutex();
-
-  latestDeployments!: Build[];
-  activeQueue: {
-    name: string;
-    build_class: BuildClass;
-    node: string;
-    liveLogUrl: string;
-  }[] = [];
-  waitingQueue: {
-    name: string;
-    build_class: BuildClass;
-  }[] = [];
-  idleQueue: {
-    name: string;
-    build_class: BuildClass;
-  }[] = [];
-
   appService = inject(AppService);
+  buildStatusService = inject(BuildStatusService);
   cdr = inject(ChangeDetectorRef);
   messageToastService = inject(MessageToastService);
   meta = inject(Meta);
@@ -81,15 +57,15 @@ export class BuildStatusComponent implements OnInit {
     commit: [],
   } as unknown as PipelineWithExternalStatus); // Workaround for silencing Angular warning
   dialogVisible = signal<boolean>(false);
-  pipelineWithStatus = signal<PipelineWithExternalStatus[]>([]);
+  isWide = signal<boolean>(true);
 
   constructor() {
     this.appService.chaoticEvent.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event.type === 'build') {
-        void this.getPackageBuilds(true);
-        void this.getQueueStats(true);
+        void this.buildStatusService.getPackageBuilds(true);
+        void this.buildStatusService.getQueueStats(true);
       }
-      if (event.type === 'pipeline') void this.getPipelines(true);
+      if (event.type === 'pipeline') void this.buildStatusService.getPipelines(true);
     });
   }
 
@@ -114,167 +90,23 @@ export class BuildStatusComponent implements OnInit {
    * Update all the data on the page and set the last updated time
    */
   async updateAll(inBackground = false): Promise<void> {
-    void this.updateMutex.runExclusive(async () => {
+    void this.buildStatusService.updateMutex.runExclusive(async () => {
       await Promise.all([
-        this.getQueueStats(inBackground),
-        this.getPipelines(inBackground),
-        this.getPackageBuilds(inBackground),
+        this.buildStatusService.getQueueStats(inBackground),
+        this.buildStatusService.getPipelines(inBackground),
+        this.buildStatusService.getPackageBuilds(inBackground),
       ]);
 
       if (this.dialogVisible()) {
         this.dialogData.set(
-          this.pipelineWithStatus()!.find(
-            (pipeline) => pipeline.pipeline.id === this.dialogData().pipeline.id,
-          ) as PipelineWithExternalStatus,
+          this.buildStatusService
+            .pipelineWithStatus()!
+            .find((pipeline) => pipeline.pipeline.id === this.dialogData().pipeline.id) as PipelineWithExternalStatus,
         );
       }
 
-      this.lastUpdated.set(new Date());
+      this.buildStatusService.lastUpdated.set(new Date());
       this.cdr.markForCheck();
-    });
-  }
-
-  /**
-   * Get the latest deployments
-   */
-  async getPackageBuilds(inBackground = false): Promise<void> {
-    this.loadingDeployments.set(!inBackground);
-
-    await new Promise<void>((resolve, reject) => {
-      this.appService
-        .getPackageBuilds(20, BuildStatus.SUCCESS)
-        .pipe(retry({ delay: 5000, count: 3 }))
-        .subscribe({
-          next: (data) => {
-            this.latestDeployments = data;
-          },
-          error: (err) => {
-            this.messageToastService.error('Error', 'Failed to fetch latest deployments');
-            console.error(err);
-          },
-          complete: () => {
-            this.loadingDeployments.set(false);
-          },
-        });
-    });
-  }
-
-  /**
-   * Get current pipeline status
-   */
-  async getPipelines(inBackground = false): Promise<void> {
-    this.loadingPipelines.set(!inBackground);
-    await new Promise<void>((resolve, reject) => {
-      this.appService
-        .getStatusChecks()
-        .pipe(retry({ delay: 5000, count: 3 }))
-        .subscribe({
-          next: (pipelines) => {
-            for (const pipeline of pipelines) {
-              if (pipeline.pipeline.status === 'failed') {
-                let failedJobs = 0;
-                for (const job of pipeline.commit) {
-                  if (job.status === 'failed') {
-                    failedJobs++;
-                  }
-                }
-                pipeline.pipeline.status = `${failedJobs}/${pipeline.commit.length} failed`;
-              } else if (pipeline.pipeline.status === 'canceled') {
-                pipeline.pipeline.status = 'success';
-              }
-
-              for (const job of pipeline.commit) {
-                job.name = job.name.split(': ')[1];
-              }
-            }
-            if (pipelines.length > 20) {
-              pipelines = pipelines.slice(0, 20);
-            }
-            this.pipelineWithStatus.set(pipelines);
-          },
-          error: (err) => {
-            if (!inBackground) {
-              this.messageToastService.error('Error', 'Failed to fetch pipeline status');
-            }
-            console.error(err);
-            reject(err);
-          },
-          complete: () => {
-            this.loadingPipelines.set(false);
-            resolve();
-          },
-        });
-    });
-  }
-
-  /*
-   * Get the current queue stats from the Chaotic backend
-   * @param inBackground Whether the request is in the background or not
-   */
-  async getQueueStats(inBackground: boolean): Promise<void> {
-    this.loadingQueue.set(!inBackground);
-    await new Promise<void>((resolve, reject) => {
-      this.appService
-        .getQueueStats()
-        .pipe(retry({ delay: 5000, count: 3 }))
-        .subscribe({
-          next: (currentQueue) => {
-            for (const queue of Object.keys(currentQueue)) {
-              switch (queue) {
-                case 'active': {
-                  const tableData = [];
-                  for (const pkg of currentQueue.active.packages) {
-                    tableData.push({
-                      name: pkg.name.split('/')[2],
-                      build_class: pkg.build_class as BuildClass,
-                      node: pkg.node,
-                      liveLogUrl: pkg.liveLog ? pkg.liveLog : '',
-                    });
-                  }
-                  this.activeQueue = tableData;
-                  break;
-                }
-                case 'waiting': {
-                  const tableData = [];
-                  for (const pkg of currentQueue.waiting.packages) {
-                    tableData.push({
-                      name: pkg.name.split('/')[2],
-                      build_class: pkg.build_class as BuildClass,
-                    });
-                  }
-                  this.waitingQueue = tableData;
-                  break;
-                }
-                case 'idle': {
-                  const tableData = [];
-                  for (const node of currentQueue.idle.nodes) {
-                    tableData.push({
-                      name: node.name,
-                      build_class: node.build_class as BuildClass,
-                    });
-                  }
-                  this.idleQueue = tableData;
-                  break;
-                }
-              }
-            }
-
-            // Finally, update the component's state
-            this.lastUpdated.set(new Date());
-            this.cdr.detectChanges();
-          },
-          error: (err) => {
-            if (!inBackground) {
-              this.messageToastService.error('Error', 'Failed to fetch queue stats');
-            }
-            console.error(err);
-            reject(err);
-          },
-          complete: () => {
-            this.loadingQueue.set(false);
-            resolve();
-          },
-        });
     });
   }
 
@@ -288,7 +120,9 @@ export class BuildStatusComponent implements OnInit {
 
   showDialog(pipelineId: number) {
     this.dialogData.set(
-      this.pipelineWithStatus()!.find((pipeline) => pipeline.pipeline.id === pipelineId) as PipelineWithExternalStatus,
+      this.buildStatusService
+        .pipelineWithStatus()!
+        .find((pipeline) => pipeline.pipeline.id === pipelineId) as PipelineWithExternalStatus,
     );
     this.dialogVisible.set(true);
   }

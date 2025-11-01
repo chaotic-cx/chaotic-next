@@ -1,14 +1,6 @@
-import { Mirror, MirrorData, MirrorSelf } from '@./shared-lib';
+import { Mirror } from '@./shared-lib';
 import { CommonModule } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  inject,
-  LOCALE_ID,
-  OnInit,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, LOCALE_ID, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
@@ -17,6 +9,7 @@ import { Tooltip } from 'primeng/tooltip';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { TitleComponent } from '../title/title.component';
+import { MirrorsService } from './mirrors.service';
 
 @Component({
   selector: 'app-mirrors',
@@ -33,8 +26,7 @@ export class MirrorsComponent implements OnInit {
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
 
-  loading = signal<boolean>(true);
-  mirrorData: MirrorData = { self: {} as MirrorSelf, mirrors: [] };
+  protected readonly mirrorsService = inject(MirrorsService);
 
   ngOnInit() {
     this.appService.updateSeoTags(
@@ -54,17 +46,17 @@ export class MirrorsComponent implements OnInit {
             mirror.last_update = mirror.last_update * 1000;
             return mirror;
           });
-          this.mirrorData.self = data.self;
-          this.mirrorData.mirrors = preparedMirrors;
-          this.loading.set(false);
+          const mirrorData = { self: data.self, mirrors: preparedMirrors };
+          this.mirrorsService.mirrorData.set(mirrorData);
+          this.mirrorsService.loading.set(false);
         },
         error: (err) => {
           this.messageToastService.error('Error', 'Failed to fetch mirror list, the router may be down');
           console.error(err);
-          this.loading.set(false);
+          this.mirrorsService.loading.set(false);
         },
         complete: () => {
-          this.loading.set(false);
+          this.mirrorsService.loading.set(false);
           this.cdr.markForCheck();
         },
       });

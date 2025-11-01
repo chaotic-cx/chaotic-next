@@ -27,7 +27,7 @@
     </ul>
   </div>
   <div>
-    <p-table [value]="mirrorData.mirrors" [loading]="loading()">
+    <p-table [value]="mirrorsService.mirrorData().mirrors" [loading]="mirrorsService.loading()">
       <ng-template #header>
         <tr>
           <th>Subdomain</th>

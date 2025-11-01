@@ -1,4 +1,3 @@
-import type { UserAgentList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 import {
@@ -9,7 +8,6 @@ import {
   inject,
   OnInit,
   PLATFORM_ID,
-  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
@@ -20,6 +18,7 @@ import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { CatppuccinFlavors } from '../theme';
+import { PackageStatsService } from '../package-stats/package-stats.service';
 
 @Component({
   selector: 'chaotic-chart-useragent',
@@ -33,14 +32,13 @@ export class ChartUseragentComponent implements OnInit {
   chartData: any;
   options: any;
   platformId = inject(PLATFORM_ID);
-  amount = signal<number>(8);
-
-  userAgentMetrics: UserAgentList = [];
 
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
+
+  protected packageStatsService = inject(PackageStatsService);
 
   constructor() {
     effect(() => {
@@ -50,7 +48,7 @@ export class ChartUseragentComponent implements OnInit {
 
   ngOnInit() {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
-      this.amount.set(state.matches ? 5 : 10);
+      this.packageStatsService.userAgentMetricRange.set(state.matches ? 5 : 10);
       this.cdr.markForCheck();
     });
     this.get30DayUserAgents();
@@ -75,7 +73,7 @@ export class ChartUseragentComponent implements OnInit {
             }
           }
 
-          this.userAgentMetrics = rightAmount;
+          this.packageStatsService.userAgentMetrics.set(rightAmount);
           this.initChart();
         },
         error: (err) => {
@@ -88,7 +86,9 @@ export class ChartUseragentComponent implements OnInit {
 
   initChart(): void {
     if (isPlatformBrowser(this.platformId)) {
-      const relevantData = this.userAgentMetrics.slice(0, this.amount());
+      const relevantData = this.packageStatsService
+        .userAgentMetrics()
+        .slice(0, this.packageStatsService.userAgentMetricRange());
       this.chartData = {
         labels: [],
         datasets: [
@@ -100,8 +100,8 @@ export class ChartUseragentComponent implements OnInit {
         ],
       };
       for (const country in relevantData) {
-        this.chartData.labels.push(this.userAgentMetrics[country].name);
-        this.chartData.datasets[0].data.push(this.userAgentMetrics[country].count);
+        this.chartData.labels.push(this.packageStatsService.userAgentMetrics()[country].name);
+        this.chartData.datasets[0].data.push(this.packageStatsService.userAgentMetrics()[country].count);
       }
 
       this.options = {
