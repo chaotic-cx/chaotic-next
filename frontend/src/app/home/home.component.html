@@ -20,21 +20,18 @@
           label="Start right away"
           iconPos="right"
           icon="pi pi-sparkles"
-          class="p-button-raised p-button-rounded white-space-nowrap my-5 px-5 py-3 font-bold"
+          class="white-space-nowrap my-5 px-5 py-3 font-bold"
           routerLink="docs"
           rounded
         >
         </p-button>
-        <span
-          class="font-bold animate-bounce block mt-20 text-6xl text-primary pi pi-arrow-down"
-          style="font-size: 3rem"
-        ></span>
+        <span class="font-bold block animate-bounce mt-20 text-primary pi pi-arrow-down" style="font-size: 3rem"></span>
       </div>
     </div>
   </div>
 </div>
 
-<div class="mx-auto sm:my-10 mt-40 mb-10">
+<div class="mx-auto sm:my-10 mt-60 mb-10">
   @defer (on viewport) {
     <chaotic-newsfeed class="fade-in"></chaotic-newsfeed>
   } @placeholder {
