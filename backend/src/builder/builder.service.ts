@@ -11,6 +11,7 @@ import { brokerConfig, MoleculerConfigCommonService } from './moleculer.config';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { Subject } from 'rxjs';
 import { EventService } from '../events/event.service';
+import { appDataSource } from '../data.source';
 
 @Injectable()
 export class BuilderService {
@@ -509,12 +510,8 @@ export class BuilderDatabaseService extends Service {
 
         await Promise.allSettled(promises);
 
-        // Notify SSE clients about the build and newly updated package
-        const updatedPackage: Package = await pkgnameExists(
-          build.pkgbase.pkgname,
-          this.dbConnections.package,
-          build.repo,
-        );
+        // Notify SSE clients about the build and newly updated package, after busting the cache for latest deployment key
+        await appDataSource.queryResultCache.remove(['builds-general-undefined-20-0']);
         this.sseSubject$.next({
           data: {
             type: 'build',
