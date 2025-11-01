@@ -7,7 +7,7 @@
     dataKey="id"
     sortField="timestamp"
     id="deployTable"
-    [value]="deployLogService.packageList"
+    [value]="deployLogService.packageList()"
     [rows]="25"
     [rowsPerPageOptions]="[25, 50, 100, 200]"
     [loading]="deployLogService.loading()"

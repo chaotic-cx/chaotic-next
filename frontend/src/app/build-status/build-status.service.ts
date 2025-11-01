@@ -9,29 +9,35 @@ import { MessageToastService } from '@garudalinux/core';
   providedIn: 'root',
 })
 export class BuildStatusService {
-  lastUpdated = signal<Date | undefined>(undefined);
-  loadingQueue = signal<boolean>(true);
-  loadingDeployments = signal<boolean>(true);
-  loadingPipelines = signal<boolean>(true);
-  pipelineWithStatus = signal<PipelineWithExternalStatus[]>([]);
+  readonly lastUpdated = signal<Date | undefined>(undefined);
+  readonly loadingQueue = signal<boolean>(true);
+  readonly loadingDeployments = signal<boolean>(true);
+  readonly loadingPipelines = signal<boolean>(true);
+  readonly pipelineWithStatus = signal<PipelineWithExternalStatus[]>([]);
 
   updateMutex = new Mutex();
 
-  latestDeployments!: Build[];
-  activeQueue: {
-    name: string;
-    build_class: BuildClass;
-    node: string;
-    liveLogUrl: string;
-  }[] = [];
-  waitingQueue: {
-    name: string;
-    build_class: BuildClass;
-  }[] = [];
-  idleQueue: {
-    name: string;
-    build_class: BuildClass;
-  }[] = [];
+  readonly latestDeployments = signal<Build[]>([]);
+  readonly activeQueue = signal<
+    {
+      name: string;
+      build_class: BuildClass;
+      node: string;
+      liveLogUrl: string;
+    }[]
+  >([]);
+  readonly waitingQueue = signal<
+    {
+      name: string;
+      build_class: BuildClass;
+    }[]
+  >([]);
+  readonly idleQueue = signal<
+    {
+      name: string;
+      build_class: BuildClass;
+    }[]
+  >([]);
 
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
@@ -48,7 +54,7 @@ export class BuildStatusService {
         .pipe(retry({ delay: 5000, count: 3 }))
         .subscribe({
           next: (data) => {
-            this.latestDeployments = data;
+            this.latestDeployments.set(data);
           },
           error: (err) => {
             this.messageToastService.error('Error', 'Failed to fetch latest deployments');
@@ -133,7 +139,7 @@ export class BuildStatusService {
                       liveLogUrl: pkg.liveLog ? pkg.liveLog : '',
                     });
                   }
-                  this.activeQueue = tableData;
+                  this.activeQueue.set(tableData);
                   break;
                 }
                 case 'waiting': {
@@ -144,7 +150,7 @@ export class BuildStatusService {
                       build_class: pkg.build_class as BuildClass,
                     });
                   }
-                  this.waitingQueue = tableData;
+                  this.waitingQueue.set(tableData);
                   break;
                 }
                 case 'idle': {
@@ -155,7 +161,7 @@ export class BuildStatusService {
                       build_class: node.build_class as BuildClass,
                     });
                   }
-                  this.idleQueue = tableData;
+                  this.idleQueue.set(tableData);
                   break;
                 }
               }
