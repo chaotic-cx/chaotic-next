@@ -52,12 +52,13 @@ export class BuildStatusComponent implements OnInit {
   observer = inject(BreakpointObserver);
   router = inject(Router);
 
-  dialogData = signal<PipelineWithExternalStatus>({
+  readonly dialogData = signal<PipelineWithExternalStatus>({
     pipeline: {},
     commit: [],
   } as unknown as PipelineWithExternalStatus); // Workaround for silencing Angular warning
-  dialogVisible = signal<boolean>(false);
-  isWide = signal<boolean>(true);
+  readonly currentTab = signal<string>('0');
+  readonly dialogVisible = signal<boolean>(false);
+  readonly isWide = signal<boolean>(true);
 
   constructor() {
     this.appService.chaoticEvent.pipe(takeUntilDestroyed()).subscribe((event) => {
@@ -108,6 +109,10 @@ export class BuildStatusComponent implements OnInit {
       this.buildStatusService.lastUpdated.set(new Date());
       this.cdr.markForCheck();
     });
+  }
+
+  changeTab($event: string | number | undefined): void {
+    console.log($event);
   }
 
   typed(value: any): PipelineWithExternalStatus {

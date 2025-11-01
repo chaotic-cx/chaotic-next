@@ -12,7 +12,7 @@ export class DeployLogService {
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
 
-  packageList: Build[] = [];
+  packageList = signal<Build[]>([]);
 
   readonly loading = signal<boolean>(true);
   readonly searchValue = signal<string>('');
@@ -34,7 +34,7 @@ export class DeployLogService {
             }
             return build;
           });
-          this.packageList = data;
+          this.packageList.set(data);
         },
         error: (err) => {
           this.messageToastService.error('Error', 'Failed to fetch package list');
