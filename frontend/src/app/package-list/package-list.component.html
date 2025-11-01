@@ -75,7 +75,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-surface0': !pkg.isActive,
+                'text-ctp-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.pkgname }}</span
@@ -84,7 +84,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-surface0': !pkg.isActive,
+                'text-ctp-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.version }}-{{ pkg.pkgrel }}</span
@@ -93,7 +93,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-surface0': !pkg.isActive,
+                'text--ctp-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.lastUpdated | date: 'short' }}</span
@@ -102,7 +102,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-surface0': !pkg.isActive,
+                'text-ctp-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.metadata?.desc }}</span
@@ -111,7 +111,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-surface0': !pkg.isActive,
+                'text-ctp-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               [innerHtml]="pkg.metadata?.url | stripPrefix"
@@ -120,7 +120,7 @@
           <td>
             <span
               [ngClass]="{
-                'text-surface0': !pkg.isActive,
+                'text-ctp-surface0': !pkg.isActive,
               }"
               class="ml-1 align-middle"
               >{{ pkg.repo | repoName }}</span
@@ -132,14 +132,14 @@
                 class="h-10"
                 (click)="openPkgbuild(pkg)"
                 [ngClass]="{
-                  'text-surface0': !pkg.isActive,
+                  'text-ctp-surface0': !pkg.isActive,
                 }"
                 pButton
                 type="button"
                 label="Source"
               />
             } @else {
-              <span class="text-surface0 ml-1 align-middle">N/A</span>
+              <span class="text-ctp-surface0 ml-1 align-middle">N/A</span>
             }
           </td>
         </tr>
