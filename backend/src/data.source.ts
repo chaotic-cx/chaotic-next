@@ -1,4 +1,4 @@
-import { DataSource, type DataSourceOptions } from 'typeorm';
+import { type DataSourceOptions } from 'typeorm';
 import { Build, Builder, Repo } from './builder/builder.entity';
 import { IS_PROD } from './constants';
 import { ArchlinuxPackage, RepoManagerSettings } from './repo-manager/repo-manager.entity';
@@ -20,5 +20,3 @@ export const dataSourceOptions: DataSourceOptions = {
     ssl: process.env.SSL_MODE === 'require' ? { rejectUnauthorized: false } : false,
   },
 };
-
-export const appDataSource: DataSource = new DataSource(dataSourceOptions);

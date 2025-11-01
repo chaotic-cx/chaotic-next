@@ -11,7 +11,6 @@ import { brokerConfig, MoleculerConfigCommonService } from './moleculer.config';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { Subject } from 'rxjs';
 import { EventService } from '../events/event.service';
-import { appDataSource } from '../data.source';
 
 @Injectable()
 export class BuilderService {
@@ -113,7 +112,7 @@ export class BuilderService {
       .orderBy('build.id', 'DESC')
       .skip(options.offset)
       .take(options.amount)
-      .cache(`builds-general-${options.builder}-${options.amount}-${options.offset}`, 30000)
+      .cache(`builds-general-${options.builder}-${options.amount}-${options.offset}`, 1000)
       .getMany();
   }
 
@@ -509,23 +508,6 @@ export class BuilderDatabaseService extends Service {
         }
 
         await Promise.allSettled(promises);
-
-        // Notify SSE clients about the build and newly updated package, after busting the cache for latest deployment key
-        await appDataSource.queryResultCache.remove([
-          'builds-general-undefined-20-0',
-          `builds-general-undefined-4000-0`,
-        ]);
-        this.sseSubject$.next({
-          data: {
-            type: 'build',
-            package: build.pkgbase.pkgname,
-            version: build.pkgbase.version,
-            pkgrel: build.pkgbase.pkgrel,
-            duration: build.timeToEnd,
-            repo: build.repo.name,
-            status: build.status,
-          },
-        });
       } catch (err: unknown) {
         Logger.error(err, 'RepoManager');
       }
@@ -533,6 +515,19 @@ export class BuilderDatabaseService extends Service {
 
     try {
       Logger.debug(await this.dbConnections.build.save(build), 'BuilderDatabaseService');
+
+      // Notify SSE clients about the build and newly updated package
+      this.sseSubject$.next({
+        data: {
+          type: 'build',
+          package: build.pkgbase.pkgname,
+          version: build.pkgbase.version,
+          pkgrel: build.pkgbase.pkgrel,
+          duration: build.timeToEnd,
+          repo: build.repo.name,
+          status: build.status,
+        },
+      });
     } catch (err: unknown) {
       Logger.error(err, 'BuilderDatabaseService');
     }
