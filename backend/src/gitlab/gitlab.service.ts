@@ -70,8 +70,9 @@ export class GitlabService {
    * @returns True if the cache was successfully busted, false otherwise
    */
   public async bustCache(body: PipelineWebhook): Promise<boolean> {
+    const cacheDeleted = await this.cacheManager.del(this.CACHE_KEY_PIPELINES);
     this.eventService.sseEvents$.next({ data: { type: 'pipeline' } });
-    return await this.cacheManager.del(this.CACHE_KEY_PIPELINES);
+    return cacheDeleted;
   }
 
   /**
