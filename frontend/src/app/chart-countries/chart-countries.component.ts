@@ -1,4 +1,3 @@
-import type { CountryRankList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 import {
@@ -9,7 +8,6 @@ import {
   inject,
   OnInit,
   PLATFORM_ID,
-  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
@@ -21,6 +19,7 @@ import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { CatppuccinFlavors } from '../theme';
+import { PackageStatsService } from '../package-stats/package-stats.service';
 
 @Component({
   selector: 'chaotic-chart-countries',
@@ -34,14 +33,13 @@ export class ChartCountriesComponent implements OnInit {
   chartData: any;
   options: any;
   platformId = inject(PLATFORM_ID);
-  amount = signal<number>(15);
 
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
 
-  countryRanks: CountryRankList = [];
+  protected readonly packageStatsService = inject(PackageStatsService);
 
   constructor() {
     effect(() => {
@@ -51,7 +49,7 @@ export class ChartCountriesComponent implements OnInit {
 
   ngOnInit(): void {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
-      this.amount.set(state.matches ? 5 : 15);
+      this.packageStatsService.countryRanksRange.set(state.matches ? 5 : 15);
       this.cdr.markForCheck();
     });
     this.getCountryRanks();
@@ -69,7 +67,7 @@ export class ChartCountriesComponent implements OnInit {
           for (const country of data) {
             country.name = `${country.name}  ${this.countryCode2Flag(country.name)}`;
           }
-          this.countryRanks = data;
+          this.packageStatsService.countryRanksMetrics.set(data);
           this.initChart();
         },
         error: (err) => {
@@ -89,14 +87,16 @@ export class ChartCountriesComponent implements OnInit {
     const codePoints = countryCode
       .toUpperCase()
       .split('')
-      // @ts-ignore
+      // @ts-expect-error works just as expected
       .map((char) => 127397 + char.charCodeAt());
     return String.fromCodePoint(...codePoints);
   }
 
   initChart(): void {
     if (isPlatformBrowser(this.platformId)) {
-      const relevantData = this.countryRanks.slice(0, this.amount());
+      const relevantData = this.packageStatsService
+        .countryRanksMetrics()
+        .slice(0, this.packageStatsService.countryRanksRange());
       this.chartData = {
         labels: [],
         datasets: [
@@ -108,8 +108,8 @@ export class ChartCountriesComponent implements OnInit {
         ],
       };
       for (const country in relevantData) {
-        this.chartData.labels.push(this.countryRanks[country].name);
-        this.chartData.datasets[0].data.push(this.countryRanks[country].count);
+        this.chartData.labels.push(this.packageStatsService.countryRanksMetrics()[country].name);
+        this.chartData.datasets[0].data.push(this.packageStatsService.countryRanksMetrics()[country].count);
       }
 
       this.options = {

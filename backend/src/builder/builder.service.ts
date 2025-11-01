@@ -511,7 +511,10 @@ export class BuilderDatabaseService extends Service {
         await Promise.allSettled(promises);
 
         // Notify SSE clients about the build and newly updated package, after busting the cache for latest deployment key
-        await appDataSource.queryResultCache.remove(['builds-general-undefined-20-0']);
+        await appDataSource.queryResultCache.remove([
+          'builds-general-undefined-20-0',
+          `builds-general-undefined-4000-0`,
+        ]);
         this.sseSubject$.next({
           data: {
             type: 'build',

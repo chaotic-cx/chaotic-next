@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -12,6 +12,7 @@ import { ChartDownloadsComponent } from '../chart-downloads/chart-downloads.comp
 import { ChartUseragentComponent } from '../chart-useragent/chart-useragent.component';
 import { SearchPackageComponent } from '../search-package/search-package.component';
 import { TitleComponent } from '../title/title.component';
+import { PackageStatsService } from './package-stats.service';
 
 @Component({
   selector: 'chaotic-package-stats',
@@ -35,15 +36,14 @@ import { TitleComponent } from '../title/title.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PackageStatsComponent implements OnInit {
-  totalUsers = signal<string>("<i class='text-ctp-maroon pi pi-hourglass'></i>");
-  currentTab = '0';
-
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  protected readonly packageStatsService = inject(PackageStatsService);
 
   async ngOnInit(): Promise<void> {
     this.appService.updateSeoTags(
@@ -57,9 +57,9 @@ export class PackageStatsComponent implements OnInit {
     void this.get30DayUsers();
 
     if (this.route.snapshot.fragment === 'globals') {
-      this.currentTab = '1';
+      this.packageStatsService.currentTab.set('1');
     } else if (this.route.snapshot.fragment === 'downloads') {
-      this.currentTab = '2';
+      this.packageStatsService.currentTab.set('2');
     } else {
       void this.router.navigate([], { fragment: 'search', queryParamsHandling: 'merge' });
     }
@@ -74,7 +74,7 @@ export class PackageStatsComponent implements OnInit {
       .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (res) => {
-          this.totalUsers.set(res);
+          this.packageStatsService.totalUsers.set(res);
           this.cdr.markForCheck();
         },
         error: (err) => {

@@ -7,8 +7,7 @@ import {
   Component,
   inject,
   OnInit,
-  signal,
-  ViewChild,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
@@ -19,13 +18,14 @@ import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { InputText } from 'primeng/inputtext';
 import { Table, TableModule } from 'primeng/table';
-import { filter, retry } from 'rxjs';
+import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { DurationPipe } from '../pipes/duration.pipe';
 import { LogurlPipe } from '../pipes/logurl.pipe';
 import { OutcomePipe } from '../pipes/outcome.pipe';
 import { TitleComponent } from '../title/title.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DeployLogService } from './deploy-log.service';
 
 @Component({
   selector: 'chaotic-deploy-log',
@@ -47,21 +47,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeployLogComponent implements OnInit, AfterViewInit {
-  outcomePipe = inject(OutcomePipe);
-  packageList: Build[] = [];
-
-  readonly loading = signal<boolean>(true);
-  readonly searchValue = signal<string>('');
-  readonly amount = signal<number>(4000);
-
-  @ViewChild('deployTable') deployTable!: Table;
-
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  protected readonly deployLogService = inject(DeployLogService);
+  protected readonly deployTable = viewChild<Table>('deployTable');
 
   constructor() {
     this.appService.chaoticEvent
@@ -69,7 +62,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
         filter((event) => event.type === 'build'),
         takeUntilDestroyed(),
       )
-      .subscribe((event) => this.getDeployments(true));
+      .subscribe((event) => this.deployLogService.getDeployments(true));
   }
 
   ngOnInit() {
@@ -82,51 +75,24 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
     );
 
     if (this.route.snapshot.queryParams['amount']) {
-      this.amount.set(this.route.snapshot.queryParams['amount']);
+      this.deployLogService.amount.set(this.route.snapshot.queryParams['amount']);
       this.cdr.markForCheck();
     }
 
-    this.getDeployments();
-  }
-
-  getDeployments(isRefresh = false): void {
-    this.appService
-      .getPackageBuilds(this.amount())
-      .pipe(retry({ delay: 5000, count: 3 }))
-      .subscribe({
-        next: (data: Build[]) => {
-          data.map((build) => {
-            build.statusText = this.outcomePipe.transform(build.status);
-            // Logs expire after 7 days of being stored inside Redis
-            if (new Date(build.timestamp).getTime() + 7 * 24 * 60 * 60 * 1000 < Date.now()) {
-              build.logUrl = 'purged';
-            }
-            return build;
-          });
-          this.packageList = data;
-        },
-        error: (err) => {
-          this.messageToastService.error('Error', 'Failed to fetch package list');
-          console.error(err);
-        },
-        complete: () => {
-          this.loading.set(false);
-          this.cdr.markForCheck();
-        },
-      });
+    this.deployLogService.getDeployments();
   }
 
   ngAfterViewInit() {
     if (this.route.snapshot.queryParams['search']) {
-      this.deployTable.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
-      this.searchValue.set(this.route.snapshot.queryParams['search']);
+      this.deployTable()!.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
+      this.deployLogService.searchValue.set(this.route.snapshot.queryParams['search']);
     }
     this.unsetRounding();
   }
 
   clear(table: Table) {
     table.clear();
-    this.searchValue.set('');
+    this.deployLogService.searchValue.set('');
     void this.router.navigate([], { queryParams: { search: '' } });
     this.cdr.markForCheck();
   }
@@ -134,7 +100,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
   globalFilter(target: EventTarget | null) {
     if (!target) return;
     const input = target as HTMLInputElement;
-    this.deployTable.filterGlobal(input.value, 'contains');
+    this.deployTable()!.filterGlobal(input.value, 'contains');
     void this.router.navigate([], { queryParams: { search: input.value } });
     this.cdr.markForCheck();
   }

@@ -9,7 +9,7 @@
     "logLevel": "debug"
   },
   "/backend": {
-    "target": "https://builds.garudalinux.org/backend",
+    "target": "https://chaotic-backend.garudalinux.org",
     "secure": false,
     "pathRewrite": {
       "^/backend": ""

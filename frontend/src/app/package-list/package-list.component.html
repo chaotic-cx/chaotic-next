@@ -9,10 +9,10 @@
     dataKey="id"
     sortField="pkgname"
     id="pkgTable"
-    [value]="packageList"
+    [value]="packageListService.packageList()"
     [rows]="25"
     [rowsPerPageOptions]="[25, 50, 100, 200]"
-    [loading]="loading()"
+    [loading]="packageListService.loading()"
     [paginator]="true"
     [globalFilterFields]="['pkgname', 'metadata.desc', 'metadata.url']"
     [sortOrder]="1"
@@ -27,7 +27,7 @@
           <input
             pInputText
             type="text"
-            [value]="searchValue"
+            [value]="packageListService.searchValue()"
             (input)="globalFilter($event.target)"
             placeholder="Search keyword"
             class="w-full"
