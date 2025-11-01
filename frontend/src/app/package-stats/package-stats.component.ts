@@ -1,12 +1,4 @@
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  inject,
-  OnInit,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -43,7 +35,7 @@ import { TitleComponent } from '../title/title.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PackageStatsComponent implements OnInit {
-  totalUsers = signal<string>("<i class='text-maroon pi pi-hourglass'></i>");
+  totalUsers = signal<string>("<i class='text-ctp-maroon pi pi-hourglass'></i>");
   currentTab = '0';
 
   private readonly appService = inject(AppService);

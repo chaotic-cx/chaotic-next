@@ -21,9 +21,9 @@
                     <i
                       class="pi"
                       [ngClass]="{
-                        'pi-check-circle text-green': pipeline.pipeline.status === 'success',
-                        'pi-exclamation-circle text-red': pipeline.pipeline.status.includes('failed'),
-                        'pi-spin pi-spinner text-peach': pipeline.pipeline.status === 'running',
+                        'pi-check-circle text-ctp-green': pipeline.pipeline.status === 'success',
+                        'pi-exclamation-circle text-ctp-red': pipeline.pipeline.status.includes('failed'),
+                        'pi-spin pi-spinner text-ctp-peach': pipeline.pipeline.status === 'running',
                       }"
                     ></i>
                     <span class="ml-1">
@@ -52,7 +52,7 @@
           <div class="md:w-1/4">
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-spin pi-spinner text-flamingo mb-2 mt-8" style="font-size: 5rem"></i>
+                <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2 mt-8" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Active builds</ng-template>
               <ng-template #subtitle>These are currently ongoing builds</ng-template>
@@ -71,7 +71,7 @@
                     <td>{{ pkg.node }}</td>
                     <td pTooltip="{{ pkg.build_class | buildClass }}" tooltipPosition="top">{{ pkg.build_class }}</td>
                     <td>
-                      <i class="pi pi-external-link text-mauve align-middle" style="font-size: 0.6rem"> </i
+                      <i class="pi pi-external-link text-ctp-mauve align-middle" style="font-size: 0.6rem"> </i
                       ><a pRipple href="{{ pkg.liveLogUrl }}"> click</a>
                     </td>
                   </tr>
@@ -92,7 +92,7 @@
           >
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-hourglass text-lavender mt-5" style="font-size: 5rem"></i>
+                <i class="pi pi-hourglass text-ctp-lavender mt-5" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
@@ -131,7 +131,7 @@
           >
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-list text-peach mt-5" style="font-size: 5rem"></i>
+                <i class="pi pi-list text-ctp-peach mt-5" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Idle builders</ng-template>
               <ng-template #subtitle>Currently idle builders</ng-template>
@@ -204,7 +204,7 @@
               <div style="margin-top: 2.5rem">
                 <p-card [style]="{ width: '100%', overflow: 'hidden' }">
                   <ng-template #header>
-                    <i class="pi pi-spin pi-spinner text-flamingo mb-2 mt-8" style="font-size: 5rem"></i>
+                    <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2 mt-8" style="font-size: 5rem"></i>
                   </ng-template>
                   <ng-template #title>Active builds</ng-template>
                   <ng-template #subtitle>These are currently ongoing builds</ng-template>
@@ -225,7 +225,7 @@
                           {{ pkg.build_class }}
                         </td>
                         <td>
-                          <i class="pi pi-external-link text-mauve align-middle" style="font-size: 0.6rem"> </i
+                          <i class="pi pi-external-link text-ctp-mauve align-middle" style="font-size: 0.6rem"> </i
                           ><a pRipple href="{{ pkg.liveLogUrl }}"> click</a>
                         </td>
                       </tr>
@@ -241,7 +241,7 @@
               <div style="margin-top: 2.5rem">
                 <p-card [style]="{ width: '100%', overflow: 'hidden' }">
                   <ng-template #header>
-                    <i class="pi pi-hourglass text-lavender mt-5" style="font-size: 5rem"></i>
+                    <i class="pi pi-hourglass text-ctp-lavender mt-5" style="font-size: 5rem"></i>
                   </ng-template>
                   <ng-template #title>Waiting builds</ng-template>
                   <ng-template #subtitle>These are currently queued builds</ng-template>
@@ -280,7 +280,7 @@
               >
                 <p-card [style]="{ width: '100%', overflow: 'hidden' }">
                   <ng-template #header>
-                    <i class="pi pi-list text-peach mt-5" style="font-size: 5rem"></i>
+                    <i class="pi pi-list text-ctp-peach mt-5" style="font-size: 5rem"></i>
                   </ng-template>
                   <ng-template #title>Idle builders</ng-template>
                   <ng-template #subtitle>Currently idle builders</ng-template>
@@ -321,9 +321,9 @@
                       <i
                         class="pi"
                         [ngClass]="{
-                          'pi-check-circle text-green': pipeline.pipeline.status === 'success',
-                          'pi-exclamation-circle text-red': pipeline.pipeline.status.includes('failed'),
-                          'pi-spin pi-spinner text-peach': pipeline.pipeline.status === 'running',
+                          'pi-check-circle text-ctp-green': pipeline.pipeline.status === 'success',
+                          'pi-exclamation-circle text-ctp-red': pipeline.pipeline.status.includes('failed'),
+                          'pi-spin pi-spinner text-ctp-peach': pipeline.pipeline.status === 'running',
                         }"
                       ></i>
                       <span class="ml-1">
@@ -376,12 +376,13 @@
       <p>Source: {{ dialogData().pipeline.source }}</p>
       <p>Created at: {{ dialogData().pipeline.created_at | date: 'short' }}</p>
       <p>
-        Web URL: <a class="text-mauve" [href]="dialogData().pipeline.web_url">{{ dialogData().pipeline.web_url }}</a>
+        Web URL:
+        <a class="text-ctp-mauve" [href]="dialogData().pipeline.web_url">{{ dialogData().pipeline.web_url }}</a>
       </p>
       <p>
         Commit:
         <a
-          class="text-mauve"
+          class="text-ctp-mauve"
           href="https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/{{ dialogData().pipeline.sha }}"
           >{{ dialogData().pipeline.sha }}</a
         >
@@ -407,7 +408,7 @@
         <ng-template #body let-job>
           <tr>
             <td>
-              <a class="text-mauve" [href]="job.target_url">{{ job.name }}</a>
+              <a class="text-ctp-mauve" [href]="job.target_url">{{ job.name }}</a>
             </td>
             <td>{{ job.started_at | date: 'short' }}</td>
             <td>{{ job.finished_at | date: 'short' }}</td>
@@ -415,11 +416,11 @@
               <i
                 class="pi"
                 [ngClass]="{
-                  'pi-check-circle text-green': job.status === 'success',
-                  'pi-exclamation-circle text-red': job.status === 'failed',
-                  'pi-spin pi-spinner text-peach': job.status === 'running',
-                  'pi-clock text-surface0': job.status === 'pending',
-                  'pi-info-circle text-text': job.status === 'canceled',
+                  'pi-check-circle text-ctp-green': job.status === 'success',
+                  'pi-exclamation-circle text-ctp-red': job.status === 'failed',
+                  'pi-spin pi-spinner text-ctp-peach': job.status === 'running',
+                  'pi-clock text-ctp-surface0': job.status === 'pending',
+                  'pi-info-circle text-ctp-text': job.status === 'canceled',
                 }"
               ></i>
               {{ job.status }}
@@ -432,8 +433,8 @@
       <div class="ml-2.5">
         <p>There are no jobs in this pipeline (yet).</p>
         <p>
-          Have a look at <a class="text-mauve" [href]="dialogData().pipeline.web_url">web UI</a> to look into details
-          instead!
+          Have a look at <a class="text-ctp-mauve" [href]="dialogData().pipeline.web_url">web UI</a> to look into
+          details instead!
         </p>
       </div>
     }
