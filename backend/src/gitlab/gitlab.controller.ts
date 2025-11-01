@@ -1,10 +1,10 @@
 import { PipelineWithExternalStatus } from '@./shared-lib';
 import { Body, Controller, Get, Headers, Post, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PipelineWebhook } from 'backend/src/gitlab/interfaces';
 import { AllowAnonymous } from '../auth/anonymous.decorator';
 import { GitlabService } from './gitlab.service';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PipelineWebhook } from './interfaces';
 
 @ApiTags('gitlab')
 @Controller('gitlab')
@@ -27,7 +27,7 @@ export class GitlabController {
     if (token !== this.WEBHOOK_TOKEN) {
       throw new UnauthorizedException('Invalid token');
     }
-    return void this.gitlabService.bustCache();
+    return void this.gitlabService.bustCache(body);
   }
 
   @AllowAnonymous()

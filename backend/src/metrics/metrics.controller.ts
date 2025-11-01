@@ -2,7 +2,7 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { AllowAnonymous } from '../auth/anonymous.decorator';
 import { MetricsService } from './metrics.service';
-import { ApiTags, ApiOkResponse, ApiParam, ApiOperation, ApiExtraModels } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('metrics')
 @Controller('metrics')

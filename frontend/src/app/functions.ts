@@ -1,17 +1,6 @@
 import { Meta } from '@angular/platform-browser';
 
 /**
- * Poll for new deployments.
- * @param interval The interval to poll at.
- * @param func The function to call.
- */
-export function startShortPolling(interval: any, func: () => void): void {
-  let initialInterval: any;
-  interval = setInterval(func, interval);
-  clearInterval(initialInterval);
-}
-
-/**
  * Shuffle an array.
  * @param array The array to shuffle.
  * @returns The shuffled array.

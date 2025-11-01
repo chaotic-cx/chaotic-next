@@ -1,11 +1,9 @@
 import nx from '@nx/eslint-plugin';
-import jsdoc from 'eslint-plugin-jsdoc';
 
 export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
-  ...jsdoc.configs['flat/recommended-mixed'],
   {
     ignores: ['**/dist', '**/node_modules'],
   },
@@ -43,7 +41,7 @@ export default [
         },
         {
           selector: 'variableLike',
-          format: ['camelCase'],
+          format: ['camelCase', 'UPPER_CASE'],
           leadingUnderscore: 'forbid',
         },
         {

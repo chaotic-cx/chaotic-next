@@ -19,12 +19,13 @@ import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { InputText } from 'primeng/inputtext';
 import { Table, TableModule } from 'primeng/table';
-import { retry } from 'rxjs';
+import { filter, retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { DurationPipe } from '../pipes/duration.pipe';
 import { LogurlPipe } from '../pipes/logurl.pipe';
 import { OutcomePipe } from '../pipes/outcome.pipe';
 import { TitleComponent } from '../title/title.component';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'chaotic-deploy-log',
@@ -62,6 +63,15 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
+  constructor() {
+    this.appService.chaoticEvent
+      .pipe(
+        filter((event) => event.type === 'build'),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => this.getDeployments(true));
+  }
+
   ngOnInit() {
     this.appService.updateSeoTags(
       this.meta,
@@ -79,7 +89,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
     this.getDeployments();
   }
 
-  getDeployments(): void {
+  getDeployments(isRefresh = false): void {
     this.appService
       .getPackageBuilds(this.amount())
       .pipe(retry({ delay: 5000, count: 3 }))

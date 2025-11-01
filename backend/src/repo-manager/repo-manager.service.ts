@@ -63,7 +63,6 @@ export class RepoManagerService {
     @InjectRepository(PackageBump)
     private packageBumpRepository: Repository<PackageBump>,
   ) {
-    Logger.log('Initializing RepoManager service...', 'RepoManager');
     void this.init();
   }
 
@@ -79,7 +78,6 @@ export class RepoManagerService {
         // 3GB threshold
         Logger.warn(`High memory usage detected: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`, 'RepoManager');
         if (global.gc) {
-          Logger.log('Triggering garbage collection', 'RepoManager');
           global.gc();
         }
       }
@@ -111,7 +109,6 @@ export class RepoManagerService {
           repo.apiToken = encryptAes(token, dbKey);
           await this.repoRepository.save(repo);
         }
-        Logger.log(`Encrypted token for repo ${repo.name}`);
       }
     } catch (err: any) {
       Logger.error(err.message, 'RepoManager');
@@ -178,7 +175,6 @@ export class RepoManagerService {
       return;
     }
 
-    Logger.log('Starting checking packages for needed rebuilds...', 'RepoManager');
     const workDirs: RepoWorkDir[] = await this.repoManager.pullArchlinuxPackages();
 
     if (!this.repoManager.changedArchPackages || this.repoManager.changedArchPackages.length === 0) {
@@ -197,6 +193,8 @@ export class RepoManagerService {
 
   /**
    * Create a new RepoManager instance.
+   * @param globalTriggers List of global rebuild triggers
+   * @param globalBlocklist List of global blacklisted triggers
    * @returns A new RepoManager instance
    */
   createRepoManager(globalTriggers?: string[], globalBlocklist?: string[]): RepoManager {
@@ -270,6 +268,8 @@ export class RepoManagerService {
   /**
    * Get the bump logs.
    * @param options The options for the bump logs, current amount, and skip
+   * @param options.amount Amount of logs to get
+   * @param options.skip Skip logs for pagination
    * @returns An array of bump log entries
    */
   async getBumpLogs(options: { amount: number; skip: number }): Promise<BumpLogEntry[]> {
@@ -400,7 +400,6 @@ export class RepoManagerService {
   async readNamcap(): Promise<void> {
     try {
       const files: string[] = await readdir('/namcap');
-      Logger.log(files.length, 'RepoManager');
 
       for (const file of files) {
         const fileContent: string = await readFile(`/namcap/${file}`, 'utf8');
@@ -416,8 +415,6 @@ export class RepoManagerService {
           'link-level-dependence': [],
         };
         const relevantRules: string[] = Object.keys(namcapAnalysis);
-
-        Logger.log(`Processing namcap analysis for ${file}`, 'RepoManager');
 
         let name: string;
         let pkg: Package;
@@ -1092,7 +1089,6 @@ class RepoManager {
               }
             } catch (fileErr: any) {
               Logger.warn(`Error processing package files ${file.descFile}: ${fileErr.message}`, 'RepoManager');
-              continue;
             }
           }
 
@@ -1115,7 +1111,6 @@ class RepoManager {
         }
       } catch (dirErr: any) {
         Logger.error(`Error processing directory ${dir.path}: ${dirErr.message}`, 'RepoManager');
-        continue;
       }
     }
 
@@ -1137,7 +1132,6 @@ class RepoManager {
       return;
     }
 
-    Logger.log('Started determining changed packages...', 'RepoManager');
     const result: ArchlinuxPackage[] = [];
 
     let archPkg: ArchlinuxPackage;
@@ -1198,7 +1192,6 @@ class RepoManager {
    * Parse the desc file of a package and return the relevant information.
    * @param descFile The path to the desc file
    * @returns The parsed package information as an ParsePackage object
-   * @private
    */
   private async parsePackageDesc(descFile: string): Promise<Partial<ParsedPackage>> {
     let pkgbaseWithVersions: Partial<ParsedPackage> = {};
@@ -1230,7 +1223,6 @@ class RepoManager {
    * Parse the .files file of a package and return the shared object names.
    * @param filesFile The path to the files file
    * @returns An array of shared object names
-   * @private
    */
   private async parsePackageFiles(filesFile: string): Promise<string[]> {
     let soNameList: string[] = [];
@@ -1264,7 +1256,6 @@ class RepoManager {
    * Extract the base and version from a desc file string.
    * @param lines The lines of the desc file
    * @returns The parsed package information as an ParsePackage object
-   * @private
    */
   private extractBaseAndVersion(lines: string): Partial<ParsedPackage> {
     const completeVersion: string = lines.match(/(?<=%VERSION%\n)\S+/)[0];
@@ -1315,7 +1306,6 @@ class RepoManager {
    * @param regex The regex to match
    * @param source The source string to match the regex in
    * @returns The first matched string or undefined
-   * @private
    */
   private tryMatch(regex: string, source: string): string {
     const regExp = new RegExp(regex);
@@ -1328,7 +1318,6 @@ class RepoManager {
    * @param repoDir The directory of the repository
    * @param needsRebuild The array of packages that need to be rebuilt
    * @param repo The repository object
-   * @private
    */
   async pushChanges(repoDir: string, needsRebuild: RepoUpdateRunParams[], repo: Repo): Promise<void> {
     Logger.log('Committing changes and pushing back to repo...', 'RepoManager');
@@ -1425,7 +1414,6 @@ class RepoManager {
    * @param pkgbaseDir The directory of the package
    * @param repo The repository object
    * @returns An object containing the configs, rebuild triggers, and the package in the database
-   * @private
    */
   async readPackageConfig(configFile: PathLike, pkgbaseDir: string, repo?: Repo): Promise<PackageConfig> {
     const pkgInDb: Package = await pkgnameExists(pkgbaseDir, this.dbConnections.packages, repo);
@@ -1477,7 +1465,6 @@ class RepoManager {
    * Additionally, the repository is added to the repoDirs array of the RepoManager class.
    * @param repo The repository to clone as object
    * @returns The path to the repository directory
-   * @private
    */
   private async createRepoDir(repo: Repo): Promise<string> {
     const repoDir: string = await mkdtemp(join(tmpdir(), repo.name));
@@ -1636,7 +1623,6 @@ class RepoManager {
           break;
         } catch (err: any) {
           // Directory doesn't exist, continue to next repo
-          continue;
         }
       }
 
@@ -1711,7 +1697,6 @@ class RepoManager {
               `Rebuilding ${pkg.pkgname} because of explicit trigger ${build.pkgbase.pkgname}`,
               'RepoManager',
             );
-            continue;
           }
         }
 

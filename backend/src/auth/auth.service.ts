@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import type { User } from '../users/users.entity';
@@ -27,8 +27,6 @@ export class AuthService {
       const isMatch: boolean = await bcrypt.compare(password, user.password);
       if (!isMatch) throw new UnauthorizedException('Invalid credentials');
     }
-
-    Logger.log(`User ${username} signed in successfully`, 'AuthService');
 
     const payload = { sub: user.id, username: user.name };
     return {

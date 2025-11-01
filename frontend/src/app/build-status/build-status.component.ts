@@ -16,9 +16,9 @@ import { Timeline } from 'primeng/timeline';
 import { Tooltip } from 'primeng/tooltip';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
-import { startShortPolling } from '../functions';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -83,6 +83,16 @@ export class BuildStatusComponent implements OnInit {
   dialogVisible = signal<boolean>(false);
   pipelineWithStatus = signal<PipelineWithExternalStatus[]>([]);
 
+  constructor() {
+    this.appService.chaoticEvent.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event.type === 'build') {
+        void this.getPackageBuilds(true);
+        void this.getQueueStats(true);
+      }
+      if (event.type === 'pipeline') void this.getPipelines(true);
+    });
+  }
+
   async ngOnInit(): Promise<void> {
     this.appService.updateSeoTags(
       this.meta,
@@ -98,10 +108,6 @@ export class BuildStatusComponent implements OnInit {
     });
 
     void this.updateAll(false);
-
-    startShortPolling(15000, async (): Promise<void> => {
-      void this.updateAll(true);
-    });
   }
 
   /**

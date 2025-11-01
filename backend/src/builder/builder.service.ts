@@ -9,6 +9,8 @@ import { BuilderDbConnections, BuildStatus, MoleculerBuildObject } from '../type
 import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from './builder.entity';
 import { brokerConfig, MoleculerConfigCommonService } from './moleculer.config';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
+import { Subject } from 'rxjs';
+import { EventService } from '../events/event.service';
 
 @Injectable()
 export class BuilderService {
@@ -25,6 +27,7 @@ export class BuilderService {
     @InjectRepository(Package)
     private packageRepository: Repository<Package>,
     private configService: ConfigService,
+    private eventService: EventService,
     private repoManagerService: RepoManagerService,
   ) {
     const redisPassword: string = this.configService.get<string | undefined>('redis.password');
@@ -49,10 +52,29 @@ export class BuilderService {
       repo: this.repoRepository,
     };
 
+    setInterval(() => {
+      Logger.debug('asdasdsa');
+      this.eventService.sseEvents$.next({
+        data: {
+          type: 'build',
+          package: 'chaotic',
+          version: '1.2.2',
+          pkgrel: 1,
+          duration: 123123123123,
+          repo: 'chaotic-aur',
+          status: BuildStatus.SUCCESS,
+        },
+      });
+    }, 10000);
+
     try {
       this.connection.connect().then(() => {
         this.broker = new ServiceBroker(brokerConfig(generateNodeId(), this.connection));
-        this.broker.createService(new BuilderDatabaseService(this.broker, dbConnections, this.repoManagerService));
+        this.broker.createService(
+          new BuilderDatabaseService(this.broker, dbConnections, this.repoManagerService, {
+            sseSubject: this.eventService.sseEvents$,
+          }),
+        );
         void this.broker.start();
       });
     } catch (err: unknown) {
@@ -396,18 +418,29 @@ export class BuilderDatabaseService extends Service {
   private dbConnections: BuilderDbConnections;
   private repoManagerService: RepoManagerService;
 
+  private readonly sseSubject$: Subject<Partial<MessageEvent>>;
+
   busyUpdating = false;
   scheduledUpdate = false;
 
-  constructor(broker: ServiceBroker, dbConnections: BuilderDbConnections, repoManagerService: RepoManagerService) {
+  constructor(
+    broker: ServiceBroker,
+    dbConnections: BuilderDbConnections,
+    repoManagerService: RepoManagerService,
+    options: { sseSubject: Subject<Partial<MessageEvent>> },
+  ) {
     super(broker);
+
+    this.sseSubject$ = options.sseSubject;
 
     this.parseServiceSchema({
       name: 'builderDatabaseService',
       events: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         'builds.*'(ctx: Context<MoleculerBuildObject>) {
           this.logBuild(ctx);
         },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         'database.removalCompleted'(ctx: Context<string[]>) {
           this.removeEntries(ctx);
         },
@@ -417,6 +450,7 @@ export class BuilderDatabaseService extends Service {
 
     this.repoManagerService = repoManagerService;
     this.dbConnections = dbConnections;
+
     Logger.log('BuilderDatabaseService created', 'BuilderDatabaseService');
   }
 
@@ -489,6 +523,24 @@ export class BuilderDatabaseService extends Service {
         }
 
         await Promise.allSettled(promises);
+
+        // Notify SSE clients about the build and newly updated package
+        const updatedPackage: Package = await pkgnameExists(
+          build.pkgbase.pkgname,
+          this.dbConnections.package,
+          build.repo,
+        );
+        this.sseSubject$.next({
+          data: {
+            type: 'build',
+            package: build.pkgbase,
+            version: updatedPackage.version,
+            pkgrel: updatedPackage.pkgrel,
+            duration: build.timeToEnd,
+            repo: build.repo,
+            status: build.status,
+          },
+        });
       } catch (err: unknown) {
         Logger.error(err, 'RepoManager');
       }

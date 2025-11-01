@@ -89,8 +89,6 @@ export interface UserAgentMetric {
   count: number;
 }
 
-export const Repository = ['chaotic-aur', 'garuda', 'all'];
-
 export interface Builder {
   id: number;
   name: string;
@@ -211,3 +209,19 @@ export interface MirrorData {
   self: MirrorSelf;
   mirrors: Mirror[];
 }
+
+export type ChaoticEventType = 'build' | 'pipeline';
+
+export type ChaoticEvent =
+  | {
+      type: 'build';
+      package: string;
+      version: string;
+      pkgrel: number;
+      duration: number;
+      repo: string;
+      status: BuildStatus;
+    }
+  | {
+      type: 'pipeline';
+    };
