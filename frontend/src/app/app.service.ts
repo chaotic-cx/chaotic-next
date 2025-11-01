@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import {
   type Build,
   type BuildStatus,
+  type ChaoticEvent,
   type CountryRankList,
   MirrorData,
   type Package,
@@ -25,6 +26,17 @@ import { Message } from './newsfeed/interfaces';
 export class AppService {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly http = inject(HttpClient);
+
+  /**
+   * Channel for instant updates regarding builds and pipeline status
+   */
+  serverEvents: EventSource = new EventSource(`${this.appConfig.backendUrl}/builder/sse`);
+
+  /**
+   * Subject for SSE notifications
+   */
+  chaoticSse$ = new Subject<ChaoticEvent>();
+  chaoticEvent = this.chaoticSse$.asObservable();
 
   getStatusChecks(): Observable<PipelineWithExternalStatus[]> {
     return this.http.get<PipelineWithExternalStatus[]>(`${this.appConfig.backendUrl}/gitlab/pipelines`);

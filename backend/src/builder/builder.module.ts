@@ -7,12 +7,14 @@ import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
 import { HttpModule } from '@nestjs/axios';
 import { RepoManagerModule } from '../repo-manager/repo-manager.module';
+import { EventModule } from '../events/event.module';
 
 @Module({
   controllers: [BuilderController],
   exports: [TypeOrmModule, BuilderService],
   imports: [
     ConfigModule.forFeature(builderConfig),
+    EventModule,
     HttpModule,
     forwardRef(() => RepoManagerModule),
     TypeOrmModule.forFeature([Builder, Build, Repo, Package]),

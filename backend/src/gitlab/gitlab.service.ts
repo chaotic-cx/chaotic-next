@@ -4,6 +4,8 @@ import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Mutex } from 'async-mutex';
+import { EventService } from '../events/event.service';
+import { PipelineWebhook } from './interfaces';
 
 @Injectable()
 export class GitlabService {
@@ -18,9 +20,9 @@ export class GitlabService {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly configService: ConfigService,
+    private readonly eventService: EventService,
   ) {
     this.chaoticId = this.configService.getOrThrow<string>('CAUR_GITLAB_ID_CAUR');
-    // this.garudaId = this.configService.getOrThrow<string>('CAUR_GITLAB_ID_GARUDA');
     this.api = new Gitlab({
       token: this.configService.getOrThrow<string>('CAUR_GITLAB_TOKEN'),
     });
@@ -64,9 +66,11 @@ export class GitlabService {
 
   /**
    * Bust the cache for the pipelines.
+   * @param body Body of GitLab API call
    * @returns True if the cache was successfully busted, false otherwise
    */
-  public async bustCache(): Promise<boolean> {
+  public async bustCache(body: PipelineWebhook): Promise<boolean> {
+    this.eventService.sseEvents$.next({ data: { type: 'pipeline' } });
     return await this.cacheManager.del(this.CACHE_KEY_PIPELINES);
   }
 
@@ -94,7 +98,6 @@ export class GitlabService {
   /**
    * Check if a stage is an external stage appended by our Chaotic Manager.
    * @param name The name of the stage
-   * @private
    */
   private isExternalStage(name: string): boolean {
     return name.startsWith('chaotic-aur:') || name.startsWith('garuda:');

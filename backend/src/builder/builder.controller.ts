@@ -1,5 +1,5 @@
-import { Controller, Get, Logger, Param, ParseBoolPipe, ParseIntPipe, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseBoolPipe, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AllowAnonymous } from '../auth/anonymous.decorator';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
@@ -162,9 +162,6 @@ export class BuilderController {
     return await this.builderService.getPopularPackages({ amount, offset, status });
   }
 
-  /**
-   * Returns the number of builds per builder.
-   */
   @AllowAnonymous()
   @Get('builders/amount')
   @ApiOperation({ summary: 'Get the number of builds per builder.' })

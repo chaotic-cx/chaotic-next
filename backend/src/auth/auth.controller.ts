@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Post, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { LoginCredentials } from '../types';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local.auth.guard';
@@ -16,16 +16,7 @@ export class AuthController {
   @ApiOkResponse({ description: 'User authenticated successfully.' })
   @UseGuards(LocalAuthGuard)
   signIn(@Body() cred: LoginCredentials) {
-    Logger.log(`User ${cred.username} is attempting to sign in with password ${cred.password}`, 'AuthController');
     return this.authService.signIn(cred.username, cred.password);
-  }
-
-  @HttpCode(HttpStatus.OK)
-  @Get('auth0/login')
-  @ApiOperation({ summary: 'Initiate Auth0 login flow.' })
-  @ApiOkResponse({ description: 'Auth0 login initiated.' })
-  auth0Login() {
-    Logger.log('User is attempting to sign in with Auth0', 'AuthController');
   }
 
   @HttpCode(HttpStatus.OK)
