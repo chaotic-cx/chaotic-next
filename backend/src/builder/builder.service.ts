@@ -11,6 +11,7 @@ import { brokerConfig, MoleculerConfigCommonService } from './moleculer.config';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { Subject } from 'rxjs';
 import { EventService } from '../events/event.service';
+import { ChaoticEvent, MoleculerCurrentQueueObject } from '@./shared-lib';
 
 @Injectable()
 export class BuilderService {
@@ -403,7 +404,7 @@ export class BuilderDatabaseService extends Service {
   private dbConnections: BuilderDbConnections;
   private repoManagerService: RepoManagerService;
 
-  private readonly sseSubject$: Subject<Partial<MessageEvent>>;
+  private readonly sseSubject$: Subject<Partial<MessageEvent<ChaoticEvent>>>;
 
   busyUpdating = false;
   scheduledUpdate = false;
@@ -412,7 +413,7 @@ export class BuilderDatabaseService extends Service {
     broker: ServiceBroker,
     dbConnections: BuilderDbConnections,
     repoManagerService: RepoManagerService,
-    options: { sseSubject: Subject<Partial<MessageEvent>> },
+    options: { sseSubject: Subject<Partial<MessageEvent<ChaoticEvent>>> },
   ) {
     super(broker);
 
@@ -428,6 +429,15 @@ export class BuilderDatabaseService extends Service {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'database.removalCompleted'(ctx: Context<string[]>) {
           this.removeEntries(ctx);
+        },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'metrics.currentQueue'(ctx: Context<MoleculerCurrentQueueObject>) {
+          this.sseSubject$.next({
+            data: {
+              type: 'queue',
+              payload: ctx.params,
+            },
+          });
         },
       },
       ...MoleculerConfigCommonService,
