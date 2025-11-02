@@ -67,6 +67,7 @@ export class BuildStatusComponent implements OnInit {
         void this.buildStatusService.getQueueStats(true);
       }
       if (event.type === 'pipeline') void this.buildStatusService.getPipelines(true);
+      if (event.type === 'queue') void this.buildStatusService.getQueueStats(true);
     });
   }
 

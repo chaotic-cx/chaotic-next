@@ -210,6 +210,15 @@ export interface MirrorData {
   mirrors: Mirror[];
 }
 
+export interface MoleculerCurrentQueueObject {
+  count: number;
+  labels: {
+    build_class: BuildClass[];
+    pkgname: string[];
+    target_repo: string[];
+  };
+}
+
 export type ChaoticEventType = 'build' | 'pipeline';
 
 export type ChaoticEvent =
@@ -224,4 +233,7 @@ export type ChaoticEvent =
     }
   | {
       type: 'pipeline';
-    };
+    }
+  | ({
+      type: 'queue';
+    } & MoleculerCurrentQueueObject);
