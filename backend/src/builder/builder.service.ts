@@ -436,11 +436,11 @@ export class BuilderDatabaseService extends Service {
       events: {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'builds.*'(ctx: Context<MoleculerBuildObject>) {
-          //this.logBuild(ctx);
+          this.logBuild(ctx);
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'database.removalCompleted'(ctx: Context<string[]>) {
-          //this.removeEntries(ctx);
+          this.removeEntries(ctx);
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'metrics.currentQueue'(ctx: Context<MoleculerCurrentQueueObject>) {
