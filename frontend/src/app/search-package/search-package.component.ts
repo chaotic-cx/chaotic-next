@@ -1,14 +1,5 @@
-import { Package } from '@./shared-lib';
 import { CommonModule } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  inject,
-  OnInit,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, viewChild } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
@@ -19,25 +10,19 @@ import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
+import { FormsModule } from '@angular/forms';
+import { PackageStatsService } from '../package-stats/package-stats.service';
+import { Select } from 'primeng/select';
 
 @Component({
   selector: 'chaotic-search-package',
-  imports: [CommonModule, AutoComplete, TableModule, PackageDetailKeyPipe, UnixDatePipe],
+  imports: [CommonModule, AutoComplete, TableModule, PackageDetailKeyPipe, UnixDatePipe, FormsModule, Select],
   templateUrl: './search-package.component.html',
   styleUrl: './search-package.component.css',
   providers: [FilterService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchPackageComponent implements OnInit {
-  suggestionPool = signal<string[]>([]);
-  currentSuggestions: string[] = [];
-  packageData!: Package;
-  initialSearchDone = false;
-
-  @ViewChild('autoComplete') autoComplete!: AutoComplete;
-
-  data: { key: string; value: any }[] = [];
-
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly filterService = inject(FilterService);
@@ -45,6 +30,10 @@ export class SearchPackageComponent implements OnInit {
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  protected readonly autoComplete = viewChild<AutoComplete>('autoComplete');
+  protected readonly packageStatsService = inject(PackageStatsService);
+  protected readonly repoOptions = ['chaotic-aur', 'garuda'];
 
   async ngOnInit(): Promise<void> {
     this.getSuggestions();
@@ -69,14 +58,16 @@ export class SearchPackageComponent implements OnInit {
     if (event.query.length < 3) return;
 
     if (/^[0-9|a-zA-Z-]*$/.test(event.query)) {
-      this.currentSuggestions = this.suggestionPool().filter((name) =>
-        this.filterService.filters['contains'](name, event.query),
+      this.packageStatsService.packageSearchCurrentSuggestions.set(
+        this.packageStatsService
+          .packageSearchSuggestionPool()
+          .filter((name) => this.filterService.filters['contains'](name, event.query)),
       );
-      this.autoComplete.inputStyleClass = '';
+      this.autoComplete()!.inputStyleClass = '';
       void this.router.navigate(['/stats'], { queryParams: { search: event.query } });
       this.cdr.markForCheck();
     } else {
-      this.autoComplete.inputStyleClass = 'ng-invalid ng-dirty';
+      this.autoComplete()!.inputStyleClass = 'ng-invalid ng-dirty';
       this.cdr.markForCheck();
     }
   }
@@ -87,7 +78,7 @@ export class SearchPackageComponent implements OnInit {
       .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (data) => {
-          this.suggestionPool.set(data.map((pkg) => pkg.pkgname));
+          this.packageStatsService.packageSearchSuggestionPool.set(data.map((pkg) => pkg.pkgname));
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -98,30 +89,39 @@ export class SearchPackageComponent implements OnInit {
   }
 
   updateDisplay(query: string): void {
-    this.data = [];
-
     this.appService
-      .getPackage(query)
+      .getPackage(query, this.packageStatsService.packageSearchSelectedRepo())
       .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (result) => {
-          this.packageData = result;
-          const data = this.packageData as Record<string, any>;
+          this.packageStatsService.packageSearchPackageData.set(result);
+          const data = result as Record<string, any>;
+          const newData = [];
 
-          data['version'] = `${data['version']}-${data['pkgrel']}`;
-          delete data['pkgrel'];
+          if (!Object.hasOwn(data, 'pkgrel') || !Object.hasOwn(data, 'version')) {
+            this.messageToastService.warn(
+              'Error',
+              'Package data is incomplete, this is due to switching to per-repo statistics not too long ago.',
+            );
+            data['version'] = data['version'] || 'unknown';
+          } else {
+            data['version'] = `${data['version']}-${data['pkgrel']}`;
+            delete data['pkgrel'];
+          }
 
           for (const key in data) {
             if (key === 'isActive') continue;
             if (data[key] && typeof data[key] !== 'object') {
-              this.data.push({ key, value: data[key] });
+              newData.push({ key: key, value: data[key] });
             } else if (data[key] && typeof data[key] === 'object') {
               for (const innerKey in data[key]) {
-                this.data.push({ key: innerKey, value: data[key][innerKey] });
+                newData.push({ key: innerKey, value: data[key][innerKey] });
               }
             }
           }
-          this.initialSearchDone = true;
+
+          this.packageStatsService.packageSearchData.set(newData);
+          this.packageStatsService.packageSearchInitialSearchDone.set(true);
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -129,13 +129,20 @@ export class SearchPackageComponent implements OnInit {
           console.error(err);
         },
       });
+
     this.appService.getSpecificPackageMetrics(query).subscribe({
       next: (result) => {
-        if (this.data.filter((d) => d.key === 'downloads')) {
-          const key: number = this.data.findIndex((d) => d.key === 'downloads');
-          this.data[key].value = result.downloads;
+        const data = this.packageStatsService.packageSearchData();
+        if (data.filter((d) => d.key === 'downloads')) {
+          const exists = data.find((d) => d.key === 'downloads');
+          if (!exists) return;
+          const key: number = data.findIndex((d) => d.key === 'downloads');
+          this.packageStatsService.packageSearchData.update((current) => {
+            current[key] = { key: 'downloads', value: result.downloads };
+            return current;
+          });
         } else {
-          this.data.push({ key: 'downloads', value: result.downloads });
+          this.packageStatsService.packageSearchData.set([...data, { key: 'downloads', value: result.downloads }]);
         }
         this.cdr.markForCheck();
       },

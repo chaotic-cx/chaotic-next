@@ -1,51 +1,59 @@
-<div>
+<div class="flex mx-auto justify-center gap-4">
   <p-auto-complete
     #autoComplete
-    [suggestions]="currentSuggestions"
+    [suggestions]="packageStatsService.packageSearchCurrentSuggestions()"
     (completeMethod)="search($event)"
     (onSelect)="updateDisplay($event.value)"
     [autofocus]="true"
     placeholder="Search a package name"
   ></p-auto-complete>
+  <p-select
+    [options]="repoOptions"
+    [(ngModel)]="packageStatsService.packageSearchSelectedRepo"
+    (ngModelChange)="updateDisplay(autoComplete.value)"
+    class="w-full md:w-60"
+  >
+  </p-select>
 </div>
 <div class="min-h-footer">
-  @if (!initialSearchDone) {
+  @if (!packageStatsService.packageSearchInitialSearchDone()) {
     <div class="mx-auto">
       <i class="pi pi-search text-ctp-maroon mt-36" style="font-size: 10rem"></i>
     </div>
+  } @else {
+    <p-table [value]="packageStatsService.packageSearchData()" [tableStyle]="{ 'width': '100%', 'margin-top': '20px' }">
+      <ng-template #body let-dataset>
+        <tr>
+          <td>{{ dataset.key | packageDetailKey }}</td>
+          @if (dataset.key === 'url') {
+            <td>
+              <a [href]="dataset.value" target="_blank" class="text-ctp-mauve" rel="noopener noreferrer">{{
+                dataset.value
+              }}</a>
+            </td>
+          } @else if (dataset.key === 'buildDate') {
+            <td>{{ dataset.value | unixDate }}</td>
+          } @else if (dataset.key === 'lastUpdated') {
+            <td>{{ dataset.value | date: 'short' }}</td>
+          } @else if (typeof dataset.value !== 'string' && dataset.value?.length > 0) {
+            <td>
+              @if (dataset.value.length > 1) {
+                <ul class="chaotic-list-regular">
+                  @for (item of dataset.value; track item) {
+                    <li>{{ item }}</li>
+                  }
+                </ul>
+              } @else {
+                <span>{{ dataset.value[0] }}</span>
+              }
+            </td>
+          } @else if (!dataset.value || dataset.value?.length === 0) {
+            <td class="text-ctp-text">n/a</td>
+          } @else {
+            <td>{{ dataset.value }}</td>
+          }
+        </tr>
+      </ng-template>
+    </p-table>
   }
-  <p-table [value]="data" [tableStyle]="{ 'width': '100%', 'margin-top': '20px' }">
-    <ng-template #body let-dataset>
-      <tr>
-        <td>{{ dataset.key | packageDetailKey }}</td>
-        @if (dataset.key === 'url') {
-          <td>
-            <a [href]="dataset.value" target="_blank" class="text-ctp-mauve" rel="noopener noreferrer">{{
-              dataset.value
-            }}</a>
-          </td>
-        } @else if (dataset.key === 'buildDate') {
-          <td>{{ dataset.value | unixDate }}</td>
-        } @else if (dataset.key === 'lastUpdated') {
-          <td>{{ dataset.value | date: 'short' }}</td>
-        } @else if (typeof dataset.value !== 'string' && dataset.value?.length > 0) {
-          <td>
-            @if (dataset.value.length > 1) {
-              <ul class="chaotic-list-regular">
-                @for (item of dataset.value; track item) {
-                  <li>{{ item }}</li>
-                }
-              </ul>
-            } @else {
-              <span>{{ dataset.value[0] }}</span>
-            }
-          </td>
-        } @else if (!dataset.value || dataset.value?.length === 0) {
-          <td class="text-ctp-text">n/a</td>
-        } @else {
-          <td>{{ dataset.value }}</td>
-        }
-      </tr>
-    </ng-template>
-  </p-table>
 </div>
