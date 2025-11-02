@@ -31,9 +31,10 @@ export class BuilderController {
   @Get('package/:name')
   @ApiOperation({ summary: 'Get a package by name.' })
   @ApiParam({ name: 'name', description: 'Package name' })
+  @ApiParam({ name: 'repo', description: 'Repository name', required: false })
   @ApiOkResponse({ description: 'Package details', type: Object })
-  async getPackage(@Param('name') name: string): Promise<Package> {
-    return await this.builderService.getPackage(name);
+  async getPackage(@Param('name') name: string, @Query('repo') repo: string): Promise<Package> {
+    return await this.builderService.getPackage(name, repo);
   }
 
   @AllowAnonymous()

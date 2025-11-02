@@ -14,7 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { Button, ButtonDirective } from 'primeng/button';
+import { Button } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
@@ -43,7 +43,6 @@ import { PackageListService } from './packge-list.service';
     DatePipe,
     Button,
     StripPrefixPipe,
-    ButtonDirective,
     NgClass,
     TitleComponent,
     RepoNamePipe,

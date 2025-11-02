@@ -107,9 +107,12 @@ export class BuilderService {
   async getBuilds(options?: { offset: number; amount: number; builder?: string }): Promise<Build[]> {
     return this.buildRepository
       .createQueryBuilder('build')
-      .leftJoinAndSelect('build.pkgbase', 'package')
-      .leftJoinAndSelect('build.builder', 'builder')
-      .leftJoinAndSelect('build.repo', 'repo')
+      .leftJoin('build.pkgbase', 'package')
+      .addSelect('package.pkgname')
+      .leftJoin('build.builder', 'builder')
+      .addSelect('builder.name')
+      .leftJoin('build.repo', 'repo')
+      .addSelect('repo.name')
       .orderBy('build.id', 'DESC')
       .skip(options.offset)
       .take(options.amount)
@@ -126,9 +129,12 @@ export class BuilderService {
     if (!options.status) {
       return await this.buildRepository
         .createQueryBuilder('build')
-        .leftJoinAndSelect('build.pkgbase', 'package')
-        .leftJoinAndSelect('build.builder', 'builder')
-        .leftJoinAndSelect('build.repo', 'repo')
+        .leftJoin('build.pkgbase', 'package')
+        .addSelect('package.pkgname')
+        .leftJoin('build.builder', 'builder')
+        .addSelect('builder.name')
+        .leftJoin('build.repo', 'repo')
+        .addSelect('repo.name')
         .orderBy('build.id', 'DESC')
         .skip(options.offset)
         .take(options.amount)
@@ -137,9 +143,12 @@ export class BuilderService {
     } else {
       return await this.buildRepository
         .createQueryBuilder('build')
-        .leftJoinAndSelect('build.pkgbase', 'package')
-        .leftJoinAndSelect('build.builder', 'builder')
-        .leftJoinAndSelect('build.repo', 'repo')
+        .leftJoin('build.pkgbase', 'package')
+        .addSelect('package.pkgname')
+        .leftJoin('build.builder', 'builder')
+        .addSelect('builder.name')
+        .leftJoin('build.repo', 'repo')
+        .addSelect('repo.name')
         .where('build.status = :status', { status: options.status })
         .orderBy('build.id', 'DESC')
         .skip(options.offset)
@@ -157,9 +166,12 @@ export class BuilderService {
   async getLastBuildsForPackage(options: { pkgname: string; amount: number; offset: number }): Promise<Build[]> {
     return this.buildRepository
       .createQueryBuilder('build')
-      .leftJoinAndSelect('build.pkgbase', 'package')
-      .leftJoinAndSelect('build.builder', 'builder')
-      .leftJoinAndSelect('build.repo', 'repo')
+      .leftJoin('build.pkgbase', 'package')
+      .addSelect('package.pkgname')
+      .leftJoin('build.builder', 'builder')
+      .addSelect('builder.name')
+      .leftJoin('build.repo', 'repo')
+      .addSelect('repo.name')
       .where('package.pkgname = :pkgname', { pkgname: options.pkgname })
       .orderBy('build.id', 'DESC')
       .skip(options.offset)
@@ -392,8 +404,8 @@ export class BuilderService {
       .getRawMany();
   }
 
-  async getPackage(name: string) {
-    return await this.packageRepository.findOne({ where: { pkgname: name } });
+  async getPackage(name: string, repo?: string) {
+    return await this.packageRepository.findOne({ where: { pkgname: name, repo: repo ? { name: repo } : undefined } });
   }
 }
 
@@ -424,11 +436,11 @@ export class BuilderDatabaseService extends Service {
       events: {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'builds.*'(ctx: Context<MoleculerBuildObject>) {
-          this.logBuild(ctx);
+          //this.logBuild(ctx);
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'database.removalCompleted'(ctx: Context<string[]>) {
-          this.removeEntries(ctx);
+          //this.removeEntries(ctx);
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'metrics.currentQueue'(ctx: Context<MoleculerCurrentQueueObject>) {

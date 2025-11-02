@@ -74,8 +74,10 @@ export class AppService {
     return this.http.get<(Package & { reponame: string })[]>(`${this.appConfig.backendUrl}/builder/packages?repo=true`);
   }
 
-  getPackage(name: string): Observable<Package> {
-    return this.http.get<Package>(`${this.appConfig.backendUrl}/builder/package/${name}`);
+  getPackage(name: string, repo: string): Observable<Package> {
+    return this.http.get<Package>(`${this.appConfig.backendUrl}/builder/package/${name}`, {
+      params: { repo },
+    });
   }
 
   getPackageBuilds(amount: number, status?: BuildStatus): Observable<Build[]> {
