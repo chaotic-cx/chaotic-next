@@ -105,6 +105,9 @@
                 [sortOrder]="1"
                 [paginator]="buildStatusService.waitingQueue().length > 10"
                 sortField="name"
+                stateStorage="local"
+                paginatorDropdownAppendTo="body"
+                stateKey="build-status-waiting-queue"
               >
                 <ng-template #header>
                   <tr>
@@ -247,6 +250,9 @@
                 [sortOrder]="1"
                 [paginator]="buildStatusService.waitingQueue().length > 10"
                 sortField="name"
+                paginatorDropdownAppendTo="body"
+                stateStorage="local"
+                stateKey="build-status-waiting-queue"
               >
                 <ng-template #header>
                   <tr>
