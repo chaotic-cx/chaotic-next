@@ -26,10 +26,13 @@
                         'pi-check-circle text-ctp-green': pipeline.pipeline.status === 'success',
                         'pi-exclamation-circle text-ctp-red': pipeline.pipeline.status.includes('failed'),
                         'pi-spin pi-spinner text-ctp-peach': pipeline.pipeline.status === 'running',
+                        'pi-info-circle text-ctp-text': pipeline.pipeline.status === 'pending',
+                        'pi-hourglass text-ctp-flamingo': pipeline.pipeline.status === 'waiting_for_resource',
+                        'pi-times-circle text-ctp-maroon': pipeline.pipeline.status === 'canceling',
                       }"
                     ></i>
-                    <span class="ml-1">
-                      <a>{{ pipeline.pipeline.status }}</a>
+                    <span class="ml-2">
+                      <a>{{ pipeline.pipeline.status.replaceAll('_', ' ') }}</a>
                     </span>
                   </div>
                 </ng-container>
@@ -307,7 +310,7 @@
         }
       </div>
     </p-panel>
-    <p-panel class="mt-5" legend="Latest deployments">
+    <p-panel class="mt-5" header="Latest deployments">
       <div class="chaotic-tab-content">
         @if (!buildStatusService.loadingPipelines()) {
           <p-timeline [value]="buildStatusService.pipelineWithStatus()">
@@ -325,10 +328,14 @@
                       'pi-check-circle text-ctp-green': pipeline.pipeline.status === 'success',
                       'pi-exclamation-circle text-ctp-red': pipeline.pipeline.status.includes('failed'),
                       'pi-spin pi-spinner text-ctp-peach': pipeline.pipeline.status === 'running',
+                      'pi-info-circle text-ctp-text': pipeline.pipeline.status === 'pending',
+                      'pi-hourglass text-ctp-flamingo': pipeline.pipeline.status === 'waiting_for_resource',
+                      'pi-hourglass text-ctp-red': pipeline.pipeline.status === 'waiting_for_resource',
+                      'pi-times-circle text-ctp-maroon': pipeline.pipeline.status === 'canceling',
                     }"
                   ></i>
-                  <span class="ml-1">
-                    <a>{{ pipeline.pipeline.status }}</a>
+                  <span class="ml-2">
+                    <a>{{ pipeline.pipeline.status.replaceAll('_', ' ') }}</a>
                   </span>
                 </div>
               </ng-container>
