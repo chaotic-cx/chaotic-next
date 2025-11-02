@@ -3407,5 +3407,30 @@
         "emoji": "👏"
       }
     ]
+  },
+  {
+    "id": 668,
+    "type": "message",
+    "date": "2025-11-02T18:05:37",
+    "date_unixtime": "1762103137",
+    "edited": "2025-11-02T18:06:41",
+    "edited_unixtime": "1762103201",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": "What's up, everyone? 👋🏻\n\nSome good news for Chaotic-AUR users: after the rising count of cases of malware in AUR, we now have a system of a trusted maintainer's list in place. This list is being checked before updating packages silently like before. There are multiple outcomes:\n\n1. All maintainers are trusted -> silently update package like before\n2. At least one maintainer is untrusted (sadly, the AUR API does not seem to expose the last packager, which is, however, being shown in the web interface for some reason): \n  a) Only pkgver/hash changes -> silently update\n  b) Anything else changes -> open PR for human review\n3. State updates are also always allowed (e.g. commit hashes of git packages)\n\nWhile we can't yet tell how sustainable reviewing the untrusted portion of package updates will be, it is certainly a good step to take moving forward. Maybe this also opens the door for people to contribute, e.g., by reviewing the package updates created via PR 😇 (if anyone is interested: let the team know!)\n\nBesides that, the website will also live-update on any deployment, queue and pipeline change for a more interactive experience 🙌🏻",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "What's up, everyone? 👋🏻\n\nSome good news for Chaotic-AUR users: after the rising count of cases of malware in AUR, we now have a system of a trusted maintainer's list in place. This list is being checked before updating packages silently like before. There are multiple outcomes:\n\n1. All maintainers are trusted -> silently update package like before\n2. At least one maintainer is untrusted (sadly, the AUR API does not seem to expose the last packager, which is, however, being shown in the web interface for some reason): \n  a) Only pkgver/hash changes -> silently update\n  b) Anything else changes -> open PR for human review\n3. State updates are also always allowed (e.g. commit hashes of git packages)\n\nWhile we can't yet tell how sustainable reviewing the untrusted portion of package updates will be, it is certainly a good step to take moving forward. Maybe this also opens the door for people to contribute, e.g., by reviewing the package updates created via PR 😇 (if anyone is interested: let the team know!)\n\nBesides that, the website will also live-update on any deployment, queue and pipeline change for a more interactive experience 🙌🏻"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "🔥"
+      }
+    ]
   }
 ]
