@@ -8,7 +8,7 @@
 <div class="chaotic-container-wide-center md:chaotic-container-regular">
   @if (isWide()) {
     <div class="flex">
-      <p-card header="Pipelines" class="md:w-1/4">
+      <p-card class="md:w-1/4" header="Pipelines">
         <div class="mt-5">
           @if (!buildStatusService.loadingPipelines()) {
             <p-timeline [value]="buildStatusService.pipelineWithStatus()">
@@ -19,7 +19,7 @@
               </ng-template>
               <ng-template #content let-unTypedPipeline>
                 <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                  <div pRipple (click)="showDialog(pipeline.pipeline.id)" class="cursor-pointer">
+                  <div class="cursor-pointer" (click)="showDialog(pipeline.pipeline.id)" pRipple>
                     <i
                       class="pi"
                       [ngClass]="{
@@ -36,7 +36,7 @@
               </ng-template>
             </p-timeline>
           } @else {
-            <div *ngFor="let item of createRange(22)" class="my-3">
+            <div class="my-3" *ngFor="let item of createRange(22)">
               <p-skeleton width="100%" height="4rem"></p-skeleton>
             </div>
           }
@@ -161,7 +161,7 @@
           </div>
         }
       </div>
-      <p-card header="Latest deployments" class="md:w-1/4">
+      <p-card class="md:w-1/4" header="Latest deployments">
         <div class="mt-5">
           @if (!buildStatusService.loadingDeployments()) {
             <p-timeline [value]="buildStatusService.latestDeployments()">
@@ -172,7 +172,7 @@
               </ng-template>
               <ng-template #content let-untypedDeployment>
                 <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
-                  <a pRipple [href]="deployment.logUrl"
+                  <a [href]="deployment.logUrl" pRipple
                     >{{ deployment.pkgbase.pkgname }}
                     <br />
                     <a class="text-ctp-subtext1 text-xs">({{ deployment.repo?.name }})</a>
@@ -181,7 +181,7 @@
               </ng-template>
             </p-timeline>
           } @else {
-            <div *ngFor="let item of createRange(22)" class="my-3">
+            <div class="my-3" *ngFor="let item of createRange(22)">
               <p-skeleton width="100%" height="4rem"></p-skeleton>
             </div>
           }
@@ -307,7 +307,7 @@
         }
       </div>
     </p-panel>
-    <p-panel legend="Latest deployments" class="mt-5">
+    <p-panel class="mt-5" legend="Latest deployments">
       <div class="chaotic-tab-content">
         @if (!buildStatusService.loadingPipelines()) {
           <p-timeline [value]="buildStatusService.pipelineWithStatus()">
@@ -318,7 +318,7 @@
             </ng-template>
             <ng-template #content let-unTypedPipeline>
               <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-                <div pRipple (click)="showDialog(pipeline.pipeline.id)" class="cursor-pointer">
+                <div class="cursor-pointer" (click)="showDialog(pipeline.pipeline.id)" pRipple>
                   <i
                     class="pi"
                     [ngClass]="{
@@ -335,13 +335,13 @@
             </ng-template>
           </p-timeline>
         } @else {
-          <div *ngFor="let item of createRange(20)" class="my-3">
+          <div class="my-3" *ngFor="let item of createRange(20)">
             <p-skeleton width="100%" height="4rem"></p-skeleton>
           </div>
         }
       </div>
     </p-panel>
-    <p-panel header="Latest deployments" class="mt-5">
+    <p-panel class="mt-5" header="Latest deployments">
       <div class="chaotic-tab-content">
         @if (!buildStatusService.loadingDeployments()) {
           <p-timeline [value]="buildStatusService.latestDeployments()">
@@ -353,7 +353,7 @@
             <ng-template #content let-untypedDeployment>
               <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
                 <span>
-                  <a pRipple [href]="deployment.logUrl">{{ deployment.pkgbase.pkgname }}</a
+                  <a [href]="deployment.logUrl" pRipple>{{ deployment.pkgbase.pkgname }}</a
                   ><br />
                   <a class="text-sm">({{ deployment.repo?.name }})</a>
                 </span>
@@ -361,7 +361,7 @@
             </ng-template>
           </p-timeline>
         } @else {
-          <div *ngFor="let item of createRange(20)" class="my-3">
+          <div class="my-3" *ngFor="let item of createRange(20)">
             <p-skeleton width="100%" height="4rem"></p-skeleton>
           </div>
         }
@@ -371,7 +371,7 @@
 </div>
 
 @if (dialogData().pipeline.source) {
-  <p-dialog header="Pipeline details" [modal]="true" [(visible)]="dialogVisible" [style]="{ width: '90vw' }">
+  <p-dialog [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '90vw' }" header="Pipeline details">
     <div class="mb-5 ml-2.5">
       <p>Source: {{ dialogData().pipeline.source }}</p>
       <p>Created at: {{ dialogData().pipeline.created_at | date: 'short' }}</p>
@@ -391,10 +391,10 @@
     @if (dialogData().commit.length > 0) {
       <p-table
         [value]="dialogData().commit"
-        dataKey="id"
-        sortField="finished_at"
         [sortOrder]="-1"
         [tableStyle]="{ width: '100%' }"
+        dataKey="id"
+        sortField="finished_at"
       >
         <ng-template #header>
           <tr>

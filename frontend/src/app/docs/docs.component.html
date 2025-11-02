@@ -35,7 +35,7 @@
         to enable the installation of our keyring and mirror list.
       </div>
       <div>
-        <pre (click)="copyText(receiveKeys)" class="whitespace-pre-wrap py-5 text-base"><code [highlight]="receiveKeys"
+        <pre class="whitespace-pre-wrap py-5 text-base" (click)="copyText(receiveKeys)"><code [highlight]="receiveKeys"
                                                                                               language="shell"
                                                                                               pTooltip="Copy to clipboard"
                                                                                               tooltipPosition="top"></code><br></pre>
@@ -56,7 +56,7 @@
           packages.
         </div>
         <div>
-          <pre (click)="copyText(installRepoPackages)" class="whitespace-pre-wrap py-5 text-base"><code
+          <pre class="whitespace-pre-wrap py-5 text-base" (click)="copyText(installRepoPackages)"><code
           [highlight]="installRepoPackages"
           language="shell"
           pTooltip="Copy to clipboard"

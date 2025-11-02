@@ -1,13 +1,13 @@
 <div class="card mb-10 flex justify-center">
-  <p-chart type="pie" [data]="chartData" [options]="options" [responsive]="true" class="w-200 max-w-2xl" />
+  <p-chart class="w-200 max-w-2xl" [data]="chartData" [options]="options" [responsive]="true" type="pie" />
 </div>
 <p-input-number
   [(ngModel)]="packageStatsService.countryRanksRange"
-  mode="decimal"
   [showButtons]="true"
-  inputId="minmaxCountry"
   [min]="0"
   [max]="30"
+  mode="decimal"
+  inputId="minmaxCountry"
   placeholder="Amount of countries to show"
 >
 </p-input-number>

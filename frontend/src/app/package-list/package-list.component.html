@@ -5,13 +5,8 @@
 
 <div class="table-container">
   <p-table
-    #pkgTable
-    dataKey="id"
-    sortField="pkgname"
     id="pkgTable"
-    stateStorage="local"
-    stateKey="package-list-table"
-    paginatorDropdownAppendTo="body"
+    #pkgTable
     [value]="packageListService.packageList()"
     [rows]="25"
     [rowsPerPageOptions]="[25, 50, 100, 200]"
@@ -20,21 +15,26 @@
     [paginator]="true"
     [globalFilterFields]="['pkgname', 'metadata.desc', 'metadata.url']"
     [sortOrder]="1"
+    dataKey="id"
+    sortField="pkgname"
+    stateStorage="local"
+    stateKey="package-list-table"
+    paginatorDropdownAppendTo="body"
   >
     <ng-template #caption>
       <div class="flex">
-        <p-button class="mr-auto" label="Clear" [outlined]="true" icon="pi pi-filter-slash" (click)="clear(pkgTable)" />
-        <p-iconfield iconPosition="left" class="ml-2.5 sm:ml-auto">
+        <p-button class="mr-auto" [outlined]="true" (click)="clear(pkgTable)" label="Clear" icon="pi pi-filter-slash" />
+        <p-iconfield class="ml-2.5 sm:ml-auto" iconPosition="left">
           <p-inputicon>
             <i class="pi pi-search"></i>
           </p-inputicon>
           <input
-            pInputText
-            type="text"
+            class="w-full"
             [value]="packageListService.searchValue()"
             (input)="globalFilter($event.target)"
+            pInputText
+            type="text"
             placeholder="Search keyword"
-            class="w-full"
           />
         </p-iconfield>
       </div>
@@ -78,55 +78,55 @@
         <tr>
           <td>
             <span
+              class="ml-1 align-middle"
               [ngClass]="{
                 'text-ctp-surface0': !pkg.isActive,
               }"
-              class="ml-1 align-middle"
               >{{ pkg.pkgname }}</span
             >
           </td>
           <td>
             <span
+              class="ml-1 align-middle"
               [ngClass]="{
                 'text-ctp-surface0': !pkg.isActive,
               }"
-              class="ml-1 align-middle"
               >{{ pkg.version }}-{{ pkg.pkgrel }}</span
             >
           </td>
           <td>
             <span
+              class="ml-1 align-middle"
               [ngClass]="{
                 'text--ctp-surface0': !pkg.isActive,
               }"
-              class="ml-1 align-middle"
               >{{ pkg.lastUpdated | date: 'short' }}</span
             >
           </td>
           <td>
             <span
+              class="ml-1 align-middle"
               [ngClass]="{
                 'text-ctp-surface0': !pkg.isActive,
               }"
-              class="ml-1 align-middle"
               >{{ pkg.metadata?.desc }}</span
             >
           </td>
           <td>
             <span
+              class="ml-1 align-middle"
               [ngClass]="{
                 'text-ctp-surface0': !pkg.isActive,
               }"
-              class="ml-1 align-middle"
               [innerHtml]="pkg.metadata?.url | stripPrefix"
             ></span>
           </td>
           <td>
             <span
+              class="ml-1 align-middle"
               [ngClass]="{
                 'text-ctp-surface0': !pkg.isActive,
               }"
-              class="ml-1 align-middle"
               >{{ pkg.repo | repoName }}</span
             >
           </td>
@@ -134,10 +134,10 @@
             @if (pkg.isActive) {
               <p-button
                 class="h-10"
-                (click)="openPkgbuild(pkg)"
                 [ngClass]="{
                   'text-ctp-surface0': !pkg.isActive,
                 }"
+                (click)="openPkgbuild(pkg)"
                 type="button"
                 label="Source"
               />

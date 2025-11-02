@@ -1,15 +1,15 @@
 <div>
   @if (isWide()) {
     <div class="flex justify-center">
-      <p-chart type="bar" [data]="chartData" [options]="options" class="h-200 w-full" />
+      <p-chart class="h-200 w-full" [data]="chartData" [options]="options" type="bar" />
     </div>
     <p-input-number
       [(ngModel)]="packageStatsService.globalPackageMetricRange"
-      mode="decimal"
       [showButtons]="true"
-      inputId="minmaxDownloads"
       [min]="0"
       [max]="200"
+      mode="decimal"
+      inputId="minmaxDownloads"
     >
     </p-input-number>
   } @else {
@@ -24,11 +24,11 @@
     </div>
     <p-input-number
       [(ngModel)]="packageStatsService.globalPackageMetricRange"
-      mode="decimal"
       [showButtons]="true"
-      inputId="minmaxDownloads"
       [min]="0"
       [max]="200"
+      mode="decimal"
+      inputId="minmaxDownloads"
     >
     </p-input-number>
   }

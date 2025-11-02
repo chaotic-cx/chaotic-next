@@ -3,13 +3,8 @@
 
 <div class="table-container">
   <p-table
-    #deployTable
-    dataKey="id"
-    sortField="timestamp"
     id="deployTable"
-    stateStorage="local"
-    stateKey="deploy-log-table"
-    paginatorDropdownAppendTo="body"
+    #deployTable
     [value]="deployLogService.packageList()"
     [rows]="25"
     [rowsPerPageOptions]="[25, 50, 100, 200]"
@@ -18,21 +13,26 @@
     [showCurrentPageReport]="true"
     [globalFilterFields]="['pkgbase.pkgname', 'builder.name', 'repo.name']"
     [sortOrder]="-1"
+    dataKey="id"
+    sortField="timestamp"
+    stateStorage="local"
+    stateKey="deploy-log-table"
+    paginatorDropdownAppendTo="body"
   >
     <ng-template #caption>
       <div class="flex">
-        <p-button label="Clear" [outlined]="true" icon="pi pi-filter-slash" (click)="clear(deployTable)" />
-        <p-iconfield iconPosition="left" class="ml-2.5 sm:ml-auto">
+        <p-button [outlined]="true" (click)="clear(deployTable)" label="Clear" icon="pi pi-filter-slash" />
+        <p-iconfield class="ml-2.5 sm:ml-auto" iconPosition="left">
           <p-inputicon>
             <i class="pi pi-search"></i>
           </p-inputicon>
           <input
-            pInputText
-            type="text"
+            class="w-full"
             [value]="deployLogService.searchValue()"
             (input)="globalFilter($event.target)"
+            pInputText
+            type="text"
             placeholder="Search keyword"
-            class="w-full"
           />
         </p-iconfield>
       </div>
