@@ -10,7 +10,6 @@ import { Dialog } from 'primeng/dialog';
 import { Ripple } from 'primeng/ripple';
 import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { Timeline } from 'primeng/timeline';
 import { Tooltip } from 'primeng/tooltip';
 import { AppService } from '../app.service';
@@ -18,6 +17,7 @@ import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BuildStatusService } from './build-status.service';
+import { Panel } from 'primeng/panel';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -27,16 +27,12 @@ import { BuildStatusService } from './build-status.service';
     Card,
     TableModule,
     BuildClassPipe,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
     TitleComponent,
     Dialog,
     Tooltip,
     Skeleton,
     Ripple,
+    Panel,
   ],
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
