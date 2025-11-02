@@ -1,5 +1,5 @@
 <div class="chaotic-container-regular">
-  <chaotic-title title="Memorial - 2024 edition" [subtitleHtml]="subtitle"></chaotic-title>
+  <chaotic-title [subtitleHtml]="subtitle" title="Memorial - 2024 edition"></chaotic-title>
 </div>
 <div class="chaotic-container-wide-center">
   <div class="mt-10 grid grid-cols-2 gap-10">
@@ -7,17 +7,17 @@
       @defer (on viewport) {
         <p-card class="h-max">
           <p-image
-            alt="Terminal screenshot"
             class="h-auto max-w-full rounded-lg"
             [preview]="true"
             [appendTo]="'body'"
             [previewImageSrc]="link.preview"
             [src]="link.full"
+            alt="Terminal screenshot"
           />
         </p-card>
       } @placeholder {
         <p-card class="h-max">
-          <p-skeleton width="100%" height="100%" class="rounded-lg" />
+          <p-skeleton class="rounded-lg" width="100%" height="100%" />
         </p-card>
       }
     }
@@ -27,16 +27,16 @@
       @defer (on viewport) {
         <p-card>
           <p-image
-            alt="Desktop screenshot"
             class="h-auto max-w-full rounded-lg"
             [preview]="true"
             [previewImageSrc]="link.preview"
             [src]="link.full"
+            alt="Desktop screenshot"
           />
         </p-card>
       } @placeholder {
         <p-card>
-          <p-skeleton width="100%" height="100%" class="rounded-lg" />
+          <p-skeleton class="rounded-lg" width="100%" height="100%" />
         </p-card>
       }
     }

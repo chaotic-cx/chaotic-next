@@ -103,7 +103,7 @@ samp {
 }
 
 p-scroll-top {
-  @apply z-999 fixed;
+  @apply fixed z-999;
 }
 
 .p-inputtext,

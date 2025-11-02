@@ -2,16 +2,16 @@
   <p-auto-complete
     #autoComplete
     [suggestions]="packageStatsService.packageSearchCurrentSuggestions()"
+    [autofocus]="true"
     (completeMethod)="search($event)"
     (onSelect)="updateDisplay($event.value)"
-    [autofocus]="true"
     placeholder="Search a package name"
   ></p-auto-complete>
   <p-select
-    [options]="repoOptions"
-    [(ngModel)]="packageStatsService.packageSearchSelectedRepo"
-    (ngModelChange)="updateDisplay(autoComplete.value)"
     class="w-full md:w-60"
+    [(ngModel)]="packageStatsService.packageSearchSelectedRepo"
+    [options]="repoOptions"
+    (ngModelChange)="updateDisplay(autoComplete.value)"
   >
   </p-select>
 </div>
@@ -27,7 +27,7 @@
           <td>{{ dataset.key | packageDetailKey }}</td>
           @if (dataset.key === 'url') {
             <td>
-              <a [href]="dataset.value" target="_blank" class="text-ctp-mauve" rel="noopener noreferrer">{{
+              <a class="text-ctp-mauve" [href]="dataset.value" target="_blank" rel="noopener noreferrer">{{
                 dataset.value
               }}</a>
             </td>
