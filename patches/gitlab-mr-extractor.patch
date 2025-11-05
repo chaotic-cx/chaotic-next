@@ -1,0 +1,25 @@
+diff --git a/dist/gitlab-client.js b/dist/gitlab-client.js
+index 74ba678fb221a5cbed17ed35447cfa54b005cedd..4567ea84e10ffc0e9e4e501870f544886e1acc53 100644
+--- a/dist/gitlab-client.js
++++ b/dist/gitlab-client.js
+@@ -37,7 +37,7 @@ class GitLabClient {
+     }
+     async getMergedMergeRequests(page = 1, perPage = 100, options = {}) {
+         const { authorId, maxResults } = options;
+-        let queryParams = `state=merged&page=${page}&per_page=${perPage}`;
++        let queryParams = `state=opened&page=${page}&per_page=${perPage}`;
+         if (authorId) {
+             queryParams += `&author_id=${authorId}`;
+         }
+diff --git a/dist/merge-request.js b/dist/merge-request.js
+index 1da5d0b46a2242e81a6aa25f8c9f3b5941c01d0d..12bb40da6ec9230a3b70bf6e57f2d82659b20820 100644
+--- a/dist/merge-request.js
++++ b/dist/merge-request.js
+@@ -50,6 +50,7 @@ class MergeRequestFetcher {
+                         updated_at: mr.updated_at,
+                         merged_by: mr.merged_by,
+                         merge_user: mr.merge_user,
++                        approved_by_ids: mr.approved_by_ids,
+                         merged_at: mr.merged_at,
+                         author: {
+                             id: mr.author.id,

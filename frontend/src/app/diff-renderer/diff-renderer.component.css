@@ -1,0 +1,41 @@
+@reference '../../styles.css';
+
+.diff-renderer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  background: var(--ctp-base);
+  border-radius: 0.25rem;
+}
+
+pre {
+  @apply m-0 overflow-x-auto p-0.5;
+  line-height: 0.5;
+}
+
+code {
+  @apply block whitespace-pre;
+}
+
+span {
+  @apply block;
+}
+
+.context {
+  @apply text-ctp-text bg-ctp-base;
+}
+
+.added {
+  background: rgba(166, 227, 161, 0.1);
+  color: var(--ctp-green);
+}
+
+.removed {
+  background: rgba(243, 139, 168, 0.1);
+  color: var(--ctp-red);
+}
+
+.hunk-header {
+  color: var(--ctp-blue);
+  background: rgba(137, 180, 250, 0.1);
+  font-weight: bold;
+}
