@@ -98,6 +98,10 @@ samp {
   background: none !important;
 }
 
+.p-toast {
+  left: 6px;
+}
+
 .p-card {
   height: 100%;
 }
