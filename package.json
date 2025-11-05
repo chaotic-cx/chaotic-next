@@ -67,6 +67,7 @@
     "crypto-js": "^4.2.0",
     "dotted-map": "^2.2.3",
     "fastify": "^5.6.1",
+    "gitlab-mr-extractor": "^1.0.0",
     "globals": "^16.5.0",
     "highlight.js": "^11.11.1",
     "ioredis": "^5.8.2",

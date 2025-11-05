@@ -1,0 +1,74 @@
+<chaotic-title
+  title="Merge request overview"
+  subtitleHtml="Currently open merge requests with the diff and option to approve."
+></chaotic-title>
+
+@if (mrOverviewService.token() !== '' && mrOverviewService.isLoading()) {
+  <div class="flex justify-center my-10">
+    <p-progress-spinner ariaLabel="loading" />
+  </div>
+} @else {
+  @if (mrOverviewService.token() === '') {
+    <div class="flex flex-col gap-2 text-ctp-text text-center mb-10">
+      <label for="username">GitLab Access Token</label>
+      <input
+        class="w-10/12 sm:w-1/2 mx-auto"
+        id="token_input"
+        #tokenInput
+        [pAutoFocus]="true"
+        [value]="mrOverviewService.token()"
+        (keydown.enter)="setToken(tokenInput.value)"
+        type="password"
+        pInputText
+      />
+      <small class="mx-5" id="username-help">
+        You can create a personal access token in your GitLab account settings. Make sure it is allowed to approve merge
+        requests. The token will be stored in session storage and cleared when you close this tab.
+      </small>
+    </div>
+  } @else {
+    <div class="chaotic-container-wide-center md:chaotic-container-regular p-2.5">
+      <p-table [value]="mrOverviewService.mergeQuests()">
+        <ng-template #header>
+          <tr>
+            <th>Package name</th>
+            <th>PKGBUILD diff</th>
+          </tr>
+        </ng-template>
+        <ng-template #body>
+          @for (mr of mrOverviewService.mergeQuests(); track mr.id) {
+            <tr>
+              <td class="align-top">
+                <p class="mb-2.5" [textContent]="mr.title"></p>
+                <p-button
+                  [loading]="isApproving(mr)"
+                  (onClick)="mrOverviewService.approve(mr)"
+                  label="Approve"
+                  icon="pi pi-check"
+                />
+              </td>
+              <td>
+                @if (mr.changes && mr.changes.length > 0) {
+                  <div class="space-y-1">
+                    @for (change of mr.changes; track change.new_path) {
+                      <div class="border border-ctp-surface2 rounded overflow-hidden">
+                        <div class="bg-ctp-surface0 px-3 py-1 border-b border-ctp-surface2">
+                          <span class="text-xs font-mono">{{ change.new_path }}</span>
+                        </div>
+                        <div class="p-2">
+                          <chaotic-diff-renderer [diff]="change.diff" />
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <span class="text-ctp-text">No changes</span>
+                }
+              </td>
+            </tr>
+          }
+        </ng-template>
+      </p-table>
+    </div>
+  }
+}
