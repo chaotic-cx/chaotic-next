@@ -13,7 +13,8 @@ RUN corepack enable pnpm && \
     pnpm exec nx run backend:build
 
 # Allow pnpm installing bcrypt .node files
-RUN cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml
+RUN cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml && \
+    cp -r patches dist/backend/patches
 
 # Generate node_modules containing nx-generated package.json for less used space
 WORKDIR /build/dist/backend
