@@ -1,6 +1,6 @@
 <chaotic-title
-  title="Merge request overview"
-  subtitleHtml="Currently open merge requests with the diff and option to approve."
+  title="Update review"
+  subtitleHtml="Currently open merge requests with package update diff and the option to approve the MR for auto-merge."
 ></chaotic-title>
 
 @if (mrOverviewService.token() !== '' && mrOverviewService.isLoading()) {
@@ -21,54 +21,47 @@
         type="password"
         pInputText
       />
-      <small class="mx-5" id="username-help">
-        You can create a personal access token in your GitLab account settings. Make sure it is allowed to approve merge
-        requests. The token will be stored in session storage and cleared when you close this tab.
+      <small class="mx-auto px-10" id="username-help">
+        You can create a personal access token in your GitLab account settings. It needs the "api" scope. Make sure to
+        keep it secret and do not share it with anyone.
       </small>
+      <p-select-button
+        class="mx-auto mt-2 px-10"
+        [(ngModel)]="mrOverviewService.storage"
+        [options]="storages"
+        aria-labelledby="token-storage"
+        optionValue="value"
+        optionLabel="label"
+      >
+      </p-select-button>
     </div>
   } @else {
     <div class="chaotic-container-wide-center md:chaotic-container-regular p-2.5">
-      <p-table [value]="mrOverviewService.mergeQuests()">
-        <ng-template #header>
-          <tr>
-            <th>Package name</th>
-            <th>PKGBUILD diff</th>
-          </tr>
-        </ng-template>
-        <ng-template #body>
-          @for (mr of mrOverviewService.mergeQuests(); track mr.id) {
-            <tr>
-              <td class="align-top">
-                <p class="mb-2.5" [textContent]="mr.title"></p>
-                <p-button
-                  [loading]="isApproving(mr)"
-                  (onClick)="mrOverviewService.approve(mr)"
-                  label="Approve"
-                  icon="pi pi-check"
-                />
-              </td>
-              <td>
-                @if (mr.changes && mr.changes.length > 0) {
-                  <div class="space-y-1">
-                    @for (change of mr.changes; track change.new_path) {
-                      <div class="border border-ctp-surface2 rounded overflow-hidden">
-                        <div class="bg-ctp-surface0 px-3 py-1 border-b border-ctp-surface2">
-                          <span class="text-xs font-mono">{{ change.new_path }}</span>
-                        </div>
-                        <div class="p-2">
-                          <chaotic-diff-renderer [diff]="change.diff" />
-                        </div>
-                      </div>
-                    }
-                  </div>
-                } @else {
-                  <span class="text-ctp-text">No changes</span>
-                }
-              </td>
-            </tr>
+      @for (mr of mrOverviewService.mergeQuests(); track mr.id) {
+        <p-panel [header]="mr.title">
+          @if (mr.changes && mr.changes.length > 0) {
+            @for (change of mr.changes; track change.new_path) {
+              <p-fieldset
+                class="text-left fieldset-responsive overflow-x-auto block mb-5"
+                [legend]="change.new_path.replace(mr.title + '/', '')"
+                [toggleable]="true"
+              >
+                <chaotic-diff-renderer class="overflow-x-auto" [diff]="change.diff" />
+              </p-fieldset>
+            }
+          } @else {
+            <span class="text-ctp-text">No changes</span>
           }
-        </ng-template>
-      </p-table>
+
+          <p-button
+            [disabled]="mr.labels.includes('approved')"
+            [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve Merge Request'"
+            [loading]="isApproving(mr)"
+            (onClick)="mrOverviewService.approve(mr)"
+            icon="pi pi-check"
+          />
+        </p-panel>
+      }
     </div>
   }
 }

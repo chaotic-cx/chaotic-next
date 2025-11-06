@@ -54,8 +54,8 @@ export const routes: Routes = [
     data: { animationState: '6' },
   },
   {
-    title: 'Merge requests',
-    path: 'merge-requests',
+    title: 'Update review',
+    path: 'update-review',
     loadComponent: () => import('./mr-overview/mr-overview.component').then((c) => c.MrOverviewComponent),
     data: { animationState: 'null' },
   },

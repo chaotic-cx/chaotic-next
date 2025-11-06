@@ -99,7 +99,12 @@ samp {
 }
 
 .p-toast {
-  left: 6px;
+  padding-left: 20px;
+  max-width: calc(100vw - 20px);
+}
+
+.p-fieldset {
+  background: unset !important;
 }
 
 .p-card {
