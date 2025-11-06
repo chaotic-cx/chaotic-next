@@ -4,6 +4,9 @@
     <div class="router-container" [@routerTransition]="prepareRoute(routerOutlet)">
       <router-outlet #routerOutlet="outlet"></router-outlet>
     </div>
+    <div garudaShellBarEnd>
+      <span class="pi pi-list cursor-pointer text-ctp-maroon my-auto" routerLink="update-review"></span>
+    </div>
   </garuda-shell>
 </div>
 <chaotic-footer></chaotic-footer>
