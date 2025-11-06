@@ -37,30 +37,37 @@
     </div>
   } @else {
     <div class="chaotic-container-wide-center md:chaotic-container-regular p-2.5">
-      @for (mr of mrOverviewService.mergeQuests(); track mr.id) {
-        <p-panel [header]="mr.title">
-          @if (mr.changes && mr.changes.length > 0) {
-            @for (change of mr.changes; track change.new_path) {
-              <p-fieldset
-                class="text-left fieldset-responsive overflow-x-auto block mb-5"
-                [legend]="change.new_path.replace(mr.title + '/', '')"
-                [toggleable]="true"
-              >
-                <chaotic-diff-renderer class="overflow-x-auto" [diff]="change.diff" />
-              </p-fieldset>
+      @if (mrOverviewService.mergeQuests().length === 0) {
+        <p class="text-ctp-text text-center">No open merge requests found.</p>
+        <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
+          >You can also browse all merge requests on GitLab.
+        </a>
+      } @else {
+        @for (mr of mrOverviewService.mergeQuests(); track mr.id) {
+          <p-panel [header]="mr.title">
+            @if (mr.changes && mr.changes.length > 0) {
+              @for (change of mr.changes; track change.new_path) {
+                <p-fieldset
+                  class="text-left fieldset-responsive overflow-x-auto block mb-5"
+                  [legend]="change.new_path.replace(mr.title + '/', '')"
+                  [toggleable]="true"
+                >
+                  <chaotic-diff-renderer class="overflow-x-auto" [diff]="change.diff" />
+                </p-fieldset>
+              }
+            } @else {
+              <span class="text-ctp-text">No changes</span>
             }
-          } @else {
-            <span class="text-ctp-text">No changes</span>
-          }
 
-          <p-button
-            [disabled]="mr.labels.includes('approved')"
-            [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve Merge Request'"
-            [loading]="isApproving(mr)"
-            (onClick)="mrOverviewService.approve(mr)"
-            icon="pi pi-check"
-          />
-        </p-panel>
+            <p-button
+              [disabled]="mr.labels.includes('approved')"
+              [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve Merge Request'"
+              [loading]="isApproving(mr)"
+              (onClick)="mrOverviewService.approve(mr)"
+              icon="pi pi-check"
+            />
+          </p-panel>
+        }
       }
     </div>
   }
