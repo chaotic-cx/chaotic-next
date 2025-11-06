@@ -14,7 +14,8 @@ RUN corepack enable pnpm && \
 
 # Allow pnpm installing bcrypt .node files
 RUN cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml && \
-    cp -r patches dist/backend/patches
+    sed -i '/gitlab-mr-extractor/d' pnpm-workspace.yaml && \
+    sed -i '/gitlab-mr-extractor/d' dist/backend/pnpm-workspace.yaml
 
 # Generate node_modules containing nx-generated package.json for less used space
 WORKDIR /build/dist/backend
