@@ -1,5 +1,5 @@
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
-import { GitLabMergeRequestExtractor, MergeRequestData } from 'gitlab-mr-extractor';
+import { GitLabMergeRequestExtractor, MergeRequestData } from '../gitlab-mr-extractor';
 import { lastValueFrom } from 'rxjs';
 import { MessageToastService } from '@garudalinux/core';
 import { HttpClient } from '@angular/common/http';
@@ -9,10 +9,10 @@ import { encrypt } from '../functions';
   providedIn: 'root',
 })
 export class MrOverviewService {
-  readonly mergeQuests = signal<MergeRequestData[]>([]);
+  readonly mergeRequests = signal<MergeRequestData[]>([]);
   readonly token = signal<string>('');
   readonly isLoading = signal<boolean>(true);
-  readonly approveLoading = signal<Map<number, boolean>>(new Map());
+  readonly loadingMap = signal<Map<number, boolean>>(new Map());
   readonly storage = signal<'sessionStorage' | 'localStorage'>('sessionStorage');
 
   private baseUrl = 'https://gitlab.com/api/v4';
@@ -51,7 +51,7 @@ export class MrOverviewService {
         authorId: 0,
       });
 
-      this.mergeQuests.set(
+      this.mergeRequests.set(
         mergeRequests
           .map((mr) => ({
             ...mr,
@@ -87,9 +87,9 @@ export class MrOverviewService {
    * @param mr The merge request to approve.
    */
   async approve(mr: MergeRequestData) {
-    const loadingMap = new Map(this.approveLoading());
+    const loadingMap = new Map(this.loadingMap());
     loadingMap.set(mr.iid, true);
-    this.approveLoading.set(loadingMap);
+    this.loadingMap.set(loadingMap);
 
     try {
       const promises = [];
@@ -118,7 +118,7 @@ export class MrOverviewService {
           lastValueFrom(
             this.http.put(
               `${this.baseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
-              { labels: labels.join(',') },
+              { labels: labels.join(','), assignee_id: 20097372 },
               { headers: { 'PRIVATE-TOKEN': this.token() } },
             ),
           ),
@@ -143,9 +143,9 @@ export class MrOverviewService {
       this.messageToastService.error('Approval Failed', 'Failed to approve the merge request. Please try again later.');
       console.error('Error approving merge request:', error);
     } finally {
-      const finalLoadingMap = new Map(this.approveLoading());
+      const finalLoadingMap = new Map(this.loadingMap());
       finalLoadingMap.delete(mr.iid);
-      this.approveLoading.set(finalLoadingMap);
+      this.loadingMap.set(finalLoadingMap);
     }
   }
 
@@ -175,6 +175,54 @@ export class MrOverviewService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  flagDangerous(mr: MergeRequestData) {
+    const loadingMap = new Map(this.loadingMap());
+    loadingMap.set(mr.iid, true);
+    this.loadingMap.set(loadingMap);
+
+    try {
+      const labels: string[] = mr.labels || [];
+      labels.push('dangerous');
+      this.http
+        .put(
+          `${this.baseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
+          { labels: labels.join(',') },
+          { headers: { 'PRIVATE-TOKEN': this.token() } },
+        )
+        .subscribe({
+          next: () => {
+            this.messageToastService.success(
+              'Flagged as Dangerous',
+              'The merge request has been flagged as dangerous.',
+            );
+            void this.extractMrs();
+          },
+          error: (error) => {
+            this.messageToastService.error(
+              'Flagging Failed',
+              'Failed to flag the merge request as dangerous. Please try again later.',
+            );
+            console.error('Error flagging merge request as dangerous:', error);
+          },
+          complete: () => {
+            const finalLoadingMap = new Map(this.loadingMap());
+            finalLoadingMap.delete(mr.iid);
+            this.loadingMap.set(finalLoadingMap);
+          },
+        });
+    } catch (error) {
+      this.messageToastService.error(
+        'Flagging Failed',
+        'Failed to flag the merge request as dangerous. Please try again later.',
+      );
+      console.error('Error flagging merge request as dangerous:', error);
+    } finally {
+      const finalLoadingMap = new Map(this.loadingMap());
+      finalLoadingMap.delete(mr.iid);
+      this.loadingMap.set(finalLoadingMap);
     }
   }
 }

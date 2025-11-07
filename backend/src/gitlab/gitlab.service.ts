@@ -5,7 +5,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Mutex } from 'async-mutex';
 import { EventService } from '../events/event.service';
-import { PipelineWebhook } from './interfaces';
+import { MergeRequestWebhook, PipelineWebhook } from './interfaces';
 
 @Injectable()
 export class GitlabService {
@@ -69,10 +69,23 @@ export class GitlabService {
    * @param body Body of GitLab API call
    * @returns True if the cache was successfully busted, false otherwise
    */
-  public async bustCache(body: PipelineWebhook): Promise<boolean> {
+  async bustCache(body: PipelineWebhook): Promise<boolean> {
     const cacheDeleted = await this.cacheManager.del(this.CACHE_KEY_PIPELINES);
     this.eventService.sseEvents$.next({ data: { type: 'pipeline' } });
     return cacheDeleted;
+  }
+
+  /**
+   * Handle a merge request webhook from GitLab, and push an event to the SSE stream.
+   * @param body Body of GitLab API call
+   */
+  handleMergeRequestWebhook(body: MergeRequestWebhook) {
+    const sendObject = {
+      labels: body.object_attributes.labels.map((label) => label.title),
+      iid: body.object_attributes.iid,
+      assignee_ids: body.object_attributes.assignee_ids,
+    };
+    this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: sendObject } });
   }
 
   /**

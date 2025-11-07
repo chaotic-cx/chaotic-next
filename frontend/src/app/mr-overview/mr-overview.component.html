@@ -37,13 +37,13 @@
     </div>
   } @else {
     <div class="chaotic-container-wide-center md:chaotic-container-regular p-2.5">
-      @if (mrOverviewService.mergeQuests().length === 0) {
+      @if (mrOverviewService.mergeRequests().length === 0) {
         <p class="text-ctp-text text-center">No open merge requests found.</p>
         <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
           >You can also browse all merge requests on GitLab.
         </a>
       } @else {
-        @for (mr of mrOverviewService.mergeQuests(); track mr.id) {
+        @for (mr of mrOverviewService.mergeRequests(); track mr.id) {
           <p-panel [header]="mr.title">
             @if (mr.changes && mr.changes.length > 0) {
               @for (change of mr.changes; track change.new_path) {
@@ -60,11 +60,22 @@
             }
 
             <p-button
-              [disabled]="mr.labels.includes('approved')"
-              [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve Merge Request'"
+              class="mr-2"
+              [disabled]="mr.labels.includes('approved') || mr.labels.includes('dangerous')"
+              [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve update'"
               [loading]="isApproving(mr)"
               (onClick)="mrOverviewService.approve(mr)"
               icon="pi pi-check"
+              severity="success"
+            />
+            <p-button
+              class="ml-2"
+              [disabled]="mr.labels.includes('dangerous') || mr.labels.includes('approved')"
+              [label]="mr.labels.includes('approved') ? 'Already flagged' : 'Flag as dangerous'"
+              [loading]="isApproving(mr)"
+              (onClick)="mrOverviewService.flagDangerous(mr)"
+              icon="pi pi-exclamation-triangle"
+              severity="danger"
             />
           </p-panel>
         }

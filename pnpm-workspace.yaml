@@ -17,6 +17,3 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - workerd
-
-patchedDependencies:
-  gitlab-mr-extractor: patches/gitlab-mr-extractor.patch
