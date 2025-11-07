@@ -25,10 +25,10 @@ export class GitLabClient {
 
   public async get<T>(
     path: string,
-    params: { queryParams: Record<string, any> } = { queryParams: {} },
+    options: { params: Record<string, any> } = { params: {} },
   ): Promise<ApiResponse<T>> {
     try {
-      const response = await this.client.get<T>(path, { params });
+      const response = await this.client.get<T>(path, { params: options.params });
       return {
         data: response.data,
         status: response.status,
@@ -45,7 +45,7 @@ export class GitLabClient {
   public async getOpenMergeRequests(page = 1, perPage = 100, options: { authorId?: number; maxResults?: number } = {}) {
     const { authorId, maxResults } = options;
     const response = await this.get<any[]>(`/api/v4/projects/${this.config.projectId}/merge_requests`, {
-      queryParams: {
+      params: {
         state: 'opened',
         page,
         per_page: perPage,

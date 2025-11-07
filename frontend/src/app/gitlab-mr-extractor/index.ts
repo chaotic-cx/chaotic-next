@@ -21,6 +21,6 @@ export class GitLabMergeRequestExtractor {
         options.authorId = userResponse.data.id;
       }
     }
-    return this.fetcher.fetchAllMerged(options);
+    return this.fetcher.fetchOpenMergeRequests(options);
   }
 }

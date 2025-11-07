@@ -10,7 +10,7 @@ export interface FetchOptions {
 export class MergeRequestFetcher {
   constructor(private client: GitLabClient) {}
 
-  public async fetchAllMerged(options: FetchOptions = {}): Promise<MergeRequestData[]> {
+  public async fetchOpenMergeRequests(options: FetchOptions = {}): Promise<MergeRequestData[]> {
     const mergeRequests: MergeRequestData[] = [];
     let page = 1;
     let hasMore = true;
