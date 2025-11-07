@@ -34,6 +34,7 @@ import { filter } from 'rxjs';
     Panel,
     Fieldset,
     Button,
+    Button,
   ],
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
@@ -86,10 +87,13 @@ export class MrOverviewComponent implements OnInit {
   /**
    * Checks if the approval process is ongoing for a given merge request.
    * @param mr The merge request to check.
+   * @param type The type of action ('approve' or 'flag').
+   * @returns True if the approval process is ongoing, false otherwise.
    */
-  isApproving(mr: MergeRequestData): boolean {
+  isLoading(mr: MergeRequestData, type: 'approve' | 'flag'): boolean {
     const loadingMap = this.mrOverviewService.loadingMap();
-    return loadingMap.has(mr.iid) && loadingMap.get(mr.iid) === true;
+    const identifier = type === 'approve' ? mr.iid : -mr.iid;
+    return loadingMap.has(identifier) && loadingMap.get(identifier) === true;
   }
 
   /**
