@@ -14,23 +14,33 @@ import { routeAnimations } from './app.routes';
 import { FooterComponent } from './footer/footer.component';
 import { AppService } from './app.service';
 import { BuildStatus, ChaoticEvent } from '@./shared-lib';
+import { LoadingService } from './loading/loading.service';
+import { ProgressSpinner } from 'primeng/progressspinner';
 
 @Component({
-  imports: [RouterModule, ShellComponent, NgOptimizedImage, FooterComponent],
-  selector: 'app-root',
+  imports: [
+    RouterModule,
+    ShellComponent,
+    NgOptimizedImage,
+    FooterComponent,
+    ProgressSpinner,
+    ProgressSpinner,
+    ProgressSpinner,
+  ],
+  selector: 'chaotic-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
   animations: [routeAnimations],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
-  title = 'Chaotic-AUR';
-
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly httpClient = inject(HttpClient);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
+
+  protected readonly loadingService = inject(LoadingService);
 
   items: MenuItem[] = [
     {

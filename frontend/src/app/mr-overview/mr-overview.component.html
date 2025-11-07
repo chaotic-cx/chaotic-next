@@ -42,7 +42,9 @@
         <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
           >You can also browse all merge requests on GitLab.
         </a>
-        <i class="text-ctp-maroon pi pi-verified mt-10" style="font-size: 5rem"></i>
+        <p>
+          <i class="text-ctp-maroon pi pi-verified mt-10" style="font-size: 5rem"></i>
+        </p>
       } @else {
         @for (mr of mrOverviewService.mergeRequests(); track mr.id) {
           <p-panel [header]="mr.title">
