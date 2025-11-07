@@ -57,10 +57,10 @@
         </div>
         <div>
           <pre class="whitespace-pre-wrap py-5 text-base" (click)="copyText(installRepoPackages)"><code
-          [highlight]="installRepoPackages"
-          language="shell"
-          pTooltip="Copy to clipboard"
-          tooltipPosition="top"></code><br></pre>
+            [highlight]="installRepoPackages"
+            language="shell"
+            pTooltip="Copy to clipboard"
+            tooltipPosition="top"></code><br></pre>
           <p-divider />
         </div>
         <p>Then, we append (adding at the end) the following to <code>/etc/pacman.conf</code>:</p>
@@ -184,8 +184,8 @@
         <pre
           class="whitespace-pre-wrap py-5 pl-5"
         ><code (click)="copyText(installPackageSpecific)" [highlight]="installPackageSpecific"
-                                                         language="shell" pTooltip="Copy to clipboard"
-                                                         tooltipPosition="top"></code></pre>
+               language="shell" pTooltip="Copy to clipboard"
+               tooltipPosition="top"></code></pre>
         Some AUR helpers like
         <a class="text-ctp-mauve" href="https://github.com/Morganamilo/paru" rel="noopener" target="_blank">paru</a>
         support this syntax as well.

@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AllowAnonymous } from '../auth/anonymous.decorator';
 import { GitlabService } from './gitlab.service';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PipelineWebhook } from './interfaces';
+import { GitLabWebHook } from './interfaces';
 
 @ApiTags('gitlab')
 @Controller('gitlab')
@@ -23,11 +23,16 @@ export class GitlabController {
   @ApiOperation({ summary: 'Update GitLab cache via webhook.' })
   @ApiBody({ type: Object, description: 'GitLab pipeline webhook payload' })
   @ApiOkResponse({ description: 'Cache update triggered.' })
-  updateCache(@Headers('X-Gitlab-Token') token: string, @Body() body: PipelineWebhook): void {
+  updateCache(@Headers('X-Gitlab-Token') token: string, @Body() body: GitLabWebHook): void {
     if (token !== this.WEBHOOK_TOKEN) {
       throw new UnauthorizedException('Invalid token');
     }
-    return void this.gitlabService.bustCache(body);
+
+    if (body.object_kind === 'pipeline') {
+      void this.gitlabService.bustCache(body);
+    } else if (body.object_kind === 'merge_request') {
+      this.gitlabService.handleMergeRequestWebhook(body);
+    }
   }
 
   @AllowAnonymous()

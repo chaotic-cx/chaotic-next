@@ -234,6 +234,14 @@ export type ChaoticEvent =
   | {
       type: 'pipeline';
     }
+  | {
+      type: 'merge_request';
+      mr: {
+        labels: string[];
+        iid: number;
+        assignee_ids: number[];
+      };
+    }
   | ({
       type: 'queue';
     } & MoleculerCurrentQueueObject);

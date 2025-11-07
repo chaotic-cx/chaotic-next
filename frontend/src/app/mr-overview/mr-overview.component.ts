@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { MergeRequestData } from 'gitlab-mr-extractor';
+import { MergeRequestData } from '../gitlab-mr-extractor';
 import { TitleComponent } from '../title/title.component';
 import { TableModule } from 'primeng/table';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
@@ -17,6 +17,8 @@ import { Router } from '@angular/router';
 import { Meta } from '@angular/platform-browser';
 import { Fieldset } from 'primeng/fieldset';
 import { Button } from 'primeng/button';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -48,6 +50,17 @@ export class MrOverviewComponent implements OnInit {
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
 
+  constructor() {
+    this.appService.chaoticEvent
+      .pipe(
+        filter((event) => event.type === 'merge_request'),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => {
+        void this.mrOverviewService.extractMrs();
+      });
+  }
+
   async ngOnInit() {
     this.appService.updateSeoTags(
       this.meta,
@@ -75,7 +88,7 @@ export class MrOverviewComponent implements OnInit {
    * @param mr The merge request to check.
    */
   isApproving(mr: MergeRequestData): boolean {
-    const loadingMap = this.mrOverviewService.approveLoading();
+    const loadingMap = this.mrOverviewService.loadingMap();
     return loadingMap.has(mr.iid) && loadingMap.get(mr.iid) === true;
   }
 
