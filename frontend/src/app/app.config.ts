@@ -1,4 +1,4 @@
-import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import {
   ApplicationConfig,
   LOCALE_ID,
@@ -13,6 +13,7 @@ import { APP_CONFIG } from '../environments/app-config.token';
 import { environment } from '../environments/environment.dev';
 import { routes } from './app.routes';
 import { CatppuccinAura } from '@garudalinux/themes/catppuccin';
+import { HttpRequestInterceptor } from './loading/loading.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -41,5 +42,6 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     { provide: APP_CONFIG, useValue: environment },
     { provide: LOCALE_ID, useValue: 'en-GB' },
+    { provide: HTTP_INTERCEPTORS, useClass: HttpRequestInterceptor, multi: true },
   ],
 };

@@ -5,7 +5,15 @@
       <router-outlet #routerOutlet="outlet"></router-outlet>
     </div>
     <div garudaShellBarEnd>
-      <span class="pi pi-list cursor-pointer text-ctp-maroon my-auto" routerLink="update-review"></span>
+      <div style="width: 15px; height: 15px; display: inline-block">
+        <p-progress-spinner
+          [hidden]="!loadingService.isLoading()"
+          [style]="{ width: '15px', height: '15px' }"
+          ariaLabel="loading"
+          strokeWidth="5"
+        />
+      </div>
+      <span class="pi pi-list cursor-pointer text-ctp-maroon my-auto ml-3" routerLink="update-review"> </span>
     </div>
   </garuda-shell>
 </div>
