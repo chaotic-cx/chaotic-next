@@ -130,7 +130,7 @@ importers:
         version: 2.2.3
       fastify:
         specifier: ^5.6.1
-        version: 5.6.1
+        version: 5.6.2
       globals:
         specifier: ^16.5.0
         version: 16.5.0
@@ -200,6 +200,9 @@ importers:
       typeorm:
         specifier: ^0.3.27
         version: 0.3.27(babel-plugin-macros@3.1.0)(ioredis@5.8.2)(pg@8.16.3)(reflect-metadata@0.2.2)(ts-node@10.9.2(@swc/core@1.15.1(@swc/helpers@0.5.17))(@types/node@24.10.0)(typescript@5.9.3))
+      web-push:
+        specifier: ^3.6.7
+        version: 3.6.7
     devDependencies:
       '@angular-devkit/build-angular':
         specifier: 20.3.9
@@ -417,9 +420,6 @@ importers:
       typescript-eslint:
         specifier: ^8.46.2
         version: 8.46.3(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
-      web-push:
-        specifier: ^3.6.7
-        version: 3.6.7
       webpack:
         specifier: 5.102.1
         version: 5.102.1(@swc/core@1.15.1(@swc/helpers@0.5.17))(esbuild@0.25.12)(webpack-cli@6.0.1)
@@ -6182,6 +6182,9 @@ packages:
 
   fastify@5.6.1:
     resolution: {integrity: sha512-WjjlOciBF0K8pDUPZoGPhqhKrQJ02I8DKaDIfO51EL0kbSMwQFl85cRwhOvmSDWoukNOdTo27gLN549pLCcH7Q==}
+
+  fastify@5.6.2:
+    resolution: {integrity: sha512-dPugdGnsvYkBlENLhCgX8yhyGCsCPrpA8lFWbTNU428l+YOnLgYHR69hzV8HWPC79n536EqzqQtvhtdaCE0dKg==}
 
   fastq@1.19.1:
     resolution: {integrity: sha512-GwLTyxkCXjXbxqIhTsMI2Nui8huMPtnxg7krajPJAjnEG/iiOS7i+zCtWGZR9G0NBKbXKh6X9m9UIsYX/N6vvQ==}
@@ -17497,6 +17500,24 @@ snapshots:
       find-my-way: 9.3.0
       light-my-request: 6.6.0
       pino: 9.14.0
+      process-warning: 5.0.0
+      rfdc: 1.4.1
+      secure-json-parse: 4.1.0
+      semver: 7.7.3
+      toad-cache: 3.7.0
+
+  fastify@5.6.2:
+    dependencies:
+      '@fastify/ajv-compiler': 4.0.5
+      '@fastify/error': 4.2.0
+      '@fastify/fast-json-stringify-compiler': 5.0.3
+      '@fastify/proxy-addr': 5.1.0
+      abstract-logging: 2.0.1
+      avvio: 9.1.0
+      fast-json-stringify: 6.1.1
+      find-my-way: 9.3.0
+      light-my-request: 6.6.0
+      pino: 10.1.0
       process-warning: 5.0.0
       rfdc: 1.4.1
       secure-json-parse: 4.1.0
