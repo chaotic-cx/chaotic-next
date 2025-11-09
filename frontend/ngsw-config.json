@@ -27,14 +27,21 @@
           "https://rsms.me/inter/inter.css"
         ]
       }
-    },
+    }
+  ],
+  "dataGroups": [
     {
-      "name": "chaotic-router",
-      "installMode": "lazy",
-      "updateMode": "prefetch",
-      "resources": {
-        "urls": ["https://status.chaotic.cx/mirrors.json"]
+      "name": "api",
+      "urls": [
+        "https://chaotic-backend.garudalinux.org/**",
+        "https://builds.garudalinux.org/api/**",
+        "https://status.chaotic.cx/**"
+      ],
+      "cacheConfig": {
+        "maxAge": "5s",
+        "maxSize": 20
       }
     }
-  ]
+  ],
+  "navigationUrls": ["/**", "!/**/__*", "!/**/sse"]
 }
