@@ -3,6 +3,7 @@ import { SwPush } from '@angular/service-worker';
 import { HttpClient } from '@angular/common/http';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { lastValueFrom } from 'rxjs';
+import { PushNotification } from '@./shared-lib';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +14,22 @@ export class NotificationService {
   private readonly appConfig = inject(APP_CONFIG);
   private readonly swPush = inject(SwPush);
   private readonly http = inject(HttpClient);
+
+  constructor() {
+    const storedPreference = localStorage.getItem('notifications-subscribed');
+    this.notificationsEnabled.set(Notification.permission === 'granted' && storedPreference === 'true');
+
+    this.swPush.messages.subscribe((message: any) => {
+      this.sendNotification(message as PushNotification);
+    });
+
+    this.swPush.notificationClicks.subscribe(({ action, notification }) => {
+      console.log('Notification clicked', action, notification);
+      if (notification.data && notification.data.url) {
+        window.open(notification.data.url);
+      }
+    });
+  }
 
   async requestPermission() {
     if (!('Notification' in window)) {
@@ -63,6 +80,13 @@ export class NotificationService {
     } catch (error) {
       console.error('Error sending subscription to server', error);
       return false;
+    }
+  }
+
+  sendNotification(message: PushNotification) {
+    console.log('Received push notification', message);
+    if (this.notificationsEnabled()) {
+      new Notification(message.title || 'Chaotic-AUR update', message);
     }
   }
 }

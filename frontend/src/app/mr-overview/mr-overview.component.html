@@ -45,8 +45,8 @@
         <i class="text-ctp-maroon pi pi-verified mt-10" style="font-size: 5rem"></i>
       </p>
     } @else {
-      @for (mr of mrOverviewService.mergeRequests(); track mr.id) {
-        <p-panel [header]="mr.title">
+      @for (mr of mrOverviewService.mergeRequests(); track mr.id; let i = $index) {
+        <p-panel [header]="mr.title" [ngClass]="i > 0 ? 'mt-5' : ''">
           @if (mr.diffs && mr.diffs.length > 0) {
             @for (change of mr.diffs; track change.new_path) {
               <p-fieldset

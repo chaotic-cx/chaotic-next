@@ -147,25 +147,6 @@ export class AppComponent implements OnInit {
 
       this.appService.chaoticSse$.next(event);
     };
-
-    if (Notification.permission === 'granted') {
-      this.notificationsEnabled.set(true);
-    }
-
-    this.swPush.messages.subscribe((message: any) => {
-      console.log('Received push message', message);
-      // Handle message in UI if needed
-    });
-
-    // Listen for notification clicks
-    this.swPush.notificationClicks.subscribe(({ action, notification }) => {
-      console.log('Notification clicked', action, notification);
-
-      // Example: navigate the user based on the notification data
-      if (notification.data && notification.data.url) {
-        window.open(notification.data.url);
-      }
-    });
   }
 
   /**

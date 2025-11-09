@@ -5,8 +5,8 @@ import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 import { setVapidDetails } from 'web-push';
 import { compare } from 'bcrypt';
-import { readFile, writeFile } from 'node:fs/promises';
-import { AES } from 'crypto-js';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { AES, enc } from 'crypto-js';
 import { existsSync } from 'node:fs';
 
 @Injectable()
@@ -54,14 +54,15 @@ export class AuthService {
    */
   async subscribeToPushEvents(body: PushSubscription) {
     let notificationsJson: PushSubscription[];
-    if (existsSync('config/notifications.json')) {
+    if (existsSync('config/notification-subscriber.json')) {
       const subscriber = await readFile('config/notification-subscriber.json', 'utf-8');
       const decryptedSubscriber = AES.decrypt(
         subscriber,
         this.configService.getOrThrow<string>('CAUR_DB_KEY'),
-      ).toString();
+      ).toString(enc.Utf8);
       notificationsJson = JSON.parse(decryptedSubscriber);
     } else {
+      await mkdir('config', { recursive: true });
       notificationsJson = [];
     }
 
@@ -71,7 +72,7 @@ export class AuthService {
       JSON.stringify(notificationsJson),
       this.configService.getOrThrow<string>('CAUR_DB_KEY'),
     ).toString();
-    await writeFile('config/notifications.json', encryptedData);
+    await writeFile('config/notification-subscriber.json', encryptedData);
     return { message: 'Subscription successful' };
   }
 }

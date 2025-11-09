@@ -259,3 +259,13 @@ export type ChaoticEvent =
   | ({
       type: 'queue';
     } & MoleculerCurrentQueueObject);
+
+export interface PushNotification {
+  title: string;
+  body: string;
+  icon: string;
+  actions?: { action: string; title: string }[];
+  data?: {
+    url?: string;
+  };
+}
