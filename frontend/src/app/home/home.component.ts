@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { NgClass, NgOptimizedImage } from '@angular/common';
+import { NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AnimateOnScrollModule } from 'primeng/animateonscroll';
@@ -9,15 +9,7 @@ import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
 
 @Component({
   selector: 'chaotic-home',
-  imports: [
-    AnimateOnScrollModule,
-    NewsfeedComponent,
-    MirrorMapComponent,
-    RouterLink,
-    NgOptimizedImage,
-    NgClass,
-    Button,
-  ],
+  imports: [AnimateOnScrollModule, NewsfeedComponent, MirrorMapComponent, RouterLink, NgOptimizedImage, Button],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
