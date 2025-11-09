@@ -136,6 +136,5 @@ export class MrOverviewComponent implements OnInit {
 
     this.mrOverviewService.token.set(value);
     this.messageToastService.success('Token Saved', 'GitLab private token has been saved to session storage.');
-    void this.mrOverviewService.loadOpenMrs();
   }
 }
