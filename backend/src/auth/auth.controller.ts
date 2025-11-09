@@ -4,6 +4,7 @@ import type { LoginCredentials } from '../types';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local.auth.guard';
 import { AllowAnonymous } from './anonymous.decorator';
+import type { PushSubscription } from 'web-push';
 
 @ApiTags('auth')
 @Controller('auth')

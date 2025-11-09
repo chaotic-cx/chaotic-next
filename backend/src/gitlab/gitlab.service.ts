@@ -9,10 +9,12 @@ import { MergeRequestSchema } from '@gitbeaker/core';
 import { readFile } from 'node:fs/promises';
 import { AES, enc } from 'crypto-js';
 import { PushSubscription, sendNotification } from 'web-push';
+import { Mutex } from 'async-mutex';
 
 @Injectable()
 export class GitlabService {
   api: any;
+  updateMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_KEY_PIPELINES = 'gitlab/pipelines';
@@ -98,7 +100,7 @@ export class GitlabService {
       });
 
       Logger.log(`Fetched ${openMrs.length} open MRs`, 'GitlabService');
-      Logger.debug(openMrs);
+      Logger.debug(openMrs, 'GitlabService');
 
       const diffPromises: Promise<any>[] = [];
       for (const mr of openMrs) {
@@ -133,23 +135,29 @@ export class GitlabService {
    * @param body Body of GitLab API call
    */
   async handleMergeRequestWebhook(body: MergeRequestWebhook) {
-    const currentData: MergeRequestWithDiffs[] = await this.cacheManager.get<MergeRequestWithDiffs[]>(
-      this.CACHE_KEY_MRS,
-    );
-    const newData: MergeRequestWithDiffs[] = await this.getOpenMergeRequests(true);
+    return await this.updateMutex.runExclusive(async () => {
+      const currentData: MergeRequestWithDiffs[] = await this.cacheManager.get<MergeRequestWithDiffs[]>(
+        this.CACHE_KEY_MRS,
+      );
+      const newData: MergeRequestWithDiffs[] = await this.getOpenMergeRequests(true);
 
-    // Determine if there are any new MRs compared to the current cached data
-    const currentIds = new Set(currentData?.map((mr) => mr.id) ?? []);
-    const newIds = new Set(newData.map((mr) => mr.id));
-    const hasNewMr = [...newIds].some((id) => !currentIds.has(id));
+      // Determine if there are any new MRs compared to the current cached data
+      const currentIds = new Set(currentData?.map((mr) => mr.id) ?? []);
+      const newIds = new Set(newData.map((mr) => mr.id));
+      const hasNewMr = currentData && [...newIds].some((id) => !currentIds.has(id));
 
-    if (hasNewMr) {
-      const newMr: MergeRequestWithDiffs[] = newData.filter((mr) => !currentIds.has(mr.id));
-      void this.notifySubscribers(newMr);
-    }
+      Logger.debug(`Current MR IDs: ${[...currentIds].join(', ')}`, 'GitlabService');
+      Logger.debug(`New MR IDs: ${[...newIds].join(', ')}`, 'GitlabService');
+      Logger.log(`Has new MR: ${hasNewMr}`, 'GitlabService');
 
-    this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: newData, hasNewMr } });
-    return true;
+      if (hasNewMr) {
+        const newMr: MergeRequestWithDiffs[] = newData.filter((mr) => !currentIds.has(mr.id));
+        void this.notifySubscribers(newMr);
+      }
+
+      this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: newData, hasNewMr } });
+      return true;
+    });
   }
 
   /**
