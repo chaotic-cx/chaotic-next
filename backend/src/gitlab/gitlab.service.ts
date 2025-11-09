@@ -1,4 +1,4 @@
-import { MergeRequestWithDiffs, PipelineWithExternalStatus } from '@./shared-lib';
+import { MergeRequestWithDiffs, PipelineWithExternalStatus, PushNotification } from '@./shared-lib';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -7,7 +7,7 @@ import { EventService } from '../events/event.service';
 import { MergeRequestWebhook, PipelineWebhook } from './interfaces';
 import { MergeRequestSchema } from '@gitbeaker/core';
 import { readFile } from 'node:fs/promises';
-import { AES } from 'crypto-js';
+import { AES, enc } from 'crypto-js';
 import { PushSubscription, sendNotification } from 'web-push';
 
 @Injectable()
@@ -186,30 +186,44 @@ export class GitlabService {
    * @param newMr The new merge request
    */
   private async notifySubscribers(newMr: MergeRequestWithDiffs[]) {
-    const subscriber = await readFile('config/notification-subscriber.json', 'utf-8');
-    const decryptedSubscriber = AES.decrypt(
-      subscriber,
-      this.configService.getOrThrow<string>('CAUR_DB_KEY'),
-    ).toString();
-
-    const pkgs = newMr.map((mr) => mr.title.match(/^[^(]*\(([^)]+)\)/)[0]).join(', ');
-    Logger.log(`Notifying subscribers about new MRs: ${pkgs}`, 'GitlabService');
-
-    const notificationPayload = {
-      title: 'New update for review',
-      body: `New package updates requires your review: ${pkgs}`,
-      icon: '/assets/android-chrome-512x512.png',
-      actions: [
-        { action: 'explore', title: 'Review now' },
-        { action: 'dismiss', title: 'Later' },
-      ],
-    };
-
-    const promises = [];
-    const notificationsJson: PushSubscription[] = JSON.parse(decryptedSubscriber);
-    for (const sub of notificationsJson) {
-      promises.push(sendNotification(sub, JSON.stringify(notificationPayload)));
+    let subscriber: string;
+    try {
+      subscriber = await readFile('config/notification-subscriber.json', 'utf-8');
+    } catch {
+      // No subscribers, nothing to do
+      return;
     }
-    await Promise.all(promises);
+
+    try {
+      const decryptedSubscriber = AES.decrypt(
+        subscriber,
+        this.configService.getOrThrow<string>('CAUR_DB_KEY'),
+      ).toString(enc.Utf8);
+
+      const pkgs = newMr.map((mr) => mr.title.match(/^[^(]*\(([^)]+)\)/)?.[1]).join(', ');
+      Logger.log(`Notifying subscribers about new MRs: ${pkgs}`, 'GitlabService');
+
+      const notificationPayload: PushNotification = {
+        title: 'New update for review',
+        body: `New package updates requires your review: ${pkgs}`,
+        icon: '/assets/android-chrome-512x512.png',
+        data: {
+          url: 'https://chaotic.cx/update-review',
+        },
+      };
+
+      const promises = [];
+      const notificationsJson: PushSubscription[] = JSON.parse(decryptedSubscriber);
+
+      Logger.debug(`Loaded ${notificationsJson.length} subscribers`, 'GitlabService');
+      for (const sub of notificationsJson) {
+        promises.push(sendNotification(sub, JSON.stringify(notificationPayload)));
+      }
+
+      Logger.log(`Sent notifications to ${promises.length} subscribers`, 'GitlabService');
+      await Promise.all(promises);
+    } catch (error) {
+      Logger.error(`Error notifying subscribers: ${error.message ?? error}`, 'GitlabService');
+    }
   }
 }

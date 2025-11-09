@@ -104,6 +104,8 @@ samp {
 }
 
 .p-fieldset {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   background: unset !important;
 }
 

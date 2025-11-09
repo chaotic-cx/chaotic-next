@@ -20,6 +20,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { MergeRequestWithDiffs } from '@./shared-lib';
 import { NotificationService } from '../notification/notification.service';
+import { NgClass } from '@angular/common';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -36,6 +37,7 @@ import { NotificationService } from '../notification/notification.service';
     Fieldset,
     Button,
     Button,
+    NgClass,
   ],
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
