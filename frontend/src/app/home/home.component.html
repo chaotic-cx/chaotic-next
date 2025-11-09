@@ -32,41 +32,8 @@
 </div>
 
 <div class="mx-auto sm:my-10 mt-60 mb-10">
-  @defer (on viewport) {
-    <chaotic-newsfeed class="fade-in"></chaotic-newsfeed>
-  } @placeholder {
-    <div class="mx-auto">
-      <h2 class="text-ctp-maroon my-5 text-center text-2xl font-bold">
-        <i class="pi-info-circle pi" style="font-size: 1.25rem"></i> Latest news
-      </h2>
-      <div
-        class="animate-pulse mt-5 mx-auto h-[800px] rounded-3xl"
-        [style]="isWide() ? 'max-width: 80%' : 'margin-left: 0.5rem; margin-right: 0.5rem'"
-      ></div>
-    </div>
-  }
+  <chaotic-newsfeed class="fade-in"></chaotic-newsfeed>
 </div>
 <div class="mx-auto mb-10 mt-40">
-  @defer (on viewport) {
-    <chaotic-mirror-map class="fade-in"></chaotic-mirror-map>
-  } @placeholder {
-    <div class="chaotic-container-regular">
-      <div class="pb-5 md:px-20">
-        <h3 class="text-ctp-maroon pb-5 text-center text-2xl font-bold">
-          <i class="pi pi-globe" style="font-size: 1.25rem"></i> Mirror map
-        </h3>
-        <a class="text-cpt-text"
-          >This map shows our current mirrors and which one will be used if our geo-mirror is used. The one right in the
-          middle of the map is our CDN mirror, which is hosted in Cloudflare R2 and therefore globally available.
-          <a class="text-ctp-mauve" href="https://status.chaotic.cx/map" rel="noopener" target="_blank"
-            >Alternative view <i class="pi pi-search text-ctp-maroon"></i
-          ></a>
-        </a>
-      </div>
-      <div
-        class="animate-pulse mt-5 mx-auto rounded-3xl"
-        [ngClass]="{ 'h-40': !isWide(), 'h-[800px]': isWide() }"
-      ></div>
-    </div>
-  }
+  <chaotic-mirror-map class="fade-in"></chaotic-mirror-map>
 </div>
