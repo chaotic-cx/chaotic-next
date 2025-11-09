@@ -1,15 +1,12 @@
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import localeEnGb from '@angular/common/locales/en-GB';
-import { ChangeDetectionStrategy, Component, effect, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { MessageToastService, ShellComponent } from '@garudalinux/core';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
 import { ConfirmationService, MenuItem } from 'primeng/api';
-import { APP_CONFIG } from '../environments/app-config.token';
-import { EnvironmentModel } from '../environments/environment.model';
 import { routeAnimations } from './app.routes';
 import { FooterComponent } from './footer/footer.component';
 import { AppService } from './app.service';
@@ -17,9 +14,7 @@ import { BuildStatus, ChaoticEvent } from '@./shared-lib';
 import { LoadingService } from './loading/loading.service';
 import { ProgressSpinner } from 'primeng/progressspinner';
 import { ConfirmDialog } from 'primeng/confirmdialog';
-import { SwPush } from '@angular/service-worker';
 import { UpdateService } from './update/update.service';
-import { NotificationService } from './notification/notification.service';
 
 @Component({
   imports: [
@@ -40,18 +35,13 @@ import { NotificationService } from './notification/notification.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
-  private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
-  private readonly httpClient = inject(HttpClient);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
-  private readonly swPush = inject(SwPush);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly updateService = inject(UpdateService);
-  private readonly notificationService = inject(NotificationService);
 
   protected readonly loadingService = inject(LoadingService);
-  protected readonly notificationsEnabled = signal<boolean>(false);
 
   items: MenuItem[] = [
     {
