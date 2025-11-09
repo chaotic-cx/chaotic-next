@@ -56,7 +56,7 @@ export class NotificationService {
   private async sendSubscriptionToServer(subscription: PushSubscription) {
     try {
       const result = await lastValueFrom(
-        this.http.post(`${this.appConfig.backendUrl}/notifications/subscribe`, subscription.toJSON()),
+        this.http.post(`${this.appConfig.backendUrl}/auth/subscribe`, subscription.toJSON()),
       );
       console.log('Subscription sent to server', result);
       return true;
