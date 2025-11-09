@@ -125,7 +125,6 @@ export class MrOverviewService {
         'Approval Successful',
         'Merge request approved successfully. The bot will auto-merge it soon.',
       );
-      await this.loadOpenMrs();
     } catch (error) {
       const err = error as any;
       if (err.status === 401) {
@@ -197,7 +196,6 @@ export class MrOverviewService {
               'Flagged as Dangerous',
               'The merge request has been flagged as dangerous.',
             );
-            void this.loadOpenMrs();
           },
           error: (error) => {
             this.messageToastService.error(

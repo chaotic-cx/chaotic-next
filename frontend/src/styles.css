@@ -109,6 +109,10 @@ samp {
   background: unset !important;
 }
 
+.p-autocomplete > input {
+  width: 100%;
+}
+
 .p-card {
   height: 100%;
 }
