@@ -38,8 +38,9 @@
         "https://status.chaotic.cx/**"
       ],
       "cacheConfig": {
-        "maxAge": "5s",
-        "maxSize": 20
+        "maxAge": "0s",
+        "maxSize": 0,
+        "strategy": "freshness"
       }
     }
   ],
