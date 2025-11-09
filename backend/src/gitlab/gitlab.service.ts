@@ -206,7 +206,7 @@ export class GitlabService {
       const notificationPayload: PushNotification = {
         title: 'New update for review',
         body: `New package updates requires your review: ${pkgs}`,
-        icon: '/assets/android-chrome-512x512.png',
+        icon: '/android-chrome-512x512.png',
         data: {
           url: 'https://chaotic.cx/update-review',
         },
