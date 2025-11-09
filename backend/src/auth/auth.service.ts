@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { User } from '../users/users.entity';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
-import { setVapidDetails } from 'web-push';
+import { PushSubscription, sendNotification, setVapidDetails } from 'web-push';
 import { compare } from 'bcrypt';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { AES, enc } from 'crypto-js';
@@ -65,8 +65,20 @@ export class AuthService {
       await mkdir('config', { recursive: true });
       notificationsJson = [];
     }
-
     notificationsJson.push(body);
+
+    // Send welcome notification
+    await sendNotification(
+      body,
+      JSON.stringify({
+        title: 'Subscription successful',
+        body: 'You have successfully subscribed to Chaotic AUR notifications.',
+        icon: '/android-chrome-512x512.png',
+        data: {
+          url: 'https://chaotic.cx',
+        },
+      }),
+    );
 
     const encryptedData = AES.encrypt(
       JSON.stringify(notificationsJson),
