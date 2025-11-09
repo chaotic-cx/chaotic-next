@@ -78,27 +78,7 @@ export class BuildStatusService {
         .pipe(retry({ delay: 5000, count: 3 }))
         .subscribe({
           next: (pipelines) => {
-            for (const pipeline of pipelines) {
-              if (pipeline.pipeline.status === 'failed') {
-                let failedJobs = 0;
-                for (const job of pipeline.commit) {
-                  if (job.status === 'failed') {
-                    failedJobs++;
-                  }
-                }
-                pipeline.pipeline.status = `${failedJobs}/${pipeline.commit.length} failed`;
-              } else if (pipeline.pipeline.status === 'canceled') {
-                pipeline.pipeline.status = 'success';
-              }
-
-              for (const job of pipeline.commit) {
-                job.name = job.name.split(': ')[1];
-              }
-            }
-            if (pipelines.length > 20) {
-              pipelines = pipelines.slice(0, 20);
-            }
-            this.pipelineWithStatus.set(pipelines);
+            this.transformPipelineData(pipelines);
           },
           error: (err) => {
             if (!inBackground) {
@@ -113,6 +93,34 @@ export class BuildStatusService {
           },
         });
     });
+  }
+
+  /**
+   * Transform the pipeline data to include failed job counts and clean job names.
+   * @param pipelines The array of pipelines to transform.
+   */
+  transformPipelineData(pipelines: PipelineWithExternalStatus[]) {
+    for (const pipeline of pipelines) {
+      if (pipeline.pipeline.status === 'failed') {
+        let failedJobs = 0;
+        for (const job of pipeline.commit) {
+          if (job.status === 'failed') {
+            failedJobs++;
+          }
+        }
+        pipeline.pipeline.status = `${failedJobs}/${pipeline.commit.length} failed`;
+      } else if (pipeline.pipeline.status === 'canceled') {
+        pipeline.pipeline.status = 'success';
+      }
+
+      for (const job of pipeline.commit) {
+        job.name = job.name.split(': ')[1];
+      }
+    }
+    if (pipelines.length > 20) {
+      pipelines = pipelines.slice(0, 20);
+    }
+    this.pipelineWithStatus.set(pipelines);
   }
 
   /*

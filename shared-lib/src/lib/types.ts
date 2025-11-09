@@ -1,4 +1,5 @@
 import type { CommitStatusSchema, PipelineSchema } from '@gitbeaker/rest';
+import { MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000;
 export const CACHE_GITLAB_TTL = 10 * 1000;
@@ -191,6 +192,21 @@ export interface PipelineWithExternalStatus {
   pipeline: PipelineSchema;
 }
 
+export type MergeRequestWithDiffs = Pick<
+  MergeRequestSchema,
+  | 'id'
+  | 'iid'
+  | 'title'
+  | 'state'
+  | 'web_url'
+  | 'created_at'
+  | 'updated_at'
+  | 'assignees'
+  | 'sha'
+  | 'merge_status'
+  | 'detailed_merge_status'
+> & { diffs: MergeRequestDiffSchema[]; labels: string[] };
+
 export interface Mirror {
   subdomain: string;
   latlon: [number, number];
@@ -233,14 +249,12 @@ export type ChaoticEvent =
     }
   | {
       type: 'pipeline';
+      pipeline: PipelineWithExternalStatus[];
     }
   | {
       type: 'merge_request';
-      mr: {
-        labels: string[];
-        iid: number;
-        assignee_ids: number[];
-      };
+      hasNewMr: boolean;
+      mr: MergeRequestWithDiffs[];
     }
   | ({
       type: 'queue';

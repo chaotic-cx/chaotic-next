@@ -1,22 +1,24 @@
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
-import { GitLabMergeRequestExtractor, MergeRequestData } from '../gitlab-mr-extractor';
 import { lastValueFrom } from 'rxjs';
 import { MessageToastService } from '@garudalinux/core';
 import { HttpClient } from '@angular/common/http';
 import { encrypt } from '../functions';
+import { MergeRequestWithDiffs } from '@./shared-lib';
+import { APP_CONFIG } from '../../environments/app-config.token';
 
 @Injectable({
   providedIn: 'root',
 })
 export class MrOverviewService {
-  readonly mergeRequests = signal<MergeRequestData[]>([]);
+  readonly mergeRequests = signal<MergeRequestWithDiffs[]>([]);
   readonly token = signal<string>('');
   readonly isLoading = signal<boolean>(true);
   readonly loadingMap = signal<Map<number, boolean>>(new Map());
   readonly storage = signal<'sessionStorage' | 'localStorage'>('sessionStorage');
 
-  private baseUrl = 'https://gitlab.com/api/v4';
-  private projectId = 54867625;
+  private readonly backendUrl = inject(APP_CONFIG).backendUrl;
+  private readonly gitlabBaseUrl = 'https://gitlab.com/api/v4';
+  private readonly projectId = 54867625;
 
   private readonly http = inject(HttpClient);
   private readonly messageToastService = inject(MessageToastService);
@@ -36,20 +38,13 @@ export class MrOverviewService {
   }
 
   /**
-   * Extracts merge requests from the GitLab repository.
-   * This method uses the GitLabMergeRequestExtractor to fetch merge requests
-   * authored by any user.
+   * Retrieves the open merge requests from our backend (cached here).
    */
-  async extractMrs() {
+  async loadOpenMrs() {
     try {
-      const extractor = new GitLabMergeRequestExtractor({
-        baseUrl: 'https://gitlab.com',
-        privateToken: this.token(),
-        projectId: this.projectId,
-      });
-      const mergeRequests = await extractor.extractMergeRequests({
-        authorId: 0,
-      });
+      const mergeRequests: MergeRequestWithDiffs[] = await lastValueFrom(
+        this.http.get<MergeRequestWithDiffs[]>(`${this.backendUrl}/gitlab/merge-requests`),
+      );
 
       this.mergeRequests.set(
         mergeRequests
@@ -77,7 +72,7 @@ export class MrOverviewService {
    * @param title
    * @private
    */
-  private extractPkgName(title: string): string | null {
+  extractPkgName(title: string): string | null {
     const match = title.match(/^[^(]*\(([^)]+)\)/);
     return match ? match[1] : null;
   }
@@ -86,7 +81,7 @@ export class MrOverviewService {
    * Approves a merge request via GitLab API.
    * @param mr The merge request to approve.
    */
-  async approve(mr: MergeRequestData) {
+  async approve(mr: MergeRequestWithDiffs) {
     const loadingMap = new Map(this.loadingMap());
     loadingMap.set(mr.iid, true);
     this.loadingMap.set(loadingMap);
@@ -96,7 +91,7 @@ export class MrOverviewService {
       promises.push(
         lastValueFrom(
           this.http.post(
-            `${this.baseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}/approve`,
+            `${this.gitlabBaseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}/approve`,
             {
               sha: mr.sha,
             },
@@ -111,13 +106,13 @@ export class MrOverviewService {
 
       // Add 'approved' label if not already present, since GitLab does not expose the approvers via API.
       // This will disable re-approvals and help track approved MRs.
-      const labels: string[] = mr.labels || [];
+      const labels: string[] = (mr.labels as string[]) || [];
       if (!labels.includes('approved')) {
         labels.push('approved');
         promises.push(
           lastValueFrom(
             this.http.put(
-              `${this.baseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
+              `${this.gitlabBaseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
               { labels: labels.join(','), assignee_id: 20097372 },
               { headers: { 'PRIVATE-TOKEN': this.token() } },
             ),
@@ -130,7 +125,7 @@ export class MrOverviewService {
         'Approval Successful',
         'Merge request approved successfully. The bot will auto-merge it soon.',
       );
-      await this.extractMrs();
+      await this.loadOpenMrs();
     } catch (error) {
       const err = error as any;
       if (err.status === 401) {
@@ -178,17 +173,21 @@ export class MrOverviewService {
     }
   }
 
-  flagDangerous(mr: MergeRequestData) {
+  /**
+   * Flags a merge request as dangerous by adding a 'dangerous' label.
+   * @param mr The merge request to flag.
+   */
+  flagDangerous(mr: MergeRequestWithDiffs) {
     const loadingMap = new Map(this.loadingMap());
     loadingMap.set(mr.iid, true);
     this.loadingMap.set(loadingMap);
 
     try {
-      const labels: string[] = mr.labels || [];
+      const labels: string[] = (mr.labels as string[]) || [];
       labels.push('dangerous');
       this.http
         .put(
-          `${this.baseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
+          `${this.gitlabBaseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
           { labels: labels.join(',') },
           { headers: { 'PRIVATE-TOKEN': this.token() } },
         )
@@ -198,7 +197,7 @@ export class MrOverviewService {
               'Flagged as Dangerous',
               'The merge request has been flagged as dangerous.',
             );
-            void this.extractMrs();
+            void this.loadOpenMrs();
           },
           error: (error) => {
             this.messageToastService.error(

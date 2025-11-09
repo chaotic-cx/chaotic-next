@@ -23,15 +23,15 @@ export class GitlabController {
   @ApiOperation({ summary: 'Update GitLab cache via webhook.' })
   @ApiBody({ type: Object, description: 'GitLab pipeline webhook payload' })
   @ApiOkResponse({ description: 'Cache update triggered.' })
-  updateCache(@Headers('X-Gitlab-Token') token: string, @Body() body: GitLabWebHook): void {
+  async updateCache(@Headers('X-Gitlab-Token') token: string, @Body() body: GitLabWebHook): Promise<void> {
     if (token !== this.WEBHOOK_TOKEN) {
       throw new UnauthorizedException('Invalid token');
     }
 
     if (body.object_kind === 'pipeline') {
-      void this.gitlabService.bustCache(body);
+      await this.gitlabService.handlePipelineWebhook(body);
     } else if (body.object_kind === 'merge_request') {
-      this.gitlabService.handleMergeRequestWebhook(body);
+      await this.gitlabService.handleMergeRequestWebhook(body);
     }
   }
 
@@ -39,7 +39,15 @@ export class GitlabController {
   @Get('pipelines')
   @ApiOperation({ summary: 'Get recent GitLab pipelines.' })
   @ApiOkResponse({ description: 'List of pipelines', isArray: true })
-  async getPipelines(): Promise<PipelineWithExternalStatus[]> {
+  async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
     return await this.gitlabService.getLastPipelines();
+  }
+
+  @AllowAnonymous()
+  @Get('merge-requests')
+  @ApiOperation({ summary: 'Get recent open GitLab merge requests with diff data.' })
+  @ApiOkResponse({ description: 'List of open merge requests', isArray: true })
+  async getOpenMergeRequests(): Promise<PipelineWithExternalStatus[]> {
+    return await this.gitlabService.getOpenMergeRequests();
   }
 }
