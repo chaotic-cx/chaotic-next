@@ -16,6 +16,25 @@
       "resources": {
         "files": ["/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"]
       }
+    },
+    {
+      "name": "external-cdn",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "urls": [
+          "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release/build/highlight.min.js",
+          "https://rsms.me/inter/inter.css"
+        ]
+      }
+    },
+    {
+      "name": "chaotic-router",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "urls": ["https://status.chaotic.cx/mirrors.json"]
+      }
     }
   ]
 }

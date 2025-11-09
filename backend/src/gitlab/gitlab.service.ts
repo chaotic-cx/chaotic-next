@@ -1,4 +1,4 @@
-import { MergeRequestWithDiffs, PipelineWithExternalStatus, PushNotification } from '@./shared-lib';
+import { MergeRequestWithDiffs, NotificationPayload, PipelineWithExternalStatus } from '@./shared-lib';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -211,12 +211,14 @@ export class GitlabService {
       const pkgs = newMr.map((mr) => mr.title.match(/^[^(]*\(([^)]+)\)/)?.[1]).join(', ');
       Logger.log(`Notifying subscribers about new MRs: ${pkgs}`, 'GitlabService');
 
-      const notificationPayload: PushNotification = {
-        title: 'New update for review',
-        body: `New package updates requires your review: ${pkgs}`,
-        icon: '/android-chrome-512x512.png',
-        data: {
-          url: 'https://chaotic.cx/update-review',
+      const notificationPayload: NotificationPayload = {
+        notification: {
+          title: 'New update for review!',
+          icon: '/android-chrome-512x512.png',
+          body: `New package updates requires your review: ${pkgs}`,
+          data: {
+            onActionClick: { default: { operation: 'openWindow', url: 'https://aur.chaotic.cx/update-review' } },
+          },
         },
       };
 
