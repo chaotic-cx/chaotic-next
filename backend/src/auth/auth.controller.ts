@@ -3,6 +3,7 @@ import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { LoginCredentials } from '../types';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local.auth.guard';
+import { AllowAnonymous } from './anonymous.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -28,5 +29,30 @@ export class AuthController {
     req.session.user_id = req.user.id;
     Logger.debug(`User ${req.user.username} has signed in with Auth0`, 'AuthController');
     Logger.debug(req, 'AuthController');
+  }
+
+  @HttpCode(HttpStatus.CREATED)
+  @AllowAnonymous()
+  @Post('subscribe')
+  @ApiOperation({ summary: 'Subscribe to push events' })
+  @ApiBody({ type: Object, description: 'Subscription details' })
+  @ApiOkResponse({ description: 'Subscription successful.' })
+  async subscribeToPushEvents(@Body() body: PushSubscription) {
+    Logger.debug('Subscribing to push events', 'AuthController');
+    Logger.log(body, 'AuthController');
+
+    return this.authService.subscribeToPushEvents(body);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @AllowAnonymous()
+  @Get('vapid-public-key')
+  @ApiOperation({ summary: 'Get VAPID public key for push notifications.' })
+  @ApiOkResponse({ description: 'VAPID public key retrieved successfully.' })
+  getVapidPublicKey() {
+    Logger.debug('Fetching VAPID public key', 'AuthController');
+    return {
+      vapidPublicKey: this.authService.vapidPublicKey,
+    };
   }
 }

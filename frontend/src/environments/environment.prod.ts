@@ -17,4 +17,5 @@ export const environment: EnvironmentModel = {
   repoUrlGaruda: 'https://gitlab.com/garuda-linux/pkgbuilds/-/tree/main/',
   repoId: 1,
   repoIdGaruda: 2,
+  vapidPublicKey: 'BFMijCyTcLZu3HRJyMfoB4vtnDcgl7E2SVZgd4uWB3XjO2VvRh_LjYHcY_oJLvMIhdp5Yvuz0gudRpY-PFI9iWA',
 };

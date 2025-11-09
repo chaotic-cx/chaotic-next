@@ -45,7 +45,8 @@
             }
           ],
           "outputHashing": "all",
-          "optimization": true
+          "optimization": true,
+          "serviceWorker": "frontend/ngsw-config.json"
         },
         "development": {
           "optimization": false,

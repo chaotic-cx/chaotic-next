@@ -19,6 +19,7 @@ import { Button } from 'primeng/button';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { MergeRequestWithDiffs } from '@./shared-lib';
+import { NotificationService } from '../notification/notification.service';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -50,6 +51,7 @@ export class MrOverviewComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
+  private readonly notificationService = inject(NotificationService);
   private readonly router = inject(Router);
 
   constructor() {
@@ -121,6 +123,13 @@ export class MrOverviewComponent implements OnInit {
         'The provided GitLab private token is invalid or lacks necessary permissions.',
       );
       return;
+    }
+
+    // In this case, we might want to be notified about new merge requests
+    const permission = await this.notificationService.requestPermission();
+    const isSubscribed = localStorage.getItem('notifications-subscribed') === 'true';
+    if (permission && !isSubscribed) {
+      await this.notificationService.subscribeToNotifications();
     }
 
     this.mrOverviewService.token.set(value);
