@@ -15,4 +15,5 @@ export interface EnvironmentModel {
   repoUrlGaruda: string;
   repoId: number;
   repoIdGaruda: number;
+  vapidPublicKey: string;
 }

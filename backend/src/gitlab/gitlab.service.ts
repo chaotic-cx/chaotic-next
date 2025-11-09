@@ -6,6 +6,9 @@ import { ConfigService } from '@nestjs/config';
 import { EventService } from '../events/event.service';
 import { MergeRequestWebhook, PipelineWebhook } from './interfaces';
 import { MergeRequestSchema } from '@gitbeaker/core';
+import { readFile } from 'node:fs/promises';
+import { AES } from 'crypto-js';
+import { PushSubscription, sendNotification } from 'web-push';
 
 @Injectable()
 export class GitlabService {
@@ -140,6 +143,11 @@ export class GitlabService {
     const newIds = new Set(newData.map((mr) => mr.id));
     const hasNewMr = [...newIds].some((id) => !currentIds.has(id));
 
+    if (hasNewMr) {
+      const newMr: MergeRequestWithDiffs[] = newData.filter((mr) => !currentIds.has(mr.id));
+      void this.notifySubscribers(newMr);
+    }
+
     this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: newData, hasNewMr } });
     return true;
   }
@@ -171,5 +179,37 @@ export class GitlabService {
    */
   private isExternalStage(name: string): boolean {
     return name.startsWith('chaotic-aur:') || name.startsWith('garuda:');
+  }
+
+  /**
+   * Notify subscribers about a new merge request via push notifications.
+   * @param newMr The new merge request
+   */
+  private async notifySubscribers(newMr: MergeRequestWithDiffs[]) {
+    const subscriber = await readFile('config/notification-subscriber.json', 'utf-8');
+    const decryptedSubscriber = AES.decrypt(
+      subscriber,
+      this.configService.getOrThrow<string>('CAUR_DB_KEY'),
+    ).toString();
+
+    const pkgs = newMr.map((mr) => mr.title.match(/^[^(]*\(([^)]+)\)/)[0]).join(', ');
+    Logger.log(`Notifying subscribers about new MRs: ${pkgs}`, 'GitlabService');
+
+    const notificationPayload = {
+      title: 'New update for review',
+      body: `New package updates requires your review: ${pkgs}`,
+      icon: '/assets/android-chrome-512x512.png',
+      actions: [
+        { action: 'explore', title: 'Review now' },
+        { action: 'dismiss', title: 'Later' },
+      ],
+    };
+
+    const promises = [];
+    const notificationsJson: PushSubscription[] = JSON.parse(decryptedSubscriber);
+    for (const sub of notificationsJson) {
+      promises.push(sendNotification(sub, JSON.stringify(notificationPayload)));
+    }
+    await Promise.all(promises);
   }
 }
