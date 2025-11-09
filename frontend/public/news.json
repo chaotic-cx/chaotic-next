@@ -3432,5 +3432,62 @@
         "emoji": "🔥"
       }
     ]
+  },
+  {
+    "id": 669,
+    "type": "message",
+    "date": "2025-11-09T18:44:12",
+    "date_unixtime": "1762710252",
+    "edited": "2025-11-09T18:44:36",
+    "edited_unixtime": "1762710276",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": [
+      "In case anyone wants to have an overview of what is queued for review (e.g. in case an expected package update appears to be late), we have a ",
+      {
+        "type": "text_link",
+        "text": "dedicated page ",
+        "href": "https://aur.chaotic.cx/update-review"
+      },
+      "by now (which also simplifies any action maintainers need to take in order to review efficiently) 🕵🏻‍♂️"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "In case anyone wants to have an overview of what is queued for review (e.g. in case an expected package update appears to be late), we have a "
+      },
+      {
+        "type": "text_link",
+        "text": "dedicated page ",
+        "href": "https://aur.chaotic.cx/update-review"
+      },
+      {
+        "type": "plain",
+        "text": "by now (which also simplifies any action maintainers need to take in order to review efficiently) 🕵🏻‍♂️"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 3,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "👀"
+      }
+    ]
   }
 ]
