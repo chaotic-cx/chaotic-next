@@ -1,17 +1,17 @@
-import { CACHE_GITLAB_TTL, PipelineWithExternalStatus } from '@./shared-lib';
+import { MergeRequestWithDiffs, PipelineWithExternalStatus } from '@./shared-lib';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Mutex } from 'async-mutex';
 import { EventService } from '../events/event.service';
 import { MergeRequestWebhook, PipelineWebhook } from './interfaces';
+import { MergeRequestSchema } from '@gitbeaker/core';
 
 @Injectable()
 export class GitlabService {
   api: any;
-  updateMutex = new Mutex();
 
+  private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_KEY_PIPELINES = 'gitlab/pipelines';
   private readonly chaoticId: string;
 
@@ -30,62 +30,118 @@ export class GitlabService {
 
   /**
    * Get the last GitLab pipelines for the chaotic-aur. Caches the result for CACHE_GITLAB_TTL (10s).
+   * @param overwriteCache Whether to overwrite the cache or not
    * @returns The last pipelines with their external statuses (aka build logs)
    */
-  async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
-    let data: PipelineWithExternalStatus[] = await this.cacheManager.get<PipelineWithExternalStatus[]>(
+  async getLastPipelines(overwriteCache = false): Promise<PipelineWithExternalStatus[]> {
+    const data: PipelineWithExternalStatus[] | undefined = await this.cacheManager.get<PipelineWithExternalStatus[]>(
       this.CACHE_KEY_PIPELINES,
     );
-    if (!data) {
-      data = await this.updateMutex.runExclusive(async () => {
-        try {
-          const fetchPromises: Promise<{ commit: CommitStatusSchema[]; pipeline: PipelineSchema }>[] = [];
+    if (!data || overwriteCache) {
+      try {
+        let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
+          maxPages: 1,
+          page: 1,
+          perPage: 50,
+        });
+        allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
 
-          let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
-            maxPages: 1,
-            page: 1,
-            perPage: 50,
-          });
-          allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
+        Logger.log(`Fetched ${allPipelines.length} pipelines`, 'GitlabService');
+        Logger.debug(allPipelines);
 
-          for (const pipeline of allPipelines) {
-            this.getCommitStatus(pipeline, fetchPromises);
-          }
-
-          const promiseResults: PipelineWithExternalStatus[] = await Promise.all(fetchPromises);
-          return promiseResults.sort((a, b) => b.pipeline.id - a.pipeline.id);
-        } catch (err) {
-          Logger.error(err, 'GitlabService');
+        const fetchPromises: Promise<{ commit: CommitStatusSchema[]; pipeline: PipelineSchema }>[] = [];
+        for (const pipeline of allPipelines) {
+          this.getCommitStatus(pipeline, fetchPromises);
         }
-      });
 
-      await this.cacheManager.set(this.CACHE_KEY_PIPELINES, data, CACHE_GITLAB_TTL);
+        const promiseResults: PipelineWithExternalStatus[] = await Promise.all(fetchPromises);
+        return promiseResults.sort((a, b) => b.pipeline.id - a.pipeline.id);
+      } catch (err) {
+        Logger.error(err, 'GitlabService');
+      }
+
+      await this.cacheManager.set(this.CACHE_KEY_PIPELINES, data);
     }
+
     return data;
   }
 
   /**
-   * Bust the cache for the pipelines.
+   * Bust the cache for the pipelines and refresh available pipelines. Pushes an event to the SSE stream.
    * @param body Body of GitLab API call
    * @returns True if the cache was successfully busted, false otherwise
    */
-  async bustCache(body: PipelineWebhook): Promise<boolean> {
-    const cacheDeleted = await this.cacheManager.del(this.CACHE_KEY_PIPELINES);
-    this.eventService.sseEvents$.next({ data: { type: 'pipeline' } });
-    return cacheDeleted;
+  async handlePipelineWebhook(body: PipelineWebhook): Promise<boolean> {
+    const newData: PipelineWithExternalStatus[] = await this.getLastPipelines(true);
+
+    this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: newData } });
+    return true;
+  }
+
+  /**
+   * Get the open merge requests with their diffs and cache the result.
+   * @param overwriteCache Whether to overwrite the cache or not
+   * @returns The open merge requests with their diffs
+   */
+  async getOpenMergeRequests(overwriteCache = false): Promise<any[]> {
+    let data: MergeRequestWithDiffs[] | undefined = await this.cacheManager.get<MergeRequestWithDiffs[]>(
+      this.CACHE_KEY_MRS,
+    );
+    if (!data || overwriteCache) {
+      const openMrs: MergeRequestSchema[] = await this.api.MergeRequests.all({
+        state: 'merged',
+        perPage: 100,
+        projectId: this.chaoticId,
+      });
+
+      Logger.log(`Fetched ${openMrs.length} open MRs`, 'GitlabService');
+      Logger.debug(openMrs);
+
+      const diffPromises: Promise<any>[] = [];
+      for (const mr of openMrs) {
+        diffPromises.push(this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid));
+      }
+
+      const diffs = await Promise.all(diffPromises);
+      data = openMrs.map((mr, index) => ({
+        title: mr.title,
+        created_at: mr.created_at,
+        web_url: mr.web_url,
+        updated_at: mr.updated_at,
+        assignees: mr.assignees,
+        labels: mr.labels as string[],
+        sha: mr.sha,
+        merge_status: mr.merge_status,
+        iid: mr.iid,
+        id: mr.id,
+        state: mr.state,
+        detailed_merge_status: mr.detailed_merge_status,
+        diffs: diffs[index],
+      }));
+
+      await this.cacheManager.set(this.CACHE_KEY_MRS, data);
+    }
+
+    return data;
   }
 
   /**
    * Handle a merge request webhook from GitLab, and push an event to the SSE stream.
    * @param body Body of GitLab API call
    */
-  handleMergeRequestWebhook(body: MergeRequestWebhook) {
-    const sendObject = {
-      labels: body.object_attributes.labels.map((label) => label.title),
-      iid: body.object_attributes.iid,
-      assignee_ids: body.object_attributes.assignee_ids,
-    };
-    this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: sendObject } });
+  async handleMergeRequestWebhook(body: MergeRequestWebhook) {
+    const currentData: MergeRequestWithDiffs[] = await this.cacheManager.get<MergeRequestWithDiffs[]>(
+      this.CACHE_KEY_MRS,
+    );
+    const newData: MergeRequestWithDiffs[] = await this.getOpenMergeRequests(true);
+
+    // Determine if there are any new MRs compared to the current cached data
+    const currentIds = new Set(currentData?.map((mr) => mr.id) ?? []);
+    const newIds = new Set(newData.map((mr) => mr.id));
+    const hasNewMr = [...newIds].some((id) => !currentIds.has(id));
+
+    this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: newData, hasNewMr } });
+    return true;
   }
 
   /**

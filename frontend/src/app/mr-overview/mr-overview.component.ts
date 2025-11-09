@@ -1,5 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { MergeRequestData } from '../gitlab-mr-extractor';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { TitleComponent } from '../title/title.component';
 import { TableModule } from 'primeng/table';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
@@ -19,6 +18,7 @@ import { Fieldset } from 'primeng/fieldset';
 import { Button } from 'primeng/button';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
+import { MergeRequestWithDiffs } from '@./shared-lib';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -38,6 +38,7 @@ import { filter } from 'rxjs';
   ],
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MrOverviewComponent implements OnInit {
   protected readonly mrOverviewService = inject(MrOverviewService);
@@ -58,7 +59,14 @@ export class MrOverviewComponent implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
-        void this.mrOverviewService.extractMrs();
+        this.mrOverviewService.mergeRequests.set(
+          event.mr
+            .map((mr) => ({
+              ...mr,
+              title: this.mrOverviewService.extractPkgName(mr.title) || mr.title,
+            }))
+            .sort((a, b) => (b.detailed_merge_status === 'not_approved' ? -1 : 1)),
+        );
       });
   }
 
@@ -80,8 +88,8 @@ export class MrOverviewComponent implements OnInit {
     if (tokenFromStorage) {
       const decryptedToken: string = await decrypt(tokenFromStorage, 'thisaintrealsafety1!!1!');
       this.mrOverviewService.token.set(decryptedToken);
-      void this.mrOverviewService.extractMrs();
     }
+    void this.mrOverviewService.loadOpenMrs();
   }
 
   /**
@@ -90,7 +98,7 @@ export class MrOverviewComponent implements OnInit {
    * @param type The type of action ('approve' or 'flag').
    * @returns True if the approval process is ongoing, false otherwise.
    */
-  isLoading(mr: MergeRequestData, type: 'approve' | 'flag'): boolean {
+  isLoading(mr: MergeRequestWithDiffs, type: 'approve' | 'flag'): boolean {
     const loadingMap = this.mrOverviewService.loadingMap();
     const identifier = type === 'approve' ? mr.iid : -mr.iid;
     return loadingMap.has(identifier) && loadingMap.get(identifier) === true;
@@ -117,6 +125,6 @@ export class MrOverviewComponent implements OnInit {
 
     this.mrOverviewService.token.set(value);
     this.messageToastService.success('Token Saved', 'GitLab private token has been saved to session storage.');
-    void this.mrOverviewService.extractMrs();
+    void this.mrOverviewService.loadOpenMrs();
   }
 }

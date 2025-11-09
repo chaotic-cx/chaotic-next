@@ -1,6 +1,7 @@
 import { HTTP_INTERCEPTORS, provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import {
   ApplicationConfig,
+  isDevMode,
   LOCALE_ID,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
@@ -14,6 +15,7 @@ import { environment } from '../environments/environment.dev';
 import { routes } from './app.routes';
 import { CatppuccinAura } from '@garudalinux/themes/catppuccin';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
+import { provideServiceWorker } from '@angular/service-worker';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -39,6 +41,10 @@ export const appConfig: ApplicationConfig = {
     }),
     provideHttpClient(withInterceptorsFromDi(), withFetch()),
     provideRouter(routes),
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
     provideZonelessChangeDetection(),
     { provide: APP_CONFIG, useValue: environment },
     { provide: LOCALE_ID, useValue: 'en-GB' },
