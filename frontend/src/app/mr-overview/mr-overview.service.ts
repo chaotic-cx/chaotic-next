@@ -48,6 +48,7 @@ export class MrOverviewService {
 
       this.mergeRequests.set(
         mergeRequests
+          .filter((mr) => !mr.labels.includes('marge_bot_batch_merge_job'))
           .map((mr) => ({
             ...mr,
             title: this.extractPkgName(mr.title) || mr.title,

@@ -65,6 +65,7 @@ export class MrOverviewComponent implements OnInit {
       .subscribe((event) => {
         this.mrOverviewService.mergeRequests.set(
           event.mr
+            .filter((mr) => !mr.labels.includes('marge_bot_batch_merge_job'))
             .map((mr) => ({
               ...mr,
               title: this.mrOverviewService.extractPkgName(mr.title) || mr.title,
