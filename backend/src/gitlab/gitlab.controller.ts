@@ -50,4 +50,12 @@ export class GitlabController {
   async getOpenMergeRequests(): Promise<PipelineWithExternalStatus[]> {
     return await this.gitlabService.getOpenMergeRequests();
   }
+
+  @AllowAnonymous()
+  @Get('review-stats')
+  @ApiOperation({ summary: 'Get GitLab merge request review statistics per user.' })
+  @ApiOkResponse({ description: 'Merge request review statistics' })
+  async getReviewStats() {
+    return await this.gitlabService.getReviewStats();
+  }
 }
