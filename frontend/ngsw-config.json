@@ -6,41 +6,7 @@
       "name": "app",
       "installMode": "prefetch",
       "resources": {
-        "files": ["/favicon.ico", "/index.csr.html", "/index.html", "/manifest.webmanifest", "/*.css", "/*.js"]
-      }
-    },
-    {
-      "name": "assets",
-      "installMode": "lazy",
-      "updateMode": "prefetch",
-      "resources": {
-        "files": ["/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"]
-      }
-    },
-    {
-      "name": "external-cdn",
-      "installMode": "lazy",
-      "updateMode": "prefetch",
-      "resources": {
-        "urls": [
-          "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release/build/highlight.min.js",
-          "https://rsms.me/inter/inter.css"
-        ]
-      }
-    }
-  ],
-  "dataGroups": [
-    {
-      "name": "api",
-      "urls": [
-        "https://chaotic-backend.garudalinux.org/**",
-        "https://builds.garudalinux.org/api/**",
-        "https://status.chaotic.cx/**"
-      ],
-      "cacheConfig": {
-        "maxAge": "0s",
-        "maxSize": 0,
-        "strategy": "freshness"
+        "files": ["/favicon.ico", "/manifest.webmanifest"]
       }
     }
   ],
