@@ -8,6 +8,7 @@ import { compare } from 'bcrypt';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { AES, enc } from 'crypto-js';
 import { existsSync } from 'node:fs';
+import { NotificationPayload } from '@./shared-lib';
 
 @Injectable()
 export class AuthService {
@@ -68,17 +69,22 @@ export class AuthService {
     notificationsJson.push(body);
 
     // Send welcome notification
-    await sendNotification(
-      body,
-      JSON.stringify({
+    const notification: NotificationPayload = {
+      notification: {
         title: 'Subscription successful',
         body: 'You have successfully subscribed to Chaotic AUR notifications.',
         icon: '/android-chrome-512x512.png',
         data: {
-          url: 'https://chaotic.cx',
+          onActionClick: {
+            default: {
+              operation: 'openWindow',
+              url: 'https://chaotic.cx',
+            },
+          },
         },
-      }),
-    );
+      },
+    };
+    await sendNotification(body, JSON.stringify(notification));
 
     const encryptedData = AES.encrypt(
       JSON.stringify(notificationsJson),
