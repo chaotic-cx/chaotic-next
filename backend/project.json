@@ -8,7 +8,7 @@
     "build": {
       "executor": "@nx/rspack:rspack",
       "outputs": ["{options.outputPath}"],
-      "defaultConfiguration": "hmr",
+      "defaultConfiguration": "production",
       "options": {
         "target": "node",
         "outputPath": "dist/{projectRoot}",
@@ -16,6 +16,7 @@
         "main": "{projectRoot}/src/main.ts",
         "tsConfig": "{projectRoot}/tsconfig.app.json",
         "rspackConfig": "{projectRoot}/rspack.config.js",
+        "generatePackageJson": true,
         "assets": []
       },
       "configurations": {
