@@ -1,13 +1,8 @@
-import { ApplicationRef, inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
-import { MessageToastService } from '@garudalinux/core';
 
 @Injectable({ providedIn: 'root' })
 export class UpdateService {
-  hasUpdate = signal<boolean>(false);
-
-  private readonly appRef = inject(ApplicationRef);
-  private readonly messageService = inject(MessageToastService);
   private readonly updates = inject(SwUpdate);
 
   constructor() {
@@ -19,7 +14,7 @@ export class UpdateService {
         case 'VERSION_READY':
           console.log(`Current app version: ${evt.currentVersion.hash}`);
           console.log(`New app version ready for use: ${evt.latestVersion.hash}`);
-          this.hasUpdate.set(true);
+          void this.updates.activateUpdate();
           break;
         case 'VERSION_INSTALLATION_FAILED':
           console.log(`Failed to install app version '${evt.version.hash}': ${evt.error}`);

@@ -1,2 +1,32 @@
 /*
   Content-Security-Policy: connect-src 'self' https://aur.chaotic.cx https://chaotic-backend.garudalinux.org https://gitlab.com https://cdn.jsdelivr.net https://rsms.me https://status.chaotic.cx https://builds.garudalinux.org https://raw.githubusercontent.com https://github.com
+
+/index.html
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/*.html
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/ngsw.json
+  Cache-Control: no-cache
+
+/ngsw-worker.js
+  Cache-Control: no-cache
+
+/safety-worker.js
+  Cache-Control: no-cache
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon.ico
+  Cache-Control: public, max-age=31536000, immutable
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=31536000, immutable

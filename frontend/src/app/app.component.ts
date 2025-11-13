@@ -1,6 +1,6 @@
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import localeEnGb from '@angular/common/locales/en-GB';
-import { ChangeDetectionStrategy, Component, effect, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { MessageToastService, ShellComponent } from '@garudalinux/core';
@@ -90,35 +90,6 @@ export class AppComponent implements OnInit {
       routerLink: '/about',
     },
   ];
-
-  constructor() {
-    effect(() => {
-      if (this.updateService.hasUpdate()) {
-        this.confirmationService.confirm({
-          message: 'A new version of the website is available. Would you like to update now?',
-          header: 'Update available',
-          icon: 'pi pi-info-circle',
-          rejectButtonProps: {
-            label: 'Cancel',
-            severity: 'secondary',
-          },
-          acceptButtonProps: {
-            label: 'Apply update',
-            severity: 'success',
-          },
-          accept: () => {
-            document.location.reload();
-          },
-          reject: () => {
-            this.messageToastService.info(
-              'Update postponed',
-              'You can update the application later by refreshing the page.',
-            );
-          },
-        });
-      }
-    });
-  }
 
   async ngOnInit() {
     TimeAgo.addDefaultLocale(en);
