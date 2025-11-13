@@ -18,6 +18,7 @@ export class GitlabService {
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_KEY_PIPELINES = 'gitlab/pipelines';
+  private readonly CACHE_KEY_REVIEW_STATS = 'gitlab/review-stats';
   private readonly chaoticId: string;
 
   // private readonly garudaId: string;
@@ -141,6 +142,9 @@ export class GitlabService {
       );
       const newData: MergeRequestWithDiffs[] = await this.getOpenMergeRequests(true);
 
+      // Wipe reviewer cache since MRs have changed
+      await this.cacheManager.del(this.CACHE_KEY_REVIEW_STATS);
+
       // Determine if there are any new MRs compared to the current cached data
       const currentIds = new Set(currentData?.map((mr) => mr.id) ?? []);
       const newIds = new Set(newData.map((mr) => mr.id));
@@ -235,5 +239,30 @@ export class GitlabService {
     } catch (error) {
       Logger.error(`Error notifying subscribers: ${error.message ?? error}`, 'GitlabService');
     }
+  }
+
+  async getReviewStats(): Promise<{ username: string; reviews: number }[]> {
+    if (await this.cacheManager.get(this.CACHE_KEY_REVIEW_STATS)) {
+      return await this.cacheManager.get(this.CACHE_KEY_REVIEW_STATS);
+    }
+    const users = await this.api.Projects.allUsers(this.chaoticId);
+
+    const reviewStats: { username: string; reviews: number }[] = [];
+    for (const user of users) {
+      const mrs = await this.api.MergeRequests.all({
+        state: 'merged',
+        projectId: this.chaoticId,
+        approvedByIds: [user.id],
+      });
+
+      Logger.debug(`User ${user.username} has approved ${mrs?.length} MRs`, 'GitlabService');
+      reviewStats.push({
+        username: user.username,
+        reviews: mrs.length,
+      });
+    }
+
+    void this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, reviewStats);
+    return reviewStats;
   }
 }
