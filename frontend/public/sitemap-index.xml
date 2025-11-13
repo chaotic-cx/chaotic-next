@@ -7,52 +7,52 @@
 
   <url>
     <loc>https://aur.chaotic.cx/</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>1.00</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/docs</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.90</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/about</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.80</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/stats</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.80</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/packages</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.80</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/deployments</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.80</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/mirrors</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.80</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/status</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.80</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/memorial</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.80</priority>
   </url>
   <url>
     <loc>https://aur.chaotic.cx/memorial-v2</loc>
-    <lastmod>2025-01-02T21:40:31+00:00</lastmod>
+    <lastmod>2025-11-13T20:00:00+00:00</lastmod>
     <priority>0.80</priority>
   </url>
 </urlset>
