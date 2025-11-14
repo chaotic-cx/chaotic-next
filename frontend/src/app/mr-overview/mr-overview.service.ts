@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { encrypt } from '../functions';
 import { MergeRequestWithDiffs } from '@./shared-lib';
 import { APP_CONFIG } from '../../environments/app-config.token';
+import { MergeRequestDiffSchema } from '@gitbeaker/core';
 
 @Injectable({
   providedIn: 'root',
@@ -52,6 +53,7 @@ export class MrOverviewService {
           .map((mr) => ({
             ...mr,
             title: this.extractPkgName(mr.title) || mr.title,
+            diffs: this.sortDiff(mr.diffs),
           }))
           .sort((a, b) => (b.detailed_merge_status === 'not_approved' ? -1 : 1)),
       );
@@ -222,5 +224,24 @@ export class MrOverviewService {
       finalLoadingMap.delete(mr.iid);
       this.loadingMap.set(finalLoadingMap);
     }
+  }
+
+  /**
+   * Sorts the commit diffs to prioritize PKGBUILD and .SRCINFO files.
+   * @param diffs The array of commit diffs to sort.
+   * @returns The sorted array of commit diffs.
+   */
+  sortDiff(diffs: MergeRequestDiffSchema[]): MergeRequestDiffSchema[] {
+    return diffs.sort((a, b) => {
+      const getSortKey = (path: string): number => {
+        if (path.endsWith('/PKGBUILD')) return 0;
+        if (path.endsWith('/.SRCINFO')) return 1;
+        return 2;
+      };
+      const keyA = getSortKey(a.new_path);
+      const keyB = getSortKey(b.new_path);
+      if (keyA !== keyB) return keyA - keyB;
+      return a.new_path.localeCompare(b.new_path);
+    });
   }
 }

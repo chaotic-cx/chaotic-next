@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, untracked } from '@angular/core';
 import { TitleComponent } from '../title/title.component';
 import { TableModule } from 'primeng/table';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
@@ -63,15 +63,22 @@ export class MrOverviewComponent implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
-        this.mrOverviewService.mergeRequests.set(
-          event.mr
-            .filter((mr) => !mr.labels.includes('marge_bot_batch_merge_job'))
-            .map((mr) => ({
-              ...mr,
-              title: this.mrOverviewService.extractPkgName(mr.title) || mr.title,
-            }))
-            .sort((a, b) => (b.detailed_merge_status === 'not_approved' ? -1 : 1)),
-        );
+        // We just update the existing MRs with the new data, preserving scroll position
+        const currentMrs = untracked(this.mrOverviewService.mergeRequests);
+        const updatedMrs = currentMrs.map((currentMr) => {
+          const updatedMr = event.mr.find((mr) => mr.id === currentMr.id);
+          if (updatedMr) {
+            return {
+              ...currentMr,
+              ...updatedMr,
+              title: this.mrOverviewService.extractPkgName(updatedMr.title) || updatedMr.title,
+              diffs: this.mrOverviewService.sortDiff(updatedMr.diffs),
+            };
+          }
+          return currentMr;
+        });
+
+        this.mrOverviewService.mergeRequests.set(updatedMrs);
       });
   }
 

@@ -3,13 +3,13 @@
 .diff-renderer {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
-  background: var(--ctp-base);
   border-radius: 0.25rem;
 }
 
 pre {
   @apply m-0 overflow-x-auto p-0.5;
-  line-height: 0.5;
+  line-height: 1;
+  font-size: 0;
 }
 
 code {
@@ -17,7 +17,9 @@ code {
 }
 
 span {
-  @apply block;
+  @apply m-0 block;
+  line-height: 1;
+  font-size: 0.75rem;
 }
 
 .context {
@@ -26,16 +28,16 @@ span {
 
 .added {
   background: rgba(166, 227, 161, 0.1);
-  color: var(--ctp-green);
+  color: var(--ctp-mocha-green);
 }
 
 .removed {
   background: rgba(243, 139, 168, 0.1);
-  color: var(--ctp-red);
+  color: var(--ctp-mocha-red);
 }
 
 .hunk-header {
-  color: var(--ctp-blue);
+  color: var(--ctp-mocha-blue);
   background: rgba(137, 180, 250, 0.1);
   font-weight: bold;
 }
