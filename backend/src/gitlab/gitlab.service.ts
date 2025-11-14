@@ -13,7 +13,7 @@ import { Mutex } from 'async-mutex';
 
 @Injectable()
 export class GitlabService {
-  api: any;
+  api: Gitlab;
   updateMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
@@ -241,6 +241,10 @@ export class GitlabService {
     }
   }
 
+  /**
+   * Get merge request review statistics per user. Caches the result.
+   * @returns An array of usernames and their review counts
+   */
   async getReviewStats(): Promise<{ username: string; reviews: number }[]> {
     if (await this.cacheManager.get(this.CACHE_KEY_REVIEW_STATS)) {
       return await this.cacheManager.get(this.CACHE_KEY_REVIEW_STATS);

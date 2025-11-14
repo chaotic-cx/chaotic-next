@@ -2,7 +2,7 @@ import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import localeEnGb from '@angular/common/locales/en-GB';
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
-import { RouterModule, RouterOutlet } from '@angular/router';
+import { Router, RouterModule, RouterOutlet } from '@angular/router';
 import { MessageToastService, ShellComponent } from '@garudalinux/core';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
@@ -38,8 +38,7 @@ export class AppComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly updateService = inject(UpdateService);
+  private readonly router = inject(Router);
 
   protected readonly loadingService = inject(LoadingService);
 
@@ -100,10 +99,12 @@ export class AppComponent implements OnInit {
     this.appService.serverEvents.onmessage = ({ data }) => {
       const event = JSON.parse(data) as ChaoticEvent;
       if (event.type === 'build' && event.status === BuildStatus.SUCCESS) {
-        this.messageToastService.success(
-          'Package deployment',
-          `${event.package}-${event.version}-${event.pkgrel} has just been deployed to ${event.repo} 🚀`,
-        );
+        const validRoutesRegex = /^\/(status|deployments|packages)(\?.*|#.*)?$/;
+        if (!this.router.url || validRoutesRegex.test(this.router.url))
+          this.messageToastService.success(
+            'Package deployment',
+            `${event.package}-${event.version}-${event.pkgrel} has just been deployed to ${event.repo} 🚀`,
+          );
       }
 
       this.appService.chaoticSse$.next(event);
