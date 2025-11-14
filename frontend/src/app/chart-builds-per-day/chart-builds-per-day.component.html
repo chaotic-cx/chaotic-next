@@ -1,0 +1,14 @@
+<div class="card mb-10 flex justify-center">
+  <p-chart class="w-200 max-w-2xl" [data]="chartData" [options]="options" [responsive]="true" type="line" />
+</div>
+<p-input-number
+  [(ngModel)]="days"
+  [showButtons]="true"
+  [min]="1"
+  [max]="365"
+  (ngModelChange)="onDaysChange()"
+  mode="decimal"
+  inputId="days"
+  placeholder="Number of days"
+>
+</p-input-number>

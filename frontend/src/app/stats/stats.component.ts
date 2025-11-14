@@ -14,6 +14,10 @@ import { SearchPackageComponent } from '../search-package/search-package.compone
 import { TitleComponent } from '../title/title.component';
 import { StatsService } from './stats.service';
 import { ChartReviewStatsComponent } from '../chart-review-stats/chart-review-stats.component';
+import { ChartBuildsPerDayComponent } from '../chart-builds-per-day/chart-builds-per-day.component';
+import { ChartPopularPackagesComponent } from '../chart-popular-packages/chart-popular-packages.component';
+import { ChartBuildersAmountComponent } from '../chart-builders-amount/chart-builders-amount.component';
+import { ChartAverageBuildTimeComponent } from '../chart-average-build-time/chart-average-build-time.component';
 
 @Component({
   selector: 'chaotic-stats',
@@ -31,6 +35,10 @@ import { ChartReviewStatsComponent } from '../chart-review-stats/chart-review-st
     TitleComponent,
     SearchPackageComponent,
     ChartReviewStatsComponent,
+    ChartBuildsPerDayComponent,
+    ChartPopularPackagesComponent,
+    ChartBuildersAmountComponent,
+    ChartAverageBuildTimeComponent,
   ],
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.css',
@@ -64,6 +72,8 @@ export class StatsComponent implements OnInit {
       this.statsService.currentTab.set('2');
     } else if (this.route.snapshot.fragment === 'update-review') {
       this.statsService.currentTab.set('3');
+    } else if (this.route.snapshot.fragment === 'builder-stats') {
+      this.statsService.currentTab.set('4');
     } else {
       this.statsService.currentTab.set('0');
       void this.router.navigate([], { fragment: 'search', queryParamsHandling: 'merge' });
@@ -102,6 +112,10 @@ export class StatsComponent implements OnInit {
         break;
       case '3':
         void this.router.navigate([], { fragment: 'update-review', queryParamsHandling: 'replace' });
+        break;
+      case '4':
+        void this.router.navigate([], { fragment: 'builder-stats', queryParamsHandling: 'replace' });
+        break;
     }
   }
 }

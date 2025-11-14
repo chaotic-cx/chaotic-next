@@ -262,14 +262,13 @@ export class BuilderService {
    * Returns the number of builds per builder.
    * @returns The number of builds per builder
    */
-  getBuildsPerBuilder(): Promise<{ builderId: string; count: string }[]> {
+  getBuildsPerBuilder(): Promise<{ name: string; count: string }[]> {
     return this.buildRepository
       .createQueryBuilder('build')
-      .select('build.builder')
+      .select('builder.name AS name')
       .addSelect('COUNT(*) AS count')
       .innerJoin('build.builder', 'builder')
-      .groupBy('build.builder')
-      .cache('builds-per-builder', 30000)
+      .groupBy('builder.name')
       .getRawMany();
   }
 

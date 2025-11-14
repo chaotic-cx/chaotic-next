@@ -167,7 +167,7 @@ export class BuilderController {
   @Get('builders/amount')
   @ApiOperation({ summary: 'Get the number of builds per builder.' })
   @ApiOkResponse({ description: 'Number of builds per builder', type: Object, isArray: true })
-  async getBuildersAmount(): Promise<{ builderId: string; count: string }[]> {
+  async getBuildersAmount(): Promise<{ name: string; count: string }[]> {
     return await this.builderService.getBuildsPerBuilder();
   }
 
