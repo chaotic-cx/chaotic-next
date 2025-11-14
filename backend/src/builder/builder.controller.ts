@@ -144,7 +144,7 @@ export class BuilderController {
     @Param('pkgname') pkgname: string,
     @Param('amount', new ParseIntPipe({ optional: true })) amount = 50,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
-  ): Promise<{ day: string; count: string }[]> {
+  ): Promise<{ day: string; repo: string; count: string }[]> {
     return await this.builderService.getBuildsCountByPkgnamePerDay({ pkgname, amount, offset });
   }
 
@@ -185,6 +185,7 @@ export class BuilderController {
   ): Promise<
     {
       day: string;
+      repo: string;
       count: string;
     }[]
   > {

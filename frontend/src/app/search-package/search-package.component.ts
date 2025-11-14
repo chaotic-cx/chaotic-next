@@ -1,22 +1,40 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { FilterService } from 'primeng/api';
 import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { TableModule } from 'primeng/table';
-import { retry } from 'rxjs';
+import { debounceTime, retry, Subject } from 'rxjs';
 import { AppService } from '../app.service';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { StatsService } from '../stats/stats.service';
 import { Select } from 'primeng/select';
+import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
 
 @Component({
   selector: 'chaotic-search-package',
-  imports: [CommonModule, AutoComplete, TableModule, PackageDetailKeyPipe, UnixDatePipe, FormsModule, Select],
+  imports: [
+    CommonModule,
+    AutoComplete,
+    TableModule,
+    PackageDetailKeyPipe,
+    UnixDatePipe,
+    FormsModule,
+    Select,
+    ChartPackageBuildStatsComponent,
+  ],
   templateUrl: './search-package.component.html',
   styleUrl: './search-package.component.css',
   providers: [FilterService],
@@ -34,6 +52,8 @@ export class SearchPackageComponent implements OnInit {
   protected readonly autoComplete = viewChild<AutoComplete>('autoComplete');
   protected readonly packageStatsService = inject(StatsService);
   protected readonly repoOptions = ['chaotic-aur', 'garuda'];
+  protected currentPackageName = signal<string>('');
+  private packageNameSubject = new Subject<string>();
 
   async ngOnInit(): Promise<void> {
     this.getSuggestions();
@@ -51,6 +71,12 @@ export class SearchPackageComponent implements OnInit {
         this.updateDisplay(params['search']);
         this.cdr.markForCheck();
       }
+    });
+
+    // Debounce package name changes to prevent excessive API calls
+    this.packageNameSubject.pipe(debounceTime(500)).subscribe((packageName) => {
+      this.currentPackageName.set(packageName);
+      this.cdr.markForCheck();
     });
   }
 
@@ -78,7 +104,8 @@ export class SearchPackageComponent implements OnInit {
       .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (data) => {
-          this.packageStatsService.packageSearchSuggestionPool.set(data.map((pkg) => pkg.pkgname));
+          const names = data.map((pkg) => pkg.pkgname);
+          this.packageStatsService.packageSearchSuggestionPool.set([...new Set(names)]);
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -89,46 +116,46 @@ export class SearchPackageComponent implements OnInit {
   }
 
   updateDisplay(query: string): void {
-    this.appService
-      .getPackage(query, this.packageStatsService.packageSearchSelectedRepo())
-      .pipe(retry({ delay: 5000, count: 3 }))
-      .subscribe({
-        next: (result) => {
-          this.packageStatsService.packageSearchPackageData.set(result);
-          const data = result as Record<string, any>;
-          const newData = [];
+    this.packageNameSubject.next(query);
 
-          if (!Object.hasOwn(data, 'pkgrel') || !Object.hasOwn(data, 'version')) {
-            this.messageToastService.warn(
-              'Error',
-              'Package data is incomplete, this is due to switching to per-repo statistics not too long ago.',
-            );
-            data['version'] = data['version'] || 'unknown';
-          } else {
-            data['version'] = `${data['version']}-${data['pkgrel']}`;
-            delete data['pkgrel'];
-          }
+    this.appService.getPackage(query, this.packageStatsService.packageSearchSelectedRepo()).subscribe({
+      next: (result) => {
+        this.packageStatsService.packageSearchPackageData.set(result);
+        const data = result as Record<string, any>;
+        const newData = [];
 
-          for (const key in data) {
-            if (key === 'isActive') continue;
-            if (data[key] && typeof data[key] !== 'object') {
-              newData.push({ key: key, value: data[key] });
-            } else if (data[key] && typeof data[key] === 'object') {
-              for (const innerKey in data[key]) {
-                newData.push({ key: innerKey, value: data[key][innerKey] });
-              }
+        if (!data) return;
+        if (!Object.hasOwn(data, 'pkgrel') || !Object.hasOwn(data, 'version')) {
+          this.messageToastService.warn(
+            'Error',
+            'Package data is incomplete, this is due to switching to per-repo statistics not too long ago.',
+          );
+          data['version'] = data['version'] || 'unknown';
+        } else {
+          data['version'] = `${data['version']}-${data['pkgrel']}`;
+          delete data['pkgrel'];
+        }
+
+        for (const key in data) {
+          if (key === 'isActive') continue;
+          if (data[key] && typeof data[key] !== 'object') {
+            newData.push({ key: key, value: data[key] });
+          } else if (data[key] && typeof data[key] === 'object') {
+            for (const innerKey in data[key]) {
+              newData.push({ key: innerKey, value: data[key][innerKey] });
             }
           }
+        }
 
-          this.packageStatsService.packageSearchData.set(newData);
-          this.packageStatsService.packageSearchInitialSearchDone.set(true);
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.messageToastService.error('Error', 'Failed to load package metrics');
-          console.error(err);
-        },
-      });
+        this.packageStatsService.packageSearchData.set(newData);
+        this.packageStatsService.packageSearchInitialSearchDone.set(true);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.messageToastService.error('Error', 'Failed to load package metrics');
+        console.error(err);
+      },
+    });
 
     this.appService.getSpecificPackageMetrics(query).subscribe({
       next: (result) => {

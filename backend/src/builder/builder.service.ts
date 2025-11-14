@@ -201,7 +201,7 @@ export class BuilderService {
     pkgname: string;
     amount: number;
     offset: number;
-  }): Promise<{ day: string; count: string }[]> {
+  }): Promise<{ day: string; repo: string; count: string }[]> {
     const requestedPackage = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
     if (!requestedPackage) {
       throw new NotFoundException('Package not found');
@@ -210,13 +210,15 @@ export class BuilderService {
     return this.buildRepository
       .createQueryBuilder('build')
       .select("DATE_TRUNC('day', build.timestamp) AS day")
+      .addSelect('repo.name AS repo')
       .addSelect('COUNT(*) AS count')
+      .innerJoin('build.repo', 'repo')
       .where('build.pkgbase = :id', { id: requestedPackage.id })
-      .groupBy('day')
+      .groupBy("DATE_TRUNC('day', build.timestamp), repo.name")
       .orderBy('day', 'DESC')
       .skip(options.offset)
       .take(options.amount)
-      .cache(`builds-${options.pkgname}-per-day-${options.amount}-${options.offset}`, 30000)
+      .cache(`builds-${options.pkgname}-per-day-repo-${options.amount}-${options.offset}`, 30000)
       .getRawMany();
   }
 
@@ -281,54 +283,6 @@ export class BuilderService {
       .orderBy('day', 'DESC')
       .take(options.days)
       .cache(`builds-per-day-${options.days}`, 30000)
-      .getRawMany();
-  }
-
-  async getStatusOfBuilds(options: { days: number }): Promise<{ status: string; count: string }[]> {
-    return await this.buildRepository
-      .createQueryBuilder('build')
-      .select('build.status')
-      .addSelect('COUNT(*) AS count')
-      .groupBy('build.status')
-      .orderBy('count', 'DESC')
-      .cache(`status-of-builds-${options.days}`, 30000)
-      .getRawMany();
-  }
-
-  async getCountPerDay(options: { days: number; offset: number }): Promise<{ day: string; count: string }[]> {
-    return await this.buildRepository
-      .createQueryBuilder('build')
-      .select("DATE_TRUNC('day', build.timestamp) AS day")
-      .addSelect('COUNT(*) AS count')
-      .groupBy('day')
-      .orderBy('day', 'DESC')
-      .cache(`count-per-day-${options.days}-${options.offset}`, 30000)
-      .take(options.days ?? 30)
-      .skip(options.offset ?? 0)
-      .getRawMany();
-  }
-
-  async buildsPerDay(options: { days: number; offset: number }): Promise<{ day: string; count: string }[]> {
-    return await this.buildRepository
-      .createQueryBuilder('build')
-      .select("DATE_TRUNC('day', build.timestamp) AS day")
-      .addSelect('COUNT(*) AS count')
-      .groupBy('day')
-      .orderBy('day', 'DESC')
-      .cache(`build-counts-per-day-${options.days}`, 30000)
-      .take(options.days ?? 30)
-      .skip(options.offset ?? 0)
-      .getRawMany();
-  }
-
-  async getBuildsPerRepo(): Promise<{ repo: string; count: string }[]> {
-    return await this.buildRepository
-      .createQueryBuilder('build')
-      .select('repo.name AS repo')
-      .addSelect('COUNT(*) AS count')
-      .innerJoin('build.repo', 'repo')
-      .groupBy('build.repo')
-      .cache(`builds-per-repo`, 30000)
       .getRawMany();
   }
 
