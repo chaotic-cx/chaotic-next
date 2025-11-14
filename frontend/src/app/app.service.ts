@@ -149,9 +149,9 @@ export class AppService {
     pkgname: string,
     amount = 50,
     offset = 0,
-  ): Observable<{ day: string; count: string }[]> {
+  ): Observable<{ day: string; repo: string; count: string }[]> {
     const params: { [key: string]: string } = { offset: offset.toString(), amount: amount.toString() };
-    return this.http.get<{ day: string; count: string }[]>(
+    return this.http.get<{ day: string; repo: string; count: string }[]>(
       `${this.appConfig.backendUrl}/builder/count/${pkgname}/${amount}`,
       { params },
     );
@@ -174,9 +174,13 @@ export class AppService {
     return this.http.get<{ name: string; count: string }[]>(`${this.appConfig.backendUrl}/builder/builders/amount`);
   }
 
-  getBuildsPerDayDefault(pkgname: string, days: number, offset = 0): Observable<{ day: string; count: string }[]> {
+  getBuildsPerDayDefault(
+    pkgname: string,
+    days: number,
+    offset = 0,
+  ): Observable<{ day: string; repo: string; count: string }[]> {
     const params: { [key: string]: string } = { offset: offset.toString() };
-    return this.http.get<{ day: string; count: string }[]>(
+    return this.http.get<{ day: string; repo: string; count: string }[]>(
       `${this.appConfig.backendUrl}/builder/per-day/pkgname/${pkgname}/${days}`,
       { params },
     );
