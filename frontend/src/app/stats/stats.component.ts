@@ -12,10 +12,11 @@ import { ChartDownloadsComponent } from '../chart-downloads/chart-downloads.comp
 import { ChartUseragentComponent } from '../chart-useragent/chart-useragent.component';
 import { SearchPackageComponent } from '../search-package/search-package.component';
 import { TitleComponent } from '../title/title.component';
-import { PackageStatsService } from './package-stats.service';
+import { StatsService } from './stats.service';
+import { ChartReviewStatsComponent } from '../chart-review-stats/chart-review-stats.component';
 
 @Component({
-  selector: 'chaotic-package-stats',
+  selector: 'chaotic-stats',
   imports: [
     TabList,
     Tabs,
@@ -29,13 +30,14 @@ import { PackageStatsService } from './package-stats.service';
     Card,
     TitleComponent,
     SearchPackageComponent,
+    ChartReviewStatsComponent,
   ],
-  templateUrl: './package-stats.component.html',
-  styleUrl: './package-stats.component.css',
+  templateUrl: './stats.component.html',
+  styleUrl: './stats.component.css',
   providers: [MessageToastService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PackageStatsComponent implements OnInit {
+export class StatsComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
@@ -43,7 +45,7 @@ export class PackageStatsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  protected readonly packageStatsService = inject(PackageStatsService);
+  protected readonly statsService = inject(StatsService);
 
   async ngOnInit(): Promise<void> {
     this.appService.updateSeoTags(
@@ -57,10 +59,13 @@ export class PackageStatsComponent implements OnInit {
     void this.get30DayUsers();
 
     if (this.route.snapshot.fragment === 'globals') {
-      this.packageStatsService.currentTab.set('1');
+      this.statsService.currentTab.set('1');
     } else if (this.route.snapshot.fragment === 'downloads') {
-      this.packageStatsService.currentTab.set('2');
+      this.statsService.currentTab.set('2');
+    } else if (this.route.snapshot.fragment === 'update-review') {
+      this.statsService.currentTab.set('3');
     } else {
+      this.statsService.currentTab.set('0');
       void this.router.navigate([], { fragment: 'search', queryParamsHandling: 'merge' });
     }
   }
@@ -74,7 +79,7 @@ export class PackageStatsComponent implements OnInit {
       .pipe(retry({ delay: 5000, count: 3 }))
       .subscribe({
         next: (res) => {
-          this.packageStatsService.totalUsers.set(res);
+          this.statsService.totalUsers.set(res);
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -95,6 +100,8 @@ export class PackageStatsComponent implements OnInit {
       case '2':
         void this.router.navigate([], { fragment: 'globals', queryParamsHandling: 'replace' });
         break;
+      case '3':
+        void this.router.navigate([], { fragment: 'update-review', queryParamsHandling: 'replace' });
     }
   }
 }

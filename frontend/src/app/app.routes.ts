@@ -50,7 +50,7 @@ export const routes: Routes = [
   {
     title: 'Statistics and data',
     path: 'stats',
-    loadComponent: () => import('./package-stats/package-stats.component').then((c) => c.PackageStatsComponent),
+    loadComponent: () => import('./stats/stats.component').then((c) => c.StatsComponent),
     data: { animationState: '6' },
   },
   {

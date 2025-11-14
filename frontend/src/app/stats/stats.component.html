@@ -2,16 +2,17 @@
   <chaotic-title
     title="Statistics and data"
     subtitleHtml="Area for package statistics and other fun stuff.<br>Total users last month: {{
-      packageStatsService.totalUsers()
+      statsService.totalUsers()
     }}<br>All stats shown here are currently relating to one month of data."
   ></chaotic-title>
 
   <div>
-    <p-tabs [(value)]="packageStatsService.currentTab" (valueChange)="changeTab($event)">
+    <p-tabs [(value)]="statsService.currentTab" (valueChange)="changeTab($event)">
       <p-tablist>
         <p-tab value="0">Search</p-tab>
         <p-tab value="1">Globals</p-tab>
         <p-tab value="2">Downloads</p-tab>
+        <p-tab value="3">Update Reviews</p-tab>
       </p-tablist>
       <p-tabpanels>
         <p-tabpanel value="0">
@@ -31,6 +32,9 @@
         </p-tabpanel>
         <p-tabpanel value="2">
           <chaotic-chart-downloads></chaotic-chart-downloads>
+        </p-tabpanel>
+        <p-tabpanel value="3">
+          <chaotic-chart-review-stats></chaotic-chart-review-stats>
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>

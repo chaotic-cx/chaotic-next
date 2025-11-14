@@ -4,7 +4,7 @@ import { CountryRankList, Package, type PackageRankList, type UserAgentList } fr
 @Injectable({
   providedIn: 'root',
 })
-export class PackageStatsService {
+export class StatsService {
   readonly currentTab = signal<string>('0');
   readonly totalUsers = signal<string>("<i class='text-ctp-maroon pi pi-hourglass'></i>");
 
@@ -24,4 +24,6 @@ export class PackageStatsService {
   readonly packageSearchInitialSearchDone = signal<boolean>(false);
   readonly packageSearchPackageData = signal<Package | null>(null);
   readonly packageSearchSelectedRepo = signal<string>('chaotic-aur');
+
+  readonly reviewStats = signal<{ username: string; reviews: number }[]>([]);
 }

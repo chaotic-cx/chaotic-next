@@ -2,7 +2,7 @@
   <p-chart class="w-200 max-w-2xl" [data]="chartData" [options]="options" [responsive]="true" type="pie" />
 </div>
 <p-input-number
-  [(ngModel)]="packageStatsService.countryRanksRange"
+  [(ngModel)]="statsService.countryRanksRange"
   [showButtons]="true"
   [min]="0"
   [max]="30"

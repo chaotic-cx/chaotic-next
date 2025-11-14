@@ -21,7 +21,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { ToastModule } from 'primeng/toast';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
-import { PackageStatsService } from '../package-stats/package-stats.service';
+import { StatsService } from '../stats/stats.service';
 
 @Component({
   selector: 'chaotic-chart-downloads',
@@ -42,7 +42,7 @@ export class ChartDownloadsComponent implements OnInit {
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
 
-  protected readonly packageStatsService = inject(PackageStatsService);
+  protected readonly statsService = inject(StatsService);
 
   constructor() {
     effect(() => {
@@ -55,10 +55,10 @@ export class ChartDownloadsComponent implements OnInit {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
       this.isWide.set(!state.matches);
       if (this.isWide()) {
-        this.packageStatsService.globalPackageMetricRange.set(50);
+        this.statsService.globalPackageMetricRange.set(50);
         this.initChart();
       } else {
-        this.packageStatsService.globalPackageMetricRange.set(20);
+        this.statsService.globalPackageMetricRange.set(20);
       }
     });
   }
@@ -68,11 +68,11 @@ export class ChartDownloadsComponent implements OnInit {
    */
   updatePackageMetrics(): void {
     this.appService
-      .getOverallPackageStats(untracked(this.packageStatsService.globalPackageMetricRange))
+      .getOverallPackageStats(untracked(this.statsService.globalPackageMetricRange))
       .pipe(retry({ count: 3, delay: 5000 }))
       .subscribe({
         next: (data) => {
-          this.packageStatsService.globalPackageMetrics.set(data);
+          this.statsService.globalPackageMetrics.set(data);
           if (this.isWide()) {
             this.initChart();
           } else {
@@ -102,7 +102,7 @@ export class ChartDownloadsComponent implements OnInit {
         ],
       };
 
-      const metrics = untracked(this.packageStatsService.globalPackageMetrics);
+      const metrics = untracked(this.statsService.globalPackageMetrics);
       for (const pkg in metrics) {
         this.chartData.labels.push(metrics[pkg].name);
         this.chartData.datasets[0].data.push(metrics[pkg].count);
@@ -129,13 +129,13 @@ export class ChartDownloadsComponent implements OnInit {
 
   private getProgressBarValues(pkg: PackageRankList) {
     const values = [];
-    const metrics = untracked(this.packageStatsService.globalPackageMetrics);
+    const metrics = untracked(this.statsService.globalPackageMetrics);
     for (const pkg of metrics) {
       const relativeCount: number = (pkg.count / metrics[0].count) * 100;
       values.push({ value: relativeCount, label: pkg.name, count: pkg.count });
     }
 
-    this.packageStatsService.globalPackageProgressbarValues.set(values);
+    this.statsService.globalPackageProgressbarValues.set(values);
     this.cdr.markForCheck();
   }
 }
