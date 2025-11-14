@@ -13,6 +13,7 @@
         <p-tab value="1">Globals</p-tab>
         <p-tab value="2">Downloads</p-tab>
         <p-tab value="3">Update Reviews</p-tab>
+        <p-tab value="4">Builder Stats</p-tab>
       </p-tablist>
       <p-tabpanels>
         <p-tabpanel value="0">
@@ -35,6 +36,28 @@
         </p-tabpanel>
         <p-tabpanel value="3">
           <chaotic-chart-review-stats></chaotic-chart-review-stats>
+        </p-tabpanel>
+        <p-tabpanel value="4">
+          <div class="mb-8">
+            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Builds per Day">
+              <chaotic-chart-builds-per-day></chaotic-chart-builds-per-day>
+            </p-card>
+          </div>
+          <div class="mb-8">
+            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Builds per Builder">
+              <chaotic-chart-builders-amount></chaotic-chart-builders-amount>
+            </p-card>
+          </div>
+          <div class="mb-8">
+            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Average Build Time per Status">
+              <chaotic-chart-average-build-time></chaotic-chart-average-build-time>
+            </p-card>
+          </div>
+          <div class="mb-8">
+            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Popular Packages">
+              <chaotic-chart-popular-packages></chaotic-chart-popular-packages>
+            </p-card>
+          </div>
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>
