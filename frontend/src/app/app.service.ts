@@ -99,4 +99,8 @@ export class AppService {
   getMirrorsStats(): Observable<MirrorData> {
     return this.http.get<MirrorData>(this.appConfig.mirrorsUrl);
   }
+
+  getUpdateReviewStats(): Observable<{ username: string; reviews: number }[]> {
+    return this.http.get<{ username: string; reviews: number }[]>(`${this.appConfig.backendUrl}/gitlab/review-stats`);
+  }
 }

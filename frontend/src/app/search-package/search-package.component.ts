@@ -11,7 +11,7 @@ import { AppService } from '../app.service';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
 import { FormsModule } from '@angular/forms';
-import { PackageStatsService } from '../package-stats/package-stats.service';
+import { StatsService } from '../stats/stats.service';
 import { Select } from 'primeng/select';
 
 @Component({
@@ -32,7 +32,7 @@ export class SearchPackageComponent implements OnInit {
   private readonly router = inject(Router);
 
   protected readonly autoComplete = viewChild<AutoComplete>('autoComplete');
-  protected readonly packageStatsService = inject(PackageStatsService);
+  protected readonly packageStatsService = inject(StatsService);
   protected readonly repoOptions = ['chaotic-aur', 'garuda'];
 
   async ngOnInit(): Promise<void> {

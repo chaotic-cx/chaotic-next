@@ -19,7 +19,7 @@ import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { CatppuccinFlavors } from '../theme';
-import { PackageStatsService } from '../package-stats/package-stats.service';
+import { StatsService } from '../stats/stats.service';
 
 @Component({
   selector: 'chaotic-chart-countries',
@@ -39,7 +39,7 @@ export class ChartCountriesComponent implements OnInit {
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
 
-  protected readonly packageStatsService = inject(PackageStatsService);
+  protected readonly statsService = inject(StatsService);
 
   constructor() {
     effect(() => {
@@ -49,7 +49,7 @@ export class ChartCountriesComponent implements OnInit {
 
   ngOnInit(): void {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
-      this.packageStatsService.countryRanksRange.set(state.matches ? 5 : 15);
+      this.statsService.countryRanksRange.set(state.matches ? 5 : 15);
       this.cdr.markForCheck();
     });
     this.getCountryRanks();
@@ -67,7 +67,7 @@ export class ChartCountriesComponent implements OnInit {
           for (const country of data) {
             country.name = `${country.name}  ${this.countryCode2Flag(country.name)}`;
           }
-          this.packageStatsService.countryRanksMetrics.set(data);
+          this.statsService.countryRanksMetrics.set(data);
           this.initChart();
         },
         error: (err) => {
@@ -94,9 +94,7 @@ export class ChartCountriesComponent implements OnInit {
 
   initChart(): void {
     if (isPlatformBrowser(this.platformId)) {
-      const relevantData = this.packageStatsService
-        .countryRanksMetrics()
-        .slice(0, this.packageStatsService.countryRanksRange());
+      const relevantData = this.statsService.countryRanksMetrics().slice(0, this.statsService.countryRanksRange());
       this.chartData = {
         labels: [],
         datasets: [
@@ -108,8 +106,8 @@ export class ChartCountriesComponent implements OnInit {
         ],
       };
       for (const country in relevantData) {
-        this.chartData.labels.push(this.packageStatsService.countryRanksMetrics()[country].name);
-        this.chartData.datasets[0].data.push(this.packageStatsService.countryRanksMetrics()[country].count);
+        this.chartData.labels.push(this.statsService.countryRanksMetrics()[country].name);
+        this.chartData.datasets[0].data.push(this.statsService.countryRanksMetrics()[country].count);
       }
 
       this.options = {
