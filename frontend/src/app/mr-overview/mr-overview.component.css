@@ -1,3 +1,5 @@
+@reference "../../styles.css"
+
 .fieldset-responsive {
   max-width: 90vw;
   overflow-x: auto;

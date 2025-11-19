@@ -49,7 +49,7 @@ export class MrOverviewService {
 
       this.mergeRequests.set(
         mergeRequests
-          .filter((mr) => !mr.labels.includes('marge_bot_batch_merge_job'))
+          .filter((mr) => !mr.labels.includes('hold') && !mr.labels.includes('dangerous'))
           .map((mr) => ({
             ...mr,
             title: this.extractPkgName(mr.title) || mr.title,
@@ -181,7 +181,7 @@ export class MrOverviewService {
    */
   flagDangerous(mr: MergeRequestWithDiffs) {
     const loadingMap = new Map(this.loadingMap());
-    loadingMap.set(mr.iid, true);
+    loadingMap.set(-mr.iid, true);
     this.loadingMap.set(loadingMap);
 
     try {
@@ -209,7 +209,7 @@ export class MrOverviewService {
           },
           complete: () => {
             const finalLoadingMap = new Map(this.loadingMap());
-            finalLoadingMap.delete(mr.iid);
+            finalLoadingMap.delete(-mr.iid);
             this.loadingMap.set(finalLoadingMap);
           },
         });
@@ -221,7 +221,55 @@ export class MrOverviewService {
       console.error('Error flagging merge request as dangerous:', error);
     } finally {
       const finalLoadingMap = new Map(this.loadingMap());
-      finalLoadingMap.delete(mr.iid);
+      finalLoadingMap.delete(-mr.iid);
+      this.loadingMap.set(finalLoadingMap);
+    }
+  }
+
+  /**
+   * Flags a merge request as on hold by adding a 'hold' label.
+   * @param mr The merge request to flag.
+   */
+  flagHold(mr: MergeRequestWithDiffs) {
+    const loadingMap = new Map(this.loadingMap());
+    loadingMap.set(-mr.iid, true);
+    this.loadingMap.set(loadingMap);
+
+    try {
+      const labels: string[] = (mr.labels as string[]) || [];
+      labels.push('hold');
+      this.http
+        .put(
+          `${this.gitlabBaseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
+          { labels: labels.join(',') },
+          { headers: { 'PRIVATE-TOKEN': this.token() } },
+        )
+        .subscribe({
+          next: () => {
+            this.messageToastService.success('Flagged as On Hold', 'The merge request has been flagged as on hold.');
+          },
+          error: (error) => {
+            this.messageToastService.error(
+              'Flagging Failed',
+              'Failed to flag the merge request as on hold. Please try again later.',
+            );
+            console.error('Error flagging merge request as on hold:', error);
+          },
+          complete: () => {
+            const finalLoadingMap = new Map(this.loadingMap());
+            finalLoadingMap.delete(-mr.iid);
+            this.loadingMap.set(finalLoadingMap);
+          },
+        });
+    } catch (error) {
+      this.messageToastService.error(
+        'Flagging Failed',
+        'Failed to flag the merge request as on hold. Please try again later.',
+      );
+      console.error('Error flagging merge request as on hold:', error);
+    } finally {
+      const finalLoadingMap = new Map(this.loadingMap());
+      finalLoadingMap.delete(-mr.iid);
       this.loadingMap.set(finalLoadingMap);
     }
   }
