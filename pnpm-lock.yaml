@@ -251,7 +251,7 @@ importers:
         version: 9.39.1
       '@nestjs/cli':
         specifier: ^11.0.10
-        version: 11.0.11(@swc/core@1.15.2(@swc/helpers@0.5.17))(@types/node@24.10.1)(esbuild@0.25.12)
+        version: 11.0.12(@swc/core@1.15.2(@swc/helpers@0.5.17))(@types/node@24.10.1)(esbuild@0.25.12)
       '@nestjs/schematics':
         specifier: 11.0.9
         version: 11.0.9(chokidar@4.0.3)(typescript@5.9.3)
@@ -3235,8 +3235,8 @@ packages:
       keyv: '>=5'
       rxjs: ^7.8.1
 
-  '@nestjs/cli@11.0.11':
-    resolution: {integrity: sha512-phKImmBK2qc0dqMPz+vnBlb+xcAxyZ5yiCKOdcgq9DwFsswL6jn3l2leKXQLIyM2bqIecE5T3tdWKLZl7wgW0w==}
+  '@nestjs/cli@11.0.12':
+    resolution: {integrity: sha512-V3fD1xESlFcJ1xpwOtUhn0edLvIa76Sx8mkvdR1s8cM4c/rZO+yGmXP30ZQwPfIJPTgBvsw93F/i+87eV96wcQ==}
     engines: {node: '>= 20.11'}
     hasBin: true
     peerDependencies:
@@ -14243,7 +14243,7 @@ snapshots:
       keyv: 5.5.4
       rxjs: 7.8.2
 
-  '@nestjs/cli@11.0.11(@swc/core@1.15.2(@swc/helpers@0.5.17))(@types/node@24.10.1)(esbuild@0.25.12)':
+  '@nestjs/cli@11.0.12(@swc/core@1.15.2(@swc/helpers@0.5.17))(@types/node@24.10.1)(esbuild@0.25.12)':
     dependencies:
       '@angular-devkit/core': 19.2.19(chokidar@4.0.3)
       '@angular-devkit/schematics': 19.2.19(chokidar@4.0.3)
