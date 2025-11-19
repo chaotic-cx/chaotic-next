@@ -49,7 +49,10 @@ export class MrOverviewService {
 
       this.mergeRequests.set(
         mergeRequests
-          .filter((mr) => !mr.labels.includes('hold') && !mr.labels.includes('dangerous'))
+          .filter(
+            (mr) =>
+              mr.labels.includes('human-review') && !mr.labels.includes('hold') && !mr.labels.includes('dangerous'),
+          )
           .map((mr) => ({
             ...mr,
             title: this.extractPkgName(mr.title) || mr.title,
