@@ -179,6 +179,14 @@ body > app-root > chaotic-footer > div > p-card > div {
   margin-inline: auto;
 }
 
+.mr-overview-panel > div > .p-panel-content {
+  @apply p-1 sm:p-4;
+}
+
+.mr-overview-panel > div > .p-panel-content > p-fieldset > fieldset {
+  border: unset !important;
+}
+
 .hover\:chaotic-grow-l:hover {
   @apply transition ease-in-out hover:scale-125;
 }

@@ -35,7 +35,7 @@
       </p-select-button>
     </div>
   }
-  <div class="chaotic-container-wide-center md:chaotic-container-regular p-2.5">
+  <div class="chaotic-container-wide-center md:chaotic-container-regular p-0.5 sm:p-2.5">
     @if (mrOverviewService.mergeRequests().length === 0) {
       <p class="text-ctp-text text-center">No open merge requests found.</p>
       <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
@@ -46,7 +46,13 @@
       </p>
     } @else {
       @for (mr of mrOverviewService.mergeRequests(); track mr.id; let i = $index) {
-        <p-panel [header]="mr.title" [ngClass]="i > 0 ? 'mt-5' : ''">
+        <p-panel class="mr-overview-panel" [ngClass]="i > 0 ? 'mt-5' : ''">
+          <ng-template #header>
+            <a class="cursor-pointer text-ctp-mauve" [href]="mr.web_url">{{
+              mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
+            }}</a>
+          </ng-template>
+
           @if (mr.diffs && mr.diffs.length > 0) {
             @for (change of mr.diffs; track change.new_path) {
               <p-fieldset
@@ -63,7 +69,7 @@
           }
 
           @if (mrOverviewService.token() !== '') {
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
               <div class="w-full min-w-0">
                 <p-button
                   [disabled]="mr.labels.includes('approved') || mr.labels.includes('dangerous')"
@@ -78,12 +84,28 @@
 
               <div class="w-full min-w-0">
                 <p-button
-                  [disabled]="mr.labels.includes('dangerous') || mr.labels.includes('approved')"
+                  [disabled]="
+                    mr.labels.includes('dangerous') || mr.labels.includes('approved') || mr.labels.includes('hold')
+                  "
                   [label]="mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous'"
                   [loading]="isLoading(mr, 'flag')"
                   (onClick)="mrOverviewService.flagDangerous(mr)"
                   icon="pi pi-exclamation-triangle"
                   severity="danger"
+                  styleClass="w-50"
+                ></p-button>
+              </div>
+
+              <div class="w-full min-w-0">
+                <p-button
+                  [disabled]="
+                    mr.labels.includes('hold') || mr.labels.includes('dangerous') || mr.labels.includes('approved')
+                  "
+                  [label]="mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now'"
+                  [loading]="isLoading(mr, 'flag')"
+                  (onClick)="mrOverviewService.flagHold(mr)"
+                  icon="pi pi-pause"
+                  severity="warn"
                   styleClass="w-50"
                 ></p-button>
               </div>

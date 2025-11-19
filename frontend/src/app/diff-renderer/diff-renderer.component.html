@@ -3,7 +3,7 @@
     <pre class="m-0 overflow-y-hidden">
       <code>
         @for (line of parsedLines(); track $index) {
-          <span [class]="getLineClass(line)" [textContent]="line.content"></span>
+          <div [class]="getLineClass(line)" [textContent]="line.content"></div>
         }
       </code>
     </pre>
