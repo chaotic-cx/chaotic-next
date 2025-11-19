@@ -28,8 +28,6 @@ async function bootstrap(): Promise<void> {
   if (trustProxy !== undefined) {
     fastifyAdapter.options({ trustProxy: trustProxy });
   }
-
-  // @ts-expect-error Helmet types are not 100% compatible with Fastify types?
   fastifyAdapter.register(helmet);
 
   const corsOptions = {

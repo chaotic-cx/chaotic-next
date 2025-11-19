@@ -19,9 +19,6 @@ export class UpdateService {
         case 'VERSION_INSTALLATION_FAILED':
           console.log(`Failed to install app version '${evt.version.hash}': ${evt.error}`);
           break;
-        case 'VERSION_FAILED':
-          console.log(`Version '${evt.version.hash}' failed with error: ${evt.error}`);
-          break;
         case 'NO_NEW_VERSION_DETECTED':
           console.log('No new version detected.');
           break;
