@@ -66,6 +66,16 @@ export class AboutComponent implements OnInit {
       role: 'Package maintenance',
     },
     {
+      name: 'Yumi',
+      github: 'a0xz',
+      role: 'Mirror management',
+    },
+    {
+      name: 'Joëlle van Essen',
+      github: 'JoelleJS',
+      role: 'Package reviews',
+    },
+    {
       name: 'SolarAquarion',
       github: 'SolarAquarion',
       role: 'Package maintenance',
