@@ -69,7 +69,7 @@
           }
 
           @if (mrOverviewService.token() !== '') {
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div class="w-full min-w-0">
                 <p-button
                   [disabled]="mr.labels.includes('approved') || mr.labels.includes('dangerous')"
@@ -115,4 +115,44 @@
       }
     }
   </div>
+
+  @if (mrOverviewService.token() !== '') {
+    <div class="flex justify-center mt-10">
+      <p-button (onClick)="openDialog()" label="Manage Packages" icon="pi pi-box" severity="secondary"></p-button>
+    </div>
+  }
 }
+
+<p-dialog [(visible)]="dialogVisible" header="Bump Packages" modal="true" styleClass="w-11/12 md:w-3/4">
+  <div class="flex flex-col gap-4">
+    <div>
+      <label for="packages">Select Packages</label>
+      <p-multi-select
+        class="w-full"
+        id="packages"
+        [(ngModel)]="selectedPackages"
+        [options]="filteredOptions()"
+        [filter]="true"
+        optionLabel="label"
+        appendTo="body"
+        optionValue="value"
+        placeholder="Select packages to bump"
+        display="chip"
+      ></p-multi-select>
+    </div>
+    <div class="flex gap-2 justify-end">
+      <p-button
+        [disabled]="selectedPackages().length === 0"
+        (onClick)="bump()"
+        label="Bump"
+        severity="success"
+      ></p-button>
+      <p-button
+        [disabled]="selectedPackages().length === 0"
+        (onClick)="schedule()"
+        label="Schedule"
+        severity="info"
+      ></p-button>
+    </div>
+  </div>
+</p-dialog>

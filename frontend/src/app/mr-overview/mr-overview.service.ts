@@ -295,4 +295,78 @@ export class MrOverviewService {
       return a.new_path.localeCompare(b.new_path);
     });
   }
+
+  /**
+   * Triggers a pipeline to bump the specified packages.
+   * @param packages The packages to bump, colon separated.
+   */
+  async bumpPackages(packages: string) {
+    try {
+      const project = await lastValueFrom(
+        this.http.get<any>(`${this.gitlabBaseUrl}/projects/${this.projectId}`, {
+          headers: { 'PRIVATE-TOKEN': this.token() },
+        }),
+      );
+      const ref = project.default_branch;
+      await lastValueFrom(
+        this.http.post<any>(
+          `${this.gitlabBaseUrl}/projects/${this.projectId}/pipeline`,
+          {
+            ref,
+            variables: [
+              { key: 'PACKAGES', value: packages },
+              { key: 'BUMP_PACKAGES', value: 'true' },
+            ],
+          },
+          { headers: { 'PRIVATE-TOKEN': this.token() } },
+        ),
+      );
+
+      this.messageToastService.success(
+        'Pipeline Triggered',
+        'Pipeline for bumping packages has been triggered and the manual job started.',
+      );
+    } catch (error) {
+      this.messageToastService.error(
+        'Failed to trigger pipeline',
+        'Could not trigger the pipeline for bumping packages.',
+      );
+      console.error('Error triggering pipeline:', error);
+    }
+  }
+
+  /**
+   * Triggers a pipeline to schedule the specified packages.
+   * @param packages The packages to schedule, colon separated.
+   */
+  async schedulePackages(packages: string) {
+    try {
+      const project = await lastValueFrom(
+        this.http.get<any>(`${this.gitlabBaseUrl}/projects/${this.projectId}`, {
+          headers: { 'PRIVATE-TOKEN': this.token() },
+        }),
+      );
+      const ref = project.default_branch;
+      await lastValueFrom(
+        this.http.post<any>(
+          `${this.gitlabBaseUrl}/projects/${this.projectId}/pipeline`,
+          {
+            ref,
+            variables: [{ key: 'PACKAGES', value: packages }],
+          },
+          { headers: { 'PRIVATE-TOKEN': this.token() } },
+        ),
+      );
+      this.messageToastService.success(
+        'Pipeline Triggered',
+        'Pipeline for scheduling packages has been triggered and the manual job started.',
+      );
+    } catch (error) {
+      this.messageToastService.error(
+        'Failed to trigger pipeline',
+        'Could not trigger the pipeline for scheduling packages.',
+      );
+      console.error('Error triggering pipeline:', error);
+    }
+  }
 }
