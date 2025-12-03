@@ -9,7 +9,7 @@
     "logLevel": "debug"
   },
   "/backend": {
-    "target": "http://localhost:3000",
+    "target": "https://chaotic-backend.garudalinux.org",
     "secure": false,
     "pathRewrite": {
       "^/backend": ""
