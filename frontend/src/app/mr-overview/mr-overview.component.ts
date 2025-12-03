@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal, untracked } from '@angular/core';
 import { TitleComponent } from '../title/title.component';
 import { TableModule } from 'primeng/table';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
@@ -17,10 +17,13 @@ import { Meta } from '@angular/platform-browser';
 import { Fieldset } from 'primeng/fieldset';
 import { Button } from 'primeng/button';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter } from 'rxjs';
-import { MergeRequestWithDiffs } from '@./shared-lib';
+import { filter, retry } from 'rxjs';
+import { MergeRequestWithDiffs, Package } from '@./shared-lib';
 import { NotificationService } from '../notification/notification.service';
 import { NgClass } from '@angular/common';
+import { Dialog } from 'primeng/dialog';
+import { MultiSelect } from 'primeng/multiselect';
+import { PackageListService } from '../package-list/packge-list.service';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -38,23 +41,37 @@ import { NgClass } from '@angular/common';
     Button,
     Button,
     NgClass,
+    Dialog,
+    MultiSelect,
   ],
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MrOverviewComponent implements OnInit {
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly meta = inject(Meta);
+  private readonly notificationService = inject(NotificationService);
+  private readonly router = inject(Router);
+  private readonly packageListService = inject(PackageListService);
+
   protected readonly mrOverviewService = inject(MrOverviewService);
   protected readonly storages: { label: string; value: string }[] = [
     { label: 'Forget after closing tab', value: 'sessionStorage' },
     { label: 'Persist after closing tab', value: 'localStorage' },
   ];
 
-  private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly meta = inject(Meta);
-  private readonly notificationService = inject(NotificationService);
-  private readonly router = inject(Router);
+  protected readonly dialogVisible = signal(false);
+  protected readonly selectedPackages = signal<string[]>([]);
+  protected readonly packagesOptions = computed(() => {
+    const data = this.packageListService.packageList();
+    return data.map((pkg) => ({ label: pkg.pkgname, value: pkg.pkgname, repo: pkg.repo }));
+  });
+  protected readonly filteredOptions = computed(() => {
+    const all = this.packagesOptions();
+    return all.filter((o) => o.repo === 1); // chaotic-aur
+  });
 
   constructor() {
     this.appService.chaoticEvent
@@ -102,6 +119,20 @@ export class MrOverviewComponent implements OnInit {
       this.mrOverviewService.token.set(decryptedToken);
     }
     void this.mrOverviewService.loadOpenMrs();
+
+    if (this.packageListService.packageList().length === 0) {
+      this.appService
+        .getPackageList()
+        .pipe(retry({ delay: 5000, count: 3 }))
+        .subscribe({
+          next: (data: (Package & { reponame: string })[]) => {
+            this.packageListService.packageList.set(data.filter((pkg) => pkg.version));
+          },
+          error: (err) => {
+            console.error('Failed to load package list', err);
+          },
+        });
+    }
   }
 
   /**
@@ -144,5 +175,28 @@ export class MrOverviewComponent implements OnInit {
 
     this.mrOverviewService.token.set(value);
     this.messageToastService.success('Token Saved', 'GitLab private token has been saved to session storage.');
+  }
+
+  openDialog() {
+    this.dialogVisible.set(true);
+  }
+
+  closeDialog() {
+    this.dialogVisible.set(false);
+    this.selectedPackages.set([]);
+  }
+
+  async bump() {
+    if (this.selectedPackages().length > 0) {
+      await this.mrOverviewService.bumpPackages(this.selectedPackages().join(':'));
+      this.closeDialog();
+    }
+  }
+
+  async schedule() {
+    if (this.selectedPackages().length > 0) {
+      await this.mrOverviewService.schedulePackages(this.selectedPackages().join(':'));
+      this.closeDialog();
+    }
   }
 }

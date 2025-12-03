@@ -73,22 +73,26 @@ export class PackageListComponent implements OnInit, AfterViewInit {
       this.router.url,
     );
 
-    this.appService
-      .getPackageList()
-      .pipe(retry({ delay: 5000, count: 3 }))
-      .subscribe({
-        next: (data: (Package & { reponame: string })[]) => {
-          this.packageListService.packageList.set(data.filter((pkg) => pkg.version));
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.messageToastService.error('Error', 'Failed to package list');
-          console.error(err);
-        },
-        complete: () => {
-          this.packageListService.loading.set(false);
-        },
-      });
+    if (this.packageListService.packageList().length === 0) {
+      this.appService
+        .getPackageList()
+        .pipe(retry({ delay: 5000, count: 3 }))
+        .subscribe({
+          next: (data: (Package & { reponame: string })[]) => {
+            this.packageListService.packageList.set(data.filter((pkg) => pkg.version));
+            this.cdr.markForCheck();
+          },
+          error: (err) => {
+            this.messageToastService.error('Error', 'Failed to package list');
+            console.error(err);
+          },
+          complete: () => {
+            this.packageListService.loading.set(false);
+          },
+        });
+    } else {
+      this.packageListService.loading.set(false);
+    }
   }
 
   ngAfterViewInit() {
