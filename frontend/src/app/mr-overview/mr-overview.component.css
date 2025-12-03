@@ -4,3 +4,7 @@
   max-width: 90vw;
   overflow-x: auto;
 }
+
+::ng-deep .p-fieldset-content-wrapper {
+  max-width: 90vw;
+}

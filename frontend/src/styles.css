@@ -117,6 +117,11 @@ samp {
   height: 100%;
 }
 
+.p-card-body {
+  padding: unset !important;
+  @apply mx-auto max-w-11/12 p-0 md:p-5;
+}
+
 p-scroll-top {
   @apply fixed z-999;
 }
@@ -183,8 +188,9 @@ body > app-root > chaotic-footer > div > p-card > div {
   @apply p-1 sm:p-4;
 }
 
-.mr-overview-panel > div > .p-panel-content > p-fieldset > fieldset {
+.mr-overview-panel > .p-panel-content-container > .p-panel-content-wrapper > .p-panel-content > p-fieldset > fieldset {
   border: unset !important;
+  padding: unset !important;
 }
 
 .hover\:chaotic-grow-l:hover {
