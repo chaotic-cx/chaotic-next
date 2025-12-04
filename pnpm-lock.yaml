@@ -103,7 +103,7 @@ importers:
         version: 3.0.3(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(@angular/platform-browser@21.0.3(@angular/animations@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(dotted-map@2.2.3)
       '@primeng/themes':
         specifier: ^20.3.0
-        version: 20.3.0
+        version: 20.4.0
       async-mutex:
         specifier: ^0.5.0
         version: 0.5.0
@@ -3993,8 +3993,8 @@ packages:
   '@poppinss/exception@1.2.2':
     resolution: {integrity: sha512-m7bpKCD4QMlFCjA/nKTs23fuvoVFoA83brRKmObCUNmi/9tVu8Ve3w4YQAnJu4q3Tjf5fr685HYIC/IA2zHRSg==}
 
-  '@primeng/themes@20.3.0':
-    resolution: {integrity: sha512-mQhUajhT4sJQSMLa21ZlK4p8XhZcFhWUiSQN5v2HA7oErNMupdr4RDlqSejBOCRBc6Y5wBBcYCGuWNlX6VHvqQ==}
+  '@primeng/themes@20.4.0':
+    resolution: {integrity: sha512-bh1yIRbCDAo+OLhQ+bm8sgwlZFRphwlR3/GXOdshJVurm5/Up+CWzoRqsZw/Q2RSrq0x3rDNA2pOTIYpcwgXbA==}
 
   '@primeuix/motion@0.0.10':
     resolution: {integrity: sha512-PsZwOPq79Scp7/ionshRcQ5xKVf9+zuLcyY5mf6onK8chHT5C9JGphmcIZ4CzcqxuGEpsm8AIbTGy+zS3RtzLA==}
@@ -15316,7 +15316,7 @@ snapshots:
 
   '@poppinss/exception@1.2.2': {}
 
-  '@primeng/themes@20.3.0':
+  '@primeng/themes@20.4.0':
     dependencies:
       '@primeuix/styled': 0.7.4
       '@primeuix/themes': 1.2.5
