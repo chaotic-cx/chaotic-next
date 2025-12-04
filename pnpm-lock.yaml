@@ -49,7 +49,7 @@ importers:
         version: 8.3.0
       '@garudalinux/core':
         specifier: 1.0.0
-        version: 1.0.0(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(@angular/platform-browser@21.0.3(@angular/animations@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@playwright/test@1.56.1)(jest-preset-angular@15.0.3(1d7dbd7fec56292a5313920ecca603ac))(primeng@21.0.0(99e0b372ac2e06dfd10da7504f9aeeba))
+        version: 1.0.0(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(@angular/platform-browser@21.0.3(@angular/animations@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@playwright/test@1.56.1)(jest-preset-angular@15.0.3(1d7dbd7fec56292a5313920ecca603ac))(primeng@21.0.1(99e0b372ac2e06dfd10da7504f9aeeba))
       '@garudalinux/themes':
         specifier: 1.0.0
         version: 1.0.0(@catppuccin/palette@2.0.0-beta.1)(@primeuix/themes@1.2.5)
@@ -184,7 +184,7 @@ importers:
         version: 7.0.0
       primeng:
         specifier: ^21.0.0-rc.1
-        version: 21.0.0(99e0b372ac2e06dfd10da7504f9aeeba)
+        version: 21.0.1(99e0b372ac2e06dfd10da7504f9aeeba)
       reflect-metadata:
         specifier: ~0.2.2
         version: 0.2.2
@@ -9090,8 +9090,8 @@ packages:
   primeicons@7.0.0:
     resolution: {integrity: sha512-jK3Et9UzwzTsd6tzl2RmwrVY/b8raJ3QZLzoDACj+oTJ0oX7L9Hy+XnVwgo4QVKlKpnP/Ur13SXV/pVh4LzaDw==}
 
-  primeng@21.0.0:
-    resolution: {integrity: sha512-Fzs0TYkacolOTR7hkflgLcDI07ku1hGqUE+XiUs1eSJUD80ubt3rlvLh17PG9j7SPK6b4p0O74mwxNWn8lsEhg==}
+  primeng@21.0.1:
+    resolution: {integrity: sha512-lCmMpr2cgL4r/HPByMnrKTPgwYJAQhMDbtu/u8VL3Otnzs8KSKY7bmSnH6cqvucsk8lr/VSKJTxbssb9gtmOVg==}
     peerDependencies:
       '@angular/cdk': ^21.0.0
       '@angular/common': ^21.0.0
@@ -13450,14 +13450,14 @@ snapshots:
       fastq: 1.19.1
       glob: 11.1.0
 
-  '@garudalinux/core@1.0.0(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(@angular/platform-browser@21.0.3(@angular/animations@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@playwright/test@1.56.1)(jest-preset-angular@15.0.3(1d7dbd7fec56292a5313920ecca603ac))(primeng@21.0.0(99e0b372ac2e06dfd10da7504f9aeeba))':
+  '@garudalinux/core@1.0.0(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(@angular/platform-browser@21.0.3(@angular/animations@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@playwright/test@1.56.1)(jest-preset-angular@15.0.3(1d7dbd7fec56292a5313920ecca603ac))(primeng@21.0.1(99e0b372ac2e06dfd10da7504f9aeeba))':
     dependencies:
       '@angular/common': 21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2)
       '@angular/core': 21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)
       '@angular/platform-browser': 21.0.3(@angular/animations@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))
       '@playwright/test': 1.56.1
       jest-preset-angular: 15.0.3(1d7dbd7fec56292a5313920ecca603ac)
-      primeng: 21.0.0(99e0b372ac2e06dfd10da7504f9aeeba)
+      primeng: 21.0.1(99e0b372ac2e06dfd10da7504f9aeeba)
       tslib: 2.8.1
 
   '@garudalinux/themes@1.0.0(@catppuccin/palette@2.0.0-beta.1)(@primeuix/themes@1.2.5)':
@@ -20889,7 +20889,7 @@ snapshots:
 
   primeicons@7.0.0: {}
 
-  primeng@21.0.0(99e0b372ac2e06dfd10da7504f9aeeba):
+  primeng@21.0.1(99e0b372ac2e06dfd10da7504f9aeeba):
     dependencies:
       '@angular/cdk': 21.0.1(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2)
       '@angular/common': 21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2)
