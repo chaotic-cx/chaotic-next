@@ -57,7 +57,7 @@
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.0",
-    "@omnedia/ngx-map": "^3.0.2",
+    "@omnedia/ngx-map": "^4.0.0",
     "@primeng/themes": "^20.3.0",
     "async-mutex": "^0.5.0",
     "axios": "^1.13.1",
