@@ -52,7 +52,7 @@ importers:
         version: 1.0.0(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(@angular/platform-browser@21.0.3(@angular/animations@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@playwright/test@1.57.0)(jest-preset-angular@15.0.3(8d0cfbf32344347624ed0e795f2de6fc))(primeng@21.0.1(99e0b372ac2e06dfd10da7504f9aeeba))
       '@garudalinux/themes':
         specifier: 1.0.0
-        version: 1.0.0(@catppuccin/palette@2.0.0-beta.1)(@primeuix/themes@1.2.5)
+        version: 1.0.0(@catppuccin/palette@2.0.0-beta.1)(@primeuix/themes@2.0.2)
       '@gitbeaker/core':
         specifier: ^43.8.0
         version: 43.8.0
@@ -102,8 +102,8 @@ importers:
         specifier: ^3.0.2
         version: 3.0.3(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(@angular/platform-browser@21.0.3(@angular/animations@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(@angular/common@21.0.3(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.3(@angular/compiler@21.0.3)(rxjs@7.8.2)))(dotted-map@2.2.3)
       '@primeng/themes':
-        specifier: ^20.3.0
-        version: 20.4.0
+        specifier: ^21.0.0
+        version: 21.0.2
       async-mutex:
         specifier: ^0.5.0
         version: 0.5.0
@@ -3748,8 +3748,8 @@ packages:
   '@poppinss/exception@1.2.2':
     resolution: {integrity: sha512-m7bpKCD4QMlFCjA/nKTs23fuvoVFoA83brRKmObCUNmi/9tVu8Ve3w4YQAnJu4q3Tjf5fr685HYIC/IA2zHRSg==}
 
-  '@primeng/themes@20.4.0':
-    resolution: {integrity: sha512-bh1yIRbCDAo+OLhQ+bm8sgwlZFRphwlR3/GXOdshJVurm5/Up+CWzoRqsZw/Q2RSrq0x3rDNA2pOTIYpcwgXbA==}
+  '@primeng/themes@21.0.2':
+    resolution: {integrity: sha512-wSw8BtrNUZBmgU5umzMj9WQKVyrLRQkAYORnRYI4wD6+TXVb/J2kQLHCA26vHbXfI6pO4fruft9mySFWlzXk0Q==}
 
   '@primeuix/motion@0.0.10':
     resolution: {integrity: sha512-PsZwOPq79Scp7/ionshRcQ5xKVf9+zuLcyY5mf6onK8chHT5C9JGphmcIZ4CzcqxuGEpsm8AIbTGy+zS3RtzLA==}
@@ -3762,8 +3762,8 @@ packages:
   '@primeuix/styles@2.0.2':
     resolution: {integrity: sha512-LNtkJsTonNHF5ag+9s3+zQzm00+LRmffw68QRIHy6S/dam1JpdrrAnUzNYlWbaY7aE2EkZvQmx7Np7+PyHn+ow==}
 
-  '@primeuix/themes@1.2.5':
-    resolution: {integrity: sha512-n3YkwJrHQaEESc/D/A/iD815sxp8cKnmzscA6a8Tm8YvMtYU32eCahwLLe6h5rywghVwxASWuG36XBgISYOIjQ==}
+  '@primeuix/themes@2.0.2':
+    resolution: {integrity: sha512-prwQvA3tDGBz8yWSUenaJUttEMCEvPvxwOfFhDPmSe1vwsfVKL2Nmh5eZvtPFQnxmIOPsHZS7zc0/L3CzJ83Eg==}
 
   '@primeuix/utils@0.6.3':
     resolution: {integrity: sha512-/SLNQSKQ73WbBIsflKVqbpVjCfFYvQO3Sf1LMheXyxh8JqxO4M63dzP56wwm9OPGuCQ6MYOd2AHgZXz+g7PZcg==}
@@ -12777,10 +12777,10 @@ snapshots:
       primeng: 21.0.1(99e0b372ac2e06dfd10da7504f9aeeba)
       tslib: 2.8.1
 
-  '@garudalinux/themes@1.0.0(@catppuccin/palette@2.0.0-beta.1)(@primeuix/themes@1.2.5)':
+  '@garudalinux/themes@1.0.0(@catppuccin/palette@2.0.0-beta.1)(@primeuix/themes@2.0.2)':
     dependencies:
       '@catppuccin/palette': 2.0.0-beta.1
-      '@primeuix/themes': 1.2.5
+      '@primeuix/themes': 2.0.2
       tslib: 2.8.1
 
   '@gitbeaker/core@43.8.0':
@@ -14608,10 +14608,10 @@ snapshots:
 
   '@poppinss/exception@1.2.2': {}
 
-  '@primeng/themes@20.4.0':
+  '@primeng/themes@21.0.2':
     dependencies:
       '@primeuix/styled': 0.7.4
-      '@primeuix/themes': 1.2.5
+      '@primeuix/themes': 2.0.2
 
   '@primeuix/motion@0.0.10':
     dependencies:
@@ -14625,7 +14625,7 @@ snapshots:
     dependencies:
       '@primeuix/styled': 0.7.4
 
-  '@primeuix/themes@1.2.5':
+  '@primeuix/themes@2.0.2':
     dependencies:
       '@primeuix/styled': 0.7.4
 
