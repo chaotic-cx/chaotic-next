@@ -5,11 +5,10 @@ COPY . /build
 
 # Bcrypt shenigans
 # hadolint ignore=DL3018
-RUN apk add --no-cache --virtual builds-deps build-base
+RUN apk add --no-cache --virtual builds-deps build-base pnpm
 
 # Enable the use of pnpm and compile the backend
-RUN corepack enable pnpm && \
-    corepack pnpm install && \
+RUN pnpm install && \
     pnpm exec nx run backend:build
 
 # Allow pnpm installing bcrypt .node files
