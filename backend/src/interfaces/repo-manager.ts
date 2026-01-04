@@ -1,5 +1,6 @@
 import type { Package } from '../builder/builder.entity';
 import type { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import type { ParsedPackageMetadata } from '@./shared-lib';
 
 export interface Repo {
   name: string;
@@ -26,23 +27,6 @@ export interface ParsedPackage {
   name: string;
   repoName: string;
   metaData: ParsedPackageMetadata;
-}
-
-export interface ParsedPackageMetadata {
-  buildDate: string;
-  checkDepends?: string[];
-  conflicts?: string[];
-  deps?: string[];
-  desc?: string;
-  filename: string;
-  license?: string;
-  makeDeps?: string[];
-  optDeps?: string[];
-  packager?: string;
-  provides?: string[];
-  replaces?: string[];
-  soNameList?: string[];
-  url?: string;
 }
 
 export interface RepoSettings {

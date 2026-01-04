@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AllowAnonymous } from '../auth/anonymous.decorator';
 import { GitlabService } from './gitlab.service';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { GitLabWebHook } from './interfaces';
+import type { GitLabWebHook } from './interfaces';
 
 @ApiTags('gitlab')
 @Controller('gitlab')
