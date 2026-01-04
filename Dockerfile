@@ -8,7 +8,8 @@ COPY . /build
 RUN apk add --no-cache --virtual builds-deps build-base
 
 # Enable the use of pnpm and compile the backend
-RUN corepack enable pnpm && \
+RUN npm install --global corepack@latest && \
+    corepack enable pnpm && \
     corepack pnpm install && \
     pnpm exec nx run backend:build
 
