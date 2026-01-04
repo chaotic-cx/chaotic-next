@@ -26,13 +26,13 @@ import {
   PackageBumpEntry,
   PackageConfig,
   ParsedPackage,
-  ParsedPackageMetadata,
   RepoSettings,
   RepoStatus,
   RepoUpdateRunParams,
   RepoWorkDir,
   TriggerType,
 } from '../interfaces/repo-manager';
+import type { ParsedPackageMetadata } from '@./shared-lib';
 import {
   ArchlinuxPackage,
   archPkgExists,
@@ -914,6 +914,7 @@ class RepoManager {
 
   /**
    * Update the database with the versions of our packages and set any non-existing packages to inactive.
+   * @param repos
    */
   async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
     const repoNames: string[] = repos.map((repo) => repo.name);

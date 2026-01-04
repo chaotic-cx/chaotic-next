@@ -1,7 +1,8 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, Repository } from 'typeorm';
 import { Mutex } from 'async-mutex';
 import { Logger } from '@nestjs/common';
-import { BumpType, ParsedPackageMetadata, TriggerType } from '../interfaces/repo-manager';
+import { BumpType, TriggerType } from '../interfaces/repo-manager';
+import type { ParsedPackageMetadata } from '@./shared-lib';
 import { Package } from '../builder/builder.entity';
 
 @Entity()

@@ -12,7 +12,8 @@ import {
   type Repository,
 } from 'typeorm';
 import { BuildStatus } from '../types';
-import { NamcapAnalysis, ParsedPackageMetadata, RepoStatus } from '../interfaces/repo-manager';
+import { NamcapAnalysis, RepoStatus } from '../interfaces/repo-manager';
+import type { ParsedPackageMetadata } from '@./shared-lib';
 
 @Entity()
 export class Builder {

@@ -1,4 +1,4 @@
-FROM node:24-alpine3.22 AS builder
+FROM node:25-alpine3.22 AS builder
 
 WORKDIR /build
 COPY . /build
@@ -22,7 +22,7 @@ WORKDIR /build/dist/backend
 RUN pnpm install --prod && \
     pnpm install pino-pretty
 
-FROM node:24-alpine3.22
+FROM node:25-alpine3.22
 
 # renovate: datasource=repology depName=alpine_3_22/autossh
 ENV AUTOSSH_VERSION="1.4g-r3"
