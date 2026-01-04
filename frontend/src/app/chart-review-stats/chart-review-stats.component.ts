@@ -65,7 +65,8 @@ export class ChartReviewStatsComponent implements OnInit {
         map((data) => {
           return data
             .sort((a, b) => b.reviews - a.reviews)
-            .filter((entry) => !entry.username.startsWith('gitlab_') && !entry.username.startsWith('project_'));
+            .filter((entry) => !entry.username.startsWith('gitlab_') && !entry.username.startsWith('project_'))
+            .filter((e) => e.reviews > 0 && e.username !== 'temeraire-cx');
         }),
       )
       .subscribe({
