@@ -79,6 +79,8 @@
                   icon="pi pi-check"
                   severity="success"
                   styleClass="w-50"
+                  pTooltip="Approve this merge request for auto-merge"
+                  tooltipPosition="top"
                 ></p-button>
               </div>
 
@@ -93,6 +95,8 @@
                   icon="pi pi-exclamation-triangle"
                   severity="danger"
                   styleClass="w-50"
+                  pTooltip="Flag this merge request as dangerous and prevent auto-merge"
+                  tooltipPosition="top"
                 ></p-button>
               </div>
 
@@ -107,6 +111,8 @@
                   icon="pi pi-pause"
                   severity="warn"
                   styleClass="w-50"
+                  pTooltip="Put this merge request on hold for later review"
+                  tooltipPosition="top"
                 ></p-button>
               </div>
             </div>
@@ -123,7 +129,12 @@
   }
 }
 
-<p-dialog [(visible)]="dialogVisible" header="Manage Packages" modal="true" styleClass="w-full md:w-4/5 lg:w-3/4 max-h-screen overflow-y-auto">
+<p-dialog
+  [(visible)]="dialogVisible"
+  header="Manage Packages"
+  modal="true"
+  styleClass="w-full md:w-4/5 lg:w-3/4 max-h-screen overflow-y-auto"
+>
   <div class="flex flex-col gap-4">
     <div>
       <label for="packages">Select Packages</label>
@@ -136,31 +147,40 @@
         [virtualScroll]="true"
         [virtualScrollItemSize]="40"
         [maxSelectedLabels]="5"
+        [showClear]="true"
+        [style]="{ 'max-height': '300px' }"
         selectedItemsLabel="{0} packages selected"
         optionLabel="label"
         appendTo="body"
         optionValue="value"
         placeholder="Select packages to bump or schedule"
         display="chip"
-        [style]="{'max-height': '300px'}"
+        pTooltip="Use the filter to search for specific packages"
+        tooltipPosition="top"
       ></p-multi-select>
     </div>
     <div class="flex flex-col sm:flex-row gap-2 justify-end">
       <p-button
         [disabled]="selectedPackages().length === 0"
+        [loading]="isBumping()"
         (onClick)="bump()"
         label="Bump Packages"
         icon="pi pi-arrow-up"
         severity="success"
         styleClass="w-full sm:w-auto"
+        pTooltip="Trigger a pipeline to bump the selected packages to their latest versions"
+        tooltipPosition="top"
       ></p-button>
       <p-button
         [disabled]="selectedPackages().length === 0"
+        [loading]="isScheduling()"
         (onClick)="schedule()"
         label="Schedule Packages"
         icon="pi pi-calendar"
         severity="info"
         styleClass="w-full sm:w-auto"
+        pTooltip="Trigger a pipeline to schedule the selected packages for building"
+        tooltipPosition="top"
       ></p-button>
     </div>
   </div>

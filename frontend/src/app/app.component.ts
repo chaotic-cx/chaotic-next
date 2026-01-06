@@ -15,6 +15,7 @@ import { LoadingService } from './loading/loading.service';
 import { ProgressSpinner } from 'primeng/progressspinner';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { UpdateService } from './update/update.service';
+import { Tooltip } from 'primeng/tooltip';
 
 @Component({
   imports: [
@@ -26,6 +27,7 @@ import { UpdateService } from './update/update.service';
     ProgressSpinner,
     ProgressSpinner,
     ProgressSpinner,
+    Tooltip,
   ],
   selector: 'chaotic-root',
   templateUrl: './app.component.html',
@@ -47,46 +49,55 @@ export class AppComponent implements OnInit {
       icon: 'pi pi-home',
       label: 'Home',
       routerLink: '/',
+      tooltip: 'Go to the homepage',
     },
     {
       icon: 'pi pi-book',
       label: 'Get started',
       routerLink: '/docs',
+      tooltip: 'View documentation and guides',
     },
     {
       icon: 'pi pi-gauge',
       label: 'Build status',
       routerLink: '/status',
+      tooltip: 'Check current build status and queue',
     },
     {
       icon: 'pi pi-receipt',
       label: 'Deployments',
       routerLink: '/deployments',
+      tooltip: 'View deployment logs and history',
     },
     {
       icon: 'pi pi-table',
       label: 'Packages',
       routerLink: '/packages',
+      tooltip: 'Browse available packages',
     },
     {
       icon: 'pi pi-chart-bar',
       label: 'Statistics',
       routerLink: '/stats',
+      tooltip: 'View usage statistics and charts',
     },
     {
       icon: 'pi pi-cloud-download',
       label: 'Mirrors',
       routerLink: '/mirrors',
+      tooltip: 'Find mirror servers for downloads',
     },
     {
       icon: 'pi pi-trophy',
       label: 'Memorial',
       routerLink: '/memorial-v2',
+      tooltip: 'View contributor memorial',
     },
     {
       icon: 'pi pi-user',
       label: 'About us',
       routerLink: '/about',
+      tooltip: 'Learn about the Chaotic-AUR project',
     },
   ];
 

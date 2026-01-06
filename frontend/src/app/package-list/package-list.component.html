@@ -23,7 +23,15 @@
   >
     <ng-template #caption>
       <div class="flex">
-        <p-button class="mr-auto" [outlined]="true" (click)="clear(pkgTable)" label="Clear" icon="pi pi-filter-slash" />
+        <p-button
+          class="mr-auto"
+          [outlined]="true"
+          (click)="clear(pkgTable)"
+          label="Clear"
+          icon="pi pi-filter-slash"
+          pTooltip="Clear all filters and search"
+          tooltipPosition="bottom"
+        />
         <p-iconfield class="ml-2.5 sm:ml-auto" iconPosition="left">
           <p-inputicon>
             <i class="pi pi-search"></i>
@@ -140,6 +148,9 @@
                 (click)="openPkgbuild(pkg)"
                 type="button"
                 label="Source"
+                ard
+                pTooltip="View the PKGBUILD source for this package"
+                tooltipPosition="left"
               />
             } @else {
               <span class="text-ctp-surface0 ml-1 align-middle">N/A</span>

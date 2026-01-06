@@ -24,6 +24,7 @@ import { NgClass } from '@angular/common';
 import { Dialog } from 'primeng/dialog';
 import { MultiSelect } from 'primeng/multiselect';
 import { PackageListService } from '../package-list/packge-list.service';
+import { Tooltip } from 'primeng/tooltip';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -43,6 +44,7 @@ import { PackageListService } from '../package-list/packge-list.service';
     NgClass,
     Dialog,
     MultiSelect,
+    Tooltip,
   ],
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
@@ -64,6 +66,9 @@ export class MrOverviewComponent implements OnInit {
 
   protected readonly dialogVisible = signal(false);
   protected readonly selectedPackages = signal<string[]>([]);
+  protected readonly isBumping = signal(false);
+  protected readonly isScheduling = signal(false);
+  protected readonly isLoadingPackages = signal(false);
   protected readonly packagesOptions = computed(() => {
     const data = this.packageListService.packageList();
     return data.map((pkg) => ({ label: pkg.pkgname, value: pkg.pkgname, repo: pkg.repo }));
@@ -187,15 +192,25 @@ export class MrOverviewComponent implements OnInit {
 
   async bump() {
     if (this.selectedPackages().length > 0) {
-      await this.mrOverviewService.bumpPackages(this.selectedPackages().join(':'));
-      this.closeDialog();
+      this.isBumping.set(true);
+      try {
+        await this.mrOverviewService.bumpPackages(this.selectedPackages().join(':'));
+      } finally {
+        this.isBumping.set(false);
+        this.closeDialog();
+      }
     }
   }
 
   async schedule() {
     if (this.selectedPackages().length > 0) {
-      await this.mrOverviewService.schedulePackages(this.selectedPackages().join(':'));
-      this.closeDialog();
+      this.isScheduling.set(true);
+      try {
+        await this.mrOverviewService.schedulePackages(this.selectedPackages().join(':'));
+      } finally {
+        this.isScheduling.set(false);
+        this.closeDialog();
+      }
     }
   }
 }

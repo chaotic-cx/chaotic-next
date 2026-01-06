@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { Card } from 'primeng/card';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { Tooltip } from 'primeng/tooltip';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { ChartCountriesComponent } from '../chart-countries/chart-countries.component';
@@ -39,6 +40,7 @@ import { ChartAverageBuildTimeComponent } from '../chart-average-build-time/char
     ChartPopularPackagesComponent,
     ChartBuildersAmountComponent,
     ChartAverageBuildTimeComponent,
+    Tooltip,
   ],
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.css',

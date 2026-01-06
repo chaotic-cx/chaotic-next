@@ -21,6 +21,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { Table, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { Tooltip } from 'primeng/tooltip';
 import { retry } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
@@ -46,6 +47,7 @@ import { PackageListService } from './packge-list.service';
     NgClass,
     TitleComponent,
     RepoNamePipe,
+    Tooltip,
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',

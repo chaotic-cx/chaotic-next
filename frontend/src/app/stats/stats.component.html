@@ -9,11 +9,11 @@
   <div>
     <p-tabs [(value)]="statsService.currentTab" (valueChange)="changeTab($event)">
       <p-tablist>
-        <p-tab value="0">Search</p-tab>
-        <p-tab value="1">Globals</p-tab>
-        <p-tab value="2">Downloads</p-tab>
-        <p-tab value="3">Update Reviews</p-tab>
-        <p-tab value="4">Builder Stats</p-tab>
+        <p-tab value="0" pTooltip="Search for package statistics" tooltipPosition="bottom">Search</p-tab>
+        <p-tab value="1" pTooltip="Global usage statistics" tooltipPosition="bottom">Globals</p-tab>
+        <p-tab value="2" pTooltip="Download statistics and trends" tooltipPosition="bottom">Downloads</p-tab>
+        <p-tab value="3" pTooltip="Update review statistics" tooltipPosition="bottom">Update Reviews</p-tab>
+        <p-tab value="4" pTooltip="Builder performance statistics" tooltipPosition="bottom">Builder Stats</p-tab>
       </p-tablist>
       <p-tabpanels>
         <p-tabpanel value="0">
