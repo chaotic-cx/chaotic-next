@@ -13,3 +13,14 @@
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* Improve panel spacing */
+.mr-overview-panel {
+  @apply rounded-lg shadow-lg;
+}
+
+/* Better button spacing */
+::ng-deep .p-button.w-50 {
+  width: 100% !important;
+  min-width: 140px;
+}

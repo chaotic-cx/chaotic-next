@@ -4,12 +4,21 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, 
 import { RouterLink } from '@angular/router';
 import { AnimateOnScrollModule } from 'primeng/animateonscroll';
 import { Button } from 'primeng/button';
+import { Tooltip } from 'primeng/tooltip';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
 
 @Component({
   selector: 'chaotic-home',
-  imports: [AnimateOnScrollModule, NewsfeedComponent, MirrorMapComponent, RouterLink, NgOptimizedImage, Button],
+  imports: [
+    AnimateOnScrollModule,
+    NewsfeedComponent,
+    MirrorMapComponent,
+    RouterLink,
+    NgOptimizedImage,
+    Button,
+    Tooltip,
+  ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
