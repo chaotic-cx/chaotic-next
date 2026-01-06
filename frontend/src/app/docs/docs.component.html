@@ -148,23 +148,6 @@
   <div class="mt-5">
     <p-panel header="Recommendations">
       <div class="chaotic-panel">
-        You may want to use
-        <a class="text-ctp-mauve" href="https://wiki.archlinux.org/index.php/Powerpill" rel="noopener" target="_blank"
-          >powerpill</a
-        >
-        to download from all mirrors simultaneously if you are living in non-first-world countries. <br />
-        Besides downloading multiple packages, it splits a single one in parts and distributes all connections through
-        the enabled mirrors. <br />
-        This is why it is still better in such areas, where CDNs aren't well established. We recommend using it as
-        follows:
-        <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(powerpillUsage)" [highlight]="powerpillUsage"
-                                                         language="shell" pTooltip="Copy to clipboard"
-                                                         tooltipPosition="top"></code></pre>
-        Make sure to insert all mirrors in your <i>pacman.conf</i> or use <i>chaotic-mirrorlist</i> with all of them
-        active if using powerpill.
-
-        <p-divider />
-
         If you need to omit a package update to use locally built ones (e.g: with native optimizations),
         <a
           class="text-ctp-mauve"
