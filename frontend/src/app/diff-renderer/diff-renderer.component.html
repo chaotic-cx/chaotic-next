@@ -1,11 +1,9 @@
 <div class="diff-renderer">
-  <div class="overflow-x-auto">
-    <pre class="m-0 overflow-y-hidden">
-      <code>
-        @for (line of parsedLines(); track $index) {
-          <div [class]="getLineClass(line)" [textContent]="line.content"></div>
-        }
-      </code>
-    </pre>
-  </div>
+  <pre class="m-0 overflow-y-hidden">
+    <code>
+      @for (line of parsedLines(); track $index) {
+        <div [class]="getLineClass(line)" [textContent]="line.content"></div>
+      }
+    </code>
+  </pre>
 </div>

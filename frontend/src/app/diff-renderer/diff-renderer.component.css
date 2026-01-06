@@ -24,8 +24,9 @@ div {
   text-indent: -1ch;
   padding-left: 1ch;
   padding-right: 1ch;
-  width: 100%;
+  width: max-content;
   min-width: 100%;
+  box-sizing: border-box;
 }
 
 .context {

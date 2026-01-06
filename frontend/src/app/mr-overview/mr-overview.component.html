@@ -61,7 +61,7 @@
                 [toggleable]="true"
                 [collapsed]="mrOverviewService.token() === ''"
               >
-                <chaotic-diff-renderer class="overflow-x-auto" [diff]="change.diff" />
+                <chaotic-diff-renderer [diff]="change.diff" />
               </p-fieldset>
             }
           } @else {
@@ -123,7 +123,7 @@
   }
 }
 
-<p-dialog [(visible)]="dialogVisible" header="Bump Packages" modal="true" styleClass="w-full md:w-3/4">
+<p-dialog [(visible)]="dialogVisible" header="Manage Packages" modal="true" styleClass="w-full md:w-4/5 lg:w-3/4 max-h-screen overflow-y-auto">
   <div class="flex flex-col gap-4">
     <div>
       <label for="packages">Select Packages</label>
@@ -135,25 +135,32 @@
         [filter]="true"
         [virtualScroll]="true"
         [virtualScrollItemSize]="40"
+        [maxSelectedLabels]="5"
+        selectedItemsLabel="{0} packages selected"
         optionLabel="label"
         appendTo="body"
         optionValue="value"
-        placeholder="Select packages to bump"
+        placeholder="Select packages to bump or schedule"
         display="chip"
+        [style]="{'max-height': '300px'}"
       ></p-multi-select>
     </div>
-    <div class="flex gap-2 justify-end">
+    <div class="flex flex-col sm:flex-row gap-2 justify-end">
       <p-button
         [disabled]="selectedPackages().length === 0"
         (onClick)="bump()"
-        label="Bump"
+        label="Bump Packages"
+        icon="pi pi-arrow-up"
         severity="success"
+        styleClass="w-full sm:w-auto"
       ></p-button>
       <p-button
         [disabled]="selectedPackages().length === 0"
         (onClick)="schedule()"
-        label="Schedule"
+        label="Schedule Packages"
+        icon="pi pi-calendar"
         severity="info"
+        styleClass="w-full sm:w-auto"
       ></p-button>
     </div>
   </div>

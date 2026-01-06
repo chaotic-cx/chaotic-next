@@ -69,8 +69,7 @@ export class MrOverviewComponent implements OnInit {
     return data.map((pkg) => ({ label: pkg.pkgname, value: pkg.pkgname, repo: pkg.repo }));
   });
   protected readonly filteredOptions = computed(() => {
-    const all = this.packagesOptions();
-    return all.filter((o) => o.repo === 1); // chaotic-aur
+    return this.packagesOptions();
   });
 
   constructor() {

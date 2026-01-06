@@ -8,3 +8,8 @@
 ::ng-deep .p-fieldset-content-wrapper {
   max-width: 90vw;
 }
+
+::ng-deep .p-fieldset-content {
+  max-width: 100%;
+  overflow-x: auto;
+}
