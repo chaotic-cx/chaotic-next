@@ -141,7 +141,8 @@
       <p-multi-select
         class="w-full"
         id="packages"
-        [(ngModel)]="selectedPackages"
+        [ngModel]="selectedPackages()"
+        (ngModelChange)="selectedPackages.set($event ?? [])"
         [options]="filteredOptions()"
         [filter]="true"
         [virtualScroll]="true"

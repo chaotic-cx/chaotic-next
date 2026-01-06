@@ -15,7 +15,6 @@ import { LoadingService } from './loading/loading.service';
 import { ProgressSpinner } from 'primeng/progressspinner';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { UpdateService } from './update/update.service';
-import { Tooltip } from 'primeng/tooltip';
 
 @Component({
   imports: [
@@ -27,7 +26,6 @@ import { Tooltip } from 'primeng/tooltip';
     ProgressSpinner,
     ProgressSpinner,
     ProgressSpinner,
-    Tooltip,
   ],
   selector: 'chaotic-root',
   templateUrl: './app.component.html',
