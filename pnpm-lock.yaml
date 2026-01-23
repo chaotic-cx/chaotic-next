@@ -151,10 +151,10 @@ importers:
         version: 3.2.0
       moleculer:
         specifier: ^0.14.35
-        version: 0.14.35(debug@4.4.3)(encoding@0.1.13)(ioredis@5.9.1)(log4js@6.9.1)(pino@10.1.1)
+        version: 0.14.35(debug@4.4.3)(encoding@0.1.13)(ioredis@5.9.1)(log4js@6.9.1)(pino@10.3.0)
       nestjs-pino:
         specifier: ^4.5.0
-        version: 4.5.0(@nestjs/common@11.1.11(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.1.1)(rxjs@7.8.2)
+        version: 4.5.0(@nestjs/common@11.1.11(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.3.0)(rxjs@7.8.2)
       ngx-highlightjs:
         specifier: ^14.0.1
         version: 14.0.1(@angular/cdk@21.0.5(@angular/common@21.0.6(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/common@21.0.6(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2))(rxjs@7.8.2)
@@ -172,7 +172,7 @@ importers:
         version: 8.16.3
       pino:
         specifier: ^10.1.0
-        version: 10.1.1
+        version: 10.3.0
       pino-http:
         specifier: ^11.0.0
         version: 11.0.0
@@ -3841,6 +3841,7 @@ packages:
 
   '@primeng/themes@21.0.3':
     resolution: {integrity: sha512-IjeONnGb1jhVyujWAdWUzVQUsSRVnpH1GWIXzNmIJMtv6BEUCc7Zk0TbIuvPS9T6eq6aiHrZgaJZ9Uu7KptDwg==}
+    deprecated: 'Deprecated. This package is no longer maintained. Please migrate to @primeuix/themes: https://www.npmjs.com/package/@primeuix/themes'
 
   '@primeuix/motion@0.0.10':
     resolution: {integrity: sha512-PsZwOPq79Scp7/ionshRcQ5xKVf9+zuLcyY5mf6onK8chHT5C9JGphmcIZ4CzcqxuGEpsm8AIbTGy+zS3RtzLA==}
@@ -8426,8 +8427,11 @@ packages:
   pino-std-serializers@7.0.0:
     resolution: {integrity: sha512-e906FRY0+tV27iq4juKzSYPbUj2do2X2JX4EzSca1631EB2QJQUqGbDuERal7LCtOpxl6x3+nvo9NPZcmjkiFA==}
 
-  pino@10.1.1:
-    resolution: {integrity: sha512-3qqVfpJtRQUCAOs4rTOEwLH6mwJJ/CSAlbis8fKOiMzTtXh0HN/VLsn3UWVTJ7U8DsWmxeNon2IpGb+wORXH4g==}
+  pino-std-serializers@7.1.0:
+    resolution: {integrity: sha512-BndPH67/JxGExRgiX1dX0w1FvZck5Wa4aal9198SrRhZjH3GxKQUKIBnYJTdj2HDN3UQAS06HlfcSbQj2OHmaw==}
+
+  pino@10.3.0:
+    resolution: {integrity: sha512-0GNPNzHXBKw6U/InGe79A3Crzyk9bcSyObF9/Gfo9DLEf5qj5RF50RSjsu0W1rZ6ZqRGdzDFCRBQvi9/rSGPtA==}
     hasBin: true
 
   pirates@4.0.7:
@@ -9685,6 +9689,7 @@ packages:
   tar@7.5.2:
     resolution: {integrity: sha512-7NyxrTE4Anh8km8iEy7o0QYPs+0JKBTj5ZaqHg6B39erLg0qYXN3BijtShwbsNSvQ+LN75+KV+C4QR/f6Gwnpg==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
 
   tcp-port-used@1.0.2:
     resolution: {integrity: sha512-l7ar8lLUD3XS1V2lfoJlCBaeoaWo/2xfYt81hM7VlvR4RrMVFqfmzfhLVk40hAb368uitje5gPtBRL1m/DGvLA==}
@@ -17724,7 +17729,7 @@ snapshots:
       fast-json-stringify: 6.1.1
       find-my-way: 9.4.0
       light-my-request: 6.6.0
-      pino: 10.1.1
+      pino: 10.3.0
       process-warning: 5.0.0
       rfdc: 1.4.1
       secure-json-parse: 4.1.0
@@ -19506,7 +19511,7 @@ snapshots:
     dependencies:
       minipass: 7.1.2
 
-  moleculer@0.14.35(debug@4.4.3)(encoding@0.1.13)(ioredis@5.9.1)(log4js@6.9.1)(pino@10.1.1):
+  moleculer@0.14.35(debug@4.4.3)(encoding@0.1.13)(ioredis@5.9.1)(log4js@6.9.1)(pino@10.3.0):
     dependencies:
       args: 5.0.3
       eventemitter2: 6.4.9
@@ -19522,7 +19527,7 @@ snapshots:
       debug: 4.4.3
       ioredis: 5.9.1
       log4js: 6.9.1
-      pino: 10.1.1
+      pino: 10.3.0
     transitivePeerDependencies:
       - encoding
 
@@ -19582,10 +19587,10 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  nestjs-pino@4.5.0(@nestjs/common@11.1.11(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.1.1)(rxjs@7.8.2):
+  nestjs-pino@4.5.0(@nestjs/common@11.1.11(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.3.0)(rxjs@7.8.2):
     dependencies:
       '@nestjs/common': 11.1.11(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      pino: 10.1.1
+      pino: 10.3.0
       pino-http: 11.0.0
       rxjs: 7.8.2
 
@@ -20092,7 +20097,7 @@ snapshots:
   pino-http@11.0.0:
     dependencies:
       get-caller-file: 2.0.5
-      pino: 10.1.1
+      pino: 10.3.0
       pino-std-serializers: 7.0.0
       process-warning: 5.0.0
 
@@ -20114,13 +20119,15 @@ snapshots:
 
   pino-std-serializers@7.0.0: {}
 
-  pino@10.1.1:
+  pino-std-serializers@7.1.0: {}
+
+  pino@10.3.0:
     dependencies:
       '@pinojs/redact': 0.4.0
       atomic-sleep: 1.0.0
       on-exit-leak-free: 2.1.2
       pino-abstract-transport: 3.0.0
-      pino-std-serializers: 7.0.0
+      pino-std-serializers: 7.1.0
       process-warning: 5.0.0
       quick-format-unescaped: 4.0.4
       real-require: 0.2.0
