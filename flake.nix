@@ -71,7 +71,7 @@
         default = chaotic-next;
         chaotic-next = mkShell {
           commands = [
-            {package = pkgs.corepack.override {nodejs-slim = pkgs.nodejs-slim_latest;};}
+            {package = pkgs.corepack;}
             {package = "nodejs_latest";}
             {package = "pre-commit";}
           ];
