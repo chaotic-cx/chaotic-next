@@ -74,12 +74,12 @@ export class MrOverviewService {
   /**
    * Extracts the package name from the merge request title.
    * This assumes the title follows a specific format.
-   * Example: "chore(mozc): PKGBUILD modified" -> "mozc"
+   * Example: "chore(update): mozc" -> "mozc"
    * @param title
    * @private
    */
   extractPkgName(title: string): string | null {
-    const match = title.match(/^[^(]*\(([^)]+)\)/);
+    const match = title.match(/^chore\(update\): ([\w@.+\-]+)$/);
     return match ? match[1] : null;
   }
 
