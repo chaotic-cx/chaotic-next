@@ -212,7 +212,7 @@ export class GitlabService {
         this.configService.getOrThrow<string>('CAUR_DB_KEY'),
       ).toString(enc.Utf8);
 
-      const pkgs = newMr.map((mr) => mr.title.match(/^[^(]*\(([^)]+)\)/)?.[1]).join(', ');
+      const pkgs = newMr.map((mr) => mr.title.match(/^chore\(update\): ([\w@.+\-]+)$/)?.[1]).join(', ');
       Logger.log(`Notifying subscribers about new MRs: ${pkgs}`, 'GitlabService');
 
       const notificationPayload: NotificationPayload = {
