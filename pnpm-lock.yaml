@@ -218,7 +218,7 @@ importers:
         version: 21.2.0(@typescript-eslint/utils@8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
       '@angular-eslint/eslint-plugin-template':
         specifier: 21.2.0
-        version: 21.2.0(@angular-eslint/template-parser@21.2.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/types@8.55.0)(@typescript-eslint/utils@8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
+        version: 21.2.0(@angular-eslint/template-parser@21.2.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/types@8.56.1)(@typescript-eslint/utils@8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
       '@angular-eslint/template-parser':
         specifier: 21.2.0
         version: 21.2.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
@@ -374,7 +374,7 @@ importers:
         version: 10.1.8(eslint@9.39.3(jiti@2.6.1))
       eslint-plugin-jsdoc:
         specifier: ^62.5.4
-        version: 62.5.5(eslint@9.39.3(jiti@2.6.1))
+        version: 62.7.1(eslint@9.39.3(jiti@2.6.1))
       eslint-plugin-prettier:
         specifier: ^5.5.4
         version: 5.5.5(@types/eslint@9.6.1)(eslint-config-prettier@10.1.8(eslint@9.39.3(jiti@2.6.1)))(eslint@9.39.3(jiti@2.6.1))(prettier@3.8.1)
@@ -4680,6 +4680,10 @@ packages:
     resolution: {integrity: sha512-ujT0Je8GI5BJWi+/mMoR0wxwVEQaxM+pi30xuMiJETlX80OPovb2p9E8ss87gnSVtYXtJoU9U1Cowcr6w2FE0w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@typescript-eslint/types@8.56.1':
+    resolution: {integrity: sha512-dbMkdIUkIkchgGDIv7KLUpa0Mda4IYjo4IAMJUZ+3xNoUXxMsk9YtKpTHSChRS85o+H9ftm51gsK1dZReY9CVw==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
   '@typescript-eslint/typescript-estree@8.55.0':
     resolution: {integrity: sha512-EwrH67bSWdx/3aRQhCoxDaHM+CrZjotc2UCCpEDVqfCE+7OjKAGWNY2HsCSTEVvWH2clYQK8pdeLp42EVs+xQw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -6129,11 +6133,11 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-  eslint-plugin-jsdoc@62.5.5:
-    resolution: {integrity: sha512-aRp0KVW26imgPqn17oSDnJdA3tlu+6D/xI/pqWzK5qDPQbldQ1Hsg84dYAsFyvGJhI+u/sGvzgGjMjlKQtUG/Q==}
+  eslint-plugin-jsdoc@62.7.1:
+    resolution: {integrity: sha512-4Zvx99Q7d1uggYBUX/AIjvoyqXhluGbbKrRmG8SQTLprPFg6fa293tVJH1o1GQwNe3lUydd8ZHzn37OaSncgSQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
     peerDependencies:
-      eslint: ^7.0.0 || ^8.0.0 || ^9.0.0
+      eslint: ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
 
   eslint-plugin-prettier@5.5.5:
     resolution: {integrity: sha512-hscXkbqUZ2sPithAuLm5MXL+Wph+U7wHngPBv9OMWwlP8iaflyxpjTYZkmdgB4/vPIhemRlBEoLrH7UC1n7aUw==}
@@ -6187,8 +6191,8 @@ packages:
     resolution: {integrity: sha512-j6PAQ2uUr79PZhBjP5C5fhl8e39FmRnOjsD5lGnWrFU8i2G776tBK7+nP8KuQUTTyAZUwfQqXAgrVH5MbH9CYQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  espree@11.1.0:
-    resolution: {integrity: sha512-WFWYhO1fV4iYkqOOvq8FbqIhr2pYfoDY0kCotMkDeNtGpiGGkZ1iov2u8ydjtgM8yF8rzK7oaTbw2NAzbAbehw==}
+  espree@11.1.1:
+    resolution: {integrity: sha512-AVHPqQoZYc+RUM4/3Ly5udlZY/U4LS8pIG05jEjWM2lQMU/oaZ7qshzAl2YP1tfNmXfftH3ohurfwNAug+MnsQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
   espree@9.6.1:
@@ -9510,8 +9514,8 @@ packages:
   spdx-expression-parse@4.0.0:
     resolution: {integrity: sha512-Clya5JIij/7C6bRR22+tnGXbc4VKlibKSVj2iHvVeX5iMW7s1SIQlqu699JkODJJIhh/pUu8L0/VLh8xflD+LQ==}
 
-  spdx-license-ids@3.0.22:
-    resolution: {integrity: sha512-4PRT4nh1EImPbt2jASOKHX7PB7I+e4IWNLvkKFDxNhJlfjbYlleYQh285Z/3mPTHSAK/AvdMmw5BNNuYH8ShgQ==}
+  spdx-license-ids@3.0.23:
+    resolution: {integrity: sha512-CWLcCCH7VLu13TgOH+r8p1O/Znwhqv/dbb6lqWy67G+pT1kHmeD/+V36AVb/vq8QMIQwVShJ6Ssl5FPh0fuSdw==}
 
   spdy-transport@3.0.0:
     resolution: {integrity: sha512-hsLVFE5SjA6TCisWeJXFKniGGOpBgMLmerfO2aCyCU5s7nJ/rpAepqmFifv/GCbSbueEeAJJnmSQ2rKC/g8Fcw==}
@@ -10833,6 +10837,18 @@ snapshots:
       '@angular-eslint/template-parser': 21.2.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
       '@angular-eslint/utils': 21.2.0(@typescript-eslint/utils@8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
       '@typescript-eslint/types': 8.55.0
+      '@typescript-eslint/utils': 8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
+      aria-query: 5.3.2
+      axobject-query: 4.1.0
+      eslint: 9.39.3(jiti@2.6.1)
+      typescript: 5.9.3
+
+  '@angular-eslint/eslint-plugin-template@21.2.0(@angular-eslint/template-parser@21.2.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/types@8.56.1)(@typescript-eslint/utils@8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)':
+    dependencies:
+      '@angular-eslint/bundled-angular-compiler': 21.2.0
+      '@angular-eslint/template-parser': 21.2.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
+      '@angular-eslint/utils': 21.2.0(@typescript-eslint/utils@8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
+      '@typescript-eslint/types': 8.56.1
       '@typescript-eslint/utils': 8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
       aria-query: 5.3.2
       axobject-query: 4.1.0
@@ -12566,7 +12582,7 @@ snapshots:
   '@es-joy/jsdoccomment@0.84.0':
     dependencies:
       '@types/estree': 1.0.8
-      '@typescript-eslint/types': 8.55.0
+      '@typescript-eslint/types': 8.56.1
       comment-parser: 1.4.5
       esquery: 1.7.0
       jsdoc-type-pratt-parser: 7.1.1
@@ -14319,7 +14335,7 @@ snapshots:
 
   '@npmcli/fs@5.0.0':
     dependencies:
-      semver: 7.7.4
+      semver: 7.7.3
 
   '@npmcli/git@7.0.1':
     dependencies:
@@ -14329,7 +14345,7 @@ snapshots:
       npm-pick-manifest: 11.0.3
       proc-log: 6.1.0
       promise-retry: 2.0.1
-      semver: 7.7.4
+      semver: 7.7.3
       which: 6.0.1
 
   '@npmcli/installed-package-contents@4.0.0':
@@ -14346,7 +14362,7 @@ snapshots:
       hosted-git-info: 9.0.2
       json-parse-even-better-errors: 5.0.0
       proc-log: 6.1.0
-      semver: 7.7.4
+      semver: 7.7.3
       validate-npm-package-license: 3.0.4
 
   '@npmcli/promise-spawn@9.0.1':
@@ -16061,6 +16077,8 @@ snapshots:
 
   '@typescript-eslint/types@8.55.0': {}
 
+  '@typescript-eslint/types@8.56.1': {}
+
   '@typescript-eslint/typescript-estree@8.55.0(typescript@5.9.3)':
     dependencies:
       '@typescript-eslint/project-service': 8.55.0(typescript@5.9.3)
@@ -17186,7 +17204,7 @@ snapshots:
       postcss-modules-scope: 3.2.1(postcss@8.5.6)
       postcss-modules-values: 4.0.0(postcss@8.5.6)
       postcss-value-parser: 4.2.0
-      semver: 7.7.4
+      semver: 7.7.3
     optionalDependencies:
       '@rspack/core': 1.7.6(@swc/helpers@0.5.19)
       webpack: 5.105.0(@swc/core@1.15.13(@swc/helpers@0.5.19))(esbuild@0.27.2)
@@ -17598,7 +17616,7 @@ snapshots:
     dependencies:
       eslint: 9.39.3(jiti@2.6.1)
 
-  eslint-plugin-jsdoc@62.5.5(eslint@9.39.3(jiti@2.6.1)):
+  eslint-plugin-jsdoc@62.7.1(eslint@9.39.3(jiti@2.6.1)):
     dependencies:
       '@es-joy/jsdoccomment': 0.84.0
       '@es-joy/resolve.exports': 1.2.0
@@ -17607,7 +17625,7 @@ snapshots:
       debug: 4.4.3
       escape-string-regexp: 4.0.0
       eslint: 9.39.3(jiti@2.6.1)
-      espree: 11.1.0
+      espree: 11.1.1
       esquery: 1.7.0
       html-entities: 2.6.0
       object-deep-merge: 2.0.0
@@ -17698,10 +17716,10 @@ snapshots:
       acorn-jsx: 5.3.2(acorn@8.16.0)
       eslint-visitor-keys: 4.2.1
 
-  espree@11.1.0:
+  espree@11.1.1:
     dependencies:
-      acorn: 8.15.0
-      acorn-jsx: 5.3.2(acorn@8.15.0)
+      acorn: 8.16.0
+      acorn-jsx: 5.3.2(acorn@8.16.0)
       eslint-visitor-keys: 5.0.1
 
   espree@9.6.1:
@@ -18612,7 +18630,7 @@ snapshots:
       '@babel/parser': 7.29.0
       '@istanbuljs/schema': 0.1.3
       istanbul-lib-coverage: 3.2.2
-      semver: 7.7.4
+      semver: 7.7.3
     transitivePeerDependencies:
       - supports-color
 
@@ -19798,7 +19816,7 @@ snapshots:
       make-fetch-happen: 15.0.3
       nopt: 9.0.0
       proc-log: 6.1.0
-      semver: 7.7.4
+      semver: 7.7.3
       tar: 7.5.9
       tinyglobby: 0.2.15
       which: 6.0.1
@@ -19829,7 +19847,7 @@ snapshots:
 
   npm-install-checks@8.0.0:
     dependencies:
-      semver: 7.7.4
+      semver: 7.7.3
 
   npm-normalize-package-bin@5.0.0: {}
 
@@ -19837,7 +19855,7 @@ snapshots:
     dependencies:
       hosted-git-info: 9.0.2
       proc-log: 6.1.0
-      semver: 7.7.4
+      semver: 7.7.3
       validate-npm-package-name: 7.0.2
 
   npm-packlist@10.0.3:
@@ -19850,7 +19868,7 @@ snapshots:
       npm-install-checks: 8.0.0
       npm-normalize-package-bin: 5.0.0
       npm-package-arg: 13.0.2
-      semver: 7.7.4
+      semver: 7.7.3
 
   npm-registry-fetch@19.1.1:
     dependencies:
@@ -20451,7 +20469,7 @@ snapshots:
       cosmiconfig: 9.0.0(typescript@5.9.3)
       jiti: 2.6.1
       postcss: 8.5.6
-      semver: 7.7.4
+      semver: 7.7.3
     optionalDependencies:
       '@rspack/core': 1.7.6(@swc/helpers@0.5.19)
       webpack: 5.105.0(@swc/core@1.15.13(@swc/helpers@0.5.19))(esbuild@0.27.2)
@@ -21437,21 +21455,21 @@ snapshots:
   spdx-correct@3.2.0:
     dependencies:
       spdx-expression-parse: 3.0.1
-      spdx-license-ids: 3.0.22
+      spdx-license-ids: 3.0.23
 
   spdx-exceptions@2.5.0: {}
 
   spdx-expression-parse@3.0.1:
     dependencies:
       spdx-exceptions: 2.5.0
-      spdx-license-ids: 3.0.22
+      spdx-license-ids: 3.0.23
 
   spdx-expression-parse@4.0.0:
     dependencies:
       spdx-exceptions: 2.5.0
-      spdx-license-ids: 3.0.22
+      spdx-license-ids: 3.0.23
 
-  spdx-license-ids@3.0.22: {}
+  spdx-license-ids@3.0.23: {}
 
   spdy-transport@3.0.0:
     dependencies:
