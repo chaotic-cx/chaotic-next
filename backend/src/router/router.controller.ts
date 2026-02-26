@@ -5,6 +5,7 @@ import type { RouterHit, RouterHitColumns } from './router.entity';
 import { RouterHitColumPipe } from './router.pipe';
 import { RouterService } from './router.service';
 import { SkipThrottle } from '@nestjs/throttler';
+import { AllowAnonymous } from '../auth/anonymous.decorator';
 
 @ApiTags('router')
 @Controller('router')
@@ -35,6 +36,7 @@ export class RouterController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @AllowAnonymous()
   @Get('/country/:days')
   @ApiOperation({ summary: 'Get router country stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -46,6 +48,7 @@ export class RouterController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @AllowAnonymous()
   @Get('/mirror/:days')
   @ApiOperation({ summary: 'Get router mirror stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -55,6 +58,7 @@ export class RouterController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @AllowAnonymous()
   @Get('/package/:days')
   @ApiOperation({ summary: 'Get router package stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -66,6 +70,7 @@ export class RouterController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @AllowAnonymous()
   @Get('/per-day/:days')
   @ApiOperation({ summary: 'Get router stats per day.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
