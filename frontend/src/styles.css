@@ -169,6 +169,12 @@ body > app-root > chaotic-footer > div > p-card > div {
 
 .p-menubar-item-icon {
   color: var(--ctp-mocha-mauve) !important;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+}
+
+.p-menu-item-icon {
+  color: var(--ctp-mocha-mauve) !important;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
 }
 
 .p-menubar-item-icon-active-color {
