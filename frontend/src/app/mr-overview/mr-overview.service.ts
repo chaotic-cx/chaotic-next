@@ -1,11 +1,11 @@
-import { effect, inject, Injectable, signal, untracked } from '@angular/core';
-import { lastValueFrom } from 'rxjs';
-import { MessageToastService } from '@garudalinux/core';
-import { HttpClient } from '@angular/common/http';
-import { encrypt } from '../functions';
 import { MergeRequestWithDiffs } from '@./shared-lib';
-import { APP_CONFIG } from '../../environments/app-config.token';
+import { HttpClient } from '@angular/common/http';
+import { effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
+import { lastValueFrom } from 'rxjs';
+import { APP_CONFIG } from '../../environments/app-config.token';
+import { encrypt } from '../functions';
 
 @Injectable({
   providedIn: 'root',
@@ -79,7 +79,7 @@ export class MrOverviewService {
    * @private
    */
   extractPkgName(title: string): string | null {
-    const match = title.match(/^chore\(update\): ([\w@.+\-]+)$/);
+    const match = title.match(/^chore\(update\): ([\w@.+-]+)$/);
     return match ? match[1] : null;
   }
 
@@ -294,79 +294,5 @@ export class MrOverviewService {
       if (keyA !== keyB) return keyA - keyB;
       return a.new_path.localeCompare(b.new_path);
     });
-  }
-
-  /**
-   * Triggers a pipeline to bump the specified packages.
-   * @param packages The packages to bump, colon separated.
-   */
-  async bumpPackages(packages: string) {
-    try {
-      const project = await lastValueFrom(
-        this.http.get<any>(`${this.gitlabBaseUrl}/projects/${this.projectId}`, {
-          headers: { 'PRIVATE-TOKEN': this.token() },
-        }),
-      );
-      const ref = project.default_branch;
-      await lastValueFrom(
-        this.http.post<any>(
-          `${this.gitlabBaseUrl}/projects/${this.projectId}/pipeline`,
-          {
-            ref,
-            variables: [
-              { key: 'PACKAGES', value: packages },
-              { key: 'BUMP_PACKAGES', value: 'true' },
-            ],
-          },
-          { headers: { 'PRIVATE-TOKEN': this.token() } },
-        ),
-      );
-
-      this.messageToastService.success(
-        'Pipeline Triggered',
-        'Pipeline for bumping packages has been triggered and the manual job started.',
-      );
-    } catch (error) {
-      this.messageToastService.error(
-        'Failed to trigger pipeline',
-        'Could not trigger the pipeline for bumping packages.',
-      );
-      console.error('Error triggering pipeline:', error);
-    }
-  }
-
-  /**
-   * Triggers a pipeline to schedule the specified packages.
-   * @param packages The packages to schedule, colon separated.
-   */
-  async schedulePackages(packages: string) {
-    try {
-      const project = await lastValueFrom(
-        this.http.get<any>(`${this.gitlabBaseUrl}/projects/${this.projectId}`, {
-          headers: { 'PRIVATE-TOKEN': this.token() },
-        }),
-      );
-      const ref = project.default_branch;
-      await lastValueFrom(
-        this.http.post<any>(
-          `${this.gitlabBaseUrl}/projects/${this.projectId}/pipeline`,
-          {
-            ref,
-            variables: [{ key: 'PACKAGES', value: packages }],
-          },
-          { headers: { 'PRIVATE-TOKEN': this.token() } },
-        ),
-      );
-      this.messageToastService.success(
-        'Pipeline Triggered',
-        'Pipeline for scheduling packages has been triggered and the manual job started.',
-      );
-    } catch (error) {
-      this.messageToastService.error(
-        'Failed to trigger pipeline',
-        'Could not trigger the pipeline for scheduling packages.',
-      );
-      console.error('Error triggering pipeline:', error);
-    }
   }
 }
