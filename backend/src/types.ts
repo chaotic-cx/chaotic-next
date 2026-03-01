@@ -36,20 +36,6 @@ export interface BuilderDbConnections {
   repo: Repository<Repo>;
 }
 
-export interface RouterHitBody {
-  arch: string;
-  country: string;
-  hostname: string;
-  ip: string;
-  package: string;
-  pkgrel: string;
-  repo: string;
-  repo_arch: string;
-  timestamp: string;
-  user_agent: string;
-  version: string;
-}
-
 export interface User {
   username: string;
   mail: string;
