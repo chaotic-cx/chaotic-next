@@ -1,141 +1,38 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import type { Repository } from 'typeorm';
-import { Package, pkgnameExists, Repo, repoExists } from '../builder/builder.entity';
+import { Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { nDaysInPast } from '../functions';
-import type { RouterHitBody } from '../types';
-import { Mirror, mirrorExists, RouterHit, type RouterHitColumns } from './router.entity';
 
 @Injectable()
 export class RouterService {
-  constructor(
-    @InjectRepository(RouterHit)
-    private routerRitRepo: Repository<RouterHit>,
-    @InjectRepository(Package)
-    private packageRepo: Repository<Package>,
-    @InjectRepository(Repo)
-    private repoRepo: Repository<Repo>,
-    @InjectRepository(Mirror)
-    private mirrorRepo: Repository<Mirror>,
-  ) {
+  constructor(private dataSource: DataSource) {
     Logger.log('RouterService initialized', 'RouterService');
   }
 
-  /**
-   * Save a router request to the database.
-   * @param body The request body containing at least repo and package properties
-   */
-  async hitRouter(body: RouterHitBody): Promise<void> {
-    if ((body.repo || body.package) === undefined) {
-      throw new BadRequestException('Missing required fields, throwing entry away');
-    }
-
-    const relations: [Repo, Mirror] = await Promise.all([
-      await repoExists(body.repo, this.repoRepo),
-      await mirrorExists(body.hostname, this.mirrorRepo),
-    ]);
-    const pkg: Package = await pkgnameExists(body.package, this.packageRepo, relations[0]);
-
-    if (relations.includes(null)) {
-      throw new BadRequestException('Invalid relations, throwing entry away');
-    }
-
-    const toSave: Partial<RouterHit> = {
-      country: body.country,
-      hostname: relations[1],
-      ip: body.ip,
-      pkgbase: pkg,
-      repo: relations[0],
-      repo_arch: body.repo_arch,
-      timestamp: new Date(Number(body.timestamp) * 1000).toISOString(),
-      user_agent: body.user_agent,
-      version: `${body.version}-${body.pkgrel}`,
-    };
-
-    void this.routerRitRepo.save(toSave);
+  async getCountryStats(days: number): Promise<{ country: string; count: string }[]> {
+    return this.dataSource.query(
+      `SELECT country, COUNT(*)::text AS count FROM "router-hits" WHERE timestamp > $1 GROUP BY country ORDER BY count DESC`,
+      [nDaysInPast(days)],
+    );
   }
 
-  /**
-   * Get the general stats for the last x days.
-   * @param days The number of days to look back
-   * @param type The column to select
-   */
-  getGeneralStats(days: number, type: RouterHitColumns): Promise<RouterHit[]> {
-    return this.routerRitRepo
-      .createQueryBuilder('router_hit')
-      .select(`router_hit.${type}`)
-      .where('router_hit.timestamp > :date', { date: nDaysInPast(days) })
-      .cache(true)
-      .getMany();
+  async getMirrorStats(days: number): Promise<{ mirror: string; count: string }[]> {
+    return this.dataSource.query(
+      `SELECT hostname AS mirror, COUNT(*)::text AS count FROM "router-hits" WHERE timestamp > $1 GROUP BY hostname ORDER BY count DESC`,
+      [nDaysInPast(days)],
+    );
   }
 
-  /**
-   * Get the number of hits per country for the last x days.
-   * @param days The number of days to look back
-   * @returns An array of objects containing the country name and the number of hits
-   */
-  getCountryStats(days: number): Promise<{ country: string; count: number }[]> {
-    return this.routerRitRepo
-      .createQueryBuilder('router_hit')
-      .select('router_hit.country AS country')
-      .addSelect('COUNT(router_hit.country)', 'count')
-      .where('router_hit.timestamp > :date', { date: nDaysInPast(days) })
-      .groupBy('router_hit.country')
-      .orderBy('count', 'DESC')
-      .cache(true)
-      .getRawMany();
+  async getPackageStats(days: number): Promise<{ pkgbase: string; count: string }[]> {
+    return this.dataSource.query(
+      `SELECT package AS pkgbase, COUNT(*)::text AS count FROM "router-hits" WHERE timestamp > $1 GROUP BY package ORDER BY count DESC`,
+      [nDaysInPast(days)],
+    );
   }
 
-  /**
-   * Get the number of hits per mirror for the last x days.
-   * @param days The number of days to look back
-   * @returns An array of objects containing the mirror hostname and the number of hits
-   */
-  getMirrorStats(days: number): Promise<{ mirror: string; count: number }[]> {
-    return this.routerRitRepo
-      .createQueryBuilder('router_hit')
-      .select('mirror.hostname AS mirror')
-      .addSelect('COUNT(mirror.hostname)', 'count')
-      .innerJoin('router_hit.hostname', 'mirror')
-      .where('router_hit.timestamp > :date', { date: nDaysInPast(days) })
-      .groupBy('mirror.hostname')
-      .orderBy('count', 'DESC')
-      .cache(true)
-      .getRawMany();
-  }
-
-  /**
-   * Get the number of hits per package for the last x days.
-   * @param days The number of days to look back
-   * @returns An array of objects containing the package name and the number of hits
-   */
-  getPackageStats(days: number): Promise<{ pkgbase: string; count: number }[]> {
-    return this.routerRitRepo
-      .createQueryBuilder('router_hit')
-      .select('package.pkgname AS pkgbase')
-      .addSelect('COUNT(package.pkgname)', 'count')
-      .innerJoin('router_hit.pkgbase', 'package')
-      .where('router_hit.timestamp > :date', { date: nDaysInPast(days) })
-      .groupBy('package.pkgname')
-      .orderBy('count', 'DESC')
-      .cache(true)
-      .getRawMany();
-  }
-
-  /**
-   * Get the number of hits per day for the last x days.
-   * @param days The number of days to look back
-   * @returns An array of objects containing the day and the number of hits
-   */
-  getPerDayStats(days: number): Promise<{ day: string; count: number }[]> {
-    return this.routerRitRepo
-      .createQueryBuilder('router_hit')
-      .select('DATE(router_hit.timestamp) AS date')
-      .addSelect('COUNT(DATE(router_hit.timestamp))', 'count')
-      .where('router_hit.timestamp > :date', { date: nDaysInPast(days) })
-      .groupBy('DATE(router_hit.timestamp)')
-      .orderBy('date', 'ASC')
-      .cache(true)
-      .getRawMany();
+  async getPerDayStats(days: number): Promise<{ day: string; count: string }[]> {
+    return this.dataSource.query(
+      `SELECT DATE(timestamp) AS day, COUNT(*)::text AS count FROM "router-hits" WHERE timestamp > $1 GROUP BY DATE(timestamp) ORDER BY day ASC`,
+      [nDaysInPast(days)],
+    );
   }
 }
