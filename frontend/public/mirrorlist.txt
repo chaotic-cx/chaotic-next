@@ -21,6 +21,10 @@ Server = https://cl-mirror.chaotic.cx/$repo/$arch
 # * By Jonathan Gutiérrez
 Server = https://cl-2-mirror.chaotic.cx/$repo/$arch
 
+# Columbia
+# * By: Eduard Tolosa
+Server = https://co-mirror.chaotic.cx/$repo/$arch
+
 # Germany
 # * By: Nico
 Server = https://de-2-mirror.chaotic.cx/$repo/$arch
@@ -56,6 +60,10 @@ Server = https://kr-mirror.chaotic.cx/$repo/$arch
 Server = https://es-mirror.chaotic.cx/$repo/$arch
 # * By: Ícar <t.me/IcarNS>
 Server = https://es-2-mirror.chaotic.cx/$repo/$arch
+
+# Sweden
+# * By: Academic Computer Club in Umeå (accum.se)
+Server = https://se-mirror.chaotic.cx/$repo/$arch
 
 # United States
 # * By: Technetium1 <github.com/Technetium1>
