@@ -28,6 +28,7 @@ async function bootstrap(): Promise<void> {
   if (trustProxy !== undefined) {
     fastifyAdapter.options({ trustProxy: trustProxy });
   }
+  // @ts-expect-error constant type issues
   fastifyAdapter.register(helmet);
 
   const corsOptions = {
