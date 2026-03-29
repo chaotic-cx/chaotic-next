@@ -7,6 +7,7 @@ import {
   Component,
   effect,
   inject,
+  model,
   OnInit,
   PLATFORM_ID,
   signal,
@@ -32,6 +33,7 @@ import { StatsService } from '../stats/stats.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartDownloadsComponent implements OnInit {
+  range = model(50);
   chartData: any;
   isWide = signal<boolean>(true);
   options: any;
@@ -46,8 +48,19 @@ export class ChartDownloadsComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      this.updatePackageMetrics();
-      this.initChart();
+      this.updatePackageMetrics(this.range());
+    });
+
+    effect(() => {
+      const data = this.statsService.globalPackageMetrics();
+      const isWide = this.isWide();
+      untracked(() => {
+        if (isWide) {
+          this.initChart();
+        } else {
+          this.getProgressBarValues(data);
+        }
+      });
     });
   }
 
@@ -55,10 +68,9 @@ export class ChartDownloadsComponent implements OnInit {
     this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
       this.isWide.set(!state.matches);
       if (this.isWide()) {
-        this.statsService.globalPackageMetricRange.set(50);
-        this.initChart();
+        this.range.set(50);
       } else {
-        this.statsService.globalPackageMetricRange.set(20);
+        this.range.set(20);
       }
     });
   }
@@ -66,19 +78,13 @@ export class ChartDownloadsComponent implements OnInit {
   /**
    * Query the overall package metrics.
    */
-  updatePackageMetrics(): void {
+  updatePackageMetrics(range: number): void {
     this.appService
-      .getOverallPackageStats(untracked(this.statsService.globalPackageMetricRange))
+      .getOverallPackageStats(range)
       .pipe(retry({ count: 3, delay: 5000 }))
       .subscribe({
         next: (data) => {
           this.statsService.globalPackageMetrics.set(data);
-          if (this.isWide()) {
-            this.initChart();
-          } else {
-            this.getProgressBarValues(data);
-            this.cdr.markForCheck();
-          }
         },
         error: (err) => {
           this.messageToastService.error('Error', 'Failed to load downloads chart data');
@@ -127,12 +133,13 @@ export class ChartDownloadsComponent implements OnInit {
     }
   }
 
-  private getProgressBarValues(pkg: PackageRankList) {
+  private getProgressBarValues(metrics: PackageRankList) {
     const values = [];
-    const metrics = untracked(this.statsService.globalPackageMetrics);
-    for (const pkg of metrics) {
-      const relativeCount: number = (pkg.count / metrics[0].count) * 100;
-      values.push({ value: relativeCount, label: pkg.name, count: pkg.count });
+    if (metrics.length > 0) {
+      for (const pkg of metrics) {
+        const relativeCount: number = (pkg.count / metrics[0].count) * 100;
+        values.push({ value: relativeCount, label: pkg.name, count: pkg.count });
+      }
     }
 
     this.statsService.globalPackageProgressbarValues.set(values);

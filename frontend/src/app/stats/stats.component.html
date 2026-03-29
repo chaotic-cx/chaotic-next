@@ -32,7 +32,7 @@
           </div>
         </p-tabpanel>
         <p-tabpanel value="2">
-          <chaotic-chart-downloads></chaotic-chart-downloads>
+          <chaotic-chart-downloads [(range)]="statsService.globalPackageMetricRange"></chaotic-chart-downloads>
         </p-tabpanel>
         <p-tabpanel value="3">
           <chaotic-chart-review-stats></chaotic-chart-review-stats>
