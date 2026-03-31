@@ -213,6 +213,7 @@ export interface Mirror {
   healthy: boolean;
   last_update: number;
   geo_active: boolean;
+  official: boolean;
 }
 
 export interface MirrorSelf {

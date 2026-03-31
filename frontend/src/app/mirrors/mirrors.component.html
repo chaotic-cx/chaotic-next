@@ -56,6 +56,13 @@
                     tooltipPosition="right"
                   ></i>
                 }
+                @if (mirror.official) {
+                  <i
+                    class="pi pi-verified text-ctp-blue"
+                    pTooltip="This mirror is run by the Chaotic-AUR operations team."
+                    tooltipPosition="right"
+                  ></i>
+                }
               </td>
               <td>
                 @if (!mirror.latlon?.length || mirror.latlon?.length === 0) {
@@ -102,6 +109,13 @@
                     tooltipPosition="right"
                   ></i>
                 }
+                @if (mirror.official) {
+                  <i
+                    class="pi pi-verified text-ctp-blue"
+                    pTooltip="This mirror is run by the chaotic operations team."
+                    tooltipPosition="right"
+                  ></i>
+                }
               </td>
               <td>
                 @if (!mirror.latlon?.length || mirror.latlon?.length === 0) {
@@ -145,6 +159,13 @@
                   <i
                     class="pi pi-globe text-blue"
                     pTooltip="The geo mirror routes your requests to this mirror."
+                    tooltipPosition="right"
+                  ></i>
+                }
+                @if (mirror.official) {
+                  <i
+                    class="pi pi-verified text-ctp-blue"
+                    pTooltip="This mirror is run by the chaotic operations team."
                     tooltipPosition="right"
                   ></i>
                 }
