@@ -74,7 +74,7 @@
     "isomorphic-git": "^1.37.4",
     "javascript-time-ago": "^2.6.4",
     "jwks-rsa": "^4.0.1",
-    "moleculer": "^0.14.35",
+    "moleculer": "^0.15.0",
     "nestjs-pino": "^4.6.1",
     "ngx-highlightjs": "^14.0.1",
     "passport": "^0.7.0",
