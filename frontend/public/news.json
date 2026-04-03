@@ -3489,5 +3489,23 @@
         "emoji": "👀"
       }
     ]
+  },
+  {
+    "id": 670,
+    "type": "message",
+    "date": "2026-04-03T12:56:37",
+    "date_unixtime": "1775213797",
+    "edited": "2026-04-03T12:56:40",
+    "edited_unixtime": "1775213800",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": "A new mirror system is now active:\n\nAll country mirrors (for example, in-mirror) will redirect:\n1. All users in the country to the closest mirror in that country\n2. All users in other countries to a random (persistent) mirror in that country (To prevent the mirrors on country borders getting overwhelmed)\nIf all mirrors in a country are unavailable, router will return an applicable error code\n\nGeo-mirror will keep working like normal.\n\nAll *specific* mirrors (for example br-1-mirror) will now no longer silently fail over to another mirror if offline (but will instead provide a generic applicable http error code)\n\nrandom-mirror will now redirect to a random (but persistent) mirror for each IP address.\n\nA new mirror list containing the changes has been deployed.",
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "A new mirror system is now active:\n\nAll country mirrors (for example, in-mirror) will redirect:\n1. All users in the country to the closest mirror in that country\n2. All users in other countries to a random (persistent) mirror in that country (To prevent the mirrors on country borders getting overwhelmed)\nIf all mirrors in a country are unavailable, router will return an applicable error code\n\nGeo-mirror will keep working like normal.\n\nAll *specific* mirrors (for example br-1-mirror) will now no longer silently fail over to another mirror if offline (but will instead provide a generic applicable http error code)\n\nrandom-mirror will now redirect to a random (but persistent) mirror for each IP address.\n\nA new mirror list containing the changes has been deployed."
+      }
+    ]
   }
 ]
