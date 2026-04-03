@@ -3495,8 +3495,8 @@
     "type": "message",
     "date": "2026-04-03T12:56:37",
     "date_unixtime": "1775213797",
-    "edited": "2026-04-03T12:56:40",
-    "edited_unixtime": "1775213800",
+    "edited": "2026-04-03T13:13:46",
+    "edited_unixtime": "1775214826",
     "from": "Chaotic-AUR",
     "from_id": "channel1293714071",
     "author": "Nιƈσ",
@@ -3505,6 +3505,83 @@
       {
         "type": "plain",
         "text": "A new mirror system is now active:\n\nAll country mirrors (for example, in-mirror) will redirect:\n1. All users in the country to the closest mirror in that country\n2. All users in other countries to a random (persistent) mirror in that country (To prevent the mirrors on country borders getting overwhelmed)\nIf all mirrors in a country are unavailable, router will return an applicable error code\n\nGeo-mirror will keep working like normal.\n\nAll *specific* mirrors (for example br-1-mirror) will now no longer silently fail over to another mirror if offline (but will instead provide a generic applicable http error code)\n\nrandom-mirror will now redirect to a random (but persistent) mirror for each IP address.\n\nA new mirror list containing the changes has been deployed."
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 10,
+        "emoji": "❤"
+      }
+    ]
+  },
+  {
+    "id": 671,
+    "type": "message",
+    "date": "2026-04-03T13:32:41",
+    "date_unixtime": "1775215961",
+    "edited": "2026-04-03T13:39:29",
+    "edited_unixtime": "1775216369",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "text": [
+      "Some of you may have noticed, there are now many \"official\" mirrors available: ",
+      {
+        "type": "link",
+        "text": "https://aur.chaotic.cx/mirrors"
+      },
+      "\n\nThese ",
+      {
+        "type": "bold",
+        "text": "52"
+      },
+      " new mirrors are operated by the chaotic-aur operations team on donated servers, more than doubling chaotic-aur's previous mirror count.\n\nGetting all of these servers online has been a massive undertaking, but now we have better mirror coverage than ever before: ",
+      {
+        "type": "link",
+        "text": "https://status.chaotic.cx/map"
+      },
+      "\n\nThese have been added to the mirrorlist as well as geo-mirror. Enjoy!"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Some of you may have noticed, there are now many \"official\" mirrors available: "
+      },
+      {
+        "type": "link",
+        "text": "https://aur.chaotic.cx/mirrors"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nThese "
+      },
+      {
+        "type": "bold",
+        "text": "52"
+      },
+      {
+        "type": "plain",
+        "text": " new mirrors are operated by the chaotic-aur operations team on donated servers, more than doubling chaotic-aur's previous mirror count.\n\nGetting all of these servers online has been a massive undertaking, but now we have better mirror coverage than ever before: "
+      },
+      {
+        "type": "link",
+        "text": "https://status.chaotic.cx/map"
+      },
+      {
+        "type": "plain",
+        "text": "\n\nThese have been added to the mirrorlist as well as geo-mirror. Enjoy!"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 9,
+        "emoji": "🔥"
+      },
+      {
+        "type": "emoji",
+        "count": 3,
+        "emoji": "❤"
       }
     ]
   }
