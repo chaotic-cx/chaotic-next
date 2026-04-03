@@ -131,7 +131,7 @@
     "@schematics/angular": "21.2.6",
     "@swc-node/register": "1.11.1",
     "@swc/core": "1.15.21",
-    "@swc/helpers": "0.5.20",
+    "@swc/helpers": "0.5.21",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/auth0": "^3.3.11",
     "@types/bcrypt": "^6.0.0",
