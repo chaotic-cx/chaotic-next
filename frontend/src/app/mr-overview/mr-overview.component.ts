@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, untracked, computed } from '@angular/core';
 import { TitleComponent } from '../title/title.component';
 import { TableModule } from 'primeng/table';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
@@ -20,8 +20,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { MergeRequestWithDiffs } from '@./shared-lib';
 import { NotificationService } from '../notification/notification.service';
-import { NgClass } from '@angular/common';
+import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { Tooltip } from 'primeng/tooltip';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -38,7 +39,13 @@ import { Tooltip } from 'primeng/tooltip';
     Fieldset,
     Button,
     NgClass,
+    NgTemplateOutlet,
     Tooltip,
+    Tab,
+    TabList,
+    TabPanel,
+    TabPanels,
+    Tabs,
   ],
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
@@ -56,6 +63,13 @@ export class MrOverviewComponent implements OnInit {
     { label: 'Forget after closing tab', value: 'sessionStorage' },
     { label: 'Persist after closing tab', value: 'localStorage' },
   ];
+
+  protected readonly nvcheckerMrs = computed(() =>
+    this.mrOverviewService.mergeRequests().filter((mr) => mr.labels.includes('nvchecker')),
+  );
+  protected readonly packageMrs = computed(() =>
+    this.mrOverviewService.mergeRequests().filter((mr) => !mr.labels.includes('nvchecker')),
+  );
 
   constructor() {
     this.appService.chaoticEvent

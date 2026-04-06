@@ -18,8 +18,6 @@ export class MrOverviewService {
   readonly storage = signal<'sessionStorage' | 'localStorage'>('sessionStorage');
 
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
-  private readonly gitlabBaseUrl = 'https://gitlab.com/api/v4';
-  private readonly projectId = 54867625;
 
   private readonly http = inject(HttpClient);
   private readonly messageToastService = inject(MessageToastService);
@@ -84,7 +82,7 @@ export class MrOverviewService {
   }
 
   /**
-   * Approves a merge request via GitLab API.
+   * Approves a merge request via the backend.
    * @param mr The merge request to approve.
    */
   async approve(mr: MergeRequestWithDiffs) {
@@ -93,40 +91,14 @@ export class MrOverviewService {
     this.loadingMap.set(loadingMap);
 
     try {
-      const promises = [];
-      promises.push(
-        lastValueFrom(
-          this.http.post(
-            `${this.gitlabBaseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}/approve`,
-            {
-              sha: mr.sha,
-            },
-            {
-              headers: {
-                'PRIVATE-TOKEN': this.token(),
-              },
-            },
-          ),
-        ),
+      await lastValueFrom(
+        this.http.post(`${this.backendUrl}/gitlab/approve`, {
+          iid: mr.iid,
+          sha: mr.sha,
+          token: this.token(),
+        }),
       );
 
-      // Add 'approved' label if not already present, since GitLab does not expose the approvers via API.
-      // This will disable re-approvals and help track approved MRs.
-      const labels: string[] = (mr.labels as string[]) || [];
-      if (!labels.includes('approved')) {
-        labels.push('approved');
-        promises.push(
-          lastValueFrom(
-            this.http.put(
-              `${this.gitlabBaseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
-              { labels: labels.join(','), assignee_id: 20097372 },
-              { headers: { 'PRIVATE-TOKEN': this.token() } },
-            ),
-          ),
-        );
-      }
-
-      await Promise.all(promises);
       this.messageToastService.success(
         'Approval Successful',
         'Merge request approved successfully. The bot will auto-merge it soon.',
@@ -155,24 +127,8 @@ export class MrOverviewService {
    * @returns A promise that resolves to true if the token is valid, false otherwise.
    */
   async testTokenWrite(token: string): Promise<boolean> {
-    const url = `https://gitlab.com/api/v4/projects/${this.projectId}/labels`;
-    const labelName = `test-label-${Date.now()}`;
     try {
-      await lastValueFrom(
-        this.http.post(
-          url,
-          { name: labelName, color: '#4287f5' },
-          {
-            headers: { 'PRIVATE-TOKEN': token },
-          },
-        ),
-      );
-      await lastValueFrom(
-        this.http.delete(`${url}?name=${encodeURIComponent(labelName)}`, {
-          headers: { 'PRIVATE-TOKEN': token },
-        }),
-      );
-      return true;
+      return await lastValueFrom(this.http.post<boolean>(`${this.backendUrl}/gitlab/test-token`, { token }));
     } catch {
       return false;
     }
@@ -187,46 +143,29 @@ export class MrOverviewService {
     loadingMap.set(-mr.iid, true);
     this.loadingMap.set(loadingMap);
 
-    try {
-      const labels: string[] = (mr.labels as string[]) || [];
-      labels.push('dangerous');
-      this.http
-        .put(
-          `${this.gitlabBaseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
-          { labels: labels.join(',') },
-          { headers: { 'PRIVATE-TOKEN': this.token() } },
-        )
-        .subscribe({
-          next: () => {
-            this.messageToastService.success(
-              'Flagged as Dangerous',
-              'The merge request has been flagged as dangerous.',
-            );
-          },
-          error: (error) => {
-            this.messageToastService.error(
-              'Flagging Failed',
-              'Failed to flag the merge request as dangerous. Please try again later.',
-            );
-            console.error('Error flagging merge request as dangerous:', error);
-          },
-          complete: () => {
-            const finalLoadingMap = new Map(this.loadingMap());
-            finalLoadingMap.delete(-mr.iid);
-            this.loadingMap.set(finalLoadingMap);
-          },
-        });
-    } catch (error) {
-      this.messageToastService.error(
-        'Flagging Failed',
-        'Failed to flag the merge request as dangerous. Please try again later.',
-      );
-      console.error('Error flagging merge request as dangerous:', error);
-    } finally {
-      const finalLoadingMap = new Map(this.loadingMap());
-      finalLoadingMap.delete(-mr.iid);
-      this.loadingMap.set(finalLoadingMap);
-    }
+    this.http
+      .post(`${this.backendUrl}/gitlab/flag`, {
+        iid: mr.iid,
+        label: 'dangerous',
+        token: this.token(),
+      })
+      .subscribe({
+        next: () => {
+          this.messageToastService.success('Flagged as Dangerous', 'The merge request has been flagged as dangerous.');
+        },
+        error: (error) => {
+          this.messageToastService.error(
+            'Flagging Failed',
+            'Failed to flag the merge request as dangerous. Please try again later.',
+          );
+          console.error('Error flagging merge request as dangerous:', error);
+        },
+        complete: () => {
+          const finalLoadingMap = new Map(this.loadingMap());
+          finalLoadingMap.delete(-mr.iid);
+          this.loadingMap.set(finalLoadingMap);
+        },
+      });
   }
 
   /**
@@ -238,43 +177,29 @@ export class MrOverviewService {
     loadingMap.set(-mr.iid, true);
     this.loadingMap.set(loadingMap);
 
-    try {
-      const labels: string[] = (mr.labels as string[]) || [];
-      labels.push('hold');
-      this.http
-        .put(
-          `${this.gitlabBaseUrl}/projects/${this.projectId}/merge_requests/${mr.iid}`,
-          { labels: labels.join(',') },
-          { headers: { 'PRIVATE-TOKEN': this.token() } },
-        )
-        .subscribe({
-          next: () => {
-            this.messageToastService.success('Flagged as On Hold', 'The merge request has been flagged as on hold.');
-          },
-          error: (error) => {
-            this.messageToastService.error(
-              'Flagging Failed',
-              'Failed to flag the merge request as on hold. Please try again later.',
-            );
-            console.error('Error flagging merge request as on hold:', error);
-          },
-          complete: () => {
-            const finalLoadingMap = new Map(this.loadingMap());
-            finalLoadingMap.delete(-mr.iid);
-            this.loadingMap.set(finalLoadingMap);
-          },
-        });
-    } catch (error) {
-      this.messageToastService.error(
-        'Flagging Failed',
-        'Failed to flag the merge request as on hold. Please try again later.',
-      );
-      console.error('Error flagging merge request as on hold:', error);
-    } finally {
-      const finalLoadingMap = new Map(this.loadingMap());
-      finalLoadingMap.delete(-mr.iid);
-      this.loadingMap.set(finalLoadingMap);
-    }
+    this.http
+      .post(`${this.backendUrl}/gitlab/flag`, {
+        iid: mr.iid,
+        label: 'hold',
+        token: this.token(),
+      })
+      .subscribe({
+        next: () => {
+          this.messageToastService.success('Flagged as On Hold', 'The merge request has been flagged as on hold.');
+        },
+        error: (error) => {
+          this.messageToastService.error(
+            'Flagging Failed',
+            'Failed to flag the merge request as on hold. Please try again later.',
+          );
+          console.error('Error flagging merge request as on hold:', error);
+        },
+        complete: () => {
+          const finalLoadingMap = new Map(this.loadingMap());
+          finalLoadingMap.delete(-mr.iid);
+          this.loadingMap.set(finalLoadingMap);
+        },
+      });
   }
 
   /**

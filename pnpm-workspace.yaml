@@ -1,7 +1,5 @@
----
 packages:
   - libs
-
 onlyBuiltDependencies:
   - '@nestjs/core'
   - '@parcel/watcher'
