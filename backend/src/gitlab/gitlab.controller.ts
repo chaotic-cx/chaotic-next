@@ -3,7 +3,7 @@ import { Body, Controller, Get, Headers, Post, UnauthorizedException } from '@ne
 import { ConfigService } from '@nestjs/config';
 import { AllowAnonymous } from '../auth/anonymous.decorator';
 import { GitlabService } from './gitlab.service';
-import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { GitLabWebHook } from './interfaces';
 
 @ApiTags('gitlab')
@@ -62,52 +62,60 @@ export class GitlabController {
   @AllowAnonymous()
   @Post('approve')
   @ApiOperation({ summary: 'Approve a merge request.' })
+  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         iid: { type: 'number' },
         sha: { type: 'string' },
-        token: { type: 'string' },
       },
     },
   })
   @ApiOkResponse({ description: 'Merge request approved.' })
-  async approve(@Body() body: { iid: number; sha: string; token: string }): Promise<void> {
-    await this.gitlabService.approveMergeRequest(body.iid, body.sha, body.token);
+  async approve(
+    @Headers('X-Gitlab-Private-Token') token: string,
+    @Body() body: { iid: number; sha: string },
+  ): Promise<void> {
+    if (!token) {
+      throw new UnauthorizedException('GitLab private token is required');
+    }
+    await this.gitlabService.approveMergeRequest(body.iid, body.sha, token);
   }
 
   @AllowAnonymous()
   @Post('flag')
   @ApiOperation({ summary: 'Flag a merge request.' })
+  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         iid: { type: 'number' },
         label: { type: 'string' },
-        token: { type: 'string' },
       },
     },
   })
   @ApiOkResponse({ description: 'Merge request flagged.' })
-  async flag(@Body() body: { iid: number; label: string; token: string }): Promise<void> {
-    await this.gitlabService.flagMergeRequest(body.iid, body.label, body.token);
+  async flag(
+    @Headers('X-Gitlab-Private-Token') token: string,
+    @Body() body: { iid: number; label: string },
+  ): Promise<void> {
+    if (!token) {
+      throw new UnauthorizedException('GitLab private token is required');
+    }
+    await this.gitlabService.flagMergeRequest(body.iid, body.label, token);
   }
 
   @AllowAnonymous()
   @Post('test-token')
   @ApiOperation({ summary: 'Test a GitLab private token for write permissions.' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        token: { type: 'string' },
-      },
-    },
-  })
+  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
   @ApiOkResponse({ description: 'Token validation result', type: Boolean })
-  async testToken(@Body() body: { token: string }): Promise<boolean> {
-    return await this.gitlabService.testToken(body.token);
+  async testToken(@Headers('X-Gitlab-Private-Token') token: string): Promise<boolean> {
+    if (!token) {
+      throw new UnauthorizedException('GitLab private token is required');
+    }
+    return await this.gitlabService.testToken(token);
   }
 }

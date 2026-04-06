@@ -23,6 +23,15 @@ import { GitlabModule } from './gitlab/gitlab.module';
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || 'info',
+        redact: {
+          paths: [
+            'req.headers["x-gitlab-private-token"]',
+            'req.headers["x-gitlab-token"]',
+            'req.headers.authorization',
+            'req.headers.cookie',
+          ],
+          remove: true,
+        },
       },
       // By default, off, but can be enabled by setting HTTP_LOGGING=true
       forRoutes: process.env.HTTP_LOGGING === 'true' ? undefined : [],

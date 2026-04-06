@@ -81,13 +81,13 @@
                   if [[ "$(readlink "$SYMLINK_TARGET_PATH")" != "$SYMLINK_SOURCE_PATH" ]]; then
                     echo "treefmt-nix: Removing existing symlink"
                     unlink "$SYMLINK_TARGET_PATH"
-                  else
-                    exit 0
                   fi
                 fi
 
-                nix-store --add-root "$SYMLINK_TARGET_PATH" --indirect --realise "$SYMLINK_SOURCE_PATH"
-                echo "treefmt-nix: Created symlink successfully"
+                if [[ ! -L "$SYMLINK_TARGET_PATH" ]]; then
+                  nix-store --add-root "$SYMLINK_TARGET_PATH" --indirect --realise "$SYMLINK_SOURCE_PATH"
+                  echo "treefmt-nix: Created symlink successfully"
+                fi
               '';
             };
             env = [

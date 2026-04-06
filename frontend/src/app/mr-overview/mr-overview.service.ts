@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { lastValueFrom } from 'rxjs';
+import { finalize, lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { encrypt } from '../functions';
 
@@ -92,11 +92,18 @@ export class MrOverviewService {
 
     try {
       await lastValueFrom(
-        this.http.post(`${this.backendUrl}/gitlab/approve`, {
-          iid: mr.iid,
-          sha: mr.sha,
-          token: this.token(),
-        }),
+        this.http.post(
+          `${this.backendUrl}/gitlab/approve`,
+          {
+            iid: mr.iid,
+            sha: mr.sha,
+          },
+          {
+            headers: {
+              'X-Gitlab-Private-Token': this.token(),
+            },
+          },
+        ),
       );
 
       this.messageToastService.success(
@@ -128,7 +135,13 @@ export class MrOverviewService {
    */
   async testTokenWrite(token: string): Promise<boolean> {
     try {
-      return await lastValueFrom(this.http.post<boolean>(`${this.backendUrl}/gitlab/test-token`, { token }));
+      return await lastValueFrom(
+        this.http.post<boolean>(`${this.backendUrl}/gitlab/test-token`, null, {
+          headers: {
+            'X-Gitlab-Private-Token': token,
+          },
+        }),
+      );
     } catch {
       return false;
     }
@@ -144,11 +157,25 @@ export class MrOverviewService {
     this.loadingMap.set(loadingMap);
 
     this.http
-      .post(`${this.backendUrl}/gitlab/flag`, {
-        iid: mr.iid,
-        label: 'dangerous',
-        token: this.token(),
-      })
+      .post(
+        `${this.backendUrl}/gitlab/flag`,
+        {
+          iid: mr.iid,
+          label: 'dangerous',
+        },
+        {
+          headers: {
+            'X-Gitlab-Private-Token': this.token(),
+          },
+        },
+      )
+      .pipe(
+        finalize(() => {
+          const finalLoadingMap = new Map(this.loadingMap());
+          finalLoadingMap.delete(-mr.iid);
+          this.loadingMap.set(finalLoadingMap);
+        }),
+      )
       .subscribe({
         next: () => {
           this.messageToastService.success('Flagged as Dangerous', 'The merge request has been flagged as dangerous.');
@@ -159,11 +186,6 @@ export class MrOverviewService {
             'Failed to flag the merge request as dangerous. Please try again later.',
           );
           console.error('Error flagging merge request as dangerous:', error);
-        },
-        complete: () => {
-          const finalLoadingMap = new Map(this.loadingMap());
-          finalLoadingMap.delete(-mr.iid);
-          this.loadingMap.set(finalLoadingMap);
         },
       });
   }
@@ -178,11 +200,25 @@ export class MrOverviewService {
     this.loadingMap.set(loadingMap);
 
     this.http
-      .post(`${this.backendUrl}/gitlab/flag`, {
-        iid: mr.iid,
-        label: 'hold',
-        token: this.token(),
-      })
+      .post(
+        `${this.backendUrl}/gitlab/flag`,
+        {
+          iid: mr.iid,
+          label: 'hold',
+        },
+        {
+          headers: {
+            'X-Gitlab-Private-Token': this.token(),
+          },
+        },
+      )
+      .pipe(
+        finalize(() => {
+          const finalLoadingMap = new Map(this.loadingMap());
+          finalLoadingMap.delete(-mr.iid);
+          this.loadingMap.set(finalLoadingMap);
+        }),
+      )
       .subscribe({
         next: () => {
           this.messageToastService.success('Flagged as On Hold', 'The merge request has been flagged as on hold.');
@@ -193,11 +229,6 @@ export class MrOverviewService {
             'Failed to flag the merge request as on hold. Please try again later.',
           );
           console.error('Error flagging merge request as on hold:', error);
-        },
-        complete: () => {
-          const finalLoadingMap = new Map(this.loadingMap());
-          finalLoadingMap.delete(-mr.iid);
-          this.loadingMap.set(finalLoadingMap);
         },
       });
   }
