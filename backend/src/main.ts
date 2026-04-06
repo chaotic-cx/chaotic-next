@@ -32,7 +32,7 @@ async function bootstrap(): Promise<void> {
 
   const corsOptions = {
     origin: CAUR_ALLOWED_CORS,
-    methods: 'GET',
+    methods: 'GET,POST,PATCH',
   };
   app.enableCors(corsOptions);
 
