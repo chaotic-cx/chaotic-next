@@ -25,7 +25,9 @@
   min-width: 140px;
 }
 
-.p-tabpanels, .p-tablist, .p-fieldset {
+.p-tabpanels,
+.p-tablist,
+.p-fieldset {
   background: unset !important;
 }
 

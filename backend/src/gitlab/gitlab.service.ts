@@ -1,15 +1,15 @@
 import { MergeRequestWithDiffs, NotificationPayload, PipelineWithExternalStatus } from '@./shared-lib';
+import { MergeRequestSchema } from '@gitbeaker/core';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Mutex } from 'async-mutex';
+import { AES, enc } from 'crypto-js';
+import { readFile } from 'node:fs/promises';
+import { PushSubscription, sendNotification } from 'web-push';
 import { EventService } from '../events/event.service';
 import { MergeRequestWebhook, PipelineWebhook } from './interfaces';
-import { MergeRequestSchema } from '@gitbeaker/core';
-import { readFile } from 'node:fs/promises';
-import { AES, enc } from 'crypto-js';
-import { PushSubscription, sendNotification } from 'web-push';
-import { Mutex } from 'async-mutex';
 
 @Injectable()
 export class GitlabService {
@@ -212,7 +212,7 @@ export class GitlabService {
         this.configService.getOrThrow<string>('CAUR_DB_KEY'),
       ).toString(enc.Utf8);
 
-      const pkgs = newMr.map((mr) => mr.title.match(/^chore\(update\): ([\w@.+\-]+)$/)?.[1]).join(', ');
+      const pkgs = newMr.map((mr) => mr.title.match(/^chore\(update\): ([\w@.+-]+)$/)?.[1]).join(', ');
       Logger.log(`Notifying subscribers about new MRs: ${pkgs}`, 'GitlabService');
 
       const notificationPayload: NotificationPayload = {
@@ -268,5 +268,69 @@ export class GitlabService {
 
     void this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, reviewStats);
     return reviewStats;
+  }
+
+  /**
+   * Approves a merge request using the provided token.
+   * @param iid The merge request IID.
+   * @param sha The merge request SHA.
+   * @param token The GitLab private token.
+   */
+  async approveMergeRequest(iid: number, sha: string, token: string) {
+    const userApi = new Gitlab({ token });
+    await userApi.MergeRequestApprovals.approve(this.chaoticId, iid, { sha });
+
+    const mr = await userApi.MergeRequests.show(this.chaoticId, iid);
+    const labels = (mr.labels as string[]) || [];
+    if (!labels.includes('approved')) {
+      labels.push('approved');
+      await userApi.MergeRequests.edit(this.chaoticId, iid, {
+        labels: labels.join(','),
+        assigneeId: 20097372, // Marge Bot
+      });
+    }
+
+    await this.cacheManager.del(this.CACHE_KEY_MRS);
+    await this.cacheManager.del(this.CACHE_KEY_REVIEW_STATS);
+    void this.getOpenMergeRequests(true);
+  }
+
+  /**
+   * Flags a merge request with a given label using the provided token.
+   * @param iid The merge request IID.
+   * @param label The label to add ('dangerous' or 'hold').
+   * @param token The GitLab private token.
+   */
+  async flagMergeRequest(iid: number, label: string, token: string) {
+    const userApi = new Gitlab({ token });
+    const mr = await userApi.MergeRequests.show(this.chaoticId, iid);
+    const labels = (mr.labels as string[]) || [];
+
+    if (!labels.includes(label)) {
+      labels.push(label);
+      await userApi.MergeRequests.edit(this.chaoticId, iid, {
+        labels: labels.join(','),
+      });
+    }
+
+    await this.cacheManager.del(this.CACHE_KEY_MRS);
+    void this.getOpenMergeRequests(true);
+  }
+
+  /**
+   * Tests the provided GitLab private token for validity and write permissions.
+   * @param token The GitLab private token to test.
+   * @returns A promise that resolves to true if the token is valid, false otherwise.
+   */
+  async testToken(token: string): Promise<boolean> {
+    const userApi = new Gitlab({ token });
+    const labelName = `test-label-${Date.now()}`;
+    try {
+      await userApi.ProjectLabels.create(this.chaoticId, labelName, '#4287f5');
+      await userApi.ProjectLabels.remove(this.chaoticId, labelName);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
