@@ -162,6 +162,20 @@ body > app-root > chaotic-footer > div > p-card > div {
   @apply text-ctp-text;
 }
 
+.p-tab {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.p-tablist,
+.p-datatable-header {
+  border-radius: 12px 12px 0 0;
+}
+
+.p-tabpanels {
+  border-radius: 0 0 12px 12px;
+}
+
 .p-timeline-event-opposite {
   flex: unset !important;
   width: 120px !important;

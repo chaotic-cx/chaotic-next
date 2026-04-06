@@ -52,80 +52,93 @@
         <i class="text-ctp-maroon pi pi-verified mt-10" style="font-size: 5rem"></i>
       </p>
     } @else {
-      @for (mr of mrOverviewService.mergeRequests(); track mr.id; let i = $index) {
-        <p-panel class="mr-overview-panel" [ngClass]="i > 0 ? 'mt-5' : ''">
-          <ng-template #header>
-            <a class="cursor-pointer text-ctp-mauve" [href]="mr.web_url">{{
-              mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
-            }}</a>
-          </ng-template>
-
-          @if (mr.diffs && mr.diffs.length > 0) {
-            @for (change of mr.diffs; track change.new_path) {
-              <p-fieldset
-                class="text-left fieldset-responsive overflow-x-auto block mb-5"
-                [legend]="change.new_path.replace(mr.title + '/', '')"
-                [toggleable]="true"
-                [collapsed]="mrOverviewService.token() === ''"
-              >
-                <chaotic-diff-renderer [diff]="change.diff" />
-              </p-fieldset>
-            }
-          } @else {
-            <span class="text-ctp-text">No changes</span>
-          }
-
-          @if (mrOverviewService.token() !== '') {
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-10 md:justify-self-center">
-              <div class="w-full min-w-0">
-                <p-button
-                  [disabled]="mr.labels.includes('approved') || mr.labels.includes('dangerous')"
-                  [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve update'"
-                  [loading]="isLoading(mr, 'approve')"
-                  (onClick)="mrOverviewService.approve(mr)"
-                  icon="pi pi-check"
-                  severity="success"
-                  styleClass="w-50"
-                  pTooltip="Approve this merge request for auto-merge"
-                  tooltipPosition="top"
-                ></p-button>
-              </div>
-
-              <div class="w-full min-w-0">
-                <p-button
-                  [disabled]="
-                    mr.labels.includes('dangerous') || mr.labels.includes('approved') || mr.labels.includes('hold')
-                  "
-                  [label]="mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous'"
-                  [loading]="isLoading(mr, 'flag')"
-                  (onClick)="mrOverviewService.flagDangerous(mr)"
-                  icon="pi pi-exclamation-triangle"
-                  severity="danger"
-                  styleClass="w-50"
-                  pTooltip="Flag this merge request as dangerous and prevent auto-merge"
-                  tooltipPosition="top"
-                ></p-button>
-              </div>
-
-              <div class="w-full min-w-0">
-                <p-button
-                  [disabled]="
-                    mr.labels.includes('hold') || mr.labels.includes('dangerous') || mr.labels.includes('approved')
-                  "
-                  [label]="mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now'"
-                  [loading]="isLoading(mr, 'flag')"
-                  (onClick)="mrOverviewService.flagHold(mr)"
-                  icon="pi pi-pause"
-                  severity="warn"
-                  styleClass="w-50"
-                  pTooltip="Put this merge request on hold for later review"
-                  tooltipPosition="top"
-                ></p-button>
-              </div>
-            </div>
-          }
-        </p-panel>
-      }
+      <p-tabs value="0">
+        <p-tablist>
+          <p-tab value="0">AUR updates ({{ packageMrs().length }})</p-tab>
+          <p-tab value="1">Package updates ({{ nvcheckerMrs().length }})</p-tab>
+        </p-tablist>
+        <p-tabpanels>
+          <p-tabpanel value="0">
+            <ng-container *ngTemplateOutlet="mrList; context: { mrs: packageMrs() }"></ng-container>
+          </p-tabpanel>
+          <p-tabpanel value="1">
+            <ng-container *ngTemplateOutlet="mrList; context: { mrs: nvcheckerMrs() }"></ng-container>
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
     }
   </div>
 }
+
+<ng-template #mrList let-mrs="mrs">
+  @for (mr of mrs; track mr.id; let i = $index) {
+    <p-panel class="mr-overview-panel" [ngClass]="i > 0 ? 'mt-5' : ''">
+      <ng-template #header>
+        <a class="cursor-pointer text-ctp-mauve" [href]="mr.web_url">{{
+          mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
+        }}</a>
+      </ng-template>
+
+      @if (mr.diffs && mr.diffs.length > 0) {
+        @for (change of mr.diffs; track change.new_path) {
+          <p-fieldset
+            class="text-left fieldset-responsive overflow-x-auto block mb-5"
+            [legend]="change.new_path.replace(mr.title + '/', '')"
+            [toggleable]="true"
+            [collapsed]="mrOverviewService.token() === ''"
+          >
+            <chaotic-diff-renderer [diff]="change.diff" />
+          </p-fieldset>
+        }
+      } @else {
+        <span class="text-ctp-text">No changes</span>
+      }
+
+      @if (mrOverviewService.token() !== '') {
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-10 md:justify-self-center">
+          <div class="w-full min-w-0">
+            <p-button
+              [disabled]="mr.labels.includes('approved') || mr.labels.includes('dangerous')"
+              [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve update'"
+              [loading]="isLoading(mr, 'approve')"
+              (onClick)="mrOverviewService.approve(mr)"
+              icon="pi pi-check"
+              severity="success"
+              styleClass="w-50"
+              pTooltip="Approve this merge request for auto-merge"
+              tooltipPosition="top"
+            ></p-button>
+          </div>
+
+          <div class="w-full min-w-0">
+            <p-button
+              [disabled]="mr.labels.includes('dangerous') || mr.labels.includes('approved') || mr.labels.includes('hold')"
+              [label]="mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous'"
+              [loading]="isLoading(mr, 'flag')"
+              (onClick)="mrOverviewService.flagDangerous(mr)"
+              icon="pi pi-exclamation-triangle"
+              severity="danger"
+              styleClass="w-50"
+              pTooltip="Flag this merge request as dangerous and prevent auto-merge"
+              tooltipPosition="top"
+            ></p-button>
+          </div>
+
+          <div class="w-full min-w-0">
+            <p-button
+              [disabled]="mr.labels.includes('hold') || mr.labels.includes('dangerous') || mr.labels.includes('approved')"
+              [label]="mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now'"
+              [loading]="isLoading(mr, 'flag')"
+              (onClick)="mrOverviewService.flagHold(mr)"
+              icon="pi pi-pause"
+              severity="warn"
+              styleClass="w-50"
+              pTooltip="Put this merge request on hold for later review"
+              tooltipPosition="top"
+            ></p-button>
+          </div>
+        </div>
+      }
+    </p-panel>
+  }
+</ng-template>
