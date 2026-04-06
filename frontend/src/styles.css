@@ -176,12 +176,6 @@ body > app-root > chaotic-footer > div > p-card > div {
   border-radius: 0 0 12px 12px;
 }
 
-
-chaotic-mr-overview > div > p-tabs > p-tablist > div > .p-tablist-tab-list {
-  border-width: unset !important;
-}
-
-
 .p-timeline-event-opposite {
   flex: unset !important;
   width: 120px !important;

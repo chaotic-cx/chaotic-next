@@ -58,4 +58,56 @@ export class GitlabController {
   async getReviewStats() {
     return await this.gitlabService.getReviewStats();
   }
+
+  @AllowAnonymous()
+  @Post('approve')
+  @ApiOperation({ summary: 'Approve a merge request.' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        iid: { type: 'number' },
+        sha: { type: 'string' },
+        token: { type: 'string' },
+      },
+    },
+  })
+  @ApiOkResponse({ description: 'Merge request approved.' })
+  async approve(@Body() body: { iid: number; sha: string; token: string }): Promise<void> {
+    await this.gitlabService.approveMergeRequest(body.iid, body.sha, body.token);
+  }
+
+  @AllowAnonymous()
+  @Post('flag')
+  @ApiOperation({ summary: 'Flag a merge request.' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        iid: { type: 'number' },
+        label: { type: 'string' },
+        token: { type: 'string' },
+      },
+    },
+  })
+  @ApiOkResponse({ description: 'Merge request flagged.' })
+  async flag(@Body() body: { iid: number; label: string; token: string }): Promise<void> {
+    await this.gitlabService.flagMergeRequest(body.iid, body.label, body.token);
+  }
+
+  @AllowAnonymous()
+  @Post('test-token')
+  @ApiOperation({ summary: 'Test a GitLab private token for write permissions.' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        token: { type: 'string' },
+      },
+    },
+  })
+  @ApiOkResponse({ description: 'Token validation result', type: Boolean })
+  async testToken(@Body() body: { token: string }): Promise<boolean> {
+    return await this.gitlabService.testToken(body.token);
+  }
 }

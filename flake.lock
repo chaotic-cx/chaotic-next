@@ -32,28 +32,32 @@
         "type": "github"
       }
     },
-    "flake-parts": {
+    "git-hooks": {
       "inputs": {
-        "nixpkgs-lib": "nixpkgs-lib"
+        "flake-compat": "flake-compat",
+        "gitignore": "gitignore",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
-        "lastModified": 1769996383,
-        "narHash": "sha256-AnYjnFWgS49RlqX7LrC4uA+sCCDBj0Ry/WOJ5XWAsa0=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "57928607ea566b5db3ad13af0e57e921e6b12381",
+        "lastModified": 1775036584,
+        "narHash": "sha256-zW0lyy7ZNNT/x8JhzFHBsP2IPx7ATZIPai4FJj12BgU=",
+        "owner": "cachix",
+        "repo": "git-hooks.nix",
+        "rev": "4e0eb042b67d863b1b34b3f64d52ceb9cd926735",
         "type": "github"
       },
       "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
+        "owner": "cachix",
+        "repo": "git-hooks.nix",
         "type": "github"
       }
     },
     "gitignore": {
       "inputs": {
         "nixpkgs": [
-          "pre-commit-hooks",
+          "git-hooks",
           "nixpkgs"
         ]
       },
@@ -87,49 +91,48 @@
         "type": "github"
       }
     },
-    "nixpkgs-lib": {
+    "root": {
+      "inputs": {
+        "devshell": "devshell",
+        "git-hooks": "git-hooks",
+        "nixpkgs": "nixpkgs",
+        "systems": "systems",
+        "treefmt-nix": "treefmt-nix"
+      }
+    },
+    "systems": {
       "locked": {
-        "lastModified": 1769909678,
-        "narHash": "sha256-cBEymOf4/o3FD5AZnzC3J9hLbiZ+QDT/KDuyHXVJOpM=",
-        "owner": "nix-community",
-        "repo": "nixpkgs.lib",
-        "rev": "72716169fe93074c333e8d0173151350670b824c",
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
         "type": "github"
       },
       "original": {
-        "owner": "nix-community",
-        "repo": "nixpkgs.lib",
+        "owner": "nix-systems",
+        "repo": "default",
         "type": "github"
       }
     },
-    "pre-commit-hooks": {
+    "treefmt-nix": {
       "inputs": {
-        "flake-compat": "flake-compat",
-        "gitignore": "gitignore",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1770726378,
-        "narHash": "sha256-kck+vIbGOaM/dHea7aTBxdFYpeUl/jHOy5W3eyRvVx8=",
-        "owner": "cachix",
-        "repo": "pre-commit-hooks.nix",
-        "rev": "5eaaedde414f6eb1aea8b8525c466dc37bba95ae",
+        "lastModified": 1775125835,
+        "narHash": "sha256-2qYcPgzFhnQWchHo0SlqLHrXpux5i6ay6UHA+v2iH4U=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "75925962939880974e3ab417879daffcba36c4a3",
         "type": "github"
       },
       "original": {
-        "owner": "cachix",
-        "repo": "pre-commit-hooks.nix",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
         "type": "github"
-      }
-    },
-    "root": {
-      "inputs": {
-        "devshell": "devshell",
-        "flake-parts": "flake-parts",
-        "nixpkgs": "nixpkgs",
-        "pre-commit-hooks": "pre-commit-hooks"
       }
     }
   },
