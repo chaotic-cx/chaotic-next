@@ -61,7 +61,7 @@ importers:
         version: 43.8.0
       '@nestjs/axios':
         specifier: ^4.0.1
-        version: 4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.14.0(debug@4.4.3))(rxjs@7.8.2)
+        version: 4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.15.0(debug@4.4.3))(rxjs@7.8.2)
       '@nestjs/cache-manager':
         specifier: ^3.1.0
         version: 3.1.0(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(cache-manager@7.2.8)(keyv@5.6.0)(rxjs@7.8.2)
@@ -91,7 +91,7 @@ importers:
         version: 11.2.6(@fastify/static@9.0.0)(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)
       '@nestjs/terminus':
         specifier: ^11.1.1
-        version: 11.1.1(@nestjs/axios@4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.14.0(debug@4.4.3))(rxjs@7.8.2))(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/typeorm@11.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3))))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3)))
+        version: 11.1.1(@nestjs/axios@4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.15.0(debug@4.4.3))(rxjs@7.8.2))(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/typeorm@11.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3))))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3)))
       '@nestjs/throttler':
         specifier: ^6.5.0
         version: 6.5.0(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)
@@ -109,7 +109,7 @@ importers:
         version: 0.5.0
       axios:
         specifier: ^1.14.0
-        version: 1.14.0(debug@4.4.3)
+        version: 1.15.0(debug@4.4.3)
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -5144,9 +5144,6 @@ packages:
   axios@1.13.5:
     resolution: {integrity: sha512-cz4ur7Vb0xS4/KUN0tPWe44eqxrIu31me+fbang3ijiNscE129POzipJJA6zniq2C/Z6sJCjMimjS8Lc/GAs8Q==}
 
-  axios@1.14.0:
-    resolution: {integrity: sha512-3Y8yrqLSwjuzpXuZ0oIYZ/XGgLwUIBU3uLvbcpb0pidD9ctpShJd43KSlEEkVQg6DS0G9NKyzOvBfUtDKEyHvQ==}
-
   axios@1.15.0:
     resolution: {integrity: sha512-wWyJDlAatxk30ZJer+GeCWS209sA42X+N5jU2jy6oHTp7ufw8uzUTVFBX9+wTfAlhiJXGS0Bq7X6efruWjuK9Q==}
 
@@ -6421,8 +6418,8 @@ packages:
   flatted@3.4.2:
     resolution: {integrity: sha512-PjDse7RzhcPkIJwy5t7KPWQSZ9cAbzQXcafsetQoD7sOJRQlGikNbx7yZp2OotDnJyrDcbyRq3Ttb18iYOqkxA==}
 
-  follow-redirects@1.15.11:
-    resolution: {integrity: sha512-deG2P0JfjrTxl50XGCDyfI97ZGVCxIpfKYmfyrQ54n5FO/0gfIES8C/Psl6kWVDolizcaaxZJnTS0QSMxvnsBQ==}
+  follow-redirects@1.16.0:
+    resolution: {integrity: sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -13431,10 +13428,10 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@nestjs/axios@4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.14.0(debug@4.4.3))(rxjs@7.8.2)':
+  '@nestjs/axios@4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.15.0(debug@4.4.3))(rxjs@7.8.2)':
     dependencies:
       '@nestjs/common': 11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      axios: 1.14.0(debug@4.4.3)
+      axios: 1.15.0(debug@4.4.3)
       rxjs: 7.8.2
 
   '@nestjs/cache-manager@3.1.0(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(cache-manager@7.2.8)(keyv@5.6.0)(rxjs@7.8.2)':
@@ -13569,7 +13566,7 @@ snapshots:
     optionalDependencies:
       '@fastify/static': 9.0.0
 
-  '@nestjs/terminus@11.1.1(@nestjs/axios@4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.14.0(debug@4.4.3))(rxjs@7.8.2))(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/typeorm@11.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3))))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3)))':
+  '@nestjs/terminus@11.1.1(@nestjs/axios@4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.15.0(debug@4.4.3))(rxjs@7.8.2))(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/typeorm@11.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3))))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3)))':
     dependencies:
       '@nestjs/common': 11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -13578,7 +13575,7 @@ snapshots:
       reflect-metadata: 0.2.2
       rxjs: 7.8.2
     optionalDependencies:
-      '@nestjs/axios': 4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.14.0(debug@4.4.3))(rxjs@7.8.2)
+      '@nestjs/axios': 4.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.15.0(debug@4.4.3))(rxjs@7.8.2)
       '@nestjs/typeorm': 11.0.1(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3)))
       typeorm: 0.3.28(babel-plugin-macros@3.1.0)(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@swc/core@1.15.26(@swc/helpers@0.5.21))(@types/node@25.5.2)(typescript@5.9.3))
 
@@ -15964,23 +15961,15 @@ snapshots:
 
   axios@1.13.5(debug@4.4.3):
     dependencies:
-      follow-redirects: 1.15.11(debug@4.4.3)
+      follow-redirects: 1.16.0(debug@4.4.3)
       form-data: 4.0.5
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
       - debug
 
-  axios@1.14.0(debug@4.4.3):
-    dependencies:
-      follow-redirects: 1.15.11(debug@4.4.3)
-      form-data: 4.0.5
-      proxy-from-env: 2.1.0
-    transitivePeerDependencies:
-      - debug
-
   axios@1.15.0(debug@4.4.3):
     dependencies:
-      follow-redirects: 1.15.11(debug@4.4.3)
+      follow-redirects: 1.16.0(debug@4.4.3)
       form-data: 4.0.5
       proxy-from-env: 2.1.0
     transitivePeerDependencies:
@@ -17467,7 +17456,7 @@ snapshots:
 
   flatted@3.4.2: {}
 
-  follow-redirects@1.15.11(debug@4.4.3):
+  follow-redirects@1.16.0(debug@4.4.3):
     optionalDependencies:
       debug: 4.4.3
 
@@ -17797,7 +17786,7 @@ snapshots:
   http-proxy@1.18.1(debug@4.4.3):
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.11(debug@4.4.3)
+      follow-redirects: 1.16.0(debug@4.4.3)
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -19248,7 +19237,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.14.0(debug@4.4.3)
+      axios: 1.15.0(debug@4.4.3)
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
       cliui: 8.0.1
