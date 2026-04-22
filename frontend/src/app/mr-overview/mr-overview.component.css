@@ -34,3 +34,15 @@
 .p-panel {
   border: unset !important;
 }
+
+.p-panel-content {
+  padding: unset !important;
+}
+
+::ng-deep .p-tablist-tab-list {
+  border: none !important;
+}
+
+::ng-deep .p-tab-active {
+  border-bottom: 2px solid currentColor !important;
+}
