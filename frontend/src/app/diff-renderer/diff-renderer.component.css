@@ -4,6 +4,8 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   border-radius: 0.25rem;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 pre {
@@ -24,8 +26,8 @@ div {
   text-indent: -1ch;
   padding-left: 1ch;
   padding-right: 1ch;
-  width: max-content;
-  min-width: 100%;
+  width: fit-content;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
