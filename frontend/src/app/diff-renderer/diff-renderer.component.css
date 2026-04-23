@@ -9,13 +9,15 @@
 }
 
 pre {
-  @apply m-0 overflow-x-auto p-0.5;
+  @apply m-0 p-0.5;
   line-height: 1;
   font-size: 0;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 code {
-  @apply block whitespace-pre-wrap;
+  @apply block;
 }
 
 div {
@@ -23,11 +25,11 @@ div {
   line-height: 1;
   font-size: 0.75rem;
   white-space: pre-wrap;
+  word-break: break-all;
   text-indent: -1ch;
   padding-left: 1ch;
   padding-right: 1ch;
-  width: fit-content;
-  max-width: 100%;
+  width: 100%;
   box-sizing: border-box;
 }
 
