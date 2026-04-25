@@ -296,13 +296,13 @@ importers:
         version: 22.6.5(@swc-node/register@1.11.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@swc/core@1.15.30(@swc/helpers@0.5.21))(@swc/types@0.1.26)(typescript@5.9.3))(@swc/core@1.15.30(@swc/helpers@0.5.21))(debug@4.4.3)
       '@rspack/cli':
         specifier: ^2.0.0
-        version: 2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(@rspack/dev-server@2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0))
+        version: 2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(@rspack/dev-server@2.0.1(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0))
       '@rspack/core':
         specifier: ^2.0.0
         version: 2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21)
       '@rspack/dev-server':
         specifier: ^2.0.0
-        version: 2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0)
+        version: 2.0.1(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0)
       '@rspack/plugin-react-refresh':
         specifier: ^2.0.0
         version: 2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(react-refresh@0.18.0)
@@ -4141,8 +4141,8 @@ packages:
     peerDependencies:
       '@rspack/core': '*'
 
-  '@rspack/dev-server@2.0.0':
-    resolution: {integrity: sha512-bSdIlt8Nq1Q2K0Gv+AMmETMKsLjEgTtL8DNlDtSe14cdtBrF0Z8kfpKUpgUKb5i0O7CZ5pmPzVwHZIEqMrCJNQ==}
+  '@rspack/dev-server@2.0.1':
+    resolution: {integrity: sha512-N5sIdU9v6WhwPH6Ek8QCj4IMvGd8jA3ZW1NMAyHP1ezzKIr2/idcNV2zX5vbC6FJvOLRLww0rFjfKA+z4tshDA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       '@rspack/core': ^2.0.0-0
@@ -14431,11 +14431,11 @@ snapshots:
       '@rspack/binding-win32-ia32-msvc': 2.0.0
       '@rspack/binding-win32-x64-msvc': 2.0.0
 
-  '@rspack/cli@2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(@rspack/dev-server@2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0))':
+  '@rspack/cli@2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(@rspack/dev-server@2.0.1(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0))':
     dependencies:
       '@rspack/core': 2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21)
     optionalDependencies:
-      '@rspack/dev-server': 2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0)
+      '@rspack/dev-server': 2.0.1(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0)
 
   '@rspack/core@1.6.8(@swc/helpers@0.5.21)':
     dependencies:
@@ -14495,7 +14495,7 @@ snapshots:
       - utf-8-validate
       - webpack
 
-  '@rspack/dev-server@2.0.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0)':
+  '@rspack/dev-server@2.0.1(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))(selfsigned@5.5.0)':
     dependencies:
       '@rspack/core': 2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21)
       '@rspack/dev-middleware': 2.0.1(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3(node-fetch@2.7.0(encoding@0.1.13)))(@swc/helpers@0.5.21))
