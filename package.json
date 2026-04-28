@@ -164,7 +164,7 @@
     "postcss": "8.5.12",
     "prettier": "^3.8.3",
     "prettier-plugin-organize-attributes": "^1.0.0",
-    "prettier-plugin-tailwindcss": "^0.7.2",
+    "prettier-plugin-tailwindcss": "^0.8.0",
     "react-refresh": "~0.18.0",
     "run-script-webpack-plugin": "^0.2.3",
     "tailwindcss": "^4.2.4",
