@@ -108,7 +108,7 @@
     "@catppuccin/palette": "^2.0.0-beta.1",
     "@catppuccin/tailwindcss": "^1.0.0",
     "@eslint/eslintrc": "^3.3.5",
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^10.0.0",
     "@nestjs/cli": "^11.0.21",
     "@nestjs/schematics": "11.1.0",
     "@nestjs/testing": "^11.1.19",
