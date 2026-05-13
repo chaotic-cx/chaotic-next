@@ -128,7 +128,7 @@
     "@rspack/core": "^2.0.0",
     "@rspack/dev-server": "^2.0.0",
     "@rspack/plugin-react-refresh": "^2.0.0",
-    "@schematics/angular": "21.2.10",
+    "@schematics/angular": "21.2.11",
     "@swc-node/register": "1.11.1",
     "@swc/core": "1.15.33",
     "@swc/helpers": "0.5.21",
