@@ -310,6 +310,8 @@ export class GitlabService {
       labels.push(label);
       await userApi.MergeRequests.edit(this.chaoticId, iid, {
         labels: labels.join(','),
+        // Close right away when dangerous
+        stateEvent: labels.includes('dangerous') ? 'close' : undefined,
       });
     }
 
