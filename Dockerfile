@@ -1,4 +1,4 @@
-FROM node:25-alpine3.22 AS builder
+FROM node:26-alpine3.24 AS builder
 
 WORKDIR /build
 COPY . /build
@@ -21,18 +21,18 @@ WORKDIR /build/dist/backend
 RUN pnpm install --prod && \
     pnpm install pino-pretty
 
-FROM node:25-alpine3.22
+FROM node:26-alpine3.24
 
-# renovate: datasource=repology depName=alpine_3_22/autossh
+# renovate: datasource=repology depName=alpine_3_24/autossh
 ENV AUTOSSH_VERSION="1.4g-r3"
-# renovate: datasource=repology depName=alpine_3_22/curl
-ENV CURL_VERSION="8.14.1-r2"
-# renovate: datasource=repology depName=alpine_3_22/zstd
-ENV ZSTD_VERSION="1.5.7-r0"
-# renovate: datasource=repology depName=alpine_3_22/bash
-ENV BASH_VERSION="5.2.37-r0"
-# renovate: datasource=repology depName=alpine_3_22/tar
-ENV TAR_VERSION="1.35-r3"
+# renovate: datasource=repology depName=alpine_3_24/curl
+ENV CURL_VERSION="8.20.0-r1"
+# renovate: datasource=repology depName=alpine_3_24/zstd
+ENV ZSTD_VERSION="1.5.7-r2"
+# renovate: datasource=repology depName=alpine_3_24/bash
+ENV BASH_VERSION="5.3.9-r1"
+# renovate: datasource=repology depName=alpine_3_24/tar
+ENV TAR_VERSION="1.35-r5"
 
 # Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
