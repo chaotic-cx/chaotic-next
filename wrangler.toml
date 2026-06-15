@@ -15,4 +15,5 @@ compatibility_date = "2024-09-02"
 mode = "smart"
 
 [env.production.vars]
-NODE_VERSION = "23.2.0"
+NODE_VERSION = "24"
+PNPM_VERSION = "11"
