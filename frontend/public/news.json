@@ -3584,5 +3584,121 @@
         "emoji": "❤"
       }
     ]
+  },
+  {
+    "id": 672,
+    "type": "message",
+    "date": "2026-06-11T22:07:39",
+    "date_unixtime": "1781208459",
+    "edited": "2026-06-12T15:09:53",
+    "edited_unixtime": "1781269793",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": [
+      "Just as a heads-up, we are aware of the wave of ",
+      {
+        "type": "text_link",
+        "text": "current injections of malicious content in AUR packages",
+        "href": "https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/FGXPCB3ZVCJIV7FX323SBAX2JHYB7ZS4/"
+      },
+      ".\n\nOur security measures are working perfectly so far and have already ",
+      {
+        "type": "text_link",
+        "text": "prevented a few of them from getting deployed",
+        "href": "https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests/?sort=created_date&state=all&label_name%5B%5D=dangerous&first_page_size=20"
+      },
+      ".\n\nPlease be extra careful when updating packages directly from AUR in the coming days! Especially watch out for the addition of an ",
+      {
+        "type": "code",
+        "text": "npm"
+      },
+      " or ",
+      {
+        "type": "code",
+        "text": "bun"
+      },
+      " dependency and an additional ",
+      {
+        "type": "code",
+        "text": ".install"
+      },
+      " script in PKGBUILDs."
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "Just as a heads-up, we are aware of the wave of "
+      },
+      {
+        "type": "text_link",
+        "text": "current injections of malicious content in AUR packages",
+        "href": "https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/FGXPCB3ZVCJIV7FX323SBAX2JHYB7ZS4/"
+      },
+      {
+        "type": "plain",
+        "text": ".\n\nOur security measures are working perfectly so far and have already "
+      },
+      {
+        "type": "text_link",
+        "text": "prevented a few of them from getting deployed",
+        "href": "https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests/?sort=created_date&state=all&label_name%5B%5D=dangerous&first_page_size=20"
+      },
+      {
+        "type": "plain",
+        "text": ".\n\nPlease be extra careful when updating packages directly from AUR in the coming days! Especially watch out for the addition of an "
+      },
+      {
+        "type": "code",
+        "text": "npm"
+      },
+      {
+        "type": "plain",
+        "text": " or "
+      },
+      {
+        "type": "code",
+        "text": "bun"
+      },
+      {
+        "type": "plain",
+        "text": " dependency and an additional "
+      },
+      {
+        "type": "code",
+        "text": ".install"
+      },
+      {
+        "type": "plain",
+        "text": " script in PKGBUILDs."
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 25,
+        "emoji": "👍"
+      },
+      {
+        "type": "emoji",
+        "count": 8,
+        "emoji": "👏"
+      },
+      {
+        "type": "emoji",
+        "count": 4,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 2,
+        "emoji": "🤝"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "🫡"
+      }
+    ]
   }
 ]
