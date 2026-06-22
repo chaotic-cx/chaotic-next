@@ -1,3 +1,4 @@
+import type { ParsedPackageMetadata } from '@./shared-lib';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -32,7 +33,6 @@ import {
   RepoWorkDir,
   TriggerType,
 } from '../interfaces/repo-manager';
-import type { ParsedPackageMetadata } from '@./shared-lib';
 import {
   ArchlinuxPackage,
   archPkgExists,
@@ -280,7 +280,9 @@ export class RepoManagerService {
     const logEntries: PackageBump[] = await this.packageBumpRepository.find({
       take: options.amount,
       skip: options.skip,
-      relations: ['pkg'],
+      relations: {
+        pkg: true,
+      },
     });
 
     for (const logEntry of logEntries) {
@@ -796,7 +798,9 @@ class RepoManager {
     const packageBumpsLastDay: PackageBump[] = await this.dbConnections.packageBump.find({
       where: { timestamp: MoreThanOrEqual(date) },
       order: { timestamp: 'DESC' },
-      relations: ['pkg'],
+      relations: {
+        pkg: true,
+      },
     });
 
     Logger.log(`Found ${packageBumpsLastDay.length} bumps in the last ${daysInPast} day(s)`, 'RepoManager');
@@ -964,7 +968,9 @@ class RepoManager {
     // packages that are not in the Chaotic-AUR database anymore.
     Logger.debug('Setting non-existing packages to inactive...', 'RepoManager');
     const allChaoticVersionsInDb: Package[] = await this.dbConnections.packages.find({
-      relations: ['repo'],
+      relations: {
+        repo: true,
+      },
     });
     for (const pkg of allChaoticVersionsInDb) {
       if (
