@@ -38,7 +38,7 @@
 
   <div class="flex justify-center my-10">
     <a href="https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/new" target="_blank" rel="noopener">
-      <p-button label="Package Maintenance" icon="pi pi-box" severity="secondary"></p-button>
+      <p-button label="Package Maintenance" icon="pi pi-box" severity="secondary" autofocus></p-button>
     </a>
   </div>
 
@@ -112,7 +112,9 @@
 
           <div class="w-full min-w-0">
             <p-button
-              [disabled]="mr.labels.includes('dangerous') || mr.labels.includes('approved') || mr.labels.includes('hold')"
+              [disabled]="
+                mr.labels.includes('dangerous') || mr.labels.includes('approved') || mr.labels.includes('hold')
+              "
               [label]="mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous'"
               [loading]="isLoading(mr, 'flag')"
               (onClick)="mrOverviewService.flagDangerous(mr)"
@@ -126,7 +128,9 @@
 
           <div class="w-full min-w-0">
             <p-button
-              [disabled]="mr.labels.includes('hold') || mr.labels.includes('dangerous') || mr.labels.includes('approved')"
+              [disabled]="
+                mr.labels.includes('hold') || mr.labels.includes('dangerous') || mr.labels.includes('approved')
+              "
               [label]="mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now'"
               [loading]="isLoading(mr, 'flag')"
               (onClick)="mrOverviewService.flagHold(mr)"
