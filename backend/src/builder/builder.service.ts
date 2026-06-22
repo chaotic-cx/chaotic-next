@@ -1,17 +1,17 @@
+import { ChaoticEvent, MoleculerCurrentQueueObject } from '@./shared-lib';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import IORedis from 'ioredis';
 import { type Context, Service, ServiceBroker } from 'moleculer';
+import { Subject } from 'rxjs';
 import { IsNull, Not, Repository } from 'typeorm';
+import { EventService } from '../events/event.service';
 import { generateNodeId, nDaysInPast } from '../functions';
+import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { BuilderDbConnections, BuildStatus, MoleculerBuildObject } from '../types';
 import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from './builder.entity';
 import { brokerConfig, MoleculerConfigCommonService } from './moleculer.config';
-import { RepoManagerService } from '../repo-manager/repo-manager.service';
-import { Subject } from 'rxjs';
-import { EventService } from '../events/event.service';
-import { ChaoticEvent, MoleculerCurrentQueueObject } from '@./shared-lib';
 
 @Injectable()
 export class BuilderService {
@@ -83,7 +83,11 @@ export class BuilderService {
     return this.packageRepository.find({
       cache: { id: 'packages-general', milliseconds: 30000 },
       loadRelationIds: true,
-      relations: options.repo ? ['repo'] : [],
+      relations: options.repo
+        ? {
+            repo: true,
+          }
+        : undefined,
       // Null would be packages requested via the router, which are not in the repository database
       where: { version: Not(IsNull()), isActive: true },
       order: { pkgname: 'ASC' },

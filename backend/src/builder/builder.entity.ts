@@ -1,3 +1,4 @@
+import type { ParsedPackageMetadata } from '@./shared-lib';
 import { Logger } from '@nestjs/common';
 import { Mutex } from 'async-mutex';
 import {
@@ -11,9 +12,8 @@ import {
   PrimaryGeneratedColumn,
   type Repository,
 } from 'typeorm';
-import { BuildStatus } from '../types';
 import { NamcapAnalysis, RepoStatus } from '../interfaces/repo-manager';
-import type { ParsedPackageMetadata } from '@./shared-lib';
+import { BuildStatus } from '../types';
 
 @Entity()
 export class Builder {
@@ -160,7 +160,12 @@ const repoMutex = new Mutex();
 export async function pkgnameExists(pkgname: string, connection: Repository<Package>, repo: Repo): Promise<Package> {
   return pkgnameMutex.runExclusive(async () => {
     try {
-      const packages: Package[] = await connection.find({ where: { pkgname }, relations: ['repo'] });
+      const packages: Package[] = await connection.find({
+        where: { pkgname },
+        relations: {
+          repo: true,
+        },
+      });
       let packageExists: Package = packages.find((pkg) => {
         return pkg.repo?.name === repo.name;
       });
