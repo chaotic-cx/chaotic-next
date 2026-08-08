@@ -1,22 +1,23 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwPush } from '@angular/service-worker';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 
 @Service()
 export class NotificationService {
-  notificationsEnabled = signal<boolean>(false);
-
   private readonly appConfig = inject(APP_CONFIG);
   private readonly swPush = inject(SwPush);
   private readonly http = inject(HttpClient);
+
+  readonly notificationsEnabled = signal<boolean>(false);
 
   constructor() {
     const storedPreference = localStorage.getItem('notifications-subscribed');
     this.notificationsEnabled.set(Notification.permission === 'granted' && storedPreference === 'true');
 
-    this.swPush.notificationClicks.subscribe(({ action, notification }) => {
+    this.swPush.notificationClicks.pipe(takeUntilDestroyed()).subscribe(({ action, notification }) => {
       console.log('Notification clicked', action, notification);
       if (notification.data && notification.data.url) {
         window.open(notification.data.url);

@@ -9,6 +9,7 @@
     "build": {
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/frontend",
         "index": "frontend/src/index.html",
@@ -53,11 +54,12 @@
           "extractLicenses": false,
           "sourceMap": true
         }
-      },
-      "defaultConfiguration": "production"
+      }
     },
     "serve": {
       "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "continuous": true,
       "configurations": {
         "production": {
           "buildTarget": "frontend:build:production"
@@ -66,12 +68,7 @@
           "buildTarget": "frontend:build:development",
           "port": 4201
         }
-      },
-      "defaultConfiguration": "development",
-      "continuous": true
-    },
-    "lint": {
-      "executor": "@nx/eslint:lint"
+      }
     },
     "serve-static": {
       "executor": "@nx/web:file-server",

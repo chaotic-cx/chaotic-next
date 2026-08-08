@@ -1,12 +1,12 @@
 import { BuildStatus } from '@./shared-lib';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
-import { CatppuccinFlavors } from '../theme';
+import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-average-build-time',
@@ -16,11 +16,11 @@ import { CatppuccinFlavors } from '../theme';
   providers: [MessageToastService],
 })
 export class ChartAverageBuildTimeComponent implements OnInit {
-  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
-  readonly loading = signal(true);
-
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
+
+  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
+  readonly loading = signal(true);
 
   ngOnInit(): void {
     this.getAverageBuildTimePerStatus();
@@ -64,7 +64,7 @@ export class ChartAverageBuildTimeComponent implements OnInit {
           {
             data: values,
             label: 'Average build time (seconds)',
-            backgroundColor: shuffleArray(CatppuccinFlavors),
+            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
           },
         ],
       },

@@ -7,6 +7,8 @@
         [style]="isWide() ? 'width: 360px' : 'width: 80%'"
         (click)="openApplet()"
         (keyup)="openApplet()"
+        tabindex="0"
+        role="button"
         ngSrc="/assets/logo.svg"
         alt="logo"
         width="741"
@@ -25,8 +27,7 @@
           rounded
           pTooltip="Get started with Chaotic-AUR documentation"
           tooltipPosition="bottom"
-        >
-        </p-button>
+        />
         <span class="font-bold block animate-bounce mt-20 text-primary pi pi-arrow-down" style="font-size: 3rem"></span>
       </div>
     </div>
@@ -34,8 +35,8 @@
 </div>
 
 <div class="mx-auto sm:my-10 mt-60 mb-10">
-  <chaotic-newsfeed class="fade-in"></chaotic-newsfeed>
+  <chaotic-newsfeed class="fade-in" />
 </div>
 <div class="mx-auto mb-10 mt-40">
-  <chaotic-mirror-map class="fade-in"></chaotic-mirror-map>
+  <chaotic-mirror-map class="fade-in" />
 </div>

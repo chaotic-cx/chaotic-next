@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
@@ -7,7 +7,7 @@ import { map } from 'rxjs/operators';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
-import { CatppuccinFlavors } from '../theme';
+import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 interface ChartConfig {
   data: any;
@@ -22,6 +22,10 @@ interface ChartConfig {
   providers: [MessageToastService],
 })
 export class ChartReviewStatsComponent implements OnInit {
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly statsService = inject(StatsService);
+
   readonly chartConfig = computed<ChartConfig>(() => {
     const reviewStats = this.statsService.reviewStats();
     const labels: string[] = [];
@@ -38,7 +42,7 @@ export class ChartReviewStatsComponent implements OnInit {
           {
             data,
             label: 'Reviews',
-            backgroundColor: shuffleArray(CatppuccinFlavors),
+            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
           },
         ],
       },
@@ -58,10 +62,6 @@ export class ChartReviewStatsComponent implements OnInit {
   });
 
   readonly loading = signal(true);
-
-  private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly statsService = inject(StatsService);
 
   ngOnInit(): void {
     this.getUpdateReviewStats();

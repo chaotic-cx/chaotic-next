@@ -1,6 +1,7 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageToastService } from '@garudalinux/core';
 import { Fieldset } from '@openng/optimus-ui/fieldset';
 import { ScrollPanel } from '@openng/optimus-ui/scrollpanel';
@@ -16,20 +17,25 @@ import { Message } from './interfaces';
   providers: [MessageToastService],
 })
 export class NewsfeedComponent implements OnInit {
-  isWide = signal<boolean>(true);
-  newsList: { data: Message; html?: string }[] = [];
-
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
 
-  async ngOnInit(): Promise<void> {
-    this.observer.observe('(min-width: 768px)').subscribe((result) => {
-      this.isWide.set(result.matches);
-      this.cdr.markForCheck();
-    });
+  readonly isWide = signal<boolean>(true);
+  newsList: { data: Message; html?: string }[] = [];
 
+  constructor() {
+    this.observer
+      .observe('(min-width: 768px)')
+      .pipe(takeUntilDestroyed())
+      .subscribe((result) => {
+        this.isWide.set(result.matches);
+        this.cdr.markForCheck();
+      });
+  }
+
+  ngOnInit(): void {
     this.appService.getNews().subscribe({
       next: (data) => {
         for (const news of data) {
@@ -57,7 +63,8 @@ export class NewsfeedComponent implements OnInit {
    * @returns A string containing the message as HTML.
    */
   entityToHtml(message: Message): string {
-    let returnValue = '';
+    let returnValue: string;
+
     if (!message.text) {
       return '';
     } else if (typeof message.text === 'string') {

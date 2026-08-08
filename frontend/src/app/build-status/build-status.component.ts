@@ -17,8 +17,8 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
-import { PipelineTimelineComponent } from './pipeline-timeline.component';
 import { BuildStatusService } from './build-status.service';
+import { PipelineTimelineComponent } from './pipeline-timeline.component';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -66,9 +66,17 @@ export class BuildStatusComponent implements OnInit {
       if (event.type === 'pipeline') this.buildStatusService.transformPipelineData(event.pipeline);
       if (event.type === 'queue') void this.buildStatusService.getQueueStats(true);
     });
+
+    this.observer
+      .observe(`(max-width: 1100px)`)
+      .pipe(takeUntilDestroyed())
+      .subscribe((state) => {
+        this.isWide.set(!state.matches);
+        this.cdr.markForCheck();
+      });
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit() {
     this.appService.updateSeoTags(
       this.meta,
       'Build status',
@@ -76,11 +84,6 @@ export class BuildStatusComponent implements OnInit {
       'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
       this.router.url,
     );
-
-    this.observer.observe(`(max-width: 1100px)`).subscribe((state) => {
-      this.isWide.set(!state.matches);
-      this.cdr.markForCheck();
-    });
 
     void this.updateAll(false);
   }

@@ -1,5 +1,5 @@
 <div class="chaotic-container-regular">
-  <chaotic-title title="Documentation" subtitle="How to get started quickly."></chaotic-title>
+  <chaotic-title title="Documentation" subtitle="How to get started quickly." />
 
   <div class="mt-5">
     <p-panel header="Important">
@@ -35,7 +35,13 @@
         to enable the installation of our keyring and mirror list.
       </div>
       <div>
-        <pre class="whitespace-pre-wrap py-5 text-base" (click)="copyText(receiveKeys)"><code [highlight]="receiveKeys"
+        <pre
+          class="whitespace-pre-wrap py-5 text-base"
+          (click)="copyText(receiveKeys)"
+          (keydown.enter)="copyText(receiveKeys)"
+          tabindex="0"
+          role="button"
+        ><code [highlight]="receiveKeys"
                                                                                               language="shell"
                                                                                               pTooltip="Copy to clipboard"
                                                                                               tooltipPosition="top"></code><br></pre>
@@ -56,7 +62,13 @@
           packages.
         </div>
         <div>
-          <pre class="whitespace-pre-wrap py-5 text-base" (click)="copyText(installRepoPackages)"><code
+          <pre
+            class="whitespace-pre-wrap py-5 text-base"
+            (click)="copyText(installRepoPackages)"
+            (keydown.enter)="copyText(installRepoPackages)"
+            tabindex="0"
+            role="button"
+          ><code
             [highlight]="installRepoPackages"
             language="shell"
             pTooltip="Copy to clipboard"
@@ -64,19 +76,28 @@
           <p-divider />
         </div>
         <p>Then, we append (adding at the end) the following to <code>/etc/pacman.conf</code>:</p>
-        <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(appendRepo)" [highlight]="appendRepo"
-                                                    language="shell" pTooltip="Copy to clipboard"
-                                                    tooltipPosition="top"></code></pre>
+        <pre
+          class="whitespace-pre-wrap py-5"
+        ><code (click)="copyText(appendRepo)" (keydown.enter)="copyText(appendRepo)"
+                                                    [highlight]="appendRepo" language="shell"
+                                                    pTooltip="Copy to clipboard"
+                                                    tooltipPosition="top" tabindex="0" role="button"></code></pre>
         <p-divider />
         <p>We recommend running a full system update along syncing our mirrorlist.</p>
-        <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(syncMirrors)" [highlight]="syncMirrors"
-                                                    language="shell" pTooltip="Copy to clipboard"
-                                                    tooltipPosition="top"></code></pre>
+        <pre
+          class="whitespace-pre-wrap py-5"
+        ><code (click)="copyText(syncMirrors)" (keydown.enter)="copyText(syncMirrors)"
+                                                    [highlight]="syncMirrors" language="shell"
+                                                    pTooltip="Copy to clipboard"
+                                                    tooltipPosition="top" tabindex="0" role="button"></code></pre>
         <p-divider />
         <p>After having completed this action, the repository is ready to use! 🚀</p>
-        <pre class="whitespace-pre-wrap py-5"><code (click)="copyText(installPackage)" [highlight]="installPackage"
-                                                    language="shell" pTooltip="Copy to clipboard"
-                                                    tooltipPosition="top"></code></pre>
+        <pre
+          class="whitespace-pre-wrap py-5"
+        ><code (click)="copyText(installPackage)" (keydown.enter)="copyText(installPackage)"
+                                                    [highlight]="installPackage" language="shell"
+                                                    pTooltip="Copy to clipboard"
+                                                    tooltipPosition="top" tabindex="0" role="button"></code></pre>
       </div>
     </p-panel>
   </div>
@@ -157,25 +178,30 @@
           >you can add the following</a
         >
         to <code>/etc/pacman.conf</code>:
-        <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(ignorePkg)" [innerHtml]="ignorePkg"
-                                                         language="shell" pTooltip="Copy to clipboard"
-                                                         tooltipPosition="top"></code></pre>
+        <pre
+          class="whitespace-pre-wrap py-5 pl-5"
+        ><code (click)="copyText(ignorePkg)" (keydown.enter)="copyText(ignorePkg)"
+                                                         [innerHtml]="ignorePkg" language="shell"
+                                                         pTooltip="Copy to clipboard"
+                                                         tooltipPosition="top" tabindex="0" role="button"></code></pre>
 
         <p-divider />
 
         You can pick the repository from which to download a package like this:
         <pre
           class="whitespace-pre-wrap py-5 pl-5"
-        ><code (click)="copyText(installPackageSpecific)" [highlight]="installPackageSpecific"
-               language="shell" pTooltip="Copy to clipboard"
-               tooltipPosition="top"></code></pre>
+        ><code (click)="copyText(installPackageSpecific)" (keydown.enter)="copyText(installPackageSpecific)"
+               [highlight]="installPackageSpecific" language="shell"
+               pTooltip="Copy to clipboard"
+               tooltipPosition="top" tabindex="0" role="button"></code></pre>
         Some AUR helpers like
         <a class="text-ctp-mauve" href="https://github.com/Morganamilo/paru" rel="noopener" target="_blank">paru</a>
         support this syntax as well.
         <pre class="whitespace-pre-wrap py-5 pl-5"><code (click)="copyText(installPackageParu)"
+                                                         (keydown.enter)="copyText(installPackageParu)"
                                                          [highlight]="installPackageParu"
                                                          language="shell" pTooltip="Copy to clipboard"
-                                                         tooltipPosition="top"></code></pre>
+                                                         tooltipPosition="top" tabindex="0" role="button"></code></pre>
 
         <p-divider />
       </div>

@@ -1,12 +1,13 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class UpdateService {
   private readonly updates = inject(SwUpdate);
 
   constructor() {
-    this.updates.versionUpdates.subscribe((evt) => {
+    this.updates.versionUpdates.pipe(takeUntilDestroyed()).subscribe((evt) => {
       switch (evt.type) {
         case 'VERSION_DETECTED':
           console.log(`Downloading new app version: ${evt.version.hash}`);

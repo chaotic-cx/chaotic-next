@@ -1,16 +1,16 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
-import { CatppuccinFlavors } from '../theme';
+import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 interface ChartConfig {
   data: any;
@@ -25,6 +25,11 @@ interface ChartConfig {
   providers: [MessageToastService],
 })
 export class ChartUseragentComponent implements OnInit {
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly observer = inject(BreakpointObserver);
+  protected readonly statsService = inject(StatsService);
+
   readonly chartConfig = computed<ChartConfig>(() => {
     const relevantData = this.statsService.userAgentMetrics().slice(0, this.statsService.userAgentMetricRange());
     const labels: string[] = [];
@@ -41,7 +46,7 @@ export class ChartUseragentComponent implements OnInit {
           {
             data,
             label: 'Router hits',
-            backgroundColor: shuffleArray(CatppuccinFlavors),
+            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
           },
         ],
       },
@@ -61,11 +66,6 @@ export class ChartUseragentComponent implements OnInit {
   });
 
   readonly loading = signal(true);
-
-  private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly observer = inject(BreakpointObserver);
-  protected readonly statsService = inject(StatsService);
 
   constructor() {
     this.observer

@@ -63,7 +63,7 @@ Total users last month: ${users}
 All stats shown here are currently relating to one month of data.`;
   });
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit() {
     this.appService.updateSeoTags(
       this.meta,
       'Statistics and data',

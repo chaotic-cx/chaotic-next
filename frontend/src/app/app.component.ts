@@ -111,7 +111,7 @@ export class AppComponent implements OnInit {
     });
   }
 
-  async ngOnInit() {
+  ngOnInit() {
     TimeAgo.addDefaultLocale(en);
     registerLocaleData(localeEnGb);
 

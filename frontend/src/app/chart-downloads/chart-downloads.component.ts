@@ -21,9 +21,14 @@ import { StatsService } from '../stats/stats.service';
   providers: [MessageToastService],
 })
 export class ChartDownloadsComponent {
-  range = model(50);
-  isWide = signal<boolean>(true);
-  loading = signal(true);
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly observer = inject(BreakpointObserver);
+  private readonly statsService = inject(StatsService);
+
+  readonly range = model(50);
+  readonly isWide = signal<boolean>(true);
+  readonly loading = signal(true);
 
   readonly chartConfig = computed(() => {
     const metrics = this.statsService.globalPackageMetrics();
@@ -74,11 +79,6 @@ export class ChartDownloadsComponent {
     }
     return values;
   });
-
-  private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly observer = inject(BreakpointObserver);
-  private readonly statsService = inject(StatsService);
 
   constructor() {
     this.observer

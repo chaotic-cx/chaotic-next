@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
@@ -7,7 +7,7 @@ import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
-import { CatppuccinFlavors } from '../theme';
+import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-popular-packages',
@@ -17,12 +17,12 @@ import { CatppuccinFlavors } from '../theme';
   providers: [MessageToastService],
 })
 export class ChartPopularPackagesComponent implements OnInit {
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+
   readonly chartConfig = signal<{ data: any; options: any } | null>(null);
   readonly loading = signal(true);
   amount = 20;
-
-  private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
 
   ngOnInit(): void {
     this.getPopularPackages();
@@ -63,7 +63,7 @@ export class ChartPopularPackagesComponent implements OnInit {
           {
             data: values,
             label: 'Build count',
-            backgroundColor: shuffleArray(CatppuccinFlavors),
+            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
           },
         ],
       },

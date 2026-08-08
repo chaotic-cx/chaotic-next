@@ -1,7 +1,7 @@
 <chaotic-title
   title="Packages"
   subtitle="This is the list of currently deployed in the repositories we supply. Make sure to check the repository the package is in."
-></chaotic-title>
+/>
 
 <div class="table-container">
   <p-table
@@ -85,66 +85,36 @@
       @if (typed(unTypedPkg); as pkg) {
         <tr>
           <td>
-            <span
-              class="ml-1 align-middle"
-              [ngClass]="{
-                'text-ctp-surface0': !pkg.isActive,
-              }"
-              >{{ pkg.pkgname }}</span
-            >
+            <span class="ml-1 align-middle" [class.text-ctp-surface0]="!pkg.isActive">{{ pkg.pkgname }}</span>
           </td>
           <td>
-            <span
-              class="ml-1 align-middle"
-              [ngClass]="{
-                'text-ctp-surface0': !pkg.isActive,
-              }"
+            <span class="ml-1 align-middle" [class.text-ctp-surface0]="!pkg.isActive"
               >{{ pkg.version }}-{{ pkg.pkgrel }}</span
             >
           </td>
           <td>
-            <span
-              class="ml-1 align-middle"
-              [ngClass]="{
-                'text--ctp-surface0': !pkg.isActive,
-              }"
-              >{{ pkg.lastUpdated | date: 'short' }}</span
-            >
+            <span class="ml-1 align-middle" [class.text--ctp-surface0]="!pkg.isActive">{{
+              pkg.lastUpdated | date: 'short'
+            }}</span>
+          </td>
+          <td>
+            <span class="ml-1 align-middle" [class.text-ctp-surface0]="!pkg.isActive">{{ pkg.metadata?.desc }}</span>
           </td>
           <td>
             <span
               class="ml-1 align-middle"
-              [ngClass]="{
-                'text-ctp-surface0': !pkg.isActive,
-              }"
-              >{{ pkg.metadata?.desc }}</span
-            >
-          </td>
-          <td>
-            <span
-              class="ml-1 align-middle"
-              [ngClass]="{
-                'text-ctp-surface0': !pkg.isActive,
-              }"
+              [class.text-ctp-surface0]="!pkg.isActive"
               [innerHtml]="pkg.metadata?.url | stripPrefix"
             ></span>
           </td>
           <td>
-            <span
-              class="ml-1 align-middle"
-              [ngClass]="{
-                'text-ctp-surface0': !pkg.isActive,
-              }"
-              >{{ pkg.repo | repoName }}</span
-            >
+            <span class="ml-1 align-middle" [class.text-ctp-surface0]="!pkg.isActive">{{ pkg.repo | repoName }}</span>
           </td>
           <td>
             @if (pkg.isActive) {
               <p-button
                 class="h-10"
-                [ngClass]="{
-                  'text-ctp-surface0': !pkg.isActive,
-                }"
+                [class.text-ctp-surface0]="!pkg.isActive"
                 (click)="openPkgbuild(pkg)"
                 type="button"
                 label="Source"

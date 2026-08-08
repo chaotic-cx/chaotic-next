@@ -2,7 +2,7 @@
   <garuda-shell class="p-2" [menuItems]="items">
     <img garudaShellBarStart ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="logo" />
     <div class="router-container">
-      <router-outlet #routerOutlet="outlet"></router-outlet>
+      <router-outlet #routerOutlet="outlet" />
     </div>
     <div garudaShellBarEnd>
       <div style="width: 15px; height: 15px; display: inline-block">
@@ -17,6 +17,6 @@
     </div>
   </garuda-shell>
 </div>
-<chaotic-footer></chaotic-footer>
+<chaotic-footer />
 
 <p-confirm-dialog />
