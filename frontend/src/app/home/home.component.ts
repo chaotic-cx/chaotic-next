@@ -1,10 +1,10 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AnimateOnScrollModule } from 'primeng/animateonscroll';
-import { Button } from 'primeng/button';
-import { Tooltip } from 'primeng/tooltip';
+import { AnimateOnScrollModule } from '@openng/optimus-ui/animateonscroll';
+import { Button } from '@openng/optimus-ui/button';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
 
@@ -21,7 +21,6 @@ import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomeComponent implements OnInit {
   isWide = signal<boolean>(true);

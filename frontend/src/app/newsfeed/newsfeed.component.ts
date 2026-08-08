@@ -1,10 +1,10 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
-import { Fieldset } from 'primeng/fieldset';
-import { ScrollPanel } from 'primeng/scrollpanel';
-import { TableModule } from 'primeng/table';
+import { Fieldset } from '@openng/optimus-ui/fieldset';
+import { ScrollPanel } from '@openng/optimus-ui/scrollpanel';
+import { TableModule } from '@openng/optimus-ui/table';
 import { AppService } from '../app.service';
 import { Message } from './interfaces';
 
@@ -14,7 +14,6 @@ import { Message } from './interfaces';
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewsfeedComponent implements OnInit {
   isWide = signal<boolean>(true);

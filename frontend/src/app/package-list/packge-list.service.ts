@@ -1,9 +1,7 @@
-import { Injectable, signal } from '@angular/core';
 import { Package } from '@./shared-lib';
+import { Service, signal } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PackageListService {
   readonly packageList = signal<(Package & { reponame: string })[]>([]);
   readonly searchValue = signal<string>('');

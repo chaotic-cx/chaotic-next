@@ -1,4 +1,10 @@
-.router-container {
+.route-container {
+  display: flex;
+  flex-direction: column;
+  width: 90%;
+  margin: 0 auto;
+  padding-bottom: 4em;
+  flex: 1 0 auto;
+  min-height: calc(100vh - 120px);
   position: relative;
-  min-height: 100vh;
 }

@@ -1,13 +1,13 @@
 import type { TeamList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
-import { Card } from 'primeng/card';
-import { Panel } from 'primeng/panel';
-import { Ripple } from 'primeng/ripple';
+import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from '@openng/optimus-ui/accordion';
+import { Card } from '@openng/optimus-ui/card';
+import { Panel } from '@openng/optimus-ui/panel';
+import { Ripple } from '@openng/optimus-ui/ripple';
 import { updateSeoTags } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
@@ -26,7 +26,6 @@ import { TitleComponent } from '../title/title.component';
   ],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AboutComponent implements OnInit {
   protected isWide = signal<boolean>(true);

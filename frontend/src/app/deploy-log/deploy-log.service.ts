@@ -1,13 +1,11 @@
-import { inject, Injectable, signal } from '@angular/core';
-import { retry } from 'rxjs';
 import { Build } from '@./shared-lib';
-import { AppService } from '../app.service';
+import { inject, Service, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
+import { retry } from 'rxjs';
+import { AppService } from '../app.service';
 import { OutcomePipe } from '../pipes/outcome.pipe';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DeployLogService {
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);

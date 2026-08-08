@@ -1,10 +1,10 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
-import { UIChart } from 'primeng/chart';
-import { InputNumber } from 'primeng/inputnumber';
+import { UIChart } from '@openng/optimus-ui/chart';
+import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
@@ -16,7 +16,6 @@ import { CatppuccinFlavors } from '../theme';
   templateUrl: './chart-popular-packages.component.html',
   styleUrl: './chart-popular-packages.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartPopularPackagesComponent implements OnInit {
   chartData: any;

@@ -1,25 +1,17 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  effect,
-  inject,
-  OnInit,
-  PLATFORM_ID,
-} from '@angular/core';
+import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
-import { UIChart } from 'primeng/chart';
-import { FluidModule } from 'primeng/fluid';
-import { InputNumber } from 'primeng/inputnumber';
+import { UIChart } from '@openng/optimus-ui/chart';
+import { FluidModule } from '@openng/optimus-ui/fluid';
+import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
-import { CatppuccinFlavors } from '../theme';
 import { StatsService } from '../stats/stats.service';
+import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-countries',
@@ -27,7 +19,6 @@ import { StatsService } from '../stats/stats.service';
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartCountriesComponent implements OnInit {
   chartData: any;

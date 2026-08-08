@@ -1,23 +1,23 @@
 import { Build, PipelineWithExternalStatus } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { Card } from 'primeng/card';
-import { Dialog } from 'primeng/dialog';
-import { Ripple } from 'primeng/ripple';
-import { Skeleton } from 'primeng/skeleton';
-import { TableModule } from 'primeng/table';
-import { Timeline } from 'primeng/timeline';
-import { Tooltip } from 'primeng/tooltip';
+import { Card } from '@openng/optimus-ui/card';
+import { Dialog } from '@openng/optimus-ui/dialog';
+import { Panel } from '@openng/optimus-ui/panel';
+import { Ripple } from '@openng/optimus-ui/ripple';
+import { Skeleton } from '@openng/optimus-ui/skeleton';
+import { TableModule } from '@openng/optimus-ui/table';
+import { Timeline } from '@openng/optimus-ui/timeline';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BuildStatusService } from './build-status.service';
-import { Panel } from 'primeng/panel';
 
 @Component({
   selector: 'chaotic-build-status',
@@ -37,7 +37,6 @@ import { Panel } from 'primeng/panel';
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BuildStatusComponent implements OnInit {
   appService = inject(AppService);

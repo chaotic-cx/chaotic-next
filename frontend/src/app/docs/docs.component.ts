@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
+import { Divider } from '@openng/optimus-ui/divider';
+import { Panel } from '@openng/optimus-ui/panel';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { Highlight } from 'ngx-highlightjs';
-import { Divider } from 'primeng/divider';
-import { Panel } from 'primeng/panel';
-import { Tooltip } from 'primeng/tooltip';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { updateSeoTags } from '../functions';
@@ -16,7 +16,6 @@ import { TitleComponent } from '../title/title.component';
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
   imports: [Panel, Divider, TitleComponent, RouterLink, Highlight, Tooltip],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DocsComponent implements OnInit {
   readonly appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';

@@ -1,10 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 @Component({
   selector: 'chaotic-diff-renderer',
   templateUrl: './diff-renderer.component.html',
   styleUrl: './diff-renderer.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
 })
 export class DiffRendererComponent {

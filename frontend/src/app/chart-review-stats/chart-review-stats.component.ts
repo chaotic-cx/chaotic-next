@@ -1,24 +1,16 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  effect,
-  inject,
-  OnInit,
-  PLATFORM_ID,
-} from '@angular/core';
+import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
-import { UIChart } from 'primeng/chart';
+import { UIChart } from '@openng/optimus-ui/chart';
 import { retry } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
-import { CatppuccinFlavors } from '../theme';
 import { StatsService } from '../stats/stats.service';
-import { map } from 'rxjs/operators';
+import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-review-stats',
@@ -26,7 +18,6 @@ import { map } from 'rxjs/operators';
   templateUrl: './chart-review-stats.component.html',
   styleUrl: './chart-review-stats.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartReviewStatsComponent implements OnInit {
   chartData: any;

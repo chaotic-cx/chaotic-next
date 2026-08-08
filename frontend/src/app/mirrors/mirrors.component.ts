@@ -1,11 +1,11 @@
 import { Mirror } from '@./shared-lib';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, LOCALE_ID, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, LOCALE_ID, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { TableModule } from 'primeng/table';
-import { Tooltip } from 'primeng/tooltip';
+import { TableModule } from '@openng/optimus-ui/table';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { TitleComponent } from '../title/title.component';
@@ -17,7 +17,6 @@ import { MirrorsService } from './mirrors.service';
   templateUrl: './mirrors.component.html',
   styleUrl: './mirrors.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MirrorsComponent implements OnInit {
   private readonly appService = inject(AppService);

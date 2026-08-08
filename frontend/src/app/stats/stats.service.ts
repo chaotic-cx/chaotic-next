@@ -1,9 +1,7 @@
-import { Injectable, signal } from '@angular/core';
 import { CountryRankList, Package, type PackageRankList, type UserAgentList } from '@./shared-lib';
+import { Service, signal } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class StatsService {
   readonly currentTab = signal<string>('0');
   readonly totalUsers = signal<string>("<i class='text-ctp-maroon pi pi-hourglass'></i>");

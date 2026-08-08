@@ -1,30 +1,22 @@
 import { Build } from '@./shared-lib';
 import { CommonModule } from '@angular/common';
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  inject,
-  OnInit,
-  viewChild,
-} from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, inject, OnInit, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { Button } from 'primeng/button';
-import { IconField } from 'primeng/iconfield';
-import { InputIcon } from 'primeng/inputicon';
-import { InputText } from 'primeng/inputtext';
-import { Table, TableModule } from 'primeng/table';
+import { Button } from '@openng/optimus-ui/button';
+import { IconField } from '@openng/optimus-ui/iconfield';
+import { InputIcon } from '@openng/optimus-ui/inputicon';
+import { InputText } from '@openng/optimus-ui/inputtext';
+import { Table, TableModule } from '@openng/optimus-ui/table';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { DurationPipe } from '../pipes/duration.pipe';
 import { LogurlPipe } from '../pipes/logurl.pipe';
 import { OutcomePipe } from '../pipes/outcome.pipe';
 import { TitleComponent } from '../title/title.component';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DeployLogService } from './deploy-log.service';
 
 @Component({
@@ -44,7 +36,6 @@ import { DeployLogService } from './deploy-log.service';
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
   providers: [MessageToastService, OutcomePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeployLogComponent implements OnInit, AfterViewInit {
   private readonly appService = inject(AppService);

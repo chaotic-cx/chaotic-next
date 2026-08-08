@@ -1,19 +1,15 @@
-import { CACHE_ROUTER_TTL, CAUR_METRICS_URL, type SpecificPackageMetrics } from '@./shared-lib';
+import { CACHE_ROUTER_TTL, type SpecificPackageMetrics } from '@./shared-lib';
+import { HttpService } from '@nestjs/axios';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Axios } from 'axios';
 import { parseOutput } from '../functions';
 
 @Injectable()
 export class MetricsService {
-  axios: Axios;
-
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {
-    this.axios = new Axios({
-      baseURL: CAUR_METRICS_URL,
-      timeout: 10000,
-    });
-
+  constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private httpService: HttpService,
+  ) {
     Logger.log('MetricsService initialized', 'MetricsService');
   }
 
@@ -27,7 +23,7 @@ export class MetricsService {
     const cacheKey = 'thirtyDayUsers';
     let data = await this.cacheManager.get(cacheKey);
     if (!data) {
-      data = await this.axios
+      data = await this.httpService.axiosRef
         .get(`30d/users`)
         .then((response) => {
           return response.data;
@@ -51,7 +47,7 @@ export class MetricsService {
     const cacheKey = 'thirtyDayUserAgents';
     let data = await this.cacheManager.get(cacheKey);
     if (!data) {
-      data = await this.axios
+      data = await this.httpService.axiosRef
         .get(`30d/user-agents`)
         .then((response) => {
           return parseOutput(response.data);
@@ -82,8 +78,8 @@ export class MetricsService {
       };
       metrics.name = param;
       data = await Promise.all([
-        this.axios.get(`30d/package/${metrics.name}`),
-        this.axios.get(`30d/package/${metrics.name}/user-agents`),
+        this.httpService.axiosRef.get(`30d/package/${metrics.name}`),
+        this.httpService.axiosRef.get(`30d/package/${metrics.name}/user-agents`),
       ])
         .then((allMetrics) => {
           metrics.downloads = allMetrics[0].data;
@@ -110,7 +106,7 @@ export class MetricsService {
     const cacheKey = `rankCountries-${range}`;
     let data = await this.cacheManager.get(cacheKey);
     if (!data) {
-      data = await this.axios
+      data = await this.httpService.axiosRef
         .get(`30d/rank/${range}/countries`)
         .then((response) => {
           return parseOutput(response.data);
@@ -135,7 +131,7 @@ export class MetricsService {
     const cacheKey = `rankPackages-${range}`;
     let data = await this.cacheManager.get(cacheKey);
     if (!data) {
-      data = await this.axios
+      data = await this.httpService.axiosRef
         .get(`30d/rank/${range}/packages`)
         .then((response) => {
           return parseOutput(response.data);

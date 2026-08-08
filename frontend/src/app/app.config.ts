@@ -1,25 +1,24 @@
-import { HTTP_INTERCEPTORS, provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import {
   ApplicationConfig,
+  inject,
   isDevMode,
   LOCALE_ID,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router, withViewTransitions } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideGarudaNG } from '@garudalinux/core';
+import { CatppuccinAura } from '@garudalinux/themes/catppuccin';
 import { provideHighlightOptions } from 'ngx-highlightjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { environment } from '../environments/environment.dev';
 import { routes } from './app.routes';
-import { CatppuccinAura } from '@garudalinux/themes/catppuccin';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
-import { provideServiceWorker } from '@angular/service-worker';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideAnimationsAsync(),
     provideBrowserGlobalErrorListeners(),
     provideGarudaNG(
       { font: 'Inter' },
@@ -39,8 +38,45 @@ export const appConfig: ApplicationConfig = {
         shell: () => import('highlight.js/lib/languages/shell.js'),
       },
     }),
-    provideHttpClient(withInterceptorsFromDi(), withFetch()),
-    provideRouter(routes),
+    provideHttpClient(withInterceptorsFromDi()),
+    provideRouter(
+      routes,
+      withViewTransitions({
+        skipInitialTransition: true,
+        onViewTransitionCreated: ({ transition, from, to }) => {
+          const router = inject(Router);
+          try {
+            const nav = router.currentNavigation();
+            const info = nav?.extras?.info as any;
+
+            const fromSegments = from.url.map((s) => s.path);
+            const toSegments = to.url.map((s) => s.path);
+            if (fromSegments.length > 1 && toSegments.length > 1 && fromSegments[0] === toSegments[0]) {
+              transition.skipTransition();
+            }
+
+            if (info?.disableViewTransition) {
+              const style = document.createElement('style');
+              style.id = 'skip-transition';
+              style.textContent = '* { view-transition-name: none !important; }';
+              document.head.appendChild(style);
+
+              transition.finished.finally(() => {
+                const el = document.getElementById('skip-transition');
+                if (el) el.remove();
+                document.body.classList.remove('is-transitioning');
+              });
+            } else {
+              transition.finished.finally(() => {
+                document.body.classList.remove('is-transitioning');
+              });
+            }
+          } catch {
+            // Ignore parse errors, let transition proceed
+          }
+        },
+      }),
+    ),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',

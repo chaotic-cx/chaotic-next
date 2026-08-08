@@ -44,7 +44,7 @@ This will allow using the production API without CORS issues.
 
 ## Tech Stack
 
-- Angular (PrimeNG, GarudaNG)
+- Angular (OptimusUI, GarudaNG)
 - NestJs (Fastify, Passport, TypeORM, Swagger)
 - Nx (Monorepo management)
 - Postgresql

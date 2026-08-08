@@ -1,12 +1,10 @@
-import { inject, Injectable, signal } from '@angular/core';
-import { SwPush } from '@angular/service-worker';
 import { HttpClient } from '@angular/common/http';
-import { APP_CONFIG } from '../../environments/app-config.token';
+import { inject, Service, signal } from '@angular/core';
+import { SwPush } from '@angular/service-worker';
 import { lastValueFrom } from 'rxjs';
+import { APP_CONFIG } from '../../environments/app-config.token';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NotificationService {
   notificationsEnabled = signal<boolean>(false);
 

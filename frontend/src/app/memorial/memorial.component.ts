@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { Card } from 'primeng/card';
-import { Image } from 'primeng/image';
-import { Skeleton } from 'primeng/skeleton';
+import { Card } from '@openng/optimus-ui/card';
+import { Image } from '@openng/optimus-ui/image';
+import { Skeleton } from '@openng/optimus-ui/skeleton';
 import { updateSeoTags } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
@@ -12,7 +12,6 @@ import { TitleComponent } from '../title/title.component';
   imports: [Card, Image, TitleComponent, Skeleton],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MemorialComponent implements OnInit {
   private readonly meta = inject(Meta);
