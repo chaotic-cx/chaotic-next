@@ -12,7 +12,7 @@ export class LoadingService {
   /**
    * Signal that indicates if loading is in progress
    */
-  isLoading = toSignal(this.loading$);
+  readonly isLoading = toSignal(this.loading$);
 
   /**
    * Contains in-progress loading requests

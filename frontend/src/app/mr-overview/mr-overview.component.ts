@@ -1,5 +1,5 @@
 import { MergeRequestWithDiffs } from '@./shared-lib';
-import { NgClass, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, OnInit, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -38,7 +38,6 @@ import { MrOverviewService } from './mr-overview.service';
     Panel,
     Fieldset,
     Button,
-    NgClass,
     NgTemplateOutlet,
     Tooltip,
     Tab,
@@ -96,7 +95,7 @@ export class MrOverviewComponent implements OnInit {
       });
   }
 
-  async ngOnInit() {
+  ngOnInit() {
     this.appService.updateSeoTags(
       this.meta,
       'Update review',
@@ -105,15 +104,16 @@ export class MrOverviewComponent implements OnInit {
       this.router.url,
     );
 
-    let tokenFromStorage: string | null = null;
+    let tokenFromStorage: string | null;
     tokenFromStorage = sessionStorage.getItem('gitlabPrivateToken');
     if (!tokenFromStorage) {
       tokenFromStorage = localStorage.getItem('gitlabPrivateToken');
     }
 
     if (tokenFromStorage) {
-      const decryptedToken: string = await decrypt(tokenFromStorage, 'thisaintrealsafety1!!1!');
-      this.mrOverviewService.token.set(decryptedToken);
+      decrypt(tokenFromStorage, 'thisaintrealsafety1!!1!').then((decryptedToken) => {
+        this.mrOverviewService.token.set(decryptedToken);
+      });
     }
     void this.mrOverviewService.loadOpenMrs();
   }

@@ -1,6 +1,7 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { AnimateOnScrollModule } from '@openng/optimus-ui/animateonscroll';
 import { Button } from '@openng/optimus-ui/button';
@@ -22,17 +23,21 @@ import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
 })
-export class HomeComponent implements OnInit {
-  isWide = signal<boolean>(true);
+export class HomeComponent {
   observer = inject(BreakpointObserver);
 
   private readonly cdr = inject(ChangeDetectorRef);
 
-  ngOnInit() {
-    this.observer.observe('(min-width: 768px)').subscribe((result) => {
-      this.isWide.set(result.matches);
-      this.cdr.markForCheck();
-    });
+  readonly isWide = signal<boolean>(true);
+
+  constructor() {
+    this.observer
+      .observe('(min-width: 768px)')
+      .pipe(takeUntilDestroyed())
+      .subscribe((result) => {
+        this.isWide.set(result.matches);
+        this.cdr.markForCheck();
+      });
   }
 
   /**

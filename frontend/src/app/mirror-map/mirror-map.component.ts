@@ -12,14 +12,14 @@ import { precomputedMap } from './map';
   imports: [NgxMapComponent],
 })
 export class MirrorMapComponent implements OnInit {
+  private readonly appService = inject(AppService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   protected dots: Dot[] = [];
   protected readonly loading = signal<boolean>(true);
   protected readonly lineColor = flavors.mocha.colors.mauve.hex;
   protected readonly mapColor = flavors.mocha.colors.surface1.hex;
   protected readonly precomputedMap = precomputedMap;
-
-  private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
     this.appService

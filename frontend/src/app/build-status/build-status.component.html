@@ -3,7 +3,7 @@
   subtitleHtml="Currently running pipelines and build queue.<br>Last updated: {{
     buildStatusService.lastUpdated() | date: 'short'
   }}"
-></chaotic-title>
+/>
 
 <div class="chaotic-container-wide-center md:chaotic-container-regular">
   @if (isWide()) {
@@ -61,11 +61,7 @@
           </div>
         }
         @if (buildStatusService.waitingQueue().length > 0) {
-          <div
-            [ngClass]="{
-              'mt-5': buildStatusService.activeQueue().length > 0,
-            }"
-          >
+          <div [class.mt-5]="buildStatusService.activeQueue().length > 0">
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
                 <i class="pi pi-hourglass text-ctp-lavender mt-5" style="font-size: 5rem"></i>
@@ -104,9 +100,7 @@
         }
         @if (buildStatusService.idleQueue().length > 0) {
           <div
-            [ngClass]="{
-              'mt-5': buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0,
-            }"
+            [class.mt-5]="buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0"
           >
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
@@ -140,24 +134,26 @@
           @if (!buildStatusService.loadingDeployments()) {
             <p-timeline [value]="buildStatusService.latestDeployments()">
               <ng-template #opposite let-untypedDeployment>
-                <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
+                @if (typedDeployment(untypedDeployment); as deployment) {
                   <small class="text-primary">{{ deployment.timestamp | date: 'short' }}</small>
-                </ng-container>
+                }
               </ng-template>
               <ng-template #content let-untypedDeployment>
-                <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
+                @if (typedDeployment(untypedDeployment); as deployment) {
                   <a [href]="deployment.logUrl" pRipple
                     >{{ deployment.pkgbase.pkgname }}
                     <br />
                     <a class="text-ctp-subtext1 text-xs">({{ deployment.repo?.name }})</a>
                   </a>
-                </ng-container>
+                }
               </ng-template>
             </p-timeline>
           } @else {
-            <div class="my-3" *ngFor="let item of createRange(22)">
-              <p-skeleton width="100%" height="4rem"></p-skeleton>
-            </div>
+            @for (item of createRange(22); track $index) {
+              <div class="my-3">
+                <p-skeleton width="100%" height="4rem" />
+              </div>
+            }
           }
         </div>
       </p-card>
@@ -249,9 +245,7 @@
         }
         @if (buildStatusService.idleQueue().length > 0) {
           <div
-            [ngClass]="{
-              'mt-5': buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0,
-            }"
+            [class.mt-5]="buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0"
           >
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
@@ -296,24 +290,26 @@
         @if (!buildStatusService.loadingDeployments()) {
           <p-timeline [value]="buildStatusService.latestDeployments()">
             <ng-template #opposite let-untypedDeployment>
-              <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
+              @if (typedDeployment(untypedDeployment); as deployment) {
                 <small class="text-primary-emphasis-alt">{{ deployment.timestamp | date: 'short' }}</small>
-              </ng-container>
+              }
             </ng-template>
             <ng-template #content let-untypedDeployment>
-              <ng-container *ngIf="typedDeployment(untypedDeployment) as deployment">
+              @if (typedDeployment(untypedDeployment); as deployment) {
                 <span>
                   <a [href]="deployment.logUrl" pRipple>{{ deployment.pkgbase.pkgname }}</a
                   ><br />
                   <a class="text-sm">({{ deployment.repo?.name }})</a>
                 </span>
-              </ng-container>
+              }
             </ng-template>
           </p-timeline>
         } @else {
-          <div class="my-3" *ngFor="let item of createRange(20)">
-            <p-skeleton width="100%" height="4rem"></p-skeleton>
-          </div>
+          @for (item of createRange(20); track $index) {
+            <div class="my-3">
+              <p-skeleton width="100%" height="4rem" />
+            </div>
+          }
         }
       </div>
     </p-panel>

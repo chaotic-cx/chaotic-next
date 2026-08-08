@@ -6,14 +6,13 @@
     (completeMethod)="search($event)"
     (onSelect)="updateDisplay($event.value)"
     placeholder="Start searching"
-  ></p-auto-complete>
+  />
   <p-select
     class="w-full md:w-60"
     [(ngModel)]="packageStatsService.packageSearchSelectedRepo"
     [options]="repoOptions"
     (ngModelChange)="updateDisplay(autoComplete.value)"
-  >
-  </p-select>
+  />
 </div>
 <div class="min-h-footer">
   @if (!packageStatsService.packageSearchInitialSearchDone()) {
@@ -55,6 +54,6 @@
         </tr>
       </ng-template>
     </p-table>
-    <chaotic-chart-package-build-stats [packageName]="currentPackageName()"></chaotic-chart-package-build-stats>
+    <chaotic-chart-package-build-stats [packageName]="currentPackageName()" />
   }
 </div>

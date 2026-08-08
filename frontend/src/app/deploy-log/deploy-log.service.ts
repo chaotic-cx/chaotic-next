@@ -10,7 +10,7 @@ export class DeployLogService {
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
 
-  packageList = signal<Build[]>([]);
+  readonly packageList = signal<Build[]>([]);
 
   readonly loading = signal<boolean>(true);
   readonly searchValue = signal<string>('');

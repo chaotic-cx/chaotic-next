@@ -11,7 +11,7 @@ import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
-import { CatppuccinFlavors } from '../theme';
+import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 interface ChartConfig {
   data: any;
@@ -26,6 +26,11 @@ interface ChartConfig {
   providers: [MessageToastService],
 })
 export class ChartCountriesComponent implements OnInit {
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly observer = inject(BreakpointObserver);
+  protected readonly statsService = inject(StatsService);
+
   readonly chartConfig = computed<ChartConfig>(() => {
     const relevantData = this.statsService.countryRanksMetrics().slice(0, this.statsService.countryRanksRange());
     const labels: string[] = [];
@@ -42,7 +47,7 @@ export class ChartCountriesComponent implements OnInit {
           {
             data,
             label: 'Router hits',
-            backgroundColor: shuffleArray(CatppuccinFlavors),
+            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
           },
         ],
       },
@@ -63,11 +68,6 @@ export class ChartCountriesComponent implements OnInit {
   });
 
   readonly loading = signal(true);
-
-  private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly observer = inject(BreakpointObserver);
-  protected readonly statsService = inject(StatsService);
 
   constructor() {
     this.observer

@@ -7,6 +7,9 @@ import { AppService } from '../app.service';
 
 @Service()
 export class BuildStatusService {
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+
   readonly lastUpdated = signal<Date | undefined>(undefined);
   readonly loadingQueue = signal<boolean>(true);
   readonly loadingDeployments = signal<boolean>(true);
@@ -36,9 +39,6 @@ export class BuildStatusService {
       build_class: BuildClass;
     }[]
   >([]);
-
-  private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
 
   /**
    * Get the latest deployments

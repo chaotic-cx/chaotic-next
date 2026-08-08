@@ -12,7 +12,7 @@ import { TitleComponent } from '../title/title.component';
 import { MirrorsService } from './mirrors.service';
 
 @Component({
-  selector: 'app-mirrors',
+  selector: 'chaotic-mirrors',
   imports: [CommonModule, TitleComponent, TableModule, Tooltip],
   templateUrl: './mirrors.component.html',
   styleUrl: './mirrors.component.css',

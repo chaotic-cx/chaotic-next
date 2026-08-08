@@ -18,6 +18,11 @@ import { TitleComponent } from '../title/title.component';
   imports: [Panel, Divider, TitleComponent, RouterLink, Highlight, Tooltip],
 })
 export class DocsComponent implements OnInit {
+  private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly meta = inject(Meta);
+  private readonly router = inject(Router);
+
   readonly appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';
   readonly ignorePkg = 'IgnorePkg = ...';
   readonly installPackage = '$ sudo pacman -S firedragon';
@@ -29,11 +34,6 @@ export class DocsComponent implements OnInit {
   readonly powerpillUsage = '$ sudo pacman -Sy && sudo powerpill -Su && paru -Su';
   readonly receiveKeys: string;
   readonly syncMirrors = '$ sudo pacman -Syu';
-
-  private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly meta = inject(Meta);
-  private readonly router = inject(Router);
 
   constructor() {
     this.receiveKeys =

@@ -7,7 +7,7 @@ import { Component, input } from '@angular/core';
   styleUrl: './title.component.css',
 })
 export class TitleComponent {
-  title = input<string>();
-  subtitle = input<string>();
-  subtitleHtml = input<string>();
+  readonly title = input<string>();
+  readonly subtitle = input<string>();
+  readonly subtitleHtml = input<string>();
 }

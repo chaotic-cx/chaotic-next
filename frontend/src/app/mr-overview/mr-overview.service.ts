@@ -9,16 +9,15 @@ import { encrypt } from '../functions';
 
 @Service()
 export class MrOverviewService {
+  private readonly backendUrl = inject(APP_CONFIG).backendUrl;
+  private readonly http = inject(HttpClient);
+  private readonly messageToastService = inject(MessageToastService);
+
   readonly mergeRequests = signal<MergeRequestWithDiffs[]>([]);
   readonly token = signal<string>('');
   readonly isLoading = signal<boolean>(true);
   readonly loadingMap = signal<Map<number, boolean>>(new Map());
   readonly storage = signal<'sessionStorage' | 'localStorage'>('sessionStorage');
-
-  private readonly backendUrl = inject(APP_CONFIG).backendUrl;
-
-  private readonly http = inject(HttpClient);
-  private readonly messageToastService = inject(MessageToastService);
 
   constructor() {
     effect(async () => {

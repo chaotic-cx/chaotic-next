@@ -1,5 +1,5 @@
 import { Package } from '@./shared-lib';
-import { DatePipe, NgClass } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { AfterViewInit, ChangeDetectorRef, Component, inject, LOCALE_ID, OnInit, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
@@ -35,7 +35,6 @@ import { PackageListService } from './packge-list.service';
     DatePipe,
     Button,
     StripPrefixPipe,
-    NgClass,
     TitleComponent,
     RepoNamePipe,
     Tooltip,

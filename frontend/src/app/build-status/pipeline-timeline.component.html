@@ -2,13 +2,21 @@
   @if (!loading()) {
     <p-timeline [value]="pipelines()">
       <ng-template #opposite let-unTypedPipeline>
-        <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
+        @if (typed(unTypedPipeline); as pipeline) {
           <small class="text-primary">{{ pipeline.pipeline.created_at | date: 'short' }}</small>
-        </ng-container>
+        }
       </ng-template>
       <ng-template #content let-unTypedPipeline>
-        <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
-          <div class="cursor-pointer" (click)="openPipeline.emit(pipeline.pipeline.id)" pRipple>
+        @if (typed(unTypedPipeline); as pipeline) {
+          <div
+            class="cursor-pointer"
+            (click)="openPipeline.emit(pipeline.pipeline.id)"
+            (keydown.enter)="openPipeline.emit(pipeline.pipeline.id)"
+            (keyup.space)="openPipeline.emit(pipeline.pipeline.id)"
+            tabindex="0"
+            role="button"
+            pRipple
+          >
             <i
               class="pi"
               [ngClass]="{
@@ -24,12 +32,14 @@
               <a>{{ pipeline.pipeline.status.replaceAll('_', ' ') }}</a>
             </span>
           </div>
-        </ng-container>
+        }
       </ng-template>
     </p-timeline>
   } @else {
-    <div class="my-3" *ngFor="let item of createRange(skeletonCount())">
-      <p-skeleton width="100%" height="4rem"></p-skeleton>
-    </div>
+    @for (item of createRange(skeletonCount()); track $index) {
+      <div class="my-3">
+        <p-skeleton width="100%" height="4rem" />
+      </div>
+    }
   }
 </div>

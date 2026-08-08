@@ -1,11 +1,11 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { inject, Pipe, PipeTransform } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Pipe({
   name: 'truncate',
 })
 export class TruncatePipe implements PipeTransform {
-  constructor(private sanitizer: DomSanitizer) {}
+  private readonly sanitizer = inject(DomSanitizer);
 
   transform(value: any, words: number): SafeHtml {
     const replacedNewlines = value?.replace(/\n/g, '<br>');

@@ -16,13 +16,13 @@ import { AppService } from '../app.service';
   providers: [MessageToastService, DatePipe],
 })
 export class ChartBuildsPerDayComponent implements OnInit {
-  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
-  readonly loading = signal(true);
-  days = 30;
-
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
   private readonly datePipe = inject(DatePipe);
+
+  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
+  readonly loading = signal(true);
+  days = 30;
 
   ngOnInit(): void {
     this.getBuildsPerDay();

@@ -13,6 +13,10 @@ import { AppService } from '../app.service';
   providers: [MessageToastService, DatePipe],
 })
 export class ChartPackageBuildStatsComponent {
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly datePipe = inject(DatePipe);
+
   readonly packageName = input.required<string>();
   readonly loading = signal(true);
 
@@ -24,10 +28,6 @@ export class ChartPackageBuildStatsComponent {
 
   private readonly stats = signal<{ day: string; repo: string; count: string }[] | null>(null);
   days = 30;
-
-  private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly datePipe = inject(DatePipe);
 
   constructor() {
     // Reload whenever the selected package changes.

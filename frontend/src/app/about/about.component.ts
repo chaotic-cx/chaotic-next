@@ -2,6 +2,7 @@ import type { TeamList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from '@openng/optimus-ui/accordion';
@@ -28,10 +29,11 @@ import { TitleComponent } from '../title/title.component';
   styleUrl: './about.component.css',
 })
 export class AboutComponent implements OnInit {
-  protected isWide = signal<boolean>(true);
   private readonly meta = inject(Meta);
   private readonly observer = inject(BreakpointObserver);
   private readonly router = inject(Router);
+
+  protected readonly isWide = signal<boolean>(true);
 
   team: TeamList = [
     {
@@ -102,10 +104,16 @@ export class AboutComponent implements OnInit {
   ];
 
   constructor() {
-    // Construct avatar URLs
     for (const member of this.team) {
       member.avatarUrl = `/assets/avatars/${member.github}.webp`;
     }
+
+    this.observer
+      .observe(['(min-width: 768px)'])
+      .pipe(takeUntilDestroyed())
+      .subscribe((result) => {
+        this.isWide.set(result.matches);
+      });
   }
 
   ngOnInit() {
@@ -116,9 +124,5 @@ export class AboutComponent implements OnInit {
       'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
       this.router.url,
     );
-
-    this.observer.observe(['(min-width: 768px)']).subscribe((result) => {
-      this.isWide.set(result.matches);
-    });
   }
 }

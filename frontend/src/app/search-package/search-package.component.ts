@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, inject, OnInit, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -39,14 +40,28 @@ export class SearchPackageComponent implements OnInit {
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly packageStatsService = inject(StatsService);
 
   protected readonly autoComplete = viewChild<AutoComplete>('autoComplete');
-  protected readonly packageStatsService = inject(StatsService);
   protected readonly repoOptions = ['chaotic-aur', 'garuda'];
-  protected currentPackageName = signal<string>('');
+  protected readonly currentPackageName = signal<string>('');
   private packageNameSubject = new Subject<string>();
 
-  async ngOnInit(): Promise<void> {
+  constructor() {
+    this.route.queryParams.pipe(takeUntilDestroyed()).subscribe((params) => {
+      if (params['search'] && /^[0-9|a-zA-Z-]*$/.test(params['search'])) {
+        this.updateDisplay(params['search']);
+        this.cdr.markForCheck();
+      }
+    });
+
+    this.packageNameSubject.pipe(debounceTime(500), takeUntilDestroyed()).subscribe((packageName) => {
+      this.currentPackageName.set(packageName);
+      this.cdr.markForCheck();
+    });
+  }
+
+  ngOnInit() {
     this.getSuggestions();
 
     this.appService.updateSeoTags(
@@ -56,19 +71,6 @@ export class SearchPackageComponent implements OnInit {
       'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search',
       this.router.url,
     );
-
-    this.route.queryParams.subscribe((params) => {
-      if (params['search'] && /^[0-9|a-zA-Z-]*$/.test(params['search'])) {
-        this.updateDisplay(params['search']);
-        this.cdr.markForCheck();
-      }
-    });
-
-    // Debounce package name changes to prevent excessive API calls
-    this.packageNameSubject.pipe(debounceTime(500)).subscribe((packageName) => {
-      this.currentPackageName.set(packageName);
-      this.cdr.markForCheck();
-    });
   }
 
   search(event: AutoCompleteCompleteEvent) {
