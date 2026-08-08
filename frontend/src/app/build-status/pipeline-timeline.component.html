@@ -1,0 +1,35 @@
+<div class="mt-5">
+  @if (!loading()) {
+    <p-timeline [value]="pipelines()">
+      <ng-template #opposite let-unTypedPipeline>
+        <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
+          <small class="text-primary">{{ pipeline.pipeline.created_at | date: 'short' }}</small>
+        </ng-container>
+      </ng-template>
+      <ng-template #content let-unTypedPipeline>
+        <ng-container *ngIf="typed(unTypedPipeline) as pipeline">
+          <div class="cursor-pointer" (click)="openPipeline.emit(pipeline.pipeline.id)" pRipple>
+            <i
+              class="pi"
+              [ngClass]="{
+                'pi-check-circle text-ctp-green': pipeline.pipeline.status.includes('success'),
+                'pi-exclamation-circle text-ctp-red': pipeline.pipeline.status.includes('failed'),
+                'pi-spin pi-spinner text-ctp-peach': pipeline.pipeline.status === 'running',
+                'pi-info-circle text-ctp-text': pipeline.pipeline.status === 'pending',
+                'pi-hourglass text-ctp-flamingo': pipeline.pipeline.status === 'waiting_for_resource',
+                'pi-times-circle text-ctp-maroon': pipeline.pipeline.status === 'canceling',
+              }"
+            ></i>
+            <span class="ml-2">
+              <a>{{ pipeline.pipeline.status.replaceAll('_', ' ') }}</a>
+            </span>
+          </div>
+        </ng-container>
+      </ng-template>
+    </p-timeline>
+  } @else {
+    <div class="my-3" *ngFor="let item of createRange(skeletonCount())">
+      <p-skeleton width="100%" height="4rem"></p-skeleton>
+    </div>
+  }
+</div>
