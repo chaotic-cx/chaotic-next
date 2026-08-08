@@ -1,19 +1,9 @@
 import { DatePipe, isPlatformBrowser } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  inject,
-  input,
-  OnChanges,
-  PLATFORM_ID,
-  SimpleChanges,
-} from '@angular/core';
+import { ChangeDetectorRef, Component, inject, input, OnChanges, PLATFORM_ID, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
-import { UIChart } from 'primeng/chart';
-import { retry } from 'rxjs';
+import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../app.service';
 
 @Component({
@@ -22,7 +12,6 @@ import { AppService } from '../app.service';
   templateUrl: './chart-package-build-stats.component.html',
   styleUrl: './chart-package-build-stats.component.css',
   providers: [MessageToastService, DatePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartPackageBuildStatsComponent implements OnChanges {
   packageName = input.required<string>();

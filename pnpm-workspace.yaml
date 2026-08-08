@@ -13,3 +13,6 @@ allowBuilds:
   sharp: false
   unrs-resolver: true
   workerd: true
+minimumReleaseAgeExclude:
+  - '@garudalinux/core@2.0.0'
+  - '@garudalinux/themes@2.0.0'

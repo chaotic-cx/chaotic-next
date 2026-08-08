@@ -1,9 +1,9 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
-import { UIChart } from 'primeng/chart';
+import { UIChart } from '@openng/optimus-ui/chart';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
@@ -15,7 +15,6 @@ import { CatppuccinFlavors } from '../theme';
   templateUrl: './chart-builders-amount.component.html',
   styleUrl: './chart-builders-amount.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartBuildersAmountComponent implements OnInit {
   chartData: any;

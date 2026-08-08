@@ -1,27 +1,19 @@
 import { CommonModule } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  inject,
-  OnInit,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, signal, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { FilterService } from 'primeng/api';
-import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
-import { TableModule } from 'primeng/table';
+import { FilterService } from '@openng/optimus-ui/api';
+import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
+import { Select } from '@openng/optimus-ui/select';
+import { TableModule } from '@openng/optimus-ui/table';
 import { debounceTime, retry, Subject } from 'rxjs';
 import { AppService } from '../app.service';
+import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
-import { FormsModule } from '@angular/forms';
 import { StatsService } from '../stats/stats.service';
-import { Select } from 'primeng/select';
-import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
 
 @Component({
   selector: 'chaotic-search-package',
@@ -38,7 +30,6 @@ import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/ch
   templateUrl: './search-package.component.html',
   styleUrl: './search-package.component.css',
   providers: [FilterService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchPackageComponent implements OnInit {
   private readonly appService = inject(AppService);

@@ -1,6 +1,3 @@
-import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
 import {
   type Build,
   type Builder,
@@ -16,15 +13,16 @@ import {
   type StatsObject,
   type UserAgentList,
 } from '@./shared-lib';
+import { HttpClient } from '@angular/common/http';
+import { inject, Service } from '@angular/core';
+import { Meta } from '@angular/platform-browser';
+import { Observable, Subject } from 'rxjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
-import { Meta } from '@angular/platform-browser';
 import { updateSeoTags } from './functions';
 import { Message } from './newsfeed/interfaces';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AppService {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly http = inject(HttpClient);

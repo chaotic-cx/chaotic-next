@@ -1,7 +1,6 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": ".",
     "declaration": false,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
@@ -10,9 +9,9 @@
     "inlineSourceMap": true,
     "lib": ["esnext", "dom"],
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "paths": {
-      "@./shared-lib": ["shared-lib/src/index.ts"]
+      "@./shared-lib": ["./shared-lib/src/index.ts"]
     },
     "rootDir": ".",
     "skipDefaultLibCheck": true,

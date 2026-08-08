@@ -1,15 +1,14 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
-import { Dot, NgxMapComponent } from '@omnedia/ngx-map';
-import { AppService } from '../app.service';
-import { retry } from 'rxjs';
-import { precomputedMap } from './map';
+import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
+import { Dot, NgxMapComponent } from '@omnedia/ngx-map';
+import { retry } from 'rxjs';
+import { AppService } from '../app.service';
+import { precomputedMap } from './map';
 
 @Component({
   selector: 'chaotic-mirror-map',
   templateUrl: './mirror-map.component.html',
   styleUrl: './mirror-map.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgxMapComponent],
 })
 export class MirrorMapComponent implements OnInit {

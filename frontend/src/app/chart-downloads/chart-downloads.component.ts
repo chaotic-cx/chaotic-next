@@ -2,7 +2,6 @@ import type { PackageRankList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 import {
-  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   effect,
@@ -16,10 +15,10 @@ import {
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
-import { UIChart } from 'primeng/chart';
-import { InputNumber } from 'primeng/inputnumber';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { ToastModule } from 'primeng/toast';
+import { UIChart } from '@openng/optimus-ui/chart';
+import { InputNumber } from '@openng/optimus-ui/inputnumber';
+import { ProgressBarModule } from '@openng/optimus-ui/progressbar';
+import { ToastModule } from '@openng/optimus-ui/toast';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { StatsService } from '../stats/stats.service';
@@ -30,7 +29,6 @@ import { StatsService } from '../stats/stats.service';
   templateUrl: './chart-downloads.component.html',
   styleUrl: './chart-downloads.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartDownloadsComponent implements OnInit {
   range = model(50);

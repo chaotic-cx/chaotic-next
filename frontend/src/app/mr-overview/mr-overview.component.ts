@@ -1,28 +1,28 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, untracked, computed } from '@angular/core';
-import { TitleComponent } from '../title/title.component';
-import { TableModule } from 'primeng/table';
-import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
-import { MessageToastService } from '@garudalinux/core';
-import { FormsModule } from '@angular/forms';
-import { InputText } from 'primeng/inputtext';
-import { ProgressSpinner } from 'primeng/progressspinner';
-import { MrOverviewService } from './mr-overview.service';
-import { AutoFocus } from 'primeng/autofocus';
-import { SelectButton } from 'primeng/selectbutton';
-import { decrypt } from '../functions';
-import { Panel } from 'primeng/panel';
-import { AppService } from '../app.service';
-import { Router } from '@angular/router';
-import { Meta } from '@angular/platform-browser';
-import { Fieldset } from 'primeng/fieldset';
-import { Button } from 'primeng/button';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter } from 'rxjs';
 import { MergeRequestWithDiffs } from '@./shared-lib';
-import { NotificationService } from '../notification/notification.service';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
-import { Tooltip } from 'primeng/tooltip';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { Component, computed, inject, OnInit, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
+import { Meta } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { MessageToastService } from '@garudalinux/core';
+import { AutoFocus } from '@openng/optimus-ui/autofocus';
+import { Button } from '@openng/optimus-ui/button';
+import { Fieldset } from '@openng/optimus-ui/fieldset';
+import { InputText } from '@openng/optimus-ui/inputtext';
+import { Panel } from '@openng/optimus-ui/panel';
+import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
+import { SelectButton } from '@openng/optimus-ui/selectbutton';
+import { TableModule } from '@openng/optimus-ui/table';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@openng/optimus-ui/tabs';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { filter } from 'rxjs';
+import { AppService } from '../app.service';
+import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
+import { decrypt } from '../functions';
+import { NotificationService } from '../notification/notification.service';
+import { TitleComponent } from '../title/title.component';
+import { MrOverviewService } from './mr-overview.service';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -49,7 +49,6 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
   ],
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MrOverviewComponent implements OnInit {
   private readonly appService = inject(AppService);

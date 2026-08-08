@@ -1,38 +1,35 @@
+import { BuildStatus, ChaoticEvent } from '@./shared-lib';
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import localeEnGb from '@angular/common/locales/en-GB';
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router, RouterModule, RouterOutlet } from '@angular/router';
+import {
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  Router,
+  RouterModule,
+  RouterOutlet,
+} from '@angular/router';
 import { MessageToastService, ShellComponent } from '@garudalinux/core';
+import { ConfirmationService, MenuItem } from '@openng/optimus-ui/api';
+import { ConfirmDialog } from '@openng/optimus-ui/confirmdialog';
+import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
-import { ConfirmationService, MenuItem } from 'primeng/api';
-import { routeAnimations } from './app.routes';
-import { FooterComponent } from './footer/footer.component';
 import { AppService } from './app.service';
-import { BuildStatus, ChaoticEvent } from '@./shared-lib';
+import { FooterComponent } from './footer/footer.component';
 import { LoadingService } from './loading/loading.service';
-import { ProgressSpinner } from 'primeng/progressspinner';
-import { ConfirmDialog } from 'primeng/confirmdialog';
 import { UpdateService } from './update/update.service';
 
 @Component({
-  imports: [
-    RouterModule,
-    ShellComponent,
-    ConfirmDialog,
-    NgOptimizedImage,
-    FooterComponent,
-    ProgressSpinner,
-    ProgressSpinner,
-    ProgressSpinner,
-  ],
+  imports: [RouterModule, ShellComponent, ConfirmDialog, NgOptimizedImage, FooterComponent, ProgressSpinner],
   selector: 'chaotic-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
-  animations: [routeAnimations],
   providers: [ConfirmationService, UpdateService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
   private readonly appService = inject(AppService);
@@ -98,6 +95,21 @@ export class AppComponent implements OnInit {
       tooltip: 'Learn about the Chaotic-AUR project',
     },
   ];
+
+  constructor() {
+    let firstNavigationComplete = false;
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        if (firstNavigationComplete) {
+          document.body.classList.add('is-transitioning');
+        }
+      } else if (event instanceof NavigationCancel || event instanceof NavigationError) {
+        document.body.classList.remove('is-transitioning');
+      } else if (event instanceof NavigationEnd) {
+        firstNavigationComplete = true;
+      }
+    });
+  }
 
   async ngOnInit() {
     TimeAgo.addDefaultLocale(en);

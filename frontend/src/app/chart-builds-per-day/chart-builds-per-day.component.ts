@@ -1,11 +1,10 @@
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, isPlatformBrowser } from '@angular/common';
+import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
-import { UIChart } from 'primeng/chart';
-import { InputNumber } from 'primeng/inputnumber';
+import { UIChart } from '@openng/optimus-ui/chart';
+import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 
@@ -15,7 +14,6 @@ import { AppService } from '../app.service';
   templateUrl: './chart-builds-per-day.component.html',
   styleUrl: './chart-builds-per-day.component.css',
   providers: [MessageToastService, DatePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartBuildsPerDayComponent implements OnInit {
   chartData: any;

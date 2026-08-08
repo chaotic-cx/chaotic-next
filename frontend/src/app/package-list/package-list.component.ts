@@ -1,34 +1,25 @@
 import { Package } from '@./shared-lib';
 import { DatePipe, NgClass } from '@angular/common';
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  inject,
-  LOCALE_ID,
-  OnInit,
-  viewChild,
-} from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, inject, LOCALE_ID, OnInit, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { Button } from 'primeng/button';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { Table, TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { Tooltip } from 'primeng/tooltip';
+import { Button } from '@openng/optimus-ui/button';
+import { IconFieldModule } from '@openng/optimus-ui/iconfield';
+import { InputIconModule } from '@openng/optimus-ui/inputicon';
+import { InputTextModule } from '@openng/optimus-ui/inputtext';
+import { MultiSelectModule } from '@openng/optimus-ui/multiselect';
+import { Table, TableModule } from '@openng/optimus-ui/table';
+import { TagModule } from '@openng/optimus-ui/tag';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { retry } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
+import { RepoNamePipe } from '../pipes/repo-name.pipe';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { TitleComponent } from '../title/title.component';
-import { RepoNamePipe } from '../pipes/repo-name.pipe';
 import { PackageListService } from './packge-list.service';
 
 @Component({
@@ -52,7 +43,6 @@ import { PackageListService } from './packge-list.service';
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PackageListComponent implements OnInit, AfterViewInit {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);

@@ -1,24 +1,24 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { Card } from 'primeng/card';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { Tooltip } from 'primeng/tooltip';
+import { Card } from '@openng/optimus-ui/card';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@openng/optimus-ui/tabs';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
+import { ChartAverageBuildTimeComponent } from '../chart-average-build-time/chart-average-build-time.component';
+import { ChartBuildersAmountComponent } from '../chart-builders-amount/chart-builders-amount.component';
+import { ChartBuildsPerDayComponent } from '../chart-builds-per-day/chart-builds-per-day.component';
 import { ChartCountriesComponent } from '../chart-countries/chart-countries.component';
 import { ChartDownloadsComponent } from '../chart-downloads/chart-downloads.component';
+import { ChartPopularPackagesComponent } from '../chart-popular-packages/chart-popular-packages.component';
+import { ChartReviewStatsComponent } from '../chart-review-stats/chart-review-stats.component';
 import { ChartUseragentComponent } from '../chart-useragent/chart-useragent.component';
 import { SearchPackageComponent } from '../search-package/search-package.component';
 import { TitleComponent } from '../title/title.component';
 import { StatsService } from './stats.service';
-import { ChartReviewStatsComponent } from '../chart-review-stats/chart-review-stats.component';
-import { ChartBuildsPerDayComponent } from '../chart-builds-per-day/chart-builds-per-day.component';
-import { ChartPopularPackagesComponent } from '../chart-popular-packages/chart-popular-packages.component';
-import { ChartBuildersAmountComponent } from '../chart-builders-amount/chart-builders-amount.component';
-import { ChartAverageBuildTimeComponent } from '../chart-average-build-time/chart-average-build-time.component';
 
 @Component({
   selector: 'chaotic-stats',
@@ -45,7 +45,6 @@ import { ChartAverageBuildTimeComponent } from '../chart-average-build-time/char
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StatsComponent implements OnInit {
   private readonly appService = inject(AppService);

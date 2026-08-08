@@ -3700,5 +3700,82 @@
         "emoji": "🫡"
       }
     ]
+  },
+  {
+    "id": 673,
+    "type": "message",
+    "date": "2026-08-02T17:28:44",
+    "date_unixtime": "1785684524",
+    "edited": "2026-08-02T17:31:15",
+    "edited_unixtime": "1785684675",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": [
+      "As a friendly reminder, please consider regularly auditing packages installed from AUR. The ",
+      {
+        "type": "text_link",
+        "text": "recent events",
+        "href": "https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/DRDEU3JUSC72CB265XHXPFA3DFSLXPBP/"
+      },
+      " show that being cautious is always a good idea. See also ",
+      {
+        "type": "text_link",
+        "text": "Pacman/Tips_and_tricks",
+        "href": "https://wiki.archlinux.org/title/Pacman/Tips_and_tricks"
+      },
+      " on ArchWiki. Here are some useful commands:\n",
+      {
+        "type": "pre",
+        "text": "pacman -Qqm # list non-repo packages\npacman -Qqe # list explicitly installed packages\npacman -Qdt # list orphaned depends",
+        "language": "shell"
+      },
+      "\nPackage updates will be paused for a while as pushing to AUR is currently disabled.\n\nStay safe, everyone!"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "As a friendly reminder, please consider regularly auditing packages installed from AUR. The "
+      },
+      {
+        "type": "text_link",
+        "text": "recent events",
+        "href": "https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/DRDEU3JUSC72CB265XHXPFA3DFSLXPBP/"
+      },
+      {
+        "type": "plain",
+        "text": " show that being cautious is always a good idea. See also "
+      },
+      {
+        "type": "text_link",
+        "text": "Pacman/Tips_and_tricks",
+        "href": "https://wiki.archlinux.org/title/Pacman/Tips_and_tricks"
+      },
+      {
+        "type": "plain",
+        "text": " on ArchWiki. Here are some useful commands:\n"
+      },
+      {
+        "type": "pre",
+        "text": "pacman -Qqm # list non-repo packages\npacman -Qqe # list explicitly installed packages\npacman -Qdt # list orphaned depends",
+        "language": "shell"
+      },
+      {
+        "type": "plain",
+        "text": "\nPackage updates will be paused for a while as pushing to AUR is currently disabled.\n\nStay safe, everyone!"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 29,
+        "emoji": "❤"
+      },
+      {
+        "type": "emoji",
+        "count": 4,
+        "emoji": "👍"
+      }
+    ]
   }
 ]

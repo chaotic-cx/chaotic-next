@@ -1,14 +1,14 @@
+import { BuildStatus } from '@./shared-lib';
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
-import { UIChart } from 'primeng/chart';
+import { UIChart } from '@openng/optimus-ui/chart';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { CatppuccinFlavors } from '../theme';
-import { BuildStatus } from '@./shared-lib';
 
 @Component({
   selector: 'chaotic-chart-average-build-time',
@@ -16,7 +16,6 @@ import { BuildStatus } from '@./shared-lib';
   templateUrl: './chart-average-build-time.component.html',
   styleUrl: './chart-average-build-time.component.css',
   providers: [MessageToastService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartAverageBuildTimeComponent implements OnInit {
   chartData: any;

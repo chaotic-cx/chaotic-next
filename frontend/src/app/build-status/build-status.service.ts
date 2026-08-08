@@ -1,13 +1,11 @@
-import { inject, Injectable, signal } from '@angular/core';
 import { Build, BuildClass, BuildStatus, PipelineWithExternalStatus } from '@./shared-lib';
-import { Mutex } from 'async-mutex';
-import { AppService } from '../app.service';
-import { retry } from 'rxjs';
+import { inject, Service, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
+import { Mutex } from 'async-mutex';
+import { retry } from 'rxjs';
+import { AppService } from '../app.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class BuildStatusService {
   readonly lastUpdated = signal<Date | undefined>(undefined);
   readonly loadingQueue = signal<boolean>(true);

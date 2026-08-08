@@ -1,15 +1,13 @@
 import { MergeRequestWithDiffs } from '@./shared-lib';
 import { HttpClient } from '@angular/common/http';
-import { effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { effect, inject, Service, signal, untracked } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { finalize, lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { encrypt } from '../functions';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MrOverviewService {
   readonly mergeRequests = signal<MergeRequestWithDiffs[]>([]);
   readonly token = signal<string>('');
