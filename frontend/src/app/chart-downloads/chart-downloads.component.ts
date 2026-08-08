@@ -34,6 +34,7 @@ export class ChartDownloadsComponent implements OnInit {
   range = model(50);
   chartData: any;
   isWide = signal<boolean>(true);
+  loading = signal(true);
   options: any;
   platformId = inject(PLATFORM_ID);
 
@@ -83,6 +84,7 @@ export class ChartDownloadsComponent implements OnInit {
       .subscribe({
         next: (data) => {
           this.statsService.globalPackageMetrics.set(data);
+          this.loading.set(false);
         },
         error: (err) => {
           this.messageToastService.error('Error', 'Failed to load downloads chart data');

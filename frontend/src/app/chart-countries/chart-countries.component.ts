@@ -1,6 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
@@ -23,6 +23,7 @@ import { CatppuccinFlavors } from '../theme';
 export class ChartCountriesComponent implements OnInit {
   chartData: any;
   options: any;
+  loading = signal(true);
   platformId = inject(PLATFORM_ID);
 
   private readonly appService = inject(AppService);
@@ -59,6 +60,7 @@ export class ChartCountriesComponent implements OnInit {
             country.name = `${country.name}  ${this.countryCode2Flag(country.name)}`;
           }
           this.statsService.countryRanksMetrics.set(data);
+          this.loading.set(false);
           this.initChart();
         },
         error: (err) => {

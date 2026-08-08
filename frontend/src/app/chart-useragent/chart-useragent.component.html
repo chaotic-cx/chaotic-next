@@ -1,5 +1,11 @@
 <div class="mb-10 flex justify-center">
-  <p-chart class="w-200 max-w-2xl" [data]="chartData" [options]="options" [responsive]="true" type="pie" />
+  @if (loading()) {
+    <div class="flex h-60 w-200 max-w-2xl items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
+  } @else {
+    <p-chart class="w-200 max-w-2xl" [data]="chartData" [options]="options" [responsive]="true" type="pie" />
+  }
 </div>
 <p-input-number
   [(ngModel)]="packageStatsService.userAgentMetricRange"

@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
@@ -19,6 +19,7 @@ import { CatppuccinFlavors } from '../theme';
 export class ChartBuildersAmountComponent implements OnInit {
   chartData: any;
   options: any;
+  loading = signal(true);
   platformId = inject(PLATFORM_ID);
 
   private readonly appService = inject(AppService);
@@ -38,6 +39,7 @@ export class ChartBuildersAmountComponent implements OnInit {
       .pipe(retry({ count: 3, delay: 5000 }))
       .subscribe({
         next: (data) => {
+          this.loading.set(false);
           this.initChart(data);
         },
         error: (err) => {
