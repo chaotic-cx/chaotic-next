@@ -3,13 +3,13 @@ import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { Card } from '@openng/optimus-ui/card';
 import { Image } from '@openng/optimus-ui/image';
-import { Skeleton } from '@openng/optimus-ui/skeleton';
+import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { updateSeoTags } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-memorial',
-  imports: [Card, Image, TitleComponent, Skeleton],
+  imports: [Card, Image, TitleComponent, ProgressSpinner, ProgressSpinner],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
 })
@@ -83,28 +83,32 @@ export class MemorialComponent implements OnInit {
   desktopLinks: { full: string; preview: string }[] = [];
   termLinks: { full: string; preview: string }[] = [];
 
-  specialTreatmentDesktops: string[] = ['alexjp.jpg', 'fcinq.jpg', 'virusz4274.png'];
+  specialTreatmentDesktops: string[] = ['alexjp.jpg', 'fcinq.jpg', 'filo.jpg', 'virusz4274.png'];
   specialTreatmentTerms: string[] = ['kenny.jpg', 'rohit-arm.jpg', 'snowdan.jpg'];
 
   constructor() {
     for (const filename of this.desktops) {
-      const baseUrl = 'https://raw.githubusercontent.com/chaotic-aur/memorial/main/desktops/';
       if (
         !this.specialTreatmentDesktops.some((item) => {
           return item === filename;
         })
       ) {
-        this.desktopLinks.push({ full: baseUrl + filename, preview: `/memorials/2021/desktops/${filename}.webp` });
+        this.desktopLinks.push({
+          full: `/memorials/2021/desktops/${filename}.webp`,
+          preview: `/memorials/2021/desktops/${filename}.webp`,
+        });
       }
     }
     for (const filename of this.terms) {
-      const baseUrl = 'https://raw.githubusercontent.com/chaotic-aur/memorial/main/terms/';
       if (
         !this.specialTreatmentTerms.some((item) => {
           return item === filename;
         })
       ) {
-        this.termLinks.push({ full: baseUrl + filename, preview: `/memorials/2021/terminals/${filename}.webp` });
+        this.termLinks.push({
+          full: `/memorials/2021/terminals/${filename}.webp`,
+          preview: `/memorials/2021/terminals/${filename}.webp`,
+        });
       }
     }
   }

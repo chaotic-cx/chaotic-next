@@ -3,13 +3,13 @@ import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { Card } from '@openng/optimus-ui/card';
 import { Image } from '@openng/optimus-ui/image';
-import { Skeleton } from '@openng/optimus-ui/skeleton';
+import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { updateSeoTags } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-memorial-v2',
-  imports: [Image, Card, TitleComponent, Skeleton],
+  imports: [Image, Card, TitleComponent, ProgressSpinner],
   templateUrl: './memorial-v2.component.html',
   styleUrl: './memorial-v2.component.css',
 })
@@ -40,12 +40,16 @@ export class MemorialV2Component implements OnInit {
 
   constructor() {
     for (const filename of this.desktops) {
-      const baseUrl = 'https://raw.githubusercontent.com/chaotic-cx/memorial-v2/main/desktops/';
-      this.desktopLinks.push({ full: baseUrl + filename, preview: `/memorials/2024/desktops/${filename}.webp` });
+      this.desktopLinks.push({
+        full: `/memorials/2024/desktops/${filename}.webp`,
+        preview: `/memorials/2024/desktops/${filename}.webp`,
+      });
     }
     for (const filename of this.terms) {
-      const baseUrl = 'https://raw.githubusercontent.com/chaotic-cx/memorial-v2/main/terminals/';
-      this.termLinks.push({ full: baseUrl + filename, preview: `/memorials/2024/terminals/${filename}.webp` });
+      this.termLinks.push({
+        full: `/memorials/2024/terminals/${filename}.webp`,
+        preview: `/memorials/2024/terminals/${filename}.webp`,
+      });
     }
   }
 
