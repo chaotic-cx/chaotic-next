@@ -1,6 +1,6 @@
 import { type DataSourceOptions } from 'typeorm';
 import { Build, Builder, Repo } from './builder/builder.entity';
-import { IS_PROD } from './constants';
+import { InitialSchema1786209704833 } from './migrations/1786209704833-InitialSchema';
 import { ArchlinuxPackage, RepoManagerSettings } from './repo-manager/repo-manager.entity';
 import { User } from './users/users.entity';
 
@@ -11,9 +11,10 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.PG_USER || 'chaotic',
   password: process.env.PG_PASSWORD || 'chaotic',
   database: process.env.PG_DATABASE || 'chaotic',
-  synchronize: !IS_PROD,
+  synchronize: false,
   entities: [Builder, Build, Repo, User, ArchlinuxPackage, RepoManagerSettings],
-  migrations: [],
+  migrations: [InitialSchema1786209704833],
+  migrationsRun: true,
   cache: true,
   extra: {
     ssl: process.env.SSL_MODE === 'require' ? { rejectUnauthorized: false } : false,
