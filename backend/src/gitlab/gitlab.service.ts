@@ -7,7 +7,8 @@ import {
 import { MergeRequestSchema } from '@gitbeaker/core';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { Mutex } from 'async-mutex';
 import { AES, enc } from 'crypto-js';
@@ -17,7 +18,7 @@ import { EventService } from '../events/event.service';
 import { MergeRequestWebhook, PipelineWebhook } from './interfaces';
 
 @Injectable()
-export class GitlabService {
+export class GitlabService implements OnModuleInit {
   api: Gitlab;
   updateMutex = new Mutex();
   reviewStatsMutex = new Mutex();
@@ -41,6 +42,19 @@ export class GitlabService {
   }
 
   /**
+   * Warm the review stats cache on startup and on a timer so the expensive GitLab
+   * computation never blocks the first request.
+   */
+  async onModuleInit(): Promise<void> {
+    await this.refreshReviewStats();
+  }
+
+  @Cron(CronExpression.EVERY_6_HOURS)
+  async handleReviewStatsRefresh(): Promise<void> {
+    await this.refreshReviewStats();
+  }
+
+  /**
    * Get the last GitLab pipelines for the chaotic-aur. Caches the result for CACHE_GITLAB_TTL (10s).
    * @param overwriteCache Whether to overwrite the cache or not
    * @returns The last pipelines with their external statuses (aka build logs)
@@ -50,32 +64,56 @@ export class GitlabService {
       this.CACHE_KEY_PIPELINES,
     );
     if (!data || overwriteCache) {
-      try {
-        let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
-          maxPages: 1,
-          page: 1,
-          perPage: 50,
-        });
-        allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
+      const pipelines = await this.getPipelinesViaRest();
 
-        Logger.log(`Fetched ${allPipelines.length} pipelines`, 'GitlabService');
-        Logger.debug(allPipelines);
-
-        const fetchPromises: Promise<{ commit: CommitStatusSchema[]; pipeline: PipelineSchema }>[] = [];
-        for (const pipeline of allPipelines) {
-          this.getCommitStatus(pipeline, fetchPromises);
-        }
-
-        const promiseResults: PipelineWithExternalStatus[] = await Promise.all(fetchPromises);
-        return promiseResults.sort((a, b) => b.pipeline.id - a.pipeline.id);
-      } catch (err) {
-        Logger.error(err, 'GitlabService');
-      }
-
-      await this.cacheManager.set(this.CACHE_KEY_PIPELINES, data);
+      await this.cacheManager.set(this.CACHE_KEY_PIPELINES, pipelines);
+      return pipelines;
     }
 
     return data;
+  }
+
+  /**
+   * Fetch pipelines via the REST API. External commit statuses are fetched once per
+   * unique commit SHA (many pipelines share a SHA), which avoids an N+1 call.
+   */
+  private async getPipelinesViaRest(): Promise<PipelineWithExternalStatus[]> {
+    let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
+      maxPages: 1,
+      page: 1,
+      perPage: 50,
+    });
+    allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
+
+    Logger.log(`Fetched ${allPipelines.length} pipelines`, 'GitlabService');
+    Logger.debug(allPipelines);
+
+    const uniqueShas = [...new Set(allPipelines.map((pipeline) => pipeline.sha))];
+    const statusesBySha = new Map<string, CommitStatusSchema[]>();
+    await Promise.all(
+      uniqueShas.map(async (sha) => {
+        try {
+          const statuses: CommitStatusSchema[] = await this.api.Commits.allStatuses(this.chaoticId, sha);
+          statusesBySha.set(
+            sha,
+            statuses.filter((status) => this.isExternalStage(status.name)),
+          );
+        } catch (err) {
+          Logger.warn(`Failed to fetch statuses for sha ${sha}: ${(err as Error).message}`, 'GitlabService');
+          statusesBySha.set(sha, []);
+        }
+      }),
+    );
+
+    const promiseResults: PipelineWithExternalStatus[] = allPipelines.map((pipeline) => {
+      const statuses = statusesBySha.get(pipeline.sha) ?? [];
+      return {
+        commit: statuses.filter((status) => status.pipeline_id === pipeline.id),
+        pipeline,
+      };
+    });
+
+    return promiseResults.sort((a, b) => b.pipeline.id - a.pipeline.id);
   }
 
   /**
@@ -171,27 +209,6 @@ export class GitlabService {
   }
 
   /**
-   * Get the commit status for a pipeline, pushing the promise to the array of promises
-   * @param pipeline The pipeline to get the status for
-   * @param promiseArray The array of promises to push the new promise to
-   */
-  private getCommitStatus(pipeline: PipelineSchema, promiseArray: Promise<PipelineWithExternalStatus>[]) {
-    promiseArray.push(
-      new Promise((resolve) => {
-        this.api.Commits.allStatuses(this.chaoticId, pipeline.sha).then((statuses: CommitStatusSchema[]) => {
-          const onlyExternal: CommitStatusSchema[] = statuses.filter((status: CommitStatusSchema) =>
-            this.isExternalStage(status.name),
-          );
-          resolve({
-            commit: onlyExternal.filter((status) => status.pipeline_id === pipeline.id),
-            pipeline,
-          });
-        });
-      }),
-    );
-  }
-
-  /**
    * Check if a stage is an external stage appended by our Chaotic Manager.
    * @param name The name of the stage
    */
@@ -259,21 +276,41 @@ export class GitlabService {
       const again = await this.cacheManager.get<{ username: string; reviews: number }[]>(this.CACHE_KEY_REVIEW_STATS);
       if (again) return again;
 
-      const users = await this.api.Projects.allUsers(this.chaoticId);
-
-      const reviewStats = await mapWithConcurrency(users, 5, async (user) => {
-        const mrs = await this.api.MergeRequests.all({
-          state: 'merged',
-          projectId: this.chaoticId,
-          approvedByIds: [user.id],
-        });
-
-        Logger.debug(`User ${user.username} has approved ${mrs?.length} MRs`, 'GitlabService');
-        return { username: user.username, reviews: mrs.length };
-      });
-
+      const reviewStats = await this.computeReviewStats();
       await this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, reviewStats, CACHE_REVIEW_STATS_TTL);
       return reviewStats;
+    });
+  }
+
+  /**
+   * Recompute review stats and refresh the cache, keeping it warm so the first
+   * request never blocks on the slow GitLab computation.
+   */
+  async refreshReviewStats(): Promise<void> {
+    try {
+      const reviewStats = await this.reviewStatsMutex.runExclusive(async () => {
+        const fresh = await this.computeReviewStats();
+        await this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, fresh, CACHE_REVIEW_STATS_TTL);
+        return fresh;
+      });
+      Logger.log(`Refreshed review stats for ${reviewStats.length} users`, 'GitlabService');
+    } catch (err) {
+      Logger.error(`Failed to refresh review stats: ${(err as Error).message}`, 'GitlabService');
+    }
+  }
+
+  private async computeReviewStats(): Promise<{ username: string; reviews: number }[]> {
+    const users = await this.api.Projects.allUsers(this.chaoticId);
+
+    return mapWithConcurrency(users, 10, async (user) => {
+      const mrs = await this.api.MergeRequests.all({
+        state: 'merged',
+        projectId: this.chaoticId,
+        approvedByIds: [user.id],
+      });
+
+      Logger.debug(`User ${user.username} has approved ${mrs?.length} MRs`, 'GitlabService');
+      return { username: user.username, reviews: mrs.length };
     });
   }
 

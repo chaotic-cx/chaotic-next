@@ -1,5 +1,5 @@
-import { DatePipe, isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
@@ -16,14 +16,11 @@ import { AppService } from '../app.service';
   providers: [MessageToastService, DatePipe],
 })
 export class ChartBuildsPerDayComponent implements OnInit {
-  chartData: any;
-  options: any;
-  loading = signal(true);
-  platformId = inject(PLATFORM_ID);
+  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
+  readonly loading = signal(true);
   days = 30;
 
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly datePipe = inject(DatePipe);
 
@@ -40,39 +37,40 @@ export class ChartBuildsPerDayComponent implements OnInit {
       .pipe(retry({ count: 3, delay: 5000 }))
       .subscribe({
         next: (data) => {
+          this.chartConfig.set(this.buildChartConfig(data));
           this.loading.set(false);
-          this.initChart(data);
         },
         error: (err) => {
+          this.loading.set(false);
           this.messageToastService.error('Error', 'Failed to load builds per day data');
           console.error(err);
         },
-        complete: () => this.cdr.markForCheck(),
       });
   }
 
-  initChart(data: { day: string; count: string }[]): void {
-    if (isPlatformBrowser(this.platformId)) {
-      this.chartData = {
-        labels: [],
+  private buildChartConfig(data: { day: string; count: string }[]): { data: any; options: any } {
+    const labels: string[] = [];
+    const values: number[] = [];
+    for (const item of data) {
+      const formattedDate = this.datePipe.transform(item.day, 'shortDate');
+      labels.push(formattedDate || item.day);
+      values.push(parseInt(item.count));
+    }
+
+    return {
+      data: {
+        labels,
         datasets: [
           {
             label: 'Builds per day',
-            data: [],
+            data: values,
             backgroundColor: flavors.mocha.colors.lavender.hex,
             borderColor: flavors.mocha.colors.lavender.hex,
             fill: false,
           },
         ],
-      };
-
-      for (const item of data) {
-        const formattedDate = this.datePipe.transform(item.day, 'shortDate');
-        this.chartData.labels.push(formattedDate || item.day);
-        this.chartData.datasets[0].data.push(parseInt(item.count));
-      }
-
-      this.options = {
+      },
+      options: {
         maintainAspectRatio: false,
         aspectRatio: 0.4,
         plugins: {
@@ -102,10 +100,8 @@ export class ChartBuildsPerDayComponent implements OnInit {
             },
           },
         },
-      };
-
-      this.cdr.markForCheck();
-    }
+      },
+    };
   }
 
   onDaysChange(): void {

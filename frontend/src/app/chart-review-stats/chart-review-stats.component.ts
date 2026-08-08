@@ -1,7 +1,4 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
@@ -12,37 +9,61 @@ import { shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CatppuccinFlavors } from '../theme';
 
+interface ChartConfig {
+  data: any;
+  options: any;
+}
+
 @Component({
   selector: 'chaotic-chart-review-stats',
-  imports: [UIChart, FormsModule],
+  imports: [UIChart],
   templateUrl: './chart-review-stats.component.html',
   styleUrl: './chart-review-stats.component.css',
   providers: [MessageToastService],
 })
 export class ChartReviewStatsComponent implements OnInit {
-  chartData: any;
-  options: any;
-  loading = signal(true);
-  platformId = inject(PLATFORM_ID);
+  readonly chartConfig = computed<ChartConfig>(() => {
+    const reviewStats = this.statsService.reviewStats();
+    const labels: string[] = [];
+    const data: number[] = [];
+    for (const stat of reviewStats) {
+      labels.push(stat.username);
+      data.push(stat.reviews);
+    }
+
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            label: 'Reviews',
+            backgroundColor: shuffleArray(CatppuccinFlavors),
+          },
+        ],
+      },
+      options: {
+        plugins: {
+          legend: {
+            labels: {
+              usePointStyle: false,
+              color: flavors.mocha.colors.text.hex,
+              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
+            },
+            position: 'top',
+          },
+        },
+      },
+    };
+  });
+
+  readonly loading = signal(true);
 
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
-  private readonly observer = inject(BreakpointObserver);
-
-  protected readonly packageStatsService = inject(StatsService);
-
-  constructor() {
-    effect(() => {
-      this.initChart();
-    });
-  }
+  private readonly statsService = inject(StatsService);
 
   ngOnInit(): void {
-    this.observer.observe(['(max-width: 768px)']).subscribe(() => {
-      // For review stats, we can show more on mobile since it's usernames
-      this.cdr.markForCheck();
-    });
     this.getUpdateReviewStats();
   }
 
@@ -53,7 +74,7 @@ export class ChartReviewStatsComponent implements OnInit {
     this.appService
       .getUpdateReviewStats()
       .pipe(
-        retry({ count: 3, delay: 5000 }),
+        retry({ count: 2, delay: 2000 }),
         map((data) => {
           return data
             .sort((a, b) => b.reviews - a.reviews)
@@ -63,52 +84,14 @@ export class ChartReviewStatsComponent implements OnInit {
       )
       .subscribe({
         next: (data) => {
-          this.packageStatsService.reviewStats.set(data);
+          this.statsService.reviewStats.set(data);
           this.loading.set(false);
-          this.initChart();
         },
         error: (err: unknown) => {
+          this.loading.set(false);
           this.messageToastService.error('Error', 'Failed to retrieve MR review stats');
           console.error(err);
         },
-        complete: () => this.cdr.markForCheck(),
       });
-  }
-
-  initChart(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      const reviewStats = this.packageStatsService.reviewStats();
-
-      this.chartData = {
-        labels: [] as string[],
-        datasets: [
-          {
-            data: [] as number[],
-            label: 'Reviews',
-            backgroundColor: shuffleArray(CatppuccinFlavors),
-          },
-        ],
-      };
-
-      for (const stat of reviewStats) {
-        this.chartData.labels.push(stat.username);
-        this.chartData.datasets[0].data.push(stat.reviews);
-      }
-
-      this.options = {
-        plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
-            },
-            position: 'top' as const,
-          },
-        },
-      };
-
-      this.cdr.markForCheck();
-    }
   }
 }

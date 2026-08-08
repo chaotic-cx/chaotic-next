@@ -1,5 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
@@ -12,20 +11,17 @@ import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-popular-packages',
-  imports: [UIChart, FormsModule, InputNumber],
+  imports: [UIChart, InputNumber, FormsModule],
   templateUrl: './chart-popular-packages.component.html',
   styleUrl: './chart-popular-packages.component.css',
   providers: [MessageToastService],
 })
 export class ChartPopularPackagesComponent implements OnInit {
-  chartData: any;
-  options: any;
-  loading = signal(true);
-  platformId = inject(PLATFORM_ID);
+  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
+  readonly loading = signal(true);
   amount = 20;
 
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
 
   ngOnInit(): void {
@@ -41,36 +37,37 @@ export class ChartPopularPackagesComponent implements OnInit {
       .pipe(retry({ count: 3, delay: 5000 }))
       .subscribe({
         next: (data) => {
+          this.chartConfig.set(this.buildChartConfig(data));
           this.loading.set(false);
-          this.initChart(data);
         },
         error: (err) => {
+          this.loading.set(false);
           this.messageToastService.error('Error', 'Failed to load popular packages data');
           console.error(err);
         },
-        complete: () => this.cdr.markForCheck(),
       });
   }
 
-  initChart(data: { pkgbase_pkgname: string; count: string }[]): void {
-    if (isPlatformBrowser(this.platformId)) {
-      this.chartData = {
-        labels: [],
+  private buildChartConfig(data: { pkgbase_pkgname: string; count: string }[]): { data: any; options: any } {
+    const labels: string[] = [];
+    const values: number[] = [];
+    for (const item of data) {
+      labels.push(item.pkgbase_pkgname);
+      values.push(parseInt(item.count));
+    }
+
+    return {
+      data: {
+        labels,
         datasets: [
           {
-            data: [],
+            data: values,
             label: 'Build count',
             backgroundColor: shuffleArray(CatppuccinFlavors),
           },
         ],
-      };
-
-      for (const item of data) {
-        this.chartData.labels.push(item.pkgbase_pkgname);
-        this.chartData.datasets[0].data.push(parseInt(item.count));
-      }
-
-      this.options = {
+      },
+      options: {
         indexAxis: 'y',
         maintainAspectRatio: false,
         aspectRatio: 0.4,
@@ -101,10 +98,8 @@ export class ChartPopularPackagesComponent implements OnInit {
             },
           },
         },
-      };
-
-      this.cdr.markForCheck();
-    }
+      },
+    };
   }
 
   onAmountChange(): void {

@@ -1,17 +1,6 @@
 import type { PackageRankList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { isPlatformBrowser } from '@angular/common';
-import {
-  ChangeDetectorRef,
-  Component,
-  effect,
-  inject,
-  model,
-  OnInit,
-  PLATFORM_ID,
-  signal,
-  untracked,
-} from '@angular/core';
+import { Component, computed, effect, inject, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
@@ -19,6 +8,7 @@ import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { ProgressBarModule } from '@openng/optimus-ui/progressbar';
 import { ToastModule } from '@openng/optimus-ui/toast';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { StatsService } from '../stats/stats.service';
@@ -30,91 +20,33 @@ import { StatsService } from '../stats/stats.service';
   styleUrl: './chart-downloads.component.css',
   providers: [MessageToastService],
 })
-export class ChartDownloadsComponent implements OnInit {
+export class ChartDownloadsComponent {
   range = model(50);
-  chartData: any;
   isWide = signal<boolean>(true);
   loading = signal(true);
-  options: any;
-  platformId = inject(PLATFORM_ID);
 
-  private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly observer = inject(BreakpointObserver);
+  readonly chartConfig = computed(() => {
+    const metrics = this.statsService.globalPackageMetrics();
+    const labels: string[] = [];
+    const data: number[] = [];
+    for (const pkg of metrics) {
+      labels.push(pkg.name);
+      data.push(pkg.count);
+    }
 
-  protected readonly statsService = inject(StatsService);
-
-  constructor() {
-    effect(() => {
-      this.updatePackageMetrics(this.range());
-    });
-
-    effect(() => {
-      const data = this.statsService.globalPackageMetrics();
-      const isWide = this.isWide();
-      untracked(() => {
-        if (isWide) {
-          this.initChart();
-        } else {
-          this.getProgressBarValues(data);
-        }
-      });
-    });
-  }
-
-  ngOnInit(): void {
-    this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
-      this.isWide.set(!state.matches);
-      if (this.isWide()) {
-        this.range.set(50);
-      } else {
-        this.range.set(20);
-      }
-    });
-  }
-
-  /**
-   * Query the overall package metrics.
-   */
-  updatePackageMetrics(range: number): void {
-    this.appService
-      .getOverallPackageStats(range)
-      .pipe(retry({ count: 3, delay: 5000 }))
-      .subscribe({
-        next: (data) => {
-          this.statsService.globalPackageMetrics.set(data);
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.messageToastService.error('Error', 'Failed to load downloads chart data');
-          console.error(err);
-        },
-        complete: () => this.cdr.markForCheck(),
-      });
-  }
-
-  initChart(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      this.chartData = {
-        labels: [],
+    return {
+      data: {
+        labels,
         datasets: [
           {
-            data: [],
+            data,
             label: 'Download count',
             backgroundColor: [flavors.mocha.colors.lavender.hex],
             innerHeight: 100,
           },
         ],
-      };
-
-      const metrics = untracked(this.statsService.globalPackageMetrics);
-      for (const pkg in metrics) {
-        this.chartData.labels.push(metrics[pkg].name);
-        this.chartData.datasets[0].data.push(metrics[pkg].count);
-      }
-
-      this.options = {
+      },
+      options: {
         indexAxis: 'y',
         maintainAspectRatio: false,
         aspectRatio: 0.4,
@@ -127,22 +59,61 @@ export class ChartDownloadsComponent implements OnInit {
             },
           },
         },
-      };
+      },
+    };
+  });
 
-      this.cdr.markForCheck();
-    }
-  }
-
-  private getProgressBarValues(metrics: PackageRankList) {
-    const values = [];
+  readonly progressbarValues = computed(() => {
+    const metrics = this.statsService.globalPackageMetrics();
+    const values: { value: number; label: string; count: number }[] = [];
     if (metrics.length > 0) {
       for (const pkg of metrics) {
         const relativeCount: number = (pkg.count / metrics[0].count) * 100;
         values.push({ value: relativeCount, label: pkg.name, count: pkg.count });
       }
     }
+    return values;
+  });
 
-    this.statsService.globalPackageProgressbarValues.set(values);
-    this.cdr.markForCheck();
+  private readonly appService = inject(AppService);
+  private readonly messageToastService = inject(MessageToastService);
+  private readonly observer = inject(BreakpointObserver);
+  private readonly statsService = inject(StatsService);
+
+  constructor() {
+    this.observer
+      .observe(['(max-width: 768px)'])
+      .pipe(takeUntilDestroyed())
+      .subscribe((state) => {
+        this.isWide.set(!state.matches);
+        this.range.set(this.isWide() ? 50 : 20);
+      });
+
+    // Refetch when the user changes the range.
+    effect(() => {
+      const range = this.range();
+      this.loading.set(true);
+      this.updatePackageMetrics(range);
+    });
+  }
+
+  /**
+   * Query the overall package metrics.
+   */
+  private updatePackageMetrics(range: number): void {
+    this.appService
+      .getOverallPackageStats(range)
+      .pipe(retry({ count: 3, delay: 5000 }))
+      .subscribe({
+        next: (data: PackageRankList) => {
+          this.statsService.globalPackageMetrics.set(data);
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.loading.set(false);
+          this.messageToastService.error('Error', 'Failed to load downloads chart data');
+          console.error(err);
+        },
+      });
   }
 }

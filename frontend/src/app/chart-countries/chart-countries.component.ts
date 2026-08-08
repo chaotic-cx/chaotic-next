@@ -1,6 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
@@ -13,6 +13,11 @@ import { shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CatppuccinFlavors } from '../theme';
 
+interface ChartConfig {
+  data: any;
+  options: any;
+}
+
 @Component({
   selector: 'chaotic-chart-countries',
   imports: [UIChart, FormsModule, InputNumber, FluidModule],
@@ -21,29 +26,59 @@ import { CatppuccinFlavors } from '../theme';
   providers: [MessageToastService],
 })
 export class ChartCountriesComponent implements OnInit {
-  chartData: any;
-  options: any;
-  loading = signal(true);
-  platformId = inject(PLATFORM_ID);
+  readonly chartConfig = computed<ChartConfig>(() => {
+    const relevantData = this.statsService.countryRanksMetrics().slice(0, this.statsService.countryRanksRange());
+    const labels: string[] = [];
+    const data: number[] = [];
+    for (const country of relevantData) {
+      labels.push(country.name);
+      data.push(country.count);
+    }
+
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            label: 'Router hits',
+            backgroundColor: shuffleArray(CatppuccinFlavors),
+          },
+        ],
+      },
+      options: {
+        chartArea: { right: 20, top: 0, width: '75%', height: '100%' },
+        plugins: {
+          legend: {
+            labels: {
+              usePointStyle: false,
+              color: flavors.mocha.colors.text.hex,
+              family: 'Inter, Helvetica, Arial, sans-serif',
+            },
+            position: 'right',
+          },
+        },
+      },
+    };
+  });
+
+  readonly loading = signal(true);
 
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
-
   protected readonly statsService = inject(StatsService);
 
   constructor() {
-    effect(() => {
-      this.initChart();
-    });
+    this.observer
+      .observe(['(max-width: 768px)'])
+      .pipe(takeUntilDestroyed())
+      .subscribe((state) => {
+        this.statsService.countryRanksRange.set(state.matches ? 5 : 15);
+      });
   }
 
   ngOnInit(): void {
-    this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
-      this.statsService.countryRanksRange.set(state.matches ? 5 : 15);
-      this.cdr.markForCheck();
-    });
     this.getCountryRanks();
   }
 
@@ -61,13 +96,12 @@ export class ChartCountriesComponent implements OnInit {
           }
           this.statsService.countryRanksMetrics.set(data);
           this.loading.set(false);
-          this.initChart();
         },
         error: (err) => {
+          this.loading.set(false);
           this.messageToastService.error('Error', 'Failed to load country chart data');
           console.error(err);
         },
-        complete: () => this.cdr.markForCheck(),
       });
   }
 
@@ -83,41 +117,5 @@ export class ChartCountriesComponent implements OnInit {
       // @ts-expect-error works just as expected
       .map((char) => 127397 + char.charCodeAt());
     return String.fromCodePoint(...codePoints);
-  }
-
-  initChart(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      const relevantData = this.statsService.countryRanksMetrics().slice(0, this.statsService.countryRanksRange());
-      this.chartData = {
-        labels: [],
-        datasets: [
-          {
-            data: [],
-            label: 'Router hits',
-            backgroundColor: shuffleArray(CatppuccinFlavors),
-          },
-        ],
-      };
-      for (const country in relevantData) {
-        this.chartData.labels.push(this.statsService.countryRanksMetrics()[country].name);
-        this.chartData.datasets[0].data.push(this.statsService.countryRanksMetrics()[country].count);
-      }
-
-      this.options = {
-        chartArea: { right: 20, top: 0, width: '75%', height: '100%' },
-        plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: 'Inter, Helvetica, Arial, sans-serif',
-            },
-            position: 'right',
-          },
-        },
-      };
-
-      this.cdr.markForCheck();
-    }
   }
 }

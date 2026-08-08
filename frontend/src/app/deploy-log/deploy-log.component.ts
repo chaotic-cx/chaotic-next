@@ -75,7 +75,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     if (this.route.snapshot.queryParams['search']) {
-      this.deployTable()!.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
+      this.deployTable()?.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
       this.deployLogService.searchValue.set(this.route.snapshot.queryParams['search']);
     }
     this.unsetRounding();
@@ -91,7 +91,7 @@ export class DeployLogComponent implements OnInit, AfterViewInit {
   globalFilter(target: EventTarget | null) {
     if (!target) return;
     const input = target as HTMLInputElement;
-    this.deployTable()!.filterGlobal(input.value, 'contains');
+    this.deployTable()?.filterGlobal(input.value, 'contains');
     void this.router.navigate([], { queryParams: { search: input.value } });
     this.cdr.markForCheck();
   }

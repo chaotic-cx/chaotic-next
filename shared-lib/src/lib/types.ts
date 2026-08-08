@@ -3,7 +3,7 @@ import { MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
 
 export const CACHE_ROUTER_TTL = 60 * 5 * 1000;
 export const CACHE_GITLAB_TTL = 10 * 1000;
-export const CACHE_REVIEW_STATS_TTL = 60 * 60 * 1000;
+export const CACHE_REVIEW_STATS_TTL = 60 * 60 * 6 * 1000; // 6 hours; recomputing review stats is expensive
 export const CAUR_ALLOWED_CORS = [
   'https://aur.chaotic.cx',
   'https://caur-frontend-pages.dev',

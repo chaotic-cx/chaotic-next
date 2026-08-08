@@ -1,7 +1,5 @@
 import { BuildStatus } from '@./shared-lib';
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
@@ -12,19 +10,16 @@ import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-average-build-time',
-  imports: [UIChart, FormsModule],
+  imports: [UIChart],
   templateUrl: './chart-average-build-time.component.html',
   styleUrl: './chart-average-build-time.component.css',
   providers: [MessageToastService],
 })
 export class ChartAverageBuildTimeComponent implements OnInit {
-  chartData: any;
-  options: any;
-  loading = signal(true);
-  platformId = inject(PLATFORM_ID);
+  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
+  readonly loading = signal(true);
 
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
 
   ngOnInit(): void {
@@ -40,39 +35,40 @@ export class ChartAverageBuildTimeComponent implements OnInit {
       .pipe(retry({ count: 3, delay: 5000 }))
       .subscribe({
         next: (data) => {
+          this.chartConfig.set(this.buildChartConfig(data));
           this.loading.set(false);
-          this.initChart(data);
         },
         error: (err) => {
+          this.loading.set(false);
           this.messageToastService.error('Error', 'Failed to load average build time data');
           console.error(err);
         },
-        complete: () => this.cdr.markForCheck(),
       });
   }
 
-  initChart(data: { average_build_time: string; status: string }[]): void {
-    if (isPlatformBrowser(this.platformId)) {
-      // Filter out timed out builds
-      const filteredData = data.filter((item) => parseInt(item.status) !== 4);
+  private buildChartConfig(data: { average_build_time: string; status: string }[]): { data: any; options: any } {
+    // Filter out timed out builds
+    const filteredData = data.filter((item) => parseInt(item.status) !== 4);
 
-      this.chartData = {
-        labels: [],
+    const labels: string[] = [];
+    const values: number[] = [];
+    for (const item of filteredData) {
+      labels.push(this.getStatusName(parseInt(item.status)));
+      values.push(parseFloat(item.average_build_time));
+    }
+
+    return {
+      data: {
+        labels,
         datasets: [
           {
-            data: [],
+            data: values,
             label: 'Average build time (seconds)',
             backgroundColor: shuffleArray(CatppuccinFlavors),
           },
         ],
-      };
-
-      for (const item of filteredData) {
-        this.chartData.labels.push(this.getStatusName(parseInt(item.status)));
-        this.chartData.datasets[0].data.push(parseFloat(item.average_build_time));
-      }
-
-      this.options = {
+      },
+      options: {
         maintainAspectRatio: false,
         aspectRatio: 0.4,
         plugins: {
@@ -102,10 +98,8 @@ export class ChartAverageBuildTimeComponent implements OnInit {
             },
           },
         },
-      };
-
-      this.cdr.markForCheck();
-    }
+      },
+    };
   }
 
   private getStatusName(status: number): string {

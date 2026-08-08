@@ -1,3 +1,15 @@
 <div class="card mt-10 justify-center">
-  <p-chart class="mx-20" [data]="chartData" [options]="options" [responsive]="true" type="line"></p-chart>
+  @if (loading()) {
+    <div class="flex h-60 w-full items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
+  } @else if (chartConfig()) {
+    <p-chart
+      class="mx-20"
+      [data]="chartConfig()!.data"
+      [options]="chartConfig()!.options"
+      [responsive]="true"
+      type="line"
+    ></p-chart>
+  }
 </div>

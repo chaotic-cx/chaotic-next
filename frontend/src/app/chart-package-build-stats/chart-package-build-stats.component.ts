@@ -1,6 +1,5 @@
-import { DatePipe, isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, input, OnChanges, PLATFORM_ID, SimpleChanges } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
@@ -8,65 +7,73 @@ import { AppService } from '../app.service';
 
 @Component({
   selector: 'chaotic-chart-package-build-stats',
-  imports: [UIChart, FormsModule],
+  imports: [UIChart, UIChart],
   templateUrl: './chart-package-build-stats.component.html',
   styleUrl: './chart-package-build-stats.component.css',
   providers: [MessageToastService, DatePipe],
 })
-export class ChartPackageBuildStatsComponent implements OnChanges {
-  packageName = input.required<string>();
+export class ChartPackageBuildStatsComponent {
+  readonly packageName = input.required<string>();
+  readonly loading = signal(true);
 
-  chartData: any;
-  options: any;
-  platformId = inject(PLATFORM_ID);
+  readonly chartConfig = computed<{ data: any; options: any } | null>(() => {
+    const data = this.stats();
+    if (!data) return null;
+    return this.buildChartConfig(data);
+  });
+
+  private readonly stats = signal<{ day: string; repo: string; count: string }[] | null>(null);
   days = 30;
 
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly datePipe = inject(DatePipe);
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['packageName'] && this.packageName()) {
-      this.getPackageBuildStats();
-    }
+  constructor() {
+    // Reload whenever the selected package changes.
+    effect(() => {
+      if (this.packageName()) this.reload();
+    });
   }
 
   /**
    * Query the build counts per day for the package.
    */
-  private getPackageBuildStats(): void {
-    if (!this.packageName) return;
+  private reload(): void {
+    const name = this.packageName();
+    if (!name) return;
 
-    this.appService.getBuildsCountByPkgnamePerDay(this.packageName(), this.days).subscribe({
+    this.loading.set(true);
+    this.appService.getBuildsCountByPkgnamePerDay(name, this.days).subscribe({
       next: (data) => {
-        this.initChart(data);
+        this.stats.set(data);
+        this.loading.set(false);
       },
       error: (err) => {
+        this.loading.set(false);
         this.messageToastService.error('Error', 'Failed to load package build stats');
         console.error(err);
       },
-      complete: () => this.cdr.markForCheck(),
     });
   }
 
-  initChart(data: { day: string; repo: string; count: string }[]): void {
-    if (isPlatformBrowser(this.platformId)) {
-      // Group data by repo
-      const repoData: { [repo: string]: { [day: string]: number } } = {};
-      const allDays = new Set<string>();
+  private buildChartConfig(data: { day: string; repo: string; count: string }[]): { data: any; options: any } {
+    // Group data by repo
+    const repoData: { [repo: string]: { [day: string]: number } } = {};
+    const allDays = new Set<string>();
 
-      for (const item of data) {
-        if (!repoData[item.repo]) {
-          repoData[item.repo] = {};
-        }
-        repoData[item.repo][item.day] = parseInt(item.count);
-        allDays.add(item.day);
+    for (const item of data) {
+      if (!repoData[item.repo]) {
+        repoData[item.repo] = {};
       }
+      repoData[item.repo][item.day] = parseInt(item.count);
+      allDays.add(item.day);
+    }
 
-      const sortedDays = Array.from(allDays).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const sortedDays = Array.from(allDays).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
-      this.chartData = {
+    return {
+      data: {
         labels: sortedDays.map((day) => this.datePipe.transform(new Date(day), 'shortDate') || day),
         datasets: Object.keys(repoData).map((repo, index) => ({
           label: `Builds for ${this.packageName()} in ${repo}`,
@@ -75,9 +82,8 @@ export class ChartPackageBuildStatsComponent implements OnChanges {
           borderColor: this.getColor(index),
           fill: false,
         })),
-      };
-
-      this.options = {
+      },
+      options: {
         maintainAspectRatio: false,
         aspectRatio: 0.4,
         plugins: {
@@ -107,10 +113,8 @@ export class ChartPackageBuildStatsComponent implements OnChanges {
             },
           },
         },
-      };
-
-      this.cdr.markForCheck();
-    }
+      },
+    };
   }
 
   private getColor(index: number): string {
@@ -128,8 +132,6 @@ export class ChartPackageBuildStatsComponent implements OnChanges {
   }
 
   onDaysChange(): void {
-    if (this.packageName()) {
-      this.getPackageBuildStats();
-    }
+    this.reload();
   }
 }
