@@ -1,5 +1,5 @@
 import { ChaoticEvent, MoleculerCurrentQueueObject } from '@./shared-lib';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import IORedis from 'ioredis';
@@ -14,7 +14,7 @@ import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists
 import { brokerConfig, MoleculerConfigCommonService } from './moleculer.config';
 
 @Injectable()
-export class BuilderService {
+export class BuilderService implements OnModuleInit {
   private broker: ServiceBroker;
   private readonly connection: IORedis;
 
@@ -43,9 +43,17 @@ export class BuilderService {
       });
     } catch (err: unknown) {
       Logger.error(err, 'BuilderService');
-      return;
     }
+  }
 
+  async onModuleInit() {
+    await this.initBroker();
+  }
+
+  /**
+   * Initializes the broker that is used to communicate with Chaotic Manager.
+   */
+  async initBroker() {
     const dbConnections: BuilderDbConnections = {
       build: this.buildRepository,
       builder: this.builderRepository,
@@ -54,15 +62,15 @@ export class BuilderService {
     };
 
     try {
-      this.connection.connect().then(() => {
-        this.broker = new ServiceBroker(brokerConfig(generateNodeId(), this.connection));
-        this.broker.createService(
-          new BuilderDatabaseService(this.broker, dbConnections, this.repoManagerService, {
-            sseSubject: this.eventService.sseEvents$,
-          }),
-        );
-        void this.broker.start();
-      });
+      await this.connection.connect();
+
+      this.broker = new ServiceBroker(brokerConfig(generateNodeId(), this.connection));
+      this.broker.createService(
+        new BuilderDatabaseService(this.broker, dbConnections, this.repoManagerService, {
+          sseSubject: this.eventService.sseEvents$,
+        }),
+      );
+      await this.broker.start();
     } catch (err: unknown) {
       Logger.error(err, 'BuilderService');
     }

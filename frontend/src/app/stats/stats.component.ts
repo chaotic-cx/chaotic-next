@@ -103,19 +103,19 @@ export class StatsComponent implements OnInit {
   changeTab($event: string | number | undefined): void {
     switch ($event) {
       case '0':
-        void this.router.navigate([], { fragment: 'search', queryParamsHandling: 'replace' });
+        history.replaceState(null, '', '#search');
         break;
       case '1':
-        void this.router.navigate([], { fragment: 'downloads', queryParamsHandling: 'replace' });
+        history.replaceState(null, '', '#downloads');
         break;
       case '2':
-        void this.router.navigate([], { fragment: 'globals', queryParamsHandling: 'replace' });
+        history.replaceState(null, '', '#globals');
         break;
       case '3':
-        void this.router.navigate([], { fragment: 'update-review', queryParamsHandling: 'replace' });
+        history.replaceState(null, '', '#update-review');
         break;
       case '4':
-        void this.router.navigate([], { fragment: 'builder-stats', queryParamsHandling: 'replace' });
+        history.replaceState(null, '', '#builder-stats');
         break;
     }
   }

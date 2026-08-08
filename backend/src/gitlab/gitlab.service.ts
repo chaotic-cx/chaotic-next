@@ -1,4 +1,9 @@
-import { MergeRequestWithDiffs, NotificationPayload, PipelineWithExternalStatus } from '@./shared-lib';
+import {
+  CACHE_REVIEW_STATS_TTL,
+  MergeRequestWithDiffs,
+  NotificationPayload,
+  PipelineWithExternalStatus,
+} from '@./shared-lib';
 import { MergeRequestSchema } from '@gitbeaker/core';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -15,6 +20,7 @@ import { MergeRequestWebhook, PipelineWebhook } from './interfaces';
 export class GitlabService {
   api: Gitlab;
   updateMutex = new Mutex();
+  reviewStatsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_KEY_PIPELINES = 'gitlab/pipelines';
@@ -246,28 +252,29 @@ export class GitlabService {
    * @returns An array of usernames and their review counts
    */
   async getReviewStats(): Promise<{ username: string; reviews: number }[]> {
-    if (await this.cacheManager.get(this.CACHE_KEY_REVIEW_STATS)) {
-      return await this.cacheManager.get(this.CACHE_KEY_REVIEW_STATS);
-    }
-    const users = await this.api.Projects.allUsers(this.chaoticId);
+    const cached = await this.cacheManager.get<{ username: string; reviews: number }[]>(this.CACHE_KEY_REVIEW_STATS);
+    if (cached) return cached;
 
-    const reviewStats: { username: string; reviews: number }[] = [];
-    for (const user of users) {
-      const mrs = await this.api.MergeRequests.all({
-        state: 'merged',
-        projectId: this.chaoticId,
-        approvedByIds: [user.id],
+    return this.reviewStatsMutex.runExclusive(async () => {
+      const again = await this.cacheManager.get<{ username: string; reviews: number }[]>(this.CACHE_KEY_REVIEW_STATS);
+      if (again) return again;
+
+      const users = await this.api.Projects.allUsers(this.chaoticId);
+
+      const reviewStats = await mapWithConcurrency(users, 5, async (user) => {
+        const mrs = await this.api.MergeRequests.all({
+          state: 'merged',
+          projectId: this.chaoticId,
+          approvedByIds: [user.id],
+        });
+
+        Logger.debug(`User ${user.username} has approved ${mrs?.length} MRs`, 'GitlabService');
+        return { username: user.username, reviews: mrs.length };
       });
 
-      Logger.debug(`User ${user.username} has approved ${mrs?.length} MRs`, 'GitlabService');
-      reviewStats.push({
-        username: user.username,
-        reviews: mrs.length,
-      });
-    }
-
-    void this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, reviewStats);
-    return reviewStats;
+      await this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, reviewStats, CACHE_REVIEW_STATS_TTL);
+      return reviewStats;
+    });
   }
 
   /**
@@ -335,4 +342,27 @@ export class GitlabService {
       return false;
     }
   }
+}
+
+/**
+ * Map over an array running `mapper` with a bounded concurrency, preserving order.
+ */
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await mapper(items[index]);
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
 }
