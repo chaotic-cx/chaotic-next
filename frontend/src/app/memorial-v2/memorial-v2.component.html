@@ -6,18 +6,23 @@
     @for (link of termLinks; track link) {
       @defer (on viewport) {
         <p-card class="h-max py-5">
-          <p-image
-            class="h-auto max-w-full rounded-lg"
-            [preview]="true"
-            [appendTo]="'body'"
-            [previewImageSrc]="link.preview"
-            [src]="link.full"
-            alt="Terminal screenshot"
-          />
+          <div class="relative aspect-[16/10] w-full">
+            <p-image
+              class="absolute inset-0"
+              [imageClass]="'h-full w-full rounded-lg object-contain'"
+              [preview]="true"
+              [appendTo]="'body'"
+              [previewImageSrc]="link.preview"
+              [src]="link.full"
+              alt="Terminal screenshot"
+            />
+          </div>
         </p-card>
       } @placeholder {
         <p-card class="h-max">
-          <p-skeleton class="rounded-lg" width="100%" height="100%" />
+          <div class="flex aspect-[16/10] w-full items-center justify-center">
+            <p-progress-spinner [style]="{ width: '4rem', height: '4rem' }" ariaLabel="loading" strokeWidth="4" />
+          </div>
         </p-card>
       }
     }
@@ -26,17 +31,22 @@
     @for (link of desktopLinks; track link) {
       @defer (on viewport) {
         <p-card>
-          <p-image
-            class="h-auto max-w-full rounded-lg"
-            [preview]="true"
-            [previewImageSrc]="link.preview"
-            [src]="link.full"
-            alt="Desktop screenshot"
-          />
+          <div class="relative aspect-video w-full">
+            <p-image
+              class="absolute inset-0"
+              [imageClass]="'h-full w-full rounded-lg object-contain'"
+              [preview]="true"
+              [previewImageSrc]="link.preview"
+              [src]="link.full"
+              alt="Desktop screenshot"
+            />
+          </div>
         </p-card>
       } @placeholder {
         <p-card>
-          <p-skeleton class="rounded-lg" width="100%" height="100%" />
+          <div class="flex aspect-video w-full items-center justify-center">
+            <p-progress-spinner [style]="{ width: '5rem', height: '5rem' }" ariaLabel="loading" strokeWidth="4" />
+          </div>
         </p-card>
       }
     }

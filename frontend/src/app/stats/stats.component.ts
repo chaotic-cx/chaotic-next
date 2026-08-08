@@ -77,7 +77,7 @@ export class StatsComponent implements OnInit {
       this.statsService.currentTab.set('4');
     } else {
       this.statsService.currentTab.set('0');
-      void this.router.navigate([], { fragment: 'search', queryParamsHandling: 'merge' });
+      history.replaceState(null, '', '#search');
     }
   }
 
