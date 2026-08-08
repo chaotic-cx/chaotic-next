@@ -10,4 +10,6 @@ services:
       POSTGRES_PASSWORD: chaotic
       POSTGRES_USER: chaotic
     volumes:
-      - ./dist/db:/var/lib/postgresql/18/docker
+      - chaotic-dev:/var/lib/postgresql/18/docker
+volumes:
+  chaotic-dev:
