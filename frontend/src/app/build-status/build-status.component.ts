@@ -17,6 +17,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
+import { PipelineTimelineComponent } from './pipeline-timeline.component';
 import { BuildStatusService } from './build-status.service';
 
 @Component({
@@ -33,6 +34,7 @@ import { BuildStatusService } from './build-status.service';
     Skeleton,
     Ripple,
     Panel,
+    PipelineTimelineComponent,
   ],
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
@@ -109,10 +111,6 @@ export class BuildStatusComponent implements OnInit {
 
   changeTab($event: string | number | undefined): void {
     console.log($event);
-  }
-
-  typed(value: any): PipelineWithExternalStatus {
-    return value;
   }
 
   typedDeployment(untypedDeployment: Build) {

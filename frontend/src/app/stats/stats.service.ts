@@ -4,7 +4,8 @@ import { Service, signal } from '@angular/core';
 @Service()
 export class StatsService {
   readonly currentTab = signal<string>('0');
-  readonly totalUsers = signal<string>("<i class='text-ctp-maroon pi pi-hourglass'></i>");
+  readonly totalUsers = signal<string | null>(null);
+  readonly usersLoading = signal<boolean>(true);
 
   readonly countryRanksMetrics = signal<CountryRankList>([]);
   readonly countryRanksRange = signal<number>(15);

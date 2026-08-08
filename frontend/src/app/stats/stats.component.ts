@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -56,6 +56,13 @@ export class StatsComponent implements OnInit {
 
   protected readonly statsService = inject(StatsService);
 
+  readonly subtitle = computed(() => {
+    const users = this.statsService.usersLoading() ? 'loading…' : (this.statsService.totalUsers() ?? '–');
+    return `Area for package statistics and other fun stuff.
+Total users last month: ${users}
+All stats shown here are currently relating to one month of data.`;
+  });
+
   async ngOnInit(): Promise<void> {
     this.appService.updateSeoTags(
       this.meta,
@@ -91,9 +98,11 @@ export class StatsComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.statsService.totalUsers.set(res);
+          this.statsService.usersLoading.set(false);
           this.cdr.markForCheck();
         },
         error: (err) => {
+          this.statsService.usersLoading.set(false);
           this.messageToastService.error('Error', 'Failed to load users count');
           console.error(err);
         },
