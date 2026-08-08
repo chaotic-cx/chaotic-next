@@ -77,6 +77,51 @@ This will allow using the production API without CORS issues.
 
 ![ERD](./assets/ERD.svg)
 
+## Database migrations
+
+The schema is managed with TypeORM migrations. They run **automatically at
+startup** (`migrationsRun: true` in `backend/src/data.source.ts`), so a fresh
+database is created on first boot without manual steps.
+
+### Running migrations
+
+- **At runtime (automatic):** the backend applies pending migrations on startup,
+  so `nx serve backend` (or the production build) is all you need.
+- **Manually** (e.g. against a standalone DB), from the repo root:
+
+  ```sh
+  PG_HOST=localhost PG_USER=chaotic PG_PASSWORD=chaotic PG_DATABASE=chaotic \
+    TS_NODE_TRANSPILE_ONLY=1 TS_NODE_PROJECT=backend/tsconfig.app.json \
+    ./node_modules/.bin/typeorm-ts-node-commonjs migration:run \
+      --dataSource backend/src/migration-cli.ts
+  ```
+
+### Creating a new migration
+
+Migrations are checked into `backend/src/migrations/`. To create one:
+
+1. **Generate from entity changes** (diff of the schema vs. your current
+   entities), from the repo root against a writable local database:
+
+   ```sh
+   PG_HOST=localhost PG_USER=chaotic PG_PASSWORD=chaotic PG_DATABASE=chaotic \
+     TS_NODE_TRANSPILE_ONLY=1 TS_NODE_PROJECT=backend/tsconfig.app.json \
+     ./node_modules/.bin/typeorm-ts-node-commonjs migration:generate \
+       backend/src/migrations/<Name> --dataSource backend/src/migration-cli.ts
+   ```
+
+2. **Or create an empty migration** to hand-write the SQL:
+
+   ```sh
+   TS_NODE_TRANSPILE_ONLY=1 TS_NODE_PROJECT=backend/tsconfig.app.json \
+     ./node_modules/.bin/typeorm-ts-node-commonjs migration:create \
+       backend/src/migrations/<Name>
+   ```
+
+3. **Register the new migration** by importing it **explicitly** in both:
+   - `backend/src/data.source.ts` (the runtime `migrations` array)
+   - `backend/src/migration-cli.ts` (the CLI `migrations` array)
+
 ## Integrate with editors
 
 Enhance your Nx experience by installing [Nx Console](https://nx.dev/nx-console) for your favorite editor. Nx Console
