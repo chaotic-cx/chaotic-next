@@ -1,6 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
@@ -11,19 +9,16 @@ import { CatppuccinFlavors } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-builders-amount',
-  imports: [UIChart, FormsModule],
+  imports: [UIChart],
   templateUrl: './chart-builders-amount.component.html',
   styleUrl: './chart-builders-amount.component.css',
   providers: [MessageToastService],
 })
 export class ChartBuildersAmountComponent implements OnInit {
-  chartData: any;
-  options: any;
-  loading = signal(true);
-  platformId = inject(PLATFORM_ID);
+  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
+  readonly loading = signal(true);
 
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
 
   ngOnInit(): void {
@@ -39,36 +34,37 @@ export class ChartBuildersAmountComponent implements OnInit {
       .pipe(retry({ count: 3, delay: 5000 }))
       .subscribe({
         next: (data) => {
+          this.chartConfig.set(this.buildChartConfig(data));
           this.loading.set(false);
-          this.initChart(data);
         },
         error: (err) => {
+          this.loading.set(false);
           this.messageToastService.error('Error', 'Failed to load builders amount data');
           console.error(err);
         },
-        complete: () => this.cdr.markForCheck(),
       });
   }
 
-  initChart(data: { name: string; count: string }[]): void {
-    if (isPlatformBrowser(this.platformId)) {
-      this.chartData = {
-        labels: [],
+  private buildChartConfig(data: { name: string; count: string }[]): { data: any; options: any } {
+    const labels: string[] = [];
+    const values: number[] = [];
+    for (const item of data) {
+      labels.push(item.name);
+      values.push(parseInt(item.count));
+    }
+
+    return {
+      data: {
+        labels,
         datasets: [
           {
-            data: [],
+            data: values,
             label: 'Builds per builder',
             backgroundColor: shuffleArray(CatppuccinFlavors),
           },
         ],
-      };
-
-      for (const item of data) {
-        this.chartData.labels.push(item.name);
-        this.chartData.datasets[0].data.push(parseInt(item.count));
-      }
-
-      this.options = {
+      },
+      options: {
         maintainAspectRatio: false,
         aspectRatio: 0.4,
         plugins: {
@@ -98,9 +94,7 @@ export class ChartBuildersAmountComponent implements OnInit {
             },
           },
         },
-      };
-
-      this.cdr.markForCheck();
-    }
+      },
+    };
   }
 }

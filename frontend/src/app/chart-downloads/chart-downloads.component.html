@@ -5,7 +5,7 @@
     </div>
   } @else if (isWide()) {
     <div class="flex justify-center">
-      <p-chart class="h-200 w-full" [data]="chartData" [options]="options" type="bar" />
+      <p-chart class="h-200 w-full" [data]="chartConfig().data" [options]="chartConfig().options" type="bar" />
     </div>
     <p-input-number
       [(ngModel)]="range"
@@ -18,7 +18,7 @@
     </p-input-number>
   } @else {
     <div class="h-auto justify-center">
-      @for (download of statsService.globalPackageProgressbarValues(); track download.label) {
+      @for (download of progressbarValues(); track download.label) {
         <p-progress-bar [value]="download.value">
           <ng-template #content>
             <span>{{ download.label }}: {{ download.count }}</span>

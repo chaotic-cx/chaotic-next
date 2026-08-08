@@ -1,16 +1,21 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { flavors } from '@catppuccin/palette';
 import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { retry } from 'rxjs';
 import { AppService } from '../app.service';
 import { shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CatppuccinFlavors } from '../theme';
+
+interface ChartConfig {
+  data: any;
+  options: any;
+}
 
 @Component({
   selector: 'chaotic-chart-useragent',
@@ -20,29 +25,58 @@ import { CatppuccinFlavors } from '../theme';
   providers: [MessageToastService],
 })
 export class ChartUseragentComponent implements OnInit {
-  chartData: any;
-  options: any;
-  loading = signal(true);
-  platformId = inject(PLATFORM_ID);
+  readonly chartConfig = computed<ChartConfig>(() => {
+    const relevantData = this.statsService.userAgentMetrics().slice(0, this.statsService.userAgentMetricRange());
+    const labels: string[] = [];
+    const data: number[] = [];
+    for (const entry of relevantData) {
+      labels.push(entry.name);
+      data.push(entry.count);
+    }
+
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            label: 'Router hits',
+            backgroundColor: shuffleArray(CatppuccinFlavors),
+          },
+        ],
+      },
+      options: {
+        plugins: {
+          legend: {
+            labels: {
+              usePointStyle: false,
+              color: flavors.mocha.colors.text.hex,
+              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
+            },
+            position: 'top',
+          },
+        },
+      },
+    };
+  });
+
+  readonly loading = signal(true);
 
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
-
-  protected packageStatsService = inject(StatsService);
+  protected readonly statsService = inject(StatsService);
 
   constructor() {
-    effect(() => {
-      this.initChart();
-    });
+    this.observer
+      .observe(['(max-width: 768px)'])
+      .pipe(takeUntilDestroyed())
+      .subscribe((state) => {
+        this.statsService.userAgentMetricRange.set(state.matches ? 5 : 10);
+      });
   }
 
-  ngOnInit() {
-    this.observer.observe(['(max-width: 768px)']).subscribe((state) => {
-      this.packageStatsService.userAgentMetricRange.set(state.matches ? 5 : 10);
-      this.cdr.markForCheck();
-    });
+  ngOnInit(): void {
     this.get30DayUserAgents();
   }
 
@@ -65,52 +99,14 @@ export class ChartUseragentComponent implements OnInit {
             }
           }
 
-          this.packageStatsService.userAgentMetrics.set(rightAmount);
+          this.statsService.userAgentMetrics.set(rightAmount);
           this.loading.set(false);
-          this.initChart();
         },
         error: (err) => {
+          this.loading.set(false);
           this.messageToastService.error('Error', 'Failed to load user agent chart data');
           console.error(err);
         },
-        complete: () => this.cdr.markForCheck(),
       });
-  }
-
-  initChart(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      const relevantData = this.packageStatsService
-        .userAgentMetrics()
-        .slice(0, this.packageStatsService.userAgentMetricRange());
-      this.chartData = {
-        labels: [],
-        datasets: [
-          {
-            data: [],
-            label: 'Router hits',
-            backgroundColor: shuffleArray(CatppuccinFlavors),
-          },
-        ],
-      };
-      for (const country in relevantData) {
-        this.chartData.labels.push(this.packageStatsService.userAgentMetrics()[country].name);
-        this.chartData.datasets[0].data.push(this.packageStatsService.userAgentMetrics()[country].count);
-      }
-
-      this.options = {
-        plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
-            },
-            position: 'top',
-          },
-        },
-      };
-
-      this.cdr.markForCheck();
-    }
   }
 }

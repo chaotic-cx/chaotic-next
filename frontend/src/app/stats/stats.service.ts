@@ -11,7 +11,6 @@ export class StatsService {
 
   readonly globalPackageMetrics = signal<PackageRankList>([]);
   readonly globalPackageMetricRange = signal<number>(50);
-  readonly globalPackageProgressbarValues = signal<{ value: number; label: string; count: number }[]>([]);
 
   readonly userAgentMetrics = signal<UserAgentList>([]);
   readonly userAgentMetricRange = signal<number>(50);

@@ -28,7 +28,7 @@ async function bootstrap(): Promise<void> {
   if (trustProxy !== undefined) {
     fastifyAdapter.options({ trustProxy: trustProxy });
   }
-  // @ts-ignore
+  // @ts-expect-error this is very annoying and still works, even though types aren't 100 accurate
   fastifyAdapter.register(helmet);
 
   const corsOptions = {
