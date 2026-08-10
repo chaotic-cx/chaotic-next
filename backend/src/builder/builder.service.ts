@@ -8,6 +8,8 @@ import { Subject } from 'rxjs';
 import { IsNull, Not, Repository } from 'typeorm';
 import { EventService } from '../events/event.service';
 import { generateNodeId, nDaysInPast } from '../functions';
+import { GitlabService } from '../gitlab/gitlab.service';
+import { GitlabStatusEvent } from '../gitlab/interfaces';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { BuilderDbConnections, BuildStatus, MoleculerBuildObject } from '../types';
 import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from './builder.entity';
@@ -30,6 +32,7 @@ export class BuilderService implements OnModuleInit {
     private configService: ConfigService,
     private eventService: EventService,
     private repoManagerService: RepoManagerService,
+    private gitlabService: GitlabService,
   ) {
     const redisPassword: string = this.configService.get<string | undefined>('redis.password');
     const redisHost: string = this.configService.get<string>('redis.host');
@@ -66,8 +69,12 @@ export class BuilderService implements OnModuleInit {
 
       this.broker = new ServiceBroker(brokerConfig(generateNodeId(), this.connection));
       this.broker.createService(
-        new BuilderDatabaseService(this.broker, dbConnections, this.repoManagerService, {
+        new BuilderDatabaseService({
+          broker: this.broker,
+          dbConnections,
+          repoManagerService: this.repoManagerService,
           sseSubject: this.eventService.sseEvents$,
+          gitlabService: this.gitlabService,
         }),
       );
       await this.broker.start();
@@ -374,6 +381,14 @@ export class BuilderService implements OnModuleInit {
   }
 }
 
+export interface BuilderDatabaseServiceOptions {
+  broker: ServiceBroker;
+  dbConnections: BuilderDbConnections;
+  repoManagerService: RepoManagerService;
+  sseSubject: Subject<Partial<MessageEvent<ChaoticEvent>>>;
+  gitlabService: GitlabService;
+}
+
 /**
  * The metrics service that provides the metrics actions for other services to call.
  */
@@ -382,19 +397,16 @@ export class BuilderDatabaseService extends Service {
   private repoManagerService: RepoManagerService;
 
   private readonly sseSubject$: Subject<Partial<MessageEvent<ChaoticEvent>>>;
+  private readonly gitlabService: GitlabService;
 
   busyUpdating = false;
   scheduledUpdate = false;
 
-  constructor(
-    broker: ServiceBroker,
-    dbConnections: BuilderDbConnections,
-    repoManagerService: RepoManagerService,
-    options: { sseSubject: Subject<Partial<MessageEvent<ChaoticEvent>>> },
-  ) {
+  constructor({ broker, dbConnections, repoManagerService, sseSubject, gitlabService }: BuilderDatabaseServiceOptions) {
     super(broker);
 
-    this.sseSubject$ = options.sseSubject;
+    this.sseSubject$ = sseSubject;
+    this.gitlabService = gitlabService;
 
     this.parseServiceSchema({
       name: 'builderDatabaseService',
@@ -402,6 +414,10 @@ export class BuilderDatabaseService extends Service {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'builds.*'(ctx: Context<MoleculerBuildObject>) {
           this.logBuild(ctx);
+        },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'gitlab.status'(ctx: Context<GitlabStatusEvent>) {
+          void this.gitlabService.handleExternalStatus(ctx.params);
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'database.removalCompleted'(ctx: Context<string[]>) {

@@ -8,14 +8,14 @@ import { MergeRequestSchema } from '@gitbeaker/core';
 import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Mutex } from 'async-mutex';
 import { AES, enc } from 'crypto-js';
 import { readFile } from 'node:fs/promises';
 import { PushSubscription, sendNotification } from 'web-push';
 import { EventService } from '../events/event.service';
-import { MergeRequestWebhook, PipelineWebhook } from './interfaces';
+import { GitlabStatusEvent, MergeRequestWebhook, PipelineWebhook } from './interfaces';
 
 @Injectable()
 export class GitlabService implements OnModuleInit {
@@ -24,11 +24,13 @@ export class GitlabService implements OnModuleInit {
   reviewStatsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
-  private readonly CACHE_KEY_PIPELINES = 'gitlab/pipelines';
   private readonly CACHE_KEY_REVIEW_STATS = 'gitlab/review-stats';
   private readonly chaoticId: string;
 
-  // private readonly garudaId: string;
+  // In-memory representation of the recent pipelines and their external statuses.
+  private readonly pipelineMap = new Map<number, PipelineSchema>();
+  private readonly statusMap = new Map<number, CommitStatusSchema[]>();
+  private statusIdCounter = 0;
 
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
@@ -41,12 +43,9 @@ export class GitlabService implements OnModuleInit {
     });
   }
 
-  /**
-   * Warm the review stats cache on startup and on a timer so the expensive GitLab
-   * computation never blocks the first request.
-   */
   async onModuleInit(): Promise<void> {
     await this.refreshReviewStats();
+    await this.seedPipelines();
   }
 
   @Cron(CronExpression.EVERY_6_HOURS)
@@ -55,29 +54,41 @@ export class GitlabService implements OnModuleInit {
   }
 
   /**
-   * Get the last GitLab pipelines for the chaotic-aur. Caches the result for CACHE_GITLAB_TTL (10s).
-   * @param overwriteCache Whether to overwrite the cache or not
-   * @returns The last pipelines with their external statuses (aka build logs)
+   * Periodically reconcile the in-memory pipeline store with GitLab as a safety net for missed webhooks
+   * or dropped status events.
    */
-  async getLastPipelines(overwriteCache = false): Promise<PipelineWithExternalStatus[]> {
-    const data: PipelineWithExternalStatus[] | undefined = await this.cacheManager.get<PipelineWithExternalStatus[]>(
-      this.CACHE_KEY_PIPELINES,
-    );
-    if (!data || overwriteCache) {
-      const pipelines = await this.getPipelinesViaRest();
-
-      await this.cacheManager.set(this.CACHE_KEY_PIPELINES, pipelines);
-      return pipelines;
-    }
-
-    return data;
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async handlePipelinesRefresh(): Promise<void> {
+    await this.seedPipelines();
   }
 
   /**
-   * Fetch pipelines via the REST API. External commit statuses are fetched once per
-   * unique commit SHA (many pipelines share a SHA), which avoids an N+1 call.
+   * Seed the in-memory pipeline store from the GitLab REST API.
    */
-  private async getPipelinesViaRest(): Promise<PipelineWithExternalStatus[]> {
+  async seedPipelines(): Promise<void> {
+    try {
+      await this.getPipelinesViaRest();
+      Logger.log(`Seeded ${this.pipelineMap.size} pipelines`, 'GitlabService');
+    } catch (err) {
+      Logger.error(`Failed to seed pipelines: ${(err as Error).message}`, 'GitlabService');
+    }
+  }
+
+  /**
+   * Get the last GitLab pipelines for the chaotic-aur with their external statuses (aka build logs).
+   * Returns instantly from the in-memory store, which is kept fresh by webhooks and moleculer events.
+   * @returns The last pipelines with their external statuses
+   */
+  async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
+    return [...this.pipelineMap.entries()]
+      .map(([id, pipeline]) => ({ pipeline, commit: this.statusMap.get(id) ?? [] }))
+      .sort((a, b) => b.pipeline.id - a.pipeline.id);
+  }
+
+  /**
+   * Fetch pipelines via the REST API and populate the in-memory store.
+   */
+  private async getPipelinesViaRest(): Promise<void> {
     let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
       maxPages: 1,
       page: 1,
@@ -105,27 +116,72 @@ export class GitlabService implements OnModuleInit {
       }),
     );
 
-    const promiseResults: PipelineWithExternalStatus[] = allPipelines.map((pipeline) => {
+    this.pipelineMap.clear();
+    this.statusMap.clear();
+    for (const pipeline of allPipelines) {
       const statuses = statusesBySha.get(pipeline.sha) ?? [];
-      return {
-        commit: statuses.filter((status) => status.pipeline_id === pipeline.id),
-        pipeline,
-      };
-    });
-
-    return promiseResults.sort((a, b) => b.pipeline.id - a.pipeline.id);
+      this.pipelineMap.set(pipeline.id, pipeline);
+      this.statusMap.set(
+        pipeline.id,
+        statuses.filter((status) => status.pipeline_id === pipeline.id),
+      );
+    }
   }
 
   /**
-   * Bust the cache for the pipelines and refresh available pipelines. Pushes an event to the SSE stream.
+   * Update the in-memory pipeline store from a pipeline webhook and push the refreshed list to the SSE
+   * stream.
    * @param body Body of GitLab API call
    * @returns True if the cache was successfully busted, false otherwise
    */
   async handlePipelineWebhook(body: PipelineWebhook): Promise<boolean> {
-    const newData: PipelineWithExternalStatus[] = await this.getLastPipelines(true);
+    const attrs = body.object_attributes;
+    const existing = this.pipelineMap.get(attrs.id);
+    this.pipelineMap.set(attrs.id, {
+      ...existing,
+      id: attrs.id,
+      status: attrs.status,
+      source: attrs.source,
+      sha: attrs.sha,
+      created_at: attrs.created_at,
+      finished_at: attrs.finished_at,
+      web_url: attrs.url,
+    } as PipelineSchema);
 
-    this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: newData } });
+    const pipelines = await this.getLastPipelines();
+    this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
     return true;
+  }
+
+  /**
+   * Handle an external commit status emitted by chaotic-manager over moleculer. Updates the affected
+   * pipeline's statuses in the in-memory store and pushes the refreshed list to the SSE stream.
+   * @param event The external status event payload
+   */
+  async handleExternalStatus(event: GitlabStatusEvent): Promise<void> {
+    if (event.pipeline_id === undefined) return;
+
+    const list = this.statusMap.get(event.pipeline_id) ?? [];
+    const existingIndex = list.findIndex((status) => status.name === event.name);
+    const existing = existingIndex >= 0 ? list[existingIndex] : undefined;
+
+    const entry: CommitStatusSchema = {
+      id: existing?.id ?? this.statusIdCounter++,
+      name: event.name,
+      status: event.status,
+      description: event.description,
+      target_url: event.target_url,
+      started_at: event.started_at ?? existing?.started_at ?? null,
+      finished_at: event.finished_at ?? existing?.finished_at ?? null,
+      pipeline_id: event.pipeline_id,
+    } as unknown as CommitStatusSchema;
+
+    if (existingIndex >= 0) list.splice(existingIndex, 1);
+    list.push(entry);
+    this.statusMap.set(event.pipeline_id, list);
+
+    const pipelines = await this.getLastPipelines();
+    this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
   }
 
   /**

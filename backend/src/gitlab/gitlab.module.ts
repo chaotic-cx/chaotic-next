@@ -9,5 +9,6 @@ import { EventModule } from '../events/event.module';
   imports: [CacheModule.register(), EventModule, HttpModule],
   controllers: [GitlabController],
   providers: [GitlabService],
+  exports: [GitlabService],
 })
 export class GitlabModule {}
