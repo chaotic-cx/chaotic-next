@@ -2,6 +2,7 @@ import type { MirrorData } from '@chaotic-next/shared-lib';
 import { httpResource } from '@angular/common/http';
 import { computed, inject, Service } from '@angular/core';
 import { AppService } from '../app.service';
+import { resourceValue } from '../functions';
 
 @Service()
 export class MirrorsService {
@@ -13,7 +14,7 @@ export class MirrorsService {
   readonly error = this.mirrorsResource.error;
 
   readonly mirrorData = computed<MirrorData | null>(() => {
-    const data = this.mirrorsResource.value();
+    const data = resourceValue(this.mirrorsResource);
     if (!data) return null;
     return {
       self: data.self,

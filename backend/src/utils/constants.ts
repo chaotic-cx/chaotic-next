@@ -1,4 +1,5 @@
 export const requiredEnvVarsProd: string[] = [
+  'BETTER_AUTH_SECRET',
   'PG_DATABASE',
   'PG_HOST',
   'PG_PASSWORD',
@@ -8,7 +9,14 @@ export const requiredEnvVarsProd: string[] = [
   'REDIS_SSH_USER',
 ];
 
-export const requiredEnvVarsDev: string[] = ['PG_DATABASE', 'PG_HOST', 'PG_PASSWORD', 'PG_USER', 'REDIS_PASSWORD'];
+export const requiredEnvVarsDev: string[] = [
+  'BETTER_AUTH_SECRET',
+  'PG_DATABASE',
+  'PG_HOST',
+  'PG_PASSWORD',
+  'PG_USER',
+  'REDIS_PASSWORD',
+];
 
 export const ARCH = 'x86_64';
 

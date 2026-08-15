@@ -12,14 +12,12 @@ import { computed, inject, Service, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, Subject } from 'rxjs';
 import { AppService } from '../app.service';
+import { resourceValue } from '../functions';
 
-/** Hardcoded repository options, matching the repos managed by Chaotic-AUR. */
 export const REPO_OPTIONS = ['chaotic-aur', 'garuda'];
 
-/** Logs expire after being stored in Redis for one week. */
 const LOG_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Hardcoded build status options with their display labels. */
 const STATUS_OPTIONS: { label: string; value: BuildStatus }[] = [
   { label: STATUS_LABELS[BuildStatus.SUCCESS], value: BuildStatus.SUCCESS },
   { label: STATUS_LABELS[BuildStatus.ALREADY_BUILT], value: BuildStatus.ALREADY_BUILT },
@@ -58,7 +56,7 @@ export class DeployLogService {
     () => `${this.appService.getBackendUrl()}/builder/builders`,
   );
   readonly builderOptions = computed<string[]>(() =>
-    (this.buildersResource.value() ?? []).map((builder) => builder.name),
+    (resourceValue(this.buildersResource) ?? []).map((builder) => builder.name),
   );
 
   private readonly resource = httpResource<Paginated<Build>>(() =>
@@ -75,9 +73,9 @@ export class DeployLogService {
   );
 
   readonly loading = computed(() => this.resource.isLoading());
-  readonly total = computed(() => this.resource.value()?.total ?? 0);
+  readonly total = computed(() => resourceValue(this.resource)?.total ?? 0);
   readonly packageList = computed<Build[]>(() =>
-    (this.resource.value()?.items ?? []).map((build) => ({
+    (resourceValue(this.resource)?.items ?? []).map((build) => ({
       ...build,
       statusText: STATUS_LABELS[build.status],
       logUrl: new Date(build.timestamp).getTime() + LOG_RETENTION_MS < Date.now() ? 'purged' : build.logUrl,
@@ -88,42 +86,35 @@ export class DeployLogService {
     this.qSubject.pipe(debounceTime(300), takeUntilDestroyed()).subscribe((q) => this.qDebounced.set(q));
   }
 
-  /** Update the global search query (debounced) and the bound input value. */
   setSearch(value: string): void {
     this.searchValue.set(value);
     this.qSubject.next(value);
   }
 
-  /** Update pagination from the table's lazy load event. */
   setPage(first: number, rows: number): void {
     this.page.set(Math.floor(first / rows) + 1);
     this.perPage.set(rows);
   }
 
-  /** Update sorting from the table's lazy load event. */
   setSort(field: string, order: number): void {
     this.sortField.set(isBuildSortField(field) ? field : DEFAULT_SORT_FIELD);
     this.sortOrder.set(order);
   }
 
-  /** Update the package name column filter from the table's lazy load event. */
   setPkgnameFilter(pkgname?: string): void {
     this.pkgnameFilter.set(pkgname ?? '');
   }
 
-  /** Update the builder dropdown filter, resetting to the first page. */
   setBuilderFilter(value: string | null | undefined): void {
     this.builderFilter.set(value ?? undefined);
     this.page.set(1);
   }
 
-  /** Update the repository dropdown filter, resetting to the first page. */
   setRepoFilter(value: string | null | undefined): void {
     this.repoFilter.set(value ?? undefined);
     this.page.set(1);
   }
 
-  /** Update the status dropdown filter, resetting to the first page. */
   setStatusFilter(value: BuildStatus | null | undefined): void {
     this.statusFilter.set(value ?? undefined);
     this.page.set(1);

@@ -9,6 +9,8 @@ import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerBehindProxyGuard } from './api/throttler-behind-proxy.guard';
 import { auth } from './auth/auth';
+import { AdminModule } from './admin/admin.module';
+import { AurModule } from './aur/aur.module';
 import { BuilderModule } from './builder/builder.module';
 import appConfig from './config/app.config';
 import { dataSourceOptions } from './data/data.source';
@@ -22,6 +24,8 @@ import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
 
 @Module({
   imports: [
+    AdminModule,
+    AurModule,
     AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
     BuilderModule,
     ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true, load: [appConfig] }),

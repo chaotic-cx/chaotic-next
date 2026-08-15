@@ -1,4 +1,4 @@
-import { RepoStatus } from '@chaotic-next/shared-lib';
+import { Paginated, RepoStatus } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -19,7 +19,8 @@ import {
   SonameDependency,
   TriggerType,
 } from '../interfaces/repo-manager';
-import { bumpTypeToText, encryptAes, errorMessage } from '../utils/functions';
+import { bumpTypeToText, errorMessage } from '../utils/functions';
+import { paginate, resolvePagination } from '../utils/pagination';
 import { ArchMirrorService } from './arch-mirror.service';
 import { BumpService, parseCiConfig } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
@@ -106,23 +107,6 @@ export class RepoManagerService implements OnModuleInit {
       }),
     );
 
-    // We explicitly want to encrypt API tokens if they are prefixed with "CLEAR:"
-    try {
-      const reposWithTokens = await this.repoRepository.find({
-        where: { apiToken: Not(IsNull()) },
-      });
-      const dbKey = this.configService.getOrThrow('app.dbKey');
-      for (const repo of reposWithTokens) {
-        if (repo.apiToken.startsWith('CLEAR:')) {
-          const token = repo.apiToken.slice('CLEAR:'.length);
-          repo.apiToken = encryptAes(token, dbKey);
-          await this.repoRepository.save(repo);
-        }
-      }
-    } catch (err: unknown) {
-      this.logger.error(errorMessage(err));
-    }
-
     this.repoManager = this.createRepoManager();
     this.logger.log(`RepoManager service initialized with ${this.repos.length} repos`);
   }
@@ -176,27 +160,31 @@ export class RepoManagerService implements OnModuleInit {
     return this.repoManager.indexArchMirror();
   }
 
-  async indexChaoticRepo(dbUrl: string): Promise<IndexResult> {
-    return this.repoManager.indexChaoticRepo(dbUrl);
+  async indexChaoticRepo(): Promise<IndexResult> {
+    return this.repoManager.indexChaoticRepo();
   }
 
-  async getBrokenPackages(): Promise<BrokenPackageReport[]> {
+  async getBrokenPackages(page?: number, perPage?: number): Promise<Paginated<BrokenPackageReport>> {
     // Arch packages are reference data and never judged broken, so only Chaotic
     // analyses are queried (and reported).
-    const analyses = await this.elfAnalysisRepository.find({
+    const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
+    const [analyses, total] = await this.elfAnalysisRepository.findAndCount({
       where: { broken: true, pkgType: pkgTypeOf(TriggerType.CHAOTIC) },
       order: { pkgId: 'ASC' },
+      skip,
+      take: safePerPage,
     });
-    if (analyses.length === 0) return [];
 
     const chaoticIds = analyses.map((a) => a.pkgId);
-    const chaoticPkgs = await this.packageRepository.find({
-      where: { id: In(chaoticIds) },
-      relations: { repo: true },
-    });
+    const chaoticPkgs = chaoticIds.length
+      ? await this.packageRepository.find({
+          where: { id: In(chaoticIds) },
+          relations: { repo: true },
+        })
+      : [];
     const chaoticById = new Map(chaoticPkgs.map((p) => [p.id, p]));
 
-    return analyses.map((analysis) => {
+    const items = analyses.map((analysis) => {
       const pkg = chaoticById.get(analysis.pkgId);
       return {
         pkgType: 'chaotic' as const,
@@ -206,6 +194,7 @@ export class RepoManagerService implements OnModuleInit {
         reasons: analysis.brokenReasons,
       };
     });
+    return paginate(items, total, safePage, safePerPage);
   }
 
   async getDependencyGraph(): Promise<DependencyEdge[]> {
@@ -257,23 +246,31 @@ export class RepoManagerService implements OnModuleInit {
    * (metadata deps, the latest ELF analysis, the soname/plugin provider index).
    */
   async getRebuildTriggerSources(pkgname: string): Promise<PackageRebuildTriggerSources> {
-    const pkg = await this.packageRepository.findOne({
+    const pkgs = await this.packageRepository.find({
       where: { pkgname, isActive: true },
       relations: { repo: true },
       order: { lastUpdated: 'DESC' },
     });
-    if (!pkg) {
+    if (pkgs.length === 0) {
       throw new NotFoundException(`Package not found: ${pkgname}`);
     }
 
+    // A pkgname can map to several package rows (e.g. duplicate/renamed repo
+    // entries), and only one of them carries the current ELF analysis. Look
+    // across all of them and use the newest analysis; a lone findOne() can pick
+    // a row with no analysis and wrongly report an empty dependency graph.
     const analyses = await this.elfAnalysisRepository.find({
-      where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: pkg.id },
+      where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: In(pkgs.map((pkg) => pkg.id)) },
     });
     // Latest by Arch version order, not DB string order (2:13 vs 2:9, 1.10 vs 1.9).
     const analysis = analyses.reduce<PackageElfAnalysis | undefined>((latest, candidate) => {
       if (!latest || compareArchVersions(candidate.version, latest.version) > 0) return candidate;
       return latest;
     }, undefined);
+
+    // Base the report on the package that owns the analysis (for metadata deps
+    // and explicit triggers); otherwise fall back to the most recently updated.
+    const pkg = pkgs.find((candidate) => candidate.id === analysis?.pkgId) ?? pkgs[0];
 
     const explicitTriggers = await this.explicitTriggersFor(pkg);
 

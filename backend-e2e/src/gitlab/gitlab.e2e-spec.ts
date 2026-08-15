@@ -3,15 +3,28 @@ import 'reflect-metadata';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServiceBroker } from 'moleculer';
 import { type Subscriber } from 'rxjs';
+import { CanActivate, type ExecutionContext } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@chaotic-next/backend/app.module';
+import { Repo } from '@chaotic-next/backend/builder/builder.entity';
+import { DataSource } from 'typeorm';
 import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
+import { PipelineTrigger } from '@chaotic-next/backend/gitlab/pipeline-trigger.entity';
 import { EventService } from '@chaotic-next/backend/events/event.service';
+import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import type { GitlabStatusEvent, PipelineWebhook } from '@chaotic-next/backend/gitlab/interfaces';
-import type { ChaoticEvent, MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
+import type { ChaoticEvent, MergeRequestWithDiffs, PipelineTriggerResult } from '@chaotic-next/shared-lib';
 
 const WEBHOOK_TOKEN = 'test-webhook-token';
+
+class FakeAuthGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<{ session: unknown }>();
+    request.session = { user: { id: 'test-user', name: 'Test User' } };
+    return true;
+  }
+}
 
 function pipelineWebhook(overrides: Partial<PipelineWebhook['object_attributes']> & { id: number }): PipelineWebhook {
   return {
@@ -63,7 +76,15 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
   let sseEvents: Partial<MessageEvent<ChaoticEvent>>[];
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideGuard(AuthGuard)
+      .useClass(FakeAuthGuard)
+      .compile();
+
+    const dataSource = moduleRef.get<DataSource>(DataSource);
+    if (!dataSource.isInitialized) await dataSource.initialize();
+    await dataSource.getRepository(Repo).save({ name: 'chaotic-aur', gitlabProjectId: 'test-project-id' });
+
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
     await app.listen(0);
@@ -395,20 +416,10 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
   });
 
   describe('POST /gitlab/approve', () => {
-    it('rejects without a token (401)', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/gitlab/approve',
-        payload: { iid: 1, sha: 'abc123' },
-      });
-      expect(res.statusCode).toBe(401);
-    });
-
     it('rejects an invalid iid (400)', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/approve',
-        headers: { 'x-gitlab-private-token': 'test-token' },
         payload: { iid: -1, sha: 'abc123' },
       });
       expect(res.statusCode).toBe(400);
@@ -418,7 +429,6 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/approve',
-        headers: { 'x-gitlab-private-token': 'test-token' },
         payload: { iid: 1, sha: 'not-a-sha' },
       });
       expect(res.statusCode).toBe(400);
@@ -430,30 +440,19 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/approve',
-        headers: { 'x-gitlab-private-token': 'valid-token' },
         payload: { iid: 42, sha: '4a70b438f76d' },
       });
 
       expect(res.statusCode).toBe(201);
-      expect(approveSpy).toHaveBeenCalledWith(42, '4a70b438f76d', 'valid-token');
+      expect(approveSpy).toHaveBeenCalledWith(42, '4a70b438f76d', { userId: 'test-user', userName: 'Test User' });
     });
   });
 
   describe('POST /gitlab/flag', () => {
-    it('rejects without a token (401)', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/gitlab/flag',
-        payload: { iid: 1, label: 'hold' },
-      });
-      expect(res.statusCode).toBe(401);
-    });
-
     it('rejects an invalid label (400)', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/flag',
-        headers: { 'x-gitlab-private-token': 'test-token' },
         payload: { iid: 1, label: 'bogus' },
       });
       expect(res.statusCode).toBe(400);
@@ -465,45 +464,146 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/flag',
-        headers: { 'x-gitlab-private-token': 'valid-token' },
         payload: { iid: 42, label: 'dangerous' },
       });
 
       expect(res.statusCode).toBe(201);
-      expect(flagSpy).toHaveBeenCalledWith(42, 'dangerous', 'valid-token');
+      expect(flagSpy).toHaveBeenCalledWith(42, 'dangerous', { userId: 'test-user', userName: 'Test User' });
     });
   });
 
-  describe('POST /gitlab/test-token', () => {
-    it('rejects without a token (401)', async () => {
-      const res = await app.inject({ method: 'POST', url: '/gitlab/test-token' });
-      expect(res.statusCode).toBe(401);
+  describe('GET /gitlab/schedules', () => {
+    it('returns all pipeline schedules including inactive ones', async () => {
+      vi.spyOn(gitlabService.api.PipelineSchedules, 'all').mockResolvedValue([
+        { id: 13, description: 'Daily rebuilds', active: true },
+        { id: 14, description: 'One-off cleanup', active: false },
+        { id: 15, description: null, active: false },
+      ] as never);
+
+      const res = await app.inject({ method: 'GET', url: '/gitlab/schedules' });
+
+      expect(res.statusCode).toBe(200);
+      const body = (await res.json()) as Array<{ id: number; description: string | null; active: boolean }>;
+      expect(body).toEqual([
+        { id: 13, description: 'Daily rebuilds', active: true },
+        { id: 14, description: 'One-off cleanup', active: false },
+        { id: 15, description: null, active: false },
+      ]);
+      expect(vi.mocked(gitlabService.api.PipelineSchedules.all).mock.calls[0][1]).not.toHaveProperty('scope');
+    });
+  });
+
+  describe('POST /gitlab/trigger (validation, mocked service)', () => {
+    it('rejects a missing operation (400)', async () => {
+      const res = await app.inject({ method: 'POST', url: '/gitlab/trigger', payload: {} });
+      expect(res.statusCode).toBe(400);
     });
 
-    it('returns true when the token has write access', async () => {
-      vi.spyOn(gitlabService, 'testToken').mockResolvedValue(true);
+    it('rejects an unknown operation (400)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/trigger',
+        payload: { operation: 'Explode Packages' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it.each(['Bump Packages', 'Schedule Packages', 'Drop Packages'])(
+      'rejects a missing packages input for %s (400)',
+      async (operation) => {
+        const res = await app.inject({ method: 'POST', url: '/gitlab/trigger', payload: { operation } });
+        expect(res.statusCode).toBe(400);
+      },
+    );
+
+    it('rejects a missing trigger input for Run Schedule (400)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/trigger',
+        payload: { operation: 'Run Schedule' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects an incomplete Add Packages request (400)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/trigger',
+        payload: { operation: 'Add Packages', add_packages: 'paru/aur' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects an invalid packages format (400)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/trigger',
+        payload: { operation: 'Bump Packages', packages: 'a;b' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('forwards validated inputs and the session user to the service (201)', async () => {
+      const triggerSpy = vi.spyOn(gitlabService, 'triggerPipeline').mockResolvedValue({
+        pipelineId: 4711,
+        webUrl: 'https://gitlab.com/pipelines/4711',
+        status: 'created',
+      });
 
       const res = await app.inject({
         method: 'POST',
-        url: '/gitlab/test-token',
-        headers: { 'x-gitlab-private-token': 'valid-token' },
+        url: '/gitlab/trigger',
+        payload: { operation: 'Bump Packages', packages: 'nodejs:20', ref: 'dev' },
       });
 
       expect(res.statusCode).toBe(201);
-      expect(await res.json()).toBe(true);
+      expect(triggerSpy).toHaveBeenCalledWith({ operation: 'Bump Packages', packages: 'nodejs:20' }, 'dev', {
+        userId: 'test-user',
+        userName: 'Test User',
+      });
+      const body = (await res.json()) as PipelineTriggerResult;
+      expect(body.pipelineId).toBe(4711);
     });
+  });
 
-    it('returns false when the token lacks write access', async () => {
-      vi.spyOn(gitlabService, 'testToken').mockResolvedValue(false);
+  describe('POST /gitlab/trigger (real service, mocked GitLab API)', () => {
+    it('creates the pipeline, records who triggered it, and persists an audit row', async () => {
+      const createSpy = vi.spyOn(gitlabService.api.Pipelines, 'create').mockResolvedValue({
+        id: 4712,
+        status: 'created',
+        web_url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/4712',
+      } as never);
 
       const res = await app.inject({
         method: 'POST',
-        url: '/gitlab/test-token',
-        headers: { 'x-gitlab-private-token': 'bad-token' },
+        url: '/gitlab/trigger',
+        payload: { operation: 'Add Packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
       });
 
       expect(res.statusCode).toBe(201);
-      expect(await res.json()).toBe(false);
+      expect(createSpy).toHaveBeenCalledWith('test-project-id', 'main', {
+        inputs: { operation: 'Add Packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
+        variables: [
+          {
+            key: 'PIPELINE_TRIGGERED_BY',
+            value: 'Test User (test-user)',
+            variable_type: 'env_var',
+          },
+        ],
+      });
+
+      const triggerRepository = app.get(DataSource).getRepository(PipelineTrigger);
+      const rows = await triggerRepository.find({ where: { pipelineId: 4712 } });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        ref: 'main',
+        operation: 'Add Packages',
+        inputs: { operation: 'Add Packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
+        webUrl: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/4712',
+        userId: 'test-user',
+        userName: 'Test User',
+      });
+      await triggerRepository.clear();
     });
   });
 });

@@ -8,7 +8,7 @@ import { FluidModule } from '@openng/optimus-ui/fluid';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels } from '../chart-config';
-import { shuffleArray } from '../functions';
+import { resourceValue, shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
@@ -32,7 +32,7 @@ export class ChartCountriesComponent {
   readonly hasData = computed(() => this.resource.hasValue());
 
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
-    const all = this.resource.value() ?? [];
+    const all = resourceValue(this.resource) ?? [];
     const relevantData = all.slice(0, this.statsService.countryRanksRange());
     const labels: string[] = [];
     const data: number[] = [];

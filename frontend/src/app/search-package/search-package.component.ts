@@ -13,14 +13,18 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Package, Paginated, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
+import { debounceTime, Subject } from 'rxjs';
 import { AppService } from '../app.service';
 import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
+import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
+import { resourceValue } from '../functions';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
 import { StatsService } from '../stats/stats.service';
@@ -36,6 +40,7 @@ import { StatsService } from '../stats/stats.service';
     FormsModule,
     Select,
     ChartPackageBuildStatsComponent,
+    PackageTriggerSourcesComponent,
   ],
   templateUrl: './search-package.component.html',
   styleUrl: './search-package.component.css',
@@ -44,6 +49,7 @@ export class SearchPackageComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly meta = inject(Meta);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly packageStatsService = inject(StatsService);
 
@@ -53,6 +59,7 @@ export class SearchPackageComponent implements OnInit {
   protected readonly repoOptions = REPO_OPTIONS;
   protected readonly currentPackageName = signal<string>('');
 
+  private readonly suggestionsQuerySubject = new Subject<string>();
   private readonly suggestionsQuery = signal<string>('');
 
   private readonly suggestionsResource = httpResource<Paginated<Package>>(() =>
@@ -77,11 +84,11 @@ export class SearchPackageComponent implements OnInit {
   });
 
   protected readonly suggestions = computed<string[]>(() => [
-    ...new Set((this.suggestionsResource.value()?.items ?? []).map((pkg) => pkg.pkgname)),
+    ...new Set((resourceValue(this.suggestionsResource)?.items ?? []).map((pkg) => pkg.pkgname)),
   ]);
 
   protected readonly packageSearchData = computed<{ key: string; value: unknown }[]>(() => {
-    const result = this.packageResource.value();
+    const result = resourceValue(this.packageResource);
     if (!result) return [];
 
     const data: Record<string, unknown> = { ...result };
@@ -123,6 +130,10 @@ export class SearchPackageComponent implements OnInit {
   });
 
   constructor() {
+    this.suggestionsQuerySubject
+      .pipe(debounceTime(300), takeUntilDestroyed())
+      .subscribe((query) => this.suggestionsQuery.set(query));
+
     effect(() => {
       const q = this.search();
       if (q && /^[a-zA-Z0-9@.+_-]+$/.test(q)) {
@@ -146,9 +157,8 @@ export class SearchPackageComponent implements OnInit {
 
     const autocomplete = this.autoComplete();
     if (/^[a-zA-Z0-9@.+_-]+$/.test(event.query)) {
-      this.suggestionsQuery.set(event.query);
+      this.suggestionsQuerySubject.next(event.query);
       if (autocomplete) autocomplete.inputStyleClass = '';
-      void this.router.navigate(['/stats'], { queryParams: { search: event.query } });
       this.cdr.markForCheck();
     } else {
       if (autocomplete) autocomplete.inputStyleClass = 'ng-invalid ng-dirty';
@@ -156,9 +166,30 @@ export class SearchPackageComponent implements OnInit {
     }
   }
 
+  selectPackage(query: string): void {
+    this.updateDisplay(query);
+    this.syncSearchParam(query);
+  }
+
+  onInputBlur(): void {
+    // The model is one-way, so the typed text only lives in this signal.
+    this.syncSearchParam(this.currentPackageName());
+  }
+
   updateDisplay(query: string): void {
     if (/^[a-zA-Z0-9@.+_-]+$/.test(query)) {
       this.currentPackageName.set(query);
     }
+  }
+
+  private syncSearchParam(query: string): void {
+    if (!/^[a-zA-Z0-9@.+_-]+$/.test(query)) return;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { search: query },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+      info: { disableViewTransition: true },
+    });
   }
 }

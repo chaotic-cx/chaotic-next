@@ -1,11 +1,14 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import { Paginated } from '@chaotic-next/shared-lib';
 import { BrokenPackageReport, IndexResult, PackageRebuildTriggerSources } from '../interfaces/repo-manager';
 import { RepoManagerService } from './repo-manager.service';
 import { PackageElfAnalysis } from './repo-manager.entity';
 import type { DependencyEdge } from './signal';
 
 @ApiTags('repo')
+@UseGuards(AuthGuard)
 @Controller('repo')
 export class RepoManagerController {
   constructor(private repoManager: RepoManagerService) {}
@@ -29,8 +32,11 @@ export class RepoManagerController {
     summary: 'List packages whose ELF analysis is flagged broken (missing sonames / stale runtime dirs).',
   })
   @ApiOkResponse({ description: 'Broken packages.', type: Object })
-  getBrokenPackages(): Promise<BrokenPackageReport[]> {
-    return this.repoManager.getBrokenPackages();
+  getBrokenPackages(
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
+  ): Promise<Paginated<BrokenPackageReport>> {
+    return this.repoManager.getBrokenPackages(page, perPage);
   }
 
   @Post('index/arch')
@@ -41,10 +47,10 @@ export class RepoManagerController {
   }
 
   @Post('index/chaotic')
-  @ApiOperation({ summary: 'Index a full Chaotic-AUR repo from a database URL into the ELF signal index.' })
+  @ApiOperation({ summary: 'Index the full Chaotic-AUR repo (CDN mirror) into the ELF signal index.' })
   @ApiCreatedResponse({ description: 'Full Chaotic repo index triggered.', type: Object })
-  indexChaoticRepo(@Body('url') url: string): Promise<IndexResult> {
-    return this.repoManager.indexChaoticRepo(url);
+  indexChaoticRepo(): Promise<IndexResult> {
+    return this.repoManager.indexChaoticRepo();
   }
 
   @Get('dependencies')

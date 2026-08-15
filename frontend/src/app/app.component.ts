@@ -1,7 +1,6 @@
-import { BuildStatus } from '@chaotic-next/shared-lib';
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import localeEnGb from '@angular/common/locales/en-GB';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import {
@@ -11,22 +10,34 @@ import {
   NavigationStart,
   Router,
   RouterModule,
-  RouterOutlet,
 } from '@angular/router';
+import { BuildStatus } from '@chaotic-next/shared-lib';
 import { MessageToastService, ShellComponent } from '@garudalinux/core';
 import { ConfirmationService, MenuItem } from '@openng/optimus-ui/api';
 import { ConfirmDialog } from '@openng/optimus-ui/confirmdialog';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
+import { AuthService } from 'ngx-better-auth';
 import { AppService } from './app.service';
-import { isChaoticEvent } from './functions';
+import { AuthButtonComponent } from './auth/auth-button.component';
 import { FooterComponent } from './footer/footer.component';
+import { isChaoticEvent } from './functions';
 import { LoadingService } from './loading/loading.service';
+import { OverlayScrollbarComponent } from './overlay-scrollbar/overlay-scrollbar.component';
 import { UpdateService } from './update/update.service';
 
 @Component({
-  imports: [RouterModule, ShellComponent, ConfirmDialog, NgOptimizedImage, FooterComponent, ProgressSpinner],
+  imports: [
+    RouterModule,
+    ShellComponent,
+    ConfirmDialog,
+    NgOptimizedImage,
+    FooterComponent,
+    OverlayScrollbarComponent,
+    ProgressSpinner,
+    AuthButtonComponent,
+  ],
   selector: 'chaotic-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
@@ -37,10 +48,11 @@ export class AppComponent implements OnInit {
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
 
   protected readonly loadingService = inject(LoadingService);
 
-  items: MenuItem[] = [
+  readonly items = computed<MenuItem[]>(() => [
     {
       icon: 'pi pi-home',
       label: 'Home',
@@ -95,19 +107,33 @@ export class AppComponent implements OnInit {
       routerLink: '/about',
       tooltip: 'Learn about the Chaotic-AUR project',
     },
-  ];
+    ...(this.authService.isLoggedIn()
+      ? [
+          {
+            icon: 'pi pi-check-square',
+            label: 'Update review',
+            routerLink: '/update-review',
+            tooltip: 'Review and approve pending package updates',
+          },
+        ]
+      : []),
+  ]);
 
   constructor() {
     let firstNavigationComplete = false;
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationStart) {
         if (firstNavigationComplete) {
-          document.body.classList.add('is-transitioning');
+          const info = this.router.getCurrentNavigation()?.extras?.info;
+          if (!info?.['disableViewTransition']) {
+            document.body.classList.add('is-transitioning');
+          }
         }
       } else if (event instanceof NavigationCancel || event instanceof NavigationError) {
         document.body.classList.remove('is-transitioning');
       } else if (event instanceof NavigationEnd) {
         firstNavigationComplete = true;
+        document.body.classList.remove('is-transitioning');
       }
     });
   }
@@ -132,15 +158,6 @@ export class AppComponent implements OnInit {
 
       this.appService.chaoticSse$.next(event);
     };
-  }
-
-  /**
-   * Returns the animation state of the next page for page transitions
-   * @param outlet Router outlet element
-   * @returns The animation state of the target route
-   */
-  prepareRoute(outlet: RouterOutlet): string {
-    return outlet.activatedRouteData['animationState'];
   }
 
   private updateMetaTags() {

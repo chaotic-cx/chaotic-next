@@ -117,14 +117,14 @@ export class RepoManager {
     }
   }
 
-  async indexChaoticRepo(dbUrl: string): Promise<IndexResult> {
+  async indexChaoticRepo(): Promise<IndexResult> {
     if (this.deployInProgress === RepoStatus.ACTIVE) {
       this.logger.warn('Deployment is already in progress, skipping Chaotic repo index');
       return { scanned: 0, skipped: 0, failed: 0 };
     }
     this.deployInProgress = RepoStatus.ACTIVE;
     try {
-      return await this.chaoticIndex.indexChaoticRepo(dbUrl);
+      return await this.chaoticIndex.indexChaoticRepo();
     } finally {
       this.deployInProgress = RepoStatus.INACTIVE;
     }

@@ -1,5 +1,15 @@
 <div class="mb-10 px-2.5 text-center md:px-0">
-  <h2 class="text-ctp-maroon text-2xl font-extrabold">{{ title() }}</h2>
+  @switch (level()) {
+    @case ('h2') {
+      <h2 class="text-ctp-maroon text-2xl font-extrabold">{{ title() }}</h2>
+    }
+    @case ('h3') {
+      <h3 class="text-ctp-maroon text-2xl font-extrabold">{{ title() }}</h3>
+    }
+    @default {
+      <h1 class="text-ctp-maroon text-2xl font-extrabold">{{ title() }}</h1>
+    }
+  }
   @if (subtitleHtml()) {
     <p class="text-ctp-text my-4 text-lg" [innerHtml]="subtitleHtml()"></p>
   } @else {

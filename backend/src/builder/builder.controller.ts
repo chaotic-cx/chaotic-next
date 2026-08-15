@@ -20,6 +20,7 @@ export class BuilderController {
   @Get('packages')
   @ApiOperation({ summary: 'Get packages with pagination, search and sorting.' })
   @ApiQuery({ name: 'repo', required: false, description: 'Add repo information to the result' })
+  @ApiQuery({ name: 'repoId', required: false, description: 'Filter packages by repository id', type: Number })
   @ApiQuery({ name: 'page', required: false, description: 'Page number, 1-based', type: Number })
   @ApiQuery({ name: 'perPage', required: false, description: 'Rows per page', type: Number })
   @ApiQuery({ name: 'q', required: false, description: 'Search query matching pkgname, description or URL' })
@@ -28,13 +29,14 @@ export class BuilderController {
   @ApiOkResponse({ description: 'Paginated list of packages' })
   async getPackages(
     @Query('repo', new ParseBoolPipe({ optional: true })) repo = false,
+    @Query('repoId', new ParseIntPipe({ optional: true })) repoId?: number,
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
     @Query('q') q?: string,
     @Query('sort') sort?: string,
     @Query('order') order?: string,
   ): Promise<Paginated<PackageDto>> {
-    return await this.builderService.getPackages({ repo, page, perPage, q, sort, order });
+    return await this.builderService.getPackages({ repo, repoId, page, perPage, q, sort, order });
   }
 
   @Get('package/:name')

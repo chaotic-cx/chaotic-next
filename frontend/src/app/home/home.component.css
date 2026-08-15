@@ -8,3 +8,23 @@
     opacity: 1;
   }
 }
+
+.hero-scroll-hint {
+  animation: heroScrollBounce 2s ease-in-out infinite;
+}
+
+@keyframes heroScrollBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-scroll-hint {
+    animation: none;
+  }
+}

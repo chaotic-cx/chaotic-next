@@ -82,8 +82,11 @@ interface BrokenDepsContext {
   changed: ArchlinuxPackage[];
   /** soname -> set of provider pkgnames (real providers, latest analysis per package). */
   providedByPkgname: Map<string, Set<string>>;
+  /** Sonames any current Arch package provides; pacman resolves these transitively. */
+  archProvidedSonames: Set<string>;
   runtimes: Partial<Record<RuntimeName, string | null>>;
   previousProvidedByPkg: Map<number, Set<string>>;
+  currentProvidedByPkg: Map<number, Set<string>>;
 }
 
 /**
@@ -411,10 +414,11 @@ export class RebuildTriggerService {
 
   private async buildBrokenDepsContext(changed: ArchlinuxPackage[]): Promise<BrokenDepsContext | null> {
     if (!changed?.length) return null;
-    const [providedByPkgname, runtimes, previousRows] = await Promise.all([
-      this.buildProvidedSonames(),
+    const [{ providedByPkgname, archProvidedSonames }, runtimes, previousRows, currentRows] = await Promise.all([
+      this.loadSonameProviders(),
       loadRuntimeVersions(this.archlinuxPackageRepository),
-      this.loadPreviousArchAnalyses(changed),
+      this.loadChangedArchAnalyses(changed, 'previousVersion'),
+      this.loadChangedArchAnalyses(changed, 'version'),
     ]);
     // Provided-soname/runtimes context is logged by SignalScanService; only the
     // run-specific part is logged here.
@@ -423,44 +427,74 @@ export class RebuildTriggerService {
     );
     const previousProvidedByPkg = new Map<number, Set<string>>();
     for (const row of previousRows) previousProvidedByPkg.set(row.pkgId, new Set(row.providedSonames));
-    return { changed, providedByPkgname, runtimes, previousProvidedByPkg };
+    const currentProvidedByPkg = new Map<number, Set<string>>();
+    for (const row of currentRows) currentProvidedByPkg.set(row.pkgId, new Set(row.providedSonames));
+    return {
+      changed,
+      providedByPkgname,
+      archProvidedSonames,
+      runtimes,
+      previousProvidedByPkg,
+      currentProvidedByPkg,
+    };
   }
 
-  private async buildProvidedSonames(): Promise<Map<string, Set<string>>> {
+  /**
+   * Soname providers from the latest analysis of every known package:
+   * `providedByPkgname` maps each soname to its provider names (Arch and
+   * Chaotic alike), `archProvidedSonames` collects the sonames any current
+   * Arch package provides.
+   */
+  private async loadSonameProviders(): Promise<{
+    providedByPkgname: Map<string, Set<string>>;
+    archProvidedSonames: Set<string>;
+  }> {
     const [latest, archPkgs, chaoticPkgs] = await Promise.all([
       latestAnalysesByPackage(this.elfAnalysisRepository),
       this.archlinuxPackageRepository.find({ select: { id: true, pkgname: true } }),
       this.packagesRepository.find({ select: { id: true, pkgname: true } }),
     ]);
-    const nameById = new Map<`${string}:${number}`, string>();
+    const nameById = new Map<string, string>();
     for (const pkg of archPkgs) nameById.set(`0:${pkg.id}`, pkg.pkgname);
     for (const pkg of chaoticPkgs) nameById.set(`1:${pkg.id}`, pkg.pkgname);
 
+    const archType = pkgTypeOf(TriggerType.ARCH);
     const bySoname = new Map<string, Set<string>>();
-    for (const analysis of latest.values()) {
-      const provider = nameById.get(`${analysis.pkgType}:${analysis.pkgId}`);
+    const archProvidedSonames = new Set<string>();
+    for (const [key, analysis] of latest) {
+      const provider = nameById.get(key);
       if (!provider) continue;
+      const isArch = analysis.pkgType === archType;
       for (const soname of analysis.providedSonames) {
+        if (isArch) archProvidedSonames.add(soname);
         const set = bySoname.get(soname) ?? new Set<string>();
         set.add(provider);
         bySoname.set(soname, set);
       }
     }
-    return bySoname;
+    return { providedByPkgname: bySoname, archProvidedSonames };
   }
 
   /**
    * The provided-soname index restricted to the packages a consumer depends on:
    * a needed soname is satisfied only when one of its declared deps provides it.
+   * Sonames provided by any current Arch package always count as satisfied —
+   * pacman resolves them transitively (spotify needs libharfbuzz.so.0 while only
+   * depending on gtk3), so flagging them produces mass false-positive rebuilds.
    * If no deps are recorded (e.g. test seeds), all providers count so the check
    * is a no-op rather than flagging everything.
    */
-  providedForDeps(providedByPkgname: Map<string, Set<string>>, consumerDeps: string[]): Set<string> {
+  providedForDeps(
+    providedByPkgname: Map<string, Set<string>>,
+    consumerDeps: string[],
+    archProvidedSonames: Set<string>,
+  ): Set<string> {
+    const satisfied = new Set<string>(archProvidedSonames);
     const deps = new Set(consumerDeps);
     if (deps.size === 0) {
-      return new Set(providedByPkgname.keys());
+      for (const soname of providedByPkgname.keys()) satisfied.add(soname);
+      return satisfied;
     }
-    const satisfied = new Set<string>();
     for (const [soname, providers] of providedByPkgname) {
       for (const provider of providers) {
         if (deps.has(provider)) {
@@ -472,15 +506,17 @@ export class RebuildTriggerService {
     return satisfied;
   }
 
-  private async loadPreviousArchAnalyses(
+  private async loadChangedArchAnalyses(
     changed: ArchlinuxPackage[],
+    versionField: 'previousVersion' | 'version',
   ): Promise<(PackageElfAnalysis & { pkgId: number })[]> {
     const ids: number[] = [];
     const versions: string[] = [];
     for (const pkg of changed) {
-      if (pkg.previousVersion) {
+      const version = versionField === 'previousVersion' ? pkg.previousVersion : pkg.version;
+      if (version) {
         ids.push(pkg.id);
-        versions.push(pkg.previousVersion);
+        versions.push(version);
       }
     }
     if (ids.length === 0) return [];
@@ -498,7 +534,7 @@ export class RebuildTriggerService {
     const deps = findBrokenDependencies({
       neededSonames: consumer.neededSonames,
       files: consumer.files,
-      providedSonames: this.providedForDeps(ctx.providedByPkgname, consumerDeps),
+      providedSonames: this.providedForDeps(ctx.providedByPkgname, consumerDeps, ctx.archProvidedSonames),
       runtimes: ctx.runtimes,
       selfProvidedSonames: consumer.providedSonames,
     });
@@ -509,7 +545,14 @@ export class RebuildTriggerService {
     for (const dep of deps) {
       if (dep.kind === 'soname' && dep.soname) {
         const soname = dep.soname;
-        const culprit = ctx.changed.find((pkg) => ctx.previousProvidedByPkg.get(pkg.id)?.has(soname));
+        // Only a package that previously provided the soname and no longer
+        // does actually broke the consumer; blaming one that still ships it
+        // (e.g. a routine harfbuzz rebuild) attributes unrelated breakage.
+        const culprit = ctx.changed.find(
+          (pkg) =>
+            ctx.previousProvidedByPkg.get(pkg.id)?.has(soname) &&
+            !(ctx.currentProvidedByPkg.get(pkg.id)?.has(soname) ?? false),
+        );
         if (culprit) {
           relevant.push(dep);
           cause = cause ?? culprit;

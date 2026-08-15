@@ -34,6 +34,7 @@ export class DocsComponent implements OnInit {
   readonly powerpillUsage = '$ sudo pacman -Sy && sudo powerpill -Su && paru -Su';
   readonly receiveKeys: string;
   readonly syncMirrors = '$ sudo pacman -Syu';
+  readonly apiDocsUrl = `${this.appConfig.backendUrl}/api/docs`;
 
   constructor() {
     this.receiveKeys =

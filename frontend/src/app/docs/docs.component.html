@@ -209,6 +209,45 @@
   </div>
 
   <div class="mt-5">
+    <p-panel header="Public API">
+      <div class="chaotic-panel text-md">
+        <p>
+          Chaotic-AUR exposes a public JSON API so you can query packages, builds, metrics and repository state
+          programmatically. Browse the interactive
+          <a class="text-ctp-mauve" [href]="apiDocsUrl" rel="noopener" target="_blank">API documentation</a>
+          for the full list of endpoints and schemas.
+        </p>
+      </div>
+    </p-panel>
+  </div>
+
+  <div class="mt-5">
+    <p-panel header="Update review process">
+      <div class="chaotic-panel text-md">
+        <p>
+          When a package we ship gets a new version (or an existing one is rebuilt), our build system prepares the
+          update by opening a merge request (MR) on GitLab against the
+          <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds" rel="noopener" target="_blank"
+            >pkgbuilds</a
+          >
+          repository.
+        </p>
+        <p-divider />
+        <p>
+          Each MR then goes through a <strong>human review</strong>: maintainers inspect the diff, build the package and
+          verify it links against the correct libraries before approving it. Only after a human approves the MR is it
+          merged and the new binary deployed to the repository.
+        </p>
+        <p-divider />
+        <p>
+          You can follow and act on these pending updates on the
+          <a class="text-ctp-mauve" routerLink="/update-review">Update review</a> page.
+        </p>
+      </div>
+    </p-panel>
+  </div>
+
+  <div class="mt-5">
     <p-panel header="Further information">
       <div class="chaotic-panel">
         For deeper insight concerning our build system, you may consult the

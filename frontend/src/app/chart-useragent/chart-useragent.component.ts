@@ -7,7 +7,7 @@ import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels } from '../chart-config';
-import { shuffleArray } from '../functions';
+import { resourceValue, shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
@@ -34,7 +34,7 @@ export class ChartUseragentComponent {
     // Don't display more than 30 user agents and truncate overly long ones.
     const maxUserAgents = 30;
     const maxNameLength = 50;
-    const relevantData = (this.resource.value() ?? [])
+    const relevantData = (resourceValue(this.resource) ?? [])
       .slice(0, Math.min(maxUserAgents, this.statsService.userAgentMetricRange()))
       .map((entry) => ({
         name: entry.name.length > maxNameLength ? `${entry.name.substring(0, maxNameLength)}...` : entry.name,

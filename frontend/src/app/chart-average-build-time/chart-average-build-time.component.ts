@@ -1,14 +1,13 @@
-import { BuildStatus, isBuildStatus, STATUS_DISPLAY_NAMES } from '@chaotic-next/shared-lib';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
+import { BuildStatus, isBuildStatus, STATUS_DISPLAY_NAMES } from '@chaotic-next/shared-lib';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
-import { shuffleArray } from '../functions';
+import { resourceValue, shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
-/** One parsed row of the average-build-time endpoint (numbers arrive as strings). */
 interface AverageBuildTimeRow {
   status: BuildStatus;
   averageBuildTime: number;
@@ -33,7 +32,7 @@ export class ChartAverageBuildTimeComponent {
   readonly hasData = computed(() => this.resource.hasValue());
 
   private readonly rows = computed<AverageBuildTimeRow[]>(() =>
-    (this.resource.value() ?? [])
+    (resourceValue(this.resource) ?? [])
       .map((item): AverageBuildTimeRow | null => {
         const status = Number(item.status);
         const averageBuildTime = Number(item.average_build_time);

@@ -3,6 +3,8 @@ import {
   type ExternalCommitStatus,
   MergeRequestWithDiffs,
   NotificationPayload,
+  PipelineScheduleOption,
+  PipelineTriggerResult,
   PipelineWithExternalStatus,
 } from '@chaotic-next/shared-lib';
 import { MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
@@ -14,24 +16,33 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mutex } from 'async-mutex';
-import { errorMessage, mapWithConcurrency } from '../utils/functions';
+import { decryptAes, errorMessage, mapWithConcurrency } from '../utils/functions';
 import { Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
 import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
+import { MrAction, MrActionType } from './mr-action.entity';
+import { PipelineTrigger } from './pipeline-trigger.entity';
+import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
+import { Repo } from '../builder/builder.entity';
+
+export interface MrActor {
+  userId: string;
+  userName: string;
+}
 
 @Injectable()
 export class GitlabService implements OnModuleInit {
   private readonly logger = new Logger(GitlabService.name);
-  api: Gitlab;
+  api!: Gitlab;
   updateMutex = new Mutex();
   reviewStatsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_KEY_REVIEW_STATS = 'gitlab/review-stats';
-  private readonly MARGE_BOT_USER_ID = 20097372;
-  private readonly chaoticId: string;
+  private chaoticId!: string;
+  private readonly mergeBotUserId: number;
 
   private readonly pipelineMap = new Map<number, PipelineSchema>();
   private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
@@ -43,14 +54,20 @@ export class GitlabService implements OnModuleInit {
     private readonly eventService: EventService,
     @InjectRepository(NotificationSubscription)
     private readonly subscriptionRepository: Repository<NotificationSubscription>,
+    @InjectRepository(MrAction)
+    private readonly mrActionRepository: Repository<MrAction>,
+    @InjectRepository(PipelineTrigger)
+    private readonly pipelineTriggerRepository: Repository<PipelineTrigger>,
+    @InjectRepository(Repo)
+    private readonly repoRepository: Repository<Repo>,
   ) {
-    this.chaoticId = this.configService.getOrThrow<string>('CAUR_GITLAB_ID_CAUR');
-    this.api = new Gitlab({
-      token: this.configService.getOrThrow<string>('CAUR_GITLAB_TOKEN'),
-    });
+    this.mergeBotUserId = this.configService.getOrThrow<number>('app.mergeBotUserId');
   }
 
-  onModuleInit(): void {
+  async onModuleInit(): Promise<void> {
+    await this.initApiClient().catch((err) =>
+      this.logger.error(`GitLab client init failed, review features unavailable: ${errorMessage(err)}`),
+    );
     // Fire-and-forget: never block application startup on GitLab seeding.
     // The cron jobs (EVERY_6_HOURS / EVERY_10_MINUTES) reconcile the store as
     // a safety net if the initial seed races or fails.
@@ -58,6 +75,37 @@ export class GitlabService implements OnModuleInit {
       this.logger.error(`Initial review-stats refresh failed: ${errorMessage(err)}`),
     );
     void this.seedPipelines().catch((err) => this.logger.error(`Initial pipeline seed failed: ${errorMessage(err)}`));
+  }
+
+  /**
+   * Source everything from the chaotic-aur repo row in the DB: the project id,
+   * the token (encrypted at rest). Falls back to env config when the repo row
+   * is missing or misconfigured so app startup never fails.
+   */
+  private async initApiClient(): Promise<void> {
+    const repo = await this.repoRepository.findOne({ where: { name: 'chaotic-aur' } }).catch((err) => {
+      this.logger.warn(`Could not load chaotic-aur repo row: ${errorMessage(err)}`);
+      return null;
+    });
+    const gitlabProjectId = repo?.gitlabProjectId ?? this.configService.get<string>('CAUR_GITLAB_ID_CAUR');
+    if (!gitlabProjectId) {
+      throw new Error('No chaotic-aur repo row with gitlabProjectId found; cannot initialise GitLab client');
+    }
+    this.chaoticId = gitlabProjectId;
+
+    let token: string | undefined;
+    if (repo?.apiToken) {
+      try {
+        token = decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
+      } catch (err) {
+        this.logger.warn(`Could not decrypt chaotic-aur apiToken: ${errorMessage(err)}`);
+      }
+    }
+    token ??= this.configService.get<string>('CAUR_GITLAB_TOKEN');
+    if (!token) {
+      throw new Error('No chaotic-aur apiToken and no CAUR_GITLAB_TOKEN configured');
+    }
+    this.api = new Gitlab({ token });
   }
 
   @Cron(CronExpression.EVERY_6_HOURS)
@@ -372,53 +420,90 @@ export class GitlabService implements OnModuleInit {
     );
   }
 
-  async approveMergeRequest(iid: number, sha: string, token: string) {
-    const userApi = new Gitlab({ token });
-    await userApi.MergeRequestApprovals.approve(this.chaoticId, iid, { sha });
+  async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<void> {
+    const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
+    await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: mr.sha ?? sha });
 
-    const mr = await userApi.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
     if (!labels.includes('approved')) {
       labels.push('approved');
-      await userApi.MergeRequests.edit(this.chaoticId, iid, {
+      await this.api.MergeRequests.edit(this.chaoticId, iid, {
         labels: labels.join(','),
-        assigneeId: this.MARGE_BOT_USER_ID,
+        assigneeId: this.mergeBotUserId,
       });
     }
 
+    await this.postActorComment(iid, '✅ Approved by', actor);
+    await this.recordMrAction(iid, 'approve', actor);
     await this.cacheManager.del(this.CACHE_KEY_MRS);
     await this.cacheManager.del(this.CACHE_KEY_REVIEW_STATS);
     void this.refreshOpenMergeRequests();
   }
 
-  async flagMergeRequest(iid: number, label: string, token: string) {
-    const userApi = new Gitlab({ token });
-    const mr = await userApi.MergeRequests.show(this.chaoticId, iid);
+  async flagMergeRequest(iid: number, label: MrActionType, actor: MrActor): Promise<void> {
+    const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
 
     if (!labels.includes(label)) {
       labels.push(label);
-      await userApi.MergeRequests.edit(this.chaoticId, iid, {
+      await this.api.MergeRequests.edit(this.chaoticId, iid, {
         labels: labels.join(','),
         // Close right away when dangerous
         stateEvent: labels.includes('dangerous') ? 'close' : undefined,
       });
     }
 
+    const comment = label === 'dangerous' ? '🚨 Flagged as dangerous by' : '⏸️ Put on hold by';
+    await this.postActorComment(iid, comment, actor);
+    await this.recordMrAction(iid, label, actor);
     await this.cacheManager.del(this.CACHE_KEY_MRS);
     void this.refreshOpenMergeRequests();
   }
 
-  async testToken(token: string): Promise<boolean> {
-    const userApi = new Gitlab({ token });
-    const labelName = `test-label-${Date.now()}`;
-    try {
-      await userApi.ProjectLabels.create(this.chaoticId, labelName, '#4287f5');
-      await userApi.ProjectLabels.remove(this.chaoticId, labelName);
-      return true;
-    } catch {
-      return false;
-    }
+  private async postActorComment(iid: number, prefix: string, actor: MrActor): Promise<void> {
+    await this.api.MergeRequestNotes.create(this.chaoticId, iid, `**${prefix}** ${actor.userName}.`);
+  }
+
+  private async recordMrAction(iid: number, action: MrActionType, actor: MrActor): Promise<void> {
+    await this.mrActionRepository.insert({ mergeRequestIid: iid, action, ...actor });
+  }
+
+  /** Pipeline schedules of the chaotic-aur project, for the Run Schedule operation. */
+  async listPipelineSchedules(): Promise<PipelineScheduleOption[]> {
+    const schedules = await this.api.PipelineSchedules.all(this.chaoticId, { perPage: 100 });
+    return schedules.map((schedule) => ({
+      id: schedule.id,
+      description: schedule.description ?? null,
+      active: schedule.active,
+    }));
+  }
+
+  /**
+   * Triggers a pipeline run with the given spec:inputs, carrying the triggering
+   * user into the pipeline as a CI variable, and records an audit row.
+   */
+  async triggerPipeline(inputs: Record<string, string>, ref: string, actor: MrActor): Promise<PipelineTriggerResult> {
+    const pipeline = await this.api.Pipelines.create(this.chaoticId, ref, {
+      inputs,
+      variables: [
+        {
+          key: PIPELINE_TRIGGERED_BY_VARIABLE,
+          value: `${actor.userName} (${actor.userId})`,
+          variable_type: 'env_var',
+        },
+      ],
+    });
+
+    await this.pipelineTriggerRepository.insert({
+      ref,
+      operation: inputs.operation,
+      inputs,
+      pipelineId: pipeline.id,
+      webUrl: pipeline.web_url,
+      ...actor,
+    });
+
+    return { pipelineId: pipeline.id, webUrl: pipeline.web_url, status: pipeline.status };
   }
 }
 

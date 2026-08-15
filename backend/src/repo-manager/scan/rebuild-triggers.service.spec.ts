@@ -231,6 +231,7 @@ describe('buildPluginBreakIndex', () => {
 
 describe('providedForDeps (provider attribution)', () => {
   const service = createService();
+  const noArchSonames = new Set<string>();
 
   it('attributes a soname to its real provider, not any provider', () => {
     // AyuGram needs libavfilter.so.11 and depends on ffmpeg. The soname is also
@@ -243,17 +244,27 @@ describe('providedForDeps (provider attribution)', () => {
     ]);
 
     // Depends on ffmpeg -> only libavfilter.so.12 is satisfied.
-    const ffmpegConsumer = service.providedForDeps(providedByPkgname, ['ffmpeg', 'qt6-base']);
+    const ffmpegConsumer = service.providedForDeps(providedByPkgname, ['ffmpeg', 'qt6-base'], noArchSonames);
     expect(ffmpegConsumer.has('libavfilter.so.12')).toBe(true);
     expect(ffmpegConsumer.has('libavfilter.so.11')).toBe(false);
 
     // Depends on ffmpeg-obs -> libavfilter.so.11 is satisfied via that provider.
-    const obsConsumer = service.providedForDeps(providedByPkgname, ['ffmpeg-obs']);
+    const obsConsumer = service.providedForDeps(providedByPkgname, ['ffmpeg-obs'], noArchSonames);
     expect(obsConsumer.has('libavfilter.so.11')).toBe(true);
+  });
+
+  it('always satisfies sonames any current Arch package provides (transitive resolution)', () => {
+    // spotify needs libharfbuzz.so.0 while only declaring gtk3; pacman pulls
+    // harfbuzz transitively, so the Arch-provided soname must not be flagged.
+    const providedByPkgname = new Map<string, Set<string>>([['libharfbuzz.so.0', new Set(['harfbuzz'])]]);
+    const archSonames = new Set(['libharfbuzz.so.0']);
+
+    const consumer = service.providedForDeps(providedByPkgname, ['gtk3'], archSonames);
+    expect(consumer.has('libharfbuzz.so.0')).toBe(true);
   });
 
   it('treats missing deps as a no-op (all providers count)', () => {
     const providedByPkgname = new Map<string, Set<string>>([['libfoo.so.1', new Set(['foo'])]]);
-    expect(service.providedForDeps(providedByPkgname, [])).toEqual(new Set(['libfoo.so.1']));
+    expect(service.providedForDeps(providedByPkgname, [], noArchSonames)).toEqual(new Set(['libfoo.so.1']));
   });
 });

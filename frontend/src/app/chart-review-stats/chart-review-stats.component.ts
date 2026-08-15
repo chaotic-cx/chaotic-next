@@ -3,7 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels } from '../chart-config';
-import { shuffleArray } from '../functions';
+import { resourceValue, shuffleArray } from '../functions';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 @Component({
@@ -24,7 +24,7 @@ export class ChartReviewStatsComponent {
   readonly hasData = computed(() => this.resource.hasValue());
 
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
-    const reviewStats = (this.resource.value() ?? [])
+    const reviewStats = (resourceValue(this.resource) ?? [])
       .sort((a, b) => b.reviews - a.reviews)
       .filter((entry) => !entry.username.startsWith('gitlab_') && !entry.username.startsWith('project_'))
       .filter((e) => e.reviews > 0 && e.username !== 'temeraire-cx');

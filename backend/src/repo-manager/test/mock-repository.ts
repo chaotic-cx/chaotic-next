@@ -54,7 +54,7 @@ interface MockRepositoryOptions<T> {
 
 export interface MockRepository<T extends object> extends Repository<T> {
   store: Map<string, T>;
-  seed: (entities: T[]) => void;
+  seed: (entities: DeepPartial<T>[]) => void;
 }
 
 const FIND_OPTIONS_KEYS = new Set(['where', 'select', 'order', 'take', 'skip', 'relations']);
@@ -134,11 +134,12 @@ export function createMockRepository<T extends object>(opts: MockRepositoryOptio
 
   const api = {
     store,
-    seed(entities: T[]): void {
-      for (const e of entities) store.set(opts.keyOf(e), { ...e });
+    seed(entities: DeepPartial<T>[]): void {
+      for (const e of entities) store.set(opts.keyOf(e as T), { ...e } as T);
     },
     find: vi.fn(wrapped.find),
     findOne: vi.fn(wrapped.findOne),
+    findBy: vi.fn((where: FindOptionsWhere<T>) => wrapped.find(where)),
     upsert: vi.fn(wrapped.upsert),
     update: vi.fn(wrapped.update),
     save: vi.fn(wrapped.save),

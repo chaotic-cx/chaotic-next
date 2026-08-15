@@ -25,6 +25,60 @@
   min-width: 140px;
 }
 
+::ng-deep .mr-btn-approve {
+  color: var(--ctp-mocha-green) !important;
+  border-color: var(--ctp-mocha-green) !important;
+}
+
+::ng-deep .mr-btn-approve:not(:disabled):hover {
+  background: rgba(166, 227, 161, 0.15) !important;
+  color: var(--ctp-mocha-green) !important;
+  border-color: var(--ctp-mocha-green) !important;
+}
+
+::ng-deep .mr-btn-approve:disabled,
+::ng-deep .mr-btn-approve[disabled] {
+  opacity: 0.5 !important;
+  color: var(--ctp-mocha-green) !important;
+  border-color: var(--ctp-mocha-green) !important;
+}
+
+::ng-deep .mr-btn-danger {
+  color: var(--ctp-mocha-red) !important;
+  border-color: var(--ctp-mocha-red) !important;
+}
+
+::ng-deep .mr-btn-danger:not(:disabled):hover {
+  background: rgba(243, 139, 168, 0.15) !important;
+  color: var(--ctp-mocha-red) !important;
+  border-color: var(--ctp-mocha-red) !important;
+}
+
+::ng-deep .mr-btn-danger:disabled,
+::ng-deep .mr-btn-danger[disabled] {
+  opacity: 0.5 !important;
+  color: var(--ctp-mocha-red) !important;
+  border-color: var(--ctp-mocha-red) !important;
+}
+
+::ng-deep .mr-btn-warn {
+  color: var(--ctp-mocha-yellow) !important;
+  border-color: var(--ctp-mocha-yellow) !important;
+}
+
+::ng-deep .mr-btn-warn:not(:disabled):hover {
+  background: rgba(249, 226, 175, 0.15) !important;
+  color: var(--ctp-mocha-yellow) !important;
+  border-color: var(--ctp-mocha-yellow) !important;
+}
+
+::ng-deep .mr-btn-warn:disabled,
+::ng-deep .mr-btn-warn[disabled] {
+  opacity: 0.5 !important;
+  color: var(--ctp-mocha-yellow) !important;
+  border-color: var(--ctp-mocha-yellow) !important;
+}
+
 .p-tabpanels,
 .p-tablist,
 .p-fieldset {

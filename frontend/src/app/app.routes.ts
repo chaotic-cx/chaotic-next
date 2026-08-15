@@ -1,4 +1,5 @@
 import { type Routes } from '@angular/router';
+import { authGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
   {
@@ -30,11 +31,46 @@ export const routes: Routes = [
     title: 'Statistics and data',
     path: 'stats',
     loadComponent: () => import('./stats/stats.component').then((c) => c.StatsComponent),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'search' },
+      {
+        path: 'search',
+        loadComponent: () =>
+          import('./stats/pages/stats-search-page.component').then((c) => c.StatsSearchPageComponent),
+      },
+      {
+        path: 'globals',
+        loadComponent: () =>
+          import('./stats/pages/stats-globals-page.component').then((c) => c.StatsGlobalsPageComponent),
+      },
+      {
+        path: 'downloads',
+        loadComponent: () =>
+          import('./stats/pages/stats-downloads-page.component').then((c) => c.StatsDownloadsPageComponent),
+      },
+      {
+        path: 'update-review',
+        loadComponent: () =>
+          import('./stats/pages/stats-update-review-page.component').then((c) => c.StatsUpdateReviewPageComponent),
+      },
+      {
+        path: 'builder-stats',
+        loadComponent: () =>
+          import('./stats/pages/stats-builder-stats-page.component').then((c) => c.StatsBuilderStatsPageComponent),
+      },
+    ],
   },
   {
     title: 'Update review',
     path: 'update-review',
     loadComponent: () => import('./mr-overview/mr-overview.component').then((c) => c.MrOverviewComponent),
+  },
+  {
+    title: 'Pipeline trigger',
+    path: 'pipeline-trigger',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pipeline-trigger/pipeline-trigger.component').then((c) => c.PipelineTriggerComponent),
   },
   {
     title: 'Mirrors',
@@ -55,6 +91,68 @@ export const routes: Routes = [
     title: 'Memorial 2021',
     path: 'memorial',
     loadComponent: () => import('./memorial/memorial.component').then((c) => c.MemorialComponent),
+  },
+  {
+    title: 'Sign in',
+    path: 'login',
+    loadComponent: () => import('./login/login.component').then((c) => c.LoginComponent),
+  },
+  {
+    title: 'Admin',
+    path: 'admin',
+    canActivate: [authGuard],
+    loadComponent: () => import('./admin/admin.component').then((c) => c.AdminComponent),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'packages' },
+      {
+        path: 'packages',
+        loadComponent: () =>
+          import('./admin/pages/admin-packages-page.component').then((c) => c.AdminPackagesPageComponent),
+      },
+      {
+        path: 'arch',
+        loadComponent: () =>
+          import('./admin/pages/admin-arch-packages-page.component').then((c) => c.AdminArchPackagesPageComponent),
+      },
+      {
+        path: 'repos',
+        loadComponent: () => import('./admin/pages/admin-repos-page.component').then((c) => c.AdminReposPageComponent),
+      },
+      {
+        path: 'builders',
+        loadComponent: () =>
+          import('./admin/pages/admin-builders-page.component').then((c) => c.AdminBuildersPageComponent),
+      },
+      {
+        path: 'mr-actions',
+        loadComponent: () =>
+          import('./admin/pages/admin-mr-actions-page.component').then((c) => c.AdminMrActionsPageComponent),
+      },
+      {
+        path: 'pipeline-triggers',
+        loadComponent: () =>
+          import('./admin/pages/admin-pipeline-triggers-page.component').then(
+            (c) => c.AdminPipelineTriggersPageComponent,
+          ),
+      },
+      {
+        path: 'package-bumps',
+        loadComponent: () =>
+          import('./admin/pages/admin-package-bumps-page.component').then((c) => c.AdminPackageBumpsPageComponent),
+      },
+      {
+        path: 'package-elf-analysis',
+        loadComponent: () =>
+          import('./admin/pages/admin-package-elf-analysis-page.component').then(
+            (c) => c.AdminPackageElfAnalysisPageComponent,
+          ),
+      },
+      {
+        path: 'repo-operations',
+        loadComponent: () =>
+          import('./admin/pages/admin-repo-operations-page.component').then((c) => c.AdminRepoOperationsPageComponent),
+      },
+    ],
   },
   {
     title: 'Not found',

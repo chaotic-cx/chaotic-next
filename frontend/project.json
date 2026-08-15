@@ -78,6 +78,12 @@
         "staticFilePath": "dist/frontend/browser",
         "spa": true
       }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p frontend/tsconfig.app.json --noEmit"
+      }
     }
   }
 }

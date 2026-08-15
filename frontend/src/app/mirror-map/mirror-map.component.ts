@@ -21,16 +21,20 @@ export class MirrorMapComponent {
 
   protected readonly dots = computed<Dot[]>(() => {
     const selfLatlon = this.mirrorsService.self()?.latlon;
+    const hasSelfLatlon = Array.isArray(selfLatlon) && selfLatlon.length >= 2;
     return this.mirrorsService
       .mirrors()
-      .filter((mirror): mirror is Mirror & { latlon: [number, number] } => mirror.latlon !== undefined)
+      .filter(
+        (mirror): mirror is Mirror & { latlon: [number, number] } =>
+          Array.isArray(mirror.latlon) && mirror.latlon.length >= 2,
+      )
       .map((mirror) => {
         const position = { lat: mirror.latlon[0], lng: mirror.latlon[1] };
         return {
           ...position,
           start: position,
           // Without our own coordinates there is nothing to draw a line to.
-          end: selfLatlon ? { lat: selfLatlon[0], lng: selfLatlon[1] } : position,
+          end: hasSelfLatlon ? { lat: selfLatlon[0], lng: selfLatlon[1] } : position,
           label: mirror.subdomain,
           icon: MIRROR_ICON_URL,
         };
