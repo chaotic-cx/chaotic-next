@@ -129,23 +129,37 @@
             <span class="ml-1 align-middle">{{ build.repo?.name }}</span>
           </td>
           <td>
-            <i
-              class="pi"
-              [ngClass]="{
-                'pi-check-circle text-ctp-green': build.statusText === 'success',
-                'pi-check text-ctp-sapphire': build.statusText === 'already-built',
-                'pi-angle-double-right text-ctp-text': build.statusText === 'skipped',
-                'pi-exclamation-circle text-ctp-red': build.statusText === 'failure',
-                'pi-hourglass text-ctp-maroon': build.statusText === 'timeout',
-                'pi-ban text-ctp-peach': build.statusText === 'canceled',
-                'pi-replay text-ctp-yellow': build.statusText === 'canceled-requeue',
-                'pi-exclamation-triangle text-ctp-blue': build.statusText === 'software-failure',
-              }"
-            ></i>
-            <span class="ml-1 align-middle">{{ build.statusText }}</span>
+            <span class="inline-flex items-center gap-1">
+              <i
+                class="pi"
+                [ngClass]="{
+                  'pi-check-circle text-ctp-green': build.statusText === 'success',
+                  'pi-check text-ctp-sapphire': build.statusText === 'already-built',
+                  'pi-angle-double-right text-ctp-text': build.statusText === 'skipped',
+                  'pi-exclamation-circle text-ctp-red': build.statusText === 'failure',
+                  'pi-hourglass text-ctp-maroon': build.statusText === 'timeout',
+                  'pi-ban text-ctp-peach': build.statusText === 'canceled',
+                  'pi-replay text-ctp-yellow': build.statusText === 'canceled-requeue',
+                  'pi-exclamation-triangle text-ctp-blue': build.statusText === 'software-failure',
+                }"
+              ></i>
+              <span>{{ build.statusText }}</span>
+            </span>
           </td>
           <td>
-            <span class="ml-1 align-middle" [innerHTML]="build.logUrl | logurl"></span>
+            @if (build.logUrl === 'purged') {
+              <span class="ml-1 align-middle text-ctp-subtext0">purged</span>
+            } @else {
+              <a
+                class="text-ctp-mauve hover:underline inline-flex items-center gap-1"
+                [routerLink]="packageLogRouteFromUrl(build.logUrl ?? '')"
+                pTooltip="Open build log"
+                tooltipPosition="left"
+              >
+                <i class="pi pi-bars"></i>
+                <span>Log</span>
+              </a>
+            }
           </td>
           <td>
             <span class="ml-1 align-middle">{{ build.timeToEnd | duration }}</span>

@@ -21,6 +21,7 @@ import { DatatableUnsetRoundingDirective } from '../directives/datatable-unset-r
 import { castTo } from '../functions';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { TitleComponent } from '../title/title.component';
+import { AuthService } from 'ngx-better-auth';
 import { PackageListService } from './package-list.service';
 
 @Component({
@@ -46,6 +47,7 @@ import { PackageListService } from './package-list.service';
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
 })
 export class PackageListComponent {
+  private readonly authService = inject(AuthService);
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -53,8 +55,9 @@ export class PackageListComponent {
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-
   protected readonly packageListService = inject(PackageListService);
+
+  readonly isLoggedIn = this.authService.isLoggedIn;
   protected readonly pkgTable = viewChild<Table>('pkgTable');
 
   readonly search = input<string>();
@@ -106,5 +109,11 @@ export class PackageListComponent {
 
   openDetail(pkg: Package) {
     void this.router.navigate(['/stats'], { queryParams: { search: pkg.pkgname } });
+  }
+
+  triggerRebuild(pkg: Package) {
+    void this.router.navigate(['/pipeline-trigger'], {
+      queryParams: { operation: 'Bump Packages', pkg: pkg.pkgname },
+    });
   }
 }

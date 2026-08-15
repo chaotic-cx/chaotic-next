@@ -166,7 +166,7 @@ interface RepoFormModel {
         </label>
         <div class="flex items-center gap-2">
           <p-checkbox [formField]="repoForm.isActive" [binary]="true" inputId="repoIsActive" />
-          <label for="repoIsActive" class="text-ctp-text text-sm">Active</label>
+          <label class="text-ctp-text text-sm" for="repoIsActive">Active</label>
         </div>
         <div class="flex justify-end gap-2">
           <p-button (onClick)="dialogVisible.set(false)" type="button" severity="secondary" text label="Cancel" />

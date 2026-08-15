@@ -124,6 +124,18 @@
           <td class="cell-actions">
             @if (pkg.isActive) {
               <div class="flex gap-2">
+                @if (isLoggedIn()) {
+                  <p-button
+                    class="h-10"
+                    (click)="triggerRebuild(pkg)"
+                    type="button"
+                    label="Rebuild"
+                    icon="pi pi-sync"
+                    severity="secondary"
+                    pTooltip="Trigger pipeline rebuild for this package"
+                    tooltipPosition="left"
+                  />
+                }
                 <p-button
                   class="h-10"
                   (click)="openDetail(pkg)"

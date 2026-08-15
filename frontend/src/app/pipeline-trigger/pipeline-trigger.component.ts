@@ -5,12 +5,12 @@ import {
   type PipelineRequestReason,
   type PipelineTriggerInputs,
 } from '@chaotic-next/shared-lib';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { applyEach, FormField, form, pattern, required, submit } from '@angular/forms/signals';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
 import { InputText } from '@openng/optimus-ui/inputtext';
@@ -83,6 +83,7 @@ function emptyModel(): PipelineTriggerFormModel {
     StepPanel,
     StepPanels,
     Stepper,
+    RouterLink,
     TitleComponent,
     Tooltip,
   ],
@@ -93,8 +94,9 @@ export class PipelineTriggerComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
-
   protected readonly pipelineTriggerService = inject(PipelineTriggerService);
+  readonly operation = input<string>();
+  readonly packageName = input<string>();
 
   protected readonly operationStep = 0;
   protected readonly inputsStep = 1;
@@ -231,6 +233,22 @@ export class PipelineTriggerComponent implements OnInit {
           this.existingPackages.update((existing) => new Set(existing).add(query));
         }
       });
+
+    effect(() => {
+      const op = this.operation();
+      const pkg = this.packageName();
+      if (
+        op &&
+        (op === 'Bump Packages' || op === 'Schedule Packages' || op === 'Drop Packages' || op === 'Add Packages')
+      ) {
+        this.model.update((m) => ({
+          ...m,
+          operation: op as PipelineOperation,
+          packageRows: pkg ? [{ pkgbase: pkg, builder: DEFAULT_BUILDER }] : m.packageRows,
+        }));
+        this.step.set(this.inputsStep);
+      }
+    });
   }
 
   ngOnInit() {

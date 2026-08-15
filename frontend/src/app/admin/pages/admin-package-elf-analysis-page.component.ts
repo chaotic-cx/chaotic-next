@@ -211,7 +211,7 @@ const PKG_TYPE_OPTIONS = [
         </label>
         <div class="flex items-center gap-2">
           <p-checkbox [formField]="elfForm.broken" [binary]="true" inputId="elfBroken" />
-          <label for="elfBroken" class="text-ctp-text text-sm">Broken</label>
+          <label class="text-ctp-text text-sm" for="elfBroken">Broken</label>
         </div>
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <div class="flex flex-col gap-2">

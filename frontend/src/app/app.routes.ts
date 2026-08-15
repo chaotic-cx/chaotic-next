@@ -73,6 +73,16 @@ export const routes: Routes = [
       import('./pipeline-trigger/pipeline-trigger.component').then((c) => c.PipelineTriggerComponent),
   },
   {
+    title: 'Pipeline logs',
+    path: 'logs/:pipelineId',
+    loadComponent: () => import('./log-viewer/log-viewer.component').then((c) => c.LogViewerComponent),
+  },
+  {
+    title: 'Package log',
+    path: 'logs/package/:pkgname/:timestamp',
+    loadComponent: () => import('./package-log/package-log.component').then((c) => c.PackageLogComponent),
+  },
+  {
     title: 'Mirrors',
     path: 'mirrors',
     loadComponent: () => import('./mirrors/mirrors.component').then((c) => c.MirrorsComponent),

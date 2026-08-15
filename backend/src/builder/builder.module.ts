@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import builderConfig from '../config/builder.config';
 import { BuilderController } from './builder.controller';
 import { Build, Builder, Package, Repo } from './builder.entity';
+import { PackageLogsController } from './package-logs.controller';
 import { BuilderService } from './builder.service';
 import { DatabaseCleanupService } from './database-cleanup.service';
 import { PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
@@ -13,7 +14,7 @@ import { GitlabModule } from '../gitlab/gitlab.module';
 import { EventModule } from '../events/event.module';
 
 @Module({
-  controllers: [BuilderController],
+  controllers: [BuilderController, PackageLogsController],
   exports: [TypeOrmModule, BuilderService],
   imports: [
     ConfigModule.forFeature(builderConfig),

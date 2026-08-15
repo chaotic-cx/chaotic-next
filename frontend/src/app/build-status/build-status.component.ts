@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Build } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { Card } from '@openng/optimus-ui/card';
@@ -15,7 +15,7 @@ import { TableModule } from '@openng/optimus-ui/table';
 import { Timeline } from '@openng/optimus-ui/timeline';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
-import { castTo, range } from '../functions';
+import { castTo, packageLogRouteFromUrl, range } from '../functions';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
 import { BuildStatusService, PipelineView } from './build-status.service';
@@ -25,6 +25,7 @@ import { PipelineTimelineComponent } from './pipeline-timeline.component';
   selector: 'chaotic-build-status',
   imports: [
     CommonModule,
+    RouterLink,
     Timeline,
     Card,
     TableModule,
@@ -110,6 +111,8 @@ export class BuildStatusComponent implements OnInit {
   }
 
   readonly typedDeployment = castTo<Build>;
+
+  readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
 
   showDialog(pipelineId: number) {
     const pipeline = this.buildStatusService.pipelineWithStatus().find((p) => p.pipeline.id === pipelineId);

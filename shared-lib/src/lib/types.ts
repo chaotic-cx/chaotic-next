@@ -173,6 +173,25 @@ export interface Repo {
   gitlabProjectId?: string;
 }
 
+export interface GitlabJob {
+  id: number;
+  name: string;
+  stage: string;
+  status: string;
+  ref: string;
+  webUrl: string;
+  startedAt?: string;
+  finishedAt?: string;
+  duration?: number;
+}
+
+export interface GitlabLogChunk {
+  offset: number;
+  text: string;
+  complete: boolean;
+  status: string;
+}
+
 export interface MrAction {
   id: number;
   mergeRequestIid: number;

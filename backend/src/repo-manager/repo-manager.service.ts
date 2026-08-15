@@ -446,26 +446,31 @@ export class RepoManagerService implements OnModuleInit {
       return;
     }
 
-    await this.repoManager.pullArchlinuxPackages();
+    this.repoManager.status = RepoStatus.ACTIVE;
+    try {
+      await this.repoManager.pullArchlinuxPackages();
 
-    if (this.repoManager.changedArchPackages.length === 0) {
-      this.pino.info(run, 'No packages changed in Arch repos, skipping run');
-      return;
+      if (this.repoManager.changedArchPackages.length === 0) {
+        this.pino.info(run, 'No packages changed in Arch repos, skipping run');
+        return;
+      }
+
+      // When the signal scanner is enabled, download the changed packages from
+      // the mirror and scan them before computing rebuild triggers.
+      if (this.configService.get<boolean>('repoMan.signalScanEnabled')) {
+        await this.repoManager.scanChangedArchPackages();
+      }
+
+      const results: BumpResult[] = [];
+      for (const repo of this.repos) {
+        const result: BumpResult = await this.repoManager.startRun(repo);
+        results.push(result);
+      }
+
+      this.summarizeChanges(results, this.repoManager);
+    } finally {
+      this.repoManager.status = RepoStatus.INACTIVE;
     }
-
-    // When the signal scanner is enabled, download the changed packages from
-    // the mirror and scan them before computing rebuild triggers.
-    if (this.configService.get<boolean>('repoMan.signalScanEnabled')) {
-      await this.repoManager.scanChangedArchPackages();
-    }
-
-    const results: BumpResult[] = [];
-    for (const repo of this.repos) {
-      const result: BumpResult = await this.repoManager.startRun(repo);
-      results.push(result);
-    }
-
-    this.summarizeChanges(results, this.repoManager);
   }
 
   createRepoManager(): RepoManager {

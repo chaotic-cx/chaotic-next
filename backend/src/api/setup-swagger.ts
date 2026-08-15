@@ -10,6 +10,7 @@ export function provideSwagger(app: INestApplication): void {
     .setDescription('Chaotic-AUR API specification')
     .setVersion('1.0')
     .setContact('Chaotic-AUR developers', 'https://aur.chaotic.cx/about', 'root@chaotic.cx')
+    .addCookieAuth('better-auth.session_token')
     .build();
 
   const openApiSpecification = SwaggerModule.createDocument(app, config);

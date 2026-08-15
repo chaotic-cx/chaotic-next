@@ -8,30 +8,41 @@
       </ng-template>
       <ng-template #content let-unTypedPipeline>
         @if (typed(unTypedPipeline); as pipeline) {
-          <div
-            class="cursor-pointer"
-            (click)="openPipeline.emit(pipeline.pipeline.id)"
-            (keydown.enter)="openPipeline.emit(pipeline.pipeline.id)"
-            (keyup.space)="openPipeline.emit(pipeline.pipeline.id)"
-            tabindex="0"
-            role="button"
-            pRipple
-          >
-            <i
-              class="pi"
-              [ngClass]="{
-                'pi-check-circle text-ctp-green': pipeline.pipeline.status.includes('success'),
-                'pi-exclamation-circle text-ctp-red': pipeline.pipeline.status.includes('failed'),
-                'pi-spin pi-spinner text-ctp-peach': pipeline.pipeline.status === 'running',
-                'pi-info-circle text-ctp-text': pipeline.pipeline.status === 'pending',
-                'pi-hourglass text-ctp-flamingo': pipeline.pipeline.status === 'waiting_for_resource',
-                'pi-times-circle text-ctp-maroon': pipeline.pipeline.status === 'canceling',
-                'pi-times-circle text-ctp-text': pipeline.pipeline.status === 'canceled',
-              }"
-            ></i>
-            <span class="ml-2">
-              <a>{{ pipeline.statusText.replaceAll('_', ' ') }}</a>
-            </span>
+          <div class="flex items-center justify-between gap-3">
+            <div
+              class="cursor-pointer"
+              (click)="openPipeline.emit(pipeline.pipeline.id)"
+              (keydown.enter)="openPipeline.emit(pipeline.pipeline.id)"
+              (keyup.space)="openPipeline.emit(pipeline.pipeline.id)"
+              tabindex="0"
+              role="button"
+              pRipple
+            >
+              <i
+                class="pi"
+                [ngClass]="{
+                  'pi-check-circle text-ctp-green': pipeline.pipeline.status.includes('success'),
+                  'pi-exclamation-circle text-ctp-red': pipeline.pipeline.status.includes('failed'),
+                  'pi-spin pi-spinner text-ctp-peach': pipeline.pipeline.status === 'running',
+                  'pi-info-circle text-ctp-text': pipeline.pipeline.status === 'pending',
+                  'pi-hourglass text-ctp-flamingo': pipeline.pipeline.status === 'waiting_for_resource',
+                  'pi-times-circle text-ctp-maroon': pipeline.pipeline.status === 'canceling',
+                  'pi-times-circle text-ctp-text': pipeline.pipeline.status === 'canceled',
+                }"
+              ></i>
+              <span class="ml-2">
+                <a>{{ pipeline.statusText.replaceAll('_', ' ') }}</a>
+              </span>
+            </div>
+            <a
+              class="text-ctp-mauve hover:text-ctp-text"
+              [routerLink]="['/logs', pipeline.pipeline.id]"
+              pTooltip="View live logs"
+              tooltipPosition="left"
+              aria-label="View live logs for pipeline {{ pipeline.pipeline.id }}"
+            >
+              <i class="pi pi-bars"></i>
+            </a>
           </div>
         }
       </ng-template>

@@ -1,4 +1,6 @@
 import {
+  GitlabJob,
+  GitlabLogChunk,
   MergeRequestWithDiffs,
   PipelineScheduleOption,
   PipelineTriggerResult,
@@ -10,17 +12,21 @@ import {
   Controller,
   Get,
   Headers,
+  Param,
+  ParseIntPipe,
   Post,
+  Sse,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { GitlabService } from './gitlab.service';
-import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { GitLabWebHook } from './interfaces';
 import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
 import { auth } from '../auth/auth';
+import { Observable } from 'rxjs';
 
 const SHA_REGEX = /^[0-9a-fA-F]{6,40}$/;
 const FLAG_LABELS = ['dangerous', 'hold'] as const;
@@ -71,6 +77,23 @@ export class GitlabController {
     return await this.gitlabService.getLastPipelines();
   }
 
+  @Get('pipelines/:pipelineId/jobs')
+  @ApiOperation({ summary: 'Get the jobs of a GitLab pipeline.' })
+  @ApiOkResponse({ description: 'List of jobs', isArray: true })
+  async getPipelineJobs(@Param('pipelineId', ParseIntPipe) pipelineId: number): Promise<GitlabJob[]> {
+    return await this.gitlabService.listPipelineJobs(pipelineId);
+  }
+
+  @Sse('pipelines/:pipelineId/jobs/:jobId/trace')
+  @ApiOperation({ summary: 'Stream the live trace (ANSI) of a GitLab pipeline job over SSE.' })
+  @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
+  async streamJobTrace(
+    @Param('pipelineId', ParseIntPipe) pipelineId: number,
+    @Param('jobId', ParseIntPipe) jobId: number,
+  ): Promise<Observable<Partial<MessageEvent<GitlabLogChunk>>>> {
+    return await this.gitlabService.getJobTraceStream(pipelineId, jobId);
+  }
+
   @Get('merge-requests')
   @ApiOperation({ summary: 'Get recent open GitLab merge requests with diff data.' })
   @ApiOkResponse({ description: 'List of open merge requests', isArray: true })
@@ -80,6 +103,7 @@ export class GitlabController {
 
   @Get('schedules')
   @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Get the active pipeline schedules of the chaotic-aur project.' })
   @ApiOkResponse({ description: 'List of active pipeline schedules', isArray: true })
   async getSchedules(): Promise<PipelineScheduleOption[]> {
@@ -95,6 +119,7 @@ export class GitlabController {
 
   @Post('approve')
   @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Approve a merge request.' })
   @ApiBody({
     schema: {
@@ -122,6 +147,7 @@ export class GitlabController {
 
   @Post('flag')
   @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Flag a merge request.' })
   @ApiBody({
     schema: {
@@ -149,6 +175,7 @@ export class GitlabController {
 
   @Post('trigger')
   @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Trigger a pipeline with the given inputs.' })
   @ApiBody({
     schema: {

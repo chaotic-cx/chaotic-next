@@ -193,11 +193,11 @@ const NO_REPO = '0';
         <div class="flex flex-wrap gap-6">
           <div class="flex items-center gap-2">
             <p-checkbox [formField]="packageForm.isActive" [binary]="true" inputId="pkgIsActive" />
-            <label for="pkgIsActive" class="text-ctp-text text-sm">Active</label>
+            <label class="text-ctp-text text-sm" for="pkgIsActive">Active</label>
           </div>
           <div class="flex items-center gap-2">
             <p-checkbox [formField]="packageForm.skipSignalScan" [binary]="true" inputId="pkgSkipScan" />
-            <label for="pkgSkipScan" class="text-ctp-text text-sm">Skip signal scan</label>
+            <label class="text-ctp-text text-sm" for="pkgSkipScan">Skip signal scan</label>
           </div>
         </div>
         <div class="flex justify-end gap-2">

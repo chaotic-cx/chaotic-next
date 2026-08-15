@@ -6,7 +6,7 @@
     @for (news of visibleNews(); track news.data.id) {
       @defer (on viewport) {
         <p-fieldset legend="{{ news.data.author }} on {{ news.data.date | date: 'short' }}">
-          <p [innerHTML]="news.html"></p>
+          <div class="news-content max-w-full overflow-x-auto break-words" [innerHTML]="news.html"></div>
         </p-fieldset>
       } @placeholder {
         <p-fieldset legend="I am loading..." />

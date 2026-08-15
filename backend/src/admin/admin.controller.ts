@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import type { Paginated, Package as PackageDto, PipelineTriggerAction } from '@chaotic-next/shared-lib';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Builder, Package, Repo } from '../builder/builder.entity';
@@ -140,6 +140,7 @@ class CreateElfAnalysisBodyDto {
 }
 
 @ApiTags('admin')
+@ApiCookieAuth('better-auth.session_token')
 @UseGuards(AuthGuard)
 @Controller('admin')
 export class AdminController {
