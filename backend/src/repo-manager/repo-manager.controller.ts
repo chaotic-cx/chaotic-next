@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiCookieAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Paginated } from '@chaotic-next/shared-lib';
 import { BrokenPackageReport, IndexResult, PackageRebuildTriggerSources } from '../interfaces/repo-manager';
@@ -8,6 +8,7 @@ import { PackageElfAnalysis } from './repo-manager.entity';
 import type { DependencyEdge } from './signal';
 
 @ApiTags('repo')
+@ApiCookieAuth('better-auth.session_token')
 @UseGuards(AuthGuard)
 @Controller('repo')
 export class RepoManagerController {

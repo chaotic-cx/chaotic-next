@@ -1,0 +1,39 @@
+:host {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .p-fieldset {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+:host ::ng-deep .p-fieldset-content {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.news-content {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.news-content pre,
+.news-content code {
+  min-width: 0;
+  max-width: 100%;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
+  overflow-x: auto !important;
+}
+
+.news-content a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}

@@ -1,6 +1,8 @@
 import {
   CACHE_REVIEW_STATS_TTL,
   type ExternalCommitStatus,
+  GitlabJob,
+  GitlabLogChunk,
   MergeRequestWithDiffs,
   NotificationPayload,
   PipelineScheduleOption,
@@ -16,16 +18,17 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mutex } from 'async-mutex';
-import { decryptAes, errorMessage, mapWithConcurrency } from '../utils/functions';
+import { Observable } from 'rxjs';
 import { Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
+import { Repo } from '../builder/builder.entity';
 import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
+import { decryptAes, errorMessage, mapWithConcurrency } from '../utils/functions';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
 import { MrAction, MrActionType } from './mr-action.entity';
-import { PipelineTrigger } from './pipeline-trigger.entity';
 import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
-import { Repo } from '../builder/builder.entity';
+import { PipelineTrigger } from './pipeline-trigger.entity';
 
 export interface MrActor {
   userId: string;
@@ -43,6 +46,9 @@ export class GitlabService implements OnModuleInit {
   private readonly CACHE_KEY_REVIEW_STATS = 'gitlab/review-stats';
   private chaoticId!: string;
   private readonly mergeBotUserId: number;
+
+  private isSeedingPipelines = false;
+  private isRefreshingReviewStats = false;
 
   private readonly pipelineMap = new Map<number, PipelineSchema>();
   private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
@@ -68,20 +74,12 @@ export class GitlabService implements OnModuleInit {
     await this.initApiClient().catch((err) =>
       this.logger.error(`GitLab client init failed, review features unavailable: ${errorMessage(err)}`),
     );
-    // Fire-and-forget: never block application startup on GitLab seeding.
-    // The cron jobs (EVERY_6_HOURS / EVERY_10_MINUTES) reconcile the store as
-    // a safety net if the initial seed races or fails.
     void this.refreshReviewStats().catch((err) =>
       this.logger.error(`Initial review-stats refresh failed: ${errorMessage(err)}`),
     );
     void this.seedPipelines().catch((err) => this.logger.error(`Initial pipeline seed failed: ${errorMessage(err)}`));
   }
 
-  /**
-   * Source everything from the chaotic-aur repo row in the DB: the project id,
-   * the token (encrypted at rest). Falls back to env config when the repo row
-   * is missing or misconfigured so app startup never fails.
-   */
   private async initApiClient(): Promise<void> {
     const repo = await this.repoRepository.findOne({ where: { name: 'chaotic-aur' } }).catch((err) => {
       this.logger.warn(`Could not load chaotic-aur repo row: ${errorMessage(err)}`);
@@ -110,21 +108,35 @@ export class GitlabService implements OnModuleInit {
 
   @Cron(CronExpression.EVERY_6_HOURS)
   async handleReviewStatsRefresh(): Promise<void> {
-    await this.refreshReviewStats();
+    if (this.isRefreshingReviewStats) return;
+    this.isRefreshingReviewStats = true;
+
+    try {
+      await this.refreshReviewStats();
+    } finally {
+      this.isRefreshingReviewStats = false;
+    }
   }
 
-  /** Safety net for missed webhooks / dropped status events. */
   @Cron(CronExpression.EVERY_10_MINUTES)
   async handlePipelinesRefresh(): Promise<void> {
     await this.seedPipelines();
   }
 
   async seedPipelines(): Promise<void> {
+    if (this.isSeedingPipelines) {
+      this.logger.debug('Pipeline seeding is already in progress, skipping execution');
+      return;
+    }
+    this.isSeedingPipelines = true;
+
     try {
       await this.getPipelinesViaRest();
       this.logger.log(`Seeded ${this.pipelineMap.size} pipelines`);
     } catch (err) {
       this.logger.error(`Failed to seed pipelines: ${errorMessage(err)}`);
+    } finally {
+      this.isSeedingPipelines = false;
     }
   }
 
@@ -505,7 +517,76 @@ export class GitlabService implements OnModuleInit {
 
     return { pipelineId: pipeline.id, webUrl: pipeline.web_url, status: pipeline.status };
   }
+
+  /** Jobs of a pipeline, in pipeline order, for the live-log viewer. */
+  async listPipelineJobs(pipelineId: number): Promise<GitlabJob[]> {
+    const jobs = await this.api.Jobs.all(this.chaoticId, { pipelineId });
+    return jobs.map((job) => ({
+      id: job.id,
+      name: job.name,
+      stage: job.stage,
+      status: job.status,
+      ref: job.ref,
+      webUrl: job.web_url,
+      startedAt: job.started_at,
+      finishedAt: job.finished_at,
+      duration: job.duration,
+    }));
+  }
+
+  /**
+   * Streams a job's trace over SSE. GitLab's trace is fetched as a whole, so the
+   * backend polls it and forwards only the appended bytes as chunks, ending with
+   * a `complete` message once the job reaches a terminal status. The teardown on
+   * unsubscribe stops the polling when the client disconnects.
+   */
+  getJobTraceStream(pipelineId: number, jobId: number): Observable<Partial<MessageEvent<GitlabLogChunk>>> {
+    const { api, chaoticId } = this;
+    return new Observable((subscriber) => {
+      let lastOffset = 0;
+      let lastStatus: string | undefined;
+      let running = true;
+
+      const stop = (): void => {
+        if (!running) return;
+        running = false;
+        clearInterval(timer);
+        subscriber.complete();
+      };
+
+      const poll = async (): Promise<void> => {
+        try {
+          const job = await api.Jobs.show(chaoticId, jobId);
+          lastStatus = job.status;
+          const raw = await api.Jobs.showLog(chaoticId, jobId);
+          if (raw.length > lastOffset) {
+            subscriber.next({
+              data: { offset: raw.length, text: raw.slice(lastOffset), complete: false, status: lastStatus },
+            });
+            lastOffset = raw.length;
+          }
+          if (TERMINAL_JOB_STATUSES.includes(lastStatus)) {
+            subscriber.next({ data: { offset: lastOffset, text: '', complete: true, status: lastStatus } });
+            stop();
+          }
+        } catch (error) {
+          subscriber.error(error);
+          stop();
+        }
+      };
+
+      const timer = setInterval(() => void poll(), JOB_TRACE_POLL_MS);
+      void poll();
+      return () => stop();
+    });
+  }
 }
+
+/** Job statuses after which no more trace output is expected. */
+const TERMINAL_JOB_STATUSES = ['success', 'failed', 'canceled', 'skipped', 'manual', 'waiting_for_resource'];
+
+/** How often the backend re-fetches a job trace to look for new bytes. */
+const JOB_TRACE_POLL_MS = 2000;
 
 function toLabelStrings(labels: MergeRequestSchema['labels']): string[] {
   return labels.map((label) => (typeof label === 'string' ? label : label.name));

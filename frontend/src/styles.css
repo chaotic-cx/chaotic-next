@@ -1,6 +1,7 @@
 /* Catppuccin variables and fonts */
 @import '@catppuccin/palette/css/catppuccin.css' layer(base);
 @import '@catppuccin/highlightjs/css/catppuccin-mocha.css' layer(base);
+@import '@xterm/xterm/css/xterm.css' layer(base);
 
 /* OptimusUI & Catppuccin Theme Overrides */
 @import '@openng/icons/openng-icons.css' layer(base);
@@ -10,6 +11,44 @@
 @import 'tailwindcss';
 @import '@catppuccin/tailwindcss/mocha.css';
 @plugin '@openng/optimus-ui-tailwindcss';
+
+/* Xterm overrides */
+.xterm .xterm-viewport,
+.xterm-scrollable-element {
+  background-color: transparent !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  pointer-events: auto !important;
+}
+
+ng-terminal,
+.resize-box,
+.terminal-outer,
+.xterm,
+.xterm-screen,
+.xterm .xterm-helper-textarea {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+@media screen and (max-width: 640px) {
+  .xterm,
+  .xterm .xterm-rows,
+  .xterm .xterm-rows span,
+  .xterm-screen {
+    font-size: 7.5px !important;
+    line-height: 1.05 !important;
+  }
+  .terminal-host {
+    font-size: 7.5px !important;
+  }
+  .xterm-container {
+    padding: 0.25rem !important;
+    touch-action: none !important;
+  }
+}
 
 /* GarudaNG override */
 .p-megamenu-end {
@@ -104,9 +143,15 @@ samp {
   max-width: calc(100vw - 20px);
 }
 
-.p-fieldset {
+.p-fieldset,
+.p-fieldset-content-container,
+.p-fieldset-content-wrapper,
+.p-fieldset-content {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-x: hidden;
 }
 
 .p-autocomplete > input {

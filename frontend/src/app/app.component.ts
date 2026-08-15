@@ -124,7 +124,7 @@ export class AppComponent implements OnInit {
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationStart) {
         if (firstNavigationComplete) {
-          const info = this.router.getCurrentNavigation()?.extras?.info;
+          const info = this.router.getCurrentNavigation()?.extras?.info as Record<string, unknown> | undefined;
           if (!info?.['disableViewTransition']) {
             document.body.classList.add('is-transitioning');
           }

@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, effect, inject, input, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { type Build, BuildStatus } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { FilterMetadata } from '@openng/optimus-ui/api';
@@ -12,12 +12,12 @@ import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
 import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { DatatableUnsetRoundingDirective } from '../directives/datatable-unset-rounding.directive';
-import { castTo } from '../functions';
+import { castTo, packageLogRouteFromUrl } from '../functions';
 import { DurationPipe } from '../pipes/duration.pipe';
-import { LogurlPipe } from '../pipes/logurl.pipe';
 import { TitleComponent } from '../title/title.component';
 import { DeployLogService } from './deploy-log.service';
 
@@ -32,10 +32,11 @@ import { DeployLogService } from './deploy-log.service';
     IconField,
     InputText,
     Select,
-    LogurlPipe,
     DurationPipe,
     TitleComponent,
     FormsModule,
+    RouterLink,
+    Tooltip,
   ],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
@@ -45,9 +46,10 @@ export class DeployLogComponent {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
-
   protected readonly deployLogService = inject(DeployLogService);
   protected readonly deployTable = viewChild<Table>('deployTable');
+
+  readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
 
   readonly search = input<string>();
 

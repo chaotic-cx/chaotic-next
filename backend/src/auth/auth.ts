@@ -96,9 +96,7 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
   secret: process.env.BETTER_AUTH_SECRET,
   database: typeormAdapter(authDataSource, { outputDir: AUTH_GENERATED_DIR }),
-  trustedOrigins: Array.from(
-    new Set(['http://localhost:4201', 'https://aur.chaotic.cx', ...envTrustedOrigins]),
-  ),
+  trustedOrigins: Array.from(new Set(['http://localhost:4201', 'https://aur.chaotic.cx', ...envTrustedOrigins])),
   rateLimit: {
     enabled: true,
     storage: 'memory',

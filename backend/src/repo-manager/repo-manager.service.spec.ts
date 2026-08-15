@@ -82,7 +82,9 @@ describe('RepoManagerService.getRebuildTriggerSources', () => {
       keyOf: (a) => `${a.pkgType}:${a.pkgId}:${a.version}`,
     });
 
-    packageRepository.seed([{ id: 7, pkgname: 'nobody', isActive: true, lastUpdated: '2026-08-06T00:00:00.000Z', metadata: {} }]);
+    packageRepository.seed([
+      { id: 7, pkgname: 'nobody', isActive: true, lastUpdated: '2026-08-06T00:00:00.000Z', metadata: {} },
+    ]);
 
     const service = buildService(packageRepository, archlinuxPackageRepository, elfAnalysisRepository);
 

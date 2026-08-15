@@ -276,6 +276,7 @@
                 <a class="text-ctp-mauve hover:underline" [href]="result.webUrl" rel="noopener" target="_blank">
                   Last triggered pipeline #{{ result.pipelineId }} ({{ result.status }})
                 </a>
+                <a class="text-ctp-mauve hover:underline" [routerLink]="['/logs', result.pipelineId]">View live logs</a>
               }
               <p-button
                 (onClick)="previousStep()"

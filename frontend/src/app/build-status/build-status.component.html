@@ -146,11 +146,22 @@
               </ng-template>
               <ng-template #content let-untypedDeployment>
                 @if (typedDeployment(untypedDeployment); as deployment) {
-                  <a [href]="deployment.logUrl" pRipple
-                    >{{ deployment.pkgbase.pkgname }}
-                    <br />
-                    <a class="text-ctp-subtext1 text-xs">({{ deployment.repo?.name }})</a>
-                  </a>
+                  <div class="flex items-center justify-between gap-3">
+                    <span>
+                      {{ deployment.pkgbase.pkgname }}
+                      <br />
+                      <span class="text-sm">({{ deployment.repo?.name }})</span>
+                    </span>
+                    <a
+                      class="text-ctp-mauve hover:text-ctp-text"
+                      [routerLink]="packageLogRouteFromUrl(deployment.logUrl ?? '')"
+                      pTooltip="Open build log"
+                      tooltipPosition="left"
+                      aria-label="Open build log for {{ deployment.pkgbase.pkgname }}"
+                    >
+                      <i class="pi pi-bars"></i>
+                    </a>
+                  </div>
                 }
               </ng-template>
             </p-timeline>
@@ -272,11 +283,22 @@
             </ng-template>
             <ng-template #content let-untypedDeployment>
               @if (typedDeployment(untypedDeployment); as deployment) {
-                <span>
-                  <a [href]="deployment.logUrl" pRipple>{{ deployment.pkgbase.pkgname }}</a
-                  ><br />
-                  <a class="text-sm">({{ deployment.repo?.name }})</a>
-                </span>
+                <div class="flex items-center justify-between gap-3">
+                  <span>
+                    {{ deployment.pkgbase.pkgname }}
+                    <br />
+                    <span class="text-sm">({{ deployment.repo?.name }})</span>
+                  </span>
+                  <a
+                    class="text-ctp-mauve hover:text-ctp-text"
+                    [routerLink]="packageLogRouteFromUrl(deployment.logUrl ?? '')"
+                    pTooltip="Open build log"
+                    tooltipPosition="left"
+                    aria-label="Open build log for {{ deployment.pkgbase.pkgname }}"
+                  >
+                    <i class="pi pi-bars"></i>
+                  </a>
+                </div>
               }
             </ng-template>
           </p-timeline>

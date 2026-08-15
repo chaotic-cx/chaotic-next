@@ -9,8 +9,6 @@ export const authGuard: CanActivateFn = () => {
 
   return authService.sessionState$.pipe(
     take(1),
-    map((session) =>
-      session ? true : router.createUrlTree(['/login'], { queryParams: { returnUrl: router.url } }),
-    ),
+    map((session) => (session ? true : router.createUrlTree(['/login'], { queryParams: { returnUrl: router.url } }))),
   );
 };

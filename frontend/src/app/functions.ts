@@ -34,6 +34,22 @@ export function parseCount(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function packageLogRouteFromUrl(logUrl: string): string[] {
+  try {
+    const url = new URL(logUrl);
+    const pkgname = url.searchParams.get('id');
+    const timestamp = url.searchParams.get('timestamp');
+    if (pkgname && timestamp) return ['/logs/package', pkgname, timestamp];
+  } catch {
+    // Malformed log URL; fall through to an empty (no-op) route.
+  }
+  return [];
+}
+
 export function resourceValue<T>(resource: { hasValue(): boolean; value(): T }): T | undefined {
   return resource.hasValue() ? resource.value() : undefined;
 }

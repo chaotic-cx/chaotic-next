@@ -1,0 +1,20 @@
+<chaotic-title
+  [subtitle]="pkgname() ? `Build log — ${timestamp()}` : 'Build log'"
+  title="{{ pkgname() || 'Package log' }}"
+/>
+
+<div class="package-log">
+  @if (error()) {
+    <p class="log-error">{{ error() }}</p>
+  }
+
+  <div class="log-panel-wrap">
+    @if (loading()) {
+      <div class="log-loading">
+        <p-progress-spinner ariaLabel="Loading log" />
+      </div>
+    } @else {
+      <chaotic-xterm-log [chunk]="logChunk()" />
+    }
+  </div>
+</div>

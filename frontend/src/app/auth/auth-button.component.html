@@ -1,23 +1,16 @@
 @if (isLoggedIn()) {
   <div class="ml-3 flex items-center gap-2">
     <a
-      routerLink="/pipeline-trigger"
       class="my-auto"
+      routerLink="/pipeline-trigger"
       aria-label="New pipeline"
       title="Create a new package build pipeline"
     >
-      <p-button
-        icon="pi pi-box"
-        severity="secondary"
-        text
-        rounded
-        size="small"
-        aria-label="New pipeline"
-      />
+      <p-button icon="pi pi-box" severity="secondary" text rounded size="small" aria-label="New pipeline" />
     </a>
     <a
-      routerLink="/admin"
       class="text-ctp-maroon my-auto cursor-pointer"
+      routerLink="/admin"
       aria-label="Admin"
       title="Manage packages and repositories"
     >
@@ -36,10 +29,10 @@
     @if (user(); as user) {
       @if (user.image) {
         <a
+          class="inline-flex items-center"
           [href]="gitlabProfileUrl()"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center"
           pTooltip="View GitLab profile"
           tooltipPosition="left"
         >

@@ -156,7 +156,7 @@ interface BuilderFormModel {
         </label>
         <div class="flex items-center gap-2">
           <p-checkbox [formField]="builderForm.isActive" [binary]="true" inputId="builderIsActive" />
-          <label for="builderIsActive" class="text-ctp-text text-sm">Active</label>
+          <label class="text-ctp-text text-sm" for="builderIsActive">Active</label>
         </div>
         <div class="flex justify-end gap-2">
           <p-button (onClick)="dialogVisible.set(false)" type="button" severity="secondary" text label="Cancel" />
