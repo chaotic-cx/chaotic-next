@@ -140,9 +140,10 @@ describe('Real-world broken recompute + dependency graph (e2e, real PostgreSQL)'
   };
 
   const fetchBroken = async (): Promise<BrokenEntry[]> => {
-    const res = await e2e.inject<BrokenEntry[]>({ method: 'GET', url: '/repo/broken' });
+    const res = await e2e.inject<{ items: BrokenEntry[] }>({ method: 'GET', url: '/repo/broken' });
     expect(res.statusCode).toBe(200);
-    return await res.json();
+    const body = await res.json();
+    return body.items;
   };
 
   const brokenPkgnames = async (): Promise<string[]> => (await fetchBroken()).map((entry) => entry.pkgname);

@@ -28,7 +28,8 @@
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/coverage/backend-e2e"],
       "options": {
-        "command": "node node_modules/vitest/vitest.mjs run --config backend-e2e/vite.config.mts --coverage"
+        "cwd": "backend-e2e",
+        "command": "vitest run --coverage"
       }
     }
   }

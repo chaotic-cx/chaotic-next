@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { SignalScanService } from '../repo-manager/scan';
-import { PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
+import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { compareArchVersions } from '../repo-manager/signal';
 import { errorMessage } from '../utils/functions';
-import { Package } from './builder.entity';
+import { Build, Package } from './builder.entity';
 
 /** Analyses kept per package: the latest plus the previous the ABI index compares. */
 const KEEP_ANALYSIS_VERSIONS = 2;
@@ -47,22 +47,23 @@ export class DatabaseCleanupService {
       }
 
       await this.dataSource.transaction(async (manager) => {
-        const candidates = await manager.query<{ id: number }[]>(
-          `SELECT p.id
-             FROM package p
-            WHERE p."repoId" IS NULL
-              AND NOT EXISTS (SELECT 1 FROM build b WHERE b."pkgbaseId" = p.id)`,
-        );
+        const candidates = await manager
+          .getRepository(Package)
+          .createQueryBuilder('p')
+          .select('p.id', 'id')
+          .leftJoin(Build, 'b', 'b.pkgbaseId = p.id')
+          .where('p.repoId IS NULL')
+          .andWhere('b.id IS NULL')
+          .getRawMany<{ id: number }>();
+
         if (candidates.length === 0) return;
 
         const ids: number[] = candidates.map((row) => row.id);
         // ELF analysis rows only reference packages for Chaotic triggers
         // (pkgType '1'); '0' rows point at ArchlinuxPackage ids instead.
-        await manager.query(`DELETE FROM package_elf_analysis WHERE "pkgType" = '1' AND "pkgId" = ANY($1::int[])`, [
-          ids,
-        ]);
-        await manager.query(`DELETE FROM package_bump WHERE "pkgId" = ANY($1::int[])`, [ids]);
-        await manager.query(`DELETE FROM package WHERE id = ANY($1::int[])`, [ids]);
+        await manager.getRepository(PackageElfAnalysis).delete({ pkgType: '1', pkgId: In(ids) });
+        await manager.getRepository(PackageBump).delete({ pkg: { id: In(ids) } });
+        await manager.getRepository(Package).delete({ id: In(ids) });
 
         // The deleted analyses may have contributed directories to the cached
         // signal index, so drop it to force a rebuild on next use.

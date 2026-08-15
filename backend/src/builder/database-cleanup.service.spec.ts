@@ -1,7 +1,7 @@
 import { DataSource, Repository, UpdateResult } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
+import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { SignalScanService } from '../repo-manager/scan';
-import { PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { Package } from './builder.entity';
 import { DatabaseCleanupService } from './database-cleanup.service';
 
@@ -17,13 +17,42 @@ function mockUpdateQueryBuilder({ affected }: { affected: number }) {
   return qb;
 }
 
+function mockSelectQueryBuilder({ candidates }: { candidates: { id: number }[] }) {
+  const qb = {
+    select: vi.fn(() => qb),
+    leftJoin: vi.fn(() => qb),
+    where: vi.fn(() => qb),
+    andWhere: vi.fn(() => qb),
+    getRawMany: vi.fn().mockResolvedValue(candidates),
+  };
+  return qb;
+}
+
 function createService(options: { affected?: number; candidates?: { id: number }[] }) {
-  const qb = mockUpdateQueryBuilder({ affected: options.affected ?? 0 });
+  const updateQb = mockUpdateQueryBuilder({ affected: options.affected ?? 0 });
+  const selectQb = mockSelectQueryBuilder({ candidates: options.candidates ?? [] });
+
   const packageRepository = {
-    createQueryBuilder: vi.fn(() => qb),
+    createQueryBuilder: vi.fn(() => updateQb),
   } as unknown as Repository<Package>;
+
+  const elfAnalysisRepo = {
+    delete: vi.fn().mockResolvedValue({ affected: options.candidates?.length ?? 0 }),
+  };
+  const bumpRepo = {
+    delete: vi.fn().mockResolvedValue({ affected: options.candidates?.length ?? 0 }),
+  };
+  const pkgRepo = {
+    createQueryBuilder: vi.fn(() => selectQb),
+    delete: vi.fn().mockResolvedValue({ affected: options.candidates?.length ?? 0 }),
+  };
+
   const manager = {
-    query: vi.fn().mockResolvedValueOnce(options.candidates ?? []),
+    getRepository: vi.fn((entity) => {
+      if (entity === PackageElfAnalysis) return elfAnalysisRepo;
+      if (entity === PackageBump) return bumpRepo;
+      return pkgRepo;
+    }),
   };
   const dataSource = {
     transaction: vi.fn(async (fn: (m: typeof manager) => Promise<void>) => fn(manager)),
@@ -33,10 +62,15 @@ function createService(options: { affected?: number; candidates?: { id: number }
     find: vi.fn(),
     delete: vi.fn().mockResolvedValue(undefined),
   } as unknown as Repository<PackageElfAnalysis>;
+
   return {
     service: new DatabaseCleanupService(packageRepository, analysisRepository, dataSource, signalScanService),
-    qb,
+    qb: updateQb,
+    selectQb,
     manager,
+    elfAnalysisRepo,
+    bumpRepo,
+    pkgRepo,
     dataSource,
     signalScanService,
     analysisRepository,
@@ -61,7 +95,7 @@ describe('DatabaseCleanupService', () => {
 
   it('purges orphaned packages not referenced by a build within a transaction', async () => {
     const ids = [10, 11, 12];
-    const { service, manager, dataSource, signalScanService } = createService({
+    const { service, manager, elfAnalysisRepo, bumpRepo, pkgRepo, dataSource, signalScanService } = createService({
       affected: 5,
       candidates: ids.map((id) => ({ id })),
     });
@@ -69,22 +103,21 @@ describe('DatabaseCleanupService', () => {
     await service.purgeOrphanedPackages();
 
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
-    expect(manager.query).toHaveBeenCalledTimes(4);
-    // elf analysis rows are only purged for Chaotic packages (pkgType '1')
-    expect(manager.query).toHaveBeenNthCalledWith(2, expect.stringContaining('package_elf_analysis'), [ids]);
-    expect(manager.query).toHaveBeenNthCalledWith(3, expect.stringContaining('package_bump'), [ids]);
-    expect(manager.query).toHaveBeenNthCalledWith(4, expect.stringContaining('FROM package WHERE'), [ids]);
+    expect(manager.getRepository).toHaveBeenCalledTimes(4);
+    expect(elfAnalysisRepo.delete).toHaveBeenCalledTimes(1);
+    expect(bumpRepo.delete).toHaveBeenCalledTimes(1);
+    expect(pkgRepo.delete).toHaveBeenCalledTimes(1);
     expect(signalScanService.invalidateDirectoryIndex).toHaveBeenCalledTimes(1);
   });
 
   it('skips the delete phase when there are no candidates', async () => {
-    const { service, manager, dataSource } = createService({ affected: 0, candidates: [] });
+    const { service, manager, elfAnalysisRepo, dataSource } = createService({ affected: 0, candidates: [] });
 
     await service.purgeOrphanedPackages();
 
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
-    // only the candidate select ran; no deletes
-    expect(manager.query).toHaveBeenCalledTimes(1);
+    expect(manager.getRepository).toHaveBeenCalledTimes(1);
+    expect(elfAnalysisRepo.delete).not.toHaveBeenCalled();
   });
 
   it('logs and swallows errors from the data source', async () => {

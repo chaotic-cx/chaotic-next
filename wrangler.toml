@@ -1,19 +1,19 @@
 name = "caur-frontend"
 pages_build_output_dir = "dist/frontend/browser"
-compatibility_date = "2024-06-03"
+compatibility_date = "2026-08-03"
 
 [placement]
 mode = "off"
 
 [vars]
-NODE_VERSION = "23.2"
+NODE_VERSION = "26"
 
 [env.production]
-compatibility_date = "2024-09-02"
+compatibility_date = "2026-08-03"
 
 [env.production.placement]
 mode = "smart"
 
 [env.production.vars]
-NODE_VERSION = "24"
+NODE_VERSION = "26"
 PNPM_VERSION = "11"

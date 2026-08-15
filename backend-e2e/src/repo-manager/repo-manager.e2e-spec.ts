@@ -126,20 +126,21 @@ describe('Repo-manager endpoints (e2e, real PostgreSQL)', () => {
       const archOk = await e2e.seedArchlinuxPackage({ pkgname: 'acl' });
       await e2e.seedElfAnalysis({ pkgId: archOk.id, version: '2.4.0', broken: false });
 
-      const res = await e2e.inject<unknown[]>({ method: 'GET', url: '/repo/broken' });
+      const res = await e2e.inject<{ items: unknown[] }>({ method: 'GET', url: '/repo/broken' });
 
       expect(res.statusCode).toBe(200);
       const body = await res.json();
-      expect(body.length).toBeGreaterThanOrEqual(1);
+      expect(body.items.length).toBeGreaterThanOrEqual(1);
     });
 
     it('returns an empty array when nothing is broken', async () => {
       const archPkg = await e2e.seedArchlinuxPackage({ pkgname: 'acl' });
       await e2e.seedElfAnalysis({ pkgId: archPkg.id, version: '2.4.0', broken: false });
 
-      const res = await e2e.inject<unknown[]>({ method: 'GET', url: '/repo/broken' });
+      const res = await e2e.inject<{ items: unknown[] }>({ method: 'GET', url: '/repo/broken' });
       expect(res.statusCode).toBe(200);
-      expect(await res.json()).toEqual([]);
+      const body = await res.json();
+      expect(body.items).toEqual([]);
     });
   });
 
