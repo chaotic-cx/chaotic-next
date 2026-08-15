@@ -94,6 +94,14 @@ function buildSummary(final) {
   return summary;
 }
 
+function normalizeFilePath(filePath) {
+  let normalized = filePath.replace(/^(?:\.\.\/)+backend\//, 'backend/').replace(/^\/.*\/backend\//, 'backend/');
+  if (normalized.startsWith('src/')) {
+    normalized = `backend/${normalized}`;
+  }
+  return normalized;
+}
+
 async function main() {
   const [outPath, ...inputs] = process.argv.slice(2);
   if (!outPath || inputs.length === 0) {
@@ -105,7 +113,12 @@ async function main() {
   for (const input of inputs) {
     const data = JSON.parse(await readFile(input, 'utf8'));
     for (const file of Object.keys(data)) {
-      merged[file] = mergeFileCoverage(merged[file], data[file]);
+      const normalizedKey = normalizeFilePath(file);
+      const fileData = data[file];
+      if (fileData) {
+        fileData.path = normalizedKey;
+      }
+      merged[normalizedKey] = mergeFileCoverage(merged[normalizedKey], fileData);
     }
   }
 

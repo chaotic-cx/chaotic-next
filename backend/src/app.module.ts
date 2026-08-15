@@ -1,12 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { LoggerModule } from 'nestjs-pino';
+import { AllExceptionsFilter } from './api/all-exceptions.filter';
 import { ThrottlerBehindProxyGuard } from './api/throttler-behind-proxy.guard';
 import { auth } from './auth/auth';
 import { AdminModule } from './admin/admin.module';
@@ -62,8 +63,21 @@ import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
   ],
   providers: [
     {
+      provide: APP_PIPE,
+      useValue: new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      }),
+    },
+    {
       provide: APP_GUARD,
       useClass: ThrottlerBehindProxyGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
     },
   ],
 })

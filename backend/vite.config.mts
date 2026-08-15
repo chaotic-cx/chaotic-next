@@ -1,8 +1,10 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+import { swcPlugin } from '../tools/vitest/swc-plugin';
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
+  plugins: [swcPlugin()],
   resolve: {
     alias: {
       '@chaotic-next/shared-lib': fileURLToPath(new URL('../shared-lib/src/index.ts', import.meta.url)),

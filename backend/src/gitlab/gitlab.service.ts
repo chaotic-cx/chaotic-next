@@ -39,12 +39,12 @@ export interface MrActor {
 export class GitlabService implements OnModuleInit {
   private readonly logger = new Logger(GitlabService.name);
   api!: Gitlab;
+  chaoticId!: string;
   updateMutex = new Mutex();
   reviewStatsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_KEY_REVIEW_STATS = 'gitlab/review-stats';
-  private chaoticId!: string;
   private readonly mergeBotUserId: number;
 
   private isSeedingPipelines = false;
