@@ -1,12 +1,30 @@
-import { MergeRequestWithDiffs, PipelineWithExternalStatus } from '@chaotic-next/shared-lib';
-import { BadRequestException, Body, Controller, Get, Headers, Post, UnauthorizedException } from '@nestjs/common';
+import {
+  MergeRequestWithDiffs,
+  PipelineScheduleOption,
+  PipelineTriggerResult,
+  PipelineWithExternalStatus,
+} from '@chaotic-next/shared-lib';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Post,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { GitlabService } from './gitlab.service';
-import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { GitLabWebHook } from './interfaces';
+import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
+import { auth } from '../auth/auth';
 
 const SHA_REGEX = /^[0-9a-fA-F]{6,40}$/;
-const FLAG_LABELS = ['dangerous', 'hold'];
+const FLAG_LABELS = ['dangerous', 'hold'] as const;
+type FlagLabel = (typeof FLAG_LABELS)[number];
 
 function assertValidIid(iid: number): void {
   if (!Number.isInteger(iid) || iid <= 0) {
@@ -60,6 +78,14 @@ export class GitlabController {
     return await this.gitlabService.getOpenMergeRequests();
   }
 
+  @Get('schedules')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Get the active pipeline schedules of the chaotic-aur project.' })
+  @ApiOkResponse({ description: 'List of active pipeline schedules', isArray: true })
+  async getSchedules(): Promise<PipelineScheduleOption[]> {
+    return await this.gitlabService.listPipelineSchedules();
+  }
+
   @Get('review-stats')
   @ApiOperation({ summary: 'Get GitLab merge request review statistics per user.' })
   @ApiOkResponse({ description: 'Merge request review statistics' })
@@ -68,8 +94,8 @@ export class GitlabController {
   }
 
   @Post('approve')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Approve a merge request.' })
-  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -81,22 +107,22 @@ export class GitlabController {
   })
   @ApiOkResponse({ description: 'Merge request approved.' })
   async approve(
-    @Headers('X-Gitlab-Private-Token') token: string,
+    @Session() session: UserSession<typeof auth>,
     @Body() body: { iid: number; sha: string },
   ): Promise<void> {
-    if (!token) {
-      throw new UnauthorizedException('GitLab private token is required');
-    }
     assertValidIid(body.iid);
     if (typeof body.sha !== 'string' || !SHA_REGEX.test(body.sha)) {
       throw new BadRequestException('Invalid sha');
     }
-    await this.gitlabService.approveMergeRequest(body.iid, body.sha, token);
+    await this.gitlabService.approveMergeRequest(body.iid, body.sha, {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
   }
 
   @Post('flag')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Flag a merge request.' })
-  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -108,27 +134,47 @@ export class GitlabController {
   })
   @ApiOkResponse({ description: 'Merge request flagged.' })
   async flag(
-    @Headers('X-Gitlab-Private-Token') token: string,
-    @Body() body: { iid: number; label: string },
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: { iid: number; label: FlagLabel },
   ): Promise<void> {
-    if (!token) {
-      throw new UnauthorizedException('GitLab private token is required');
-    }
     assertValidIid(body.iid);
     if (!FLAG_LABELS.includes(body.label)) {
       throw new BadRequestException(`Invalid label, must be one of: ${FLAG_LABELS.join(', ')}`);
     }
-    await this.gitlabService.flagMergeRequest(body.iid, body.label, token);
+    await this.gitlabService.flagMergeRequest(body.iid, body.label, {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
   }
 
-  @Post('test-token')
-  @ApiOperation({ summary: 'Test a GitLab private token for write permissions.' })
-  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
-  @ApiOkResponse({ description: 'Token validation result', type: Boolean })
-  async testToken(@Headers('X-Gitlab-Private-Token') token: string): Promise<boolean> {
-    if (!token) {
-      throw new UnauthorizedException('GitLab private token is required');
-    }
-    return await this.gitlabService.testToken(token);
+  @Post('trigger')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Trigger a pipeline with the given inputs.' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['operation'],
+      properties: {
+        operation: { type: 'string', example: 'Bump Packages' },
+        ref: { type: 'string', example: 'main' },
+        packages: { type: 'string', example: 'nodejs:20' },
+        trigger: { type: 'string' },
+        add_packages: { type: 'string', example: 'paru/aur' },
+        request_origin: { type: 'string', example: 'github/5678' },
+        request_reason: { type: 'string', example: 'request' },
+        custom_request_reason: { type: 'string' },
+      },
+    },
+  })
+  @ApiOkResponse({ description: 'Pipeline triggered.' })
+  async triggerPipeline(
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: unknown,
+  ): Promise<PipelineTriggerResult> {
+    const { ref, inputs } = validatePipelineTriggerInputs(body);
+    return await this.gitlabService.triggerPipeline(inputs, ref, {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
   }
 }

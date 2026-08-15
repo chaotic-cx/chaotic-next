@@ -21,17 +21,58 @@
     paginatorDropdownAppendTo="body"
   >
     <ng-template #caption>
-      <div class="flex">
-        <p-button [outlined]="true" (click)="clear(deployTable)" label="Clear" icon="pi pi-filter-slash" />
-        <p-button
-          class="ml-2.5"
-          [outlined]="true"
-          [loading]="deployLogService.loading()"
-          (click)="deployLogService.reload()"
-          label="Reload"
-          icon="pi pi-refresh"
-        />
-        <p-iconfield class="ml-2.5 sm:ml-auto" iconPosition="left">
+      <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <p-button
+            class="hidden sm:inline-flex"
+            [outlined]="true"
+            (click)="clear(deployTable)"
+            label="Clear"
+            icon="pi pi-filter-slash"
+          />
+          <p-button
+            class="hidden sm:inline-flex"
+            [outlined]="true"
+            [loading]="deployLogService.loading()"
+            (click)="deployLogService.reload()"
+            label="Reload"
+            icon="pi pi-refresh"
+          />
+        </div>
+        <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+          <p-select
+            class="w-40"
+            [options]="deployLogService.builderOptions()"
+            [ngModel]="deployLogService.builderFilter()"
+            [filter]="true"
+            (ngModelChange)="onBuilderFilter($event)"
+            placeholder="All builders"
+            filterPlaceholder="Search builder"
+            showClear
+            appendTo="body"
+          />
+          <p-select
+            class="w-40"
+            [options]="deployLogService.repoOptions"
+            [ngModel]="deployLogService.repoFilter()"
+            (ngModelChange)="onRepoFilter($event)"
+            placeholder="All repos"
+            showClear
+            appendTo="body"
+          />
+          <p-select
+            class="w-40"
+            [options]="deployLogService.statusOptions"
+            [ngModel]="deployLogService.statusFilter()"
+            (ngModelChange)="onStatusFilter($event)"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All outcomes"
+            showClear
+            appendTo="body"
+          />
+        </div>
+        <p-iconfield class="w-full sm:w-64" iconPosition="left">
           <p-inputicon>
             <i class="pi pi-search"></i>
           </p-inputicon>
@@ -55,50 +96,13 @@
           </div>
         </th>
         <th>
-          <div class="flex items-center gap-2.5">
-            Builder
-            <p-select
-              class="w-40"
-              [options]="deployLogService.builderOptions()"
-              [ngModel]="deployLogService.builderFilter()"
-              [filter]="true"
-              (ngModelChange)="onBuilderFilter($event)"
-              placeholder="All builders"
-              filterPlaceholder="Search builder"
-              showClear
-              appendTo="body"
-            />
-          </div>
+          <div class="flex items-center">Builder</div>
         </th>
         <th>
-          <div class="flex items-center gap-2.5">
-            Repository
-            <p-select
-              class="w-40"
-              [options]="deployLogService.repoOptions"
-              [ngModel]="deployLogService.repoFilter()"
-              (ngModelChange)="onRepoFilter($event)"
-              placeholder="All repos"
-              showClear
-              appendTo="body"
-            />
-          </div>
+          <div class="flex items-center">Repository</div>
         </th>
         <th>
-          <div class="flex items-center gap-2.5">
-            Outcome
-            <p-select
-              class="w-40"
-              [options]="deployLogService.statusOptions"
-              [ngModel]="deployLogService.statusFilter()"
-              (ngModelChange)="onStatusFilter($event)"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="All outcomes"
-              showClear
-              appendTo="body"
-            />
-          </div>
+          <div class="flex items-center">Outcome</div>
         </th>
         <th>
           <div class="flex items-center">Log URL</div>
@@ -107,7 +111,7 @@
         <th pSortableColumn="timestamp">
           <div class="flex items-center">Time of finish&nbsp;<p-sortIcon field="timestamp" /></div>
         </th>
-        <th>
+        <th class="cell-actions">
           <div class="flex items-center">Details</div>
         </th>
       </tr>
@@ -149,7 +153,7 @@
           <td>
             <span class="ml-1 align-middle">{{ build.timestamp | date: 'short' }}</span>
           </td>
-          <td>
+          <td class="cell-actions">
             <p-button
               class="h-8"
               (click)="openDetail(build)"

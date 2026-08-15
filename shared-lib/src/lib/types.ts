@@ -72,6 +72,7 @@ export interface Package {
   pkgname: string;
   lastUpdated?: string;
   isActive: boolean;
+  skipSignalScan?: boolean;
   version?: string;
   bumpCount?: number;
   bumpTriggers?: { pkgname: string; archVersion: string }[];
@@ -169,6 +170,143 @@ export interface Repo {
   gitRef: string;
   dbPath?: string;
   apiToken?: string;
+  gitlabProjectId?: string;
+}
+
+export interface MrAction {
+  id: number;
+  mergeRequestIid: number;
+  action: string;
+  userId: string;
+  userName: string;
+  createdAt: string;
+}
+
+export const PIPELINE_OPERATIONS = [
+  'None',
+  'Bump Packages',
+  'Schedule Packages',
+  'Run Schedule',
+  'Drop Packages',
+  'Add Packages',
+] as const;
+export type PipelineOperation = (typeof PIPELINE_OPERATIONS)[number];
+
+export const PIPELINE_REQUEST_REASONS = [
+  'unset',
+  'request',
+  'depends',
+  'depends:optional',
+  'depends:make',
+  'depends:check',
+] as const;
+export type PipelineRequestReason = (typeof PIPELINE_REQUEST_REASONS)[number];
+
+// Regex constraints of the pipeline's spec:inputs section, shared by the
+// backend validation and the frontend signal-forms validators.
+export const PIPELINE_PACKAGES_REGEX = /^(?:[\w@.+/-]+(?::[\w@.+/-]+)*)?$/;
+export const PIPELINE_ADD_PACKAGES_REGEX =
+  /^([\w@.+/-]+\/(aur|(https?|git):\/\/\S+)(\s[\w@.+/-]+\/(aur|(https?|git):\/\/\S+))*)?$/;
+export const PIPELINE_REF_REGEX = /^[\w@.+/-]{1,255}$/;
+export const PIPELINE_PKG_BASE_REGEX = /^[\w@.+-]+$/;
+
+/**
+ * Inputs of the chaotic-aur pipeline, mirroring its `spec:inputs` section.
+ * Which inputs are required depends on the chosen operation.
+ */
+export interface PipelineTriggerInputs {
+  operation: PipelineOperation;
+  packages?: string;
+  trigger?: string;
+  add_packages?: string;
+  request_origin?: string;
+  request_reason?: string;
+  custom_request_reason?: string;
+}
+
+export interface PipelineTriggerResult {
+  pipelineId: number;
+  webUrl: string;
+  status: string;
+}
+
+export interface PipelineScheduleOption {
+  id: number;
+  description: string | null;
+  active: boolean;
+}
+
+export interface PipelineTriggerAction {
+  id: number;
+  ref: string;
+  operation: string;
+  inputs: Record<string, string>;
+  pipelineId?: number;
+  webUrl?: string;
+  userId: string;
+  userName: string;
+  createdAt: string;
+}
+
+export interface PackageBump {
+  id: number;
+  bumpType: number;
+  trigger: number;
+  triggerFrom: number;
+  details?: string[];
+  timestamp: string;
+  pkgname?: string;
+  triggerName?: string;
+}
+export type PkgType = '0' | '1';
+
+export interface IndexResult {
+  scanned: number;
+  skipped: number;
+  failed: number;
+}
+
+/**
+ * One package flagged broken by the ELF signal scanner. Only Chaotic packages
+ * are ever reported: Arch packages are reference data and never judged broken.
+ */
+export interface BrokenPackageReport {
+  pkgType: 'chaotic';
+  pkgname: string;
+  version: string;
+  repoName?: string;
+  reasons: string[];
+}
+
+export interface RebuildTriggerSourcePackage {
+  pkgname: string;
+  pkgType: 'arch' | 'chaotic';
+}
+
+export interface SonameDependency {
+  soname: string;
+  providers: RebuildTriggerSourcePackage[];
+}
+
+export interface PackageRebuildTriggerSources {
+  pkgname: string;
+  /** Arch packages listed in the package's CI_REBUILD_TRIGGERS (read live from `.CI/config`). */
+  explicitTriggers: { pkgname: string; archVersion: string }[];
+  /** Sonames the package links and who provides them (a dropped provider triggers BROKEN_DEPS). */
+  sonameDependencies: SonameDependency[];
+  /** Owners this package is a plugin of; their ABI change triggers PLUGIN. */
+  pluginOwners: RebuildTriggerSourcePackage[];
+}
+
+export interface AdminPackageElfAnalysis {
+  id: number;
+  pkgType: PkgType;
+  pkgId: number;
+  pkgname?: string;
+  version: string;
+  broken: boolean;
+  brokenReasons: string[];
+  scannedAt: string;
 }
 
 export interface Build {
@@ -230,6 +368,17 @@ export enum RepoStatus {
   ACTIVE = 0,
   INACTIVE = 1,
   RUNNING = 2,
+}
+
+export interface ArchPackage {
+  id: number;
+  pkgname: string;
+  version?: string;
+  pkgrel?: number;
+  arch?: string;
+  lastUpdated?: string;
+  previousVersion?: string | null;
+  metadata?: ParsedPackageMetadata;
 }
 
 export interface ParsedPackageMetadata {

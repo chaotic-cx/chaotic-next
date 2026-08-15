@@ -1,0 +1,303 @@
+<chaotic-title
+  title="Pipeline trigger"
+  subtitle="Run the Chaotic-AUR pipeline with a specific operation. Every trigger is recorded with your account."
+/>
+
+<div class="chaotic-container-wide-center md:chaotic-container-regular p-0.5 sm:p-2.5">
+  <p-stepper [value]="step()" (valueChange)="onStepChange($event)">
+    <p-step-list>
+      @for (wizardStep of steps(); track wizardStep.value) {
+        <p-step [value]="wizardStep.value">{{ wizardStep.label }}</p-step>
+      }
+    </p-step-list>
+
+    <p-step-panels>
+      <p-step-panel [value]="operationStep">
+        <ng-template #content>
+          <div class="flex flex-col items-center gap-8 py-8">
+            <span class="text-ctp-text text-base font-medium">What should the pipeline do?</span>
+            <div class="grid w-full max-w-3xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              @for (card of operationCards; track card.operation) {
+                <button
+                  class="hover:border-ctp-mauve flex cursor-pointer flex-col gap-2 rounded-lg border border-ctp-surface1 p-4 text-left transition-colors hover:bg-ctp-surface0/40"
+                  (click)="pickOperation(card.operation)"
+                  type="button"
+                >
+                  <span class="text-ctp-text font-bold">{{ card.operation }}</span>
+                  <span class="text-ctp-subtext0 text-sm">{{ card.description }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        </ng-template>
+      </p-step-panel>
+
+      <p-step-panel [value]="inputsStep">
+        <ng-template #content>
+          <div class="flex flex-col items-center gap-10 py-8">
+            @if (showSchedule()) {
+              <div class="flex w-full flex-col items-center gap-5">
+                <span class="text-ctp-text text-base font-medium">Which schedule should be run?</span>
+                @if (optionsFailed()) {
+                  <span class="text-ctp-red text-sm">
+                    Schedules and builders could not be loaded — please try again later.
+                  </span>
+                } @else if (scheduleOptions().length === 0) {
+                  <span class="text-ctp-subtext0 text-sm">No active schedules were found.</span>
+                } @else {
+                  <div class="grid w-full max-w-3xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    @for (schedule of scheduleOptions(); track schedule.value) {
+                      <button
+                        class="hover:border-ctp-mauve flex cursor-pointer flex-col gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-ctp-surface0/40"
+                        [class.border-ctp-surface1]="model().schedule !== schedule.value"
+                        [class.border-ctp-mauve]="model().schedule === schedule.value"
+                        (click)="pickSchedule(schedule.value)"
+                        type="button"
+                      >
+                        <span class="text-ctp-text font-bold">{{ schedule.label }}</span>
+                        @if (!schedule.active) {
+                          <span class="text-ctp-subtext0 text-xs">inactive</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                }
+                @if (triggerForm.schedule().errors().length) {
+                  <span class="text-ctp-red text-xs">{{ triggerForm.schedule().errors()[0].message }}</span>
+                }
+              </div>
+            }
+
+            @if (showPackages()) {
+              <div class="flex w-full flex-col items-center gap-5">
+                <div class="flex flex-col items-center gap-1">
+                  <span class="text-ctp-text text-sm">Which packages?</span>
+                  @if (showBuilderSelect()) {
+                    <span class="text-ctp-subtext0 text-xs">An optional custom builder can be chosen per package.</span>
+                  }
+                </div>
+
+                @for (row of triggerForm.packageRows; track $index) {
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="flex flex-wrap items-center justify-center gap-2">
+                      <div class="relative w-full sm:w-64">
+                        <p-auto-complete
+                          class="w-full"
+                          [suggestions]="packageSuggestions()"
+                          [ngModel]="model().packageRows[$index].pkgbase"
+                          [ngModelOptions]="{ standalone: true }"
+                          [delay]="0"
+                          [minLength]="2"
+                          (ngModelChange)="setPackageRowPkgbase($index, $event)"
+                          (onBlur)="onPackageRowBlur($index, $event)"
+                          (completeMethod)="onPackageSuggest($event)"
+                          inputStyleClass="pr-9"
+                          placeholder="Search packages…"
+                        />
+                        <p-button
+                          class="absolute top-1/2 right-1 -translate-y-1/2"
+                          (onClick)="removePackageRow($index)"
+                          icon="pi pi-trash"
+                          severity="danger"
+                          size="small"
+                          text
+                          type="button"
+                          pTooltip="Remove package"
+                          tooltipPosition="left"
+                        />
+                      </div>
+                      @if (showBuilderSelect()) {
+                        <p-select
+                          class="w-full sm:w-56"
+                          [options]="builderOptions()"
+                          [ngModel]="model().packageRows[$index].builder"
+                          [ngModelOptions]="{ standalone: true }"
+                          (ngModelChange)="setPackageRowBuilder($index, $event)"
+                          optionLabel="label"
+                          optionValue="value"
+                          appendTo="body"
+                        />
+                      }
+                    </div>
+                    @if (row.pkgbase().touched() && row.pkgbase().errors().length) {
+                      <span class="text-ctp-red text-xs">{{ row.pkgbase().errors()[0].message }}</span>
+                    }
+                  </div>
+                }
+
+                <p-button
+                  (onClick)="addPackageRow()"
+                  icon="pi pi-plus"
+                  label="Add package"
+                  severity="secondary"
+                  type="button"
+                />
+              </div>
+            }
+
+            @if (showAddPackages()) {
+              <div class="flex w-full flex-col items-center gap-10">
+                <div class="flex w-full flex-col items-center gap-5">
+                  <div class="flex flex-col items-center gap-1">
+                    <span class="text-ctp-text text-sm">Which packages should be added?</span>
+                    <span class="text-ctp-subtext0 text-xs">
+                      Only AUR packages can be added here — other sources need to be added manually.
+                    </span>
+                  </div>
+
+                  @for (row of triggerForm.addRows; track $index) {
+                    <div class="flex flex-col items-center gap-1">
+                      <div class="relative w-full sm:w-64">
+                        <p-auto-complete
+                          class="w-full"
+                          [suggestions]="aurSuggestions()"
+                          [ngModel]="model().addRows[$index].pkgbase"
+                          [ngModelOptions]="{ standalone: true }"
+                          [delay]="0"
+                          [minLength]="2"
+                          (ngModelChange)="setAurRowPkgbase($index, $event)"
+                          (onBlur)="onAurRowBlur($index, $event)"
+                          (completeMethod)="onAurSuggest($event)"
+                          inputStyleClass="pr-9"
+                          placeholder="Search the AUR…"
+                        />
+                        <p-button
+                          class="absolute top-1/2 right-1 -translate-y-1/2"
+                          (onClick)="removeAurRow($index)"
+                          icon="pi pi-trash"
+                          severity="danger"
+                          size="small"
+                          text
+                          type="button"
+                          pTooltip="Remove package"
+                          tooltipPosition="left"
+                        />
+                      </div>
+                      @if (row.pkgbase().touched() && row.pkgbase().errors().length) {
+                        <span class="text-ctp-red text-xs">{{ row.pkgbase().errors()[0].message }}</span>
+                      } @else if (aurMissing().has(model().addRows[$index].pkgbase.trim())) {
+                        <span class="text-ctp-red text-xs">Not found in the AUR</span>
+                      } @else if (existingPackages().has(model().addRows[$index].pkgbase.trim())) {
+                        <span class="text-ctp-yellow text-xs">Already packaged</span>
+                      }
+                    </div>
+                  }
+
+                  <p-button
+                    (onClick)="addAurRow()"
+                    icon="pi pi-plus"
+                    label="Add package"
+                    severity="secondary"
+                    type="button"
+                  />
+                </div>
+
+                <div class="flex w-full flex-col items-center gap-5">
+                  <label class="flex w-full max-w-xs flex-col items-center gap-1">
+                    <span class="text-ctp-text text-sm">Request origin</span>
+                    <input
+                      [formField]="triggerForm.requestOrigin"
+                      pInputText
+                      placeholder="github/5678,chaotic/xiota,forum/tne"
+                      type="text"
+                    />
+                    @if (triggerForm.requestOrigin().touched() && triggerForm.requestOrigin().errors().length) {
+                      <span class="text-ctp-red text-xs">{{ triggerForm.requestOrigin().errors()[0].message }}</span>
+                    }
+                  </label>
+
+                  <div class="flex w-full max-w-2xl flex-col items-center gap-3">
+                    <span class="text-ctp-text text-sm">Request reason</span>
+                    <div class="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      @for (card of requestReasonCards; track card.reason) {
+                        <button
+                          class="flex cursor-pointer flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-ctp-surface0/40"
+                          [class.border-ctp-surface1]="model().requestReason !== card.reason"
+                          [class.border-ctp-mauve]="model().requestReason === card.reason"
+                          (click)="setRequestReason(card.reason)"
+                          type="button"
+                        >
+                          <span class="text-ctp-text text-sm font-bold">{{ card.reason }}</span>
+                          <span class="text-ctp-subtext0 text-xs">{{ card.description }}</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+
+                  <label class="flex w-full max-w-xs flex-col items-center gap-1">
+                    <span class="text-ctp-text text-sm">Custom request reason</span>
+                    <input
+                      [formField]="triggerForm.customRequestReason"
+                      pInputText
+                      placeholder="Overwrites the request reason"
+                      type="text"
+                    />
+                  </label>
+                </div>
+              </div>
+            }
+
+            <div class="mt-4 flex items-center gap-3">
+              <p-button
+                (onClick)="previousStep()"
+                icon="pi pi-arrow-left"
+                label="Back"
+                severity="secondary"
+                type="button"
+              />
+              <p-button
+                [disabled]="!inputsValid()"
+                (onClick)="nextStep()"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                label="Continue"
+                type="button"
+              />
+            </div>
+          </div>
+        </ng-template>
+      </p-step-panel>
+
+      <p-step-panel [value]="reviewStep">
+        <ng-template #content>
+          <div class="flex flex-col items-center gap-10 py-8">
+            <div class="flex flex-col items-center gap-2">
+              <span class="text-ctp-text mb-2 text-center text-base font-medium">Review the trigger</span>
+              @for (entry of reviewEntries(); track entry[0]) {
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                  <span class="font-bold text-ctp-subtext0">{{ entry[0] }}:</span>
+                  <span class="text-ctp-text">{{ entry[1] }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-3">
+              @if (pipelineTriggerService.lastResult(); as result) {
+                <a class="text-ctp-mauve hover:underline" [href]="result.webUrl" rel="noopener" target="_blank">
+                  Last triggered pipeline #{{ result.pipelineId }} ({{ result.status }})
+                </a>
+              }
+              <p-button
+                (onClick)="previousStep()"
+                icon="pi pi-arrow-left"
+                label="Back"
+                severity="secondary"
+                type="button"
+              />
+              <p-button (onClick)="reset()" label="Start over" severity="secondary" type="button" />
+              <p-button
+                [disabled]="!canSubmit()"
+                [loading]="pipelineTriggerService.isTriggering()"
+                (onClick)="submitTrigger()"
+                icon="pi pi-play"
+                label="Trigger pipeline"
+                severity="danger"
+                type="button"
+              />
+            </div>
+          </div>
+        </ng-template>
+      </p-step-panel>
+    </p-step-panels>
+  </p-stepper>
+</div>

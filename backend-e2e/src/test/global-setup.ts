@@ -18,6 +18,8 @@ export async function setup(): Promise<void> {
     .start();
 
   process.env.NODE_ENV = 'development';
+  process.env.BETTER_AUTH_SECRET = 'test-secret-test-secret-test-secret-test-secret';
+  process.env.BETTER_AUTH_URL = 'http://localhost:3000';
   process.env.PG_HOST = container.getHost();
   process.env.PG_PORT = String(container.getPort());
   process.env.PG_USER = container.getUsername();
@@ -31,6 +33,9 @@ export async function setup(): Promise<void> {
   process.env.CAUR_VAPID_PUBLIC =
     'BPWNRtrPfUjhwu8ST1Se2jfU0P_u5YJ0uo3xCovSkNEor1XY4ZX_HVriwh0T1_a3rvoD2oFymAxvNyUe4PthHXQ';
   process.env.CAUR_VAPID_PRIVATE = 'epJJES7PtVQ19YkI67dn6Ndf23U-rVr4Gr8mrZQeoqw';
+  process.env.CAUR_GITLAB_MERGE_BOT_USER_ID = '12345';
+  process.env.GITLAB_CLIENT_ID = 'mock-gitlab-client-id';
+  process.env.GITLAB_CLIENT_SECRET = 'mock-gitlab-client-secret';
 }
 
 export async function teardown(): Promise<void> {

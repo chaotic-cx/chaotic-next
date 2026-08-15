@@ -67,6 +67,9 @@ export class GitlabRepoReaderFactory implements RepoReaderFactory {
     if (!repo.gitlabProjectId) {
       throw new Error(`Repo ${repo.name} has no gitlabProjectId; cannot read repo tree`);
     }
+    if (!repo.apiToken) {
+      throw new Error(`Repo ${repo.name} has no api token; cannot read repo tree`);
+    }
     const token = decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
     const api = new Gitlab({ token });
     const blob = await api.Repositories.showArchive(repo.gitlabProjectId, {

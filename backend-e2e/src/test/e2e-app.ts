@@ -3,14 +3,20 @@ import { AppModule } from '@chaotic-next/backend/app.module';
 import { Build, Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { BuilderService } from '@chaotic-next/backend/builder/builder.service';
 import { NotificationSubscription } from '@chaotic-next/backend/notifications/notification-subscription.entity';
-import { ArchlinuxPackage, PackageElfAnalysis } from '@chaotic-next/backend/repo-manager/repo-manager.entity';
+import { MrAction as MrActionEntity } from '@chaotic-next/backend/gitlab/mr-action.entity';
+import { PipelineTrigger as PipelineTriggerEntity } from '@chaotic-next/backend/gitlab/pipeline-trigger.entity';
+import {
+  ArchlinuxPackage,
+  PackageBump as PackageBumpEntity,
+  PackageElfAnalysis,
+} from '@chaotic-next/backend/repo-manager/repo-manager.entity';
 import { BuildStatus } from '@chaotic-next/backend/types/types';
 import { RepoStatus } from '@chaotic-next/shared-lib';
-
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Logger } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
+import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { DataSource } from 'typeorm';
 import { ARCH_PACKAGES, BUILDERS, CHAOTIC_AUR_REPO, GARUDA_REPO } from './fixtures';
 
@@ -81,6 +87,16 @@ export interface E2eResponse<T = unknown> {
   json(): Promise<T>;
 }
 
+export type MrActionSeed = Partial<Pick<MrActionEntity, 'mergeRequestIid' | 'action' | 'userId' | 'userName'>>;
+
+export type PipelineTriggerSeed = Partial<
+  Pick<PipelineTriggerEntity, 'pipelineId' | 'ref' | 'operation' | 'inputs' | 'webUrl' | 'userId' | 'userName'>
+>;
+
+export type PackageBumpSeed = Partial<
+  Pick<PackageBumpEntity, 'bumpType' | 'trigger' | 'triggerFrom' | 'details' | 'timestamp'> & { pkg: Package }
+>;
+
 export interface E2eApp {
   readonly app: NestFastifyApplication;
   readonly dataSource: DataSource;
@@ -98,6 +114,9 @@ export interface E2eApp {
   seedArchlinuxPackage(overrides?: ArchPackageSeed): Promise<ArchlinuxPackage>;
   seedNotificationSubscription(overrides?: SubscriptionSeed): Promise<NotificationSubscription>;
   seedElfAnalysis(overrides?: ElfAnalysisSeed): Promise<PackageElfAnalysis>;
+  seedMrAction(overrides?: MrActionSeed): Promise<MrActionEntity>;
+  seedPipelineTrigger(overrides?: PipelineTriggerSeed): Promise<PipelineTriggerEntity>;
+  seedPackageBump(overrides?: PackageBumpSeed): Promise<PackageBumpEntity>;
   resetTables(): Promise<void>;
   close(): Promise<void>;
 }
@@ -107,7 +126,10 @@ export async function createE2eApp(): Promise<E2eApp> {
   // through their own `new Logger()` instances, which route through the static
   // console logger unless it is overridden with no enabled levels.
   Logger.overrideLogger([]);
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideGuard(AuthGuard)
+    .useValue({ canActivate: () => true })
+    .compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
     logger: false,
@@ -140,6 +162,9 @@ export async function createE2eApp(): Promise<E2eApp> {
     seedArchlinuxPackage: (overrides) => seedArchlinuxPackage(dataSource, overrides),
     seedNotificationSubscription: (overrides) => seedNotificationSubscription(dataSource, overrides),
     seedElfAnalysis: (overrides) => seedElfAnalysis(dataSource, overrides),
+    seedMrAction: (overrides) => seedMrAction(dataSource, overrides),
+    seedPipelineTrigger: (overrides) => seedPipelineTrigger(dataSource, overrides),
+    seedPackageBump: (overrides) => seedPackageBump(dataSource, overrides),
     resetTables: async () => {
       await truncateTables(dataSource);
       await cache.clear();
@@ -160,6 +185,8 @@ export async function createE2eApp(): Promise<E2eApp> {
 const TABLES_TO_RESET = [
   'router-hits',
   'query-result-cache',
+  'mr_action',
+  'pipeline_trigger',
   'package_bump',
   'package_elf_analysis',
   'build',
@@ -201,8 +228,8 @@ async function seedRepo(dataSource: DataSource, overrides: RepoSeed | undefined,
     status: overrides?.status ?? RepoStatus.ACTIVE,
     gitRef: overrides?.gitRef ?? real.gitRef,
     dbPath: overrides?.dbPath ?? real.dbPath,
-    apiToken: overrides?.apiToken ?? 'test-token',
-    gitlabProjectId: overrides?.gitlabProjectId ?? null,
+    apiToken: overrides?.apiToken ?? null,
+    gitlabProjectId: overrides?.gitlabProjectId ?? ('gitlabProjectId' in real ? real.gitlabProjectId : null),
   });
 }
 
@@ -381,6 +408,49 @@ async function seedElfAnalysis(
     pluginOf: overrides?.pluginOf ?? [],
     broken: overrides?.broken ?? false,
     brokenReasons: overrides?.brokenReasons ?? [],
+  });
+}
+
+async function seedMrAction(dataSource: DataSource, overrides: MrActionSeed | undefined): Promise<MrActionEntity> {
+  const repo = dataSource.getRepository(MrActionEntity);
+  return repo.save({
+    mergeRequestIid: overrides?.mergeRequestIid ?? 101,
+    action: overrides?.action ?? 'approve',
+    userId: overrides?.userId ?? '12345',
+    userName: overrides?.userName ?? 'Test User',
+  });
+}
+
+async function seedPipelineTrigger(
+  dataSource: DataSource,
+  overrides: PipelineTriggerSeed | undefined,
+): Promise<PipelineTriggerEntity> {
+  const repo = dataSource.getRepository(PipelineTriggerEntity);
+  const operation = overrides?.operation ?? 'Bump Packages';
+  return repo.save({
+    pipelineId: overrides?.pipelineId ?? 6001,
+    ref: overrides?.ref ?? 'main',
+    operation,
+    inputs: overrides?.inputs ?? { operation, packages: 'nodejs:20' },
+    webUrl: overrides?.webUrl ?? 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/6001',
+    userId: overrides?.userId ?? '12345',
+    userName: overrides?.userName ?? 'Test User',
+  });
+}
+
+async function seedPackageBump(
+  dataSource: DataSource,
+  overrides: PackageBumpSeed | undefined,
+): Promise<PackageBumpEntity> {
+  const repo = dataSource.getRepository(PackageBumpEntity);
+  const pkg = overrides?.pkg ?? (await seedPackage(dataSource, undefined, () => pkgCounterInternal++));
+  return repo.save({
+    pkg,
+    bumpType: overrides?.bumpType ?? 1,
+    trigger: overrides?.trigger ?? 0,
+    triggerFrom: overrides?.triggerFrom ?? 1,
+    details: overrides?.details ?? ['rebuilt due to dependency update'],
+    timestamp: overrides?.timestamp ?? new Date(),
   });
 }
 

@@ -11,6 +11,7 @@ export interface BumpCommitAction {
   pkgname: string;
   content: string;
   bumpType: BumpType;
+  triggerName?: string;
   details?: string[];
 }
 
@@ -28,8 +29,9 @@ function buildCommitMessage(actions: BumpCommitAction[]): string {
   const body = actions
     .map((a) => {
       const reason = bumpTypeAdjectiveText(a.bumpType);
+      const trigger = a.triggerName ? `, triggered by ${a.triggerName}` : '';
       const detail = a.details?.length ? ` (${a.details.join(', ')})` : '';
-      return `- ${a.pkgname}: ${reason}${detail}`;
+      return `- ${a.pkgname}: ${reason}${trigger}${detail}`;
     })
     .join('\n');
   return `${subject}\n\n${body}`;
@@ -49,6 +51,9 @@ export class GitlabRepoWriter implements RepoWriter {
     if (actions.length === 0) return;
     if (!repo.gitlabProjectId) {
       throw new Error(`Repo ${repo.name} has no gitlabProjectId; cannot create bump commit`);
+    }
+    if (!repo.apiToken) {
+      throw new Error(`Repo ${repo.name} has no api token; cannot create bump commit`);
     }
 
     const token = decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));

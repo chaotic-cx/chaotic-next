@@ -11,6 +11,7 @@ import { ProgressBarModule } from '@openng/optimus-ui/progressbar';
 import { ToastModule } from '@openng/optimus-ui/toast';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels } from '../chart-config';
+import { resourceValue } from '../functions';
 import { StatsService } from '../stats/stats.service';
 
 @Component({
@@ -36,7 +37,7 @@ export class ChartDownloadsComponent {
   readonly hasData = computed(() => this.resource.hasValue());
 
   readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
-    const metrics = this.resource.value() ?? [];
+    const metrics = resourceValue(this.resource) ?? [];
     const labels: string[] = [];
     const data: number[] = [];
     for (const pkg of metrics) {
@@ -67,7 +68,7 @@ export class ChartDownloadsComponent {
   });
 
   readonly progressbarValues = computed(() => {
-    const metrics = this.resource.value() ?? [];
+    const metrics = resourceValue(this.resource) ?? [];
     const values: { value: number; label: string; count: number }[] = [];
     if (metrics.length > 0) {
       for (const pkg of metrics) {

@@ -7,14 +7,8 @@ import { Component, computed, input } from '@angular/core';
   imports: [],
 })
 export class DiffRendererComponent {
-  /**
-   * The diff string to be rendered.
-   */
   readonly diff = input.required<string>();
 
-  /**
-   * Parses the diff string into an array of DiffLine objects.
-   */
   readonly parsedLines = computed(() => {
     if (!this.diff()) return [];
 
@@ -48,10 +42,6 @@ export class DiffRendererComponent {
     return result;
   });
 
-  /**
-   * Returns the CSS class for a given diff line based on its type.
-   * @param line The diff line to get the class for.
-   */
   getLineClass(line: DiffLine): string {
     return line.type;
   }

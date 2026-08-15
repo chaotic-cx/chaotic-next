@@ -21,3 +21,5 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - '@garudalinux/core@2.0.0'
   - '@garudalinux/themes@2.0.0'
+patchedDependencies:
+  '@openng/optimus-ui': patches/@openng__optimus-ui.patch

@@ -19,6 +19,7 @@ export interface PackagesQueryParams {
   q?: string;
   sort?: PackageSortField;
   order?: SortOrder;
+  repoId?: number;
 }
 
 export interface BuildsQueryParams {
@@ -32,19 +33,15 @@ export interface BuildsQueryParams {
   order?: SortOrder;
 }
 
+export const ALL_TIME_DAYS = 3650;
+
 @Service()
 export class AppService {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly http = inject(HttpClient);
 
-  /**
-   * Channel for instant updates regarding builds and pipeline status
-   */
   serverEvents: EventSource = new EventSource(`${this.appConfig.backendUrl}/sse?ngsw-bypass`);
 
-  /**
-   * Subject for SSE notifications
-   */
   chaoticSse$ = new Subject<ChaoticEvent>();
   chaoticEvent = this.chaoticSse$.asObservable();
 
@@ -53,9 +50,7 @@ export class AppService {
   }
 
   private daysParams(days?: number): HttpParams {
-    let params = new HttpParams();
-    if (days !== undefined) params = params.set('days', days.toString());
-    return params;
+    return new HttpParams().set('days', (days ?? ALL_TIME_DAYS).toString());
   }
 
   getUsersResourceRequest(days?: number): HttpResourceRequest {
@@ -120,6 +115,7 @@ export class AppService {
     if (params.q) queryParams = queryParams.set('q', params.q);
     if (params.sort) queryParams = queryParams.set('sort', params.sort);
     if (params.order) queryParams = queryParams.set('order', params.order);
+    if (params.repoId !== undefined) queryParams = queryParams.set('repoId', params.repoId.toString());
     return { url: `${this.appConfig.backendUrl}/builder/packages`, params: queryParams };
   }
 
@@ -136,6 +132,10 @@ export class AppService {
 
   getPackageResourceRequest(name: string, repo: string): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/package/${name}`, params: new HttpParams().set('repo', repo) };
+  }
+
+  getPackageRebuildTriggerSourcesResourceRequest(pkgname: string): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/repo/dependencies/${encodeURIComponent(pkgname)}` };
   }
 
   getStatusChecksResourceRequest(): HttpResourceRequest {

@@ -2,14 +2,10 @@
   @apply mx-auto;
 }
 
-.p-card {
-  background: unset;
-  backdrop-filter: unset;
-  -webkit-backdrop-filter: unset;
-}
-
 .p-tabpanels {
   border-radius: 10px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 ::ng-deep .p-tablist-tab-list {

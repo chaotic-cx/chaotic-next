@@ -1,20 +1,11 @@
 import { MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { effect, inject, Service, signal, untracked } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
-import { encrypt } from '../functions';
 
-/**
- * Obfuscation password for the Gitlab token kept in local/session storage.
- * This is NOT security — anyone with access to the browser can recover the
- * token — it only avoids storing the plaintext token verbatim.
- */
-export const TOKEN_OBFUSCATION_PASSWORD = 'thisaintrealsafety1!!1!';
-
-/** Labels that can be attached to a merge request to block its review. */
 export type MrFlagLabel = 'dangerous' | 'hold';
 
 const FLAG_COPY: Record<MrFlagLabel, { success: [string, string]; error: [string, string] }> = {
@@ -35,24 +26,8 @@ export class MrOverviewService {
   private readonly messageToastService = inject(MessageToastService);
 
   readonly mergeRequests = signal<MergeRequestWithDiffs[]>([]);
-  readonly token = signal<string>('');
   readonly isLoading = signal<boolean>(true);
-  readonly loadingMap = signal<Map<number, boolean>>(new Map());
-  readonly storage = signal<'sessionStorage' | 'localStorage'>('sessionStorage');
-
-  constructor() {
-    effect(async () => {
-      const tokenValue = this.token();
-      if (tokenValue === '') return;
-
-      const encryptedValue = await encrypt(tokenValue, TOKEN_OBFUSCATION_PASSWORD);
-      if (untracked(this.storage) === 'sessionStorage') {
-        sessionStorage.setItem('gitlabPrivateToken', encryptedValue);
-      } else {
-        localStorage.setItem('gitlabPrivateToken', encryptedValue);
-      }
-    });
-  }
+  readonly loadingMap = signal<Map<string, boolean>>(new Map());
 
   async loadOpenMrs() {
     try {
@@ -81,47 +56,29 @@ export class MrOverviewService {
       this.isLoading.set(false);
       this.messageToastService.error(
         'Error fetching merge requests',
-        'An error occurred while fetching merge requests. Please check your token and try again.',
+        'An error occurred while fetching merge requests. Please try again.',
       );
       console.error('Error extracting merge requests:', error);
     }
   }
 
-  /**
-   * Extracts the package name from the merge request title.
-   * This assumes the title follows a specific format.
-   * Example: "chore(update): mozc" -> "mozc"
-   * @param title
-   * @private
-   */
   extractPkgName(title: string): string | null {
     const match = title.match(/^chore\(update\): ([\w@.+-]+)$/);
     return match ? match[1] : null;
   }
 
-  /**
-   * Approves a merge request via the backend.
-   * @param mr The merge request to approve.
-   */
   async approve(mr: MergeRequestWithDiffs) {
+    const loadingKey = `${mr.iid}:approve`;
     const loadingMap = new Map(this.loadingMap());
-    loadingMap.set(mr.iid, true);
+    loadingMap.set(loadingKey, true);
     this.loadingMap.set(loadingMap);
 
     try {
       await lastValueFrom(
-        this.http.post<unknown>(
-          `${this.backendUrl}/gitlab/approve`,
-          {
-            iid: mr.iid,
-            sha: mr.sha,
-          },
-          {
-            headers: {
-              'X-Gitlab-Private-Token': this.token(),
-            },
-          },
-        ),
+        this.http.post<unknown>(`${this.backendUrl}/gitlab/approve`, {
+          iid: mr.iid,
+          sha: mr.sha,
+        }),
       );
 
       this.messageToastService.success(
@@ -140,55 +97,24 @@ export class MrOverviewService {
       console.error('Error approving merge request:', error);
     } finally {
       const finalLoadingMap = new Map(this.loadingMap());
-      finalLoadingMap.delete(mr.iid);
+      finalLoadingMap.delete(loadingKey);
       this.loadingMap.set(finalLoadingMap);
     }
   }
 
-  /**
-   * Tests the provided GitLab private token for validity.
-   * @param token The GitLab private token to test.
-   * @returns A promise that resolves to true if the token is valid, false otherwise.
-   */
-  async testTokenWrite(token: string): Promise<boolean> {
-    try {
-      return await lastValueFrom(
-        this.http.post<boolean>(`${this.backendUrl}/gitlab/test-token`, null, {
-          headers: {
-            'X-Gitlab-Private-Token': token,
-          },
-        }),
-      );
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Flags a merge request with the given label so it drops out of the review list.
-   * @param mr The merge request to flag.
-   * @param label The flag label to attach.
-   */
   async flag(mr: MergeRequestWithDiffs, label: MrFlagLabel): Promise<void> {
     const copy = FLAG_COPY[label];
+    const loadingKey = `${mr.iid}:flag:${label}`;
     const loadingMap = new Map(this.loadingMap());
-    loadingMap.set(-mr.iid, true);
+    loadingMap.set(loadingKey, true);
     this.loadingMap.set(loadingMap);
 
     try {
       await lastValueFrom(
-        this.http.post<unknown>(
-          `${this.backendUrl}/gitlab/flag`,
-          {
-            iid: mr.iid,
-            label,
-          },
-          {
-            headers: {
-              'X-Gitlab-Private-Token': this.token(),
-            },
-          },
-        ),
+        this.http.post<unknown>(`${this.backendUrl}/gitlab/flag`, {
+          iid: mr.iid,
+          label,
+        }),
       );
       this.messageToastService.success(copy.success[0], copy.success[1]);
     } catch (error) {
@@ -196,16 +122,11 @@ export class MrOverviewService {
       console.error(`Error flagging merge request as ${label}:`, error);
     } finally {
       const finalLoadingMap = new Map(this.loadingMap());
-      finalLoadingMap.delete(-mr.iid);
+      finalLoadingMap.delete(loadingKey);
       this.loadingMap.set(finalLoadingMap);
     }
   }
 
-  /**
-   * Sorts the commit diffs to prioritize PKGBUILD and .SRCINFO files.
-   * @param diffs The array of commit diffs to sort.
-   * @returns The sorted array of commit diffs.
-   */
   sortDiff(diffs: MergeRequestDiffSchema[]): MergeRequestDiffSchema[] {
     return [...diffs].sort((a, b) => {
       const getSortKey = (path: string): number => {

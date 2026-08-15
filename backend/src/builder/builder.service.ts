@@ -2,17 +2,16 @@ import type { Package as PackageDto, Paginated } from '@chaotic-next/shared-lib'
 import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { BuildStatus } from '../types/types';
-import { CACHE_TTL_MS } from '../utils/constants';
-import { clampInt, errorMessage, generateNodeId, nDaysInPast, whitelistSort } from '../utils/functions';
-import { MAX_AMOUNT, MAX_DAYS_PER_DAY_CHART, MAX_DAYS_WINDOW, MAX_OFFSET } from '../utils/constants';
-import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
 import IORedis from 'ioredis';
 import { ServiceBroker } from 'moleculer';
 import { Repository } from 'typeorm';
 import { EventService } from '../events/event.service';
 import { GitlabService } from '../gitlab/gitlab.service';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
+import { BuildStatus } from '../types/types';
+import { CACHE_TTL_MS, MAX_AMOUNT, MAX_DAYS_PER_DAY_CHART, MAX_DAYS_WINDOW, MAX_OFFSET } from '../utils/constants';
+import { clampInt, errorMessage, generateNodeId, nDaysInPast, whitelistSort } from '../utils/functions';
+import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
 import { BuilderDatabaseService } from './builder-database.service';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { brokerConfig } from './moleculer.config';
@@ -125,6 +124,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     sort?: string;
     order?: string;
     repo?: boolean;
+    repoId?: number;
   }): Promise<Paginated<PackageDto>> {
     const { page, perPage, skip } = resolvePagination(options.page, options.perPage);
     const query = this.packageRepository
@@ -141,6 +141,9 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
         `(package.pkgname ILIKE :q OR package.metadata->>'desc' ILIKE :q OR package.metadata->>'url' ILIKE :q)`,
         { q: `%${options.q}%` },
       );
+    }
+    if (options.repoId !== undefined) {
+      query.andWhere('package.repoId = :repoId', { repoId: options.repoId });
     }
 
     query.orderBy(this.packageSortExpression(options.sort), resolveOrder(options.order));
@@ -310,7 +313,9 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .addSelect('repo.name AS repo')
       .addSelect('COUNT(*) AS count')
       .innerJoin('build.repo', 'repo')
-      .where('build.pkgbase = :id', { id: requestedPackage.id })
+      .innerJoin('build.pkgbase', 'pkgbase')
+      .where('pkgbase.pkgname = :pkgname', { pkgname: options.pkgname })
+      .andWhere('build.timestamp > :date', { date: nDaysInPast(amount) })
       .groupBy("DATE_TRUNC('day', build.timestamp), repo.name")
       .orderBy('day', 'DESC')
       .skip(offset)

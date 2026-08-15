@@ -3,7 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
-import { parseCount, shuffleArray } from '../functions';
+import { parseCount, resourceValue, shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
@@ -26,7 +26,7 @@ export class ChartBuildersAmountComponent {
   readonly hasData = computed(() => this.resource.hasValue());
 
   readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
-    const data = this.resource.value() ?? [];
+    const data = resourceValue(this.resource) ?? [];
     const labels: string[] = [];
     const values: number[] = [];
     for (const item of data) {

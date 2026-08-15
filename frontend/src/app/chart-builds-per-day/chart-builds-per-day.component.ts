@@ -3,9 +3,9 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { UIChart } from '@openng/optimus-ui/chart';
-import { AppService } from '../app.service';
+import { ALL_TIME_DAYS, AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
-import { parseCount } from '../functions';
+import { parseCount, resourceValue } from '../functions';
 import { StatsService } from '../stats/stats.service';
 
 @Component({
@@ -21,7 +21,7 @@ export class ChartBuildsPerDayComponent {
   private readonly statsService = inject(StatsService);
 
   private readonly resource = httpResource<{ day: string; count: string }[]>(() =>
-    this.appService.getBuildsPerDayResourceRequest(this.statsService.timeRangeDays() ?? 3650),
+    this.appService.getBuildsPerDayResourceRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
   );
 
   readonly loading = this.resource.isLoading;
@@ -29,7 +29,7 @@ export class ChartBuildsPerDayComponent {
   readonly hasData = computed(() => this.resource.hasValue());
 
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
-    const data = this.resource.value() ?? [];
+    const data = resourceValue(this.resource) ?? [];
     const labels: string[] = [];
     const values: number[] = [];
     for (const item of data) {

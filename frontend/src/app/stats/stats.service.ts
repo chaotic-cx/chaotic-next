@@ -7,10 +7,8 @@ export function isStatsTab(value: string): value is StatsTab {
   return (STATS_TABS as readonly string[]).includes(value);
 }
 
-/** A time-range preset shared across all statistics charts. */
 interface TimeRange {
   label: string;
-  /** Number of days to look back, or null for all time. */
   days: number | null;
 }
 

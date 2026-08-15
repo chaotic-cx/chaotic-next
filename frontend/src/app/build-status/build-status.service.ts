@@ -8,12 +8,11 @@ import {
 import { httpResource } from '@angular/common/http';
 import { computed, effect, inject, Service, signal } from '@angular/core';
 import { AppService } from '../app.service';
+import { resourceValue } from '../functions';
 
-/** A pipeline as displayed: its external jobs plus the derived status label. */
 export interface PipelineView {
   pipeline: PipelineWithExternalStatus['pipeline'];
   commit: PipelineWithExternalStatus['commit'];
-  /** Human-readable status; failed pipelines show their failed-job count. */
   statusText: string;
 }
 
@@ -27,7 +26,6 @@ interface ActiveQueueEntry extends QueueEntry {
   liveLogUrl: string;
 }
 
-/** How many pipelines are kept in the timeline lists. */
 const MAX_VISIBLE_PIPELINES = 20;
 
 @Service()
@@ -49,12 +47,12 @@ export class BuildStatusService {
   readonly loadingQueue = this.queueStatsResource.isLoading;
   readonly loading = computed(() => this.loadingDeployments() || this.loadingPipelines() || this.loadingQueue());
 
-  readonly latestDeployments = computed<Build[]>(() => this.packageBuildsResource.value()?.items ?? []);
+  readonly latestDeployments = computed<Build[]>(() => resourceValue(this.packageBuildsResource)?.items ?? []);
 
   readonly pipelineWithStatus = signal<PipelineView[]>([]);
 
   readonly activeQueue = computed<ActiveQueueEntry[]>(() =>
-    (this.queueStatsResource.value()?.active.packages ?? []).map((pkg) => ({
+    (resourceValue(this.queueStatsResource)?.active.packages ?? []).map((pkg) => ({
       name: this.shortName(pkg.name),
       build_class: pkg.build_class,
       node: pkg.node,
@@ -62,13 +60,13 @@ export class BuildStatusService {
     })),
   );
   readonly waitingQueue = computed<QueueEntry[]>(() =>
-    (this.queueStatsResource.value()?.waiting.packages ?? []).map((pkg) => ({
+    (resourceValue(this.queueStatsResource)?.waiting.packages ?? []).map((pkg) => ({
       name: this.shortName(pkg.name),
       build_class: pkg.build_class,
     })),
   );
   readonly idleQueue = computed<QueueEntry[]>(() =>
-    (this.queueStatsResource.value()?.idle.nodes ?? []).map((node) => ({
+    (resourceValue(this.queueStatsResource)?.idle.nodes ?? []).map((node) => ({
       name: node.name,
       build_class: node.build_class,
     })),
@@ -76,11 +74,15 @@ export class BuildStatusService {
 
   constructor() {
     effect(() => {
-      const pipelines = this.pipelinesResource.value();
+      const pipelines = resourceValue(this.pipelinesResource);
       if (pipelines) this.transformPipelineData(pipelines);
     });
     effect(() => {
-      if (this.packageBuildsResource.value() && this.pipelinesResource.value() && this.queueStatsResource.value()) {
+      if (
+        resourceValue(this.packageBuildsResource) &&
+        resourceValue(this.pipelinesResource) &&
+        resourceValue(this.queueStatsResource)
+      ) {
         this.lastUpdated.set(new Date());
       }
     });
@@ -110,11 +112,6 @@ export class BuildStatusService {
     this.queueStatsResource.reload();
   }
 
-  /**
-   * Build the view models for the pipeline lists: shortened job names and a
-   * status label that includes the failed-job count for failed pipelines.
-   * @param pipelines The pipelines received via REST or SSE.
-   */
   transformPipelineData(pipelines: PipelineWithExternalStatus[]): void {
     this.pipelineWithStatus.set(pipelines.slice(0, MAX_VISIBLE_PIPELINES).map((pipeline) => this.toView(pipeline)));
   }

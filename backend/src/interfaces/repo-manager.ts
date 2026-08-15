@@ -49,14 +49,7 @@ export interface BumpResult {
 }
 
 /** Outcome of a full-repo indexing run. */
-export interface IndexResult {
-  /** Number of packages that were downloaded and scanned. */
-  scanned: number;
-  /** Number of packages skipped (already indexed for their version). */
-  skipped: number;
-  /** Number of packages that failed to download or scan. */
-  failed: number;
-}
+export type { IndexResult } from '@chaotic-next/shared-lib';
 
 /** A single package that needs to be downloaded and scanned during indexing. */
 export interface IndexCandidate {
@@ -198,39 +191,11 @@ export interface OwnerDescriptor {
  * Only Chaotic packages are ever reported: Arch packages are reference data
  * (Chaotic depends on their sonames) and are never judged "broken".
  */
-export interface BrokenPackageReport {
-  pkgType: 'chaotic';
-  pkgname: string;
-  version: string;
-  repoName?: string;
-  reasons: string[];
-}
+export type { BrokenPackageReport } from '@chaotic-next/shared-lib';
 
 /** A package that can be a rebuild-trigger source, across both namespaces. */
-export interface RebuildTriggerSourcePackage {
-  pkgname: string;
-  pkgType: 'arch' | 'chaotic';
-}
-
-/** One soname a package links and every indexed package that provides it. */
-export interface SonameDependency {
-  soname: string;
-  providers: RebuildTriggerSourcePackage[];
-}
-
-/**
- * What can cause a Chaotic package to be rebuilt (GET /repo/dependencies/:pkgname),
- * per trigger channel: explicit CI_REBUILD_TRIGGERS, the soname providers it
- * links (broken-deps channel) and the owners it is a plugin of (plugin ABI
- * channel). Explicit triggers are read live from `.CI/config`; the rest come
- * from persisted data.
- */
-export interface PackageRebuildTriggerSources {
-  pkgname: string;
-  /** Arch packages listed in the package's CI_REBUILD_TRIGGERS (read live from `.CI/config`). */
-  explicitTriggers: { pkgname: string; archVersion: string }[];
-  /** Sonames the package links and who provides them (a dropped provider triggers BROKEN_DEPS). */
-  sonameDependencies: SonameDependency[];
-  /** Owners this package is a plugin of; their ABI change triggers PLUGIN. */
-  pluginOwners: RebuildTriggerSourcePackage[];
-}
+export type {
+  PackageRebuildTriggerSources,
+  RebuildTriggerSourcePackage,
+  SonameDependency,
+} from '@chaotic-next/shared-lib';

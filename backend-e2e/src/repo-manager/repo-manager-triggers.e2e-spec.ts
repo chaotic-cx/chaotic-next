@@ -5,13 +5,17 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@chaotic-next/backend/app.module';
 import { RepoManagerService } from '@chaotic-next/backend/repo-manager/repo-manager.service';
+import { AuthGuard } from '@thallesp/nestjs-better-auth';
 
 describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
   let app: NestFastifyApplication;
   let repoManagerService: RepoManagerService;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
     await app.listen(0);
@@ -69,19 +73,17 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
   });
 
   describe('POST /repo/index/chaotic', () => {
-    it('calls indexChaoticRepo with the provided URL and returns the result', async () => {
-      const dbUrl = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/chaotic-aur.db';
+    it('calls indexChaoticRepo against the CDN mirror and returns the result', async () => {
       const expectedResult = { total: 50, added: 30, updated: 20, unchanged: 0 };
       const spy = vi.spyOn(repoManagerService, 'indexChaoticRepo').mockResolvedValue(expectedResult as never);
 
       const res = await app.inject({
         method: 'POST',
         url: '/repo/index/chaotic',
-        payload: { url: dbUrl },
       });
 
       expect(res.statusCode).toBe(201);
-      expect(spy).toHaveBeenCalledWith(dbUrl);
+      expect(spy).toHaveBeenCalledWith();
       const body = await res.json();
       expect(body).toMatchObject(expectedResult);
     });

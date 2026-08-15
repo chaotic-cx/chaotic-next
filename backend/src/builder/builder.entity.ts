@@ -68,7 +68,7 @@ export class Repo {
   dbPath!: string;
 
   @Column({ type: 'varchar', nullable: true })
-  apiToken!: string;
+  apiToken!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
   gitlabProjectId!: string | null;

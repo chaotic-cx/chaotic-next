@@ -1,34 +1,32 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { httpResource } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Button } from '@openng/optimus-ui/button';
 import { MessageToastService } from '@garudalinux/core';
 import { Fieldset } from '@openng/optimus-ui/fieldset';
-import { ScrollPanel } from '@openng/optimus-ui/scrollpanel';
 import { TableModule } from '@openng/optimus-ui/table';
 import { AppService } from '../app.service';
+import { resourceValue } from '../functions';
 import { Message } from './interfaces';
+
+const INITIAL_VISIBLE_NEWS = 3;
+const NEWS_INCREMENT = 3;
 
 @Component({
   selector: 'chaotic-newsfeed',
-  imports: [CommonModule, TableModule, Fieldset, ScrollPanel],
+  imports: [CommonModule, TableModule, Fieldset, Button],
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],
 })
 export class NewsfeedComponent {
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
-  private readonly observer = inject(BreakpointObserver);
 
   private readonly newsResource = httpResource<Message[]>(() => this.appService.getNewsResourceRequest());
 
-  readonly isWide = signal<boolean>(true);
-
   readonly newsList = computed<{ data: Message; html: string }[]>(() => {
-    const news = this.newsResource.value();
+    const news = resourceValue(this.newsResource);
     if (!news) return [];
     return news
       .filter((item) => item.type === 'message')
@@ -37,27 +35,24 @@ export class NewsfeedComponent {
       .sort((a, b) => b.data.id - a.data.id);
   });
 
+  private readonly visibleCount = signal(INITIAL_VISIBLE_NEWS);
+
+  readonly visibleNews = computed(() => this.newsList().slice(0, this.visibleCount()));
+
+  readonly hasMore = computed(() => this.newsList().length > this.visibleCount());
+
+  showMore() {
+    this.visibleCount.update((count) => count + NEWS_INCREMENT);
+  }
+
   constructor() {
     effect(() => {
       if (this.newsResource.error()) {
         this.messageToastService.error('Error', 'Failed to fetch news');
       }
     });
-
-    this.observer
-      .observe('(min-width: 768px)')
-      .pipe(takeUntilDestroyed())
-      .subscribe((result) => {
-        this.isWide.set(result.matches);
-        this.cdr.markForCheck();
-      });
   }
 
-  /**
-   * Convert the entity object of a Telegram message to HTML.
-   * @param message The Telegram message to convert.
-   * @returns A string containing the message as HTML.
-   */
   entityToHtml(message: Message): string {
     let returnValue: string;
 

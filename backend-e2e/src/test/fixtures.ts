@@ -4,6 +4,7 @@ export const CHAOTIC_AUR_REPO = {
   isActive: true,
   gitRef: 'main',
   dbPath: 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/chaotic-aur.files',
+  gitlabProjectId: '123456',
 } as const;
 
 export const GARUDA_REPO = {

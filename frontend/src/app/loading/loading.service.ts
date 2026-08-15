@@ -10,10 +10,6 @@ export class LoadingService {
 
   loadingMap: Map<string, boolean> = new Map<string, boolean>();
 
-  /**
-   * Track in-flight requests so loading only turns false once the last one
-   * completes. Only called from the HttpInterceptorService.
-   */
   setLoading(loading: boolean, url: string): void {
     if (!url) {
       throw new Error('The request URL must be provided to the LoadingService.setLoading function');

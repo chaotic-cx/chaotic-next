@@ -40,12 +40,14 @@ export class HomeComponent {
       });
   }
 
-  /**
-   * Many thanks for adapting the original applet and letting us use it!
-   * Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
-   * Copyright (c) 2018 Juan Carlos Ponce Campuzano
-   */
-  openApplet() {
-    window.location.href = 'https://aur.chaotic.cx/aizawa/index.html';
+  scrollToNews(newsTarget: HTMLElement): void {
+    if (newsTarget) {
+      const rect = newsTarget.getBoundingClientRect();
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      window.scrollTo({
+        top: rect.top + scrollTop - 80,
+        behavior: 'smooth',
+      });
+    }
   }
 }

@@ -3,71 +3,47 @@
   subtitleHtml="Package updates currently queued for human review with the option to approve the MR for auto-merge."
 />
 
-@if (mrOverviewService.token() !== '' && mrOverviewService.isLoading()) {
-  <div class="flex justify-center my-10">
-    <p-progress-spinner ariaLabel="loading" />
-  </div>
-} @else {
-  @if (mrOverviewService.token() === '') {
-    <div class="flex flex-col gap-2 text-ctp-text text-center mb-10">
-      <label for="username">GitLab Access Token</label>
-      <input
-        class="w-10/12 sm:w-1/2 mx-auto"
-        id="token_input"
-        #tokenInput
-        [pAutoFocus]="true"
-        [value]="mrOverviewService.token()"
-        (keydown.enter)="setToken(tokenInput.value)"
-        type="password"
-        pInputText
-      />
-      <small class="mx-auto px-10" id="username-help">
-        As a maintainer, you can create a personal access token in your GitLab account settings.
-      </small>
-      <p-select-button
-        class="mx-auto mt-2 px-10"
-        [(ngModel)]="mrOverviewService.storage"
-        [options]="storages"
-        aria-labelledby="token-storage"
-        optionValue="value"
-        optionLabel="label"
-      />
+<div class="chaotic-container-wide-center md:chaotic-container-regular p-0.5 sm:p-2.5">
+  <p-tabs value="0">
+    <p-tablist>
+      <p-tab value="0">AUR updates ({{ packageMrs().length }})</p-tab>
+      <p-tab value="1">Package updates ({{ nvcheckerMrs().length }})</p-tab>
+    </p-tablist>
+    <p-tabpanels>
+      <p-tabpanel value="0">
+        <ng-container
+          *ngTemplateOutlet="tabBody; context: { $implicit: packageMrs(), empty: 'No open AUR update requests found.' }"
+        />
+      </p-tabpanel>
+      <p-tabpanel value="1">
+        <ng-container
+          *ngTemplateOutlet="
+            tabBody;
+            context: { $implicit: nvcheckerMrs(), empty: 'No open package update requests found.' }
+          "
+        />
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</div>
+
+<ng-template #tabBody let-mrs let-empty="empty">
+  @if (mrOverviewService.isLoading()) {
+    <div class="flex justify-center my-10">
+      <p-progress-spinner ariaLabel="loading" />
     </div>
-  }
-
-  <div class="flex justify-center my-10">
-    <a href="https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/new" target="_blank" rel="noopener">
-      <p-button label="Package Maintenance" icon="pi pi-box" severity="secondary" autofocus />
-    </a>
-  </div>
-
-  <div class="chaotic-container-wide-center md:chaotic-container-regular p-0.5 sm:p-2.5">
-    @if (mrOverviewService.mergeRequests().length === 0) {
-      <p class="text-ctp-text text-center">No open merge requests found.</p>
+  } @else if (mrs.length === 0) {
+    <div class="flex flex-col items-center gap-2 mt-5 text-center">
+      <p class="text-ctp-text">{{ empty }}</p>
       <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
         >You can also browse all merge requests on GitLab.
       </a>
-      <p>
-        <i class="text-ctp-maroon pi pi-verified mt-10" style="font-size: 5rem"></i>
-      </p>
-    } @else {
-      <p-tabs value="0">
-        <p-tablist>
-          <p-tab value="0">AUR updates ({{ packageMrs().length }})</p-tab>
-          <p-tab value="1">Package updates ({{ nvcheckerMrs().length }})</p-tab>
-        </p-tablist>
-        <p-tabpanels>
-          <p-tabpanel value="0">
-            <ng-container *ngTemplateOutlet="mrList; context: { mrs: packageMrs() }" />
-          </p-tabpanel>
-          <p-tabpanel value="1">
-            <ng-container *ngTemplateOutlet="mrList; context: { mrs: nvcheckerMrs() }" />
-          </p-tabpanel>
-        </p-tabpanels>
-      </p-tabs>
-    }
-  </div>
-}
+      <i class="text-ctp-maroon pi pi-verified mt-5" style="font-size: 5rem"></i>
+    </div>
+  } @else {
+    <ng-container *ngTemplateOutlet="mrList; context: { mrs }" />
+  }
+</ng-template>
 
 <ng-template #mrList let-mrs="mrs">
   @for (mr of mrs; track mr.id; let i = $index) {
@@ -84,7 +60,6 @@
             class="text-left fieldset-responsive overflow-x-auto block mb-5"
             [legend]="change.new_path.replace(`${mr.title}/`, '')"
             [toggleable]="true"
-            [collapsed]="mrOverviewService.token() === ''"
           >
             <chaotic-diff-renderer [diff]="change.diff" />
           </p-fieldset>
@@ -93,17 +68,18 @@
         <span class="text-ctp-text">No changes</span>
       }
 
-      @if (mrOverviewService.token() !== '') {
+      @if (isLoggedIn()) {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-10 md:justify-self-center">
           <div class="w-full min-w-0">
             <p-button
-              [disabled]="mr.labels.includes('approved') || mr.labels.includes('dangerous')"
+              [disabled]="mr.labels.includes('approved') || mr.labels.includes('dangerous') || isLoading(mr, 'any')"
               [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve update'"
               [loading]="isLoading(mr, 'approve')"
               (onClick)="mrOverviewService.approve(mr)"
               icon="pi pi-check"
               severity="success"
-              styleClass="w-50"
+              variant="outlined"
+              styleClass="w-50 mr-btn-approve"
               pTooltip="Approve this merge request for auto-merge"
               tooltipPosition="top"
             />
@@ -112,14 +88,18 @@
           <div class="w-full min-w-0">
             <p-button
               [disabled]="
-                mr.labels.includes('dangerous') || mr.labels.includes('approved') || mr.labels.includes('hold')
+                mr.labels.includes('dangerous') ||
+                mr.labels.includes('approved') ||
+                mr.labels.includes('hold') ||
+                isLoading(mr, 'any')
               "
               [label]="mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous'"
-              [loading]="isLoading(mr, 'flag')"
+              [loading]="isLoading(mr, 'flag:dangerous')"
               (onClick)="mrOverviewService.flag(mr, 'dangerous')"
               icon="pi pi-exclamation-triangle"
               severity="danger"
-              styleClass="w-50"
+              variant="outlined"
+              styleClass="w-50 mr-btn-danger"
               pTooltip="Flag this merge request as dangerous and prevent auto-merge"
               tooltipPosition="top"
             />
@@ -128,19 +108,27 @@
           <div class="w-full min-w-0">
             <p-button
               [disabled]="
-                mr.labels.includes('hold') || mr.labels.includes('dangerous') || mr.labels.includes('approved')
+                mr.labels.includes('hold') ||
+                mr.labels.includes('dangerous') ||
+                mr.labels.includes('approved') ||
+                isLoading(mr, 'any')
               "
               [label]="mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now'"
-              [loading]="isLoading(mr, 'flag')"
+              [loading]="isLoading(mr, 'flag:hold')"
               (onClick)="mrOverviewService.flag(mr, 'hold')"
               icon="pi pi-pause"
               severity="warn"
-              styleClass="w-50"
+              variant="outlined"
+              styleClass="w-50 mr-btn-warn"
               pTooltip="Put this merge request on hold for later review"
               tooltipPosition="top"
             />
           </div>
         </div>
+      } @else {
+        <p class="text-ctp-subtext text-sm">
+          <a class="text-ctp-mauve" routerLink="/login">Sign in</a> to approve, flag or hold updates.
+        </p>
       }
     </p-panel>
   }

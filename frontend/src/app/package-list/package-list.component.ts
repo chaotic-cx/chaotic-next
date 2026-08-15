@@ -10,6 +10,7 @@ import { IconFieldModule } from '@openng/optimus-ui/iconfield';
 import { InputIconModule } from '@openng/optimus-ui/inputicon';
 import { InputTextModule } from '@openng/optimus-ui/inputtext';
 import { MultiSelectModule } from '@openng/optimus-ui/multiselect';
+import { Select } from '@openng/optimus-ui/select';
 import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
@@ -31,6 +32,7 @@ import { PackageListService } from './package-list.service';
     InputTextModule,
     FormsModule,
     MultiSelectModule,
+    Select,
     TagModule,
     DatePipe,
     Button,
@@ -74,10 +76,6 @@ export class PackageListComponent {
     });
   }
 
-  /**
-   * Handle the lazy load event from the table: paging and sorting are
-   * forwarded to the server-side paginated query.
-   */
   onLazyLoad(event: TableLazyLoadEvent): void {
     this.packageListService.setPage(event.first ?? 0, event.rows ?? 25);
     this.packageListService.setSort(

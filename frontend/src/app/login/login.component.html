@@ -1,0 +1,31 @@
+<div class="flex w-full justify-center px-4 py-28 md:py-36">
+  <div class="w-full max-w-sm rounded-2xl border border-ctp-surface1 p-8 shadow-lg backdrop-blur-md">
+    <div class="mb-8 flex flex-col items-center gap-4 text-center">
+      <img
+        ngSrc="/assets/logo_400.png"
+        width="72"
+        height="72"
+        priority
+        class="rounded-xl"
+        alt="Chaotic-AUR logo"
+      />
+      <div>
+        <h1 class="text-ctp-text text-2xl font-extrabold">Sign in</h1>
+        <p class="text-ctp-subtext mt-2 text-sm">
+          Sign in with your GitLab account to review and manage Chaotic-AUR packages.
+        </p>
+      </div>
+    </div>
+    <p-button
+      (onClick)="login()"
+      severity="secondary"
+      ariaLabel="Continue with GitLab"
+      styleClass="w-full"
+    >
+      <span class="flex w-full items-center justify-center gap-2">
+        <svg class="h-5 w-5" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><title>file_type_gitlab</title><polygon points="16 28.896 16 28.896 21.156 13.029 10.844 13.029 16 28.896" style="fill:#e24329"/><polygon points="16 28.896 10.844 13.029 3.619 13.029 16 28.896" style="fill:#fc6d26"/><path d="M3.619,13.029h0L2.052,17.851a1.067,1.067,0,0,0,.388,1.193L16,28.9,3.619,13.029Z" style="fill:#fca326"/><path d="M3.619,13.029h7.225L7.739,3.473a.534.534,0,0,0-1.015,0L3.619,13.029Z" style="fill:#e24329"/><polygon points="16 28.896 21.156 13.029 28.381 13.029 16 28.896" style="fill:#fc6d26"/><path d="M28.381,13.029h0l1.567,4.822a1.067,1.067,0,0,1-.388,1.193L16,28.9,28.381,13.029Z" style="fill:#fca326"/><path d="M28.381,13.029H21.156l3.105-9.557a.534.534,0,0,1,1.015,0l3.105,9.557Z" style="fill:#e24329"/></svg>
+        <span>Continue with GitLab</span>
+      </span>
+    </p-button>
+  </div>
+</div>

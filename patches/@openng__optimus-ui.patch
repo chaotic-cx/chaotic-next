@@ -1,0 +1,13 @@
+diff --git a/fesm2022/openng-optimus-ui-autofocus.mjs b/fesm2022/openng-optimus-ui-autofocus.mjs
+index 321d167657f064502c110d51abd1a094c500e83b..00fe369ee7b7bba4cafae0ebad84dd9c9b3e4ee1 100644
+--- a/fesm2022/openng-optimus-ui-autofocus.mjs
++++ b/fesm2022/openng-optimus-ui-autofocus.mjs
+@@ -20,7 +20,7 @@ class AutoFocus extends BaseComponent {
+     host = inject(ElementRef);
+     onAfterContentChecked() {
+         // This sets the `attr.autofocus` which is different than the Input `autofocus` attribute.
+-        if (this.autofocus === false) {
++        if (!this.autofocus) {
+             this.host.nativeElement.removeAttribute('autofocus');
+         }
+         else {

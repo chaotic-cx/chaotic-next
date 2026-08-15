@@ -1,25 +1,20 @@
 <div class="h-svh">
   <div class="surface-section mt-5 px-4 py-8 md:mt-10 md:px-6 lg:px-8">
     <div class="text-center">
-      <img
-        class="mx-auto cursor-pointer"
-        [priority]="true"
-        [style]="isWide() ? 'width: 360px' : 'width: 80%'"
-        (click)="openApplet()"
-        (keyup)="openApplet()"
-        tabindex="0"
-        role="button"
-        ngSrc="/assets/logo.svg"
-        alt="logo"
-        width="741"
-        height="711"
-      />
-      <div class="text-ctp-maroon mb-10 mt-20 text-3xl font-bold">Chaotic-AUR</div>
-      <div class="text-ctp-mauve my-10 text-4xl font-bold">Automated building repo for AUR packages 👨🏻‍💻</div>
-      <div class="text-ctp-text my-5 text-2xl">Building AUR packages for you, so you don't have to!</div>
+      <a
+        class="mx-auto block cursor-pointer"
+        [style.width]="isWide() ? '360px' : '80%'"
+        href="https://aur.chaotic.cx/aizawa/index.html"
+        aria-label="Open the interactive Chaotic-AUR applet"
+      >
+        <img class="w-full" priority ngSrc="/assets/logo.svg" alt="Chaotic-AUR logo" width="741" height="711" />
+      </a>
+      <h1 class="text-ctp-maroon mb-10 mt-20 text-3xl font-bold">Chaotic-AUR</h1>
+      <p class="text-ctp-mauve my-10 text-2xl font-bold">Automated building repo for AUR packages 👨🏻‍💻</p>
+      <p class="text-ctp-text my-5 text-xl">Building AUR packages for you, so you don't have to!</p>
       <div>
         <p-button
-          class="white-space-nowrap my-5 px-5 py-3 font-bold"
+          class="whitespace-nowrap my-5 px-5 py-3 font-bold"
           label="Start right away"
           iconPos="right"
           icon="pi pi-sparkles"
@@ -28,15 +23,23 @@
           pTooltip="Get started with Chaotic-AUR documentation"
           tooltipPosition="bottom"
         />
-        <span class="font-bold block animate-bounce mt-20 text-primary pi pi-arrow-down" style="font-size: 3rem"></span>
+        <span
+          class="hero-scroll-hint mt-20 block font-bold text-primary pi pi-arrow-down cursor-pointer"
+          style="font-size: 3rem"
+          tabindex="0"
+          role="button"
+          aria-label="Scroll to newsfeed"
+          (click)="scrollToNews(newsSection)"
+          (keydown.enter)="scrollToNews(newsSection)"
+        ></span>
       </div>
     </div>
   </div>
 </div>
 
-<div class="mx-auto sm:my-10 mt-60 mb-10">
+<div #newsSection class="mx-auto mb-10 mt-20">
   <chaotic-newsfeed class="fade-in" />
 </div>
-<div class="mx-auto mb-10 mt-40">
+<div class="mx-auto mb-10 mt-20">
   <chaotic-mirror-map class="fade-in" />
 </div>

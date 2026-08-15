@@ -79,6 +79,22 @@ describe('GitlabRepoWriter', () => {
     expect(body).toContain('- wine: plugin ABI break (vtable _ZTV... slot 7 shifted)');
   });
 
+  it('names the triggering package in each body line when known', async () => {
+    await writer.commitBumps(makeRepo(), [
+      action({
+        pkgname: 'kicad-git',
+        bumpType: BumpType.BROKEN_DEPS,
+        triggerName: 'harfbuzz',
+        details: ['missing soname libharfbuzz.so.0'],
+      }),
+      action({ pkgname: 'wine', bumpType: BumpType.PLUGIN, details: ['vtable _ZTV... slot 7 shifted'] }),
+    ]);
+
+    const body = (createMock.mock.calls[0][2] as string).split('\n\n')[1];
+    expect(body).toContain('- kicad-git: broken dependency, triggered by harfbuzz (missing soname libharfbuzz.so.0)');
+    expect(body).toContain('- wine: plugin ABI break (vtable _ZTV... slot 7 shifted)');
+  });
+
   it('collapses the subject to packages (N) when there are more than three', async () => {
     const actions = ['a', 'b', 'c', 'd'].map((n) => action({ pkgname: n }));
 

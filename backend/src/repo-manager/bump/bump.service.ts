@@ -111,6 +111,7 @@ export class BumpService {
         pkgname: param.pkg.pkgname,
         content: param.bumpedConfigContent,
         bumpType: param.bumpType,
+        triggerName: param.archPkg.pkgname,
         details: param.details,
       });
     }

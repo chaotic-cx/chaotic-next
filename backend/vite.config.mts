@@ -11,6 +11,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.{test,spec}.ts'],
+    setupFiles: ['src/test/silence-nest-logger.ts'],
     // The signal-scan spec shells out to bsdtar/readelf/nm which can take a
     // while; a generous timeout also lets the istanbul coverage reporters emit
     // their JSON/HTML files (a too-short timeout breaks coverage finalization).

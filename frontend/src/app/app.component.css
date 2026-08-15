@@ -1,12 +1,18 @@
 .router-container {
   display: flex;
   flex-direction: column;
-  width: 90%;
+  width: 100%;
   margin: 0 auto;
   padding-bottom: 4em;
   flex: 1 0 auto;
   min-height: calc(100vh - 120px);
   position: relative;
+}
+
+@media (min-width: 768px) {
+  .router-container {
+    width: 90%;
+  }
 }
 
 chaotic-footer {

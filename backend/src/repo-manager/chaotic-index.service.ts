@@ -15,6 +15,10 @@ import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } 
  * bootstrap the signal index) and the incremental database-version sync that
  * runs after successful builds.
  */
+
+/** CDN location of the Chaotic-AUR package database used for bulk indexing. */
+export const CHAOTIC_CDN_DATABASE_URL = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/chaotic-aur.db';
+
 @Injectable()
 export class ChaoticIndexService {
   private readonly logger = new Logger(ChaoticIndexService.name);
@@ -33,7 +37,7 @@ export class ChaoticIndexService {
    * database file (e.g. `<repo>.files`); archives are fetched from the same
    * directory. Skips packages already analyzed for their current version.
    */
-  async indexChaoticRepo(dbUrl: string): Promise<IndexResult> {
+  async indexChaoticRepo(dbUrl: string = CHAOTIC_CDN_DATABASE_URL): Promise<IndexResult> {
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-index-'));
     this.logger.log(`Started indexing Chaotic repo from ${dbUrl}...`);
     try {
