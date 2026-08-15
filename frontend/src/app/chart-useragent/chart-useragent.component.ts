@@ -1,37 +1,46 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { httpResource } from '@angular/common/http';
+import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { flavors } from '@catppuccin/palette';
-import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
-import { retry } from 'rxjs';
 import { AppService } from '../app.service';
+import { type ChartConfig, mochaLegendLabels } from '../chart-config';
 import { shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
-
-interface ChartConfig {
-  data: any;
-  options: any;
-}
 
 @Component({
   selector: 'chaotic-chart-useragent',
   imports: [InputNumber, UIChart, FormsModule],
   templateUrl: './chart-useragent.component.html',
   styleUrl: './chart-useragent.component.css',
-  providers: [MessageToastService],
 })
-export class ChartUseragentComponent implements OnInit {
+export class ChartUseragentComponent {
   private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
   protected readonly statsService = inject(StatsService);
 
-  readonly chartConfig = computed<ChartConfig>(() => {
-    const relevantData = this.statsService.userAgentMetrics().slice(0, this.statsService.userAgentMetricRange());
+  private readonly resource = httpResource<{ name: string; count: number }[]>(() =>
+    this.appService.getUserAgentsResourceRequest(this.statsService.timeRangeDays() ?? undefined),
+  );
+
+  readonly loading = this.resource.isLoading;
+
+  readonly hasData = computed(() => this.resource.hasValue());
+
+  readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
+    // Don't display more than 30 user agents and truncate overly long ones.
+    const maxUserAgents = 30;
+    const maxNameLength = 50;
+    const relevantData = (this.resource.value() ?? [])
+      .slice(0, Math.min(maxUserAgents, this.statsService.userAgentMetricRange()))
+      .map((entry) => ({
+        name: entry.name.length > maxNameLength ? `${entry.name.substring(0, maxNameLength)}...` : entry.name,
+        count: entry.count,
+      }));
+
     const labels: string[] = [];
     const data: number[] = [];
     for (const entry of relevantData) {
@@ -52,20 +61,11 @@ export class ChartUseragentComponent implements OnInit {
       },
       options: {
         plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
-            },
-            position: 'top',
-          },
+          legend: { labels: mochaLegendLabels(), position: 'top' },
         },
       },
     };
   });
-
-  readonly loading = signal(true);
 
   constructor() {
     this.observer
@@ -73,40 +73,6 @@ export class ChartUseragentComponent implements OnInit {
       .pipe(takeUntilDestroyed())
       .subscribe((state) => {
         this.statsService.userAgentMetricRange.set(state.matches ? 5 : 10);
-      });
-  }
-
-  ngOnInit(): void {
-    this.get30DayUserAgents();
-  }
-
-  /**
-   * Query the number of user agents in the last 30 days.
-   * @returns The number of user agents in the last 30 days.
-   */
-  private get30DayUserAgents(): void {
-    this.appService
-      .get30dayUserAgents()
-      .pipe(retry({ count: 3, delay: 5000 }))
-      .subscribe({
-        next: (data) => {
-          // We don't want to display >30 user agents
-          const rightAmount = data.slice(0, 30);
-          // and also not too long user agent strings as that breaks visuals
-          for (const entry of rightAmount) {
-            if (entry.name.length > 50) {
-              entry.name = `${entry.name.substring(0, 50)}...`;
-            }
-          }
-
-          this.statsService.userAgentMetrics.set(rightAmount);
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.loading.set(false);
-          this.messageToastService.error('Error', 'Failed to load user agent chart data');
-          console.error(err);
-        },
       });
   }
 }

@@ -1,6 +1,7 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { httpResource } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageToastService } from '@garudalinux/core';
 import { Fieldset } from '@openng/optimus-ui/fieldset';
@@ -16,16 +17,33 @@ import { Message } from './interfaces';
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],
 })
-export class NewsfeedComponent implements OnInit {
+export class NewsfeedComponent {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
 
+  private readonly newsResource = httpResource<Message[]>(() => this.appService.getNewsResourceRequest());
+
   readonly isWide = signal<boolean>(true);
-  newsList: { data: Message; html?: string }[] = [];
+
+  readonly newsList = computed<{ data: Message; html: string }[]>(() => {
+    const news = this.newsResource.value();
+    if (!news) return [];
+    return news
+      .filter((item) => item.type === 'message')
+      .map((item) => ({ data: item, html: this.entityToHtml(item) }))
+      .filter((item) => item.html.length > 0)
+      .sort((a, b) => b.data.id - a.data.id);
+  });
 
   constructor() {
+    effect(() => {
+      if (this.newsResource.error()) {
+        this.messageToastService.error('Error', 'Failed to fetch news');
+      }
+    });
+
     this.observer
       .observe('(min-width: 768px)')
       .pipe(takeUntilDestroyed())
@@ -33,28 +51,6 @@ export class NewsfeedComponent implements OnInit {
         this.isWide.set(result.matches);
         this.cdr.markForCheck();
       });
-  }
-
-  ngOnInit(): void {
-    this.appService.getNews().subscribe({
-      next: (data) => {
-        for (const news of data) {
-          if (news.type !== 'message') continue;
-          const html: string = this.entityToHtml(news);
-          if (!html) continue;
-          this.newsList.push({ data: news, html: html });
-        }
-        this.newsList.sort((a, b) => {
-          return b.data.id - a.data.id;
-        });
-
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.messageToastService.error('Error', 'Failed to fetch news');
-        console.error(err);
-      },
-    });
   }
 
   /**
@@ -77,7 +73,9 @@ export class NewsfeedComponent implements OnInit {
           } else {
             switch (item.type) {
               case 'text_link':
-                return `<a class="text-ctp-mauve" href="${item.href}" target="_blank">${item.text}</a>`;
+                return item.href
+                  ? `<a class="text-ctp-mauve" href="${item.href}" target="_blank">${item.text}</a>`
+                  : item.text;
               case 'bold':
                 return `<strong>${item.text}</strong>`;
               case 'code':

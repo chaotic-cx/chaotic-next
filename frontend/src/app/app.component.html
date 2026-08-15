@@ -1,5 +1,5 @@
-<div class="background min-h-svh">
-  <garuda-shell class="p-2" [menuItems]="items">
+<div class="background flex min-h-svh flex-col">
+  <garuda-shell class="flex-1 p-2" [menuItems]="items">
     <img garudaShellBarStart ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="logo" />
     <div class="router-container">
       <router-outlet #routerOutlet="outlet" />
@@ -16,7 +16,7 @@
       <span class="pi pi-inbox cursor-pointer text-ctp-maroon my-auto ml-3" routerLink="update-review"> </span>
     </div>
   </garuda-shell>
+  <chaotic-footer />
 </div>
-<chaotic-footer />
 
 <p-confirm-dialog />

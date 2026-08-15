@@ -316,27 +316,25 @@
   }
 </div>
 
-@if (dialogData().pipeline.source) {
+@if (dialogData(); as dialog) {
   <p-dialog [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '90vw' }" header="Pipeline details">
     <div class="mb-5 ml-2.5">
-      <p>Source: {{ dialogData().pipeline.source }}</p>
-      <p>Created at: {{ dialogData().pipeline.created_at | date: 'short' }}</p>
+      <p>Source: {{ dialog.pipeline.source }}</p>
+      <p>Created at: {{ dialog.pipeline.created_at | date: 'short' }}</p>
       <p>
         Web URL:
-        <a class="text-ctp-mauve" [href]="dialogData().pipeline.web_url">{{ dialogData().pipeline.web_url }}</a>
+        <a class="text-ctp-mauve" [href]="dialog.pipeline.web_url">{{ dialog.pipeline.web_url }}</a>
       </p>
       <p>
         Commit:
-        <a
-          class="text-ctp-mauve"
-          href="https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/{{ dialogData().pipeline.sha }}"
-          >{{ dialogData().pipeline.sha }}</a
-        >
+        <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/{{ dialog.pipeline.sha }}">{{
+          dialog.pipeline.sha
+        }}</a>
       </p>
     </div>
-    @if (dialogData().commit.length > 0) {
+    @if (dialog.commit.length > 0) {
       <p-table
-        [value]="dialogData().commit"
+        [value]="dialog.commit"
         [sortOrder]="-1"
         [tableStyle]="{ width: '100%' }"
         dataKey="id"
@@ -379,8 +377,8 @@
       <div class="ml-2.5">
         <p>There are no jobs in this pipeline (yet).</p>
         <p>
-          Have a look at <a class="text-ctp-mauve" [href]="dialogData().pipeline.web_url">web UI</a> to look into
-          details instead!
+          Have a look at <a class="text-ctp-mauve" [href]="dialog.pipeline.web_url">web UI</a> to look into details
+          instead!
         </p>
       </div>
     }

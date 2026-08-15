@@ -65,12 +65,12 @@
                 }
               </td>
               <td>
-                @if (!mirror.latlon?.length || mirror.latlon?.length === 0) {
-                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
-                } @else {
-                  <a href="https://www.openstreetmap.org/#map=6/{{ mirror.latlon[0] }}/{{ mirror.latlon[1] }}">
-                    {{ mirror.latlon.join(', ') }}
+                @if (mirror.latlon; as latlon) {
+                  <a href="https://www.openstreetmap.org/#map=6/{{ latlon[0] }}/{{ latlon[1] }}">
+                    {{ latlon.join(', ') }}
                   </a>
+                } @else {
+                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
                 }
               </td>
               <td>{{ mirror.last_update | date: 'short' : 'UTC' }}</td>
@@ -118,12 +118,12 @@
                 }
               </td>
               <td>
-                @if (!mirror.latlon?.length || mirror.latlon?.length === 0) {
-                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
-                } @else {
-                  <a href="https://www.openstreetmap.org/#map=6/{{ mirror.latlon[0] }}/{{ mirror.latlon[1] }}">
-                    {{ mirror.latlon.join(', ') }}
+                @if (mirror.latlon; as latlon) {
+                  <a href="https://www.openstreetmap.org/#map=6/{{ latlon[0] }}/{{ latlon[1] }}">
+                    {{ latlon.join(', ') }}
                   </a>
+                } @else {
+                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
                 }
               </td>
               <td>{{ mirror.last_update | date: 'short' : 'UTC' }}</td>
@@ -171,12 +171,12 @@
                 }
               </td>
               <td>
-                @if (!mirror.latlon?.length || mirror.latlon?.length === 0) {
-                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
-                } @else {
-                  <a href="https://www.openstreetmap.org/#map=6/{{ mirror.latlon[0] }}/{{ mirror.latlon[1] }}">
-                    {{ mirror.latlon.join(', ') }}
+                @if (mirror.latlon; as latlon) {
+                  <a href="https://www.openstreetmap.org/#map=6/{{ latlon[0] }}/{{ latlon[1] }}">
+                    {{ latlon.join(', ') }}
                   </a>
+                } @else {
+                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
                 }
               </td>
               <td>Totally unavailable</td>

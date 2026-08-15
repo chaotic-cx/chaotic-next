@@ -1,11 +1,32 @@
-import { MergeRequestWithDiffs } from '@./shared-lib';
-import { HttpClient } from '@angular/common/http';
+import { MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { effect, inject, Service, signal, untracked } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { finalize, lastValueFrom } from 'rxjs';
+import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { encrypt } from '../functions';
+
+/**
+ * Obfuscation password for the Gitlab token kept in local/session storage.
+ * This is NOT security — anyone with access to the browser can recover the
+ * token — it only avoids storing the plaintext token verbatim.
+ */
+export const TOKEN_OBFUSCATION_PASSWORD = 'thisaintrealsafety1!!1!';
+
+/** Labels that can be attached to a merge request to block its review. */
+export type MrFlagLabel = 'dangerous' | 'hold';
+
+const FLAG_COPY: Record<MrFlagLabel, { success: [string, string]; error: [string, string] }> = {
+  dangerous: {
+    success: ['Flagged as Dangerous', 'The merge request has been flagged as dangerous.'],
+    error: ['Flagging Failed', 'Failed to flag the merge request as dangerous. Please try again later.'],
+  },
+  hold: {
+    success: ['Flagged as On Hold', 'The merge request has been flagged as on hold.'],
+    error: ['Flagging Failed', 'Failed to flag the merge request as on hold. Please try again later.'],
+  },
+};
 
 @Service()
 export class MrOverviewService {
@@ -24,7 +45,7 @@ export class MrOverviewService {
       const tokenValue = this.token();
       if (tokenValue === '') return;
 
-      const encryptedValue = await encrypt(tokenValue, 'thisaintrealsafety1!!1!');
+      const encryptedValue = await encrypt(tokenValue, TOKEN_OBFUSCATION_PASSWORD);
       if (untracked(this.storage) === 'sessionStorage') {
         sessionStorage.setItem('gitlabPrivateToken', encryptedValue);
       } else {
@@ -33,9 +54,6 @@ export class MrOverviewService {
     });
   }
 
-  /**
-   * Retrieves the open merge requests from our backend (cached here).
-   */
   async loadOpenMrs() {
     try {
       const mergeRequests: MergeRequestWithDiffs[] = await lastValueFrom(
@@ -53,7 +71,10 @@ export class MrOverviewService {
             title: this.extractPkgName(mr.title) || mr.title,
             diffs: this.sortDiff(mr.diffs),
           }))
-          .sort((a, b) => (b.detailed_merge_status === 'not_approved' ? -1 : 1)),
+          .sort(
+            (a, b) =>
+              Number(b.detailed_merge_status === 'not_approved') - Number(a.detailed_merge_status === 'not_approved'),
+          ),
       );
       this.isLoading.set(false);
     } catch (error) {
@@ -89,7 +110,7 @@ export class MrOverviewService {
 
     try {
       await lastValueFrom(
-        this.http.post(
+        this.http.post<unknown>(
           `${this.backendUrl}/gitlab/approve`,
           {
             iid: mr.iid,
@@ -108,8 +129,7 @@ export class MrOverviewService {
         'Merge request approved successfully. The bot will auto-merge it soon.',
       );
     } catch (error) {
-      const err = error as any;
-      if (err.status === 401) {
+      if (error instanceof HttpErrorResponse && error.status === 401) {
         this.messageToastService.info(
           'Already approved',
           'This update seems to have been already approved by you? GitLab does not always return a valid status at all times.',
@@ -145,89 +165,40 @@ export class MrOverviewService {
   }
 
   /**
-   * Flags a merge request as dangerous by adding a 'dangerous' label.
+   * Flags a merge request with the given label so it drops out of the review list.
    * @param mr The merge request to flag.
+   * @param label The flag label to attach.
    */
-  flagDangerous(mr: MergeRequestWithDiffs) {
+  async flag(mr: MergeRequestWithDiffs, label: MrFlagLabel): Promise<void> {
+    const copy = FLAG_COPY[label];
     const loadingMap = new Map(this.loadingMap());
     loadingMap.set(-mr.iid, true);
     this.loadingMap.set(loadingMap);
 
-    this.http
-      .post(
-        `${this.backendUrl}/gitlab/flag`,
-        {
-          iid: mr.iid,
-          label: 'dangerous',
-        },
-        {
-          headers: {
-            'X-Gitlab-Private-Token': this.token(),
+    try {
+      await lastValueFrom(
+        this.http.post<unknown>(
+          `${this.backendUrl}/gitlab/flag`,
+          {
+            iid: mr.iid,
+            label,
           },
-        },
-      )
-      .pipe(
-        finalize(() => {
-          const finalLoadingMap = new Map(this.loadingMap());
-          finalLoadingMap.delete(-mr.iid);
-          this.loadingMap.set(finalLoadingMap);
-        }),
-      )
-      .subscribe({
-        next: () => {
-          this.messageToastService.success('Flagged as Dangerous', 'The merge request has been flagged as dangerous.');
-        },
-        error: (error) => {
-          this.messageToastService.error(
-            'Flagging Failed',
-            'Failed to flag the merge request as dangerous. Please try again later.',
-          );
-          console.error('Error flagging merge request as dangerous:', error);
-        },
-      });
-  }
-
-  /**
-   * Flags a merge request as on hold by adding a 'hold' label.
-   * @param mr The merge request to flag.
-   */
-  flagHold(mr: MergeRequestWithDiffs) {
-    const loadingMap = new Map(this.loadingMap());
-    loadingMap.set(-mr.iid, true);
-    this.loadingMap.set(loadingMap);
-
-    this.http
-      .post(
-        `${this.backendUrl}/gitlab/flag`,
-        {
-          iid: mr.iid,
-          label: 'hold',
-        },
-        {
-          headers: {
-            'X-Gitlab-Private-Token': this.token(),
+          {
+            headers: {
+              'X-Gitlab-Private-Token': this.token(),
+            },
           },
-        },
-      )
-      .pipe(
-        finalize(() => {
-          const finalLoadingMap = new Map(this.loadingMap());
-          finalLoadingMap.delete(-mr.iid);
-          this.loadingMap.set(finalLoadingMap);
-        }),
-      )
-      .subscribe({
-        next: () => {
-          this.messageToastService.success('Flagged as On Hold', 'The merge request has been flagged as on hold.');
-        },
-        error: (error) => {
-          this.messageToastService.error(
-            'Flagging Failed',
-            'Failed to flag the merge request as on hold. Please try again later.',
-          );
-          console.error('Error flagging merge request as on hold:', error);
-        },
-      });
+        ),
+      );
+      this.messageToastService.success(copy.success[0], copy.success[1]);
+    } catch (error) {
+      this.messageToastService.error(copy.error[0], copy.error[1]);
+      console.error(`Error flagging merge request as ${label}:`, error);
+    } finally {
+      const finalLoadingMap = new Map(this.loadingMap());
+      finalLoadingMap.delete(-mr.iid);
+      this.loadingMap.set(finalLoadingMap);
+    }
   }
 
   /**
@@ -236,7 +207,7 @@ export class MrOverviewService {
    * @returns The sorted array of commit diffs.
    */
   sortDiff(diffs: MergeRequestDiffSchema[]): MergeRequestDiffSchema[] {
-    return diffs.sort((a, b) => {
+    return [...diffs].sort((a, b) => {
       const getSortKey = (path: string): number => {
         if (path.endsWith('/PKGBUILD')) return 0;
         if (path.endsWith('/.SRCINFO')) return 1;

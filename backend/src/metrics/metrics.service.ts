@@ -1,147 +1,128 @@
-import { CACHE_ROUTER_TTL, type SpecificPackageMetrics } from '@./shared-lib';
-import { HttpService } from '@nestjs/axios';
-import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { parseOutput } from '../functions';
+import { type CountNameObject, type SpecificPackageMetrics, type UserAgentList } from '@chaotic-next/shared-lib';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { clampInt, nDaysInPast } from '../utils/functions';
+import { MAX_DAYS_WINDOW } from '../utils/constants';
+import { DataSource } from 'typeorm';
+import { RouterHit } from '../router/router-hit.entity';
+
+const PKGNAME_REGEX = /^[a-zA-Z0-9.@+_-]{1,255}$/;
+
+function assertPackageName(name: string): string {
+  if (!PKGNAME_REGEX.test(name)) {
+    throw new BadRequestException(`Invalid package name: ${name}`);
+  }
+  return name;
+}
+
+function assertRankRange(range: string): number {
+  if (!/^\d+$/.test(range)) {
+    throw new BadRequestException(`Invalid rank range: ${range}`);
+  }
+  const parsed = Number.parseInt(range, 10);
+  if (parsed < 1 || parsed > 200) {
+    throw new BadRequestException('Rank range must be between 1 and 200');
+  }
+  return parsed;
+}
 
 @Injectable()
 export class MetricsService {
-  constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    private httpService: HttpService,
-  ) {
-    Logger.log('MetricsService initialized', 'MetricsService');
+  private readonly logger = new Logger(MetricsService.name);
+
+  constructor(private dataSource: DataSource) {
+    this.logger.log('MetricsService initialized');
   }
 
   /**
-   * Get the 30d user count from Chaotic-AUR router
-   * @returns The 30d user count from Chaotic-AUR router
+   * Get the unique user (IP) count from the router-hits table.
+   * @param days The number of days to look back (defaults to 30)
+   * @returns The unique user count
    */
-  async thirtyDayUsers() {
-    Logger.debug('thirtyDayUsers requested', 'MetricsService');
-
-    const cacheKey = 'thirtyDayUsers';
-    let data = await this.cacheManager.get(cacheKey);
-    if (!data) {
-      data = await this.httpService.axiosRef
-        .get(`30d/users`)
-        .then((response) => {
-          return response.data;
-        })
-        .catch((err) => {
-          console.error(err);
-          return [];
-        });
-      await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL);
-    }
-    return data;
+  async uniqueUsers(days = 30): Promise<number> {
+    const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
+    const row = await this.dataSource
+      .getRepository(RouterHit)
+      .createQueryBuilder('hit')
+      .select('COUNT(DISTINCT hit.ip)::int', 'count')
+      .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+      .getRawOne<{ count: number }>();
+    return row?.count ?? 0;
   }
 
   /**
-   * Get the 30d user agents list from Chaotic-AUR router
-   * @returns The 30d user agents list from Chaotic-AUR router
+   * Get the user agent list from the router-hits table.
+   * @param days The number of days to look back (defaults to 30)
+   * @returns The user agent list with counts
    */
-  async thirtyDayUserAgents() {
-    Logger.debug('thirtyDayUsersAgents requested', 'MetricsService');
-
-    const cacheKey = 'thirtyDayUserAgents';
-    let data = await this.cacheManager.get(cacheKey);
-    if (!data) {
-      data = await this.httpService.axiosRef
-        .get(`30d/user-agents`)
-        .then((response) => {
-          return parseOutput(response.data);
-        })
-        .catch((err) => {
-          console.error(err);
-          return [];
-        });
-      await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL);
-    }
-    return data;
+  async uniqueUserAgents(days = 30): Promise<UserAgentList> {
+    const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
+    return this.dataSource
+      .getRepository(RouterHit)
+      .createQueryBuilder('hit')
+      .select('hit.userAgent', 'name')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+      .groupBy('hit.userAgent')
+      .orderBy('count', 'DESC')
+      .getRawMany<UserAgentList[number]>();
   }
 
-  /**
-   * Get the metrics of a specific package from Chaotic-AUR router
-   * @param param The name of the package to get the metrics
-   * @returns The metrics of the specific package from Chaotic-AUR router
-   */
-  async thirtyDayPackage(param: any) {
-    Logger.debug('thirtyDayPackage requested', 'MetricsService');
+  async packageMetrics(param: string, days = 30): Promise<SpecificPackageMetrics> {
+    const pkgname = assertPackageName(param);
+    const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
+    const cutoff = nDaysInPast(clampedDays);
 
-    const cacheKey = `thirtyDayPackage-${param}`;
-    let data = await this.cacheManager.get(cacheKey);
-    if (!data) {
-      const metrics: SpecificPackageMetrics = {
-        downloads: 0,
-        user_agents: [],
-      };
-      metrics.name = param;
-      data = await Promise.all([
-        this.httpService.axiosRef.get(`30d/package/${metrics.name}`),
-        this.httpService.axiosRef.get(`30d/package/${metrics.name}/user-agents`),
-      ])
-        .then((allMetrics) => {
-          metrics.downloads = allMetrics[0].data;
-          metrics.user_agents = parseOutput(allMetrics[1].data);
-          return metrics;
-        })
-        .catch((err) => {
-          console.error(err);
-          return metrics;
-        });
-      await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL);
-    }
-    return data;
+    const repo = this.dataSource.getRepository(RouterHit);
+    const downloadRow = await repo
+      .createQueryBuilder('hit')
+      .select('COUNT(*)::int', 'count')
+      .where('hit.timestamp > :cutoff', { cutoff })
+      .andWhere('hit.package = :pkg', { pkg: pkgname })
+      .getRawOne<{ count: number }>();
+    const userAgentRows = await repo
+      .createQueryBuilder('hit')
+      .select('hit.userAgent', 'name')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('hit.timestamp > :cutoff', { cutoff })
+      .andWhere('hit.package = :pkg', { pkg: pkgname })
+      .groupBy('hit.userAgent')
+      .orderBy('count', 'DESC')
+      .getRawMany<UserAgentList[number]>();
+
+    return {
+      name: pkgname,
+      downloads: downloadRow?.count ?? 0,
+      user_agents: userAgentRows,
+    };
   }
 
-  /**
-   * Get the rank of packages from Chaotic-AUR router
-   * @param range The range of the rank, valid are numbers form 1-50
-   * @returns The rank of countries from Chaotic-AUR router
-   */
-  async rankCountries(range: any) {
-    Logger.debug('rankCountries requested', 'MetricsService');
-
-    const cacheKey = `rankCountries-${range}`;
-    let data = await this.cacheManager.get(cacheKey);
-    if (!data) {
-      data = await this.httpService.axiosRef
-        .get(`30d/rank/${range}/countries`)
-        .then((response) => {
-          return parseOutput(response.data);
-        })
-        .catch((err) => {
-          console.error(err);
-          return [];
-        });
-      await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL);
-    }
-    return data;
+  async rankCountries(range: string, days = 30): Promise<CountNameObject[]> {
+    const rankRange = assertRankRange(range);
+    const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
+    return this.dataSource
+      .getRepository(RouterHit)
+      .createQueryBuilder('hit')
+      .select('hit.country', 'name')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+      .groupBy('hit.country')
+      .orderBy('count', 'DESC')
+      .limit(rankRange)
+      .getRawMany<CountNameObject>();
   }
 
-  /**
-   * Get the rank of packages from Chaotic-AUR router
-   * @param range The range of the rank, valid are numbers form 1-50
-   * @returns The rank of packages from Chaotic-AUR router
-   */
-  async rankPackages(range: any) {
-    Logger.debug('rankCountries requested', 'MetricsService');
-
-    const cacheKey = `rankPackages-${range}`;
-    let data = await this.cacheManager.get(cacheKey);
-    if (!data) {
-      data = await this.httpService.axiosRef
-        .get(`30d/rank/${range}/packages`)
-        .then((response) => {
-          return parseOutput(response.data);
-        })
-        .catch((err) => {
-          console.error(err);
-          return [];
-        });
-      await this.cacheManager.set(cacheKey, data, CACHE_ROUTER_TTL);
-    }
-    return data;
+  async rankPackages(range: string, days = 30): Promise<CountNameObject[]> {
+    const rankRange = assertRankRange(range);
+    const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
+    return this.dataSource
+      .getRepository(RouterHit)
+      .createQueryBuilder('hit')
+      .select('hit.package', 'name')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+      .groupBy('hit.package')
+      .orderBy('count', 'DESC')
+      .limit(rankRange)
+      .getRawMany<CountNameObject>();
   }
 }

@@ -1,10 +1,18 @@
-import { PipelineWithExternalStatus } from '@./shared-lib';
-import { Body, Controller, Get, Headers, Post, UnauthorizedException } from '@nestjs/common';
+import { MergeRequestWithDiffs, PipelineWithExternalStatus } from '@chaotic-next/shared-lib';
+import { BadRequestException, Body, Controller, Get, Headers, Post, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AllowAnonymous } from '../auth/anonymous.decorator';
 import { GitlabService } from './gitlab.service';
 import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { GitLabWebHook } from './interfaces';
+
+const SHA_REGEX = /^[0-9a-fA-F]{6,40}$/;
+const FLAG_LABELS = ['dangerous', 'hold'];
+
+function assertValidIid(iid: number): void {
+  if (!Number.isInteger(iid) || iid <= 0) {
+    throw new BadRequestException('Invalid iid');
+  }
+}
 
 @ApiTags('gitlab')
 @Controller('gitlab')
@@ -18,7 +26,6 @@ export class GitlabController {
     this.WEBHOOK_TOKEN = this.configService.getOrThrow<string>('CAUR_GITLAB_WEBHOOK_TOKEN');
   }
 
-  @AllowAnonymous()
   @Post('update')
   @ApiOperation({ summary: 'Update GitLab cache via webhook.' })
   @ApiBody({ type: Object, description: 'GitLab pipeline webhook payload' })
@@ -28,14 +35,17 @@ export class GitlabController {
       throw new UnauthorizedException('Invalid token');
     }
 
+    if (body.object_kind !== 'pipeline' && body.object_kind !== 'merge_request') {
+      throw new BadRequestException('Invalid object_kind');
+    }
+
     if (body.object_kind === 'pipeline') {
       await this.gitlabService.handlePipelineWebhook(body);
-    } else if (body.object_kind === 'merge_request') {
-      await this.gitlabService.handleMergeRequestWebhook(body);
+    } else {
+      await this.gitlabService.handleMergeRequestWebhook();
     }
   }
 
-  @AllowAnonymous()
   @Get('pipelines')
   @ApiOperation({ summary: 'Get recent GitLab pipelines.' })
   @ApiOkResponse({ description: 'List of pipelines', isArray: true })
@@ -43,15 +53,13 @@ export class GitlabController {
     return await this.gitlabService.getLastPipelines();
   }
 
-  @AllowAnonymous()
   @Get('merge-requests')
   @ApiOperation({ summary: 'Get recent open GitLab merge requests with diff data.' })
   @ApiOkResponse({ description: 'List of open merge requests', isArray: true })
-  async getOpenMergeRequests(): Promise<PipelineWithExternalStatus[]> {
+  async getOpenMergeRequests(): Promise<MergeRequestWithDiffs[]> {
     return await this.gitlabService.getOpenMergeRequests();
   }
 
-  @AllowAnonymous()
   @Get('review-stats')
   @ApiOperation({ summary: 'Get GitLab merge request review statistics per user.' })
   @ApiOkResponse({ description: 'Merge request review statistics' })
@@ -59,7 +67,6 @@ export class GitlabController {
     return await this.gitlabService.getReviewStats();
   }
 
-  @AllowAnonymous()
   @Post('approve')
   @ApiOperation({ summary: 'Approve a merge request.' })
   @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
@@ -80,10 +87,13 @@ export class GitlabController {
     if (!token) {
       throw new UnauthorizedException('GitLab private token is required');
     }
+    assertValidIid(body.iid);
+    if (typeof body.sha !== 'string' || !SHA_REGEX.test(body.sha)) {
+      throw new BadRequestException('Invalid sha');
+    }
     await this.gitlabService.approveMergeRequest(body.iid, body.sha, token);
   }
 
-  @AllowAnonymous()
   @Post('flag')
   @ApiOperation({ summary: 'Flag a merge request.' })
   @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
@@ -104,10 +114,13 @@ export class GitlabController {
     if (!token) {
       throw new UnauthorizedException('GitLab private token is required');
     }
+    assertValidIid(body.iid);
+    if (!FLAG_LABELS.includes(body.label)) {
+      throw new BadRequestException(`Invalid label, must be one of: ${FLAG_LABELS.join(', ')}`);
+    }
     await this.gitlabService.flagMergeRequest(body.iid, body.label, token);
   }
 
-  @AllowAnonymous()
   @Post('test-token')
   @ApiOperation({ summary: 'Test a GitLab private token for write permissions.' })
   @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })

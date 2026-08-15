@@ -1,4 +1,4 @@
-import { MergeRequestWithDiffs } from '@./shared-lib';
+import { MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, OnInit, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -22,7 +22,7 @@ import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component'
 import { decrypt } from '../functions';
 import { NotificationService } from '../notification/notification.service';
 import { TitleComponent } from '../title/title.component';
-import { MrOverviewService } from './mr-overview.service';
+import { MrOverviewService, TOKEN_OBFUSCATION_PASSWORD } from './mr-overview.service';
 
 @Component({
   selector: 'chaotic-mr-overview',
@@ -96,13 +96,13 @@ export class MrOverviewComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.appService.updateSeoTags(
-      this.meta,
-      'Update review',
-      'Review and approve pending merge requests for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review',
-      this.router.url,
-    );
+    this.appService.updateSeoTags(this.meta, {
+      title: 'Update review',
+      description: 'Review and approve pending merge requests for Chaotic-AUR',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review',
+      url: this.router.url,
+    });
 
     let tokenFromStorage: string | null;
     tokenFromStorage = sessionStorage.getItem('gitlabPrivateToken');
@@ -111,7 +111,7 @@ export class MrOverviewComponent implements OnInit {
     }
 
     if (tokenFromStorage) {
-      decrypt(tokenFromStorage, 'thisaintrealsafety1!!1!').then((decryptedToken) => {
+      decrypt(tokenFromStorage, TOKEN_OBFUSCATION_PASSWORD).then((decryptedToken) => {
         this.mrOverviewService.token.set(decryptedToken);
       });
     }

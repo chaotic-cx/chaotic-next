@@ -26,10 +26,11 @@
                 'pi-info-circle text-ctp-text': pipeline.pipeline.status === 'pending',
                 'pi-hourglass text-ctp-flamingo': pipeline.pipeline.status === 'waiting_for_resource',
                 'pi-times-circle text-ctp-maroon': pipeline.pipeline.status === 'canceling',
+                'pi-times-circle text-ctp-text': pipeline.pipeline.status === 'canceled',
               }"
             ></i>
             <span class="ml-2">
-              <a>{{ pipeline.pipeline.status.replaceAll('_', ' ') }}</a>
+              <a>{{ pipeline.statusText.replaceAll('_', ' ') }}</a>
             </span>
           </div>
         }

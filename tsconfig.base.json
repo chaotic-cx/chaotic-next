@@ -11,7 +11,8 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "paths": {
-      "@./shared-lib": ["./shared-lib/src/index.ts"]
+      "@chaotic-next/backend/*": ["./backend/src/*"],
+      "@chaotic-next/shared-lib": ["./shared-lib/src/index.ts"]
     },
     "rootDir": ".",
     "skipDefaultLibCheck": true,

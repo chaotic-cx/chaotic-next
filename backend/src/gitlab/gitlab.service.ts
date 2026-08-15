@@ -1,41 +1,48 @@
 import {
   CACHE_REVIEW_STATS_TTL,
+  type ExternalCommitStatus,
   MergeRequestWithDiffs,
   NotificationPayload,
   PipelineWithExternalStatus,
-} from '@./shared-lib';
-import { MergeRequestSchema } from '@gitbeaker/core';
-import { CommitStatusSchema, Gitlab, PipelineSchema } from '@gitbeaker/rest';
+} from '@chaotic-next/shared-lib';
+import { MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
+import type { CommitStatusSchema } from '@gitbeaker/rest';
+import { Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Mutex } from 'async-mutex';
-import { AES, enc } from 'crypto-js';
-import { readFile } from 'node:fs/promises';
+import { errorMessage, mapWithConcurrency } from '../utils/functions';
+import { Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
 import { EventService } from '../events/event.service';
-import { GitlabStatusEvent, MergeRequestWebhook, PipelineWebhook } from './interfaces';
+import { NotificationSubscription } from '../notifications/notification-subscription.entity';
+import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
 
 @Injectable()
 export class GitlabService implements OnModuleInit {
+  private readonly logger = new Logger(GitlabService.name);
   api: Gitlab;
   updateMutex = new Mutex();
   reviewStatsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_KEY_REVIEW_STATS = 'gitlab/review-stats';
+  private readonly MARGE_BOT_USER_ID = 20097372;
   private readonly chaoticId: string;
 
-  // In-memory representation of the recent pipelines and their external statuses.
   private readonly pipelineMap = new Map<number, PipelineSchema>();
-  private readonly statusMap = new Map<number, CommitStatusSchema[]>();
+  private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
   private statusIdCounter = 0;
 
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly configService: ConfigService,
     private readonly eventService: EventService,
+    @InjectRepository(NotificationSubscription)
+    private readonly subscriptionRepository: Repository<NotificationSubscription>,
   ) {
     this.chaoticId = this.configService.getOrThrow<string>('CAUR_GITLAB_ID_CAUR');
     this.api = new Gitlab({
@@ -43,9 +50,14 @@ export class GitlabService implements OnModuleInit {
     });
   }
 
-  async onModuleInit(): Promise<void> {
-    await this.refreshReviewStats();
-    await this.seedPipelines();
+  onModuleInit(): void {
+    // Fire-and-forget: never block application startup on GitLab seeding.
+    // The cron jobs (EVERY_6_HOURS / EVERY_10_MINUTES) reconcile the store as
+    // a safety net if the initial seed races or fails.
+    void this.refreshReviewStats().catch((err) =>
+      this.logger.error(`Initial review-stats refresh failed: ${errorMessage(err)}`),
+    );
+    void this.seedPipelines().catch((err) => this.logger.error(`Initial pipeline seed failed: ${errorMessage(err)}`));
   }
 
   @Cron(CronExpression.EVERY_6_HOURS)
@@ -53,41 +65,27 @@ export class GitlabService implements OnModuleInit {
     await this.refreshReviewStats();
   }
 
-  /**
-   * Periodically reconcile the in-memory pipeline store with GitLab as a safety net for missed webhooks
-   * or dropped status events.
-   */
+  /** Safety net for missed webhooks / dropped status events. */
   @Cron(CronExpression.EVERY_10_MINUTES)
   async handlePipelinesRefresh(): Promise<void> {
     await this.seedPipelines();
   }
 
-  /**
-   * Seed the in-memory pipeline store from the GitLab REST API.
-   */
   async seedPipelines(): Promise<void> {
     try {
       await this.getPipelinesViaRest();
-      Logger.log(`Seeded ${this.pipelineMap.size} pipelines`, 'GitlabService');
+      this.logger.log(`Seeded ${this.pipelineMap.size} pipelines`);
     } catch (err) {
-      Logger.error(`Failed to seed pipelines: ${(err as Error).message}`, 'GitlabService');
+      this.logger.error(`Failed to seed pipelines: ${errorMessage(err)}`);
     }
   }
 
-  /**
-   * Get the last GitLab pipelines for the chaotic-aur with their external statuses (aka build logs).
-   * Returns instantly from the in-memory store, which is kept fresh by webhooks and moleculer events.
-   * @returns The last pipelines with their external statuses
-   */
   async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
     return [...this.pipelineMap.entries()]
       .map(([id, pipeline]) => ({ pipeline, commit: this.statusMap.get(id) ?? [] }))
       .sort((a, b) => b.pipeline.id - a.pipeline.id);
   }
 
-  /**
-   * Fetch pipelines via the REST API and populate the in-memory store.
-   */
   private async getPipelinesViaRest(): Promise<void> {
     let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
       maxPages: 1,
@@ -96,8 +94,7 @@ export class GitlabService implements OnModuleInit {
     });
     allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
 
-    Logger.log(`Fetched ${allPipelines.length} pipelines`, 'GitlabService');
-    Logger.debug(allPipelines);
+    this.logger.log(`Fetched ${allPipelines.length} pipelines`);
 
     const uniqueShas = [...new Set(allPipelines.map((pipeline) => pipeline.sha))];
     const statusesBySha = new Map<string, CommitStatusSchema[]>();
@@ -110,7 +107,7 @@ export class GitlabService implements OnModuleInit {
             statuses.filter((status) => this.isExternalStage(status.name)),
           );
         } catch (err) {
-          Logger.warn(`Failed to fetch statuses for sha ${sha}: ${(err as Error).message}`, 'GitlabService');
+          this.logger.warn(`Failed to fetch statuses for sha ${sha}: ${errorMessage(err)}`);
           statusesBySha.set(sha, []);
         }
       }),
@@ -123,41 +120,51 @@ export class GitlabService implements OnModuleInit {
       this.pipelineMap.set(pipeline.id, pipeline);
       this.statusMap.set(
         pipeline.id,
-        statuses.filter((status) => status.pipeline_id === pipeline.id),
+        statuses
+          .filter((status) => status.pipeline_id === pipeline.id)
+          .map((status) => this.toExternalStatus(pipeline.id, status)),
       );
     }
   }
 
-  /**
-   * Update the in-memory pipeline store from a pipeline webhook and push the refreshed list to the SSE
-   * stream.
-   * @param body Body of GitLab API call
-   * @returns True if the cache was successfully busted, false otherwise
-   */
+  private toExternalStatus(pipelineId: number, status: CommitStatusSchema): ExternalCommitStatus {
+    return {
+      id: status.id,
+      name: status.name,
+      status: status.status,
+      description: status.description ?? null,
+      target_url: status.target_url,
+      started_at: status.started_at ?? null,
+      finished_at: status.finished_at ?? null,
+      pipeline_id: pipelineId,
+    };
+  }
+
+  /** Update the store from a webhook, then push the refreshed list to SSE. */
   async handlePipelineWebhook(body: PipelineWebhook): Promise<boolean> {
     const attrs = body.object_attributes;
     const existing = this.pipelineMap.get(attrs.id);
     this.pipelineMap.set(attrs.id, {
       ...existing,
       id: attrs.id,
+      iid: attrs.iid,
+      project_id: existing?.project_id ?? body.project?.id ?? 0,
+      ref: attrs.ref,
       status: attrs.status,
       source: attrs.source,
       sha: attrs.sha,
       created_at: attrs.created_at,
-      finished_at: attrs.finished_at,
+      // Webhooks don't carry updated_at; the fallback keeps the schema complete.
+      updated_at: existing?.updated_at ?? attrs.created_at,
       web_url: attrs.url,
-    } as PipelineSchema);
+    });
 
     const pipelines = await this.getLastPipelines();
     this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
     return true;
   }
 
-  /**
-   * Handle an external commit status emitted by chaotic-manager over moleculer. Updates the affected
-   * pipeline's statuses in the in-memory store and pushes the refreshed list to the SSE stream.
-   * @param event The external status event payload
-   */
+  /** Handle a chaotic-manager commit status: update the store, push to SSE. */
   async handleExternalStatus(event: GitlabStatusEvent): Promise<void> {
     if (event.pipeline_id === undefined) return;
 
@@ -165,16 +172,16 @@ export class GitlabService implements OnModuleInit {
     const existingIndex = list.findIndex((status) => status.name === event.name);
     const existing = existingIndex >= 0 ? list[existingIndex] : undefined;
 
-    const entry: CommitStatusSchema = {
+    const entry: ExternalCommitStatus = {
       id: existing?.id ?? this.statusIdCounter++,
       name: event.name,
       status: event.status,
-      description: event.description,
+      description: event.description ?? null,
       target_url: event.target_url,
       started_at: event.started_at ?? existing?.started_at ?? null,
       finished_at: event.finished_at ?? existing?.finished_at ?? null,
       pipeline_id: event.pipeline_id,
-    } as unknown as CommitStatusSchema;
+    };
 
     if (existingIndex >= 0) list.splice(existingIndex, 1);
     list.push(entry);
@@ -184,12 +191,7 @@ export class GitlabService implements OnModuleInit {
     this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
   }
 
-  /**
-   * Get the open merge requests with their diffs and cache the result.
-   * @param overwriteCache Whether to overwrite the cache or not
-   * @returns The open merge requests with their diffs
-   */
-  async getOpenMergeRequests(overwriteCache = false): Promise<any[]> {
+  async getOpenMergeRequests(overwriteCache = false): Promise<MergeRequestWithDiffs[]> {
     let data: MergeRequestWithDiffs[] | undefined = await this.cacheManager.get<MergeRequestWithDiffs[]>(
       this.CACHE_KEY_MRS,
     );
@@ -200,12 +202,18 @@ export class GitlabService implements OnModuleInit {
         projectId: this.chaoticId,
       });
 
-      Logger.log(`Fetched ${openMrs.length} open MRs`, 'GitlabService');
-      Logger.debug(openMrs, 'GitlabService');
+      this.logger.log(`Fetched ${openMrs.length} open MRs`);
 
-      const diffPromises: Promise<any>[] = [];
+      const diffPromises: Promise<MergeRequestDiffSchema[]>[] = [];
       for (const mr of openMrs) {
-        diffPromises.push(this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid));
+        // One MR whose diff fails to load (e.g. a transient GitLab 500) must
+        // not fail the whole batch: its diffs just come back empty.
+        diffPromises.push(
+          this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid).catch((err: unknown) => {
+            this.logger.warn(`Failed to fetch diffs for MR !${mr.iid}: ${errorMessage(err)}`);
+            return [];
+          }),
+        );
       }
 
       const diffs = await Promise.all(diffPromises);
@@ -215,7 +223,7 @@ export class GitlabService implements OnModuleInit {
         web_url: mr.web_url,
         updated_at: mr.updated_at,
         assignees: mr.assignees,
-        labels: mr.labels as string[],
+        labels: toLabelStrings(mr.labels),
         sha: mr.sha,
         merge_status: mr.merge_status,
         iid: mr.iid,
@@ -231,13 +239,17 @@ export class GitlabService implements OnModuleInit {
     return data;
   }
 
-  /**
-   * Handle a merge request webhook from GitLab, and push an event to the SSE stream.
-   * @param body Body of GitLab API call
-   */
-  async handleMergeRequestWebhook(body: MergeRequestWebhook) {
+  private async refreshOpenMergeRequests(): Promise<void> {
+    try {
+      await this.getOpenMergeRequests(true);
+    } catch (err) {
+      this.logger.error(`Failed to refresh merge requests: ${errorMessage(err)}`);
+    }
+  }
+
+  async handleMergeRequestWebhook() {
     return await this.updateMutex.runExclusive(async () => {
-      const currentData: MergeRequestWithDiffs[] = await this.cacheManager.get<MergeRequestWithDiffs[]>(
+      const currentData: MergeRequestWithDiffs[] | undefined = await this.cacheManager.get<MergeRequestWithDiffs[]>(
         this.CACHE_KEY_MRS,
       );
       const newData: MergeRequestWithDiffs[] = await this.getOpenMergeRequests(true);
@@ -248,11 +260,11 @@ export class GitlabService implements OnModuleInit {
       // Determine if there are any new MRs compared to the current cached data
       const currentIds = new Set(currentData?.map((mr) => mr.id) ?? []);
       const newIds = new Set(newData.map((mr) => mr.id));
-      const hasNewMr = currentData && [...newIds].some((id) => !currentIds.has(id));
+      const hasNewMr = currentData !== undefined && [...newIds].some((id) => !currentIds.has(id));
 
-      Logger.debug(`Current MR IDs: ${[...currentIds].join(', ')}`, 'GitlabService');
-      Logger.debug(`New MR IDs: ${[...newIds].join(', ')}`, 'GitlabService');
-      Logger.log(`Has new MR: ${hasNewMr}`, 'GitlabService');
+      this.logger.debug(`Current MR IDs: ${[...currentIds].join(', ')}`);
+      this.logger.debug(`New MR IDs: ${[...newIds].join(', ')}`);
+      this.logger.log(`Has new MR: ${hasNewMr}`);
 
       if (hasNewMr) {
         const newMr: MergeRequestWithDiffs[] = newData.filter((mr) => !currentIds.has(mr.id));
@@ -264,35 +276,23 @@ export class GitlabService implements OnModuleInit {
     });
   }
 
-  /**
-   * Check if a stage is an external stage appended by our Chaotic Manager.
-   * @param name The name of the stage
-   */
   private isExternalStage(name: string): boolean {
     return name.startsWith('chaotic-aur:') || name.startsWith('garuda:');
   }
 
-  /**
-   * Notify subscribers about a new merge request via push notifications.
-   * @param newMr The new merge request
-   */
   private async notifySubscribers(newMr: MergeRequestWithDiffs[]) {
-    let subscriber: string;
     try {
-      subscriber = await readFile('config/notification-subscriber.json', 'utf-8');
-    } catch {
-      // No subscribers, nothing to do
-      return;
-    }
+      const subscriptions = await this.subscriptionRepository.find();
+      if (subscriptions.length === 0) {
+        // No subscribers, nothing to do
+        return;
+      }
 
-    try {
-      const decryptedSubscriber = AES.decrypt(
-        subscriber,
-        this.configService.getOrThrow<string>('CAUR_DB_KEY'),
-      ).toString(enc.Utf8);
-
-      const pkgs = newMr.map((mr) => mr.title.match(/^chore\(update\): ([\w@.+-]+)$/)?.[1]).join(', ');
-      Logger.log(`Notifying subscribers about new MRs: ${pkgs}`, 'GitlabService');
+      const pkgs = newMr
+        .map((mr) => mr.title.match(/^chore\(update\): ([\w@.+-]+)$/)?.[1])
+        .filter((name): name is string => name !== undefined)
+        .join(', ');
+      this.logger.log(`Notifying subscribers about new MRs: ${pkgs}`);
 
       const notificationPayload: NotificationPayload = {
         notification: {
@@ -305,25 +305,28 @@ export class GitlabService implements OnModuleInit {
         },
       };
 
-      const promises = [];
-      const notificationsJson: PushSubscription[] = JSON.parse(decryptedSubscriber);
+      const promises = subscriptions.map((sub) => {
+        const pushSubscription: PushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        };
+        return sendNotification(pushSubscription, JSON.stringify(notificationPayload));
+      });
 
-      Logger.debug(`Loaded ${notificationsJson.length} subscribers`, 'GitlabService');
-      for (const sub of notificationsJson) {
-        promises.push(sendNotification(sub, JSON.stringify(notificationPayload)));
+      this.logger.log(`Sent notifications to ${promises.length} subscribers`);
+      const results = await Promise.allSettled(promises);
+      const failed = results.filter((result) => result.status === 'rejected').length;
+      if (failed > 0) {
+        this.logger.warn(`${failed} of ${results.length} push notifications failed`);
       }
-
-      Logger.log(`Sent notifications to ${promises.length} subscribers`, 'GitlabService');
-      await Promise.all(promises);
     } catch (error) {
-      Logger.error(`Error notifying subscribers: ${error.message ?? error}`, 'GitlabService');
+      this.logger.error(`Error notifying subscribers: ${errorMessage(error)}`);
     }
   }
 
-  /**
-   * Get merge request review statistics per user. Caches the result.
-   * @returns An array of usernames and their review counts
-   */
   async getReviewStats(): Promise<{ username: string; reviews: number }[]> {
     const cached = await this.cacheManager.get<{ username: string; reviews: number }[]>(this.CACHE_KEY_REVIEW_STATS);
     if (cached) return cached;
@@ -338,10 +341,6 @@ export class GitlabService implements OnModuleInit {
     });
   }
 
-  /**
-   * Recompute review stats and refresh the cache, keeping it warm so the first
-   * request never blocks on the slow GitLab computation.
-   */
   async refreshReviewStats(): Promise<void> {
     try {
       const reviewStats = await this.reviewStatsMutex.runExclusive(async () => {
@@ -349,62 +348,53 @@ export class GitlabService implements OnModuleInit {
         await this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, fresh, CACHE_REVIEW_STATS_TTL);
         return fresh;
       });
-      Logger.log(`Refreshed review stats for ${reviewStats.length} users`, 'GitlabService');
+      this.logger.log(`Refreshed review stats for ${reviewStats.length} users`);
     } catch (err) {
-      Logger.error(`Failed to refresh review stats: ${(err as Error).message}`, 'GitlabService');
+      this.logger.error(`Failed to refresh review stats: ${errorMessage(err)}`);
     }
   }
 
   private async computeReviewStats(): Promise<{ username: string; reviews: number }[]> {
     const users = await this.api.Projects.allUsers(this.chaoticId);
 
-    return mapWithConcurrency(users, 10, async (user) => {
-      const mrs = await this.api.MergeRequests.all({
-        state: 'merged',
-        projectId: this.chaoticId,
-        approvedByIds: [user.id],
-      });
+    return mapWithConcurrency(
+      users,
+      async (user) => {
+        const mrs = await this.api.MergeRequests.all({
+          state: 'merged',
+          projectId: this.chaoticId,
+          approvedByIds: [user.id],
+        });
 
-      Logger.debug(`User ${user.username} has approved ${mrs?.length} MRs`, 'GitlabService');
-      return { username: user.username, reviews: mrs.length };
-    });
+        return { username: user.username, reviews: mrs.length };
+      },
+      10,
+    );
   }
 
-  /**
-   * Approves a merge request using the provided token.
-   * @param iid The merge request IID.
-   * @param sha The merge request SHA.
-   * @param token The GitLab private token.
-   */
   async approveMergeRequest(iid: number, sha: string, token: string) {
     const userApi = new Gitlab({ token });
     await userApi.MergeRequestApprovals.approve(this.chaoticId, iid, { sha });
 
     const mr = await userApi.MergeRequests.show(this.chaoticId, iid);
-    const labels = (mr.labels as string[]) || [];
+    const labels = toLabelStrings(mr.labels);
     if (!labels.includes('approved')) {
       labels.push('approved');
       await userApi.MergeRequests.edit(this.chaoticId, iid, {
         labels: labels.join(','),
-        assigneeId: 20097372, // Marge Bot
+        assigneeId: this.MARGE_BOT_USER_ID,
       });
     }
 
     await this.cacheManager.del(this.CACHE_KEY_MRS);
     await this.cacheManager.del(this.CACHE_KEY_REVIEW_STATS);
-    void this.getOpenMergeRequests(true);
+    void this.refreshOpenMergeRequests();
   }
 
-  /**
-   * Flags a merge request with a given label using the provided token.
-   * @param iid The merge request IID.
-   * @param label The label to add ('dangerous' or 'hold').
-   * @param token The GitLab private token.
-   */
   async flagMergeRequest(iid: number, label: string, token: string) {
     const userApi = new Gitlab({ token });
     const mr = await userApi.MergeRequests.show(this.chaoticId, iid);
-    const labels = (mr.labels as string[]) || [];
+    const labels = toLabelStrings(mr.labels);
 
     if (!labels.includes(label)) {
       labels.push(label);
@@ -416,14 +406,9 @@ export class GitlabService implements OnModuleInit {
     }
 
     await this.cacheManager.del(this.CACHE_KEY_MRS);
-    void this.getOpenMergeRequests(true);
+    void this.refreshOpenMergeRequests();
   }
 
-  /**
-   * Tests the provided GitLab private token for validity and write permissions.
-   * @param token The GitLab private token to test.
-   * @returns A promise that resolves to true if the token is valid, false otherwise.
-   */
   async testToken(token: string): Promise<boolean> {
     const userApi = new Gitlab({ token });
     const labelName = `test-label-${Date.now()}`;
@@ -437,25 +422,6 @@ export class GitlabService implements OnModuleInit {
   }
 }
 
-/**
- * Map over an array running `mapper` with a bounded concurrency, preserving order.
- */
-async function mapWithConcurrency<T, R>(
-  items: readonly T[],
-  concurrency: number,
-  mapper: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let nextIndex = 0;
-
-  const worker = async () => {
-    while (true) {
-      const index = nextIndex++;
-      if (index >= items.length) return;
-      results[index] = await mapper(items[index]);
-    }
-  };
-
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
-  return results;
+function toLabelStrings(labels: MergeRequestSchema['labels']): string[] {
+  return labels.map((label) => (typeof label === 'string' ? label : label.name));
 }

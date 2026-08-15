@@ -1,14 +1,15 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOAuth2, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import { BrokenPackageReport, IndexResult, PackageRebuildTriggerSources } from '../interfaces/repo-manager';
 import { RepoManagerService } from './repo-manager.service';
+import { PackageElfAnalysis } from './repo-manager.entity';
+import type { DependencyEdge } from './signal';
 
 @ApiTags('repo')
 @Controller('repo')
 export class RepoManagerController {
   constructor(private repoManager: RepoManagerService) {}
 
-  @ApiBearerAuth()
-  @ApiOAuth2([])
   @Get('run')
   @ApiOperation({ summary: 'Trigger a repo manager run.' })
   @ApiOkResponse({ description: 'Repo manager run triggered.' })
@@ -16,21 +17,75 @@ export class RepoManagerController {
     void this.repoManager.run();
   }
 
-  @ApiBearerAuth()
-  @ApiOAuth2([])
+  @Get('signal-scan')
+  @ApiOperation({ summary: 'Trigger a signal scan of the changed Arch packages.' })
+  @ApiOkResponse({ description: 'Signal scan triggered.' })
+  triggerSignalScan(): void {
+    void this.repoManager.triggerSignalScan();
+  }
+
+  @Get('broken')
+  @ApiOperation({
+    summary: 'List packages whose ELF analysis is flagged broken (missing sonames / stale runtime dirs).',
+  })
+  @ApiOkResponse({ description: 'Broken packages.', type: Object })
+  getBrokenPackages(): Promise<BrokenPackageReport[]> {
+    return this.repoManager.getBrokenPackages();
+  }
+
+  @Post('index/arch')
+  @ApiOperation({ summary: 'Index the full Arch mirror into the ELF signal index.' })
+  @ApiCreatedResponse({ description: 'Full Arch mirror index triggered.', type: Object })
+  indexArchMirror(): Promise<IndexResult> {
+    return this.repoManager.indexArchMirror();
+  }
+
+  @Post('index/chaotic')
+  @ApiOperation({ summary: 'Index a full Chaotic-AUR repo from a database URL into the ELF signal index.' })
+  @ApiCreatedResponse({ description: 'Full Chaotic repo index triggered.', type: Object })
+  indexChaoticRepo(@Body('url') url: string): Promise<IndexResult> {
+    return this.repoManager.indexChaoticRepo(url);
+  }
+
+  @Get('dependencies')
+  @ApiOperation({ summary: 'List dependency edges across all indexed packages (Arch and Chaotic).' })
+  @ApiOkResponse({ description: 'Dependency edges (consumer -> provider by soname).' })
+  getDependencies(): Promise<DependencyEdge[]> {
+    return this.repoManager.getDependencyGraph();
+  }
+
+  @Get('dependencies/:pkgname')
+  @ApiOperation({ summary: 'List what can cause a package to be rebuilt via our system, per trigger channel.' })
+  @ApiOkResponse({ description: 'Rebuild trigger sources for the package.', type: Object })
+  getRebuildTriggerSources(@Param('pkgname') pkgname: string): Promise<PackageRebuildTriggerSources> {
+    return this.repoManager.getRebuildTriggerSources(pkgname);
+  }
+
+  @Get('signals/export')
+  @ApiOperation({ summary: 'Export all stored ELF analyses as a JSON seed.' })
+  @ApiOkResponse({ description: 'Exported ELF analyses.' })
+  exportSignalsSeed(): Promise<PackageElfAnalysis[]> {
+    return this.repoManager.exportSignalsSeed();
+  }
+
+  @Post('signals/import')
+  @ApiOperation({ summary: 'Import a JSON seed of ELF analyses.' })
+  @ApiCreatedResponse({ description: 'ELF analyses imported.' })
+  importSignalsSeed(@Body() seed: unknown[]): Promise<void> {
+    return this.repoManager.importSignalsSeed(seed);
+  }
+
+  @Post('signals/import-file')
+  @ApiOperation({ summary: 'Stream-import a newline-delimited JSON seed file of ELF analyses from disk.' })
+  @ApiCreatedResponse({ description: 'ELF analyses imported.' })
+  importSignalsSeedFile(@Body('path') path: string): Promise<void> {
+    return this.repoManager.importSignalsSeedFile(path);
+  }
+
   @Get('update-db')
   @ApiOperation({ summary: 'Update Chaotic-AUR database versions.' })
   @ApiOkResponse({ description: 'Chaotic-AUR database update triggered.' })
   updateChaoticVersions(): void {
     void this.repoManager.updateChaoticVersions();
-  }
-
-  @ApiBearerAuth()
-  @ApiOAuth2([])
-  @Get('read-namcap')
-  @ApiOperation({ summary: 'Read Namcap analysis.' })
-  @ApiOkResponse({ description: 'Namcap analysis read triggered.' })
-  readNamcap(): void {
-    void this.repoManager.readNamcap();
   }
 }

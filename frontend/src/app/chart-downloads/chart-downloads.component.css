@@ -2,3 +2,10 @@
   background: var(--ctp-mocha-lavender) !important;
   border-radius: var(--p-border-radius-md);
 }
+
+p-chart,
+p-chart canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

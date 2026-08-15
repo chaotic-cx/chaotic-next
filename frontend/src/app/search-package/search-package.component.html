@@ -1,9 +1,11 @@
 <div class="flex mx-auto justify-center gap-4 flex-col md:flex-row w-full px-4">
   <p-auto-complete
     #autoComplete
-    [suggestions]="packageStatsService.packageSearchCurrentSuggestions()"
+    [suggestions]="suggestions()"
     [autofocus]="true"
-    (completeMethod)="search($event)"
+    [ngModel]="currentPackageName()"
+    (ngModelChange)="updateDisplay($event)"
+    (completeMethod)="onAutoCompleteSearch($event)"
     (onSelect)="updateDisplay($event.value)"
     placeholder="Start searching"
   />
@@ -15,12 +17,12 @@
   />
 </div>
 <div class="min-h-footer">
-  @if (!packageStatsService.packageSearchInitialSearchDone()) {
+  @if (!hasSearchData()) {
     <div class="mx-auto">
       <i class="pi pi-search text-ctp-maroon mt-36" style="font-size: 10rem"></i>
     </div>
   } @else {
-    <p-table [value]="packageStatsService.packageSearchData()" [tableStyle]="{ 'width': '100%', 'margin-top': '20px' }">
+    <p-table [value]="packageSearchData()" [tableStyle]="{ 'width': '100%', 'margin-top': '20px' }">
       <ng-template #body let-dataset>
         <tr>
           <td>{{ dataset.key | packageDetailKey }}</td>

@@ -1,4 +1,4 @@
-import { BuildStatus, ChaoticEvent } from '@./shared-lib';
+import { BuildStatus } from '@chaotic-next/shared-lib';
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import localeEnGb from '@angular/common/locales/en-GB';
 import { Component, inject, OnInit } from '@angular/core';
@@ -20,6 +20,7 @@ import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
 import { AppService } from './app.service';
+import { isChaoticEvent } from './functions';
 import { FooterComponent } from './footer/footer.component';
 import { LoadingService } from './loading/loading.service';
 import { UpdateService } from './update/update.service';
@@ -118,7 +119,8 @@ export class AppComponent implements OnInit {
     this.updateMetaTags();
 
     this.appService.serverEvents.onmessage = ({ data }) => {
-      const event = JSON.parse(data) as ChaoticEvent;
+      const event: unknown = JSON.parse(data);
+      if (!isChaoticEvent(event)) return;
       if (event.type === 'build' && event.status === BuildStatus.SUCCESS) {
         const validRoutesRegex = /^\/(status|deployments|packages)(\?.*|#.*)?$/;
         if (!this.router.url || validRoutesRegex.test(this.router.url))

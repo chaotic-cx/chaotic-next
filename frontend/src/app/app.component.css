@@ -1,4 +1,4 @@
-.route-container {
+.router-container {
   display: flex;
   flex-direction: column;
   width: 90%;
@@ -7,4 +7,10 @@
   flex: 1 0 auto;
   min-height: calc(100vh - 120px);
   position: relative;
+}
+
+chaotic-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
 }

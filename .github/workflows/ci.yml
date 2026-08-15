@@ -1,0 +1,9 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+jobs:
+  checks:
+    name: Lint, format, test and build
+    uses: ./.github/workflows/checks.yml

@@ -1,3 +1,10 @@
 .chaotic-footer {
   width: 100%;
 }
+
+.chaotic-footer ::ng-deep .p-card {
+  background: rgb(from var(--ctp-mocha-base) r g b / 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 0;
+}

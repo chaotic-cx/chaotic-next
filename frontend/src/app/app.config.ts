@@ -7,7 +7,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, Router, withViewTransitions } from '@angular/router';
+import { provideRouter, Router, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideGarudaNG } from '@garudalinux/core';
 import { CatppuccinAura } from '@garudalinux/themes/catppuccin';
@@ -41,13 +41,14 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptorsFromDi()),
     provideRouter(
       routes,
+      withComponentInputBinding(),
       withViewTransitions({
         skipInitialTransition: true,
         onViewTransitionCreated: ({ transition, from, to }) => {
           const router = inject(Router);
           try {
             const nav = router.currentNavigation();
-            const info = nav?.extras?.info as any;
+            const info = nav?.extras?.info as { disableViewTransition?: boolean } | undefined;
 
             const fromSegments = from.url.map((s) => s.path);
             const toSegments = to.url.map((s) => s.path);
