@@ -1,0 +1,33 @@
+name: Setup repository
+description: Checkout, install Node/pnpm, and install dependencies with caching.
+inputs:
+  install-system-deps:
+    description: Whether to install the system packages required for ELF scanning tests.
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v5
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: .node-version
+        cache: pnpm
+    - name: Install system dependencies
+      if: ${{ inputs.install-system-deps == 'true' }}
+      run: sudo apt-get update && sudo apt-get install -y libarchive-tools binutils
+      shell: bash
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash
+    - name: Cache Nx
+      uses: actions/cache@v5
+      with:
+        path: .nx/cache
+        key: nx-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          nx-${{ runner.os }}-
+    - name: Prune empty Nx cache entries
+      run: find .nx/cache -mindepth 1 -maxdepth 1 -type d -empty -delete 2>/dev/null || true
+      shell: bash

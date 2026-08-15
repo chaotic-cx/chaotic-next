@@ -120,23 +120,22 @@ export class GitlabService implements OnModuleInit {
 
   @Cron(CronExpression.EVERY_10_MINUTES)
   async handlePipelinesRefresh(): Promise<void> {
-    await this.seedPipelines();
+    if (this.isSeedingPipelines) return;
+    this.isSeedingPipelines = true;
+
+    try {
+      await this.seedPipelines();
+    } finally {
+      this.isSeedingPipelines = false;
+    }
   }
 
   async seedPipelines(): Promise<void> {
-    if (this.isSeedingPipelines) {
-      this.logger.debug('Pipeline seeding is already in progress, skipping execution');
-      return;
-    }
-    this.isSeedingPipelines = true;
-
     try {
       await this.getPipelinesViaRest();
       this.logger.log(`Seeded ${this.pipelineMap.size} pipelines`);
     } catch (err) {
       this.logger.error(`Failed to seed pipelines: ${errorMessage(err)}`);
-    } finally {
-      this.isSeedingPipelines = false;
     }
   }
 

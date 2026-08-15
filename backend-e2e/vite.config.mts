@@ -35,7 +35,7 @@ export default defineConfig({
     mockReset: true,
     coverage: {
       provider: 'istanbul',
-      reporter: ['text', 'json', 'json-summary', 'html'],
+      reporter: ['json', 'json-summary', 'html'],
       reportsDirectory: fileURLToPath(new URL('../coverage/backend-e2e', import.meta.url)),
       include: ['../backend/src/**/*.ts'],
       exclude: [

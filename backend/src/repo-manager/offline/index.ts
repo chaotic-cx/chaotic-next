@@ -264,18 +264,24 @@ export async function scanMirrorPackages(
       processed++;
       if (result.kind === 'missing') {
         skipped++;
-        console.log(`[${processed}/${total}] skipped ${pkg.name} (missing ${archivePath})`);
+        if (process.env.NODE_ENV !== 'test') {
+          console.log(`[${processed}/${total}] skipped ${pkg.name} (missing ${archivePath})`);
+        }
         continue;
       }
       if (result.kind === 'unreadable') {
         failed++;
-        console.error(
-          `[${processed}/${total}] failed ${pkg.name}${result.error ? `: ${result.error}` : ' (unreadable archive)'}`,
-        );
+        if (process.env.NODE_ENV !== 'test') {
+          console.error(
+            `[${processed}/${total}] failed ${pkg.name}${result.error ? `: ${result.error}` : ' (unreadable archive)'}`,
+          );
+        }
         continue;
       }
       await appendEntry(partialStream, result.entry);
-      console.log(`[${processed}/${total}] scanned ${pkg.name} (${result.entry.files.length} files)`);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`[${processed}/${total}] scanned ${pkg.name} (${result.entry.files.length} files)`);
+      }
     }
   };
 
