@@ -1,3 +1,4 @@
+import { ApproveMrDto, FlagMrDto, TriggerPipelineDto } from '@chaotic-next/backend/gitlab/gitlab.dto';
 import {
   GitlabJob,
   GitlabLogChunk,
@@ -20,17 +21,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
-import { GitlabService } from './gitlab.service';
 import { ApiBody, ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import { Observable } from 'rxjs';
+import { auth } from '../auth/auth';
+import { GitlabService } from './gitlab.service';
 import type { GitLabWebHook } from './interfaces';
 import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
-import { auth } from '../auth/auth';
-import { Observable } from 'rxjs';
 
 const SHA_REGEX = /^[0-9a-fA-F]{6,40}$/;
 const FLAG_LABELS = ['dangerous', 'hold'] as const;
-type FlagLabel = (typeof FLAG_LABELS)[number];
 
 function assertValidIid(iid: number): void {
   if (!Number.isInteger(iid) || iid <= 0) {
@@ -121,20 +121,8 @@ export class GitlabController {
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Approve a merge request.' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        iid: { type: 'number' },
-        sha: { type: 'string' },
-      },
-    },
-  })
   @ApiOkResponse({ description: 'Merge request approved.' })
-  async approve(
-    @Session() session: UserSession<typeof auth>,
-    @Body() body: { iid: number; sha: string },
-  ): Promise<void> {
+  async approve(@Session() session: UserSession<typeof auth>, @Body() body: ApproveMrDto): Promise<void> {
     assertValidIid(body.iid);
     if (typeof body.sha !== 'string' || !SHA_REGEX.test(body.sha)) {
       throw new BadRequestException('Invalid sha');
@@ -149,20 +137,8 @@ export class GitlabController {
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Flag a merge request.' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        iid: { type: 'number' },
-        label: { type: 'string' },
-      },
-    },
-  })
   @ApiOkResponse({ description: 'Merge request flagged.' })
-  async flag(
-    @Session() session: UserSession<typeof auth>,
-    @Body() body: { iid: number; label: FlagLabel },
-  ): Promise<void> {
+  async flag(@Session() session: UserSession<typeof auth>, @Body() body: FlagMrDto): Promise<void> {
     assertValidIid(body.iid);
     if (!FLAG_LABELS.includes(body.label)) {
       throw new BadRequestException(`Invalid label, must be one of: ${FLAG_LABELS.join(', ')}`);
@@ -177,26 +153,10 @@ export class GitlabController {
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Trigger a pipeline with the given inputs.' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['operation'],
-      properties: {
-        operation: { type: 'string', example: 'Bump Packages' },
-        ref: { type: 'string', example: 'main' },
-        packages: { type: 'string', example: 'nodejs:20' },
-        trigger: { type: 'string' },
-        add_packages: { type: 'string', example: 'paru/aur' },
-        request_origin: { type: 'string', example: 'github/5678' },
-        request_reason: { type: 'string', example: 'request' },
-        custom_request_reason: { type: 'string' },
-      },
-    },
-  })
   @ApiOkResponse({ description: 'Pipeline triggered.' })
   async triggerPipeline(
     @Session() session: UserSession<typeof auth>,
-    @Body() body: unknown,
+    @Body() body: TriggerPipelineDto,
   ): Promise<PipelineTriggerResult> {
     const { ref, inputs } = validatePipelineTriggerInputs(body);
     return await this.gitlabService.triggerPipeline(inputs, ref, {

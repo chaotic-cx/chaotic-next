@@ -1,9 +1,9 @@
-import { Controller, Get, Param, ParseBoolPipe, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
-import { BuildStatus } from '@chaotic-next/shared-lib';
+import { GetBuildsQueryDto, GetLatestBuildsQueryDto, GetPackagesQueryDto } from './builder.dto';
 
 @ApiTags('builder')
 @Controller('builder')
@@ -19,24 +19,9 @@ export class BuilderController {
 
   @Get('packages')
   @ApiOperation({ summary: 'Get packages with pagination, search and sorting.' })
-  @ApiQuery({ name: 'repo', required: false, description: 'Add repo information to the result' })
-  @ApiQuery({ name: 'repoId', required: false, description: 'Filter packages by repository id', type: Number })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number, 1-based', type: Number })
-  @ApiQuery({ name: 'perPage', required: false, description: 'Rows per page', type: Number })
-  @ApiQuery({ name: 'q', required: false, description: 'Search query matching pkgname, description or URL' })
-  @ApiQuery({ name: 'sort', required: false, description: 'Sort field (pkgname, lastUpdated, version, repo)' })
-  @ApiQuery({ name: 'order', required: false, description: 'Sort order (ASC or DESC)' })
   @ApiOkResponse({ description: 'Paginated list of packages' })
-  async getPackages(
-    @Query('repo', new ParseBoolPipe({ optional: true })) repo = false,
-    @Query('repoId', new ParseIntPipe({ optional: true })) repoId?: number,
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-    @Query('sort') sort?: string,
-    @Query('order') order?: string,
-  ): Promise<Paginated<PackageDto>> {
-    return await this.builderService.getPackages({ repo, repoId, page, perPage, q, sort, order });
+  async getPackages(@Query() query: GetPackagesQueryDto): Promise<Paginated<PackageDto>> {
+    return await this.builderService.getPackages(query);
   }
 
   @Get('package/:name')
@@ -44,7 +29,7 @@ export class BuilderController {
   @ApiParam({ name: 'name', description: 'Package name' })
   @ApiParam({ name: 'repo', description: 'Repository name', required: false })
   @ApiOkResponse({ description: 'Package details', type: Object })
-  async getPackage(@Param('name') name: string, @Query('repo') repo: string): Promise<Package> {
+  async getPackage(@Param('name') name: string, @Query('repo') repo?: string): Promise<Package> {
     return await this.builderService.getPackage(name, repo);
   }
 
@@ -57,44 +42,29 @@ export class BuilderController {
 
   @Get('builds')
   @ApiOperation({ summary: 'Get builds with server-side pagination, search and sorting.' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number, 1-based', type: Number })
-  @ApiQuery({ name: 'perPage', required: false, description: 'Rows per page', type: Number })
-  @ApiQuery({ name: 'q', required: false, description: 'Search query matching pkgname, builder, repo or commit' })
-  @ApiQuery({ name: 'builder', required: false, description: 'Filter by builder name' })
-  @ApiQuery({ name: 'repo', required: false, description: 'Filter by repository name' })
-  @ApiQuery({ name: 'status', required: false, description: 'Filter by build status', type: Number })
-  @ApiQuery({
-    name: 'sort',
-    required: false,
-    description: 'Sort field (id, timestamp, timeToEnd, pkgname, builder, repo, status)',
-  })
-  @ApiQuery({ name: 'order', required: false, description: 'Sort order (ASC or DESC)' })
   @ApiOkResponse({ description: 'Paginated list of builds' })
-  async getBuilds(
-    @Query('builder') builder: string,
-    @Query('repo') repo: string,
-    @Query('status', new ParseIntPipe({ optional: true })) status?: BuildStatus,
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-    @Query('sort') sort?: string,
-    @Query('order') order?: string,
-  ): Promise<Paginated<Build>> {
-    return await this.builderService.getBuilds({ builder, repo, status, page, perPage, q, sort, order });
+  async getBuilds(@Query() query: GetBuildsQueryDto): Promise<Paginated<Build>> {
+    return await this.builderService.getBuilds({
+      builder: query.builder ?? '',
+      repo: query.repo ?? '',
+      status: query.status,
+      page: query.page,
+      perPage: query.perPage,
+      q: query.q,
+      sort: query.sort,
+      order: query.order,
+    });
   }
 
   @Get('latest')
   @ApiOperation({ summary: 'Get latest builds.' })
-  @ApiQuery({ name: 'amount', required: false, description: 'Amount to return', type: Number })
-  @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiQuery({ name: 'status', required: false, description: 'Build status', type: Number })
   @ApiOkResponse({ description: 'List of latest builds', type: Build, isArray: true })
-  async getLatestBuilds(
-    @Query('amount', new ParseIntPipe({ optional: true })) amount = 50,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
-    @Query('status', new ParseIntPipe({ optional: true })) status?: BuildStatus,
-  ): Promise<Build[]> {
-    return await this.builderService.getLastBuilds({ amount, offset, status });
+  async getLatestBuilds(@Query() query: GetLatestBuildsQueryDto): Promise<Build[]> {
+    return await this.builderService.getLastBuilds({
+      amount: query.amount ?? 50,
+      offset: query.offset ?? 0,
+      status: query.status,
+    });
   }
 
   @Get('latest/url/:amount')

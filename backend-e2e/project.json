@@ -14,13 +14,11 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "cwd": "backend-e2e",
-        "command": "vitest run"
+        "command": "node node_modules/vitest/vitest.mjs run --config backend-e2e/vite.config.mts"
       },
       "configurations": {
         "watch": {
-          "cwd": "backend-e2e",
-          "command": "vitest"
+          "command": "node node_modules/vitest/vitest.mjs --config backend-e2e/vite.config.mts"
         }
       }
     },
@@ -28,8 +26,7 @@
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/coverage/backend-e2e"],
       "options": {
-        "cwd": "backend-e2e",
-        "command": "vitest run --coverage"
+        "command": "node node_modules/vitest/vitest.mjs run --config backend-e2e/vite.config.mts --coverage"
       }
     }
   }

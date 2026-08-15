@@ -246,6 +246,15 @@ export class AdminService {
     return paginate(items, total, safePage, safePerPage);
   }
 
+  async createBuilder(body: CreateBuilderBody): Promise<Builder> {
+    return this.builderRepository.save({
+      name: body.name,
+      description: body.description,
+      builderClass: body.builderClass,
+      isActive: body.isActive ?? true,
+    });
+  }
+
   async updateBuilder(id: number, body: Partial<CreateBuilderBody>): Promise<Builder> {
     const builder = await this.builderRepository.findOne({ where: { id } });
     if (!builder) throw new NotFoundException(`Builder ${id} not found`);

@@ -1,38 +1,7 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiProperty } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { CountryStatsDto, MirrorStatsDto, PackageStatsDto, PerDayStatsDto } from './router.dto';
 import { RouterService } from './router.service';
-
-class CountryStatsDto {
-  @ApiProperty()
-  country!: string;
-
-  @ApiProperty()
-  count!: string;
-}
-
-class MirrorStatsDto {
-  @ApiProperty()
-  mirror!: string;
-
-  @ApiProperty()
-  count!: string;
-}
-
-class PackageStatsDto {
-  @ApiProperty()
-  pkgbase!: string;
-
-  @ApiProperty()
-  count!: string;
-}
-
-class PerDayStatsDto {
-  @ApiProperty()
-  day!: string;
-
-  @ApiProperty()
-  count!: string;
-}
 
 @ApiTags('router')
 @Controller('router')

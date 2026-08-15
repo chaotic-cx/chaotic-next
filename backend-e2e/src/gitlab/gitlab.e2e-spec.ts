@@ -581,7 +581,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       });
 
       expect(res.statusCode).toBe(201);
-      expect(createSpy).toHaveBeenCalledWith('test-project-id', 'main', {
+      expect(createSpy).toHaveBeenCalledWith(gitlabService.chaoticId, 'main', {
         inputs: { operation: 'Add Packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
         variables: [
           {

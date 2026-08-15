@@ -1,143 +1,26 @@
+import type { Package as PackageDto, Paginated, PipelineTriggerAction } from '@chaotic-next/shared-lib';
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
-import type { Paginated, Package as PackageDto, PipelineTriggerAction } from '@chaotic-next/shared-lib';
+import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Builder, Package, Repo } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
-import { AdminService, PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from './admin.service';
+import {
+  AdminPackageElfAnalysisDto,
+  CreateBuilderBodyDto,
+  CreateElfAnalysisBodyDto,
+  ListAdminPackagesQueryDto,
+  ListArchPackagesQueryDto,
+  ListBuildersQueryDto,
+  ListElfAnalysisQueryDto,
+  ListMrActionsQueryDto,
+  ListPackageBumpsQueryDto,
+  ListPipelineTriggersQueryDto,
+  MrActionDto,
+  PackageBumpDto,
+  PipelineTriggerDto,
+} from './admin.dto';
 import type { CreateArchPackageBody, CreatePackageBody, CreateRepoBody } from './admin.service';
-
-class MrActionDto {
-  @ApiProperty()
-  id!: number;
-
-  @ApiProperty()
-  mergeRequestIid!: number;
-
-  @ApiProperty()
-  action!: string;
-
-  @ApiProperty()
-  userId!: string;
-
-  @ApiProperty()
-  userName!: string;
-
-  @ApiProperty()
-  createdAt!: string;
-}
-
-class PipelineTriggerDto {
-  @ApiProperty()
-  id!: number;
-
-  @ApiProperty()
-  ref!: string;
-
-  @ApiProperty()
-  operation!: string;
-
-  @ApiProperty({ type: Object })
-  inputs!: Record<string, string>;
-
-  @ApiProperty({ required: false })
-  pipelineId?: number;
-
-  @ApiProperty({ required: false })
-  webUrl?: string;
-
-  @ApiProperty()
-  userId!: string;
-
-  @ApiProperty()
-  userName!: string;
-
-  @ApiProperty()
-  createdAt!: string;
-}
-
-class PackageBumpDto {
-  @ApiProperty()
-  id!: number;
-
-  @ApiProperty()
-  bumpType!: number;
-
-  @ApiProperty()
-  trigger!: number;
-
-  @ApiProperty()
-  triggerFrom!: number;
-
-  @ApiProperty({ type: String, isArray: true, required: false })
-  details?: string[];
-
-  @ApiProperty()
-  timestamp!: string;
-
-  @ApiProperty({ required: false })
-  pkgname?: string;
-
-  @ApiProperty({ required: false })
-  triggerName?: string;
-}
-
-class AdminPackageElfAnalysisDto {
-  @ApiProperty()
-  id!: number;
-
-  @ApiProperty({ enum: [PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC] })
-  pkgType!: '0' | '1';
-
-  @ApiProperty()
-  pkgId!: number;
-
-  @ApiProperty({ required: false })
-  pkgname?: string;
-
-  @ApiProperty()
-  version!: string;
-
-  @ApiProperty()
-  broken!: boolean;
-
-  @ApiProperty({ type: String, isArray: true })
-  brokenReasons!: string[];
-
-  @ApiProperty()
-  scannedAt!: string;
-}
-
-class CreateBuilderBodyDto {
-  @ApiProperty()
-  name!: string;
-
-  @ApiProperty({ required: false })
-  description?: string;
-
-  @ApiProperty({ required: false })
-  builderClass?: string;
-
-  @ApiProperty({ required: false })
-  isActive?: boolean;
-}
-
-class CreateElfAnalysisBodyDto {
-  @ApiProperty({ enum: [PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC] })
-  pkgType!: '0' | '1';
-
-  @ApiProperty()
-  pkgId!: number;
-
-  @ApiProperty()
-  version!: string;
-
-  @ApiProperty({ required: false })
-  broken?: boolean;
-
-  @ApiProperty({ type: String, isArray: true, required: false })
-  brokenReasons?: string[];
-}
+import { AdminService, PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from './admin.service';
 
 @ApiTags('admin')
 @ApiCookieAuth('better-auth.session_token')
@@ -149,19 +32,13 @@ export class AdminController {
   @Get('packages')
   @ApiOperation({ summary: 'List packages (admin)' })
   @ApiOkResponse({ description: 'Paginated list of packages' })
-  async listPackages(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-    @Query('repoId', new ParseIntPipe({ optional: true })) repoId?: number,
-    @Query('active') active?: string,
-  ): Promise<Paginated<PackageDto>> {
+  async listPackages(@Query() query: ListAdminPackagesQueryDto): Promise<Paginated<PackageDto>> {
     return this.adminService.listPackages(
-      page,
-      perPage,
-      q,
-      repoId,
-      active === undefined ? undefined : active === 'true',
+      query.page,
+      query.perPage,
+      query.q,
+      query.repoId,
+      query.active === undefined ? undefined : query.active === 'true',
     );
   }
 
@@ -182,12 +59,8 @@ export class AdminController {
   @Get('arch-packages')
   @ApiOperation({ summary: 'List Arch packages (admin)' })
   @ApiOkResponse({ description: 'Paginated list of Arch packages' })
-  async listArchPackages(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-  ): Promise<Paginated<ArchlinuxPackage>> {
-    return this.adminService.listArchPackages(page, perPage, q);
+  async listArchPackages(@Query() query: ListArchPackagesQueryDto): Promise<Paginated<ArchlinuxPackage>> {
+    return this.adminService.listArchPackages(query.page, query.perPage, query.q);
   }
 
   @Patch('arch-packages/:id')
@@ -210,7 +83,7 @@ export class AdminController {
   @Get('repos')
   @ApiOperation({ summary: 'List repos (admin)' })
   @ApiOkResponse({ description: 'List of repos', type: Repo, isArray: true })
-  listRepos(): Promise<Repo[]> {
+  async listRepos(): Promise<Repo[]> {
     return this.adminService.listRepos();
   }
 
@@ -238,13 +111,20 @@ export class AdminController {
   @Get('builders')
   @ApiOperation({ summary: 'List builders (admin)' })
   @ApiOkResponse({ description: 'Paginated list of builders' })
-  async listBuilders(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-    @Query('active') active?: string,
-  ): Promise<Paginated<Builder>> {
-    return this.adminService.listBuilders(page, perPage, q, active === undefined ? undefined : active === 'true');
+  async listBuilders(@Query() query: ListBuildersQueryDto): Promise<Paginated<Builder>> {
+    return this.adminService.listBuilders(
+      query.page,
+      query.perPage,
+      query.q,
+      query.active === undefined ? undefined : query.active === 'true',
+    );
+  }
+
+  @Post('builders')
+  @ApiOperation({ summary: 'Create a builder' })
+  @ApiCreatedResponse({ description: 'The created builder', type: Builder })
+  createBuilder(@Body() body: CreateBuilderBodyDto): Promise<Builder> {
+    return this.adminService.createBuilder(body);
   }
 
   @Patch('builders/:id')
@@ -264,38 +144,22 @@ export class AdminController {
   @Get('mr-actions')
   @ApiOperation({ summary: 'List merge-request actions (admin)' })
   @ApiOkResponse({ description: 'Paginated list of MR actions', type: MrActionDto, isArray: true })
-  async listMrActions(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-    @Query('action') action?: string,
-  ): Promise<Paginated<MrActionDto>> {
-    return this.adminService.listMrActions(page, perPage, q, action);
+  async listMrActions(@Query() query: ListMrActionsQueryDto): Promise<Paginated<MrActionDto>> {
+    return this.adminService.listMrActions(query.page, query.perPage, query.q, query.action);
   }
 
   @Get('pipeline-triggers')
   @ApiOperation({ summary: 'List triggered pipelines (admin)' })
   @ApiOkResponse({ description: 'Paginated list of triggered pipelines', type: PipelineTriggerDto, isArray: true })
-  async listPipelineTriggers(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-    @Query('operation') operation?: string,
-  ): Promise<Paginated<PipelineTriggerAction>> {
-    return this.adminService.listPipelineTriggers(page, perPage, q, operation);
+  async listPipelineTriggers(@Query() query: ListPipelineTriggersQueryDto): Promise<Paginated<PipelineTriggerAction>> {
+    return this.adminService.listPipelineTriggers(query.page, query.perPage, query.q, query.operation);
   }
 
   @Get('package-bumps')
   @ApiOperation({ summary: 'List package bumps (admin)' })
   @ApiOkResponse({ description: 'Paginated list of package bumps', type: PackageBumpDto, isArray: true })
-  async listPackageBumps(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-    @Query('bumpType', new ParseIntPipe({ optional: true })) bumpType?: number,
-    @Query('triggerFrom', new ParseIntPipe({ optional: true })) triggerFrom?: number,
-  ): Promise<Paginated<PackageBumpDto>> {
-    return this.adminService.listPackageBumps(page, perPage, q, bumpType, triggerFrom);
+  async listPackageBumps(@Query() query: ListPackageBumpsQueryDto): Promise<Paginated<PackageBumpDto>> {
+    return this.adminService.listPackageBumps(query.page, query.perPage, query.q, query.bumpType, query.triggerFrom);
   }
 
   @Get('package-elf-analysis')
@@ -305,19 +169,15 @@ export class AdminController {
     type: AdminPackageElfAnalysisDto,
     isArray: true,
   })
-  async listElfAnalysis(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
-    @Query('q') q?: string,
-    @Query('pkgType') pkgType?: string,
-    @Query('broken') broken?: string,
-  ): Promise<Paginated<AdminPackageElfAnalysisDto>> {
+  async listElfAnalysis(@Query() query: ListElfAnalysisQueryDto): Promise<Paginated<AdminPackageElfAnalysisDto>> {
     return this.adminService.listElfAnalysis(
-      page,
-      perPage,
-      q,
-      pkgType === undefined || (pkgType !== PKG_TYPE_ARCH && pkgType !== PKG_TYPE_CHAOTIC) ? undefined : pkgType,
-      broken === undefined ? undefined : broken === 'true',
+      query.page,
+      query.perPage,
+      query.q,
+      query.pkgType === undefined || (query.pkgType !== PKG_TYPE_ARCH && query.pkgType !== PKG_TYPE_CHAOTIC)
+        ? undefined
+        : query.pkgType,
+      query.broken === undefined ? undefined : query.broken === 'true',
     );
   }
 
