@@ -1,10 +1,28 @@
+export type TextEntityType =
+  | 'bold'
+  | 'bot_command'
+  | 'cashtag'
+  | 'code'
+  | 'custom_emoji'
+  | 'email'
+  | 'hashtag'
+  | 'italic'
+  | 'mention'
+  | 'phone_number'
+  | 'pre'
+  | 'spoiler'
+  | 'strikethrough'
+  | 'text_link'
+  | 'underline'
+  | 'url';
+
 export interface TextEntity {
-  type: string;
+  type: TextEntityType;
   text: string;
   href?: string;
 }
 
-export interface Reaction {
+interface Reaction {
   type: string;
   count: number;
   emoji: string;

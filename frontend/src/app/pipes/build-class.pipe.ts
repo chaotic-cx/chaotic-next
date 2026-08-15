@@ -1,38 +1,25 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
+const BUILD_CLASS_LABELS: Record<number, string> = {
+  0: '0 (None)',
+  1: '1 (None)',
+  2: '2 (Light)',
+  3: '3 (Light)',
+  4: '4 (Light)',
+  5: '5 (Medium)',
+  6: '6 (Medium)',
+  7: '7 (Heavy)',
+  8: '8 (Heavy)',
+  9: '9 (Very Heavy)',
+  10: '10 (Very Heavy)',
+};
+
 @Pipe({
   name: 'buildClass',
-  standalone: true,
 })
 export class BuildClassPipe implements PipeTransform {
-  transform(value: null | number): unknown {
-    switch (value) {
-      case 0:
-        return '0 (None)';
-      case 1:
-        return '1 (None)';
-      case 2:
-        return '2 (Light)';
-      case 3:
-        return '3 (Light)';
-      case 4:
-        return '4 (Light)';
-      case 5:
-        return '5 (Medium)';
-      case 6:
-        return '6 (Medium)';
-      case 7:
-        return '7 (Heavy)';
-      case 8:
-        return '8 (Heavy)';
-      case 9:
-        return '9 (Very Heavy)';
-      case 10:
-        return '10 (Very Heavy)';
-      case null:
-        return 'Custom';
-      default:
-        return value;
-    }
+  transform(value: null | number): string {
+    if (value === null) return 'Custom';
+    return BUILD_CLASS_LABELS[value] ?? String(value);
   }
 }

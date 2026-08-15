@@ -54,12 +54,12 @@ export class MemorialV2Component implements OnInit {
   }
 
   ngOnInit() {
-    updateSeoTags(
-      this.meta,
-      'Memorial 2024',
-      'Memorial of Chaotic-AUR 2024, celebrating the sixth birthday of Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
-      this.router.url,
-    );
+    updateSeoTags(this.meta, {
+      title: 'Memorial 2024',
+      description: 'Memorial of Chaotic-AUR 2024, celebrating the sixth birthday of Chaotic-AUR',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
+      url: this.router.url,
+    });
   }
 }

@@ -10,8 +10,10 @@
     [loading]="deployLogService.loading()"
     [paginator]="true"
     [showCurrentPageReport]="true"
-    [globalFilterFields]="['pkgbase.pkgname', 'builder.name', 'repo.name']"
+    [lazy]="true"
+    [totalRecords]="deployLogService.total()"
     [sortOrder]="-1"
+    (onLazyLoad)="onLazyLoad($event)"
     dataKey="id"
     sortField="timestamp"
     stateStorage="local"
@@ -21,6 +23,14 @@
     <ng-template #caption>
       <div class="flex">
         <p-button [outlined]="true" (click)="clear(deployTable)" label="Clear" icon="pi pi-filter-slash" />
+        <p-button
+          class="ml-2.5"
+          [outlined]="true"
+          [loading]="deployLogService.loading()"
+          (click)="deployLogService.reload()"
+          label="Reload"
+          icon="pi pi-refresh"
+        />
         <p-iconfield class="ml-2.5 sm:ml-auto" iconPosition="left">
           <p-inputicon>
             <i class="pi pi-search"></i>
@@ -45,21 +55,49 @@
           </div>
         </th>
         <th>
-          <div class="flex items-center">
+          <div class="flex items-center gap-2.5">
             Builder
-            <p-columnFilter type="text" field="builder.name" display="menu" />
+            <p-select
+              class="w-40"
+              [options]="deployLogService.builderOptions()"
+              [ngModel]="deployLogService.builderFilter()"
+              [filter]="true"
+              (ngModelChange)="onBuilderFilter($event)"
+              placeholder="All builders"
+              filterPlaceholder="Search builder"
+              showClear
+              appendTo="body"
+            />
           </div>
         </th>
         <th>
-          <div class="flex items-center">
+          <div class="flex items-center gap-2.5">
             Repository
-            <p-columnFilter type="text" field="repo.name" display="menu" />
+            <p-select
+              class="w-40"
+              [options]="deployLogService.repoOptions"
+              [ngModel]="deployLogService.repoFilter()"
+              (ngModelChange)="onRepoFilter($event)"
+              placeholder="All repos"
+              showClear
+              appendTo="body"
+            />
           </div>
         </th>
         <th>
-          <div class="flex items-center">
+          <div class="flex items-center gap-2.5">
             Outcome
-            <p-columnFilter type="text" field="statusText" display="menu" />
+            <p-select
+              class="w-40"
+              [options]="deployLogService.statusOptions"
+              [ngModel]="deployLogService.statusFilter()"
+              (ngModelChange)="onStatusFilter($event)"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All outcomes"
+              showClear
+              appendTo="body"
+            />
           </div>
         </th>
         <th>
@@ -68,6 +106,9 @@
         <th pSortableColumn="timeToEnd">Duration&nbsp;<p-sortIcon field="timeToEnd" /></th>
         <th pSortableColumn="timestamp">
           <div class="flex items-center">Time of finish&nbsp;<p-sortIcon field="timestamp" /></div>
+        </th>
+        <th>
+          <div class="flex items-center">Details</div>
         </th>
       </tr>
     </ng-template>
@@ -108,12 +149,23 @@
           <td>
             <span class="ml-1 align-middle">{{ build.timestamp | date: 'short' }}</span>
           </td>
+          <td>
+            <p-button
+              class="h-8"
+              (click)="openDetail(build)"
+              type="button"
+              label="Details"
+              outlined="true"
+              pTooltip="View package statistics"
+              tooltipPosition="left"
+            />
+          </td>
         </tr>
       }
     </ng-template>
     <ng-template #emptymessage>
       <tr>
-        <td colspan="7">No packages found.</td>
+        <td colspan="8">No packages found.</td>
       </tr>
     </ng-template>
   </p-table>

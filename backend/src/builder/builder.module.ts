@@ -5,6 +5,8 @@ import builderConfig from '../config/builder.config';
 import { BuilderController } from './builder.controller';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
+import { DatabaseCleanupService } from './database-cleanup.service';
+import { PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { HttpModule } from '@nestjs/axios';
 import { RepoManagerModule } from '../repo-manager/repo-manager.module';
 import { GitlabModule } from '../gitlab/gitlab.module';
@@ -19,8 +21,8 @@ import { EventModule } from '../events/event.module';
     HttpModule,
     GitlabModule,
     forwardRef(() => RepoManagerModule),
-    TypeOrmModule.forFeature([Builder, Build, Repo, Package]),
+    TypeOrmModule.forFeature([Builder, Build, Repo, Package, PackageElfAnalysis]),
   ],
-  providers: [BuilderService],
+  providers: [BuilderService, DatabaseCleanupService],
 })
 export class BuilderModule {}

@@ -1,4 +1,4 @@
-import type { TeamList } from '@./shared-lib';
+import type { TeamList } from '@chaotic-next/shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
@@ -117,12 +117,12 @@ export class AboutComponent implements OnInit {
   }
 
   ngOnInit() {
-    updateSeoTags(
-      this.meta,
-      'About us',
-      'Learn more about the Chaotic-AUR team and project',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
-      this.router.url,
-    );
+    updateSeoTags(this.meta, {
+      title: 'About us',
+      description: 'Learn more about the Chaotic-AUR team and project',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
+      url: this.router.url,
+    });
   }
 }

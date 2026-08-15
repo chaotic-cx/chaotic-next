@@ -1,30 +1,33 @@
-<div>
-  @if (loading()) {
-    <div class="flex h-60 items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
-    </div>
-  } @else if (isWide()) {
-    <div class="flex justify-center">
-      <p-chart class="h-200 w-full" [data]="chartConfig().data" [options]="chartConfig().options" type="bar" />
-    </div>
-    <p-input-number
-      [(ngModel)]="range"
-      [showButtons]="true"
-      [min]="0"
-      [max]="200"
-      mode="decimal"
-      inputId="minmaxDownloads"
-    />
-  } @else {
-    <div class="h-auto justify-center">
-      @for (download of progressbarValues(); track download.label) {
-        <p-progress-bar [value]="download.value">
-          <ng-template #content>
-            <span>{{ download.label }}: {{ download.count }}</span>
-          </ng-template>
-        </p-progress-bar>
+<div class="flex h-full min-h-[24rem] flex-col">
+  @if (isWide()) {
+    <div class="relative flex flex-1 justify-center">
+      @if (hasData()) {
+        <p-chart class="w-full h-full" [data]="chartConfig().data" [options]="chartConfig().options" type="bar" />
+      } @else if (loading()) {
+        <div class="absolute inset-0 flex items-center justify-center">
+          <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+        </div>
       }
     </div>
+  } @else {
+    <div class="relative flex-1 justify-center">
+      <div class="justify-center">
+        @for (download of progressbarValues(); track download.label) {
+          <p-progress-bar [value]="download.value">
+            <ng-template #content>
+              <span>{{ download.label }}: {{ download.count }}</span>
+            </ng-template>
+          </p-progress-bar>
+        }
+      </div>
+      @if (loading()) {
+        <div class="absolute inset-0 flex items-center justify-center">
+          <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+        </div>
+      }
+    </div>
+  }
+  <div class="flex justify-center pt-4">
     <p-input-number
       [(ngModel)]="range"
       [showButtons]="true"
@@ -33,5 +36,5 @@
       mode="decimal"
       inputId="minmaxDownloads"
     />
-  }
+  </div>
 </div>

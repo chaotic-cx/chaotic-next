@@ -1,55 +1,61 @@
-<div class="chaotic-container-wide-center">
-  <chaotic-title [subtitle]="subtitle()" title="Statistics and data" />
+<div class="chaotic-container-wide-center flex min-h-svh flex-col">
+  <chaotic-title [subtitleHtml]="subtitle()" title="Statistics and data" />
 
-  <div>
+  <div class="flex items-center gap-2 mb-4 justify-end">
+    <label class="text-sm text-ctp-subtext1" for="statsTimeRange">Time range</label>
+    <p-select
+      [(ngModel)]="statsService.timeRangeDays"
+      [options]="statsService.timeRangeOptions"
+      inputId="statsTimeRange"
+      optionLabel="label"
+      optionValue="days"
+      appendTo="body"
+    />
+  </div>
+
+  <div class="flex flex-1 flex-col">
     <p-tabs [(value)]="statsService.currentTab" (valueChange)="changeTab($event)">
       <p-tablist>
-        <p-tab value="0" pTooltip="Search for package statistics" tooltipPosition="bottom">Search</p-tab>
-        <p-tab value="1" pTooltip="Global usage statistics" tooltipPosition="bottom">Globals</p-tab>
-        <p-tab value="2" pTooltip="Download statistics and trends" tooltipPosition="bottom">Downloads</p-tab>
-        <p-tab value="3" pTooltip="Update review statistics" tooltipPosition="bottom">Update Reviews</p-tab>
-        <p-tab value="4" pTooltip="Builder performance statistics" tooltipPosition="bottom">Builder Stats</p-tab>
+        <p-tab value="search" pTooltip="Search for package statistics" tooltipPosition="bottom">Search</p-tab>
+        <p-tab value="globals" pTooltip="Global usage statistics" tooltipPosition="bottom">Globals</p-tab>
+        <p-tab value="downloads" pTooltip="Download statistics and trends" tooltipPosition="bottom">Downloads</p-tab>
+        <p-tab value="update-review" pTooltip="Update review statistics" tooltipPosition="bottom">Update Reviews</p-tab>
+        <p-tab value="builder-stats" pTooltip="Builder performance statistics" tooltipPosition="bottom">
+          Builder Stats
+        </p-tab>
       </p-tablist>
       <p-tabpanels>
-        <p-tabpanel value="0">
+        <p-tabpanel value="search">
           <chaotic-search-package />
         </p-tabpanel>
-        <p-tabpanel value="1">
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Country list">
+        <p-tabpanel value="globals">
+          <div class="flex h-full flex-col gap-8">
+            <p-card [style]="{ overflow: 'hidden' }" header="Country list">
               <chaotic-chart-countries />
             </p-card>
-          </div>
-          <div class="mt-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="User agents">
+            <p-card [style]="{ overflow: 'hidden' }" header="User agents">
               <chaotic-chart-useragent />
             </p-card>
           </div>
         </p-tabpanel>
-        <p-tabpanel value="2">
+        <p-tabpanel value="downloads">
           <chaotic-chart-downloads [(range)]="statsService.globalPackageMetricRange" />
         </p-tabpanel>
-        <p-tabpanel value="3">
+        <p-tabpanel value="update-review">
           <chaotic-chart-review-stats />
         </p-tabpanel>
-        <p-tabpanel value="4">
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Builds per Day">
+        <p-tabpanel value="builder-stats">
+          <div class="grid h-full grid-cols-1 gap-8 xl:grid-cols-2">
+            <p-card [style]="{ overflow: 'hidden' }" header="Builds per Day">
               <chaotic-chart-builds-per-day />
             </p-card>
-          </div>
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Builds per Builder">
+            <p-card [style]="{ overflow: 'hidden' }" header="Builds per Builder">
               <chaotic-chart-builders-amount />
             </p-card>
-          </div>
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Average Build Time per Status">
+            <p-card [style]="{ overflow: 'hidden' }" header="Average Build Time per Status">
               <chaotic-chart-average-build-time />
             </p-card>
-          </div>
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Popular Packages">
+            <p-card [style]="{ overflow: 'hidden' }" header="Popular Packages">
               <chaotic-chart-popular-packages />
             </p-card>
           </div>

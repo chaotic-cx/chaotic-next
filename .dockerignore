@@ -3,6 +3,8 @@ dist
 tmp
 /backend/dist/db
 /out-tsc
+coverage
+pkgbuilds
 
 # dependencies
 node_modules

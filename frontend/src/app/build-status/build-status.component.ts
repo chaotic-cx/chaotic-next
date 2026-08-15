@@ -1,10 +1,10 @@
-import { Build, PipelineWithExternalStatus } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { Build } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { Card } from '@openng/optimus-ui/card';
 import { Dialog } from '@openng/optimus-ui/dialog';
@@ -15,9 +15,10 @@ import { TableModule } from '@openng/optimus-ui/table';
 import { Timeline } from '@openng/optimus-ui/timeline';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
+import { castTo, range } from '../functions';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { TitleComponent } from '../title/title.component';
-import { BuildStatusService } from './build-status.service';
+import { BuildStatusService, PipelineView } from './build-status.service';
 import { PipelineTimelineComponent } from './pipeline-timeline.component';
 
 @Component({
@@ -49,22 +50,23 @@ export class BuildStatusComponent implements OnInit {
   observer = inject(BreakpointObserver);
   router = inject(Router);
 
-  readonly dialogData = signal<PipelineWithExternalStatus>({
-    pipeline: {},
-    commit: [],
-  } as unknown as PipelineWithExternalStatus); // Workaround for silencing Angular warning
-  readonly currentTab = signal<string>('0');
+  readonly dialogData = signal<PipelineView | null>(null);
   readonly dialogVisible = signal<boolean>(false);
   readonly isWide = signal<boolean>(true);
 
   constructor() {
     this.appService.chaoticEvent.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event.type === 'build') {
-        void this.buildStatusService.getPackageBuilds(true);
-        void this.buildStatusService.getQueueStats(true);
+        void this.buildStatusService.refreshPackageBuilds();
+        void this.buildStatusService.refreshQueueStats();
       }
-      if (event.type === 'pipeline') this.buildStatusService.transformPipelineData(event.pipeline);
-      if (event.type === 'queue') void this.buildStatusService.getQueueStats(true);
+      if (event.type === 'pipeline') {
+        this.buildStatusService.transformPipelineData(event.pipeline);
+        if (this.dialogVisible()) {
+          this.refreshDialogData();
+        }
+      }
+      if (event.type === 'queue') void this.buildStatusService.refreshQueueStats();
     });
 
     this.observer
@@ -77,59 +79,45 @@ export class BuildStatusComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.appService.updateSeoTags(
-      this.meta,
-      'Build status',
-      'Current build status and queue information for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
-      this.router.url,
-    );
-
-    void this.updateAll(false);
-  }
-
-  /**
-   * Update all the data on the page and set the last updated time
-   */
-  async updateAll(inBackground = false): Promise<void> {
-    void this.buildStatusService.updateMutex.runExclusive(async () => {
-      await Promise.all([
-        this.buildStatusService.getQueueStats(inBackground),
-        this.buildStatusService.getPipelines(inBackground),
-        this.buildStatusService.getPackageBuilds(inBackground),
-      ]);
-
-      if (this.dialogVisible()) {
-        this.dialogData.set(
-          this.buildStatusService
-            .pipelineWithStatus()!
-            .find((pipeline) => pipeline.pipeline.id === this.dialogData().pipeline.id) as PipelineWithExternalStatus,
-        );
-      }
-
-      this.buildStatusService.lastUpdated.set(new Date());
-      this.cdr.markForCheck();
+    this.appService.updateSeoTags(this.meta, {
+      title: 'Build status',
+      description: 'Current build status and queue information for Chaotic-AUR',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
+      url: this.router.url,
     });
+
+    void this.updateAll();
   }
 
-  changeTab($event: string | number | undefined): void {
-    console.log($event);
+  updateAll(): void {
+    this.buildStatusService.getQueueStats();
+    this.buildStatusService.getPipelines();
+    this.buildStatusService.getPackageBuilds();
+
+    if (this.dialogVisible()) {
+      this.refreshDialogData();
+    }
   }
 
-  typedDeployment(untypedDeployment: Build) {
-    return untypedDeployment;
+  private refreshDialogData(): void {
+    const current = this.dialogData()?.pipeline.id;
+    if (current === undefined) return;
+    const updated = this.buildStatusService.pipelineWithStatus()?.find((pipeline) => pipeline.pipeline.id === current);
+    if (updated) {
+      this.dialogData.set(updated);
+    }
   }
+
+  readonly typedDeployment = castTo<Build>;
 
   showDialog(pipelineId: number) {
-    this.dialogData.set(
-      this.buildStatusService
-        .pipelineWithStatus()!
-        .find((pipeline) => pipeline.pipeline.id === pipelineId) as PipelineWithExternalStatus,
-    );
-    this.dialogVisible.set(true);
+    const pipeline = this.buildStatusService.pipelineWithStatus().find((p) => p.pipeline.id === pipelineId);
+    if (pipeline) {
+      this.dialogData.set(pipeline);
+      this.dialogVisible.set(true);
+    }
   }
 
-  createRange(number: number): number[] {
-    return new Array(number).fill(0).map((n, index) => index + 1);
-  }
+  readonly createRange = range;
 }

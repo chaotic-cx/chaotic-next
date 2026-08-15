@@ -1,0 +1,41 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "backend/src/data/migration-cli.ts",
+    "backend/src/main.ts",
+    "backend/src/scripts/*.ts",
+    "frontend/src/environments/environment.prod.ts",
+    "frontend/src/main.ts",
+    "shared-lib/src/index.ts"
+  ],
+  "project": ["backend/src/**/*.ts", "frontend/src/**/*.ts", "shared-lib/src/**/*.ts"],
+  "ignore": ["backend/src/config/users.config.ts"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": [
+    "@angular-eslint/*",
+    "@angular/pwa",
+    "@catppuccin/*",
+    "@eslint/*",
+    "@fastify/cors",
+    "@nestjs/cli",
+    "@nestjs/schematics",
+    "@nestjs/testing",
+    "@nx/*",
+    "@openng/icons",
+    "@openng/optimus-ui-tailwindcss",
+    "@testcontainers/*",
+    "@typescript-eslint/*",
+    "angular-eslint",
+    "chart.js",
+    "esbuild",
+    "eslint-config-prettier",
+    "eslint-plugin-*",
+    "fastify",
+    "globals",
+    "postcss",
+    "testcontainers",
+    "typescript-eslint",
+    "unplugin-swc",
+    "wrangler"
+  ]
+}

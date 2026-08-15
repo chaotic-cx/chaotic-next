@@ -1,26 +1,26 @@
-import { Package } from '@./shared-lib';
 import { DatePipe } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, inject, LOCALE_ID, OnInit, viewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, inject, input, LOCALE_ID, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Package } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { Button } from '@openng/optimus-ui/button';
 import { IconFieldModule } from '@openng/optimus-ui/iconfield';
 import { InputIconModule } from '@openng/optimus-ui/inputicon';
 import { InputTextModule } from '@openng/optimus-ui/inputtext';
 import { MultiSelectModule } from '@openng/optimus-ui/multiselect';
-import { Table, TableModule } from '@openng/optimus-ui/table';
+import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { retry } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
-import { RepoNamePipe } from '../pipes/repo-name.pipe';
+import { DatatableUnsetRoundingDirective } from '../directives/datatable-unset-rounding.directive';
+import { castTo } from '../functions';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { TitleComponent } from '../title/title.component';
-import { PackageListService } from './packge-list.service';
+import { PackageListService } from './package-list.service';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -36,14 +36,14 @@ import { PackageListService } from './packge-list.service';
     Button,
     StripPrefixPipe,
     TitleComponent,
-    RepoNamePipe,
     Tooltip,
+    DatatableUnsetRoundingDirective,
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
 })
-export class PackageListComponent implements OnInit, AfterViewInit {
+export class PackageListComponent {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -55,77 +55,58 @@ export class PackageListComponent implements OnInit, AfterViewInit {
   protected readonly packageListService = inject(PackageListService);
   protected readonly pkgTable = viewChild<Table>('pkgTable');
 
-  ngOnInit() {
-    this.appService.updateSeoTags(
-      this.meta,
-      'Package list',
-      'List of all packages available in the Chaotic-AUR repository',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list',
-      this.router.url,
-    );
+  readonly search = input<string>();
 
-    if (this.packageListService.packageList().length === 0) {
-      this.appService
-        .getPackageList()
-        .pipe(retry({ delay: 5000, count: 3 }))
-        .subscribe({
-          next: (data: (Package & { reponame: string })[]) => {
-            this.packageListService.packageList.set(data.filter((pkg) => pkg.version));
-            this.cdr.markForCheck();
-          },
-          error: (err) => {
-            this.messageToastService.error('Error', 'Failed to package list');
-            console.error(err);
-          },
-          complete: () => {
-            this.packageListService.loading.set(false);
-          },
-        });
-    } else {
-      this.packageListService.loading.set(false);
-    }
-  }
+  constructor() {
+    this.appService.updateSeoTags(this.meta, {
+      title: 'Package list',
+      description: 'List of all packages available in the Chaotic-AUR repository',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list',
+      url: this.router.url,
+    });
 
-  ngAfterViewInit() {
-    if (this.route.snapshot.queryParams['search']) {
-      this.pkgTable()!.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
-      this.packageListService.searchValue.set(this.route.snapshot.queryParams['search']);
-      this.cdr.markForCheck();
-    }
-    this.unsetRounding();
+    effect(() => {
+      const q = this.search();
+      if (q) {
+        this.packageListService.setSearch(q);
+      }
+    });
   }
 
   /**
-   * Remove the border radius from the datatable container elements.
+   * Handle the lazy load event from the table: paging and sorting are
+   * forwarded to the server-side paginated query.
    */
-  private unsetRounding(): void {
-    const elements = document.querySelectorAll('.p-datatable-table-container');
-    for (const element of Array.from(elements)) {
-      if (element instanceof HTMLElement) {
-        element.style.borderRadius = '0';
-      }
-    }
+  onLazyLoad(event: TableLazyLoadEvent): void {
+    this.packageListService.setPage(event.first ?? 0, event.rows ?? 25);
+    this.packageListService.setSort(
+      typeof event.sortField === 'string' ? event.sortField : 'pkgname',
+      event.sortOrder ?? 1,
+    );
   }
 
   clear(table: Table) {
     table.clear();
-    this.packageListService.searchValue.set('');
+    this.packageListService.setSearch('');
+    void this.router.navigate([], { queryParams: { search: '' } });
     this.cdr.markForCheck();
   }
 
   globalFilter(target: EventTarget | null) {
-    if (!target) return;
-    const input = target as HTMLInputElement;
-    this.pkgTable()!.filterGlobal(input.value, 'contains');
-    void this.router.navigate([], { queryParams: { search: input.value } });
+    if (!(target instanceof HTMLInputElement)) return;
+    this.packageListService.setSearch(target.value);
+    void this.router.navigate([], { queryParams: { search: target.value } });
   }
 
-  typed(value: any): Package {
-    return value;
-  }
+  readonly typed = castTo<Package>;
 
   openPkgbuild(pkg: Package) {
     const url: string = pkg.repo === this.appConfig.repoId ? this.appConfig.repoUrl : this.appConfig.repoUrlGaruda;
     window.open(`${url}/${pkg.pkgname}`, '_blank');
+  }
+
+  openDetail(pkg: Package) {
+    void this.router.navigate(['/stats'], { queryParams: { search: pkg.pkgname } });
   }
 }

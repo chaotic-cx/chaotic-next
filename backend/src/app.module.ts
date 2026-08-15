@@ -1,25 +1,31 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { LoggerModule } from 'nestjs-pino';
-import { AuthModule } from './auth/auth.module';
+import { ThrottlerBehindProxyGuard } from './api/throttler-behind-proxy.guard';
+import { auth } from './auth/auth';
 import { BuilderModule } from './builder/builder.module';
 import appConfig from './config/app.config';
-import { dataSourceOptions } from './data.source';
+import { dataSourceOptions } from './data/data.source';
+import { GitlabModule } from './gitlab/gitlab.module';
+import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
-import { UsersModule } from './users/users.module';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { ScheduleModule } from '@nestjs/schedule';
-import { GitlabModule } from './gitlab/gitlab.module';
+import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
 
 @Module({
   imports: [
-    AuthModule,
+    AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
     BuilderModule,
     ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true, load: [appConfig] }),
+    HealthModule,
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || 'info',
@@ -33,23 +39,28 @@ import { GitlabModule } from './gitlab/gitlab.module';
           remove: true,
         },
       },
-      // By default, off, but can be enabled by setting HTTP_LOGGING=true
       forRoutes: process.env.HTTP_LOGGING === 'true' ? undefined : [],
     }),
     MetricsModule,
+    NotificationsModule,
     RepoManagerModule,
     RouterModule,
     ScheduleModule.forRoot(),
     TerminusModule,
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 100,
+        ttl: THROTTLE_TTL_MS,
+        limit: THROTTLE_LIMIT,
       },
     ]),
     TypeOrmModule.forRoot({ ...dataSourceOptions, autoLoadEntities: true }),
-    UsersModule,
     GitlabModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerBehindProxyGuard,
+    },
   ],
 })
 export class AppModule {}

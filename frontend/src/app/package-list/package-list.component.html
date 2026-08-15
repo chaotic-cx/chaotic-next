@@ -13,8 +13,10 @@
     [loading]="packageListService.loading()"
     [showCurrentPageReport]="true"
     [paginator]="true"
-    [globalFilterFields]="['pkgname', 'metadata.desc', 'metadata.url']"
+    [lazy]="true"
+    [totalRecords]="packageListService.total()"
     [sortOrder]="1"
+    (onLazyLoad)="onLazyLoad($event)"
     dataKey="id"
     sortField="pkgname"
     stateStorage="local"
@@ -108,20 +110,32 @@
             ></span>
           </td>
           <td>
-            <span class="ml-1 align-middle" [class.text-ctp-surface0]="!pkg.isActive">{{ pkg.repo | repoName }}</span>
+            <span class="ml-1 align-middle" [class.text-ctp-surface0]="!pkg.isActive">{{ pkg.reponame }}</span>
           </td>
           <td>
             @if (pkg.isActive) {
-              <p-button
-                class="h-10"
-                [class.text-ctp-surface0]="!pkg.isActive"
-                (click)="openPkgbuild(pkg)"
-                type="button"
-                label="Source"
-                ard
-                pTooltip="View the PKGBUILD source for this package"
-                tooltipPosition="left"
-              />
+              <div class="flex gap-2">
+                <p-button
+                  class="h-10"
+                  [class.text-ctp-surface0]="!pkg.isActive"
+                  (click)="openDetail(pkg)"
+                  type="button"
+                  label="Details"
+                  outlined="true"
+                  pTooltip="View package statistics"
+                  tooltipPosition="left"
+                />
+                <p-button
+                  class="h-10"
+                  [class.text-ctp-surface0]="!pkg.isActive"
+                  (click)="openPkgbuild(pkg)"
+                  type="button"
+                  label="Source"
+                  ard
+                  pTooltip="View the PKGBUILD source for this package"
+                  tooltipPosition="left"
+                />
+              </div>
             } @else {
               <span class="text-ctp-surface0 ml-1 align-middle">N/A</span>
             }
