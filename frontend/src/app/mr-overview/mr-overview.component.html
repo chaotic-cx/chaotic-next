@@ -3,7 +3,7 @@
   subtitleHtml="Package updates currently queued for human review with the option to approve the MR for auto-merge."
 />
 
-<div class="chaotic-container-wide-center md:chaotic-container-regular p-0.5 sm:p-2.5">
+<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
   <p-tabs [value]="activeTabValue()" (valueChange)="onTabChange($event)">
     <p-tablist>
       <p-tab value="0">AUR updates ({{ packageMrs().length }})</p-tab>

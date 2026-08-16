@@ -1,15 +1,15 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { Card } from '@openng/optimus-ui/card';
 import { Image } from '@openng/optimus-ui/image';
+import { Panel } from '@openng/optimus-ui/panel';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { updateSeoTags } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-memorial',
-  imports: [Card, Image, TitleComponent, ProgressSpinner, ProgressSpinner],
+  imports: [Panel, Image, TitleComponent, ProgressSpinner],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
 })

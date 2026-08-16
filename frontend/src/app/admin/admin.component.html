@@ -1,41 +1,43 @@
 <chaotic-title title="Admin" subtitle="Manage packages, repositories, builders and analysis data." />
 
 <div class="flex flex-1 flex-col">
-  <p-tabs [value]="activeTab()" (valueChange)="navigate($event)">
-    <p-tablist>
-      <p-tab pTooltip="Manage packages" tooltipPosition="bottom" value="packages">Packages</p-tab>
-      <p-tab pTooltip="Manage Arch Linux packages" tooltipPosition="bottom" value="arch">Arch packages</p-tab>
-      <p-tab pTooltip="Manage repositories" tooltipPosition="bottom" value="repos">Repos</p-tab>
-      <p-tab pTooltip="Manage builders" tooltipPosition="bottom" value="builders">Builders</p-tab>
-      <p-tab pTooltip="View merge-request review actions" tooltipPosition="bottom" value="mr-actions">
-        MR actions
-      </p-tab>
-      <p-tab pTooltip="View triggered pipelines" tooltipPosition="bottom" value="pipeline-triggers">
-        Pipeline triggers
-      </p-tab>
-      <p-tab pTooltip="View package rebuild bumps" tooltipPosition="bottom" value="package-bumps">
-        Package bumps
-      </p-tab>
-      <p-tab pTooltip="Manage package ELF analysis rows" tooltipPosition="bottom" value="package-elf-analysis">
-        ELF analysis
-      </p-tab>
-      <p-tab
-        pTooltip="Scan an AUR package: sources, static rules and VirusTotal checks"
-        tooltipPosition="bottom"
-        value="aur-scan"
-      >
-        AUR scan
-      </p-tab>
-      <p-tab
-        pTooltip="Trigger repo manager operations and view broken packages"
-        tooltipPosition="bottom"
-        value="repo-operations"
-      >
-        Repo operations
-      </p-tab>
-    </p-tablist>
-  </p-tabs>
-  <div class="p-tabpanels">
-    <router-outlet />
+  <div class="admin-tabs-container">
+    <p-tabs [value]="activeTab()" (valueChange)="navigate($event)">
+      <p-tablist>
+        <p-tab pTooltip="Manage packages" tooltipPosition="bottom" value="packages">Packages</p-tab>
+        <p-tab pTooltip="Manage Arch Linux packages" tooltipPosition="bottom" value="arch">Arch packages</p-tab>
+        <p-tab pTooltip="Manage repositories" tooltipPosition="bottom" value="repos">Repos</p-tab>
+        <p-tab pTooltip="Manage builders" tooltipPosition="bottom" value="builders">Builders</p-tab>
+        <p-tab pTooltip="View merge-request review actions" tooltipPosition="bottom" value="mr-actions">
+          MR actions
+        </p-tab>
+        <p-tab pTooltip="View triggered pipelines" tooltipPosition="bottom" value="pipeline-triggers">
+          Pipeline triggers
+        </p-tab>
+        <p-tab pTooltip="View package rebuild bumps" tooltipPosition="bottom" value="package-bumps">
+          Package bumps
+        </p-tab>
+        <p-tab pTooltip="Manage package ELF analysis rows" tooltipPosition="bottom" value="package-elf-analysis">
+          ELF analysis
+        </p-tab>
+        <p-tab
+          pTooltip="Scan an AUR package: sources, static rules and VirusTotal checks"
+          tooltipPosition="bottom"
+          value="aur-scan"
+        >
+          AUR scan
+        </p-tab>
+        <p-tab
+          pTooltip="Trigger repo manager operations and view broken packages"
+          tooltipPosition="bottom"
+          value="repo-operations"
+        >
+          Repo operations
+        </p-tab>
+      </p-tablist>
+    </p-tabs>
+    <div class="p-tabpanels">
+      <router-outlet />
+    </div>
   </div>
 </div>

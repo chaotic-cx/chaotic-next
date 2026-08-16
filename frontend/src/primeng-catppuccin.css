@@ -4,7 +4,9 @@
   --p-text-color: var(--ctp-mocha-text);
   --p-text-muted-color: var(--ctp-mocha-subtext0);
   --p-content-background: var(--ctp-mocha-surface0);
-  --p-content-border-color: var(--ctp-mocha-surface1);
+  --p-content-border-color: var(--ctp-mocha-crust);
+  --p-panel-border-color: var(--ctp-mocha-crust);
+  --p-panel-border-radius: 12px;
 
   --p-button-primary-background: var(--ctp-mocha-mauve);
   --p-button-primary-border-color: var(--ctp-mocha-mauve);

@@ -9,7 +9,13 @@
         </p>
       </div>
     </div>
-    <p-button (onClick)="login()" severity="secondary" ariaLabel="Continue with GitLab" styleClass="w-full">
+    <p-button
+      [loading]="isLoading()"
+      (onClick)="login()"
+      severity="secondary"
+      ariaLabel="Continue with GitLab"
+      styleClass="w-full"
+    >
       <span class="flex w-full items-center justify-center gap-2">
         <svg class="h-5 w-5" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
           <title>file_type_gitlab</title>

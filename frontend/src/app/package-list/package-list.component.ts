@@ -17,7 +17,6 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
-import { DatatableUnsetRoundingDirective } from '../directives/datatable-unset-rounding.directive';
 import { castTo } from '../functions';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { TitleComponent } from '../title/title.component';
@@ -40,7 +39,6 @@ import { PackageListService } from './package-list.service';
     StripPrefixPipe,
     TitleComponent,
     Tooltip,
-    DatatableUnsetRoundingDirective,
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',

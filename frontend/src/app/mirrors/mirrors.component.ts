@@ -3,6 +3,7 @@ import { Component, effect, inject, LOCALE_ID, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
+import { Panel } from '@openng/optimus-ui/panel';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
@@ -11,7 +12,7 @@ import { MirrorsService } from './mirrors.service';
 
 @Component({
   selector: 'chaotic-mirrors',
-  imports: [CommonModule, TitleComponent, TableModule, Tooltip],
+  imports: [CommonModule, TitleComponent, TableModule, Tooltip, Panel],
   templateUrl: './mirrors.component.html',
   styleUrl: './mirrors.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],

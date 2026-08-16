@@ -34,7 +34,7 @@ div {
 }
 
 .context {
-  @apply text-ctp-text bg-ctp-base;
+  @apply text-ctp-text bg-transparent;
 }
 
 .added {
@@ -81,7 +81,7 @@ div {
 
 .findings {
   @apply m-0 pr-1 pl-2;
-  background: var(--ctp-mocha-base);
+  background: transparent;
   border-left: 2px solid var(--ctp-mocha-yellow);
   text-indent: 0;
   white-space: normal;

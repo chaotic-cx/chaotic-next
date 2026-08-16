@@ -1,4 +1,4 @@
-<div class="card relative flex h-full min-h-[24rem] justify-center">
+<div class="card relative flex justify-center" [style.height.px]="amount() * 36 + 32">
   @if (hasData()) {
     <p-chart
       class="w-full h-full"

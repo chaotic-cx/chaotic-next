@@ -98,7 +98,7 @@
   padding: unset !important;
 }
 
-::ng-deep .p-tablist-tab-list {
+:host ::ng-deep .p-tablist-tab-list {
   border: none !important;
 }
 

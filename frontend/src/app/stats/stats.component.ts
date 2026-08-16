@@ -64,10 +64,7 @@ export class StatsComponent implements OnInit {
     });
   }
 
-  readonly subtitle = computed(() => {
-    const users = this.statsService.usersLoading() ? 'loading…' : (this.statsService.totalUsers() ?? '–');
-    return `Area for package statistics and other fun stuff.<br>Total users: ${users}`;
-  });
+  readonly subtitle = 'Area for package statistics and other fun stuff.';
 
   ngOnInit(): void {
     this.appService.updateSeoTags(this.meta, {

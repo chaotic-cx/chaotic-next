@@ -17,6 +17,7 @@
       <i class="pi pi-cog"></i>
     </a>
     <p-button
+      [loading]="isLogoutLoading()"
       (onClick)="logout()"
       icon="pi pi-sign-out"
       severity="secondary"
@@ -48,6 +49,7 @@
   </div>
 } @else {
   <p-button
+    [loading]="isLoginLoading()"
     (onClick)="login()"
     label="Login"
     icon="pi pi-sign-in"

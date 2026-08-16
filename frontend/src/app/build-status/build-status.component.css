@@ -6,6 +6,7 @@
 
 .p-card {
   background: unset;
+  padding-top: 1rem;
 }
 
 ::ng-deep .p-datatable {

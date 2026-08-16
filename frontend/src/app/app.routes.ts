@@ -108,6 +108,10 @@ export const routes: Routes = [
     loadComponent: () => import('./login/login.component').then((c) => c.LoginComponent),
   },
   {
+    path: 'auth/callback',
+    loadComponent: () => import('./auth/auth-callback.component').then((c) => c.AuthCallbackComponent),
+  },
+  {
     title: 'Admin',
     path: 'admin',
     canActivate: [authGuard],

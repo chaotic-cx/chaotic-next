@@ -318,8 +318,8 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .andWhere('build.timestamp > :date', { date: nDaysInPast(amount) })
       .groupBy("DATE_TRUNC('day', build.timestamp), repo.name")
       .orderBy('day', 'DESC')
-      .skip(offset)
-      .take(amount)
+      .limit(amount)
+      .offset(offset)
       .cache(`builds-${options.pkgname}-per-day-repo-${amount}-${offset}`, CACHE_TTL_MS)
       .getRawMany();
   }
@@ -351,8 +351,8 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     }
 
     return query
-      .skip(offset)
-      .take(amount)
+      .limit(amount)
+      .offset(offset)
       .cache(
         `popular-packages-distinct-${amount}-${offset}-${options.status ?? 'all'}-${options.days ?? 'all'}`,
         CACHE_TTL_MS,
@@ -387,7 +387,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
         .addSelect('COUNT(DISTINCT build.commit) AS count')
         .groupBy('day')
         .orderBy('day', 'DESC')
-        .take(days)
+        .limit(days)
         .cache(`builds-per-day-distinct-${days}`, CACHE_TTL_MS)
         .getRawMany()
     );
@@ -442,8 +442,8 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .from(Build, 'b')
       .innerJoin('b.pkgbase', 'p')
       .orderBy('p."lastUpdated"', 'DESC')
-      .take(amount)
-      .skip(offset)
+      .limit(amount)
+      .offset(offset)
       .cache(`latest-builds-${amount}-${offset}`, CACHE_TTL_MS)
       .getRawMany();
   }

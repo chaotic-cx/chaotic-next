@@ -15,15 +15,17 @@ import { ChartPopularPackagesComponent } from '../../chart-popular-packages/char
     ChartPopularPackagesComponent,
   ],
   template: `
-    <div class="grid h-full grid-cols-1 gap-8 xl:grid-cols-2">
+    <div class="flex flex-col gap-8">
+      <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
+        <p-card [style]="{ overflow: 'hidden' }" header="Average Build Time per Status">
+          <chaotic-chart-average-build-time />
+        </p-card>
+        <p-card [style]="{ overflow: 'hidden' }" header="Builds per Builder">
+          <chaotic-chart-builders-amount />
+        </p-card>
+      </div>
       <p-card [style]="{ overflow: 'hidden' }" header="Builds per Day">
         <chaotic-chart-builds-per-day />
-      </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Builds per Builder">
-        <chaotic-chart-builders-amount />
-      </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Average Build Time per Status">
-        <chaotic-chart-average-build-time />
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Popular Packages">
         <chaotic-chart-popular-packages />

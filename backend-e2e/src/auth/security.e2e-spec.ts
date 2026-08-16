@@ -36,8 +36,12 @@ describe('Better Auth & Security Configurations (e2e)', () => {
       expect(auth.options.advanced?.defaultCookieAttributes?.sameSite).toBe('lax');
     });
 
-    it('parses reverse proxy IP headers (x-forwarded-for, x-real-ip)', () => {
-      expect(auth.options.advanced?.ipAddress?.ipAddressHeaders).toEqual(['x-forwarded-for', 'x-real-ip']);
+    it('parses reverse proxy IP headers (cf-connecting-ip, x-forwarded-for, x-real-ip)', () => {
+      expect(auth.options.advanced?.ipAddress?.ipAddressHeaders).toEqual([
+        'cf-connecting-ip',
+        'x-forwarded-for',
+        'x-real-ip',
+      ]);
     });
   });
 

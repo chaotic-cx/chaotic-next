@@ -31,11 +31,21 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const tagName = context.ref.replace('refs/tags/', '');
+
+            const ref = await github.rest.git.getRef({ owner, repo, ref: `tags/${tagName}` });
+            let commitSha = ref.data.object.sha;
+            if (ref.data.object.type === 'tag') {
+              const tag = await github.rest.git.getTag({ owner, repo, tag_sha: commitSha });
+              commitSha = tag.data.object.sha;
+            }
+
             for (let i = 0; i < 30; i++) {
-              const { data } = await github.rest.actions.listWorkflowRunsForCommit({
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
                 owner,
                 repo,
-                commit_sha: context.sha,
+                head_sha: commitSha,
                 per_page: 50,
               });
               const ci = data.workflow_runs.filter((r) => r.name === 'CI');
@@ -47,7 +57,7 @@ jobs:
                 core.setFailed('CI failed for this commit.');
                 return;
               }
-              await new Promise((resolve) => setTimeout(resolve, 10000));
+              await sleep(10000);
             }
             core.setFailed('Timed out waiting for CI to pass.');
       - name: Checkout repository

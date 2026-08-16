@@ -133,9 +133,10 @@ samp {
 }
 
 .p-panel {
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   background: none !important;
+  will-change: backdrop-filter;
 }
 
 .p-toast {
@@ -147,15 +148,28 @@ samp {
 .p-fieldset-content-container,
 .p-fieldset-content-wrapper,
 .p-fieldset-content {
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   min-width: 0 !important;
   max-width: 100% !important;
   overflow-x: hidden;
 }
 
+.p-tabs,
+.p-tablist,
+.p-tabpanels {
+  background: transparent !important;
+}
+
 .p-autocomplete > input {
   width: 100%;
+}
+
+.p-card,
+.p-tabs,
+.p-datatable {
+  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
+  border-radius: var(--p-panel-border-radius, 12px);
 }
 
 .p-card {
@@ -163,8 +177,16 @@ samp {
 }
 
 .p-card-body {
-  padding: unset !important;
+  padding-inline: unset !important;
   @apply mx-auto max-w-11/12 p-0 md:p-5;
+}
+
+.p-card-header {
+  padding-top: 1.25rem !important;
+}
+
+.p-card-footer {
+  padding-bottom: 1.25rem !important;
 }
 
 p-scroll-top {
@@ -179,11 +201,13 @@ p-scroll-top {
 .p-card,
 .p-stepper,
 .table-container {
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 .table-container {
+  border-radius: var(--p-panel-border-radius, 12px);
+  overflow: hidden;
   max-width: calc(100vw - 2rem);
   @apply mx-auto;
 }
@@ -215,6 +239,15 @@ p-scroll-top {
 
 .p-datatable-header {
   @apply rounded-t-lg;
+}
+
+.p-datatable,
+.p-datatable-header,
+.p-datatable-table-container,
+.p-datatable-thead > tr > th,
+.p-datatable-tbody > tr,
+.p-paginator {
+  background: transparent !important;
 }
 
 body > app-root > chaotic-footer > div > p-card > div {

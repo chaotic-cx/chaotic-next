@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MessageToastService } from '@garudalinux/core';
 import { Button } from '@openng/optimus-ui/button';
 import { AuthService } from 'ngx-better-auth';
 import { GitlabLoginService } from '../auth/gitlab-login.service';
@@ -13,10 +14,12 @@ import { GitlabLoginService } from '../auth/gitlab-login.service';
 export class LoginComponent {
   private readonly authService = inject(AuthService);
   private readonly gitlabLoginService = inject(GitlabLoginService);
+  private readonly messageToastService = inject(MessageToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   readonly isLoggedIn = this.authService.isLoggedIn;
+  readonly isLoading = signal(false);
 
   constructor() {
     if (this.authService.isLoggedIn()) {
@@ -25,7 +28,13 @@ export class LoginComponent {
   }
 
   login(): void {
-    this.gitlabLoginService.login(window.location.origin + this.returnUrl());
+    this.isLoading.set(true);
+    this.gitlabLoginService.login(this.returnUrl()).subscribe({
+      error: () => {
+        this.isLoading.set(false);
+        this.messageToastService.error('Login failed', 'Could not start the GitLab sign-in flow.');
+      },
+    });
   }
 
   private returnUrl(): string {
