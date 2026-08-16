@@ -6,7 +6,8 @@ WORKDIR /build
 # hadolint ignore=DL3018
 RUN apk add --no-cache --virtual builds-deps build-base pnpm
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc .node-version ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY patches ./patches
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     --mount=type=cache,target=/root/.cache/pnpm \
@@ -14,16 +15,15 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 
 COPY . .
 RUN --mount=type=cache,target=/root/.nx \
-    pnpm exec nx run backend:build
-
-RUN cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml
+    pnpm exec nx run backend:build && \
+    cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml && \
+    cp -r patches dist/backend/patches
 
 WORKDIR /build/dist/backend
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     --mount=type=cache,target=/root/.cache/pnpm \
-    pnpm install --prod --frozen-lockfile && \
-    pnpm install pino-pretty
+    pnpm install --prod --frozen-lockfile
 
 FROM node:26-alpine
 
