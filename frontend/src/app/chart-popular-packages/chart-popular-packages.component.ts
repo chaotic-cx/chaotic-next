@@ -5,7 +5,7 @@ import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
-import { parseCount, resourceValue, shuffleArray } from '../functions';
+import { parseCount, resourceValue } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
@@ -45,7 +45,7 @@ export class ChartPopularPackagesComponent {
           {
             data: values,
             label: 'Build count',
-            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
+            backgroundColor: CATPPUCCIN_FLAVOURS,
           },
         ],
       },

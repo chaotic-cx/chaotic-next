@@ -306,7 +306,7 @@ describe('GitlabService.enrichVirusTotalReports', () => {
 });
 
 describe('GitlabService.getOpenMergeRequests', () => {
-  const mrSchema = (iid: number): unknown => ({
+  const mrSchema = (iid: number): Record<string, unknown> => ({
     id: iid,
     iid,
     title: `chore(update): pkg${iid}`,
@@ -369,6 +369,63 @@ describe('GitlabService.getOpenMergeRequests', () => {
     expect(data).toBe(cached);
     expect(all).not.toHaveBeenCalled();
     expect(cacheSet).not.toHaveBeenCalled();
+  });
+
+  it('reuses cached diffs and scan findings for MRs whose revision did not move', async () => {
+    const { service, cacheSet } = createService();
+    const firstMr = mrSchema(1);
+    const secondMr = mrSchema(2);
+    const all = vi
+      .fn()
+      .mockResolvedValueOnce([firstMr, secondMr])
+      .mockResolvedValueOnce([firstMr, { ...secondMr, updated_at: '2026-01-02T00:00:00Z' }]);
+    const allDiffs = vi.fn().mockResolvedValue([diffEntry]);
+    (service as unknown as { api: unknown }).api = { MergeRequests: { all, allDiffs } };
+
+    const first = await service.getOpenMergeRequests(true);
+    const second = await service.getOpenMergeRequests(true);
+
+    expect(allDiffs).toHaveBeenCalledTimes(3);
+    expect(allDiffs).toHaveBeenNthCalledWith(1, 'test-project-id', 1);
+    expect(allDiffs).toHaveBeenNthCalledWith(2, 'test-project-id', 2);
+    expect(allDiffs).toHaveBeenNthCalledWith(3, 'test-project-id', 2);
+
+    expect(second[0]?.diffs).toBe(first[0]?.diffs);
+    expect(second[0]?.scanFindings).toBe(first[0]?.scanFindings);
+    expect(second[1]?.scanFindings).not.toBe(first[1]?.scanFindings);
+    expect(cacheSet).toHaveBeenCalledTimes(2);
+  });
+
+  it('carries VirusTotal reports and maintainer info over to a rebuilt snapshot', async () => {
+    const { service, cacheSet } = createService();
+    const all = vi.fn().mockResolvedValue([mrSchema(1)]);
+    const allDiffs = vi.fn().mockResolvedValue([diffEntry]);
+    (service as unknown as { api: unknown }).api = { MergeRequests: { all, allDiffs } };
+    const previous: MergeRequestWithDiffs[] = [
+      mr({
+        vtReports: [
+          {
+            type: 'url',
+            value: 'https://evil.example/payload',
+            context: 'testpkg/testpkg.install:2',
+            verdict: 'malicious',
+          },
+        ],
+        maintainers: [
+          { username: 'stranger', packagesMaintained: 1, totalVotes: 0, oldestFirstSubmitted: '', novice: true },
+        ],
+      }),
+    ];
+    (service as unknown as { cacheManager: unknown }).cacheManager = {
+      get: vi.fn().mockResolvedValue(previous),
+      set: cacheSet,
+      del: vi.fn(),
+    };
+
+    const data = await service.getOpenMergeRequests(true);
+
+    expect(data[0]?.vtReports).toEqual(previous[0]?.vtReports);
+    expect(data[0]?.maintainers).toEqual(previous[0]?.maintainers);
   });
 });
 

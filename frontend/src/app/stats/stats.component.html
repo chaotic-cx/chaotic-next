@@ -1,7 +1,7 @@
-<div class="chaotic-container-wide-center flex min-h-svh flex-col">
-  <chaotic-title [subtitleHtml]="subtitle()" title="Statistics and data" />
+<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
+  <chaotic-title [subtitleHtml]="subtitle" title="Statistics and data" />
 
-  <div class="flex flex-1 flex-col">
+  <div class="stats-tabs-container">
     <p-tabs [value]="activeTab()" (valueChange)="navigate($event)">
       <p-tablist>
         <p-tab pTooltip="Search for package statistics" tooltipPosition="bottom" value="search">Search</p-tab>
@@ -15,17 +15,22 @@
         </p-tab>
       </p-tablist>
     </p-tabs>
-    <div class="p-tabpanels flex flex-1 flex-col">
-      <div class="mb-4 flex items-center justify-end gap-2">
-        <label class="text-sm text-ctp-subtext1" for="statsTimeRange">Time range</label>
-        <p-select
-          [(ngModel)]="statsService.timeRangeDays"
-          [options]="statsService.timeRangeOptions"
-          inputId="statsTimeRange"
-          optionLabel="label"
-          optionValue="days"
-          appendTo="body"
-        />
+    <div class="p-tabpanels flex flex-col">
+      <div class="mb-4 flex items-center justify-between gap-2">
+        <span class="text-sm text-ctp-subtext1">
+          Total users: {{ statsService.usersLoading() ? 'loading…' : (statsService.totalUsers() ?? '–') }}
+        </span>
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-ctp-subtext1" for="statsTimeRange">Time range</label>
+          <p-select
+            [(ngModel)]="statsService.timeRangeDays"
+            [options]="statsService.timeRangeOptions"
+            inputId="statsTimeRange"
+            optionLabel="label"
+            optionValue="days"
+            appendTo="body"
+          />
+        </div>
       </div>
       <router-outlet />
     </div>

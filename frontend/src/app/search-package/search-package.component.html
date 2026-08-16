@@ -3,7 +3,7 @@
     #autoComplete
     [suggestions]="suggestions()"
     [autofocus]="true"
-    [ngModel]="currentPackageName()"
+    [ngModel]="typedInput()"
     (ngModelChange)="updateDisplay($event)"
     (completeMethod)="onAutoCompleteSearch($event)"
     (onSelect)="selectPackage($event.value)"

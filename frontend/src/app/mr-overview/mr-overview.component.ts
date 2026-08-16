@@ -106,8 +106,9 @@ export class MrOverviewComponent implements OnInit {
       )
       .subscribe((event) => {
         const currentMrs = untracked(this.mrOverviewService.mergeRequests);
+        const updatedById = new Map(event.mr.map((mr) => [mr.id, mr]));
         const updatedMrs = currentMrs.map((currentMr) => {
-          const updatedMr = event.mr.find((mr) => mr.id === currentMr.id);
+          const updatedMr = updatedById.get(currentMr.id);
           if (updatedMr) {
             return {
               ...currentMr,

@@ -14,7 +14,6 @@ import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
-import { DatatableUnsetRoundingDirective } from '../directives/datatable-unset-rounding.directive';
 import { castTo, packageLogRouteFromUrl } from '../functions';
 import { DurationPipe } from '../pipes/duration.pipe';
 import { TitleComponent } from '../title/title.component';
@@ -24,7 +23,6 @@ import { DeployLogService } from './deploy-log.service';
   selector: 'chaotic-deploy-log',
   imports: [
     CommonModule,
-    DatatableUnsetRoundingDirective,
     TableModule,
     Button,
     InputIcon,

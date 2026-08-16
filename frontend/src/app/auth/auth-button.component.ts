@@ -1,9 +1,10 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { AuthService } from 'ngx-better-auth';
 import { Button } from '@openng/optimus-ui/button';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { finalize } from 'rxjs/operators';
 import { GitlabLoginService } from './gitlab-login.service';
 
 @Component({
@@ -17,6 +18,8 @@ export class AuthButtonComponent {
   private readonly messageToastService = inject(MessageToastService);
 
   readonly isLoggedIn = this.authService.isLoggedIn;
+  readonly isLoginLoading = signal(false);
+  readonly isLogoutLoading = signal(false);
   readonly user = computed(() => this.authService.session()?.user ?? null);
   readonly gitlabProfileUrl = computed(() => {
     const user = this.user();
@@ -27,12 +30,26 @@ export class AuthButtonComponent {
   });
 
   login(): void {
-    this.gitlabLoginService.login(window.location.origin);
+    this.isLoginLoading.set(true);
+    this.gitlabLoginService
+      .login('/')
+      .pipe(finalize(() => this.isLoginLoading.set(false)))
+      .subscribe({
+        error: () => {
+          this.messageToastService.error('Login failed', 'Could not start the GitLab sign-in flow.');
+        },
+      });
   }
 
   logout(): void {
-    this.authService.signOut().subscribe({
-      error: () => this.messageToastService.error('Logout failed', 'Could not sign out. Please try again.'),
-    });
+    this.isLogoutLoading.set(true);
+    this.authService
+      .signOut()
+      .pipe(finalize(() => this.isLogoutLoading.set(false)))
+      .subscribe({
+        error: () => {
+          this.messageToastService.error('Logout failed', 'Could not sign out. Please try again.');
+        },
+      });
   }
 }

@@ -1,10 +1,10 @@
-import { httpResource } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Button } from '@openng/optimus-ui/button';
 import { MessageToastService } from '@garudalinux/core';
-import { Fieldset } from '@openng/optimus-ui/fieldset';
-import { TableModule } from '@openng/optimus-ui/table';
+import { PrimeTemplate } from '@openng/optimus-ui/api';
+import { Button } from '@openng/optimus-ui/button';
+import { Panel } from '@openng/optimus-ui/panel';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
 import { Message } from './interfaces';
@@ -14,7 +14,7 @@ const NEWS_INCREMENT = 3;
 
 @Component({
   selector: 'chaotic-newsfeed',
-  imports: [CommonModule, TableModule, Fieldset, Button],
+  imports: [CommonModule, Panel, Button, PrimeTemplate],
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],

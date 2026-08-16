@@ -1,7 +1,8 @@
 import { Component, computed, effect, inject } from '@angular/core';
-import type { Mirror } from '@chaotic-next/shared-lib';
 import { flavors } from '@catppuccin/palette';
+import type { Mirror } from '@chaotic-next/shared-lib';
 import { Dot, NgxMapComponent } from '@omnedia/ngx-map';
+import { Panel } from '@openng/optimus-ui/panel';
 import { MirrorsService } from '../mirrors/mirrors.service';
 import { precomputedMap } from './map';
 
@@ -11,7 +12,7 @@ const MIRROR_ICON_URL = 'https://chaotic.cx/favicon.ico';
   selector: 'chaotic-mirror-map',
   templateUrl: './mirror-map.component.html',
   styleUrl: './mirror-map.component.css',
-  imports: [NgxMapComponent],
+  imports: [NgxMapComponent, Panel],
 })
 export class MirrorMapComponent {
   protected readonly mirrorsService = inject(MirrorsService);

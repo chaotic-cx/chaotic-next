@@ -13,6 +13,7 @@ import {
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
 import { MergeRequestSchema } from '@gitbeaker/core';
+import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import type { CommitStatusSchema } from '@gitbeaker/rest';
 import { Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -47,9 +48,70 @@ const JOB_TRACE_POLL_MS = 2000;
 const MAX_VERDICT_NOTE_FINDINGS = 5;
 const DIFF_FETCH_CONCURRENCY = 5;
 const REVIEW_STATS_CONCURRENCY = 10;
+const CACHE_MRS_TTL = 30 * 60 * 1000;
+
+interface CachedMrData {
+  updatedAt: string;
+  diffs: MergeRequestDiffSchema[];
+  scanFindings: DiffScanFinding[];
+}
 
 function toLabelStrings(labels: MergeRequestSchema['labels']): string[] {
   return labels.map((label) => (typeof label === 'string' ? label : label.name));
+}
+
+function toMergeRequestWithDiffs(
+  mr: MergeRequestSchema,
+  diffs: MergeRequestDiffSchema[],
+  scanFindings: DiffScanFinding[],
+  previous: MergeRequestWithDiffs | undefined,
+): MergeRequestWithDiffs {
+  return {
+    title: mr.title,
+    created_at: mr.created_at,
+    web_url: mr.web_url,
+    updated_at: mr.updated_at,
+    assignees: mr.assignees,
+    labels: toLabelStrings(mr.labels),
+    sha: mr.sha,
+    merge_status: mr.merge_status,
+    iid: mr.iid,
+    id: mr.id,
+    state: mr.state,
+    detailed_merge_status: mr.detailed_merge_status,
+    diff_refs: mr.diff_refs as MergeRequestWithDiffs['diff_refs'],
+    diffs,
+    scanFindings,
+    ...(previous?.vtReports !== undefined ? { vtReports: previous.vtReports } : {}),
+    ...(previous?.maintainers !== undefined ? { maintainers: previous.maintainers } : {}),
+    ...(previous?.maintainerChange !== undefined ? { maintainerChange: previous.maintainerChange } : {}),
+  };
+}
+
+function mrStateKey(mr: MergeRequestWithDiffs): string {
+  return JSON.stringify([
+    mr.id,
+    mr.updated_at,
+    mr.state,
+    mr.detailed_merge_status,
+    mr.sha,
+    mr.labels,
+    mr.scanFindings,
+    mr.vtReports,
+    mr.maintainers,
+    mr.maintainerChange,
+  ]);
+}
+
+function changedMergeRequests(
+  current: MergeRequestWithDiffs[] | undefined,
+  updated: MergeRequestWithDiffs[],
+): MergeRequestWithDiffs[] {
+  const currentById = new Map(current?.map((mr) => [mr.id, mr]) ?? []);
+  return updated.filter((mr) => {
+    const before = currentById.get(mr.id);
+    return before === undefined || mrStateKey(before) !== mrStateKey(mr);
+  });
 }
 
 function mrPkgname(title: string): string | null {
@@ -64,6 +126,7 @@ export class GitlabService implements OnModuleInit {
   chaoticId!: string;
   updateMutex = new Mutex();
   reviewStatsMutex = new Mutex();
+  mergeRequestsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_KEY_REVIEW_STATS = 'gitlab/review-stats';
@@ -75,6 +138,8 @@ export class GitlabService implements OnModuleInit {
   private isEnrichingVt = false;
 
   private readonly vtNotedMrIids = new Set<number>();
+
+  private readonly mrDataCache = new Map<number, CachedMrData>();
 
   /** updated_at of the MR revision maintainers were last computed for. */
   private readonly maintainerCheckedAt = new Map<number, string>();
@@ -306,63 +371,75 @@ export class GitlabService implements OnModuleInit {
   }
 
   async getOpenMergeRequests(overwriteCache = false): Promise<MergeRequestWithDiffs[]> {
-    let data: MergeRequestWithDiffs[] | undefined = await this.cacheManager.get<MergeRequestWithDiffs[]>(
-      this.CACHE_KEY_MRS,
-    );
-    if (data && !overwriteCache) {
-      this.logger.debug('Serving open MRs from cache');
-      return data;
-    }
-    this.logger.debug(overwriteCache ? 'Forcing refresh of open MRs' : 'No cached MRs, fetching open MRs');
+    return this.mergeRequestsMutex.runExclusive(async () => {
+      if (!overwriteCache) {
+        const cached = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
+        if (cached) {
+          this.logger.debug('Serving open MRs from cache');
+          return cached;
+        }
+      }
+      this.logger.debug(overwriteCache ? 'Forcing refresh of open MRs' : 'No cached MRs, fetching open MRs');
 
-    const openMrs: MergeRequestSchema[] = await this.api.MergeRequests.all({
-      state: 'opened',
-      perPage: 100,
-      projectId: this.chaoticId,
-    });
-    this.logger.log(`Fetched ${openMrs.length} open MRs`);
+      const openMrs: MergeRequestSchema[] = await this.api.MergeRequests.all({
+        state: 'opened',
+        perPage: 100,
+        projectId: this.chaoticId,
+      });
+      this.logger.log(`Fetched ${openMrs.length} open MRs`);
 
-    // One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
-    // the whole batch: its diffs just come back empty.
-    const diffs = await mapWithConcurrency(
-      openMrs,
-      (mr) =>
-        this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid).catch((err: unknown) => {
-          this.logger.warn(`Failed to fetch diffs for MR !${mr.iid}: ${errorMessage(err)}`);
-          return [];
-        }),
-      DIFF_FETCH_CONCURRENCY,
-    );
+      const openIids = new Set(openMrs.map((mr) => mr.iid));
+      for (const iid of this.mrDataCache.keys()) {
+        if (!openIids.has(iid)) this.mrDataCache.delete(iid);
+      }
 
-    data = openMrs.map((mr, index) => {
-      const scanFindings = this.diffScanService.scanDiffs(diffs[index]);
-      const ruleIds = [...new Set(scanFindings.map((finding) => finding.ruleId))];
-      this.logger.debug(
-        `MR !${mr.iid}: ${diffs[index].length} changed file(s), ${scanFindings.length} finding(s)` +
-          (ruleIds.length > 0 ? ` [${ruleIds.join(', ')}]` : ''),
+      const staleMrs = openMrs.filter((mr) => {
+        const cached = this.mrDataCache.get(mr.iid);
+        return cached === undefined || cached.updatedAt !== mr.updated_at;
+      });
+      this.logger.log(`Fetching diffs for ${staleMrs.length} of ${openMrs.length} open MRs`);
+
+      // One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
+      // the whole batch: its diffs just come back empty.
+      const diffsByIid = new Map<number, MergeRequestDiffSchema[]>();
+      await mapWithConcurrency(
+        staleMrs,
+        async (mr) => {
+          const diffs = await this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid).catch((err: unknown) => {
+            this.logger.warn(`Failed to fetch diffs for MR !${mr.iid}: ${errorMessage(err)}`);
+            return [];
+          });
+          diffsByIid.set(mr.iid, diffs);
+        },
+        DIFF_FETCH_CONCURRENCY,
       );
-      return {
-        title: mr.title,
-        created_at: mr.created_at,
-        web_url: mr.web_url,
-        updated_at: mr.updated_at,
-        assignees: mr.assignees,
-        labels: toLabelStrings(mr.labels),
-        sha: mr.sha,
-        merge_status: mr.merge_status,
-        iid: mr.iid,
-        id: mr.id,
-        state: mr.state,
-        detailed_merge_status: mr.detailed_merge_status,
-        diff_refs: mr.diff_refs as MergeRequestWithDiffs['diff_refs'],
-        diffs: diffs[index],
-        scanFindings,
-      };
+
+      // Enrichment (VirusTotal/maintainers) lives on the previous snapshot and must
+      // survive rebuilds, otherwise the enrichment crons would redo all lookups.
+      const previous = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
+      const previousById = new Map(previous?.map((mr) => [mr.id, mr]) ?? []);
+
+      const data = openMrs.map((mr) => {
+        const previousMr = previousById.get(mr.id);
+        const cached = this.mrDataCache.get(mr.iid);
+        if (cached !== undefined && cached.updatedAt === mr.updated_at) {
+          return toMergeRequestWithDiffs(mr, cached.diffs, cached.scanFindings, previousMr);
+        }
+        const diffs = diffsByIid.get(mr.iid) ?? [];
+        const scanFindings = this.diffScanService.scanDiffs(diffs);
+        this.mrDataCache.set(mr.iid, { updatedAt: mr.updated_at, diffs, scanFindings });
+        const ruleIds = [...new Set(scanFindings.map((finding) => finding.ruleId))];
+        this.logger.debug(
+          `MR !${mr.iid}: ${diffs.length} changed file(s), ${scanFindings.length} finding(s)` +
+            (ruleIds.length > 0 ? ` [${ruleIds.join(', ')}]` : ''),
+        );
+        return toMergeRequestWithDiffs(mr, diffs, scanFindings, previousMr);
+      });
+
+      await this.cacheManager.set(this.CACHE_KEY_MRS, data, CACHE_MRS_TTL);
+
+      return data;
     });
-
-    await this.cacheManager.set(this.CACHE_KEY_MRS, data);
-
-    return data;
   }
 
   private async refreshOpenMergeRequests(): Promise<void> {
@@ -399,13 +476,16 @@ export class GitlabService implements OnModuleInit {
         void this.notifySubscribers(newMr);
       }
 
-      this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: newData, hasNewMr } });
+      this.eventService.sseEvents$.next({
+        data: { type: 'merge_request', mr: changedMergeRequests(currentData, newData), hasNewMr },
+      });
       return true;
     });
   }
 
   async autoFlagMergeRequests(mrs: MergeRequestWithDiffs[]): Promise<void> {
     let changed = false;
+    const flaggedMrs: MergeRequestWithDiffs[] = [];
 
     for (const mr of mrs) {
       const verdict = this.diffScanService.autoFlagVerdict(mr.scanFindings);
@@ -430,6 +510,7 @@ export class GitlabService implements OnModuleInit {
           addLabels: verdict.label,
         });
         mr.labels.push(verdict.label);
+        flaggedMrs.push(mr);
         changed = true;
         this.logger.warn(`Auto-flagged MR !${mr.iid} as ${verdict.label} (scan score ${verdict.score})`);
         await this.postScanVerdictComments(mr, verdict);
@@ -440,7 +521,7 @@ export class GitlabService implements OnModuleInit {
 
     if (changed) {
       await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
-      this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: mrs, hasNewMr: false } });
+      this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: flaggedMrs, hasNewMr: false } });
     }
   }
 
@@ -545,7 +626,7 @@ export class GitlabService implements OnModuleInit {
           `MR !${mr.iid}: VirusTotal verdicts: ${reports.map((report) => `${report.type}=${report.verdict}`).join(', ')}`,
         );
         await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
-        this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: mrs, hasNewMr: false } });
+        this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: [mr], hasNewMr: false } });
 
         const notable = reports.filter((report) => report.verdict === 'malicious' || report.verdict === 'suspicious');
         if (notable.length > 0 && !this.vtNotedMrIids.has(mr.iid)) {
@@ -570,6 +651,7 @@ export class GitlabService implements OnModuleInit {
     if (pkgnames.length === 0) return;
 
     let changed = false;
+    const changedMrs: MergeRequestWithDiffs[] = [];
     try {
       const statuses = await this.aurScanService.maintainerStatusFor(pkgnames);
       for (const mr of pending) {
@@ -583,6 +665,7 @@ export class GitlabService implements OnModuleInit {
         this.maintainerCheckedAt.set(mr.iid, mr.updated_at);
         mr.maintainers = status.maintainers;
         mr.maintainerChange = status.change ?? undefined;
+        changedMrs.push(mr);
         changed = true;
         if (status.change) {
           this.logger.warn(
@@ -601,7 +684,7 @@ export class GitlabService implements OnModuleInit {
 
     if (changed) {
       await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
-      this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: mrs, hasNewMr: false } });
+      this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: changedMrs, hasNewMr: false } });
     }
   }
 

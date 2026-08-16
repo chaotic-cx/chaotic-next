@@ -4,17 +4,6 @@
   min-width: 0;
 }
 
-:host ::ng-deep .p-fieldset {
-  min-width: 0 !important;
-  max-width: 100% !important;
-}
-
-:host ::ng-deep .p-fieldset-content {
-  min-width: 0 !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-}
-
 .news-content {
   min-width: 0;
   max-width: 100%;

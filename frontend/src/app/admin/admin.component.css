@@ -1,26 +1,21 @@
-.stats-tabs-container {
+.admin-tabs-container {
   border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
   border-radius: var(--p-panel-border-radius, 12px);
   overflow: hidden;
 }
 
-:host ::ng-deep .stats-tabs-container .p-tabs {
+:host ::ng-deep .admin-tabs-container .p-tabs {
   border: none !important;
   border-radius: 0 !important;
   background: transparent !important;
 }
 
-.p-tab {
-  @apply mx-auto;
+:host ::ng-deep .admin-tabs-container .p-tablist-tab-list {
+  border: none !important;
 }
 
 .p-tabpanels {
-  border-radius: 10px;
+  background: transparent !important;
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
-}
-
-:host ::ng-deep .p-tablist-tab-list {
-  border: none !important;
-  border-radius: 10px !important;
 }

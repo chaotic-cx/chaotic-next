@@ -57,10 +57,12 @@ export class SearchPackageComponent implements OnInit {
 
   protected readonly autoComplete = viewChild<AutoComplete>('autoComplete');
   protected readonly repoOptions = REPO_OPTIONS;
+  protected readonly typedInput = signal<string>('');
   protected readonly currentPackageName = signal<string>('');
 
   private readonly suggestionsQuerySubject = new Subject<string>();
   private readonly suggestionsQuery = signal<string>('');
+  private readonly packageNameSubject = new Subject<string>();
 
   private readonly suggestionsResource = httpResource<Paginated<Package>>(() =>
     this.suggestionsQuery()
@@ -134,9 +136,16 @@ export class SearchPackageComponent implements OnInit {
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((query) => this.suggestionsQuery.set(query));
 
+    this.packageNameSubject.pipe(debounceTime(400), takeUntilDestroyed()).subscribe((query) => {
+      if (/^[a-zA-Z0-9@.+_-]+$/.test(query)) {
+        this.currentPackageName.set(query);
+      }
+    });
+
     effect(() => {
       const q = this.search();
       if (q && /^[a-zA-Z0-9@.+_-]+$/.test(q)) {
+        this.typedInput.set(q);
         this.currentPackageName.set(q);
       }
     });
@@ -167,18 +176,25 @@ export class SearchPackageComponent implements OnInit {
   }
 
   selectPackage(query: string): void {
-    this.updateDisplay(query);
-    this.syncSearchParam(query);
+    if (/^[a-zA-Z0-9@.+_-]+$/.test(query)) {
+      this.typedInput.set(query);
+      this.currentPackageName.set(query);
+      this.syncSearchParam(query);
+    }
   }
 
   onInputBlur(): void {
-    // The model is one-way, so the typed text only lives in this signal.
-    this.syncSearchParam(this.currentPackageName());
+    const typed = this.typedInput();
+    if (/^[a-zA-Z0-9@.+_-]+$/.test(typed)) {
+      this.currentPackageName.set(typed);
+      this.syncSearchParam(typed);
+    }
   }
 
   updateDisplay(query: string): void {
     if (/^[a-zA-Z0-9@.+_-]+$/.test(query)) {
-      this.currentPackageName.set(query);
+      this.typedInput.set(query);
+      this.packageNameSubject.next(query);
     }
   }
 

@@ -4,39 +4,38 @@
     subtitleHtml="Down for everyone or just me? <i class='text-ctp-maroon pi pi-search'></i>"
   />
 
-  <div class="mx-auto w-full px-4 pb-5 lg:w-3/4 xl:w-1/2">
-    <p class="ml-5 text-left">Besides the mirrors found below, we have 2 more mirrors available:</p>
-    <ul class="chaotic-list-regular text-ctp-text list-disc">
-      <li>
-        <a class="text-ctp-mauve" href="https://cdn-mirror.chaotic.cx" rel="noopener" target="_blank">CDN mirror</a>:
-        This mirror is hosted at
-        <a
-          class="text-ctp-mauve"
-          href="https://www.cloudflare.com/developer-platform/products/r2/"
-          rel="noopener"
-          target="_blank"
-          >Cloudflare R2</a
-        >
-        and therefore globally distributed.
-      </li>
-      <li>
-        <a class="text-ctp-mauve" href="https://geo-mirror.chaotic.cx" rel="noopener" target="_blank">GEO mirror</a>:
-        This one automatically routes your requests to the closest mirror.
-      </li>
-      <li>If you want to host a mirror yourself, please get in contact with us in some way.</li>
-    </ul>
-  </div>
   <div class="mx-auto w-full px-4 pb-5 lg:w-3/4 xl:w-2/3">
+    <p-panel class="mr-overview-panel text-left mb-6" header="Additional mirrors">
+      <p class="mb-2">Besides the mirrors found below, we have 2 more mirrors available:</p>
+      <ul class="chaotic-list-regular text-ctp-text list-disc ml-5">
+        <li>
+          <a class="text-ctp-mauve" href="https://cdn-mirror.chaotic.cx" rel="noopener" target="_blank">CDN mirror</a>:
+          This mirror is hosted at
+          <a
+            class="text-ctp-mauve"
+            href="https://www.cloudflare.com/developer-platform/products/r2/"
+            rel="noopener"
+            target="_blank"
+            >Cloudflare R2</a
+          >
+          and therefore globally distributed.
+        </li>
+        <li>
+          <a class="text-ctp-mauve" href="https://geo-mirror.chaotic.cx" rel="noopener" target="_blank">GEO mirror</a>:
+          This one automatically routes your requests to the closest mirror.
+        </li>
+        <li>If you want to host a mirror yourself, please get in contact with us in some way.</li>
+      </ul>
+    </p-panel>
+
     @if (mirrorsService.onlineMirrors().length > 0) {
-      <div class="mt-8">
-        <h2 class="text-xl font-bold mb-4 text-ctp-text text-left ml-4">
-          Online
-          <i
-            class="pi pi-check-circle text-ctp-green ml-2"
-            pTooltip="All up to date and fine"
-            tooltipPosition="right"
-          ></i>
-        </h2>
+      <p-panel class="mr-overview-panel mt-6 text-left">
+        <ng-template #header>
+          <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
+            Online
+            <i class="pi pi-check-circle text-ctp-green" pTooltip="All up to date and fine" tooltipPosition="right"></i>
+          </div>
+        </ng-template>
         <p-table [value]="mirrorsService.onlineMirrors()" [loading]="mirrorsService.loading()">
           <ng-template #header>
             <tr>
@@ -77,19 +76,21 @@
             </tr>
           </ng-template>
         </p-table>
-      </div>
+      </p-panel>
     }
 
     @if (mirrorsService.outdatedMirrors().length > 0) {
-      <div class="mt-8">
-        <h2 class="text-xl font-bold mb-4 text-left text-ctp-text ml-4">
-          Outdated
-          <i
-            class="pi pi-exclamation-circle text-ctp-peach ml-2"
-            pTooltip="Geo- and country mirrors don't route to it, and direct requests will return an error code."
-            tooltipPosition="right"
-          ></i>
-        </h2>
+      <p-panel class="mr-overview-panel mt-6 text-left">
+        <ng-template #header>
+          <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
+            Outdated
+            <i
+              class="pi pi-exclamation-circle text-ctp-peach"
+              pTooltip="Geo- and country mirrors don't route to it, and direct requests will return an error code."
+              tooltipPosition="right"
+            ></i>
+          </div>
+        </ng-template>
         <p-table [value]="mirrorsService.outdatedMirrors()" [loading]="mirrorsService.loading()">
           <ng-template #header>
             <tr>
@@ -130,19 +131,21 @@
             </tr>
           </ng-template>
         </p-table>
-      </div>
+      </p-panel>
     }
 
     @if (mirrorsService.offlineMirrors().length > 0) {
-      <div class="mt-8">
-        <h2 class="text-xl font-bold mb-4 text-ctp-text text-left ml-4">
-          Offline
-          <i
-            class="pi pi-times-circle text-ctp-red ml-2"
-            pTooltip="The up-to-date check is completely unsuccessful, so the mirror is considered offline."
-            tooltipPosition="right"
-          ></i>
-        </h2>
+      <p-panel class="mr-overview-panel mt-6 text-left">
+        <ng-template #header>
+          <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
+            Offline
+            <i
+              class="pi pi-times-circle text-ctp-red"
+              pTooltip="The up-to-date check is completely unsuccessful, so the mirror is considered offline."
+              tooltipPosition="right"
+            ></i>
+          </div>
+        </ng-template>
         <p-table [value]="mirrorsService.offlineMirrors()" [loading]="mirrorsService.loading()">
           <ng-template #header>
             <tr>
@@ -183,7 +186,7 @@
             </tr>
           </ng-template>
         </p-table>
-      </div>
+      </p-panel>
     }
   </div>
 </div>

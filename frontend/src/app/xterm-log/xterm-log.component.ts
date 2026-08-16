@@ -1,8 +1,8 @@
-import { Component, ElementRef, OnDestroy, OnInit, effect, input, viewChild } from '@angular/core';
+import { Component, effect, ElementRef, input, OnDestroy, OnInit, viewChild } from '@angular/core';
+import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
 
@@ -49,8 +49,8 @@ const ANSI_ESCAPE = new RegExp(
         flex-direction: column;
         border: 1px solid var(--ctp-mocha-surface1);
         border-radius: 0.75rem;
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
         overflow: hidden;
         padding: 0.75rem;
       }
