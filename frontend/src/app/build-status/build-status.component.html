@@ -315,7 +315,13 @@
 </div>
 
 @if (dialogData(); as dialog) {
-  <p-dialog [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '90vw' }" header="Pipeline details">
+  <p-dialog
+    [(visible)]="dialogVisible"
+    [modal]="true"
+    [appendTo]="'body'"
+    [style]="{ width: '90vw' }"
+    header="Pipeline details"
+  >
     <div class="mb-5 ml-2.5">
       <p>Source: {{ dialog.pipeline.source }}</p>
       <p>Created at: {{ dialog.pipeline.created_at | date: 'short' }}</p>

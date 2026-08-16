@@ -135,7 +135,8 @@ interface BuilderFormModel {
     <p-dialog
       [(visible)]="dialogVisible"
       [modal]="true"
-      [style]="{ 'width': '36rem', 'max-width': '90vw' }"
+      [appendTo]="'body'"
+      [style]="{ 'width': '64rem', 'max-width': '94vw' }"
       [header]="'Edit builder'"
     >
       <form class="flex flex-col gap-4" (submit)="save(); $event.preventDefault()">
