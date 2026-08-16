@@ -1,10 +1,13 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { MAX_QUERY_LENGTH, MIN_QUERY_LENGTH } from '../utils/constants';
 import { AurSuggestionsQueryDto } from './aur.dto';
 import { AurService } from './aur.service';
 
 @ApiTags('aur')
+@ApiCookieAuth('better-auth.session_token')
+@UseGuards(AuthGuard)
 @Controller('aur')
 export class AurController {
   constructor(private readonly aurService: AurService) {}

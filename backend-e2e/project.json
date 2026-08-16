@@ -11,17 +11,6 @@
         "command": "tsc -p backend-e2e/tsconfig.json --noEmit"
       }
     },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "node node_modules/vitest/vitest.mjs run --config backend-e2e/vite.config.mts"
-      },
-      "configurations": {
-        "watch": {
-          "command": "node node_modules/vitest/vitest.mjs --config backend-e2e/vite.config.mts"
-        }
-      }
-    },
     "test-ci": {
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/coverage/backend-e2e"],

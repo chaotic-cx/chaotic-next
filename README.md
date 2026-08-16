@@ -55,8 +55,8 @@ pnpm install
 Start the backend and frontend (in two terminals):
 
 ```bash
-pnpm start:be-nx
-pnpm start:home
+pnpm start:be
+pnpm start:fe
 ```
 
 - Backend runs at `http://localhost:3000`, Swagger docs at `http://localhost:3000/api`

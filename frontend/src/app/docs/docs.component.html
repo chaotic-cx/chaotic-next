@@ -209,19 +209,6 @@
   </div>
 
   <div class="mt-5">
-    <p-panel header="Public API">
-      <div class="chaotic-panel text-md">
-        <p>
-          Chaotic-AUR exposes a public JSON API so you can query packages, builds, metrics and repository state
-          programmatically. Browse the interactive
-          <a class="text-ctp-mauve" [href]="apiDocsUrl" rel="noopener" target="_blank">API documentation</a>
-          for the full list of endpoints and schemas.
-        </p>
-      </div>
-    </p-panel>
-  </div>
-
-  <div class="mt-5">
     <p-panel header="Update review process">
       <div class="chaotic-panel text-md">
         <p>
@@ -234,14 +221,26 @@
         </p>
         <p-divider />
         <p>
-          Each MR then goes through a <strong>human review</strong>: maintainers inspect the diff, build the package and
-          verify it links against the correct libraries before approving it. Only after a human approves the MR is it
-          merged and the new binary deployed to the repository.
+          Each MR then goes through a human review: maintainers inspect the diff and verify it contains no malicious
+          changes before approving it. Only after a human approves the MR is it merged and deployed to the repository.
         </p>
         <p-divider />
         <p>
-          You can follow and act on these pending updates on the
+          You can follow these pending updates on the
           <a class="text-ctp-mauve" routerLink="/update-review">Update review</a> page.
+        </p>
+      </div>
+    </p-panel>
+  </div>
+
+  <div class="mt-5">
+    <p-panel header="Public API">
+      <div class="chaotic-panel text-md">
+        <p>
+          Chaotic-AUR exposes a public JSON API so you can query packages, builds, metrics and repository state
+          programmatically. Browse the interactive
+          <a class="text-ctp-mauve" [href]="apiDocsUrl" rel="noopener" target="_blank">API documentation</a>
+          for the full list of endpoints and schemas.
         </p>
       </div>
     </p-panel>

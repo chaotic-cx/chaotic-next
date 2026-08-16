@@ -3,36 +3,36 @@ import { Type } from 'class-transformer';
 import { IsArray, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class UserAgentMetricDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'User agent string' })
   @IsString()
   name!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Number of requests from this user agent' })
   @IsInt()
   count!: number;
 }
 
 export class CountNameDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Name (e.g. country or package)' })
   @IsString()
   name!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Number of hits' })
   @IsInt()
   count!: number;
 }
 
 export class SpecificPackageMetricsDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Package name' })
   @IsOptional()
   @IsString()
   name?: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Number of downloads' })
   @IsInt()
   downloads!: number;
 
-  @ApiProperty({ type: UserAgentMetricDto, isArray: true })
+  @ApiProperty({ description: 'User agent breakdown for the package', type: UserAgentMetricDto, isArray: true })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => UserAgentMetricDto)

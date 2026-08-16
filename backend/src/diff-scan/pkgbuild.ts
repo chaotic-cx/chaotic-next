@@ -98,13 +98,16 @@ export function extractScalarVars(pkgbuildText: string): Map<string, string> {
   return vars;
 }
 
+/** Makepkg-provided variables that are never declared in the PKGBUILD but have a stable default. */
+const MAKEPKG_DEFAULTS: ReadonlyMap<string, string> = new Map([['CARCH', 'x86_64']]);
+
 export function substituteVars(template: string, vars: ReadonlyMap<string, string>): string | null {
   const expanded = template.replace(
     /\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
     (match, braced: string | undefined, bare: string | undefined) => {
       const name = braced ?? bare;
       if (name === undefined) return match;
-      return vars.get(name) ?? `\u0000${match}`;
+      return vars.get(name) ?? MAKEPKG_DEFAULTS.get(name) ?? `\u0000${match}`;
     },
   );
   if (expanded.includes('\u0000') || expanded.includes('$')) return null;

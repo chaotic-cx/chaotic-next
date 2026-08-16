@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, Matches, Min } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Min } from 'class-validator';
+
+export class AurScanBodyDto {
+  @ApiProperty({ description: 'AUR package name to scan' })
+  @IsString()
+  @IsNotEmpty()
+  package!: string;
+}
 
 export class ApproveMrDto {
   @ApiProperty({ description: 'Merge request IID' })

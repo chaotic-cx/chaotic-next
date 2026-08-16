@@ -158,6 +158,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'aur-scan',
+        loadComponent: () =>
+          import('./admin/pages/admin-aur-scan-page.component').then((c) => c.AdminAurScanPageComponent),
+      },
+      {
         path: 'repo-operations',
         loadComponent: () =>
           import('./admin/pages/admin-repo-operations-page.component').then((c) => c.AdminRepoOperationsPageComponent),

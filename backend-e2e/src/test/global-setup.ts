@@ -36,6 +36,10 @@ export async function setup(): Promise<void> {
   process.env.CAUR_GITLAB_MERGE_BOT_USER_ID = '12345';
   process.env.GITLAB_CLIENT_ID = 'mock-gitlab-client-id';
   process.env.GITLAB_CLIENT_SECRET = 'mock-gitlab-client-secret';
+  // Fake key: specs exercise the real VirusTotal mapping and DB writes against a stubbed upstream.
+  process.env.VIRUSTOTAL_API_KEY = 'e2e-virustotal-key';
+  process.env.VIRUSTOTAL_REQUEST_SPACING_MS = '10';
+  process.env.VIRUSTOTAL_POLL_INTERVAL_MS = '25';
 }
 
 export async function teardown(): Promise<void> {

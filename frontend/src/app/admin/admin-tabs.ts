@@ -7,6 +7,7 @@ export const ADMIN_TABS = [
   'pipeline-triggers',
   'package-bumps',
   'package-elf-analysis',
+  'aur-scan',
   'repo-operations',
 ] as const;
 export type AdminTab = (typeof ADMIN_TABS)[number];

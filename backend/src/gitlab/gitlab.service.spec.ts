@@ -18,6 +18,9 @@ function fakePipeline(id: number) {
 
 function createService(
   virustotal: { enabled: boolean; reportOn: ReturnType<typeof vi.fn> } = { enabled: false, reportOn: vi.fn() },
+  aurScan: { maintainerStatusFor: ReturnType<typeof vi.fn> } = {
+    maintainerStatusFor: vi.fn(async () => new Map()),
+  },
 ): {
   service: GitlabService;
   pipelineTriggerRepository: { insert: ReturnType<typeof vi.fn> };
@@ -28,6 +31,7 @@ function createService(
   cacheSet: ReturnType<typeof vi.fn>;
   sseNext: ReturnType<typeof vi.fn>;
   vtReportOn: ReturnType<typeof vi.fn>;
+  maintainerStatusFor: ReturnType<typeof vi.fn>;
 } {
   const pipelinesCreate = vi.fn();
   const pipelineTriggerRepository = { insert: vi.fn() };
@@ -42,6 +46,7 @@ function createService(
     { get: vi.fn(), getOrThrow: vi.fn().mockReturnValue(12345) } as never,
     new DiffScanService(),
     virustotal as never,
+    aurScan as never,
     { sseEvents$: { next: sseNext } } as never,
     {} as Repository<never>,
     {} as Repository<never>,
@@ -65,6 +70,7 @@ function createService(
     cacheSet,
     sseNext,
     vtReportOn: virustotal.reportOn,
+    maintainerStatusFor: aurScan.maintainerStatusFor,
   };
 }
 
@@ -397,5 +403,68 @@ describe('GitlabService.approveMergeRequest', () => {
 
     expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
     expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved', assigneeId: 12345 });
+  });
+});
+
+describe('GitlabService.enrichMaintainerInfo', () => {
+  const strangerStatus = {
+    maintainers: [
+      {
+        username: 'stranger',
+        packagesMaintained: 1,
+        totalVotes: 0,
+        oldestFirstSubmitted: new Date().toISOString(),
+        novice: true,
+      },
+    ],
+    meta: { votes: 3, popularity: 0.5, firstSubmitted: '', outOfDate: false, orphaned: false },
+    change: {
+      previous: ['oldmaintainer'],
+      added: ['stranger'],
+      removed: ['oldmaintainer'],
+      detectedAt: new Date().toISOString(),
+    },
+  };
+
+  function enrich(service: GitlabService) {
+    return (service as unknown as { enrichMaintainerInfo(mrs: MergeRequestWithDiffs[]): Promise<void> })
+      .enrichMaintainerInfo;
+  }
+
+  it('attaches maintainers and takeover changes to update MRs', async () => {
+    const maintainerStatusFor = vi.fn(async () => new Map([['evilpkg', strangerStatus]]));
+    const { service, cacheSet, sseNext } = createService(undefined, { maintainerStatusFor });
+    const updateMr = mr({ title: 'chore(update): evilpkg' });
+    const otherMr = mr({ title: 'chore: mass rebuild', iid: 2, id: 99 });
+
+    await enrich(service).call(service, [updateMr, otherMr]);
+
+    expect(maintainerStatusFor).toHaveBeenCalledTimes(1);
+    expect(maintainerStatusFor).toHaveBeenCalledWith(['evilpkg']);
+    expect(updateMr.maintainers?.[0]?.username).toBe('stranger');
+    expect(updateMr.maintainerChange?.added).toEqual(['stranger']);
+    expect(otherMr.maintainers).toBeUndefined();
+    expect(cacheSet).toHaveBeenCalled();
+    expect(sseNext).toHaveBeenCalled();
+  });
+
+  it('skips MRs whose updated_at has not changed since the last run', async () => {
+    const maintainerStatusFor = vi.fn(async () => new Map([['evilpkg', strangerStatus]]));
+    const { service } = createService(undefined, { maintainerStatusFor });
+    const updateMr = mr({ title: 'chore(update): evilpkg', updated_at: '2026-08-16T10:00:00Z' });
+
+    await enrich(service).call(service, [updateMr]);
+    await enrich(service).call(service, [{ ...updateMr, maintainers: undefined, maintainerChange: undefined }]);
+    expect(maintainerStatusFor).toHaveBeenCalledTimes(1);
+
+    const pushedMr = {
+      ...updateMr,
+      updated_at: '2026-08-16T12:00:00Z',
+      maintainers: undefined,
+      maintainerChange: undefined,
+    };
+    await enrich(service).call(service, [pushedMr]);
+    expect(maintainerStatusFor).toHaveBeenCalledTimes(2);
+    expect(maintainerStatusFor).toHaveBeenLastCalledWith(['evilpkg']);
   });
 });

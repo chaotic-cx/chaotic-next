@@ -4,7 +4,7 @@
 />
 
 <div class="chaotic-container-wide-center md:chaotic-container-regular p-0.5 sm:p-2.5">
-  <p-tabs value="0">
+  <p-tabs [value]="activeTabValue()" (valueChange)="onTabChange($event)">
     <p-tablist>
       <p-tab value="0">AUR updates ({{ packageMrs().length }})</p-tab>
       <p-tab value="1">Package updates ({{ nvcheckerMrs().length }})</p-tab>
@@ -47,7 +47,13 @@
 
 <ng-template #mrList let-mrs="mrs">
   @for (mr of mrs; track mr.id; let i = $index) {
-    <p-panel class="mr-overview-panel" [class.mt-5]="i > 0">
+    <p-panel
+      class="mr-overview-panel"
+      [class.mt-5]="i > 0"
+      [class.mr-focused]="focusedIndex() === i"
+      [attr.data-mr-panel]="''"
+      [attr.tabindex]="focusedIndex() === i ? 0 : -1"
+    >
       <ng-template #header>
         <div class="flex w-full flex-wrap items-center justify-between gap-2">
           <a class="cursor-pointer text-ctp-mauve" [href]="mr.web_url">{{
@@ -71,13 +77,14 @@
             class="text-left fieldset-responsive overflow-x-auto block mb-5"
             [toggleable]="true"
             [collapsed]="!summary.hasCritical"
+            [attr.data-scan-fieldset]="''"
             legend="Automated security scan"
           >
             <div class="flex flex-col gap-1.5 pl-1.5 pb-1.5">
               @for (finding of scanFindings(mr); track $index) {
                 <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
                   <div class="flex min-w-0 items-center gap-2">
-                    <p-tag [severity]="tagSeverity[finding.severity]" [value]="finding.severity" />
+                    <p-tag [severity]="presenter.findingSeverity[finding.severity]" [value]="finding.severity" />
                     <span
                       class="min-w-0 break-words font-semibold"
                       [pTooltip]="finding.description"
@@ -101,13 +108,40 @@
                   @for (report of vtReports(mr); track $index) {
                     <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
                       <div class="flex min-w-0 items-center gap-2">
-                        <p-tag [severity]="vtTagSeverity[report.verdict]" [value]="report.verdict" />
+                        <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
                         <span class="min-w-0 break-all text-xs font-semibold">{{ report.value }}</span>
                       </div>
                       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
                         <code class="whitespace-nowrap text-xs text-ctp-sky">{{ report.context }}</code>
-                        <span class="text-xs text-ctp-subtext">{{ vtEngines(report) }}</span>
+                        <span class="text-xs text-ctp-subtext">{{ presenter.vtEngines(report) }}</span>
                       </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (maintainers(mr).length || maintainerChange(mr)) {
+                <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
+                  <span class="text-sm font-semibold">Maintainers</span>
+                  @for (maintainer of maintainers(mr); track maintainer.username) {
+                    <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+                      <div class="flex min-w-0 items-center gap-2">
+                        @if (maintainer.novice) {
+                          <p-tag severity="warn" value="New" />
+                        }
+                        <span class="text-xs font-semibold">{{ maintainer.username }}</span>
+                      </div>
+                      <span class="text-xs text-ctp-subtext">{{ presenter.maintainerSummary(maintainer) }}</span>
+                    </div>
+                  }
+                  @if (maintainerChange(mr); as change) {
+                    <div class="flex flex-wrap items-center gap-2">
+                      @if (presenter.tookOverByNovice(change, maintainers(mr))) {
+                        <p-tag severity="danger" value="New maintainer took over" />
+                      } @else {
+                        <p-tag severity="warn" value="Maintainer changed" />
+                      }
+                      <span class="text-xs text-ctp-subtext">{{ presenter.maintainerChangeSummary(change) }}</span>
                     </div>
                   }
                 </div>
@@ -124,7 +158,7 @@
               [legend]="stripPkgPrefix(mr, change.new_path) + (fileHasFindings(mr, change.new_path) ? ' ⚠' : '')"
               [toggleable]="true"
             >
-              <chaotic-diff-renderer [diff]="change.diff" [highlightLines]="findingLines(mr, change.new_path)" />
+              <chaotic-diff-renderer [diff]="change.diff" [findingsByLine]="findingsByLine(mr, change.new_path)" />
             </p-fieldset>
           }
         } @else {

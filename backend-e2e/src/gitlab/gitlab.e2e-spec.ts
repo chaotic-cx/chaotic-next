@@ -308,6 +308,48 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
   });
 
+  describe('GET /gitlab/pipelines/:pipelineId/jobs', () => {
+    it('maps GitLab jobs to the log-viewer shape', async () => {
+      vi.spyOn(gitlabService.api.Jobs, 'all').mockResolvedValue([
+        {
+          id: 501,
+          name: 'build:firedragon',
+          stage: 'build',
+          status: 'success',
+          ref: 'main',
+          web_url: 'https://gitlab.com/jobs/501',
+          started_at: '2026-08-16T10:00:00Z',
+          finished_at: '2026-08-16T10:03:00Z',
+          duration: 180,
+        },
+      ] as never);
+
+      const res = await app.inject({ method: 'GET', url: '/gitlab/pipelines/42/jobs' });
+
+      expect(res.statusCode).toBe(200);
+      const body = (await res.json()) as Array<{
+        id: number;
+        name: string;
+        stage: string;
+        status: string;
+        webUrl: string;
+      }>;
+      expect(body).toEqual([
+        {
+          id: 501,
+          name: 'build:firedragon',
+          stage: 'build',
+          status: 'success',
+          ref: 'main',
+          webUrl: 'https://gitlab.com/jobs/501',
+          startedAt: '2026-08-16T10:00:00Z',
+          finishedAt: '2026-08-16T10:03:00Z',
+          duration: 180,
+        },
+      ]);
+    });
+  });
+
   describe('GET /gitlab/pipelines (cache read)', () => {
     it('returns pipelines sorted by id descending', async () => {
       await app.inject({

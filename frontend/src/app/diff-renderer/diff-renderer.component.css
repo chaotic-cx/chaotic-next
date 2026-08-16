@@ -47,6 +47,16 @@ div {
   color: var(--ctp-mocha-red);
 }
 
+.added .word-changed {
+  background: rgba(166, 227, 161, 0.25);
+  border-radius: 2px;
+}
+
+.removed .word-changed {
+  background: rgba(243, 139, 168, 0.25);
+  border-radius: 2px;
+}
+
 .hunk-header {
   color: var(--ctp-mocha-blue);
   background: rgba(137, 180, 250, 0.1);
@@ -56,4 +66,46 @@ div {
 .highlighted {
   background: rgba(249, 226, 175, 0.18);
   box-shadow: inset 2px 0 0 var(--ctp-mocha-yellow);
+}
+
+.flagged {
+  background: rgba(249, 226, 175, 0.18);
+  box-shadow: inset 2px 0 0 var(--ctp-mocha-yellow);
+  cursor: pointer;
+}
+
+.flagged:hover,
+.flagged.expanded {
+  background: rgba(249, 226, 175, 0.28);
+}
+
+.findings {
+  @apply m-0 pr-1 pl-2;
+  background: var(--ctp-mocha-base);
+  border-left: 2px solid var(--ctp-mocha-yellow);
+  text-indent: 0;
+  white-space: normal;
+  padding-top: 0.25rem;
+}
+
+.finding {
+  @apply flex flex-col gap-0.5 py-1;
+  border-bottom: 1px solid var(--ctp-mocha-surface0);
+}
+
+.finding:last-child {
+  border-bottom: none;
+}
+
+.finding-rule {
+  color: var(--ctp-mocha-yellow);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.finding-description {
+  color: var(--ctp-mocha-subtext);
+  font-size: 0.7rem;
+  white-space: normal;
+  word-break: break-word;
 }

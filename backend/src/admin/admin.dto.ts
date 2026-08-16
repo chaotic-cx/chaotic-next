@@ -4,186 +4,186 @@ import { IsArray, IsBoolean, IsDefined, IsEnum, IsInt, IsObject, IsOptional, IsS
 import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from './admin.service';
 
 export class MrActionDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Record ID' })
   @IsInt()
   id!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Merge request IID' })
   @IsInt()
   mergeRequestIid!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Action performed on the merge request' })
   @IsString()
   action!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'ID of the user who performed the action' })
   @IsString()
   userId!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Name of the user who performed the action' })
   @IsString()
   userName!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'When the action was performed (ISO 8601)' })
   @IsString()
   createdAt!: string;
 }
 
 export class PipelineTriggerDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Record ID' })
   @IsInt()
   id!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Git ref the pipeline was triggered on' })
   @IsString()
   ref!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Pipeline operation name' })
   @IsString()
   operation!: string;
 
-  @ApiProperty({ type: Object })
+  @ApiProperty({ description: 'Inputs passed to the pipeline', type: Object })
   @IsDefined()
   @IsObject()
   inputs!: Record<string, string>;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'GitLab pipeline ID' })
   @IsOptional()
   @IsInt()
   pipelineId?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'URL of the triggered pipeline' })
   @IsOptional()
   @IsString()
   webUrl?: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'ID of the user who triggered the pipeline' })
   @IsString()
   userId!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Name of the user who triggered the pipeline' })
   @IsString()
   userName!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'When the pipeline was triggered (ISO 8601)' })
   @IsString()
   createdAt!: string;
 }
 
 export class PackageBumpDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Record ID' })
   @IsInt()
   id!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Bump type ID' })
   @IsInt()
   bumpType!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'ID of the package that triggered the bump' })
   @IsInt()
   trigger!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Origin of the trigger (0 for Arch, 1 for Chaotic)' })
   @IsInt()
   triggerFrom!: number;
 
-  @ApiPropertyOptional({ type: String, isArray: true })
+  @ApiPropertyOptional({ description: 'Details of the bump', type: String, isArray: true })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   details?: string[];
 
-  @ApiProperty()
+  @ApiProperty({ description: 'When the bump happened (ISO 8601)' })
   @IsString()
   timestamp!: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Name of the bumped package' })
   @IsOptional()
   @IsString()
   pkgname?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Name of the triggering package' })
   @IsOptional()
   @IsString()
   triggerName?: string;
 }
 
 export class AdminPackageElfAnalysisDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Record ID' })
   @IsInt()
   id!: number;
 
-  @ApiProperty({ enum: [PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC] })
+  @ApiProperty({ description: 'Package type (0 for Arch, 1 for Chaotic)', enum: [PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC] })
   @IsEnum([PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC])
   pkgType!: '0' | '1';
 
-  @ApiProperty()
+  @ApiProperty({ description: 'ID of the analysed package' })
   @IsInt()
   pkgId!: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Name of the analysed package' })
   @IsOptional()
   @IsString()
   pkgname?: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Version of the analysed package' })
   @IsString()
   version!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Whether the package was flagged broken' })
   @IsBoolean()
   broken!: boolean;
 
-  @ApiProperty({ type: String, isArray: true })
+  @ApiProperty({ description: 'Reasons the package was flagged broken', type: String, isArray: true })
   @IsArray()
   @IsString({ each: true })
   brokenReasons!: string[];
 
-  @ApiProperty()
+  @ApiProperty({ description: 'When the package was scanned (ISO 8601)' })
   @IsString()
   scannedAt!: string;
 }
 
 export class CreateBuilderBodyDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Builder name' })
   @IsString()
   name!: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Builder description' })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Builder class' })
   @IsOptional()
   @IsString()
   builderClass?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Whether the builder is active' })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }
 
 export class CreateElfAnalysisBodyDto {
-  @ApiProperty({ enum: [PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC] })
+  @ApiProperty({ description: 'Package type (0 for Arch, 1 for Chaotic)', enum: [PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC] })
   @IsEnum([PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC])
   pkgType!: '0' | '1';
 
-  @ApiProperty()
+  @ApiProperty({ description: 'ID of the analysed package' })
   @IsInt()
   pkgId!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Version of the analysed package' })
   @IsString()
   version!: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Whether the package is flagged broken' })
   @IsOptional()
   @IsBoolean()
   broken?: boolean;
 
-  @ApiPropertyOptional({ type: String, isArray: true })
+  @ApiPropertyOptional({ description: 'Reasons the package is flagged broken', type: String, isArray: true })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

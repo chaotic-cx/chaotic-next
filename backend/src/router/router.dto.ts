@@ -2,41 +2,41 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
 
 export class CountryStatsDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Country of the router hit' })
   @IsString()
   country!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Number of hits' })
   @IsString()
   count!: string;
 }
 
 export class MirrorStatsDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Mirror hostname' })
   @IsString()
   mirror!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Number of hits' })
   @IsString()
   count!: string;
 }
 
 export class PackageStatsDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Package base name' })
   @IsString()
   pkgbase!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Number of hits' })
   @IsString()
   count!: string;
 }
 
 export class PerDayStatsDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
   @IsString()
   day!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Number of hits' })
   @IsString()
   count!: string;
 }

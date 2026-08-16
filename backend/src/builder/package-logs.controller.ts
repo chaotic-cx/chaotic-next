@@ -1,7 +1,7 @@
+import { GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { Controller, NotFoundException, Param, ServiceUnavailableException, Sse } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { Observable } from 'rxjs';
 
 @ApiTags('logs')
@@ -10,7 +10,7 @@ export class PackageLogsController {
   constructor(private readonly configService: ConfigService) {}
 
   @Sse(':pkgname/:timestamp')
-  @ApiOperation({ summary: 'Stream a package build log (ANSI) from the build server.' })
+  @ApiOperation({ summary: 'Stream a package build log from the build server.' })
   @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
   getPackageLog(
     @Param('pkgname') pkgname: string,

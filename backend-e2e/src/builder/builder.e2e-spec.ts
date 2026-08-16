@@ -51,6 +51,28 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
     });
   });
 
+  describe('GET /builder/package/:name', () => {
+    it('returns the package with its repo name', async () => {
+      const repo = await e2e.seedRepo({ name: CHAOTIC_AUR_REPO.name });
+      await e2e.seedPackage({ pkgname: 'firedragon', version: '2:13.1.1', repo });
+
+      const res = await e2e.inject<{ pkgname: string; version: string }>({
+        method: 'GET',
+        url: '/builder/package/firedragon',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body.pkgname).toBe('firedragon');
+      expect(body.version).toBe('2:13.1.1');
+    });
+
+    it('answers 404 for an unknown package', async () => {
+      const res = await e2e.inject({ method: 'GET', url: '/builder/package/nope' });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
   describe('GET /builder/packages', () => {
     it('returns a paginated list with total count', async () => {
       const repo = await e2e.seedRepo({ name: CHAOTIC_AUR_REPO.name });

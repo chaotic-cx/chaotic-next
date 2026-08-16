@@ -1,5 +1,6 @@
 export const requiredEnvVarsProd: string[] = [
   'BETTER_AUTH_SECRET',
+  'BETTER_AUTH_TRUSTED_ORIGINS',
   'PG_DATABASE',
   'PG_HOST',
   'PG_PASSWORD',

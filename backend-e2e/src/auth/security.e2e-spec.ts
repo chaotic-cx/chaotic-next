@@ -42,8 +42,8 @@ describe('Better Auth & Security Configurations (e2e)', () => {
   });
 
   describe('Trusted Origins Security', () => {
-    it('configures trustedOrigins whitelist preventing unauthorized origins', () => {
-      expect(auth.options.trustedOrigins).toEqual(['http://localhost:4201', 'https://aur.chaotic.cx']);
+    it('derives trustedOrigins exclusively from BETTER_AUTH_TRUSTED_ORIGINS env var', () => {
+      expect(auth.options.trustedOrigins).toEqual([]);
     });
   });
 

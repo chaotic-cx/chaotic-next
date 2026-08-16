@@ -258,7 +258,47 @@
         </ng-template>
       </p-step-panel>
 
-      <p-step-panel [value]="reviewStep">
+      @if (showScanStep()) {
+        <p-step-panel [value]="scanStep">
+          <ng-template #content>
+            <div class="flex flex-col gap-4 py-8">
+              <span class="text-ctp-text text-sm">
+                Every package is scanned before it can be added: the AUR sources are fetched and checked against the
+                security rules and VirusTotal.
+              </span>
+              @if (step() === scanStep) {
+                @for (name of packageNames(); track name) {
+                  <div class="mx-2 my-2 rounded-lg border border-ctp-surface0 p-4 sm:mx-4">
+                    <chaotic-aur-scan-result [packageName]="name" />
+                  </div>
+                }
+              }
+              <div class="mt-4 flex flex-wrap items-center justify-center gap-3">
+                <p-button
+                  (onClick)="previousStep()"
+                  icon="pi pi-arrow-left"
+                  label="Back"
+                  severity="secondary"
+                  type="button"
+                />
+                @if (scansComplete()) {
+                  <p-button
+                    (onClick)="nextStep()"
+                    icon="pi pi-arrow-right"
+                    iconPos="right"
+                    label="Continue"
+                    type="button"
+                  />
+                } @else {
+                  <span class="text-ctp-subtext text-sm">Continue unlocks once every scan has completed</span>
+                }
+              </div>
+            </div>
+          </ng-template>
+        </p-step-panel>
+      }
+
+      <p-step-panel [value]="reviewStep()">
         <ng-template #content>
           <div class="flex flex-col items-center gap-10 py-8">
             <div class="flex flex-col items-center gap-2">

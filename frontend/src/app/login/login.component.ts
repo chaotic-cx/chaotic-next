@@ -25,7 +25,7 @@ export class LoginComponent {
   }
 
   login(): void {
-    this.gitlabLoginService.login(this.returnUrl());
+    this.gitlabLoginService.login(window.location.origin + this.returnUrl());
   }
 
   private returnUrl(): string {

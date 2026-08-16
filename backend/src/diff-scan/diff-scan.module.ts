@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import virustotalConfig from '../config/virustotal.config';
+import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
+import { AurScanService } from './aur-scan.service';
 import { DiffScanService } from './diff-scan.service';
 import { VirusTotalVerdict } from './virus-total-verdict.entity';
 import { VirustotalService } from './virustotal.service';
@@ -11,9 +13,9 @@ import { VirustotalService } from './virustotal.service';
   imports: [
     CacheModule.register(),
     ConfigModule.forFeature(virustotalConfig),
-    TypeOrmModule.forFeature([VirusTotalVerdict]),
+    TypeOrmModule.forFeature([VirusTotalVerdict, AurMaintainerSnapshot]),
   ],
-  providers: [DiffScanService, VirustotalService],
-  exports: [DiffScanService, VirustotalService],
+  providers: [AurScanService, DiffScanService, VirustotalService],
+  exports: [AurScanService, DiffScanService, VirustotalService],
 })
 export class DiffScanModule {}

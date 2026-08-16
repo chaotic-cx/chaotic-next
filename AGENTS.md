@@ -55,12 +55,12 @@ pnpm test                           # run all unit tests (Vitest)
 pnpm test:full                      # run full test suites
 pnpm test:e2e                       # run backend-e2e tests
 pnpm test:watch                     # watch mode
-pnpm test:coverage:combined         # coverage across all suites + merged report
+pnpm test:coverage:combined         # coverage across all suites and merged report
 pnpm lint                           # lint all projects (nx run-many --target=lint)
 pnpm format                         # format with Prettier
 pnpm typecheck                      # tsc --noEmit (builds/tests do NOT typecheck)
-pnpm start:be-nx                    # start backend (dev) via nx
-pnpm start:home                     # start frontend dev server
+pnpm start:be                       # start backend via nx
+pnpm start:fe                       # start frontend dev server
 ```
 
 Target a single project with `pnpm exec nx <target> <project>`, e.g.

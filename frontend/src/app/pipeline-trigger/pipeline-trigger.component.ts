@@ -1,16 +1,17 @@
 import {
   PIPELINE_PKG_BASE_REGEX,
+  PIPELINE_OPERATIONS,
   PIPELINE_REQUEST_REASONS,
   type PipelineOperation,
   type PipelineRequestReason,
   type PipelineTriggerInputs,
 } from '@chaotic-next/shared-lib';
-import { Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { applyEach, FormField, form, pattern, required, submit } from '@angular/forms/signals';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
 import { InputText } from '@openng/optimus-ui/inputtext';
@@ -19,6 +20,8 @@ import { Step, StepList, StepPanel, StepPanels, Stepper } from '@openng/optimus-
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { AppService } from '../app.service';
+import { AurScanResultComponent } from '../aur-scan/aur-scan-result.component';
+import { isScanSettled, AurScanService } from '../aur-scan/aur-scan.service';
 import { TitleComponent } from '../title/title.component';
 import { PipelineTriggerService } from './pipeline-trigger.service';
 
@@ -73,6 +76,7 @@ function emptyModel(): PipelineTriggerFormModel {
   selector: 'chaotic-pipeline-trigger',
   imports: [
     AutoComplete,
+    AurScanResultComponent,
     Button,
     FormField,
     FormsModule,
@@ -94,13 +98,14 @@ export class PipelineTriggerComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   protected readonly pipelineTriggerService = inject(PipelineTriggerService);
-  readonly operation = input<string>();
-  readonly packageName = input<string>();
+  protected readonly aurScanService = inject(AurScanService);
 
   protected readonly operationStep = 0;
   protected readonly inputsStep = 1;
-  protected readonly reviewStep = 2;
+  protected readonly scanStep = 2;
+  protected readonly reviewStep = computed(() => this.steps().at(-1)?.value ?? this.operationStep);
 
   protected readonly operationCards: Array<{ operation: PipelineOperation; description: string }> = [
     { operation: 'Bump Packages', description: 'Rebuild the selected packages now.' },
@@ -145,16 +150,25 @@ export class PipelineTriggerComponent implements OnInit {
 
   protected readonly steps = computed(() => {
     const inputLabel = this.showSchedule() ? 'Schedule' : this.showAddPackages() ? 'New packages' : 'Packages';
-    return this.showInputsStep()
-      ? [
-          { label: 'Operation', value: this.operationStep },
-          { label: inputLabel, value: this.inputsStep },
-          { label: 'Review', value: this.reviewStep },
-        ]
-      : [
-          { label: 'Operation', value: this.operationStep },
-          { label: 'Review', value: this.reviewStep },
-        ];
+    const panels = ['Operation'];
+    if (this.showInputsStep()) panels.push(inputLabel);
+    if (this.showScanStep()) panels.push('Security scan');
+    panels.push('Review');
+    return panels.map((label, index) => ({ label, value: index }));
+  });
+
+  protected readonly showScanStep = computed(() => this.showAddPackages());
+
+  protected readonly packageNames = computed(() =>
+    this.model()
+      .addRows.map((row) => row.pkgbase.trim())
+      .filter((name) => name !== ''),
+  );
+
+  protected readonly scansComplete = computed(() => {
+    const names = this.packageNames();
+    if (names.length === 0) return false;
+    return names.every((name) => isScanSettled(this.aurScanService.scanOf(name)));
   });
 
   protected readonly inputsValid = computed(() => {
@@ -164,7 +178,8 @@ export class PipelineTriggerComponent implements OnInit {
     const model = this.model();
     if (OPERATIONS_REQUIRING_PACKAGES.includes(model.operation)) return model.packageRows.length > 0;
     if (model.operation === 'Add Packages') {
-      return model.addRows.length > 0 && model.addRows.every((row) => !this.aurMissing().has(row.pkgbase.trim()));
+      const addable = (name: string): boolean => !this.aurMissing().has(name) && !this.existingPackages().has(name);
+      return model.addRows.length > 0 && model.addRows.every((row) => addable(row.pkgbase.trim()));
     }
     return true;
   });
@@ -234,24 +249,16 @@ export class PipelineTriggerComponent implements OnInit {
         }
       });
 
+    // Every wizard choice is mirrored into the query params so the URL can be
+    // shared and the wizard state restored from it on load.
     effect(() => {
-      const op = this.operation();
-      const pkg = this.packageName();
-      if (
-        op &&
-        (op === 'Bump Packages' || op === 'Schedule Packages' || op === 'Drop Packages' || op === 'Add Packages')
-      ) {
-        this.model.update((m) => ({
-          ...m,
-          operation: op as PipelineOperation,
-          packageRows: pkg ? [{ pkgbase: pkg, builder: DEFAULT_BUILDER }] : m.packageRows,
-        }));
-        this.step.set(this.inputsStep);
-      }
+      const queryParams = this.queryParamsFor(this.model(), this.step());
+      void this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
     });
   }
 
   ngOnInit() {
+    this.applyQueryParams();
     this.appService.updateSeoTags(this.meta, {
       title: 'Pipeline trigger',
       description: 'Trigger the Chaotic-AUR pipeline with the desired operation and inputs',
@@ -428,4 +435,78 @@ export class PipelineTriggerComponent implements OnInit {
 
     return inputs;
   }
+
+  private applyQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const operation = params.get('operation');
+    const operationValid = operation !== null && PIPELINE_OPERATIONS.includes(operation as PipelineOperation);
+    const restoredOperation: PipelineOperation = operationValid ? (operation as PipelineOperation) : 'None';
+    if (restoredOperation === 'None') return;
+
+    // "packages" is canonical; "pkg" and "packageName" are legacy single-name links.
+    const packagesRaw = params.get('packages') ?? params.get('pkg') ?? params.get('packageName') ?? '';
+    const names = packagesRaw
+      .split(',')
+      .map((name) => name.trim())
+      .filter((name) => name !== '');
+
+    const reason = params.get('reason');
+    const reasonValid = reason !== null && PIPELINE_REQUEST_REASONS.includes(reason as PipelineRequestReason);
+    const stepRaw = Number.parseInt(params.get('step') ?? '', 10);
+
+    this.model.update((model) => ({
+      ...model,
+      operation: restoredOperation,
+      packageRows:
+        names.length > 0 && OPERATIONS_REQUIRING_PACKAGES.includes(restoredOperation)
+          ? names.map((name) => {
+              const [pkgbase, builder] = name.split('/');
+              return { pkgbase, builder: builder ?? DEFAULT_BUILDER };
+            })
+          : model.packageRows,
+      addRows: names.length > 0 && restoredOperation === 'Add Packages' ? names.map(toAddRow) : model.addRows,
+      schedule: params.get('schedule') ?? model.schedule,
+      requestOrigin: params.get('origin') ?? model.requestOrigin,
+      requestReason: reasonValid ? (reason as PipelineRequestReason) : model.requestReason,
+      customRequestReason: params.get('customReason') ?? model.customRequestReason,
+    }));
+
+    const maxStep = this.steps().length - 1;
+    const targetStep = Number.isInteger(stepRaw)
+      ? Math.min(Math.max(stepRaw, this.inputsStep), maxStep)
+      : this.inputsStep;
+    this.step.set(targetStep);
+  }
+
+  private queryParamsFor(model: PipelineTriggerFormModel, step: number): Record<string, string> {
+    const names =
+      model.operation === 'Add Packages'
+        ? model.addRows.map((row) => row.pkgbase.trim()).filter((name) => name !== '')
+        : model.packageRows
+            .map((row) =>
+              row.builder === DEFAULT_BUILDER ? row.pkgbase.trim() : `${row.pkgbase.trim()}/${row.builder}`,
+            )
+            .filter((name) => name !== '' && name !== '/');
+
+    return definedOnly({
+      operation: model.operation === 'None' ? undefined : model.operation,
+      packages: names.length > 0 ? names.join(',') : undefined,
+      schedule: model.schedule === '' ? undefined : model.schedule,
+      origin: model.requestOrigin === '' ? undefined : model.requestOrigin,
+      reason: model.requestReason === 'unset' ? undefined : model.requestReason,
+      customReason: model.customRequestReason === '' ? undefined : model.customRequestReason,
+      step: step === this.operationStep ? undefined : String(step),
+    });
+  }
+}
+
+function definedOnly(params: Record<string, string | undefined>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(params).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
+}
+
+function toAddRow(name: string): AddPackageRow {
+  const [pkgbase] = name.split('/');
+  return { pkgbase };
 }

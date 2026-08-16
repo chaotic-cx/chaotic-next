@@ -84,6 +84,8 @@ export type E2eMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 export interface E2eResponse<T = unknown> {
   statusCode: number;
+  headers: Record<string, unknown>;
+  body: string;
   json(): Promise<T>;
 }
 
