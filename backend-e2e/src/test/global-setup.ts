@@ -27,8 +27,6 @@ export async function setup(): Promise<void> {
   process.env.PG_DATABASE = container.getDatabase();
   process.env.REDIS_PASSWORD = 'dummy';
   process.env.CAUR_DB_KEY = '00000000000000000000000000000000';
-  process.env.CAUR_GITLAB_ID_CAUR = 'test-project-id';
-  process.env.CAUR_GITLAB_TOKEN = 'test-gitlab-token';
   process.env.CAUR_GITLAB_WEBHOOK_TOKEN = 'test-webhook-token';
   process.env.CAUR_VAPID_PUBLIC =
     'BPWNRtrPfUjhwu8ST1Se2jfU0P_u5YJ0uo3xCovSkNEor1XY4ZX_HVriwh0T1_a3rvoD2oFymAxvNyUe4PthHXQ';

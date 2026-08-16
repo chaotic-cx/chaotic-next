@@ -34,14 +34,11 @@ It contains the backend API, the frontend website and a small shared library.
 
 - Node.js 26+ and `pnpm` 11+
 - A PostgreSQL database
-- Redis (optional; only needed for Moleculer build-event handling)
 
-Copy `.env` to your environment and adjust at least `PG_*`, `CAUR_JWT_SECRET`
-and `CAUR_USERS`. A local development setup can use a `docker run` Postgres:
+A local development setup can be spun up using Docker Compose from the repo root:
 
 ```bash
-docker run --name chaotic-pg -e POSTGRES_USER=chaotic -e POSTGRES_PASSWORD=chaotic \
-  -e POSTGRES_DB=chaotic -p 5432:5432 -d postgres
+docker compose up -d
 ```
 
 ## Development
@@ -60,13 +57,7 @@ pnpm start:fe
 ```
 
 - Backend runs at `http://localhost:3000`, Swagger docs at `http://localhost:3000/api`
-- Frontend runs at `http://localhost:4200`
-
-The frontend dev server proxies `/backend` to `localhost:3000`, `/api` and
-`/router` to the production endpoints (see `frontend/proxy.conf.json`). To use a
-local CORS-enabled API proxy instead, change `CAUR_BACKEND_URL` /
-`CAUR_API_URL` in `shared-lib/src/lib/types.ts` and run `pnpm proxy:api` /
-`pnpm proxy:be`.
+- Frontend runs at `http://localhost:4201`
 
 ### Build, test, lint
 
@@ -92,7 +83,6 @@ See `backend/src/config/` for the full list. The most important ones:
 | `NODE_ENV`                                | `development`                      | `production` disables TypeORM schema sync                  |
 | `CAUR_PORT`                               | `3000`                             | Backend listen port                                        |
 | `CAUR_DB_KEY`                             | —                                  | AES key used to encrypt repo API tokens at rest            |
-| `CAUR_JWT_SECRET`                         | —                                  | JWT secret for the backend                                 |
 | `REDIS_PASSWORD` / `REDIS_SSH_*`          | —                                  | Redis + SSH tunnel for Moleculer events                    |
 | `REPOMANAGER_SCHEDULE`                    | `0 * * * *`                        | Cron schedule for the repo-manager run                     |
 | `REPOMANAGER_MIRROR_URL`                  | `https://arch.mirror.constant.com` | Arch mirror used for the `.files` DBs and package archives |

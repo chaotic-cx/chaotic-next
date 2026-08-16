@@ -35,7 +35,7 @@ export class GitlabLoginService {
   private readonly config = inject(APP_CONFIG);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly authBaseURL = `${this.config.backendUrl}/api/auth`;
+  private readonly authBaseURL = this.config.authBaseUrl;
 
   login(returnPath: string): Observable<void> {
     sessionStorage.setItem(AUTH_REDIRECT_KEY, returnPath);
