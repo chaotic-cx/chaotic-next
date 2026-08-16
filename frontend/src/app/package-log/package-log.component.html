@@ -1,5 +1,5 @@
 <chaotic-title
-  [subtitle]="pkgname() ? `Build log — ${timestamp()}` : 'Build log'"
+  [subtitle]="pkgname() ? `Build log — ${formattedTimestamp()}` : 'Build log'"
   title="{{ pkgname() || 'Package log' }}"
 />
 
@@ -8,13 +8,61 @@
     <p class="log-error">{{ error() }}</p>
   }
 
+  @if (builder() || streaming()) {
+    <div class="log-toolbar">
+      @if (builder(); as host) {
+        <span class="builder-name">
+          <i class="pi pi-server"></i>
+          {{ host }}
+        </span>
+      }
+      <div class="toolbar-right">
+        @if (streaming()) {
+          <span class="live-badge">● live</span>
+        }
+        <button
+          class="download-btn"
+          [class.hide-download]="searchQuery()"
+          (click)="downloadLog()"
+          type="button"
+          aria-label="Download log"
+        >
+          <i class="pi pi-download"></i>
+        </button>
+        @if (searchQuery()) {
+          <button class="search-nav" (click)="searchPrevious()" type="button" aria-label="Previous match">
+            <i class="pi pi-angle-up"></i>
+          </button>
+          <button class="search-nav" (click)="searchNext()" type="button" aria-label="Next match">
+            <i class="pi pi-angle-down"></i>
+          </button>
+        }
+        <p-iconfield class="search-field" iconPosition="left">
+          <p-inputicon>
+            <i class="pi pi-search"></i>
+          </p-inputicon>
+          <input
+            class="w-full"
+            [value]="searchQuery()"
+            (input)="onSearch($any($event.target).value)"
+            (keydown.enter)="searchNext()"
+            (keydown.shift.enter)="searchPrevious()"
+            pInputText
+            type="text"
+            placeholder="Search buffer"
+          />
+        </p-iconfield>
+      </div>
+    </div>
+  }
+
   <div class="log-panel-wrap">
     @if (loading()) {
       <div class="log-loading">
         <p-progress-spinner ariaLabel="Loading log" />
       </div>
     } @else {
-      <chaotic-xterm-log [chunk]="logChunk()" />
+      <chaotic-xterm-log #term [chunk]="logChunk()" />
     }
   </div>
 </div>

@@ -339,3 +339,8 @@ body.is-transitioning .router-container {
     }
   }
 }
+
+/* Detached lazy-viewport spacers show a calm skeleton block instead of nothing */
+.chaotic-lazy-viewport:not(:has(*)) {
+  @apply bg-ctp-surface0/40 animate-pulse rounded-lg;
+}

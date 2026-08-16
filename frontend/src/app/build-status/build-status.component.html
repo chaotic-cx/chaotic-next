@@ -48,12 +48,12 @@
                     <td pTooltip="{{ pkg.build_class | buildClass }}" tooltipPosition="top">{{ pkg.build_class }}</td>
                     <td>
                       <a
+                        [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
                         pRipple
-                        href="{{ pkg.liveLogUrl }}"
                         aria-label="Open live build log for {{ pkg.name }}"
                         title="Open live build log for {{ pkg.name }}"
                       >
-                        <i class="pi pi-external-link text-ctp-mauve" style="font-size: 1.25rem"></i>
+                        <i class="pi pi-bars text-ctp-mauve" style="font-size: 1.25rem"></i>
                       </a>
                     </td>
                   </tr>
@@ -197,8 +197,8 @@
                 @for (pkg of buildStatusService.activeQueue(); track pkg.name) {
                   <a
                     class="block py-2.5"
+                    [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
                     pRipple
-                    href="{{ pkg.liveLogUrl }}"
                     aria-label="Open live build log for {{ pkg.name }}"
                   >
                     <span class="block truncate font-semibold">{{ pkg.name }}</span>
@@ -373,11 +373,15 @@
       </p-table>
     } @else {
       <div class="ml-2.5">
-        <p>There are no jobs in this pipeline (yet).</p>
-        <p>
-          Have a look at <a class="text-ctp-mauve" [href]="dialog.pipeline.web_url">web UI</a> to look into details
-          instead!
-        </p>
+        <a
+          class="text-ctp-mauve hover:underline inline-flex items-center gap-1"
+          [routerLink]="['/logs', dialog.pipeline.id]"
+          pTooltip="Open live build logs"
+          tooltipPosition="left"
+        >
+          <i class="pi pi-bars"></i>
+          <span>No jobs yet — open pipeline logs</span>
+        </a>
       </div>
     }
   </p-dialog>

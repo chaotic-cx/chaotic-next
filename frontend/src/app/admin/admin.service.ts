@@ -367,6 +367,14 @@ export class AdminService {
     );
   }
 
+  async triggerMrScan(): Promise<void> {
+    await this.runMutation(
+      () => this.http.post(`${this.backendUrl}/gitlab/mr-scan`, {}),
+      'Merge request scan triggered',
+      'Could not trigger the merge request scan.',
+    );
+  }
+
   async indexArchMirror(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/repo/index/arch`, {}),

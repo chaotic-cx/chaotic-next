@@ -1,4 +1,7 @@
 import { Component, ElementRef, OnDestroy, OnInit, effect, input, viewChild } from '@angular/core';
+import { SearchAddon } from '@xterm/addon-search';
+import { SerializeAddon } from '@xterm/addon-serialize';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
@@ -10,8 +13,16 @@ const MOBILE_MAX_WIDTH = 640;
 const TABLET_MAX_WIDTH = 1024;
 const SCROLLBACK_LINES = 9999999;
 const PIXELS_PER_SCROLL_LINE = 16;
-const BACKGROUND_COLOR = '#1e1e2e';
 const SCROLLBAR_COLOR = '#f5e0dc';
+
+const ESC = String.fromCharCode(27);
+const C1_ESC = String.fromCharCode(155);
+const BEL = String.fromCharCode(7);
+
+const ANSI_ESCAPE = new RegExp(
+  `[${ESC}${C1_ESC}][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d/#&.:=?%@~_]+)*)?${BEL})|(?:(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))`,
+  'g',
+);
 
 @Component({
   selector: 'chaotic-xterm-log',
@@ -38,11 +49,16 @@ const SCROLLBAR_COLOR = '#f5e0dc';
         flex-direction: column;
         border: 1px solid var(--ctp-mocha-surface1);
         border-radius: 0.75rem;
-        background: ${BACKGROUND_COLOR};
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
         overflow: hidden;
         padding: 0.75rem;
+      }
+
+      :host ::ng-deep .xterm-viewport,
+      :host ::ng-deep .xterm-scrollable-element,
+      :host ::ng-deep .xterm-screen {
+        background: transparent !important;
       }
 
       .terminal-host {
@@ -61,23 +77,44 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   private terminal?: Terminal;
   private fitAddon?: FitAddon;
+  private serializeAddon?: SerializeAddon;
+  private searchAddon?: SearchAddon;
   private resizeObserver?: ResizeObserver;
 
   constructor() {
     effect(() => {
-      const data = this.chunk();
-      if (data && this.terminal) {
-        this.terminal.write(data);
-        this.terminal.scrollToBottom();
+      const text = this.chunk();
+      if (!text) return;
+      const delta = text.slice(this.writtenLength);
+      this.writtenLength = text.length;
+      if (delta) {
+        this.pending += delta;
+        this.flushPending();
       }
     });
 
     effect(() => {
-      if (this.clearSignal() && this.terminal) {
-        this.terminal.clear();
-        this.terminal.reset();
+      if (this.clearSignal()) {
+        this.writtenLength = 0;
+        this.pending = '';
+        this.terminal?.clear();
+        this.terminal?.reset();
       }
     });
+  }
+
+  private pending = '';
+  private writtenLength = 0;
+
+  private flushPending(): void {
+    if (!this.terminal || !this.pending) return;
+    const text = this.pending;
+    this.pending = '';
+    const normalized = this.normalizeChunk(text);
+    if (normalized) {
+      this.terminal.write(normalized);
+      this.terminal.scrollToBottom();
+    }
   }
 
   ngOnInit(): void {
@@ -89,6 +126,42 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.resizeObserver?.disconnect();
     this.terminal?.dispose();
+  }
+
+  private normalizeChunk(text: string): string {
+    const startsWithNewline = /^\r?\n/.test(text);
+    const endsWithNewline = /\r?\n$/.test(text);
+    const normalized = text
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map((line) => line.replace(/[ \t]+$/g, ''))
+      .filter((line) => this.hasVisibleText(line))
+      .join('\n');
+    return `${startsWithNewline ? '\n' : ''}${normalized}${endsWithNewline ? '\n' : ''}`;
+  }
+
+  private hasVisibleText(line: string): boolean {
+    return line.replace(ANSI_ESCAPE, '').replace(/\s/g, '').length > 0;
+  }
+
+  downloadLog(filename: string): void {
+    const text = this.serializeAddon?.serialize() ?? '';
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  findNext(query: string): void {
+    if (!query) return;
+    this.searchAddon?.findNext(query);
+  }
+
+  findPrevious(query: string): void {
+    if (!query) return;
+    this.searchAddon?.findPrevious(query);
   }
 
   private getResponsiveFontSize(): number {
@@ -111,7 +184,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       fontSize: this.getResponsiveFontSize(),
       lineHeight: 1.2,
       theme: {
-        background: BACKGROUND_COLOR,
+        background: 'rgba(0, 0, 0, 0)',
         black: '#45475a',
         blue: '#89b4fa',
         brightBlack: '#585b70',
@@ -136,6 +209,23 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
     this.fitAddon = new FitAddon();
     this.terminal.loadAddon(this.fitAddon);
+
+    this.serializeAddon = new SerializeAddon();
+    this.terminal.loadAddon(this.serializeAddon);
+
+    this.searchAddon = new SearchAddon();
+    this.terminal.loadAddon(this.searchAddon);
+
+    this.terminal.loadAddon(
+      new WebLinksAddon((event, uri) => {
+        void event;
+        const link = document.createElement('a');
+        link.href = uri;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.click();
+      }),
+    );
 
     try {
       const webglAddon = new WebglAddon();
@@ -185,7 +275,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     if (viewport) {
       viewport.setAttribute(
         'style',
-        `background-color: ${BACKGROUND_COLOR}; scrollbar-color: ${SCROLLBAR_COLOR} ${BACKGROUND_COLOR}; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;`,
+        `scrollbar-color: ${SCROLLBAR_COLOR} transparent; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;`,
       );
     }
 
@@ -204,9 +294,6 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     });
     this.resizeObserver.observe(container);
 
-    const initialChunk = this.chunk();
-    if (initialChunk) {
-      this.terminal.write(initialChunk);
-    }
+    this.flushPending();
   }
 }

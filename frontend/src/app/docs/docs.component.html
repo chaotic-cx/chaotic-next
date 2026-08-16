@@ -42,9 +42,9 @@
           tabindex="0"
           role="button"
         ><code [highlight]="receiveKeys"
-                                                                                              language="shell"
-                                                                                              pTooltip="Copy to clipboard"
-                                                                                              tooltipPosition="top"></code><br></pre>
+               language="shell"
+               pTooltip="Copy to clipboard"
+               tooltipPosition="top"></code><br></pre>
         <p-divider />
         <div class="chaotic-panel">
           This allows us to install our
@@ -79,25 +79,25 @@
         <pre
           class="whitespace-pre-wrap py-5"
         ><code (click)="copyText(appendRepo)" (keydown.enter)="copyText(appendRepo)"
-                                                    [highlight]="appendRepo" language="shell"
-                                                    pTooltip="Copy to clipboard"
-                                                    tooltipPosition="top" tabindex="0" role="button"></code></pre>
+               [highlight]="appendRepo" language="shell"
+               pTooltip="Copy to clipboard"
+               tooltipPosition="top" tabindex="0" role="button"></code></pre>
         <p-divider />
         <p>We recommend running a full system update along syncing our mirrorlist.</p>
         <pre
           class="whitespace-pre-wrap py-5"
         ><code (click)="copyText(syncMirrors)" (keydown.enter)="copyText(syncMirrors)"
-                                                    [highlight]="syncMirrors" language="shell"
-                                                    pTooltip="Copy to clipboard"
-                                                    tooltipPosition="top" tabindex="0" role="button"></code></pre>
+               [highlight]="syncMirrors" language="shell"
+               pTooltip="Copy to clipboard"
+               tooltipPosition="top" tabindex="0" role="button"></code></pre>
         <p-divider />
         <p>After having completed this action, the repository is ready to use! 🚀</p>
         <pre
           class="whitespace-pre-wrap py-5"
         ><code (click)="copyText(installPackage)" (keydown.enter)="copyText(installPackage)"
-                                                    [highlight]="installPackage" language="shell"
-                                                    pTooltip="Copy to clipboard"
-                                                    tooltipPosition="top" tabindex="0" role="button"></code></pre>
+               [highlight]="installPackage" language="shell"
+               pTooltip="Copy to clipboard"
+               tooltipPosition="top" tabindex="0" role="button"></code></pre>
       </div>
     </p-panel>
   </div>
@@ -181,9 +181,9 @@
         <pre
           class="whitespace-pre-wrap py-5 pl-5"
         ><code (click)="copyText(ignorePkg)" (keydown.enter)="copyText(ignorePkg)"
-                                                         [innerHtml]="ignorePkg" language="shell"
-                                                         pTooltip="Copy to clipboard"
-                                                         tooltipPosition="top" tabindex="0" role="button"></code></pre>
+               [innerHtml]="ignorePkg" language="shell"
+               pTooltip="Copy to clipboard"
+               tooltipPosition="top" tabindex="0" role="button"></code></pre>
 
         <p-divider />
 
@@ -225,8 +225,8 @@
     <p-panel header="Update review process">
       <div class="chaotic-panel text-md">
         <p>
-          When a package we ship gets a new version (or an existing one is rebuilt), our build system prepares the
-          update by opening a merge request (MR) on GitLab against the
+          When an AUR package gets updated and the update is anything else but a minor version change, our build system
+          prepares the update by opening a merge request (MR) on GitLab against the
           <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds" rel="noopener" target="_blank"
             >pkgbuilds</a
           >

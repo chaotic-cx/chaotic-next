@@ -1,6 +1,6 @@
-import { MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
+import { MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { lastValueFrom } from 'rxjs';

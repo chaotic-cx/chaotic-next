@@ -90,6 +90,12 @@ export class AppComponent implements OnInit {
       tooltip: 'View usage statistics and charts',
     },
     {
+      icon: 'pi pi-check-square',
+      label: 'Update review',
+      routerLink: '/update-review',
+      tooltip: 'Review and approve pending package updates',
+    },
+    {
       icon: 'pi pi-cloud-download',
       label: 'Mirrors',
       routerLink: '/mirrors',
@@ -107,16 +113,6 @@ export class AppComponent implements OnInit {
       routerLink: '/about',
       tooltip: 'Learn about the Chaotic-AUR project',
     },
-    ...(this.authService.isLoggedIn()
-      ? [
-          {
-            icon: 'pi pi-check-square',
-            label: 'Update review',
-            routerLink: '/update-review',
-            tooltip: 'Review and approve pending package updates',
-          },
-        ]
-      : []),
   ]);
 
   constructor() {

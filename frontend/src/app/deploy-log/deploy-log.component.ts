@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { type Build, BuildStatus } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
-import { FilterMetadata } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
@@ -77,13 +76,11 @@ export class DeployLogComponent {
       typeof event.sortField === 'string' ? event.sortField : 'timestamp',
       event.sortOrder ?? -1,
     );
-    this.deployLogService.setPkgnameFilter(this.extractPkgnameFilter(event.filters));
   }
 
   clear(table: Table) {
     table.clear();
     this.deployLogService.setSearch('');
-    this.deployLogService.clearPkgnameFilter();
     this.deployLogService.setBuilderFilter(undefined);
     this.deployLogService.setRepoFilter(undefined);
     this.deployLogService.setStatusFilter(undefined);
@@ -112,15 +109,6 @@ export class DeployLogComponent {
 
   openDetail(build: Build) {
     void this.router.navigate(['/stats'], { queryParams: { search: build.pkgbase.pkgname } });
-  }
-
-  private extractPkgnameFilter(
-    filters?: Record<string, FilterMetadata | FilterMetadata[] | undefined>,
-  ): string | undefined {
-    const entry = filters?.['pkgbase.pkgname'];
-    const meta = Array.isArray(entry) ? entry[0] : entry;
-    const raw = meta?.value;
-    return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
   }
 
   private applyFilter<T>(setFilter: (value: T | null) => void, value: T | null): void {
