@@ -41,8 +41,7 @@ Nx-managed projects:
 ## Prerequisites
 
 Node.js 26+, pnpm 11+, a PostgreSQL database (Redis only needed for Moleculer
-build-event handling). Environment is configured via `.env` (see README for
-`PG_*`, `CAUR_JWT_SECRET`, `CAUR_USERS`).
+build-event handling). Environment is configured via `.env`.
 
 ## Useful commands
 

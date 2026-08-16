@@ -17,3 +17,4 @@ mode = "smart"
 [env.production.vars]
 NODE_VERSION = "26"
 PNPM_VERSION = "11"
+BACKEND_ORIGIN = "https://chaotic-backend.garudalinux.org"

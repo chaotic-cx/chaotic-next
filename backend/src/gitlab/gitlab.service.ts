@@ -12,8 +12,8 @@ import {
   totalEngines,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
-import { MergeRequestSchema } from '@gitbeaker/core';
 import type { MergeRequestDiffSchema } from '@gitbeaker/core';
+import { MergeRequestSchema } from '@gitbeaker/core';
 import type { CommitStatusSchema } from '@gitbeaker/rest';
 import { Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -182,11 +182,10 @@ export class GitlabService implements OnModuleInit {
       this.logger.warn(`Could not load chaotic-aur repo row: ${errorMessage(err)}`);
       return null;
     });
-    const gitlabProjectId = repo?.gitlabProjectId ?? this.configService.get<string>('CAUR_GITLAB_ID_CAUR');
-    if (!gitlabProjectId) {
+    if (!repo?.gitlabProjectId) {
       throw new Error('No chaotic-aur repo row with gitlabProjectId found; cannot initialise GitLab client');
     }
-    this.chaoticId = gitlabProjectId;
+    this.chaoticId = repo?.gitlabProjectId;
 
     let token: string | undefined;
     if (repo?.apiToken) {
@@ -196,10 +195,10 @@ export class GitlabService implements OnModuleInit {
         this.logger.warn(`Could not decrypt chaotic-aur apiToken: ${errorMessage(err)}`);
       }
     }
-    token ??= this.configService.get<string>('CAUR_GITLAB_TOKEN');
     if (!token) {
-      throw new Error('No chaotic-aur apiToken and no CAUR_GITLAB_TOKEN configured');
+      throw new Error('No chaotic-aur apiToken configured');
     }
+
     this.api = new Gitlab({ token });
   }
 

@@ -11,6 +11,7 @@ import { Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { DataSource } from 'typeorm';
 import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
 import { PipelineTrigger } from '@chaotic-next/backend/gitlab/pipeline-trigger.entity';
+import { encryptAes } from '@chaotic-next/backend/utils/functions';
 import { EventService } from '@chaotic-next/backend/events/event.service';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import type { GitlabStatusEvent, PipelineWebhook } from '@chaotic-next/backend/gitlab/interfaces';
@@ -83,7 +84,11 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
 
     const dataSource = moduleRef.get<DataSource>(DataSource);
     if (!dataSource.isInitialized) await dataSource.initialize();
-    await dataSource.getRepository(Repo).save({ name: 'chaotic-aur', gitlabProjectId: 'test-project-id' });
+    await dataSource.getRepository(Repo).save({
+      name: 'chaotic-aur',
+      gitlabProjectId: 'test-project-id',
+      apiToken: encryptAes('test-gitlab-token', process.env.CAUR_DB_KEY ?? ''),
+    });
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
