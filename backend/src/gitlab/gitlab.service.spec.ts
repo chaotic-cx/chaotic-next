@@ -12,6 +12,7 @@ function fakePipeline(id: number) {
   return {
     id,
     status: 'created',
+    sha: 'def456',
     web_url: `https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/${id}`,
   };
 }
@@ -99,6 +100,7 @@ describe('GitlabService.triggerPipeline', () => {
     });
     expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith({
       ref: 'main',
+      commitSha: 'def456',
       operation: 'Bump Packages',
       inputs,
       pipelineId: 4711,
@@ -449,17 +451,24 @@ describe('GitlabService.approveMergeRequest', () => {
     const mrEdit = vi.fn().mockResolvedValue({});
     const approvalsApprove = vi.fn().mockResolvedValue({});
     const noteCreate = vi.fn().mockResolvedValue({});
+    const mrActionInsert = vi.fn();
     (service as unknown as { api: unknown }).api = {
       MergeRequests: { show, edit: mrEdit },
       MergeRequestApprovals: { approve: approvalsApprove },
       MergeRequestNotes: { create: noteCreate },
     };
-    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
     await service.approveMergeRequest(1, 'abc123', ACTOR);
 
     expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
     expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved', assigneeId: 12345 });
+    expect(mrActionInsert).toHaveBeenCalledWith({
+      mergeRequestIid: 1,
+      action: 'approve',
+      commitSha: 'abc123',
+      ...ACTOR,
+    });
   });
 });
 

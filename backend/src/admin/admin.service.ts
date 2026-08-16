@@ -278,6 +278,7 @@ export class AdminService {
       const isNumeric = /^\d+$/.test(q);
       conditions = [
         ...(isNumeric ? [{ mergeRequestIid: Number(q) }] : []),
+        { commitSha: ILike(`%${q}%`) },
         { userId: ILike(`%${q}%`) },
         { userName: ILike(`%${q}%`) },
       ];
@@ -295,6 +296,7 @@ export class AdminService {
     const items: MrAction[] = rows.map((row) => ({
       id: row.id,
       mergeRequestIid: row.mergeRequestIid,
+      commitSha: row.commitSha,
       action: row.action,
       userId: row.userId,
       userName: row.userName,
@@ -315,6 +317,7 @@ export class AdminService {
       const isNumeric = /^\d+$/.test(q);
       conditions = [
         ...(isNumeric ? [{ pipelineId: Number(q) }] : []),
+        { commitSha: ILike(`%${q}%`) },
         { userId: ILike(`%${q}%`) },
         { userName: ILike(`%${q}%`) },
       ];
@@ -332,6 +335,7 @@ export class AdminService {
     const items: PipelineTriggerAction[] = rows.map((row) => ({
       id: row.id,
       ref: row.ref,
+      commitSha: row.commitSha,
       operation: row.operation,
       inputs: row.inputs,
       pipelineId: row.pipelineId ?? undefined,

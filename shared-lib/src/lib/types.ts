@@ -193,6 +193,7 @@ export interface GitlabLogChunk {
 export interface MrAction {
   id: number;
   mergeRequestIid: number;
+  commitSha: string | null;
   action: string;
   userId: string;
   userName: string;
@@ -256,6 +257,7 @@ export interface PipelineScheduleOption {
 export interface PipelineTriggerAction {
   id: number;
   ref: string;
+  commitSha: string | null;
   operation: string;
   inputs: Record<string, string>;
   pipelineId?: number;
