@@ -1,5 +1,6 @@
 import { DataSource, Repository, UpdateResult } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
+import { RouterHit } from '../router/router-hit.entity';
 import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { SignalScanService } from '../repo-manager/scan';
 import { Package } from './builder.entity';
@@ -10,6 +11,17 @@ function mockUpdateQueryBuilder({ affected }: { affected: number }) {
   const qb = {
     update: vi.fn(() => qb),
     set: vi.fn(() => qb),
+    where: vi.fn(() => qb),
+    andWhere: vi.fn(() => qb),
+    execute,
+  };
+  return qb;
+}
+
+function mockDeleteQueryBuilder(affected: number) {
+  const execute = vi.fn().mockResolvedValue({ affected });
+  const qb = {
+    delete: vi.fn(() => qb),
     where: vi.fn(() => qb),
     andWhere: vi.fn(() => qb),
     execute,
@@ -28,9 +40,10 @@ function mockSelectQueryBuilder({ candidates }: { candidates: { id: number }[] }
   return qb;
 }
 
-function createService(options: { affected?: number; candidates?: { id: number }[] }) {
+function createService(options: { affected?: number; candidates?: { id: number }[]; routerHits?: number[] }) {
   const updateQb = mockUpdateQueryBuilder({ affected: options.affected ?? 0 });
   const selectQb = mockSelectQueryBuilder({ candidates: options.candidates ?? [] });
+  const routerHitQbs = (options.routerHits ?? [0]).map(mockDeleteQueryBuilder);
 
   const packageRepository = {
     createQueryBuilder: vi.fn(() => updateQb),
@@ -46,6 +59,9 @@ function createService(options: { affected?: number; candidates?: { id: number }
     createQueryBuilder: vi.fn(() => selectQb),
     delete: vi.fn().mockResolvedValue({ affected: options.candidates?.length ?? 0 }),
   };
+  const routerHitRepo = {
+    createQueryBuilder: vi.fn(() => routerHitQbs.shift() ?? mockDeleteQueryBuilder(0)),
+  };
 
   const manager = {
     getRepository: vi.fn((entity) => {
@@ -56,6 +72,7 @@ function createService(options: { affected?: number; candidates?: { id: number }
   };
   const dataSource = {
     transaction: vi.fn(async (fn: (m: typeof manager) => Promise<void>) => fn(manager)),
+    getRepository: vi.fn((entity) => (entity === RouterHit ? routerHitRepo : manager.getRepository(entity))),
   } as unknown as DataSource;
   const signalScanService = createSignalScanStub();
   const analysisRepository = {
@@ -71,6 +88,7 @@ function createService(options: { affected?: number; candidates?: { id: number }
     elfAnalysisRepo,
     bumpRepo,
     pkgRepo,
+    routerHitRepo,
     dataSource,
     signalScanService,
     analysisRepository,
@@ -117,6 +135,77 @@ describe('DatabaseCleanupService', () => {
 
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
     expect(manager.getRepository).toHaveBeenCalledTimes(1);
+    expect(elfAnalysisRepo.delete).not.toHaveBeenCalled();
+  });
+
+  it('deactivates active packages with an invalid name', async () => {
+    const { service, qb } = createService({ affected: 3, candidates: [] });
+
+    await service.purgeInvalidNamedPackages();
+
+    expect(qb.set).toHaveBeenCalledWith({ isActive: false });
+    expect(qb.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('purges invalid-named packages even when build-referenced', async () => {
+    const ids = [415, 17773, 17581];
+    const { service, manager, elfAnalysisRepo, bumpRepo, pkgRepo, dataSource, signalScanService } = createService({
+      affected: 3,
+      candidates: ids.map((id) => ({ id })),
+    });
+
+    await service.purgeInvalidNamedPackages();
+
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    expect(elfAnalysisRepo.delete).toHaveBeenCalledTimes(1);
+    expect(bumpRepo.delete).toHaveBeenCalledTimes(1);
+    expect(pkgRepo.delete).toHaveBeenCalledTimes(1);
+    expect(signalScanService.invalidateDirectoryIndex).toHaveBeenCalledTimes(1);
+    void manager;
+  });
+
+  it('skips the delete phase for invalid names when there are no candidates', async () => {
+    const { service, manager, dataSource, elfAnalysisRepo } = createService({ affected: 0, candidates: [] });
+
+    await service.purgeInvalidNamedPackages();
+
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    expect(manager.getRepository).toHaveBeenCalledTimes(1);
+    expect(elfAnalysisRepo.delete).not.toHaveBeenCalled();
+  });
+
+  it('deactivates packages whose only builds are stale', async () => {
+    const { service, qb } = createService({ affected: 7, candidates: [] });
+
+    await service.purgeStaleBuildReferencedPackages();
+
+    expect(qb.set).toHaveBeenCalledWith({ isActive: false });
+    expect(qb.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('purges build-referenced packages whose newest build is stale', async () => {
+    const ids = [500, 501];
+    const { service, manager, elfAnalysisRepo, bumpRepo, pkgRepo, dataSource, signalScanService } = createService({
+      affected: 7,
+      candidates: ids.map((id) => ({ id })),
+    });
+
+    await service.purgeStaleBuildReferencedPackages();
+
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    expect(elfAnalysisRepo.delete).toHaveBeenCalledTimes(1);
+    expect(bumpRepo.delete).toHaveBeenCalledTimes(1);
+    expect(pkgRepo.delete).toHaveBeenCalledTimes(1);
+    expect(signalScanService.invalidateDirectoryIndex).toHaveBeenCalledTimes(1);
+    void manager;
+  });
+
+  it('skips the delete phase when no packages have stale builds', async () => {
+    const { service, dataSource, elfAnalysisRepo } = createService({ affected: 0, candidates: [] });
+
+    await service.purgeStaleBuildReferencedPackages();
+
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
     expect(elfAnalysisRepo.delete).not.toHaveBeenCalled();
   });
 
@@ -169,5 +258,44 @@ describe('DatabaseCleanupService', () => {
 
     expect(analysisRepository.delete).not.toHaveBeenCalled();
     expect(signalScanService.invalidateDirectoryIndex).not.toHaveBeenCalled();
+  });
+
+  it('purges old router hits older than the retention window', async () => {
+    const { service, dataSource, routerHitRepo } = createService({
+      affected: 0,
+      candidates: [],
+      routerHits: [10_000, 10_000, 5_000],
+    });
+
+    await service.purgeOldRouterHits();
+
+    expect(dataSource.getRepository).toHaveBeenCalledWith(RouterHit);
+    expect(routerHitRepo.createQueryBuilder).toHaveBeenCalledTimes(3);
+  });
+
+  it('purges router hits in a single batch when below the batch size', async () => {
+    const { service, routerHitRepo } = createService({ affected: 0, candidates: [], routerHits: [2_000] });
+
+    await service.purgeOldRouterHits();
+
+    expect(routerHitRepo.createQueryBuilder).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs and swallows router-hits purge errors', async () => {
+    const routerHitRepo = {
+      createQueryBuilder: vi.fn(() => {
+        throw new Error('db down');
+      }),
+    };
+    const dataSource = {
+      getRepository: vi.fn(() => routerHitRepo),
+    } as unknown as DataSource;
+    const signalScanService = createSignalScanStub();
+    const analysisRepository = {} as unknown as Repository<PackageElfAnalysis>;
+    const packageRepository = {} as unknown as Repository<Package>;
+
+    const service = new DatabaseCleanupService(packageRepository, analysisRepository, dataSource, signalScanService);
+
+    await expect(service.purgeOldRouterHits()).resolves.toBeUndefined();
   });
 });

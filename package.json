@@ -22,7 +22,7 @@
     "knip": "knip",
     "lint": "nx run-many --target=lint",
     "start": "nx run-many --target=serve --all",
-    "start:be": "nx run backend:serve | pino-pretty -cSt SYS:HH:MM:SS --ignore pid,hostname",
+    "start:be": "nx run backend:serve",
     "start:fe": "nx run frontend:serve --proxy-config frontend/proxy.conf.json",
     "test": "nx run-many --target=test --all",
     "test:full": "nx run-many --target=test:full --all",

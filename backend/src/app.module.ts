@@ -35,6 +35,15 @@ import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || 'info',
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+            singleLine: true,
+          },
+        },
         redact: {
           paths: [
             'req.headers["x-gitlab-private-token"]',

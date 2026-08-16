@@ -41,7 +41,7 @@ jobs:
               commitSha = tag.data.object.sha;
             }
 
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 90; i++) {
               const { data } = await github.rest.actions.listWorkflowRunsForRepo({
                 owner,
                 repo,
