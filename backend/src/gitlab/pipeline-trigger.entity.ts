@@ -13,6 +13,9 @@ export class PipelineTrigger {
   @Column({ type: 'varchar' })
   ref!: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  commitSha!: string | null;
+
   @Column({ type: 'varchar' })
   operation!: string;
 

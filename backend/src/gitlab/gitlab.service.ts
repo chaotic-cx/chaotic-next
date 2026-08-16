@@ -842,7 +842,7 @@ export class GitlabService implements OnModuleInit {
     }
 
     await this.postActorComment(iid, '✅ Approved by', actor);
-    await this.recordMrAction(iid, 'approve', actor);
+    await this.recordMrAction(iid, 'approve', mr.sha ?? sha, actor);
     await this.cacheManager.del(this.CACHE_KEY_MRS);
     await this.cacheManager.del(this.CACHE_KEY_REVIEW_STATS);
     void this.refreshOpenMergeRequests();
@@ -861,7 +861,7 @@ export class GitlabService implements OnModuleInit {
 
     const comment = label === 'dangerous' ? '🚨 Flagged as dangerous by' : '⏸️ Put on hold by';
     await this.postActorComment(iid, comment, actor);
-    await this.recordMrAction(iid, label, actor);
+    await this.recordMrAction(iid, label, mr.sha ?? null, actor);
     await this.cacheManager.del(this.CACHE_KEY_MRS);
     void this.refreshOpenMergeRequests();
   }
@@ -870,8 +870,13 @@ export class GitlabService implements OnModuleInit {
     await this.api.MergeRequestNotes.create(this.chaoticId, iid, `**${prefix}** ${actor.userName}.`);
   }
 
-  private async recordMrAction(iid: number, action: MrActionType, actor: MrActor): Promise<void> {
-    await this.mrActionRepository.insert({ mergeRequestIid: iid, action, ...actor });
+  private async recordMrAction(
+    iid: number,
+    action: MrActionType,
+    commitSha: string | null,
+    actor: MrActor,
+  ): Promise<void> {
+    await this.mrActionRepository.insert({ mergeRequestIid: iid, action, commitSha, ...actor });
   }
 
   async listPipelineSchedules(): Promise<PipelineScheduleOption[]> {
@@ -901,6 +906,7 @@ export class GitlabService implements OnModuleInit {
 
     await this.pipelineTriggerRepository.insert({
       ref,
+      commitSha: pipeline.sha ?? null,
       operation: inputs.operation,
       inputs,
       pipelineId: pipeline.id,

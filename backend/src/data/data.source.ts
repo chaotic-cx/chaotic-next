@@ -9,6 +9,7 @@ import { MrAction1786782432930 } from '../migrations/1786782432930-MrAction';
 import { PipelineTrigger1786868832930 } from '../migrations/1786868832930-PipelineTrigger';
 import { VirusTotalVerdict1786871992879 } from '../migrations/1786871992879-VirusTotalVerdict';
 import { AurMaintainerSnapshot1786920000000 } from '../migrations/1786920000000-AurMaintainerSnapshot';
+import { AuditCommitSha1786999414850 } from '../migrations/1786999414850-AuditCommitSha';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { RouterHit } from '../router/router-hit.entity';
@@ -40,6 +41,7 @@ export const dataSourceOptions: DataSourceOptions = {
     PipelineTrigger1786868832930,
     VirusTotalVerdict1786871992879,
     AurMaintainerSnapshot1786920000000,
+    AuditCommitSha1786999414850,
   ],
   migrationsRun: true,
   cache: true,

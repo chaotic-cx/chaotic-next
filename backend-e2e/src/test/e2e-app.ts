@@ -89,10 +89,15 @@ export interface E2eResponse<T = unknown> {
   json(): Promise<T>;
 }
 
-export type MrActionSeed = Partial<Pick<MrActionEntity, 'mergeRequestIid' | 'action' | 'userId' | 'userName'>>;
+export type MrActionSeed = Partial<
+  Pick<MrActionEntity, 'mergeRequestIid' | 'commitSha' | 'action' | 'userId' | 'userName'>
+>;
 
 export type PipelineTriggerSeed = Partial<
-  Pick<PipelineTriggerEntity, 'pipelineId' | 'ref' | 'operation' | 'inputs' | 'webUrl' | 'userId' | 'userName'>
+  Pick<
+    PipelineTriggerEntity,
+    'pipelineId' | 'ref' | 'commitSha' | 'operation' | 'inputs' | 'webUrl' | 'userId' | 'userName'
+  >
 >;
 
 export type PackageBumpSeed = Partial<

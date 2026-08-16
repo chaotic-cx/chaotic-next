@@ -12,6 +12,9 @@ export class MrAction {
   @Column({ type: 'int' })
   mergeRequestIid!: number;
 
+  @Column({ type: 'varchar', nullable: true })
+  commitSha!: string | null;
+
   @Column({ type: 'varchar' })
   action!: MrActionType;
 

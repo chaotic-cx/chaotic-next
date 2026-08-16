@@ -66,7 +66,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
-                placeholder="Search MR, user"
+                placeholder="Search MR, commit, user"
               />
             </p-iconfield>
           </div>
@@ -76,6 +76,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <th style="min-width: 3rem">ID</th>
             <th style="min-width: 8rem">MR</th>
             <th style="min-width: 8rem">Action</th>
+            <th style="min-width: 10rem">Commit</th>
             <th style="min-width: 10rem">User</th>
             <th style="min-width: 8rem">Created</th>
           </tr>
@@ -97,6 +98,20 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               <p-tag [value]="action.action" [severity]="severity(action)" />
             </td>
             <td>
+              @if (action.commitSha) {
+                <a
+                  class="cursor-pointer text-ctp-mauve hover:underline"
+                  [href]="commitUrl(action.commitSha)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <code class="text-sm">{{ shortSha(action.commitSha) }}</code>
+                </a>
+              } @else {
+                <span class="text-ctp-subtext0">—</span>
+              }
+            </td>
+            <td>
               <span class="font-medium">{{ action.userName }}</span>
             </td>
             <td>{{ action.createdAt | date: 'short' }}</td>
@@ -112,9 +127,18 @@ export class AdminMrActionsPageComponent {
   readonly actionOptions = ACTION_OPTIONS;
 
   private readonly mrBaseUrl = 'https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests';
+  private readonly commitBaseUrl = 'https://gitlab.com/chaotic-aur/pkgbuilds/-/commit';
 
   severity(action: MrAction): TagSeverity {
     return ACTION_SEVERITY[action.action] ?? 'secondary';
+  }
+
+  shortSha(sha: string): string {
+    return sha.slice(0, 8);
+  }
+
+  commitUrl(sha: string): string {
+    return `${this.commitBaseUrl}/${sha}`;
   }
 
   mrUrl(iid: number): string {

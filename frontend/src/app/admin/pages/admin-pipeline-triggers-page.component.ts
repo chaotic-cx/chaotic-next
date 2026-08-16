@@ -54,7 +54,7 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
-                placeholder="Search pipeline, user"
+                placeholder="Search pipeline, commit, user"
               />
             </p-iconfield>
           </div>
@@ -66,6 +66,7 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
             <th style="min-width: 10rem">Operation</th>
             <th style="min-width: 16rem">Inputs</th>
             <th style="min-width: 8rem">Ref</th>
+            <th style="min-width: 8rem">Commit</th>
             <th style="min-width: 10rem">User</th>
             <th style="min-width: 8rem">Created</th>
           </tr>
@@ -95,6 +96,13 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
             </td>
             <td>{{ trigger.ref }}</td>
             <td>
+              @if (trigger.commitSha) {
+                <code class="text-sm">{{ shortSha(trigger.commitSha) }}</code>
+              } @else {
+                <span class="text-ctp-subtext0">—</span>
+              }
+            </td>
+            <td>
               <span class="font-medium">{{ trigger.userName }}</span>
             </td>
             <td>{{ trigger.createdAt | date: 'short' }}</td>
@@ -108,6 +116,10 @@ export class AdminPipelineTriggersPageComponent {
   readonly service = inject(AdminService);
 
   readonly operationOptions = OPERATION_OPTIONS;
+
+  shortSha(sha: string): string {
+    return sha.slice(0, 8);
+  }
 
   formatInputs(trigger: PipelineTriggerAction): string {
     return Object.entries(trigger.inputs)

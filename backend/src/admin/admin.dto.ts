@@ -12,6 +12,11 @@ export class MrActionDto {
   @IsInt()
   mergeRequestIid!: number;
 
+  @ApiPropertyOptional({ description: 'Commit hash the action was performed on' })
+  @IsOptional()
+  @IsString()
+  commitSha?: string | null;
+
   @ApiProperty({ description: 'Action performed on the merge request' })
   @IsString()
   action!: string;
@@ -37,6 +42,11 @@ export class PipelineTriggerDto {
   @ApiProperty({ description: 'Git ref the pipeline was triggered on' })
   @IsString()
   ref!: string;
+
+  @ApiPropertyOptional({ description: 'Commit hash the pipeline was triggered on' })
+  @IsOptional()
+  @IsString()
+  commitSha?: string | null;
 
   @ApiProperty({ description: 'Pipeline operation name' })
   @IsString()
