@@ -30,14 +30,6 @@
             label="Clear"
             icon="pi pi-filter-slash"
           />
-          <p-button
-            class="hidden sm:inline-flex"
-            [outlined]="true"
-            [loading]="deployLogService.loading()"
-            (click)="deployLogService.reload()"
-            label="Reload"
-            icon="pi pi-refresh"
-          />
         </div>
         <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
           <p-select
@@ -89,12 +81,7 @@
     </ng-template>
     <ng-template #header>
       <tr>
-        <th>
-          <div class="flex items-center">
-            Package name
-            <p-columnFilter type="text" field="pkgbase.pkgname" display="menu" />
-          </div>
-        </th>
+        <th>Package name</th>
         <th>
           <div class="flex items-center">Builder</div>
         </th>
@@ -111,8 +98,8 @@
         <th pSortableColumn="timestamp">
           <div class="flex items-center">Time of finish&nbsp;<p-sortIcon field="timestamp" /></div>
         </th>
-        <th class="cell-actions">
-          <div class="flex items-center">Details</div>
+        <th class="cell-actions w-16">
+          <div class="flex items-center justify-end">Details</div>
         </th>
       </tr>
     </ng-template>
@@ -167,10 +154,11 @@
           <td>
             <span class="ml-1 align-middle">{{ build.timestamp | date: 'short' }}</span>
           </td>
-          <td class="cell-actions">
+          <td class="cell-actions w-16">
             <p-button
               class="h-8"
               (click)="openDetail(build)"
+              size="small"
               type="button"
               label="Details"
               outlined="true"

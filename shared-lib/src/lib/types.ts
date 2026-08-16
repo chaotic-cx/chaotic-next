@@ -1,7 +1,7 @@
 import { MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
 import type { PipelineSchema } from '@gitbeaker/rest';
 
-export const CACHE_REVIEW_STATS_TTL = 60 * 60 * 6 * 1000; // 6 hours; recomputing review stats is expensive
+export const CACHE_REVIEW_STATS_TTL = 60 * 60 * 6 * 1000; // recomputing review stats is expensive
 export const CAUR_ALLOWED_CORS = [
   'https://aur.chaotic.cx',
   'https://caur-frontend-pages.dev',
@@ -108,13 +108,12 @@ export function isBuildSortField(value: string): value is BuildSortField {
 }
 
 export interface PackageElfAnalysis {
-  /** Version of the package this analysis belongs to. */
   version: string;
-  /** Every regular file shipped in the archive, e.g. "usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so". */
+  /** e.g. "usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so" */
   files: string[];
-  /** DT_NEEDED sonames of every ELF object in the package, deduplicated. */
+  /** DT_NEEDED sonames of every ELF object in the package. */
   neededSonames: string[];
-  /** SONAME of every shipped .so file, deduplicated. */
+  /** SONAME of every shipped .so file. */
   providedSonames: string[];
   /**
    * Dynamic symbols the package imports (undefined symbols of its shipped
@@ -136,7 +135,7 @@ export interface PackageElfAnalysis {
    * append) breaks every consumer that imports a shifted slot.
    */
   vtables: Record<string, string[]>;
-  /** Directories this package owns: the parent directory of every shipped file. */
+  /** Parent directory of every shipped file. */
   directoriesOwned: string[];
   /**
    * The direct parent directories of the shipped files (real ownership). Used
@@ -155,9 +154,8 @@ export interface PackageElfAnalysis {
    * python/perl/ruby/ghc version directory.
    */
   broken: boolean;
-  /** Human-readable reasons, empty when not broken. */
+  /** Empty when not broken. */
   brokenReasons: string[];
-  /** Timestamp of the scan, ISO string. */
   scannedAt: string;
 }
 
@@ -433,6 +431,40 @@ export interface PipelineWithExternalStatus {
   pipeline: PipelineSchema;
 }
 
+export type DiffScanSeverity = 'critical' | 'warning' | 'info';
+
+export interface DiffScanFinding {
+  ruleId: string;
+  ruleName: string;
+  severity: DiffScanSeverity;
+  description: string;
+  file: string;
+  line?: number;
+  match: string;
+}
+
+export type VtVerdict = 'malicious' | 'suspicious' | 'clean' | 'unknown';
+
+export interface VtEngineStats {
+  malicious: number;
+  suspicious: number;
+  undetected: number;
+  harmless: number;
+  timeout: number;
+}
+
+export function totalEngines(stats: VtEngineStats): number {
+  return stats.malicious + stats.suspicious + stats.undetected + stats.harmless + stats.timeout;
+}
+
+export interface VtIndicatorReport {
+  type: 'url' | 'file';
+  value: string;
+  context: string;
+  verdict: VtVerdict;
+  stats?: VtEngineStats;
+}
+
 export type MergeRequestWithDiffs = Pick<
   MergeRequestSchema,
   | 'id'
@@ -446,7 +478,13 @@ export type MergeRequestWithDiffs = Pick<
   | 'sha'
   | 'merge_status'
   | 'detailed_merge_status'
-> & { diffs: MergeRequestDiffSchema[]; labels: string[] };
+> & {
+  diffs: MergeRequestDiffSchema[];
+  labels: string[];
+  scanFindings?: DiffScanFinding[];
+  vtReports?: VtIndicatorReport[];
+  diff_refs?: { base_sha: string; head_sha: string; start_sha: string } | null;
+};
 
 export interface Mirror {
   subdomain: string;

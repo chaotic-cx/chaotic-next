@@ -399,6 +399,48 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       expect(res.statusCode).toBe(200);
       expect(await res.json()).toEqual([]);
     });
+
+    it('attaches security scan findings to MRs fetched from the GitLab API', async () => {
+      const api = gitlabService.api;
+      vi.spyOn(api.MergeRequests, 'all').mockResolvedValue([
+        {
+          id: 2,
+          iid: 2,
+          title: 'chore(update): evilpkg',
+          state: 'opened',
+          web_url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests/2',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+          assignees: [],
+          sha: 'feedface',
+          labels: ['human-review'],
+          merge_status: 'can_be_merged',
+          detailed_merge_status: 'not_approved',
+        },
+      ] as never);
+      vi.spyOn(api.MergeRequests, 'allDiffs').mockResolvedValue([
+        {
+          old_path: 'evilpkg/evilpkg.install',
+          new_path: 'evilpkg/evilpkg.install',
+          a_mode: '100644',
+          b_mode: '100644',
+          new_file: true,
+          renamed_file: false,
+          deleted_file: false,
+          diff: ['@@ -0,0 +1,3 @@', '+post_install() {', '+  npm install atomic-lockfile', '+}'].join('\n'),
+        },
+      ] as never);
+
+      await gitlabService.getOpenMergeRequests(true);
+      const res = await app.inject({ method: 'GET', url: '/gitlab/merge-requests' });
+
+      expect(res.statusCode).toBe(200);
+      const body = (await res.json()) as Array<{ scanFindings?: Array<{ ruleId: string; severity: string }> }>;
+      const ruleIds = body[0]?.scanFindings?.map((finding) => finding.ruleId);
+      expect(ruleIds).toContain('CAUR-INSTALL-NEW');
+      expect(ruleIds).toContain('NPM-001');
+      expect(ruleIds).toContain('NPM-002');
+    });
   });
 
   describe('GET /gitlab/review-stats (cache-backed)', () => {

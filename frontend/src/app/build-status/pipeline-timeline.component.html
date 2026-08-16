@@ -21,13 +21,13 @@
               <i
                 class="pi"
                 [ngClass]="{
-                  'pi-check-circle text-ctp-green': pipeline.pipeline.status.includes('success'),
-                  'pi-exclamation-circle text-ctp-red': pipeline.pipeline.status.includes('failed'),
-                  'pi-spin pi-spinner text-ctp-peach': pipeline.pipeline.status === 'running',
-                  'pi-info-circle text-ctp-text': pipeline.pipeline.status === 'pending',
-                  'pi-hourglass text-ctp-flamingo': pipeline.pipeline.status === 'waiting_for_resource',
-                  'pi-times-circle text-ctp-maroon': pipeline.pipeline.status === 'canceling',
-                  'pi-times-circle text-ctp-text': pipeline.pipeline.status === 'canceled',
+                  'pi-check-circle text-ctp-green': pipeline.statusText.includes('success'),
+                  'pi-exclamation-circle text-ctp-red': pipeline.statusText.includes('failed'),
+                  'pi-spin pi-spinner text-ctp-peach': pipeline.statusText === 'running',
+                  'pi-info-circle text-ctp-text': pipeline.statusText === 'pending',
+                  'pi-hourglass text-ctp-flamingo': pipeline.statusText === 'waiting_for_resource',
+                  'pi-times-circle text-ctp-maroon': pipeline.statusText === 'canceling',
+                  'pi-times-circle text-ctp-text': pipeline.statusText === 'canceled',
                 }"
               ></i>
               <span class="ml-2">

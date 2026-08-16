@@ -117,10 +117,12 @@ export class BuildStatusService {
   }
 
   private toView(pipeline: PipelineWithExternalStatus): PipelineView {
+    const failedJobs = pipeline.commit.filter((job) => job.status === 'failed').length;
     let statusText = pipeline.pipeline.status;
-    if (pipeline.pipeline.status === 'failed') {
-      const failedJobs = pipeline.commit.filter((job) => job.status === 'failed').length;
+    if (failedJobs > 0) {
       statusText = `${failedJobs}/${pipeline.commit.length} failed`;
+    } else if (pipeline.pipeline.status === 'canceled') {
+      statusText = 'success';
     }
     return {
       pipeline: pipeline.pipeline,

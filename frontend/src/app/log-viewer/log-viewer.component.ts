@@ -140,7 +140,7 @@ export class LogViewerComponent {
       // Only once a running job produces output is it actually "live".
       this.streaming.set(true);
       if (chunk.text) {
-        this.logChunk.set(chunk.text);
+        this.logChunk.set(this.logChunk() + chunk.text);
       }
     };
 

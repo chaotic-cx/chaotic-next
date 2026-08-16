@@ -43,7 +43,6 @@ export class DeployLogService {
   readonly repoOptions = REPO_OPTIONS;
   readonly statusOptions = STATUS_OPTIONS;
 
-  readonly pkgnameFilter = signal<string>('');
   readonly builderFilter = signal<string | undefined>(undefined);
   readonly repoFilter = signal<string | undefined>(undefined);
   readonly statusFilter = signal<BuildStatus | undefined>(undefined);
@@ -101,10 +100,6 @@ export class DeployLogService {
     this.sortOrder.set(order);
   }
 
-  setPkgnameFilter(pkgname?: string): void {
-    this.pkgnameFilter.set(pkgname ?? '');
-  }
-
   setBuilderFilter(value: string | null | undefined): void {
     this.builderFilter.set(value ?? undefined);
     this.page.set(1);
@@ -118,10 +113,6 @@ export class DeployLogService {
   setStatusFilter(value: BuildStatus | null | undefined): void {
     this.statusFilter.set(value ?? undefined);
     this.page.set(1);
-  }
-
-  clearPkgnameFilter(): void {
-    this.pkgnameFilter.set('');
   }
 
   reload(): void {

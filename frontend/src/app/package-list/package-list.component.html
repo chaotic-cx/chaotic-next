@@ -90,7 +90,7 @@
           </div>
         </th>
         <th class="cell-actions" style="min-width: 5rem">
-          <div class="flex items-center">PKGBUILD</div>
+          <div class="flex items-center justify-end">PKGBUILD</div>
         </th>
       </tr>
     </ng-template>
@@ -126,8 +126,9 @@
               <div class="flex gap-2">
                 @if (isLoggedIn()) {
                   <p-button
-                    class="h-10"
+                    class="h-8"
                     (click)="triggerRebuild(pkg)"
+                    size="small"
                     type="button"
                     label="Rebuild"
                     icon="pi pi-sync"
@@ -137,8 +138,9 @@
                   />
                 }
                 <p-button
-                  class="h-10"
+                  class="h-8"
                   (click)="openDetail(pkg)"
+                  size="small"
                   type="button"
                   label="Details"
                   outlined="true"
@@ -146,8 +148,9 @@
                   tooltipPosition="left"
                 />
                 <p-button
-                  class="h-10"
+                  class="h-8"
                   (click)="openPkgbuild(pkg)"
+                  size="small"
                   type="button"
                   label="Source"
                   pTooltip="View the PKGBUILD source for this package"

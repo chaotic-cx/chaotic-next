@@ -15,6 +15,7 @@ import { AurModule } from './aur/aur.module';
 import { BuilderModule } from './builder/builder.module';
 import appConfig from './config/app.config';
 import { dataSourceOptions } from './data/data.source';
+import { MigrationLogger } from './data/migration-logger';
 import { GitlabModule } from './gitlab/gitlab.module';
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
@@ -58,7 +59,7 @@ import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
         limit: THROTTLE_LIMIT,
       },
     ]),
-    TypeOrmModule.forRoot({ ...dataSourceOptions, autoLoadEntities: true }),
+    TypeOrmModule.forRoot({ ...dataSourceOptions, autoLoadEntities: true, logger: new MigrationLogger() }),
     GitlabModule,
   ],
   providers: [

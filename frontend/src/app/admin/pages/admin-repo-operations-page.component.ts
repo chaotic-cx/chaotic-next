@@ -23,9 +23,17 @@ import { AdminService } from '../admin.service';
             <p-button
               (onClick)="service.triggerSignalScan()"
               label="Trigger signal scan"
-              icon="pi pi-wave-square"
+              icon="pi pi-microchip"
               severity="secondary"
               pTooltip="Scan changed Arch packages for ELF signals"
+              tooltipPosition="bottom"
+            />
+            <p-button
+              (onClick)="service.triggerMrScan()"
+              label="Trigger MR scan"
+              icon="pi pi-shield"
+              severity="secondary"
+              pTooltip="Scan open merge requests for malicious changes: rule findings, auto-flag labels and VirusTotal checks"
               tooltipPosition="bottom"
             />
             <p-button

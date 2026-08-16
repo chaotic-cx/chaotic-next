@@ -1,5 +1,6 @@
 import {
   CACHE_REVIEW_STATS_TTL,
+  type DiffScanFinding,
   type ExternalCommitStatus,
   GitlabJob,
   GitlabLogChunk,
@@ -8,12 +9,14 @@ import {
   PipelineScheduleOption,
   PipelineTriggerResult,
   PipelineWithExternalStatus,
+  type VtEngineStats,
+  type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
-import { MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
+import { MergeRequestSchema } from '@gitbeaker/core';
 import type { CommitStatusSchema } from '@gitbeaker/rest';
 import { Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,6 +25,9 @@ import { Observable } from 'rxjs';
 import { Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
 import { Repo } from '../builder/builder.entity';
+import { DiffScanService, type DiffScanVerdict, type MrAutoFlagLabel } from '../diff-scan/diff-scan.service';
+import { extractIndicators } from '../diff-scan/indicators';
+import { VirustotalService } from '../diff-scan/virustotal.service';
 import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { decryptAes, errorMessage, mapWithConcurrency } from '../utils/functions';
@@ -33,6 +39,22 @@ import { PipelineTrigger } from './pipeline-trigger.entity';
 export interface MrActor {
   userId: string;
   userName: string;
+}
+
+/** Job statuses after which no more trace output is expected. */
+const TERMINAL_JOB_STATUSES = ['success', 'failed', 'canceled', 'skipped', 'manual', 'waiting_for_resource'];
+/** How often the backend re-fetches a job trace to look for new bytes. */
+const JOB_TRACE_POLL_MS = 2000;
+const MAX_VERDICT_NOTE_FINDINGS = 5;
+/** Fetching every MR diff at once makes GitLab throw transient 500s, so batches are bounded. */
+const DIFF_FETCH_CONCURRENCY = 5;
+
+function toLabelStrings(labels: MergeRequestSchema['labels']): string[] {
+  return labels.map((label) => (typeof label === 'string' ? label : label.name));
+}
+
+function totalEngines(stats: VtEngineStats): number {
+  return stats.malicious + stats.suspicious + stats.undetected + stats.harmless + stats.timeout;
 }
 
 @Injectable()
@@ -49,6 +71,11 @@ export class GitlabService implements OnModuleInit {
 
   private isSeedingPipelines = false;
   private isRefreshingReviewStats = false;
+  private isAutoFlaggingMrs = false;
+  private isEnrichingVt = false;
+
+  /** MRs that already received a VirusTotal note, so the cron does not repeat itself. */
+  private readonly vtNotedMrIids = new Set<number>();
 
   private readonly pipelineMap = new Map<number, PipelineSchema>();
   private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
@@ -57,6 +84,8 @@ export class GitlabService implements OnModuleInit {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly configService: ConfigService,
+    private readonly diffScanService: DiffScanService,
+    private readonly virustotalService: VirustotalService,
     private readonly eventService: EventService,
     @InjectRepository(NotificationSubscription)
     private readonly subscriptionRepository: Repository<NotificationSubscription>,
@@ -127,6 +156,28 @@ export class GitlabService implements OnModuleInit {
       await this.seedPipelines();
     } finally {
       this.isSeedingPipelines = false;
+    }
+  }
+
+  @Cron(CronExpression.EVERY_30_MINUTES)
+  async handleAutoFlagRefresh(): Promise<void> {
+    if (this.isAutoFlaggingMrs) {
+      this.logger.debug('Auto-flag refresh already running, skipping');
+      return;
+    }
+    this.isAutoFlaggingMrs = true;
+
+    try {
+      this.logger.debug('Starting auto-flag refresh');
+      const mrs = await this.getOpenMergeRequests(true);
+      await this.autoFlagMergeRequests(mrs);
+      void this.enrichVirusTotalReports(mrs).catch((err) =>
+        this.logger.error(`VirusTotal enrichment failed: ${errorMessage(err)}`),
+      );
+    } catch (err) {
+      this.logger.error(`Auto-flag refresh failed: ${errorMessage(err)}`);
+    } finally {
+      this.isAutoFlaggingMrs = false;
     }
   }
 
@@ -213,7 +264,7 @@ export class GitlabService implements OnModuleInit {
       source: attrs.source,
       sha: attrs.sha,
       created_at: attrs.created_at,
-      // Webhooks don't carry updated_at; the fallback keeps the schema complete.
+      // Webhooks omit updated_at — fall back to created_at to keep the column populated.
       updated_at: existing?.updated_at ?? attrs.created_at,
       web_url: attrs.url,
     });
@@ -254,29 +305,39 @@ export class GitlabService implements OnModuleInit {
     let data: MergeRequestWithDiffs[] | undefined = await this.cacheManager.get<MergeRequestWithDiffs[]>(
       this.CACHE_KEY_MRS,
     );
-    if (!data || overwriteCache) {
-      const openMrs: MergeRequestSchema[] = await this.api.MergeRequests.all({
-        state: 'opened',
-        perPage: 100,
-        projectId: this.chaoticId,
-      });
+    if (data && !overwriteCache) {
+      this.logger.debug('Serving open MRs from cache');
+      return data;
+    }
+    this.logger.debug(overwriteCache ? 'Forcing refresh of open MRs' : 'No cached MRs, fetching open MRs');
 
-      this.logger.log(`Fetched ${openMrs.length} open MRs`);
+    const openMrs: MergeRequestSchema[] = await this.api.MergeRequests.all({
+      state: 'opened',
+      perPage: 100,
+      projectId: this.chaoticId,
+    });
+    this.logger.log(`Fetched ${openMrs.length} open MRs`);
 
-      const diffPromises: Promise<MergeRequestDiffSchema[]>[] = [];
-      for (const mr of openMrs) {
-        // One MR whose diff fails to load (e.g. a transient GitLab 500) must
-        // not fail the whole batch: its diffs just come back empty.
-        diffPromises.push(
-          this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid).catch((err: unknown) => {
-            this.logger.warn(`Failed to fetch diffs for MR !${mr.iid}: ${errorMessage(err)}`);
-            return [];
-          }),
-        );
-      }
+    // One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
+    // the whole batch: its diffs just come back empty.
+    const diffs = await mapWithConcurrency(
+      openMrs,
+      (mr) =>
+        this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid).catch((err: unknown) => {
+          this.logger.warn(`Failed to fetch diffs for MR !${mr.iid}: ${errorMessage(err)}`);
+          return [];
+        }),
+      DIFF_FETCH_CONCURRENCY,
+    );
 
-      const diffs = await Promise.all(diffPromises);
-      data = openMrs.map((mr, index) => ({
+    data = openMrs.map((mr, index) => {
+      const scanFindings = this.diffScanService.scanDiffs(diffs[index]);
+      const ruleIds = [...new Set(scanFindings.map((finding) => finding.ruleId))];
+      this.logger.debug(
+        `MR !${mr.iid}: ${diffs[index].length} changed file(s), ${scanFindings.length} finding(s)` +
+          (ruleIds.length > 0 ? ` [${ruleIds.join(', ')}]` : ''),
+      );
+      return {
         title: mr.title,
         created_at: mr.created_at,
         web_url: mr.web_url,
@@ -289,11 +350,13 @@ export class GitlabService implements OnModuleInit {
         id: mr.id,
         state: mr.state,
         detailed_merge_status: mr.detailed_merge_status,
+        diff_refs: mr.diff_refs as MergeRequestWithDiffs['diff_refs'],
         diffs: diffs[index],
-      }));
+        scanFindings,
+      };
+    });
 
-      await this.cacheManager.set(this.CACHE_KEY_MRS, data);
-    }
+    await this.cacheManager.set(this.CACHE_KEY_MRS, data);
 
     return data;
   }
@@ -313,10 +376,8 @@ export class GitlabService implements OnModuleInit {
       );
       const newData: MergeRequestWithDiffs[] = await this.getOpenMergeRequests(true);
 
-      // Wipe reviewer cache since MRs have changed
       await this.cacheManager.del(this.CACHE_KEY_REVIEW_STATS);
 
-      // Determine if there are any new MRs compared to the current cached data
       const currentIds = new Set(currentData?.map((mr) => mr.id) ?? []);
       const newIds = new Set(newData.map((mr) => mr.id));
       const hasNewMr = currentData !== undefined && [...newIds].some((id) => !currentIds.has(id));
@@ -324,6 +385,10 @@ export class GitlabService implements OnModuleInit {
       this.logger.debug(`Current MR IDs: ${[...currentIds].join(', ')}`);
       this.logger.debug(`New MR IDs: ${[...newIds].join(', ')}`);
       this.logger.log(`Has new MR: ${hasNewMr}`);
+
+      await this.autoFlagMergeRequests(newData).catch((err) =>
+        this.logger.error(`Auto-flagging after MR webhook failed: ${errorMessage(err)}`),
+      );
 
       if (hasNewMr) {
         const newMr: MergeRequestWithDiffs[] = newData.filter((mr) => !currentIds.has(mr.id));
@@ -335,6 +400,187 @@ export class GitlabService implements OnModuleInit {
     });
   }
 
+  async autoFlagMergeRequests(mrs: MergeRequestWithDiffs[]): Promise<void> {
+    let changed = false;
+
+    for (const mr of mrs) {
+      const verdict = this.diffScanService.autoFlagVerdict(mr.scanFindings);
+      if (!verdict) {
+        if (mr.scanFindings && mr.scanFindings.length > 0) {
+          this.logger.debug(`MR !${mr.iid}: scan score below label thresholds, leaving unlabelled`);
+        }
+        continue;
+      }
+      if (this.hasAutoFlagLabel(mr.labels, verdict.label)) {
+        this.logger.debug(
+          `MR !${mr.iid}: verdict ${verdict.label} (score ${verdict.score}), label already present, skipping`,
+        );
+        continue;
+      }
+      this.logger.debug(`MR !${mr.iid}: applying verdict ${verdict.label} (scan score ${verdict.score})`);
+
+      try {
+        // addLabels only appends; sending the full list would race against label
+        // changes since our snapshot was taken and could wipe e.g. human-review.
+        await this.api.MergeRequests.edit(this.chaoticId, mr.iid, {
+          addLabels: verdict.label,
+        });
+        mr.labels.push(verdict.label);
+        changed = true;
+        this.logger.warn(`Auto-flagged MR !${mr.iid} as ${verdict.label} (scan score ${verdict.score})`);
+        await this.postScanVerdictComments(mr, verdict);
+      } catch (err) {
+        this.logger.warn(`Could not auto-flag MR !${mr.iid}: ${errorMessage(err)}`);
+      }
+    }
+
+    if (changed) {
+      await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
+      this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: mrs, hasNewMr: false } });
+    }
+  }
+
+  private hasAutoFlagLabel(labels: string[], label: MrAutoFlagLabel): boolean {
+    if (labels.includes(label)) return true;
+    return label === 'suspicious' && labels.includes('malware');
+  }
+
+  private async postScanVerdictComments(mr: MergeRequestWithDiffs, verdict: DiffScanVerdict): Promise<void> {
+    const refs = mr.diff_refs ?? null;
+    if (!refs) {
+      await this.postScanVerdictNote(mr.iid, verdict, verdict.findings);
+      return;
+    }
+
+    const anchorCandidates = verdict.findings
+      .filter((finding): finding is DiffScanFinding & { line: number } => finding.line !== undefined)
+      .slice(0, MAX_VERDICT_NOTE_FINDINGS);
+    const attempted = new Set<DiffScanFinding>(anchorCandidates);
+    const summary = verdict.findings.filter((finding) => !attempted.has(finding));
+
+    for (const finding of anchorCandidates) {
+      const body = [
+        `🤖 **${finding.ruleId} — ${finding.ruleName}** (${finding.severity})`,
+        '',
+        finding.description,
+      ].join('\n');
+      try {
+        await this.api.MergeRequestDiscussions.create(this.chaoticId, mr.iid, body, {
+          position: {
+            positionType: 'text',
+            baseSha: refs.base_sha,
+            startSha: refs.start_sha,
+            headSha: refs.head_sha,
+            oldPath: finding.file,
+            newPath: finding.file,
+            newLine: String(finding.line),
+          },
+        });
+      } catch (err) {
+        // Findings that cannot be anchored inline still belong in the summary note.
+        summary.push(finding);
+        this.logger.warn(`Could not anchor finding ${finding.ruleId} on MR !${mr.iid}: ${errorMessage(err)}`);
+      }
+    }
+
+    await this.postScanVerdictNote(mr.iid, verdict, summary);
+  }
+
+  private async postScanVerdictNote(iid: number, verdict: DiffScanVerdict, findings: DiffScanFinding[]): Promise<void> {
+    const bullets = findings.map(
+      (finding) =>
+        `- **${finding.severity}** ${finding.ruleId} ${finding.ruleName} — \`${finding.file}${finding.line !== undefined ? `:${finding.line}` : ''}\``,
+    );
+    await this.api.MergeRequestNotes.create(
+      this.chaoticId,
+      iid,
+      [
+        `🤖 **Automated security scan**: score ${verdict.score}, added label \`${verdict.label}\`.`,
+        '',
+        ...bullets,
+      ].join('\n'),
+    );
+  }
+
+  /**
+   * Checks the indicators of flagged MRs against VirusTotal in the background.
+   * Reports only surface in the UI and as MR notes; they never influence labels.
+   */
+  private async enrichVirusTotalReports(mrs: MergeRequestWithDiffs[]): Promise<void> {
+    if (!this.virustotalService.enabled) {
+      this.logger.debug('VirusTotal disabled (no API key), skipping enrichment');
+      return;
+    }
+    if (this.isEnrichingVt) {
+      this.logger.debug('VirusTotal enrichment already running, skipping');
+      return;
+    }
+    this.isEnrichingVt = true;
+
+    try {
+      for (const mr of mrs) {
+        if (!mr.scanFindings || mr.scanFindings.length === 0) continue;
+        if (mr.vtReports !== undefined) {
+          this.logger.debug(`MR !${mr.iid}: VirusTotal reports already present, skipping`);
+          continue;
+        }
+        const indicators = extractIndicators(mr.diffs);
+        if (indicators.length === 0) {
+          this.logger.debug(`MR !${mr.iid}: no indicators worth checking on VirusTotal`);
+          continue;
+        }
+
+        this.logger.debug(`MR !${mr.iid}: checking ${indicators.length} indicator(s) on VirusTotal`);
+        const reports = await this.virustotalService.reportOn(indicators);
+        mr.vtReports = reports;
+        if (reports.length === 0) {
+          this.logger.debug(`MR !${mr.iid}: no VirusTotal reports (lookups failed or nothing known)`);
+          continue;
+        }
+        this.logger.debug(
+          `MR !${mr.iid}: VirusTotal verdicts: ${reports.map((report) => `${report.type}=${report.verdict}`).join(', ')}`,
+        );
+        await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
+        this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: mrs, hasNewMr: false } });
+
+        const notable = reports.filter((report) => report.verdict === 'malicious' || report.verdict === 'suspicious');
+        if (notable.length > 0 && !this.vtNotedMrIids.has(mr.iid)) {
+          this.logger.debug(`MR !${mr.iid}: posting VirusTotal note for ${notable.length} notable report(s)`);
+          if (await this.postVirusTotalNote(mr.iid, notable)) {
+            this.vtNotedMrIids.add(mr.iid);
+          }
+        }
+      }
+    } finally {
+      this.isEnrichingVt = false;
+    }
+  }
+
+  private async postVirusTotalNote(iid: number, reports: VtIndicatorReport[]): Promise<boolean> {
+    const bullets = reports.map((report) => {
+      const engines = report.stats
+        ? ` — ${report.stats.malicious + report.stats.suspicious}/${totalEngines(report.stats)} engines flagged`
+        : '';
+      return `- **${report.verdict}** ${report.type} \`${report.value}\`${engines} (${report.context})`;
+    });
+    try {
+      await this.api.MergeRequestNotes.create(
+        this.chaoticId,
+        iid,
+        [
+          `🤖 **VirusTotal**: ${reports.length} indicator(s) from this MR were flagged by VirusTotal.`,
+          '',
+          ...bullets,
+        ].join('\n'),
+      );
+      this.logger.debug(`Posted VirusTotal note on MR !${iid}`);
+      return true;
+    } catch (err) {
+      this.logger.warn(`Could not post VirusTotal note on MR !${iid}: ${errorMessage(err)}`);
+      return false;
+    }
+  }
+
   private isExternalStage(name: string): boolean {
     return name.startsWith('chaotic-aur:') || name.startsWith('garuda:');
   }
@@ -343,7 +589,6 @@ export class GitlabService implements OnModuleInit {
     try {
       const subscriptions = await this.subscriptionRepository.find();
       if (subscriptions.length === 0) {
-        // No subscribers, nothing to do
         return;
       }
 
@@ -433,13 +678,17 @@ export class GitlabService implements OnModuleInit {
 
   async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<void> {
     const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
+    const labels = toLabelStrings(mr.labels);
+    if (labels.includes('malware')) {
+      throw new BadRequestException(
+        'This merge request is flagged as malware by the automated security scan and requires manual review.',
+      );
+    }
     await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: mr.sha ?? sha });
 
-    const labels = toLabelStrings(mr.labels);
     if (!labels.includes('approved')) {
-      labels.push('approved');
       await this.api.MergeRequests.edit(this.chaoticId, iid, {
-        labels: labels.join(','),
+        addLabels: 'approved',
         assigneeId: this.mergeBotUserId,
       });
     }
@@ -456,11 +705,10 @@ export class GitlabService implements OnModuleInit {
     const labels = toLabelStrings(mr.labels);
 
     if (!labels.includes(label)) {
-      labels.push(label);
       await this.api.MergeRequests.edit(this.chaoticId, iid, {
-        labels: labels.join(','),
+        addLabels: label,
         // Close right away when dangerous
-        stateEvent: labels.includes('dangerous') ? 'close' : undefined,
+        stateEvent: label === 'dangerous' ? 'close' : undefined,
       });
     }
 
@@ -535,8 +783,8 @@ export class GitlabService implements OnModuleInit {
 
   /**
    * Streams a job's trace over SSE. GitLab's trace is fetched as a whole, so the
-   * backend polls it and forwards only the appended bytes as chunks, ending with
-   * a `complete` message once the job reaches a terminal status. The teardown on
+   * backend polls it and forwards only the appended bytes as chunks, ending with a
+   * `complete` message once the job reaches a terminal status. The teardown on
    * unsubscribe stops the polling when the client disconnects.
    */
   getJobTraceStream(pipelineId: number, jobId: number): Observable<Partial<MessageEvent<GitlabLogChunk>>> {
@@ -579,14 +827,4 @@ export class GitlabService implements OnModuleInit {
       return () => stop();
     });
   }
-}
-
-/** Job statuses after which no more trace output is expected. */
-const TERMINAL_JOB_STATUSES = ['success', 'failed', 'canceled', 'skipped', 'manual', 'waiting_for_resource'];
-
-/** How often the backend re-fetches a job trace to look for new bytes. */
-const JOB_TRACE_POLL_MS = 2000;
-
-function toLabelStrings(labels: MergeRequestSchema['labels']): string[] {
-  return labels.map((label) => (typeof label === 'string' ? label : label.name));
 }

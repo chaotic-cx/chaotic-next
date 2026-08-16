@@ -70,6 +70,15 @@ export class GitlabController {
     }
   }
 
+  @Post('mr-scan')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Run the merge request security scan now (auto-flag labels and VirusTotal checks).' })
+  @ApiOkResponse({ description: 'Merge request scan triggered.' })
+  mrScan(): void {
+    void this.gitlabService.handleAutoFlagRefresh();
+  }
+
   @Get('pipelines')
   @ApiOperation({ summary: 'Get recent GitLab pipelines.' })
   @ApiOkResponse({ description: 'List of pipelines', isArray: true })

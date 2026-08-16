@@ -49,87 +49,141 @@
   @for (mr of mrs; track mr.id; let i = $index) {
     <p-panel class="mr-overview-panel" [class.mt-5]="i > 0">
       <ng-template #header>
-        <a class="cursor-pointer text-ctp-mauve" [href]="mr.web_url">{{
-          mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
-        }}</a>
+        <div class="flex w-full flex-wrap items-center justify-between gap-2">
+          <a class="cursor-pointer text-ctp-mauve" [href]="mr.web_url">{{
+            mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
+          }}</a>
+          @if (scanSummary(mr); as summary) {
+            <p-tag
+              [severity]="summary.tagSeverity"
+              [value]="summary.label"
+              icon="pi pi-shield"
+              pTooltip="Automated security scan found potentially problematic changes. Review the findings below."
+              tooltipPosition="top"
+            />
+          }
+        </div>
       </ng-template>
 
-      @if (mr.diffs && mr.diffs.length > 0) {
-        @for (change of mr.diffs; track change.new_path) {
+      <div *chaoticLazyViewport>
+        @if (scanSummary(mr); as summary) {
           <p-fieldset
             class="text-left fieldset-responsive overflow-x-auto block mb-5"
-            [legend]="change.new_path.replace(`${mr.title}/`, '')"
             [toggleable]="true"
+            [collapsed]="!summary.hasCritical"
+            legend="Automated security scan"
           >
-            <chaotic-diff-renderer [diff]="change.diff" />
+            <div class="flex flex-col gap-1.5 pl-1.5 pb-1.5">
+              @for (finding of scanFindings(mr); track $index) {
+                <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+                  <div class="flex min-w-0 items-center gap-2">
+                    <p-tag [severity]="tagSeverity[finding.severity]" [value]="finding.severity" />
+                    <span
+                      class="min-w-0 break-words font-semibold"
+                      [pTooltip]="finding.description"
+                      tooltipPosition="top"
+                    >
+                      {{ finding.ruleName }}
+                    </span>
+                  </div>
+                  <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+                    <code class="whitespace-nowrap text-ctp-sky text-xs">
+                      {{ fileLocation(mr, finding) }}
+                    </code>
+                    <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
+                  </div>
+                </div>
+              }
+
+              @if (vtReports(mr).length) {
+                <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
+                  <span class="text-sm font-semibold">VirusTotal indicators</span>
+                  @for (report of vtReports(mr); track $index) {
+                    <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+                      <div class="flex min-w-0 items-center gap-2">
+                        <p-tag [severity]="vtTagSeverity[report.verdict]" [value]="report.verdict" />
+                        <span class="min-w-0 break-all text-xs font-semibold">{{ report.value }}</span>
+                      </div>
+                      <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <code class="whitespace-nowrap text-xs text-ctp-sky">{{ report.context }}</code>
+                        <span class="text-xs text-ctp-subtext">{{ vtEngines(report) }}</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
           </p-fieldset>
         }
-      } @else {
-        <span class="text-ctp-text">No changes</span>
-      }
 
-      @if (isLoggedIn()) {
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-10 md:justify-self-center">
-          <div class="w-full min-w-0">
-            <p-button
-              [disabled]="mr.labels.includes('approved') || mr.labels.includes('dangerous') || isLoading(mr, 'any')"
-              [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve update'"
-              [loading]="isLoading(mr, 'approve')"
-              (onClick)="mrOverviewService.approve(mr)"
-              icon="pi pi-check"
-              severity="success"
-              variant="outlined"
-              styleClass="w-50 mr-btn-approve"
-              pTooltip="Approve this merge request for auto-merge"
-              tooltipPosition="top"
-            />
-          </div>
+        @if (mr.diffs && mr.diffs.length > 0) {
+          @for (change of mr.diffs; track change.new_path) {
+            <p-fieldset
+              class="text-left fieldset-responsive overflow-x-auto block mb-5"
+              *chaoticLazyViewport
+              [legend]="stripPkgPrefix(mr, change.new_path) + (fileHasFindings(mr, change.new_path) ? ' ⚠' : '')"
+              [toggleable]="true"
+            >
+              <chaotic-diff-renderer [diff]="change.diff" [highlightLines]="findingLines(mr, change.new_path)" />
+            </p-fieldset>
+          }
+        } @else {
+          <span class="text-ctp-text">No changes</span>
+        }
 
-          <div class="w-full min-w-0">
-            <p-button
-              [disabled]="
-                mr.labels.includes('dangerous') ||
-                mr.labels.includes('approved') ||
-                mr.labels.includes('hold') ||
-                isLoading(mr, 'any')
-              "
-              [label]="mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous'"
-              [loading]="isLoading(mr, 'flag:dangerous')"
-              (onClick)="mrOverviewService.flag(mr, 'dangerous')"
-              icon="pi pi-exclamation-triangle"
-              severity="danger"
-              variant="outlined"
-              styleClass="w-50 mr-btn-danger"
-              pTooltip="Flag this merge request as dangerous and prevent auto-merge"
-              tooltipPosition="top"
-            />
-          </div>
+        @if (isLoggedIn()) {
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-10 md:justify-self-center">
+            <div class="w-full min-w-0">
+              <p-button
+                [disabled]="actionsDisabled(mr)"
+                [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve update'"
+                [loading]="isLoading(mr, 'approve')"
+                (onClick)="mrOverviewService.approve(mr)"
+                icon="pi pi-check"
+                severity="success"
+                variant="outlined"
+                styleClass="w-50 mr-btn-approve"
+                pTooltip="Approve this merge request for auto-merge"
+                tooltipPosition="top"
+              />
+            </div>
 
-          <div class="w-full min-w-0">
-            <p-button
-              [disabled]="
-                mr.labels.includes('hold') ||
-                mr.labels.includes('dangerous') ||
-                mr.labels.includes('approved') ||
-                isLoading(mr, 'any')
-              "
-              [label]="mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now'"
-              [loading]="isLoading(mr, 'flag:hold')"
-              (onClick)="mrOverviewService.flag(mr, 'hold')"
-              icon="pi pi-pause"
-              severity="warn"
-              variant="outlined"
-              styleClass="w-50 mr-btn-warn"
-              pTooltip="Put this merge request on hold for later review"
-              tooltipPosition="top"
-            />
+            <div class="w-full min-w-0">
+              <p-button
+                [disabled]="actionsDisabled(mr) || mr.labels.includes('hold')"
+                [label]="mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous'"
+                [loading]="isLoading(mr, 'flag:dangerous')"
+                (onClick)="mrOverviewService.flag(mr, 'dangerous')"
+                icon="pi pi-exclamation-triangle"
+                severity="danger"
+                variant="outlined"
+                styleClass="w-50 mr-btn-danger"
+                pTooltip="Flag this merge request as dangerous and prevent auto-merge"
+                tooltipPosition="top"
+              />
+            </div>
+
+            <div class="w-full min-w-0">
+              <p-button
+                [disabled]="actionsDisabled(mr) || mr.labels.includes('hold')"
+                [label]="mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now'"
+                [loading]="isLoading(mr, 'flag:hold')"
+                (onClick)="mrOverviewService.flag(mr, 'hold')"
+                icon="pi pi-pause"
+                severity="warn"
+                variant="outlined"
+                styleClass="w-50 mr-btn-warn"
+                pTooltip="Put this merge request on hold for later review"
+                tooltipPosition="top"
+              />
+            </div>
           </div>
-        </div>
-      } @else {
-        <p class="text-ctp-subtext text-sm">
-          <a class="text-ctp-mauve" routerLink="/login">Sign in</a> to approve, flag or hold updates.
-        </p>
-      }
+        } @else {
+          <p class="text-ctp-subtext text-sm">
+            <a class="text-ctp-mauve" routerLink="/login">Sign in</a> to approve, flag or hold updates.
+          </p>
+        }
+      </div>
     </p-panel>
   }
 </ng-template>

@@ -66,29 +66,31 @@
         {
           default = mkShell {
             devshell = {
-              name = "Toolbox shell";
-              startup.preCommitHooks.text = self.checks.${pkgs.system}.pre-commit-check.shellHook + ''
-                FLAKE_ROOT=$(${nixpkgs.lib.getExe pkgs.gitMinimal} rev-parse --show-toplevel)
-                SYMLINK_SOURCE_PATH="${treefmtEval.config.build.configFile}"
-                SYMLINK_TARGET_PATH="$FLAKE_ROOT/.treefmt.toml"
+              name = "Chaotic shell";
+              startup.preCommitHooks.text =
+                self.checks.${pkgs.stdenv.hostPlatform.system}.pre-commit-check.shellHook
+                + ''
+                  FLAKE_ROOT=$(${nixpkgs.lib.getExe pkgs.gitMinimal} rev-parse --show-toplevel)
+                  SYMLINK_SOURCE_PATH="${treefmtEval.config.build.configFile}"
+                  SYMLINK_TARGET_PATH="$FLAKE_ROOT/.treefmt.toml"
 
-                if [[ -e "$SYMLINK_TARGET_PATH" && ! -L "$SYMLINK_TARGET_PATH" ]]; then
-                  echo "treefmt-nix: Error: Target exists but is not a symlink."
-                  exit 1
-                fi
-
-                if [[ -L "$SYMLINK_TARGET_PATH" ]]; then
-                  if [[ "$(readlink "$SYMLINK_TARGET_PATH")" != "$SYMLINK_SOURCE_PATH" ]]; then
-                    echo "treefmt-nix: Removing existing symlink"
-                    unlink "$SYMLINK_TARGET_PATH"
+                  if [[ -e "$SYMLINK_TARGET_PATH" && ! -L "$SYMLINK_TARGET_PATH" ]]; then
+                    echo "treefmt-nix: Error: Target exists but is not a symlink."
+                    exit 1
                   fi
-                fi
 
-                if [[ ! -L "$SYMLINK_TARGET_PATH" ]]; then
-                  nix-store --add-root "$SYMLINK_TARGET_PATH" --indirect --realise "$SYMLINK_SOURCE_PATH"
-                  echo "treefmt-nix: Created symlink successfully"
-                fi
-              '';
+                  if [[ -L "$SYMLINK_TARGET_PATH" ]]; then
+                    if [[ "$(readlink "$SYMLINK_TARGET_PATH")" != "$SYMLINK_SOURCE_PATH" ]]; then
+                      echo "treefmt-nix: Removing existing symlink"
+                      unlink "$SYMLINK_TARGET_PATH"
+                    fi
+                  fi
+
+                  if [[ ! -L "$SYMLINK_TARGET_PATH" ]]; then
+                    nix-store --add-root "$SYMLINK_TARGET_PATH" --indirect --realise "$SYMLINK_SOURCE_PATH"
+                    echo "treefmt-nix: Created symlink successfully"
+                  fi
+                '';
             };
             env = [
               {
@@ -105,10 +107,10 @@
         }
       );
 
-      formatter = eachSystem (pkgs: treefmtEval.${pkgs.system}.config.build.wrapper);
+      formatter = eachSystem (pkgs: treefmtEval.${pkgs.stdenv.hostPlatform.system}.config.build.wrapper);
 
       checks = eachSystem (pkgs: {
-        pre-commit-check = inputs.git-hooks.lib.${pkgs.system}.run {
+        pre-commit-check = inputs.git-hooks.lib.${pkgs.stdenv.hostPlatform.system}.run {
           hooks = {
             check-json.enable = true;
             check-yaml = {
