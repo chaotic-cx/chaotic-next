@@ -148,8 +148,6 @@ samp {
 .p-fieldset-content-container,
 .p-fieldset-content-wrapper,
 .p-fieldset-content {
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
   min-width: 0 !important;
   max-width: 100% !important;
   overflow-x: hidden;
@@ -170,6 +168,12 @@ samp {
 .p-datatable {
   border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
   border-radius: var(--p-panel-border-radius, 12px);
+}
+
+.p-datatable {
+  background: var(--p-card-background);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .p-card {
@@ -241,7 +245,6 @@ p-scroll-top {
   @apply rounded-t-lg;
 }
 
-.p-datatable,
 .p-datatable-header,
 .p-datatable-table-container,
 .p-datatable-thead > tr > th,

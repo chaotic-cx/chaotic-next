@@ -17,7 +17,14 @@ import { MergeRequestSchema } from '@gitbeaker/core';
 import type { CommitStatusSchema } from '@gitbeaker/rest';
 import { Gitlab, PipelineSchema } from '@gitbeaker/rest';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { BadRequestException, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -789,7 +796,17 @@ export class GitlabService implements OnModuleInit {
     }
   }
 
+  private assertApiReady(): void {
+    if (!this.api) {
+      throw new ServiceUnavailableException(
+        'GitLab client is not initialised; GitLab integration features are unavailable.',
+      );
+    }
+  }
+
   private async computeReviewStats(): Promise<{ username: string; reviews: number }[]> {
+    this.assertApiReady();
+
     const users = await this.api.Projects.allUsers(this.chaoticId);
 
     return mapWithConcurrency(

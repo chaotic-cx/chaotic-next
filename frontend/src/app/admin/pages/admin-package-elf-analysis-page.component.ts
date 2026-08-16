@@ -175,6 +175,7 @@ const PKG_TYPE_OPTIONS = [
     <p-dialog
       [(visible)]="dialogVisible"
       [modal]="true"
+      [appendTo]="'body'"
       [style]="{ 'width': '64rem', 'max-width': '94vw' }"
       [header]="'Edit ELF analysis'"
     >
