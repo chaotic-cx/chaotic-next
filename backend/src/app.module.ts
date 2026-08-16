@@ -7,11 +7,12 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { LoggerModule } from 'nestjs-pino';
+import pinoPretty from 'pino-pretty';
+import { AdminModule } from './admin/admin.module';
 import { AllExceptionsFilter } from './api/all-exceptions.filter';
 import { ThrottlerBehindProxyGuard } from './api/throttler-behind-proxy.guard';
-import { auth } from './auth/auth';
-import { AdminModule } from './admin/admin.module';
 import { AurModule } from './aur/aur.module';
+import { auth } from './auth/auth';
 import { BuilderModule } from './builder/builder.module';
 import appConfig from './config/app.config';
 import { dataSourceOptions } from './data/data.source';
@@ -23,6 +24,9 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const pino = pinoPretty;
 
 @Module({
   imports: [
