@@ -91,7 +91,7 @@ export class AppComponent implements OnInit {
     },
     {
       icon: 'pi pi-check-square',
-      label: 'Update review',
+      label: 'Pending reviews',
       routerLink: '/update-review',
       tooltip: 'Review and approve pending package updates',
     },

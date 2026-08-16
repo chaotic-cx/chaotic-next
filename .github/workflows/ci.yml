@@ -8,7 +8,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   static-checks:
-    name: Lint, format and typecheck
+    name: Lint, format, typecheck and knip
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,6 +23,8 @@ jobs:
         run: pnpm typecheck
       - name: Lint
         run: pnpm lint
+      - name: Check for unused files and dependencies
+        run: pnpm knip
   unit:
     name: Unit tests and build
     needs: [static-checks]

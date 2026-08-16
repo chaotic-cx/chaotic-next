@@ -67,6 +67,7 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
             throw new Error(`GitLab user info request failed with status ${response.status}`);
           }
           const profile = (await response.json()) as GitLabProfile;
+
           return {
             id: String(profile.id),
             name: profile.username || profile.name,
@@ -81,8 +82,10 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
   });
 }
 
-const envTrustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
-  ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(',').map((o) => o.trim())
+const trustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
+  ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean)
   : [];
 
 const RATE_LIMIT_WINDOW_SECONDS = 60;
@@ -91,12 +94,28 @@ const SECONDS_PER_DAY = 60 * 60 * 24;
 const SESSION_EXPIRES_IN_SECONDS = 7 * SECONDS_PER_DAY;
 const SESSION_UPDATE_AGE_SECONDS = SECONDS_PER_DAY;
 
+const DISABLED_PATHS = [
+  '/sign-up/email',
+  '/sign-in/email',
+  '/request-password-reset',
+  '/reset-password/:token',
+  '/reset-password',
+  '/verify-password',
+  '/change-password',
+  '/set-password',
+  '/change-email',
+  '/send-verification-email',
+  '/verify-email',
+] as const;
+
 export const auth = betterAuth({
   appName: 'Chaotic-AUR',
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
   secret: process.env.BETTER_AUTH_SECRET,
+  emailAndPassword: { enabled: false },
+  disabledPaths: [...DISABLED_PATHS],
   database: typeormAdapter(authDataSource, { outputDir: AUTH_GENERATED_DIR }),
-  trustedOrigins: Array.from(new Set(['http://localhost:4201', 'https://aur.chaotic.cx', ...envTrustedOrigins])),
+  trustedOrigins: [...new Set(trustedOrigins)],
   rateLimit: {
     enabled: true,
     storage: 'memory',
@@ -117,10 +136,8 @@ export const auth = betterAuth({
       sameSite: 'lax',
     },
     ipAddress: {
-      ipAddressHeaders: ['x-forwarded-for', 'x-real-ip'],
+      ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for', 'x-real-ip'],
     },
   },
   plugins,
 });
-
-export type Auth = typeof auth;

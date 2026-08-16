@@ -177,7 +177,7 @@ describe('Admin Endpoints (e2e)', () => {
 
   describe('GET, POST, PATCH, DELETE /admin/repos', () => {
     it('manages repos (list, create, update, delete)', async () => {
-      const repo = await e2e.seedRepo({ name: 'main-repo' });
+      await e2e.seedRepo({ name: 'main-repo' });
 
       const listRes = await e2e.inject({
         method: 'GET',
@@ -359,6 +359,26 @@ describe('Admin Endpoints (e2e)', () => {
         url: `/admin/package-elf-analysis/${analysis.id}`,
       });
       expect(delRes.statusCode).toBe(200);
+    });
+  });
+  describe('GET /admin/package-elf-analysis/:id/bumps', () => {
+    it('lists the rebuild bumps of an analysis row', async () => {
+      const archPkg = await e2e.seedArchlinuxPackage({ pkgname: 'bash' });
+      const analysis = await e2e.seedElfAnalysis({ pkgType: '0', pkgId: archPkg.id, version: '5.2' });
+      const pkg = await e2e.seedPackage({ pkgname: 'firefox' });
+      await e2e.seedPackageBump({ pkg, bumpType: 1, trigger: archPkg.id, triggerFrom: 0 });
+
+      const res = await e2e.inject({ method: 'GET', url: `/admin/package-elf-analysis/${analysis.id}/bumps` });
+
+      expect(res.statusCode).toBe(200);
+      const bumps = (await res.json()) as Array<{ bumpType: number }>;
+      expect(bumps).toHaveLength(1);
+      expect(bumps[0].bumpType).toBe(1);
+    });
+
+    it('answers 404 for an unknown analysis id', async () => {
+      const res = await e2e.inject({ method: 'GET', url: '/admin/package-elf-analysis/999999/bumps' });
+      expect(res.statusCode).toBe(404);
     });
   });
 });

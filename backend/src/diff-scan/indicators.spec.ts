@@ -127,6 +127,17 @@ describe('extractIndicators', () => {
     expect(extractIndicators([change])).toEqual([]);
   });
 
+  it('substitutes makepkg-provided CARCH with its default', () => {
+    const change = makeChange(
+      ['@@ -1,5 +1,6 @@', ' pkgver=1.2.3', ' source=(', '   "https://dl.example.net/${CARCH}/pkg.tar.zst"', ' )'].join(
+        '\n',
+      ),
+    );
+    expect(extractIndicators([change])).toEqual([
+      { type: 'url', value: 'https://dl.example.net/x86_64/pkg.tar.zst', context: 'testpkg/PKGBUILD (source)' },
+    ]);
+  });
+
   it('skips documentation and landing pages to avoid false positives', () => {
     const change = makeChange(
       [

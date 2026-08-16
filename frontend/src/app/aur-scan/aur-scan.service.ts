@@ -1,0 +1,78 @@
+import { HttpClient } from '@angular/common/http';
+import { inject, Service, signal } from '@angular/core';
+import type { AurPackageScan, AurScanStreamChunk } from '@chaotic-next/shared-lib';
+import { MessageToastService } from '@garudalinux/core';
+import { lastValueFrom } from 'rxjs';
+import { APP_CONFIG } from '../../environments/app-config.token';
+
+export function isScanSettled(scan: AurPackageScan | undefined): boolean {
+  return scan?.status === 'done' || scan?.status === 'failed';
+}
+
+@Service()
+export class AurScanService {
+  private readonly backendUrl = inject(APP_CONFIG).backendUrl;
+  private readonly http = inject(HttpClient);
+  private readonly messageToastService = inject(MessageToastService);
+
+  readonly scans = signal<ReadonlyMap<string, AurPackageScan>>(new Map());
+  private readonly streams = new Map<string, EventSource>();
+
+  scanOf(packageName: string): AurPackageScan | undefined {
+    return this.scans().get(packageName.trim().toLowerCase());
+  }
+
+  async startScan(packageName: string): Promise<void> {
+    const name = packageName.trim();
+    if (!name || this.scanOf(name)) return;
+
+    try {
+      const scan = await lastValueFrom(
+        this.http.post<AurPackageScan>(`${this.backendUrl}/gitlab/aur-scan`, { package: name }),
+      );
+      this.store(scan);
+      if (!isScanSettled(scan)) this.openStream(scan.packageName);
+    } catch (error) {
+      this.messageToastService.error('Scan failed', 'Could not scan the AUR package. Does it exist?');
+      console.error('AUR scan failed:', error);
+    }
+  }
+
+  private openStream(packageName: string): void {
+    const key = packageName.toLowerCase();
+    if (this.streams.has(key)) return;
+
+    const stream = new EventSource(
+      `${this.backendUrl}/gitlab/aur-scan/${encodeURIComponent(packageName)}/stream?ngsw-bypass`,
+    );
+    this.streams.set(key, stream);
+
+    stream.onmessage = (event) => {
+      const chunk = parseChunk(event.data);
+      if (!chunk) return;
+      this.store(chunk.scan);
+      if (chunk.complete) this.closeStream(chunk.scan.packageName);
+    };
+    // EventSource auto-reconnects; a dropped stream resumes with the next update.
+    stream.onerror = () => undefined;
+  }
+
+  private closeStream(packageName: string): void {
+    const key = packageName.toLowerCase();
+    this.streams.get(key)?.close();
+    this.streams.delete(key);
+  }
+
+  private store(scan: AurPackageScan): void {
+    this.scans.update((scans) => new Map(scans).set(scan.packageName.toLowerCase(), scan));
+  }
+}
+
+function parseChunk(raw: string): AurScanStreamChunk | null {
+  try {
+    const parsed = JSON.parse(raw) as AurScanStreamChunk;
+    return parsed?.scan ? parsed : null;
+  } catch {
+    return null;
+  }
+}

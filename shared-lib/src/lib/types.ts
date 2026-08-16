@@ -465,6 +465,53 @@ export interface VtIndicatorReport {
   stats?: VtEngineStats;
 }
 
+export type AurScanStatus = 'scanning' | 'awaiting-vt' | 'done' | 'failed';
+
+export interface AurMaintainerInfo {
+  username: string;
+  packagesMaintained: number;
+  totalVotes: number;
+  /** Submission date of the maintainer's oldest package; the closest available proxy for account age. */
+  oldestFirstSubmitted: string;
+  novice: boolean;
+}
+
+export interface AurMaintainerChange {
+  previous: string[];
+  added: string[];
+  removed: string[];
+  detectedAt: string;
+}
+
+export interface AurPackageMeta {
+  votes: number;
+  popularity: number;
+  firstSubmitted: string;
+  outOfDate: boolean;
+  orphaned: boolean;
+}
+
+export interface AurPackageScan {
+  packageName: string;
+  packageBase: string;
+  status: AurScanStatus;
+  error?: string;
+  sources: string[];
+  scannedFiles: string[];
+  findings: DiffScanFinding[];
+  vtReports: VtIndicatorReport[];
+  vtPending: number;
+  maintainers: AurMaintainerInfo[];
+  maintainerChange?: AurMaintainerChange;
+  packageMeta: AurPackageMeta;
+  startedAt: string;
+}
+
+export interface AurScanStreamChunk {
+  scan: AurPackageScan;
+  complete: boolean;
+}
+
 export type MergeRequestWithDiffs = Pick<
   MergeRequestSchema,
   | 'id'
@@ -483,6 +530,8 @@ export type MergeRequestWithDiffs = Pick<
   labels: string[];
   scanFindings?: DiffScanFinding[];
   vtReports?: VtIndicatorReport[];
+  maintainers?: AurMaintainerInfo[];
+  maintainerChange?: AurMaintainerChange;
   diff_refs?: { base_sha: string; head_sha: string; start_sha: string } | null;
 };
 

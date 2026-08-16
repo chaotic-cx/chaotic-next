@@ -2,7 +2,27 @@
   <pre class="m-0 overflow-y-hidden">
     <code>
       @for (line of parsedLines(); track $index) {
-        <div [class]="getLineClass(line)" [textContent]="line.content"></div>
+        @if (flaggedLine(line); as findings) {
+          <div
+            [class]="lineClass(line)"
+            role="button"
+            tabindex="0"
+            (click)="toggle(line)"
+            (keydown.enter)="toggle(line)"
+          >@if (line.segments) { @for (segment of line.segments; track $index) {<span [class]="segment.changed ? 'word-changed' : ''">{{ segment.text }}</span>} } @else { {{ line.content }} }</div>
+          @if (expandedLine() === line.lineNumber) {
+            <div class="findings">
+              @for (finding of findings; track finding.ruleId) {
+                <div class="finding">
+                  <span class="finding-rule">{{ finding.ruleName }}</span>
+                  <span class="finding-description">{{ finding.description }}</span>
+                </div>
+              }
+            </div>
+          }
+        } @else {
+          <div [class]="lineClass(line)">@if (line.segments) { @for (segment of line.segments; track $index) {<span [class]="segment.changed ? 'word-changed' : ''">{{ segment.text }}</span>} } @else { {{ line.content }} }</div>
+        }
       }
     </code>
   </pre>

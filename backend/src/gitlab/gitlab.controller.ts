@@ -1,5 +1,7 @@
-import { ApproveMrDto, FlagMrDto, TriggerPipelineDto } from '@chaotic-next/backend/gitlab/gitlab.dto';
+import { ApproveMrDto, AurScanBodyDto, FlagMrDto, TriggerPipelineDto } from '@chaotic-next/backend/gitlab/gitlab.dto';
 import {
+  AurPackageScan,
+  AurScanStreamChunk,
   GitlabJob,
   GitlabLogChunk,
   MergeRequestWithDiffs,
@@ -13,6 +15,7 @@ import {
   Controller,
   Get,
   Headers,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
@@ -21,10 +24,19 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBody, ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiCookieAuth,
+  ApiCreatedResponse,
+  ApiHeaders,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
 import { auth } from '../auth/auth';
+import { AurScanService } from '../diff-scan/aur-scan.service';
 import { GitlabService } from './gitlab.service';
 import type { GitLabWebHook } from './interfaces';
 import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
@@ -46,12 +58,14 @@ export class GitlabController {
   constructor(
     private readonly configService: ConfigService,
     private readonly gitlabService: GitlabService,
+    private readonly aurScanService: AurScanService,
   ) {
     this.WEBHOOK_TOKEN = this.configService.getOrThrow<string>('CAUR_GITLAB_WEBHOOK_TOKEN');
   }
 
   @Post('update')
   @ApiOperation({ summary: 'Update GitLab cache via webhook.' })
+  @ApiHeaders([{ name: 'X-Gitlab-Token', description: 'GitLab webhook token', required: true }])
   @ApiBody({ type: Object, description: 'GitLab pipeline webhook payload' })
   @ApiOkResponse({ description: 'Cache update triggered.' })
   async updateCache(@Headers('X-Gitlab-Token') token: string, @Body() body: GitLabWebHook): Promise<void> {
@@ -79,6 +93,34 @@ export class GitlabController {
     void this.gitlabService.handleAutoFlagRefresh();
   }
 
+  @Post('aur-scan')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Scan an AUR package: PKGBUILD sources, static rules and VirusTotal checks.' })
+  @ApiCreatedResponse({ description: 'The scan result; VirusTotal reports follow via GET once completed.' })
+  startAurScan(@Body() body: AurScanBodyDto): Promise<AurPackageScan> {
+    return this.aurScanService.startScan(body.package);
+  }
+
+  @Get('aur-scan/:packageName')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Fetch the current AUR package scan result.' })
+  @ApiOkResponse({ description: 'The current scan result.' })
+  async getAurScan(@Param('packageName') packageName: string): Promise<AurPackageScan> {
+    const scan = this.aurScanService.getScan(packageName);
+    if (!scan) throw new NotFoundException(`No scan recorded for "${packageName}"`);
+    return { ...scan };
+  }
+
+  @Sse('aur-scan/:packageName/stream')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Stream AUR package scan updates until the scan completes.' })
+  @ApiOkResponse({ description: 'Stream of AurScanStreamChunk messages', type: Object })
+  streamAurScan(@Param('packageName') packageName: string): Observable<Partial<MessageEvent<AurScanStreamChunk>>> {
+    return this.aurScanService.streamScan(packageName);
+  }
+
   @Get('pipelines')
   @ApiOperation({ summary: 'Get recent GitLab pipelines.' })
   @ApiOkResponse({ description: 'List of pipelines', isArray: true })
@@ -94,7 +136,7 @@ export class GitlabController {
   }
 
   @Sse('pipelines/:pipelineId/jobs/:jobId/trace')
-  @ApiOperation({ summary: 'Stream the live trace (ANSI) of a GitLab pipeline job over SSE.' })
+  @ApiOperation({ summary: 'Stream the live trace of a GitLab pipeline job over SSE.' })
   @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
   async streamJobTrace(
     @Param('pipelineId', ParseIntPipe) pipelineId: number,

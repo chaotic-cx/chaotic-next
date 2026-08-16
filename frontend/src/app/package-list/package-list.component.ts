@@ -113,7 +113,7 @@ export class PackageListComponent {
 
   triggerRebuild(pkg: Package) {
     void this.router.navigate(['/pipeline-trigger'], {
-      queryParams: { operation: 'Bump Packages', pkg: pkg.pkgname },
+      queryParams: { operation: 'Bump Packages', packages: pkg.pkgname },
     });
   }
 }

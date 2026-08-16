@@ -19,6 +19,11 @@
   @apply rounded-lg shadow-lg;
 }
 
+.mr-focused {
+  outline: 2px solid var(--ctp-mocha-mauve);
+  outline-offset: 2px;
+}
+
 /* Better button spacing */
 ::ng-deep .p-button.w-50 {
   width: 100% !important;

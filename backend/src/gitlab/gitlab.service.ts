@@ -9,7 +9,7 @@ import {
   PipelineScheduleOption,
   PipelineTriggerResult,
   PipelineWithExternalStatus,
-  type VtEngineStats,
+  totalEngines,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
 import { MergeRequestSchema } from '@gitbeaker/core';
@@ -25,6 +25,7 @@ import { Observable } from 'rxjs';
 import { Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
 import { Repo } from '../builder/builder.entity';
+import { AurScanService } from '../diff-scan/aur-scan.service';
 import { DiffScanService, type DiffScanVerdict, type MrAutoFlagLabel } from '../diff-scan/diff-scan.service';
 import { extractIndicators } from '../diff-scan/indicators';
 import { VirustotalService } from '../diff-scan/virustotal.service';
@@ -41,20 +42,19 @@ export interface MrActor {
   userName: string;
 }
 
-/** Job statuses after which no more trace output is expected. */
 const TERMINAL_JOB_STATUSES = ['success', 'failed', 'canceled', 'skipped', 'manual', 'waiting_for_resource'];
-/** How often the backend re-fetches a job trace to look for new bytes. */
 const JOB_TRACE_POLL_MS = 2000;
 const MAX_VERDICT_NOTE_FINDINGS = 5;
-/** Fetching every MR diff at once makes GitLab throw transient 500s, so batches are bounded. */
 const DIFF_FETCH_CONCURRENCY = 5;
+const REVIEW_STATS_CONCURRENCY = 10;
 
 function toLabelStrings(labels: MergeRequestSchema['labels']): string[] {
   return labels.map((label) => (typeof label === 'string' ? label : label.name));
 }
 
-function totalEngines(stats: VtEngineStats): number {
-  return stats.malicious + stats.suspicious + stats.undetected + stats.harmless + stats.timeout;
+function mrPkgname(title: string): string | null {
+  const match = title.match(/^chore\(update\): ([\w@.+-]+)$/);
+  return match ? match[1] : null;
 }
 
 @Injectable()
@@ -74,8 +74,10 @@ export class GitlabService implements OnModuleInit {
   private isAutoFlaggingMrs = false;
   private isEnrichingVt = false;
 
-  /** MRs that already received a VirusTotal note, so the cron does not repeat itself. */
   private readonly vtNotedMrIids = new Set<number>();
+
+  /** updated_at of the MR revision maintainers were last computed for. */
+  private readonly maintainerCheckedAt = new Map<number, string>();
 
   private readonly pipelineMap = new Map<number, PipelineSchema>();
   private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
@@ -86,6 +88,7 @@ export class GitlabService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly diffScanService: DiffScanService,
     private readonly virustotalService: VirustotalService,
+    private readonly aurScanService: AurScanService,
     private readonly eventService: EventService,
     @InjectRepository(NotificationSubscription)
     private readonly subscriptionRepository: Repository<NotificationSubscription>,
@@ -174,6 +177,9 @@ export class GitlabService implements OnModuleInit {
       void this.enrichVirusTotalReports(mrs).catch((err) =>
         this.logger.error(`VirusTotal enrichment failed: ${errorMessage(err)}`),
       );
+      void this.enrichMaintainerInfo(mrs).catch((err) =>
+        this.logger.error(`Maintainer enrichment failed: ${errorMessage(err)}`),
+      );
     } catch (err) {
       this.logger.error(`Auto-flag refresh failed: ${errorMessage(err)}`);
     } finally {
@@ -250,7 +256,6 @@ export class GitlabService implements OnModuleInit {
     };
   }
 
-  /** Update the store from a webhook, then push the refreshed list to SSE. */
   async handlePipelineWebhook(body: PipelineWebhook): Promise<boolean> {
     const attrs = body.object_attributes;
     const existing = this.pipelineMap.get(attrs.id);
@@ -274,7 +279,6 @@ export class GitlabService implements OnModuleInit {
     return true;
   }
 
-  /** Handle a chaotic-manager commit status: update the store, push to SSE. */
   async handleExternalStatus(event: GitlabStatusEvent): Promise<void> {
     if (event.pipeline_id === undefined) return;
 
@@ -556,6 +560,51 @@ export class GitlabService implements OnModuleInit {
     }
   }
 
+  /** A package is only re-checked while its MR keeps changing; a takeover on a dormant MR resurfaces with new activity. */
+  private async enrichMaintainerInfo(mrs: MergeRequestWithDiffs[]): Promise<void> {
+    const pending = mrs.filter((mr) => {
+      const pkgname = mrPkgname(mr.title);
+      return pkgname !== null && mr.maintainers === undefined && this.maintainerCheckedAt.get(mr.iid) !== mr.updated_at;
+    });
+    const pkgnames = [...new Set(pending.map((mr) => mrPkgname(mr.title) as string))];
+    if (pkgnames.length === 0) return;
+
+    let changed = false;
+    try {
+      const statuses = await this.aurScanService.maintainerStatusFor(pkgnames);
+      for (const mr of pending) {
+        const pkgname = mrPkgname(mr.title) as string;
+        const status = statuses.get(pkgname);
+        if (!status) {
+          this.logger.debug(`MR !${mr.iid}: "${pkgname}" not found in the AUR, skipping maintainer info`);
+          continue;
+        }
+
+        this.maintainerCheckedAt.set(mr.iid, mr.updated_at);
+        mr.maintainers = status.maintainers;
+        mr.maintainerChange = status.change ?? undefined;
+        changed = true;
+        if (status.change) {
+          this.logger.warn(
+            `MR !${mr.iid}: maintainer change on ${pkgname}: +${status.change.added.join(', ') || 'none'} / -${status.change.removed.join(', ') || 'none'}`,
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Maintainer lookup for ${pkgnames.length} package(s) failed: ${errorMessage(err)}`);
+    }
+
+    const openIids = new Set(mrs.map((mr) => mr.iid));
+    for (const iid of this.maintainerCheckedAt.keys()) {
+      if (!openIids.has(iid)) this.maintainerCheckedAt.delete(iid);
+    }
+
+    if (changed) {
+      await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
+      this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: mrs, hasNewMr: false } });
+    }
+  }
+
   private async postVirusTotalNote(iid: number, reports: VtIndicatorReport[]): Promise<boolean> {
     const bullets = reports.map((report) => {
       const engines = report.stats
@@ -672,7 +721,7 @@ export class GitlabService implements OnModuleInit {
 
         return { username: user.username, reviews: mrs.length };
       },
-      10,
+      REVIEW_STATS_CONCURRENCY,
     );
   }
 
@@ -707,7 +756,6 @@ export class GitlabService implements OnModuleInit {
     if (!labels.includes(label)) {
       await this.api.MergeRequests.edit(this.chaoticId, iid, {
         addLabels: label,
-        // Close right away when dangerous
         stateEvent: label === 'dangerous' ? 'close' : undefined,
       });
     }
@@ -727,7 +775,6 @@ export class GitlabService implements OnModuleInit {
     await this.mrActionRepository.insert({ mergeRequestIid: iid, action, ...actor });
   }
 
-  /** Pipeline schedules of the chaotic-aur project, for the Run Schedule operation. */
   async listPipelineSchedules(): Promise<PipelineScheduleOption[]> {
     const schedules = await this.api.PipelineSchedules.all(this.chaoticId, { perPage: 100 });
     return schedules.map((schedule) => ({

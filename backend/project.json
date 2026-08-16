@@ -21,17 +21,6 @@
         "runBuildTargetDependencies": false
       }
     },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "node node_modules/vitest/vitest.mjs run --config backend/vite.config.mts"
-      },
-      "configurations": {
-        "watch": {
-          "command": "node node_modules/vitest/vitest.mjs --config backend/vite.config.mts"
-        }
-      }
-    },
     "test:full": {
       "executor": "nx:run-commands",
       "options": {
