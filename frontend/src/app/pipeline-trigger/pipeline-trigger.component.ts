@@ -253,7 +253,12 @@ export class PipelineTriggerComponent implements OnInit {
     // shared and the wizard state restored from it on load.
     effect(() => {
       const queryParams = this.queryParamsFor(this.model(), this.step());
-      void this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams,
+        replaceUrl: true,
+        info: { disableViewTransition: true },
+      });
     });
   }
 
