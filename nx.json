@@ -143,7 +143,7 @@
       "options": {
         "targetName": "lint"
       },
-      "include": ["backend/**/*", "frontend/**/*"]
+      "include": ["backend/**/*", "frontend/**/*", "backend-e2e/**/*"]
     },
     {
       "plugin": "@nx/vite/plugin",
