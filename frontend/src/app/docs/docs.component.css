@@ -1,3 +1,7 @@
 pre {
   @apply cursor-pointer;
 }
+
+p-panel {
+  scroll-margin-top: 5rem;
+}

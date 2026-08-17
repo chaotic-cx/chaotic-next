@@ -132,6 +132,11 @@ export class SearchPackageComponent implements OnInit {
   });
 
   constructor() {
+    const repoParam = this.route.snapshot.queryParamMap.get('repo');
+    if (repoParam && this.repoOptions.includes(repoParam)) {
+      this.packageStatsService.packageSearchSelectedRepo.set(repoParam);
+    }
+
     this.suggestionsQuerySubject
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((query) => this.suggestionsQuery.set(query));
@@ -205,6 +210,16 @@ export class SearchPackageComponent implements OnInit {
       queryParams: { search: query },
       queryParamsHandling: 'merge',
       replaceUrl: true,
+      info: { disableViewTransition: true },
+    });
+  }
+
+  protected onRepoChange(repo: string): void {
+    this.packageStatsService.packageSearchSelectedRepo.set(repo);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { repo },
+      queryParamsHandling: 'merge',
       info: { disableViewTransition: true },
     });
   }

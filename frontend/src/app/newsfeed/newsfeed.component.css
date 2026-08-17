@@ -4,6 +4,13 @@
   min-width: 0;
 }
 
+:host ::ng-deep .p-panel-content-wrapper,
+:host ::ng-deep .p-panel-content {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .news-content {
   min-width: 0;
   max-width: 100%;

@@ -10,6 +10,7 @@ import {
 import { httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { debounceTime, Subject } from 'rxjs';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
@@ -18,22 +19,43 @@ export const REPO_OPTIONS = ['chaotic-aur', 'garuda'];
 
 const LOG_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
-const STATUS_OPTIONS: { label: string; value: BuildStatus }[] = [
-  { label: STATUS_LABELS[BuildStatus.SUCCESS], value: BuildStatus.SUCCESS },
-  { label: STATUS_LABELS[BuildStatus.ALREADY_BUILT], value: BuildStatus.ALREADY_BUILT },
-  { label: STATUS_LABELS[BuildStatus.SKIPPED], value: BuildStatus.SKIPPED },
-  { label: STATUS_LABELS[BuildStatus.FAILED], value: BuildStatus.FAILED },
-  { label: STATUS_LABELS[BuildStatus.TIMED_OUT], value: BuildStatus.TIMED_OUT },
-  { label: STATUS_LABELS[BuildStatus.CANCELED], value: BuildStatus.CANCELED },
-  { label: STATUS_LABELS[BuildStatus.CANCELED_REQUEUE], value: BuildStatus.CANCELED_REQUEUE },
-  { label: STATUS_LABELS[BuildStatus.SOFTWARE_FAILURE], value: BuildStatus.SOFTWARE_FAILURE },
+const STATUS_OPTIONS: { label: string; value: BuildStatus; icon: string }[] = [
+  { label: STATUS_LABELS[BuildStatus.SUCCESS], value: BuildStatus.SUCCESS, icon: 'pi-check-circle text-ctp-green' },
+  {
+    label: STATUS_LABELS[BuildStatus.ALREADY_BUILT],
+    value: BuildStatus.ALREADY_BUILT,
+    icon: 'pi-check text-ctp-sapphire',
+  },
+  {
+    label: STATUS_LABELS[BuildStatus.SKIPPED],
+    value: BuildStatus.SKIPPED,
+    icon: 'pi-angle-double-right text-ctp-text',
+  },
+  { label: STATUS_LABELS[BuildStatus.FAILED], value: BuildStatus.FAILED, icon: 'pi-exclamation-circle text-ctp-red' },
+  { label: STATUS_LABELS[BuildStatus.TIMED_OUT], value: BuildStatus.TIMED_OUT, icon: 'pi-hourglass text-ctp-maroon' },
+  { label: STATUS_LABELS[BuildStatus.CANCELED], value: BuildStatus.CANCELED, icon: 'pi-ban text-ctp-peach' },
+  {
+    label: STATUS_LABELS[BuildStatus.CANCELED_REQUEUE],
+    value: BuildStatus.CANCELED_REQUEUE,
+    icon: 'pi-replay text-ctp-yellow',
+  },
+  {
+    label: STATUS_LABELS[BuildStatus.SOFTWARE_FAILURE],
+    value: BuildStatus.SOFTWARE_FAILURE,
+    icon: 'pi-exclamation-triangle text-ctp-blue',
+  },
 ];
 
 const DEFAULT_SORT_FIELD: BuildSortField = 'timestamp';
 
+const STATUS_BY_LABEL = new Map(
+  Object.entries(STATUS_LABELS).map(([key, label]) => [label, Number(key) as BuildStatus]),
+);
+
 @Service()
 export class DeployLogService {
   private readonly appService = inject(AppService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly page = signal<number>(1);
   readonly perPage = signal<number>(25);
@@ -43,12 +65,14 @@ export class DeployLogService {
   readonly repoOptions = REPO_OPTIONS;
   readonly statusOptions = STATUS_OPTIONS;
 
-  readonly builderFilter = signal<string | undefined>(undefined);
-  readonly repoFilter = signal<string | undefined>(undefined);
-  readonly statusFilter = signal<BuildStatus | undefined>(undefined);
+  readonly builderFilter = signal<string | undefined>(this.route.snapshot.queryParamMap.get('builder') ?? undefined);
+  readonly repoFilter = signal<string | undefined>(this.route.snapshot.queryParamMap.get('repo') ?? undefined);
+  readonly statusFilter = signal<BuildStatus | undefined>(
+    STATUS_BY_LABEL.get(this.route.snapshot.queryParamMap.get('status') ?? ''),
+  );
 
-  readonly searchValue = signal<string>('');
-  private readonly qDebounced = signal<string>('');
+  readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
+  private readonly qDebounced = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
   private readonly qSubject = new Subject<string>();
 
   private readonly buildersResource = httpResource<Builder[]>(
@@ -113,6 +137,10 @@ export class DeployLogService {
   setStatusFilter(value: BuildStatus | null | undefined): void {
     this.statusFilter.set(value ?? undefined);
     this.page.set(1);
+  }
+
+  statusByLabel(label: string | undefined): BuildStatus | undefined {
+    return label ? STATUS_BY_LABEL.get(label) : undefined;
   }
 
   reload(): void {

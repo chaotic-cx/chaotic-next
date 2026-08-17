@@ -31,9 +31,18 @@
             icon="pi pi-filter-slash"
           />
         </div>
-        <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+        <div class="flex w-full flex-wrap items-center gap-2.5 sm:ml-auto sm:w-auto sm:flex-nowrap">
           <p-select
-            class="w-40"
+            class="w-full sm:w-40"
+            [options]="deployLogService.repoOptions"
+            [ngModel]="deployLogService.repoFilter()"
+            (ngModelChange)="onRepoFilter($event)"
+            placeholder="All repos"
+            showClear
+            appendTo="body"
+          />
+          <p-select
+            class="hidden w-40 sm:block"
             [options]="deployLogService.builderOptions()"
             [ngModel]="deployLogService.builderFilter()"
             [filter]="true"
@@ -44,16 +53,7 @@
             appendTo="body"
           />
           <p-select
-            class="w-40"
-            [options]="deployLogService.repoOptions"
-            [ngModel]="deployLogService.repoFilter()"
-            (ngModelChange)="onRepoFilter($event)"
-            placeholder="All repos"
-            showClear
-            appendTo="body"
-          />
-          <p-select
-            class="w-40"
+            class="hidden w-48 sm:block"
             [options]="deployLogService.statusOptions"
             [ngModel]="deployLogService.statusFilter()"
             (ngModelChange)="onStatusFilter($event)"
@@ -62,7 +62,14 @@
             placeholder="All outcomes"
             showClear
             appendTo="body"
-          />
+          >
+            <ng-template pTemplate="option" let-option>
+              <span class="flex items-center gap-1">
+                <i class="pi" [class]="option.icon"></i>
+                <span>{{ option.label }}</span>
+              </span>
+            </ng-template>
+          </p-select>
         </div>
         <p-iconfield class="w-full sm:w-64" iconPosition="left">
           <p-inputicon>

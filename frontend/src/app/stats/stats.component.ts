@@ -12,6 +12,18 @@ import { resourceValue } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { isStatsTab, StatsService } from './stats.service';
 
+const ALL_TIME_RANGE_PARAM = 'all';
+
+function timeRangeToParam(days: number | null): string {
+  return days === null ? ALL_TIME_RANGE_PARAM : String(days);
+}
+
+function paramToTimeRange(value: string): number | null | undefined {
+  if (value === ALL_TIME_RANGE_PARAM) return null;
+  const days = Number(value);
+  return Number.isInteger(days) && days > 0 ? days : undefined;
+}
+
 @Component({
   selector: 'chaotic-stats',
   imports: [TabList, Tabs, Tab, FormsModule, Select, TitleComponent, Tooltip, RouterOutlet],
@@ -28,6 +40,15 @@ export class StatsComponent implements OnInit {
   protected readonly statsService = inject(StatsService);
 
   readonly search = input<string>();
+
+  private readonly applyInitialRange = this.initTimeRangeFromRoute();
+
+  private initTimeRangeFromRoute(): void {
+    const param = this.route.snapshot.queryParamMap.get('range');
+    if (param === null) return;
+    const days = paramToTimeRange(param);
+    if (days !== undefined) this.statsService.timeRangeDays.set(days);
+  }
 
   private readonly usersResource = httpResource<number>(() =>
     this.appService.getUsersResourceRequest(this.statsService.timeRangeDays() ?? undefined),
@@ -94,5 +115,14 @@ export class StatsComponent implements OnInit {
         info: { disableViewTransition: true },
       });
     }
+  }
+
+  protected onTimeRangeChange(days: number | null | undefined): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { range: timeRangeToParam(days ?? null) },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 }

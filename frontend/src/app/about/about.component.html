@@ -1,4 +1,4 @@
-<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
+<div class="mx-auto max-w-4xl">
   <chaotic-title
     title="About us"
     subtitleHtml="Chaotic-AUR is a repository that provides a large number of packages for Arch Linux.<br>
@@ -6,22 +6,27 @@
   />
   <div>
     <div class="chaotic-panel mt-5">
-      <p-panel header="Team members">
+      <p-panel id="team-members">
+        <ng-template pTemplate="header">
+          <button class="cursor-pointer font-bold" (click)="scrollTo('team-members')">Team members</button>
+        </ng-template>
         @if (isWide()) {
           <div class="grid grid-cols-2 items-stretch gap-10 md:grid-cols-3 lg:grid-cols-4">
             @for (member of team; track member) {
               <p-card>
-                <h3 class="text-ctp-maroon py-5 text-center text-lg font-bold">{{ member.name }}</h3>
-                <div class="flex flex-col items-center pb-5">
+                <h3 class="flex h-16 items-center justify-center px-2 text-center text-lg font-bold text-ctp-maroon">
+                  {{ member.name }}
+                </h3>
+                <div class="flex flex-col items-center pb-4">
                   <img
-                    class="my-5 h-24 w-24 rounded-full shadow-lg"
+                    class="my-4 h-20 w-20 rounded-full shadow-lg"
                     ngSrc="{{ member.avatarUrl }}"
                     height="200"
                     width="200"
                     alt="{{ member.name }} avatar"
                   />
                   <span class="text-ctp-peach text-sm">{{ member.role }}</span>
-                  <a class="mt-5" href="https://github.com/{{ member.github }}" rel="noopener noreferrer">
+                  <a class="mt-4" href="https://github.com/{{ member.github }}" rel="noopener noreferrer">
                     <i class="pi pi-github" pRipple style="font-size: 1.5rem"></i>
                   </a>
                 </div>
@@ -56,7 +61,10 @@
     </div>
 
     <div class="chaotic-panel mt-5">
-      <p-panel header="Contact us">
+      <p-panel id="contact-us">
+        <ng-template pTemplate="header">
+          <button class="cursor-pointer font-bold" (click)="scrollTo('contact-us')">Contact us</button>
+        </ng-template>
         <ul class="chaotic-list-regular text-ctp-text">
           <li>Please use our issue trackers or the Telegram group, for general questions and support.</li>
           <li>
@@ -74,7 +82,10 @@
     </div>
 
     <div class="chaotic-panel mt-5">
-      <p-panel header="Build nodes">
+      <p-panel id="build-nodes">
+        <ng-template pTemplate="header">
+          <button class="cursor-pointer font-bold" (click)="scrollTo('build-nodes')">Build nodes</button>
+        </ng-template>
         <ul class="chaotic-list-regular text-ctp-text">
           <li>
             Most packages available in this repo are automatically built from their respective
@@ -106,7 +117,10 @@
     </div>
 
     <div class="mt-5">
-      <p-panel header="Reporting bugs">
+      <p-panel id="reporting-bugs">
+        <ng-template pTemplate="header">
+          <button class="cursor-pointer font-bold" (click)="scrollTo('reporting-bugs')">Reporting bugs</button>
+        </ng-template>
         <ul class="chaotic-list-regular text-ctp-text">
           <li>
             Feel free to create
@@ -125,7 +139,10 @@
     </div>
 
     <div class="mt-5">
-      <p-panel header="Mirrors">
+      <p-panel id="mirrors">
+        <ng-template pTemplate="header">
+          <button class="cursor-pointer font-bold" (click)="scrollTo('mirrors')">Mirrors</button>
+        </ng-template>
         <ul class="chaotic-list-regular text-ctp-text">
           <li>
             We have a few mirrors available for you to use. You can find the list of mirrors and their status
@@ -142,7 +159,10 @@
     </div>
 
     <div class="mt-5">
-      <p-panel header="Useful links">
+      <p-panel id="useful-links">
+        <ng-template pTemplate="header">
+          <button class="cursor-pointer font-bold" (click)="scrollTo('useful-links')">Useful links</button>
+        </ng-template>
         <ul class="chaotic-list-regular text-ctp-text">
           <li>
             Telegram channel with news and updates:
@@ -217,7 +237,10 @@
     </div>
 
     <div class="mt-5">
-      <p-panel header="Special thanks">
+      <p-panel id="special-thanks">
+        <ng-template pTemplate="header">
+          <button class="cursor-pointer font-bold" (click)="scrollTo('special-thanks')">Special thanks</button>
+        </ng-template>
         <ul class="chaotic-list-regular text-ctp-text">
           <li>Librewish (Shrinivas Kumbhar) - Former Co-maintainer, Garuda Linux founder</li>
           <li>Garuda Linux staffers</li>

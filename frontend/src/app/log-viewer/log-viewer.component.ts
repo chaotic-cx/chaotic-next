@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { GitlabJob, GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from '../app.service';
@@ -41,6 +41,7 @@ export class LogViewerComponent {
   private readonly appService = inject(AppService);
   private readonly logService = inject(LogViewerService);
   private readonly meta = inject(Meta);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   readonly pipelineId = input<string>();
@@ -87,6 +88,12 @@ export class LogViewerComponent {
     this.error.set(undefined);
     this.loading.set(true);
     this.streaming.set(false);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { job: job.id },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
     this.openStream(job.id);
   }
 
@@ -110,7 +117,9 @@ export class LogViewerComponent {
     try {
       const jobs = await this.logService.getJobs(pipelineId);
       this.jobs.set(jobs);
-      const initial = pickInitialJob(jobs);
+      const requestedJob = this.requestedJobId();
+      const initial =
+        jobs.find((job) => job.id === requestedJob) ?? (requestedJob === undefined ? pickInitialJob(jobs) : undefined);
       if (initial) {
         this.selectJob(initial);
       } else {
@@ -120,6 +129,13 @@ export class LogViewerComponent {
       this.error.set(errorMessage(error));
       this.loading.set(false);
     }
+  }
+
+  private requestedJobId(): number | undefined {
+    const raw = this.route.snapshot.queryParamMap.get('job');
+    if (raw === null) return undefined;
+    const id = Number(raw);
+    return Number.isInteger(id) ? id : undefined;
   }
 
   private openStream(jobId: number): void {

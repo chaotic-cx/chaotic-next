@@ -2,7 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   type AurMaintainerChange,
   type AurMaintainerInfo,
@@ -44,6 +44,15 @@ const FIRST_PANEL_INDEX = 0;
 const AUR_UPDATES_TAB = '0';
 const PACKAGE_UPDATES_TAB = '1';
 
+const TAB_QUERY_PARAMS: Record<'0' | '1', string> = {
+  [AUR_UPDATES_TAB]: 'aur',
+  [PACKAGE_UPDATES_TAB]: 'packages',
+};
+
+function tabFromQueryParam(value: string): '0' | '1' {
+  return value === TAB_QUERY_PARAMS[PACKAGE_UPDATES_TAB] ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB;
+}
+
 @Component({
   selector: 'chaotic-mr-overview',
   imports: [
@@ -74,6 +83,7 @@ const PACKAGE_UPDATES_TAB = '1';
 export class MrOverviewComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly meta = inject(Meta);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly hostElement = inject(ElementRef).nativeElement as HTMLElement;
 
@@ -167,6 +177,12 @@ export class MrOverviewComponent implements OnInit {
     const tab = value === PACKAGE_UPDATES_TAB ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB;
     this.activeTabValue.set(tab);
     this.focusedIndex.set(NO_FOCUSED_PANEL);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: TAB_QUERY_PARAMS[tab] },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 
   private focusedPanel(index: number): HTMLElement | null {
@@ -182,6 +198,11 @@ export class MrOverviewComponent implements OnInit {
   }
 
   ngOnInit() {
+    const tabParam = this.route.snapshot.queryParamMap.get('tab');
+    if (tabParam !== null) {
+      this.activeTabValue.set(tabFromQueryParam(tabParam));
+    }
+
     this.appService.updateSeoTags(this.meta, {
       title: 'Update review',
       description: 'Review and approve pending merge requests for Chaotic-AUR',

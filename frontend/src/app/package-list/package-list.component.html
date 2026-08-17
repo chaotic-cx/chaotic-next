@@ -35,10 +35,10 @@
           tooltipPosition="bottom"
         />
         <p-select
-          class="hidden sm:block"
+          class="w-full sm:w-40"
           [options]="packageListService.repos() ?? []"
           [ngModel]="packageListService.repoFilter()"
-          (ngModelChange)="packageListService.setRepoFilter($event)"
+          (ngModelChange)="onRepoFilter($event)"
           optionLabel="name"
           optionValue="id"
           placeholder="All repos"

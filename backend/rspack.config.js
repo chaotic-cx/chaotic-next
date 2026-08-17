@@ -17,24 +17,25 @@ module.exports = () => ({
       target: 'node',
       main: './src/main.ts',
       tsConfig: './tsconfig.app.json',
-      assets: [],
-      optimization: false,
+      optimization: isProduction,
       outputHashing: 'none',
       generatePackageJson: isProduction,
-      sourceMap: true,
+      sourceMap: isProduction,
+      typeCheckOptions: isProduction,
       cache: false,
     }),
-    new SwcJsMinimizerRspackPlugin({
-      minimizerOptions: {
-        compress: {
-          keep_classnames: true,
-          keep_fnames: true,
+    isProduction &&
+      new SwcJsMinimizerRspackPlugin({
+        minimizerOptions: {
+          compress: {
+            keep_classnames: true,
+            keep_fnames: true,
+          },
+          mangle: {
+            keep_classnames: true,
+            keep_fnames: true,
+          },
         },
-        mangle: {
-          keep_classnames: true,
-          keep_fnames: true,
-        },
-      },
-    }),
+      }),
   ],
 });
