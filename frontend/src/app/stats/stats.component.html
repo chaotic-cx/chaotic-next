@@ -25,6 +25,7 @@
           <p-select
             [(ngModel)]="statsService.timeRangeDays"
             [options]="statsService.timeRangeOptions"
+            (ngModelChange)="onTimeRangeChange($event)"
             inputId="statsTimeRange"
             optionLabel="label"
             optionValue="days"

@@ -14,7 +14,7 @@
     class="w-full md:w-60"
     [(ngModel)]="packageStatsService.packageSearchSelectedRepo"
     [options]="repoOptions"
-    (ngModelChange)="updateDisplay(autoComplete.value)"
+    (ngModelChange)="onRepoChange($event)"
   />
 </div>
 <div class="min-h-footer">
@@ -23,7 +23,7 @@
       <i class="pi pi-search text-ctp-maroon" style="font-size: 10rem"></i>
     </div>
   } @else {
-    <p-table [value]="packageSearchData()" [tableStyle]="{ 'width': '100%', 'margin-top': '20px' }">
+    <p-table [value]="packageSearchData()" [tableStyle]="{ width: '100%' }" styleClass="no-background">
       <ng-template #body let-dataset>
         <tr>
           <td>{{ dataset.key | packageDetailKey }}</td>

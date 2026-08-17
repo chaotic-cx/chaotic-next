@@ -1,6 +1,7 @@
 import { httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { isPackageSortField, Package, type PackageSortField, Paginated, Repo } from '@chaotic-next/shared-lib';
 import { debounceTime, Subject } from 'rxjs';
 import { AppService } from '../app.service';
@@ -11,15 +12,20 @@ const DEFAULT_SORT_FIELD: PackageSortField = 'pkgname';
 @Service()
 export class PackageListService {
   private readonly appService = inject(AppService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly page = signal<number>(1);
   readonly perPage = signal<number>(25);
   readonly sortField = signal<PackageSortField>(DEFAULT_SORT_FIELD);
   readonly sortOrder = signal<number>(1);
-  readonly repoFilter = signal<number | undefined>(undefined);
 
-  readonly searchValue = signal<string>('');
-  private readonly qDebounced = signal<string>('');
+  readonly repoName = signal<string | undefined>(this.route.snapshot.queryParamMap.get('repo') ?? undefined);
+  readonly repoFilter = computed<number | undefined>(
+    () => this.repos()?.find((repo) => repo.name === this.repoName())?.id,
+  );
+
+  readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
+  private readonly qDebounced = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
   private readonly qSubject = new Subject<string>();
 
   private readonly reposResource = httpResource<Repo[]>(() =>
@@ -27,16 +33,17 @@ export class PackageListService {
   );
   readonly repos = resourceSignal(this.reposResource);
 
-  private readonly resource = httpResource<Paginated<Package>>(() =>
-    this.appService.getPackagesResourceRequest({
+  private readonly resource = httpResource<Paginated<Package>>(() => {
+    if (this.repoName() && !this.repos()) return undefined;
+    return this.appService.getPackagesResourceRequest({
       page: this.page(),
       perPage: this.perPage(),
       q: this.qDebounced() || undefined,
       sort: this.sortField(),
       order: this.sortOrder() === 1 ? 'ASC' : 'DESC',
       repoId: this.repoFilter(),
-    }),
-  );
+    });
+  });
 
   readonly loading = computed(() => this.resource.isLoading());
   readonly total = computed(() => resourceValue(this.resource)?.total ?? 0);
@@ -53,8 +60,8 @@ export class PackageListService {
     this.qSubject.next(value);
   }
 
-  setRepoFilter(repoId: number | null | undefined): void {
-    this.repoFilter.set(repoId ?? undefined);
+  setRepoFilter(repoName: string | null | undefined): void {
+    this.repoName.set(repoName ?? undefined);
     this.page.set(1);
   }
 

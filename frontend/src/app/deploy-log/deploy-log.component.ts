@@ -3,7 +3,7 @@ import { ChangeDetectorRef, Component, effect, inject, input, viewChild } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { type Build, BuildStatus } from '@chaotic-next/shared-lib';
+import { type Build, BuildStatus, STATUS_LABELS } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { Button } from '@openng/optimus-ui/button';
 import { IconField } from '@openng/optimus-ui/iconfield';
@@ -37,7 +37,7 @@ import { DeployLogService } from './deploy-log.service';
   ],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
-  providers: [MessageToastService],
+  providers: [MessageToastService, DeployLogService],
 })
 export class DeployLogComponent {
   private readonly appService = inject(AppService);
@@ -50,6 +50,10 @@ export class DeployLogComponent {
 
   readonly search = input<string>();
 
+  readonly repo = input<string>();
+  readonly builder = input<string>();
+  readonly status = input<string>();
+
   constructor() {
     this.appService.chaoticEvent
       .pipe(
@@ -60,9 +64,22 @@ export class DeployLogComponent {
 
     effect(() => {
       const q = this.search();
-      if (q) {
-        this.deployLogService.setSearch(q);
-      }
+      if (q) this.deployLogService.setSearch(q);
+    });
+
+    effect(() => {
+      const repo = this.repo();
+      if (repo) this.deployLogService.setRepoFilter(repo);
+    });
+
+    effect(() => {
+      const builder = this.builder();
+      if (builder) this.deployLogService.setBuilderFilter(builder);
+    });
+
+    effect(() => {
+      const status = this.status();
+      if (status) this.deployLogService.setStatusFilter(this.deployLogService.statusByLabel(status));
     });
   }
 
@@ -82,26 +99,49 @@ export class DeployLogComponent {
     this.deployLogService.setBuilderFilter(undefined);
     this.deployLogService.setRepoFilter(undefined);
     this.deployLogService.setStatusFilter(undefined);
-    void this.router.navigate([], { queryParams: { search: '' } });
+    void this.router.navigate([], {
+      queryParams: { search: null, repo: null, builder: null, status: null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
     this.cdr.markForCheck();
   }
 
   onBuilderFilter(value: string | null): void {
     this.applyFilter((v) => this.deployLogService.setBuilderFilter(v), value);
+    void this.router.navigate([], {
+      queryParams: { builder: value ?? null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 
   onRepoFilter(value: string | null): void {
     this.applyFilter((v) => this.deployLogService.setRepoFilter(v), value);
+    void this.router.navigate([], {
+      queryParams: { repo: value ?? null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 
   onStatusFilter(value: BuildStatus | null): void {
     this.applyFilter((v) => this.deployLogService.setStatusFilter(v), value);
+    void this.router.navigate([], {
+      queryParams: { status: value === null ? null : STATUS_LABELS[value] },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 
   globalFilter(target: EventTarget | null) {
     if (!(target instanceof HTMLInputElement)) return;
     this.deployLogService.setSearch(target.value);
-    void this.router.navigate([], { queryParams: { search: target.value } });
+    void this.router.navigate([], {
+      queryParams: { search: target.value || null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
     this.cdr.markForCheck();
   }
 
