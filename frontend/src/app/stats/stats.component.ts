@@ -1,16 +1,17 @@
 import { httpResource } from '@angular/common/http';
-import { ChangeDetectorRef, Component, computed, effect, inject, input, OnInit } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectorRef, Component, effect, inject, input, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { Select } from '@openng/optimus-ui/select';
 import { Tab, TabList, Tabs } from '@openng/optimus-ui/tabs';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
 import { TitleComponent } from '../title/title.component';
-import { isStatsTab, StatsService } from './stats.service';
+import { isStatsTab, StatsService, type StatsTab } from './stats.service';
 
 const ALL_TIME_RANGE_PARAM = 'all';
 
@@ -50,18 +51,38 @@ export class StatsComponent implements OnInit {
     if (days !== undefined) this.statsService.timeRangeDays.set(days);
   }
 
+  private readonly applyInitialRepo = this.initRepoFromRoute();
+
+  private initRepoFromRoute(): void {
+    const param = this.route.snapshot.queryParamMap.get('repo');
+    if (param !== null && this.statsService.repoOptions.includes(param)) {
+      this.statsService.packageSearchSelectedRepo.set(param);
+    }
+  }
+
   private readonly usersResource = httpResource<number>(() =>
     this.appService.getUsersResourceRequest(this.statsService.timeRangeDays() ?? undefined),
   );
 
-  private readonly routerEvents = toSignal(this.router.events, { initialValue: null });
+  protected readonly activeTab = signal<StatsTab | null>(this.tabFromUrl(this.router.url));
 
-  protected readonly activeTab = computed<string>(() => {
-    void this.routerEvents();
-    return this.route.firstChild?.snapshot?.url?.[0]?.path ?? 'search';
-  });
+  private tabFromUrl(url: string): StatsTab | null {
+    const path = url.split('?')[0].split('/').filter(Boolean).pop() ?? '';
+    return isStatsTab(path) ? (path as StatsTab) : null;
+  }
 
   constructor() {
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationStart || event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => {
+        this.activeTab.set(
+          event instanceof NavigationEnd ? this.tabFromUrl(event.urlAfterRedirects) : this.tabFromUrl(event.url),
+        );
+      });
+
     effect(() => {
       const users = resourceValue(this.usersResource);
       this.statsService.usersLoading.set(this.usersResource.isLoading());
@@ -121,6 +142,15 @@ export class StatsComponent implements OnInit {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { range: timeRangeToParam(days ?? null) },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
+  }
+
+  protected onRepoChange(repo: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { repo: repo || null },
       queryParamsHandling: 'merge',
       info: { disableViewTransition: true },
     });

@@ -12,19 +12,18 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Package, Paginated, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
 import { InputText } from '@openng/optimus-ui/inputtext';
-import { TableModule } from '@openng/optimus-ui/table';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
 import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
-import { UnixDatePipe } from '../pipes/unix-date.pipe';
+import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { SearchSuggestionsComponent } from '../search-suggestions/search-suggestions.component';
 import { StatsService } from '../stats/stats.service';
 
@@ -32,10 +31,9 @@ import { StatsService } from '../stats/stats.service';
   selector: 'chaotic-search-package',
   imports: [
     CommonModule,
-    TableModule,
     PackageDetailKeyPipe,
-    UnixDatePipe,
-    FormsModule,
+    RelativeTimePipe,
+    Tooltip,
     InputText,
     FormField,
     SearchSuggestionsComponent,
@@ -56,7 +54,6 @@ export class SearchPackageComponent implements OnInit {
   readonly search = input<string>();
 
   private readonly resultsSection = viewChild<ElementRef<HTMLElement>>('resultsSection');
-  protected readonly repoOptions = REPO_OPTIONS;
   protected readonly currentPackageName = signal<string>('');
   private readonly scrollToResults = !!this.route.snapshot.queryParamMap.get('search');
 
@@ -91,7 +88,11 @@ export class SearchPackageComponent implements OnInit {
   });
 
   protected readonly suggestions = computed<string[]>(() => [
-    ...new Set((resourceValue(this.suggestionsResource)?.items ?? []).map((pkg) => pkg.pkgname)),
+    ...new Set(
+      (resourceValue(this.suggestionsResource)?.items ?? [])
+        .filter((pkg) => pkg.reponame === this.packageStatsService.packageSearchSelectedRepo())
+        .map((pkg) => pkg.pkgname),
+    ),
   ]);
 
   protected readonly packageSearchData = computed<{ key: string; value: unknown }[]>(() => {
@@ -106,8 +107,9 @@ export class SearchPackageComponent implements OnInit {
     }
     delete data['pkgrel'];
 
+    const skippedKeys = new Set(['id', 'isActive', 'skipSignalScan', 'bumpCount', 'bumpTriggers']);
     for (const [key, value] of Object.entries(data)) {
-      if (key === 'isActive') continue;
+      if (skippedKeys.has(key)) continue;
       if (value === null || value === undefined) continue;
       if (typeof value === 'object') {
         for (const [innerKey, innerValue] of Object.entries(value)) {
@@ -137,20 +139,20 @@ export class SearchPackageComponent implements OnInit {
   });
 
   constructor() {
-    const repoParam = this.route.snapshot.queryParamMap.get('repo');
-    if (repoParam && this.repoOptions.includes(repoParam)) {
-      this.packageStatsService.packageSearchSelectedRepo.set(repoParam);
-    }
-
     effect(() => {
       const q = this.search();
       if (q) this.searchModel.update((model) => ({ ...model, query: q }));
     });
 
     effect(() => {
-      if (!this.searchForm.query().valid()) return;
       const q = this.searchModel().query.trim();
-      if (q) this.currentPackageName.set(q);
+      if (!q) {
+        if (this.currentPackageName() !== '') this.currentPackageName.set('');
+        this.clearSearchParam();
+        return;
+      }
+      if (!this.searchForm.query().valid()) return;
+      this.currentPackageName.set(q);
     });
 
     effect(() => {
@@ -204,13 +206,44 @@ export class SearchPackageComponent implements OnInit {
     });
   }
 
-  protected onRepoChange(repo: string): void {
-    this.packageStatsService.packageSearchSelectedRepo.set(repo);
+  private clearSearchParam(): void {
+    if (!this.route.snapshot.queryParamMap.has('search')) return;
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { repo },
+      queryParams: { search: null },
       queryParamsHandling: 'merge',
+      replaceUrl: true,
       info: { disableViewTransition: true },
     });
+  }
+
+  protected isArray(value: unknown): value is unknown[] {
+    return Array.isArray(value);
+  }
+
+  protected isString(value: unknown): value is string {
+    return typeof value === 'string';
+  }
+
+  protected isNumber(value: unknown): value is number {
+    return typeof value === 'number';
+  }
+
+  protected isBoolean(value: unknown): value is boolean {
+    return typeof value === 'boolean';
+  }
+
+  protected asString(value: unknown): string {
+    return typeof value === 'string' ? value : String(value ?? '');
+  }
+
+  protected asNumber(value: unknown): number {
+    return typeof value === 'number' ? value : Number(value);
+  }
+
+  protected asDate(value: unknown): string | number | Date {
+    if (value instanceof Date) return value;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : String(value ?? '');
   }
 }

@@ -1,4 +1,4 @@
-import { Component, effect, ElementRef, input, OnDestroy, OnInit, viewChild } from '@angular/core';
+import { Component, effect, ElementRef, input, OnDestroy, OnInit, output, viewChild } from '@angular/core';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
@@ -14,20 +14,13 @@ const TABLET_MAX_WIDTH = 1024;
 const SCROLLBACK_LINES = 9999999;
 const PIXELS_PER_SCROLL_LINE = 16;
 const SCROLLBAR_COLOR = '#f5e0dc';
-
-const ESC = String.fromCharCode(27);
-const C1_ESC = String.fromCharCode(155);
-const BEL = String.fromCharCode(7);
-
-const ANSI_ESCAPE = new RegExp(
-  `[${ESC}${C1_ESC}][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d/#&.:=?%@~_]+)*)?${BEL})|(?:(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))`,
-  'g',
-);
+const LINE_NUMBER_TOP_OFFSET_PX = 1;
 
 @Component({
   selector: 'chaotic-xterm-log',
   template: `
     <div class="xterm-container">
+      <div class="terminal-gutter" #gutter></div>
       <div class="terminal-host" #terminalDiv></div>
     </div>
   `,
@@ -46,7 +39,7 @@ const ANSI_ESCAPE = new RegExp(
         min-height: 0;
         position: relative;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         border: 1px solid var(--ctp-mocha-surface1);
         border-radius: 0.75rem;
         backdrop-filter: blur(2px);
@@ -61,8 +54,35 @@ const ANSI_ESCAPE = new RegExp(
         background: transparent !important;
       }
 
+      .terminal-gutter {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        width: auto;
+        min-width: 1.5rem;
+        margin-right: 0.5rem;
+        overflow: hidden;
+        border-right: 1px solid var(--ctp-mocha-surface1);
+      }
+
+      :host ::ng-deep .terminal-gutter .line-num {
+        border: none;
+        background: transparent;
+        color: var(--ctp-mocha-text);
+        font-family: inherit;
+        text-align: right;
+        padding-right: 0.5rem;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      :host ::ng-deep .terminal-gutter .line-num:hover {
+        color: var(--ctp-mocha-mauve);
+      }
+
       .terminal-host {
-        width: 100%;
+        flex: 1;
+        min-width: 0;
         height: 100%;
         overflow: hidden;
       }
@@ -74,7 +94,10 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   readonly clearSignal = input<boolean>(false);
   readonly scrollToLine = input<number | undefined>(undefined);
 
+  readonly lineClick = output<number>();
+
   private readonly terminalDiv = viewChild<ElementRef<HTMLDivElement>>('terminalDiv');
+  private readonly gutter = viewChild<ElementRef<HTMLDivElement>>('gutter');
 
   private terminal?: Terminal;
   private fitAddon?: FitAddon;
@@ -117,20 +140,77 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     this.pending = '';
     const normalized = this.normalizeChunk(text);
     if (normalized) {
-      this.terminal.write(normalized);
       this.writtenLines += this.countNewlines(normalized);
-      if (!this.lineScrolled) this.terminal.scrollToBottom();
-      this.maybeScrollToLine();
+      this.terminal.write(normalized, () => this.afterWrite());
     }
   }
 
-  private maybeScrollToLine(): void {
+  private afterWrite(): void {
+    if (!this.terminal || this.lineScrolled) return;
     const line = this.scrollToLine();
-    if (line === undefined || this.lineScrolled || !this.terminal) return;
-    if (this.writtenLines >= line - 1) {
-      this.terminal.scrollToLine(line - 1);
-      this.lineScrolled = true;
+    if (line === undefined || this.writtenLines < line - 1) {
+      this.terminal.scrollToBottom();
+      return;
     }
+    this.highlightLine(line - 1);
+    this.terminal.scrollToLine(line - 1);
+    this.lineScrolled = true;
+    this.updateLineNumbers();
+  }
+
+  private highlightLine(bufferIndex: number): void {
+    if (!this.terminal) return;
+    const cursor = this.terminal.buffer.active.baseY + this.terminal.buffer.active.cursorY;
+    try {
+      const marker = this.terminal.registerMarker(bufferIndex - cursor);
+      if (!marker) return;
+      this.terminal.registerDecoration({
+        marker,
+        layer: 'bottom',
+        backgroundColor: '#313244',
+        width: this.terminal.cols,
+      });
+    } catch {
+      // Marker/decoration APIs can fail for out-of-range lines; ignore.
+    }
+  }
+
+  private readonly onGutterClick = (event: Event): void => {
+    const target = (event.target as HTMLElement).closest('.line-num') as HTMLElement | null;
+    const raw = target?.dataset['line'];
+    if (!raw) return;
+    this.lineClick.emit(Number(raw));
+  };
+
+  private updateLineNumbers(): void {
+    const terminal = this.terminal;
+    const gutterEl = this.gutter()?.nativeElement;
+    const host = this.terminalDiv()?.nativeElement;
+    if (!terminal || !gutterEl || !host) return;
+    const screen = host.querySelector('.xterm-screen') as HTMLElement | null;
+    if (!screen || !screen.clientHeight) return;
+    const rows = terminal.rows;
+    const cellHeight = screen.clientHeight / rows;
+    const topOffset = screen.getBoundingClientRect().top - gutterEl.getBoundingClientRect().top;
+    const fontSize = `${terminal.options.fontSize ?? DEFAULT_FONT_SIZE}px`;
+    const start = terminal.buffer.active.viewportY;
+    gutterEl.style.paddingTop = `${Math.max(0, topOffset) + LINE_NUMBER_TOP_OFFSET_PX}px`;
+    gutterEl.textContent = '';
+    const fragment = document.createDocumentFragment();
+    for (let r = 0; r < rows; r++) {
+      const lineIndex = start + r;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'line-num';
+      button.style.fontSize = fontSize;
+      button.style.height = `${cellHeight}px`;
+      button.style.lineHeight = `${cellHeight}px`;
+      button.dataset['line'] = String(lineIndex + 1);
+      button.textContent = String(lineIndex + 1);
+      button.setAttribute('aria-label', `Line ${lineIndex + 1}`);
+      fragment.appendChild(button);
+    }
+    gutterEl.appendChild(fragment);
   }
 
   ngOnInit(): void {
@@ -145,19 +225,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   }
 
   private normalizeChunk(text: string): string {
-    const startsWithNewline = /^\r?\n/.test(text);
-    const endsWithNewline = /\r?\n$/.test(text);
-    const normalized = text
-      .replace(/\r\n/g, '\n')
-      .split('\n')
-      .map((line) => line.replace(/[ \t]+$/g, ''))
-      .filter((line) => this.hasVisibleText(line))
-      .join('\n');
-    return `${startsWithNewline ? '\n' : ''}${normalized}${endsWithNewline ? '\n' : ''}`;
-  }
-
-  private hasVisibleText(line: string): boolean {
-    return line.replace(ANSI_ESCAPE, '').replace(/\s/g, '').length > 0;
+    return text.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '');
   }
 
   private countNewlines(text: string): number {
@@ -201,6 +269,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     if (!container) return;
 
     this.terminal = new Terminal({
+      allowProposedApi: true,
       disableStdin: true,
       scrollback: SCROLLBACK_LINES,
       convertEol: true,
@@ -261,6 +330,10 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
     this.terminal.open(container);
 
+    this.terminal.onScroll(() => this.updateLineNumbers());
+    this.terminal.onResize(() => this.updateLineNumbers());
+    this.gutter()?.nativeElement.addEventListener('click', this.onGutterClick);
+
     this.terminal.attachCustomKeyEventHandler(() => false);
 
     let lastTouchY = 0;
@@ -304,6 +377,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     }
 
     this.fitAddon.fit();
+    this.updateLineNumbers();
 
     this.resizeObserver = new ResizeObserver(() => {
       if (this.terminal) {
@@ -314,6 +388,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       }
       requestAnimationFrame(() => {
         this.fitAddon?.fit();
+        this.updateLineNumbers();
       });
     });
     this.resizeObserver.observe(container);

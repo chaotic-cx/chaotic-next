@@ -1,15 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  ChangeDetectorRef,
-  Component,
-  effect,
-  ElementRef,
-  HostListener,
-  inject,
-  input,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form } from '@angular/forms/signals';
@@ -55,6 +45,9 @@ import { DeployLogService } from './deploy-log.service';
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
   providers: [MessageToastService, DeployLogService],
+  host: {
+    '(document:keydown)': 'focusSearchOnShortcut($event)',
+  },
 })
 export class DeployLogComponent {
   private readonly appService = inject(AppService);
@@ -195,7 +188,6 @@ export class DeployLogComponent {
     this.cdr.markForCheck();
   }
 
-  @HostListener('document:keydown', ['$event'])
   protected focusSearchOnShortcut(event: KeyboardEvent): void {
     if (!event.ctrlKey || event.key.toLowerCase() !== 'f') return;
     event.preventDefault();

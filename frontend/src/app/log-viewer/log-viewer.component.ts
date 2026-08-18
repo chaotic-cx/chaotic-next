@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { GitlabJob, GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from '../app.service';
-import { errorMessage } from '../functions';
+import { copyLineLink, errorMessage } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
 import { LogViewerService } from './log-viewer.service';
@@ -178,14 +178,26 @@ export class LogViewerComponent {
       }
     };
 
-    // EventSource reconnects automatically; just stop the spinner so an idle
-    // stream never shows as "loading".
-    source.onerror = () => this.loading.set(false);
+    // Close on error to stop EventSource's automatic infinite reconnect loop.
+    source.onerror = () => {
+      this.loading.set(false);
+      this.closeStream();
+    };
   }
 
   private closeStream(): void {
     this.eventSource?.close();
     this.eventSource = undefined;
+  }
+
+  protected onLineClick(line: number): void {
+    copyLineLink(line);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { line },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 }
 

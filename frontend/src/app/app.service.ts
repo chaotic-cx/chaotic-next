@@ -45,6 +45,11 @@ export class AppService {
   chaoticSse$ = new Subject<ChaoticEvent>();
   chaoticEvent = this.chaoticSse$.asObservable();
 
+  constructor() {
+    // Close on error to stop EventSource's automatic infinite reconnect loop.
+    this.serverEvents.onerror = () => this.serverEvents.close();
+  }
+
   getNewsResourceRequest(): HttpResourceRequest {
     return { url: '/news.json' };
   }

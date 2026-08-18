@@ -32,7 +32,7 @@
             [anchor]="searchInputEl"
             [suggestions]="suggestions()"
             [visible]="suggestionsVisible() && searchModel().query.length >= 3"
-            (select)="searchPackages($event)"
+            (selectSuggestion)="searchPackages($event)"
           />
         </div>
         <div class="mx-auto flex max-w-2xl flex-col items-stretch justify-center gap-3 sm:flex-row">

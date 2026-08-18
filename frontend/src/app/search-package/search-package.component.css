@@ -14,18 +14,3 @@
   justify-content: center;
   padding: 3rem 0;
 }
-
-.no-background {
-  margin-top: 3rem;
-  background: transparent !important;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.no-background ::ng-deep .p-datatable-table-container,
-.no-background ::ng-deep .p-datatable-table,
-.no-background ::ng-deep .p-datatable-thead > tr > th,
-.no-background ::ng-deep .p-datatable-tbody > tr,
-.no-background ::ng-deep .p-datatable-tbody > tr > td {
-  background: transparent;
-}

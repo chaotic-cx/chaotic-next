@@ -40,6 +40,18 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+export function formatDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+  return parts.join(' ');
+}
+
 export function packageLogRouteFromUrl(logUrl: string): string[] {
   try {
     const url = new URL(logUrl);
@@ -58,6 +70,12 @@ export function resourceValue<T>(resource: { hasValue(): boolean; value(): T }):
 
 export function resourceSignal<T>(resource: { hasValue(): boolean; value(): T }): Signal<T | undefined> {
   return computed(() => resourceValue(resource));
+}
+
+export function copyLineLink(line: number): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set('line', String(line));
+  void navigator.clipboard.writeText(url.toString());
 }
 
 export interface SeoTags {

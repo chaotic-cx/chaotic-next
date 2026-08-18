@@ -4,7 +4,6 @@ import {
   Component,
   effect,
   ElementRef,
-  HostListener,
   inject,
   input,
   LOCALE_ID,
@@ -61,6 +60,9 @@ import { PackageListService } from './package-list.service';
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
   providers: [MessageToastService, PackageListService, { provide: LOCALE_ID, useValue: 'en-GB' }],
+  host: {
+    '(document:keydown)': 'focusSearchOnShortcut($event)',
+  },
 })
 export class PackageListComponent {
   private readonly authService = inject(AuthService);
@@ -128,7 +130,6 @@ export class PackageListComponent {
     );
   }
 
-  @HostListener('document:keydown', ['$event'])
   protected focusSearchOnShortcut(event: KeyboardEvent): void {
     if (!event.ctrlKey || event.key.toLowerCase() !== 'f') return;
     event.preventDefault();
