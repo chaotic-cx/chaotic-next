@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, type ValueTransformer } from 'typeorm';
+
+const bigintToNumber: ValueTransformer = {
+  to: (value: number | null): number | null => value,
+  from: (value: string | null): number | null => (value === null ? null : Number(value)),
+};
 
 /** Audit row for every pipeline triggered through the API, mirroring MrAction. */
 @Entity('pipeline_trigger')
@@ -7,7 +12,7 @@ export class PipelineTrigger {
   id!: number;
 
   @Index('IDX_pipeline_trigger_pipelineId')
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: bigintToNumber })
   pipelineId!: number | null;
 
   @Column({ type: 'varchar' })

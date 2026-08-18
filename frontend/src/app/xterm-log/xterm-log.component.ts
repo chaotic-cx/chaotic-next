@@ -137,11 +137,6 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      this.receivedLength = this.chunk().length;
-      this.scheduleFlush();
-    });
-
-    effect(() => {
       if (this.clearSignal()) {
         this.receivedLength = 0;
         this.consumedLength = 0;
@@ -154,6 +149,11 @@ export class XtermLogComponent implements OnInit, OnDestroy {
         this.terminal?.clear();
         this.terminal?.reset();
       }
+    });
+
+    effect(() => {
+      this.receivedLength = this.chunk().length;
+      this.scheduleFlush();
     });
   }
 

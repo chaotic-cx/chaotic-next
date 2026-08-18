@@ -1,4 +1,5 @@
 import type { PackageElfAnalysis as PackageElfAnalysisType, ParsedPackageMetadata } from '@chaotic-next/shared-lib';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
   CreateDateColumn,
@@ -17,27 +18,35 @@ import { BumpType, TriggerType } from '../interfaces/repo-manager';
 @Entity()
 @Index('IDX_archlinux_package_pkgname', ['pkgname'])
 export class ArchlinuxPackage {
+  @ApiProperty({ description: 'Package ID' })
   @PrimaryGeneratedColumn()
   id!: number;
 
+  @ApiProperty({ description: 'Package name' })
   @Column({ type: 'varchar' })
   pkgname!: string;
 
+  @ApiProperty({ description: 'Current package version' })
   @Column({ type: 'varchar', nullable: true })
   version!: string;
 
+  @ApiProperty({ description: 'Package release number' })
   @Column({ type: 'int', nullable: true })
   pkgrel!: number;
 
+  @ApiProperty({ description: 'Target architecture' })
   @Column({ type: 'varchar', nullable: true })
   arch!: string;
 
+  @ApiProperty({ description: 'When the package was last updated (ISO 8601)' })
   @Column({ type: 'timestamp', nullable: true })
   lastUpdated!: Date;
 
+  @ApiProperty({ description: 'Previous package version' })
   @Column({ type: 'varchar', nullable: true })
   previousVersion!: string | null;
 
+  @ApiProperty({ description: 'Parsed package metadata', type: Object })
   @Column({ type: 'jsonb', nullable: true })
   metadata!: ParsedPackageMetadata;
 }

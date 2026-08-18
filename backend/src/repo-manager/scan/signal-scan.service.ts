@@ -2,12 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { FindOptionsSelect } from 'typeorm';
 import { In, Repository } from 'typeorm';
+import { Package, Repo } from '../../builder/builder.entity';
 import { TriggerType } from '../../interfaces/repo-manager';
+import { errorMessage } from '../../utils/functions';
+import { scanArchive } from '../offline/scan-archive';
 import { ArchlinuxPackage, PackageElfAnalysis, type PackageElfPkgType } from '../repo-manager.entity';
 import { saveInBatches } from '../save';
-import { Package, Repo } from '../../builder/builder.entity';
-import { scanArchive } from '../offline/scan-archive';
-import { errorMessage } from '../../utils/functions';
 import {
   ARCH_PKG_TYPE,
   buildAnalysis,
@@ -220,6 +220,16 @@ export class SignalScanService {
    * judged broken, so an unfiltered recompute covers Chaotic only.
    */
   async recomputeBroken(filter?: { pkgType: TriggerType; pkgId: number }[]): Promise<void> {
+    const skipIds = await this.loadSkipSignalScanIds();
+    await this.clearSkipFlags(skipIds);
+
+    // Only the columns needed to judge brokenness are fetched; the full rows
+    // carry heavy `files`/symbol/vtable JSONB that is never rewritten here.
+    const candidates = await this.loadBrokenCandidates(filter);
+    const notSkipped = candidates.filter((analysis) => !skipIds.has(analysis.pkgId));
+
+    if (notSkipped.length === 0) return;
+
     const [provided, runtimes] = await Promise.all([
       this.getProvidedSonames(),
       loadRuntimeVersions(this.archlinuxPackageRepository),
@@ -228,14 +238,6 @@ export class SignalScanService {
       `Broken-deps context: ${provided.size} provided sonames, runtimes ${JSON.stringify(runtimes)}`,
       'SignalScanService',
     );
-
-    const skipIds = await this.loadSkipSignalScanIds();
-    await this.clearSkipFlags(skipIds);
-
-    // Only the columns needed to judge brokenness are fetched; the full rows
-    // carry heavy `files`/symbol/vtable JSONB that is never rewritten here.
-    const candidates = await this.loadBrokenCandidates(filter);
-    const notSkipped = candidates.filter((analysis) => !skipIds.has(analysis.pkgId));
 
     let changed = 0;
     const checkSonames = provided.size >= MIN_PROVIDED_SONAMES;
