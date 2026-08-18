@@ -83,9 +83,8 @@ const XTERM_THEME = {
         flex-shrink: 0;
         width: auto;
         min-width: 1.5rem;
-        margin-right: 0.5rem;
+        margin-right: 1rem;
         overflow: hidden;
-        border-right: 1px solid var(--ctp-mocha-surface1);
       }
 
       :host ::ng-deep .terminal-gutter .line-num {
