@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1.7
 FROM node:26-alpine AS builder
 
+ENV NODE_ENV=production
+
 WORKDIR /build
 
 # hadolint ignore=DL3018
@@ -26,6 +28,8 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --prod --frozen-lockfile
 
 FROM node:26-alpine
+
+ENV NODE_ENV=production
 
 WORKDIR /app
 

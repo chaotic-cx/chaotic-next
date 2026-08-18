@@ -41,7 +41,7 @@ export const appConfig: ApplicationConfig = {
       },
     }),
     provideBetterAuth({
-      baseURL: `${environment.backendUrl}/api/auth`,
+      baseURL: environment.authBaseUrl,
     }),
     provideAuthInitializer(),
     provideHttpClient(withInterceptorsFromDi()),
