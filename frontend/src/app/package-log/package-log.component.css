@@ -122,16 +122,9 @@
 }
 
 .log-panel-wrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: calc(100dvh - 260px);
-}
-
-.log-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  min-height: 0;
 }

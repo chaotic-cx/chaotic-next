@@ -47,9 +47,7 @@
             <tr>
               <th class="w-1/3" pSortableColumn="subdomain">Subdomain&nbsp;<p-sortIcon field="subdomain" /></th>
               <th class="w-1/3">Approximate Position</th>
-              <th class="w-1/5" pSortableColumn="last_update">
-                Last update (UTC)&nbsp;<p-sortIcon field="last_update" />
-              </th>
+              <th class="w-1/5" pSortableColumn="last_update">Last update&nbsp;<p-sortIcon field="last_update" /></th>
             </tr>
           </ng-template>
           <ng-template #body let-mirror>
@@ -80,7 +78,11 @@
                   {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
                 }
               </td>
-              <td>{{ mirror.last_update | date: 'short' : 'UTC' }}</td>
+              <td>
+                <span [pTooltip]="(mirror.last_update | date: 'short' : 'UTC') ?? undefined" tooltipPosition="top">
+                  {{ mirror.last_update | relativeTime }}
+                </span>
+              </td>
             </tr>
           </ng-template>
         </p-table>
@@ -110,9 +112,7 @@
             <tr>
               <th class="w-1/3" pSortableColumn="subdomain">Subdomain&nbsp;<p-sortIcon field="subdomain" /></th>
               <th class="w-1/3">Approximate Position</th>
-              <th class="w-1/5" pSortableColumn="last_update">
-                Last update (UTC)&nbsp;<p-sortIcon field="last_update" />
-              </th>
+              <th class="w-1/5" pSortableColumn="last_update">Last update&nbsp;<p-sortIcon field="last_update" /></th>
             </tr>
           </ng-template>
           <ng-template #body let-mirror>
@@ -143,7 +143,11 @@
                   {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
                 }
               </td>
-              <td>{{ mirror.last_update | date: 'short' : 'UTC' }}</td>
+              <td>
+                <span [pTooltip]="(mirror.last_update | date: 'short' : 'UTC') ?? undefined" tooltipPosition="top">
+                  {{ mirror.last_update | relativeTime }}
+                </span>
+              </td>
             </tr>
           </ng-template>
         </p-table>

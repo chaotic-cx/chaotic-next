@@ -19,24 +19,20 @@ export class PackageLogsController {
     const base = this.configService.getOrThrow<string>('app.garudaLogsUrl');
     const url = `${base}/${encodeURIComponent(pkgname)}/${encodeURIComponent(timestamp)}`;
     return new Observable((subscriber) => {
-      let running = true;
-
-      const stop = (): void => {
-        if (!running) return;
-        running = false;
-        subscriber.complete();
-      };
+      // Aborting on teardown cancels the upstream fetch so a disconnecting
+      // client does not leave the build-server connection dangling.
+      const upstream = new AbortController();
 
       const stream = async (): Promise<void> => {
         try {
-          const response = await fetch(url);
+          const response = await fetch(url, { signal: upstream.signal });
           if (response.status === 404) throw new NotFoundException('Build log not found');
           if (!response.ok || !response.body) throw new ServiceUnavailableException('Could not fetch build log');
 
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           let offset = 0;
-          while (running) {
+          while (!upstream.signal.aborted) {
             const { done, value } = await reader.read();
             if (done) break;
             const text = decoder.decode(value, { stream: true });
@@ -46,15 +42,15 @@ export class PackageLogsController {
             }
           }
           subscriber.next({ data: { offset, text: '', complete: true, status: '' } });
-          stop();
         } catch (error) {
-          subscriber.error(error);
-          stop();
+          if (!upstream.signal.aborted) subscriber.error(error);
+        } finally {
+          subscriber.complete();
         }
       };
 
       void stream();
-      return () => stop();
+      return () => upstream.abort();
     });
   }
 }

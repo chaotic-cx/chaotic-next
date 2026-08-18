@@ -1,7 +1,4 @@
-<chaotic-title
-  [subtitle]="pkgname() ? `${formattedTimestamp()} — ${elapsedLabel()}` : 'Build log'"
-  title="{{ pkgname() || 'Package log' }}"
-/>
+<chaotic-title [subtitle]="subtitle()" title="{{ pkgname() || 'Package log' }}" />
 
 <div class="package-log">
   @if (error()) {
@@ -58,12 +55,6 @@
   }
 
   <div class="log-panel-wrap">
-    @if (loading()) {
-      <div class="log-loading">
-        <p-progress-spinner ariaLabel="Loading log" />
-      </div>
-    } @else {
-      <chaotic-xterm-log #term [chunk]="logChunk()" [scrollToLine]="scrollToLine()" (lineClick)="onLineClick($event)" />
-    }
+    <chaotic-xterm-log #term [chunk]="logChunks()" [scrollToLine]="scrollToLine()" (lineClick)="onLineClick($event)" />
   </div>
 </div>

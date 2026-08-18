@@ -51,7 +51,7 @@ export class LogViewerComponent {
   protected readonly jobs = signal<GitlabJob[]>([]);
   protected readonly selectedJobId = signal<number | undefined>(undefined);
   protected readonly scrollToLine = signal<number | undefined>(undefined);
-  protected readonly logChunk = signal('');
+  protected readonly logChunks = signal<string[]>([]);
   protected readonly clearSignal = signal(false);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | undefined>(undefined);
@@ -84,7 +84,7 @@ export class LogViewerComponent {
   protected selectJob(job: GitlabJob): void {
     this.closeStream();
     this.selectedJobId.set(job.id);
-    this.logChunk.set('');
+    this.logChunks.set([]);
     this.clearSignal.set(true);
     this.error.set(undefined);
     this.loading.set(true);
@@ -111,7 +111,7 @@ export class LogViewerComponent {
     this.closeStream();
     this.jobs.set([]);
     this.selectedJobId.set(undefined);
-    this.logChunk.set('');
+    this.logChunks.set([]);
     this.clearSignal.set(true);
     this.error.set(undefined);
     this.loading.set(true);
@@ -174,7 +174,7 @@ export class LogViewerComponent {
       // Only once a running job produces output is it actually "live".
       this.streaming.set(true);
       if (chunk.text) {
-        this.logChunk.set(this.logChunk() + chunk.text);
+        this.logChunks.update((chunks) => [...chunks, chunk.text]);
       }
     };
 

@@ -2,6 +2,8 @@
 @import '@catppuccin/palette/css/catppuccin.css' layer(base);
 @import '@catppuccin/highlightjs/css/catppuccin-mocha.css' layer(base);
 @import '@xterm/xterm/css/xterm.css' layer(base);
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/inter';
 
 /* OptimusUI & Catppuccin Theme Overrides */
 @import '@openng/icons/openng-icons.css' layer(base);
@@ -73,7 +75,7 @@ ng-terminal,
 
 @supports (font-variation-settings: normal) {
   :root {
-    font-family: InterVariable, sans-serif;
+    font-family: 'Inter Variable', Inter, sans-serif;
   }
 }
 
@@ -104,7 +106,7 @@ kbd,
 samp {
   font-style: normal;
   font-weight: 400;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   font-optical-sizing: auto;
 }
 

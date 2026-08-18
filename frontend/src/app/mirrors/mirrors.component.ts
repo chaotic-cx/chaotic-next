@@ -7,12 +7,13 @@ import { Panel } from '@openng/optimus-ui/panel';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
+import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { TitleComponent } from '../title/title.component';
 import { MirrorsService } from './mirrors.service';
 
 @Component({
   selector: 'chaotic-mirrors',
-  imports: [CommonModule, TitleComponent, TableModule, Tooltip, Panel],
+  imports: [CommonModule, TitleComponent, TableModule, Tooltip, Panel, RelativeTimePipe],
   templateUrl: './mirrors.component.html',
   styleUrl: './mirrors.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],

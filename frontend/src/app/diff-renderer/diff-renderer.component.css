@@ -1,7 +1,7 @@
 @reference '../../styles.css';
 
 .diff-renderer {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.75rem;
   border-radius: 0.25rem;
   max-width: 100%;
