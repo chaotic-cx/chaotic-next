@@ -43,6 +43,10 @@
                     <span class="block truncate font-semibold">{{ pkg.name }}</span>
                     <span class="block text-sm text-ctp-subtext1">
                       Node: {{ pkg.node }} &middot; {{ pkg.build_class | buildClass }}
+                      @if (buildStatusService.activeEtaLabels().get(pkg.name); as eta) {
+                        &middot;
+                        <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
+                      }
                     </span>
                   </a>
                 }
@@ -62,15 +66,52 @@
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
               <div class="divide-y divide-white/5">
-                @for (pkg of buildStatusService.waitingQueue(); track pkg.name) {
+                @for (pkg of paginatedWaitingQueue(); track pkg.name) {
                   <div class="flex items-center justify-between gap-3 py-2.5">
                     <span class="truncate font-medium">{{ pkg.name }}</span>
-                    <span class="text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+                    <span class="text-sm text-ctp-subtext1">
+                      @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
+                        <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
+                        &middot;
+                      }
+                      {{ pkg.build_class | buildClass }}
+                    </span>
                   </div>
                 }
               </div>
               <ng-template #footer>
-                <div class="mt-1 flex gap-4"></div>
+                <div class="mt-1 flex items-center justify-between gap-4">
+                  @if (buildStatusService.queueClearLabel(); as label) {
+                    <span class="text-sm text-ctp-subtext1" [pTooltip]="estimateTooltip" tooltipPosition="top">
+                      {{ label }}
+                    </span>
+                  }
+                  @if (waitingQueuePageCount() > 1) {
+                    <div class="ml-auto flex items-center gap-2">
+                      <button
+                        class="queue-page-btn"
+                        [disabled]="paginatedWaitingQueuePage() <= 1"
+                        (click)="selectWaitingQueuePage(paginatedWaitingQueuePage() - 1)"
+                        type="button"
+                        aria-label="Previous page"
+                      >
+                        <i class="pi pi-angle-left"></i>
+                      </button>
+                      <span class="text-sm text-ctp-subtext1"
+                        >{{ paginatedWaitingQueuePage() }} / {{ waitingQueuePageCount() }}</span
+                      >
+                      <button
+                        class="queue-page-btn"
+                        [disabled]="paginatedWaitingQueuePage() >= waitingQueuePageCount()"
+                        (click)="selectWaitingQueuePage(paginatedWaitingQueuePage() + 1)"
+                        type="button"
+                        aria-label="Next page"
+                      >
+                        <i class="pi pi-angle-right"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
               </ng-template>
             </p-card>
           </div>
@@ -156,10 +197,10 @@
           </div>
         }
         @if (buildStatusService.activeQueue().length > 0) {
-          <div style="margin-top: 2.5rem">
+          <div>
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2 mt-8" style="font-size: 5rem"></i>
+                <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Active builds</ng-template>
               <ng-template #subtitle>These are currently ongoing builds</ng-template>
@@ -174,6 +215,10 @@
                     <span class="block truncate font-semibold">{{ pkg.name }}</span>
                     <span class="block text-sm text-ctp-subtext1">
                       Node: {{ pkg.node }} &middot; {{ pkg.build_class | buildClass }}
+                      @if (buildStatusService.activeEtaLabels().get(pkg.name); as eta) {
+                        &middot;
+                        <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
+                      }
                     </span>
                   </a>
                 }
@@ -193,15 +238,52 @@
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
               <div class="divide-y divide-white/5">
-                @for (pkg of buildStatusService.waitingQueue(); track pkg.name) {
+                @for (pkg of paginatedWaitingQueue(); track pkg.name) {
                   <div class="flex items-center justify-between gap-3 py-2.5">
                     <span class="truncate font-medium">{{ pkg.name }}</span>
-                    <span class="text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+                    <span class="text-sm text-ctp-subtext1">
+                      @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
+                        <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
+                        &middot;
+                      }
+                      {{ pkg.build_class | buildClass }}
+                    </span>
                   </div>
                 }
               </div>
               <ng-template #footer>
-                <div class="mt-1 flex gap-4"></div>
+                <div class="mt-1 flex items-center justify-between gap-4">
+                  @if (buildStatusService.queueClearLabel(); as label) {
+                    <span class="text-sm text-ctp-subtext1" [pTooltip]="estimateTooltip" tooltipPosition="top">
+                      {{ label }}
+                    </span>
+                  }
+                  @if (waitingQueuePageCount() > 1) {
+                    <div class="ml-auto flex items-center gap-2">
+                      <button
+                        class="queue-page-btn"
+                        [disabled]="paginatedWaitingQueuePage() <= 1"
+                        (click)="selectWaitingQueuePage(paginatedWaitingQueuePage() - 1)"
+                        type="button"
+                        aria-label="Previous page"
+                      >
+                        <i class="pi pi-angle-left"></i>
+                      </button>
+                      <span class="text-sm text-ctp-subtext1"
+                        >{{ paginatedWaitingQueuePage() }} / {{ waitingQueuePageCount() }}</span
+                      >
+                      <button
+                        class="queue-page-btn"
+                        [disabled]="paginatedWaitingQueuePage() >= waitingQueuePageCount()"
+                        (click)="selectWaitingQueuePage(paginatedWaitingQueuePage() + 1)"
+                        type="button"
+                        aria-label="Next page"
+                      >
+                        <i class="pi pi-angle-right"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
               </ng-template>
             </p-card>
           </div>

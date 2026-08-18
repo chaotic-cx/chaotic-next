@@ -1,6 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, effect, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -57,6 +57,29 @@ export class BuildStatusComponent implements OnInit {
   readonly dialogData = signal<PipelineView | null>(null);
   readonly dialogVisible = signal<boolean>(false);
   readonly isWide = signal<boolean>(true);
+  readonly estimateTooltip = 'Estimated from historical average build times — actual times vary.';
+
+  private static readonly WAITING_PAGE_SIZE = 15;
+  private readonly waitingQueuePage = signal(1);
+
+  /** Number of pages the waiting queue spans; at least one so the controls are stable. */
+  readonly waitingQueuePageCount = computed(() =>
+    Math.max(1, Math.ceil(this.buildStatusService.waitingQueue().length / BuildStatusComponent.WAITING_PAGE_SIZE)),
+  );
+
+  /** Current page clamped to the valid range after the queue shrinks or grows. */
+  readonly paginatedWaitingQueuePage = computed(() => Math.min(this.waitingQueuePage(), this.waitingQueuePageCount()));
+
+  /** Slice of the waiting queue shown on the current page. */
+  readonly paginatedWaitingQueue = computed(() => {
+    const queue = this.buildStatusService.waitingQueue();
+    const start = (this.paginatedWaitingQueuePage() - 1) * BuildStatusComponent.WAITING_PAGE_SIZE;
+    return queue.slice(start, start + BuildStatusComponent.WAITING_PAGE_SIZE);
+  });
+
+  selectWaitingQueuePage(page: number): void {
+    this.waitingQueuePage.set(Math.min(Math.max(1, page), this.waitingQueuePageCount()));
+  }
 
   constructor() {
     this.appService.chaoticEvent.pipe(takeUntilDestroyed()).subscribe((event) => {

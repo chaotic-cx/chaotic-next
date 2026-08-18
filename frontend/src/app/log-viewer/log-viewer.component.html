@@ -36,7 +36,7 @@
       </div>
     } @else {
       <chaotic-xterm-log
-        [chunk]="logChunk()"
+        [chunk]="logChunks()"
         [clearSignal]="clearSignal()"
         [scrollToLine]="scrollToLine()"
         (lineClick)="onLineClick($event)"

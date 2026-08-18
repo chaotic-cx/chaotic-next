@@ -212,4 +212,25 @@ export class BuilderController {
   > {
     return await this.builderService.getAverageBuildTimePerStatus(days);
   }
+
+  @Get('average/pkgname')
+  @ApiOperation({ summary: 'Get average build time per package.' })
+  @ApiQuery({ name: 'pkgname', required: true, isArray: true, description: 'Package names to look up' })
+  @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
+  @ApiOkResponse({ description: 'Average build time per package', type: Object, isArray: true })
+  async getAverageBuildTimePerPackage(
+    @Query('pkgname') pkgnames: string[],
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
+  ): Promise<
+    {
+      pkgname: string;
+      average_build_time: string;
+      samples: string;
+    }[]
+  > {
+    return await this.builderService.getAverageBuildTimePerPackage(
+      Array.isArray(pkgnames) ? pkgnames : [pkgnames],
+      days,
+    );
+  }
 }

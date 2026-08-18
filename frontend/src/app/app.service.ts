@@ -96,6 +96,12 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/average/time`, params: this.daysParams(days) };
   }
 
+  getPackageAverageBuildTimesResourceRequest(pkgnames: string[], days?: number): HttpResourceRequest {
+    let params = this.daysParams(days);
+    for (const pkgname of pkgnames) params = params.append('pkgname', pkgname);
+    return { url: `${this.appConfig.backendUrl}/builder/average/pkgname`, params };
+  }
+
   getPopularPackagesResourceRequest(amount: number, days?: number, status?: BuildStatus): HttpResourceRequest {
     let params = this.daysParams(days);
     if (status !== undefined) {

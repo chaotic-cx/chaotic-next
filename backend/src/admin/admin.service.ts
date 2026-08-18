@@ -69,6 +69,8 @@ export interface CreateElfAnalysisBody {
 }
 
 const FK_VIOLATION_CODE = '23503';
+const RESTRICT_VIOLATION_CODE = '23001';
+const INTEGRITY_VIOLATION_CODES = new Set([FK_VIOLATION_CODE, RESTRICT_VIOLATION_CODE]);
 
 @Injectable()
 export class AdminService {
@@ -577,7 +579,11 @@ export class AdminService {
       if (affected === undefined || affected === 0) throw new NotFoundException(`${label} not found`);
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      if (error instanceof Error && 'code' in error && (error as { code: string }).code === FK_VIOLATION_CODE) {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        INTEGRITY_VIOLATION_CODES.has((error as { code: string }).code)
+      ) {
         throw new ConflictException(`${label} is still referenced by other rows and cannot be deleted`);
       }
       throw error;

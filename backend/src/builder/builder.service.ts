@@ -426,6 +426,31 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     return query.cache(`average-build-time-per-status-${days ?? 'all'}`, CACHE_TTL_MS).getRawMany();
   }
 
+  async getAverageBuildTimePerPackage(
+    pkgnames: string[],
+    days?: number,
+  ): Promise<{ pkgname: string; average_build_time: string; samples: string }[]> {
+    if (pkgnames.length === 0) return [];
+
+    const query = this.buildRepository
+      .createQueryBuilder('build')
+      .select('pkgbase.pkgname AS pkgname')
+      .addSelect('AVG("timeToEnd") AS average_build_time')
+      .addSelect('COUNT(*) AS samples')
+      .innerJoin('build.pkgbase', 'pkgbase')
+      .where('pkgbase.pkgname IN (:...pkgnames)', { pkgnames })
+      .andWhere('"timeToEnd" IS NOT NULL')
+      .andWhere('build.status IN (:...statuses)', { statuses: [BuildStatus.SUCCESS, BuildStatus.FAILED] })
+      .groupBy('pkgbase.pkgname')
+      .orderBy('pkgname', 'ASC');
+
+    if (days !== undefined) {
+      query.andWhere('build.timestamp > :date', { date: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
+    }
+
+    return query.cache(`average-build-time-per-package-${pkgnames.join(',')}`, CACHE_TTL_MS).getRawMany();
+  }
+
   async getLatestBuilds(options: {
     amount: number;
     offset: number;
