@@ -15,6 +15,7 @@ const SCROLLBACK_LINES = 9999999;
 const PIXELS_PER_SCROLL_LINE = 16;
 const SCROLLBAR_COLOR = '#f5e0dc';
 const LINE_NUMBER_TOP_OFFSET_PX = 1;
+const GUTTER_MIN_FONT_SIZE_PX = 10;
 
 const XTERM_THEME = {
   background: 'rgba(0, 0, 0, 0)',
@@ -82,9 +83,9 @@ const XTERM_THEME = {
         flex-direction: column;
         flex-shrink: 0;
         width: auto;
-        min-width: 1.5rem;
+        min-width: 2.5rem;
         margin-right: 1rem;
-        overflow: hidden;
+        scrollbar-width: thin;
       }
 
       :host ::ng-deep .terminal-gutter .line-num {
@@ -108,6 +109,12 @@ const XTERM_THEME = {
         min-width: 0;
         height: 100%;
         overflow: hidden;
+      }
+
+      @media (max-width: 640px) {
+        .terminal-gutter {
+          display: none;
+        }
       }
     `,
   ],
@@ -259,7 +266,11 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     this.gutterRows = terminal.rows;
     this.gutterCellHeightPx = screen.clientHeight / terminal.rows;
     this.gutterTopOffsetPx = screen.getBoundingClientRect().top - gutterEl.getBoundingClientRect().top;
-    this.gutterFontSizePx = `${terminal.options.fontSize ?? DEFAULT_FONT_SIZE}px`;
+    const cellFontSize = Math.max(
+      GUTTER_MIN_FONT_SIZE_PX,
+      Math.min(terminal.options.fontSize ?? DEFAULT_FONT_SIZE, this.gutterCellHeightPx),
+    );
+    this.gutterFontSizePx = `${cellFontSize}px`;
   }
 
   private updateLineNumbers(): void {
