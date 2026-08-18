@@ -3777,5 +3777,115 @@
         "emoji": "👍"
       }
     ]
+  },
+  {
+    "id": 674,
+    "type": "message",
+    "date": "2026-08-18T23:30:34",
+    "date_unixtime": "1787088634",
+    "edited": "2026-08-18T23:30:58",
+    "edited_unixtime": "1787088658",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": [
+      "I'm happy to announce big updates to ",
+      {
+        "type": "text_link",
+        "text": "our website",
+        "href": "https://aur.chaotic.cx/"
+      },
+      "! Besides having received major updates in how things look, they are also a lot more interactive and useful than before 😀\n\n  - Build status now ",
+      {
+        "type": "text_link",
+        "text": "shows estimations",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      " for how long a build is going to take or when a build is assumed to start based on average build times. \n  - Build logs can be ",
+      {
+        "type": "text_link",
+        "text": "viewed live right in the website itself",
+        "href": "https://aur.chaotic.cx/logs/package/wezterm-git/1787082498695"
+      },
+      ", searched, downloaded and shared. The same goes for ",
+      {
+        "type": "text_link",
+        "text": "pipeline logs",
+        "href": "https://aur.chaotic.cx/logs/2770451637?job=15968252914"
+      },
+      "!\n  - The entire history (which is ~2 years since we started using a database for these purposes) of ",
+      {
+        "type": "text_link",
+        "text": "deployment logs",
+        "href": "https://aur.chaotic.cx/deployments"
+      },
+      ", as well as statistics and packages can be queried in many more ways than before.\n  - ",
+      {
+        "type": "text_link",
+        "text": "Update reviews",
+        "href": "https://aur.chaotic.cx/update-review"
+      },
+      " became better than ever before due to better highlighting and some automated scans raising awareness for general things to be looked out for. I'm planning to expand this even further in the future.\n  - Most of the maintenance tasks can generally now be done from within the website, via GitLab SSO, which is also a great help. No more fiddling around with GitLabs web interface while on the run!\n\nBesides our schedule pipeline, which does most of the heavy in regard of updating our PKGBUILDs from various sources, and opening MRs for us to review received some parallelization which allows it to finish in <5 minutes instead of 20-30 🚀"
+    ],
+    "text_entities": [
+      {
+        "type": "plain",
+        "text": "I'm happy to announce big updates to "
+      },
+      {
+        "type": "text_link",
+        "text": "our website",
+        "href": "https://aur.chaotic.cx/"
+      },
+      {
+        "type": "plain",
+        "text": "! Besides having received major updates in how things look, they are also a lot more interactive and useful than before 😀\n\n  - Build status now "
+      },
+      {
+        "type": "text_link",
+        "text": "shows estimations",
+        "href": "https://aur.chaotic.cx/status"
+      },
+      {
+        "type": "plain",
+        "text": " for how long a build is going to take or when a build is assumed to start based on average build times. \n  - Build logs can be "
+      },
+      {
+        "type": "text_link",
+        "text": "viewed live right in the website itself",
+        "href": "https://aur.chaotic.cx/logs/package/wezterm-git/1787082498695"
+      },
+      {
+        "type": "plain",
+        "text": ", searched, downloaded and shared. The same goes for "
+      },
+      {
+        "type": "text_link",
+        "text": "pipeline logs",
+        "href": "https://aur.chaotic.cx/logs/2770451637?job=15968252914"
+      },
+      {
+        "type": "plain",
+        "text": "!\n  - The entire history (which is ~2 years since we started using a database for these purposes) of "
+      },
+      {
+        "type": "text_link",
+        "text": "deployment logs",
+        "href": "https://aur.chaotic.cx/deployments"
+      },
+      {
+        "type": "plain",
+        "text": ", as well as statistics and packages can be queried in many more ways than before.\n  - "
+      },
+      {
+        "type": "text_link",
+        "text": "Update reviews",
+        "href": "https://aur.chaotic.cx/update-review"
+      },
+      {
+        "type": "plain",
+        "text": " became better than ever before due to better highlighting and some automated scans raising awareness for general things to be looked out for. I'm planning to expand this even further in the future.\n  - Most of the maintenance tasks can generally now be done from within the website, via GitLab SSO, which is also a great help. No more fiddling around with GitLabs web interface while on the run!\n\nBesides our schedule pipeline, which does most of the heavy lifting in regard of updating our PKGBUILDs from various sources, and opening MRs for us to review received some parallelization which allows it to finish in <5 minutes instead of 20-30 🚀"
+      }
+    ]
   }
 ]
