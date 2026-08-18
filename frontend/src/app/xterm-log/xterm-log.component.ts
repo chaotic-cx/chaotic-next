@@ -130,9 +130,6 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      // Track the number of received chunks only; joining and writing is
-      // deferred to flush() so rapid SSE messages are coalesced and the log is
-      // never rebuilt or flattened in full on each message.
       this.receivedLength = this.chunk().length;
       this.scheduleFlush();
     });
@@ -142,8 +139,10 @@ export class XtermLogComponent implements OnInit, OnDestroy {
         this.receivedLength = 0;
         this.consumedLength = 0;
         this.flushScheduled = false;
-        this.writtenLines = 0;
         this.lineScrolled = false;
+        this.logicalLineStarts = [];
+        this.lastMappedLength = -1;
+        this.lastMappedCols = -1;
         this.clearFlushTimer();
         this.terminal?.clear();
         this.terminal?.reset();
@@ -155,17 +154,21 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   private consumedLength = 0;
   private flushScheduled = false;
   private flushTimer: number | undefined;
-  private writtenLines = 0;
   private lineScrolled = false;
+
+  /** Buffer row where each logical (un-wrapped) line starts; re-mapped on re-wrap. */
+  private logicalLineStarts: number[] = [];
+  private lastMappedLength = -1;
+  private lastMappedCols = -1;
 
   private gutterRows = 0;
   private gutterCellHeightPx = 0;
   private gutterTopOffsetPx = 0;
   private gutterFontSizePx = '';
   private lastGutterViewportStart = -1;
+  private gutterButtons: HTMLButtonElement[] = [];
+  private gutterUpdateRaf = 0;
 
-  /** Max bytes written per flush; larger deltas are split so the render loop
-   * never blocks on the whole log at once. */
   private static readonly MAX_FLUSH_BYTES = 64 * 1024;
   private static readonly FLUSH_DELAY_MS = 16;
 
@@ -188,8 +191,6 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     if (!this.terminal || this.receivedLength <= this.consumedLength) return;
     const chunks = this.chunk();
 
-    // Write at most MAX_FLUSH_BYTES per pass so a huge backlog is rendered over
-    // several frames instead of one long main-thread block.
     let bytes = 0;
     let end = this.consumedLength;
     while (end < chunks.length) {
@@ -201,23 +202,23 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     this.consumedLength = end;
     const normalized = this.normalizeChunk(delta);
     if (normalized) {
-      this.writtenLines += this.countNewlines(normalized);
       this.terminal.write(normalized, () => this.afterWrite());
     }
 
-    // Keep draining the buffered backlog across frames.
     if (this.consumedLength < this.receivedLength) this.scheduleFlush();
   }
 
   private afterWrite(): void {
     if (!this.terminal || this.lineScrolled) return;
     const line = this.scrollToLine();
-    if (line === undefined || this.writtenLines < line - 1) {
+    this.ensureLogicalLineMapping();
+    const bufferRow = line === undefined ? undefined : this.logicalLineStarts[line - 1];
+    if (bufferRow === undefined) {
       this.terminal.scrollToBottom();
       return;
     }
-    this.highlightLine(line - 1);
-    this.terminal.scrollToLine(line - 1);
+    this.highlightLine(bufferRow);
+    this.terminal.scrollToLine(bufferRow);
     this.lineScrolled = true;
     this.updateLineNumbers();
   }
@@ -247,7 +248,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     this.lineClick.emit(Number(raw));
   };
 
-  /** Reads gutter layout once; cached so per-scroll updates don't force reflow. */
+  /** Reads gutter layout once; cached to avoid forced reflows per scroll. */
   private measureGutter(): void {
     const terminal = this.terminal;
     const gutterEl = this.gutter()?.nativeElement;
@@ -265,28 +266,80 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     const terminal = this.terminal;
     const gutterEl = this.gutter()?.nativeElement;
     if (!terminal || !gutterEl || this.gutterRows === 0) return;
+    this.ensureLogicalLineMapping();
     const start = terminal.buffer.active.viewportY;
 
-    // Skip rebuilding the gutter when the visible line range is unchanged.
-    if (start === this.lastGutterViewportStart && gutterEl.childElementCount > 0) return;
+    if (start === this.lastGutterViewportStart && this.gutterButtons.length > 0) return;
     this.lastGutterViewportStart = start;
-    gutterEl.style.paddingTop = `${Math.max(0, this.gutterTopOffsetPx) + LINE_NUMBER_TOP_OFFSET_PX}px`;
-    gutterEl.textContent = '';
-    const fragment = document.createDocumentFragment();
-    for (let r = 0; r < this.gutterRows; r++) {
-      const lineIndex = start + r;
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'line-num';
-      button.style.fontSize = this.gutterFontSizePx;
-      button.style.height = `${this.gutterCellHeightPx}px`;
-      button.style.lineHeight = `${this.gutterCellHeightPx}px`;
-      button.dataset['line'] = String(lineIndex + 1);
-      button.textContent = String(lineIndex + 1);
-      button.setAttribute('aria-label', `Line ${lineIndex + 1}`);
-      fragment.appendChild(button);
+
+    if (this.gutterButtons.length !== this.gutterRows) {
+      gutterEl.textContent = '';
+      this.gutterButtons = [];
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < this.gutterRows; i++) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'line-num';
+        button.style.fontSize = this.gutterFontSizePx;
+        button.style.height = `${this.gutterCellHeightPx}px`;
+        button.style.lineHeight = `${this.gutterCellHeightPx}px`;
+        this.gutterButtons.push(button);
+        fragment.appendChild(button);
+      }
+      gutterEl.appendChild(fragment);
     }
-    gutterEl.appendChild(fragment);
+
+    gutterEl.style.paddingTop = `${Math.max(0, this.gutterTopOffsetPx) + LINE_NUMBER_TOP_OFFSET_PX}px`;
+    for (let r = 0; r < this.gutterRows; r++) {
+      const bufferRow = start + r;
+      const line = terminal.buffer.active.getLine(bufferRow);
+      const logicalLine = this.logicalNumberForRow(bufferRow, line?.isWrapped);
+      const button = this.gutterButtons[r];
+      button.textContent = logicalLine === undefined ? '' : String(logicalLine);
+      if (logicalLine !== undefined) {
+        button.dataset['line'] = String(logicalLine);
+        button.setAttribute('aria-label', `Line ${logicalLine}`);
+      } else {
+        delete button.dataset['line'];
+        button.removeAttribute('aria-label');
+      }
+    }
+  }
+
+  private ensureLogicalLineMapping(): void {
+    const buffer = this.terminal?.buffer.active;
+    if (!buffer) return;
+    const cols = this.terminal?.cols ?? 0;
+    if (buffer.length === this.lastMappedLength && cols === this.lastMappedCols) return;
+    this.lastMappedLength = buffer.length;
+    this.lastMappedCols = cols;
+    const starts: number[] = [];
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (!line || !line.isWrapped) starts.push(i);
+    }
+    this.logicalLineStarts = starts;
+  }
+
+  private logicalNumberForRow(bufferRow: number, wrapped: boolean | undefined): number | undefined {
+    if (wrapped) return undefined;
+    const starts = this.logicalLineStarts;
+    let low = 0;
+    let high = starts.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (starts[mid] <= bufferRow) low = mid + 1;
+      else high = mid;
+    }
+    return low > 0 ? low : undefined;
+  }
+
+  private scheduleGutterUpdate(): void {
+    if (this.gutterUpdateRaf) return;
+    this.gutterUpdateRaf = requestAnimationFrame(() => {
+      this.gutterUpdateRaf = 0;
+      this.updateLineNumbers();
+    });
   }
 
   ngOnInit(): void {
@@ -302,14 +355,6 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   private normalizeChunk(text: string): string {
     return text.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '');
-  }
-
-  private countNewlines(text: string): number {
-    let count = 0;
-    for (let i = 0; i < text.length; i++) {
-      if (text.charCodeAt(i) === 10) count++;
-    }
-    return count;
   }
 
   downloadLog(filename: string): void {
@@ -385,8 +430,11 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
     this.terminal.open(container);
 
-    this.terminal.onScroll(() => this.updateLineNumbers());
-    this.terminal.onResize(() => this.updateLineNumbers());
+    this.terminal.onScroll(() => this.scheduleGutterUpdate());
+    this.terminal.onResize(() => {
+      this.lastGutterViewportStart = -1;
+      this.updateLineNumbers();
+    });
     this.gutter()?.nativeElement.addEventListener('click', this.onGutterClick);
 
     this.terminal.attachCustomKeyEventHandler(() => false);
@@ -450,7 +498,6 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     });
     this.resizeObserver.observe(container);
 
-    // Flush anything that streamed in before the terminal was ready.
     this.flush();
   }
 }
