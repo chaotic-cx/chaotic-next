@@ -13,7 +13,7 @@ import { AurScanService } from '../../aur-scan/aur-scan.service';
   template: `
     <p-panel header="Scan AUR package">
       <div class="flex flex-col gap-4">
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <input
             class="w-full sm:w-72"
             [(ngModel)]="packageName"
@@ -29,6 +29,7 @@ import { AurScanService } from '../../aur-scan/aur-scan.service';
             (onClick)="scan()"
             icon="pi pi-search"
             severity="secondary"
+            styleClass="w-full sm:w-auto"
             pTooltip="Fetches the AUR PKGBUILD and its sources, runs the security rules and checks URLs on VirusTotal"
             tooltipPosition="bottom"
           />

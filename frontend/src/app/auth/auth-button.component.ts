@@ -1,15 +1,25 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
-import { AuthService } from 'ngx-better-auth';
+import { Avatar } from '@openng/optimus-ui/avatar';
 import { Button } from '@openng/optimus-ui/button';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { AuthService } from 'ngx-better-auth';
 import { finalize } from 'rxjs/operators';
 import { GitlabLoginService } from './gitlab-login.service';
 
+function initialsOf(name: string | null | undefined): string {
+  return (name ?? '?')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 @Component({
   selector: 'chaotic-auth-button',
-  imports: [Button, RouterLink, Tooltip],
+  imports: [Button, RouterLink, Tooltip, Avatar],
   templateUrl: './auth-button.component.html',
 })
 export class AuthButtonComponent {
@@ -28,6 +38,28 @@ export class AuthButtonComponent {
     if (rawUser.webUrl) return rawUser.webUrl;
     return `https://gitlab.com/${user.name}`;
   });
+
+  protected readonly avatarFailed = signal(false);
+
+  protected readonly avatarUrl = computed(() => {
+    const user = this.user();
+    if (!user?.image || this.avatarFailed()) return undefined;
+    const version = user.updatedAt ?? user.id;
+    return version ? `${user.image}?v=${encodeURIComponent(String(version))}` : user.image;
+  });
+
+  protected readonly avatarLabel = computed(() => initialsOf(this.user()?.name));
+
+  constructor() {
+    effect(() => {
+      this.user();
+      this.avatarFailed.set(false);
+    });
+  }
+
+  protected onAvatarError(): void {
+    this.avatarFailed.set(true);
+  }
 
   login(): void {
     this.isLoginLoading.set(true);

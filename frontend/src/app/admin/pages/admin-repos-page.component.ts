@@ -171,9 +171,22 @@ interface RepoFormModel {
           <p-checkbox [formField]="repoForm.isActive" [binary]="true" inputId="repoIsActive" />
           <label class="text-ctp-text text-sm" for="repoIsActive">Active</label>
         </div>
-        <div class="flex justify-end gap-2">
-          <p-button (onClick)="dialogVisible.set(false)" type="button" severity="secondary" text label="Cancel" />
-          <p-button [disabled]="repoForm().invalid()" type="submit" severity="primary" label="Save" />
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <p-button
+            (onClick)="dialogVisible.set(false)"
+            type="button"
+            severity="secondary"
+            text
+            label="Cancel"
+            styleClass="w-full sm:w-auto"
+          />
+          <p-button
+            [disabled]="repoForm().invalid()"
+            type="submit"
+            severity="primary"
+            label="Save"
+            styleClass="w-full sm:w-auto"
+          />
         </div>
       </form>
     </p-dialog>

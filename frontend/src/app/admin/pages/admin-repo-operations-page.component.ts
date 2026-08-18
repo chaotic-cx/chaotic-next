@@ -12,13 +12,14 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
   imports: [Button, Panel, TableModule, Tooltip],
   template: `
     <div class="flex flex-col gap-5">
-      <p-panel header="Trigger operations">
+      <p-panel class="min-w-0" header="Trigger operations">
         <div class="flex flex-col gap-4">
-          <div class="flex flex-wrap gap-3">
+          <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
             <p-button
               (onClick)="service.triggerRepoRun()"
               label="Trigger repo run"
               icon="pi pi-play"
+              styleClass="w-full sm:w-auto"
               pTooltip="Run the repo manager over the configured repositories"
               tooltipPosition="bottom"
             />
@@ -27,6 +28,7 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
               label="Trigger signal scan"
               icon="pi pi-microchip"
               severity="secondary"
+              styleClass="w-full sm:w-auto"
               pTooltip="Scan changed Arch packages for ELF signals"
               tooltipPosition="bottom"
             />
@@ -35,6 +37,7 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
               label="Trigger MR scan"
               icon="pi pi-shield"
               severity="secondary"
+              styleClass="w-full sm:w-auto"
               pTooltip="Scan open merge requests for malicious changes: rule findings, auto-flag labels and VirusTotal checks"
               tooltipPosition="bottom"
             />
@@ -43,6 +46,7 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
               label="Index Arch mirror"
               icon="pi pi-database"
               severity="secondary"
+              styleClass="w-full sm:w-auto"
               pTooltip="Index the full Arch mirror into the ELF signal index"
               tooltipPosition="bottom"
             />
@@ -51,6 +55,7 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
               label="Index Chaotic repo"
               icon="pi pi-database"
               severity="secondary"
+              styleClass="w-full sm:w-auto"
               pTooltip="Index the full Chaotic-AUR repo (CDN mirror) into the ELF signal index"
               tooltipPosition="bottom"
             />
@@ -58,7 +63,8 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
         </div>
       </p-panel>
 
-      <p-panel header="Broken packages">
+      <div class="min-w-0">
+        <span class="p-panel-title mb-2 ml-4 block text-ctp-text">Broken packages</span>
         <div class="overflow-x-auto">
           <p-table
             [value]="service.brokenReports()"
@@ -68,6 +74,7 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
             [lazy]="true"
             [totalRecords]="service.brokenReportsTotal()"
             [showCurrentPageReport]="true"
+            [scrollable]="true"
             [rowsPerPageOptions]="[25, 50, 100]"
             (onLazyLoad)="onLazyLoad($event)"
             dataKey="pkgname"
@@ -94,7 +101,7 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
             </ng-template>
           </p-table>
         </div>
-      </p-panel>
+      </div>
     </div>
   `,
 })

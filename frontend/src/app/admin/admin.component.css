@@ -19,3 +19,15 @@
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }
+
+@media screen and (max-width: 639px) {
+  :host ::ng-deep .cell-actions > div {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+:host ::ng-deep .p-datatable,
+:host ::ng-deep .p-datatable-scrollable > .p-datatable-table-container {
+  max-width: 100%;
+}
