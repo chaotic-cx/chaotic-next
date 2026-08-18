@@ -33,6 +33,7 @@ function findEndReason(buffer: string): BuildEndReason | undefined {
   if (/Job \S+ reached a timeout/.test(buffer)) return 'timed_out';
   if (/Job \S+ was canceled/.test(buffer)) return 'canceled';
   if (/Job \S+ execution failed/.test(buffer)) return 'node_disconnected';
+  if (/Didn't finish building the package!/.test(buffer)) return 'failed';
   if (/Job \S+ failed/.test(buffer)) return 'failed';
   return undefined;
 }
