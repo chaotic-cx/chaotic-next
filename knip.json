@@ -14,10 +14,10 @@
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": [
     "@angular-eslint/*",
-    "@angular/pwa",
     "@catppuccin/*",
     "@eslint/*",
     "@fastify/cors",
+    "@fontsource-variable/*",
     "@nestjs/cli",
     "@nestjs/schematics",
     "@nx/*",
