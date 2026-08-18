@@ -62,9 +62,9 @@
               <ng-template #subtitle>These are currently queued builds</ng-template>
               <div class="divide-y divide-white/5">
                 @for (pkg of paginatedWaitingQueue(); track pkg.name) {
-                  <div class="flex items-center justify-between gap-3 py-2.5">
-                    <span class="truncate font-medium">{{ pkg.name }}</span>
-                    <span class="text-sm text-ctp-subtext1">
+                  <div class="py-2.5">
+                    <span class="block truncate font-semibold">{{ pkg.name }}</span>
+                    <span class="block text-sm text-ctp-subtext1">
                       @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
                         <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
                         &middot;
@@ -225,18 +225,18 @@
           </div>
         }
         @if (buildStatusService.waitingQueue().length > 0) {
-          <div style="margin-top: 2.5rem">
+          <div class="mt-3">
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-hourglass text-ctp-lavender mt-5" style="font-size: 5rem"></i>
+                <i class="pi pi-hourglass text-ctp-lavender" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
               <div class="divide-y divide-white/5">
                 @for (pkg of paginatedWaitingQueue(); track pkg.name) {
-                  <div class="flex items-center justify-between gap-3 py-2.5">
-                    <span class="truncate font-medium">{{ pkg.name }}</span>
-                    <span class="text-sm text-ctp-subtext1">
+                  <div class="py-2.5">
+                    <span class="block truncate font-semibold">{{ pkg.name }}</span>
+                    <span class="block text-sm text-ctp-subtext1">
                       @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
                         <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
                         &middot;
@@ -285,11 +285,11 @@
         }
         @if (buildStatusService.idleQueue().length > 0) {
           <div
-            [class.mt-5]="buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0"
+            [class.mt-3]="buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0"
           >
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-list text-ctp-peach mt-5" style="font-size: 5rem"></i>
+                <i class="pi pi-list text-ctp-peach" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Idle builders</ng-template>
               <ng-template #subtitle>Currently idle builders</ng-template>
@@ -371,64 +371,85 @@
     [(visible)]="dialogVisible"
     [modal]="true"
     [appendTo]="'body'"
-    [style]="{ width: '90vw' }"
+    [style]="{ 'width': '64rem', 'max-width': '94vw' }"
     header="Pipeline details"
   >
-    <div class="mb-5 ml-2.5">
-      <p>Source: {{ dialog.pipeline.source }}</p>
-      <p>Created at: {{ dialog.pipeline.created_at | date: 'short' }}</p>
-      <p>
-        Web URL:
-        <a class="text-ctp-mauve" [href]="dialog.pipeline.web_url">{{ dialog.pipeline.web_url }}</a>
-      </p>
-      <p>
-        Commit:
-        <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/{{ dialog.pipeline.sha }}">{{
-          dialog.pipeline.sha
-        }}</a>
-      </p>
+    <div
+      class="mb-5 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-ctp-surface1 bg-ctp-mantle px-4 py-3 text-sm"
+    >
+      <span class="flex items-center gap-2">
+        <span class="text-ctp-subtext0">Source</span>
+        <span class="font-medium">{{ dialog.pipeline.source }}</span>
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="text-ctp-subtext0">Created</span>
+        <span
+          class="text-ctp-text"
+          [pTooltip]="(dialog.pipeline.created_at | date: 'short') ?? undefined"
+          tooltipPosition="top"
+          >{{ dialog.pipeline.created_at | relativeTime }}</span
+        >
+      </span>
+      <a
+        class="flex items-center gap-1.5 text-ctp-mauve hover:text-ctp-text"
+        [href]="dialog.pipeline.web_url"
+        target="_blank"
+        rel="noopener"
+      >
+        <i class="pi pi-external-link"></i>
+        <span>GitLab</span>
+      </a>
+      <a
+        class="flex items-center gap-1.5 font-mono text-ctp-mauve hover:text-ctp-text"
+        [href]="`https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/${dialog.pipeline.sha}`"
+        target="_blank"
+        rel="noopener"
+        pTooltip="View commit"
+        tooltipPosition="top"
+      >
+        <i class="pi pi-hashtag"></i>
+        <span>{{ dialog.pipeline.sha.slice(0, 8) }}</span>
+      </a>
     </div>
     @if (dialog.commit.length > 0) {
-      <p-table
-        [value]="dialog.commit"
-        [sortOrder]="-1"
-        [tableStyle]="{ width: '100%' }"
-        dataKey="id"
-        sortField="finished_at"
-      >
-        <ng-template #header>
-          <tr>
-            <th>Package</th>
-            <th>Started</th>
-            <th>Finished</th>
-            <th>Status</th>
-            <th>Message</th>
-          </tr>
-        </ng-template>
-        <ng-template #body let-job>
-          <tr>
-            <td>
-              <a class="text-ctp-mauve" [href]="job.target_url">{{ job.name }}</a>
-            </td>
-            <td>{{ job.started_at | date: 'short' }}</td>
-            <td>{{ job.finished_at | date: 'short' }}</td>
-            <td>
-              <i
-                class="pi"
-                [ngClass]="{
-                  'pi-check-circle text-ctp-green': job.status === 'success',
-                  'pi-exclamation-circle text-ctp-red': job.status === 'failed',
-                  'pi-spin pi-spinner text-ctp-peach': job.status === 'running',
-                  'pi-clock text-ctp-surface0': job.status === 'pending',
-                  'pi-info-circle text-ctp-text': job.status === 'canceled',
-                }"
-              ></i>
-              {{ job.status }}
-            </td>
-            <td>{{ job.description }}</td>
-          </tr>
-        </ng-template>
-      </p-table>
+      <ul class="space-y-2.5">
+        @for (job of sortedCommit(); track job.id) {
+          @let status = jobStatus(job.status);
+          <li class="flex items-start gap-3 rounded-lg border border-ctp-surface1 bg-ctp-mantle p-3.5">
+            <i class="pi mt-1 {{ status.icon }} {{ status.color }}"></i>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between gap-3">
+                <a
+                  class="truncate font-semibold text-ctp-mauve hover:text-ctp-text"
+                  [href]="job.target_url ?? undefined"
+                  target="_blank"
+                  rel="noopener"
+                  >{{ job.name }}</a
+                >
+                <span
+                  class="shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium uppercase {{ status.chip }} {{
+                    status.color
+                  }}"
+                  >{{ job.status }}</span
+                >
+              </div>
+              @if (job.description) {
+                <p class="mt-1 truncate text-sm text-ctp-subtext1">{{ job.description }}</p>
+              }
+              <div class="mt-1.5 text-xs text-ctp-subtext0">
+                @if (job.started_at) {
+                  <span>{{ job.started_at | date: 'short' }}</span>
+                  @if (job.finished_at) {
+                    <span> &rarr; {{ job.finished_at | date: 'short' }}</span>
+                  }
+                } @else {
+                  <span>Not started</span>
+                }
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
     } @else {
       <div class="ml-2.5">
         <a

@@ -1,18 +1,5 @@
 @reference "../../styles.css"
 
-.p-datatable-table {
-  width: unset !important;
-}
-
-.p-card {
-  background: unset;
-  padding-top: 1rem;
-}
-
-::ng-deep .p-datatable {
-  width: unset !important;
-}
-
 .p-tab {
   @apply mx-auto;
 }

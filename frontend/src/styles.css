@@ -124,6 +124,12 @@ samp {
   @apply p-4;
 }
 
+@media (max-width: 1100px) {
+  chaotic-build-status .chaotic-tab-content {
+    padding: 0;
+  }
+}
+
 .chaotic-container-wide {
   @apply container text-center align-middle;
 }
@@ -182,6 +188,17 @@ samp {
 
 .p-card {
   height: 100%;
+}
+
+chaotic-build-status .p-card {
+  background: unset;
+  padding-top: 1rem;
+}
+
+@media (max-width: 1100px) {
+  chaotic-build-status .p-card {
+    background: var(--p-card-background);
+  }
 }
 
 .p-card-body {

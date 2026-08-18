@@ -25,7 +25,7 @@ export interface PipelineView {
 
 interface QueueEntry {
   name: string;
-  build_class: number | null;
+  build_class: number | string | null;
 }
 
 interface ActiveQueueEntry extends QueueEntry {
@@ -71,7 +71,7 @@ export class BuildStatusService {
   readonly activeQueue = computed<ActiveQueueEntry[]>(() =>
     (resourceValue(this.queueStatsResource)?.active.packages ?? []).map((pkg) => ({
       name: this.shortName(pkg.name),
-      build_class: pkg.build_class,
+      build_class: pkg.build_class ?? pkg.node,
       node: pkg.node,
       liveLogUrl: pkg.liveLog ?? '',
     })),
@@ -85,7 +85,7 @@ export class BuildStatusService {
   readonly idleQueue = computed<QueueEntry[]>(() =>
     (resourceValue(this.queueStatsResource)?.idle.nodes ?? []).map((node) => ({
       name: node.name,
-      build_class: node.build_class,
+      build_class: node.build_class ?? node.name,
     })),
   );
 
@@ -117,9 +117,10 @@ export class BuildStatusService {
       active: this.activeQueue().map((pkg) => ({
         pkgname: pkg.name,
         startedMs: this.activeFirstSeen().get(pkg.name) ?? Date.now(),
+        buildClass: pkg.build_class,
       })),
-      waiting: this.waitingQueue().map((pkg) => pkg.name),
-      idleCount: this.idleQueue().length,
+      waiting: this.waitingQueue().map((pkg) => ({ pkgname: pkg.name, buildClass: pkg.build_class })),
+      idle: this.idleQueue().map((node) => ({ buildClass: node.build_class })),
       nowMs: this.now(),
       avgOf: (pkgname) => this.averageMinutes(pkgname),
     }),
