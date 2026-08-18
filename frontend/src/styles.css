@@ -18,8 +18,6 @@
 .xterm .xterm-viewport,
 .xterm-scrollable-element {
   background-color: transparent !important;
-  overflow-x: auto !important;
-  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   pointer-events: auto !important;
 }
