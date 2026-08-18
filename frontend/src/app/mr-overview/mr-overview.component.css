@@ -94,8 +94,10 @@
   border: unset !important;
 }
 
-.p-panel-content {
-  padding: unset !important;
+@media screen and (max-width: 639px) {
+  ::ng-deep .mr-overview-panel .p-panel-content {
+    padding: 0 !important;
+  }
 }
 
 :host ::ng-deep .p-tablist-tab-list {

@@ -1,6 +1,7 @@
 import { inject, Service } from '@angular/core';
 import { Router } from '@angular/router';
 import { APP_CONFIG } from '../../environments/app-config.token';
+import { NotificationService } from '../notification/notification.service';
 import { AuthService } from 'ngx-better-auth';
 import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, filter, finalize, first, map, switchMap, timeout } from 'rxjs/operators';
@@ -35,6 +36,7 @@ export class GitlabLoginService {
   private readonly config = inject(APP_CONFIG);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly notificationService = inject(NotificationService);
   private readonly authBaseURL = this.config.authBaseUrl;
 
   login(returnPath: string): Observable<void> {
@@ -138,6 +140,9 @@ export class GitlabLoginService {
         timeout({ first: SESSION_REFRESH_TIMEOUT_MS }),
         catchError(() => of(undefined)),
       )
-      .subscribe(() => void this.router.navigateByUrl(destination));
+      .subscribe(() => {
+        void this.router.navigateByUrl(destination);
+        void this.notificationService.promptIfNeeded();
+      });
   }
 }
