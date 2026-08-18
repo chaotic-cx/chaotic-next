@@ -126,6 +126,12 @@ describe('findBuildLogMarkers on failed builds', () => {
     expect(markers.endReason).toBe('node_disconnected');
   });
 
+  it('detects a build that did not finish building the package as failed', () => {
+    const markers = findBuildLogMarkers("Didn't finish building the package!", {});
+    expect(markers.endReason).toBe('failed');
+    expect(markers.buildEndMs).toBeUndefined();
+  });
+
   it('keeps the first end reason once the build has ended', () => {
     const prior: BuildLogMarkers = { endReason: 'canceled' };
     const markers = findBuildLogMarkers('Build job chaotic-aur/x86_64/foo finished at 16/08/2026, 07:10:54 UTC', prior);
