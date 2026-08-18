@@ -13,6 +13,15 @@
   animation: heroScrollBounce 2s ease-in-out infinite;
 }
 
+.hero-card {
+  background: none;
+  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
+  border-radius: var(--p-panel-border-radius, 12px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  will-change: backdrop-filter;
+}
+
 @keyframes heroScrollBounce {
   0%,
   100% {

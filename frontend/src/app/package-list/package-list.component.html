@@ -25,15 +25,18 @@
   >
     <ng-template #caption>
       <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-        <p-button
-          class="hidden sm:mr-auto sm:inline-flex"
-          [outlined]="true"
-          (click)="clear(pkgTable)"
-          label="Clear"
-          icon="pi pi-filter-slash"
-          pTooltip="Clear all filters and search"
-          tooltipPosition="bottom"
-        />
+        <div class="flex flex-wrap items-center gap-2.5 sm:mr-auto">
+          <p-button
+            class="hidden sm:inline-flex"
+            [outlined]="true"
+            (click)="clear(pkgTable)"
+            label="Clear"
+            icon="pi pi-filter-slash"
+            pTooltip="Clear all filters and search"
+            tooltipPosition="bottom"
+          />
+          <chaotic-column-toggle [columns]="packageColumns" tableKey="package-list-table" />
+        </div>
         <p-select
           class="w-full sm:w-40"
           [options]="packageListService.repos() ?? []"
@@ -51,8 +54,8 @@
           </p-inputicon>
           <input
             class="w-full"
-            [value]="packageListService.searchValue()"
-            (input)="globalFilter($event.target)"
+            #searchInput
+            [formField]="searchForm.query"
             pInputText
             type="text"
             placeholder="Search keyword"
@@ -62,105 +65,138 @@
     </ng-template>
     <ng-template #header>
       <tr>
-        <th pSortableColumn="pkgname" style="min-width: 15rem">
-          <div class="flex items-center">
-            Name&nbsp;
-            <p-sortIcon field="pkgname" />
-          </div>
-        </th>
-        <th style="min-width: 10rem">
-          <div class="flex items-center">Version</div>
-        </th>
-        <th pSortableColumn="lastUpdated" style="min-width: 10rem">
-          <div class="flex items-center">
-            Last updated&nbsp;
-            <p-sortIcon field="lastUpdated" />
-          </div>
-        </th>
-        <th style="min-width: 10rem">
-          <div class="flex items-center">Description</div>
-        </th>
-        <th style="min-width: 15rem; max-width: 20rem">
-          <div class="flex items-center">Homepage</div>
-        </th>
-        <th pSortableColumn="repo" style="min-width: 5rem">
-          <div class="flex items-center">
-            Repository
-            <p-sortIcon field="repo" />
-          </div>
-        </th>
-        <th class="cell-actions" style="min-width: 5rem">
-          <div class="flex items-center justify-end">PKGBUILD</div>
-        </th>
+        @if (columnVisibility.isVisible('package-list-table', 'name')) {
+          <th pSortableColumn="pkgname" style="min-width: 15rem">
+            <div class="flex items-center">
+              Name&nbsp;
+              <p-sortIcon field="pkgname" />
+            </div>
+          </th>
+        }
+        @if (columnVisibility.isVisible('package-list-table', 'version')) {
+          <th style="min-width: 10rem">
+            <div class="flex items-center">Version</div>
+          </th>
+        }
+        @if (columnVisibility.isVisible('package-list-table', 'lastUpdated')) {
+          <th pSortableColumn="lastUpdated" style="min-width: 10rem">
+            <div class="flex items-center">
+              Last updated&nbsp;
+              <p-sortIcon field="lastUpdated" />
+            </div>
+          </th>
+        }
+        @if (columnVisibility.isVisible('package-list-table', 'description')) {
+          <th style="min-width: 10rem">
+            <div class="flex items-center">Description</div>
+          </th>
+        }
+        @if (columnVisibility.isVisible('package-list-table', 'homepage')) {
+          <th style="min-width: 15rem; max-width: 20rem">
+            <div class="flex items-center">Homepage</div>
+          </th>
+        }
+        @if (columnVisibility.isVisible('package-list-table', 'repo')) {
+          <th pSortableColumn="repo" style="min-width: 5rem">
+            <div class="flex items-center">
+              Repository
+              <p-sortIcon field="repo" />
+            </div>
+          </th>
+        }
+        @if (columnVisibility.isVisible('package-list-table', 'actions')) {
+          <th class="cell-actions" style="min-width: 5rem">
+            <div class="flex items-center justify-end">PKGBUILD</div>
+          </th>
+        }
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-unTypedPkg>
       @if (typed(unTypedPkg); as pkg) {
         <tr [class.text-ctp-subtext0]="!pkg.isActive">
-          <td>
-            <span class="ml-1 align-middle">{{ pkg.pkgname }}</span>
-          </td>
-          <td>
-            <span class="ml-1 align-middle">{{ pkg.version }}-{{ pkg.pkgrel }}</span>
-          </td>
-          <td>
-            <span class="ml-1 align-middle">{{ pkg.lastUpdated | date: 'short' }}</span>
-          </td>
-          <td>
-            <span class="ml-1 align-middle">{{ pkg.metadata?.desc }}</span>
-          </td>
-          <td>
-            @if (pkg.metadata?.url; as url) {
-              <a class="ml-1 align-middle text-ctp-mauve" [href]="url" target="_blank" rel="noopener noreferrer">{{
-                url | stripPrefix
-              }}</a>
-            } @else {
-              <span class="ml-1 align-middle">n/a</span>
-            }
-          </td>
-          <td>
-            <span class="ml-1 align-middle">{{ pkg.reponame }}</span>
-          </td>
-          <td class="cell-actions">
-            @if (pkg.isActive) {
-              <div class="flex gap-2">
-                @if (isLoggedIn()) {
+          @if (columnVisibility.isVisible('package-list-table', 'name')) {
+            <td>
+              <span class="ml-1 align-middle">{{ pkg.pkgname }}</span>
+            </td>
+          }
+          @if (columnVisibility.isVisible('package-list-table', 'version')) {
+            <td>
+              <span class="ml-1 align-middle">{{ pkg.version }}-{{ pkg.pkgrel }}</span>
+            </td>
+          }
+          @if (columnVisibility.isVisible('package-list-table', 'lastUpdated')) {
+            <td>
+              <span
+                class="ml-1 align-middle"
+                [pTooltip]="(pkg.lastUpdated | date: 'short') ?? undefined"
+                tooltipPosition="top"
+                >{{ pkg.lastUpdated | relativeTime }}</span
+              >
+            </td>
+          }
+          @if (columnVisibility.isVisible('package-list-table', 'description')) {
+            <td>
+              <span class="ml-1 align-middle">{{ pkg.metadata?.desc }}</span>
+            </td>
+          }
+          @if (columnVisibility.isVisible('package-list-table', 'homepage')) {
+            <td>
+              @if (pkg.metadata?.url; as url) {
+                <a class="ml-1 align-middle text-ctp-mauve" [href]="url" target="_blank" rel="noopener noreferrer">{{
+                  url | stripPrefix
+                }}</a>
+              } @else {
+                <span class="ml-1 align-middle">n/a</span>
+              }
+            </td>
+          }
+          @if (columnVisibility.isVisible('package-list-table', 'repo')) {
+            <td>
+              <span class="ml-1 align-middle">{{ pkg.reponame }}</span>
+            </td>
+          }
+          @if (columnVisibility.isVisible('package-list-table', 'actions')) {
+            <td class="cell-actions">
+              @if (pkg.isActive) {
+                <div class="flex gap-2">
+                  @if (isLoggedIn()) {
+                    <p-button
+                      class="h-8"
+                      (click)="triggerRebuild(pkg)"
+                      size="small"
+                      type="button"
+                      label="Rebuild"
+                      icon="pi pi-sync"
+                      severity="secondary"
+                      pTooltip="Trigger pipeline rebuild for this package"
+                      tooltipPosition="left"
+                    />
+                  }
                   <p-button
                     class="h-8"
-                    (click)="triggerRebuild(pkg)"
+                    (click)="openDetail(pkg)"
                     size="small"
                     type="button"
-                    label="Rebuild"
-                    icon="pi pi-sync"
-                    severity="secondary"
-                    pTooltip="Trigger pipeline rebuild for this package"
+                    label="Details"
+                    outlined="true"
+                    pTooltip="View package statistics"
                     tooltipPosition="left"
                   />
-                }
-                <p-button
-                  class="h-8"
-                  (click)="openDetail(pkg)"
-                  size="small"
-                  type="button"
-                  label="Details"
-                  outlined="true"
-                  pTooltip="View package statistics"
-                  tooltipPosition="left"
-                />
-                <p-button
-                  class="h-8"
-                  (click)="openPkgbuild(pkg)"
-                  size="small"
-                  type="button"
-                  label="Source"
-                  pTooltip="View the PKGBUILD source for this package"
-                  tooltipPosition="left"
-                />
-              </div>
-            } @else {
-              <span class="ml-1 align-middle">N/A</span>
-            }
-          </td>
+                  <p-button
+                    class="h-8"
+                    (click)="openPkgbuild(pkg)"
+                    size="small"
+                    type="button"
+                    label="Source"
+                    pTooltip="View the PKGBUILD source for this package"
+                    tooltipPosition="left"
+                  />
+                </div>
+              } @else {
+                <span class="ml-1 align-middle">N/A</span>
+              }
+            </td>
+          }
         </tr>
       }
     </ng-template>

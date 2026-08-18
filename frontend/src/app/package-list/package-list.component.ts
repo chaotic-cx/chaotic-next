@@ -1,6 +1,18 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectorRef, Component, effect, inject, input, LOCALE_ID } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  input,
+  LOCALE_ID,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { debounce, FormField, form } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { Package } from '@chaotic-next/shared-lib';
@@ -19,7 +31,10 @@ import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
 import { castTo } from '../functions';
+import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
+import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
+import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
 import { TitleComponent } from '../title/title.component';
 import { PackageListService } from './package-list.service';
 
@@ -36,9 +51,12 @@ import { PackageListService } from './package-list.service';
     TagModule,
     DatePipe,
     Button,
+    FormField,
     StripPrefixPipe,
+    RelativeTimePipe,
     TitleComponent,
     Tooltip,
+    ColumnVisibilityComponent,
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
@@ -52,11 +70,38 @@ export class PackageListComponent {
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
   protected readonly packageListService = inject(PackageListService);
+  protected readonly columnVisibility = inject(ColumnVisibilityService);
+
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   readonly isLoggedIn = this.authService.isLoggedIn;
   readonly search = input<string>();
 
+  protected readonly packageColumns: ColumnDef[] = [
+    { key: 'name', label: 'Name' },
+    { key: 'version', label: 'Version' },
+    { key: 'lastUpdated', label: 'Last updated' },
+    { key: 'description', label: 'Description' },
+    { key: 'homepage', label: 'Homepage' },
+    { key: 'repo', label: 'Repository' },
+    { key: 'actions', label: 'PKGBUILD' },
+  ];
+
+  protected readonly searchModel = signal({ query: this.packageListService.searchValue() });
+  protected readonly searchForm = form(this.searchModel, (schemaPath) => {
+    debounce(schemaPath.query, 300);
+  });
+
   constructor() {
+    this.columnVisibility.register('package-list-table', [
+      'name',
+      'version',
+      'lastUpdated',
+      'description',
+      'homepage',
+      'repo',
+      'actions',
+    ]);
     this.appService.updateSeoTags(this.meta, {
       title: 'Package list',
       description: 'List of all packages available in the Chaotic-AUR repository',
@@ -67,7 +112,11 @@ export class PackageListComponent {
 
     effect(() => {
       const q = this.search();
-      if (q) this.packageListService.setSearch(q);
+      if (q) this.searchModel.update((model) => ({ ...model, query: q }));
+    });
+
+    effect(() => {
+      this.applySearch(this.searchForm.query().value());
     });
   }
 
@@ -79,9 +128,18 @@ export class PackageListComponent {
     );
   }
 
+  @HostListener('document:keydown', ['$event'])
+  protected focusSearchOnShortcut(event: KeyboardEvent): void {
+    if (!event.ctrlKey || event.key.toLowerCase() !== 'f') return;
+    event.preventDefault();
+    this.searchInput()?.nativeElement.focus();
+    this.searchInput()?.nativeElement.select();
+  }
+
   clear(table: Table) {
     table.clear();
-    this.packageListService.setSearch('');
+    table.clearState();
+    this.searchModel.update((model) => ({ ...model, query: '' }));
     this.packageListService.setRepoFilter(undefined);
     void this.router.navigate([], {
       queryParams: { search: null, repo: null },
@@ -91,11 +149,10 @@ export class PackageListComponent {
     this.cdr.markForCheck();
   }
 
-  globalFilter(target: EventTarget | null) {
-    if (!(target instanceof HTMLInputElement)) return;
-    this.packageListService.setSearch(target.value);
+  private applySearch(query: string): void {
+    this.packageListService.setSearch(query);
     void this.router.navigate([], {
-      queryParams: { search: target.value || null },
+      queryParams: { search: query || null },
       queryParamsHandling: 'merge',
       info: { disableViewTransition: true },
     });

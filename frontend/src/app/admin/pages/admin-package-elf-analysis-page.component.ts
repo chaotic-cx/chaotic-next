@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FormField, form, pattern, required, submit } from '@angular/forms/signals';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { AdminPackageElfAnalysis } from '@chaotic-next/shared-lib';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
@@ -18,6 +18,15 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { PackageTriggerSourcesComponent } from '../../package-trigger-sources/package-trigger-sources.component';
 import { AdminService, ElfAnalysisFormData } from '../admin.service';
+import {
+  createDebounced,
+  pageFromQuery,
+  pageToQuery,
+  patchQueryParams,
+  queryFromRaw,
+  queryToQuery,
+  restoreQueryParams,
+} from '../admin-url-sync';
 
 interface ElfAnalysisFormModel {
   pkgType: '0' | '1';
@@ -97,6 +106,7 @@ const PKG_TYPE_OPTIONS = [
               </p-inputicon>
               <input
                 class="w-full"
+                [value]="service.elfAnalysisQuery()"
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
@@ -260,6 +270,8 @@ const PKG_TYPE_OPTIONS = [
 export class AdminPackageElfAnalysisPageComponent {
   readonly service = inject(AdminService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<AdminPackageElfAnalysis | null>(null);
@@ -269,6 +281,19 @@ export class AdminPackageElfAnalysisPageComponent {
     { label: 'Broken', value: true },
     { label: 'OK', value: false },
   ];
+
+  private readonly syncSearch = createDebounced(400, () =>
+    patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.elfAnalysisQuery()) }),
+  );
+
+  constructor() {
+    restoreQueryParams(this.route, {
+      q: (raw) => this.service.elfAnalysisQuery.set(queryFromRaw(raw)),
+      pkgType: (raw) => this.service.elfAnalysisPkgTypeFilter.set(raw === '0' || raw === '1' ? raw : undefined),
+      broken: (raw) => this.service.elfAnalysisBrokenFilter.set(raw === null ? undefined : raw === 'true'),
+      page: (raw) => this.service.elfAnalysisPage.set(pageFromQuery(raw)),
+    });
+  }
 
   protected readonly model = signal<ElfAnalysisFormModel>(emptyModel());
   readonly elfForm = form(this.model, (s) => {
@@ -327,20 +352,29 @@ export class AdminPackageElfAnalysisPageComponent {
   setPkgTypeFilter(value: string | null | undefined): void {
     this.service.elfAnalysisPkgTypeFilter.set(value === null || value === undefined ? undefined : (value as '0' | '1'));
     this.service.elfAnalysisPage.set(1);
+    patchQueryParams(this.router, this.route, {
+      pkgType: value === null || value === undefined ? null : (value as '0' | '1'),
+    });
   }
 
   setBrokenFilter(value: boolean | null | undefined): void {
     this.service.elfAnalysisBrokenFilter.set(value === null || value === undefined ? undefined : value);
     this.service.elfAnalysisPage.set(1);
+    patchQueryParams(this.router, this.route, {
+      broken: value === null || value === undefined ? null : String(value),
+    });
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.service.elfAnalysisPage.set(Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1);
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
+    this.service.elfAnalysisPage.set(page);
+    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 
   onSearch(event: Event): void {
     this.service.elfAnalysisQuery.set((event.target as HTMLInputElement).value);
     this.service.elfAnalysisPage.set(1);
+    this.syncSearch();
   }
 
   private toFormData(model: ElfAnalysisFormModel): ElfAnalysisFormData {

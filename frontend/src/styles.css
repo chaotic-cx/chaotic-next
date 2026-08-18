@@ -22,6 +22,10 @@
   pointer-events: auto !important;
 }
 
+.suggestion-list {
+  scrollbar-color: #313244 rgba(24, 24, 37, 0.5);
+}
+
 ng-terminal,
 .resize-box,
 .terminal-outer,
@@ -376,7 +380,16 @@ body.is-transitioning .router-container {
   }
 }
 
-/* Detached lazy-viewport spacers show a calm skeleton block instead of nothing */
 .chaotic-lazy-viewport:not(:has(*)) {
   @apply bg-ctp-surface0/40 animate-pulse rounded-lg;
+}
+
+.chaotic-lazy-viewport {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 12rem;
+}
+
+.chaotic-diff-placeholder {
+  @apply bg-ctp-surface0/40 animate-pulse rounded-lg;
+  min-height: 8rem;
 }

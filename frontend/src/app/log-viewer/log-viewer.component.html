@@ -35,7 +35,7 @@
         <p-progress-spinner ariaLabel="Loading logs" />
       </div>
     } @else {
-      <chaotic-xterm-log [chunk]="logChunk()" [clearSignal]="clearSignal()" />
+      <chaotic-xterm-log [chunk]="logChunk()" [clearSignal]="clearSignal()" [scrollToLine]="scrollToLine()" />
     }
   </div>
 </div>

@@ -7,7 +7,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
 
 const DEFAULT_FONT_SIZE = 12;
-const MOBILE_FONT_SIZE = 7.5;
+const MOBILE_FONT_SIZE = 4;
 const TABLET_FONT_SIZE = 9.5;
 const MOBILE_MAX_WIDTH = 640;
 const TABLET_MAX_WIDTH = 1024;
@@ -72,6 +72,7 @@ const ANSI_ESCAPE = new RegExp(
 export class XtermLogComponent implements OnInit, OnDestroy {
   readonly chunk = input<string>('');
   readonly clearSignal = input<boolean>(false);
+  readonly scrollToLine = input<number | undefined>(undefined);
 
   private readonly terminalDiv = viewChild<ElementRef<HTMLDivElement>>('terminalDiv');
 
@@ -97,6 +98,8 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       if (this.clearSignal()) {
         this.writtenLength = 0;
         this.pending = '';
+        this.writtenLines = 0;
+        this.lineScrolled = false;
         this.terminal?.clear();
         this.terminal?.reset();
       }
@@ -105,6 +108,8 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   private pending = '';
   private writtenLength = 0;
+  private writtenLines = 0;
+  private lineScrolled = false;
 
   private flushPending(): void {
     if (!this.terminal || !this.pending) return;
@@ -113,7 +118,18 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     const normalized = this.normalizeChunk(text);
     if (normalized) {
       this.terminal.write(normalized);
-      this.terminal.scrollToBottom();
+      this.writtenLines += this.countNewlines(normalized);
+      if (!this.lineScrolled) this.terminal.scrollToBottom();
+      this.maybeScrollToLine();
+    }
+  }
+
+  private maybeScrollToLine(): void {
+    const line = this.scrollToLine();
+    if (line === undefined || this.lineScrolled || !this.terminal) return;
+    if (this.writtenLines >= line - 1) {
+      this.terminal.scrollToLine(line - 1);
+      this.lineScrolled = true;
     }
   }
 
@@ -142,6 +158,14 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   private hasVisibleText(line: string): boolean {
     return line.replace(ANSI_ESCAPE, '').replace(/\s/g, '').length > 0;
+  }
+
+  private countNewlines(text: string): number {
+    let count = 0;
+    for (let i = 0; i < text.length; i++) {
+      if (text.charCodeAt(i) === 10) count++;
+    }
+    return count;
   }
 
   downloadLog(filename: string): void {

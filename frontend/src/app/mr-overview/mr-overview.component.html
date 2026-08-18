@@ -71,7 +71,7 @@
         </div>
       </ng-template>
 
-      <div *chaoticLazyViewport>
+      <div class="chaotic-lazy-viewport">
         @if (scanSummary(mr); as summary) {
           <p-fieldset
             class="text-left fieldset-responsive overflow-x-auto block mb-5"
@@ -153,12 +153,15 @@
         @if (mr.diffs && mr.diffs.length > 0) {
           @for (change of mr.diffs; track change.new_path) {
             <p-fieldset
-              class="text-left fieldset-responsive overflow-x-auto block mb-5"
-              *chaoticLazyViewport
+              class="text-left fieldset-responsive overflow-x-auto block mb-5 chaotic-lazy-viewport"
               [legend]="stripPkgPrefix(mr, change.new_path) + (fileHasFindings(mr, change.new_path) ? ' ⚠' : '')"
               [toggleable]="true"
             >
-              <chaotic-diff-renderer [diff]="change.diff" [findingsByLine]="findingsByLine(mr, change.new_path)" />
+              @defer (on viewport; prefetch on idle) {
+                <chaotic-diff-renderer [diff]="change.diff" [findingsByLine]="findingsByLine(mr, change.new_path)" />
+              } @placeholder {
+                <div class="chaotic-diff-placeholder" aria-hidden="true"></div>
+              }
             </p-fieldset>
           }
         } @else {

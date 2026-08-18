@@ -3,7 +3,9 @@ import { Button } from '@openng/optimus-ui/button';
 import { Panel } from '@openng/optimus-ui/panel';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
+import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from '../admin-url-sync';
 
 @Component({
   selector: 'chaotic-admin-repo-operations-page',
@@ -98,8 +100,18 @@ import { AdminService } from '../admin.service';
 })
 export class AdminRepoOperationsPageComponent {
   readonly service = inject(AdminService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  constructor() {
+    restoreQueryParams(this.route, {
+      page: (raw) => this.service.brokenPage.set(pageFromQuery(raw)),
+    });
+  }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.service.brokenPage.set(Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1);
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
+    this.service.brokenPage.set(page);
+    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 }

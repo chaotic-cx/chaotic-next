@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   inject,
   input,
   OnInit,
@@ -12,33 +13,32 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { debounce, FormField, form, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Package, Paginated, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
-import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
-import { Select } from '@openng/optimus-ui/select';
+import { InputText } from '@openng/optimus-ui/inputtext';
 import { TableModule } from '@openng/optimus-ui/table';
-import { debounceTime, Subject } from 'rxjs';
 import { AppService } from '../app.service';
 import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
-import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
-import { resourceValue } from '../functions';
+import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { UnixDatePipe } from '../pipes/unix-date.pipe';
+import { SearchSuggestionsComponent } from '../search-suggestions/search-suggestions.component';
 import { StatsService } from '../stats/stats.service';
 
 @Component({
   selector: 'chaotic-search-package',
   imports: [
     CommonModule,
-    AutoComplete,
     TableModule,
     PackageDetailKeyPipe,
     UnixDatePipe,
     FormsModule,
-    Select,
+    InputText,
+    FormField,
+    SearchSuggestionsComponent,
     ChartPackageBuildStatsComponent,
     PackageTriggerSourcesComponent,
   ],
@@ -55,20 +55,25 @@ export class SearchPackageComponent implements OnInit {
 
   readonly search = input<string>();
 
-  protected readonly autoComplete = viewChild<AutoComplete>('autoComplete');
+  private readonly resultsSection = viewChild<ElementRef<HTMLElement>>('resultsSection');
   protected readonly repoOptions = REPO_OPTIONS;
-  protected readonly typedInput = signal<string>('');
   protected readonly currentPackageName = signal<string>('');
+  private readonly scrollToResults = !!this.route.snapshot.queryParamMap.get('search');
 
-  private readonly suggestionsQuerySubject = new Subject<string>();
-  private readonly suggestionsQuery = signal<string>('');
-  private readonly packageNameSubject = new Subject<string>();
+  protected readonly searchModel = signal({ query: '' });
+  protected readonly searchForm = form(this.searchModel, (schemaPath) => {
+    debounce(schemaPath.query, 300);
+    pattern(schemaPath.query, PACKAGE_NAME_PATTERN, { message: 'Invalid package name' });
+  });
 
-  private readonly suggestionsResource = httpResource<Paginated<Package>>(() =>
-    this.suggestionsQuery()
-      ? this.appService.getPackagesResourceRequest({ page: 1, perPage: 200, q: this.suggestionsQuery() })
-      : undefined,
-  );
+  protected readonly suggestionsVisible = signal(false);
+
+  private readonly suggestionsResource = httpResource<Paginated<Package>>(() => {
+    const query = this.searchModel().query.trim();
+    return query.length >= 3
+      ? this.appService.getPackagesResourceRequest({ page: 1, perPage: 200, q: query })
+      : undefined;
+  });
 
   private readonly packageResource = httpResource<Package>(() => {
     const name = this.currentPackageName();
@@ -137,22 +142,20 @@ export class SearchPackageComponent implements OnInit {
       this.packageStatsService.packageSearchSelectedRepo.set(repoParam);
     }
 
-    this.suggestionsQuerySubject
-      .pipe(debounceTime(300), takeUntilDestroyed())
-      .subscribe((query) => this.suggestionsQuery.set(query));
-
-    this.packageNameSubject.pipe(debounceTime(400), takeUntilDestroyed()).subscribe((query) => {
-      if (/^[a-zA-Z0-9@.+_-]+$/.test(query)) {
-        this.currentPackageName.set(query);
-      }
+    effect(() => {
+      const q = this.search();
+      if (q) this.searchModel.update((model) => ({ ...model, query: q }));
     });
 
     effect(() => {
-      const q = this.search();
-      if (q && /^[a-zA-Z0-9@.+_-]+$/.test(q)) {
-        this.typedInput.set(q);
-        this.currentPackageName.set(q);
-      }
+      if (!this.searchForm.query().valid()) return;
+      const q = this.searchModel().query.trim();
+      if (q) this.currentPackageName.set(q);
+    });
+
+    effect(() => {
+      if (!this.scrollToResults || !this.hasSearchData()) return;
+      this.resultsSection()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
@@ -166,45 +169,32 @@ export class SearchPackageComponent implements OnInit {
     });
   }
 
-  onAutoCompleteSearch(event: AutoCompleteCompleteEvent) {
-    if (event.query.length < 3) return;
-
-    const autocomplete = this.autoComplete();
-    if (/^[a-zA-Z0-9@.+_-]+$/.test(event.query)) {
-      this.suggestionsQuerySubject.next(event.query);
-      if (autocomplete) autocomplete.inputStyleClass = '';
-      this.cdr.markForCheck();
-    } else {
-      if (autocomplete) autocomplete.inputStyleClass = 'ng-invalid ng-dirty';
-      this.cdr.markForCheck();
-    }
+  selectPackage(query: string): void {
+    if (!query.trim()) return;
+    this.searchModel.update((model) => ({ ...model, query }));
+    this.currentPackageName.set(query);
+    this.suggestionsVisible.set(false);
+    this.syncSearchParam(query);
+    this.cdr.markForCheck();
   }
 
-  selectPackage(query: string): void {
-    if (/^[a-zA-Z0-9@.+_-]+$/.test(query)) {
-      this.typedInput.set(query);
-      this.currentPackageName.set(query);
-      this.syncSearchParam(query);
-    }
+  onEnter(): void {
+    if (!this.searchForm.query().valid()) return;
+    this.selectPackage(this.searchModel().query);
   }
 
   onInputBlur(): void {
-    const typed = this.typedInput();
-    if (/^[a-zA-Z0-9@.+_-]+$/.test(typed)) {
+    setTimeout(() => this.suggestionsVisible.set(false), 150);
+    if (!this.searchForm.query().valid()) return;
+    const typed = this.searchModel().query.trim();
+    if (typed) {
       this.currentPackageName.set(typed);
       this.syncSearchParam(typed);
     }
   }
 
-  updateDisplay(query: string): void {
-    if (/^[a-zA-Z0-9@.+_-]+$/.test(query)) {
-      this.typedInput.set(query);
-      this.packageNameSubject.next(query);
-    }
-  }
-
   private syncSearchParam(query: string): void {
-    if (!/^[a-zA-Z0-9@.+_-]+$/.test(query)) return;
+    if (!query.trim()) return;
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { search: query },

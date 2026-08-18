@@ -1,9 +1,9 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Build } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { Card } from '@openng/optimus-ui/card';
@@ -17,6 +17,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
 import { castTo, packageLogRouteFromUrl, range } from '../functions';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
+import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { TitleComponent } from '../title/title.component';
 import { BuildStatusService, PipelineView } from './build-status.service';
 import { PipelineTimelineComponent } from './pipeline-timeline.component';
@@ -30,6 +31,7 @@ import { PipelineTimelineComponent } from './pipeline-timeline.component';
     Card,
     TableModule,
     BuildClassPipe,
+    RelativeTimePipe,
     TitleComponent,
     Dialog,
     Tooltip,
@@ -50,6 +52,7 @@ export class BuildStatusComponent implements OnInit {
   meta = inject(Meta);
   observer = inject(BreakpointObserver);
   router = inject(Router);
+  route = inject(ActivatedRoute);
 
   readonly dialogData = signal<PipelineView | null>(null);
   readonly dialogVisible = signal<boolean>(false);
@@ -68,6 +71,31 @@ export class BuildStatusComponent implements OnInit {
         }
       }
       if (event.type === 'queue') void this.buildStatusService.refreshQueueStats();
+    });
+
+    effect(() => {
+      const param = this.route.snapshot.queryParamMap.get('pipeline');
+      if (param === null) return;
+      const id = Number(param);
+      if (!Number.isInteger(id)) return;
+      const pipeline = this.buildStatusService.pipelineWithStatus().find((p) => p.pipeline.id === id);
+      if (pipeline && !this.dialogVisible()) {
+        this.dialogData.set(pipeline);
+        this.dialogVisible.set(true);
+      }
+    });
+
+    effect(() => {
+      if (this.dialogVisible()) return;
+      if (this.route.snapshot.queryParamMap.has('pipeline')) {
+        void this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { pipeline: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+          info: { disableViewTransition: true },
+        });
+      }
     });
 
     this.observer
@@ -119,6 +147,12 @@ export class BuildStatusComponent implements OnInit {
     if (pipeline) {
       this.dialogData.set(pipeline);
       this.dialogVisible.set(true);
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { pipeline: String(pipelineId) },
+        queryParamsHandling: 'merge',
+        info: { disableViewTransition: true },
+      });
     }
   }
 

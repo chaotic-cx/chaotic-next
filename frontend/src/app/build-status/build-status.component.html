@@ -1,7 +1,7 @@
 <chaotic-title
   title="Build status"
   subtitleHtml="Currently running pipelines and build queue.<br>Last updated: {{
-    buildStatusService.lastUpdated() | date: 'short'
+    buildStatusService.lastUpdated() | relativeTime
   }}"
 />
 
@@ -32,34 +32,21 @@
               </ng-template>
               <ng-template #title>Active builds</ng-template>
               <ng-template #subtitle>These are currently ongoing builds</ng-template>
-              <p-table [value]="buildStatusService.activeQueue()">
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Node</th>
-                    <th>Build class</th>
-                    <th>Live log</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.node }}</td>
-                    <td pTooltip="{{ pkg.build_class | buildClass }}" tooltipPosition="top">{{ pkg.build_class }}</td>
-                    <td>
-                      <a
-                        [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
-                        pRipple
-                        aria-label="Open live build log for {{ pkg.name }}"
-                        title="Open live build log for {{ pkg.name }}"
-                      >
-                        <i class="pi pi-bars text-ctp-mauve" style="font-size: 1.25rem"></i>
-                      </a>
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
-
+              <div class="divide-y divide-white/5">
+                @for (pkg of buildStatusService.activeQueue(); track pkg.name) {
+                  <a
+                    class="block py-2.5"
+                    [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
+                    pRipple
+                    aria-label="Open live build log for {{ pkg.name }}"
+                  >
+                    <span class="block truncate font-semibold">{{ pkg.name }}</span>
+                    <span class="block text-sm text-ctp-subtext1">
+                      Node: {{ pkg.node }} &middot; {{ pkg.build_class | buildClass }}
+                    </span>
+                  </a>
+                }
+              </div>
               <ng-template #footer>
                 <div class="mt-1 flex gap-4"></div>
               </ng-template>
@@ -74,30 +61,14 @@
               </ng-template>
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
-              <p-table
-                [value]="buildStatusService.waitingQueue()"
-                [rows]="15"
-                [rowsPerPageOptions]="[15, 25, 35]"
-                [sortOrder]="1"
-                [paginator]="buildStatusService.waitingQueue().length > 10"
-                sortField="name"
-                stateStorage="local"
-                paginatorDropdownAppendTo="body"
-                stateKey="build-status-waiting-queue"
-              >
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Build class</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.build_class | buildClass }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <div class="divide-y divide-white/5">
+                @for (pkg of buildStatusService.waitingQueue(); track pkg.name) {
+                  <div class="flex items-center justify-between gap-3 py-2.5">
+                    <span class="truncate font-medium">{{ pkg.name }}</span>
+                    <span class="text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+                  </div>
+                }
+              </div>
               <ng-template #footer>
                 <div class="mt-1 flex gap-4"></div>
               </ng-template>
@@ -114,20 +85,14 @@
               </ng-template>
               <ng-template #title>Idle builders</ng-template>
               <ng-template #subtitle>Currently idle builders</ng-template>
-              <p-table [value]="buildStatusService.idleQueue()" [sortOrder]="1" sortField="name">
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Build class</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.build_class | buildClass }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <div class="divide-y divide-white/5">
+                @for (pkg of buildStatusService.idleQueue(); track pkg.name) {
+                  <div class="flex items-center justify-between gap-3 py-2.5">
+                    <span class="truncate font-medium">{{ pkg.name }}</span>
+                    <span class="text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+                  </div>
+                }
+              </div>
               <ng-template #footer>
                 <div class="mt-1 flex gap-4"></div>
               </ng-template>
@@ -141,7 +106,12 @@
             <p-timeline [value]="buildStatusService.latestDeployments()">
               <ng-template #opposite let-untypedDeployment>
                 @if (typedDeployment(untypedDeployment); as deployment) {
-                  <small class="text-primary">{{ deployment.timestamp | date: 'short' }}</small>
+                  <small
+                    class="text-primary"
+                    [pTooltip]="(deployment.timestamp | date: 'short') ?? undefined"
+                    tooltipPosition="top"
+                    >{{ deployment.timestamp | relativeTime }}</small
+                  >
                 }
               </ng-template>
               <ng-template #content let-untypedDeployment>
@@ -278,7 +248,12 @@
           <p-timeline [value]="buildStatusService.latestDeployments()">
             <ng-template #opposite let-untypedDeployment>
               @if (typedDeployment(untypedDeployment); as deployment) {
-                <small class="text-primary-emphasis-alt">{{ deployment.timestamp | date: 'short' }}</small>
+                <small
+                  class="text-primary-emphasis-alt"
+                  [pTooltip]="(deployment.timestamp | date: 'short') ?? undefined"
+                  tooltipPosition="top"
+                  >{{ deployment.timestamp | relativeTime }}</small
+                >
               }
             </ng-template>
             <ng-template #content let-untypedDeployment>

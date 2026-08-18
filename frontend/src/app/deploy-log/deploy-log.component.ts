@@ -1,7 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, effect, inject, input, viewChild } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { debounce, FormField, form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { type Build, BuildStatus, STATUS_LABELS } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
@@ -16,6 +27,9 @@ import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { castTo, packageLogRouteFromUrl } from '../functions';
 import { DurationPipe } from '../pipes/duration.pipe';
+import { RelativeTimePipe } from '../pipes/relative-time.pipe';
+import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
+import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
 import { TitleComponent } from '../title/title.component';
 import { DeployLogService } from './deploy-log.service';
 
@@ -30,10 +44,13 @@ import { DeployLogService } from './deploy-log.service';
     InputText,
     Select,
     DurationPipe,
+    RelativeTimePipe,
     TitleComponent,
     FormsModule,
+    FormField,
     RouterLink,
     Tooltip,
+    ColumnVisibilityComponent,
   ],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
@@ -44,7 +61,10 @@ export class DeployLogComponent {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
   protected readonly deployLogService = inject(DeployLogService);
+  protected readonly columnVisibility = inject(ColumnVisibilityService);
   protected readonly deployTable = viewChild<Table>('deployTable');
+
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
 
@@ -54,7 +74,33 @@ export class DeployLogComponent {
   readonly builder = input<string>();
   readonly status = input<string>();
 
+  protected readonly deployColumns: ColumnDef[] = [
+    { key: 'pkgname', label: 'Package name' },
+    { key: 'builder', label: 'Builder' },
+    { key: 'repo', label: 'Repository' },
+    { key: 'outcome', label: 'Outcome' },
+    { key: 'logUrl', label: 'Log URL' },
+    { key: 'duration', label: 'Duration' },
+    { key: 'timestamp', label: 'Time of finish' },
+    { key: 'actions', label: 'Details' },
+  ];
+
+  protected readonly searchModel = signal({ query: this.deployLogService.searchValue() });
+  protected readonly searchForm = form(this.searchModel, (schemaPath) => {
+    debounce(schemaPath.query, 300);
+  });
+
   constructor() {
+    this.columnVisibility.register('deploy-log-table', [
+      'pkgname',
+      'builder',
+      'repo',
+      'outcome',
+      'logUrl',
+      'duration',
+      'timestamp',
+      'actions',
+    ]);
     this.appService.chaoticEvent
       .pipe(
         filter((event) => event.type === 'build'),
@@ -64,7 +110,11 @@ export class DeployLogComponent {
 
     effect(() => {
       const q = this.search();
-      if (q) this.deployLogService.setSearch(q);
+      if (q) this.searchModel.update((model) => ({ ...model, query: q }));
+    });
+
+    effect(() => {
+      this.applySearch(this.searchForm.query().value());
     });
 
     effect(() => {
@@ -95,7 +145,8 @@ export class DeployLogComponent {
 
   clear(table: Table) {
     table.clear();
-    this.deployLogService.setSearch('');
+    table.clearState();
+    this.searchModel.update((model) => ({ ...model, query: '' }));
     this.deployLogService.setBuilderFilter(undefined);
     this.deployLogService.setRepoFilter(undefined);
     this.deployLogService.setStatusFilter(undefined);
@@ -134,15 +185,22 @@ export class DeployLogComponent {
     });
   }
 
-  globalFilter(target: EventTarget | null) {
-    if (!(target instanceof HTMLInputElement)) return;
-    this.deployLogService.setSearch(target.value);
+  private applySearch(query: string): void {
+    this.deployLogService.setSearch(query);
     void this.router.navigate([], {
-      queryParams: { search: target.value || null },
+      queryParams: { search: query || null },
       queryParamsHandling: 'merge',
       info: { disableViewTransition: true },
     });
     this.cdr.markForCheck();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  protected focusSearchOnShortcut(event: KeyboardEvent): void {
+    if (!event.ctrlKey || event.key.toLowerCase() !== 'f') return;
+    event.preventDefault();
+    this.searchInput()?.nativeElement.focus();
+    this.searchInput()?.nativeElement.select();
   }
 
   openDetail(build: Build) {

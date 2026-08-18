@@ -8,7 +8,19 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
+import {
+  createDebounced,
+  pageFromQuery,
+  pageToQuery,
+  patchQueryParams,
+  queryFromRaw,
+  queryToQuery,
+  restoreQueryParams,
+  stringFilterFromQuery,
+  stringFilterToQuery,
+} from '../admin-url-sync';
 
 const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: operation, value: operation }));
 
@@ -114,8 +126,22 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
 })
 export class AdminPipelineTriggersPageComponent {
   readonly service = inject(AdminService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly operationOptions = OPERATION_OPTIONS;
+
+  private readonly syncSearch = createDebounced(400, () =>
+    patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.pipelineTriggerQuery()) }),
+  );
+
+  constructor() {
+    restoreQueryParams(this.route, {
+      q: (raw) => this.service.pipelineTriggerQuery.set(queryFromRaw(raw)),
+      operation: (raw) => this.service.pipelineTriggerOperationFilter.set(stringFilterFromQuery(raw)),
+      page: (raw) => this.service.pipelineTriggerPage.set(pageFromQuery(raw)),
+    });
+  }
 
   shortSha(sha: string): string {
     return sha.slice(0, 8);
@@ -129,16 +155,20 @@ export class AdminPipelineTriggersPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.service.pipelineTriggerPage.set(Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1);
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
+    this.service.pipelineTriggerPage.set(page);
+    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 
   onSearch(event: Event): void {
     this.service.pipelineTriggerQuery.set((event.target as HTMLInputElement).value);
     this.service.pipelineTriggerPage.set(1);
+    this.syncSearch();
   }
 
   setOperationFilter(value: string | null | undefined): void {
     this.service.pipelineTriggerOperationFilter.set(value ?? undefined);
     this.service.pipelineTriggerPage.set(1);
+    patchQueryParams(this.router, this.route, { operation: stringFilterToQuery(value ?? undefined) });
   }
 }

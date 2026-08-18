@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormField, form, required, submit } from '@angular/forms/signals';
 import { ArchPackage } from '@chaotic-next/shared-lib';
@@ -10,7 +10,17 @@ import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService, ArchPackageFormData } from '../admin.service';
+import {
+  createDebounced,
+  pageFromQuery,
+  pageToQuery,
+  patchQueryParams,
+  queryFromRaw,
+  queryToQuery,
+  restoreQueryParams,
+} from '../admin-url-sync';
 
 interface ArchPackageFormModel {
   pkgname: string;
@@ -136,11 +146,15 @@ interface ArchPackageFormModel {
 export class AdminArchPackagesPageComponent {
   readonly service = inject(AdminService);
   private readonly confirmationService = inject(ConfirmationService);
-
-  readonly q = input<string>();
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<ArchPackage | null>(null);
+
+  private readonly syncSearch = createDebounced(400, () =>
+    patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.archQuery()) }),
+  );
 
   private readonly model = signal<ArchPackageFormModel>(emptyModel());
   readonly packageForm = form(this.model, (s) => {
@@ -148,12 +162,9 @@ export class AdminArchPackagesPageComponent {
   });
 
   constructor() {
-    effect(() => {
-      const q = this.q();
-      if (typeof q === 'string' && q.trim()) {
-        this.service.archQuery.set(q);
-        this.service.archPage.set(1);
-      }
+    restoreQueryParams(this.route, {
+      q: (raw) => this.service.archQuery.set(queryFromRaw(raw)),
+      page: (raw) => this.service.archPage.set(pageFromQuery(raw)),
     });
   }
 
@@ -188,12 +199,15 @@ export class AdminArchPackagesPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.service.archPage.set(Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1);
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
+    this.service.archPage.set(page);
+    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 
   onSearch(event: Event): void {
     this.service.archQuery.set((event.target as HTMLInputElement).value);
     this.service.archPage.set(1);
+    this.syncSearch();
   }
 
   private toFormData(model: ArchPackageFormModel): ArchPackageFormData {
