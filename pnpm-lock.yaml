@@ -67,7 +67,7 @@ importers:
         version: 44.0.0-pre.0
       '@hedystia/better-auth-typeorm':
         specifier: ^1.0.1
-        version: 1.0.1(better-auth@1.6.29(@prisma/client@5.22.0)(better-sqlite3@12.11.1)(pg@8.23.0)(vitest@4.1.10))(typeorm@1.1.0(babel-plugin-macros@3.1.0)(better-sqlite3@12.11.1)(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)(supports-color@7.2.0)(ts-node@10.9.2(@swc/core@1.16.0(@swc/helpers@0.5.23))(@types/node@26.2.0)(typescript@6.0.3)))
+        version: 1.1.0(better-auth@1.6.29(@prisma/client@5.22.0)(better-sqlite3@12.11.1)(pg@8.23.0)(vitest@4.1.10))(typeorm@1.1.0(babel-plugin-macros@3.1.0)(better-sqlite3@12.11.1)(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)(supports-color@7.2.0)(ts-node@10.9.2(@swc/core@1.16.0(@swc/helpers@0.5.23))(@types/node@26.2.0)(typescript@6.0.3)))
       '@nestjs/axios':
         specifier: ^4.0.1
         version: 4.0.1(@nestjs/common@11.2.1(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(rxjs@7.8.2)
@@ -2123,8 +2123,8 @@ packages:
   '@harperfast/extended-iterable@1.0.3':
     resolution: {integrity: sha512-sSAYhQca3rDWtQUHSAPeO7axFIUJOI6hn1gjRC5APVE1a90tuyT8f5WIgRsFhhWA7htNkju2veB9eWL6YHi/Lw==}
 
-  '@hedystia/better-auth-typeorm@1.0.1':
-    resolution: {integrity: sha512-hp5zCN8dDBKf5/odnoDdor8SLAb73ysjCIz09wTk6IxNmCAABzxYgu1f5ZniLLcEDFX6drXo411PoiivfZIWtg==}
+  '@hedystia/better-auth-typeorm@1.1.0':
+    resolution: {integrity: sha512-S69R6UWI4MyGBE4QzSx6fYp4aNGAcWyteshYQdqMvzIB+pcDvtgBuJnhTqzP+hh/90BE0IatCfb9KQQwy0OmPg==}
     peerDependencies:
       better-auth: ^1.4.19
       typeorm: ^1.0.0
@@ -12771,7 +12771,7 @@ snapshots:
   '@harperfast/extended-iterable@1.0.3':
     optional: true
 
-  '@hedystia/better-auth-typeorm@1.0.1(better-auth@1.6.29(@prisma/client@5.22.0)(better-sqlite3@12.11.1)(pg@8.23.0)(vitest@4.1.10))(typeorm@1.1.0(babel-plugin-macros@3.1.0)(better-sqlite3@12.11.1)(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)(supports-color@7.2.0)(ts-node@10.9.2(@swc/core@1.16.0(@swc/helpers@0.5.23))(@types/node@26.2.0)(typescript@6.0.3)))':
+  '@hedystia/better-auth-typeorm@1.1.0(better-auth@1.6.29(@prisma/client@5.22.0)(better-sqlite3@12.11.1)(pg@8.23.0)(vitest@4.1.10))(typeorm@1.1.0(babel-plugin-macros@3.1.0)(better-sqlite3@12.11.1)(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)(supports-color@7.2.0)(ts-node@10.9.2(@swc/core@1.16.0(@swc/helpers@0.5.23))(@types/node@26.2.0)(typescript@6.0.3)))':
     dependencies:
       better-auth: 1.6.29(@prisma/client@5.22.0)(better-sqlite3@12.11.1)(pg@8.23.0)(vitest@4.1.10)
       typeorm: 1.1.0(babel-plugin-macros@3.1.0)(better-sqlite3@12.11.1)(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)(supports-color@7.2.0)(ts-node@10.9.2(@swc/core@1.16.0(@swc/helpers@0.5.23))(@types/node@26.2.0)(typescript@6.0.3))
