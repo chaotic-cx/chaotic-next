@@ -3,7 +3,7 @@ import { computeQueueEstimates, formatEta, overallAverageMinutes, type PackageBu
 
 const MINUTE_MS = 60_000;
 
-function averages(entries: Record<string, [number, number]>): (pkgname: string) => number | undefined {
+function averages(entries: Record<string, [number]>): (pkgname: string) => number | undefined {
   const map = new Map<string, number>(
     Object.entries(entries).map(([pkgname, [averageMinutes]]) => [pkgname, averageMinutes]),
   );
@@ -28,9 +28,9 @@ describe('computeQueueEstimates', () => {
   it('estimates remaining time of running builds', () => {
     const now = 10 * MINUTE_MS;
     const result = computeQueueEstimates({
-      active: [{ pkgname: 'a', startedMs: 0 }],
+      active: [{ pkgname: 'a', startedMs: 0, buildClass: 0 }],
       waiting: [],
-      idleCount: 1,
+      idle: [{ buildClass: 0 }],
       nowMs: now,
       avgOf: averages({ a: [30] }),
     });
@@ -40,9 +40,9 @@ describe('computeQueueEstimates', () => {
 
   it('clamps finished estimates at zero', () => {
     const result = computeQueueEstimates({
-      active: [{ pkgname: 'a', startedMs: 0 }],
+      active: [{ pkgname: 'a', startedMs: 0, buildClass: 0 }],
       waiting: [],
-      idleCount: 0,
+      idle: [],
       nowMs: 60 * MINUTE_MS,
       avgOf: averages({ a: [30] }),
     });
@@ -52,8 +52,12 @@ describe('computeQueueEstimates', () => {
   it('lets idle builders start the first waiting packages immediately', () => {
     const result = computeQueueEstimates({
       active: [],
-      waiting: ['a', 'b', 'c'],
-      idleCount: 2,
+      waiting: [
+        { pkgname: 'a', buildClass: 0 },
+        { pkgname: 'b', buildClass: 0 },
+        { pkgname: 'c', buildClass: 0 },
+      ],
+      idle: [{ buildClass: 0 }, { buildClass: 0 }],
       nowMs: 0,
       avgOf: averages({ a: [10], b: [10], c: [10] }),
     });
@@ -67,11 +71,15 @@ describe('computeQueueEstimates', () => {
   it('makes the first wave wait for the running builds', () => {
     const result = computeQueueEstimates({
       active: [
-        { pkgname: 'x', startedMs: 0 },
-        { pkgname: 'y', startedMs: 0 },
+        { pkgname: 'x', startedMs: 0, buildClass: 0 },
+        { pkgname: 'y', startedMs: 0, buildClass: 0 },
       ],
-      waiting: ['a', 'b', 'c'],
-      idleCount: 0,
+      waiting: [
+        { pkgname: 'a', buildClass: 0 },
+        { pkgname: 'b', buildClass: 0 },
+        { pkgname: 'c', buildClass: 0 },
+      ],
+      idle: [],
       nowMs: 0,
       avgOf: averages({ x: [10], y: [10], a: [10], b: [10], c: [10] }),
     });
@@ -85,8 +93,14 @@ describe('computeQueueEstimates', () => {
   it('runs waves in parallel across all builders', () => {
     const result = computeQueueEstimates({
       active: [],
-      waiting: ['a', 'b', 'c', 'd', 'e'],
-      idleCount: 2,
+      waiting: [
+        { pkgname: 'a', buildClass: 0 },
+        { pkgname: 'b', buildClass: 0 },
+        { pkgname: 'c', buildClass: 0 },
+        { pkgname: 'd', buildClass: 0 },
+        { pkgname: 'e', buildClass: 0 },
+      ],
+      idle: [{ buildClass: 0 }, { buildClass: 0 }],
       nowMs: 0,
       avgOf: averages({ a: [10], b: [10], c: [10], d: [10], e: [10] }),
     });
@@ -96,11 +110,57 @@ describe('computeQueueEstimates', () => {
     expect(result.queueClear).toBe(30);
   });
 
+  it('does not start a build before an eligible builder frees up', () => {
+    const result = computeQueueEstimates({
+      active: [{ pkgname: 'x', startedMs: 0, buildClass: 2 }],
+      waiting: [{ pkgname: 'a', buildClass: 2 }],
+      idle: [],
+      nowMs: 0,
+      avgOf: averages({ x: [10], a: [5] }),
+    });
+    // Builder x is busy for ~10m; a cannot start sooner than that.
+    expect(result.waitingStart.get('a')).toBe(10);
+  });
+
+  it('only uses builders that can run the build class', () => {
+    const result = computeQueueEstimates({
+      active: [],
+      waiting: [{ pkgname: 'a', buildClass: 2 }],
+      idle: [{ buildClass: 1 }, { buildClass: 3 }],
+      nowMs: 0,
+      avgOf: averages({ a: [5] }),
+    });
+    // Class 1 cannot run class 2; only the class 3 builder picks it up.
+    expect(result.waitingStart.get('a')).toBe(0);
+  });
+
+  it('matches string build classes exactly', () => {
+    const result = computeQueueEstimates({
+      active: [],
+      waiting: [{ pkgname: 'a', buildClass: 'mybuildclass' }],
+      idle: [{ buildClass: 'other' }, { buildClass: 'mybuildclass' }],
+      nowMs: 0,
+      avgOf: averages({ a: [5] }),
+    });
+    expect(result.waitingStart.get('a')).toBe(0);
+  });
+
+  it('leaves a build unestimated when no builder can run its class', () => {
+    const result = computeQueueEstimates({
+      active: [],
+      waiting: [{ pkgname: 'a', buildClass: 2 }],
+      idle: [{ buildClass: 1 }],
+      nowMs: 0,
+      avgOf: averages({ a: [5] }),
+    });
+    expect(result.waitingStart.has('a')).toBe(false);
+  });
+
   it('falls back when a package has no history', () => {
     const result = computeQueueEstimates({
-      active: [{ pkgname: 'unknown-pkg', startedMs: 0 }],
+      active: [{ pkgname: 'unknown-pkg', startedMs: 0, buildClass: 0 }],
       waiting: [],
-      idleCount: 0,
+      idle: [],
       nowMs: 0,
       avgOf: (pkgname) => (pkgname === 'known' ? 10 : undefined),
     });
@@ -111,8 +171,8 @@ describe('computeQueueEstimates', () => {
   it('returns no estimates without builders', () => {
     const result = computeQueueEstimates({
       active: [],
-      waiting: ['a'],
-      idleCount: 0,
+      waiting: [{ pkgname: 'a', buildClass: 0 }],
+      idle: [],
       nowMs: 0,
       avgOf: averages({ a: [10] }),
     });
@@ -123,13 +183,52 @@ describe('computeQueueEstimates', () => {
   it('returns no estimates when nothing has history', () => {
     const result = computeQueueEstimates({
       active: [],
-      waiting: ['a', 'b'],
-      idleCount: 2,
+      waiting: [
+        { pkgname: 'a', buildClass: 0 },
+        { pkgname: 'b', buildClass: 0 },
+      ],
+      idle: [{ buildClass: 0 }, { buildClass: 0 }],
       nowMs: 0,
       avgOf: () => undefined,
     });
     expect(result.waitingStart.size).toBe(0);
     expect(result.queueClear).toBeUndefined();
+  });
+
+  it('schedules the live queue against eligible builders only', () => {
+    const active = [
+      { pkgname: 'detect-it-easy-git', startedMs: 0, buildClass: 5 },
+      { pkgname: 'element-desktop-git', startedMs: 0, buildClass: 5 },
+    ];
+    const idle = [{ buildClass: 'catbuilder' }];
+    const waiting = [
+      'euphonica-git',
+      'fooyin-git',
+      'geeqie-git',
+      'ghostty-git',
+      'gitify-git',
+      'glib2-git',
+      'goverlay-git',
+      'ironbar-git',
+      'lib32-vulkan-nouveau-git',
+      'linux-firmware-git',
+    ].map((pkgname) => ({ pkgname, buildClass: 5 }));
+
+    const result = computeQueueEstimates({
+      active,
+      waiting,
+      idle,
+      nowMs: 0,
+      avgOf: (pkgname) => (pkgname === 'detect-it-easy-git' ? 12 : pkgname === 'element-desktop-git' ? 6 : 10),
+    });
+
+    // catbuilder is a named-class builder ("catbuilder") and cannot run class 5,
+    // so the first queued build can only start when a class-5 builder frees up.
+    expect(result.activeFinish.get('detect-it-easy-git')).toBe(12);
+    expect(result.activeFinish.get('element-desktop-git')).toBe(6);
+    expect(result.waitingStart.get('euphonica-git')).toBe(6);
+    expect(result.waitingStart.get('fooyin-git')).toBe(12);
+    expect(result.waitingStart.get('geeqie-git')).toBe(16);
   });
 });
 

@@ -11,7 +11,6 @@ import { Dialog } from '@openng/optimus-ui/dialog';
 import { Panel } from '@openng/optimus-ui/panel';
 import { Ripple } from '@openng/optimus-ui/ripple';
 import { Skeleton } from '@openng/optimus-ui/skeleton';
-import { TableModule } from '@openng/optimus-ui/table';
 import { Timeline } from '@openng/optimus-ui/timeline';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
@@ -29,7 +28,6 @@ import { PipelineTimelineComponent } from './pipeline-timeline.component';
     RouterLink,
     Timeline,
     Card,
-    TableModule,
     BuildClassPipe,
     RelativeTimePipe,
     TitleComponent,
@@ -180,4 +178,30 @@ export class BuildStatusComponent implements OnInit {
   }
 
   readonly createRange = range;
+
+  private static readonly JOB_STATUS: Record<string, { icon: string; color: string; chip: string; rank: number }> = {
+    running: { icon: 'pi-spin pi-spinner', color: 'text-ctp-peach', chip: 'border-ctp-peach', rank: 0 },
+    pending: { icon: 'pi-clock', color: 'text-ctp-yellow', chip: 'border-ctp-yellow', rank: 1 },
+    waiting_for_resource: { icon: 'pi-hourglass', color: 'text-ctp-lavender', chip: 'border-ctp-lavender', rank: 1 },
+    failed: { icon: 'pi-times-circle', color: 'text-ctp-red', chip: 'border-ctp-red', rank: 2 },
+    canceled: { icon: 'pi-ban', color: 'text-ctp-subtext0', chip: 'border-ctp-subtext0', rank: 2 },
+    success: { icon: 'pi-check-circle', color: 'text-ctp-green', chip: 'border-ctp-green', rank: 3 },
+  };
+
+  jobStatus(status: string): { icon: string; color: string; chip: string; rank: number } {
+    return (
+      BuildStatusComponent.JOB_STATUS[status] ?? {
+        icon: 'pi-question-circle',
+        color: 'text-ctp-subtext0',
+        chip: 'border-ctp-subtext0',
+        rank: 3,
+      }
+    );
+  }
+
+  /** Jobs ordered by lifecycle: in progress, waiting, failed/canceled, then done. */
+  readonly sortedCommit = computed(() => {
+    const jobs = this.dialogData()?.commit ?? [];
+    return [...jobs].sort((a, b) => this.jobStatus(a.status).rank - this.jobStatus(b.status).rank);
+  });
 }

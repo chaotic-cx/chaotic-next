@@ -18,8 +18,9 @@ const BUILD_CLASS_LABELS: Record<number, string> = {
   name: 'buildClass',
 })
 export class BuildClassPipe implements PipeTransform {
-  transform(value: null | number): string {
+  transform(value: null | number | string): string {
     if (value === null) return 'Custom';
+    if (typeof value === 'string') return value;
     return BUILD_CLASS_LABELS[value] ?? String(value);
   }
 }
