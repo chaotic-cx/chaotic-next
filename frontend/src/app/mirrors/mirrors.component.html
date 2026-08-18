@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-4xl">
+<div class="mx-auto max-w-5xl">
   <chaotic-title
     title="Mirrors"
     subtitleHtml="Down for everyone or just me? <i class='text-ctp-maroon pi pi-search'></i>"
@@ -28,191 +28,72 @@
       </ul>
     </p-panel>
 
-    @if (mirrorsService.onlineMirrors().length > 0) {
-      <p-panel class="mr-overview-panel mt-6 text-left">
-        <ng-template #header>
-          <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
-            Online
-            <i class="pi pi-check-circle text-ctp-green" pTooltip="All up to date and fine" tooltipPosition="right"></i>
-          </div>
-        </ng-template>
-        <p-table
-          [value]="mirrorsService.onlineMirrors()"
-          [loading]="mirrorsService.loading()"
-          [resizableColumns]="true"
-          stateStorage="local"
-          stateKey="online-mirrors-table"
-        >
+    @if (mirrorsService.loading()) {
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        @for (item of [1, 2, 3, 4, 5, 6]; track item) {
+          <p-skeleton height="6rem" />
+        }
+      </div>
+    } @else {
+      @if (mirrorsService.onlineMirrors().length > 0) {
+        <p-panel class="mr-overview-panel mt-6 text-left">
           <ng-template #header>
-            <tr>
-              <th class="w-1/3" pSortableColumn="subdomain">Subdomain&nbsp;<p-sortIcon field="subdomain" /></th>
-              <th class="w-1/3">Approximate Position</th>
-              <th class="w-1/5" pSortableColumn="last_update">Last update&nbsp;<p-sortIcon field="last_update" /></th>
-            </tr>
+            <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
+              Online
+              <i
+                class="pi pi-check-circle text-ctp-green"
+                pTooltip="All up to date and fine"
+                tooltipPosition="right"
+              ></i>
+            </div>
           </ng-template>
-          <ng-template #body let-mirror>
-            <tr>
-              <td>
-                {{ mirror.subdomain }}
-                @if (mirror.geo_active) {
-                  <i
-                    class="pi pi-globe text-blue"
-                    pTooltip="The geo mirror routes your requests to this mirror."
-                    tooltipPosition="right"
-                  ></i>
-                }
-                @if (mirror.official) {
-                  <i
-                    class="pi pi-verified text-ctp-blue"
-                    pTooltip="This mirror is run by the Chaotic-AUR operations team."
-                    tooltipPosition="right"
-                  ></i>
-                }
-              </td>
-              <td>
-                @if (mirror.latlon; as latlon) {
-                  <a href="https://www.openstreetmap.org/#map=6/{{ latlon[0] }}/{{ latlon[1] }}">
-                    {{ latlon.join(', ') }}
-                  </a>
-                } @else {
-                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
-                }
-              </td>
-              <td>
-                <span [pTooltip]="(mirror.last_update | date: 'short' : 'UTC') ?? undefined" tooltipPosition="top">
-                  {{ mirror.last_update | relativeTime }}
-                </span>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </p-panel>
-    }
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @for (mirror of mirrorsService.onlineMirrors(); track mirror.subdomain) {
+              <chaotic-mirror-card [mirror]="mirror" status="online" />
+            }
+          </div>
+        </p-panel>
+      }
 
-    @if (mirrorsService.outdatedMirrors().length > 0) {
-      <p-panel class="mr-overview-panel mt-6 text-left">
-        <ng-template #header>
-          <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
-            Outdated
-            <i
-              class="pi pi-exclamation-circle text-ctp-peach"
-              pTooltip="Geo- and country mirrors don't route to it, and direct requests will return an error code."
-              tooltipPosition="right"
-            ></i>
-          </div>
-        </ng-template>
-        <p-table
-          [value]="mirrorsService.outdatedMirrors()"
-          [loading]="mirrorsService.loading()"
-          [resizableColumns]="true"
-          stateStorage="local"
-          stateKey="outdated-mirrors-table"
-        >
+      @if (mirrorsService.outdatedMirrors().length > 0) {
+        <p-panel class="mr-overview-panel mt-6 text-left">
           <ng-template #header>
-            <tr>
-              <th class="w-1/3" pSortableColumn="subdomain">Subdomain&nbsp;<p-sortIcon field="subdomain" /></th>
-              <th class="w-1/3">Approximate Position</th>
-              <th class="w-1/5" pSortableColumn="last_update">Last update&nbsp;<p-sortIcon field="last_update" /></th>
-            </tr>
+            <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
+              Outdated
+              <i
+                class="pi pi-exclamation-circle text-ctp-peach"
+                pTooltip="Geo- and country mirrors don't route to it, and direct requests will return an error code."
+                tooltipPosition="right"
+              ></i>
+            </div>
           </ng-template>
-          <ng-template #body let-mirror>
-            <tr>
-              <td>
-                {{ mirror.subdomain }}
-                @if (mirror.geo_active) {
-                  <i
-                    class="pi pi-globe text-blue"
-                    pTooltip="The geo mirror routes your requests to this mirror."
-                    tooltipPosition="right"
-                  ></i>
-                }
-                @if (mirror.official) {
-                  <i
-                    class="pi pi-verified text-ctp-blue"
-                    pTooltip="This mirror is run by the chaotic operations team."
-                    tooltipPosition="right"
-                  ></i>
-                }
-              </td>
-              <td>
-                @if (mirror.latlon; as latlon) {
-                  <a href="https://www.openstreetmap.org/#map=6/{{ latlon[0] }}/{{ latlon[1] }}">
-                    {{ latlon.join(', ') }}
-                  </a>
-                } @else {
-                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
-                }
-              </td>
-              <td>
-                <span [pTooltip]="(mirror.last_update | date: 'short' : 'UTC') ?? undefined" tooltipPosition="top">
-                  {{ mirror.last_update | relativeTime }}
-                </span>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </p-panel>
-    }
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @for (mirror of mirrorsService.outdatedMirrors(); track mirror.subdomain) {
+              <chaotic-mirror-card [mirror]="mirror" status="outdated" />
+            }
+          </div>
+        </p-panel>
+      }
 
-    @if (mirrorsService.offlineMirrors().length > 0) {
-      <p-panel class="mr-overview-panel mt-6 text-left">
-        <ng-template #header>
-          <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
-            Offline
-            <i
-              class="pi pi-times-circle text-ctp-red"
-              pTooltip="The up-to-date check is completely unsuccessful, so the mirror is considered offline."
-              tooltipPosition="right"
-            ></i>
-          </div>
-        </ng-template>
-        <p-table
-          [value]="mirrorsService.offlineMirrors()"
-          [loading]="mirrorsService.loading()"
-          [resizableColumns]="true"
-          stateStorage="local"
-          stateKey="offline-mirrors-table"
-        >
+      @if (mirrorsService.offlineMirrors().length > 0) {
+        <p-panel class="mr-overview-panel mt-6 text-left">
           <ng-template #header>
-            <tr>
-              <th class="w-1/3" pSortableColumn="subdomain">Subdomain&nbsp;<p-sortIcon field="subdomain" /></th>
-              <th class="w-1/3">Approximate Position</th>
-              <th class="w-1/5">Last update (UTC)</th>
-            </tr>
+            <div class="flex items-center gap-2 text-xl font-bold text-ctp-text">
+              Offline
+              <i
+                class="pi pi-times-circle text-ctp-red"
+                pTooltip="The up-to-date check is completely unsuccessful, so the mirror is considered offline."
+                tooltipPosition="right"
+              ></i>
+            </div>
           </ng-template>
-          <ng-template #body let-mirror>
-            <tr>
-              <td>
-                {{ mirror.subdomain }}
-                @if (mirror.geo_active) {
-                  <i
-                    class="pi pi-globe text-blue"
-                    pTooltip="The geo mirror routes your requests to this mirror."
-                    tooltipPosition="right"
-                  ></i>
-                }
-                @if (mirror.official) {
-                  <i
-                    class="pi pi-verified text-ctp-blue"
-                    pTooltip="This mirror is run by the chaotic operations team."
-                    tooltipPosition="right"
-                  ></i>
-                }
-              </td>
-              <td>
-                @if (mirror.latlon; as latlon) {
-                  <a href="https://www.openstreetmap.org/#map=6/{{ latlon[0] }}/{{ latlon[1] }}">
-                    {{ latlon.join(', ') }}
-                  </a>
-                } @else {
-                  {{ mirror.subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
-                }
-              </td>
-              <td>Totally unavailable</td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </p-panel>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @for (mirror of mirrorsService.offlineMirrors(); track mirror.subdomain) {
+              <chaotic-mirror-card [mirror]="mirror" status="offline" />
+            }
+          </div>
+        </p-panel>
+      }
     }
   </div>
 </div>

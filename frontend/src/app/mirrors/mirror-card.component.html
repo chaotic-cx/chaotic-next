@@ -1,0 +1,57 @@
+<div class="chaotic-mirror-card flex h-full flex-col gap-2.5 rounded-xl border p-4">
+  <div class="flex items-start justify-between gap-3">
+    <a
+      class="truncate font-semibold text-ctp-text hover:text-ctp-mauve"
+      [href]="`https://${mirror().subdomain}.chaotic.cx`"
+      target="_blank"
+      rel="noopener"
+      >{{ mirror().subdomain }}</a
+    >
+    <span
+      class="shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium uppercase {{ STATUS[status()].chip }}"
+      [pTooltip]="STATUS[status()].tooltip"
+      tooltipPosition="top"
+      >{{ STATUS[status()].label }}</span
+    >
+  </div>
+
+  <div class="flex items-center gap-2 text-sm text-ctp-subtext1">
+    @if (mirror().geo_active) {
+      <i
+        class="pi pi-globe text-blue"
+        pTooltip="The geo mirror routes your requests to this mirror."
+        tooltipPosition="top"
+      ></i>
+    }
+    @if (mirror().official) {
+      <i
+        class="pi pi-verified text-ctp-blue"
+        pTooltip="This mirror is run by the Chaotic-AUR operations team."
+        tooltipPosition="top"
+      ></i>
+    }
+    <span class="truncate">
+      @if (mirror().latlon; as latlon) {
+        <a
+          class="hover:text-ctp-mauve"
+          [href]="`https://www.openstreetmap.org/#map=6/${latlon[0]}/${latlon[1]}`"
+          target="_blank"
+          rel="noopener"
+          >{{ latlon.join(', ') }}</a
+        >
+      } @else {
+        {{ mirror().subdomain === 'cdn-mirror' ? 'Global CDN' : 'Unknown' }}
+      }
+    </span>
+  </div>
+
+  <div class="mt-auto text-xs text-ctp-subtext0">
+    @if (status() === 'offline') {
+      <span>Totally unavailable</span>
+    } @else {
+      <span [pTooltip]="(mirror().last_update | date: 'short' : 'UTC') ?? undefined" tooltipPosition="top">
+        Last update {{ mirror().last_update | relativeTime }}
+      </span>
+    }
+  </div>
+</div>
