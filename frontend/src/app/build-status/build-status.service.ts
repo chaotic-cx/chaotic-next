@@ -46,19 +46,6 @@ const ESTIMATE_TICK_MS = 30_000;
 export class BuildStatusService {
   private readonly appService = inject(AppService);
   private readonly destroyRef = inject(DestroyRef);
-  private loadedAt: Date | undefined;
-
-  readonly lastUpdated = computed<Date | undefined>(() => {
-    if (
-      resourceValue(this.packageBuildsResource) &&
-      resourceValue(this.pipelinesResource) &&
-      resourceValue(this.queueStatsResource)
-    ) {
-      this.loadedAt ??= new Date();
-      return this.loadedAt;
-    }
-    return undefined;
-  });
 
   private readonly packageBuildsResource = httpResource<Paginated<Build>>(() =>
     this.appService.getPackageBuildsResourceRequest(20, BuildStatus.SUCCESS),
