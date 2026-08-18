@@ -13,7 +13,18 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService, BuilderFormData } from '../admin.service';
+import {
+  createDebounced,
+  pageFromQuery,
+  pageToQuery,
+  patchQueryParams,
+  queryFromRaw,
+  queryToQuery,
+  restoreQueryParams,
+  stringFilterToQuery,
+} from '../admin-url-sync';
 
 interface BuilderFormModel {
   name: string;
@@ -170,14 +181,28 @@ interface BuilderFormModel {
 export class AdminBuildersPageComponent {
   readonly service = inject(AdminService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<Builder | null>(null);
+
+  private readonly syncSearch = createDebounced(400, () =>
+    patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.builderQuery()) }),
+  );
 
   private readonly model = signal<BuilderFormModel>(emptyModel());
   readonly builderForm = form(this.model, (s) => {
     required(s.name, { message: 'Builder name is required' });
   });
+
+  constructor() {
+    restoreQueryParams(this.route, {
+      q: (raw) => this.service.builderQuery.set(queryFromRaw(raw)),
+      active: (raw) => this.service.builderActiveFilter.set(raw === 'active' || raw === 'inactive' ? raw : undefined),
+      page: (raw) => this.service.builderPage.set(pageFromQuery(raw)),
+    });
+  }
 
   openEdit(builder: Builder): void {
     this.editing.set(builder);
@@ -210,17 +235,21 @@ export class AdminBuildersPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.service.builderPage.set(Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1);
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
+    this.service.builderPage.set(page);
+    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 
   onSearch(event: Event): void {
     this.service.builderQuery.set((event.target as HTMLInputElement).value);
     this.service.builderPage.set(1);
+    this.syncSearch();
   }
 
   setActiveFilter(value: 'active' | 'inactive' | null | undefined): void {
     this.service.builderActiveFilter.set(value ?? undefined);
     this.service.builderPage.set(1);
+    patchQueryParams(this.router, this.route, { active: stringFilterToQuery(value ?? undefined) });
   }
 
   private toFormData(model: BuilderFormModel): BuilderFormData {

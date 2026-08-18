@@ -24,7 +24,6 @@ import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { presenter } from '../aur-scan/scan-presenter';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
-import { LazyViewportDirective } from '../directives/lazy-viewport.directive';
 import { TitleComponent } from '../title/title.component';
 import { MrOverviewService } from './mr-overview.service';
 
@@ -59,7 +58,6 @@ function tabFromQueryParam(value: string): '0' | '1' {
     TitleComponent,
     TableModule,
     DiffRendererComponent,
-    LazyViewportDirective,
     ProgressSpinner,
     Panel,
     Fieldset,

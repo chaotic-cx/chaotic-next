@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormField, form, required, submit } from '@angular/forms/signals';
 import { Package as PackageDto } from '@chaotic-next/shared-lib';
@@ -13,8 +13,19 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService, PackageFormData } from '../admin.service';
+import {
+  createDebounced,
+  pageFromQuery,
+  pageToQuery,
+  patchQueryParams,
+  queryFromRaw,
+  queryToQuery,
+  restoreQueryParams,
+  stringFilterFromQuery,
+  stringFilterToQuery,
+} from '../admin-url-sync';
 
 interface PackageFormModel {
   pkgname: string;
@@ -64,7 +75,7 @@ const NO_REPO = '0';
               <p-select
                 [options]="service.repos() ?? []"
                 [ngModel]="service.packageRepoFilter()"
-                (ngModelChange)="service.setPackageRepoFilter($event)"
+                (ngModelChange)="onRepoChange($event)"
                 optionLabel="name"
                 optionValue="id"
                 placeholder="All repos"
@@ -74,7 +85,7 @@ const NO_REPO = '0';
               <p-select
                 [options]="service.activeOptions"
                 [ngModel]="service.packageActiveFilter()"
-                (ngModelChange)="service.setPackageActiveFilter($event)"
+                (ngModelChange)="onActiveChange($event)"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Active status"
@@ -213,11 +224,14 @@ export class AdminPackagesPageComponent {
   readonly service = inject(AdminService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
-
-  readonly q = input<string>();
+  private readonly route = inject(ActivatedRoute);
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<PackageDto | null>(null);
+
+  private readonly syncSearch = createDebounced(400, () =>
+    patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.packageQuery()) }),
+  );
 
   protected readonly model = signal<PackageFormModel>(emptyModel());
   readonly packageForm = form(this.model, (s) => {
@@ -230,12 +244,12 @@ export class AdminPackagesPageComponent {
   ]);
 
   constructor() {
-    effect(() => {
-      const q = this.q();
-      if (typeof q === 'string' && q.trim()) {
-        this.service.packageQuery.set(q);
-        this.service.packagePage.set(1);
-      }
+    restoreQueryParams(this.route, {
+      q: (raw) => this.service.packageQuery.set(queryFromRaw(raw)),
+      repo: (raw) =>
+        this.service.packageRepoFilter.set(stringFilterFromQuery(raw) === undefined ? undefined : Number(raw)),
+      active: (raw) => this.service.packageActiveFilter.set(raw === 'active' || raw === 'inactive' ? raw : undefined),
+      page: (raw) => this.service.packagePage.set(pageFromQuery(raw)),
     });
   }
 
@@ -272,12 +286,25 @@ export class AdminPackagesPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.service.packagePage.set(Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1);
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
+    this.service.packagePage.set(page);
+    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 
   onSearch(event: Event): void {
     this.service.packageQuery.set((event.target as HTMLInputElement).value);
     this.service.packagePage.set(1);
+    this.syncSearch();
+  }
+
+  onRepoChange(repoId: number | null | undefined): void {
+    this.service.setPackageRepoFilter(repoId);
+    patchQueryParams(this.router, this.route, { repo: stringFilterToQuery(String(repoId ?? '')) });
+  }
+
+  onActiveChange(active: 'active' | 'inactive' | null | undefined): void {
+    this.service.setPackageActiveFilter(active);
+    patchQueryParams(this.router, this.route, { active: stringFilterToQuery(active ?? undefined) });
   }
 
   goToRepos(): void {

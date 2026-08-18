@@ -36,12 +36,20 @@
             <i class="pi pi-check-circle text-ctp-green" pTooltip="All up to date and fine" tooltipPosition="right"></i>
           </div>
         </ng-template>
-        <p-table [value]="mirrorsService.onlineMirrors()" [loading]="mirrorsService.loading()">
+        <p-table
+          [value]="mirrorsService.onlineMirrors()"
+          [loading]="mirrorsService.loading()"
+          [resizableColumns]="true"
+          stateStorage="local"
+          stateKey="online-mirrors-table"
+        >
           <ng-template #header>
             <tr>
-              <th class="w-1/3">Subdomain</th>
+              <th class="w-1/3" pSortableColumn="subdomain">Subdomain&nbsp;<p-sortIcon field="subdomain" /></th>
               <th class="w-1/3">Approximate Position</th>
-              <th class="w-1/5">Last update (UTC)</th>
+              <th class="w-1/5" pSortableColumn="last_update">
+                Last update (UTC)&nbsp;<p-sortIcon field="last_update" />
+              </th>
             </tr>
           </ng-template>
           <ng-template #body let-mirror>
@@ -91,12 +99,20 @@
             ></i>
           </div>
         </ng-template>
-        <p-table [value]="mirrorsService.outdatedMirrors()" [loading]="mirrorsService.loading()">
+        <p-table
+          [value]="mirrorsService.outdatedMirrors()"
+          [loading]="mirrorsService.loading()"
+          [resizableColumns]="true"
+          stateStorage="local"
+          stateKey="outdated-mirrors-table"
+        >
           <ng-template #header>
             <tr>
-              <th class="w-1/3">Subdomain</th>
+              <th class="w-1/3" pSortableColumn="subdomain">Subdomain&nbsp;<p-sortIcon field="subdomain" /></th>
               <th class="w-1/3">Approximate Position</th>
-              <th class="w-1/5">Last update (UTC)</th>
+              <th class="w-1/5" pSortableColumn="last_update">
+                Last update (UTC)&nbsp;<p-sortIcon field="last_update" />
+              </th>
             </tr>
           </ng-template>
           <ng-template #body let-mirror>
@@ -146,10 +162,16 @@
             ></i>
           </div>
         </ng-template>
-        <p-table [value]="mirrorsService.offlineMirrors()" [loading]="mirrorsService.loading()">
+        <p-table
+          [value]="mirrorsService.offlineMirrors()"
+          [loading]="mirrorsService.loading()"
+          [resizableColumns]="true"
+          stateStorage="local"
+          stateKey="offline-mirrors-table"
+        >
           <ng-template #header>
             <tr>
-              <th class="w-1/3">Subdomain</th>
+              <th class="w-1/3" pSortableColumn="subdomain">Subdomain&nbsp;<p-sortIcon field="subdomain" /></th>
               <th class="w-1/3">Approximate Position</th>
               <th class="w-1/5">Last update (UTC)</th>
             </tr>

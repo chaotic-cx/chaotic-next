@@ -3,14 +3,19 @@
     <p-timeline [value]="pipelines()">
       <ng-template #opposite let-unTypedPipeline>
         @if (typed(unTypedPipeline); as pipeline) {
-          <small class="text-primary">{{ pipeline.pipeline.created_at | date: 'short' }}</small>
+          <small
+            class="text-primary"
+            [pTooltip]="(pipeline.pipeline.created_at | date: 'short') ?? undefined"
+            tooltipPosition="top"
+            >{{ pipeline.pipeline.created_at | relativeTime }}</small
+          >
         }
       </ng-template>
       <ng-template #content let-unTypedPipeline>
         @if (typed(unTypedPipeline); as pipeline) {
           <div class="flex items-center justify-between gap-3">
             <div
-              class="cursor-pointer"
+              class="inline-flex cursor-pointer items-center"
               (click)="openPipeline.emit(pipeline.pipeline.id)"
               (keydown.enter)="openPipeline.emit(pipeline.pipeline.id)"
               (keyup.space)="openPipeline.emit(pipeline.pipeline.id)"

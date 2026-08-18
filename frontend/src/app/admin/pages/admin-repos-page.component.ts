@@ -13,7 +13,9 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService, RepoFormData } from '../admin.service';
+import { createDebounced, patchQueryParams, restoreQueryParams, stringFilterToQuery } from '../admin-url-sync';
 
 interface RepoFormModel {
   name: string;
@@ -50,7 +52,7 @@ interface RepoFormModel {
               <p-select
                 [options]="service.activeOptions"
                 [ngModel]="activeFilter()"
-                (ngModelChange)="activeFilter.set($event ?? undefined)"
+                (ngModelChange)="onActiveChange($event)"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Active status"
@@ -180,12 +182,26 @@ interface RepoFormModel {
 export class AdminReposPageComponent {
   readonly service = inject(AdminService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<Repo | null>(null);
 
   readonly activeFilter = signal<'active' | 'inactive' | undefined>(undefined);
   readonly query = signal('');
+
+  private readonly syncSearch = createDebounced(400, () =>
+    patchQueryParams(this.router, this.route, { q: this.query() === '' ? null : this.query() }),
+  );
+
+  constructor() {
+    restoreQueryParams(this.route, {
+      q: (raw) => this.query.set(raw ?? ''),
+      active: (raw) => this.activeFilter.set(raw === 'active' || raw === 'inactive' ? raw : undefined),
+    });
+  }
+
   readonly filteredRepos = computed(() => {
     const repos = this.service.repos() ?? [];
     const filter = this.activeFilter();
@@ -199,6 +215,12 @@ export class AdminReposPageComponent {
 
   onSearch(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
+    this.syncSearch();
+  }
+
+  onActiveChange(value: 'active' | 'inactive' | null | undefined): void {
+    this.activeFilter.set(value ?? undefined);
+    patchQueryParams(this.router, this.route, { active: stringFilterToQuery(value ?? undefined) });
   }
 
   private readonly model = signal<RepoFormModel>(emptyModel());

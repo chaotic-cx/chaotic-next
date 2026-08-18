@@ -1,5 +1,5 @@
 <chaotic-title
-  [subtitle]="pkgname() ? `Build log — ${formattedTimestamp()}` : 'Build log'"
+  [subtitle]="pkgname() ? `${formattedTimestamp()} — ${elapsedLabel()}` : 'Build log'"
   title="{{ pkgname() || 'Package log' }}"
 />
 
@@ -43,6 +43,7 @@
           </p-inputicon>
           <input
             class="w-full"
+            #searchInput
             [value]="searchQuery()"
             (input)="onSearch($any($event.target).value)"
             (keydown.enter)="searchNext()"
@@ -62,7 +63,7 @@
         <p-progress-spinner ariaLabel="Loading log" />
       </div>
     } @else {
-      <chaotic-xterm-log #term [chunk]="logChunk()" />
+      <chaotic-xterm-log #term [chunk]="logChunk()" [scrollToLine]="scrollToLine()" />
     }
   </div>
 </div>

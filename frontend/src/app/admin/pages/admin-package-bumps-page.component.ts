@@ -9,7 +9,17 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
+import {
+  createDebounced,
+  pageFromQuery,
+  pageToQuery,
+  patchQueryParams,
+  queryFromRaw,
+  queryToQuery,
+  restoreQueryParams,
+} from '../admin-url-sync';
 
 const BUMP_TYPE_OPTIONS = [
   { label: 'Explicit', value: 0 },
@@ -82,7 +92,14 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               <p-inputicon>
                 <i class="pi pi-search"></i>
               </p-inputicon>
-              <input class="w-full" (input)="onSearch($event)" pInputText type="text" placeholder="Search pkgname" />
+              <input
+                class="w-full"
+                [value]="service.packageBumpQuery()"
+                (input)="onSearch($event)"
+                pInputText
+                type="text"
+                placeholder="Search pkgname"
+              />
             </p-iconfield>
           </div>
         </ng-template>
@@ -138,9 +155,24 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 })
 export class AdminPackageBumpsPageComponent {
   readonly service = inject(AdminService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly bumpTypeOptions = BUMP_TYPE_OPTIONS;
   readonly sourceOptions = SOURCE_OPTIONS;
+
+  private readonly syncSearch = createDebounced(400, () =>
+    patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.packageBumpQuery()) }),
+  );
+
+  constructor() {
+    restoreQueryParams(this.route, {
+      q: (raw) => this.service.packageBumpQuery.set(queryFromRaw(raw)),
+      bumpType: (raw) => this.service.packageBumpTypeFilter.set(raw === null ? undefined : Number(raw)),
+      source: (raw) => this.service.packageBumpSourceFilter.set(raw === null ? undefined : Number(raw)),
+      page: (raw) => this.service.packageBumpPage.set(pageFromQuery(raw)),
+    });
+  }
 
   bumpTypeLabel(bumpType: number): string {
     return BUMP_TYPE_LABELS[bumpType] ?? String(bumpType);
@@ -167,19 +199,26 @@ export class AdminPackageBumpsPageComponent {
   setBumpTypeFilter(value: number | null | undefined): void {
     this.service.packageBumpTypeFilter.set(value ?? undefined);
     this.service.packageBumpPage.set(1);
+    patchQueryParams(this.router, this.route, {
+      bumpType: value === null || value === undefined ? null : String(value),
+    });
   }
 
   setSourceFilter(value: number | null | undefined): void {
     this.service.packageBumpSourceFilter.set(value ?? undefined);
     this.service.packageBumpPage.set(1);
+    patchQueryParams(this.router, this.route, { source: value === null || value === undefined ? null : String(value) });
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.service.packageBumpPage.set(Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1);
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
+    this.service.packageBumpPage.set(page);
+    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 
   onSearch(event: Event): void {
     this.service.packageBumpQuery.set((event.target as HTMLInputElement).value);
     this.service.packageBumpPage.set(1);
+    this.syncSearch();
   }
 }

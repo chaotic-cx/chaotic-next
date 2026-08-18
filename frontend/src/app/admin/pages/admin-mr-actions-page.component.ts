@@ -8,7 +8,19 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
+import {
+  createDebounced,
+  pageFromQuery,
+  pageToQuery,
+  patchQueryParams,
+  queryFromRaw,
+  queryToQuery,
+  restoreQueryParams,
+  stringFilterFromQuery,
+  stringFilterToQuery,
+} from '../admin-url-sync';
 
 const ACTION_SEVERITY: Record<string, TagSeverity> = {
   approve: 'success',
@@ -123,8 +135,22 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 })
 export class AdminMrActionsPageComponent {
   readonly service = inject(AdminService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly actionOptions = ACTION_OPTIONS;
+
+  private readonly syncSearch = createDebounced(400, () =>
+    patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.mrActionQuery()) }),
+  );
+
+  constructor() {
+    restoreQueryParams(this.route, {
+      q: (raw) => this.service.mrActionQuery.set(queryFromRaw(raw)),
+      action: (raw) => this.service.mrActionActionFilter.set(stringFilterFromQuery(raw)),
+      page: (raw) => this.service.mrActionPage.set(pageFromQuery(raw)),
+    });
+  }
 
   private readonly mrBaseUrl = 'https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests';
   private readonly commitBaseUrl = 'https://gitlab.com/chaotic-aur/pkgbuilds/-/commit';
@@ -146,16 +172,20 @@ export class AdminMrActionsPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.service.mrActionPage.set(Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1);
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
+    this.service.mrActionPage.set(page);
+    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 
   onSearch(event: Event): void {
     this.service.mrActionQuery.set((event.target as HTMLInputElement).value);
     this.service.mrActionPage.set(1);
+    this.syncSearch();
   }
 
   setActionFilter(value: string | null | undefined): void {
     this.service.mrActionActionFilter.set(value ?? undefined);
     this.service.mrActionPage.set(1);
+    patchQueryParams(this.router, this.route, { action: stringFilterToQuery(value ?? undefined) });
   }
 }

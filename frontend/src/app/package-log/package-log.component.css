@@ -41,7 +41,8 @@
     display: none;
   }
 
-  .hide-download {
+  .hide-download,
+  .download-btn {
     display: none !important;
   }
 

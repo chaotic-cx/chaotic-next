@@ -1,6 +1,17 @@
-import { Component, computed, effect, inject, input, OnDestroy, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  input,
+  OnDestroy,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Meta } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
@@ -28,6 +39,14 @@ function parseChunk(data: string): GitlabLogChunk | undefined {
   }
 }
 
+function formatElapsed(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
+
 @Component({
   selector: 'chaotic-package-log',
   imports: [XtermLogComponent, ProgressSpinner, TitleComponent, IconField, InputIcon, InputText],
@@ -39,10 +58,12 @@ export class PackageLogComponent implements OnDestroy {
   private readonly logService = inject(PackageLogService);
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly pkgname = input<string>();
   readonly timestamp = input<string>();
 
+  protected readonly scrollToLine = signal<number | undefined>(undefined);
   protected readonly logChunk = signal('');
   protected readonly loading = signal(true);
   protected readonly streaming = signal(false);
@@ -50,6 +71,9 @@ export class PackageLogComponent implements OnDestroy {
 
   protected readonly builder = signal<string | undefined>(undefined);
   protected readonly searchQuery = signal('');
+  protected readonly elapsed = signal(0);
+
+  protected readonly elapsedLabel = computed(() => formatElapsed(this.elapsed()));
 
   protected readonly formattedTimestamp = computed(() => {
     const ms = Number(this.timestamp());
@@ -57,8 +81,10 @@ export class PackageLogComponent implements OnDestroy {
   });
 
   private readonly terminalRef = viewChild<XtermLogComponent>('term');
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   private eventSource: EventSource | undefined;
+  private elapsedTimer: number | undefined;
 
   constructor() {
     effect(() => {
@@ -74,17 +100,34 @@ export class PackageLogComponent implements OnDestroy {
     });
   }
 
+  @HostListener('document:keydown', ['$event'])
+  protected onGlobalKeydown(event: KeyboardEvent): void {
+    if (!event.ctrlKey) return;
+    const key = event.key.toLowerCase();
+    if (key === 'f') {
+      event.preventDefault();
+      this.searchInput()?.nativeElement.focus();
+      this.searchInput()?.nativeElement.select();
+    } else if (key === 's') {
+      event.preventDefault();
+      this.downloadLog();
+    }
+  }
+
   ngOnDestroy(): void {
+    this.stopElapsedTimer();
     this.closeStream();
   }
 
   private loadLog(pkgname: string, timestamp: string): void {
     this.closeStream();
+    this.startElapsedTimer(Number(timestamp));
     this.logChunk.set('');
     this.builder.set(undefined);
     this.error.set(undefined);
     this.loading.set(true);
     this.streaming.set(false);
+    this.scrollToLine.set(this.requestedLine());
 
     this.appService.updateSeoTags(this.meta, {
       title: `${pkgname} build log`,
@@ -124,6 +167,27 @@ export class PackageLogComponent implements OnDestroy {
   private closeStream(): void {
     this.eventSource?.close();
     this.eventSource = undefined;
+  }
+
+  private startElapsedTimer(startMs: number): void {
+    const base = Number.isFinite(startMs) ? startMs : Date.now();
+    const tick = () => this.elapsed.set(Math.max(0, Math.floor((Date.now() - base) / 1000)));
+    if (this.elapsedTimer !== undefined) window.clearInterval(this.elapsedTimer);
+    tick();
+    this.elapsedTimer = window.setInterval(tick, 1000);
+  }
+
+  private stopElapsedTimer(): void {
+    if (this.elapsedTimer === undefined) return;
+    window.clearInterval(this.elapsedTimer);
+    this.elapsedTimer = undefined;
+  }
+
+  private requestedLine(): number | undefined {
+    const raw = this.route.snapshot.queryParamMap.get('line');
+    if (raw === null) return undefined;
+    const line = Number(raw);
+    return Number.isInteger(line) && line > 0 ? line : undefined;
   }
 
   protected onSearch(query: string): void {

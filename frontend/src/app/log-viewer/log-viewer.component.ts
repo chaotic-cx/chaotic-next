@@ -50,6 +50,7 @@ export class LogViewerComponent {
 
   protected readonly jobs = signal<GitlabJob[]>([]);
   protected readonly selectedJobId = signal<number | undefined>(undefined);
+  protected readonly scrollToLine = signal<number | undefined>(undefined);
   protected readonly logChunk = signal('');
   protected readonly clearSignal = signal(false);
   protected readonly loading = signal(true);
@@ -88,6 +89,15 @@ export class LogViewerComponent {
     this.error.set(undefined);
     this.loading.set(true);
     this.streaming.set(false);
+    this.scrollToLine.set(job.id === this.requestedJobId() ? this.requestedLine() : undefined);
+    if (this.scrollToLine() === undefined && this.route.snapshot.queryParamMap.has('line')) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { line: null },
+        queryParamsHandling: 'merge',
+        info: { disableViewTransition: true },
+      });
+    }
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { job: job.id },
@@ -106,6 +116,7 @@ export class LogViewerComponent {
     this.error.set(undefined);
     this.loading.set(true);
     this.streaming.set(false);
+    this.scrollToLine.set(undefined);
 
     this.appService.updateSeoTags(this.meta, {
       title: `Pipeline #${pipelineId} logs`,
@@ -136,6 +147,13 @@ export class LogViewerComponent {
     if (raw === null) return undefined;
     const id = Number(raw);
     return Number.isInteger(id) ? id : undefined;
+  }
+
+  private requestedLine(): number | undefined {
+    const raw = this.route.snapshot.queryParamMap.get('line');
+    if (raw === null) return undefined;
+    const line = Number(raw);
+    return Number.isInteger(line) && line > 0 ? line : undefined;
   }
 
   private openStream(jobId: number): void {

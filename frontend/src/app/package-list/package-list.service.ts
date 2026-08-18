@@ -1,9 +1,7 @@
 import { httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { isPackageSortField, Package, type PackageSortField, Paginated, Repo } from '@chaotic-next/shared-lib';
-import { debounceTime, Subject } from 'rxjs';
 import { AppService } from '../app.service';
 import { resourceSignal, resourceValue } from '../functions';
 
@@ -25,8 +23,6 @@ export class PackageListService {
   );
 
   readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
-  private readonly qDebounced = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
-  private readonly qSubject = new Subject<string>();
 
   private readonly reposResource = httpResource<Repo[]>(() =>
     this.appService.getBackendUrl() ? `${this.appService.getBackendUrl()}/builder/repos` : undefined,
@@ -38,7 +34,7 @@ export class PackageListService {
     return this.appService.getPackagesResourceRequest({
       page: this.page(),
       perPage: this.perPage(),
-      q: this.qDebounced() || undefined,
+      q: this.searchValue() || undefined,
       sort: this.sortField(),
       order: this.sortOrder() === 1 ? 'ASC' : 'DESC',
       repoId: this.repoFilter(),
@@ -51,13 +47,8 @@ export class PackageListService {
     (resourceValue(this.resource)?.items ?? []).filter((pkg) => pkg.version),
   );
 
-  constructor() {
-    this.qSubject.pipe(debounceTime(300), takeUntilDestroyed()).subscribe((q) => this.qDebounced.set(q));
-  }
-
   setSearch(value: string): void {
     this.searchValue.set(value);
-    this.qSubject.next(value);
   }
 
   setRepoFilter(repoName: string | null | undefined): void {

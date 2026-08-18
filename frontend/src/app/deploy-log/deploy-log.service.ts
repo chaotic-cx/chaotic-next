@@ -9,9 +9,7 @@ import {
 } from '@chaotic-next/shared-lib';
 import { httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { debounceTime, Subject } from 'rxjs';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
 
@@ -72,11 +70,9 @@ export class DeployLogService {
   );
 
   readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
-  private readonly qDebounced = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
-  private readonly qSubject = new Subject<string>();
 
-  private readonly buildersResource = httpResource<Builder[]>(
-    () => `${this.appService.getBackendUrl()}/builder/builders`,
+  private readonly buildersResource = httpResource<Builder[]>(() =>
+    this.appService.getBackendUrl() ? `${this.appService.getBackendUrl()}/builder/builders` : undefined,
   );
   readonly builderOptions = computed<string[]>(() =>
     (resourceValue(this.buildersResource) ?? []).map((builder) => builder.name),
@@ -86,7 +82,7 @@ export class DeployLogService {
     this.appService.getBuildsResourceRequest({
       page: this.page(),
       perPage: this.perPage(),
-      q: this.qDebounced() || undefined,
+      q: this.searchValue() || undefined,
       builder: this.builderFilter(),
       repo: this.repoFilter(),
       status: this.statusFilter(),
@@ -105,13 +101,8 @@ export class DeployLogService {
     })),
   );
 
-  constructor() {
-    this.qSubject.pipe(debounceTime(300), takeUntilDestroyed()).subscribe((q) => this.qDebounced.set(q));
-  }
-
   setSearch(value: string): void {
     this.searchValue.set(value);
-    this.qSubject.next(value);
   }
 
   setPage(first: number, rows: number): void {
