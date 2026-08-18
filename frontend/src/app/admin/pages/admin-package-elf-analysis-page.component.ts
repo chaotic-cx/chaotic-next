@@ -259,9 +259,22 @@ const PKG_TYPE_OPTIONS = [
             <chaotic-package-trigger-sources [pkgname]="editing()?.pkgname" />
           </div>
         </div>
-        <div class="flex justify-end gap-2">
-          <p-button (onClick)="closeDialog()" type="button" severity="secondary" text label="Cancel" />
-          <p-button [disabled]="elfForm().invalid()" type="submit" severity="primary" label="Save" />
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <p-button
+            (onClick)="closeDialog()"
+            type="button"
+            severity="secondary"
+            text
+            label="Cancel"
+            styleClass="w-full sm:w-auto"
+          />
+          <p-button
+            [disabled]="elfForm().invalid()"
+            type="submit"
+            severity="primary"
+            label="Save"
+            styleClass="w-full sm:w-auto"
+          />
         </div>
       </form>
     </p-dialog>

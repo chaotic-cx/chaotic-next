@@ -1,7 +1,7 @@
 <chaotic-title title="Admin" subtitle="Manage packages, repositories, builders and analysis data." />
 
 <div class="flex flex-1 flex-col">
-  <div class="admin-tabs-container">
+  <div class="admin-tabs-container min-w-0">
     <p-tabs [value]="activeTab()" (valueChange)="navigate($event)">
       <p-tablist>
         <p-tab pTooltip="Manage packages" tooltipPosition="bottom" value="packages">Packages</p-tab>
@@ -36,7 +36,7 @@
         </p-tab>
       </p-tablist>
     </p-tabs>
-    <div class="p-tabpanels">
+    <div class="p-tabpanels min-w-0">
       <router-outlet />
     </div>
   </div>

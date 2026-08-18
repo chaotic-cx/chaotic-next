@@ -170,9 +170,22 @@ interface BuilderFormModel {
           <p-checkbox [formField]="builderForm.isActive" [binary]="true" inputId="builderIsActive" />
           <label class="text-ctp-text text-sm" for="builderIsActive">Active</label>
         </div>
-        <div class="flex justify-end gap-2">
-          <p-button (onClick)="dialogVisible.set(false)" type="button" severity="secondary" text label="Cancel" />
-          <p-button [disabled]="builderForm().invalid()" type="submit" severity="primary" label="Save" />
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <p-button
+            (onClick)="dialogVisible.set(false)"
+            type="button"
+            severity="secondary"
+            text
+            label="Cancel"
+            styleClass="w-full sm:w-auto"
+          />
+          <p-button
+            [disabled]="builderForm().invalid()"
+            type="submit"
+            severity="primary"
+            label="Save"
+            styleClass="w-full sm:w-auto"
+          />
         </div>
       </form>
     </p-dialog>
