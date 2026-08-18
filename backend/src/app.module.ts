@@ -1,28 +1,53 @@
-import { Module } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { LoggerModule } from 'nestjs-pino';
-import { AuthModule } from './auth/auth.module';
+import pinoPretty from 'pino-pretty';
+import { AdminModule } from './admin/admin.module';
+import { AllExceptionsFilter } from './api/all-exceptions.filter';
+import { ThrottlerBehindProxyGuard } from './api/throttler-behind-proxy.guard';
+import { AurModule } from './aur/aur.module';
+import { auth } from './auth/auth';
 import { BuilderModule } from './builder/builder.module';
 import appConfig from './config/app.config';
-import { dataSourceOptions } from './data.source';
+import { dataSourceOptions } from './data/data.source';
+import { MigrationLogger } from './data/migration-logger';
+import { GitlabModule } from './gitlab/gitlab.module';
+import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
-import { UsersModule } from './users/users.module';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { ScheduleModule } from '@nestjs/schedule';
-import { GitlabModule } from './gitlab/gitlab.module';
+import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const pino = pinoPretty;
 
 @Module({
   imports: [
-    AuthModule,
+    AdminModule,
+    AurModule,
+    AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
     BuilderModule,
     ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true, load: [appConfig] }),
+    HealthModule,
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || 'info',
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+            singleLine: true,
+          },
+        },
         redact: {
           paths: [
             'req.headers["x-gitlab-private-token"]',
@@ -33,23 +58,41 @@ import { GitlabModule } from './gitlab/gitlab.module';
           remove: true,
         },
       },
-      // By default, off, but can be enabled by setting HTTP_LOGGING=true
       forRoutes: process.env.HTTP_LOGGING === 'true' ? undefined : [],
     }),
     MetricsModule,
+    NotificationsModule,
     RepoManagerModule,
     RouterModule,
     ScheduleModule.forRoot(),
     TerminusModule,
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 100,
+        ttl: THROTTLE_TTL_MS,
+        limit: THROTTLE_LIMIT,
       },
     ]),
-    TypeOrmModule.forRoot({ ...dataSourceOptions, autoLoadEntities: true }),
-    UsersModule,
+    TypeOrmModule.forRoot({ ...dataSourceOptions, autoLoadEntities: true, logger: new MigrationLogger() }),
     GitlabModule,
+  ],
+  providers: [
+    {
+      provide: APP_PIPE,
+      useValue: new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      }),
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerBehindProxyGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
   ],
 })
 export class AppModule {}

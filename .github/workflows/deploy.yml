@@ -1,0 +1,93 @@
+name: Deploy
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: ["main"]
+    types: [completed]
+  push:
+    tags: ["v*", "[0-9]*.[0-9]*.[0-9]*"]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+jobs:
+  build-and-push:
+    name: Build and push Docker image
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      tags: ${{ steps.tags.outputs.tags }}
+    steps:
+      - name: Wait for CI to pass (tags)
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const tagName = context.ref.replace('refs/tags/', '');
+
+            const ref = await github.rest.git.getRef({ owner, repo, ref: `tags/${tagName}` });
+            let commitSha = ref.data.object.sha;
+            if (ref.data.object.type === 'tag') {
+              const tag = await github.rest.git.getTag({ owner, repo, tag_sha: commitSha });
+              commitSha = tag.data.object.sha;
+            }
+
+            for (let i = 0; i < 90; i++) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                head_sha: commitSha,
+                per_page: 50,
+              });
+              const ci = data.workflow_runs.filter((r) => r.name === 'CI');
+              if (ci.some((r) => r.conclusion === 'success')) {
+                console.log('CI passed for this commit.');
+                return;
+              }
+              if (ci.some((r) => ['failure', 'cancelled'].includes(r.conclusion))) {
+                core.setFailed('CI failed for this commit.');
+                return;
+              }
+              await sleep(10000);
+            }
+            core.setFailed('Timed out waiting for CI to pass.');
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Compute image tags
+        id: tags
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

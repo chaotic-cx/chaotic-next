@@ -1,22 +1,21 @@
-<div class="background min-h-svh">
-  <garuda-shell class="p-2" [menuItems]="items">
+<div class="background flex min-h-svh flex-col">
+  <garuda-shell class="flex-1 p-2" [menuItems]="items()">
     <img garudaShellBarStart ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="logo" />
     <div class="router-container">
       <router-outlet #routerOutlet="outlet" />
     </div>
-    <div garudaShellBarEnd>
-      <div style="width: 15px; height: 15px; display: inline-block">
-        <p-progress-spinner
-          [hidden]="!loadingService.isLoading()"
-          [style]="{ width: '15px', height: '15px' }"
-          ariaLabel="loading"
-          strokeWidth="5"
-        />
+    <div class="flex items-center gap-2" garudaShellBarEnd>
+      <div class="flex h-[15px] w-[15px] items-center justify-center">
+        @if (loadingService.isLoading()) {
+          <p-progress-spinner [style]="{ width: '15px', height: '15px' }" ariaLabel="loading" strokeWidth="5" />
+        }
       </div>
-      <span class="pi pi-inbox cursor-pointer text-ctp-maroon my-auto ml-3" routerLink="update-review"> </span>
+      <chaotic-auth-button />
     </div>
   </garuda-shell>
+  <chaotic-footer />
 </div>
-<chaotic-footer />
 
-<p-confirm-dialog />
+<chaotic-overlay-scrollbar />
+
+<p-confirm-dialog [appendTo]="'body'" />

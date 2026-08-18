@@ -1,0 +1,22 @@
+{
+  "name": "backend-e2e",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "backend-e2e/src",
+  "projectType": "application",
+  "tags": ["scope:backend", "type:e2e"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p backend-e2e/tsconfig.json --noEmit"
+      }
+    },
+    "test-ci": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/coverage/backend-e2e"],
+      "options": {
+        "command": "node node_modules/vitest/vitest.mjs run --config backend-e2e/vite.config.mts --coverage"
+      }
+    }
+  }
+}

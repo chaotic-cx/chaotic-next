@@ -1,12 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
-import {
-  HealthCheck,
-  type HealthCheckResult,
-  type HealthCheckService,
-  type MemoryHealthIndicator,
-  type TypeOrmHealthIndicator,
-} from '@nestjs/terminus';
-import { ApiTags, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { HealthCheckResult } from '@nestjs/terminus';
+import { HealthCheck, HealthCheckService, MemoryHealthIndicator, TypeOrmHealthIndicator } from '@nestjs/terminus';
+import { RedisHealthIndicator } from './redis.health';
 
 @ApiTags('health')
 @Controller('health')
@@ -15,10 +11,11 @@ export class HealthController {
     private health: HealthCheckService,
     private orm: TypeOrmHealthIndicator,
     private memory: MemoryHealthIndicator,
+    private redis: RedisHealthIndicator,
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get application health status including DB and memory.' })
+  @ApiOperation({ summary: 'Liveness: process up, DB reachable, memory sane.' })
   @ApiOkResponse({ description: 'Health check result', type: Object })
   @HealthCheck()
   check(): Promise<HealthCheckResult> {
@@ -26,5 +23,13 @@ export class HealthController {
       () => this.orm.pingCheck('db'),
       () => this.memory.checkRSS('mem_rss', 1024 * 2 ** 20 /* 1024 MB */),
     ]);
+  }
+
+  @Get('ready')
+  @ApiOperation({ summary: 'Readiness: DB and Redis are reachable.' })
+  @ApiOkResponse({ description: 'Readiness check result', type: Object })
+  @HealthCheck()
+  ready(): Promise<HealthCheckResult> {
+    return this.health.check([() => this.orm.pingCheck('db'), () => this.redis.pingCheck('redis')]);
   }
 }

@@ -2,17 +2,24 @@ packages:
   - libs
 allowBuilds:
   '@parcel/watcher': false
+  '@prisma/client': false
   '@scarf/scarf': false
   '@swc/core': true
   bcrypt: true
+  better-sqlite3: false
+  cpu-features: true
   esbuild: true
   less: false
   lmdb: false
   msgpackr-extract: true
   nx: true
+  protobufjs: true
   sharp: false
+  ssh2: true
   unrs-resolver: true
   workerd: true
 minimumReleaseAgeExclude:
   - '@garudalinux/core@2.0.0'
   - '@garudalinux/themes@2.0.0'
+patchedDependencies:
+  '@openng/optimus-ui': patches/@openng__optimus-ui.patch

@@ -113,7 +113,7 @@ export interface PipelineWebhook {
   }[];
 }
 
-export interface MergeRequestWebhook {
+interface MergeRequestWebhook {
   object_kind: 'merge_request';
   event_type: string;
   user: {
@@ -203,10 +203,8 @@ export interface MergeRequestWebhook {
       };
     };
     reviewer_ids: number[];
-    source: any;
     state: string;
     system: boolean;
-    target: any;
     time_change: number;
     total_time_spent: number;
     url: string;
@@ -222,8 +220,6 @@ export interface MergeRequestWebhook {
       modified_from_project_rule: boolean;
       orchestration_policy_idx: number | null;
       vulnerabilities_allowed: number;
-      scanners: any[];
-      severity_levels: any[];
       vulnerability_states: string[];
       security_orchestration_policy_configuration_id: number | null;
       scan_result_policy_id: number | null;

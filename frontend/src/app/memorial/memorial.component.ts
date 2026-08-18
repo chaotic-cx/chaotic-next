@@ -1,15 +1,15 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { Card } from '@openng/optimus-ui/card';
 import { Image } from '@openng/optimus-ui/image';
+import { Panel } from '@openng/optimus-ui/panel';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { updateSeoTags } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-memorial',
-  imports: [Card, Image, TitleComponent, ProgressSpinner, ProgressSpinner],
+  imports: [Panel, Image, TitleComponent, ProgressSpinner],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
 })
@@ -114,12 +114,12 @@ export class MemorialComponent implements OnInit {
   }
 
   ngOnInit() {
-    updateSeoTags(
-      this.meta,
-      'Memorial',
-      'Memorial of Chaotic-AUR, celebrating the third birthday of Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
-      this.router.url,
-    );
+    updateSeoTags(this.meta, {
+      title: 'Memorial',
+      description: 'Memorial of Chaotic-AUR, celebrating the third birthday of Chaotic-AUR',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
+      url: this.router.url,
+    });
   }
 }

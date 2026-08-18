@@ -1,0 +1,56 @@
+import { GitlabLogChunk } from '@chaotic-next/shared-lib';
+import { Controller, NotFoundException, Param, ServiceUnavailableException, Sse } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Observable } from 'rxjs';
+
+@ApiTags('logs')
+@Controller('logs')
+export class PackageLogsController {
+  constructor(private readonly configService: ConfigService) {}
+
+  @Sse(':pkgname/:timestamp')
+  @ApiOperation({ summary: 'Stream a package build log from the build server.' })
+  @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
+  getPackageLog(
+    @Param('pkgname') pkgname: string,
+    @Param('timestamp') timestamp: string,
+  ): Observable<Partial<MessageEvent<GitlabLogChunk>>> {
+    const base = this.configService.getOrThrow<string>('app.garudaLogsUrl');
+    const url = `${base}/${encodeURIComponent(pkgname)}/${encodeURIComponent(timestamp)}`;
+    return new Observable((subscriber) => {
+      // Aborting on teardown cancels the upstream fetch so a disconnecting
+      // client does not leave the build-server connection dangling.
+      const upstream = new AbortController();
+
+      const stream = async (): Promise<void> => {
+        try {
+          const response = await fetch(url, { signal: upstream.signal });
+          if (response.status === 404) throw new NotFoundException('Build log not found');
+          if (!response.ok || !response.body) throw new ServiceUnavailableException('Could not fetch build log');
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let offset = 0;
+          while (!upstream.signal.aborted) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const text = decoder.decode(value, { stream: true });
+            if (text) {
+              offset += text.length;
+              subscriber.next({ data: { offset, text, complete: false, status: '' } });
+            }
+          }
+          subscriber.next({ data: { offset, text: '', complete: true, status: '' } });
+        } catch (error) {
+          if (!upstream.signal.aborted) subscriber.error(error);
+        } finally {
+          subscriber.complete();
+        }
+      };
+
+      void stream();
+      return () => upstream.abort();
+    });
+  }
+}

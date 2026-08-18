@@ -1,33 +1,34 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
-import { MessageToastService } from '@garudalinux/core';
+import { httpResource } from '@angular/common/http';
+import { Component, computed, inject } from '@angular/core';
 import { UIChart } from '@openng/optimus-ui/chart';
-import { retry } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { AppService } from '../app.service';
-import { shuffleArray } from '../functions';
-import { StatsService } from '../stats/stats.service';
+import { type ChartConfig, mochaLegendLabels } from '../chart-config';
+import { resourceValue, shuffleArray } from '../functions';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
-
-interface ChartConfig {
-  data: any;
-  options: any;
-}
 
 @Component({
   selector: 'chaotic-chart-review-stats',
   imports: [UIChart],
   templateUrl: './chart-review-stats.component.html',
   styleUrl: './chart-review-stats.component.css',
-  providers: [MessageToastService],
 })
-export class ChartReviewStatsComponent implements OnInit {
+export class ChartReviewStatsComponent {
   private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly statsService = inject(StatsService);
 
-  readonly chartConfig = computed<ChartConfig>(() => {
-    const reviewStats = this.statsService.reviewStats();
+  private readonly resource = httpResource<{ username: string; reviews: number }[]>(() =>
+    this.appService.getUpdateReviewStatsResourceRequest(),
+  );
+
+  readonly loading = this.resource.isLoading;
+
+  readonly hasData = computed(() => this.resource.hasValue());
+
+  readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
+    const reviewStats = (resourceValue(this.resource) ?? [])
+      .sort((a, b) => b.reviews - a.reviews)
+      .filter((entry) => !entry.username.startsWith('gitlab_') && !entry.username.startsWith('project_'))
+      .filter((e) => e.reviews > 0 && e.username !== 'temeraire-cx');
+
     const labels: string[] = [];
     const data: number[] = [];
     for (const stat of reviewStats) {
@@ -48,50 +49,9 @@ export class ChartReviewStatsComponent implements OnInit {
       },
       options: {
         plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
-            },
-            position: 'top',
-          },
+          legend: { labels: mochaLegendLabels(), position: 'top' },
         },
       },
     };
   });
-
-  readonly loading = signal(true);
-
-  ngOnInit(): void {
-    this.getUpdateReviewStats();
-  }
-
-  /**
-   * Query the update review stats.
-   */
-  private getUpdateReviewStats(): void {
-    this.appService
-      .getUpdateReviewStats()
-      .pipe(
-        retry({ count: 2, delay: 2000 }),
-        map((data) => {
-          return data
-            .sort((a, b) => b.reviews - a.reviews)
-            .filter((entry) => !entry.username.startsWith('gitlab_') && !entry.username.startsWith('project_'))
-            .filter((e) => e.reviews > 0 && e.username !== 'temeraire-cx');
-        }),
-      )
-      .subscribe({
-        next: (data) => {
-          this.statsService.reviewStats.set(data);
-          this.loading.set(false);
-        },
-        error: (err: unknown) => {
-          this.loading.set(false);
-          this.messageToastService.error('Error', 'Failed to retrieve MR review stats');
-          console.error(err);
-        },
-      });
-  }
 }

@@ -5,3 +5,7 @@
 .p-accordionheader {
   color: var(--ctp-mocha-text);
 }
+
+p-panel {
+  scroll-margin-top: 5rem;
+}

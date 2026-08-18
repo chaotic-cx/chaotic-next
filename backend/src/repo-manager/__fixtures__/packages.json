@@ -1,0 +1,230 @@
+{
+  "_comment": "Curated real packages for the scan-pipeline regression tests, vendored into this repo via git-lfs. Historical kwin versions exercise symbol/vtable drift detection; better-blur is the kwin plugin consumer. Historical boost-libs/icu versions + apollo exercise the broken-deps rebuild trigger (soname change). sha256 pins the exact bytes so a corrupt or partially-smudged checkout fails loudly instead of silently testing the wrong package.",
+  "packages": [
+    {
+      "key": "kwin-old",
+      "filename": "kwin-6.7.0-1-x86_64.pkg.tar.zst",
+      "sha256": "5613eeb1f305b95541829f8c1dd93ad0a29e9efc7e10d5a206c9585b52ddb0ea",
+      "pkgType": "ARCH",
+      "pkgId": 1001,
+      "pkgname": "kwin",
+      "version": "6.7.0-1"
+    },
+    {
+      "key": "kwin-new",
+      "filename": "kwin-6.7.4-4-x86_64.pkg.tar.zst",
+      "sha256": "fba40244002fa4c8d1b5b709f68a0c010a788413020d9901d9232d2b93a9f8ec",
+      "pkgType": "ARCH",
+      "pkgId": 1001,
+      "pkgname": "kwin",
+      "version": "6.7.4-4"
+    },
+    {
+      "key": "better-blur",
+      "filename": "kwin-effects-better-blur-dx-2.5.1-1.5-x86_64.pkg.tar.zst",
+      "sha256": "2c3fd00c4c68ee0c80ec6abd0e81459f5b12d36e5a467cc52be62bdf303888a4",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2001,
+      "pkgname": "kwin-effects-better-blur-dx",
+      "version": "2.5.1-1.5"
+    },
+    {
+      "key": "boost-old",
+      "filename": "boost-libs-1.89.0-1-x86_64.pkg.tar.zst",
+      "sha256": "4df4b97c0aea15cde9ed63b478f7c29fdb5c0472df4d4636f4feef93942594ed",
+      "pkgType": "ARCH",
+      "pkgId": 1002,
+      "pkgname": "boost-libs",
+      "version": "1.89.0-1"
+    },
+    {
+      "key": "boost-new",
+      "filename": "boost-libs-1.91.0-1-x86_64.pkg.tar.zst",
+      "sha256": "c26b53bcc990d27ac2f5ec4d3db426b98fbbb2e09cd6c74c82b66da2ead2d1b0",
+      "pkgType": "ARCH",
+      "pkgId": 1002,
+      "pkgname": "boost-libs",
+      "version": "1.91.0-1"
+    },
+    {
+      "key": "apollo",
+      "filename": "apollo-git-0.4.8.r24.gadc5c5a-1.1-x86_64.pkg.tar.zst",
+      "sha256": "118ec1687287f3d902b38217418e41905f0566fb4983a08713fa061e400feda2",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2002,
+      "pkgname": "apollo-git",
+      "version": "0.4.8.r24.gadc5c5a-1.1"
+    },
+    {
+      "key": "icu-old",
+      "filename": "icu-76.1-1-x86_64.pkg.tar.zst",
+      "sha256": "8e0745f79b330395e04cb6c2119dd901b0adb35f031ab5b4240bb7e72e688157",
+      "pkgType": "ARCH",
+      "pkgId": 1003,
+      "pkgname": "icu",
+      "version": "76.1-1"
+    },
+    {
+      "key": "icu-new",
+      "filename": "icu-78.1-1-x86_64.pkg.tar.zst",
+      "sha256": "e10eeafcb177337c29d4a8f67d7366e3183755ee507ae141d314381669e14cba",
+      "pkgType": "ARCH",
+      "pkgId": 1003,
+      "pkgname": "icu",
+      "version": "78.1-1"
+    },
+    {
+      "key": "fmt-old",
+      "filename": "fmt-11.2.0-1-x86_64.pkg.tar.zst",
+      "sha256": "509b15e66cb605572bea50ce9b25475e29e5e720d09f683887f9cdf264b4ed60",
+      "pkgType": "ARCH",
+      "pkgId": 1004,
+      "pkgname": "fmt",
+      "version": "11.2.0-1"
+    },
+    {
+      "key": "fmt-new",
+      "filename": "fmt-12.0.0-1-x86_64.pkg.tar.zst",
+      "sha256": "e291cfef6626ac3fbed37ca1c3e1ef4df3a6fb534e9b902a575afd90acd92aae",
+      "pkgType": "ARCH",
+      "pkgId": 1004,
+      "pkgname": "fmt",
+      "version": "12.0.0-1"
+    },
+    {
+      "key": "spdlog-old",
+      "filename": "spdlog-1.15.3-1-x86_64.pkg.tar.zst",
+      "sha256": "07c52b34c4f04b75c5a3ec84f3747d02b279c7a210678fa90fd0a7bb579e2bbc",
+      "pkgType": "ARCH",
+      "pkgId": 1005,
+      "pkgname": "spdlog",
+      "version": "1.15.3-1"
+    },
+    {
+      "key": "spdlog-new",
+      "filename": "spdlog-1.17.0-1-x86_64.pkg.tar.zst",
+      "sha256": "60af02ed5276f9084dbc26b6d097000ede95fbc4127877f3a60563369356a2b6",
+      "pkgType": "ARCH",
+      "pkgId": 1005,
+      "pkgname": "spdlog",
+      "version": "1.17.0-1"
+    },
+    {
+      "key": "waybar",
+      "filename": "waybar-git-0.15.0.r959.g084d874-1-x86_64.pkg.tar.zst",
+      "sha256": "e694212d3e3223fc18f620a45d7a0247fb4fd8b4e7682aa5ee13b40adae7e046",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2003,
+      "pkgname": "waybar-git",
+      "version": "0.15.0.r959.g084d874-1"
+    },
+    {
+      "key": "autojump",
+      "filename": "autojump-22.5.3-11.1-any.pkg.tar.zst",
+      "sha256": "192d410d67819057993a313054afe06b115d9ef0a0ee9ab6ea993f9e0dcab27e",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2004,
+      "pkgname": "autojump",
+      "version": "22.5.3-11.1"
+    },
+    {
+      "key": "perl-pam",
+      "filename": "perl-authen-pam-0.16-14.3-any.pkg.tar.zst",
+      "sha256": "2ed05e2751376733720dd450d2ea22785ca2e8c97b4cbf9d57cf31a51ac8edd2",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2005,
+      "pkgname": "perl-authen-pam",
+      "version": "0.16-14.3"
+    },
+    {
+      "key": "ruby-fusuma",
+      "filename": "ruby-fusuma-plugin-wmctrl-1.4.2-1-any.pkg.tar.zst",
+      "sha256": "5420ede7d3bb4a875a3355f0d2b12c2e3c78cf87690a5628855b2f95f9e188f0",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2006,
+      "pkgname": "ruby-fusuma-plugin-wmctrl",
+      "version": "1.4.2-1"
+    },
+    {
+      "key": "haskell-strict-concurrency",
+      "filename": "haskell-strict-concurrency-0.2.4.3-1-x86_64.pkg.tar.zst",
+      "sha256": "8bbf4988073224e6eae99feeae3c422a24fc919ab2fb1350f369fd14795166c8",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2007,
+      "pkgname": "haskell-strict-concurrency",
+      "version": "0.2.4.3-1"
+    },
+    {
+      "key": "bluespec",
+      "filename": "bluespec-git-r1127.941eecfe-1-x86_64.pkg.tar.zst",
+      "sha256": "1d6baa8783fafd6f7f2b120895205368128315c0e53001f6ed9835ba7f4ef70e",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2008,
+      "pkgname": "bluespec-git",
+      "version": "r1127.941eecfe-1"
+    },
+    {
+      "key": "liblphobos-new",
+      "filename": "liblphobos-3:1.42.0-1-x86_64.pkg.tar.zst",
+      "sha256": "788c212a2782f8dc1be670c7e5c08b0f70ffde7e27f193e6280d25e9ef335fcc",
+      "pkgType": "ARCH",
+      "pkgId": 1006,
+      "pkgname": "liblphobos",
+      "version": "3:1.42.0-1"
+    },
+    {
+      "key": "gtkd",
+      "filename": "gtkd-3.11.0-4.1-x86_64.pkg.tar.zst",
+      "sha256": "469fd6fa9d77a83e4a87f87febeb08120257cc1e733ba9be84d514d71025cae1",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2009,
+      "pkgname": "gtkd",
+      "version": "3.11.0-4.1"
+    },
+    {
+      "key": "hyprutils-git",
+      "filename": "hyprutils-git-0.14.0.r4.g5a7b8cf-1-x86_64.pkg.tar.zst",
+      "sha256": "a6dc3622a604750e3a1beccd5f8b28c563b0e32e4e04ea04243aa9b38362f6a8",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2010,
+      "pkgname": "hyprutils-git",
+      "version": "0.14.0.r4.g5a7b8cf-1"
+    },
+    {
+      "key": "hyprlang-git",
+      "filename": "hyprlang-git-0.6.8.r7.g0901175-1.14-x86_64.pkg.tar.zst",
+      "sha256": "9ec042b03317e024b544f7aae6082fff0c2b88e15aee3c97e3dfa95e394e8982",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2011,
+      "pkgname": "hyprlang-git",
+      "version": "0.6.8.r7.g0901175-1.14"
+    },
+    {
+      "key": "ffmpeg",
+      "filename": "ffmpeg-2:9.0-5-x86_64.pkg.tar.zst",
+      "sha256": "d54a06fe451849a12ee822be05b0d1b6ba0f7d419c50cf725bc2b16c36e91aeb",
+      "pkgType": "ARCH",
+      "pkgId": 1007,
+      "pkgname": "ffmpeg",
+      "version": "2:9.0-5"
+    },
+    {
+      "key": "aegisub",
+      "filename": "aegisub-arch1t3cht-git-12.r24.g9bfd500-2.15-x86_64.pkg.tar.zst",
+      "sha256": "bbc5acfba0fad4b8017ee0e7827b476dfa2408b12d90075859ac2c702148c48d",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2012,
+      "pkgname": "aegisub-arch1t3cht-git",
+      "version": "12.r24.g9bfd500-2.15"
+    },
+    {
+      "key": "srb2",
+      "filename": "srb2-2.2.15-1.3-x86_64.pkg.tar.zst",
+      "sha256": "0f64fa44d17a011fe5f87597edee27892d474e4331e2c3ff0ecd86dcbd4050dd",
+      "pkgType": "CHAOTIC",
+      "pkgId": 2013,
+      "pkgname": "srb2",
+      "version": "2.2.15-1.3"
+    }
+  ]
+}

@@ -1,16 +1,16 @@
-<div class="card mb-10 flex justify-center">
-  @if (loading()) {
-    <div class="flex h-60 w-200 max-w-2xl items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
-    </div>
-  } @else {
+<div class="card relative flex min-h-[24rem] items-center justify-center">
+  @if (hasData()) {
     <p-chart
-      class="w-200 max-w-2xl"
+      class="w-full max-w-xl"
       [data]="chartConfig().data"
       [options]="chartConfig().options"
       [responsive]="true"
       type="pie"
     />
+  } @else if (loading()) {
+    <div class="absolute inset-0 flex items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
   }
 </div>
 <p-input-number

@@ -1,0 +1,62 @@
+@if (isLoggedIn()) {
+  <div class="ml-3 flex items-center gap-2">
+    <a
+      class="my-auto"
+      routerLink="/pipeline-trigger"
+      aria-label="New pipeline"
+      title="Create a new package build pipeline"
+    >
+      <p-button icon="pi pi-box" severity="secondary" text rounded size="small" aria-label="New pipeline" />
+    </a>
+    <a
+      class="text-ctp-maroon my-auto cursor-pointer"
+      routerLink="/admin"
+      aria-label="Admin"
+      title="Manage packages and repositories"
+    >
+      <i class="pi pi-cog"></i>
+    </a>
+    <p-button
+      [loading]="isLogoutLoading()"
+      (onClick)="logout()"
+      icon="pi pi-sign-out"
+      severity="secondary"
+      text
+      rounded
+      size="small"
+      pTooltip="Sign out"
+      tooltipPosition="left"
+    />
+    @if (user(); as user) {
+      @if (user.image) {
+        <a
+          class="inline-flex items-center"
+          [href]="gitlabProfileUrl()"
+          target="_blank"
+          rel="noopener noreferrer"
+          pTooltip="View GitLab profile"
+          tooltipPosition="left"
+        >
+          <img
+            class="h-8 w-8 rounded-full object-cover transition-opacity hover:opacity-80"
+            [src]="user.image"
+            [alt]="user.name"
+            referrerPolicy="no-referrer"
+          />
+        </a>
+      }
+    }
+  </div>
+} @else {
+  <p-button
+    [loading]="isLoginLoading()"
+    (onClick)="login()"
+    label="Login"
+    icon="pi pi-sign-in"
+    severity="secondary"
+    size="small"
+    styleClass="ml-3"
+    pTooltip="Sign in with GitLab"
+    tooltipPosition="left"
+  />
+}

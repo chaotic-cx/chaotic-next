@@ -1,37 +1,24 @@
-<div>
-  @if (loading()) {
-    <div class="flex h-60 items-center justify-center">
+<div class="card relative flex h-full min-h-[24rem] justify-center">
+  @if (hasData()) {
+    <p-chart
+      class="w-full h-full"
+      [data]="chartConfig().data"
+      [options]="chartConfig().options"
+      [responsive]="true"
+      type="bar"
+    />
+  } @else if (loading()) {
+    <div class="absolute inset-0 flex items-center justify-center">
       <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
     </div>
-  } @else if (isWide()) {
-    <div class="flex justify-center">
-      <p-chart class="h-200 w-full" [data]="chartConfig().data" [options]="chartConfig().options" type="bar" />
-    </div>
-    <p-input-number
-      [(ngModel)]="range"
-      [showButtons]="true"
-      [min]="0"
-      [max]="200"
-      mode="decimal"
-      inputId="minmaxDownloads"
-    />
-  } @else {
-    <div class="h-auto justify-center">
-      @for (download of progressbarValues(); track download.label) {
-        <p-progress-bar [value]="download.value">
-          <ng-template #content>
-            <span>{{ download.label }}: {{ download.count }}</span>
-          </ng-template>
-        </p-progress-bar>
-      }
-    </div>
-    <p-input-number
-      [(ngModel)]="range"
-      [showButtons]="true"
-      [min]="0"
-      [max]="200"
-      mode="decimal"
-      inputId="minmaxDownloads"
-    />
   }
 </div>
+<p-input-number
+  [(ngModel)]="range"
+  [showButtons]="true"
+  [min]="1"
+  [max]="200"
+  mode="decimal"
+  inputId="minmaxDownloads"
+  placeholder="Number of packages"
+/>

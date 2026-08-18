@@ -1,0 +1,48 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsArray, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
+
+export class UserAgentMetricDto {
+  @ApiProperty({ description: 'User agent string' })
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ description: 'Number of requests from this user agent' })
+  @IsInt()
+  count!: number;
+}
+
+export class CountNameDto {
+  @ApiProperty({ description: 'Name (e.g. country or package)' })
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ description: 'Number of hits' })
+  @IsInt()
+  count!: number;
+}
+
+export class SpecificPackageMetricsDto {
+  @ApiPropertyOptional({ description: 'Package name' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({ description: 'Number of downloads' })
+  @IsInt()
+  downloads!: number;
+
+  @ApiProperty({ description: 'User agent breakdown for the package', type: UserAgentMetricDto, isArray: true })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UserAgentMetricDto)
+  user_agents!: UserAgentMetricDto[];
+}
+
+export class MetricsQueryDto {
+  @ApiPropertyOptional({ description: 'Number of days to look back' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  days?: number;
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "backend/src/data/migration-cli.ts",
+    "backend/src/main.ts",
+    "backend/src/scripts/*.ts",
+    "frontend/src/environments/environment.prod.ts",
+    "frontend/src/main.ts",
+    "shared-lib/src/index.ts"
+  ],
+  "project": ["backend/src/**/*.ts", "frontend/src/**/*.ts", "shared-lib/src/**/*.ts"],
+  "ignore": ["backend/src/test/silence-nest-logger.ts", "frontend/src/test-setup.ts"],
+  "ignoreUnresolved": ["src/test/silence-nest-logger.ts", "src/test-setup.ts"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": [
+    "@angular-eslint/*",
+    "@catppuccin/*",
+    "@eslint/*",
+    "@fastify/cors",
+    "@fontsource-variable/*",
+    "@nestjs/cli",
+    "@nestjs/schematics",
+    "@nx/*",
+    "@openng/icons",
+    "@openng/optimus-ui-tailwindcss",
+    "@typescript-eslint/*",
+    "angular-eslint",
+    "eslint-plugin-*",
+    "globals",
+    "postcss",
+    "testcontainers",
+    "typescript-eslint",
+    "unplugin-swc",
+    "wrangler"
+  ]
+}

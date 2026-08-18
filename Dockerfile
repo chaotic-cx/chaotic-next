@@ -1,33 +1,36 @@
+# syntax=docker/dockerfile:1.7
 FROM node:26-alpine AS builder
 
 WORKDIR /build
-COPY . /build
 
-# Bcrypt shenigans
 # hadolint ignore=DL3018
 RUN apk add --no-cache --virtual builds-deps build-base pnpm
 
-# Enable the use of pnpm and compile the backend
-RUN pnpm install && \
-    pnpm exec nx run backend:build
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY patches ./patches
 
-# Allow pnpm installing bcrypt .node files
-RUN cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    --mount=type=cache,target=/root/.cache/pnpm \
+    pnpm install --frozen-lockfile
 
-# Generate node_modules containing nx-generated package.json for less used space
+COPY . .
+RUN --mount=type=cache,target=/root/.nx \
+    pnpm exec nx run backend:build && \
+    cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml && \
+    cp -r patches dist/backend/patches
+
 WORKDIR /build/dist/backend
 
-# Run the actual installation
-RUN pnpm install --prod && \
-    pnpm install pino-pretty
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    --mount=type=cache,target=/root/.cache/pnpm \
+    pnpm install --prod --frozen-lockfile
 
 FROM node:26-alpine
 
-# Copy the compiled backend and the entry point script in a clean image
 WORKDIR /app
 
 # hadolint ignore=DL3018
-RUN apk add --no-cache autossh curl zstd bash tar
+RUN apk add --no-cache autossh curl zstd bash tar binutils libarchive-tools file
 COPY entry_point.sh /entry_point.sh
 RUN chmod +x /entry_point.sh
 COPY --from=builder /build/dist/backend /app

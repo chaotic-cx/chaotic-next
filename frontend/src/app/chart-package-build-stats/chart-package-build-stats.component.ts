@@ -1,64 +1,45 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { httpResource } from '@angular/common/http';
+import { Component, computed, inject, input } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
-import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
-import { AppService } from '../app.service';
+import { ALL_TIME_DAYS, AppService } from '../app.service';
+import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
+import { parseCount, resourceValue } from '../functions';
+import { StatsService } from '../stats/stats.service';
 
 @Component({
   selector: 'chaotic-chart-package-build-stats',
-  imports: [UIChart, UIChart],
+  imports: [UIChart],
   templateUrl: './chart-package-build-stats.component.html',
   styleUrl: './chart-package-build-stats.component.css',
-  providers: [MessageToastService, DatePipe],
+  providers: [DatePipe],
 })
 export class ChartPackageBuildStatsComponent {
   private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
   private readonly datePipe = inject(DatePipe);
+  private readonly statsService = inject(StatsService);
 
   readonly packageName = input.required<string>();
-  readonly loading = signal(true);
 
-  readonly chartConfig = computed<{ data: any; options: any } | null>(() => {
-    const data = this.stats();
-    if (!data) return null;
+  private readonly resource = httpResource<{ day: string; repo: string; count: string }[]>(() => {
+    const name = this.packageName();
+    if (!name) return undefined;
+    return this.appService.getBuildsCountByPkgnamePerDayResourceRequest(
+      name,
+      this.statsService.timeRangeDays() ?? ALL_TIME_DAYS,
+    );
+  });
+
+  readonly loading = this.resource.isLoading;
+
+  readonly chartConfig = computed<ChartConfig<'line'> | null>(() => {
+    const data = resourceValue(this.resource);
+    if (!data || data.length === 0) return null;
     return this.buildChartConfig(data);
   });
 
-  private readonly stats = signal<{ day: string; repo: string; count: string }[] | null>(null);
-  days = 30;
-
-  constructor() {
-    // Reload whenever the selected package changes.
-    effect(() => {
-      if (this.packageName()) this.reload();
-    });
-  }
-
-  /**
-   * Query the build counts per day for the package.
-   */
-  private reload(): void {
-    const name = this.packageName();
-    if (!name) return;
-
-    this.loading.set(true);
-    this.appService.getBuildsCountByPkgnamePerDay(name, this.days).subscribe({
-      next: (data) => {
-        this.stats.set(data);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.loading.set(false);
-        this.messageToastService.error('Error', 'Failed to load package build stats');
-        console.error(err);
-      },
-    });
-  }
-
-  private buildChartConfig(data: { day: string; repo: string; count: string }[]): { data: any; options: any } {
-    // Group data by repo
+  private buildChartConfig(data: { day: string; repo: string; count: string }[]): ChartConfig<'line'> {
     const repoData: { [repo: string]: { [day: string]: number } } = {};
     const allDays = new Set<string>();
 
@@ -66,7 +47,7 @@ export class ChartPackageBuildStatsComponent {
       if (!repoData[item.repo]) {
         repoData[item.repo] = {};
       }
-      repoData[item.repo][item.day] = parseInt(item.count);
+      repoData[item.repo][item.day] = parseCount(item.count);
       allDays.add(item.day);
     }
 
@@ -87,32 +68,9 @@ export class ChartPackageBuildStatsComponent {
         maintainAspectRatio: false,
         aspectRatio: 0.4,
         plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
-            },
-          },
+          legend: { labels: mochaLegendLabels() },
         },
-        scales: {
-          x: {
-            ticks: {
-              color: flavors.mocha.colors.text.hex,
-            },
-            grid: {
-              color: flavors.mocha.colors.surface0.hex,
-            },
-          },
-          y: {
-            ticks: {
-              color: flavors.mocha.colors.text.hex,
-            },
-            grid: {
-              color: flavors.mocha.colors.surface0.hex,
-            },
-          },
-        },
+        scales: mochaScales(),
       },
     };
   }
@@ -129,9 +87,5 @@ export class ChartPackageBuildStatsComponent {
       flavors.mocha.colors.mauve.hex,
     ];
     return colors[index % colors.length];
-  }
-
-  onDaysChange(): void {
-    this.reload();
   }
 }

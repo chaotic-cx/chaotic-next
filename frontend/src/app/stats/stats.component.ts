@@ -1,131 +1,158 @@
-import { ChangeDetectorRef, Component, computed, inject, OnInit } from '@angular/core';
+import { httpResource } from '@angular/common/http';
+import { ChangeDetectorRef, Component, effect, inject, input, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MessageToastService } from '@garudalinux/core';
-import { Card } from '@openng/optimus-ui/card';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@openng/optimus-ui/tabs';
+import { ActivatedRoute, NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
+import { Select } from '@openng/optimus-ui/select';
+import { Tab, TabList, Tabs } from '@openng/optimus-ui/tabs';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { retry } from 'rxjs';
+import { filter } from 'rxjs';
 import { AppService } from '../app.service';
-import { ChartAverageBuildTimeComponent } from '../chart-average-build-time/chart-average-build-time.component';
-import { ChartBuildersAmountComponent } from '../chart-builders-amount/chart-builders-amount.component';
-import { ChartBuildsPerDayComponent } from '../chart-builds-per-day/chart-builds-per-day.component';
-import { ChartCountriesComponent } from '../chart-countries/chart-countries.component';
-import { ChartDownloadsComponent } from '../chart-downloads/chart-downloads.component';
-import { ChartPopularPackagesComponent } from '../chart-popular-packages/chart-popular-packages.component';
-import { ChartReviewStatsComponent } from '../chart-review-stats/chart-review-stats.component';
-import { ChartUseragentComponent } from '../chart-useragent/chart-useragent.component';
-import { SearchPackageComponent } from '../search-package/search-package.component';
+import { resourceValue } from '../functions';
 import { TitleComponent } from '../title/title.component';
-import { StatsService } from './stats.service';
+import { isStatsTab, StatsService, type StatsTab } from './stats.service';
+
+const ALL_TIME_RANGE_PARAM = 'all';
+
+function timeRangeToParam(days: number | null): string {
+  return days === null ? ALL_TIME_RANGE_PARAM : String(days);
+}
+
+function paramToTimeRange(value: string): number | null | undefined {
+  if (value === ALL_TIME_RANGE_PARAM) return null;
+  const days = Number(value);
+  return Number.isInteger(days) && days > 0 ? days : undefined;
+}
 
 @Component({
   selector: 'chaotic-stats',
-  imports: [
-    TabList,
-    Tabs,
-    Tab,
-    TabPanels,
-    TabPanel,
-    ChartCountriesComponent,
-    ChartUseragentComponent,
-    ChartDownloadsComponent,
-    FormsModule,
-    Card,
-    TitleComponent,
-    SearchPackageComponent,
-    ChartReviewStatsComponent,
-    ChartBuildsPerDayComponent,
-    ChartPopularPackagesComponent,
-    ChartBuildersAmountComponent,
-    ChartAverageBuildTimeComponent,
-    Tooltip,
-  ],
+  imports: [TabList, Tabs, Tab, FormsModule, Select, TitleComponent, Tooltip, RouterOutlet],
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.css',
-  providers: [MessageToastService],
 })
 export class StatsComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   protected readonly statsService = inject(StatsService);
 
-  readonly subtitle = computed(() => {
-    const users = this.statsService.usersLoading() ? 'loading…' : (this.statsService.totalUsers() ?? '–');
-    return `Area for package statistics and other fun stuff.
-Total users last month: ${users}
-All stats shown here are currently relating to one month of data.`;
-  });
+  readonly search = input<string>();
 
-  ngOnInit() {
-    this.appService.updateSeoTags(
-      this.meta,
-      'Statistics and data',
-      'Package and repository statistics for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics',
-      this.router.url,
-    );
+  private readonly applyInitialRange = this.initTimeRangeFromRoute();
 
-    void this.get30DayUsers();
+  private initTimeRangeFromRoute(): void {
+    const param = this.route.snapshot.queryParamMap.get('range');
+    if (param === null) return;
+    const days = paramToTimeRange(param);
+    if (days !== undefined) this.statsService.timeRangeDays.set(days);
+  }
 
-    if (this.route.snapshot.fragment === 'globals') {
-      this.statsService.currentTab.set('1');
-    } else if (this.route.snapshot.fragment === 'downloads') {
-      this.statsService.currentTab.set('2');
-    } else if (this.route.snapshot.fragment === 'update-review') {
-      this.statsService.currentTab.set('3');
-    } else if (this.route.snapshot.fragment === 'builder-stats') {
-      this.statsService.currentTab.set('4');
-    } else {
-      this.statsService.currentTab.set('0');
-      history.replaceState(null, '', '#search');
+  private readonly applyInitialRepo = this.initRepoFromRoute();
+
+  private initRepoFromRoute(): void {
+    const param = this.route.snapshot.queryParamMap.get('repo');
+    if (param !== null && this.statsService.repoOptions.includes(param)) {
+      this.statsService.packageSearchSelectedRepo.set(param);
     }
   }
 
-  /**
-   * Get total users count.
-   */
-  async get30DayUsers(): Promise<void> {
-    this.appService
-      .get30dayUsers()
-      .pipe(retry({ delay: 5000, count: 3 }))
-      .subscribe({
-        next: (res) => {
-          this.statsService.totalUsers.set(res);
-          this.statsService.usersLoading.set(false);
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.statsService.usersLoading.set(false);
-          this.messageToastService.error('Error', 'Failed to load users count');
-          console.error(err);
-        },
+  private readonly usersResource = httpResource<number>(() =>
+    this.appService.getUsersResourceRequest(this.statsService.timeRangeDays() ?? undefined),
+  );
+
+  protected readonly activeTab = signal<StatsTab | null>(this.tabFromUrl(this.router.url));
+
+  private tabFromUrl(url: string): StatsTab | null {
+    const path = url.split('?')[0].split('/').filter(Boolean).pop() ?? '';
+    return isStatsTab(path) ? (path as StatsTab) : null;
+  }
+
+  constructor() {
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationStart || event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => {
+        this.activeTab.set(
+          event instanceof NavigationEnd ? this.tabFromUrl(event.urlAfterRedirects) : this.tabFromUrl(event.url),
+        );
       });
+
+    effect(() => {
+      const users = resourceValue(this.usersResource);
+      this.statsService.usersLoading.set(this.usersResource.isLoading());
+      this.statsService.totalUsers.set(users ?? null);
+      this.cdr.markForCheck();
+    });
+
+    // When arriving with a ?search= package name, always show the Search tab
+    // so the package detail is actually visible.
+    effect(() => {
+      const q = this.search();
+      if (typeof q === 'string' && q.trim()) {
+        void this.router.navigate(['search'], {
+          relativeTo: this.route,
+          replaceUrl: true,
+          queryParamsHandling: 'merge',
+          info: { disableViewTransition: true },
+        });
+        this.cdr.markForCheck();
+      }
+    });
   }
 
-  changeTab($event: string | number | undefined): void {
-    switch ($event) {
-      case '0':
-        history.replaceState(null, '', '#search');
-        break;
-      case '1':
-        history.replaceState(null, '', '#downloads');
-        break;
-      case '2':
-        history.replaceState(null, '', '#globals');
-        break;
-      case '3':
-        history.replaceState(null, '', '#update-review');
-        break;
-      case '4':
-        history.replaceState(null, '', '#builder-stats');
-        break;
+  readonly subtitle = 'Area for package statistics and other fun stuff.';
+
+  ngOnInit(): void {
+    this.appService.updateSeoTags(this.meta, {
+      title: 'Statistics and data',
+      description: 'Package and repository statistics for Chaotic-AUR',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics',
+      url: this.router.url,
+    });
+
+    // Legacy deep links used fragments (#builder-stats); forward them to the
+    // corresponding child route once.
+    const fragment = this.route.snapshot.fragment;
+    if (fragment !== null && isStatsTab(fragment)) {
+      void this.router.navigate([fragment], {
+        relativeTo: this.route,
+        replaceUrl: true,
+        info: { disableViewTransition: true },
+      });
     }
+  }
+
+  protected navigate(value: string | number | undefined): void {
+    if (typeof value === 'string' && isStatsTab(value)) {
+      void this.router.navigate([value], {
+        relativeTo: this.route,
+        info: { disableViewTransition: true },
+      });
+    }
+  }
+
+  protected onTimeRangeChange(days: number | null | undefined): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { range: timeRangeToParam(days ?? null) },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
+  }
+
+  protected onRepoChange(repo: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { repo: repo || null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 }

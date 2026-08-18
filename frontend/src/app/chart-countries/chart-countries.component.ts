@@ -1,42 +1,43 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { httpResource } from '@angular/common/http';
+import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { flavors } from '@catppuccin/palette';
-import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { FluidModule } from '@openng/optimus-ui/fluid';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
-import { retry } from 'rxjs';
 import { AppService } from '../app.service';
-import { shuffleArray } from '../functions';
+import { type ChartConfig, mochaLegendLabels } from '../chart-config';
+import { resourceValue, shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
-
-interface ChartConfig {
-  data: any;
-  options: any;
-}
 
 @Component({
   selector: 'chaotic-chart-countries',
   imports: [UIChart, FormsModule, InputNumber, FluidModule],
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
-  providers: [MessageToastService],
 })
-export class ChartCountriesComponent implements OnInit {
+export class ChartCountriesComponent {
   private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
   private readonly observer = inject(BreakpointObserver);
   protected readonly statsService = inject(StatsService);
 
-  readonly chartConfig = computed<ChartConfig>(() => {
-    const relevantData = this.statsService.countryRanksMetrics().slice(0, this.statsService.countryRanksRange());
+  private readonly resource = httpResource<{ name: string; count: number }[]>(() =>
+    this.appService.getCountryRanksResourceRequest(this.statsService.timeRangeDays() ?? undefined),
+  );
+
+  readonly loading = this.resource.isLoading;
+
+  readonly hasData = computed(() => this.resource.hasValue());
+
+  readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
+    const all = resourceValue(this.resource) ?? [];
+    const relevantData = all.slice(0, this.statsService.countryRanksRange());
     const labels: string[] = [];
     const data: number[] = [];
     for (const country of relevantData) {
-      labels.push(country.name);
+      labels.push(`${country.name}  ${this.countryCode2Flag(country.name)}`);
       data.push(country.count);
     }
 
@@ -54,20 +55,11 @@ export class ChartCountriesComponent implements OnInit {
       options: {
         chartArea: { right: 20, top: 0, width: '75%', height: '100%' },
         plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: 'Inter, Helvetica, Arial, sans-serif',
-            },
-            position: 'right',
-          },
+          legend: { labels: mochaLegendLabels(), position: 'right' },
         },
       },
     };
   });
-
-  readonly loading = signal(true);
 
   constructor() {
     this.observer
@@ -78,44 +70,13 @@ export class ChartCountriesComponent implements OnInit {
       });
   }
 
-  ngOnInit(): void {
-    this.getCountryRanks();
-  }
-
-  /**
-   * Query the country ranks.
-   */
-  private getCountryRanks(): void {
-    this.appService
-      .getCountryRanks()
-      .pipe(retry({ count: 3, delay: 5000 }))
-      .subscribe({
-        next: (data) => {
-          for (const country of data) {
-            country.name = `${country.name}  ${this.countryCode2Flag(country.name)}`;
-          }
-          this.statsService.countryRanksMetrics.set(data);
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.loading.set(false);
-          this.messageToastService.error('Error', 'Failed to load country chart data');
-          console.error(err);
-        },
-      });
-  }
-
-  /**
-   * Transform a country code to a flag emoji.
-   * Seen here: https://dev.to/jorik/country-code-to-flag-emoji-a21
-   * @returns The corresponding flag as emoji.
-   */
   private countryCode2Flag(countryCode: string): string {
+    // Flag emojis are regional indicator symbols starting at U+1F1E6 ('A' is code 65).
+    const flagEmojiOffset = 0x1f1e6 - 65;
     const codePoints = countryCode
       .toUpperCase()
       .split('')
-      // @ts-expect-error works just as expected
-      .map((char) => 127397 + char.charCodeAt());
+      .map((char) => flagEmojiOffset + char.charCodeAt(0));
     return String.fromCodePoint(...codePoints);
   }
 }

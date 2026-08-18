@@ -1,10 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
-import { MessageToastService } from '@garudalinux/core';
+import { httpResource } from '@angular/common/http';
+import { Component, computed, inject } from '@angular/core';
 import { UIChart } from '@openng/optimus-ui/chart';
-import { retry } from 'rxjs';
 import { AppService } from '../app.service';
-import { shuffleArray } from '../functions';
+import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
+import { parseCount, resourceValue, shuffleArray } from '../functions';
+import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 @Component({
@@ -12,45 +12,26 @@ import { CATPPUCCIN_FLAVOURS } from '../theme';
   imports: [UIChart],
   templateUrl: './chart-builders-amount.component.html',
   styleUrl: './chart-builders-amount.component.css',
-  providers: [MessageToastService],
 })
-export class ChartBuildersAmountComponent implements OnInit {
+export class ChartBuildersAmountComponent {
   private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
+  private readonly statsService = inject(StatsService);
 
-  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
-  readonly loading = signal(true);
+  private readonly resource = httpResource<{ name: string; count: string }[]>(() =>
+    this.appService.getBuildersAmountResourceRequest(this.statsService.timeRangeDays() ?? undefined),
+  );
 
-  ngOnInit(): void {
-    this.getBuildersAmount();
-  }
+  readonly loading = this.resource.isLoading;
 
-  /**
-   * Query the builders and their build amounts.
-   */
-  private getBuildersAmount(): void {
-    this.appService
-      .getBuildersAmount()
-      .pipe(retry({ count: 3, delay: 5000 }))
-      .subscribe({
-        next: (data) => {
-          this.chartConfig.set(this.buildChartConfig(data));
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.loading.set(false);
-          this.messageToastService.error('Error', 'Failed to load builders amount data');
-          console.error(err);
-        },
-      });
-  }
+  readonly hasData = computed(() => this.resource.hasValue());
 
-  private buildChartConfig(data: { name: string; count: string }[]): { data: any; options: any } {
+  readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
+    const data = resourceValue(this.resource) ?? [];
     const labels: string[] = [];
     const values: number[] = [];
     for (const item of data) {
       labels.push(item.name);
-      values.push(parseInt(item.count));
+      values.push(parseCount(item.count));
     }
 
     return {
@@ -68,33 +49,10 @@ export class ChartBuildersAmountComponent implements OnInit {
         maintainAspectRatio: false,
         aspectRatio: 0.4,
         plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
-            },
-          },
+          legend: { labels: mochaLegendLabels() },
         },
-        scales: {
-          x: {
-            ticks: {
-              color: flavors.mocha.colors.text.hex,
-            },
-            grid: {
-              color: flavors.mocha.colors.surface0.hex,
-            },
-          },
-          y: {
-            ticks: {
-              color: flavors.mocha.colors.text.hex,
-            },
-            grid: {
-              color: flavors.mocha.colors.surface0.hex,
-            },
-          },
-        },
+        scales: mochaScales(),
       },
     };
-  }
+  });
 }

@@ -1,207 +1,177 @@
-import {
-  type Build,
-  type Builder,
-  type BuildStatus,
-  type ChaoticEvent,
-  type CountryRankList,
-  MirrorData,
-  type Package,
-  type PackageRankList,
-  type PipelineWithExternalStatus,
-  type Repo,
-  type SpecificPackageMetrics,
-  type StatsObject,
-  type UserAgentList,
-} from '@./shared-lib';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams, type HttpResourceRequest } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
-import { Observable, Subject } from 'rxjs';
+import {
+  type BuildSortField,
+  type BuildStatus,
+  type ChaoticEvent,
+  type PackageSortField,
+  type SortOrder,
+} from '@chaotic-next/shared-lib';
+import { Subject } from 'rxjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
-import { updateSeoTags } from './functions';
-import { Message } from './newsfeed/interfaces';
+import { type SeoTags, updateSeoTags } from './functions';
+
+export interface PackagesQueryParams {
+  page: number;
+  perPage: number;
+  q?: string;
+  sort?: PackageSortField;
+  order?: SortOrder;
+  repoId?: number;
+}
+
+export interface BuildsQueryParams {
+  page: number;
+  perPage: number;
+  q?: string;
+  builder?: string;
+  repo?: string;
+  status?: BuildStatus;
+  sort?: BuildSortField;
+  order?: SortOrder;
+}
+
+export const ALL_TIME_DAYS = 3650;
 
 @Service()
 export class AppService {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly http = inject(HttpClient);
 
-  /**
-   * Channel for instant updates regarding builds and pipeline status
-   */
   serverEvents: EventSource = new EventSource(`${this.appConfig.backendUrl}/sse?ngsw-bypass`);
 
-  /**
-   * Subject for SSE notifications
-   */
   chaoticSse$ = new Subject<ChaoticEvent>();
   chaoticEvent = this.chaoticSse$.asObservable();
 
-  getStatusChecks(): Observable<PipelineWithExternalStatus[]> {
-    return this.http.get<PipelineWithExternalStatus[]>(`${this.appConfig.backendUrl}/gitlab/pipelines`);
+  constructor() {
+    // Close on error to stop EventSource's automatic infinite reconnect loop.
+    this.serverEvents.onerror = () => this.serverEvents.close();
   }
 
-  getQueueStats(): Observable<StatsObject> {
-    return this.http.get<StatsObject>(`${this.appConfig.apiUrl}/queue/stats`);
+  getNewsResourceRequest(): HttpResourceRequest {
+    return { url: '/news.json' };
   }
 
-  getNews(): Observable<Message[]> {
-    return this.http.get<Message[]>(`/news.json`);
+  private daysParams(days?: number): HttpParams {
+    return new HttpParams().set('days', (days ?? ALL_TIME_DAYS).toString());
   }
 
-  get30dayUsers(): Observable<string> {
-    return this.http.get<string>(`${this.appConfig.cachedMetricsUrl}/30d/users`);
+  getUsersResourceRequest(days?: number): HttpResourceRequest {
+    return { url: `${this.appConfig.cachedMetricsUrl}/users`, params: this.daysParams(days) };
   }
 
-  getOverallPackageStats(packageMetricRange: number): Observable<PackageRankList> {
-    return this.http.get<PackageRankList>(`${this.appConfig.cachedMetricsUrl}/30d/rank/${packageMetricRange}/packages`);
+  getUserAgentsResourceRequest(days?: number): HttpResourceRequest {
+    return { url: `${this.appConfig.cachedMetricsUrl}/user-agents`, params: this.daysParams(days) };
   }
 
-  getSpecificPackageMetrics(packageName: string): Observable<SpecificPackageMetrics> {
-    return this.http.get<SpecificPackageMetrics>(`${this.appConfig.cachedMetricsUrl}/30d/package/${packageName}`);
+  getCountryRanksResourceRequest(days?: number): HttpResourceRequest {
+    return { url: `${this.appConfig.cachedMetricsUrl}/rank/30/countries`, params: this.daysParams(days) };
   }
 
-  get30dayUserAgents(): Observable<UserAgentList> {
-    return this.http.get<UserAgentList>(`${this.appConfig.cachedMetricsUrl}/30d/user-agents`);
+  getOverallPackageStatsResourceRequest(range: number, days?: number): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.cachedMetricsUrl}/rank/${range}/packages`,
+      params: this.daysParams(days),
+    };
   }
 
-  getCountryRanks(): Observable<CountryRankList> {
-    return this.http.get<CountryRankList>(`${this.appConfig.cachedMetricsUrl}/30d/rank/30/countries`);
+  getSpecificPackageMetricsResourceRequest(packageName: string, days?: number): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.cachedMetricsUrl}/package/${packageName}`,
+      params: this.daysParams(days),
+    };
   }
 
-  getPackageList(): Observable<(Package & { reponame: string })[]> {
-    return this.http.get<(Package & { reponame: string })[]>(`${this.appConfig.backendUrl}/builder/packages?repo=true`);
+  getBuildsPerDayResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/per-day/${days}` };
   }
 
-  getPackage(name: string, repo: string): Observable<Package> {
-    return this.http.get<Package>(`${this.appConfig.backendUrl}/builder/package/${name}`, {
-      params: { repo },
-    });
+  getBuildersAmountResourceRequest(days?: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/builders/amount`, params: this.daysParams(days) };
   }
 
-  getPackageBuilds(amount: number, status?: BuildStatus): Observable<Build[]> {
-    const params: { [key: string]: string } = { amount: amount.toString() };
-    if (status) params['status'] = status.toString();
-
-    return this.http.get<Build[]>(`${this.appConfig.backendUrl}/builder/builds`, {
-      params,
-    });
+  getAverageBuildTimeResourceRequest(days?: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/average/time`, params: this.daysParams(days) };
   }
 
-  /**
-   * Update the meta tags for the current page.
-   */
-  updateSeoTags(meta: Meta, title: string, description: string, keywords: string, url: string, image?: string): void {
-    updateSeoTags(meta, title, description, keywords, url, image);
+  getPackageAverageBuildTimesResourceRequest(pkgnames: string[], days?: number): HttpResourceRequest {
+    let params = this.daysParams(days);
+    for (const pkgname of pkgnames) params = params.append('pkgname', pkgname);
+    return { url: `${this.appConfig.backendUrl}/builder/average/pkgname`, params };
   }
 
-  getMirrorsStats(): Observable<MirrorData> {
-    return this.http.get<MirrorData>(this.appConfig.mirrorsUrl);
+  getPopularPackagesResourceRequest(amount: number, days?: number, status?: BuildStatus): HttpResourceRequest {
+    let params = this.daysParams(days);
+    if (status !== undefined) {
+      params = params.set('status', status.toString());
+    }
+    return { url: `${this.appConfig.backendUrl}/builder/popular/${amount}`, params };
   }
 
-  getUpdateReviewStats(): Observable<{ username: string; reviews: number }[]> {
-    return this.http.get<{ username: string; reviews: number }[]>(`${this.appConfig.backendUrl}/gitlab/review-stats`);
+  getBuildsCountByPkgnamePerDayResourceRequest(pkgname: string, days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/count/${pkgname}/${days}` };
   }
 
-  // Builder API methods
-  getBuilders(): Observable<Builder[]> {
-    return this.http.get<Builder[]>(`${this.appConfig.backendUrl}/builder/builders`);
+  getBackendUrl(): string {
+    return this.appConfig.backendUrl;
   }
 
-  getRepos(): Observable<Repo[]> {
-    return this.http.get<Repo[]>(`${this.appConfig.backendUrl}/builder/repos`);
+  getPackagesResourceRequest(params: PackagesQueryParams): HttpResourceRequest {
+    let queryParams = new HttpParams()
+      .set('repo', 'true')
+      .set('page', params.page.toString())
+      .set('perPage', params.perPage.toString());
+    if (params.q) queryParams = queryParams.set('q', params.q);
+    if (params.sort) queryParams = queryParams.set('sort', params.sort);
+    if (params.order) queryParams = queryParams.set('order', params.order);
+    if (params.repoId !== undefined) queryParams = queryParams.set('repoId', params.repoId.toString());
+    return { url: `${this.appConfig.backendUrl}/builder/packages`, params: queryParams };
   }
 
-  getLatestBuilds(amount = 50, offset = 0, status?: BuildStatus): Observable<Build[]> {
-    const params: { [key: string]: string } = { amount: amount.toString(), offset: offset.toString() };
-    if (status !== undefined) params['status'] = status.toString();
-    return this.http.get<Build[]>(`${this.appConfig.backendUrl}/builder/latest`, { params });
+  getBuildsResourceRequest(params: BuildsQueryParams): HttpResourceRequest {
+    let queryParams = new HttpParams().set('page', params.page.toString()).set('perPage', params.perPage.toString());
+    if (params.q) queryParams = queryParams.set('q', params.q);
+    if (params.builder) queryParams = queryParams.set('builder', params.builder);
+    if (params.repo) queryParams = queryParams.set('repo', params.repo);
+    if (params.status !== undefined) queryParams = queryParams.set('status', params.status.toString());
+    if (params.sort) queryParams = queryParams.set('sort', params.sort);
+    if (params.order) queryParams = queryParams.set('order', params.order);
+    return { url: `${this.appConfig.backendUrl}/builder/builds`, params: queryParams };
   }
 
-  getLatestBuildsByPkgname(pkgname: string, offset = 0, amount = 30): Observable<Build[]> {
-    const params: { [key: string]: string } = { offset: offset.toString(), amount: amount.toString() };
-    return this.http.get<Build[]>(`${this.appConfig.backendUrl}/builder/latest/${pkgname}`, { params });
+  getPackageResourceRequest(name: string, repo: string): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/package/${name}`, params: new HttpParams().set('repo', repo) };
   }
 
-  getLatestBuildsByPkgnameWithAmount(pkgname: string, days: number, offset = 0): Observable<Build[]> {
-    const params: { [key: string]: string } = { offset: offset.toString() };
-    return this.http.get<Build[]>(`${this.appConfig.backendUrl}/builder/latest/${pkgname}/${days}`, { params });
+  getPackageRebuildTriggerSourcesResourceRequest(pkgname: string): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/repo/dependencies/${encodeURIComponent(pkgname)}` };
   }
 
-  getBuildsPerPackage(): Observable<{ pkgbase: string; count: string }[]> {
-    return this.http.get<{ pkgbase: string; count: string }[]>(`${this.appConfig.backendUrl}/builder/count/days`);
+  getStatusChecksResourceRequest(): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/gitlab/pipelines` };
   }
 
-  getBuildsPerPackageWithDays(days: number): Observable<{ pkgbase: string; count: string }[]> {
-    return this.http.get<{ pkgbase: string; count: string }[]>(
-      `${this.appConfig.backendUrl}/builder/count/days/${days}`,
-    );
+  getQueueStatsResourceRequest(): HttpResourceRequest {
+    return { url: `${this.appConfig.apiUrl}/queue/stats` };
   }
 
-  getLatestBuildsCountByPkgname(pkgname: string): Observable<number> {
-    return this.http.get<number>(`${this.appConfig.backendUrl}/builder/count/package/${pkgname}`);
+  getPackageBuildsResourceRequest(perPage = 20, status?: BuildStatus): HttpResourceRequest {
+    let params: HttpParams = new HttpParams().set('perPage', perPage.toString());
+    if (status !== undefined) params = params.set('status', status.toString());
+    return { url: `${this.appConfig.backendUrl}/builder/builds`, params };
   }
 
-  getBuildsCountByPkgnamePerDay(
-    pkgname: string,
-    amount = 50,
-    offset = 0,
-  ): Observable<{ day: string; repo: string; count: string }[]> {
-    const params: { [key: string]: string } = { offset: offset.toString(), amount: amount.toString() };
-    return this.http.get<{ day: string; repo: string; count: string }[]>(
-      `${this.appConfig.backendUrl}/builder/count/${pkgname}/${amount}`,
-      { params },
-    );
+  updateSeoTags(meta: Meta, seo: SeoTags): void {
+    updateSeoTags(meta, seo);
   }
 
-  getPopularPackages(
-    amount: number,
-    offset = 0,
-    status?: BuildStatus,
-  ): Observable<{ pkgbase_pkgname: string; count: string }[]> {
-    const params: { [key: string]: string } = { offset: offset.toString() };
-    if (status !== undefined) params['status'] = status.toString();
-    return this.http.get<{ pkgbase_pkgname: string; count: string }[]>(
-      `${this.appConfig.backendUrl}/builder/popular/${amount}`,
-      { params },
-    );
+  getMirrorsStatsResourceRequest(): HttpResourceRequest {
+    return { url: this.appConfig.mirrorsUrl };
   }
 
-  getBuildersAmount(): Observable<{ name: string; count: string }[]> {
-    return this.http.get<{ name: string; count: string }[]>(`${this.appConfig.backendUrl}/builder/builders/amount`);
-  }
-
-  getBuildsPerDayDefault(
-    pkgname: string,
-    days: number,
-    offset = 0,
-  ): Observable<{ day: string; repo: string; count: string }[]> {
-    const params: { [key: string]: string } = { offset: offset.toString() };
-    return this.http.get<{ day: string; repo: string; count: string }[]>(
-      `${this.appConfig.backendUrl}/builder/per-day/pkgname/${pkgname}/${days}`,
-      { params },
-    );
-  }
-
-  getBuildsPerDay(days: number): Observable<{ day: string; count: string }[]> {
-    return this.http.get<{ day: string; count: string }[]>(`${this.appConfig.backendUrl}/builder/per-day/${days}`);
-  }
-
-  getLatestBuildsByPkgnameWithUrls(
-    amount = 50,
-    offset = 0,
-  ): Observable<{ commit: string; logUrl: string; pkgname: string; timeToEnd: string; version: string }[]> {
-    const params: { [key: string]: string } = { offset: offset.toString(), amount: amount.toString() };
-    return this.http.get<{ commit: string; logUrl: string; pkgname: string; timeToEnd: string; version: string }[]>(
-      `${this.appConfig.backendUrl}/builder/latest/url/${amount}`,
-      { params },
-    );
-  }
-
-  getAverageBuildTimePerStatus(): Observable<{ average_build_time: string; status: string }[]> {
-    return this.http.get<{ average_build_time: string; status: string }[]>(
-      `${this.appConfig.backendUrl}/builder/average/time`,
-    );
+  getUpdateReviewStatsResourceRequest(): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/gitlab/review-stats` };
   }
 }

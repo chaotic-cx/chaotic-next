@@ -1,67 +1,58 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { httpResource } from '@angular/common/http';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
-import { Fieldset } from '@openng/optimus-ui/fieldset';
-import { ScrollPanel } from '@openng/optimus-ui/scrollpanel';
-import { TableModule } from '@openng/optimus-ui/table';
+import { PrimeTemplate } from '@openng/optimus-ui/api';
+import { Button } from '@openng/optimus-ui/button';
+import { Panel } from '@openng/optimus-ui/panel';
 import { AppService } from '../app.service';
+import { resourceValue } from '../functions';
 import { Message } from './interfaces';
+
+const INITIAL_VISIBLE_NEWS = 3;
+const NEWS_INCREMENT = 3;
 
 @Component({
   selector: 'chaotic-newsfeed',
-  imports: [CommonModule, TableModule, Fieldset, ScrollPanel],
+  imports: [CommonModule, Panel, Button, PrimeTemplate],
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],
 })
-export class NewsfeedComponent implements OnInit {
+export class NewsfeedComponent {
   private readonly appService = inject(AppService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly messageToastService = inject(MessageToastService);
-  private readonly observer = inject(BreakpointObserver);
 
-  readonly isWide = signal<boolean>(true);
-  newsList: { data: Message; html?: string }[] = [];
+  private readonly newsResource = httpResource<Message[]>(() => this.appService.getNewsResourceRequest());
 
-  constructor() {
-    this.observer
-      .observe('(min-width: 768px)')
-      .pipe(takeUntilDestroyed())
-      .subscribe((result) => {
-        this.isWide.set(result.matches);
-        this.cdr.markForCheck();
-      });
+  readonly newsList = computed<{ data: Message; html: string }[]>(() => {
+    const news = resourceValue(this.newsResource);
+    if (!news) return [];
+    return news
+      .filter((item) => item.type === 'message')
+      .map((item) => ({ data: item, html: this.entityToHtml(item) }))
+      .filter((item) => item.html.length > 0)
+      .sort((a, b) => b.data.id - a.data.id);
+  });
+
+  private readonly visibleCount = signal(INITIAL_VISIBLE_NEWS);
+
+  readonly visibleNews = computed(() => this.newsList().slice(0, this.visibleCount()));
+
+  readonly hasMore = computed(() => this.newsList().length > this.visibleCount());
+
+  showMore() {
+    this.visibleCount.update((count) => count + NEWS_INCREMENT);
   }
 
-  ngOnInit(): void {
-    this.appService.getNews().subscribe({
-      next: (data) => {
-        for (const news of data) {
-          if (news.type !== 'message') continue;
-          const html: string = this.entityToHtml(news);
-          if (!html) continue;
-          this.newsList.push({ data: news, html: html });
-        }
-        this.newsList.sort((a, b) => {
-          return b.data.id - a.data.id;
-        });
-
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
+  constructor() {
+    effect(() => {
+      if (this.newsResource.error()) {
         this.messageToastService.error('Error', 'Failed to fetch news');
-        console.error(err);
-      },
+      }
     });
   }
 
-  /**
-   * Convert the entity object of a Telegram message to HTML.
-   * @param message The Telegram message to convert.
-   * @returns A string containing the message as HTML.
-   */
   entityToHtml(message: Message): string {
     let returnValue: string;
 
@@ -77,7 +68,9 @@ export class NewsfeedComponent implements OnInit {
           } else {
             switch (item.type) {
               case 'text_link':
-                return `<a class="text-ctp-mauve" href="${item.href}" target="_blank">${item.text}</a>`;
+                return item.href
+                  ? `<a class="text-ctp-mauve" href="${item.href}" target="_blank">${item.text}</a>`
+                  : item.text;
               case 'bold':
                 return `<strong>${item.text}</strong>`;
               case 'code':

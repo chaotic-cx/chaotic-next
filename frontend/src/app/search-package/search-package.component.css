@@ -1,3 +1,16 @@
+:host {
+  display: flex;
+  flex-direction: column;
+}
+
 .min-h-footer {
-  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
 }

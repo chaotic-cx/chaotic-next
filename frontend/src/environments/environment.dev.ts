@@ -4,6 +4,7 @@ export const environment: EnvironmentModel = {
   production: false,
   apiUrl: 'http://localhost:4201/api',
   backendUrl: 'http://localhost:4201/backend',
+  authBaseUrl: 'http://localhost:4201/backend/api/auth',
   cachedMetricsUrl: 'http://localhost:4201/backend/metrics',
   homeUrl: 'https://aur.chaotic.cx/',
   logsUrl: 'https://builds.garudalinux.org/logs/logs.html',

@@ -1,60 +1,49 @@
-<div class="chaotic-container-wide-center">
-  <chaotic-title [subtitle]="subtitle()" title="Statistics and data" />
+<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
+  <chaotic-title [subtitleHtml]="subtitle" title="Statistics and data" />
 
-  <div>
-    <p-tabs [(value)]="statsService.currentTab" (valueChange)="changeTab($event)">
+  <div class="stats-tabs-container">
+    <p-tabs [value]="activeTab() ?? undefined" (valueChange)="navigate($event)">
       <p-tablist>
-        <p-tab value="0" pTooltip="Search for package statistics" tooltipPosition="bottom">Search</p-tab>
-        <p-tab value="1" pTooltip="Global usage statistics" tooltipPosition="bottom">Globals</p-tab>
-        <p-tab value="2" pTooltip="Download statistics and trends" tooltipPosition="bottom">Downloads</p-tab>
-        <p-tab value="3" pTooltip="Update review statistics" tooltipPosition="bottom">Update Reviews</p-tab>
-        <p-tab value="4" pTooltip="Builder performance statistics" tooltipPosition="bottom">Builder Stats</p-tab>
+        <p-tab pTooltip="Search for package statistics" tooltipPosition="bottom" value="search">Search</p-tab>
+        <p-tab pTooltip="Global usage statistics" tooltipPosition="bottom" value="globals">Globals</p-tab>
+        <p-tab pTooltip="Download statistics and trends" tooltipPosition="bottom" value="downloads">Downloads</p-tab>
+        <p-tab pTooltip="Update review statistics" tooltipPosition="bottom" value="update-review">
+          Update Reviews
+        </p-tab>
+        <p-tab pTooltip="Builder performance statistics" tooltipPosition="bottom" value="builder-stats">
+          Builder Stats
+        </p-tab>
       </p-tablist>
-      <p-tabpanels>
-        <p-tabpanel value="0">
-          <chaotic-search-package />
-        </p-tabpanel>
-        <p-tabpanel value="1">
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Country list">
-              <chaotic-chart-countries />
-            </p-card>
-          </div>
-          <div class="mt-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="User agents">
-              <chaotic-chart-useragent />
-            </p-card>
-          </div>
-        </p-tabpanel>
-        <p-tabpanel value="2">
-          <chaotic-chart-downloads [(range)]="statsService.globalPackageMetricRange" />
-        </p-tabpanel>
-        <p-tabpanel value="3">
-          <chaotic-chart-review-stats />
-        </p-tabpanel>
-        <p-tabpanel value="4">
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Builds per Day">
-              <chaotic-chart-builds-per-day />
-            </p-card>
-          </div>
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Builds per Builder">
-              <chaotic-chart-builders-amount />
-            </p-card>
-          </div>
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Average Build Time per Status">
-              <chaotic-chart-average-build-time />
-            </p-card>
-          </div>
-          <div class="mb-8">
-            <p-card [style]="{ width: '100%', overflow: 'hidden' }" header="Popular Packages">
-              <chaotic-chart-popular-packages />
-            </p-card>
-          </div>
-        </p-tabpanel>
-      </p-tabpanels>
     </p-tabs>
+    <div class="p-tabpanels flex flex-col">
+      <div class="mb-4 grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-2 sm:flex sm:items-center">
+        <span class="text-sm text-ctp-subtext1 justify-self-start ml-2.5">
+          Total users: {{ statsService.usersLoading() ? 'loading…' : (statsService.totalUsers() ?? '–') }}
+        </span>
+        <div class="flex items-center justify-self-end gap-2 sm:ml-auto">
+          <label class="text-sm text-ctp-subtext1" for="statsTimeRange">Time range</label>
+          <p-select
+            [(ngModel)]="statsService.timeRangeDays"
+            [options]="statsService.timeRangeOptions"
+            (ngModelChange)="onTimeRangeChange($event)"
+            inputId="statsTimeRange"
+            optionLabel="label"
+            optionValue="days"
+            appendTo="body"
+          />
+        </div>
+        @if (activeTab() === 'search') {
+          <p-select
+            class="col-span-2 w-full sm:col-span-1 sm:w-auto"
+            [(ngModel)]="statsService.packageSearchSelectedRepo"
+            [options]="statsService.repoOptions"
+            (ngModelChange)="onRepoChange($event)"
+            appendTo="body"
+            placeholder="Repo"
+          />
+        }
+      </div>
+      <router-outlet />
+    </div>
   </div>
 </div>
