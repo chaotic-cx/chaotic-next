@@ -23,6 +23,16 @@
           </button>
         }
       </div>
+      <p-select
+        class="job-select w-full min-w-0"
+        [options]="jobOptions()"
+        [ngModel]="selectedJobId()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onJobSelect($event)"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+      />
       @if (streaming()) {
         <span class="live-badge">● live</span>
       }

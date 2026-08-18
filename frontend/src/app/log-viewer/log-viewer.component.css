@@ -96,6 +96,24 @@
   -webkit-backdrop-filter: blur(2px);
 }
 
+.job-select {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .log-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .job-list {
+    display: none;
+  }
+
+  .job-select {
+    display: flex;
+  }
+}
+
 .live-badge {
   color: var(--ctp-mocha-red);
   font-size: 0.75rem;

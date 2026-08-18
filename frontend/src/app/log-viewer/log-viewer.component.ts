@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GitlabJob, GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
+import { Select } from '@openng/optimus-ui/select';
 import { AppService } from '../app.service';
 import { copyLineLink, errorMessage } from '../functions';
 import { TitleComponent } from '../title/title.component';
@@ -33,7 +35,7 @@ function parseChunk(data: string): GitlabLogChunk | undefined {
 
 @Component({
   selector: 'chaotic-log-viewer',
-  imports: [XtermLogComponent, CommonModule, ProgressSpinner, TitleComponent],
+  imports: [XtermLogComponent, CommonModule, FormsModule, ProgressSpinner, Select, TitleComponent],
   templateUrl: './log-viewer.component.html',
   styleUrl: './log-viewer.component.css',
 })
@@ -59,6 +61,9 @@ export class LogViewerComponent {
   protected readonly runningStatuses = RUNNING_STATUSES;
 
   protected readonly selectedJob = computed(() => this.jobs().find((job) => job.id === this.selectedJobId()));
+  protected readonly jobOptions = computed(() =>
+    this.jobs().map((job) => ({ label: `${job.name} (${job.status})`, value: job.id })),
+  );
   protected readonly subtitle = computed(() => {
     const job = this.selectedJob();
     return job ? `${job.name} — live output` : 'No job selected';
@@ -105,6 +110,11 @@ export class LogViewerComponent {
       info: { disableViewTransition: true },
     });
     this.openStream(job.id);
+  }
+
+  protected onJobSelect(id: number): void {
+    const job = this.jobs().find((candidate) => candidate.id === id);
+    if (job) this.selectJob(job);
   }
 
   private async loadPipeline(pipelineId: number): Promise<void> {
