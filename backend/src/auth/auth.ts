@@ -108,9 +108,11 @@ const DISABLED_PATHS = [
   '/verify-email',
 ] as const;
 
+const authBaseUrl = new URL(process.env.BETTER_AUTH_URL ?? 'http://localhost:3000');
+
 export const auth = betterAuth({
   appName: 'Chaotic-AUR',
-  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
+  baseURL: authBaseUrl.origin,
   secret: process.env.BETTER_AUTH_SECRET,
   emailAndPassword: { enabled: false },
   disabledPaths: [...DISABLED_PATHS],
