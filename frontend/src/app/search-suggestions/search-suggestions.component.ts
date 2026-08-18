@@ -14,7 +14,7 @@ import { Component, effect, inject, input, output, TemplateRef, ViewContainerRef
           <li>
             <button
               class="w-full cursor-pointer px-3 py-2 text-left text-ctp-text transition-colors hover:bg-ctp-surface0/60"
-              (mousedown)="select.emit(suggestion)"
+              (mousedown)="selectSuggestion.emit(suggestion)"
               type="button"
             >
               {{ suggestion }}
@@ -36,7 +36,7 @@ export class SearchSuggestionsComponent {
   readonly suggestions = input<string[]>([]);
   readonly visible = input<boolean>(false);
 
-  readonly select = output<string>();
+  readonly selectSuggestion = output<string>();
 
   private overlayRef: OverlayRef | undefined;
 

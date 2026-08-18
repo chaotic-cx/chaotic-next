@@ -1,4 +1,5 @@
 import { Service, signal } from '@angular/core';
+import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
 
 export const STATS_TABS = ['search', 'globals', 'downloads', 'update-review', 'builder-stats'] as const;
 export type StatsTab = (typeof STATS_TABS)[number];
@@ -27,6 +28,8 @@ export class StatsService {
   readonly usersLoading = signal<boolean>(true);
 
   readonly timeRangeOptions = TIME_RANGES;
+
+  readonly repoOptions = REPO_OPTIONS;
 
   readonly timeRangeDays = signal<number | null>(TIME_RANGES[1].days);
 

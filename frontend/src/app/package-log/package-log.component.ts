@@ -3,11 +3,11 @@ import {
   computed,
   effect,
   ElementRef,
-  HostListener,
   inject,
   input,
   OnDestroy,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
@@ -18,6 +18,7 @@ import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from '../app.service';
+import { copyLineLink, formatDuration } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
 import { PackageLogService } from './package-log.service';
@@ -39,12 +40,11 @@ function parseChunk(data: string): GitlabLogChunk | undefined {
   }
 }
 
-function formatElapsed(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+function parseLogTimestamp(value: string): number {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})$/);
+  if (!match) return NaN;
+  const [, day, month, year, hour, minute, second] = match;
+  return Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
 }
 
 @Component({
@@ -52,6 +52,9 @@ function formatElapsed(totalSeconds: number): string {
   imports: [XtermLogComponent, ProgressSpinner, TitleComponent, IconField, InputIcon, InputText],
   templateUrl: './package-log.component.html',
   styleUrl: './package-log.component.css',
+  host: {
+    '(document:keydown)': 'onGlobalKeydown($event)',
+  },
 })
 export class PackageLogComponent implements OnDestroy {
   private readonly appService = inject(AppService);
@@ -73,7 +76,10 @@ export class PackageLogComponent implements OnDestroy {
   protected readonly searchQuery = signal('');
   protected readonly elapsed = signal(0);
 
-  protected readonly elapsedLabel = computed(() => formatElapsed(this.elapsed()));
+  protected readonly buildStartMs = signal<number | undefined>(undefined);
+  protected readonly buildEndMs = signal<number | undefined>(undefined);
+
+  protected readonly elapsedLabel = computed(() => formatDuration(this.elapsed()));
 
   protected readonly formattedTimestamp = computed(() => {
     const ms = Number(this.timestamp());
@@ -90,7 +96,10 @@ export class PackageLogComponent implements OnDestroy {
     effect(() => {
       const pkgname = this.pkgname();
       const timestamp = this.timestamp();
-      if (pkgname && timestamp) this.loadLog(pkgname, timestamp);
+      // untracked: loadLog reads the timer signals the log-parsing effect below
+      // rewrites; tracking them would retrigger this effect and reopen the
+      // EventSource in an endless loop.
+      if (pkgname && timestamp) untracked(() => this.loadLog(pkgname, timestamp));
     });
 
     effect(() => {
@@ -98,9 +107,28 @@ export class PackageLogComponent implements OnDestroy {
       const match = this.logChunk().match(/Executing build on host ([^\s.,]+)/);
       if (match?.[1]) this.builder.set(match[1]);
     });
+
+    effect(() => {
+      const text = this.logChunk();
+      if (!text) return;
+      const startMatch = text.match(/Added to build queue at (\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2}) UTC/);
+      if (startMatch?.[1]) {
+        const ms = parseLogTimestamp(startMatch[1]);
+        if (Number.isFinite(ms)) this.buildStartMs.set(ms);
+      }
+      const endMatch = text.match(/Build job \S+ finished at (\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2}) UTC/);
+      if (endMatch?.[1]) {
+        const ms = parseLogTimestamp(endMatch[1]);
+        if (Number.isFinite(ms)) {
+          this.buildEndMs.set(ms);
+          const start = this.buildStartMs();
+          if (start !== undefined) this.elapsed.set(Math.max(0, Math.floor((ms - start) / 1000)));
+          this.stopElapsedTimer();
+        }
+      }
+    });
   }
 
-  @HostListener('document:keydown', ['$event'])
   protected onGlobalKeydown(event: KeyboardEvent): void {
     if (!event.ctrlKey) return;
     const key = event.key.toLowerCase();
@@ -146,6 +174,7 @@ export class PackageLogComponent implements OnDestroy {
       this.loading.set(false);
       if (chunk.complete) {
         this.streaming.set(false);
+        this.stopElapsedTimer();
         this.closeStream();
         return;
       }
@@ -160,6 +189,8 @@ export class PackageLogComponent implements OnDestroy {
 
     source.onerror = () => {
       this.loading.set(false);
+      this.streaming.set(false);
+      this.error.set('Log stream ended unexpectedly. Please retry in a moment.');
       this.closeStream();
     };
   }
@@ -170,8 +201,19 @@ export class PackageLogComponent implements OnDestroy {
   }
 
   private startElapsedTimer(startMs: number): void {
-    const base = Number.isFinite(startMs) ? startMs : Date.now();
-    const tick = () => this.elapsed.set(Math.max(0, Math.floor((Date.now() - base) / 1000)));
+    this.buildStartMs.set(Number.isFinite(startMs) ? startMs : Date.now());
+    this.buildEndMs.set(undefined);
+    const tick = () => {
+      const start = this.buildStartMs();
+      if (start === undefined) return;
+      const end = this.buildEndMs();
+      if (end !== undefined) {
+        this.elapsed.set(Math.max(0, Math.floor((end - start) / 1000)));
+        this.stopElapsedTimer();
+        return;
+      }
+      this.elapsed.set(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    };
     if (this.elapsedTimer !== undefined) window.clearInterval(this.elapsedTimer);
     tick();
     this.elapsedTimer = window.setInterval(tick, 1000);
@@ -205,5 +247,15 @@ export class PackageLogComponent implements OnDestroy {
 
   protected downloadLog(): void {
     this.terminalRef()?.downloadLog(`${this.pkgname() ?? 'build'}.log`);
+  }
+
+  protected onLineClick(line: number): void {
+    copyLineLink(line);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { line },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 }
