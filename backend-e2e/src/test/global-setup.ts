@@ -20,6 +20,7 @@ export async function setup(): Promise<void> {
   process.env.NODE_ENV = 'development';
   process.env.BETTER_AUTH_SECRET = 'test-secret-test-secret-test-secret-test-secret';
   process.env.BETTER_AUTH_URL = 'http://localhost:3000';
+  process.env.BETTER_AUTH_TRUSTED_ORIGINS = '';
   process.env.PG_HOST = container.getHost();
   process.env.PG_PORT = String(container.getPort());
   process.env.PG_USER = container.getUsername();
