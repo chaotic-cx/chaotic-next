@@ -1,7 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
+import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Divider } from '@openng/optimus-ui/divider';
 import { Panel } from '@openng/optimus-ui/panel';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
@@ -15,13 +17,15 @@ import { TitleComponent } from '../title/title.component';
   selector: 'chaotic-docs',
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
-  imports: [Panel, Divider, TitleComponent, RouterLink, Highlight, Tooltip],
+  imports: [Panel, Divider, TitleComponent, RouterLink, Highlight, Tooltip, PrimeTemplate],
 })
 export class DocsComponent implements OnInit {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';
   readonly ignorePkg = 'IgnorePkg = ...';
@@ -34,6 +38,7 @@ export class DocsComponent implements OnInit {
   readonly powerpillUsage = '$ sudo pacman -Sy && sudo powerpill -Su && paru -Su';
   readonly receiveKeys: string;
   readonly syncMirrors = '$ sudo pacman -Syu';
+  readonly apiDocsUrl = `${this.appConfig.backendUrl}/api/docs`;
 
   constructor() {
     this.receiveKeys =
@@ -42,13 +47,30 @@ export class DocsComponent implements OnInit {
   }
 
   ngOnInit() {
-    updateSeoTags(
-      this.meta,
-      'Documentation',
-      'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
-      this.router.url,
-    );
+    updateSeoTags(this.meta, {
+      title: 'Documentation',
+      description: 'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
+      url: this.router.url,
+    });
+
+    this.route.fragment
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((fragment) => this.scrollToFragment(fragment));
+  }
+
+  private scrollToFragment(fragment: string | null): void {
+    if (!fragment) return;
+    document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  scrollTo(id: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      fragment: id,
+      info: { disableViewTransition: true },
+    });
   }
 
   copyText(text: string) {

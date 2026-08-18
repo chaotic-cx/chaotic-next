@@ -1,24 +1,26 @@
-import { ChaoticEvent, MoleculerCurrentQueueObject } from '@./shared-lib';
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import type { Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
+import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import IORedis from 'ioredis';
-import { type Context, Service, ServiceBroker } from 'moleculer';
-import { Subject } from 'rxjs';
-import { IsNull, Not, Repository } from 'typeorm';
+import { ServiceBroker } from 'moleculer';
+import { Repository } from 'typeorm';
 import { EventService } from '../events/event.service';
-import { generateNodeId, nDaysInPast } from '../functions';
 import { GitlabService } from '../gitlab/gitlab.service';
-import { GitlabStatusEvent } from '../gitlab/interfaces';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
-import { BuilderDbConnections, BuildStatus, MoleculerBuildObject } from '../types';
-import { Build, Builder, builderExists, Package, pkgnameExists, Repo, repoExists } from './builder.entity';
-import { brokerConfig, MoleculerConfigCommonService } from './moleculer.config';
+import { BuildStatus } from '../types/types';
+import { CACHE_TTL_MS, MAX_AMOUNT, MAX_DAYS_PER_DAY_CHART, MAX_DAYS_WINDOW, MAX_OFFSET } from '../utils/constants';
+import { clampInt, errorMessage, generateNodeId, nDaysInPast, whitelistSort } from '../utils/functions';
+import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
+import { BuilderDatabaseService } from './builder-database.service';
+import { Build, Builder, Package, Repo } from './builder.entity';
+import { brokerConfig } from './moleculer.config';
 
 @Injectable()
-export class BuilderService implements OnModuleInit {
-  private broker: ServiceBroker;
-  private readonly connection: IORedis;
+export class BuilderService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(BuilderService.name);
+  private broker?: ServiceBroker;
+  private readonly connection?: IORedis;
 
   constructor(
     @InjectRepository(Build)
@@ -34,30 +36,45 @@ export class BuilderService implements OnModuleInit {
     private repoManagerService: RepoManagerService,
     private gitlabService: GitlabService,
   ) {
-    const redisPassword: string = this.configService.get<string | undefined>('redis.password');
-    const redisHost: string = this.configService.get<string>('redis.host');
-    const redisPort: number = this.configService.get<number>('redis.port');
+    const redisPassword: string | undefined = this.configService.get<string | undefined>('redis.password');
+    const redisHost: string = this.configService.getOrThrow<string>('redis.host');
+    const redisPort: number = this.configService.getOrThrow<number>('redis.port');
 
     try {
-      this.connection = new IORedis(redisPort, redisHost, {
+      const connection = new IORedis(redisPort, redisHost, {
         lazyConnect: true,
         maxRetriesPerRequest: null,
         password: redisPassword,
       });
+      let redisErrorLogged = false;
+      connection.on('error', (err: Error) => {
+        if (connection.status === 'end' || connection.status === 'close') {
+          return;
+        }
+        if (!redisErrorLogged) {
+          redisErrorLogged = true;
+          this.logger.error(`Redis connection error: ${err.message}`);
+        }
+      });
+      this.connection = connection;
     } catch (err: unknown) {
-      Logger.error(err, 'BuilderService');
+      this.logger.error(err);
     }
   }
 
-  async onModuleInit() {
-    await this.initBroker();
+  onModuleInit() {
+    // Fire-and-forget: don't block startup on broker connection/registration.
+    void this.initBroker().catch((err: unknown) => {
+      this.logger.error(`Broker init failed: ${errorMessage(err)}`);
+    });
   }
 
-  /**
-   * Initializes the broker that is used to communicate with Chaotic Manager.
-   */
   async initBroker() {
-    const dbConnections: BuilderDbConnections = {
+    if (!this.connection) {
+      this.logger.error('Broker init skipped: Redis connection could not be established');
+      return;
+    }
+    const dbConnections = {
       build: this.buildRepository,
       builder: this.builderRepository,
       package: this.packageRepository,
@@ -79,52 +96,158 @@ export class BuilderService implements OnModuleInit {
       );
       await this.broker.start();
     } catch (err: unknown) {
-      Logger.error(err, 'BuilderService');
+      this.logger.error(err);
     }
   }
 
-  /**
-   * Returns all builders from the database.
-   */
-  async getBuilders(options?: any): Promise<Builder[]> {
-    return this.builderRepository.find({ cache: { id: 'builders-general', milliseconds: 30000 } });
+  async onModuleDestroy() {
+    if (this.broker) {
+      try {
+        await this.broker.stop();
+      } catch {
+        // Ignore broker stop errors on teardown
+      }
+    }
+    if (this.connection) {
+      this.connection.disconnect();
+    }
   }
 
-  /**
-   * Returns all packages from the database.
-   * @param options An object containing whether to include repo information or not
-   */
-  async getPackages(options?: { repo: boolean }): Promise<Package[]> {
-    return this.packageRepository.find({
-      cache: { id: 'packages-general', milliseconds: 30000 },
-      loadRelationIds: true,
-      relations: options.repo
-        ? {
-            repo: true,
-          }
-        : undefined,
-      // Null would be packages requested via the router, which are not in the repository database
-      where: { version: Not(IsNull()), isActive: true },
-      order: { pkgname: 'ASC' },
+  async getBuilders(): Promise<Builder[]> {
+    return this.builderRepository.find({ cache: { id: 'builders-general', milliseconds: CACHE_TTL_MS } });
+  }
+
+  async getPackages(options: {
+    page?: number;
+    perPage?: number;
+    q?: string;
+    sort?: string;
+    order?: string;
+    repo?: boolean;
+    repoId?: number;
+  }): Promise<Paginated<PackageDto>> {
+    const { page, perPage, skip } = resolvePagination(options.page, options.perPage);
+    const query = this.packageRepository
+      .createQueryBuilder('package')
+      .leftJoin('package.repo', 'repo')
+      .addSelect('package')
+      .addSelect('repo.id')
+      .addSelect('repo.name')
+      .where('package.version IS NOT NULL')
+      .andWhere('package.isActive = :isActive', { isActive: true });
+
+    if (options.q) {
+      query.andWhere(
+        `(package.pkgname ILIKE :q OR package.metadata->>'desc' ILIKE :q OR package.metadata->>'url' ILIKE :q)`,
+        { q: `%${options.q}%` },
+      );
+    }
+    if (options.repoId !== undefined) {
+      query.andWhere('package.repoId = :repoId', { repoId: options.repoId });
+    }
+
+    query.orderBy(this.packageSortExpression(options.sort), resolveOrder(options.order));
+
+    const [items, total] = await query.skip(skip).take(perPage).getManyAndCount();
+
+    // The frontend consumes `repo` as the numeric id (RepoNamePipe) plus a
+    // resolved `reponame`. Never leak the repo's apiToken, so only select the name.
+    const mapped: PackageDto[] = items.map((pkg) => ({
+      id: pkg.id,
+      pkgname: pkg.pkgname,
+      lastUpdated: pkg.lastUpdated,
+      isActive: pkg.isActive,
+      version: pkg.version,
+      bumpCount: pkg.bumpCount,
+      bumpTriggers: pkg.bumpTriggers ?? undefined,
+      metadata: pkg.metadata,
+      pkgrel: pkg.pkgrel,
+      repo: pkg.repo?.id,
+      reponame: pkg.repo?.name,
+    }));
+    return paginate(mapped, total, page, perPage);
+  }
+
+  private packageSortExpression(sort?: string): string {
+    return whitelistSort(sort ?? 'pkgname', 'package.pkgname', {
+      id: 'package.id',
+      pkgname: 'package.pkgname',
+      lastUpdated: 'package.lastUpdated',
+      version: 'package.version',
+      pkgrel: 'package.pkgrel',
+      repo: 'repo.name',
     });
   }
 
-  /**
-   * Returns all repos from the database.
-   */
-  async getRepos(options?: any): Promise<Repo[]> {
+  async getRepos(): Promise<Repo[]> {
     return this.repoRepository.find({
-      cache: { id: 'repos-general', milliseconds: 30000 },
+      cache: { id: 'repos-general', milliseconds: CACHE_TTL_MS },
       where: { isActive: true },
       select: { id: true, name: true, repoUrl: true, gitRef: true, dbPath: true },
     });
   }
 
-  /**
-   * Returns all builds from the database.
-   */
-  async getBuilds(options?: { offset: number; amount: number; builder?: string }): Promise<Build[]> {
-    return this.buildRepository
+  async getBuilds(options: {
+    page?: number;
+    perPage?: number;
+    q?: string;
+    builder?: string;
+    repo?: string;
+    status?: BuildStatus;
+    sort?: string;
+    order?: string;
+  }): Promise<Paginated<Build>> {
+    const { page, perPage, skip } = resolvePagination(options.page, options.perPage);
+    const query = this.buildRepository
+      .createQueryBuilder('build')
+      .leftJoin('build.pkgbase', 'package')
+      .addSelect('package.pkgname')
+      .leftJoin('build.builder', 'builder')
+      .addSelect('builder.name')
+      .leftJoin('build.repo', 'repo')
+      .addSelect('repo.name');
+
+    if (options.builder) {
+      query.andWhere('builder.name = :builder', { builder: options.builder });
+    }
+
+    if (options.repo) {
+      query.andWhere('repo.name = :repo', { repo: options.repo });
+    }
+
+    if (options.status !== undefined) {
+      query.andWhere('build.status = :status', { status: options.status });
+    }
+
+    if (options.q) {
+      query.andWhere(
+        '(package.pkgname ILIKE :q OR builder.name ILIKE :q OR repo.name ILIKE :q OR build.commit ILIKE :q)',
+        { q: `%${options.q}%` },
+      );
+    }
+
+    query.orderBy(this.buildSortExpression(options.sort), resolveOrder(options.order));
+
+    const [items, total] = await query.skip(skip).take(perPage).getManyAndCount();
+    return paginate(items, total, page, perPage);
+  }
+
+  private buildSortExpression(sort?: string): string {
+    return whitelistSort(sort ?? 'id', 'build.id', {
+      id: 'build.id',
+      timestamp: 'build.timestamp',
+      timeToEnd: 'build.timeToEnd',
+      status: 'build.status',
+      pkgname: 'package.pkgname',
+      builder: 'builder.name',
+      repo: 'repo.name',
+    });
+  }
+
+  async getLastBuilds(options: { offset: number; amount: number; status?: BuildStatus }): Promise<Build[]> {
+    const amount = clampInt(options.amount, 1, MAX_AMOUNT);
+    const offset = clampInt(options.offset, 0, MAX_OFFSET);
+    const query = this.buildRepository
       .createQueryBuilder('build')
       .leftJoin('build.pkgbase', 'package')
       .addSelect('package.pkgname')
@@ -132,57 +255,22 @@ export class BuilderService implements OnModuleInit {
       .addSelect('builder.name')
       .leftJoin('build.repo', 'repo')
       .addSelect('repo.name')
-      .orderBy('build.id', 'DESC')
-      .skip(options.offset)
-      .take(options.amount)
-      .cache(`builds-general-${options.builder}-${options.amount}-${options.offset}`, 1000)
+      .orderBy('build.id', 'DESC');
+
+    if (options.status !== undefined) {
+      query.where('build.status = :status', { status: options.status });
+    }
+
+    return query
+      .skip(offset)
+      .take(amount)
+      .cache(`builds-latest-${options.status ?? 'all'}-${amount}-${offset}`, CACHE_TTL_MS)
       .getMany();
   }
 
-  /**
-   * Returns a build from the database.
-   * @param options An object containing the amount to look back and the offset
-   * @returns The last n builds, unless an offset is provided
-   */
-  async getLastBuilds(options: { offset: number; amount: number; status?: BuildStatus }): Promise<Build[]> {
-    if (!options.status) {
-      return await this.buildRepository
-        .createQueryBuilder('build')
-        .leftJoin('build.pkgbase', 'package')
-        .addSelect('package.pkgname')
-        .leftJoin('build.builder', 'builder')
-        .addSelect('builder.name')
-        .leftJoin('build.repo', 'repo')
-        .addSelect('repo.name')
-        .orderBy('build.id', 'DESC')
-        .skip(options.offset)
-        .take(options.amount)
-        .cache(`builds-latest-${options.amount}-${options.offset}`, 30000)
-        .getMany();
-    } else {
-      return await this.buildRepository
-        .createQueryBuilder('build')
-        .leftJoin('build.pkgbase', 'package')
-        .addSelect('package.pkgname')
-        .leftJoin('build.builder', 'builder')
-        .addSelect('builder.name')
-        .leftJoin('build.repo', 'repo')
-        .addSelect('repo.name')
-        .where('build.status = :status', { status: options.status })
-        .orderBy('build.id', 'DESC')
-        .skip(options.offset)
-        .take(options.amount)
-        .cache(`builds-latest-${options.status}-${options.amount}-${options.offset}`, 30000)
-        .getMany();
-    }
-  }
-
-  /**
-   * Returns the last build for a specific package.
-   * @param options The package name, amount to look back and offset
-   * @returns The last n builds for a specific package
-   */
   async getLastBuildsForPackage(options: { pkgname: string; amount: number; offset: number }): Promise<Build[]> {
+    const amount = clampInt(options.amount, 1, MAX_AMOUNT);
+    const offset = clampInt(options.offset, 0, MAX_OFFSET);
     return this.buildRepository
       .createQueryBuilder('build')
       .leftJoin('build.pkgbase', 'package')
@@ -193,29 +281,19 @@ export class BuilderService implements OnModuleInit {
       .addSelect('repo.name')
       .where('package.pkgname = :pkgname', { pkgname: options.pkgname })
       .orderBy('build.id', 'DESC')
-      .skip(options.offset)
-      .take(options.amount)
-      .cache(`builds-latest-pkg-${options.pkgname}-${options.amount}-${options.offset}`, 30000)
+      .skip(offset)
+      .take(amount)
+      .cache(`builds-latest-pkg-${options.pkgname}-${amount}-${offset}`, CACHE_TTL_MS)
       .getMany();
   }
 
-  /**
-   * Returns the build count for a specific package.
-   * @param pkgname The package name to look for
-   * @returns The build count for a specific package
-   */
   getLastBuildsCountForPackage(pkgname: string): Promise<number> {
     return this.buildRepository.count({
       where: { pkgbase: { pkgname } },
-      cache: { id: `builds_count_${pkgname}`, milliseconds: 30000 },
+      cache: { id: `builds_count_${pkgname}`, milliseconds: CACHE_TTL_MS },
     });
   }
 
-  /**
-   * Returns the build count for a specific package per day.
-   * @param options The package name and amount to look back, or the offset.
-   * @returns The build count for a specific package per day
-   */
   async getBuildsCountByPkgnamePerDay(options: {
     pkgname: string;
     amount: number;
@@ -226,140 +304,159 @@ export class BuilderService implements OnModuleInit {
       throw new NotFoundException('Package not found');
     }
 
+    const amount = clampInt(options.amount, 1, MAX_DAYS_PER_DAY_CHART);
+    const offset = clampInt(options.offset, 0, MAX_OFFSET);
+
     return this.buildRepository
       .createQueryBuilder('build')
       .select("DATE_TRUNC('day', build.timestamp) AS day")
       .addSelect('repo.name AS repo')
       .addSelect('COUNT(*) AS count')
       .innerJoin('build.repo', 'repo')
-      .where('build.pkgbase = :id', { id: requestedPackage.id })
+      .innerJoin('build.pkgbase', 'pkgbase')
+      .where('pkgbase.pkgname = :pkgname', { pkgname: options.pkgname })
+      .andWhere('build.timestamp > :date', { date: nDaysInPast(amount) })
       .groupBy("DATE_TRUNC('day', build.timestamp), repo.name")
       .orderBy('day', 'DESC')
-      .skip(options.offset)
-      .take(options.amount)
-      .cache(`builds-${options.pkgname}-per-day-repo-${options.amount}-${options.offset}`, 30000)
+      .limit(amount)
+      .offset(offset)
+      .cache(`builds-${options.pkgname}-per-day-repo-${amount}-${offset}`, CACHE_TTL_MS)
       .getRawMany();
   }
 
-  /**
-   * Returns the most frequently built packages.
-   * @param options The amount and offset, optionally a numeric status, as an object.
-   * @returns The most frequently built packages
-   */
   getPopularPackages(options: {
     amount: number;
     offset: number;
-    status: number;
-  }): Promise<{ pkgname: string; count: string }[]> {
-    if (options.status) {
-      return this.builderRepository
-        .createQueryBuilder('build')
-        .select('pkgbase.pkgname')
-        .addSelect('COUNT(*) AS count')
-        .innerJoin('build.pkgbase', 'pkgbase')
-        .groupBy('pkgbase.pkgname')
-        .orderBy('count', 'DESC')
-        .where('build.status = :status', { status: options.status })
-        .skip(options.offset)
-        .take(options.amount)
-        .cache(`popular-packages-${options.amount}-${options.offset}-${options.status}`, 30000)
-        .getRawMany();
-    }
-    return this.buildRepository
+    status?: number;
+    days?: number;
+  }): Promise<{ pkgbase_pkgname: string; count: string }[]> {
+    const amount = clampInt(options.amount, 1, MAX_AMOUNT);
+    const offset = clampInt(options.offset, 0, MAX_OFFSET);
+    const query = this.buildRepository
       .createQueryBuilder('build')
       .select('pkgbase.pkgname')
-      .addSelect('COUNT(*) AS count')
+      // Count distinct source commits instead of every build row: CI incidents
+      // re-queue an already-built commit hundreds of times (status ALREADY_BUILT),
+      // which would otherwise inflate the count for e.g. garuda-*-git packages.
+      .addSelect('COUNT(DISTINCT build.commit) AS count')
       .innerJoin('build.pkgbase', 'pkgbase')
       .groupBy('pkgbase.pkgname')
-      .orderBy('count', 'DESC')
-      .skip(options.offset)
-      .take(options.amount)
-      .cache(`popular-packages-${options.amount}-${options.offset}`, 30000)
-      .cache(true)
+      .orderBy('count', 'DESC');
+
+    if (options.status !== undefined) {
+      query.where('build.status = :status', { status: options.status });
+    }
+    if (options.days !== undefined) {
+      query.andWhere('build.timestamp > :date', { date: nDaysInPast(clampInt(options.days, 1, MAX_DAYS_WINDOW)) });
+    }
+
+    return query
+      .limit(amount)
+      .offset(offset)
+      .cache(
+        `popular-packages-distinct-${amount}-${offset}-${options.status ?? 'all'}-${options.days ?? 'all'}`,
+        CACHE_TTL_MS,
+      )
       .getRawMany();
   }
 
-  /**
-   * Returns the number of builds per builder.
-   * @returns The number of builds per builder
-   */
-  getBuildsPerBuilder(): Promise<{ name: string; count: string }[]> {
-    return this.buildRepository
+  getBuildsPerBuilder(days?: number): Promise<{ name: string; count: string }[]> {
+    const query = this.buildRepository
       .createQueryBuilder('build')
       .select('builder.name AS name')
       .addSelect('COUNT(*) AS count')
       .innerJoin('build.builder', 'builder')
-      .groupBy('builder.name')
-      .getRawMany();
+      .groupBy('builder.name');
+
+    if (days !== undefined) {
+      query.where('build.timestamp > :date', { date: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
+    }
+
+    return query.cache(`builds-per-builder-${days ?? 'all'}`, CACHE_TTL_MS).getRawMany();
   }
 
   getBuildsPerDay(options: { days: number }): Promise<{ day: string; count: string }[]> {
-    return this.buildRepository
-      .createQueryBuilder('build')
-      .select("DATE_TRUNC('day', build.timestamp) AS day")
-      .addSelect('COUNT(*) AS count')
-      .groupBy('day')
-      .orderBy('day', 'DESC')
-      .take(options.days)
-      .cache(`builds-per-day-${options.days}`, 30000)
-      .getRawMany();
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+    return (
+      this.buildRepository
+        .createQueryBuilder('build')
+        .select("DATE_TRUNC('day', build.timestamp) AS day")
+        // Count distinct source commits so CI retry loops (same commit re-queued,
+        // status ALREADY_BUILT) don't inflate the daily totals, matching the
+        // per-package popular chart.
+        .addSelect('COUNT(DISTINCT build.commit) AS count')
+        .groupBy('day')
+        .orderBy('day', 'DESC')
+        .limit(days)
+        .cache(`builds-per-day-distinct-${days}`, CACHE_TTL_MS)
+        .getRawMany()
+    );
   }
 
-  /**
-   * Returns the number of builds per package.
-   * @param options The amount to look back
-   * @returns The number of builds per package
-   */
   getBuildsPerPackage(options?: { days: number }): Promise<{ pkgbase: string; count: string }[]> {
-    if (!options?.days) {
-      return this.buildRepository
-        .createQueryBuilder('build')
-        .select('pkgbase.pkgname AS pkgbase')
-        .addSelect('COUNT(*) AS count')
-        .innerJoin('build.pkgbase', 'pkgbase')
-        .groupBy('pkgbase.pkgname')
-        .orderBy('count', 'DESC')
-        .cache(`builds-per-package`, 30000)
-        .getRawMany();
-    } else {
-      return this.buildRepository
-        .createQueryBuilder('build')
-        .select('pkgbase.pkgname AS pkgbase')
-        .addSelect('COUNT(*) AS count')
-        .innerJoin('build.pkgbase', 'pkgbase')
-        .where('build.timestamp > :date', { date: nDaysInPast(options.days) })
-        .groupBy('pkgbase.pkgname')
-        .orderBy('count', 'DESC')
-        .cache(`builds-per-package-${options.days}`, 30000)
-        .getRawMany();
+    const days = options?.days ? clampInt(options.days, 1, MAX_DAYS_WINDOW) : undefined;
+    const query = this.buildRepository
+      .createQueryBuilder('build')
+      .select('pkgbase.pkgname AS pkgbase')
+      .addSelect('COUNT(*) AS count')
+      .innerJoin('build.pkgbase', 'pkgbase')
+      .groupBy('pkgbase.pkgname')
+      .orderBy('count', 'DESC');
+
+    if (days !== undefined) {
+      query.where('build.timestamp > :date', { date: nDaysInPast(days) });
     }
+
+    return query.cache(`builds-per-package-${days ?? 'all'}`, CACHE_TTL_MS).getRawMany();
   }
 
-  /**
-   * Returns the average build time per status.
-   * @returns The average build time per status
-   */
-  async getAverageBuildTimePerStatus(): Promise<{ status: string; average_build_time: string }[]> {
-    return await this.buildRepository
+  async getAverageBuildTimePerStatus(days?: number): Promise<{ status: string; average_build_time: string }[]> {
+    const query = this.buildRepository
       .createQueryBuilder('build')
       .select('AVG("timeToEnd") AS average_build_time')
       .addSelect('status')
       .where('"timeToEnd" IS NOT NULL')
       .groupBy('status')
-      .orderBy('average_build_time', 'DESC')
-      .cache(`average-build-time-per-status`, 30000)
-      .getRawMany();
+      .orderBy('average_build_time', 'DESC');
+
+    if (days !== undefined) {
+      query.andWhere('build.timestamp > :date', { date: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
+    }
+
+    return query.cache(`average-build-time-per-status-${days ?? 'all'}`, CACHE_TTL_MS).getRawMany();
   }
 
-  /**
-   * Returns the latest builds.
-   * @param options The amount and offset
-   * @returns The latest builds with commit URL, commit hash, time to end, package name, and version
-   */
+  async getAverageBuildTimePerPackage(
+    pkgnames: string[],
+    days?: number,
+  ): Promise<{ pkgname: string; average_build_time: string; samples: string }[]> {
+    if (pkgnames.length === 0) return [];
+
+    const query = this.buildRepository
+      .createQueryBuilder('build')
+      .select('pkgbase.pkgname AS pkgname')
+      .addSelect('AVG("timeToEnd") AS average_build_time')
+      .addSelect('COUNT(*) AS samples')
+      .innerJoin('build.pkgbase', 'pkgbase')
+      .where('pkgbase.pkgname IN (:...pkgnames)', { pkgnames })
+      .andWhere('"timeToEnd" IS NOT NULL')
+      .andWhere('build.status IN (:...statuses)', { statuses: [BuildStatus.SUCCESS, BuildStatus.FAILED] })
+      .groupBy('pkgbase.pkgname')
+      .orderBy('pkgname', 'ASC');
+
+    if (days !== undefined) {
+      query.andWhere('build.timestamp > :date', { date: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
+    }
+
+    return query.cache(`average-build-time-per-package-${pkgnames.join(',')}`, CACHE_TTL_MS).getRawMany();
+  }
+
   async getLatestBuilds(options: {
     amount: number;
     offset: number;
   }): Promise<{ logUrl: string; commit: string; timeToEnd: string; pkgname: string; version: string }[]> {
+    const amount = clampInt(options.amount ?? 100, 1, MAX_AMOUNT);
+    const offset = clampInt(options.offset ?? 0, 0, MAX_OFFSET);
     return await this.buildRepository
       .createQueryBuilder('build')
       .select('b."logUrl"')
@@ -370,192 +467,23 @@ export class BuilderService implements OnModuleInit {
       .from(Build, 'b')
       .innerJoin('b.pkgbase', 'p')
       .orderBy('p."lastUpdated"', 'DESC')
-      .take(options.amount ?? 100)
-      .skip(options.offset ?? 0)
-      .cache(`latest-builds`, 30000)
+      .limit(amount)
+      .offset(offset)
+      .cache(`latest-builds-${amount}-${offset}`, CACHE_TTL_MS)
       .getRawMany();
   }
 
   async getPackage(name: string, repo?: string) {
-    return await this.packageRepository.findOne({ where: { pkgname: name, repo: repo ? { name: repo } : undefined } });
-  }
-}
-
-export interface BuilderDatabaseServiceOptions {
-  broker: ServiceBroker;
-  dbConnections: BuilderDbConnections;
-  repoManagerService: RepoManagerService;
-  sseSubject: Subject<Partial<MessageEvent<ChaoticEvent>>>;
-  gitlabService: GitlabService;
-}
-
-/**
- * The metrics service that provides the metrics actions for other services to call.
- */
-export class BuilderDatabaseService extends Service {
-  private dbConnections: BuilderDbConnections;
-  private repoManagerService: RepoManagerService;
-
-  private readonly sseSubject$: Subject<Partial<MessageEvent<ChaoticEvent>>>;
-  private readonly gitlabService: GitlabService;
-
-  busyUpdating = false;
-  scheduledUpdate = false;
-
-  constructor({ broker, dbConnections, repoManagerService, sseSubject, gitlabService }: BuilderDatabaseServiceOptions) {
-    super(broker);
-
-    this.sseSubject$ = sseSubject;
-    this.gitlabService = gitlabService;
-
-    this.parseServiceSchema({
-      name: 'builderDatabaseService',
-      events: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'builds.*'(ctx: Context<MoleculerBuildObject>) {
-          this.logBuild(ctx);
-        },
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'gitlab.status'(ctx: Context<GitlabStatusEvent>) {
-          void this.gitlabService.handleExternalStatus(ctx.params);
-        },
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'database.removalCompleted'(ctx: Context<string[]>) {
-          this.removeEntries(ctx);
-        },
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'metrics.currentQueue'(ctx: Context<MoleculerCurrentQueueObject>) {
-          this.sseSubject$.next({
-            data: {
-              type: 'queue',
-              payload: ctx.params,
-            },
-          });
-        },
-      },
-      ...MoleculerConfigCommonService,
+    const where = repo ? { pkgname: name, repo: { name: repo } } : { pkgname: name };
+    // Only expose complete, current rows. Legacy leftovers (e.g. from before the
+    // per-repo model) can have NULL version/pkgrel/metadata and must not be shown.
+    const pkg = await this.packageRepository.findOne({
+      where,
+      order: { isActive: 'DESC' },
     });
-
-    this.repoManagerService = repoManagerService;
-    this.dbConnections = dbConnections;
-
-    Logger.log('BuilderDatabaseService created', 'BuilderDatabaseService');
-  }
-
-  /**
-   * Logs a new build to the database.
-   * @param ctx The Moleculer context object containing the build object
-   */
-  async logBuild(ctx: Context<MoleculerBuildObject>): Promise<void> {
-    // These events are not relevant as they miss required data
-    if (ctx.eventName.endsWith('Histogram')) return;
-
-    const params = ctx.params;
-
-    // No point in logging if the required fields are missing. Database will throw an error anyway.
-    if (!params.builder_name || !params.target_repo || !params.pkgname) {
-      Logger.error('Missing required fields, throwing entry away', 'BuilderDatabaseService');
-      return;
+    if (!pkg || !pkg.version || pkg.pkgrel === null || pkg.pkgrel === undefined || !pkg.metadata) {
+      throw new NotFoundException(`Package not found: ${name}`);
     }
-
-    const relations: [Builder, Repo] = await Promise.all([
-      builderExists(params.builder_name, this.dbConnections.builder),
-      repoExists(params.target_repo, this.dbConnections.repo),
-    ]);
-    const pkg: Package = await pkgnameExists(params.pkgname, this.dbConnections.package, relations[1]);
-
-    if (relations.includes(undefined)) {
-      Logger.error('Invalid relations or database is not available, throwing entry away', 'BuilderDatabaseService');
-      return;
-    }
-
-    pkg.lastUpdated = new Date().toISOString();
-
-    const build: Partial<Build> = {
-      arch: params.arch,
-      buildClass: params.build_class ? params.build_class.toString() : null,
-      builder: relations[0],
-      logUrl: params.logUrl,
-      timeToEnd: params.duration,
-      commit: params.commit.split(':')[0],
-      pkgbase: pkg,
-      repo: relations[1],
-      status: params.status,
-      replaced: params.replaced,
-    };
-
-    // Update the chaotic versions as they changed with new successful builds
-    if (params.status === BuildStatus.SUCCESS) {
-      try {
-        const promises: Promise<void>[] = [
-          this.repoManagerService.eventuallyBumpAffected(build),
-          this.repoManagerService.processNamcapAnalysis(build as Build, params.namcapAnalysis),
-        ];
-
-        if (this.busyUpdating === false) {
-          this.busyUpdating = true;
-          promises.push(
-            (async () => {
-              await this.repoManagerService.updateChaoticVersions();
-              if (this.scheduledUpdate) {
-                this.scheduledUpdate = false;
-                await this.repoManagerService.updateChaoticVersions();
-              } else {
-                this.scheduledUpdate = false;
-              }
-            })(),
-          );
-        } else {
-          Logger.warn('Scheduling Chaotic version update, another update is in progress', 'BuilderDatabaseService');
-          this.scheduledUpdate = true;
-        }
-
-        await Promise.allSettled(promises);
-      } catch (err: unknown) {
-        Logger.error(err, 'RepoManager');
-      }
-    }
-
-    try {
-      Logger.debug(await this.dbConnections.build.save(build), 'BuilderDatabaseService');
-
-      // Notify SSE clients about the build and newly updated package
-      this.sseSubject$.next({
-        data: {
-          type: 'build',
-          package: build.pkgbase.pkgname,
-          version: build.pkgbase.version,
-          pkgrel: build.pkgbase.pkgrel,
-          duration: build.timeToEnd,
-          repo: build.repo.name,
-          status: build.status,
-        },
-      });
-    } catch (err: unknown) {
-      Logger.error(err, 'BuilderDatabaseService');
-    }
-  }
-
-  /**
-   * Removes entries from the database.
-   * @param ctx The Moleculer context object containing the package names to remove
-   */
-  async removeEntries(ctx: Context<string[]>): Promise<void> {
-    const pkgbases = ctx.params as string[];
-
-    try {
-      for (const pkgbase of pkgbases) {
-        const pkg = await this.dbConnections.package.findOne({ where: { pkgname: pkgbase } });
-        if (pkg) {
-          await this.dbConnections.package.update(pkg.id, {
-            isActive: false,
-            lastUpdated: new Date().toISOString(),
-          });
-        }
-        Logger.log(`Removed ${pkgbase} from the database active records`, 'BuilderDatabaseService');
-      }
-    } catch (err: unknown) {
-      Logger.error(err, 'BuilderDatabaseService');
-    }
+    return pkg;
   }
 }

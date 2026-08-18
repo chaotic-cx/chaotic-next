@@ -1,59 +1,95 @@
-<div class="flex mx-auto justify-center gap-4 flex-col md:flex-row w-full px-4">
-  <p-auto-complete
-    #autoComplete
-    [suggestions]="packageStatsService.packageSearchCurrentSuggestions()"
-    [autofocus]="true"
-    (completeMethod)="search($event)"
-    (onSelect)="updateDisplay($event.value)"
-    placeholder="Start searching"
-  />
-  <p-select
-    class="w-full md:w-60"
-    [(ngModel)]="packageStatsService.packageSearchSelectedRepo"
-    [options]="repoOptions"
-    (ngModelChange)="updateDisplay(autoComplete.value)"
-  />
-</div>
+<ng-template #searchBar>
+  <div class="relative w-full">
+    <input
+      class="w-full text-center"
+      #searchInputEl
+      [formField]="searchForm.query"
+      [class.ng-invalid]="searchForm.query().invalid()"
+      [class.ng-dirty]="searchForm.query().dirty()"
+      (focus)="suggestionsVisible.set(true)"
+      (keydown.enter)="onEnter()"
+      (blur)="onInputBlur()"
+      pInputText
+      type="text"
+      placeholder="Start searching"
+    />
+    <chaotic-search-suggestions
+      [anchor]="searchInputEl"
+      [suggestions]="suggestions()"
+      [visible]="suggestionsVisible() && searchModel().query.length >= 3"
+      (selectSuggestion)="selectPackage($event)"
+    />
+  </div>
+</ng-template>
 <div class="min-h-footer">
-  @if (!packageStatsService.packageSearchInitialSearchDone()) {
-    <div class="mx-auto">
-      <i class="pi pi-search text-ctp-maroon mt-36" style="font-size: 10rem"></i>
+  @if (!hasSearchData()) {
+    <div class="empty-state">
+      <div class="flex w-full max-w-xl flex-col items-center gap-10 px-4">
+        <i class="pi pi-search text-ctp-maroon" style="font-size: 10rem"></i>
+        <ng-container *ngTemplateOutlet="searchBar" />
+      </div>
     </div>
   } @else {
-    <p-table [value]="packageStatsService.packageSearchData()" [tableStyle]="{ 'width': '100%', 'margin-top': '20px' }">
-      <ng-template #body let-dataset>
-        <tr>
-          <td>{{ dataset.key | packageDetailKey }}</td>
-          @if (dataset.key === 'url') {
-            <td>
-              <a class="text-ctp-mauve" [href]="dataset.value" target="_blank" rel="noopener noreferrer">{{
-                dataset.value
-              }}</a>
-            </td>
-          } @else if (dataset.key === 'buildDate') {
-            <td>{{ dataset.value | unixDate }}</td>
-          } @else if (dataset.key === 'lastUpdated') {
-            <td>{{ dataset.value | date: 'short' }}</td>
-          } @else if (typeof dataset.value !== 'string' && dataset.value?.length > 0) {
-            <td>
-              @if (dataset.value.length > 1) {
-                <ul class="chaotic-list-regular">
-                  @for (item of dataset.value; track item) {
-                    <li>{{ item }}</li>
-                  }
-                </ul>
+    <div class="mx-auto w-full max-w-xl px-4">
+      <ng-container *ngTemplateOutlet="searchBar" />
+    </div>
+    <div class="scroll-mt-24 mt-8 flex flex-col gap-4" #resultsSection>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        @for (dataset of packageSearchData(); track dataset.key) {
+          <div class="flex flex-col rounded-xl border border-ctp-surface1 bg-ctp-mantle/50 p-4">
+            <div class="text-xs font-medium uppercase tracking-wide text-ctp-subtext1">
+              {{ dataset.key | packageDetailKey }}
+            </div>
+            <div class="mt-1.5 flex flex-1 items-center justify-center text-sm text-ctp-text">
+              @if (dataset.key === 'url') {
+                <a
+                  class="text-ctp-mauve break-all"
+                  [href]="asString(dataset.value)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ asString(dataset.value) }}</a
+                >
+              } @else if (dataset.key === 'buildDate') {
+                <span
+                  class="cursor-help"
+                  [pTooltip]="(asNumber(dataset.value) * 1000 | date: 'short') ?? undefined"
+                  tooltipPosition="top"
+                  >{{ asNumber(dataset.value) * 1000 | relativeTime }}</span
+                >
+              } @else if (dataset.key === 'lastUpdated') {
+                <span
+                  class="cursor-help"
+                  [pTooltip]="(asDate(dataset.value) | date: 'short') ?? undefined"
+                  tooltipPosition="top"
+                  >{{ asDate(dataset.value) | relativeTime }}</span
+                >
+              } @else if (isArray(dataset.value)) {
+                @if (dataset.value.length === 0) {
+                  <span class="text-ctp-subtext1">n/a</span>
+                } @else {
+                  <div class="flex flex-wrap justify-center gap-1.5">
+                    @for (item of dataset.value; track item) {
+                      <span class="rounded-full border border-ctp-surface1 bg-ctp-surface0/40 px-2.5 py-0.5 text-xs">{{
+                        item
+                      }}</span>
+                    }
+                  </div>
+                }
+              } @else if (isString(dataset.value) && dataset.value.trim()) {
+                <span>{{ dataset.value }}</span>
+              } @else if (isNumber(dataset.value) || isBoolean(dataset.value)) {
+                <span>{{ dataset.value }}</span>
               } @else {
-                <span>{{ dataset.value[0] }}</span>
+                <span class="text-ctp-subtext1">n/a</span>
               }
-            </td>
-          } @else if (!dataset.value || dataset.value?.length === 0) {
-            <td class="text-ctp-text">n/a</td>
-          } @else {
-            <td>{{ dataset.value }}</td>
-          }
-        </tr>
-      </ng-template>
-    </p-table>
-    <chaotic-chart-package-build-stats [packageName]="currentPackageName()" />
+            </div>
+          </div>
+        }
+      </div>
+      <div class="mt-10">
+        <chaotic-package-trigger-sources [pkgname]="currentPackageName()" />
+      </div>
+      <chaotic-chart-package-build-stats [packageName]="currentPackageName()" />
+    </div>
   }
 </div>

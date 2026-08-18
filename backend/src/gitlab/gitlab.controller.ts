@@ -1,10 +1,54 @@
-import { PipelineWithExternalStatus } from '@./shared-lib';
-import { Body, Controller, Get, Headers, Post, UnauthorizedException } from '@nestjs/common';
+import { ApproveMrDto, AurScanBodyDto, FlagMrDto, TriggerPipelineDto } from '@chaotic-next/backend/gitlab/gitlab.dto';
+import {
+  AurPackageScan,
+  AurScanStreamChunk,
+  GitlabJob,
+  GitlabLogChunk,
+  MergeRequestWithDiffs,
+  PipelineScheduleOption,
+  PipelineTriggerResult,
+  PipelineWithExternalStatus,
+} from '@chaotic-next/shared-lib';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Post,
+  Sse,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AllowAnonymous } from '../auth/anonymous.decorator';
+import {
+  ApiBody,
+  ApiCookieAuth,
+  ApiCreatedResponse,
+  ApiHeaders,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import { Observable } from 'rxjs';
+import { auth } from '../auth/auth';
+import { AurScanService } from '../diff-scan/aur-scan.service';
 import { GitlabService } from './gitlab.service';
-import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { GitLabWebHook } from './interfaces';
+import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
+
+const SHA_REGEX = /^[0-9a-fA-F]{6,40}$/;
+const FLAG_LABELS = ['dangerous', 'hold'] as const;
+
+function assertValidIid(iid: number): void {
+  if (!Number.isInteger(iid) || iid <= 0) {
+    throw new BadRequestException('Invalid iid');
+  }
+}
 
 @ApiTags('gitlab')
 @Controller('gitlab')
@@ -14,13 +58,14 @@ export class GitlabController {
   constructor(
     private readonly configService: ConfigService,
     private readonly gitlabService: GitlabService,
+    private readonly aurScanService: AurScanService,
   ) {
     this.WEBHOOK_TOKEN = this.configService.getOrThrow<string>('CAUR_GITLAB_WEBHOOK_TOKEN');
   }
 
-  @AllowAnonymous()
   @Post('update')
   @ApiOperation({ summary: 'Update GitLab cache via webhook.' })
+  @ApiHeaders([{ name: 'X-Gitlab-Token', description: 'GitLab webhook token', required: true }])
   @ApiBody({ type: Object, description: 'GitLab pipeline webhook payload' })
   @ApiOkResponse({ description: 'Cache update triggered.' })
   async updateCache(@Headers('X-Gitlab-Token') token: string, @Body() body: GitLabWebHook): Promise<void> {
@@ -28,14 +73,54 @@ export class GitlabController {
       throw new UnauthorizedException('Invalid token');
     }
 
+    if (body.object_kind !== 'pipeline' && body.object_kind !== 'merge_request') {
+      throw new BadRequestException('Invalid object_kind');
+    }
+
     if (body.object_kind === 'pipeline') {
       await this.gitlabService.handlePipelineWebhook(body);
-    } else if (body.object_kind === 'merge_request') {
-      await this.gitlabService.handleMergeRequestWebhook(body);
+    } else {
+      await this.gitlabService.handleMergeRequestWebhook();
     }
   }
 
-  @AllowAnonymous()
+  @Post('mr-scan')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Run the merge request security scan now (auto-flag labels and VirusTotal checks).' })
+  @ApiOkResponse({ description: 'Merge request scan triggered.' })
+  mrScan(): void {
+    void this.gitlabService.handleAutoFlagRefresh();
+  }
+
+  @Post('aur-scan')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Scan an AUR package: PKGBUILD sources, static rules and VirusTotal checks.' })
+  @ApiCreatedResponse({ description: 'The scan result; VirusTotal reports follow via GET once completed.' })
+  startAurScan(@Body() body: AurScanBodyDto): Promise<AurPackageScan> {
+    return this.aurScanService.startScan(body.package);
+  }
+
+  @Get('aur-scan/:packageName')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Fetch the current AUR package scan result.' })
+  @ApiOkResponse({ description: 'The current scan result.' })
+  async getAurScan(@Param('packageName') packageName: string): Promise<AurPackageScan> {
+    const scan = this.aurScanService.getScan(packageName);
+    if (!scan) throw new NotFoundException(`No scan recorded for "${packageName}"`);
+    return { ...scan };
+  }
+
+  @Sse('aur-scan/:packageName/stream')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Stream AUR package scan updates until the scan completes.' })
+  @ApiOkResponse({ description: 'Stream of AurScanStreamChunk messages', type: Object })
+  streamAurScan(@Param('packageName') packageName: string): Observable<Partial<MessageEvent<AurScanStreamChunk>>> {
+    return this.aurScanService.streamScan(packageName);
+  }
+
   @Get('pipelines')
   @ApiOperation({ summary: 'Get recent GitLab pipelines.' })
   @ApiOkResponse({ description: 'List of pipelines', isArray: true })
@@ -43,15 +128,39 @@ export class GitlabController {
     return await this.gitlabService.getLastPipelines();
   }
 
-  @AllowAnonymous()
+  @Get('pipelines/:pipelineId/jobs')
+  @ApiOperation({ summary: 'Get the jobs of a GitLab pipeline.' })
+  @ApiOkResponse({ description: 'List of jobs', isArray: true })
+  async getPipelineJobs(@Param('pipelineId', ParseIntPipe) pipelineId: number): Promise<GitlabJob[]> {
+    return await this.gitlabService.listPipelineJobs(pipelineId);
+  }
+
+  @Sse('pipelines/:pipelineId/jobs/:jobId/trace')
+  @ApiOperation({ summary: 'Stream the live trace of a GitLab pipeline job over SSE.' })
+  @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
+  async streamJobTrace(
+    @Param('pipelineId', ParseIntPipe) pipelineId: number,
+    @Param('jobId', ParseIntPipe) jobId: number,
+  ): Promise<Observable<Partial<MessageEvent<GitlabLogChunk>>>> {
+    return await this.gitlabService.getJobTraceStream(pipelineId, jobId);
+  }
+
   @Get('merge-requests')
   @ApiOperation({ summary: 'Get recent open GitLab merge requests with diff data.' })
   @ApiOkResponse({ description: 'List of open merge requests', isArray: true })
-  async getOpenMergeRequests(): Promise<PipelineWithExternalStatus[]> {
+  async getOpenMergeRequests(): Promise<MergeRequestWithDiffs[]> {
     return await this.gitlabService.getOpenMergeRequests();
   }
 
-  @AllowAnonymous()
+  @Get('schedules')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Get the active pipeline schedules of the chaotic-aur project.' })
+  @ApiOkResponse({ description: 'List of active pipeline schedules', isArray: true })
+  async getSchedules(): Promise<PipelineScheduleOption[]> {
+    return await this.gitlabService.listPipelineSchedules();
+  }
+
   @Get('review-stats')
   @ApiOperation({ summary: 'Get GitLab merge request review statistics per user.' })
   @ApiOkResponse({ description: 'Merge request review statistics' })
@@ -59,63 +168,51 @@ export class GitlabController {
     return await this.gitlabService.getReviewStats();
   }
 
-  @AllowAnonymous()
   @Post('approve')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Approve a merge request.' })
-  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        iid: { type: 'number' },
-        sha: { type: 'string' },
-      },
-    },
-  })
   @ApiOkResponse({ description: 'Merge request approved.' })
-  async approve(
-    @Headers('X-Gitlab-Private-Token') token: string,
-    @Body() body: { iid: number; sha: string },
-  ): Promise<void> {
-    if (!token) {
-      throw new UnauthorizedException('GitLab private token is required');
+  async approve(@Session() session: UserSession<typeof auth>, @Body() body: ApproveMrDto): Promise<void> {
+    assertValidIid(body.iid);
+    if (typeof body.sha !== 'string' || !SHA_REGEX.test(body.sha)) {
+      throw new BadRequestException('Invalid sha');
     }
-    await this.gitlabService.approveMergeRequest(body.iid, body.sha, token);
+    await this.gitlabService.approveMergeRequest(body.iid, body.sha, {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
   }
 
-  @AllowAnonymous()
   @Post('flag')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Flag a merge request.' })
-  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        iid: { type: 'number' },
-        label: { type: 'string' },
-      },
-    },
-  })
   @ApiOkResponse({ description: 'Merge request flagged.' })
-  async flag(
-    @Headers('X-Gitlab-Private-Token') token: string,
-    @Body() body: { iid: number; label: string },
-  ): Promise<void> {
-    if (!token) {
-      throw new UnauthorizedException('GitLab private token is required');
+  async flag(@Session() session: UserSession<typeof auth>, @Body() body: FlagMrDto): Promise<void> {
+    assertValidIid(body.iid);
+    if (!FLAG_LABELS.includes(body.label)) {
+      throw new BadRequestException(`Invalid label, must be one of: ${FLAG_LABELS.join(', ')}`);
     }
-    await this.gitlabService.flagMergeRequest(body.iid, body.label, token);
+    await this.gitlabService.flagMergeRequest(body.iid, body.label, {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
   }
 
-  @AllowAnonymous()
-  @Post('test-token')
-  @ApiOperation({ summary: 'Test a GitLab private token for write permissions.' })
-  @ApiHeader({ name: 'X-Gitlab-Private-Token', description: 'GitLab private token with write permissions.' })
-  @ApiOkResponse({ description: 'Token validation result', type: Boolean })
-  async testToken(@Headers('X-Gitlab-Private-Token') token: string): Promise<boolean> {
-    if (!token) {
-      throw new UnauthorizedException('GitLab private token is required');
-    }
-    return await this.gitlabService.testToken(token);
+  @Post('trigger')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Trigger a pipeline with the given inputs.' })
+  @ApiOkResponse({ description: 'Pipeline triggered.' })
+  async triggerPipeline(
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: TriggerPipelineDto,
+  ): Promise<PipelineTriggerResult> {
+    const { ref, inputs } = validatePipelineTriggerInputs(body);
+    return await this.gitlabService.triggerPipeline(inputs, ref, {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
   }
 }

@@ -1,70 +1,41 @@
-const { composePlugins, withNx } = require('@nx/rspack');
-const { SwcJsMinimizerRspackPlugin, HotModuleReplacementPlugin } = require('@rspack/core');
-const { RunScriptWebpackPlugin } = require('run-script-webpack-plugin');
-const { merge } = require('webpack-merge');
-const nodeExternals = require('webpack-node-externals');
+const { NxAppRspackPlugin } = require('@nx/rspack/app-plugin');
+const { SwcJsMinimizerRspackPlugin } = require('@rspack/core');
+const { join } = require('path');
 
-module.exports = composePlugins(withNx(), (config, { options, context }) => {
-  const isHmr = context.configurationName === 'hmr';
-  const merged = merge(config, {
-    ...(isHmr
-      ? {
-          entry: { main: ['@rspack/core/hot/poll?100'] },
-          plugins: [
-            new HotModuleReplacementPlugin(),
-            new RunScriptWebpackPlugin({ name: options.outputFileName, autoRestart: false }),
-          ],
-        }
-      : {
-          optimization: {
-            minimizer: [
-              new SwcJsMinimizerRspackPlugin({
-                minimizerOptions: {
-                  compress: {
-                    keep_classnames: true,
-                    keep_fnames: true,
-                  },
-                  mangle: {
-                    keep_classnames: true,
-                    keep_fnames: true,
-                  },
-                },
-              }),
-            ],
+const isProduction = process.env.NODE_ENV === 'production' || process.env.NX_TASK_TARGET_CONFIGURATION === 'production';
+
+module.exports = () => ({
+  context: __dirname,
+  output: {
+    path: join(__dirname, '../dist/backend'),
+    clean: true,
+    devtoolModuleFilenameTemplate: '[absolute-resource-path]',
+  },
+  devtool: 'inline-source-map',
+  plugins: [
+    new NxAppRspackPlugin({
+      target: 'node',
+      main: './src/main.ts',
+      tsConfig: './tsconfig.app.json',
+      optimization: isProduction,
+      outputHashing: 'none',
+      generatePackageJson: isProduction,
+      sourceMap: isProduction,
+      typeCheckOptions: isProduction,
+      cache: false,
+    }),
+    isProduction &&
+      new SwcJsMinimizerRspackPlugin({
+        minimizerOptions: {
+          compress: {
+            keep_classnames: true,
+            keep_fnames: true,
           },
-        }),
-    module: {
-      rules: [
-        {
-          test: /\.ts$/,
-          exclude: /node_modules/,
-          use: {
-            loader: 'builtin:swc-loader',
-            options: {
-              jsc: {
-                parser: {
-                  syntax: 'typescript',
-                  decorators: true,
-                },
-                transform: {
-                  legacyDecorator: true,
-                  decoratorMetadata: true,
-                },
-              },
-            },
+          mangle: {
+            keep_classnames: true,
+            keep_fnames: true,
           },
         },
-      ],
-    },
-    experiments: {
-      incremental: true,
-    },
-  });
-
-  merged.externals = [
-    nodeExternals({
-      allowlist: ['@rspack/core/hot/poll?100'],
-    }),
-  ];
-  return merged;
+      }),
+  ],
 });

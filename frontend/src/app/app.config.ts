@@ -7,14 +7,16 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, Router, withViewTransitions } from '@angular/router';
+import { provideRouter, Router, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideGarudaNG } from '@garudalinux/core';
 import { CatppuccinAura } from '@garudalinux/themes/catppuccin';
+import { provideBetterAuth } from 'ngx-better-auth';
 import { provideHighlightOptions } from 'ngx-highlightjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { environment } from '../environments/environment.dev';
 import { routes } from './app.routes';
+import { provideAuthInitializer } from './auth/auth-initializer';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
 
 export const appConfig: ApplicationConfig = {
@@ -38,16 +40,21 @@ export const appConfig: ApplicationConfig = {
         shell: () => import('highlight.js/lib/languages/shell.js'),
       },
     }),
+    provideBetterAuth({
+      baseURL: `${environment.backendUrl}/api/auth`,
+    }),
+    provideAuthInitializer(),
     provideHttpClient(withInterceptorsFromDi()),
     provideRouter(
       routes,
+      withComponentInputBinding(),
       withViewTransitions({
         skipInitialTransition: true,
         onViewTransitionCreated: ({ transition, from, to }) => {
           const router = inject(Router);
           try {
             const nav = router.currentNavigation();
-            const info = nav?.extras?.info as any;
+            const info = nav?.extras?.info as { disableViewTransition?: boolean } | undefined;
 
             const fromSegments = from.url.map((s) => s.path);
             const toSegments = to.url.map((s) => s.path);

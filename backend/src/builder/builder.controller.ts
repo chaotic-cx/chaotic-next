@@ -1,16 +1,15 @@
-import { Controller, Get, Param, ParseBoolPipe, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { AllowAnonymous } from '../auth/anonymous.decorator';
+import type { Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
-import { BuildStatus } from '@./shared-lib';
+import { GetBuildsQueryDto, GetLatestBuildsQueryDto, GetPackagesQueryDto } from './builder.dto';
 
 @ApiTags('builder')
 @Controller('builder')
 export class BuilderController {
   constructor(private builderService: BuilderService) {}
 
-  @AllowAnonymous()
   @Get('builders')
   @ApiOperation({ summary: 'Get all builders.' })
   @ApiOkResponse({ description: 'List of builders', type: Builder, isArray: true })
@@ -18,26 +17,22 @@ export class BuilderController {
     return await this.builderService.getBuilders();
   }
 
-  @AllowAnonymous()
   @Get('packages')
-  @ApiOperation({ summary: 'Get all packages.' })
-  @ApiQuery({ name: 'repo', required: false, description: 'Add repo to information' })
-  @ApiOkResponse({ description: 'List of packages', type: Package, isArray: true })
-  async getPackages(@Query('repo', new ParseBoolPipe({ optional: true })) repo = false): Promise<Package[]> {
-    return await this.builderService.getPackages({ repo });
+  @ApiOperation({ summary: 'Get packages with pagination, search and sorting.' })
+  @ApiOkResponse({ description: 'Paginated list of packages' })
+  async getPackages(@Query() query: GetPackagesQueryDto): Promise<Paginated<PackageDto>> {
+    return await this.builderService.getPackages(query);
   }
 
-  @AllowAnonymous()
   @Get('package/:name')
   @ApiOperation({ summary: 'Get a package by name.' })
   @ApiParam({ name: 'name', description: 'Package name' })
   @ApiParam({ name: 'repo', description: 'Repository name', required: false })
   @ApiOkResponse({ description: 'Package details', type: Object })
-  async getPackage(@Param('name') name: string, @Query('repo') repo: string): Promise<Package> {
+  async getPackage(@Param('name') name: string, @Query('repo') repo?: string): Promise<Package> {
     return await this.builderService.getPackage(name, repo);
   }
 
-  @AllowAnonymous()
   @Get('repos')
   @ApiOperation({ summary: 'Get all repos.' })
   @ApiOkResponse({ description: 'List of repos', type: Repo, isArray: true })
@@ -45,37 +40,45 @@ export class BuilderController {
     return await this.builderService.getRepos();
   }
 
-  @AllowAnonymous()
   @Get('builds')
-  @ApiOperation({ summary: 'Get builds with optional filters.' })
-  @ApiQuery({ name: 'builder', required: false, description: 'Builder name' })
-  @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiQuery({ name: 'amount', required: false, description: 'Amount to return', type: Number })
-  @ApiOkResponse({ description: 'List of builds', type: Build, isArray: true })
-  async getBuilds(
-    @Query('builder') builder: string,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
-    @Query('amount', new ParseIntPipe({ optional: true })) amount = 50,
-  ): Promise<Build[]> {
-    return await this.builderService.getBuilds({ builder, offset, amount });
+  @ApiOperation({ summary: 'Get builds with server-side pagination, search and sorting.' })
+  @ApiOkResponse({ description: 'Paginated list of builds' })
+  async getBuilds(@Query() query: GetBuildsQueryDto): Promise<Paginated<Build>> {
+    return await this.builderService.getBuilds({
+      builder: query.builder ?? '',
+      repo: query.repo ?? '',
+      status: query.status,
+      page: query.page,
+      perPage: query.perPage,
+      q: query.q,
+      sort: query.sort,
+      order: query.order,
+    });
   }
 
-  @AllowAnonymous()
   @Get('latest')
   @ApiOperation({ summary: 'Get latest builds.' })
-  @ApiQuery({ name: 'amount', required: false, description: 'Amount to return', type: Number })
-  @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiQuery({ name: 'status', required: false, description: 'Build status', type: Number })
   @ApiOkResponse({ description: 'List of latest builds', type: Build, isArray: true })
-  async getLatestBuilds(
-    @Query('amount', new ParseIntPipe({ optional: true })) amount = 50,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
-    @Query('status', new ParseIntPipe({ optional: true })) status?: BuildStatus,
-  ): Promise<Build[]> {
-    return await this.builderService.getLastBuilds({ amount, offset, status });
+  async getLatestBuilds(@Query() query: GetLatestBuildsQueryDto): Promise<Build[]> {
+    return await this.builderService.getLastBuilds({
+      amount: query.amount ?? 50,
+      offset: query.offset ?? 0,
+      status: query.status,
+    });
   }
 
-  @AllowAnonymous()
+  @Get('latest/url/:amount')
+  @ApiOperation({ summary: 'Get latest builds with URLs.' })
+  @ApiParam({ name: 'amount', description: 'Number of builds to return' })
+  @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
+  @ApiOkResponse({ description: 'List of latest builds with URLs', type: Object, isArray: true })
+  async getLatestBuildsByPkgnameWithUrls(
+    @Param('amount', new ParseIntPipe({ optional: true })) amount = 50,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
+  ): Promise<{ commit: string; logUrl: string; pkgname: string; timeToEnd: string; version: string }[]> {
+    return await this.builderService.getLatestBuilds({ amount, offset });
+  }
+
   @Get('latest/:pkgname')
   @ApiOperation({ summary: 'Get latest builds for a package.' })
   @ApiParam({ name: 'pkgname', description: 'Package name' })
@@ -90,22 +93,20 @@ export class BuilderController {
     return await this.builderService.getLastBuildsForPackage({ pkgname, amount, offset });
   }
 
-  @AllowAnonymous()
   @Get('latest/:pkgname/:amount')
   @ApiOperation({ summary: 'Get latest builds for a package with a limit.' })
   @ApiParam({ name: 'pkgname', description: 'Package name' })
-  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiParam({ name: 'amount', description: 'Number of builds to return' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
   @ApiOkResponse({ description: 'List of latest builds for package with limit', type: Build, isArray: true })
   async getLatestBuildsByPkgnameWithAmount(
     @Param('pkgname') pkgname: string,
-    @Param('days', ParseIntPipe) days: number,
+    @Param('amount', ParseIntPipe) amount: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
   ): Promise<Build[]> {
-    return await this.builderService.getLastBuildsForPackage({ pkgname, amount: days, offset });
+    return await this.builderService.getLastBuildsForPackage({ pkgname, amount, offset });
   }
 
-  @AllowAnonymous()
   @Get('count/days')
   @ApiOperation({ summary: 'Get build counts per package per day.' })
   @ApiOkResponse({ description: 'Build counts per package per day', type: Object, isArray: true })
@@ -113,7 +114,6 @@ export class BuilderController {
     return await this.builderService.getBuildsPerPackage();
   }
 
-  @AllowAnonymous()
   @Get('count/days/:days')
   @ApiOperation({ summary: 'Get build counts per package for a given number of days.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -124,7 +124,6 @@ export class BuilderController {
     return await this.builderService.getBuildsPerPackage({ days });
   }
 
-  @AllowAnonymous()
   @Get('count/package/:pkgname')
   @ApiOperation({ summary: 'Get build count for a package.' })
   @ApiParam({ name: 'pkgname', description: 'Package name' })
@@ -133,7 +132,6 @@ export class BuilderController {
     return await this.builderService.getLastBuildsCountForPackage(pkgname);
   }
 
-  @AllowAnonymous()
   @Get('count/:pkgname/:amount')
   @ApiOperation({ summary: 'Get build count for a package per day.' })
   @ApiParam({ name: 'pkgname', description: 'Package name' })
@@ -148,30 +146,32 @@ export class BuilderController {
     return await this.builderService.getBuildsCountByPkgnamePerDay({ pkgname, amount, offset });
   }
 
-  @AllowAnonymous()
   @Get('popular/:amount')
   @ApiOperation({ summary: 'Get popular packages.' })
   @ApiParam({ name: 'amount', description: 'Number of packages to return' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
   @ApiQuery({ name: 'status', required: false, description: 'Build status', type: Number })
+  @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
   @ApiOkResponse({ description: 'List of popular packages', type: Object, isArray: true })
   async getPopularPackages(
     @Param('amount', ParseIntPipe) amount: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
     @Query('status', new ParseIntPipe({ optional: true })) status?: number,
-  ): Promise<{ pkgname: string; count: string }[]> {
-    return await this.builderService.getPopularPackages({ amount, offset, status });
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
+  ): Promise<{ pkgbase_pkgname: string; count: string }[]> {
+    return await this.builderService.getPopularPackages({ amount, offset, status, days });
   }
 
-  @AllowAnonymous()
   @Get('builders/amount')
   @ApiOperation({ summary: 'Get the number of builds per builder.' })
+  @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
   @ApiOkResponse({ description: 'Number of builds per builder', type: Object, isArray: true })
-  async getBuildersAmount(): Promise<{ name: string; count: string }[]> {
-    return await this.builderService.getBuildsPerBuilder();
+  async getBuildsPerBuilder(
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
+  ): Promise<{ name: string; count: string }[]> {
+    return await this.builderService.getBuildsPerBuilder(days);
   }
 
-  @AllowAnonymous()
   @Get('per-day/pkgname/:pkgname/:days')
   @ApiOperation({ summary: 'Get builds per day for a package.' })
   @ApiParam({ name: 'pkgname', description: 'Package name' })
@@ -181,7 +181,7 @@ export class BuilderController {
   async getBuildsPerDayDefault(
     @Param('pkgname') pkgname: string,
     @Param('days', ParseIntPipe) days: number,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
   ): Promise<
     {
       day: string;
@@ -192,7 +192,6 @@ export class BuilderController {
     return await this.builderService.getBuildsCountByPkgnamePerDay({ offset, pkgname, amount: days });
   }
 
-  @AllowAnonymous()
   @Get('per-day/:days')
   @ApiOperation({ summary: 'Get builds per day for all packages.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -201,29 +200,37 @@ export class BuilderController {
     return await this.builderService.getBuildsPerDay({ days: days });
   }
 
-  @AllowAnonymous()
-  @Get('latest/url/:amount')
-  @ApiOperation({ summary: 'Get latest builds with URLs.' })
-  @ApiParam({ name: 'amount', description: 'Number of builds to return' })
-  @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiOkResponse({ description: 'List of latest builds with URLs', type: Object, isArray: true })
-  async getLatestBuildsByPkgnameWithUrls(
-    @Param('amount', new ParseIntPipe({ optional: true })) amount = 50,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
-  ): Promise<{ commit: string; logUrl: string; pkgname: string; timeToEnd: string; version: string }[]> {
-    return await this.builderService.getLatestBuilds({ amount, offset });
-  }
-
-  @AllowAnonymous()
   @Get('average/time')
   @ApiOperation({ summary: 'Get average build time per status.' })
+  @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
   @ApiOkResponse({ description: 'Average build time per status', type: Object, isArray: true })
-  async getAverageBuildTimePerStatus(): Promise<
+  async getAverageBuildTimePerStatus(@Query('days', new ParseIntPipe({ optional: true })) days?: number): Promise<
     {
       average_build_time: string;
       status: string;
     }[]
   > {
-    return await this.builderService.getAverageBuildTimePerStatus();
+    return await this.builderService.getAverageBuildTimePerStatus(days);
+  }
+
+  @Get('average/pkgname')
+  @ApiOperation({ summary: 'Get average build time per package.' })
+  @ApiQuery({ name: 'pkgname', required: true, isArray: true, description: 'Package names to look up' })
+  @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
+  @ApiOkResponse({ description: 'Average build time per package', type: Object, isArray: true })
+  async getAverageBuildTimePerPackage(
+    @Query('pkgname') pkgnames: string[],
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
+  ): Promise<
+    {
+      pkgname: string;
+      average_build_time: string;
+      samples: string;
+    }[]
+  > {
+    return await this.builderService.getAverageBuildTimePerPackage(
+      Array.isArray(pkgnames) ? pkgnames : [pkgnames],
+      days,
+    );
   }
 }

@@ -4,16 +4,11 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { LoadingService } from './loading.service';
 
-/**
- * This class is for intercepting http requests. When a request starts, we set the loadingSub property
- * in the LoadingService to true. Once the request completes, and we have a response, set the loadingSub
- * property to false. If an error occurs while servicing the request, set the loadingSub property to false.
- */
 @Injectable()
 export class HttpRequestInterceptor implements HttpInterceptor {
   private readonly loading = inject(LoadingService);
 
-  intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+  intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     this.loading.setLoading(true, request.url);
     return next
       .handle(request)
@@ -24,7 +19,7 @@ export class HttpRequestInterceptor implements HttpInterceptor {
         }),
       )
       .pipe(
-        map((evt: HttpEvent<any>) => {
+        map((evt: HttpEvent<unknown>) => {
           if (evt instanceof HttpResponse) {
             this.loading.setLoading(false, request.url);
           }

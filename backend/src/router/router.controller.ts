@@ -1,39 +1,7 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiProperty } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { CountryStatsDto, MirrorStatsDto, PackageStatsDto, PerDayStatsDto } from './router.dto';
 import { RouterService } from './router.service';
-import { AllowAnonymous } from '../auth/anonymous.decorator';
-
-class CountryStatsDto {
-  @ApiProperty()
-  country: string;
-
-  @ApiProperty()
-  count: string;
-}
-
-class MirrorStatsDto {
-  @ApiProperty()
-  mirror: string;
-
-  @ApiProperty()
-  count: string;
-}
-
-class PackageStatsDto {
-  @ApiProperty()
-  pkgbase: string;
-
-  @ApiProperty()
-  count: string;
-}
-
-class PerDayStatsDto {
-  @ApiProperty()
-  day: string;
-
-  @ApiProperty()
-  count: string;
-}
 
 @ApiTags('router')
 @Controller('router')
@@ -41,7 +9,6 @@ export class RouterController {
   constructor(private routerService: RouterService) {}
 
   @HttpCode(HttpStatus.OK)
-  @AllowAnonymous()
   @Get('/country/:days')
   @ApiOperation({ summary: 'Get router country stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -51,7 +18,6 @@ export class RouterController {
   }
 
   @HttpCode(HttpStatus.OK)
-  @AllowAnonymous()
   @Get('/mirror/:days')
   @ApiOperation({ summary: 'Get router mirror stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -61,7 +27,6 @@ export class RouterController {
   }
 
   @HttpCode(HttpStatus.OK)
-  @AllowAnonymous()
   @Get('/package/:days')
   @ApiOperation({ summary: 'Get router package stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -71,7 +36,6 @@ export class RouterController {
   }
 
   @HttpCode(HttpStatus.OK)
-  @AllowAnonymous()
   @Get('/per-day/:days')
   @ApiOperation({ summary: 'Get router stats per day.' })
   @ApiParam({ name: 'days', description: 'Number of days' })

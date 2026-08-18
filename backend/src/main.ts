@@ -1,54 +1,47 @@
-import { CAUR_ALLOWED_CORS } from '@./shared-lib';
+import { CAUR_ALLOWED_CORS } from '@chaotic-next/shared-lib';
 import helmet from '@fastify/helmet';
 import type { INestApplication } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Logger as PinoLogger } from 'nestjs-pino';
-import { AllExceptionsFilter } from './all-exceptions/all-exceptions.filter';
 import { provideSwagger } from './api/setup-swagger';
 import { AppModule } from './app.module';
-import { checkEnvironment } from './functions';
+import { checkEnvironment } from './utils/functions';
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
-declare const module: any;
 
 async function bootstrap(): Promise<void> {
-  const fastifyAdapter = new FastifyAdapter();
+  // Fastify only understands a boolean or an address/CIDR here, so the env
+  // strings "true"/"false" are mapped to booleans before being passed on.
+  const trustProxyEnv = process.env.CAUR_TRUST_PROXY;
+  const trustProxy = trustProxyEnv === 'true' ? true : trustProxyEnv === 'false' ? false : trustProxyEnv;
+
+  const fastifyAdapter = new FastifyAdapter(trustProxy === undefined ? undefined : { trustProxy });
   const app: INestApplication = await NestFactory.create<NestFastifyApplication>(AppModule, fastifyAdapter, {
     bufferLogs: true,
   });
   app.useLogger(app.get(PinoLogger));
+  app.enableShutdownHooks();
 
   const configService: ConfigService = app.get<ConfigService>(ConfigService);
   checkEnvironment(configService);
 
-  const trustProxy: string = configService.get<string>(process.env.CAUR_TRUST_PROXY);
-  if (trustProxy !== undefined) {
-    fastifyAdapter.options({ trustProxy: trustProxy });
-  }
-  // @ts-expect-error this is very annoying and still works, even though types aren't 100 accurate
-  fastifyAdapter.register(helmet);
+  // Two fastify majors' type declarations coexist in the dependency tree
+  // (@nestjs/platform-fastify pins an older one than @fastify/helmet expects),
+  // so the plugin is narrowed to exactly what the adapter's register() takes.
+  type AdapterPlugin = Parameters<FastifyAdapter['register']>[0];
+  fastifyAdapter.register(helmet as unknown as AdapterPlugin);
 
   const corsOptions = {
     origin: CAUR_ALLOWED_CORS,
-    methods: 'GET,POST,PATCH',
+    methods: 'GET,POST,PATCH,DELETE',
   };
   app.enableCors(corsOptions);
 
-  const { httpAdapter } = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
-
-  // Provide the Swagger API documentation at /api
   provideSwagger(app);
-  await app.listen(configService.get<number>('app.port'), configService.get<string>('app.host'));
-
-  // Hot Module Replacement support
-  if (module.hot) {
-    module.hot.accept();
-    module.hot.dispose(() => app.close());
-  }
+  await app.listen(configService.getOrThrow<number>('app.port'), configService.getOrThrow<string>('app.host'));
 }
 
 bootstrap().then(() => {

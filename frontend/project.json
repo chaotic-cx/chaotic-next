@@ -35,7 +35,7 @@
             },
             {
               "type": "anyComponentStyle",
-              "maximumWarning": "2kb",
+              "maximumWarning": "4kb",
               "maximumError": "4kb"
             }
           ],
@@ -77,6 +77,19 @@
         "port": 4201,
         "staticFilePath": "dist/frontend/browser",
         "spa": true
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p frontend/tsconfig.app.json --noEmit"
+      }
+    },
+    "test-ci": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/coverage/frontend"],
+      "options": {
+        "command": "node node_modules/vitest/vitest.mjs run --config frontend/vite.config.mts --coverage"
       }
     }
   }

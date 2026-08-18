@@ -1,26 +1,41 @@
-import { Package } from '@./shared-lib';
 import { DatePipe } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, inject, LOCALE_ID, OnInit, viewChild } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  LOCALE_ID,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { debounce, FormField, form } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
+import { Package } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { Button } from '@openng/optimus-ui/button';
 import { IconFieldModule } from '@openng/optimus-ui/iconfield';
 import { InputIconModule } from '@openng/optimus-ui/inputicon';
 import { InputTextModule } from '@openng/optimus-ui/inputtext';
 import { MultiSelectModule } from '@openng/optimus-ui/multiselect';
-import { Table, TableModule } from '@openng/optimus-ui/table';
+import { Select } from '@openng/optimus-ui/select';
+import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { retry } from 'rxjs';
+import { AuthService } from 'ngx-better-auth';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
-import { RepoNamePipe } from '../pipes/repo-name.pipe';
+import { castTo } from '../functions';
+import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
+import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
+import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
 import { TitleComponent } from '../title/title.component';
-import { PackageListService } from './packge-list.service';
+import { PackageListService } from './package-list.service';
 
 @Component({
   selector: 'chaotic-package-list',
@@ -31,101 +46,147 @@ import { PackageListService } from './packge-list.service';
     InputTextModule,
     FormsModule,
     MultiSelectModule,
+    Select,
     TagModule,
     DatePipe,
     Button,
+    FormField,
     StripPrefixPipe,
+    RelativeTimePipe,
     TitleComponent,
-    RepoNamePipe,
     Tooltip,
+    ColumnVisibilityComponent,
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
-  providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
+  providers: [MessageToastService, PackageListService, { provide: LOCALE_ID, useValue: 'en-GB' }],
+  host: {
+    '(document:keydown)': 'focusSearchOnShortcut($event)',
+  },
 })
-export class PackageListComponent implements OnInit, AfterViewInit {
+export class PackageListComponent {
+  private readonly authService = inject(AuthService);
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-
   protected readonly packageListService = inject(PackageListService);
-  protected readonly pkgTable = viewChild<Table>('pkgTable');
+  protected readonly columnVisibility = inject(ColumnVisibilityService);
 
-  ngOnInit() {
-    this.appService.updateSeoTags(
-      this.meta,
-      'Package list',
-      'List of all packages available in the Chaotic-AUR repository',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list',
-      this.router.url,
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  readonly isLoggedIn = this.authService.isLoggedIn;
+  readonly search = input<string>();
+
+  protected readonly packageColumns: ColumnDef[] = [
+    { key: 'name', label: 'Name' },
+    { key: 'version', label: 'Version' },
+    { key: 'lastUpdated', label: 'Last updated' },
+    { key: 'description', label: 'Description' },
+    { key: 'homepage', label: 'Homepage' },
+    { key: 'repo', label: 'Repository' },
+    { key: 'actions', label: 'PKGBUILD' },
+  ];
+
+  protected readonly searchModel = signal({ query: this.packageListService.searchValue() });
+  protected readonly searchForm = form(this.searchModel, (schemaPath) => {
+    debounce(schemaPath.query, 300);
+  });
+
+  constructor() {
+    this.columnVisibility.register('package-list-table', [
+      'name',
+      'version',
+      'lastUpdated',
+      'description',
+      'homepage',
+      'repo',
+      'actions',
+    ]);
+    this.appService.updateSeoTags(this.meta, {
+      title: 'Package list',
+      description: 'List of all packages available in the Chaotic-AUR repository',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list',
+      url: this.router.url,
+    });
+
+    effect(() => {
+      const q = this.search();
+      if (q) this.searchModel.update((model) => ({ ...model, query: q }));
+    });
+
+    effect(() => {
+      this.applySearch(this.searchForm.query().value());
+    });
+  }
+
+  onLazyLoad(event: TableLazyLoadEvent): void {
+    this.packageListService.setPage(event.first ?? 0, event.rows ?? 25);
+    this.packageListService.setSort(
+      typeof event.sortField === 'string' ? event.sortField : 'pkgname',
+      event.sortOrder ?? 1,
     );
-
-    if (this.packageListService.packageList().length === 0) {
-      this.appService
-        .getPackageList()
-        .pipe(retry({ delay: 5000, count: 3 }))
-        .subscribe({
-          next: (data: (Package & { reponame: string })[]) => {
-            this.packageListService.packageList.set(data.filter((pkg) => pkg.version));
-            this.cdr.markForCheck();
-          },
-          error: (err) => {
-            this.messageToastService.error('Error', 'Failed to package list');
-            console.error(err);
-          },
-          complete: () => {
-            this.packageListService.loading.set(false);
-          },
-        });
-    } else {
-      this.packageListService.loading.set(false);
-    }
   }
 
-  ngAfterViewInit() {
-    if (this.route.snapshot.queryParams['search']) {
-      this.pkgTable()!.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
-      this.packageListService.searchValue.set(this.route.snapshot.queryParams['search']);
-      this.cdr.markForCheck();
-    }
-    this.unsetRounding();
-  }
-
-  /**
-   * Remove the border radius from the datatable container elements.
-   */
-  private unsetRounding(): void {
-    const elements = document.querySelectorAll('.p-datatable-table-container');
-    for (const element of Array.from(elements)) {
-      if (element instanceof HTMLElement) {
-        element.style.borderRadius = '0';
-      }
-    }
+  protected focusSearchOnShortcut(event: KeyboardEvent): void {
+    if (!event.ctrlKey || event.key.toLowerCase() !== 'f') return;
+    event.preventDefault();
+    this.searchInput()?.nativeElement.focus();
+    this.searchInput()?.nativeElement.select();
   }
 
   clear(table: Table) {
     table.clear();
-    this.packageListService.searchValue.set('');
+    table.clearState();
+    this.searchModel.update((model) => ({ ...model, query: '' }));
+    this.packageListService.setRepoFilter(undefined);
+    void this.router.navigate([], {
+      queryParams: { search: null, repo: null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
     this.cdr.markForCheck();
   }
 
-  globalFilter(target: EventTarget | null) {
-    if (!target) return;
-    const input = target as HTMLInputElement;
-    this.pkgTable()!.filterGlobal(input.value, 'contains');
-    void this.router.navigate([], { queryParams: { search: input.value } });
+  private applySearch(query: string): void {
+    this.packageListService.setSearch(query);
+    void this.router.navigate([], {
+      queryParams: { search: query || null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
 
-  typed(value: any): Package {
-    return value;
+  onRepoFilter(repoId: number | null): void {
+    const repoName = repoId === null ? null : this.repoNameById(repoId);
+    this.packageListService.setRepoFilter(repoName);
+    void this.router.navigate([], {
+      queryParams: { repo: repoName },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
   }
+
+  private repoNameById(id: number): string | undefined {
+    return this.packageListService.repos()?.find((repo) => repo.id === id)?.name;
+  }
+
+  readonly typed = castTo<Package>;
 
   openPkgbuild(pkg: Package) {
     const url: string = pkg.repo === this.appConfig.repoId ? this.appConfig.repoUrl : this.appConfig.repoUrlGaruda;
     window.open(`${url}/${pkg.pkgname}`, '_blank');
+  }
+
+  openDetail(pkg: Package) {
+    void this.router.navigate(['/stats'], { queryParams: { search: pkg.pkgname } });
+  }
+
+  triggerRebuild(pkg: Package) {
+    void this.router.navigate(['/pipeline-trigger'], {
+      queryParams: { operation: 'Bump Packages', packages: pkg.pkgname },
+    });
   }
 }

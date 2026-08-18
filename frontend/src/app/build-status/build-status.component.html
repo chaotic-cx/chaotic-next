@@ -1,9 +1,4 @@
-<chaotic-title
-  title="Build status"
-  subtitleHtml="Currently running pipelines and build queue.<br>Last updated: {{
-    buildStatusService.lastUpdated() | date: 'short'
-  }}"
-/>
+<chaotic-title title="Build status" subtitleHtml="Currently running pipelines and build queue." />
 
 <div class="chaotic-container-wide-center md:chaotic-container-regular">
   @if (isWide()) {
@@ -18,42 +13,39 @@
       </p-card>
       <div class="mx-auto">
         @if (buildStatusService.loadingQueue()) {
-          <div class="md:w-1/4">
+          <div>
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <p-skeleton height="30rem" />
             </p-card>
           </div>
         }
         @if (buildStatusService.activeQueue().length > 0) {
-          <div class="md:w-1/4">
+          <div>
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
                 <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2 mt-8" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Active builds</ng-template>
               <ng-template #subtitle>These are currently ongoing builds</ng-template>
-              <p-table [value]="buildStatusService.activeQueue()">
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Node</th>
-                    <th>Build class</th>
-                    <th>Live log</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.node }}</td>
-                    <td pTooltip="{{ pkg.build_class | buildClass }}" tooltipPosition="top">{{ pkg.build_class }}</td>
-                    <td>
-                      <i class="pi pi-external-link text-ctp-mauve align-middle" style="font-size: 0.6rem"> </i
-                      ><a pRipple href="{{ pkg.liveLogUrl }}"> click</a>
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
-
+              <div class="divide-y divide-white/5">
+                @for (pkg of buildStatusService.activeQueue(); track pkg.name) {
+                  <a
+                    class="block py-2.5"
+                    [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
+                    pRipple
+                    aria-label="Open live build log for {{ pkg.name }}"
+                  >
+                    <span class="block truncate font-semibold">{{ pkg.name }}</span>
+                    <span class="block text-sm text-ctp-subtext1">
+                      Node: {{ pkg.node }} &middot; {{ pkg.build_class | buildClass }}
+                      @if (buildStatusService.activeEtaLabels().get(pkg.name); as eta) {
+                        &middot;
+                        <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
+                      }
+                    </span>
+                  </a>
+                }
+              </div>
               <ng-template #footer>
                 <div class="mt-1 flex gap-4"></div>
               </ng-template>
@@ -68,32 +60,53 @@
               </ng-template>
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
-              <p-table
-                [value]="buildStatusService.waitingQueue()"
-                [rows]="15"
-                [rowsPerPageOptions]="[15, 25, 35]"
-                [sortOrder]="1"
-                [paginator]="buildStatusService.waitingQueue().length > 10"
-                sortField="name"
-                stateStorage="local"
-                paginatorDropdownAppendTo="body"
-                stateKey="build-status-waiting-queue"
-              >
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Build class</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.build_class | buildClass }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <div class="divide-y divide-white/5">
+                @for (pkg of paginatedWaitingQueue(); track pkg.name) {
+                  <div class="py-2.5">
+                    <span class="block truncate font-semibold">{{ pkg.name }}</span>
+                    <span class="block text-sm text-ctp-subtext1">
+                      @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
+                        <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
+                        &middot;
+                      }
+                      {{ pkg.build_class | buildClass }}
+                    </span>
+                  </div>
+                }
+              </div>
               <ng-template #footer>
-                <div class="mt-1 flex gap-4"></div>
+                <div class="mt-1 flex items-center justify-between gap-4">
+                  @if (buildStatusService.queueClearLabel(); as label) {
+                    <span class="text-sm text-ctp-subtext1" [pTooltip]="estimateTooltip" tooltipPosition="top">
+                      {{ label }}
+                    </span>
+                  }
+                  @if (waitingQueuePageCount() > 1) {
+                    <div class="ml-auto flex items-center gap-2">
+                      <button
+                        class="queue-page-btn"
+                        [disabled]="paginatedWaitingQueuePage() <= 1"
+                        (click)="selectWaitingQueuePage(paginatedWaitingQueuePage() - 1)"
+                        type="button"
+                        aria-label="Previous page"
+                      >
+                        <i class="pi pi-angle-left"></i>
+                      </button>
+                      <span class="text-sm text-ctp-subtext1"
+                        >{{ paginatedWaitingQueuePage() }} / {{ waitingQueuePageCount() }}</span
+                      >
+                      <button
+                        class="queue-page-btn"
+                        [disabled]="paginatedWaitingQueuePage() >= waitingQueuePageCount()"
+                        (click)="selectWaitingQueuePage(paginatedWaitingQueuePage() + 1)"
+                        type="button"
+                        aria-label="Next page"
+                      >
+                        <i class="pi pi-angle-right"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
               </ng-template>
             </p-card>
           </div>
@@ -108,20 +121,14 @@
               </ng-template>
               <ng-template #title>Idle builders</ng-template>
               <ng-template #subtitle>Currently idle builders</ng-template>
-              <p-table [value]="buildStatusService.idleQueue()" [sortOrder]="1" sortField="name">
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Build class</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.build_class | buildClass }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <div class="divide-y divide-white/5">
+                @for (pkg of buildStatusService.idleQueue(); track pkg.name) {
+                  <div class="flex items-center justify-between gap-3 py-2.5">
+                    <span class="truncate font-medium">{{ pkg.name }}</span>
+                    <span class="text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+                  </div>
+                }
+              </div>
               <ng-template #footer>
                 <div class="mt-1 flex gap-4"></div>
               </ng-template>
@@ -135,16 +142,32 @@
             <p-timeline [value]="buildStatusService.latestDeployments()">
               <ng-template #opposite let-untypedDeployment>
                 @if (typedDeployment(untypedDeployment); as deployment) {
-                  <small class="text-primary">{{ deployment.timestamp | date: 'short' }}</small>
+                  <small
+                    class="text-primary"
+                    [pTooltip]="(deployment.timestamp | date: 'short') ?? undefined"
+                    tooltipPosition="top"
+                    >{{ deployment.timestamp | relativeTime }}</small
+                  >
                 }
               </ng-template>
               <ng-template #content let-untypedDeployment>
                 @if (typedDeployment(untypedDeployment); as deployment) {
-                  <a [href]="deployment.logUrl" pRipple
-                    >{{ deployment.pkgbase.pkgname }}
-                    <br />
-                    <a class="text-ctp-subtext1 text-xs">({{ deployment.repo?.name }})</a>
-                  </a>
+                  <div class="flex items-center justify-between gap-3">
+                    <span>
+                      {{ deployment.pkgbase.pkgname }}
+                      <br />
+                      <span class="text-sm">({{ deployment.repo?.name }})</span>
+                    </span>
+                    <a
+                      class="text-ctp-mauve hover:text-ctp-text"
+                      [routerLink]="packageLogRouteFromUrl(deployment.logUrl ?? '')"
+                      pTooltip="Open build log"
+                      tooltipPosition="left"
+                      aria-label="Open build log for {{ deployment.pkgbase.pkgname }}"
+                    >
+                      <i class="pi pi-bars"></i>
+                    </a>
+                  </div>
                 }
               </ng-template>
             </p-timeline>
@@ -160,45 +183,41 @@
     </div>
   } @else {
     <p-panel header="Queue status">
-      <div class="chaotic-tab-content">
+      <div class="chaotic-tab-content overflow-x-auto">
         @if (buildStatusService.loadingQueue()) {
-          <div class="md:w-1/4">
-            <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
+          <div class="w-full">
+            <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <p-skeleton height="30rem" />
             </p-card>
           </div>
         }
         @if (buildStatusService.activeQueue().length > 0) {
-          <div style="margin-top: 2.5rem">
+          <div>
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2 mt-8" style="font-size: 5rem"></i>
+                <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Active builds</ng-template>
               <ng-template #subtitle>These are currently ongoing builds</ng-template>
-              <p-table [value]="buildStatusService.activeQueue()" [sortOrder]="1" sortField="name">
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Node</th>
-                    <th>Build class</th>
-                    <th>Live log</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.node }}</td>
-                    <td pTooltip="{{ pkg.build_class | buildClass }}" tooltipPosition="top">
-                      {{ pkg.build_class }}
-                    </td>
-                    <td>
-                      <i class="pi pi-external-link text-ctp-mauve align-middle" style="font-size: 0.6rem"> </i
-                      ><a pRipple href="{{ pkg.liveLogUrl }}"> click</a>
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <div class="divide-y divide-white/5">
+                @for (pkg of buildStatusService.activeQueue(); track pkg.name) {
+                  <a
+                    class="block py-2.5"
+                    [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
+                    pRipple
+                    aria-label="Open live build log for {{ pkg.name }}"
+                  >
+                    <span class="block truncate font-semibold">{{ pkg.name }}</span>
+                    <span class="block text-sm text-ctp-subtext1">
+                      Node: {{ pkg.node }} &middot; {{ pkg.build_class | buildClass }}
+                      @if (buildStatusService.activeEtaLabels().get(pkg.name); as eta) {
+                        &middot;
+                        <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
+                      }
+                    </span>
+                  </a>
+                }
+              </div>
               <ng-template #footer>
                 <div class="mt-1 flex gap-4"></div>
               </ng-template>
@@ -206,67 +225,82 @@
           </div>
         }
         @if (buildStatusService.waitingQueue().length > 0) {
-          <div style="margin-top: 2.5rem">
+          <div class="mt-3">
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-hourglass text-ctp-lavender mt-5" style="font-size: 5rem"></i>
+                <i class="pi pi-hourglass text-ctp-lavender" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Waiting builds</ng-template>
               <ng-template #subtitle>These are currently queued builds</ng-template>
-              <p-table
-                [value]="buildStatusService.waitingQueue()"
-                [rows]="15"
-                [rowsPerPageOptions]="[15, 25, 35]"
-                [sortOrder]="1"
-                [paginator]="buildStatusService.waitingQueue().length > 10"
-                sortField="name"
-                paginatorDropdownAppendTo="body"
-                stateStorage="local"
-                stateKey="build-status-waiting-queue"
-              >
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Build class</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.build_class | buildClass }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <div class="divide-y divide-white/5">
+                @for (pkg of paginatedWaitingQueue(); track pkg.name) {
+                  <div class="py-2.5">
+                    <span class="block truncate font-semibold">{{ pkg.name }}</span>
+                    <span class="block text-sm text-ctp-subtext1">
+                      @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
+                        <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{ eta }}</span>
+                        &middot;
+                      }
+                      {{ pkg.build_class | buildClass }}
+                    </span>
+                  </div>
+                }
+              </div>
               <ng-template #footer>
-                <div class="mt-1 flex gap-4"></div>
+                <div class="mt-1 flex items-center justify-between gap-4">
+                  @if (buildStatusService.queueClearLabel(); as label) {
+                    <span class="text-sm text-ctp-subtext1" [pTooltip]="estimateTooltip" tooltipPosition="top">
+                      {{ label }}
+                    </span>
+                  }
+                  @if (waitingQueuePageCount() > 1) {
+                    <div class="ml-auto flex items-center gap-2">
+                      <button
+                        class="queue-page-btn"
+                        [disabled]="paginatedWaitingQueuePage() <= 1"
+                        (click)="selectWaitingQueuePage(paginatedWaitingQueuePage() - 1)"
+                        type="button"
+                        aria-label="Previous page"
+                      >
+                        <i class="pi pi-angle-left"></i>
+                      </button>
+                      <span class="text-sm text-ctp-subtext1"
+                        >{{ paginatedWaitingQueuePage() }} / {{ waitingQueuePageCount() }}</span
+                      >
+                      <button
+                        class="queue-page-btn"
+                        [disabled]="paginatedWaitingQueuePage() >= waitingQueuePageCount()"
+                        (click)="selectWaitingQueuePage(paginatedWaitingQueuePage() + 1)"
+                        type="button"
+                        aria-label="Next page"
+                      >
+                        <i class="pi pi-angle-right"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
               </ng-template>
             </p-card>
           </div>
         }
         @if (buildStatusService.idleQueue().length > 0) {
           <div
-            [class.mt-5]="buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0"
+            [class.mt-3]="buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0"
           >
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
-                <i class="pi pi-list text-ctp-peach mt-5" style="font-size: 5rem"></i>
+                <i class="pi pi-list text-ctp-peach" style="font-size: 5rem"></i>
               </ng-template>
               <ng-template #title>Idle builders</ng-template>
               <ng-template #subtitle>Currently idle builders</ng-template>
-              <p-table [value]="buildStatusService.idleQueue()" [sortOrder]="1" sortField="name">
-                <ng-template #header>
-                  <tr>
-                    <th>Name</th>
-                    <th>Build class</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-pkg>
-                  <tr>
-                    <td>{{ pkg.name }}</td>
-                    <td>{{ pkg.build_class | buildClass }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <div class="divide-y divide-white/5">
+                @for (pkg of buildStatusService.idleQueue(); track pkg.name) {
+                  <div class="flex items-center justify-between gap-3 py-2.5">
+                    <span class="truncate font-medium">{{ pkg.name }}</span>
+                    <span class="text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+                  </div>
+                }
+              </div>
               <ng-template #footer>
                 <div class="mt-1 flex gap-4"></div>
               </ng-template>
@@ -276,7 +310,7 @@
       </div>
     </p-panel>
     <p-panel class="mt-5" header="Pipelines">
-      <div class="chaotic-tab-content">
+      <div class="chaotic-tab-content overflow-x-auto">
         <chaotic-pipeline-timeline
           [pipelines]="buildStatusService.pipelineWithStatus()"
           [loading]="buildStatusService.loadingPipelines()"
@@ -286,21 +320,37 @@
       </div>
     </p-panel>
     <p-panel class="mt-5" header="Latest deployments">
-      <div class="chaotic-tab-content">
+      <div class="chaotic-tab-content overflow-x-auto">
         @if (!buildStatusService.loadingDeployments()) {
           <p-timeline [value]="buildStatusService.latestDeployments()">
             <ng-template #opposite let-untypedDeployment>
               @if (typedDeployment(untypedDeployment); as deployment) {
-                <small class="text-primary-emphasis-alt">{{ deployment.timestamp | date: 'short' }}</small>
+                <small
+                  class="text-primary-emphasis-alt"
+                  [pTooltip]="(deployment.timestamp | date: 'short') ?? undefined"
+                  tooltipPosition="top"
+                  >{{ deployment.timestamp | relativeTime }}</small
+                >
               }
             </ng-template>
             <ng-template #content let-untypedDeployment>
               @if (typedDeployment(untypedDeployment); as deployment) {
-                <span>
-                  <a [href]="deployment.logUrl" pRipple>{{ deployment.pkgbase.pkgname }}</a
-                  ><br />
-                  <a class="text-sm">({{ deployment.repo?.name }})</a>
-                </span>
+                <div class="flex items-center justify-between gap-3">
+                  <span>
+                    {{ deployment.pkgbase.pkgname }}
+                    <br />
+                    <span class="text-sm">({{ deployment.repo?.name }})</span>
+                  </span>
+                  <a
+                    class="text-ctp-mauve hover:text-ctp-text"
+                    [routerLink]="packageLogRouteFromUrl(deployment.logUrl ?? '')"
+                    pTooltip="Open build log"
+                    tooltipPosition="left"
+                    aria-label="Open build log for {{ deployment.pkgbase.pkgname }}"
+                  >
+                    <i class="pi pi-bars"></i>
+                  </a>
+                </div>
               }
             </ng-template>
           </p-timeline>
@@ -316,72 +366,101 @@
   }
 </div>
 
-@if (dialogData().pipeline.source) {
-  <p-dialog [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '90vw' }" header="Pipeline details">
-    <div class="mb-5 ml-2.5">
-      <p>Source: {{ dialogData().pipeline.source }}</p>
-      <p>Created at: {{ dialogData().pipeline.created_at | date: 'short' }}</p>
-      <p>
-        Web URL:
-        <a class="text-ctp-mauve" [href]="dialogData().pipeline.web_url">{{ dialogData().pipeline.web_url }}</a>
-      </p>
-      <p>
-        Commit:
-        <a
-          class="text-ctp-mauve"
-          href="https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/{{ dialogData().pipeline.sha }}"
-          >{{ dialogData().pipeline.sha }}</a
+@if (dialogData(); as dialog) {
+  <p-dialog
+    [(visible)]="dialogVisible"
+    [modal]="true"
+    [appendTo]="'body'"
+    [style]="{ 'width': '64rem', 'max-width': '94vw' }"
+    header="Pipeline details"
+  >
+    <div
+      class="mb-5 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-ctp-surface1 bg-ctp-mantle px-4 py-3 text-sm"
+    >
+      <span class="flex items-center gap-2">
+        <span class="text-ctp-subtext0">Source</span>
+        <span class="font-medium">{{ dialog.pipeline.source }}</span>
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="text-ctp-subtext0">Created</span>
+        <span
+          class="text-ctp-text"
+          [pTooltip]="(dialog.pipeline.created_at | date: 'short') ?? undefined"
+          tooltipPosition="top"
+          >{{ dialog.pipeline.created_at | relativeTime }}</span
         >
-      </p>
-    </div>
-    @if (dialogData().commit.length > 0) {
-      <p-table
-        [value]="dialogData().commit"
-        [sortOrder]="-1"
-        [tableStyle]="{ width: '100%' }"
-        dataKey="id"
-        sortField="finished_at"
+      </span>
+      <a
+        class="flex items-center gap-1.5 text-ctp-mauve hover:text-ctp-text"
+        [href]="dialog.pipeline.web_url"
+        target="_blank"
+        rel="noopener"
       >
-        <ng-template #header>
-          <tr>
-            <th>Package</th>
-            <th>Started</th>
-            <th>Finished</th>
-            <th>Status</th>
-            <th>Message</th>
-          </tr>
-        </ng-template>
-        <ng-template #body let-job>
-          <tr>
-            <td>
-              <a class="text-ctp-mauve" [href]="job.target_url">{{ job.name }}</a>
-            </td>
-            <td>{{ job.started_at | date: 'short' }}</td>
-            <td>{{ job.finished_at | date: 'short' }}</td>
-            <td>
-              <i
-                class="pi"
-                [ngClass]="{
-                  'pi-check-circle text-ctp-green': job.status === 'success',
-                  'pi-exclamation-circle text-ctp-red': job.status === 'failed',
-                  'pi-spin pi-spinner text-ctp-peach': job.status === 'running',
-                  'pi-clock text-ctp-surface0': job.status === 'pending',
-                  'pi-info-circle text-ctp-text': job.status === 'canceled',
-                }"
-              ></i>
-              {{ job.status }}
-            </td>
-            <td>{{ job.description }}</td>
-          </tr>
-        </ng-template>
-      </p-table>
+        <i class="pi pi-external-link"></i>
+        <span>GitLab</span>
+      </a>
+      <a
+        class="flex items-center gap-1.5 font-mono text-ctp-mauve hover:text-ctp-text"
+        [href]="`https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/${dialog.pipeline.sha}`"
+        target="_blank"
+        rel="noopener"
+        pTooltip="View commit"
+        tooltipPosition="top"
+      >
+        <i class="pi pi-hashtag"></i>
+        <span>{{ dialog.pipeline.sha.slice(0, 8) }}</span>
+      </a>
+    </div>
+    @if (dialog.commit.length > 0) {
+      <ul class="space-y-2.5">
+        @for (job of sortedCommit(); track job.id) {
+          @let status = jobStatus(job.status);
+          <li class="flex items-start gap-3 rounded-lg border border-ctp-surface1 bg-ctp-mantle p-3.5">
+            <i class="pi mt-1 {{ status.icon }} {{ status.color }}"></i>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between gap-3">
+                <a
+                  class="truncate font-semibold text-ctp-mauve hover:text-ctp-text"
+                  [href]="job.target_url ?? undefined"
+                  target="_blank"
+                  rel="noopener"
+                  >{{ job.name }}</a
+                >
+                <span
+                  class="shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium uppercase {{ status.chip }} {{
+                    status.color
+                  }}"
+                  >{{ job.status }}</span
+                >
+              </div>
+              @if (job.description) {
+                <p class="mt-1 truncate text-sm text-ctp-subtext1">{{ job.description }}</p>
+              }
+              <div class="mt-1.5 text-xs text-ctp-subtext0">
+                @if (job.started_at) {
+                  <span>{{ job.started_at | date: 'short' }}</span>
+                  @if (job.finished_at) {
+                    <span> &rarr; {{ job.finished_at | date: 'short' }}</span>
+                  }
+                } @else {
+                  <span>Not started</span>
+                }
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
     } @else {
       <div class="ml-2.5">
-        <p>There are no jobs in this pipeline (yet).</p>
-        <p>
-          Have a look at <a class="text-ctp-mauve" [href]="dialogData().pipeline.web_url">web UI</a> to look into
-          details instead!
-        </p>
+        <a
+          class="text-ctp-mauve hover:underline inline-flex items-center gap-1"
+          [routerLink]="['/logs', dialog.pipeline.id]"
+          pTooltip="Open live build logs"
+          tooltipPosition="left"
+        >
+          <i class="pi pi-bars"></i>
+          <span>No jobs yet — open pipeline logs</span>
+        </a>
       </div>
     }
   </p-dialog>

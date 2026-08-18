@@ -1,21 +1,25 @@
-import { Build } from '@./shared-lib';
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, inject, OnInit, viewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Meta } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
+import { debounce, FormField, form } from '@angular/forms/signals';
+import { Router, RouterLink } from '@angular/router';
+import { type Build, BuildStatus, STATUS_LABELS } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { Button } from '@openng/optimus-ui/button';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
-import { Table, TableModule } from '@openng/optimus-ui/table';
+import { Select } from '@openng/optimus-ui/select';
+import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
+import { castTo, packageLogRouteFromUrl } from '../functions';
 import { DurationPipe } from '../pipes/duration.pipe';
-import { LogurlPipe } from '../pipes/logurl.pipe';
-import { OutcomePipe } from '../pipes/outcome.pipe';
+import { RelativeTimePipe } from '../pipes/relative-time.pipe';
+import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
+import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
 import { TitleComponent } from '../title/title.component';
 import { DeployLogService } from './deploy-log.service';
 
@@ -28,87 +32,176 @@ import { DeployLogService } from './deploy-log.service';
     InputIcon,
     IconField,
     InputText,
-    LogurlPipe,
+    Select,
     DurationPipe,
+    RelativeTimePipe,
     TitleComponent,
     FormsModule,
+    FormField,
+    RouterLink,
+    Tooltip,
+    ColumnVisibilityComponent,
   ],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
-  providers: [MessageToastService, OutcomePipe],
+  providers: [MessageToastService, DeployLogService],
+  host: {
+    '(document:keydown)': 'focusSearchOnShortcut($event)',
+  },
 })
-export class DeployLogComponent implements OnInit, AfterViewInit {
+export class DeployLogComponent {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly meta = inject(Meta);
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-
   protected readonly deployLogService = inject(DeployLogService);
+  protected readonly columnVisibility = inject(ColumnVisibilityService);
   protected readonly deployTable = viewChild<Table>('deployTable');
 
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
+
+  readonly search = input<string>();
+
+  readonly repo = input<string>();
+  readonly builder = input<string>();
+  readonly status = input<string>();
+
+  protected readonly deployColumns: ColumnDef[] = [
+    { key: 'pkgname', label: 'Package name' },
+    { key: 'builder', label: 'Builder' },
+    { key: 'repo', label: 'Repository' },
+    { key: 'outcome', label: 'Outcome' },
+    { key: 'logUrl', label: 'Log URL' },
+    { key: 'duration', label: 'Duration' },
+    { key: 'timestamp', label: 'Time of finish' },
+    { key: 'actions', label: 'Details' },
+  ];
+
+  protected readonly searchModel = signal({ query: this.deployLogService.searchValue() });
+  protected readonly searchForm = form(this.searchModel, (schemaPath) => {
+    debounce(schemaPath.query, 300);
+  });
+
   constructor() {
+    this.columnVisibility.register('deploy-log-table', [
+      'pkgname',
+      'builder',
+      'repo',
+      'outcome',
+      'logUrl',
+      'duration',
+      'timestamp',
+      'actions',
+    ]);
     this.appService.chaoticEvent
       .pipe(
         filter((event) => event.type === 'build'),
         takeUntilDestroyed(),
       )
-      .subscribe((event) => this.deployLogService.getDeployments(true));
+      .subscribe(() => this.deployLogService.reload());
+
+    effect(() => {
+      const q = this.search();
+      if (q) this.searchModel.update((model) => ({ ...model, query: q }));
+    });
+
+    effect(() => {
+      this.applySearch(this.searchForm.query().value());
+    });
+
+    effect(() => {
+      const repo = this.repo();
+      if (repo) this.deployLogService.setRepoFilter(repo);
+    });
+
+    effect(() => {
+      const builder = this.builder();
+      if (builder) this.deployLogService.setBuilderFilter(builder);
+    });
+
+    effect(() => {
+      const status = this.status();
+      if (status) this.deployLogService.setStatusFilter(this.deployLogService.statusByLabel(status));
+    });
   }
 
-  ngOnInit() {
-    this.appService.updateSeoTags(
-      this.meta,
-      'Deploy log',
-      'Deploy log for the Chaotic-AUR repository',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR deploy log',
-      this.router.url,
+  readonly typed = castTo<Build>;
+
+  onLazyLoad(event: TableLazyLoadEvent): void {
+    this.deployLogService.setPage(event.first ?? 0, event.rows ?? 25);
+    this.deployLogService.setSort(
+      typeof event.sortField === 'string' ? event.sortField : 'timestamp',
+      event.sortOrder ?? -1,
     );
-
-    if (this.route.snapshot.queryParams['amount']) {
-      this.deployLogService.amount.set(this.route.snapshot.queryParams['amount']);
-      this.cdr.markForCheck();
-    }
-
-    this.deployLogService.getDeployments();
-  }
-
-  ngAfterViewInit() {
-    if (this.route.snapshot.queryParams['search']) {
-      this.deployTable()?.filterGlobal(this.route.snapshot.queryParams['search'], 'contains');
-      this.deployLogService.searchValue.set(this.route.snapshot.queryParams['search']);
-    }
-    this.unsetRounding();
   }
 
   clear(table: Table) {
     table.clear();
-    this.deployLogService.searchValue.set('');
-    void this.router.navigate([], { queryParams: { search: '' } });
+    table.clearState();
+    this.searchModel.update((model) => ({ ...model, query: '' }));
+    this.deployLogService.setBuilderFilter(undefined);
+    this.deployLogService.setRepoFilter(undefined);
+    this.deployLogService.setStatusFilter(undefined);
+    void this.router.navigate([], {
+      queryParams: { search: null, repo: null, builder: null, status: null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
     this.cdr.markForCheck();
   }
 
-  globalFilter(target: EventTarget | null) {
-    if (!target) return;
-    const input = target as HTMLInputElement;
-    this.deployTable()?.filterGlobal(input.value, 'contains');
-    void this.router.navigate([], { queryParams: { search: input.value } });
+  onBuilderFilter(value: string | null): void {
+    this.applyFilter((v) => this.deployLogService.setBuilderFilter(v), value);
+    void this.router.navigate([], {
+      queryParams: { builder: value ?? null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
+  }
+
+  onRepoFilter(value: string | null): void {
+    this.applyFilter((v) => this.deployLogService.setRepoFilter(v), value);
+    void this.router.navigate([], {
+      queryParams: { repo: value ?? null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
+  }
+
+  onStatusFilter(value: BuildStatus | null): void {
+    this.applyFilter((v) => this.deployLogService.setStatusFilter(v), value);
+    void this.router.navigate([], {
+      queryParams: { status: value === null ? null : STATUS_LABELS[value] },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
+  }
+
+  private applySearch(query: string): void {
+    this.deployLogService.setSearch(query);
+    void this.router.navigate([], {
+      queryParams: { search: query || null },
+      queryParamsHandling: 'merge',
+      info: { disableViewTransition: true },
+    });
     this.cdr.markForCheck();
   }
 
-  typed(value: any): Build {
-    return value;
+  protected focusSearchOnShortcut(event: KeyboardEvent): void {
+    if (!event.ctrlKey || event.key.toLowerCase() !== 'f') return;
+    event.preventDefault();
+    this.searchInput()?.nativeElement.focus();
+    this.searchInput()?.nativeElement.select();
   }
 
-  /**
-   * Remove the border radius from the datatable container elements.
-   */
-  private unsetRounding(): void {
-    const elements = document.querySelectorAll('.p-datatable-table-container');
-    for (const element of Array.from(elements)) {
-      if (element instanceof HTMLElement) {
-        element.style.borderRadius = '0';
-      }
-    }
+  openDetail(build: Build) {
+    void this.router.navigate(['/stats'], { queryParams: { search: build.pkgbase.pkgname } });
+  }
+
+  private applyFilter<T>(setFilter: (value: T | null) => void, value: T | null): void {
+    const table = this.deployTable();
+    if (table) table.first = 0;
+    setFilter(value);
   }
 }

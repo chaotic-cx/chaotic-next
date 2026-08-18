@@ -1,11 +1,12 @@
-import type { TeamList } from '@./shared-lib';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import type { TeamList } from '@chaotic-next/shared-lib';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from '@openng/optimus-ui/accordion';
+import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Card } from '@openng/optimus-ui/card';
 import { Panel } from '@openng/optimus-ui/panel';
 import { Ripple } from '@openng/optimus-ui/ripple';
@@ -24,6 +25,7 @@ import { TitleComponent } from '../title/title.component';
     AccordionHeader,
     AccordionContent,
     TitleComponent,
+    PrimeTemplate,
   ],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',
@@ -31,7 +33,9 @@ import { TitleComponent } from '../title/title.component';
 export class AboutComponent implements OnInit {
   private readonly meta = inject(Meta);
   private readonly observer = inject(BreakpointObserver);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly isWide = signal<boolean>(true);
 
@@ -117,12 +121,29 @@ export class AboutComponent implements OnInit {
   }
 
   ngOnInit() {
-    updateSeoTags(
-      this.meta,
-      'About us',
-      'Learn more about the Chaotic-AUR team and project',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
-      this.router.url,
-    );
+    updateSeoTags(this.meta, {
+      title: 'About us',
+      description: 'Learn more about the Chaotic-AUR team and project',
+      keywords:
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
+      url: this.router.url,
+    });
+
+    this.route.fragment
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((fragment) => this.scrollToFragment(fragment));
+  }
+
+  scrollTo(id: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      fragment: id,
+      info: { disableViewTransition: true },
+    });
+  }
+
+  private scrollToFragment(fragment: string | null): void {
+    if (!fragment) return;
+    document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

@@ -1,11 +1,10 @@
 import * as flavors from '@catppuccin/palette';
 
-const { latte, mocha } = flavors.flavors;
+const { mocha } = flavors.flavors;
 
 export const CATPPUCCIN_FLAVOURS: string[] = [
   mocha.colors.blue.hex,
   mocha.colors.green.hex,
-  mocha.colors.lavender.hex,
   mocha.colors.lavender.hex,
   mocha.colors.maroon.hex,
   mocha.colors.mauve.hex,

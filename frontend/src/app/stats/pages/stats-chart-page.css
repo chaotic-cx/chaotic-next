@@ -1,0 +1,5 @@
+:host ::ng-deep .p-card {
+  background: var(--p-card-background);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}

@@ -5,32 +5,11 @@
   "projectType": "application",
   "tags": [],
   "targets": {
-    "build": {
-      "executor": "@nx/rspack:rspack",
-      "outputs": ["{options.outputPath}"],
-      "defaultConfiguration": "production",
+    "typecheck": {
+      "executor": "nx:run-commands",
       "options": {
-        "target": "node",
-        "outputPath": "dist/{projectRoot}",
-        "outputHashing": "none",
-        "main": "{projectRoot}/src/main.ts",
-        "tsConfig": "{projectRoot}/tsconfig.app.json",
-        "rspackConfig": "{projectRoot}/rspack.config.js",
-        "generatePackageJson": true,
-        "assets": []
-      },
-      "configurations": {
-        "hmr": {
-          "mode": "development",
-          "watch": true
-        },
-        "development": {
-          "mode": "development"
-        },
-        "production": {
-          "mode": "production",
-          "sourceMap": false
-        }
+        "commands": ["tsc -p backend/tsconfig.app.json --noEmit", "tsc -p backend/tsconfig.spec.json --noEmit"],
+        "parallel": false
       }
     },
     "serve": {
@@ -40,14 +19,19 @@
       "options": {
         "buildTarget": "backend:build",
         "runBuildTargetDependencies": false
-      },
-      "configurations": {
-        "development": {
-          "buildTarget": "backend:build:development"
-        },
-        "production": {
-          "buildTarget": "backend:build:production"
-        }
+      }
+    },
+    "test:full": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node node_modules/vitest/vitest.mjs run --config backend/vite.config.mts"
+      }
+    },
+    "test-ci": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/coverage/backend"],
+      "options": {
+        "command": "node node_modules/vitest/vitest.mjs run --config backend/vite.config.mts --coverage"
       }
     }
   }

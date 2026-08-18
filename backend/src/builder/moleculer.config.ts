@@ -1,11 +1,11 @@
 import type IORedis from 'ioredis';
 import type { BrokerOptions, LoggerConfig, ServiceSchema } from 'moleculer';
 
-export const MoleculerConfigCommon: Partial<BrokerOptions> = {
+const moleculerConfigCommon: Partial<BrokerOptions> = {
   skipProcessEventRegistration: true,
 };
 
-export function MoleculerConfigLog(): LoggerConfig {
+function moleculerConfigLog(): LoggerConfig {
   return {
     type: 'Pino',
     options: {
@@ -14,7 +14,7 @@ export function MoleculerConfigLog(): LoggerConfig {
   };
 }
 
-export const MoleculerConfigCommonService: Partial<ServiceSchema> = {
+export const moleculerConfigCommonService: Partial<ServiceSchema> = {
   settings: {
     $noVersionPrefix: true,
   },
@@ -23,7 +23,7 @@ export const MoleculerConfigCommonService: Partial<ServiceSchema> = {
 
 export function brokerConfig(nodeID: string, connection: IORedis): BrokerOptions {
   return {
-    logger: MoleculerConfigLog(),
+    logger: moleculerConfigLog(),
     nodeID: nodeID,
     metadata: {
       version: 1,
@@ -36,6 +36,6 @@ export function brokerConfig(nodeID: string, connection: IORedis): BrokerOptions
         password: connection.options.password,
       },
     },
-    ...MoleculerConfigCommon,
+    ...moleculerConfigCommon,
   };
 }

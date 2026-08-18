@@ -29,7 +29,6 @@ function init() {
 
     if ! isRunning; then
       echo "Starting up authSSH..."
-      # Set up ssh tunneling
       AUTOSSH_PIDFILE=/tmp/tunnel.pid AUTOSSH_GATETIME=0 AUTOSSH_PORT=0 autossh -f -N -L "6380:127.0.0.1:${REDIS_PORT}" \
         -p "$REDIS_SSH_PORT" \
         -o StrictHostKeyChecking=no \
@@ -46,7 +45,6 @@ function init() {
 
     export REDIS_PORT=6380
 
-    # Wait for tunnel to be established
     echo "Waiting for tunnel to be established..."
     while ! nc -z localhost $REDIS_PORT; do
       sleep 1

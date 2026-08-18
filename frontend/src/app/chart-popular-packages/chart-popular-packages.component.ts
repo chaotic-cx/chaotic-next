@@ -1,12 +1,12 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { httpResource } from '@angular/common/http';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { flavors } from '@catppuccin/palette';
-import { MessageToastService } from '@garudalinux/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
-import { retry } from 'rxjs';
 import { AppService } from '../app.service';
-import { shuffleArray } from '../functions';
+import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
+import { parseCount, resourceValue } from '../functions';
+import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 @Component({
@@ -14,46 +14,28 @@ import { CATPPUCCIN_FLAVOURS } from '../theme';
   imports: [UIChart, InputNumber, FormsModule],
   templateUrl: './chart-popular-packages.component.html',
   styleUrl: './chart-popular-packages.component.css',
-  providers: [MessageToastService],
 })
-export class ChartPopularPackagesComponent implements OnInit {
+export class ChartPopularPackagesComponent {
   private readonly appService = inject(AppService);
-  private readonly messageToastService = inject(MessageToastService);
+  private readonly statsService = inject(StatsService);
 
-  readonly chartConfig = signal<{ data: any; options: any } | null>(null);
-  readonly loading = signal(true);
-  amount = 20;
+  readonly amount = signal<number>(20);
 
-  ngOnInit(): void {
-    this.getPopularPackages();
-  }
+  private readonly resource = httpResource<{ pkgbase_pkgname: string; count: string }[]>(() =>
+    this.appService.getPopularPackagesResourceRequest(this.amount(), this.statsService.timeRangeDays() ?? undefined),
+  );
 
-  /**
-   * Query the popular packages.
-   */
-  private getPopularPackages(): void {
-    this.appService
-      .getPopularPackages(this.amount)
-      .pipe(retry({ count: 3, delay: 5000 }))
-      .subscribe({
-        next: (data) => {
-          this.chartConfig.set(this.buildChartConfig(data));
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.loading.set(false);
-          this.messageToastService.error('Error', 'Failed to load popular packages data');
-          console.error(err);
-        },
-      });
-  }
+  readonly loading = this.resource.isLoading;
 
-  private buildChartConfig(data: { pkgbase_pkgname: string; count: string }[]): { data: any; options: any } {
+  readonly hasData = computed(() => this.resource.hasValue());
+
+  readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
+    const data = resourceValue(this.resource) ?? [];
     const labels: string[] = [];
     const values: number[] = [];
     for (const item of data) {
       labels.push(item.pkgbase_pkgname);
-      values.push(parseInt(item.count));
+      values.push(parseCount(item.count));
     }
 
     return {
@@ -63,7 +45,7 @@ export class ChartPopularPackagesComponent implements OnInit {
           {
             data: values,
             label: 'Build count',
-            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
+            backgroundColor: CATPPUCCIN_FLAVOURS,
           },
         ],
       },
@@ -72,38 +54,10 @@ export class ChartPopularPackagesComponent implements OnInit {
         maintainAspectRatio: false,
         aspectRatio: 0.4,
         plugins: {
-          legend: {
-            labels: {
-              usePointStyle: false,
-              color: flavors.mocha.colors.text.hex,
-              family: "'Inter', 'Helvetica', 'Arial', sans-serif",
-            },
-          },
+          legend: { labels: mochaLegendLabels() },
         },
-        scales: {
-          x: {
-            ticks: {
-              color: flavors.mocha.colors.text.hex,
-            },
-            grid: {
-              color: flavors.mocha.colors.surface0.hex,
-            },
-          },
-          y: {
-            ticks: {
-              color: flavors.mocha.colors.text.hex,
-            },
-            grid: {
-              color: flavors.mocha.colors.surface0.hex,
-            },
-          },
-        },
+        scales: mochaScales(),
       },
     };
-  }
-
-  onAmountChange(): void {
-    this.loading.set(true);
-    this.getPopularPackages();
-  }
+  });
 }

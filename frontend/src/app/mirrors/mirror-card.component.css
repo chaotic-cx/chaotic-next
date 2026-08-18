@@ -1,0 +1,6 @@
+.chaotic-mirror-card {
+  background: var(--p-card-background);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-color: var(--p-panel-border-color, var(--ctp-mocha-crust));
+}

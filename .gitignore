@@ -3,7 +3,6 @@
 # Compiled output
 dist
 tmp
-**.js
 out-tsc
 
 # Dependencies
@@ -34,6 +33,16 @@ typings
 core
 repos
 
+# Test fixtures are vendored via git-lfs (see .gitattributes)
+
+# Local clone of the pkgbuilds repo (used by config.spec.ts when present;
+# too large to vendor into this repo)
+pkgbuilds/
+
+# Generated signal-scan dumps (via /repo/signals/export); multi-GB, regenerable
+seed*.json
+seed*.json.partial
+
 # System Files
 .DS_Store
 Thumbs.db
@@ -52,3 +61,6 @@ Thumbs.db
 
 .claude/worktrees
 .claude/settings.local.json
+
+vite.config.*.timestamp*
+vitest.config.*.timestamp*

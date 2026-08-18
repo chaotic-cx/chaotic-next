@@ -1,25 +1,15 @@
-<div class="card mb-10 flex justify-center">
-  @if (loading()) {
-    <div class="flex h-60 w-full items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
-    </div>
-  } @else {
+<div class="card relative flex h-full min-h-[24rem] justify-center">
+  @if (hasData()) {
     <p-chart
-      class="w-full mx-20"
+      class="w-full h-full"
       [data]="chartConfig()!.data"
       [options]="chartConfig()!.options"
       [responsive]="true"
       type="line"
     />
+  } @else if (loading()) {
+    <div class="absolute inset-0 flex items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
   }
 </div>
-<p-input-number
-  [(ngModel)]="days"
-  [showButtons]="true"
-  [min]="1"
-  [max]="365"
-  (ngModelChange)="onDaysChange()"
-  mode="decimal"
-  inputId="days"
-  placeholder="Number of days"
-/>

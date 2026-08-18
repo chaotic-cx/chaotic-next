@@ -1,11 +1,23 @@
-import { MergeRequestWithDiffs } from '@./shared-lib';
-import { HttpClient } from '@angular/common/http';
-import { effect, inject, Service, signal, untracked } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { inject, Service, signal } from '@angular/core';
+import { MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { finalize, lastValueFrom } from 'rxjs';
+import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
-import { encrypt } from '../functions';
+
+export type MrFlagLabel = 'dangerous' | 'hold';
+
+const FLAG_COPY: Record<MrFlagLabel, { success: [string, string]; error: [string, string] }> = {
+  dangerous: {
+    success: ['Flagged as Dangerous', 'The merge request has been flagged as dangerous.'],
+    error: ['Flagging Failed', 'Failed to flag the merge request as dangerous. Please try again later.'],
+  },
+  hold: {
+    success: ['Flagged as On Hold', 'The merge request has been flagged as on hold.'],
+    error: ['Flagging Failed', 'Failed to flag the merge request as on hold. Please try again later.'],
+  },
+};
 
 @Service()
 export class MrOverviewService {
@@ -14,28 +26,9 @@ export class MrOverviewService {
   private readonly messageToastService = inject(MessageToastService);
 
   readonly mergeRequests = signal<MergeRequestWithDiffs[]>([]);
-  readonly token = signal<string>('');
   readonly isLoading = signal<boolean>(true);
-  readonly loadingMap = signal<Map<number, boolean>>(new Map());
-  readonly storage = signal<'sessionStorage' | 'localStorage'>('sessionStorage');
+  readonly loadingMap = signal<Map<string, boolean>>(new Map());
 
-  constructor() {
-    effect(async () => {
-      const tokenValue = this.token();
-      if (tokenValue === '') return;
-
-      const encryptedValue = await encrypt(tokenValue, 'thisaintrealsafety1!!1!');
-      if (untracked(this.storage) === 'sessionStorage') {
-        sessionStorage.setItem('gitlabPrivateToken', encryptedValue);
-      } else {
-        localStorage.setItem('gitlabPrivateToken', encryptedValue);
-      }
-    });
-  }
-
-  /**
-   * Retrieves the open merge requests from our backend (cached here).
-   */
   async loadOpenMrs() {
     try {
       const mergeRequests: MergeRequestWithDiffs[] = await lastValueFrom(
@@ -53,54 +46,39 @@ export class MrOverviewService {
             title: this.extractPkgName(mr.title) || mr.title,
             diffs: this.sortDiff(mr.diffs),
           }))
-          .sort((a, b) => (b.detailed_merge_status === 'not_approved' ? -1 : 1)),
+          .sort(
+            (a, b) =>
+              Number(b.detailed_merge_status === 'not_approved') - Number(a.detailed_merge_status === 'not_approved'),
+          ),
       );
       this.isLoading.set(false);
     } catch (error) {
       this.isLoading.set(false);
       this.messageToastService.error(
         'Error fetching merge requests',
-        'An error occurred while fetching merge requests. Please check your token and try again.',
+        'An error occurred while fetching merge requests. Please try again.',
       );
       console.error('Error extracting merge requests:', error);
     }
   }
 
-  /**
-   * Extracts the package name from the merge request title.
-   * This assumes the title follows a specific format.
-   * Example: "chore(update): mozc" -> "mozc"
-   * @param title
-   * @private
-   */
   extractPkgName(title: string): string | null {
     const match = title.match(/^chore\(update\): ([\w@.+-]+)$/);
     return match ? match[1] : null;
   }
 
-  /**
-   * Approves a merge request via the backend.
-   * @param mr The merge request to approve.
-   */
   async approve(mr: MergeRequestWithDiffs) {
+    const loadingKey = `${mr.iid}:approve`;
     const loadingMap = new Map(this.loadingMap());
-    loadingMap.set(mr.iid, true);
+    loadingMap.set(loadingKey, true);
     this.loadingMap.set(loadingMap);
 
     try {
       await lastValueFrom(
-        this.http.post(
-          `${this.backendUrl}/gitlab/approve`,
-          {
-            iid: mr.iid,
-            sha: mr.sha,
-          },
-          {
-            headers: {
-              'X-Gitlab-Private-Token': this.token(),
-            },
-          },
-        ),
+        this.http.post<unknown>(`${this.backendUrl}/gitlab/approve`, {
+          iid: mr.iid,
+          sha: mr.sha,
+        }),
       );
 
       this.messageToastService.success(
@@ -108,8 +86,7 @@ export class MrOverviewService {
         'Merge request approved successfully. The bot will auto-merge it soon.',
       );
     } catch (error) {
-      const err = error as any;
-      if (err.status === 401) {
+      if (error instanceof HttpErrorResponse && error.status === 401) {
         this.messageToastService.info(
           'Already approved',
           'This update seems to have been already approved by you? GitLab does not always return a valid status at all times.',
@@ -120,123 +97,38 @@ export class MrOverviewService {
       console.error('Error approving merge request:', error);
     } finally {
       const finalLoadingMap = new Map(this.loadingMap());
-      finalLoadingMap.delete(mr.iid);
+      finalLoadingMap.delete(loadingKey);
       this.loadingMap.set(finalLoadingMap);
     }
   }
 
-  /**
-   * Tests the provided GitLab private token for validity.
-   * @param token The GitLab private token to test.
-   * @returns A promise that resolves to true if the token is valid, false otherwise.
-   */
-  async testTokenWrite(token: string): Promise<boolean> {
+  async flag(mr: MergeRequestWithDiffs, label: MrFlagLabel): Promise<void> {
+    const copy = FLAG_COPY[label];
+    const loadingKey = `${mr.iid}:flag:${label}`;
+    const loadingMap = new Map(this.loadingMap());
+    loadingMap.set(loadingKey, true);
+    this.loadingMap.set(loadingMap);
+
     try {
-      return await lastValueFrom(
-        this.http.post<boolean>(`${this.backendUrl}/gitlab/test-token`, null, {
-          headers: {
-            'X-Gitlab-Private-Token': token,
-          },
+      await lastValueFrom(
+        this.http.post<unknown>(`${this.backendUrl}/gitlab/flag`, {
+          iid: mr.iid,
+          label,
         }),
       );
-    } catch {
-      return false;
+      this.messageToastService.success(copy.success[0], copy.success[1]);
+    } catch (error) {
+      this.messageToastService.error(copy.error[0], copy.error[1]);
+      console.error(`Error flagging merge request as ${label}:`, error);
+    } finally {
+      const finalLoadingMap = new Map(this.loadingMap());
+      finalLoadingMap.delete(loadingKey);
+      this.loadingMap.set(finalLoadingMap);
     }
   }
 
-  /**
-   * Flags a merge request as dangerous by adding a 'dangerous' label.
-   * @param mr The merge request to flag.
-   */
-  flagDangerous(mr: MergeRequestWithDiffs) {
-    const loadingMap = new Map(this.loadingMap());
-    loadingMap.set(-mr.iid, true);
-    this.loadingMap.set(loadingMap);
-
-    this.http
-      .post(
-        `${this.backendUrl}/gitlab/flag`,
-        {
-          iid: mr.iid,
-          label: 'dangerous',
-        },
-        {
-          headers: {
-            'X-Gitlab-Private-Token': this.token(),
-          },
-        },
-      )
-      .pipe(
-        finalize(() => {
-          const finalLoadingMap = new Map(this.loadingMap());
-          finalLoadingMap.delete(-mr.iid);
-          this.loadingMap.set(finalLoadingMap);
-        }),
-      )
-      .subscribe({
-        next: () => {
-          this.messageToastService.success('Flagged as Dangerous', 'The merge request has been flagged as dangerous.');
-        },
-        error: (error) => {
-          this.messageToastService.error(
-            'Flagging Failed',
-            'Failed to flag the merge request as dangerous. Please try again later.',
-          );
-          console.error('Error flagging merge request as dangerous:', error);
-        },
-      });
-  }
-
-  /**
-   * Flags a merge request as on hold by adding a 'hold' label.
-   * @param mr The merge request to flag.
-   */
-  flagHold(mr: MergeRequestWithDiffs) {
-    const loadingMap = new Map(this.loadingMap());
-    loadingMap.set(-mr.iid, true);
-    this.loadingMap.set(loadingMap);
-
-    this.http
-      .post(
-        `${this.backendUrl}/gitlab/flag`,
-        {
-          iid: mr.iid,
-          label: 'hold',
-        },
-        {
-          headers: {
-            'X-Gitlab-Private-Token': this.token(),
-          },
-        },
-      )
-      .pipe(
-        finalize(() => {
-          const finalLoadingMap = new Map(this.loadingMap());
-          finalLoadingMap.delete(-mr.iid);
-          this.loadingMap.set(finalLoadingMap);
-        }),
-      )
-      .subscribe({
-        next: () => {
-          this.messageToastService.success('Flagged as On Hold', 'The merge request has been flagged as on hold.');
-        },
-        error: (error) => {
-          this.messageToastService.error(
-            'Flagging Failed',
-            'Failed to flag the merge request as on hold. Please try again later.',
-          );
-          console.error('Error flagging merge request as on hold:', error);
-        },
-      });
-  }
-
-  /**
-   * Sorts the commit diffs to prioritize PKGBUILD and .SRCINFO files.
-   * @param diffs The array of commit diffs to sort.
-   * @returns The sorted array of commit diffs.
-   */
   sortDiff(diffs: MergeRequestDiffSchema[]): MergeRequestDiffSchema[] {
-    return diffs.sort((a, b) => {
+    return [...diffs].sort((a, b) => {
       const getSortKey = (path: string): number => {
         if (path.endsWith('/PKGBUILD')) return 0;
         if (path.endsWith('/.SRCINFO')) return 1;

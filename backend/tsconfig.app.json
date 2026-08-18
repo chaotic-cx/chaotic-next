@@ -7,6 +7,6 @@
     "emitDecoratorMetadata": true,
     "target": "esnext"
   },
-  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "src/repo-manager/test"],
   "include": ["src/**/*.ts"]
 }
