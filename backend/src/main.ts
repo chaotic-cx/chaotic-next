@@ -13,7 +13,12 @@ import { checkEnvironment } from './utils/functions';
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
 async function bootstrap(): Promise<void> {
-  const fastifyAdapter = new FastifyAdapter();
+  // Fastify only understands a boolean or an address/CIDR here, so the env
+  // strings "true"/"false" are mapped to booleans before being passed on.
+  const trustProxyEnv = process.env.CAUR_TRUST_PROXY;
+  const trustProxy = trustProxyEnv === 'true' ? true : trustProxyEnv === 'false' ? false : trustProxyEnv;
+
+  const fastifyAdapter = new FastifyAdapter(trustProxy === undefined ? undefined : { trustProxy });
   const app: INestApplication = await NestFactory.create<NestFastifyApplication>(AppModule, fastifyAdapter, {
     bufferLogs: true,
   });
@@ -22,14 +27,6 @@ async function bootstrap(): Promise<void> {
 
   const configService: ConfigService = app.get<ConfigService>(ConfigService);
   checkEnvironment(configService);
-
-  // Fastify only understands a boolean or an address/CIDR here, so the env
-  // strings "true"/"false" are mapped to booleans before being passed on.
-  const trustProxyEnv = process.env.CAUR_TRUST_PROXY;
-  if (trustProxyEnv !== undefined) {
-    const trustProxy = trustProxyEnv === 'true' ? true : trustProxyEnv === 'false' ? false : trustProxyEnv;
-    fastifyAdapter.options({ trustProxy });
-  }
 
   // Two fastify majors' type declarations coexist in the dependency tree
   // (@nestjs/platform-fastify pins an older one than @fastify/helmet expects),
