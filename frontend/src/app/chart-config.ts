@@ -26,3 +26,15 @@ export function mochaScales(): { x: AxisStyling; y: AxisStyling } {
   };
   return { x: axis, y: axis };
 }
+
+export function mochaAxisChartOptions<TType extends ChartType>(indexAxis: 'x' | 'y' = 'x'): ChartOptions<TType> {
+  const options = {
+    maintainAspectRatio: false,
+    aspectRatio: 0.4,
+    plugins: {
+      legend: { labels: mochaLegendLabels() },
+    },
+    scales: mochaScales(),
+  } as const;
+  return (indexAxis === 'y' ? { ...options, indexAxis: 'y' } : options) as unknown as ChartOptions<TType>;
+}

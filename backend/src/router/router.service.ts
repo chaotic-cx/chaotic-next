@@ -63,4 +63,36 @@ export class RouterService {
       .orderBy('count', 'DESC')
       .getRawMany<{ day: string; count: string }>();
   }
+
+  async getUserAgentTrend(days: number, top = 5): Promise<{ day: string; userAgent: string; count: string }[]> {
+    const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
+    const repo = this.dataSource.getRepository(RouterHit);
+    const cutoff = nDaysInPast(clampedDays);
+
+    const topAgents = await repo
+      .createQueryBuilder('hit')
+      .select('hit."user-agent"', 'ua')
+      .addSelect('COUNT(*)', 'count')
+      .where('hit.timestamp > :cutoff', { cutoff })
+      .andWhere('hit."user-agent" IS NOT NULL')
+      .groupBy('hit."user-agent"')
+      .orderBy('count', 'DESC')
+      .limit(top)
+      .getRawMany<{ ua: string }>();
+
+    const agents = topAgents.map((row) => row.ua);
+    if (agents.length === 0) return [];
+
+    return repo
+      .createQueryBuilder('hit')
+      .select('DATE(hit.timestamp)::text', 'day')
+      .addSelect('hit."user-agent"', 'userAgent')
+      .addSelect('COUNT(*)::text', 'count')
+      .where('hit.timestamp > :cutoff', { cutoff })
+      .andWhere('hit."user-agent" IN (:...agents)', { agents })
+      .groupBy('DATE(hit.timestamp)')
+      .addGroupBy('hit."user-agent"')
+      .orderBy('DATE(hit.timestamp)', 'ASC')
+      .getRawMany<{ day: string; userAgent: string; count: string }>();
+  }
 }

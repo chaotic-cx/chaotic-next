@@ -4,7 +4,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../app.service';
-import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
+import { type ChartConfig, mochaAxisChartOptions } from '../chart-config';
 import { parseCount, resourceValue } from '../functions';
 import { StatsService } from '../stats/stats.service';
 
@@ -64,14 +64,7 @@ export class ChartPackageBuildStatsComponent {
           fill: false,
         })),
       },
-      options: {
-        maintainAspectRatio: false,
-        aspectRatio: 0.4,
-        plugins: {
-          legend: { labels: mochaLegendLabels() },
-        },
-        scales: mochaScales(),
-      },
+      options: mochaAxisChartOptions<'line'>(),
     };
   }
 
