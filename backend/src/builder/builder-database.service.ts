@@ -80,7 +80,6 @@ export class BuilderDatabaseService extends Service {
 
     const params = ctx.params;
 
-    // No point in logging if the required fields are missing. Database will throw an error anyway.
     if (
       !params.builder_name ||
       !params.target_repo ||
@@ -145,7 +144,6 @@ export class BuilderDatabaseService extends Service {
     try {
       this.logger.debug(await this.dbConnections.build.save(build));
 
-      // Notify SSE clients about the build and newly updated package
       this.sseSubject$.next({
         data: {
           type: 'build',

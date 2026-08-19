@@ -11,7 +11,7 @@ module.exports = () => ({
     clean: true,
     devtoolModuleFilenameTemplate: '[absolute-resource-path]',
   },
-  devtool: 'inline-source-map',
+  devtool: isProduction ? 'inline-source-map' : undefined,
   plugins: [
     new NxAppRspackPlugin({
       target: 'node',
@@ -20,7 +20,7 @@ module.exports = () => ({
       optimization: isProduction,
       outputHashing: 'none',
       generatePackageJson: isProduction,
-      sourceMap: isProduction,
+      sourceMap: !isProduction,
       typeCheckOptions: isProduction,
       cache: false,
     }),
