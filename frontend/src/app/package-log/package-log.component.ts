@@ -214,6 +214,10 @@ export class PackageLogComponent implements OnDestroy {
       // backgrounded tabs. Reconnect (resuming from the last offset) instead of
       // permanently closing, and only surface an error once retries are spent.
       this.streaming.set(false);
+      if (document.visibilityState !== 'visible') {
+        this.closeStream();
+        return;
+      }
       if (this.reconnectAttempts >= PackageLogComponent.MAX_RECONNECT_ATTEMPTS) {
         this.error.set('Log stream ended unexpectedly. Please retry in a moment.');
         this.closeStream();

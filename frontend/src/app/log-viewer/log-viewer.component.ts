@@ -210,6 +210,10 @@ export class LogViewerComponent implements OnDestroy {
     source.onerror = () => {
       this.loading.set(false);
       this.streaming.set(false);
+      if (document.visibilityState !== 'visible') {
+        this.closeStream();
+        return;
+      }
       if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         this.error.set('Log stream ended unexpectedly. Please retry in a moment.');
         this.closeStream();

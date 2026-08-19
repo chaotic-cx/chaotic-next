@@ -14,9 +14,9 @@
       "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": {
-        "files": ["/**", "!/**/*.map"]
+        "files": ["/**", "!/**/*.map", "!/memorials/**"]
       }
     }
   ],
-  "navigationUrls": ["/**", "!/**/__*", "!/**/sse"]
+  "navigationUrls": ["/**", "!/backend/**", "!/**/__*", "!/**/sse"]
 }
