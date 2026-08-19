@@ -17,6 +17,8 @@
             class="recent-card flex flex-col gap-1 p-4"
             [routerLink]="['/stats/search']"
             [queryParams]="{ search: pkg.pkgname }"
+            animate.enter="ctp-item-enter"
+            animate.leave="ctp-item-leave"
           >
             <span class="truncate font-bold text-ctp-mauve">{{ pkg.pkgname }}</span>
             <span class="truncate text-sm text-ctp-subtext1">{{ versionLabel(pkg) }}</span>

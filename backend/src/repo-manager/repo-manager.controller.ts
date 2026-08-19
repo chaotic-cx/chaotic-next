@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } fr
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiCookieAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Paginated } from '@chaotic-next/shared-lib';
-import { BrokenPackageReport, IndexResult, PackageRebuildTriggerSources } from '../interfaces/repo-manager';
+import { BrokenPackageReport, PackageRebuildTriggerSources } from '../interfaces/repo-manager';
 import { RepoManagerService } from './repo-manager.service';
 import { PackageElfAnalysis } from './repo-manager.entity';
 import type { DependencyEdge } from './signal';
@@ -42,16 +42,16 @@ export class RepoManagerController {
 
   @Post('index/arch')
   @ApiOperation({ summary: 'Index the full Arch mirror into the ELF signal index.' })
-  @ApiCreatedResponse({ description: 'Full Arch mirror index triggered.', type: Object })
-  indexArchMirror(): Promise<IndexResult> {
-    return this.repoManager.indexArchMirror();
+  @ApiCreatedResponse({ description: 'Full Arch mirror index triggered.' })
+  indexArchMirror(): void {
+    void this.repoManager.indexArchMirror();
   }
 
   @Post('index/chaotic')
   @ApiOperation({ summary: 'Index the full Chaotic-AUR repo (CDN mirror) into the ELF signal index.' })
-  @ApiCreatedResponse({ description: 'Full Chaotic repo index triggered.', type: Object })
-  indexChaoticRepo(): Promise<IndexResult> {
-    return this.repoManager.indexChaoticRepo();
+  @ApiCreatedResponse({ description: 'Full Chaotic repo index triggered.' })
+  indexChaoticRepo(): void {
+    void this.repoManager.indexChaoticRepo();
   }
 
   @Get('dependencies')

@@ -2,12 +2,11 @@ import { NotificationPayload } from '@chaotic-next/shared-lib';
 import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { decryptAesRaw } from '../utils/functions';
 import { existsSync } from 'node:fs';
 import { readFile, unlink } from 'node:fs/promises';
 import { Repository } from 'typeorm';
 import { PushSubscription, sendNotification, setVapidDetails } from 'web-push';
-import { errorMessage } from '../utils/functions';
+import { decryptAesRaw, errorMessage } from '../utils/functions';
 import { NotificationSubscription } from './notification-subscription.entity';
 
 const MAX_SUBSCRIBERS = 1000;
@@ -80,7 +79,6 @@ export class NotificationService implements OnModuleInit {
     }
     await this.upsertSubscription(body);
 
-    // Send welcome notification
     const notification: NotificationPayload = {
       notification: {
         title: 'Subscription successful',
@@ -96,7 +94,18 @@ export class NotificationService implements OnModuleInit {
         },
       },
     };
-    await sendNotification(body, JSON.stringify(notification));
+
+    try {
+      await sendNotification(body, JSON.stringify(notification));
+    } catch (error) {
+      const statusCode = (error as { statusCode?: number }).statusCode;
+      if (statusCode === 404 || statusCode === 410) {
+        await this.subscriptionRepository.delete({ endpoint: body.endpoint });
+        this.logger.warn(`Removed stale push subscription (${statusCode}): ${body.endpoint}`);
+      } else {
+        this.logger.warn(`Welcome push notification failed: ${errorMessage(error)}`);
+      }
+    }
 
     return { message: 'Subscription successful' };
   }

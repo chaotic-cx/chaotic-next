@@ -20,7 +20,7 @@
           </div>
         }
         @if (buildStatusService.activeQueue().length > 0) {
-          <div>
+          <div animate.enter="queue-section-enter" animate.leave="queue-section-leave">
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
                 <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2 mt-8" style="font-size: 5rem"></i>
@@ -32,6 +32,8 @@
                   <a
                     class="block py-2.5"
                     [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
+                    animate.enter="queue-item-enter"
+                    animate.leave="queue-item-leave"
                     pRipple
                     aria-label="Open live build log for {{ pkg.name }}"
                   >
@@ -53,7 +55,11 @@
           </div>
         }
         @if (buildStatusService.waitingQueue().length > 0) {
-          <div [class.mt-5]="buildStatusService.activeQueue().length > 0">
+          <div
+            [class.mt-5]="buildStatusService.activeQueue().length > 0"
+            animate.enter="queue-section-enter"
+            animate.leave="queue-section-leave"
+          >
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
                 <i class="pi pi-hourglass text-ctp-lavender mt-5" style="font-size: 5rem"></i>
@@ -62,7 +68,7 @@
               <ng-template #subtitle>These are currently queued builds</ng-template>
               <div class="divide-y divide-white/5">
                 @for (pkg of paginatedWaitingQueue(); track pkg.name) {
-                  <div class="py-2.5">
+                  <div class="py-2.5" animate.enter="queue-item-enter" animate.leave="queue-item-leave">
                     <span class="block truncate font-semibold">{{ pkg.name }}</span>
                     <span class="block text-sm text-ctp-subtext1">
                       @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
@@ -114,6 +120,8 @@
         @if (buildStatusService.idleQueue().length > 0) {
           <div
             [class.mt-5]="buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0"
+            animate.enter="queue-section-enter"
+            animate.leave="queue-section-leave"
           >
             <p-card [style]="{ width: '30rem', overflow: 'hidden' }">
               <ng-template #header>
@@ -123,7 +131,11 @@
               <ng-template #subtitle>Currently idle builders</ng-template>
               <div class="divide-y divide-white/5">
                 @for (pkg of buildStatusService.idleQueue(); track pkg.name) {
-                  <div class="flex items-center justify-between gap-3 py-2.5">
+                  <div
+                    class="flex items-center justify-between gap-3 py-2.5"
+                    animate.enter="queue-item-enter"
+                    animate.leave="queue-item-leave"
+                  >
                     <span class="truncate font-medium">{{ pkg.name }}</span>
                     <span class="text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
                   </div>
@@ -192,7 +204,7 @@
           </div>
         }
         @if (buildStatusService.activeQueue().length > 0) {
-          <div>
+          <div animate.enter="queue-section-enter" animate.leave="queue-section-leave">
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
                 <i class="pi pi-spin pi-spinner text-ctp-flamingo mb-2" style="font-size: 5rem"></i>
@@ -204,6 +216,8 @@
                   <a
                     class="block py-2.5"
                     [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
+                    animate.enter="queue-item-enter"
+                    animate.leave="queue-item-leave"
                     pRipple
                     aria-label="Open live build log for {{ pkg.name }}"
                   >
@@ -225,7 +239,7 @@
           </div>
         }
         @if (buildStatusService.waitingQueue().length > 0) {
-          <div class="mt-3">
+          <div class="mt-3" animate.enter="queue-section-enter" animate.leave="queue-section-leave">
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
                 <i class="pi pi-hourglass text-ctp-lavender" style="font-size: 5rem"></i>
@@ -234,7 +248,7 @@
               <ng-template #subtitle>These are currently queued builds</ng-template>
               <div class="divide-y divide-white/5">
                 @for (pkg of paginatedWaitingQueue(); track pkg.name) {
-                  <div class="py-2.5">
+                  <div class="py-2.5" animate.enter="queue-item-enter" animate.leave="queue-item-leave">
                     <span class="block truncate font-semibold">{{ pkg.name }}</span>
                     <span class="block text-sm text-ctp-subtext1">
                       @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
@@ -286,6 +300,8 @@
         @if (buildStatusService.idleQueue().length > 0) {
           <div
             [class.mt-3]="buildStatusService.activeQueue().length > 0 || buildStatusService.waitingQueue().length > 0"
+            animate.enter="queue-section-enter"
+            animate.leave="queue-section-leave"
           >
             <p-card [style]="{ width: '100%', overflow: 'hidden' }">
               <ng-template #header>
@@ -295,7 +311,11 @@
               <ng-template #subtitle>Currently idle builders</ng-template>
               <div class="divide-y divide-white/5">
                 @for (pkg of buildStatusService.idleQueue(); track pkg.name) {
-                  <div class="flex items-center justify-between gap-3 py-2.5">
+                  <div
+                    class="flex items-center justify-between gap-3 py-2.5"
+                    animate.enter="queue-item-enter"
+                    animate.leave="queue-item-leave"
+                  >
                     <span class="truncate font-medium">{{ pkg.name }}</span>
                     <span class="text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
                   </div>
