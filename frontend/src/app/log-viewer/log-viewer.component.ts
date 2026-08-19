@@ -50,7 +50,7 @@ export class LogViewerComponent implements OnDestroy {
   );
   protected readonly subtitle = computed(() => {
     const job = this.selectedJob();
-    return job ? `${job.name} — live output` : 'No job selected';
+    return job ? job.name : 'No job selected';
   });
 
   private eventSource: EventSource | undefined;

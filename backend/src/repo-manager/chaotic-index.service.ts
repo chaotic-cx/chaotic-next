@@ -1,14 +1,14 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { bulkGetOrCreatePackages, Package, Repo, getOrCreateRepo } from '../builder/builder.entity';
+import { bulkGetOrCreatePackages, getOrCreateRepo, Package, Repo } from '../builder/builder.entity';
+import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } from '../interfaces/repo-manager';
+import { ArchMirrorService } from './arch-mirror.service';
 import { saveInBatches } from './save';
 import { SignalScanService } from './scan';
-import { ArchMirrorService } from './arch-mirror.service';
-import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } from '../interfaces/repo-manager';
 
 /**
  * Chaotic-AUR repo indexing: one-off bulk index of a repo mirror (used to
@@ -105,93 +105,99 @@ export class ChaoticIndexService {
     const repoNames: string[] = repos.map((repo) => repo.name);
 
     this.logger.log(`Updating database of ${repoNames.join(', ')}...`);
+    const tempDirs: string[] = [];
 
-    const downloads: PromiseSettledResult<RepoWorkDir | null>[] = await Promise.allSettled(
-      repos.map(async (repo) => {
-        const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
-        this.logger.debug(`Created temporary directory ${tempDir}`);
-        return await this.archMirror.pullDatabases(repo.dbPath, tempDir, repo.name);
-      }),
-    );
+    try {
+      const downloads: PromiseSettledResult<RepoWorkDir | null>[] = await Promise.allSettled(
+        repos.map(async (repo) => {
+          const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
+          tempDirs.push(tempDir);
+          this.logger.debug(`Created temporary directory ${tempDir}`);
+          return await this.archMirror.pullDatabases(repo.dbPath, tempDir, repo.name);
+        }),
+      );
 
-    this.logger.debug('Done pulling all Chaotic-AUR databases');
-    const workDirs: RepoWorkDir[] = [];
-    for (const download of downloads) {
-      if (download.status === 'fulfilled' && download.value) {
-        workDirs.push(download.value);
+      this.logger.debug('Done pulling all Chaotic-AUR databases');
+      const workDirs: RepoWorkDir[] = [];
+      for (const download of downloads) {
+        if (download.status === 'fulfilled' && download.value) {
+          workDirs.push(download.value);
+        }
       }
-    }
-    const currentChaoticVersions: ParsedPackage[] = await this.archMirror.parsePacmanDatabases(workDirs);
+      const currentChaoticVersions: ParsedPackage[] = await this.archMirror.parsePacmanDatabases(workDirs);
 
-    this.logger.debug('Updating Chaotic database versions...');
-    // Bulk-resolve every package row in one query + insert instead of one
-    // serialized getOrCreatePackage() round-trip per package, and persist in batches
-    // (awaited) instead of fire-and-forget saves that can be lost on crash.
-    const repoByName = new Map(repos.map((r) => [r.name, r] as const));
-    const chaoticEntries: { pkgname: string; repo: Repo }[] = [];
-    for (const pkg of currentChaoticVersions) {
-      if (!pkg.name) continue;
-      const repo = repoByName.get(pkg.repoName);
-      if (!repo) continue;
-      chaoticEntries.push({ pkgname: pkg.name, repo });
-    }
-    const chaoticByKey = await bulkGetOrCreatePackages(chaoticEntries, this.packagesRepository);
+      this.logger.debug('Updating Chaotic database versions...');
+      // Bulk-resolve every package row in one query + insert instead of one
+      // serialized getOrCreatePackage() round-trip per package, and persist in batches
+      // (awaited) instead of fire-and-forget saves that can be lost on crash.
+      const repoByName = new Map(repos.map((r) => [r.name, r] as const));
+      const chaoticEntries: { pkgname: string; repo: Repo }[] = [];
+      for (const pkg of currentChaoticVersions) {
+        if (!pkg.name) continue;
+        const repo = repoByName.get(pkg.repoName);
+        if (!repo) continue;
+        chaoticEntries.push({ pkgname: pkg.name, repo });
+      }
+      const chaoticByKey = await bulkGetOrCreatePackages(chaoticEntries, this.packagesRepository);
 
-    const toUpdate: Package[] = [];
-    for (const pkg of currentChaoticVersions) {
-      if (!pkg.name) continue;
-      const repo = repoByName.get(pkg.repoName);
-      if (!repo) continue;
-      const chaoticPkg = chaoticByKey.get(`${repo.name}:${pkg.name}`);
-      if (!chaoticPkg) continue;
+      const toUpdate: Package[] = [];
+      for (const pkg of currentChaoticVersions) {
+        if (!pkg.name) continue;
+        const repo = repoByName.get(pkg.repoName);
+        if (!repo) continue;
+        const chaoticPkg = chaoticByKey.get(`${repo.name}:${pkg.name}`);
+        if (!chaoticPkg) continue;
 
-      // Account for already bumped packages
-      chaoticPkg.pkgrel = pkg.pkgrel;
-      chaoticPkg.bump = pkg.bump;
-      chaoticPkg.version = pkg.version;
-      markActive(chaoticPkg);
-      chaoticPkg.metadata = pkg.metaData;
-      chaoticPkg.repo = repo;
-      toUpdate.push(chaoticPkg);
-    }
-    await saveInBatches(this.packagesRepository, toUpdate);
-    this.logger.log('Finished updating Chaotic database versions');
+        // Account for already bumped packages
+        chaoticPkg.pkgrel = pkg.pkgrel;
+        chaoticPkg.bump = pkg.bump;
+        chaoticPkg.version = pkg.version;
+        markActive(chaoticPkg);
+        chaoticPkg.metadata = pkg.metaData;
+        chaoticPkg.repo = repo;
+        toUpdate.push(chaoticPkg);
+      }
+      await saveInBatches(this.packagesRepository, toUpdate);
+      this.logger.log('Finished updating Chaotic database versions');
 
-    // Lastly, set any non-existing packages to inactive. The database can contain inactive
-    // packages that are not in the Chaotic-AUR database anymore.
-    this.logger.debug('Setting non-existing packages to inactive...');
-    // O(1) membership via a Set instead of an O(N*M) scan over currentChaoticVersions.
-    const currentKeys = new Set(currentChaoticVersions.map((p) => `${p.repoName}:${p.name}`));
-    const allChaoticVersionsInDb: Package[] = await this.packagesRepository.find({
-      relations: {
-        repo: true,
-      },
-    });
-    const toDeactivate: Package[] = deactivateMissing(allChaoticVersionsInDb, currentKeys, () => new Date());
-    for (const pkg of toDeactivate) {
-      this.logger.log(`Setting ${pkg.pkgname} in repo ${pkg.repo?.name ?? 'unknown'} to inactive`);
-    }
-    await saveInBatches(this.packagesRepository, toDeactivate);
+      // Lastly, set any non-existing packages to inactive. The database can contain inactive
+      // packages that are not in the Chaotic-AUR database anymore.
+      this.logger.debug('Setting non-existing packages to inactive...');
+      // O(1) membership via a Set instead of an O(N*M) scan over currentChaoticVersions.
+      const currentKeys = new Set(currentChaoticVersions.map((p) => `${p.repoName}:${p.name}`));
+      const allChaoticVersionsInDb: Package[] = await this.packagesRepository.find({
+        relations: {
+          repo: true,
+        },
+      });
+      const toDeactivate: Package[] = deactivateMissing(allChaoticVersionsInDb, currentKeys, () => new Date());
+      for (const pkg of toDeactivate) {
+        this.logger.log(`Setting ${pkg.pkgname} in repo ${pkg.repo?.name ?? 'unknown'} to inactive`);
+      }
+      await saveInBatches(this.packagesRepository, toDeactivate);
 
-    // Drop inactive rows that merely duplicate an active package in another
-    // repo (e.g. stale garuda rows left over from when garuda mirrored the
-    // chaotic-aur DB). These are version-less rows created by the bulk import
-    // that never represented a real package, so removing them keeps the
-    // repository table clean instead of letting junk accumulate.
-    const duplicates = findDuplicateInactiveRows(allChaoticVersionsInDb);
-    if (duplicates.length > 0) {
-      const ids = duplicates.map((pkg) => pkg.id);
-      this.logger.log(`Removing ${duplicates.length} duplicate inactive package rows`);
-      // Only delete rows with no build history; builds FK-reference the package.
-      await this.packagesRepository
-        .createQueryBuilder()
-        .delete()
-        .from(Package)
-        .where('id IN (:...ids)', { ids })
-        .andWhere(`NOT EXISTS (SELECT 1 FROM "build" b WHERE b."pkgbaseId" = "package".id)`)
-        .execute();
+      // Drop inactive rows that merely duplicate an active package in another
+      // repo (e.g. stale garuda rows left over from when garuda mirrored the
+      // chaotic-aur DB). These are version-less rows created by the bulk import
+      // that never represented a real package, so removing them keeps the
+      // repository table clean instead of letting junk accumulate.
+      const duplicates = findDuplicateInactiveRows(allChaoticVersionsInDb);
+      if (duplicates.length > 0) {
+        const ids = duplicates.map((pkg) => pkg.id);
+        this.logger.log(`Removing ${duplicates.length} duplicate inactive package rows`);
+        // Only delete rows with no build history; builds FK-reference the package.
+        await this.packagesRepository
+          .createQueryBuilder()
+          .delete()
+          .from(Package)
+          .where('id IN (:...ids)', { ids })
+          .andWhere(`NOT EXISTS (SELECT 1 FROM "build" b WHERE b."pkgbaseId" = "package".id)`)
+          .execute();
+      }
+      this.logger.debug('Finished setting non-existing packages to inactive');
+    } finally {
+      await this.archMirror.cleanUp(tempDirs);
     }
-    this.logger.debug('Finished setting non-existing packages to inactive');
   }
 }
 
