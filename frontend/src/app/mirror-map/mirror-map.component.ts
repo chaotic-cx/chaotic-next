@@ -295,6 +295,13 @@ export class MirrorMapComponent implements OnDestroy {
       style: STYLE_URL,
       center: [0, 30],
       zoom: 0.5,
+      transformRequest: (url: string) => {
+        if (url.includes('demotiles.maplibre.org')) {
+          const separator = url.includes('?') ? '&' : '?';
+          return { url: `${url}${separator}ngsw-bypass=true` };
+        }
+        return { url };
+      },
     });
 
     this.map.addControl(new NavigationControl(), 'top-right');
