@@ -3,7 +3,7 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { Test } from '@nestjs/testing';
 import { AuthGuard, AuthModule } from '@thallesp/nestjs-better-auth';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { auth } from './auth';
+import { auth, checkGitLabGroupMembership } from './auth';
 
 @Controller('test-auth')
 class TestAuthController {
@@ -62,6 +62,20 @@ describe('Auth Configuration & Guard Protection', () => {
       });
 
       expect(res.statusCode).toBe(401);
+    });
+  });
+
+  describe('checkGitLabGroupMembership', () => {
+    it('returns true when user is a member of the group (200 OK)', async () => {
+      const mockFetch = async () => ({ ok: true, status: 200 }) as Response;
+      const isMember = await checkGitLabGroupMembership('chaotic-aur', 12345, 'mock-token', mockFetch as never);
+      expect(isMember).toBe(true);
+    });
+
+    it('returns false when user is not a member of the group (404 Not Found)', async () => {
+      const mockFetch = async () => ({ ok: false, status: 404 }) as Response;
+      const isMember = await checkGitLabGroupMembership('chaotic-aur', 99999, 'mock-token', mockFetch as never);
+      expect(isMember).toBe(false);
     });
   });
 });
