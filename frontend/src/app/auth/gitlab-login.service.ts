@@ -102,7 +102,7 @@ export class GitlabLoginService {
         if (result === AUTH_CALLBACK_MESSAGE) completeLogin();
         else if (result === AUTH_ERROR_MESSAGE) {
           teardown();
-          subscriber.error(new Error('Authentication failed'));
+          subscriber.complete();
         }
       };
 
@@ -112,13 +112,13 @@ export class GitlabLoginService {
       const checkClosed = setInterval(() => {
         if (popup.closed) {
           teardown();
-          subscriber.error(new Error('Authentication cancelled'));
+          subscriber.complete();
         }
       }, 500);
 
       const timeoutId = setTimeout(() => {
         teardown();
-        subscriber.error(new Error('Authentication timed out'));
+        subscriber.complete();
       }, OAUTH_TIMEOUT_MS);
 
       function teardown() {

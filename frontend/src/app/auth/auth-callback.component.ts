@@ -1,4 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { AuthService } from 'ngx-better-auth';
 import { filter, take, timeout } from 'rxjs';
 import {
@@ -10,22 +11,44 @@ import {
 
 const SESSION_TIMEOUT_MS = 10_000;
 
+function errorMessageForCode(code: string): string {
+  if (code === 'user_info_is_missing') {
+    return 'Only members of the Chaotic-AUR GitLab group are allowed to sign in.';
+  }
+  return 'Sign-in could not be completed. Please try again.';
+}
+
 @Component({
   selector: 'chaotic-auth-callback',
   template: `
     <div class="flex w-full items-center justify-center px-4 py-28 md:py-36">
       <div class="w-full max-w-sm rounded-2xl border border-ctp-surface1 p-8 shadow-lg backdrop-blur-md text-center">
-        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-ctp-surface1 border-t-ctp-blue"></div>
-        <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">Signing you in</h1>
-        <p class="text-ctp-subtext mt-2 text-sm">Completing GitLab authentication...</p>
+        @if (errorMessage()) {
+          <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">Sign-in unavailable</h1>
+          <p class="text-ctp-subtext mt-2 text-sm">{{ errorMessage() }}</p>
+        } @else {
+          <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-ctp-surface1 border-t-ctp-blue"></div>
+          <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">Signing you in</h1>
+          <p class="text-ctp-subtext mt-2 text-sm">Completing GitLab authentication...</p>
+        }
       </div>
     </div>
   `,
 })
 export class AuthCallbackComponent {
   private readonly authService = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
+
+  readonly errorMessage = signal<string | null>(null);
 
   constructor() {
+    const code = this.route.snapshot.queryParamMap.get('error');
+    this.errorMessage.set(code ? errorMessageForCode(code) : null);
+
+    if (this.errorMessage()) {
+      return;
+    }
+
     this.authService.sessionState$
       .pipe(
         filter((session) => session !== null),

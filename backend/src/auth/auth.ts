@@ -45,8 +45,25 @@ const gitlabClientSecret = process.env.GITLAB_CLIENT_SECRET;
 
 const plugins = gitlabClientId && gitlabClientSecret ? [gitlabOAuth(gitlabClientId, gitlabClientSecret)] : [];
 
+export async function checkGitLabGroupMembership(
+  group: string,
+  userId: number | string,
+  token?: string,
+  fetchFn = fetch,
+): Promise<boolean> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const res = await fetchFn(`https://gitlab.com/api/v4/groups/${encodeURIComponent(group)}/members/all/${userId}`, {
+    headers,
+  });
+  return res.ok;
+}
+
 function gitlabOAuth(clientId: string, clientSecret: string) {
   const defaultRedirectUri = `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'}/api/auth/oauth2/callback/gitlab`;
+  const allowedGroup = process.env.GITLAB_ALLOWED_GROUP ?? 'chaotic-aur';
 
   return genericOAuth({
     config: [
@@ -67,6 +84,15 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
             throw new Error(`GitLab user info request failed with status ${response.status}`);
           }
           const profile = (await response.json()) as GitLabProfile;
+
+          if (allowedGroup) {
+            const memberToken = process.env.GITLAB_TOKEN || process.env.CAUR_GITLAB_TOKEN || tokens.accessToken;
+            const isMember = await checkGitLabGroupMembership(allowedGroup, profile.id, memberToken);
+
+            if (!isMember) {
+              return null;
+            }
+          }
 
           return {
             id: String(profile.id),
