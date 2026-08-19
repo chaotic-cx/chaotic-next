@@ -2,6 +2,7 @@ import { exec } from 'node:child_process';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { parsePkgrel } from '@chaotic-next/shared-lib';
 import type { ParsedPackage, RepoWorkDir } from '../../interfaces/repo-manager';
 
 const execP = promisify(exec);
@@ -48,16 +49,17 @@ export function extractBaseAndVersion(lines: string): Partial<ParsedPackage> {
   const name = requiredMatch(lines, 'NAME');
   const optDeps = tryMatch(OPTDEPENDS_RE, lines);
   const packager = lines.match(/(?<=%PACKAGER%\n)[\s\S]*?(?=\n{2})/);
-  const pkgrel = Number(completeVersion.split('-')[splitVersion.length - 1]);
+  const { pkgrel, bump } = parsePkgrel(splitVersion[splitVersion.length - 1]);
   const provides = tryMatch(PROVIDES_RE, lines);
   const replaces = tryMatch(REPLACES_RE, lines);
   const url = lines.match(/(?<=%URL%\n)\S+/);
-  const version = completeVersion.split('-')[0];
+  const version = splitVersion[0];
 
   return {
     base,
     version,
     pkgrel,
+    bump,
     name,
     metaData: {
       buildDate: requiredMatch(lines, 'BUILDDATE'),

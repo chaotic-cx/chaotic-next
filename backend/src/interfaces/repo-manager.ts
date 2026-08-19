@@ -11,6 +11,7 @@ export interface RepoWorkDir {
 export interface ParsedPackage {
   base: string;
   pkgrel: number;
+  bump: number;
   version: string;
   name: string;
   repoName: string;

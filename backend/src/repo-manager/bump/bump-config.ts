@@ -18,6 +18,8 @@ export function parseCiConfig(configText: string): Record<string, string | undef
 }
 
 export function applyPackageBump(configText: string, version: string, pkgrel: number): string {
+  // The `.CI/config` base is `version-pkgrel` (integer pkgrel); the `/counter`
+  // suffix is the Chaotic-AUR rebuild indicator and is what gets incremented.
   const newBase = `${version}-${pkgrel}`;
   const bumpLine = `${BUMP_KEY}=${newBase}/1`;
   const lines = configText.split('\n');

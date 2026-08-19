@@ -32,6 +32,7 @@ export interface CreatePackageBody {
   skipSignalScan?: boolean;
   version?: string;
   pkgrel?: number;
+  bump?: number;
   repoId?: number;
 }
 
@@ -125,11 +126,13 @@ export class AdminService {
       id: pkg.id,
       pkgname: pkg.pkgname,
       lastUpdated: pkg.lastUpdated,
+      createdAt: pkg.createdAt,
       isActive: pkg.isActive,
       skipSignalScan: pkg.skipSignalScan,
       version: pkg.version,
       bumpCount: pkg.bumpCount,
       pkgrel: pkg.pkgrel,
+      bump: pkg.bump,
       repo: pkg.repo?.id,
       reponame: pkg.repo?.name,
     }));
@@ -145,6 +148,7 @@ export class AdminService {
     if (body.skipSignalScan !== undefined) pkg.skipSignalScan = body.skipSignalScan;
     if (body.version !== undefined) pkg.version = body.version;
     if (body.pkgrel !== undefined) pkg.pkgrel = body.pkgrel;
+    if (body.bump !== undefined) pkg.bump = body.bump;
     if (body.repoId !== undefined) {
       pkg.repo = body.repoId ? await this.findRepo(body.repoId) : (null as unknown as Repo);
     }

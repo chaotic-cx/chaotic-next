@@ -67,6 +67,7 @@ export class ChaoticIndexService {
         if (!chaoticPkg) continue;
         chaoticPkg.version = pkg.version;
         chaoticPkg.pkgrel = pkg.pkgrel;
+        chaoticPkg.bump = pkg.bump;
         chaoticPkg.metadata = pkg.metaData;
         chaoticPkg.isActive = true;
         chaoticPkg.repo = repo;
@@ -145,13 +146,10 @@ export class ChaoticIndexService {
       if (!chaoticPkg) continue;
 
       // Account for already bumped packages
-      if (pkg.pkgrel.toString().match(/\./)) {
-        chaoticPkg.pkgrel = Number(pkg.pkgrel.toFixed());
-      } else {
-        chaoticPkg.pkgrel = pkg.pkgrel;
-      }
+      chaoticPkg.pkgrel = pkg.pkgrel;
+      chaoticPkg.bump = pkg.bump;
       chaoticPkg.version = pkg.version;
-      chaoticPkg.isActive = true;
+      markActive(chaoticPkg);
       chaoticPkg.metadata = pkg.metaData;
       chaoticPkg.repo = repo;
       toUpdate.push(chaoticPkg);
@@ -169,15 +167,63 @@ export class ChaoticIndexService {
         repo: true,
       },
     });
-    const toDeactivate: Package[] = [];
-    for (const pkg of allChaoticVersionsInDb) {
-      if (pkg.isActive && !currentKeys.has(`${pkg.repo?.name}:${pkg.pkgname}`)) {
-        this.logger.log(`Setting ${pkg.pkgname} in repo ${pkg.repo?.name ?? 'unknown'} to inactive`);
-        pkg.isActive = false;
-        toDeactivate.push(pkg);
-      }
+    const toDeactivate: Package[] = deactivateMissing(allChaoticVersionsInDb, currentKeys, () => new Date());
+    for (const pkg of toDeactivate) {
+      this.logger.log(`Setting ${pkg.pkgname} in repo ${pkg.repo?.name ?? 'unknown'} to inactive`);
     }
     await saveInBatches(this.packagesRepository, toDeactivate);
+
+    // Drop inactive rows that merely duplicate an active package in another
+    // repo (e.g. stale garuda rows left over from when garuda mirrored the
+    // chaotic-aur DB). These are version-less rows created by the bulk import
+    // that never represented a real package, so removing them keeps the
+    // repository table clean instead of letting junk accumulate.
+    const duplicates = findDuplicateInactiveRows(allChaoticVersionsInDb);
+    if (duplicates.length > 0) {
+      const ids = duplicates.map((pkg) => pkg.id);
+      this.logger.log(`Removing ${duplicates.length} duplicate inactive package rows`);
+      // Only delete rows with no build history; builds FK-reference the package.
+      await this.packagesRepository
+        .createQueryBuilder()
+        .delete()
+        .from(Package)
+        .where('id IN (:...ids)', { ids })
+        .andWhere(`NOT EXISTS (SELECT 1 FROM "build" b WHERE b."pkgbaseId" = "package".id)`)
+        .execute();
+    }
     this.logger.debug('Finished setting non-existing packages to inactive');
   }
+}
+
+/** Marks a package as currently present/active, clearing any prior removal time. */
+export function markActive(pkg: Package): void {
+  pkg.isActive = true;
+  pkg.removedAt = null;
+}
+
+/**
+ * Returns the active packages absent from `currentKeys` (i.e. removed from the
+ * repo) after marking them inactive and stamping their removal time. Packages
+ * already inactive are left untouched.
+ */
+export function deactivateMissing(allPackages: Package[], currentKeys: Set<string>, now: () => Date): Package[] {
+  const toDeactivate: Package[] = [];
+  for (const pkg of allPackages) {
+    if (pkg.isActive && !currentKeys.has(`${pkg.repo?.name}:${pkg.pkgname}`)) {
+      pkg.isActive = false;
+      pkg.removedAt = now().toISOString();
+      toDeactivate.push(pkg);
+    }
+  }
+  return toDeactivate;
+}
+
+/**
+ * Returns inactive, version-less rows whose pkgname is active in another repo.
+ * These are bulk-import duplicates (never a real package of their own repo) and
+ * can be safely deleted instead of accumulating as stale inactive rows.
+ */
+export function findDuplicateInactiveRows(allPackages: Package[]): Package[] {
+  const activePkgNames = new Set(allPackages.filter((pkg) => pkg.isActive).map((pkg) => pkg.pkgname));
+  return allPackages.filter((pkg) => !pkg.isActive && pkg.version === null && activePkgNames.has(pkg.pkgname));
 }

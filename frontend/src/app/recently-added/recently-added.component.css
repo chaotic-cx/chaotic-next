@@ -1,0 +1,21 @@
+.recently-added-section {
+  background: none;
+  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
+  border-radius: var(--p-panel-border-radius, 12px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  padding: 1.5rem;
+}
+
+.recent-card {
+  background: var(--p-card-background, rgba(30, 30, 46, 0.6));
+  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
+  border-radius: var(--p-panel-border-radius, 12px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  transition: border-color 0.15s ease;
+}
+
+.recent-card:hover {
+  border-color: var(--ctp-maroon);
+}

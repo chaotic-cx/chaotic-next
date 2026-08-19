@@ -15,7 +15,7 @@ import {
 import { debounce, FormField, form, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Package, Paginated, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
+import { Package, Paginated, SpecificPackageMetrics, formatPkgrel } from '@chaotic-next/shared-lib';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
@@ -103,9 +103,10 @@ export class SearchPackageComponent implements OnInit {
     const rows: { key: string; value: unknown }[] = [];
 
     if (data['version'] !== undefined) {
-      data['version'] = `${data['version']}-${data['pkgrel']}`;
+      data['version'] = `${data['version']}-${formatPkgrel(Number(data['pkgrel'] ?? 0), Number(data['bump'] ?? 0))}`;
     }
     delete data['pkgrel'];
+    delete data['bump'];
 
     const skippedKeys = new Set(['id', 'isActive', 'skipSignalScan', 'bumpCount', 'bumpTriggers']);
     for (const [key, value] of Object.entries(data)) {

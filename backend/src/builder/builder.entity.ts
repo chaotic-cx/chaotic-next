@@ -107,6 +107,14 @@ export class Package {
   @Column({ type: 'timestamp', nullable: true })
   lastUpdated!: string;
 
+  @ApiProperty({ description: 'When the package was first added (ISO 8601)' })
+  @Column({ type: 'timestamp', nullable: true })
+  createdAt!: string;
+
+  @ApiProperty({ description: 'When the package was removed / deactivated (ISO 8601), null while active' })
+  @Column({ type: 'timestamp', nullable: true })
+  removedAt!: string | null;
+
   @ApiProperty({ description: 'Whether the package is active' })
   @Column({ type: 'boolean', nullable: false, default: true })
   isActive!: boolean;
@@ -134,6 +142,10 @@ export class Package {
   @ApiProperty({ description: 'Package release number' })
   @Column({ type: 'int', nullable: true })
   pkgrel!: number;
+
+  @ApiProperty({ description: 'Chaotic-AUR rebuild indicator (fractional part of a non-integer pkgrel)' })
+  @Column({ type: 'int', default: 0 })
+  bump!: number;
 
   @ApiProperty({ description: 'Owning repo', type: () => Repo })
   @ManyToOne(() => Repo, (repo) => repo.id, { cascade: true, nullable: true })
@@ -238,6 +250,7 @@ export async function getOrCreatePackage(
         pkgname: pkgname,
         repo: repo,
         lastUpdated: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         isActive: true,
       });
     }
@@ -313,6 +326,7 @@ export async function bulkGetOrCreatePackages(
             pkgname: e.pkgname,
             repo: e.repo,
             lastUpdated: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
             isActive: true,
           }) as DeepPartial<Package>,
       ),

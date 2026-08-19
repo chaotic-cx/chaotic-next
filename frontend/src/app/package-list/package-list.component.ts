@@ -14,7 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { Package } from '@chaotic-next/shared-lib';
+import { Package, formatPkgrel } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { Button } from '@openng/optimus-ui/button';
 import { IconFieldModule } from '@openng/optimus-ui/iconfield';
@@ -25,7 +25,6 @@ import { Select } from '@openng/optimus-ui/select';
 import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { AuthService } from 'ngx-better-auth';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
@@ -65,7 +64,6 @@ import { PackageListService } from './package-list.service';
   },
 })
 export class PackageListComponent {
-  private readonly authService = inject(AuthService);
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -74,9 +72,10 @@ export class PackageListComponent {
   protected readonly packageListService = inject(PackageListService);
   protected readonly columnVisibility = inject(ColumnVisibilityService);
 
+  protected readonly formatPkgrel = formatPkgrel;
+
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
-  readonly isLoggedIn = this.authService.isLoggedIn;
   readonly search = input<string>();
 
   protected readonly packageColumns: ColumnDef[] = [
@@ -182,11 +181,5 @@ export class PackageListComponent {
 
   openDetail(pkg: Package) {
     void this.router.navigate(['/stats'], { queryParams: { search: pkg.pkgname } });
-  }
-
-  triggerRebuild(pkg: Package) {
-    void this.router.navigate(['/pipeline-trigger'], {
-      queryParams: { operation: 'Bump Packages', packages: pkg.pkgname },
-    });
   }
 }

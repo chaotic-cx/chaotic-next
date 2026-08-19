@@ -1,3 +1,5 @@
+import { AddPackageBump1787139892583 } from '@chaotic-next/backend/migrations/1787139892583-AddPackageBump';
+import { type DataSourceOptions } from 'typeorm';
 import { Build, Builder, Repo, UpdateLastBuilderActive } from '../builder/builder.entity';
 import { AurMaintainerSnapshot } from '../diff-scan/aur-maintainer-snapshot.entity';
 import { VirusTotalVerdict } from '../diff-scan/virus-total-verdict.entity';
@@ -11,10 +13,12 @@ import { VirusTotalVerdict1786871992879 } from '../migrations/1786871992879-Viru
 import { AurMaintainerSnapshot1786920000000 } from '../migrations/1786920000000-AurMaintainerSnapshot';
 import { AuditCommitSha1786999414850 } from '../migrations/1786999414850-AuditCommitSha';
 import { PipelineIdBigInt1787080648292 } from '../migrations/1787080648292-PipelineIdBigInt';
+import { AddPackageCreatedAt1787146120924 } from '../migrations/1787146120924-AddPackageCreatedAt';
+import { AddPackageRemovedAt1787147034396 } from '../migrations/1787147034396-AddPackageRemovedAt';
+import { CleanupDuplicateInactiveRows1787149556087 } from '../migrations/1787149556087-CleanupDuplicateInactiveRows';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { RouterHit } from '../router/router-hit.entity';
-import { type DataSourceOptions } from 'typeorm';
 import { pgConnectionOptions } from './pg-options';
 
 export const dataSourceOptions: DataSourceOptions = {
@@ -44,6 +48,10 @@ export const dataSourceOptions: DataSourceOptions = {
     AurMaintainerSnapshot1786920000000,
     AuditCommitSha1786999414850,
     PipelineIdBigInt1787080648292,
+    AddPackageBump1787139892583,
+    AddPackageCreatedAt1787146120924,
+    AddPackageRemovedAt1787147034396,
+    CleanupDuplicateInactiveRows1787149556087,
   ],
   migrationsRun: true,
   cache: true,
