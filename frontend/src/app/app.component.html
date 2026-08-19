@@ -1,6 +1,16 @@
 <div class="background flex min-h-svh flex-col">
   <garuda-shell class="flex-1 p-2" [menuItems]="items()">
-    <img garudaShellBarStart ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="logo" />
+    <div class="flex items-center gap-2" garudaShellBarStart>
+      <img ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="logo" />
+      <p-button
+        class="mobile-nav-trigger"
+        [icon]="mobileNavOpen() ? 'pi pi-times' : 'pi pi-bars'"
+        [ariaLabel]="mobileNavOpen() ? 'Close navigation menu' : 'Open navigation menu'"
+        (onClick)="mobileNavOpen.update((open) => !open)"
+        text
+        rounded
+      />
+    </div>
     <div class="router-container">
       <router-outlet #routerOutlet="outlet" />
     </div>
@@ -14,6 +24,8 @@
     </div>
   </garuda-shell>
   <chaotic-footer />
+
+  <chaotic-mobile-nav [items]="items()" [visible]="mobileNavOpen()" (closed)="mobileNavOpen.set(false)" />
 </div>
 
 <chaotic-overlay-scrollbar />

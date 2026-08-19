@@ -1,0 +1,23 @@
+@if (visible()) {
+  <div
+    class="mobile-nav"
+    (click)="closed.emit()"
+    (keydown.enter)="closed.emit()"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Navigation menu"
+    tabindex="0"
+  >
+    <nav class="mobile-nav__links">
+      @for (item of items(); track item.label) {
+        <a class="mobile-nav__link" [routerLink]="item.routerLink" (click)="closed.emit()">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+    <div class="mobile-nav__auth">
+      <chaotic-auth-button class="in-drawer" />
+    </div>
+  </div>
+}

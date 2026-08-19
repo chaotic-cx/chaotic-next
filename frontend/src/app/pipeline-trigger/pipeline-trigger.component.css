@@ -2,3 +2,17 @@
   display: block;
   padding-bottom: 2rem;
 }
+
+.pipeline-trigger-actions ::ng-deep .p-button {
+  width: 100%;
+}
+
+.pipeline-trigger-actions ::ng-deep .p-button-label {
+  white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+  .pipeline-trigger-actions ::ng-deep .p-button-icon {
+    display: none;
+  }
+}

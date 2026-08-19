@@ -6,7 +6,15 @@
       "name": "app",
       "installMode": "prefetch",
       "resources": {
-        "files": ["/favicon.ico", "/manifest.webmanifest"]
+        "files": ["/index.html", "/favicon.ico", "/site.webmanifest", "/*.css", "/*.js"]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/**", "!/**/*.map"]
       }
     }
   ],

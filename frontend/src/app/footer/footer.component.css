@@ -1,5 +1,6 @@
 .chaotic-footer {
   width: 100%;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .chaotic-footer ::ng-deep .p-card {
