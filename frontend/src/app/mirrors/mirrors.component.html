@@ -49,7 +49,12 @@
           </ng-template>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @for (mirror of mirrorsService.onlineMirrors(); track mirror.subdomain) {
-              <chaotic-mirror-card [mirror]="mirror" status="online" />
+              <chaotic-mirror-card
+                [mirror]="mirror"
+                animate.enter="ctp-item-enter"
+                animate.leave="ctp-item-leave"
+                status="online"
+              />
             }
           </div>
         </p-panel>
@@ -69,7 +74,12 @@
           </ng-template>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @for (mirror of mirrorsService.outdatedMirrors(); track mirror.subdomain) {
-              <chaotic-mirror-card [mirror]="mirror" status="outdated" />
+              <chaotic-mirror-card
+                [mirror]="mirror"
+                animate.enter="ctp-item-enter"
+                animate.leave="ctp-item-leave"
+                status="outdated"
+              />
             }
           </div>
         </p-panel>
@@ -89,7 +99,12 @@
           </ng-template>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @for (mirror of mirrorsService.offlineMirrors(); track mirror.subdomain) {
-              <chaotic-mirror-card [mirror]="mirror" status="offline" />
+              <chaotic-mirror-card
+                [mirror]="mirror"
+                animate.enter="ctp-item-enter"
+                animate.leave="ctp-item-leave"
+                status="offline"
+              />
             }
           </div>
         </p-panel>

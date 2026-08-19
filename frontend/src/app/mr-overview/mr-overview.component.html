@@ -53,6 +53,8 @@
       [class.mr-focused]="focusedIndex() === i"
       [attr.data-mr-panel]="''"
       [attr.tabindex]="focusedIndex() === i ? 0 : -1"
+      animate.enter="ctp-item-enter"
+      animate.leave="ctp-item-leave"
     >
       <ng-template #header>
         <div class="flex w-full flex-wrap items-center justify-between gap-2">

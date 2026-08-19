@@ -355,7 +355,7 @@ export class AdminService {
   async triggerRepoRun(): Promise<void> {
     await this.runMutation(
       () => this.http.get(`${this.backendUrl}/repo/run`),
-      'Repo run triggered',
+      'Repo run started. It can take a while depending on load.',
       'Could not trigger the repo run.',
     );
   }
@@ -363,7 +363,7 @@ export class AdminService {
   async triggerSignalScan(): Promise<void> {
     await this.runMutation(
       () => this.http.get(`${this.backendUrl}/repo/signal-scan`),
-      'Signal scan triggered',
+      'Signal scan started. It can take a while depending on load.',
       'Could not trigger the signal scan.',
     );
   }
@@ -371,7 +371,7 @@ export class AdminService {
   async triggerMrScan(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/gitlab/mr-scan`, {}),
-      'Merge request scan triggered',
+      'Merge request scan started. It can take a while depending on load.',
       'Could not trigger the merge request scan.',
     );
   }
@@ -379,7 +379,7 @@ export class AdminService {
   async indexArchMirror(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/repo/index/arch`, {}),
-      'Arch mirror index triggered',
+      'Arch mirror index started. It can take a while depending on load.',
       'Could not trigger the Arch mirror index.',
     );
   }
@@ -387,7 +387,7 @@ export class AdminService {
   async indexChaoticRepo(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/repo/index/chaotic`, {}),
-      'Chaotic repo index triggered',
+      'Chaotic repo index started. It can take a while depending on load.',
       'Could not trigger the Chaotic repo index.',
     );
   }

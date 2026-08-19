@@ -60,22 +60,19 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
   });
 
   describe('POST /repo/index/arch', () => {
-    it('calls indexArchMirror and returns the result', async () => {
-      const expectedResult = { total: 100, added: 50, updated: 50, unchanged: 0 };
-      vi.spyOn(repoManagerService, 'indexArchMirror').mockResolvedValue(expectedResult as never);
+    it('fires indexArchMirror and returns immediately', async () => {
+      const spy = vi.spyOn(repoManagerService, 'indexArchMirror').mockResolvedValue({} as never);
 
       const res = await app.inject({ method: 'POST', url: '/repo/index/arch' });
 
       expect(res.statusCode).toBe(201);
-      const body = await res.json();
-      expect(body).toMatchObject(expectedResult);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('POST /repo/index/chaotic', () => {
-    it('calls indexChaoticRepo against the CDN mirror and returns the result', async () => {
-      const expectedResult = { total: 50, added: 30, updated: 20, unchanged: 0 };
-      const spy = vi.spyOn(repoManagerService, 'indexChaoticRepo').mockResolvedValue(expectedResult as never);
+    it('fires indexChaoticRepo against the CDN mirror and returns immediately', async () => {
+      const spy = vi.spyOn(repoManagerService, 'indexChaoticRepo').mockResolvedValue({} as never);
 
       const res = await app.inject({
         method: 'POST',
@@ -84,8 +81,6 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
 
       expect(res.statusCode).toBe(201);
       expect(spy).toHaveBeenCalledWith();
-      const body = await res.json();
-      expect(body).toMatchObject(expectedResult);
     });
   });
 });

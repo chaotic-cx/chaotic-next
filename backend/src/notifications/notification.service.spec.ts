@@ -30,6 +30,7 @@ function mockRepository() {
     find: vi.fn().mockResolvedValue([]),
     count: vi.fn().mockResolvedValue(0),
     upsert: vi.fn().mockResolvedValue(true),
+    delete: vi.fn().mockResolvedValue(true),
   } as unknown as Repository<NotificationSubscription>;
 }
 
@@ -96,6 +97,23 @@ describe('NotificationService', () => {
       await service.subscribeToPushEvents(validSubscription);
       expect(repo.count).not.toHaveBeenCalled();
       expect(repo.upsert).toHaveBeenCalled();
+    });
+
+    it('keeps the subscription when the welcome push fails transiently', async () => {
+      vi.mocked(sendNotification).mockRejectedValueOnce(new Error('network error'));
+      await expect(service.subscribeToPushEvents(validSubscription)).resolves.toEqual({
+        message: 'Subscription successful',
+      });
+      expect(repo.upsert).toHaveBeenCalled();
+      expect(repo.delete).not.toHaveBeenCalled();
+    });
+
+    it('removes a stale subscription when the push service returns 410', async () => {
+      vi.mocked(sendNotification).mockRejectedValueOnce({ statusCode: 410 });
+      await expect(service.subscribeToPushEvents(validSubscription)).resolves.toEqual({
+        message: 'Subscription successful',
+      });
+      expect(repo.delete).toHaveBeenCalledWith({ endpoint: validSubscription.endpoint });
     });
 
     it('rejects an endpoint on a non-allowlisted host', async () => {

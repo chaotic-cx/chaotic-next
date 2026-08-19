@@ -461,3 +461,31 @@ body.is-transitioning .router-container {
   @apply bg-ctp-surface0/40 animate-pulse rounded-lg;
   min-height: 8rem;
 }
+
+@keyframes ctp-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ctp-item-enter {
+  animation: ctp-item-enter 0.25s ease-out;
+}
+
+@keyframes ctp-item-leave {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.ctp-item-leave {
+  animation: ctp-item-leave 0.18s ease-in;
+}
