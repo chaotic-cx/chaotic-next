@@ -411,7 +411,6 @@ export class ArchMirrorService {
         continue;
       }
 
-      // If we update records, don't
       if (!settings.regenDatabase) {
         this.logger.log(`Package ${pkg.name} has changed, updating records`);
         archPkg.previousVersion = archPkg.version;
@@ -443,7 +442,6 @@ export class ArchMirrorService {
       }
 
       try {
-        // Check if directory exists before trying to remove it
         const dirStats = await stat(dir);
         if (dirStats.isDirectory()) {
           await rm(dir, { recursive: true, force: true });
