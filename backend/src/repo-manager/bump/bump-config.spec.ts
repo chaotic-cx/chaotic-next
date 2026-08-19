@@ -101,4 +101,16 @@ describe('applyPackageBump', () => {
       'CI_REBUILD_TRIGGERS=icu\nCI_PACKAGE_BUMP=r221.e78bf689-1/3\n',
     );
   });
+
+  it('preserves the recorded base and bumps only the counter when version is unknown', () => {
+    expect(applyPackageBump('CI_PACKAGE_BUMP=26.2.0_devel.221337.b860e0132f9-1/1\n', null, null)).toBe(
+      'CI_PACKAGE_BUMP=26.2.0_devel.221337.b860e0132f9-1/2\n',
+    );
+    expect(applyPackageBump('CI_PACKAGE_BUMP=1.0-2/9\n', undefined, undefined)).toBe('CI_PACKAGE_BUMP=1.0-2/10\n');
+    expect(applyPackageBump('CI_PACKAGE_BUMP=2.0-1\n', null, null)).toBe('CI_PACKAGE_BUMP=2.0-1/1\n');
+  });
+
+  it('throws instead of writing a null-based bump when version is unknown and no line exists', () => {
+    expect(() => applyPackageBump('CI_PKGBUILD_SOURCE=aur\n', null, null)).toThrow(/version and pkgrel are unknown/);
+  });
 });

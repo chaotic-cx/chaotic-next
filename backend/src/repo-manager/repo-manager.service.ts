@@ -1,6 +1,14 @@
 import { Paginated, RepoStatus } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
-import { Inject, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CronJob } from 'cron';
@@ -12,10 +20,12 @@ import {
   BrokenPackageReport,
   BumpLogEntry,
   BumpResult,
+  BumpType,
   IndexResult,
   PackageRebuildTriggerSources,
   RebuildTriggerSourcePackage,
   RepoSettings,
+  RepoUpdateRunParams,
   SonameDependency,
   TriggerType,
 } from '../interfaces/repo-manager';
@@ -28,6 +38,7 @@ import { RepoManager } from './repo-manager';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from './repo-manager.entity';
 import { REPO_READER_FACTORY, REPO_WRITER, type RepoReader, type RepoReaderFactory, type RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
+import { BumpPackagesResultDto } from './repo-manager.dto';
 import { latestAnalysesByPackage } from './scan/latest-analyses';
 import { SeedTransferService } from './seed-transfer.service';
 import {
@@ -195,6 +206,97 @@ export class RepoManagerService implements OnModuleInit {
       };
     });
     return paginate(items, total, safePage, safePerPage);
+  }
+
+  /**
+   * Manually bump a set of packages selected from the admin UI. Packages are
+   * grouped by repo and each repo's `.CI/config` is rewritten in one atomic
+   * GitLab commit. This is an explicit admin action, so it always bumps
+   * regardless of the ABI dry-run setting.
+   */
+  async bumpSelectedPackages(pkgnames: string[]): Promise<BumpPackagesResultDto> {
+    const uniqueNames = [...new Set(pkgnames.map((name) => name.trim()).filter(Boolean))];
+    if (uniqueNames.length === 0) {
+      throw new BadRequestException('No packages provided');
+    }
+
+    const pkgs = await this.packageRepository.find({
+      where: { pkgname: In(uniqueNames), isActive: true },
+      relations: { repo: true },
+    });
+    const byRepo = new Map<number, Package[]>();
+    for (const pkg of pkgs) {
+      if (!pkg.repo) continue;
+      const list = byRepo.get(pkg.repo.id) ?? [];
+      list.push(pkg);
+      byRepo.set(pkg.repo.id, list);
+    }
+    if (byRepo.size === 0) {
+      throw new NotFoundException('No active packages matched the selection');
+    }
+
+    // The commit must carry the reason each package is broken (missing sonames),
+    // not just that it was bumped manually.
+    const brokenReasons = await this.loadBrokenReasons([...byRepo.values()].flat());
+    const skipped: string[] = [];
+
+    if (this.repoManager.status === RepoStatus.ACTIVE) {
+      throw new ConflictException('Repo manager is already running, try again later');
+    }
+
+    const bumped: string[] = [];
+    for (const repoPkgs of byRepo.values()) {
+      const repo = repoPkgs[0].repo;
+      let reader: RepoReader | undefined;
+      try {
+        reader = await this.readerFactory.open(repo);
+        // The `.CI/config` lives under the repo's pkgbase directory. A broken
+        // report can name a built sub-package that is not a real directory, so
+        // only bump packages whose directory actually exists in the repo.
+        const dirs = new Set(await reader.listPackageDirs());
+        const needsRebuild: RepoUpdateRunParams[] = [];
+        for (const pkg of repoPkgs) {
+          if (!dirs.has(pkg.pkgname)) {
+            skipped.push(pkg.pkgname);
+            continue;
+          }
+          const configText = await reader.readFile(`${pkg.pkgname}/.CI/config`).catch(() => '');
+          const reasons = brokenReasons.get(pkg.id) ?? [];
+          needsRebuild.push({
+            archPkg: pkg,
+            bumpType: BumpType.MANUAL,
+            configs: parseCiConfig(configText),
+            pkg,
+            triggerFrom: TriggerType.CHAOTIC,
+            details: reasons.length > 0 ? reasons : ['manual bump from admin UI'],
+          });
+        }
+        if (needsRebuild.length === 0) continue;
+        const bumpedEntries = await this.bumpService.bumpPackages(needsRebuild, reader);
+        const needsPush = needsRebuild.filter((entry) => entry.gotBumped === true);
+        if (needsPush.length > 0) {
+          await this.bumpService.pushChanges(needsPush, repo);
+        }
+        bumped.push(...bumpedEntries.map((entry) => entry.pkg.pkgname));
+      } finally {
+        await reader?.dispose();
+      }
+    }
+
+    if (skipped.length > 0) {
+      this.logger.warn(`Skipped ${skipped.length} package(s) without a repo directory: ${skipped.join(', ')}`);
+    }
+    return { bumped };
+  }
+
+  private async loadBrokenReasons(pkgs: Package[]): Promise<Map<number, string[]>> {
+    if (pkgs.length === 0) return new Map();
+    const rows = await this.elfAnalysisRepository.find({
+      where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: In(pkgs.map((p) => p.id)), broken: true },
+      select: { pkgId: true, version: true, brokenReasons: true },
+    });
+    const latest = latestAnalysisByKey(rows, (row) => String(row.pkgId));
+    return new Map([...latest.values()].map((row) => [row.pkgId, row.brokenReasons]));
   }
 
   async getDependencyGraph(): Promise<DependencyEdge[]> {

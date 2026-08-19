@@ -2,7 +2,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Package, getOrCreatePackage, Repo } from '../../builder/builder.entity';
-import { type PackageBumpEntry, type PackageConfig, type RepoUpdateRunParams } from '../../interfaces/repo-manager';
+import {
+  BumpType,
+  type PackageBumpEntry,
+  type PackageConfig,
+  type RepoUpdateRunParams,
+} from '../../interfaces/repo-manager';
 import { errorMessage } from '../../utils/functions';
 import { PackageBump } from '../repo-manager.entity';
 import { type BumpCommitAction, REPO_WRITER, type RepoReader, type RepoWriter } from '../repo-rw';
@@ -54,31 +59,40 @@ export class BumpService {
 
       param.bumpedConfigContent = await this.bumpSinglePackage(reader, param.pkg.pkgname, param.pkg.repo);
 
-      this.logger.log(`Rebuilding ${param.pkg.pkgname} because of changed ${param.archPkg.pkgname}`);
+      this.logger.log(
+        param.bumpType === BumpType.MANUAL
+          ? `Rebuilding ${param.pkg.pkgname} manually`
+          : `Rebuilding ${param.pkg.pkgname} because of changed ${param.archPkg.pkgname}`,
+      );
       bumpedEntries.push({
         pkg: param.pkg,
         bumpType: param.bumpType,
         trigger: param.archPkg.id,
         triggerFrom: param.triggerFrom,
-        triggerName: param.archPkg.pkgname,
+        // A manual bump has no triggering package, so omit the self-referential name.
+        triggerName: param.bumpType === BumpType.MANUAL ? undefined : param.archPkg.pkgname,
         details: param.details,
       });
 
-      if (!param.pkg.bumpTriggers) {
-        param.pkg.bumpTriggers = [{ pkgname: param.archPkg.pkgname, archVersion: param.archPkg.version }];
-      } else {
-        if (!param.pkg.bumpTriggers.find((trigger) => trigger.pkgname === param.archPkg.pkgname)) {
-          param.pkg.bumpTriggers.push({
-            pkgname: param.archPkg.pkgname,
-            archVersion: param.archPkg.version,
-          });
+      // Record the Arch package that caused the rebuild. Manual bumps have no
+      // real trigger, so they must not add themselves to their own bumpTriggers.
+      if (param.bumpType !== BumpType.MANUAL) {
+        if (!param.pkg.bumpTriggers) {
+          param.pkg.bumpTriggers = [{ pkgname: param.archPkg.pkgname, archVersion: param.archPkg.version }];
         } else {
-          param.pkg.bumpTriggers = param.pkg.bumpTriggers.map((trigger) => {
-            if (trigger.pkgname === param.archPkg.pkgname) {
-              trigger.archVersion = param.archPkg.version;
-            }
-            return trigger;
-          });
+          if (!param.pkg.bumpTriggers.find((trigger) => trigger.pkgname === param.archPkg.pkgname)) {
+            param.pkg.bumpTriggers.push({
+              pkgname: param.archPkg.pkgname,
+              archVersion: param.archPkg.version,
+            });
+          } else {
+            param.pkg.bumpTriggers = param.pkg.bumpTriggers.map((trigger) => {
+              if (trigger.pkgname === param.archPkg.pkgname) {
+                trigger.archVersion = param.archPkg.version;
+              }
+              return trigger;
+            });
+          }
         }
       }
 
@@ -111,7 +125,8 @@ export class BumpService {
         pkgname: param.pkg.pkgname,
         content: param.bumpedConfigContent,
         bumpType: param.bumpType,
-        triggerName: param.archPkg.pkgname,
+        // A manual bump has no triggering package, so omit the "triggered by" clause.
+        triggerName: param.bumpType === BumpType.MANUAL ? undefined : param.archPkg.pkgname,
         details: param.details,
       });
     }

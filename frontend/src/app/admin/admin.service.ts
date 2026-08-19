@@ -107,6 +107,7 @@ export class AdminService {
   readonly elfAnalysisBrokenFilter = signal<boolean | undefined>(undefined);
 
   readonly brokenPage = signal(1);
+  readonly brokenSelection = signal<BrokenPackageReport[]>([]);
 
   readonly activeOptions = ACTIVE_OPTIONS;
 
@@ -389,6 +390,19 @@ export class AdminService {
       () => this.http.post(`${this.backendUrl}/repo/index/chaotic`, {}),
       'Chaotic repo index started. It can take a while depending on load.',
       'Could not trigger the Chaotic repo index.',
+    );
+  }
+
+  async bumpBrokenPackages(): Promise<void> {
+    const pkgnames = this.brokenSelection().map((report) => report.pkgname);
+    await this.runMutation(
+      () => this.http.post<{ bumped: string[] }>(`${this.backendUrl}/repo/broken/bump`, { pkgnames }),
+      `Bumped ${pkgnames.length} package(s) and committed the changes.`,
+      'Could not bump the selected packages.',
+      () => {
+        this.brokenSelection.set([]);
+        this.brokenReportsResource.reload();
+      },
     );
   }
 

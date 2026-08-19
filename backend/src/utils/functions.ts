@@ -45,6 +45,8 @@ export function bumpTypeToText(type: BumpType): string {
       return 'via a plugin ABI break';
     case BumpType.BROKEN_DEPS:
       return 'via a broken dependency';
+    case BumpType.MANUAL:
+      return 'manually';
     default:
       return 'Unknown';
   }
@@ -64,6 +66,8 @@ export function bumpTypeAdjectiveText(type: BumpType): string {
       return 'plugin ABI break';
     case BumpType.BROKEN_DEPS:
       return 'broken dependency';
+    case BumpType.MANUAL:
+      return 'manual';
     default:
       return 'Unknown';
   }
