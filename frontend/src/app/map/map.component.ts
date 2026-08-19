@@ -16,7 +16,7 @@ import { TitleComponent } from '../title/title.component';
     <div class="mx-auto flex w-full flex-1 flex-col">
       <chaotic-title
         title="Mirror map"
-        subtitleHtml="Where our mirrors are located. Pick a mirror from the overview to zoom in on it."
+        subtitleHtml="Where our mirrors are located. Pick a mirror from the overview to see details."
       />
       <chaotic-mirror-map
         [fillHeight]="true"

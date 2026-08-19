@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: connect-src 'self' https://aur.chaotic.cx https://chaotic-backend.garudalinux.org https://gitlab.com https://cdn.jsdelivr.net https://rsms.me https://status.chaotic.cx https://builds.garudalinux.org https://raw.githubusercontent.com https://github.com
+  Content-Security-Policy: connect-src 'self' https://aur.chaotic.cx https://chaotic-backend.garudalinux.org https://gitlab.com https://cdn.jsdelivr.net https://rsms.me https://status.chaotic.cx https://builds.garudalinux.org https://raw.githubusercontent.com https://github.com https://demotiles.maplibre.org
 
 /index.html
   Cache-Control: no-cache, must-revalidate, max-age=300
