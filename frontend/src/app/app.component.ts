@@ -51,6 +51,7 @@ export class AppComponent implements OnInit {
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
+  private readonly _updateService = inject(UpdateService);
 
   protected readonly loadingService = inject(LoadingService);
 
