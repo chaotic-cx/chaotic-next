@@ -17,6 +17,8 @@ export interface BuilderDatabaseServiceOptions {
   gitlabService: GitlabService;
 }
 
+const BUILD_OUTCOME_EVENTS = new Set(['builds.success', 'builds.failed', 'builds.cancelled', 'builds.canceling']);
+
 /**
  * Moleculer service writing build events (received over the broker) to the
  * database and pushing the corresponding SSE events. Created and registered by
@@ -75,8 +77,9 @@ export class BuilderDatabaseService extends Service {
   }
 
   async logBuild(ctx: Context<MoleculerBuildObject>): Promise<void> {
-    // These events are not relevant as they miss required data
-    if (ctx.eventName?.endsWith('Histogram')) return;
+    if (ctx.eventName && !BUILD_OUTCOME_EVENTS.has(ctx.eventName)) {
+      return;
+    }
 
     const params = ctx.params;
 
@@ -87,7 +90,7 @@ export class BuilderDatabaseService extends Service {
       params.duration === undefined ||
       params.status === undefined
     ) {
-      this.logger.error('Missing required fields, throwing entry away');
+      this.logger.warn(`Malformed build event '${ctx.eventName}': missing required fields, dropping entry`);
       return;
     }
 
