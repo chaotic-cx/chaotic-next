@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiCookieAuth
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Paginated } from '@chaotic-next/shared-lib';
 import { BrokenPackageReport, PackageRebuildTriggerSources } from '../interfaces/repo-manager';
+import { BumpPackagesBodyDto, BumpPackagesResultDto } from './repo-manager.dto';
 import { RepoManagerService } from './repo-manager.service';
 import { PackageElfAnalysis } from './repo-manager.entity';
 import type { DependencyEdge } from './signal';
@@ -38,6 +39,13 @@ export class RepoManagerController {
     @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
   ): Promise<Paginated<BrokenPackageReport>> {
     return this.repoManager.getBrokenPackages(page, perPage);
+  }
+
+  @Post('broken/bump')
+  @ApiOperation({ summary: 'Manually bump a set of packages selected in the admin UI.' })
+  @ApiCreatedResponse({ description: 'The package names that were bumped.', type: BumpPackagesResultDto })
+  bumpBrokenPackages(@Body() body: BumpPackagesBodyDto): Promise<BumpPackagesResultDto> {
+    return this.repoManager.bumpSelectedPackages(body.pkgnames);
   }
 
   @Post('index/arch')

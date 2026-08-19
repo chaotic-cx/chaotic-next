@@ -84,6 +84,8 @@ export enum BumpType {
   PLUGIN = 6,
   /** A package newly links a soname nobody provides or ships stale runtime dirs. */
   BROKEN_DEPS = 7,
+  /** An administrator manually selected the package for a rebuild from the UI. */
+  MANUAL = 8,
 }
 
 export enum TriggerType {

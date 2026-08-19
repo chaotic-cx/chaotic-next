@@ -16,6 +16,7 @@ import { PipelineIdBigInt1787080648292 } from '../migrations/1787080648292-Pipel
 import { AddPackageCreatedAt1787146120924 } from '../migrations/1787146120924-AddPackageCreatedAt';
 import { AddPackageRemovedAt1787147034396 } from '../migrations/1787147034396-AddPackageRemovedAt';
 import { CleanupDuplicateInactiveRows1787149556087 } from '../migrations/1787149556087-CleanupDuplicateInactiveRows';
+import { AddManualBumpType1787174029311 } from '../migrations/1787174029311-AddManualBumpType';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { RouterHit } from '../router/router-hit.entity';
@@ -52,6 +53,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AddPackageCreatedAt1787146120924,
     AddPackageRemovedAt1787147034396,
     CleanupDuplicateInactiveRows1787149556087,
+    AddManualBumpType1787174029311,
   ],
   migrationsRun: true,
   cache: true,

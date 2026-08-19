@@ -3,6 +3,7 @@ import { Button } from '@openng/optimus-ui/button';
 import { Panel } from '@openng/optimus-ui/panel';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ConfirmationService } from '@openng/optimus-ui/api';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
 import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from '../admin-url-sync';
@@ -64,9 +65,23 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
       </p-panel>
 
       <div class="min-w-0">
-        <span class="p-panel-title mb-2 ml-4 block text-ctp-text">Broken packages</span>
+        <div class="mb-2 flex items-center justify-between gap-3 px-4">
+          <span class="p-panel-title block text-ctp-text">Broken packages</span>
+          <p-button
+            [disabled]="service.brokenSelection().length === 0"
+            [badge]="service.brokenSelection().length.toString()"
+            (onClick)="confirmBump()"
+            label="Bump selected"
+            icon="pi pi-arrow-up"
+            size="small"
+            severity="danger"
+            pTooltip="Rebuild the selected broken packages and commit the changes"
+            tooltipPosition="left"
+          />
+        </div>
         <div class="overflow-x-auto">
           <p-table
+            [(selection)]="service.brokenSelection"
             [value]="service.brokenReports()"
             [rows]="25"
             [loading]="service.brokenReportsLoading()"
@@ -76,12 +91,15 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
             [showCurrentPageReport]="true"
             [scrollable]="true"
             [rowsPerPageOptions]="[25, 50, 100]"
+            [selectionMode]="'multiple'"
+            [selectionPageOnly]="true"
             (onLazyLoad)="onLazyLoad($event)"
             dataKey="pkgname"
             paginatorDropdownAppendTo="body"
           >
             <ng-template #header>
               <tr>
+                <th style="width: 3rem"><p-tableHeaderCheckbox /></th>
                 <th style="min-width: 12rem">Package</th>
                 <th style="min-width: 8rem">Version</th>
                 <th style="min-width: 8rem">Repo</th>
@@ -89,7 +107,8 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-report>
-              <tr>
+              <tr [pSelectableRow]="report">
+                <td><p-tableCheckbox [value]="report" /></td>
                 <td>{{ report.pkgname }}</td>
                 <td>{{ report.version }}</td>
                 <td>{{ report.repoName }}</td>
@@ -109,10 +128,23 @@ export class AdminRepoOperationsPageComponent {
   readonly service = inject(AdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly confirmationService = inject(ConfirmationService);
 
   constructor() {
     restoreQueryParams(this.route, {
       page: (raw) => this.service.brokenPage.set(pageFromQuery(raw)),
+    });
+  }
+
+  confirmBump(): void {
+    const count = this.service.brokenSelection().length;
+    if (count === 0) return;
+    this.confirmationService.confirm({
+      message: `Rebuild ${count} selected broken package(s)? This bumps their pkgrel and commits the changes.`,
+      header: 'Bump selected packages',
+      acceptLabel: 'Bump',
+      rejectLabel: 'Cancel',
+      accept: () => void this.service.bumpBrokenPackages(),
     });
   }
 
