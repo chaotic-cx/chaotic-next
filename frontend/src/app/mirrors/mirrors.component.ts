@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, effect, inject, LOCALE_ID, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { Panel } from '@openng/optimus-ui/panel';
 import { Skeleton } from '@openng/optimus-ui/skeleton';
@@ -13,7 +13,7 @@ import { MirrorsService } from './mirrors.service';
 
 @Component({
   selector: 'chaotic-mirrors',
-  imports: [CommonModule, TitleComponent, Tooltip, Panel, Skeleton, MirrorCardComponent],
+  imports: [CommonModule, TitleComponent, Tooltip, Panel, Skeleton, MirrorCardComponent, RouterLink],
   templateUrl: './mirrors.component.html',
   styleUrl: './mirrors.component.css',
   providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],

@@ -2,6 +2,7 @@
 @import '@catppuccin/palette/css/catppuccin.css' layer(base);
 @import '@catppuccin/highlightjs/css/catppuccin-mocha.css' layer(base);
 @import '@xterm/xterm/css/xterm.css' layer(base);
+@import 'maplibre-gl/dist/maplibre-gl.css' layer(base);
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/inter';
 
@@ -259,8 +260,10 @@ p-scroll-top {
 
 .table-container {
   border-radius: var(--p-panel-border-radius, 12px);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   max-width: calc(100vw - 2rem);
+  overscroll-behavior-x: contain;
   @apply mx-auto;
 }
 
@@ -271,13 +274,17 @@ p-scroll-top {
 .p-datatable-tbody > tr > td.cell-actions {
   vertical-align: middle;
   text-align: right;
+  white-space: nowrap;
 }
 
 .p-datatable-tbody > tr > td.cell-actions > div,
 .p-datatable-tbody > tr > td.cell-actions > p-button {
-  display: inline-flex;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .p-datatable-table-container,

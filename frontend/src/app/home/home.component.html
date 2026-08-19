@@ -1,5 +1,5 @@
 <div class="flex min-h-svh flex-col">
-  <div class="surface-section flex flex-1 items-center justify-center px-4 pb-8 md:py-8 md:px-6 lg:px-8">
+  <div class="surface-section flex flex-1 items-center justify-center pb-8 md:py-8 md:px-6 lg:px-8">
     <div class="hero-card mx-auto w-full max-w-4xl p-6 md:p-10">
       <div class="text-center">
         <a
@@ -15,7 +15,7 @@
         <p class="text-ctp-text my-5 text-xl">Building AUR packages for you, so you don't have to!</p>
         <div class="relative mx-auto my-6 w-full max-w-md">
           <input
-            class="w-full text-center"
+            class="w-full text-center h-12"
             #searchInputEl
             [formField]="searchForm.query"
             [class.ng-invalid]="searchForm.query().invalid()"
@@ -106,7 +106,20 @@
   <div class="mx-auto mb-10 mt-20" #newsSection>
     <chaotic-newsfeed />
   </div>
-  <div class="mx-auto mb-10 mt-20">
-    <chaotic-mirror-map />
+  <div class="mx-auto mb-10 mt-20 w-full max-w-4xl">
+    <chaotic-recently-added />
+  </div>
+  <div class="mx-auto mb-10 mt-20 w-full max-w-4xl px-3 sm:px-0">
+    <h2 class="text-ctp-maroon my-5 text-center text-2xl font-bold">
+      <i class="pi-map pi" style="font-size: 1.25rem"></i> Mirror map
+    </h2>
+    @defer (on viewport) {
+      <chaotic-mirror-map [mirrors]="mirrorsService.mirrors()" [self]="mirrorsService.self()" [focus]="focus()" />
+    } @placeholder {
+      <div class="h-64"></div>
+    }
+    <p class="mx-auto mt-4 max-w-4xl text-center text-sm text-ctp-subtext1">
+      Where our mirrors are located. Pick a mirror from the overview to zoom in on it.
+    </p>
   </div>
 </div>

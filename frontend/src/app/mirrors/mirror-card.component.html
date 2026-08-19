@@ -34,9 +34,10 @@
       @if (mirror().latlon; as latlon) {
         <a
           class="hover:text-ctp-mauve"
-          [href]="`https://www.openstreetmap.org/#map=6/${latlon[0]}/${latlon[1]}`"
-          target="_blank"
-          rel="noopener"
+          [routerLink]="['/map']"
+          [queryParams]="{ focus: latlon.join(',') }"
+          [pTooltip]="'View this mirror on the map'"
+          tooltipPosition="top"
           >{{ latlon.join(', ') }}</a
         >
       } @else {
