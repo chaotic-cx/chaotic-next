@@ -1,0 +1,36 @@
+<div class="mx-auto w-full max-w-4xl">
+  <h2 class="text-ctp-maroon my-5 text-center text-2xl font-bold">
+    <i class="pi pi-box" style="font-size: 1.25rem"></i> Recently added
+  </h2>
+
+  <div class="recently-added-section">
+    @if (loading() && packages().length === 0) {
+      <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        @for (_ of placeholderCount; track $index) {
+          <div class="h-20"></div>
+        }
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        @for (pkg of packages(); track pkg.id) {
+          <a
+            class="recent-card flex flex-col gap-1 p-4"
+            [routerLink]="['/stats/search']"
+            [queryParams]="{ search: pkg.pkgname }"
+          >
+            <span class="truncate font-bold text-ctp-mauve">{{ pkg.pkgname }}</span>
+            <span class="truncate text-sm text-ctp-subtext1">{{ versionLabel(pkg) }}</span>
+            <span class="mt-auto flex items-center justify-between gap-2 pt-2">
+              @if (pkg.reponame) {
+                <p-tag [value]="pkg.reponame" severity="secondary" />
+              }
+              @if (pkg.createdAt) {
+                <span class="text-xs opacity-80">{{ pkg.createdAt | relativeTime }}</span>
+              }
+            </span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+</div>

@@ -5,6 +5,9 @@ export const pgConnectionOptions = {
   username: process.env.PG_USER || 'chaotic',
   password: process.env.PG_PASSWORD || 'chaotic',
   database: process.env.PG_DATABASE || 'chaotic',
+  // Keep all date truncation (per-day stats) in UTC so buckets are stable and
+  // not shifted by the server's local timezone.
+  options: '-c timezone=UTC',
   extra: {
     ssl:
       process.env.SSL_MODE === 'require'

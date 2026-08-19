@@ -152,6 +152,7 @@ export class BuilderDatabaseService extends Service {
           package: pkg.pkgname,
           version: pkg.version,
           pkgrel: pkg.pkgrel,
+          bump: pkg.bump ?? 0,
           duration: params.duration,
           repo: repo.name,
           status: params.status,

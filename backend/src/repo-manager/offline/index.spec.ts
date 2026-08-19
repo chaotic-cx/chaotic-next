@@ -12,6 +12,7 @@ const fmtPkg: ParsedPackage = {
   base: 'fmt',
   version: '12.0.0',
   pkgrel: 1,
+  bump: 0,
   repoName: 'extra',
   metaData: { filename: 'fmt-12.0.0-1-x86_64.pkg.tar.zst', buildDate: '' },
 };

@@ -146,7 +146,14 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       query.andWhere('package.repoId = :repoId', { repoId: options.repoId });
     }
 
-    query.orderBy(this.packageSortExpression(options.sort), resolveOrder(options.order));
+    const order = resolveOrder(options.order);
+    // Null `createdAt` rows (packages with no build history) must not surface
+    // as "recently added": Postgres sorts NULLs first in DESC, so force them last.
+    query.orderBy(
+      this.packageSortExpression(options.sort),
+      order,
+      options.sort === 'createdAt' ? 'NULLS LAST' : undefined,
+    );
 
     const [items, total] = await query.skip(skip).take(perPage).getManyAndCount();
 
@@ -156,12 +163,14 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       id: pkg.id,
       pkgname: pkg.pkgname,
       lastUpdated: pkg.lastUpdated,
+      createdAt: pkg.createdAt,
       isActive: pkg.isActive,
       version: pkg.version,
       bumpCount: pkg.bumpCount,
       bumpTriggers: pkg.bumpTriggers ?? undefined,
       metadata: pkg.metadata,
       pkgrel: pkg.pkgrel,
+      bump: pkg.bump,
       repo: pkg.repo?.id,
       reponame: pkg.repo?.name,
     }));
@@ -173,6 +182,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       id: 'package.id',
       pkgname: 'package.pkgname',
       lastUpdated: 'package.lastUpdated',
+      createdAt: 'package.createdAt',
       version: 'package.version',
       pkgrel: 'package.pkgrel',
       repo: 'repo.name',
@@ -391,6 +401,76 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
         .cache(`builds-per-day-distinct-${days}`, CACHE_TTL_MS)
         .getRawMany()
     );
+  }
+
+  getPackageAdditionsPerDay(options: { days: number }): Promise<{ day: string; count: string }[]> {
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+    return this.packageRepository
+      .createQueryBuilder('package')
+      .select("DATE_TRUNC('day', package.createdAt AT TIME ZONE 'UTC') AS day")
+      .addSelect('COUNT(*) AS count')
+      .where('package.createdAt IS NOT NULL')
+      .groupBy('day')
+      .orderBy('day', 'DESC')
+      .limit(days)
+      .cache(`package-additions-per-day-${days}`, CACHE_TTL_MS)
+      .getRawMany();
+  }
+
+  getAverageBuildTimePerDay(options: { days: number }): Promise<{ day: string; status: string; average: string }[]> {
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+    return this.buildRepository
+      .createQueryBuilder('build')
+      .select("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC') AS day")
+      .addSelect('build.status AS status')
+      .addSelect('AVG(build.timeToEnd) AS average')
+      .where('build.timeToEnd IS NOT NULL')
+      .groupBy('day')
+      .addGroupBy('build.status')
+      .orderBy('day', 'DESC')
+      .limit(days)
+      .cache(`avg-build-time-per-day-${days}`, CACHE_TTL_MS)
+      .getRawMany();
+  }
+
+  getFailedBuildHotspots(options: { amount: number }): Promise<{ pkgname: string; count: string }[]> {
+    const amount = clampInt(options.amount, 1, MAX_AMOUNT);
+    return this.buildRepository
+      .createQueryBuilder('build')
+      .select('pkg.pkgname AS pkgname')
+      .addSelect('COUNT(*) AS count')
+      .innerJoin('build.pkgbase', 'pkg')
+      .where('build.status::text IN (:...failures)', {
+        failures: [String(BuildStatus.FAILED), String(BuildStatus.TIMED_OUT), String(BuildStatus.SOFTWARE_FAILURE)],
+      })
+      .groupBy('pkg.pkgname')
+      .orderBy('count', 'DESC')
+      .limit(amount)
+      .cache(`failed-build-hotspots-${amount}`, CACHE_TTL_MS)
+      .getRawMany();
+  }
+
+  getThroughputPerDay(options: {
+    days: number;
+  }): Promise<{ day: string; success: string; alreadyBuilt: string; skipped: string; failed: string }[]> {
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+    const failedStatuses = [
+      String(BuildStatus.FAILED),
+      String(BuildStatus.TIMED_OUT),
+      String(BuildStatus.SOFTWARE_FAILURE),
+    ];
+    return this.buildRepository
+      .createQueryBuilder('build')
+      .select("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC') AS day")
+      .addSelect(`COUNT(*) FILTER (WHERE build.status::text = '${BuildStatus.SUCCESS}') AS success`)
+      .addSelect(`COUNT(*) FILTER (WHERE build.status::text = '${BuildStatus.ALREADY_BUILT}') AS alreadyBuilt`)
+      .addSelect(`COUNT(*) FILTER (WHERE build.status::text = '${BuildStatus.SKIPPED}') AS skipped`)
+      .addSelect(`COUNT(*) FILTER (WHERE build.status::text IN ('${failedStatuses.join("','")}')) AS failed`)
+      .groupBy('day')
+      .orderBy('day', 'DESC')
+      .limit(days)
+      .cache(`throughput-per-day-${days}`, CACHE_TTL_MS)
+      .getRawMany();
   }
 
   getBuildsPerPackage(options?: { days: number }): Promise<{ pkgbase: string; count: string }[]> {

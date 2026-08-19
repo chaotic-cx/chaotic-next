@@ -71,6 +71,7 @@ export interface Package {
   id: number;
   pkgname: string;
   lastUpdated?: string;
+  createdAt?: string;
   isActive: boolean;
   skipSignalScan?: boolean;
   version?: string;
@@ -78,6 +79,7 @@ export interface Package {
   bumpTriggers?: { pkgname: string; archVersion: string }[];
   metadata?: ParsedPackageMetadata;
   pkgrel?: number;
+  bump?: number;
   repo?: number;
   /** Repository name, resolved server-side when the repo relation is joined. */
   reponame?: string;
@@ -93,7 +95,7 @@ export interface Paginated<T> {
 
 export type SortOrder = 'ASC' | 'DESC';
 
-export const PACKAGE_SORT_FIELDS = ['id', 'pkgname', 'lastUpdated', 'version', 'pkgrel', 'repo'] as const;
+export const PACKAGE_SORT_FIELDS = ['id', 'pkgname', 'lastUpdated', 'createdAt', 'version', 'pkgrel', 'repo'] as const;
 export type PackageSortField = (typeof PACKAGE_SORT_FIELDS)[number];
 
 export const BUILD_SORT_FIELDS = ['id', 'timestamp', 'timeToEnd', 'status', 'pkgname', 'builder', 'repo'] as const;
@@ -572,6 +574,7 @@ export type ChaoticEvent =
       package: string;
       version: string;
       pkgrel: number;
+      bump: number;
       duration: number;
       repo: string;
       status: BuildStatus;

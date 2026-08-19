@@ -59,6 +59,12 @@ describe('applyPackageBump', () => {
     expect(applyPackageBump('CI_PACKAGE_BUMP=130.0-1/9\n', '131.0', 2)).toBe('CI_PACKAGE_BUMP=131.0-2/1\n');
   });
 
+  it('keeps incrementing the counter when the package already has a fractional pkgrel recorded', () => {
+    // `130.0-2/9` built pkgrel `2.9` (pkgrel=2, bump=9); the next bump must go
+    // to `130.0-2/10` (`2.10`), not reset the counter to 1.
+    expect(applyPackageBump('CI_PACKAGE_BUMP=130.0-2/9\n', '130.0', 2)).toBe('CI_PACKAGE_BUMP=130.0-2/10\n');
+  });
+
   it('starts the counter at 1 when the existing bump has no /counter', () => {
     expect(applyPackageBump('CI_PACKAGE_BUMP=131.0-2\n', '131.0', 2)).toBe('CI_PACKAGE_BUMP=131.0-2/1\n');
   });

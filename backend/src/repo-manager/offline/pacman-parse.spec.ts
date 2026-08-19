@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { parsePkgrel } from '@chaotic-next/shared-lib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { extractBaseAndVersion, parsePackageDesc, parsePackageFiles, parsePacmanDatabases } from './pacman-parse';
 
@@ -79,9 +80,16 @@ describe('parsePacmanDatabases (real vendored repo database)', () => {
       base: 'fmt',
       version: '12.0.0',
       pkgrel: 1,
+      bump: 0,
       repoName: 'chaotic-aur',
     });
     expect(fmt.metaData.url).toBe('https://fmt.dev');
+  });
+
+  it('splits a fractional pkgrel into its integer part and the Chaotic-AUR bump', () => {
+    expect(parsePkgrel('2.1')).toEqual({ pkgrel: 2, bump: 1 });
+    expect(parsePkgrel('2')).toEqual({ pkgrel: 2, bump: 0 });
+    expect(parsePkgrel('0')).toEqual({ pkgrel: 0, bump: 0 });
   });
 
   it('extracts real sonames from the fmt files payload', async () => {

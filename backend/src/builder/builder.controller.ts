@@ -200,6 +200,46 @@ export class BuilderController {
     return await this.builderService.getBuildsPerDay({ days: days });
   }
 
+  @Get('added/per-day/:days')
+  @ApiOperation({ summary: 'Get number of packages added to the repo per day.' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Packages added per day', type: Object, isArray: true })
+  async getPackageAdditionsPerDay(
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<{ day: string; count: string }[]> {
+    return await this.builderService.getPackageAdditionsPerDay({ days: days });
+  }
+
+  @Get('average/per-day/:days')
+  @ApiOperation({ summary: 'Get average build time per day per status.' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Average build time per day', type: Object, isArray: true })
+  async getAverageBuildTimePerDay(
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<{ day: string; status: string; average: string }[]> {
+    return await this.builderService.getAverageBuildTimePerDay({ days: days });
+  }
+
+  @Get('builds/failed/top/:amount')
+  @ApiOperation({ summary: 'Get packages with the most failed builds.' })
+  @ApiParam({ name: 'amount', description: 'Number of packages' })
+  @ApiOkResponse({ description: 'Top packages by failed build count', type: Object, isArray: true })
+  async getFailedBuildHotspots(
+    @Param('amount', ParseIntPipe) amount: number,
+  ): Promise<{ pkgname: string; count: string }[]> {
+    return await this.builderService.getFailedBuildHotspots({ amount: amount });
+  }
+
+  @Get('throughput/per-day/:days')
+  @ApiOperation({ summary: 'Get successful vs already-built vs skipped vs failed builds per day.' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Throughput per day', type: Object, isArray: true })
+  async getThroughputPerDay(
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<{ day: string; success: string; alreadyBuilt: string; skipped: string; failed: string }[]> {
+    return await this.builderService.getThroughputPerDay({ days: days });
+  }
+
   @Get('average/time')
   @ApiOperation({ summary: 'Get average build time per status.' })
   @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
