@@ -376,7 +376,6 @@ export class ArchMirrorService {
       }
     }
 
-    await this.cleanUp(actualWorkDirs.filter((dir): dir is RepoWorkDir => dir !== null).map((dir) => dir.workDir));
     this.logger.debug('Done parsing databases');
     this.logger.log(`Total packages processed: ${currentPackageVersions.length}`);
 

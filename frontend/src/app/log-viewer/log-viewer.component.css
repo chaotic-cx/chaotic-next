@@ -147,10 +147,11 @@
 }
 
 .log-panel-wrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: calc(100dvh - 360px);
+  height: calc(100dvh - 260px);
 }
 
 .log-loading {
