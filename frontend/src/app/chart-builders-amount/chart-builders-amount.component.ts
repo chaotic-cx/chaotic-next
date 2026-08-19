@@ -2,7 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../app.service';
-import { type ChartConfig, mochaLegendLabels, mochaScales } from '../chart-config';
+import { type ChartConfig, mochaAxisChartOptions } from '../chart-config';
 import { parseCount, resourceValue, shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
@@ -45,14 +45,7 @@ export class ChartBuildersAmountComponent {
           },
         ],
       },
-      options: {
-        maintainAspectRatio: false,
-        aspectRatio: 0.4,
-        plugins: {
-          legend: { labels: mochaLegendLabels() },
-        },
-        scales: mochaScales(),
-      },
+      options: mochaAxisChartOptions<'bar'>(),
     };
   });
 }

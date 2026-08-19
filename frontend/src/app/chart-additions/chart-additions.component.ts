@@ -9,19 +9,19 @@ import { parseCount, resourceValue } from '../functions';
 import { StatsService } from '../stats/stats.service';
 
 @Component({
-  selector: 'chaotic-chart-builds-per-day',
+  selector: 'chaotic-chart-additions',
   imports: [UIChart],
-  templateUrl: './chart-builds-per-day.component.html',
-  styleUrl: './chart-builds-per-day.component.css',
+  templateUrl: './chart-additions.component.html',
+  styleUrl: './chart-additions.component.css',
   providers: [DatePipe],
 })
-export class ChartBuildsPerDayComponent {
+export class ChartAdditionsComponent {
   private readonly appService = inject(AppService);
   private readonly datePipe = inject(DatePipe);
   private readonly statsService = inject(StatsService);
 
   private readonly resource = httpResource<{ day: string; count: string }[]>(() =>
-    this.appService.getBuildsPerDayResourceRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
+    this.appService.getPackageAdditionsResourceRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
   );
 
   readonly loading = this.resource.isLoading;
@@ -29,24 +29,23 @@ export class ChartBuildsPerDayComponent {
   readonly hasData = computed(() => this.resource.hasValue());
 
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
-    const data = resourceValue(this.resource) ?? [];
+    const rows = resourceValue(this.resource) ?? [];
     const labels: string[] = [];
     const values: number[] = [];
-    for (const item of data) {
-      const formattedDate = this.datePipe.transform(item.day, 'shortDate');
-      labels.push(formattedDate || item.day);
-      values.push(parseCount(item.count));
+    for (const row of rows) {
+      const formattedDate = this.datePipe.transform(row.day, 'shortDate');
+      labels.push(formattedDate || row.day);
+      values.push(parseCount(row.count));
     }
-
     return {
       data: {
-        labels,
+        labels: labels.reverse(),
         datasets: [
           {
-            label: 'Builds per day',
-            data: values,
-            backgroundColor: flavors.mocha.colors.lavender.hex,
-            borderColor: flavors.mocha.colors.lavender.hex,
+            label: 'Packages added',
+            data: values.reverse(),
+            backgroundColor: flavors.mocha.colors.green.hex,
+            borderColor: flavors.mocha.colors.green.hex,
             fill: false,
           },
         ],

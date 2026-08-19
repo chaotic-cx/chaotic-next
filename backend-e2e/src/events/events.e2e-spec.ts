@@ -30,6 +30,7 @@ describe('EventService SSE wiring (e2e, real PostgreSQL)', () => {
         package: 'firedragon',
         version: '2:13.1.1',
         pkgrel: 1,
+        bump: 0,
         duration: 0,
         repo: 'garuda',
         status: 0,

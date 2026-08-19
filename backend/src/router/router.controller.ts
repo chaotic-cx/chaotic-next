@@ -43,4 +43,15 @@ export class RouterController {
   async getRouterStatsPerDay(@Param('days', ParseIntPipe) days: number): Promise<PerDayStatsDto[]> {
     return this.routerService.getPerDayStats(days);
   }
+
+  @HttpCode(HttpStatus.OK)
+  @Get('/useragents/trend/:days')
+  @ApiOperation({ summary: 'Get download counts per day for the top user agents.' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'User-agent download trend', type: Object, isArray: true })
+  async getUserAgentTrend(
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<{ day: string; userAgent: string; count: string }[]> {
+    return this.routerService.getUserAgentTrend(days);
+  }
 }

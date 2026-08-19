@@ -1,7 +1,15 @@
 import { Service, signal } from '@angular/core';
 import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
 
-export const STATS_TABS = ['search', 'globals', 'downloads', 'update-review', 'builder-stats'] as const;
+export const STATS_TABS = [
+  'search',
+  'globals',
+  'downloads',
+  'update-review',
+  'builder-stats',
+  'additions',
+  'insights',
+] as const;
 export type StatsTab = (typeof STATS_TABS)[number];
 
 export function isStatsTab(value: string): value is StatsTab {

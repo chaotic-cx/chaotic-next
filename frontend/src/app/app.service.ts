@@ -11,7 +11,7 @@ import {
 import { Subject } from 'rxjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
-import { type SeoTags, updateSeoTags } from './functions';
+import { isChaoticEvent, type SeoTags, updateSeoTags } from './functions';
 
 export interface PackagesQueryParams {
   page: number;
@@ -125,6 +125,26 @@ export class AppService {
 
   getBuildsPerDayResourceRequest(days: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/per-day/${days}` };
+  }
+
+  getPackageAdditionsResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/added/per-day/${days}` };
+  }
+
+  getAverageBuildTimePerDayResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/average/per-day/${days}` };
+  }
+
+  getFailedBuildHotspotsResourceRequest(amount: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/builds/failed/top/${amount}` };
+  }
+
+  getThroughputResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/throughput/per-day/${days}` };
+  }
+
+  getUserAgentTrendResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/router/useragents/trend/${days}` };
   }
 
   getBuildersAmountResourceRequest(days?: number): HttpResourceRequest {

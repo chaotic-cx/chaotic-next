@@ -58,6 +58,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./stats/pages/stats-builder-stats-page.component').then((c) => c.StatsBuilderStatsPageComponent),
       },
+      {
+        path: 'additions',
+        loadComponent: () =>
+          import('./stats/pages/stats-additions-page.component').then((c) => c.StatsAdditionsPageComponent),
+      },
+      {
+        path: 'insights',
+        loadComponent: () =>
+          import('./stats/pages/stats-insights-page.component').then((c) => c.StatsInsightsPageComponent),
+      },
     ],
   },
   {
