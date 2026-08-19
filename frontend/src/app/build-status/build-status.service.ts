@@ -1,3 +1,5 @@
+import { httpResource } from '@angular/common/http';
+import { computed, DestroyRef, effect, inject, Service, signal, untracked } from '@angular/core';
 import {
   type Build,
   BuildStatus,
@@ -5,15 +7,13 @@ import {
   type PipelineWithExternalStatus,
   type StatsObject,
 } from '@chaotic-next/shared-lib';
-import { httpResource } from '@angular/common/http';
-import { computed, DestroyRef, effect, inject, Service, signal, untracked } from '@angular/core';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
 import {
-  type PackageBuildAverage,
   computeQueueEstimates,
   formatEta,
   overallAverageMinutes,
+  type PackageBuildAverage,
   type QueueEstimates,
 } from './queue-estimates';
 
@@ -58,10 +58,11 @@ export class BuildStatusService {
     const names = [...this.activeQueue().map((pkg) => pkg.name), ...this.waitingQueue().map((pkg) => pkg.name)];
     return this.appService.getPackageAverageBuildTimesResourceRequest(names);
   });
+  private readonly queueLoaded = signal(false);
 
   readonly loadingDeployments = this.packageBuildsResource.isLoading;
   readonly loadingPipelines = this.pipelinesResource.isLoading;
-  readonly loadingQueue = this.queueStatsResource.isLoading;
+  readonly loadingQueue = computed(() => this.queueStatsResource.isLoading() && !this.queueLoaded());
   readonly loading = computed(() => this.loadingDeployments() || this.loadingPipelines() || this.loadingQueue());
 
   readonly latestDeployments = computed<Build[]>(() => resourceValue(this.packageBuildsResource)?.items ?? []);
@@ -138,6 +139,10 @@ export class BuildStatusService {
     // must persist across queue changes, so it is not pure-derivable. This
     // effect writes only its own target signal (untracked), avoiding a loop.
     effect(() => this.trackFirstSeenActive());
+
+    effect(() => {
+      if (resourceValue(this.queueStatsResource)) this.queueLoaded.set(true);
+    });
 
     const tick = window.setInterval(() => this.now.set(Date.now()), ESTIMATE_TICK_MS);
     this.destroyRef.onDestroy(() => window.clearInterval(tick));

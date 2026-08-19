@@ -21,7 +21,8 @@ export class UpdateService {
           });
           break;
         case 'VERSION_INSTALLATION_FAILED':
-          this.messageToastService.error('Update failed', `Could not install the new version: ${evt.error}`);
+          console.error('Failed to install the new app version', evt.error);
+          this.messageToastService.error('Update failed', 'Could not install the new version.');
           break;
       }
     });
