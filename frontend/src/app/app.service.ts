@@ -35,19 +35,58 @@ export interface BuildsQueryParams {
 
 export const ALL_TIME_DAYS = 3650;
 
+const SSE_RECONNECT_DELAY_MS = 1000;
+
 @Service()
 export class AppService {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly http = inject(HttpClient);
 
-  serverEvents: EventSource = new EventSource(`${this.appConfig.backendUrl}/sse?ngsw-bypass`);
-
   chaoticSse$ = new Subject<ChaoticEvent>();
   chaoticEvent = this.chaoticSse$.asObservable();
 
+  private eventSource: EventSource | undefined;
+  private reconnectTimer: number | undefined;
+  private readonly onVisibilityChange = (): void => {
+    if (document.visibilityState === 'visible') this.reconnect();
+  };
+
   constructor() {
-    // Close on error to stop EventSource's automatic infinite reconnect loop.
-    this.serverEvents.onerror = () => this.serverEvents.close();
+    // Closing on error would permanently stop live updates: EventSource does not
+    // auto-reconnect after an explicit close, and backgrounded tabs drop the
+    // connection. Instead, re-establish the stream on error and on tab focus.
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
+    this.reconnect();
+  }
+
+  private reconnect(): void {
+    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
+    if (this.eventSource && this.eventSource.readyState !== EventSource.CLOSED) {
+      this.eventSource.close();
+    }
+
+    const source = new EventSource(`${this.appConfig.backendUrl}/sse?ngsw-bypass`);
+    this.eventSource = source;
+
+    source.onmessage = ({ data }) => {
+      const event: unknown = JSON.parse(data);
+      if (isChaoticEvent(event)) this.chaoticSse$.next(event);
+    };
+
+    source.onerror = () => {
+      this.eventSource?.close();
+      this.eventSource = undefined;
+      this.scheduleReconnect();
+    };
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer !== undefined) return;
+    this.reconnectTimer = window.setTimeout(() => {
+      this.reconnectTimer = undefined;
+      this.reconnect();
+    }, SSE_RECONNECT_DELAY_MS);
   }
 
   getNewsResourceRequest(): HttpResourceRequest {

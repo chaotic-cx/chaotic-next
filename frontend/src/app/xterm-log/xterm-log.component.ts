@@ -7,10 +7,6 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
 
 const DEFAULT_FONT_SIZE = 12;
-const MOBILE_FONT_SIZE = 4;
-const TABLET_FONT_SIZE = 9.5;
-const MOBILE_MAX_WIDTH = 640;
-const TABLET_MAX_WIDTH = 1024;
 const SCROLLBACK_LINES = 9999999;
 const PIXELS_PER_SCROLL_LINE = 16;
 const SCROLLBAR_COLOR = '#f5e0dc';
@@ -388,12 +384,8 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     this.searchAddon?.findPrevious(query);
   }
 
-  private getResponsiveFontSize(): number {
-    if (typeof window === 'undefined') return DEFAULT_FONT_SIZE;
-    const width = window.innerWidth;
-    if (width <= MOBILE_MAX_WIDTH) return MOBILE_FONT_SIZE;
-    if (width <= TABLET_MAX_WIDTH) return TABLET_FONT_SIZE;
-    return DEFAULT_FONT_SIZE;
+  private isCoarsePointer(): boolean {
+    return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
   }
 
   private initTerminal(): void {
@@ -406,7 +398,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       scrollback: SCROLLBACK_LINES,
       convertEol: true,
       fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
-      fontSize: this.getResponsiveFontSize(),
+      fontSize: DEFAULT_FONT_SIZE,
       lineHeight: 1.2,
       theme: XTERM_THEME,
     });
@@ -432,9 +424,12 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     );
 
     try {
-      const webglAddon = new WebglAddon();
-      webglAddon.onContextLoss(() => webglAddon.dispose());
-      this.terminal.loadAddon(webglAddon);
+      // WebGL rendering is heavy on mobile GPU/battery; fall back to canvas there.
+      if (!this.isCoarsePointer()) {
+        const webglAddon = new WebglAddon();
+        webglAddon.onContextLoss(() => webglAddon.dispose());
+        this.terminal.loadAddon(webglAddon);
+      }
     } catch {
       // Fallback to standard canvas renderer if WebGL unavailable
     }
@@ -495,12 +490,6 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     this.updateLineNumbers();
 
     this.resizeObserver = new ResizeObserver(() => {
-      if (this.terminal) {
-        const newFontSize = this.getResponsiveFontSize();
-        if (this.terminal.options.fontSize !== newFontSize) {
-          this.terminal.options.fontSize = newFontSize;
-        }
-      }
       requestAnimationFrame(() => {
         this.fitAddon?.fit();
         this.measureGutter();

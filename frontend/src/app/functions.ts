@@ -1,8 +1,26 @@
 import { computed, type Signal } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
-import type { ChaoticEvent } from '@chaotic-next/shared-lib';
+import type { ParamMap } from '@angular/router';
+import type { ChaoticEvent, GitlabLogChunk } from '@chaotic-next/shared-lib';
 
 const CHAOTIC_EVENT_TYPES = new Set(['build', 'pipeline', 'merge_request', 'queue']);
+
+export function parseLogChunk(data: string): GitlabLogChunk | undefined {
+  try {
+    const value: unknown = JSON.parse(data);
+    if (typeof value !== 'object' || value === null) return undefined;
+    const partial = value as Partial<GitlabLogChunk>;
+    if (typeof partial.text !== 'string') return undefined;
+    return {
+      offset: partial.offset ?? 0,
+      text: partial.text,
+      complete: partial.complete === true,
+      status: partial.status ?? '',
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 export const PACKAGE_NAME_PATTERN = /^[a-zA-Z0-9@.+_-]+$/;
 
@@ -34,6 +52,14 @@ export function range(count: number): number[] {
 export function parseCount(value: string): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function parseFocusQuery(params: ParamMap): [number, number] | null {
+  const raw = params.get('focus');
+  if (!raw) return null;
+  const [lat, lon] = raw.split(',').map(Number);
+  if (![lat, lon].every(Number.isFinite)) return null;
+  return [lon, lat];
 }
 
 export function errorMessage(error: unknown): string {

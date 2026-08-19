@@ -23,6 +23,7 @@ export interface PackageFormData {
   skipSignalScan: boolean;
   version?: string;
   pkgrel?: number;
+  bump?: number;
   repoId?: number;
 }
 
