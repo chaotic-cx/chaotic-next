@@ -1,37 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, input, OnDestroy, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { GitlabJob, GitlabLogChunk } from '@chaotic-next/shared-lib';
+import { GitlabJob } from '@chaotic-next/shared-lib';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { Select } from '@openng/optimus-ui/select';
 import { AppService } from '../app.service';
-import { copyLineLink, errorMessage } from '../functions';
+import { copyLineLink, errorMessage, parseLogChunk } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
 import { LogViewerService } from './log-viewer.service';
 
-/** Statuses in which a job is still expected to produce output. */
 const RUNNING_STATUSES = new Set(['created', 'waiting_for_resource', 'preparing', 'pending', 'running']);
 
-/** Parse an SSE message payload into a chunk, ignoring malformed messages. */
-function parseChunk(data: string): GitlabLogChunk | undefined {
-  try {
-    const value: unknown = JSON.parse(data);
-    if (typeof value !== 'object' || value === null) return undefined;
-    const partial = value as Partial<GitlabLogChunk>;
-    if (typeof partial.text !== 'string') return undefined;
-    return {
-      offset: partial.offset ?? 0,
-      text: partial.text,
-      complete: partial.complete === true,
-      status: partial.status ?? '',
-    };
-  } catch {
-    return undefined;
-  }
-}
+const RECONNECT_DELAY_MS = 1000;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 @Component({
   selector: 'chaotic-log-viewer',
@@ -39,7 +23,7 @@ function parseChunk(data: string): GitlabLogChunk | undefined {
   templateUrl: './log-viewer.component.html',
   styleUrl: './log-viewer.component.css',
 })
-export class LogViewerComponent {
+export class LogViewerComponent implements OnDestroy {
   private readonly appService = inject(AppService);
   private readonly logService = inject(LogViewerService);
   private readonly meta = inject(Meta);
@@ -70,8 +54,24 @@ export class LogViewerComponent {
   });
 
   private eventSource: EventSource | undefined;
+  private reconnectTimer: number | undefined;
+  private isCompleted = false;
+  private reconnectAttempts = 0;
+  private cumulativeOffset = 0;
+  private readonly onVisibilityChange = (): void => {
+    // Backgrounded tabs get their SSE throttled and dropped by the browser;
+    // reconnect (resuming from the last offset) when the tab regains focus and stream is incomplete.
+    if (document.visibilityState === 'visible' && !this.isCompleted) {
+      if (!this.eventSource || this.eventSource.readyState === EventSource.CLOSED) {
+        this.error.set(undefined);
+        this.reconnectAttempts = 0;
+        this.reconnect();
+      }
+    }
+  };
 
   constructor() {
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
     effect(() => {
       const raw = this.pipelineId();
       if (raw) void this.loadPipeline(Number(raw));
@@ -86,6 +86,11 @@ export class LogViewerComponent {
     });
   }
 
+  ngOnDestroy(): void {
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    this.closeStream();
+  }
+
   protected selectJob(job: GitlabJob): void {
     this.closeStream();
     this.selectedJobId.set(job.id);
@@ -94,6 +99,9 @@ export class LogViewerComponent {
     this.error.set(undefined);
     this.loading.set(true);
     this.streaming.set(false);
+    this.isCompleted = false;
+    this.cumulativeOffset = 0;
+    this.reconnectAttempts = 0;
     this.scrollToLine.set(job.id === this.requestedJobId() ? this.requestedLine() : undefined);
     if (this.scrollToLine() === undefined && this.route.snapshot.queryParamMap.has('line')) {
       void this.router.navigate([], {
@@ -126,6 +134,9 @@ export class LogViewerComponent {
     this.error.set(undefined);
     this.loading.set(true);
     this.streaming.set(false);
+    this.isCompleted = false;
+    this.cumulativeOffset = 0;
+    this.reconnectAttempts = 0;
     this.scrollToLine.set(undefined);
 
     this.appService.updateSeoTags(this.meta, {
@@ -169,33 +180,66 @@ export class LogViewerComponent {
   private openStream(jobId: number): void {
     const raw = this.pipelineId();
     if (!raw) return;
-    const source = new EventSource(this.logService.traceStreamUrl(Number(raw), jobId));
+    this.eventSource?.close();
+    this.eventSource = undefined;
+    const source = new EventSource(this.logService.traceStreamUrl(Number(raw), jobId, this.cumulativeOffset));
     this.eventSource = source;
 
     source.onmessage = (event) => {
-      const chunk = parseChunk(event.data);
+      const chunk = parseLogChunk(event.data);
       if (!chunk) return;
       this.loading.set(false);
       if (chunk.complete) {
+        this.isCompleted = true;
         this.streaming.set(false);
         this.closeStream();
         return;
       }
+      this.reconnectAttempts = 0;
       // Only once a running job produces output is it actually "live".
       this.streaming.set(true);
       if (chunk.text) {
+        this.cumulativeOffset = chunk.offset;
         this.logChunks.update((chunks) => [...chunks, chunk.text]);
       }
     };
 
-    // Close on error to stop EventSource's automatic infinite reconnect loop.
+    // Do not treat a transient drop as fatal: the browser throttles SSE in
+    // backgrounded tabs. Reconnect (resuming from the last offset) instead of
+    // permanently closing.
     source.onerror = () => {
       this.loading.set(false);
+      this.streaming.set(false);
+      if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        this.error.set('Log stream ended unexpectedly. Please retry in a moment.');
+        this.closeStream();
+        return;
+      }
+      this.reconnectAttempts += 1;
       this.closeStream();
+      this.scheduleReconnect();
     };
   }
 
+  private reconnect(): void {
+    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
+    const jobId = this.selectedJobId();
+    if (jobId !== undefined) this.openStream(jobId);
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer !== undefined) return;
+    this.reconnectTimer = window.setTimeout(() => {
+      this.reconnectTimer = undefined;
+      const jobId = this.selectedJobId();
+      if (jobId !== undefined) this.openStream(jobId);
+    }, RECONNECT_DELAY_MS);
+  }
+
   private closeStream(): void {
+    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
     this.eventSource?.close();
     this.eventSource = undefined;
   }

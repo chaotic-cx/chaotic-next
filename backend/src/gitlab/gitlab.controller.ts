@@ -19,6 +19,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Sse,
   UnauthorizedException,
   UseGuards,
@@ -31,6 +32,7 @@ import {
   ApiHeaders,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
@@ -138,11 +140,13 @@ export class GitlabController {
   @Sse('pipelines/:pipelineId/jobs/:jobId/trace')
   @ApiOperation({ summary: 'Stream the live trace of a GitLab pipeline job over SSE.' })
   @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
+  @ApiQuery({ name: 'offset', required: false, description: 'Resume from this offset', type: Number })
   async streamJobTrace(
     @Param('pipelineId', ParseIntPipe) pipelineId: number,
     @Param('jobId', ParseIntPipe) jobId: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
   ): Promise<Observable<Partial<MessageEvent<GitlabLogChunk>>>> {
-    return await this.gitlabService.getJobTraceStream(pipelineId, jobId);
+    return await this.gitlabService.getJobTraceStream(pipelineId, jobId, offset);
   }
 
   @Get('merge-requests')

@@ -939,10 +939,16 @@ export class GitlabService implements OnModuleInit {
    * `complete` message once the job reaches a terminal status. The teardown on
    * unsubscribe stops the polling when the client disconnects.
    */
-  getJobTraceStream(pipelineId: number, jobId: number): Observable<Partial<MessageEvent<GitlabLogChunk>>> {
+  getJobTraceStream(
+    pipelineId: number,
+    jobId: number,
+    resumeAt = 0,
+  ): Observable<Partial<MessageEvent<GitlabLogChunk>>> {
     const { api, chaoticId } = this;
     return new Observable((subscriber) => {
-      let lastOffset = 0;
+      // lastOffset seeds from the resume point so a reconnecting client only
+      // receives bytes appended after its last received chunk.
+      let lastOffset = resumeAt > 0 ? resumeAt : 0;
       let lastStatus: string | undefined;
       let running = true;
 

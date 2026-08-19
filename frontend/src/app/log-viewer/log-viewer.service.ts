@@ -14,8 +14,11 @@ export class LogViewerService {
     return lastValueFrom(this.http.get<GitlabJob[]>(`${this.backendUrl}/gitlab/pipelines/${pipelineId}/jobs`));
   }
 
-  /** EventSource URL of a job's live trace. */
-  traceStreamUrl(pipelineId: number, jobId: number): string {
-    return `${this.backendUrl}/gitlab/pipelines/${pipelineId}/jobs/${jobId}/trace?ngsw-bypass`;
+  /** EventSource URL of a job's live trace; `offset` resumes a dropped stream. */
+  traceStreamUrl(pipelineId: number, jobId: number, offset = 0): string {
+    const base = `${this.backendUrl}/gitlab/pipelines/${pipelineId}/jobs/${jobId}/trace`;
+    const params = new URLSearchParams({ 'ngsw-bypass': '' });
+    if (offset > 0) params.set('offset', String(offset));
+    return `${base}?${params.toString()}`;
   }
 }

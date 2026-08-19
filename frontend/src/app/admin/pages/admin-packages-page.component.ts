@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormField, form, required, submit } from '@angular/forms/signals';
-import { Package as PackageDto } from '@chaotic-next/shared-lib';
+import { Package as PackageDto, formatPkgrel } from '@chaotic-next/shared-lib';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Checkbox } from '@openng/optimus-ui/checkbox';
@@ -33,6 +33,7 @@ interface PackageFormModel {
   skipSignalScan: boolean;
   version: string;
   pkgrel: string;
+  bump: string;
   repoId: string;
 }
 
@@ -122,7 +123,7 @@ const NO_REPO = '0';
           <tr>
             <td>{{ pkg.id }}</td>
             <td>{{ pkg.pkgname }}</td>
-            <td>{{ pkg.version }}{{ pkg.pkgrel ? '-' + pkg.pkgrel : '' }}</td>
+            <td>{{ pkg.version }}{{ pkg.pkgrel ? '-' + formatPkgrel(pkg.pkgrel, pkg.bump ?? 0) : '' }}</td>
             <td>
               @if (pkg.reponame) {
                 <button class="cursor-pointer text-ctp-mauve hover:underline" (click)="goToRepos()" type="button">
@@ -138,7 +139,25 @@ const NO_REPO = '0';
               }
             </td>
             <td class="cell-actions">
-              <div class="flex gap-2">
+              <div class="flex flex-nowrap items-center gap-1 sm:gap-2">
+                <p-button
+                  (onClick)="bumpPackage(pkg)"
+                  icon="pi pi-arrow-up"
+                  severity="warn"
+                  text
+                  rounded
+                  pTooltip="Bump"
+                  tooltipPosition="left"
+                />
+                <p-button
+                  (onClick)="dropPackage(pkg)"
+                  icon="pi pi-minus-circle"
+                  severity="danger"
+                  text
+                  rounded
+                  pTooltip="Drop"
+                  tooltipPosition="left"
+                />
                 <p-button
                   (onClick)="openEdit(pkg)"
                   icon="pi pi-pencil"
@@ -187,6 +206,10 @@ const NO_REPO = '0';
           <label class="flex flex-1 flex-col gap-1">
             <span class="text-ctp-text text-sm">Pkgrel</span>
             <input [formField]="packageForm.pkgrel" pInputText type="text" inputmode="numeric" />
+          </label>
+          <label class="flex flex-1 flex-col gap-1">
+            <span class="text-ctp-text text-sm">Bump</span>
+            <input [formField]="packageForm.bump" pInputText type="text" inputmode="numeric" />
           </label>
         </div>
         <div class="flex flex-col gap-1">
@@ -239,6 +262,8 @@ export class AdminPackagesPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  protected readonly formatPkgrel = formatPkgrel;
+
   readonly dialogVisible = signal(false);
   readonly editing = signal<PackageDto | null>(null);
 
@@ -274,6 +299,7 @@ export class AdminPackagesPageComponent {
       skipSignalScan: pkg.skipSignalScan ?? false,
       version: pkg.version ?? '',
       pkgrel: pkg.pkgrel === undefined ? '' : String(pkg.pkgrel),
+      bump: pkg.bump === undefined ? '' : String(pkg.bump),
       repoId: pkg.repo === undefined ? NO_REPO : String(pkg.repo),
     });
     this.dialogVisible.set(true);
@@ -295,6 +321,18 @@ export class AdminPackagesPageComponent {
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
       accept: () => void this.service.deletePackage(pkg.id),
+    });
+  }
+
+  bumpPackage(pkg: PackageDto): void {
+    void this.router.navigate(['/pipeline-trigger'], {
+      queryParams: { operation: 'Bump Packages', packages: pkg.pkgname },
+    });
+  }
+
+  dropPackage(pkg: PackageDto): void {
+    void this.router.navigate(['/pipeline-trigger'], {
+      queryParams: { operation: 'Drop Packages', packages: pkg.pkgname },
     });
   }
 
@@ -335,11 +373,12 @@ export class AdminPackagesPageComponent {
       skipSignalScan: model.skipSignalScan,
       version: model.version === '' ? undefined : model.version,
       pkgrel: model.pkgrel === '' ? undefined : Number(model.pkgrel),
+      bump: model.bump === '' ? undefined : Number(model.bump),
       repoId: model.repoId === NO_REPO ? undefined : Number(model.repoId),
     };
   }
 }
 
 function emptyModel(): PackageFormModel {
-  return { pkgname: '', isActive: true, skipSignalScan: false, version: '', pkgrel: '', repoId: NO_REPO };
+  return { pkgname: '', isActive: true, skipSignalScan: false, version: '', pkgrel: '', bump: '', repoId: NO_REPO };
 }
