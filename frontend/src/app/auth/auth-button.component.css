@@ -1,0 +1,20 @@
+.auth-avatar {
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  :host:not(.in-drawer) .auth-actions {
+    display: none;
+  }
+
+  :host.in-drawer .auth-avatar {
+    display: none;
+  }
+
+  :host:not(.in-drawer) .auth-avatar ::ng-deep .p-avatar {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.875rem;
+  }
+}

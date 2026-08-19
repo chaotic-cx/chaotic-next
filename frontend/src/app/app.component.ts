@@ -1,6 +1,6 @@
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import localeEnGb from '@angular/common/locales/en-GB';
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import {
@@ -11,19 +11,19 @@ import {
   Router,
   RouterModule,
 } from '@angular/router';
-import { BuildStatus } from '@chaotic-next/shared-lib';
+import { BuildStatus, formatPkgrel } from '@chaotic-next/shared-lib';
 import { MessageToastService, ShellComponent } from '@garudalinux/core';
 import { ConfirmationService, MenuItem } from '@openng/optimus-ui/api';
+import { Button } from '@openng/optimus-ui/button';
 import { ConfirmDialog } from '@openng/optimus-ui/confirmdialog';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
-import { AuthService } from 'ngx-better-auth';
 import { AppService } from './app.service';
 import { AuthButtonComponent } from './auth/auth-button.component';
 import { FooterComponent } from './footer/footer.component';
-import { isChaoticEvent } from './functions';
 import { LoadingService } from './loading/loading.service';
+import { MobileNavComponent } from './mobile-nav/mobile-nav.component';
 import { OverlayScrollbarComponent } from './overlay-scrollbar/overlay-scrollbar.component';
 import { UpdateService } from './update/update.service';
 
@@ -32,11 +32,13 @@ import { UpdateService } from './update/update.service';
     RouterModule,
     ShellComponent,
     ConfirmDialog,
+    Button,
     NgOptimizedImage,
     FooterComponent,
     OverlayScrollbarComponent,
     ProgressSpinner,
     AuthButtonComponent,
+    MobileNavComponent,
   ],
   selector: 'chaotic-root',
   templateUrl: './app.component.html',
@@ -45,12 +47,14 @@ import { UpdateService } from './update/update.service';
 })
 export class AppComponent implements OnInit {
   private readonly appService = inject(AppService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
-  private readonly authService = inject(AuthService);
 
   protected readonly loadingService = inject(LoadingService);
+
+  protected readonly mobileNavOpen = signal(false);
 
   readonly items = computed<MenuItem[]>(() => [
     {
@@ -140,20 +144,16 @@ export class AppComponent implements OnInit {
 
     this.updateMetaTags();
 
-    this.appService.serverEvents.onmessage = ({ data }) => {
-      const event: unknown = JSON.parse(data);
-      if (!isChaoticEvent(event)) return;
+    this.appService.chaoticEvent.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
       if (event.type === 'build' && event.status === BuildStatus.SUCCESS) {
         const validRoutesRegex = /^\/(status|deployments|packages)(\?.*|#.*)?$/;
         if (!this.router.url || validRoutesRegex.test(this.router.url))
           this.messageToastService.success(
             'Package deployment',
-            `${event.package}-${event.version}-${event.pkgrel} has just been deployed to ${event.repo} 🚀`,
+            `${event.package}-${event.version}-${formatPkgrel(event.pkgrel ?? 0, event.bump ?? 0)} has just been deployed to ${event.repo} 🚀`,
           );
       }
-
-      this.appService.chaoticSse$.next(event);
-    };
+    });
   }
 
   private updateMetaTags() {

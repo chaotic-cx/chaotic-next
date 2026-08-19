@@ -38,16 +38,6 @@ ng-terminal,
 }
 
 @media screen and (max-width: 640px) {
-  .xterm,
-  .xterm .xterm-rows,
-  .xterm .xterm-rows span,
-  .xterm-screen {
-    font-size: 7.5px !important;
-    line-height: 1.05 !important;
-  }
-  .terminal-host {
-    font-size: 7.5px !important;
-  }
   .xterm-container {
     padding: 0.25rem !important;
     touch-action: none !important;
@@ -61,6 +51,43 @@ ng-terminal,
 
 .garuda-shell-content {
   @apply mx-0! mt-4! mb-0! md:mt-8!;
+}
+
+.garuda-shell-menubar:not(.garuda-shell-relative) {
+  top: calc(env(safe-area-inset-top) + 8px);
+}
+
+.garuda-shell__dropdown:not(.garuda-shell-relative) {
+  top: calc(env(safe-area-inset-top) + 68px);
+}
+
+@media (pointer: coarse) {
+  .garuda-shell-menubar .p-button,
+  .p-menubar-end .p-button,
+  .p-menubar-end .p-avatar {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: 960px) {
+  .garuda-shell__dropdown {
+    display: none !important;
+  }
+
+  .garuda-shell__dropdown-toggle {
+    display: none !important;
+  }
+}
+
+.mobile-nav-trigger {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  .mobile-nav-trigger {
+    display: inline-flex;
+  }
 }
 
 /* Font */
@@ -296,6 +323,23 @@ body > app-root > chaotic-footer > div > p-card > div {
 .p-tabpanels,
 .p-stepper .p-steppanels {
   border-radius: 0 0 12px 12px;
+}
+
+@media (max-width: 640px) {
+  .p-stepper .p-steplist {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .p-stepper .p-steplist::-webkit-scrollbar {
+    display: none;
+  }
+
+  .p-step-title {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
 }
 
 .p-timeline-event-opposite {

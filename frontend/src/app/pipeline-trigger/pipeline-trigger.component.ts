@@ -16,7 +16,6 @@ import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/auto
 import { Button } from '@openng/optimus-ui/button';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
-import { Step, StepList, StepPanel, StepPanels, Stepper } from '@openng/optimus-ui/stepper';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { AppService } from '../app.service';
@@ -82,11 +81,6 @@ function emptyModel(): PipelineTriggerFormModel {
     FormsModule,
     InputText,
     Select,
-    Step,
-    StepList,
-    StepPanel,
-    StepPanels,
-    Stepper,
     RouterLink,
     TitleComponent,
     Tooltip,
@@ -102,17 +96,28 @@ export class PipelineTriggerComponent implements OnInit {
   protected readonly pipelineTriggerService = inject(PipelineTriggerService);
   protected readonly aurScanService = inject(AurScanService);
 
-  protected readonly operationStep = 0;
-  protected readonly inputsStep = 1;
-  protected readonly scanStep = 2;
-  protected readonly reviewStep = computed(() => this.steps().at(-1)?.value ?? this.operationStep);
-
-  protected readonly operationCards: Array<{ operation: PipelineOperation; description: string }> = [
-    { operation: 'Bump Packages', description: 'Rebuild the selected packages now.' },
-    { operation: 'Schedule Packages', description: 'Queue the selected packages for building.' },
-    { operation: 'Run Schedule', description: 'Trigger one of the pipeline schedules.' },
-    { operation: 'Drop Packages', description: 'Remove the selected packages from the repository.' },
-    { operation: 'Add Packages', description: 'Add new packages from the AUR to the repository.' },
+  protected readonly operationCards: Array<{ operation: PipelineOperation; description: string; icon: string }> = [
+    {
+      operation: 'Bump Packages',
+      description: 'Rebuild the selected packages now.',
+      icon: 'pi pi-arrow-up',
+    },
+    {
+      operation: 'Schedule Packages',
+      description: 'Queue the selected packages for building.',
+      icon: 'pi pi-calendar-plus',
+    },
+    { operation: 'Run Schedule', description: 'Trigger one of the pipeline schedules.', icon: 'pi pi-play' },
+    {
+      operation: 'Drop Packages',
+      description: 'Remove the selected packages from the repository.',
+      icon: 'pi pi-trash',
+    },
+    {
+      operation: 'Add Packages',
+      description: 'Add new packages from the AUR to the repository.',
+      icon: 'pi pi-plus-circle',
+    },
   ];
   protected readonly requestReasonCards = PIPELINE_REQUEST_REASONS.map((reason) => ({
     reason,
@@ -139,25 +144,12 @@ export class PipelineTriggerComponent implements OnInit {
     });
   });
 
-  protected readonly step = signal(this.operationStep);
-
   protected readonly showPackages = computed(() => OPERATIONS_REQUIRING_PACKAGES.includes(this.model().operation));
   protected readonly showSchedule = computed(() => this.model().operation === 'Run Schedule');
   protected readonly showAddPackages = computed(() => this.model().operation === 'Add Packages');
   protected readonly showBuilderSelect = computed(
     () => this.model().operation !== 'Drop Packages' && this.model().operation !== 'Bump Packages',
   );
-
-  protected readonly steps = computed(() => {
-    const inputLabel = this.showSchedule() ? 'Schedule' : this.showAddPackages() ? 'New packages' : 'Packages';
-    const panels = ['Operation'];
-    if (this.showInputsStep()) panels.push(inputLabel);
-    if (this.showScanStep()) panels.push('Security scan');
-    panels.push('Review');
-    return panels.map((label, index) => ({ label, value: index }));
-  });
-
-  protected readonly showScanStep = computed(() => this.showAddPackages());
 
   protected readonly packageNames = computed(() =>
     this.model()
@@ -184,7 +176,15 @@ export class PipelineTriggerComponent implements OnInit {
     return true;
   });
 
-  protected readonly canSubmit = computed(() => !this.pipelineTriggerService.isTriggering() && this.inputsValid());
+  protected readonly canSubmit = computed(
+    () => !this.pipelineTriggerService.isTriggering() && this.inputsValid() && this.scanReady(),
+  );
+
+  protected readonly scanReady = computed(() => {
+    if (!this.showAddPackages()) return true;
+    if (this.packageNames().length === 0) return true;
+    return this.scansComplete();
+  });
 
   protected readonly reviewEntries = computed(() =>
     Object.entries(this.toInputs(this.model())).filter((entry) => entry[1] !== ''),
@@ -252,7 +252,7 @@ export class PipelineTriggerComponent implements OnInit {
     // Every wizard choice is mirrored into the query params so the URL can be
     // shared and the wizard state restored from it on load.
     effect(() => {
-      const queryParams = this.queryParamsFor(this.model(), this.step());
+      const queryParams = this.queryParamsFor(this.model());
       void this.router.navigate([], {
         relativeTo: this.route,
         queryParams,
@@ -273,35 +273,8 @@ export class PipelineTriggerComponent implements OnInit {
     void this.loadOptions();
   }
 
-  protected onStepChange(value: number | undefined): void {
-    if (value !== undefined) this.step.set(value);
-  }
-
-  protected nextStep(): void {
-    const values = this.steps().map((wizardStep) => wizardStep.value);
-    const nextIndex = values.indexOf(this.step()) + 1;
-    if (nextIndex > 0 && nextIndex < values.length) this.step.set(values[nextIndex]);
-  }
-
-  protected previousStep(): void {
-    const values = this.steps().map((wizardStep) => wizardStep.value);
-    const previousIndex = values.indexOf(this.step()) - 1;
-    if (previousIndex >= 0) this.step.set(values[previousIndex]);
-  }
-
   protected setOperation(operation: PipelineOperation): void {
     this.model.update((model) => ({ ...model, operation }));
-    this.step.set(this.operationStep);
-  }
-
-  protected pickOperation(operation: PipelineOperation): void {
-    this.setOperation(operation);
-    this.nextStep();
-  }
-
-  protected pickSchedule(schedule: string): void {
-    this.setSchedule(schedule);
-    this.nextStep();
   }
 
   protected setSchedule(schedule: string): void {
@@ -382,15 +355,10 @@ export class PipelineTriggerComponent implements OnInit {
 
   protected reset(): void {
     this.model.set(emptyModel());
-    this.step.set(this.operationStep);
     this.packageSuggestions.set([]);
     this.aurSuggestions.set([]);
     this.aurMissing.set(new Set());
     this.existingPackages.set(new Set());
-  }
-
-  private showInputsStep(): boolean {
-    return this.model().operation !== 'None';
   }
 
   private async loadOptions(): Promise<void> {
@@ -457,7 +425,6 @@ export class PipelineTriggerComponent implements OnInit {
 
     const reason = params.get('reason');
     const reasonValid = reason !== null && PIPELINE_REQUEST_REASONS.includes(reason as PipelineRequestReason);
-    const stepRaw = Number.parseInt(params.get('step') ?? '', 10);
 
     this.model.update((model) => ({
       ...model,
@@ -475,15 +442,9 @@ export class PipelineTriggerComponent implements OnInit {
       requestReason: reasonValid ? (reason as PipelineRequestReason) : model.requestReason,
       customRequestReason: params.get('customReason') ?? model.customRequestReason,
     }));
-
-    const maxStep = this.steps().length - 1;
-    const targetStep = Number.isInteger(stepRaw)
-      ? Math.min(Math.max(stepRaw, this.inputsStep), maxStep)
-      : this.inputsStep;
-    this.step.set(targetStep);
   }
 
-  private queryParamsFor(model: PipelineTriggerFormModel, step: number): Record<string, string> {
+  private queryParamsFor(model: PipelineTriggerFormModel): Record<string, string> {
     const names =
       model.operation === 'Add Packages'
         ? model.addRows.map((row) => row.pkgbase.trim()).filter((name) => name !== '')
@@ -500,7 +461,6 @@ export class PipelineTriggerComponent implements OnInit {
       origin: model.requestOrigin === '' ? undefined : model.requestOrigin,
       reason: model.requestReason === 'unset' ? undefined : model.requestReason,
       customReason: model.customRequestReason === '' ? undefined : model.customRequestReason,
-      step: step === this.operationStep ? undefined : String(step),
     });
   }
 }

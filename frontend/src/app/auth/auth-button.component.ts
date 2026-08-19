@@ -21,6 +21,7 @@ function initialsOf(name: string | null | undefined): string {
   selector: 'chaotic-auth-button',
   imports: [Button, RouterLink, Tooltip, Avatar],
   templateUrl: './auth-button.component.html',
+  styleUrl: './auth-button.component.css',
 })
 export class AuthButtonComponent {
   private readonly authService = inject(AuthService);
