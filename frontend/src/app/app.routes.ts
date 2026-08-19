@@ -88,6 +88,11 @@ export const routes: Routes = [
     loadComponent: () => import('./mirrors/mirrors.component').then((c) => c.MirrorsComponent),
   },
   {
+    title: 'Mirror map',
+    path: 'map',
+    loadComponent: () => import('./map/map.component').then((c) => c.MapComponent),
+  },
+  {
     title: 'Memorial 2024',
     path: 'memorial-v2',
     loadComponent: () => import('./memorial-v2/memorial-v2.component').then((c) => c.MemorialV2Component),

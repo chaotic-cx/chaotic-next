@@ -2,19 +2,22 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { debounce, FormField, form, pattern } from '@angular/forms/signals';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Package, Paginated } from '@chaotic-next/shared-lib';
 import { AnimateOnScrollModule } from '@openng/optimus-ui/animateonscroll';
 import { Button } from '@openng/optimus-ui/button';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { map } from 'rxjs';
 import { AppService } from '../app.service';
 import { BuildStatusService } from '../build-status/build-status.service';
-import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
+import { PACKAGE_NAME_PATTERN, parseFocusQuery, resourceValue } from '../functions';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
+import { MirrorsService } from '../mirrors/mirrors.service';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
+import { RecentlyAddedComponent } from '../recently-added/recently-added.component';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { SearchSuggestionsComponent } from '../search-suggestions/search-suggestions.component';
 
@@ -23,6 +26,7 @@ import { SearchSuggestionsComponent } from '../search-suggestions/search-suggest
   imports: [
     AnimateOnScrollModule,
     NewsfeedComponent,
+    RecentlyAddedComponent,
     MirrorMapComponent,
     RouterLink,
     NgOptimizedImage,
@@ -41,8 +45,14 @@ export class HomeComponent {
 
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly buildStatusService = inject(BuildStatusService);
+  protected readonly mirrorsService = inject(MirrorsService);
+
+  protected readonly focus = toSignal(this.route.queryParamMap.pipe(map(parseFocusQuery)), {
+    initialValue: null as [number, number] | null,
+  });
 
   readonly isWide = signal<boolean>(true);
 
