@@ -44,7 +44,7 @@ jobs:
         run: pnpm build
       - name: Upload unit coverage
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-backend
           path: coverage/backend/
@@ -65,7 +65,7 @@ jobs:
         run: pnpm exec nx run backend-e2e:test-ci --skip-nx-cache
       - name: Upload e2e coverage
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-backend-e2e
           path: coverage/backend-e2e/
@@ -81,12 +81,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Download unit coverage
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: coverage-backend
           path: coverage/backend/
       - name: Download e2e coverage
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: coverage-backend-e2e
           path: coverage/backend-e2e/
