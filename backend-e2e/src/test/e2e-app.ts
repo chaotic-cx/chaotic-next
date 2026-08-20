@@ -501,7 +501,7 @@ async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Pr
     const day = utcDayStart(row.timestamp ?? new Date());
     const mainKey = `${day.getTime()}|${row.country}|${row.hostname}|${row.package}`;
     mainByKey.set(mainKey, (mainByKey.get(mainKey) ?? 0) + 1);
-    const agentKey = `${day.getTime()}|${row.userAgent ?? ''}`;
+    const agentKey = `${day.getTime()}|${row.package}|${row.userAgent ?? ''}`;
     agentByKey.set(agentKey, (agentByKey.get(agentKey) ?? 0) + 1);
   }
 
@@ -522,14 +522,14 @@ async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Pr
 
   const agentParams: unknown[] = [];
   const agentValues = [...agentByKey.entries()].map(([key, count], i) => {
-    const [dayMs, userAgent] = key.split('|');
-    const base = i * 3;
-    agentParams.push(new Date(Number(dayMs)), userAgent, count);
-    return `($${base + 1}, $${base + 2}, $${base + 3})`;
+    const [dayMs, pkg, userAgent] = key.split('|');
+    const base = i * 4;
+    agentParams.push(new Date(Number(dayMs)), pkg, userAgent, count);
+    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
   });
   if (agentValues.length > 0) {
     await dataSource.query(
-      `INSERT INTO "router_hits_daily_agents" ("day", "user_agent", "count")
+      `INSERT INTO "router_hits_daily_agents" ("day", "package", "user_agent", "count")
        VALUES ${agentValues.join(', ')}`,
       agentParams,
     );

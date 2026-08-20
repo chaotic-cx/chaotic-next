@@ -4,7 +4,7 @@ import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BuildStatusService } from './build-status.service';
 import { PipelineListComponent } from './pipeline-list.component';
 
-const PIPELINES_PAGE_SIZE = 6;
+const PIPELINES_PAGE_SIZE = 8;
 
 @Component({
   selector: 'chaotic-build-status-pipelines',

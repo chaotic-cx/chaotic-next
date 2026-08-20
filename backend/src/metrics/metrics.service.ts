@@ -7,7 +7,8 @@ import { clampInt, nDaysInPast, utcDayStart } from '../utils/functions';
 import { MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
 import { cachedResult } from '../utils/cache';
 import { DataSource } from 'typeorm';
-import { RouterHit } from '../router/router-hit.entity';
+import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
+import { RouterHitDaily } from '../router/router-hit-daily.entity';
 
 const PKGNAME_REGEX = /^[a-zA-Z0-9.@+_-]{1,255}$/;
 
@@ -80,7 +81,7 @@ export class MetricsService {
   }
 
   /**
-   * Get the user agent list from the router-hits table.
+   * Get the user agent list from the daily agent rollup.
    * @param days The number of days to look back (defaults to 30)
    * @returns The user agent list with counts
    */
@@ -88,11 +89,11 @@ export class MetricsService {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
     return cachedResult(this.cache, `metrics:user-agents:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
       this.dataSource
-        .getRepository(RouterHit)
+        .getRepository(RouterHitDailyAgent)
         .createQueryBuilder('hit')
         .select('hit.userAgent', 'name')
-        .addSelect('COUNT(*)::int', 'count')
-        .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+        .addSelect('SUM(hit.count)::int', 'count')
+        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
         .groupBy('hit.userAgent')
         .orderBy('count', 'DESC')
         .getRawMany<UserAgentList[number]>(),
@@ -108,20 +109,21 @@ export class MetricsService {
   }
 
   private async queryPackageMetrics(pkgname: string, clampedDays: number): Promise<SpecificPackageMetrics> {
-    const cutoff = nDaysInPast(clampedDays);
+    const cutoff = utcDayStart(nDaysInPast(clampedDays));
 
-    const repo = this.dataSource.getRepository(RouterHit);
-    const downloadRow = await repo
+    const downloadRow = await this.dataSource
+      .getRepository(RouterHitDaily)
       .createQueryBuilder('hit')
-      .select('COUNT(*)::int', 'count')
-      .where('hit.timestamp > :cutoff', { cutoff })
+      .select('SUM(hit.count)::int', 'count')
+      .where('hit.day >= :cutoff', { cutoff })
       .andWhere('hit.package = :pkg', { pkg: pkgname })
       .getRawOne<{ count: number }>();
-    const userAgentRows = await repo
+    const userAgentRows = await this.dataSource
+      .getRepository(RouterHitDailyAgent)
       .createQueryBuilder('hit')
       .select('hit.userAgent', 'name')
-      .addSelect('COUNT(*)::int', 'count')
-      .where('hit.timestamp > :cutoff', { cutoff })
+      .addSelect('SUM(hit.count)::int', 'count')
+      .where('hit.day >= :cutoff', { cutoff })
       .andWhere('hit.package = :pkg', { pkg: pkgname })
       .groupBy('hit.userAgent')
       .orderBy('count', 'DESC')
@@ -139,11 +141,11 @@ export class MetricsService {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
     return cachedResult(this.cache, `metrics:rank-countries:${rankRange}:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
       this.dataSource
-        .getRepository(RouterHit)
+        .getRepository(RouterHitDaily)
         .createQueryBuilder('hit')
         .select('hit.country', 'name')
-        .addSelect('COUNT(*)::int', 'count')
-        .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+        .addSelect('SUM(hit.count)::int', 'count')
+        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
         .groupBy('hit.country')
         .orderBy('count', 'DESC')
         .limit(rankRange)
@@ -156,11 +158,11 @@ export class MetricsService {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
     return cachedResult(this.cache, `metrics:rank-packages:${rankRange}:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
       this.dataSource
-        .getRepository(RouterHit)
+        .getRepository(RouterHitDaily)
         .createQueryBuilder('hit')
         .select('hit.package', 'name')
-        .addSelect('COUNT(*)::int', 'count')
-        .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+        .addSelect('SUM(hit.count)::int', 'count')
+        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
         .groupBy('hit.package')
         .orderBy('count', 'DESC')
         .limit(rankRange)

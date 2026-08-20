@@ -4,8 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { SignalScanService } from '../repo-manager/scan';
-import { RouterHit } from '../router/router-hit.entity';
 import { compareArchVersions } from '../repo-manager/signal';
+import { RouterHit } from '../router/router-hit.entity';
 import { errorMessage, nDaysInPast } from '../utils/functions';
 import { Build, Package } from './builder.entity';
 
@@ -20,8 +20,12 @@ const KEEP_ANALYSIS_VERSIONS = 2;
 const STALE_BUILD_GRACE_DAYS = 90;
 const VALID_PKGNAME_PATTERN = '^[a-zA-Z0-9][a-zA-Z0-9@._+-]*$';
 
-/** How long raw router hits are kept before they are purged. */
-const ROUTER_HITS_RETENTION_DAYS = 365;
+/**
+ * How long raw router hits are kept before they are purged. The daily rollup
+ * carries the long-lived history; raw rows only need to cover the current day
+ * so the scheduled rollup refresh can keep the latest day current.
+ */
+const ROUTER_HITS_RETENTION_DAYS = 3;
 
 /**
  * Rows deleted per purge loop iteration. Batching (via ctid) avoids one giant
