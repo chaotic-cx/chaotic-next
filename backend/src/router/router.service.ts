@@ -49,15 +49,16 @@ export class RouterService implements OnModuleInit {
         ON CONFLICT ("day", "country", "hostname", "package") DO UPDATE SET "count" = EXCLUDED."count"
       `);
       await this.dataSource.query(`
-        INSERT INTO "router_hits_daily_agents" ("day", "user_agent", "count")
+        INSERT INTO "router_hits_daily_agents" ("day", "package", "user_agent", "count")
         SELECT
           DATE_TRUNC('day', "timestamp" AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',
+          "package",
           COALESCE("user-agent", ''),
           COUNT(*)::bigint
         FROM "router-hits"
         WHERE "timestamp" >= (SELECT COALESCE(MAX("day"), '-infinity'::timestamp) FROM "router_hits_daily_agents")
-        GROUP BY 1, 2
-        ON CONFLICT ("day", "user_agent") DO UPDATE SET "count" = EXCLUDED."count"
+        GROUP BY 1, 2, 3
+        ON CONFLICT ("day", "package", "user_agent") DO UPDATE SET "count" = EXCLUDED."count"
       `);
       await this.dataSource.query(`
         INSERT INTO "router_hits_daily_users" ("day", "sketch")
