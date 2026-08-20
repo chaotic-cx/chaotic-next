@@ -9,8 +9,8 @@ import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BuildStatusService } from './build-status.service';
 
-const DEPLOYMENTS_SKELETON_COUNT = 20;
-const DEPLOYMENTS_PAGE_SIZE = 10;
+const DEPLOYMENTS_SKELETON_COUNT = 6;
+const DEPLOYMENTS_PAGE_SIZE = 6;
 
 @Component({
   selector: 'chaotic-build-status-deployments',

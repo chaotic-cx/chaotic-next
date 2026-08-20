@@ -6,7 +6,7 @@
       icon="pi-hourglass"
       iconClass="text-ctp-lavender"
     />
-    <ul class="queue-page-list flex-1 max-h-[32rem] divide-y divide-white/5 overflow-y-auto pr-1">
+    <ul class="queue-page-list flex-1 divide-y divide-white/5">
       @for (pkg of paginatedQueue(); track pkg.name) {
         <li class="flex items-center justify-between gap-3 py-2.5">
           <div class="min-w-0 flex-1">
