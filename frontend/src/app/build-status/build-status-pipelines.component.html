@@ -5,11 +5,11 @@
     icon="pi-arrow-right-arrow-left"
     iconClass="text-ctp-mauve"
   />
-  <div class="flex-1 max-h-[26rem] overflow-y-auto pr-1">
+  <div class="flex-1">
     <chaotic-pipeline-list
       [pipelines]="paginatedPipelines()"
       [loading]="buildStatusService.loadingPipelines()"
-      [skeletonCount]="20"
+      [skeletonCount]="6"
       (openPipeline)="openPipeline.emit($event)"
     />
   </div>

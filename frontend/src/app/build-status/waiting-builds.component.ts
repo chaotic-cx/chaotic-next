@@ -6,7 +6,7 @@ import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
 import { sortByStartTime } from './queue-estimates';
 
-const WAITING_PAGE_SIZE = 15;
+const WAITING_PAGE_SIZE = 6;
 
 @Component({
   selector: 'chaotic-build-status-waiting-builds',
