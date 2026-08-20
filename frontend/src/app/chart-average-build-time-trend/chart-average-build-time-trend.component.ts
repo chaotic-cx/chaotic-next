@@ -30,7 +30,9 @@ export class ChartAverageBuildTimeTrendComponent {
 
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
     const rows = resourceValue(this.resource) ?? [];
-    const statuses = [...new Set(rows.map((r) => Number(r.status)))].filter(isBuildStatus);
+    const statuses = [...new Set(rows.map((r) => Number(r.status)))]
+      .filter(isBuildStatus)
+      .filter((s) => s !== BuildStatus.TIMED_OUT);
 
     const daySet = new Set<string>();
     for (const row of rows) {

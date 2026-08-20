@@ -3,7 +3,6 @@ export interface EnvironmentModel {
   apiUrl: string;
   backendUrl: string;
   authBaseUrl: string;
-  cachedMetricsUrl: string;
   homeUrl: string;
   logsUrl: string;
   mapUrl: string;

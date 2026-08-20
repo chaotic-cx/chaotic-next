@@ -27,6 +27,26 @@ export class RouterController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @Get('stats/mirror-over-time/:days')
+  @ApiOperation({ summary: 'Get mirror downloads over time' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Mirror downloads over time', type: Object, isArray: true })
+  async getRouterStatsMirrorOverTime(
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<{ day: string; mirror: string; count: string }[]> {
+    return this.routerService.getMirrorStatsOverTime(days);
+  }
+
+  @Get('stats/country-over-time/:days')
+  @ApiOperation({ summary: 'Get country downloads over time' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Country downloads over time', type: Object, isArray: true })
+  async getRouterStatsCountryOverTime(
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<{ day: string; country: string; count: string }[]> {
+    return this.routerService.getCountryStatsOverTime(days);
+  }
+
   @Get('/package/:days')
   @ApiOperation({ summary: 'Get router package stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })

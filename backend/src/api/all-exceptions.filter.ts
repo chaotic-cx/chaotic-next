@@ -38,6 +38,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
           exception instanceof Error ? exception.stack : String(exception)
         }`,
       );
+    } else if (status === HttpStatus.NOT_FOUND) {
+      this.logger.debug(
+        `HttpException [${status}] on ${request.method} ${request.url}: ${
+          typeof message === 'object' ? JSON.stringify(message) : message
+        }`,
+      );
     } else {
       this.logger.warn(
         `HttpException [${status}] on ${request.method} ${request.url}: ${

@@ -4,6 +4,7 @@ import { RouterService } from './router.service';
 
 @Module({
   controllers: [RouterController],
+  exports: [RouterService],
   providers: [RouterService],
 })
 export class RouterModule {}

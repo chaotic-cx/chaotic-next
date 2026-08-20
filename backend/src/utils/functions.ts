@@ -1,9 +1,9 @@
 import type { ConfigService } from '@nestjs/config';
-import { BumpType } from '../interfaces/repo-manager';
-import { requiredEnvVarsDev, requiredEnvVarsProd } from './constants';
 import constants from 'node:constants';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { access } from 'node:fs/promises';
+import { BumpType } from '../interfaces/repo-manager';
+import { requiredEnvVarsDev, requiredEnvVarsProd } from './constants';
 
 export function generateNodeId(): string {
   // This prevents broker shutdowns due to double ids in case we have overlapping nodeIds.
@@ -25,6 +25,10 @@ export function checkEnvironment(configService: ConfigService): void {
 
 export function nDaysInPast(n: number): Date {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+}
+
+export function utcDayStart(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
 export function clampInt(value: number, min: number, max: number): number {

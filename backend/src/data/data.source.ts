@@ -17,8 +17,12 @@ import { AddPackageCreatedAt1787146120924 } from '../migrations/1787146120924-Ad
 import { AddPackageRemovedAt1787147034396 } from '../migrations/1787147034396-AddPackageRemovedAt';
 import { CleanupDuplicateInactiveRows1787149556087 } from '../migrations/1787149556087-CleanupDuplicateInactiveRows';
 import { AddManualBumpType1787174029311 } from '../migrations/1787174029311-AddManualBumpType';
+import { RouterHitsDailyRollup1787184527000 } from '../migrations/1787184527000-RouterHitsDailyRollup';
+import { RouterHitsDailyUsers1787192834000 } from '../migrations/1787192834000-RouterHitsDailyUsers';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
+import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
+import { RouterHitDaily } from '../router/router-hit-daily.entity';
 import { RouterHit } from '../router/router-hit.entity';
 import { pgConnectionOptions } from './pg-options';
 
@@ -31,6 +35,8 @@ export const dataSourceOptions: DataSourceOptions = {
     Repo,
     NotificationSubscription,
     RouterHit,
+    RouterHitDaily,
+    RouterHitDailyAgent,
     ArchlinuxPackage,
     PackageBump,
     PackageElfAnalysis,
@@ -54,6 +60,8 @@ export const dataSourceOptions: DataSourceOptions = {
     AddPackageRemovedAt1787147034396,
     CleanupDuplicateInactiveRows1787149556087,
     AddManualBumpType1787174029311,
+    RouterHitsDailyRollup1787184527000,
+    RouterHitsDailyUsers1787192834000,
   ],
   migrationsRun: true,
   cache: true,

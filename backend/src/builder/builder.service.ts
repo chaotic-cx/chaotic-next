@@ -450,6 +450,23 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .getRawMany();
   }
 
+  getHeavyPackages(options: { amount: number; days: number }): Promise<{ pkgname: string; average: string }[]> {
+    const amount = clampInt(options.amount, 1, MAX_AMOUNT);
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+    return this.buildRepository
+      .createQueryBuilder('build')
+      .select('pkg.pkgname AS pkgname')
+      .addSelect('AVG(build.timeToEnd) AS average')
+      .innerJoin('build.pkgbase', 'pkg')
+      .where('build.timeToEnd IS NOT NULL')
+      .andWhere('build.timestamp > :date', { date: nDaysInPast(days) })
+      .groupBy('pkg.pkgname')
+      .orderBy('average', 'DESC')
+      .limit(amount)
+      .cache(`heavy-packages-${amount}-${days}`, CACHE_TTL_MS)
+      .getRawMany();
+  }
+
   getThroughputPerDay(options: {
     days: number;
   }): Promise<{ day: string; success: string; alreadyBuilt: string; skipped: string; failed: string }[]> {

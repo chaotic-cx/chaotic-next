@@ -3,6 +3,7 @@ import { Card } from '@openng/optimus-ui/card';
 import { ChartAverageBuildTimeComponent } from '../../chart-average-build-time/chart-average-build-time.component';
 import { ChartBuildersAmountComponent } from '../../chart-builders-amount/chart-builders-amount.component';
 import { ChartBuildsPerDayComponent } from '../../chart-builds-per-day/chart-builds-per-day.component';
+import { ChartHeavyPackagesComponent } from '../../chart-heavy-packages/chart-heavy-packages.component';
 import { ChartPopularPackagesComponent } from '../../chart-popular-packages/chart-popular-packages.component';
 
 @Component({
@@ -13,6 +14,7 @@ import { ChartPopularPackagesComponent } from '../../chart-popular-packages/char
     ChartBuildersAmountComponent,
     ChartAverageBuildTimeComponent,
     ChartPopularPackagesComponent,
+    ChartHeavyPackagesComponent,
   ],
   template: `
     <div class="flex flex-col gap-8">
@@ -29,6 +31,9 @@ import { ChartPopularPackagesComponent } from '../../chart-popular-packages/char
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Popular Packages">
         <chaotic-chart-popular-packages />
+      </p-card>
+      <p-card [style]="{ overflow: 'hidden' }" header="Heavy Packages">
+        <chaotic-chart-heavy-packages />
       </p-card>
     </div>
   `,

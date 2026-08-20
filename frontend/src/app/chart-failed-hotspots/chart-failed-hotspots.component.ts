@@ -18,7 +18,7 @@ export class ChartFailedHotspotsComponent {
   private readonly appService = inject(AppService);
 
   private readonly resource = httpResource<{ pkgname: string; count: string }[]>(() =>
-    this.appService.getFailedBuildHotspotsResourceRequest(TOP_PACKAGES),
+    this.appService.getTopFailedBuildsResourceRequest(TOP_PACKAGES),
   );
 
   readonly loading = this.resource.isLoading;

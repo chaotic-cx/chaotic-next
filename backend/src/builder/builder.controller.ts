@@ -221,13 +221,23 @@ export class BuilderController {
   }
 
   @Get('builds/failed/top/:amount')
-  @ApiOperation({ summary: 'Get packages with the most failed builds.' })
+  @ApiOperation({ summary: 'Get the packages with the highest amount of failed builds.' })
   @ApiParam({ name: 'amount', description: 'Number of packages' })
   @ApiOkResponse({ description: 'Top packages by failed build count', type: Object, isArray: true })
   async getFailedBuildHotspots(
     @Param('amount', ParseIntPipe) amount: number,
   ): Promise<{ pkgname: string; count: string }[]> {
     return await this.builderService.getFailedBuildHotspots({ amount: amount });
+  }
+
+  @Get('stats/heavy-packages/:amount/:days')
+  @ApiOperation({ summary: 'Get the packages with the highest average build time.' })
+  @ApiOkResponse({ description: 'Packages by average build time', type: Object, isArray: true })
+  async getHeavyPackages(
+    @Param('amount', ParseIntPipe) amount: number,
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<{ pkgname: string; average: string }[]> {
+    return await this.builderService.getHeavyPackages({ amount, days });
   }
 
   @Get('throughput/per-day/:days')

@@ -1,4 +1,5 @@
 import { Module, ValidationPipe } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -31,6 +32,7 @@ import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
     AurModule,
     AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
     BuilderModule,
+    CacheModule.register({ isGlobal: true }),
     ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true, load: [appConfig] }),
     HealthModule,
     LoggerModule.forRoot({

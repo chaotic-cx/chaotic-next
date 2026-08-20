@@ -1,7 +1,6 @@
 import { MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
 import type { PipelineSchema } from '@gitbeaker/rest';
 
-export const CACHE_REVIEW_STATS_TTL = 60 * 60 * 6 * 1000; // recomputing review stats is expensive
 export const CAUR_ALLOWED_CORS = [
   'https://aur.chaotic.cx',
   'https://caur-frontend-pages.dev',

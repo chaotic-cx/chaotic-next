@@ -579,4 +579,24 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       expect(body.length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  describe('GET /builder/stats/heavy-packages/:amount/:days', () => {
+    it('returns packages with the highest average build time', async () => {
+      const pkg1 = await e2e.seedPackage({ pkgname: 'linux-tkg' });
+      const pkg2 = await e2e.seedPackage({ pkgname: 'nano' });
+      await e2e.seedBuild({ pkgbase: pkg1, timeToEnd: 5000 });
+      await e2e.seedBuild({ pkgbase: pkg2, timeToEnd: 10 });
+
+      const res = await e2e.inject<Array<{ pkgname: string; average: string }>>({
+        method: 'GET',
+        url: '/builder/stats/heavy-packages/10/30',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(2);
+      expect(body[0].pkgname).toBe('linux-tkg');
+      expect(body[1].pkgname).toBe('nano');
+    });
+  });
 });
