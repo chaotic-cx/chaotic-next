@@ -1,0 +1,34 @@
+@if (buildStatusService.waitingQueue().length > 0) {
+  <section class="flex h-full flex-col" animate.enter="queue-section-enter" animate.leave="queue-section-leave">
+    <chaotic-build-status-section
+      title="Waiting builds"
+      subtitle="These are currently queued builds"
+      icon="pi-hourglass"
+      iconClass="text-ctp-lavender"
+    />
+    <ul class="queue-page-list flex-1 max-h-[32rem] divide-y divide-white/5 overflow-y-auto pr-1">
+      @for (pkg of paginatedQueue(); track pkg.name) {
+        <li class="flex items-center justify-between gap-3 py-2.5">
+          <div class="min-w-0 flex-1">
+            <span class="block truncate font-semibold">{{ pkg.name }}</span>
+            <span class="block text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+          </div>
+          @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
+            <span
+              class="shrink-0 whitespace-nowrap text-right text-sm text-ctp-subtext1"
+              [pTooltip]="estimateTooltip"
+              tooltipPosition="top"
+              >{{ eta }}</span
+            >
+          }
+        </li>
+      }
+    </ul>
+    <div class="mt-4 flex flex-col items-center gap-3">
+      @if (buildStatusService.queueClearLabel(); as label) {
+        <span class="text-sm text-ctp-mauve" [pTooltip]="estimateTooltip" tooltipPosition="top">{{ label }}</span>
+      }
+      <chaotic-build-status-pager [page]="currentPage()" [pageCount]="pageCount()" (pageChange)="selectPage($event)" />
+    </div>
+  </section>
+}

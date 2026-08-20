@@ -1,0 +1,101 @@
+@if (data(); as dialog) {
+  <p-dialog
+    [(visible)]="visible"
+    [modal]="true"
+    [appendTo]="'body'"
+    [dismissableMask]="true"
+    [style]="{ 'width': '64rem', 'max-width': '94vw' }"
+    styleClass="build-status-dialog"
+    header="Pipeline details"
+  >
+    <div
+      class="mb-5 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-ctp-surface1 bg-ctp-mantle px-4 py-3 text-sm"
+    >
+      <span class="flex items-center gap-2">
+        <span class="text-ctp-subtext0">Source</span>
+        <span class="font-medium">{{ dialog.pipeline.source }}</span>
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="text-ctp-subtext0">Created</span>
+        <span
+          class="text-ctp-text"
+          [pTooltip]="(dialog.pipeline.created_at | date: 'short') ?? undefined"
+          tooltipPosition="top"
+          >{{ dialog.pipeline.created_at | relativeTime }}</span
+        >
+      </span>
+      <a
+        class="flex cursor-pointer items-center gap-1.5 text-ctp-mauve hover:text-ctp-text"
+        [href]="dialog.pipeline.web_url"
+        target="_blank"
+        rel="noopener"
+      >
+        <i class="pi pi-external-link"></i>
+        <span>GitLab</span>
+      </a>
+      <a
+        class="flex cursor-pointer items-center gap-1.5 font-mono text-ctp-mauve hover:text-ctp-text"
+        [href]="`https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/${dialog.pipeline.sha}`"
+        target="_blank"
+        rel="noopener"
+        pTooltip="View commit"
+        tooltipPosition="top"
+      >
+        <i class="pi pi-hashtag"></i>
+        <span>{{ dialog.pipeline.sha.slice(0, 8) }}</span>
+      </a>
+    </div>
+    @if (dialog.commit.length > 0) {
+      <ul class="space-y-2.5">
+        @for (job of sortedCommit(); track job.id) {
+          @let status = jobStatus(job.status);
+          <li class="flex items-start gap-3 rounded-lg border border-ctp-surface1 bg-ctp-mantle p-3.5">
+            <i class="pi mt-1 {{ status.icon }} {{ status.color }}"></i>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between gap-3">
+                <a
+                  class="truncate cursor-pointer font-semibold text-ctp-mauve hover:text-ctp-text"
+                  [href]="job.target_url ?? undefined"
+                  target="_blank"
+                  rel="noopener"
+                  >{{ job.name }}</a
+                >
+                <span
+                  class="shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium uppercase {{ status.chip }} {{
+                    status.color
+                  }}"
+                  >{{ job.status }}</span
+                >
+              </div>
+              @if (job.description) {
+                <p class="mt-1 truncate text-sm text-ctp-subtext1">{{ job.description }}</p>
+              }
+              <div class="mt-1.5 text-xs text-ctp-subtext0">
+                @if (job.started_at) {
+                  <span>{{ job.started_at | date: 'short' }}</span>
+                  @if (job.finished_at) {
+                    <span> &rarr; {{ job.finished_at | date: 'short' }}</span>
+                  }
+                } @else {
+                  <span>Not started</span>
+                }
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="ml-2.5">
+        <a
+          class="text-ctp-mauve hover:underline inline-flex cursor-pointer items-center gap-1"
+          [routerLink]="['/logs', dialog.pipeline.id]"
+          pTooltip="Open live build logs"
+          tooltipPosition="left"
+        >
+          <i class="pi pi-bars"></i>
+          <span>No jobs yet — open pipeline logs</span>
+        </a>
+      </div>
+    }
+  </p-dialog>
+}

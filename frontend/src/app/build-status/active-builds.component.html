@@ -1,0 +1,45 @@
+@if (sortedQueue().length > 0) {
+  <section class="flex h-full flex-col" animate.enter="queue-section-enter" animate.leave="queue-section-leave">
+    <chaotic-build-status-section
+      title="Active builds"
+      subtitle="These are currently ongoing builds"
+      icon="pi-spin pi-spinner"
+      iconClass="text-ctp-flamingo"
+    />
+    <ul class="flex-1 max-h-[26rem] divide-y divide-white/5 overflow-y-auto pr-1">
+      @for (pkg of sortedQueue(); track pkg.name) {
+        <li
+          class="flex items-center justify-between gap-3 py-2.5"
+          animate.enter="queue-item-enter"
+          animate.leave="queue-item-leave"
+        >
+          <span class="min-w-0 flex-1">
+            <span class="block truncate font-semibold">{{ pkg.name }}</span>
+            <span class="block text-sm text-ctp-subtext1">
+              Node: {{ pkg.node }} &middot; {{ pkg.build_class | buildClass }}
+            </span>
+          </span>
+          <span class="flex shrink-0 items-center gap-2">
+            @if (buildStatusService.activeEtaLabels().get(pkg.name); as eta) {
+              <span
+                class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
+                [pTooltip]="estimateTooltip"
+                tooltipPosition="top"
+                >{{ eta }}</span
+              >
+            }
+            <a
+              class="cursor-pointer text-ctp-mauve hover:text-ctp-text"
+              [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
+              pTooltip="Open live build log"
+              tooltipPosition="left"
+              aria-label="Open live build log for {{ pkg.name }}"
+            >
+              <i class="pi pi-bars"></i>
+            </a>
+          </span>
+        </li>
+      }
+    </ul>
+  </section>
+}

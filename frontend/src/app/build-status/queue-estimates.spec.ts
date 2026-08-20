@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { computeQueueEstimates, formatEta, overallAverageMinutes, type PackageBuildAverage } from './queue-estimates';
+import {
+  computeQueueEstimates,
+  formatEta,
+  overallAverageMinutes,
+  sortByStartTime,
+  type PackageBuildAverage,
+} from './queue-estimates';
 
 const MINUTE_MS = 60_000;
 
@@ -229,6 +235,35 @@ describe('computeQueueEstimates', () => {
     expect(result.waitingStart.get('euphonica-git')).toBe(6);
     expect(result.waitingStart.get('fooyin-git')).toBe(12);
     expect(result.waitingStart.get('geeqie-git')).toBe(16);
+  });
+});
+
+describe('sortByStartTime', () => {
+  it('sorts entries by start time ascending', () => {
+    const starts = new Map([
+      ['a', 3],
+      ['b', 1],
+      ['c', 2],
+    ]);
+    const entries = [{ name: 'a' }, { name: 'b' }, { name: 'c' }];
+    expect(sortByStartTime(entries, starts).map((entry) => entry.name)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('keeps entries without a start time last, preserving relative order', () => {
+    const starts = new Map([['a', 1]]);
+    const entries = [{ name: 'x' }, { name: 'a' }, { name: 'y' }];
+    expect(sortByStartTime(entries, starts).map((entry) => entry.name)).toEqual(['a', 'x', 'y']);
+  });
+
+  it('does not mutate the input array', () => {
+    const starts = new Map([
+      ['a', 2],
+      ['b', 1],
+    ]);
+    const entries = [{ name: 'a' }, { name: 'b' }];
+    const before = [...entries];
+    sortByStartTime(entries, starts);
+    expect(entries).toEqual(before);
   });
 });
 

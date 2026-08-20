@@ -17,6 +17,8 @@ import {
   type QueueEstimates,
 } from './queue-estimates';
 
+export const BUILD_ESTIMATE_TOOLTIP = 'Estimated from historical average build times — actual times vary.';
+
 export interface PipelineView {
   pipeline: PipelineWithExternalStatus['pipeline'];
   commit: PipelineWithExternalStatus['commit'];
@@ -39,7 +41,7 @@ interface PackageAverageRow {
   samples: string;
 }
 
-const MAX_VISIBLE_PIPELINES = 20;
+const MAX_VISIBLE_PIPELINES = 40;
 const ESTIMATE_TICK_MS = 30_000;
 
 @Service()
@@ -112,6 +114,13 @@ export class BuildStatusService {
    * running when the page loaded count from load time, so their remaining
    * time is never underestimated. */
   private readonly activeFirstSeen = signal<ReadonlyMap<string, number>>(new Map());
+
+  /** Wall-clock start time of each running build, keyed by pkgname. */
+  readonly activeStartedMs = computed<ReadonlyMap<string, number>>(() => {
+    const firstSeen = this.activeFirstSeen();
+    const now = Date.now();
+    return new Map(this.activeQueue().map((pkg) => [pkg.name, firstSeen.get(pkg.name) ?? now]));
+  });
 
   readonly estimates = computed<QueueEstimates>(() =>
     computeQueueEstimates({

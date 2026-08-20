@@ -28,6 +28,7 @@ const BUMP_TYPE_OPTIONS = [
   { label: 'From deps (chaotic)', value: 3 },
   { label: 'Plugin', value: 6 },
   { label: 'Broken deps', value: 7 },
+  { label: 'Manual', value: 8 },
 ];
 
 const BUMP_TYPE_LABELS: Record<number, string> = Object.fromEntries(

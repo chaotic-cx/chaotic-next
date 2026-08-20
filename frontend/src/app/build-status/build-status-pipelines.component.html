@@ -1,0 +1,22 @@
+<section class="flex h-full flex-col">
+  <chaotic-build-status-section
+    title="Pipelines"
+    subtitle="Recent GitLab pipelines"
+    icon="pi-arrow-right-arrow-left"
+    iconClass="text-ctp-mauve"
+  />
+  <div class="flex-1 max-h-[26rem] overflow-y-auto pr-1">
+    <chaotic-pipeline-list
+      [pipelines]="paginatedPipelines()"
+      [loading]="buildStatusService.loadingPipelines()"
+      [skeletonCount]="20"
+      (openPipeline)="openPipeline.emit($event)"
+    />
+  </div>
+  <chaotic-build-status-pager
+    class="mt-4"
+    [page]="currentPage()"
+    [pageCount]="pageCount()"
+    (pageChange)="selectPage($event)"
+  />
+</section>
