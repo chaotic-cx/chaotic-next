@@ -223,10 +223,27 @@ chaotic-build-status .p-card {
   padding-top: 1rem;
 }
 
-@media (max-width: 1100px) {
-  chaotic-build-status .p-card {
-    background: var(--p-card-background);
-  }
+chaotic-build-status :where(ul, div) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ctp-mocha-surface1) transparent;
+}
+
+chaotic-build-status :where(ul, div)::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+chaotic-build-status :where(ul, div)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb {
+  background: var(--ctp-mocha-surface1);
+  border-radius: 9999px;
+}
+
+chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb:hover {
+  background: var(--ctp-mocha-surface2);
 }
 
 .p-card-body {
@@ -347,11 +364,6 @@ body > app-root > chaotic-footer > div > p-card > div {
     font-size: 0.75rem;
     white-space: nowrap;
   }
-}
-
-.p-timeline-event-opposite {
-  flex: unset !important;
-  width: 120px !important;
 }
 
 .p-menubar-item-icon {
@@ -488,4 +500,62 @@ body.is-transitioning .router-container {
 
 .ctp-item-leave {
   animation: ctp-item-leave 0.18s ease-in;
+}
+
+@keyframes queue-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.queue-section-enter {
+  animation: queue-section-enter 0.3s ease-out;
+}
+
+@keyframes queue-section-leave {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.queue-section-leave {
+  animation: queue-section-leave 0.2s ease-in;
+}
+
+@keyframes queue-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.queue-item-enter {
+  animation: queue-item-enter 0.25s ease-out;
+}
+
+@keyframes queue-item-leave {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.queue-item-leave {
+  animation: queue-item-leave 0.18s ease-in;
 }

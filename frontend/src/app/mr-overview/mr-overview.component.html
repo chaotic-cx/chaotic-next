@@ -6,7 +6,20 @@
 <div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
   <p-tabs [value]="activeTabValue()" (valueChange)="onTabChange($event)">
     <p-tablist>
-      <p-tab value="0">AUR updates ({{ packageMrs().length }})</p-tab>
+      <p-tab value="0">
+        @if (hasNewMr()) {
+          <button
+            class="mr-1 inline-flex cursor-pointer items-center"
+            (click)="refreshMrs()"
+            pTooltip="A new merge request has arrived and needs review. Click to refresh."
+            tooltipPosition="top"
+            aria-label="Refresh merge requests"
+          >
+            <i class="pi pi-circle-fill text-ctp-red"></i>
+          </button>
+        }
+        AUR updates ({{ packageMrs().length }})
+      </p-tab>
       <p-tab value="1">Package updates ({{ nvcheckerMrs().length }})</p-tab>
     </p-tablist>
     <p-tabpanels>

@@ -29,7 +29,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideGarudaNG(
-      { font: 'Inter' },
+      { font: 'Inter Variable' },
       {
         theme: {
           preset: CatppuccinAura,

@@ -1,0 +1,23 @@
+@if (pageCount() > 1) {
+  <div class="flex items-center justify-center gap-2">
+    <button
+      class="queue-page-btn cursor-pointer"
+      [disabled]="page() <= 1"
+      (click)="goTo(page() - 1)"
+      type="button"
+      aria-label="Previous page"
+    >
+      <i class="pi pi-angle-left"></i>
+    </button>
+    <span class="text-sm text-ctp-subtext1">{{ page() }} / {{ pageCount() }}</span>
+    <button
+      class="queue-page-btn cursor-pointer"
+      [disabled]="page() >= pageCount()"
+      (click)="goTo(page() + 1)"
+      type="button"
+      aria-label="Next page"
+    >
+      <i class="pi pi-angle-right"></i>
+    </button>
+  </div>
+}

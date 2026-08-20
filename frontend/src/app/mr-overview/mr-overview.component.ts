@@ -97,6 +97,7 @@ export class MrOverviewComponent implements OnInit {
   /** Which tab the j/k navigation operates on: 0 = AUR updates, 1 = package updates. */
   protected readonly activeTabValue = signal<'0' | '1'>(AUR_UPDATES_TAB);
 
+  protected readonly hasNewMr = signal(false);
   protected readonly presenter = presenter;
 
   protected readonly nvcheckerMrs = computed(() =>
@@ -113,6 +114,7 @@ export class MrOverviewComponent implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
+        if (event.hasNewMr) this.hasNewMr.set(true);
         const currentMrs = untracked(this.mrOverviewService.mergeRequests);
         const updatedById = new Map(event.mr.map((mr) => [mr.id, mr]));
         const updatedMrs = currentMrs.map((currentMr) => {
@@ -171,10 +173,15 @@ export class MrOverviewComponent implements OnInit {
     panel?.focus();
   }
 
+  protected refreshMrs(): void {
+    void this.mrOverviewService.loadOpenMrs();
+  }
+
   protected onTabChange(value: string | number | undefined): void {
     const tab = value === PACKAGE_UPDATES_TAB ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB;
     this.activeTabValue.set(tab);
     this.focusedIndex.set(NO_FOCUSED_PANEL);
+    this.hasNewMr.set(false);
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: TAB_QUERY_PARAMS[tab] },

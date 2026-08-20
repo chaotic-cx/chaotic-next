@@ -1,0 +1,26 @@
+@reference "../../styles.css"
+
+.queue-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ctp-mocha-surface1);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--ctp-mocha-text);
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.queue-page-btn:hover:not(:disabled) {
+  border-color: var(--ctp-mocha-mauve);
+  color: var(--ctp-mocha-mauve);
+}
+
+.queue-page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

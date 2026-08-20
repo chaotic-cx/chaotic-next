@@ -23,6 +23,22 @@ export function overallAverageMinutes(entries: PackageBuildAverage[]): number | 
   return samples > 0 ? weighted / samples : undefined;
 }
 
+/** Sorts queue entries keyed by `name` by their start time, earliest first.
+ * Entries without a recorded start time sort last, preserving relative order. */
+export function sortByStartTime<T extends { name: string }>(
+  entries: readonly T[],
+  startTime: ReadonlyMap<string, number>,
+): T[] {
+  return [...entries].sort((a, b) => {
+    const aStart = startTime.get(a.name);
+    const bStart = startTime.get(b.name);
+    if (aStart === undefined && bStart === undefined) return 0;
+    if (aStart === undefined) return 1;
+    if (bStart === undefined) return -1;
+    return aStart - bStart;
+  });
+}
+
 export interface ActiveBuildInput {
   pkgname: string;
   /** When the build was first seen running; wall-clock ms. */

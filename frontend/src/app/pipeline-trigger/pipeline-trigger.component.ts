@@ -1,3 +1,4 @@
+import { BreakpointObserver } from '@angular/cdk/layout';
 import {
   PIPELINE_PKG_BASE_REGEX,
   PIPELINE_OPERATIONS,
@@ -6,7 +7,7 @@ import {
   type PipelineRequestReason,
   type PipelineTriggerInputs,
 } from '@chaotic-next/shared-lib';
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { applyEach, FormField, form, pattern, required, submit } from '@angular/forms/signals';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -27,6 +28,7 @@ import { PipelineTriggerService } from './pipeline-trigger.service';
 const OPERATIONS_REQUIRING_PACKAGES: PipelineOperation[] = ['Bump Packages', 'Schedule Packages', 'Drop Packages'];
 const LOOKUP_DEBOUNCE_MS = 300;
 const MIN_LOOKUP_LENGTH = 2;
+const MOBILE_QUERY = '(max-width: 768px)';
 
 const AUR_SOURCE = 'aur';
 const DEFAULT_BUILDER = '';
@@ -93,8 +95,12 @@ export class PipelineTriggerComponent implements OnInit {
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly observer = inject(BreakpointObserver);
   protected readonly pipelineTriggerService = inject(PipelineTriggerService);
   protected readonly aurScanService = inject(AurScanService);
+
+  private readonly detailsSection = viewChild.required<ElementRef<HTMLElement>>('detailsSection');
+  private readonly isMobile = signal(false);
 
   protected readonly operationCards: Array<{ operation: PipelineOperation; description: string; icon: string }> = [
     {
@@ -203,6 +209,7 @@ export class PipelineTriggerComponent implements OnInit {
 
   private readonly packageLookupSubject = new Subject<string>();
   private readonly aurLookupSubject = new Subject<string>();
+  private syncedQueryParams: Record<string, string> | null = null;
 
   constructor() {
     // One debounced lookup per pause in typing, so the backend and the AUR are
@@ -249,17 +256,16 @@ export class PipelineTriggerComponent implements OnInit {
         }
       });
 
-    // Every wizard choice is mirrored into the query params so the URL can be
-    // shared and the wizard state restored from it on load.
-    effect(() => {
-      const queryParams = this.queryParamsFor(this.model());
-      void this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams,
-        replaceUrl: true,
-        info: { disableViewTransition: true },
-      });
-    });
+    // Every wizard choice is mirrored into the URL query string so the link can
+    // be shared and the wizard state restored from it on load. The query string
+    // is replaced in place via history.replaceState rather than routed, so
+    // typing does not trigger a navigation that resets the page scroll to top.
+    effect(() => this.syncQueryParams());
+
+    this.observer
+      .observe(MOBILE_QUERY)
+      .pipe(takeUntilDestroyed())
+      .subscribe((state) => this.isMobile.set(state.matches));
   }
 
   ngOnInit() {
@@ -274,7 +280,11 @@ export class PipelineTriggerComponent implements OnInit {
   }
 
   protected setOperation(operation: PipelineOperation): void {
+    if (this.model().operation === operation) return;
     this.model.update((model) => ({ ...model, operation }));
+    if (this.isMobile()) {
+      this.detailsSection().nativeElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
   }
 
   protected setSchedule(schedule: string): void {
@@ -463,6 +473,22 @@ export class PipelineTriggerComponent implements OnInit {
       customReason: model.customRequestReason === '' ? undefined : model.customRequestReason,
     });
   }
+
+  private syncQueryParams(): void {
+    const queryParams = this.queryParamsFor(this.model());
+    if (this.syncedQueryParams !== null && queryParamsEqual(this.syncedQueryParams, queryParams)) return;
+    const url = this.router.createUrlTree([], { relativeTo: this.route, queryParams }).toString();
+    history.replaceState(null, '', url);
+    this.syncedQueryParams = queryParams;
+  }
+}
+
+function queryParamsEqual(a: Record<string, string>, b: Record<string, string>): boolean {
+  if (a === b) return true;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((key) => a[key] === b[key]);
 }
 
 function definedOnly(params: Record<string, string | undefined>): Record<string, string> {

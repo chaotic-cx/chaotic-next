@@ -27,6 +27,11 @@
       "matchUpdateTypes": ["patch"]
     },
     {
+      "groupName": "Optimus UI",
+      "groupSlug": "optimus-ui",
+      "matchPackagePrefixes": ["@openng/optimus-ui"]
+    },
+    {
       "enabled": false,
       "groupName": "Nx-managed dependencies",
       "groupSlug": "nx-managed",

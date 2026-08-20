@@ -1,0 +1,42 @@
+@if (!loading()) {
+  <ul class="divide-y divide-white/5">
+    @for (pipeline of pipelines(); track pipeline.pipeline.id) {
+      <li class="flex items-center gap-3 py-2.5">
+        <button
+          class="group flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ctp-mauve"
+          (click)="openPipeline.emit(pipeline.pipeline.id)"
+          (keydown.enter)="openPipeline.emit(pipeline.pipeline.id)"
+          (keyup.space)="openPipeline.emit(pipeline.pipeline.id)"
+          type="button"
+          aria-label="Open details for pipeline {{ pipeline.pipeline.id }}"
+        >
+          <span class="h-2.5 w-2.5 shrink-0 rounded-full" [class]="statusDotClass(pipeline.statusText)"></span>
+          <span class="truncate font-medium group-hover:text-ctp-mauve">{{
+            pipeline.statusText.replaceAll('_', ' ')
+          }}</span>
+        </button>
+        <span
+          class="shrink-0 text-xs text-ctp-subtext1"
+          [pTooltip]="(pipeline.pipeline.created_at | date: 'short') ?? undefined"
+          tooltipPosition="top"
+          >{{ pipeline.pipeline.created_at | relativeTime }}</span
+        >
+        <a
+          class="shrink-0 cursor-pointer text-ctp-mauve hover:text-ctp-text"
+          [routerLink]="['/logs', pipeline.pipeline.id]"
+          pTooltip="View live logs"
+          tooltipPosition="left"
+          aria-label="View live logs for pipeline {{ pipeline.pipeline.id }}"
+        >
+          <i class="pi pi-bars"></i>
+        </a>
+      </li>
+    }
+  </ul>
+} @else {
+  @for (item of createRange(skeletonCount()); track $index) {
+    <div class="my-3">
+      <p-skeleton width="100%" height="3.5rem" />
+    </div>
+  }
+}
