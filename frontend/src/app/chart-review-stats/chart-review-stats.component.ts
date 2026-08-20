@@ -4,6 +4,7 @@ import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaLegendLabels } from '../chart-config';
 import { resourceValue, shuffleArray } from '../functions';
+import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 @Component({
@@ -14,9 +15,10 @@ import { CATPPUCCIN_FLAVOURS } from '../theme';
 })
 export class ChartReviewStatsComponent {
   private readonly appService = inject(AppService);
+  private readonly statsService = inject(StatsService);
 
   private readonly resource = httpResource<{ username: string; reviews: number }[]>(() =>
-    this.appService.getUpdateReviewStatsResourceRequest(),
+    this.appService.getUpdateReviewStatsResourceRequest(this.statsService.timeRangeDays() ?? undefined),
   );
 
   readonly loading = this.resource.isLoading;

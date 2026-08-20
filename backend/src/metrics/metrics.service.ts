@@ -1,7 +1,11 @@
 import { type CountNameObject, type SpecificPackageMetrics, type UserAgentList } from '@chaotic-next/shared-lib';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { clampInt, nDaysInPast } from '../utils/functions';
-import { MAX_DAYS_WINDOW } from '../utils/constants';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import type { Cache } from 'cache-manager';
+import { clampInt, nDaysInPast, utcDayStart } from '../utils/functions';
+import { MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
+import { cachedResult } from '../utils/cache';
 import { DataSource } from 'typeorm';
 import { RouterHit } from '../router/router-hit.entity';
 
@@ -29,24 +33,50 @@ function assertRankRange(range: string): number {
 export class MetricsService {
   private readonly logger = new Logger(MetricsService.name);
 
-  constructor(private dataSource: DataSource) {
+  constructor(
+    private dataSource: DataSource,
+    @Inject(CACHE_MANAGER) private cache: Cache,
+  ) {
     this.logger.log('MetricsService initialized');
   }
 
+  /** Precomputes the common windows so requests never hit a cold cache. */
+  @Cron(CronExpression.EVERY_6_HOURS)
+  async warmMetricsCache(): Promise<void> {
+    const windows = [7, 30, 90, MAX_DAYS_WINDOW];
+    await Promise.allSettled([
+      ...windows.flatMap((days) => [
+        this.uniqueUsers(days),
+        this.uniqueUserAgents(days),
+        this.rankCountries('10', days),
+        this.rankCountries('30', days),
+        this.rankPackages('10', days),
+        this.rankPackages('30', days),
+        this.rankPackages('100', days),
+      ]),
+    ]);
+  }
+
   /**
-   * Get the unique user (IP) count from the router-hits table.
+   * Get the unique user (IP) count from the daily HyperLogLog sketches. The
+   * sketches survive raw-log purges, so history is preserved for any window.
    * @param days The number of days to look back (defaults to 30)
    * @returns The unique user count
    */
   async uniqueUsers(days = 30): Promise<number> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    const row = await this.dataSource
-      .getRepository(RouterHit)
-      .createQueryBuilder('hit')
-      .select('COUNT(DISTINCT hit.ip)::int', 'count')
-      .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
-      .getRawOne<{ count: number }>();
-    return row?.count ?? 0;
+    return cachedResult(
+      this.cache,
+      `metrics:users:${clampedDays}`,
+      METRICS_CACHE_TTL_MS,
+      () =>
+        this.dataSource.query(
+          `SELECT ROUND(hll_cardinality(hll_union_agg(sketch)))::int AS count
+         FROM "router_hits_daily_users"
+         WHERE "day" >= $1`,
+          [utcDayStart(nDaysInPast(clampedDays))],
+        ) as Promise<Array<{ count: number }>>,
+    ).then((rows) => rows[0]?.count ?? 0);
   }
 
   /**
@@ -56,20 +86,28 @@ export class MetricsService {
    */
   async uniqueUserAgents(days = 30): Promise<UserAgentList> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return this.dataSource
-      .getRepository(RouterHit)
-      .createQueryBuilder('hit')
-      .select('hit.userAgent', 'name')
-      .addSelect('COUNT(*)::int', 'count')
-      .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
-      .groupBy('hit.userAgent')
-      .orderBy('count', 'DESC')
-      .getRawMany<UserAgentList[number]>();
+    return cachedResult(this.cache, `metrics:user-agents:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
+      this.dataSource
+        .getRepository(RouterHit)
+        .createQueryBuilder('hit')
+        .select('hit.userAgent', 'name')
+        .addSelect('COUNT(*)::int', 'count')
+        .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+        .groupBy('hit.userAgent')
+        .orderBy('count', 'DESC')
+        .getRawMany<UserAgentList[number]>(),
+    );
   }
 
   async packageMetrics(param: string, days = 30): Promise<SpecificPackageMetrics> {
     const pkgname = assertPackageName(param);
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
+    return cachedResult(this.cache, `metrics:package:${pkgname}:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
+      this.queryPackageMetrics(pkgname, clampedDays),
+    );
+  }
+
+  private async queryPackageMetrics(pkgname: string, clampedDays: number): Promise<SpecificPackageMetrics> {
     const cutoff = nDaysInPast(clampedDays);
 
     const repo = this.dataSource.getRepository(RouterHit);
@@ -99,30 +137,34 @@ export class MetricsService {
   async rankCountries(range: string, days = 30): Promise<CountNameObject[]> {
     const rankRange = assertRankRange(range);
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return this.dataSource
-      .getRepository(RouterHit)
-      .createQueryBuilder('hit')
-      .select('hit.country', 'name')
-      .addSelect('COUNT(*)::int', 'count')
-      .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
-      .groupBy('hit.country')
-      .orderBy('count', 'DESC')
-      .limit(rankRange)
-      .getRawMany<CountNameObject>();
+    return cachedResult(this.cache, `metrics:rank-countries:${rankRange}:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
+      this.dataSource
+        .getRepository(RouterHit)
+        .createQueryBuilder('hit')
+        .select('hit.country', 'name')
+        .addSelect('COUNT(*)::int', 'count')
+        .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+        .groupBy('hit.country')
+        .orderBy('count', 'DESC')
+        .limit(rankRange)
+        .getRawMany<CountNameObject>(),
+    );
   }
 
   async rankPackages(range: string, days = 30): Promise<CountNameObject[]> {
     const rankRange = assertRankRange(range);
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return this.dataSource
-      .getRepository(RouterHit)
-      .createQueryBuilder('hit')
-      .select('hit.package', 'name')
-      .addSelect('COUNT(*)::int', 'count')
-      .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
-      .groupBy('hit.package')
-      .orderBy('count', 'DESC')
-      .limit(rankRange)
-      .getRawMany<CountNameObject>();
+    return cachedResult(this.cache, `metrics:rank-packages:${rankRange}:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
+      this.dataSource
+        .getRepository(RouterHit)
+        .createQueryBuilder('hit')
+        .select('hit.package', 'name')
+        .addSelect('COUNT(*)::int', 'count')
+        .where('hit.timestamp > :cutoff', { cutoff: nDaysInPast(clampedDays) })
+        .groupBy('hit.package')
+        .orderBy('count', 'DESC')
+        .limit(rankRange)
+        .getRawMany<CountNameObject>(),
+    );
   }
 }

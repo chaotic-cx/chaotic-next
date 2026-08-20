@@ -12,6 +12,8 @@ import {
 } from '@chaotic-next/backend/repo-manager/repo-manager.entity';
 import { BuildStatus } from '@chaotic-next/backend/types/types';
 import { RepoStatus } from '@chaotic-next/shared-lib';
+import { utcDayStart } from '@chaotic-next/backend/utils/functions';
+import { HLL_LOG2M } from '@chaotic-next/backend/utils/constants';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Logger } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -191,6 +193,9 @@ export async function createE2eApp(): Promise<E2eApp> {
 
 const TABLES_TO_RESET = [
   'router-hits',
+  'router_hits_daily',
+  'router_hits_daily_agents',
+  'router_hits_daily_users',
   'query-result-cache',
   'mr_action',
   'pipeline_trigger',
@@ -487,4 +492,75 @@ async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Pr
      VALUES ${values}`,
     params,
   );
+
+  // Router metrics are served from the daily rollup, so seed it alongside the
+  // raw rows the same way the scheduled refresh aggregates them.
+  const mainByKey = new Map<string, number>();
+  const agentByKey = new Map<string, number>();
+  for (const row of rows) {
+    const day = utcDayStart(row.timestamp ?? new Date());
+    const mainKey = `${day.getTime()}|${row.country}|${row.hostname}|${row.package}`;
+    mainByKey.set(mainKey, (mainByKey.get(mainKey) ?? 0) + 1);
+    const agentKey = `${day.getTime()}|${row.userAgent ?? ''}`;
+    agentByKey.set(agentKey, (agentByKey.get(agentKey) ?? 0) + 1);
+  }
+
+  const mainParams: unknown[] = [];
+  const mainValues = [...mainByKey.entries()].map(([key, count], i) => {
+    const [dayMs, country, hostname, pkg] = key.split('|');
+    const base = i * 5;
+    mainParams.push(new Date(Number(dayMs)), country, hostname, pkg, count);
+    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+  });
+  if (mainValues.length > 0) {
+    await dataSource.query(
+      `INSERT INTO "router_hits_daily" ("day", "country", "hostname", "package", "count")
+       VALUES ${mainValues.join(', ')}`,
+      mainParams,
+    );
+  }
+
+  const agentParams: unknown[] = [];
+  const agentValues = [...agentByKey.entries()].map(([key, count], i) => {
+    const [dayMs, userAgent] = key.split('|');
+    const base = i * 3;
+    agentParams.push(new Date(Number(dayMs)), userAgent, count);
+    return `($${base + 1}, $${base + 2}, $${base + 3})`;
+  });
+  if (agentValues.length > 0) {
+    await dataSource.query(
+      `INSERT INTO "router_hits_daily_agents" ("day", "user_agent", "count")
+       VALUES ${agentValues.join(', ')}`,
+      agentParams,
+    );
+  }
+
+  const ipsByDay = new Map<number, Set<string>>();
+  for (const row of rows) {
+    const dayMs = utcDayStart(row.timestamp ?? new Date()).getTime();
+    let ips = ipsByDay.get(dayMs);
+    if (!ips) {
+      ips = new Set<string>();
+      ipsByDay.set(dayMs, ips);
+    }
+    ips.add(row.ip);
+  }
+  const userParams: unknown[] = [];
+  const userPairs: string[] = [];
+  for (const [dayMs, ips] of ipsByDay) {
+    for (const ip of ips) {
+      const base = userParams.length;
+      userParams.push(new Date(dayMs), ip);
+      userPairs.push(`($${base + 1}::timestamp, $${base + 2})`);
+    }
+  }
+  if (userPairs.length > 0) {
+    await dataSource.query(
+      `INSERT INTO "router_hits_daily_users" ("day", "sketch")
+       SELECT day, hll_add_agg(hll_hash_text(ip), ${HLL_LOG2M})
+       FROM (VALUES ${userPairs.join(', ')}) AS hits(day, ip)
+       GROUP BY day`,
+      userParams,
+    );
+  }
 }

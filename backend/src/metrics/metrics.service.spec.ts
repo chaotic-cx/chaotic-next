@@ -1,12 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
-import { nDaysInPast } from '../utils/functions';
+import { nDaysInPast, utcDayStart } from '../utils/functions';
 import { DataSource } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { MetricsService } from './metrics.service';
 
 const MIN_DAYS = 1;
 const MAX_DAYS = 3650;
-const TOLERANCE_MS = 5_000;
 
 interface QbMock {
   getRawMany: ReturnType<typeof vi.fn>;
@@ -33,41 +32,51 @@ function makeQb() {
   return qb;
 }
 
+function makeCache() {
+  return { get: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined) };
+}
+
 function createService(qb: QbMock) {
   const repository = { createQueryBuilder: vi.fn(() => qb) };
-  const dataSource = { getRepository: vi.fn(() => repository) } as unknown as DataSource;
-  return { service: new MetricsService(dataSource), qb, repository };
+  const dataSource = {
+    getRepository: vi.fn(() => repository),
+    query: vi.fn(),
+  } as unknown as DataSource;
+  return { service: new MetricsService(dataSource, makeCache() as never), qb, repository, dataSource };
+}
+
+function createServiceWithQuery(dataSource: DataSource) {
+  return { service: new MetricsService(dataSource, makeCache() as never) };
 }
 
 describe('MetricsService', () => {
   describe('uniqueUsers', () => {
     it('returns the unique ip count', async () => {
-      const qb = makeQb();
-      qb.getRawOne.mockResolvedValueOnce({ count: 42 });
-      const { service } = createService(qb);
+      const dataSource = { query: vi.fn().mockResolvedValue([{ count: 42 }]) } as unknown as DataSource;
+      const { service } = createServiceWithQuery(dataSource);
       await expect(service.uniqueUsers(30)).resolves.toBe(42);
     });
 
     it('returns 0 when no rows', async () => {
-      const qb = makeQb();
-      const { service } = createService(qb);
+      const dataSource = { query: vi.fn().mockResolvedValue([]) } as unknown as DataSource;
+      const { service } = createServiceWithQuery(dataSource);
       await expect(service.uniqueUsers(30)).resolves.toBe(0);
     });
 
     it('clamps days below the minimum to the minimum', async () => {
-      const qb = makeQb();
-      const { service } = createService(qb);
+      const query = vi.fn().mockResolvedValue([{ count: 1 }]);
+      const { service } = createServiceWithQuery({ query } as unknown as DataSource);
       await service.uniqueUsers(MIN_DAYS - 1);
-      const cutoff = (qb.where.mock.calls[0][1] as { cutoff: Date }).cutoff;
-      expect(Math.abs(cutoff.getTime() - nDaysInPast(MIN_DAYS).getTime())).toBeLessThan(TOLERANCE_MS);
+      const cutoff = query.mock.calls[0][1][0];
+      expect(cutoff).toEqual(utcDayStart(nDaysInPast(MIN_DAYS)));
     });
 
     it('clamps days above the maximum to the maximum', async () => {
-      const qb = makeQb();
-      const { service } = createService(qb);
+      const query = vi.fn().mockResolvedValue([{ count: 1 }]);
+      const { service } = createServiceWithQuery({ query } as unknown as DataSource);
       await service.uniqueUsers(MAX_DAYS + 1);
-      const cutoff = (qb.where.mock.calls[0][1] as { cutoff: Date }).cutoff;
-      expect(Math.abs(cutoff.getTime() - nDaysInPast(MAX_DAYS).getTime())).toBeLessThan(TOLERANCE_MS);
+      const cutoff = query.mock.calls[0][1][0];
+      expect(cutoff).toEqual(utcDayStart(nDaysInPast(MAX_DAYS)));
     });
   });
 

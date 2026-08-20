@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { resolve } from 'node:path';
 
 let container: StartedPostgreSqlContainer | undefined;
 
@@ -10,7 +11,10 @@ export async function setup(): Promise<void> {
     Logger.prototype[method] = () => undefined;
   }
 
-  container = await new PostgreSqlContainer('postgres:18-alpine')
+  const image = 'chaotic-postgres-hll:latest';
+  await PostgreSqlContainer.fromDockerfile(resolve(__dirname, '../../../docker/postgres-hll')).build(image);
+
+  container = await new PostgreSqlContainer(image)
     .withDatabase('chaotic')
     .withUsername('chaotic')
     .withPassword('chaotic')

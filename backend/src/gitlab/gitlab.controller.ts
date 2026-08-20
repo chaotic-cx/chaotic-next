@@ -167,9 +167,18 @@ export class GitlabController {
 
   @Get('review-stats')
   @ApiOperation({ summary: 'Get GitLab merge request review statistics per user.' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Optional time range in days' })
   @ApiOkResponse({ description: 'Merge request review statistics' })
-  async getReviewStats() {
-    return await this.gitlabService.getReviewStats();
+  async getReviewStats(@Query('days') days?: string) {
+    return await this.gitlabService.getReviewStats(parseOptionalDays(days));
+  }
+
+  @Get('review-stats/over-time')
+  @ApiOperation({ summary: 'Get GitLab merge request review statistics per user over time.' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Optional time range in days' })
+  @ApiOkResponse({ description: 'Merge request review statistics over time' })
+  async getReviewStatsOverTime(@Query('days') days?: string) {
+    return await this.gitlabService.getReviewStatsOverTime(parseOptionalDays(days));
   }
 
   @Post('approve')
@@ -219,4 +228,11 @@ export class GitlabController {
       userName: session.user.name,
     });
   }
+}
+
+/** Parses the optional `days` query param, returning undefined for missing or non-numeric values. */
+function parseOptionalDays(raw: string | undefined): number | undefined {
+  if (raw === undefined || raw.trim() === '') return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
 }

@@ -1,12 +1,10 @@
-import { CacheInterceptor } from '@nestjs/cache-manager';
-import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CountNameDto, MetricsQueryDto, SpecificPackageMetricsDto, UserAgentMetricDto } from './metrics.dto';
 import { MetricsService } from './metrics.service';
 
 @ApiTags('metrics')
 @Controller('metrics')
-@UseInterceptors(CacheInterceptor)
 export class MetricsController {
   constructor(private metricsService: MetricsService) {}
 

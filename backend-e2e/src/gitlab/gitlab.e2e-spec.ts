@@ -10,6 +10,7 @@ import { AppModule } from '@chaotic-next/backend/app.module';
 import { Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { DataSource } from 'typeorm';
 import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
+import { MrAction } from '@chaotic-next/backend/gitlab/mr-action.entity';
 import { PipelineTrigger } from '@chaotic-next/backend/gitlab/pipeline-trigger.entity';
 import { encryptAes } from '@chaotic-next/backend/utils/functions';
 import { EventService } from '@chaotic-next/backend/events/event.service';
@@ -301,15 +302,42 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       expect(res.statusCode).toBe(401);
     });
 
-    it('rejects an invalid object_kind (400)', async () => {
-      const res = await app.inject({
+    it('caps the cache to the latest 40 pipelines when more arrive via webhook', async () => {
+      // Seed 40 pipelines: IDs 1..40
+      for (let i = 1; i <= 40; i++) {
+        await app.inject({
+          method: 'POST',
+          url: '/gitlab/update',
+          headers: { 'x-gitlab-token': WEBHOOK_TOKEN },
+          payload: pipelineWebhook({ id: i, status: 'success' }),
+        });
+      }
+
+      let pipelines = await gitlabService.getLastPipelines();
+      expect(pipelines).toHaveLength(40);
+      expect(pipelines.map((p) => p.pipeline.id)).toContain(1);
+
+      // Insert 41st and 42nd pipeline
+      await app.inject({
         method: 'POST',
         url: '/gitlab/update',
         headers: { 'x-gitlab-token': WEBHOOK_TOKEN },
-        payload: { object_kind: 'push' },
+        payload: pipelineWebhook({ id: 41, status: 'success' }),
+      });
+      await app.inject({
+        method: 'POST',
+        url: '/gitlab/update',
+        headers: { 'x-gitlab-token': WEBHOOK_TOKEN },
+        payload: pipelineWebhook({ id: 42, status: 'success' }),
       });
 
-      expect(res.statusCode).toBe(400);
+      pipelines = await gitlabService.getLastPipelines();
+      expect(pipelines).toHaveLength(40);
+      const ids = pipelines.map((p) => p.pipeline.id);
+      expect(ids[0]).toBe(42);
+      expect(ids[1]).toBe(41);
+      expect(ids).not.toContain(1);
+      expect(ids).not.toContain(2);
     });
   });
 
@@ -579,6 +607,62 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         { id: 15, description: null, active: false },
       ]);
       expect(vi.mocked(gitlabService.api.PipelineSchedules.all).mock.calls[0][1]).not.toHaveProperty('scope');
+    });
+  });
+
+  describe('GET /gitlab/review-stats', () => {
+    it('returns approval stats per user filtered by time range', async () => {
+      const ds = app.get<DataSource>(DataSource);
+      const mrActionRepo = ds.getRepository(MrAction);
+      const now = new Date();
+      await mrActionRepo.save([
+        {
+          action: 'approve',
+          mergeRequestIid: 1,
+          userId: 'user1',
+          userName: 'Alice',
+          createdAt: now,
+        },
+        {
+          action: 'approve',
+          mergeRequestIid: 2,
+          userId: 'user2',
+          userName: 'Bob',
+          createdAt: now,
+        },
+      ]);
+
+      const res = await app.inject({ method: 'GET', url: '/gitlab/review-stats?days=30' });
+
+      expect(res.statusCode).toBe(200);
+      const body = (await res.json()) as Array<{ username: string; reviews: number }>;
+      expect(body).toHaveLength(2);
+      expect(body.find((u) => u.username === 'Alice')?.reviews).toBe(1);
+      expect(body.find((u) => u.username === 'Bob')?.reviews).toBe(1);
+    });
+  });
+
+  describe('GET /gitlab/review-stats/over-time', () => {
+    it('returns approval stats per user grouped by date', async () => {
+      const ds = app.get<DataSource>(DataSource);
+      const mrActionRepo = ds.getRepository(MrAction);
+      const now = new Date();
+      await mrActionRepo.save({
+        action: 'approve',
+        mergeRequestIid: 1,
+        userId: 'user1',
+        userName: 'Alice',
+        createdAt: now,
+      });
+
+      const res = await app.inject({ method: 'GET', url: '/gitlab/review-stats/over-time?days=30' });
+
+      expect(res.statusCode).toBe(200);
+      const body = (await res.json()) as Array<{ date: string; username: string; reviews: number }>;
+      expect(body.length).toBeGreaterThanOrEqual(1);
+      const aliceEntry = body.find((r) => r.username === 'Alice');
+      expect(aliceEntry).toBeDefined();
+      expect(aliceEntry?.reviews).toBeGreaterThanOrEqual(1);
     });
   });
 

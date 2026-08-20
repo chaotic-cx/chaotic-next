@@ -1,7 +1,7 @@
 name: chaotic-next
 services:
   chaotic_db:
-    image: postgres:18-alpine
+    build: ./docker/postgres-hll
     container_name: chaotic_db
     restart: always
     network_mode: host

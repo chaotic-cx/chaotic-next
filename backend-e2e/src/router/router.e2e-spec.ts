@@ -111,6 +111,46 @@ describe('Router endpoints (e2e, real PostgreSQL)', () => {
     });
   });
 
+  describe('GET /router/stats/mirror-over-time/:days', () => {
+    it('groups hits by day and mirror', async () => {
+      const noonUtc = new Date();
+      noonUtc.setUTCHours(12, 0, 0, 0);
+      await e2e.seedRouterHits([
+        routerHit({ package: 'firedragon', hostname: 'de-mirror.chaotic.cx', timestamp: noonUtc }),
+        routerHit({ package: 'google-chrome', hostname: 'us-mirror.chaotic.cx', timestamp: noonUtc }),
+        routerHit({ package: 'spotify', hostname: 'de-mirror.chaotic.cx', timestamp: noonUtc }),
+      ]);
+
+      const res = await e2e.inject<CountRow<'mirror'>[]>({ method: 'GET', url: '/router/stats/mirror-over-time/30' });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(2);
+      expect(body.find((b) => b.mirror === 'de-mirror.chaotic.cx')?.count).toBe('2');
+      expect(body.find((b) => b.mirror === 'us-mirror.chaotic.cx')?.count).toBe('1');
+    });
+  });
+
+  describe('GET /router/stats/country-over-time/:days', () => {
+    it('groups hits by day and country', async () => {
+      const noonUtc = new Date();
+      noonUtc.setUTCHours(12, 0, 0, 0);
+      await e2e.seedRouterHits([
+        routerHit({ package: 'firedragon', country: 'DE', timestamp: noonUtc }),
+        routerHit({ package: 'google-chrome', country: 'US', timestamp: noonUtc }),
+        routerHit({ package: 'spotify', country: 'DE', timestamp: noonUtc }),
+      ]);
+
+      const res = await e2e.inject<CountRow<'country'>[]>({ method: 'GET', url: '/router/stats/country-over-time/30' });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(2);
+      expect(body.find((b) => b.country === 'DE')?.count).toBe('2');
+      expect(body.find((b) => b.country === 'US')?.count).toBe('1');
+    });
+  });
+
   describe('days parameter handling', () => {
     it('rejects a non-integer days value with 400 (ParseIntPipe)', async () => {
       const res = await e2e.inject({ method: 'GET', url: '/router/per-day/abc' });

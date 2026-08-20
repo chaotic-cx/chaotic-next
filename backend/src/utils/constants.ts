@@ -23,12 +23,17 @@ export const ARCH = 'x86_64';
 
 export const CACHE_TTL_MS = 30_000;
 
+/** Long-lived TTL for expensive router/metrics aggregations, refreshed by the rollup cron. */
+export const METRICS_CACHE_TTL_MS = 21_600_000;
+
 /** Global API throttling: 100 requests per minute per client. */
 export const THROTTLE_TTL_MS = 60_000;
 export const THROTTLE_LIMIT = 100;
 
 /** Bounds for user-supplied query windows and pagination. */
 export const MAX_DAYS_WINDOW = 3650;
+/** Bit sample size (log2 registers) for per-day distinct-user HyperLogLog sketches. */
+export const HLL_LOG2M = 12;
 export const MAX_DAYS_PER_DAY_CHART = 365;
 export const MAX_AMOUNT = 100;
 export const MAX_OFFSET = 10_000;

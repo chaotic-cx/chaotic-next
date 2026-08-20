@@ -1,5 +1,4 @@
 import {
-  CACHE_REVIEW_STATS_TTL,
   type DiffScanFinding,
   type ExternalCommitStatus,
   GitlabJob,
@@ -39,7 +38,8 @@ import { extractIndicators } from '../diff-scan/indicators';
 import { VirustotalService } from '../diff-scan/virustotal.service';
 import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
-import { decryptAes, errorMessage, mapWithConcurrency } from '../utils/functions';
+import { decryptAes, errorMessage, mapWithConcurrency, clampInt, nDaysInPast } from '../utils/functions';
+import { MAX_DAYS_WINDOW } from '../utils/constants';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
 import { MrAction, MrActionType } from './mr-action.entity';
 import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
@@ -54,8 +54,8 @@ const TERMINAL_JOB_STATUSES = ['success', 'failed', 'canceled', 'skipped', 'manu
 const JOB_TRACE_POLL_MS = 2000;
 const MAX_VERDICT_NOTE_FINDINGS = 5;
 const DIFF_FETCH_CONCURRENCY = 5;
-const REVIEW_STATS_CONCURRENCY = 10;
 const CACHE_MRS_TTL = 30 * 60 * 1000;
+const MAX_CACHED_PIPELINES = 40;
 
 interface CachedMrData {
   updatedAt: string;
@@ -132,15 +132,12 @@ export class GitlabService implements OnModuleInit {
   api!: Gitlab;
   chaoticId!: string;
   updateMutex = new Mutex();
-  reviewStatsMutex = new Mutex();
   mergeRequestsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
-  private readonly CACHE_KEY_REVIEW_STATS = 'gitlab/review-stats';
   private readonly mergeBotUserId: number;
 
   private isSeedingPipelines = false;
-  private isRefreshingReviewStats = false;
   private isAutoFlaggingMrs = false;
   private isEnrichingVt = false;
 
@@ -178,9 +175,6 @@ export class GitlabService implements OnModuleInit {
     await this.initApiClient().catch((err) =>
       this.logger.error(`GitLab client init failed, review features unavailable: ${errorMessage(err)}`),
     );
-    void this.refreshReviewStats().catch((err) =>
-      this.logger.error(`Initial review-stats refresh failed: ${errorMessage(err)}`),
-    );
     void this.seedPipelines().catch((err) => this.logger.error(`Initial pipeline seed failed: ${errorMessage(err)}`));
   }
 
@@ -207,18 +201,6 @@ export class GitlabService implements OnModuleInit {
     }
 
     this.api = new Gitlab({ token });
-  }
-
-  @Cron(CronExpression.EVERY_6_HOURS)
-  async handleReviewStatsRefresh(): Promise<void> {
-    if (this.isRefreshingReviewStats) return;
-    this.isRefreshingReviewStats = true;
-
-    try {
-      await this.refreshReviewStats();
-    } finally {
-      this.isRefreshingReviewStats = false;
-    }
   }
 
   @Cron(CronExpression.EVERY_10_MINUTES)
@@ -270,16 +252,16 @@ export class GitlabService implements OnModuleInit {
   async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
     return [...this.pipelineMap.entries()]
       .map(([id, pipeline]) => ({ pipeline, commit: this.statusMap.get(id) ?? [] }))
-      .sort((a, b) => b.pipeline.id - a.pipeline.id);
+      .sort((a, b) => b.pipeline.id - a.pipeline.id)
+      .slice(0, MAX_CACHED_PIPELINES);
   }
 
   private async getPipelinesViaRest(): Promise<void> {
     let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
-      maxPages: 1,
-      page: 1,
-      perPage: 50,
+      maxPages: 2,
+      perPage: 100,
     });
-    allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped');
+    allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped').slice(0, MAX_CACHED_PIPELINES);
 
     this.logger.log(`Fetched ${allPipelines.length} pipelines`);
 
@@ -344,6 +326,14 @@ export class GitlabService implements OnModuleInit {
       updated_at: existing?.updated_at ?? attrs.created_at,
       web_url: attrs.url,
     });
+
+    if (this.pipelineMap.size > MAX_CACHED_PIPELINES) {
+      const sortedIds = [...this.pipelineMap.keys()].sort((a, b) => b - a);
+      for (const oldId of sortedIds.slice(MAX_CACHED_PIPELINES)) {
+        this.pipelineMap.delete(oldId);
+        this.statusMap.delete(oldId);
+      }
+    }
 
     const pipelines = await this.getLastPipelines();
     this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
@@ -462,8 +452,6 @@ export class GitlabService implements OnModuleInit {
         this.CACHE_KEY_MRS,
       );
       const newData: MergeRequestWithDiffs[] = await this.getOpenMergeRequests(true);
-
-      await this.cacheManager.del(this.CACHE_KEY_REVIEW_STATS);
 
       const currentIds = new Set(currentData?.map((mr) => mr.id) ?? []);
       const newIds = new Set(newData.map((mr) => mr.id));
@@ -769,31 +757,41 @@ export class GitlabService implements OnModuleInit {
     }
   }
 
-  async getReviewStats(): Promise<{ username: string; reviews: number }[]> {
-    const cached = await this.cacheManager.get<{ username: string; reviews: number }[]>(this.CACHE_KEY_REVIEW_STATS);
-    if (cached) return cached;
+  async getReviewStats(days?: number): Promise<{ username: string; reviews: number }[]> {
+    const rows = await this.reviewStatsBaseQuery(days)
+      .select('mr.userName', 'username')
+      .addSelect('COUNT(*)', 'reviews')
+      .groupBy('mr.userName')
+      .getRawMany();
 
-    return this.reviewStatsMutex.runExclusive(async () => {
-      const again = await this.cacheManager.get<{ username: string; reviews: number }[]>(this.CACHE_KEY_REVIEW_STATS);
-      if (again) return again;
-
-      const reviewStats = await this.computeReviewStats();
-      await this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, reviewStats, CACHE_REVIEW_STATS_TTL);
-      return reviewStats;
-    });
+    return rows.map((row) => ({ username: String(row.username), reviews: Number(row.reviews) }));
   }
 
-  async refreshReviewStats(): Promise<void> {
-    try {
-      const reviewStats = await this.reviewStatsMutex.runExclusive(async () => {
-        const fresh = await this.computeReviewStats();
-        await this.cacheManager.set(this.CACHE_KEY_REVIEW_STATS, fresh, CACHE_REVIEW_STATS_TTL);
-        return fresh;
-      });
-      this.logger.log(`Refreshed review stats for ${reviewStats.length} users`);
-    } catch (err) {
-      this.logger.error(`Failed to refresh review stats: ${errorMessage(err)}`);
+  async getReviewStatsOverTime(days?: number): Promise<{ date: string; username: string; reviews: number }[]> {
+    const dateExpr = `TO_CHAR(mr.createdAt AT TIME ZONE 'UTC', 'YYYY-MM-DD')`;
+    const rows = await this.reviewStatsBaseQuery(days)
+      .select(dateExpr, 'date')
+      .addSelect('mr.userName', 'username')
+      .addSelect('COUNT(*)', 'reviews')
+      .groupBy(dateExpr)
+      .addGroupBy('mr.userName')
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    return rows.map((row) => ({
+      date: String(row.date),
+      username: String(row.username),
+      reviews: Number(row.reviews),
+    }));
+  }
+
+  /** Base query over recorded approval actions, optionally restricted to the last `days`. */
+  private reviewStatsBaseQuery(days?: number) {
+    const query = this.mrActionRepository.createQueryBuilder('mr').where('mr.action = :action', { action: 'approve' });
+    if (days !== undefined) {
+      query.andWhere('mr.createdAt >= :cutoff', { cutoff: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
     }
+    return query;
   }
 
   private assertApiReady(): void {
@@ -802,26 +800,6 @@ export class GitlabService implements OnModuleInit {
         'GitLab client is not initialised; GitLab integration features are unavailable.',
       );
     }
-  }
-
-  private async computeReviewStats(): Promise<{ username: string; reviews: number }[]> {
-    this.assertApiReady();
-
-    const users = await this.api.Projects.allUsers(this.chaoticId);
-
-    return mapWithConcurrency(
-      users,
-      async (user) => {
-        const mrs = await this.api.MergeRequests.all({
-          state: 'merged',
-          projectId: this.chaoticId,
-          approvedByIds: [user.id],
-        });
-
-        return { username: user.username, reviews: mrs.length };
-      },
-      REVIEW_STATS_CONCURRENCY,
-    );
   }
 
   async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<void> {
@@ -844,7 +822,6 @@ export class GitlabService implements OnModuleInit {
     await this.postActorComment(iid, '✅ Approved by', actor);
     await this.recordMrAction(iid, 'approve', mr.sha ?? sha, actor);
     await this.cacheManager.del(this.CACHE_KEY_MRS);
-    await this.cacheManager.del(this.CACHE_KEY_REVIEW_STATS);
     void this.refreshOpenMergeRequests();
   }
 

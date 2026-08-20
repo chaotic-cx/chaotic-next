@@ -98,27 +98,27 @@ export class AppService {
   }
 
   getUsersResourceRequest(days?: number): HttpResourceRequest {
-    return { url: `${this.appConfig.cachedMetricsUrl}/users`, params: this.daysParams(days) };
+    return { url: `${this.appConfig.backendUrl}/metrics/users`, params: this.daysParams(days) };
   }
 
   getUserAgentsResourceRequest(days?: number): HttpResourceRequest {
-    return { url: `${this.appConfig.cachedMetricsUrl}/user-agents`, params: this.daysParams(days) };
+    return { url: `${this.appConfig.backendUrl}/metrics/user-agents`, params: this.daysParams(days) };
   }
 
   getCountryRanksResourceRequest(days?: number): HttpResourceRequest {
-    return { url: `${this.appConfig.cachedMetricsUrl}/rank/30/countries`, params: this.daysParams(days) };
+    return { url: `${this.appConfig.backendUrl}/metrics/rank/30/countries`, params: this.daysParams(days) };
   }
 
   getOverallPackageStatsResourceRequest(range: number, days?: number): HttpResourceRequest {
     return {
-      url: `${this.appConfig.cachedMetricsUrl}/rank/${range}/packages`,
+      url: `${this.appConfig.backendUrl}/metrics/rank/${range}/packages`,
       params: this.daysParams(days),
     };
   }
 
   getSpecificPackageMetricsResourceRequest(packageName: string, days?: number): HttpResourceRequest {
     return {
-      url: `${this.appConfig.cachedMetricsUrl}/package/${packageName}`,
+      url: `${this.appConfig.backendUrl}/metrics/package/${packageName}`,
       params: this.daysParams(days),
     };
   }
@@ -135,8 +135,12 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/average/per-day/${days}` };
   }
 
-  getFailedBuildHotspotsResourceRequest(amount: number): HttpResourceRequest {
+  getTopFailedBuildsResourceRequest(amount: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/builds/failed/top/${amount}` };
+  }
+
+  getHeavyPackagesResourceRequest(amount: number, days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/stats/heavy-packages/${amount}/${days}` };
   }
 
   getThroughputResourceRequest(days: number): HttpResourceRequest {
@@ -145,6 +149,14 @@ export class AppService {
 
   getUserAgentTrendResourceRequest(days: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/router/useragents/trend/${days}` };
+  }
+
+  getMirrorStatsOverTimeResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/router/stats/mirror-over-time/${days}` };
+  }
+
+  getCountryStatsOverTimeResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/router/stats/country-over-time/${days}` };
   }
 
   getBuildersAmountResourceRequest(days?: number): HttpResourceRequest {
@@ -230,7 +242,19 @@ export class AppService {
     return { url: this.appConfig.mirrorsUrl };
   }
 
-  getUpdateReviewStatsResourceRequest(): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/gitlab/review-stats` };
+  getUpdateReviewStatsResourceRequest(timeRangeDays?: number): HttpResourceRequest {
+    const url = new URL(`${this.appConfig.backendUrl}/gitlab/review-stats`);
+    if (timeRangeDays !== undefined) {
+      url.searchParams.set('days', timeRangeDays.toString());
+    }
+    return { url: url.toString() };
+  }
+
+  getUpdateReviewStatsOverTimeResourceRequest(timeRangeDays?: number): HttpResourceRequest {
+    const url = new URL(`${this.appConfig.backendUrl}/gitlab/review-stats/over-time`);
+    if (timeRangeDays !== undefined) {
+      url.searchParams.set('days', timeRangeDays.toString());
+    }
+    return { url: url.toString() };
   }
 }
