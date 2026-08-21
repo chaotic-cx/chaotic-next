@@ -5,46 +5,42 @@
     "production": [
       "default",
       "!{projectRoot}/.eslintrc.json",
-      "!{projectRoot}/eslint.config.js",
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
       "!{projectRoot}/tsconfig.spec.json",
-      "!{projectRoot}/jest.config.[jt]s",
-      "!{projectRoot}/src/test-setup.[jt]s",
-      "!{projectRoot}/test-setup.[jt]s"
+      "!{projectRoot}/src/test-setup.ts",
+      "!{projectRoot}/test-setup.ts"
     ],
     "sharedGlobals": []
   },
   "targetDefaults": {
-    "@angular-devkit/build-angular:browser": {
-      "cache": true,
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"]
-    },
-    "@nx/eslint:lint": {
-      "cache": true,
-      "inputs": ["default", "^default", "{workspaceRoot}/eslint.config.mjs", "{workspaceRoot}/tools/eslint-rules/**/*"]
-    },
-    "@nx/jest:jest": {
-      "cache": true,
-      "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"],
-      "options": {
-        "passWithNoTests": true
-      },
-      "configurations": {
-        "ci": {
-          "ci": true,
-          "codeCoverage": true
-        }
-      }
-    },
-    "@nx/js:tsc": {
-      "cache": true,
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"]
-    },
     "format": {
       "inputs": ["default", "{workspaceRoot}/.prettierrc.js"],
       "cache": true
+    },
+    "build": {
+      "cache": true,
+      "options": {
+        "args": ["--node-env=development"]
+      },
+      "configurations": {
+        "development": {
+          "args": ["--node-env=development"]
+        },
+        "production": {
+          "args": ["--node-env=production"]
+        }
+      }
+    },
+    "@nx/js:node": {
+      "defaultConfiguration": "development",
+      "configurations": {
+        "development": {
+          "buildTarget": "{projectName}:build"
+        },
+        "production": {
+          "buildTarget": "{projectName}:build:production"
+        }
+      }
     }
   },
   "generators": {
@@ -130,11 +126,7 @@
       "plugin": "@nx/rspack/plugin",
       "options": {
         "buildTargetName": "build",
-        "serveTargetName": "rspack:serve",
-        "serveStaticTargetName": "serve-static",
-        "previewTargetName": "preview",
-        "buildDepsTargetName": "build-deps",
-        "watchDepsTargetName": "watch-deps"
+        "serveTargetName": "serve"
       },
       "include": ["backend/**/*"]
     },
