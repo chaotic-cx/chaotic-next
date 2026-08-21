@@ -5,7 +5,21 @@
   />
 
   <div class="w-full">
-    <p-panel class="mr-overview-panel text-left mb-6" header="Additional mirrors">
+    <p-panel class="mr-overview-panel text-left mb-6">
+      <ng-template #header>
+        <div class="flex w-full items-center justify-between">
+          <span class="font-bold text-ctp-text text-xl">Additional mirrors</span>
+          <a
+            class="text-ctp-mauve hover:text-ctp-pink transition-colors flex items-center justify-center p-1"
+            routerLink="/map"
+            pTooltip="View mirror map"
+            tooltipPosition="left"
+            aria-label="View mirror map"
+          >
+            <i class="pi pi-globe text-xl"></i>
+          </a>
+        </div>
+      </ng-template>
       <p class="mb-2">Besides the mirrors found below, we have 2 more mirrors available:</p>
       <ul class="chaotic-list-regular text-ctp-text list-disc ml-5">
         <li>
