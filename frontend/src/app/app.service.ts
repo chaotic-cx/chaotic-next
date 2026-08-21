@@ -139,6 +139,10 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/builds/failed/top/${amount}` };
   }
 
+  getFailedBuildsOverTimeResourceRequest(amount: number, days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/builds/failed/over-time/${amount}/${days}` };
+  }
+
   getHeavyPackagesResourceRequest(amount: number, days: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/stats/heavy-packages/${amount}/${days}` };
   }

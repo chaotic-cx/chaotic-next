@@ -33,7 +33,7 @@ export class ChartHeavyPackagesComponent {
         labels: data.map((d) => d.pkgname),
         datasets: [
           {
-            label: 'Average Build Time (seconds)',
+            label: 'Average Build Time (minutes)',
             data: data.map((d) => parseFloat(d.average)),
             backgroundColor: CATPPUCCIN_FLAVOURS,
           },
