@@ -12,17 +12,17 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { debounce, FormField, form, pattern } from '@angular/forms/signals';
+import { debounce, form, FormField, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Package, Paginated, SpecificPackageMetrics, formatPkgrel } from '@chaotic-next/shared-lib';
+import { formatPkgrel, Package, Paginated, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
-import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
+import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { SearchSuggestionsComponent } from '../search-suggestions/search-suggestions.component';
@@ -121,15 +121,22 @@ export class SearchPackageComponent implements OnInit {
       'provided_sonames',
       'required_sonames',
       'sonames',
+      'lastUpdated',
     ]);
     for (const [key, value] of Object.entries(data)) {
       if (skippedKeys.has(key)) continue;
       if (value === null || value === undefined) continue;
       if (typeof value === 'object') {
         for (const [innerKey, innerValue] of Object.entries(value)) {
+          if (skippedKeys.has(innerKey)) continue;
+          if (innerValue === null || innerValue === undefined) continue;
+          if (Array.isArray(innerValue) && innerValue.length === 0) continue;
+          if (typeof innerValue === 'string' && !innerValue.trim()) continue;
           rows.push({ key: innerKey, value: innerValue });
         }
       } else {
+        if (Array.isArray(value) && value.length === 0) continue;
+        if (typeof value === 'string' && !value.trim()) continue;
         rows.push({ key, value });
       }
     }
@@ -143,6 +150,38 @@ export class SearchPackageComponent implements OnInit {
         rows.push({ key: 'downloads', value: downloads });
       }
     }
+
+    const preferredKeyOrder: Record<string, number> = {
+      pkgname: 1,
+      name: 1,
+      pkgbase: 1,
+      version: 2,
+      description: 3,
+      desc: 3,
+      buildDate: 4,
+      createdAt: 5,
+      downloads: 6,
+      url: 7,
+      filename: 8,
+      packager: 9,
+      maintainer: 9,
+      license: 10,
+      licenses: 10,
+      deps: 11,
+      depends: 11,
+      makeDeps: 12,
+      makedepends: 12,
+      optDeps: 13,
+      optdepends: 13,
+      checkDepends: 14,
+      checkdepends: 14,
+    };
+
+    rows.sort((a, b) => {
+      const orderA = preferredKeyOrder[a.key] ?? 99;
+      const orderB = preferredKeyOrder[b.key] ?? 99;
+      return orderA - orderB;
+    });
 
     return rows;
   });
@@ -229,6 +268,11 @@ export class SearchPackageComponent implements OnInit {
       replaceUrl: true,
       info: { disableViewTransition: true },
     });
+  }
+
+  protected getMirrorDownloadUrl(filename: string): string {
+    const repo = this.packageStatsService.packageSearchSelectedRepo() || 'chaotic-aur';
+    return `https://cdn-mirror.chaotic.cx/${repo}/x86_64/${filename}`;
   }
 
   protected isArray(value: unknown): value is unknown[] {

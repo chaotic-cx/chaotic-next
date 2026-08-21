@@ -12,6 +12,8 @@ export class PackageDetailKeyPipe implements PipeTransform {
         return 'ID';
       case 'pkgname':
         return 'Package name';
+      case 'createdAt':
+        return 'Added at';
       case 'version':
         return 'Version';
       case 'deps':

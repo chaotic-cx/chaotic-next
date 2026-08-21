@@ -42,61 +42,112 @@
   >
     <div class="overflow-hidden">
       <div class="scroll-mt-24 mt-4 flex flex-col gap-4" #resultsSection>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           @for (dataset of packageSearchData(); track dataset.key) {
-            <div class="flex flex-col rounded-xl border border-ctp-surface1 bg-ctp-mantle/50 p-4">
-              <div class="text-xs font-medium uppercase tracking-wide text-ctp-subtext1">
-                {{ dataset.key | packageDetailKey }}
+            <div
+              class="group flex flex-col justify-between rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
+            >
+              <div
+                class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-ctp-subtext0"
+              >
+                <span>{{ dataset.key | packageDetailKey }}</span>
+                @if (dataset.key === 'url') {
+                  <i class="pi pi-external-link text-ctp-mauve text-xs"></i>
+                } @else if (dataset.key === 'downloads') {
+                  <i class="pi pi-download text-ctp-blue text-xs"></i>
+                } @else if (
+                  dataset.key === 'createdAt' || dataset.key === 'lastUpdated' || dataset.key === 'buildDate'
+                ) {
+                  <i class="pi pi-clock text-ctp-teal text-xs"></i>
+                } @else if (dataset.key === 'version') {
+                  <i class="pi pi-tag text-ctp-peach text-xs"></i>
+                } @else if (dataset.key === 'pkgname' || dataset.key === 'name' || dataset.key === 'pkgbase') {
+                  <i class="pi pi-box text-ctp-lavender text-xs"></i>
+                } @else if (dataset.key === 'reponame' || dataset.key === 'repo') {
+                  <i class="pi pi-database text-ctp-sapphire text-xs"></i>
+                } @else if (dataset.key === 'arch' || dataset.key === 'architectures') {
+                  <i class="pi pi-desktop text-ctp-sky text-xs"></i>
+                } @else if (dataset.key === 'license' || dataset.key === 'licenses') {
+                  <i class="pi pi-shield text-ctp-green text-xs"></i>
+                } @else if (dataset.key === 'packager' || dataset.key === 'maintainer') {
+                  <i class="pi pi-user text-ctp-yellow text-xs"></i>
+                } @else if (dataset.key === 'description') {
+                  <i class="pi pi-info-circle text-ctp-subtext0 text-xs"></i>
+                } @else if (
+                  dataset.key === 'compressedSize' || dataset.key === 'installedSize' || dataset.key === 'size'
+                ) {
+                  <i class="pi pi-file text-ctp-maroon text-xs"></i>
+                } @else if (
+                  dataset.key === 'depends' ||
+                  dataset.key === 'makedepends' ||
+                  dataset.key === 'optdepends' ||
+                  dataset.key === 'checkdepends'
+                ) {
+                  <i class="pi pi-sitemap text-ctp-flamingo text-xs"></i>
+                } @else {
+                  <i class="pi pi-info-circle text-ctp-overlay1 text-xs"></i>
+                }
               </div>
-              <div class="mt-1.5 flex flex-1 items-center justify-center text-sm text-ctp-text">
+              <div class="mt-2.5 flex flex-1 items-center text-sm font-medium text-ctp-text">
                 @if (dataset.key === 'url') {
                   <a
-                    class="text-ctp-mauve break-all"
+                    class="text-ctp-mauve hover:text-ctp-pink transition-colors break-all flex items-center gap-1 font-mono text-xs"
                     [href]="asString(dataset.value)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ asString(dataset.value) }}</a
+                  >
+                } @else if (dataset.key === 'filename') {
+                  <a
+                    class="text-ctp-sapphire hover:text-ctp-sky transition-colors break-all flex items-center gap-1 font-mono text-xs"
+                    [href]="getMirrorDownloadUrl(asString(dataset.value))"
                     target="_blank"
                     rel="noopener noreferrer"
                     >{{ asString(dataset.value) }}</a
                   >
                 } @else if (dataset.key === 'createdAt') {
                   <span
-                    class="cursor-help"
+                    class="cursor-help font-mono text-xs text-ctp-subtext1 hover:text-ctp-text transition-colors"
                     [pTooltip]="(asDate(dataset.value) | relativeTime) ?? undefined"
                     tooltipPosition="top"
                     >{{ asDate(dataset.value) | date: 'medium' }}</span
                   >
                 } @else if (dataset.key === 'buildDate') {
                   <span
-                    class="cursor-help"
+                    class="cursor-help font-mono text-xs text-ctp-subtext1 hover:text-ctp-text transition-colors"
                     [pTooltip]="(asNumber(dataset.value) * 1000 | date: 'short') ?? undefined"
                     tooltipPosition="top"
                     >{{ asNumber(dataset.value) * 1000 | relativeTime }}</span
                   >
-                } @else if (dataset.key === 'lastUpdated') {
+                } @else if (dataset.key === 'version') {
                   <span
-                    class="cursor-help"
-                    [pTooltip]="(asDate(dataset.value) | date: 'short') ?? undefined"
-                    tooltipPosition="top"
-                    >{{ asDate(dataset.value) | relativeTime }}</span
+                    class="rounded-md bg-ctp-peach/15 px-2.5 py-1 font-mono text-xs font-semibold text-ctp-peach border border-ctp-peach/30"
                   >
+                    {{ asString(dataset.value) }}
+                  </span>
+                } @else if (dataset.key === 'downloads') {
+                  <span class="font-mono text-base font-bold text-ctp-blue">
+                    {{ asNumber(dataset.value) | number }}
+                  </span>
                 } @else if (isArray(dataset.value)) {
                   @if (dataset.value.length === 0) {
-                    <span class="text-ctp-subtext1">n/a</span>
+                    <span class="text-ctp-subtext0 text-xs">n/a</span>
                   } @else {
-                    <div class="flex flex-wrap justify-center gap-1.5">
+                    <div class="flex flex-wrap gap-1.5">
                       @for (item of dataset.value; track item) {
                         <span
-                          class="rounded-full border border-ctp-surface1 bg-ctp-surface0/40 px-2.5 py-0.5 text-xs"
+                          class="rounded-full border border-ctp-surface1 bg-ctp-surface0/60 px-2.5 py-0.5 text-xs text-ctp-subtext1"
                           >{{ item }}</span
                         >
                       }
                     </div>
                   }
                 } @else if (isString(dataset.value) && dataset.value.trim()) {
-                  <span>{{ dataset.value }}</span>
+                  <span class="break-words">{{ dataset.value }}</span>
                 } @else if (isNumber(dataset.value) || isBoolean(dataset.value)) {
-                  <span>{{ dataset.value }}</span>
+                  <span class="font-mono">{{ dataset.value }}</span>
                 } @else {
-                  <span class="text-ctp-subtext1">n/a</span>
+                  <span class="text-ctp-subtext0 text-xs">n/a</span>
                 }
               </div>
             </div>
