@@ -552,7 +552,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
 
     it('approves the MR and busts the cache on valid input', async () => {
-      const approveSpy = vi.spyOn(gitlabService, 'approveMergeRequest').mockResolvedValue(undefined);
+      const approveSpy = vi.spyOn(gitlabService, 'approveMergeRequest').mockResolvedValue({ deferred: false });
 
       const res = await app.inject({
         method: 'POST',
@@ -726,11 +726,11 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/trigger',
-        payload: { operation: 'Bump Packages', packages: 'nodejs:20', ref: 'dev' },
+        payload: { operation: 'bump-packages', packages: 'nodejs:20', ref: 'dev' },
       });
 
       expect(res.statusCode).toBe(201);
-      expect(triggerSpy).toHaveBeenCalledWith({ operation: 'Bump Packages', packages: 'nodejs:20' }, 'dev', {
+      expect(triggerSpy).toHaveBeenCalledWith({ operation: 'bump-packages', packages: 'nodejs:20' }, 'dev', {
         userId: 'test-user',
         userName: 'Test User',
       });
@@ -750,12 +750,12 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/trigger',
-        payload: { operation: 'Add Packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
+        payload: { operation: 'add-packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
       });
 
       expect(res.statusCode).toBe(201);
       expect(createSpy).toHaveBeenCalledWith(gitlabService.chaoticId, 'main', {
-        inputs: { operation: 'Add Packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
+        inputs: { operation: 'add-packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
         variables: [
           {
             key: 'PIPELINE_TRIGGERED_BY',

@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
-import { swcPlugin } from '../tools/vitest/swc-plugin';
+import { swcPlugin } from '../tools/vitest/swc-plugin.mts';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 

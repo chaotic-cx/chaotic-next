@@ -74,14 +74,29 @@ export class MrOverviewService {
     this.loadingMap.set(loadingMap);
 
     try {
-      await lastValueFrom(
-        this.http.post<unknown>(`${this.backendUrl}/gitlab/approve`, {
+      const res = await lastValueFrom(
+        this.http.post<{ deferred: boolean }>(`${this.backendUrl}/gitlab/approve`, {
           iid: mr.iid,
           sha: mr.sha,
         }),
       );
 
-      this.messageToastService.success('Approval Successful', 'Merge request approved and merged.');
+      if (res?.deferred) {
+        this.messageToastService.success(
+          'Approval Successful',
+          'Merge request approved. The merge will be executed once the scheduled pipeline completes.',
+        );
+      } else {
+        this.messageToastService.success('Approval Successful', 'Merge request approved and merged.');
+      }
+
+      this.mergeRequests.update((mrs) =>
+        mrs.map((item) => {
+          if (item.iid !== mr.iid) return item;
+          const labels = item.labels.includes('approved') ? [...item.labels] : [...item.labels, 'approved'];
+          return { ...item, labels };
+        }),
+      );
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 401) {
         this.messageToastService.info(
@@ -114,6 +129,14 @@ export class MrOverviewService {
         }),
       );
       this.messageToastService.success(copy.success[0], copy.success[1]);
+
+      this.mergeRequests.update((mrs) =>
+        mrs.map((item) => {
+          if (item.iid !== mr.iid) return item;
+          const labels = item.labels.includes(label) ? [...item.labels] : [...item.labels, label];
+          return { ...item, labels };
+        }),
+      );
     } catch (error) {
       this.messageToastService.error(copy.error[0], copy.error[1]);
       console.error(`Error flagging merge request as ${label}:`, error);

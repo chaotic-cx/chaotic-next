@@ -10,7 +10,7 @@ import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm';
 import { filter, Observable, Subject } from 'rxjs';
 import { Repository } from 'typeorm';
-import { errorMessage } from '../utils/functions';
+import { errorMessage, mapWithConcurrency } from '../utils/functions';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
 import { DiffScanService } from './diff-scan.service';
 import type { ScanIndicator } from './indicators';
@@ -28,6 +28,7 @@ const MAINTAINER_NOVICE_TENURE_MS = 180 * 24 * 60 * 60 * 1000;
 const INFO_BATCH_WINDOW_MS = 50;
 const INFO_BATCH_SIZE = 50;
 const MAINTAINER_PROFILE_TTL_MS = 60 * 60 * 1000;
+const MAINTAINER_LOOKUP_CONCURRENCY = 3;
 const SCANNABLE_EXTENSIONS = new Set([
   'sh',
   'install',
@@ -190,10 +191,11 @@ export class AurScanService {
     Map<string, { maintainers: AurMaintainerInfo[]; meta: AurPackageMeta; change: AurMaintainerChange | null }>
   > {
     const infos = await this.fetchInfos(packageNames);
-    const entries = await Promise.all(
-      infos
-        .filter((info) => info.Name !== undefined && info.PackageBase !== undefined)
-        .map(async (info) => [info.Name as string, await this.maintainerStatus(info)] as const),
+    const validInfos = infos.filter((info) => info.Name !== undefined && info.PackageBase !== undefined);
+    const entries = await mapWithConcurrency(
+      validInfos,
+      async (info) => [info.Name as string, await this.maintainerStatus(info)] as const,
+      MAINTAINER_LOOKUP_CONCURRENCY,
     );
     return new Map(entries);
   }
