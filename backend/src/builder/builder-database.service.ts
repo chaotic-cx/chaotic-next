@@ -4,7 +4,7 @@ import { Subject } from 'rxjs';
 import { GitlabService } from '../gitlab/gitlab.service';
 import { GitlabStatusEvent } from '../gitlab/interfaces';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
-import { BuilderDbConnections, BuildStatus, MoleculerBuildObject } from '../types/types';
+import { BuilderDbConnections, BuildStatus, MoleculerBuildObject, QueuePromotedEvent } from '../types/types';
 import { errorMessage } from '../utils/functions';
 import { Build, getOrCreateBuilder, Package, getOrCreatePackage, getOrCreateRepo } from './builder.entity';
 import { moleculerConfigCommonService } from './moleculer.config';
@@ -62,6 +62,15 @@ export class BuilderDatabaseService extends Service {
           this.sseSubject$.next({
             data: {
               type: 'queue',
+              ...ctx.params,
+            },
+          });
+        },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'queue.promoted'(ctx: Context<QueuePromotedEvent>) {
+          this.sseSubject$.next({
+            data: {
+              type: 'queue_promoted',
               ...ctx.params,
             },
           });

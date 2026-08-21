@@ -9,6 +9,7 @@ export const ADMIN_TABS = [
   'package-elf-analysis',
   'aur-scan',
   'repo-operations',
+  'manager-logs',
 ] as const;
 export type AdminTab = (typeof ADMIN_TABS)[number];
 

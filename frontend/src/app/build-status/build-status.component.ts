@@ -57,6 +57,10 @@ export class BuildStatusComponent implements OnInit {
         }
       }
       if (event.type === 'queue') void this.buildStatusService.refreshQueueStats();
+      if (event.type === 'queue_promoted') {
+        void this.buildStatusService.refreshPackageBuilds();
+        void this.buildStatusService.refreshQueueStats();
+      }
     });
 
     effect(() => {

@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import { httpResource } from '@angular/common/http';
 import { computed, DestroyRef, effect, inject, Service, signal, untracked } from '@angular/core';
 import {
@@ -7,6 +8,8 @@ import {
   type PipelineWithExternalStatus,
   type StatsObject,
 } from '@chaotic-next/shared-lib';
+import { lastValueFrom } from 'rxjs';
+import { APP_CONFIG } from '../../environments/app-config.token';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
 import {
@@ -27,6 +30,7 @@ export interface PipelineView {
 
 interface QueueEntry {
   name: string;
+  rawName: string;
   build_class: number | string | null;
 }
 
@@ -48,6 +52,8 @@ const ESTIMATE_TICK_MS = 30_000;
 export class BuildStatusService {
   private readonly appService = inject(AppService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly http = inject(HttpClient);
+  private readonly backendUrl = inject(APP_CONFIG).backendUrl;
 
   private readonly packageBuildsResource = httpResource<Paginated<Build>>(() =>
     this.appService.getPackageBuildsResourceRequest(20, BuildStatus.SUCCESS),
@@ -74,6 +80,7 @@ export class BuildStatusService {
   readonly activeQueue = computed<ActiveQueueEntry[]>(() =>
     (resourceValue(this.queueStatsResource)?.active.packages ?? []).map((pkg) => ({
       name: this.shortName(pkg.name),
+      rawName: pkg.name,
       build_class: pkg.build_class ?? pkg.node,
       node: pkg.node,
       liveLogUrl: pkg.liveLog ?? '',
@@ -82,12 +89,14 @@ export class BuildStatusService {
   readonly waitingQueue = computed<QueueEntry[]>(() =>
     (resourceValue(this.queueStatsResource)?.waiting.packages ?? []).map((pkg) => ({
       name: this.shortName(pkg.name),
+      rawName: pkg.name,
       build_class: pkg.build_class,
     })),
   );
   readonly idleQueue = computed<QueueEntry[]>(() =>
     (resourceValue(this.queueStatsResource)?.idle.nodes ?? []).map((node) => ({
       name: node.name,
+      rawName: node.name,
       build_class: node.build_class ?? node.name,
     })),
   );
@@ -212,16 +221,18 @@ export class BuildStatusService {
     this.pipelinesResource.reload();
   }
 
-  refreshPipelines(): void {
-    this.pipelinesResource.reload();
-  }
-
   getQueueStats(): void {
     this.queueStatsResource.reload();
   }
 
   refreshQueueStats(): void {
     this.queueStatsResource.reload();
+  }
+
+  async promote(pkgbase: string, arch = 'x86_64', targetRepo = 'chaotic-aur'): Promise<void> {
+    await lastValueFrom(
+      this.http.post(`${this.backendUrl}/api/queue/promote`, { pkgbase, arch, target_repo: targetRepo }),
+    );
   }
 
   transformPipelineData(pipelines: PipelineWithExternalStatus[]): void {

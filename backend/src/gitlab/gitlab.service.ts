@@ -434,6 +434,15 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       this.unlinkedCommitShas.delete(attrs.sha);
     }
 
+    if (attrs.sha) {
+      const trigger = await this.pipelineTriggerRepository.findOne({
+        where: { pipelineId: attrs.id, commitSha: IsNull() },
+      });
+      if (trigger) {
+        await this.pipelineTriggerRepository.update(trigger.id, { commitSha: attrs.sha });
+      }
+    }
+
     const pipelines = await this.getLastPipelines();
     this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
     return true;
@@ -1026,32 +1035,48 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   }
 
   async runSchedule(scheduleId: number, actor: MrActor): Promise<PipelineTriggerResult> {
+    let lastPipeline: { id?: number; sha?: string } | undefined;
+
     if (scheduleId > 0) {
       this.logger.debug(`Triggering pipeline schedule #${scheduleId}...`);
       const schedules = this.api.PipelineSchedules as unknown as Record<string, (...args: unknown[]) => unknown>;
+      let result: unknown;
       if (typeof schedules.play === 'function') {
-        await schedules.play(this.chaoticId, scheduleId);
+        result = await schedules.play(this.chaoticId, scheduleId);
       } else if (typeof schedules.take === 'function') {
-        await schedules.take(this.chaoticId, scheduleId);
+        result = await schedules.take(this.chaoticId, scheduleId);
       } else {
-        await (this.api as unknown as { requester: { post: (...args: unknown[]) => unknown } }).requester.post(
+        result = await (this.api as unknown as { requester: { post: (...args: unknown[]) => unknown } }).requester.post(
           `projects/${encodeURIComponent(this.chaoticId)}/pipeline_schedules/${scheduleId}/play`,
         );
       }
+
+      const body = result as {
+        data?: { last_pipeline?: { id?: number; sha?: string } };
+        last_pipeline?: { id?: number; sha?: string };
+      };
+      lastPipeline = body?.data?.last_pipeline ?? body?.last_pipeline;
     }
-    const webUrl = `${this.chaoticId}/pipeline_schedules`;
+
+    const pipelineId = lastPipeline?.id ?? null;
+    const commitSha = lastPipeline?.sha ?? null;
+    const webUrl = pipelineId ? `${this.chaoticId}/-/pipelines/${pipelineId}` : `${this.chaoticId}/pipeline_schedules`;
+
+    if (commitSha) {
+      this.unlinkedCommitShas.add(commitSha);
+    }
 
     await this.pipelineTriggerRepository.insert({
       ref: 'main',
-      commitSha: null,
+      commitSha,
       operation: PipelineOperation.RUN_SCHEDULE,
       inputs: { scheduleId: String(scheduleId) },
-      pipelineId: null,
+      pipelineId,
       webUrl,
       ...actor,
     });
 
-    return { pipelineId: 0, webUrl, status: 'scheduled' };
+    return { pipelineId: pipelineId ?? 0, webUrl, status: 'scheduled' };
   }
 
   async dropPackages(packages: string[], ref: string, actor: MrActor): Promise<PipelineTriggerResult> {

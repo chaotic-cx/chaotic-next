@@ -179,6 +179,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./admin/pages/admin-repo-operations-page.component').then((c) => c.AdminRepoOperationsPageComponent),
       },
+      {
+        path: 'manager-logs',
+        loadComponent: () =>
+          import('./admin/pages/admin-manager-logs-page.component').then((c) => c.AdminManagerLogsPageComponent),
+      },
     ],
   },
   {
