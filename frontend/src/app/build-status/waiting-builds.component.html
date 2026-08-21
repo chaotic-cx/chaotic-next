@@ -13,14 +13,33 @@
             <span class="block truncate font-semibold">{{ pkg.name }}</span>
             <span class="block text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
           </div>
-          @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
-            <span
-              class="shrink-0 whitespace-nowrap text-right text-sm text-ctp-subtext1"
-              [pTooltip]="estimateTooltip"
-              tooltipPosition="top"
-              >{{ eta }}</span
-            >
-          }
+          <div class="flex shrink-0 items-center gap-2">
+            @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
+              <span
+                class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
+                [pTooltip]="estimateTooltip"
+                tooltipPosition="top"
+                >{{ eta }}</span
+              >
+            }
+            @if (isLoggedIn()) {
+              <button
+                class="cursor-pointer text-ctp-green hover:text-ctp-text disabled:cursor-not-allowed disabled:opacity-50"
+                [disabled]="promoting() !== null"
+                [attr.aria-label]="`Promote ${pkg.name} to front of queue`"
+                (click)="promote(pkg.name, pkg.rawName)"
+                type="button"
+                pTooltip="Promote to front of queue"
+                tooltipPosition="left"
+              >
+                @if (promoting() === pkg.name) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-arrow-up"></i>
+                }
+              </button>
+            }
+          </div>
         </li>
       }
     </ul>

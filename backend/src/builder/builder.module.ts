@@ -2,6 +2,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import builderConfig from '../config/builder.config';
+import { BuildApiController } from './build-api.controller';
 import { BuilderController } from './builder.controller';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { PackageLogsController } from './package-logs.controller';
@@ -14,7 +15,7 @@ import { GitlabModule } from '../gitlab/gitlab.module';
 import { EventModule } from '../events/event.module';
 
 @Module({
-  controllers: [BuilderController, PackageLogsController],
+  controllers: [BuildApiController, BuilderController, PackageLogsController],
   exports: [TypeOrmModule, BuilderService],
   imports: [
     ConfigModule.forFeature(builderConfig),

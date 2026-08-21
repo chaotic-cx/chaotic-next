@@ -1,22 +1,27 @@
 import 'reflect-metadata';
-
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ServiceBroker } from 'moleculer';
-import { type Subscriber } from 'rxjs';
-import { CanActivate, type ExecutionContext } from '@nestjs/common';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-import { Test } from '@nestjs/testing';
 import { AppModule } from '@chaotic-next/backend/app.module';
 import { Repo } from '@chaotic-next/backend/builder/builder.entity';
-import { DataSource } from 'typeorm';
+import { EventService } from '@chaotic-next/backend/events/event.service';
 import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
+import type { GitlabStatusEvent, PipelineWebhook } from '@chaotic-next/backend/gitlab/interfaces';
 import { MrAction } from '@chaotic-next/backend/gitlab/mr-action.entity';
 import { PipelineTrigger } from '@chaotic-next/backend/gitlab/pipeline-trigger.entity';
 import { encryptAes } from '@chaotic-next/backend/utils/functions';
-import { EventService } from '@chaotic-next/backend/events/event.service';
+import {
+  type ChaoticEvent,
+  type MergeRequestWithDiffs,
+  PipelineOperation,
+  type PipelineTriggerResult,
+} from '@chaotic-next/shared-lib';
+import { CanActivate, type ExecutionContext } from '@nestjs/common';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Test } from '@nestjs/testing';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
-import type { GitlabStatusEvent, PipelineWebhook } from '@chaotic-next/backend/gitlab/interfaces';
-import type { ChaoticEvent, MergeRequestWithDiffs, PipelineTriggerResult } from '@chaotic-next/shared-lib';
+import { ServiceBroker } from 'moleculer';
+import { type Subscriber } from 'rxjs';
+import { DataSource } from 'typeorm';
+
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const WEBHOOK_TOKEN = 'test-webhook-token';
 
@@ -776,6 +781,141 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         userId: 'test-user',
         userName: 'Test User',
       });
+      await triggerRepository.clear();
+    });
+  });
+
+  describe('POST /gitlab/run-schedule (real service, mocked GitLab API)', () => {
+    it('captures pipeline ID and commit SHA from play API response', async () => {
+      const playMock = vi.fn().mockResolvedValue({
+        id: 15,
+        description: 'Test schedule',
+        ref: 'main',
+        cron: '0 * * * *',
+        cron_timezone: 'UTC',
+        next_run_at: '2026-08-21T23:00:00Z',
+        active: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-08-21T22:00:00Z',
+        owner: { id: 1, username: 'admin', name: 'Admin', state: 'active', avatar_url: '', web_url: '' },
+        last_pipeline: { id: 8888, sha: 'deadbeef1234', ref: 'main', status: 'created' },
+      } as never);
+      (gitlabService.api.PipelineSchedules as unknown as Record<string, unknown>).play = playMock;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/run-schedule',
+        payload: { scheduleId: 15 },
+      });
+
+      expect(res.statusCode).toBe(201);
+      expect(playMock).toHaveBeenCalledWith('test-project-id', 15);
+
+      const body = (await res.json()) as PipelineTriggerResult;
+      expect(body.pipelineId).toBe(8888);
+      expect(body.status).toBe('scheduled');
+
+      const triggerRepository = app.get(DataSource).getRepository(PipelineTrigger);
+      const rows = await triggerRepository.find({ where: { pipelineId: 8888 } });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        ref: 'main',
+        commitSha: 'deadbeef1234',
+        pipelineId: 8888,
+        operation: PipelineOperation.RUN_SCHEDULE,
+        userId: 'test-user',
+        userName: 'Test User',
+      });
+      await triggerRepository.clear();
+    });
+
+    it('records a trigger with null pipelineId when play response lacks last_pipeline', async () => {
+      (gitlabService.api.PipelineSchedules as unknown as Record<string, unknown>).play = vi.fn().mockResolvedValue({
+        id: 15,
+        description: 'Test schedule',
+        ref: 'main',
+        cron: '0 * * * *',
+        cron_timezone: 'UTC',
+        next_run_at: '2026-08-21T23:00:00Z',
+        active: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-08-21T22:00:00Z',
+        owner: { id: 1, username: 'admin', name: 'Admin', state: 'active', avatar_url: '', web_url: '' },
+      } as never);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/run-schedule',
+        payload: { scheduleId: 15 },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = (await res.json()) as PipelineTriggerResult;
+      expect(body.pipelineId).toBe(0);
+
+      const triggerRepository = app.get(DataSource).getRepository(PipelineTrigger);
+      const rows = await triggerRepository.find({ where: { operation: PipelineOperation.RUN_SCHEDULE } });
+      expect(rows).toHaveLength(1);
+      expect(rows[0].pipelineId).toBeNull();
+      expect(rows[0].commitSha).toBeNull();
+      await triggerRepository.clear();
+    });
+  });
+
+  describe('webhook backfills schedule trigger (reverse linkage)', () => {
+    it('backfills commitSha on schedule trigger when webhook arrives with matching pipelineId', async () => {
+      const triggerRepository = app.get(DataSource).getRepository(PipelineTrigger);
+      const trigger = await triggerRepository.save({
+        ref: 'main',
+        commitSha: null,
+        operation: PipelineOperation.RUN_SCHEDULE,
+        inputs: { scheduleId: '15' },
+        pipelineId: 9999,
+        webUrl: 'https://gitlab.com/test-project-id/-/pipelines/9999',
+        userId: 'test-user',
+        userName: 'Test User',
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/update',
+        headers: { 'x-gitlab-token': WEBHOOK_TOKEN },
+        payload: pipelineWebhook({ id: 9999, sha: 'backfilled123', source: 'schedule' }),
+      });
+
+      expect(res.statusCode).toBe(201);
+
+      const updated = (await triggerRepository.findOne({ where: { id: trigger.id } })) as PipelineTrigger;
+      expect(updated).toBeDefined();
+      expect(updated.commitSha).toBe('backfilled123');
+      expect(updated.pipelineId).toBe(9999);
+
+      await triggerRepository.clear();
+    });
+
+    it('does not overwrite existing commitSha on webhook backfill', async () => {
+      const triggerRepository = app.get(DataSource).getRepository(PipelineTrigger);
+      const trigger = await triggerRepository.save({
+        ref: 'main',
+        commitSha: 'original_sha',
+        operation: PipelineOperation.RUN_SCHEDULE,
+        inputs: { scheduleId: '15' },
+        pipelineId: 8888,
+        webUrl: 'https://gitlab.com/test-project-id/-/pipelines/8888',
+        userId: 'test-user',
+        userName: 'Test User',
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/gitlab/update',
+        headers: { 'x-gitlab-token': WEBHOOK_TOKEN },
+        payload: pipelineWebhook({ id: 8888, sha: 'should_not_overwrite', source: 'schedule' }),
+      });
+
+      const updated = (await triggerRepository.findOne({ where: { id: trigger.id } })) as PipelineTrigger;
+      expect(updated.commitSha).toBe('original_sha');
+
       await triggerRepository.clear();
     });
   });

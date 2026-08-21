@@ -3,7 +3,7 @@ import { Meta } from '@angular/platform-browser';
 import type { ParamMap } from '@angular/router';
 import type { ChaoticEvent, GitlabLogChunk } from '@chaotic-next/shared-lib';
 
-const CHAOTIC_EVENT_TYPES = new Set(['build', 'pipeline', 'merge_request', 'queue']);
+const CHAOTIC_EVENT_TYPES = new Set(['build', 'pipeline', 'merge_request', 'queue', 'queue_promoted']);
 
 export function parseLogChunk(data: string): GitlabLogChunk | undefined {
   try {

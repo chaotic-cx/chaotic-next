@@ -18,6 +18,13 @@ export interface MoleculerBuildObject {
   timestamp: number;
 }
 
+export interface QueuePromotedEvent {
+  arch: string;
+  pkgbase: string;
+  target_repo: string;
+  timestamp: number;
+}
+
 export interface BuilderDbConnections {
   build: Repository<Build>;
   builder: Repository<Builder>;

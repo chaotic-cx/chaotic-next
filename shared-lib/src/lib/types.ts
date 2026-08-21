@@ -620,7 +620,14 @@ export type ChaoticEvent =
     }
   | ({
       type: 'queue';
-    } & MoleculerCurrentQueueObject);
+    } & MoleculerCurrentQueueObject)
+  | {
+      type: 'queue_promoted';
+      arch: string;
+      pkgbase: string;
+      target_repo: string;
+      timestamp: number;
+    };
 
 export interface NotificationPayload {
   notification: {

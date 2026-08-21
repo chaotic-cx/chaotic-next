@@ -711,8 +711,9 @@ describe('handlePipelineWebhook', () => {
     expect((service as unknown as { unlinkedCommitShas: Set<string> }).unlinkedCommitShas.has('abc123456')).toBe(false);
   });
 
-  it('skips database query when commitSha is not present in unlinkedCommitShas set', async () => {
+  it('skips commitSha backfill when SHA is not in unlinkedCommitShas set', async () => {
     const { service, pipelineTriggerRepository } = createService();
+    pipelineTriggerRepository.findOne.mockResolvedValue(null);
 
     const webhookPayload = {
       object_kind: 'pipeline' as const,
@@ -731,6 +732,128 @@ describe('handlePipelineWebhook', () => {
     await service.handlePipelineWebhook(webhookPayload);
 
     expect(pipelineTriggerRepository.update).not.toHaveBeenCalled();
-    expect(pipelineTriggerRepository.findOne).not.toHaveBeenCalled();
+    expect(pipelineTriggerRepository.findOne).toHaveBeenCalledWith({
+      where: { pipelineId: 8888, commitSha: expect.anything() },
+    });
+  });
+
+  it('backfills commitSha on trigger with matching pipelineId via reverse webhook lookup', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    pipelineTriggerRepository.findOne.mockResolvedValue({ id: 42, pipelineId: 7777, commitSha: null });
+    pipelineTriggerRepository.update.mockResolvedValue({ affected: 1 });
+
+    const webhookPayload = {
+      object_kind: 'pipeline' as const,
+      object_attributes: {
+        id: 7777,
+        iid: 20,
+        ref: 'main',
+        status: 'running',
+        source: 'schedule',
+        sha: 'deadbeef123',
+        created_at: '2026-08-21T19:00:00Z',
+        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/7777',
+      },
+    } as unknown as import('./interfaces').PipelineWebhook;
+
+    await service.handlePipelineWebhook(webhookPayload);
+
+    expect(pipelineTriggerRepository.findOne).toHaveBeenCalledWith({
+      where: { pipelineId: 7777, commitSha: expect.anything() },
+    });
+    expect(pipelineTriggerRepository.update).toHaveBeenCalledWith(42, { commitSha: 'deadbeef123' });
+  });
+
+  it('does not backfill commitSha when trigger already has one', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    pipelineTriggerRepository.findOne.mockResolvedValue(null);
+
+    const webhookPayload = {
+      object_kind: 'pipeline' as const,
+      object_attributes: {
+        id: 7777,
+        iid: 20,
+        ref: 'main',
+        status: 'running',
+        source: 'schedule',
+        sha: 'deadbeef123',
+        created_at: '2026-08-21T19:00:00Z',
+        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/7777',
+      },
+    } as unknown as import('./interfaces').PipelineWebhook;
+
+    await service.handlePipelineWebhook(webhookPayload);
+
+    expect(pipelineTriggerRepository.findOne).toHaveBeenCalledWith({
+      where: { pipelineId: 7777, commitSha: expect.anything() },
+    });
+    expect(pipelineTriggerRepository.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('GitlabService.runSchedule', () => {
+  it('captures pipeline ID and commit SHA from play API response', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    const playResult = {
+      data: {
+        last_pipeline: { id: 5555, sha: 'abc123sha', ref: 'main', status: 'created' },
+      },
+    };
+    const schedulesPlay = vi.fn().mockResolvedValue(playResult);
+    (service as unknown as { api: unknown }).api = {
+      PipelineSchedules: { play: schedulesPlay },
+    };
+
+    const result = await service.runSchedule(15, ACTOR);
+
+    expect(schedulesPlay).toHaveBeenCalledWith('test-project-id', 15);
+    expect(result.pipelineId).toBe(5555);
+    expect(result.status).toBe('scheduled');
+    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ref: 'main',
+        commitSha: 'abc123sha',
+        operation: PipelineOperation.RUN_SCHEDULE,
+        inputs: { scheduleId: '15' },
+        pipelineId: 5555,
+      }),
+    );
+    expect((service as unknown as { unlinkedCommitShas: Set<string> }).unlinkedCommitShas.has('abc123sha')).toBe(true);
+  });
+
+  it('falls back to schedule endpoint URL when play response has no last_pipeline', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    const schedulesPlay = vi.fn().mockResolvedValue({ data: {} });
+    (service as unknown as { api: unknown }).api = {
+      PipelineSchedules: { play: schedulesPlay },
+    };
+
+    const result = await service.runSchedule(15, ACTOR);
+
+    expect(result.pipelineId).toBe(0);
+    expect(result.status).toBe('scheduled');
+    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commitSha: null,
+        pipelineId: null,
+      }),
+    );
+  });
+
+  it('unwraps gitbeaker response envelope (data property)', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    const schedulesPlay = vi.fn().mockResolvedValue({
+      data: { last_pipeline: { id: 7777, sha: 'inner123', ref: 'main', status: 'created' } },
+    });
+    (service as unknown as { api: unknown }).api = {
+      PipelineSchedules: { play: schedulesPlay },
+    };
+
+    const result = await service.runSchedule(30, ACTOR);
+
+    expect(result.pipelineId).toBe(7777);
+    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ commitSha: 'inner123', pipelineId: 7777 }),
+    );
   });
 });
