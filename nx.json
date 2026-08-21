@@ -18,7 +18,9 @@
       "cache": true
     },
     "build": {
-      "cache": true,
+      "cache": true
+    },
+    "backend:build": {
       "options": {
         "args": ["--node-env=development"]
       },
