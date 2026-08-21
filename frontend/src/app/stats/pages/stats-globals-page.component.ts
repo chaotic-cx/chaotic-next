@@ -7,7 +7,7 @@ import { ChartUseragentComponent } from '../../chart-useragent/chart-useragent.c
   selector: 'chaotic-stats-globals-page',
   imports: [Card, ChartCountriesComponent, ChartUseragentComponent],
   template: `
-    <div class="flex h-full flex-col gap-8">
+    <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
       <p-card [style]="{ overflow: 'hidden' }" header="Country list">
         <chaotic-chart-countries />
       </p-card>

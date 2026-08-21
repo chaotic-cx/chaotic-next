@@ -515,6 +515,15 @@ export interface AurScanStreamChunk {
   complete: boolean;
 }
 
+export interface MrPackageInfo {
+  pkgname: string;
+  ciFiles: string[];
+  pkgbuildSource: string;
+  manageAur: boolean;
+  rebuildTriggers: string[];
+  nvchecker: boolean;
+}
+
 export type MergeRequestWithDiffs = Pick<
   MergeRequestSchema,
   | 'id'
@@ -535,6 +544,7 @@ export type MergeRequestWithDiffs = Pick<
   vtReports?: VtIndicatorReport[];
   maintainers?: AurMaintainerInfo[];
   maintainerChange?: AurMaintainerChange;
+  packageInfo?: MrPackageInfo;
   diff_refs?: { base_sha: string; head_sha: string; start_sha: string } | null;
 };
 

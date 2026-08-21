@@ -19,4 +19,17 @@
       }
     </ul>
   </section>
+} @else {
+  <section class="flex h-full flex-col">
+    <chaotic-build-status-section
+      title="Idle builders"
+      subtitle="Currently idle builders"
+      icon="pi-list"
+      iconClass="text-ctp-subtext0"
+    />
+    <div class="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center text-ctp-subtext0">
+      <i class="pi pi-server text-3xl"></i>
+      <span class="text-sm font-medium">No idle builders</span>
+    </div>
+  </section>
 }

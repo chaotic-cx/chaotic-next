@@ -54,8 +54,8 @@ const AKIRA_INSTALL = [
 const service = new DiffScanService();
 
 describe('real-world campaign MRs (regression)', () => {
-  it('flags !2224 (alvr): npm payload install plus identity takeover', () => {
-    const findings = service.scanDiffs([
+  it('flags !2224 (alvr): npm payload install plus identity takeover', async () => {
+    const findings = await service.scanDiffs([
       makeChange(ALVR_PKGBUILD, { new_path: 'alvr/PKGBUILD' }),
       makeChange(ALVR_INSTALL, { new_path: 'alvr/alvr-deps.install', new_file: true }),
     ]);
@@ -69,8 +69,8 @@ describe('real-world campaign MRs (regression)', () => {
     expect(findings.every((finding) => finding.severity !== 'info')).toBe(true);
   });
 
-  it('flags !2241 (akira-git): bun payload install plus identity takeover', () => {
-    const findings = service.scanDiffs([
+  it('flags !2241 (akira-git): bun payload install plus identity takeover', async () => {
+    const findings = await service.scanDiffs([
       makeChange(AKIRA_PKGBUILD, { new_path: 'akira-git/PKGBUILD' }),
       makeChange(AKIRA_INSTALL, { new_path: 'akira-git/akira-git-deps.install', new_file: true }),
     ]);

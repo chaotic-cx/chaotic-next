@@ -9,10 +9,10 @@ import {
   type DiffScanFinding,
   type DiffScanSeverity,
   MergeRequestWithDiffs,
+  type MrPackageInfo,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
 import { Button } from '@openng/optimus-ui/button';
-import { Fieldset } from '@openng/optimus-ui/fieldset';
 import { Panel } from '@openng/optimus-ui/panel';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { TableModule } from '@openng/optimus-ui/table';
@@ -60,7 +60,6 @@ function tabFromQueryParam(value: string): '0' | '1' {
     DiffRendererComponent,
     ProgressSpinner,
     Panel,
-    Fieldset,
     Button,
     NgTemplateOutlet,
     Tooltip,
@@ -242,6 +241,42 @@ export class MrOverviewComponent implements OnInit {
     return this.requiresManualReview(mr) || mr.labels.includes('approved') || this.isLoading(mr, 'any');
   }
 
+  /** Display config for a review action button, shared by the mobile and desktop layouts. */
+  protected actionButton(
+    mr: MergeRequestWithDiffs,
+    action: 'approve' | 'dangerous' | 'hold',
+  ): { label: string; icon: string; severity: string; disabled: boolean; loading: boolean; tooltip: string } {
+    switch (action) {
+      case 'approve':
+        return {
+          label: mr.labels.includes('approved') ? 'Already approved' : 'Approve update',
+          icon: 'pi pi-check',
+          severity: 'success',
+          disabled: this.actionsDisabled(mr),
+          loading: this.isLoading(mr, 'approve'),
+          tooltip: 'Approve this merge request for auto-merge',
+        };
+      case 'dangerous':
+        return {
+          label: mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous',
+          icon: 'pi pi-exclamation-triangle',
+          severity: 'danger',
+          disabled: this.actionsDisabled(mr) || mr.labels.includes('hold'),
+          loading: this.isLoading(mr, 'flag:dangerous'),
+          tooltip: 'Flag this merge request as dangerous and prevent auto-merge',
+        };
+      case 'hold':
+        return {
+          label: mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now',
+          icon: 'pi pi-pause',
+          severity: 'warn',
+          disabled: this.actionsDisabled(mr) || mr.labels.includes('hold'),
+          loading: this.isLoading(mr, 'flag:hold'),
+          tooltip: 'Put this merge request on hold for later review',
+        };
+    }
+  }
+
   private readonly severityOrder: Record<DiffScanSeverity, number> = { critical: 0, warning: 1, info: 2 };
 
   protected scanFindings(mr: MergeRequestWithDiffs): DiffScanFinding[] {
@@ -264,7 +299,7 @@ export class MrOverviewComponent implements OnInit {
     const findings = mr.scanFindings ?? [];
     if (findings.length === 0) return null;
     const worst = findings.reduce((a, b) => (this.severityOrder[a.severity] <= this.severityOrder[b.severity] ? a : b));
-    const label = `${findings.length} scan finding${findings.length === 1 ? '' : 's'}`;
+    const label = `${findings.length} finding${findings.length === 1 ? '' : 's'}`;
     return {
       tagSeverity: this.presenter.findingSeverity[worst.severity],
       label,
@@ -272,8 +307,17 @@ export class MrOverviewComponent implements OnInit {
     };
   }
 
-  protected fileHasFindings(mr: MergeRequestWithDiffs, path: string): boolean {
-    return (mr.scanFindings ?? []).some((finding) => finding.file === path);
+  private readonly findingsOpen = signal<ReadonlyMap<number, boolean>>(new Map());
+
+  /** Whether the scan-findings card is expanded; defaults to open when a finding is critical. */
+  protected isFindingsOpen(mr: MergeRequestWithDiffs): boolean {
+    return this.findingsOpen().get(mr.iid) ?? this.scanSummary(mr)?.hasCritical ?? false;
+  }
+
+  protected toggleFindings(mr: MergeRequestWithDiffs): void {
+    const next = new Map(this.findingsOpen());
+    next.set(mr.iid, !this.isFindingsOpen(mr));
+    this.findingsOpen.set(next);
   }
 
   protected findingsByLine(mr: MergeRequestWithDiffs, path: string): Map<number, DiffScanFinding[]> {
@@ -294,5 +338,52 @@ export class MrOverviewComponent implements OnInit {
   protected fileLocation(mr: MergeRequestWithDiffs, finding: DiffScanFinding): string {
     const path = this.stripPkgPrefix(mr, finding.file);
     return finding.line !== undefined ? `${path}:${finding.line}` : path;
+  }
+
+  protected packageInfo(mr: MergeRequestWithDiffs): MrPackageInfo | null {
+    return mr.packageInfo ?? null;
+  }
+
+  /** `.CI` files that signal a build override worth flagging (excludes the always-present `config`/`info`). */
+  protected ciOverrideFiles(mr: MergeRequestWithDiffs): string[] {
+    return (mr.packageInfo?.ciFiles ?? []).filter((file) => file !== 'config' && file !== 'info');
+  }
+
+  /** Whether the CI auto-pushes this package's AUR repo (`CI_MANAGE_AUR=true`). */
+  protected isAurManaged(mr: MergeRequestWithDiffs): boolean {
+    return mr.packageInfo?.manageAur === true;
+  }
+
+  /** Whether versions are auto-checked via nvchecker (`CI_NVCHECKER=true`). */
+  protected isNvchecker(mr: MergeRequestWithDiffs): boolean {
+    return mr.packageInfo?.nvchecker === true;
+  }
+
+  /** Packages that trigger a rebuild of this one when they change (`CI_REBUILD_TRIGGERS`). */
+  protected rebuildTriggers(mr: MergeRequestWithDiffs): string[] {
+    return mr.packageInfo?.rebuildTriggers ?? [];
+  }
+
+  protected ciFolderUrl(mr: MergeRequestWithDiffs): string {
+    const pkgname = mr.packageInfo?.pkgname ?? this.mrOverviewService.extractPkgName(mr.title) ?? '';
+    return `https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/${pkgname}/.CI`;
+  }
+
+  protected packageLink(mr: MergeRequestWithDiffs): { label: string; url: string; tooltip: string } | null {
+    const info = mr.packageInfo;
+    if (!info) return null;
+    const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== 'aur';
+    if (isCustom) {
+      return {
+        label: 'Custom',
+        url: `https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/${info.pkgname}`,
+        tooltip: `PKGBUILD maintained in the pkgbuilds repo (${info.pkgbuildSource})`,
+      };
+    }
+    return {
+      label: 'AUR',
+      url: `https://aur.archlinux.org/packages/${info.pkgname}`,
+      tooltip: `Open the AUR page for ${info.pkgname}`,
+    };
   }
 }

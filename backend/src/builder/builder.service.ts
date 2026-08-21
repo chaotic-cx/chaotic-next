@@ -334,6 +334,33 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .getRawMany();
   }
 
+  async getAverageBuildTimePerDayForPackage(options: {
+    pkgname: string;
+    days: number;
+  }): Promise<{ day: string; average: string }[]> {
+    const requestedPackage = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
+    if (!requestedPackage) {
+      throw new NotFoundException('Package not found');
+    }
+
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+
+    return this.buildRepository
+      .createQueryBuilder('build')
+      .select("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC') AS day")
+      .addSelect('AVG(build.timeToEnd) AS average')
+      .innerJoin('build.pkgbase', 'pkgbase')
+      .where('pkgbase.pkgname = :pkgname', { pkgname: options.pkgname })
+      .andWhere('build.timeToEnd IS NOT NULL')
+      .andWhere('build.status = :status', { status: BuildStatus.SUCCESS })
+      .andWhere('build.timestamp > :date', { date: nDaysInPast(days) })
+      .groupBy("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC')")
+      .orderBy('day', 'DESC')
+      .limit(days)
+      .cache(`avg-build-time-${options.pkgname}-per-day-${days}`, CACHE_TTL_MS)
+      .getRawMany();
+  }
+
   getPopularPackages(options: {
     amount: number;
     offset: number;

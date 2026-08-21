@@ -141,7 +141,7 @@ export class AurScanService {
         changes.push(fullFileDiff(file.name, file.content));
       }
       scan.scannedFiles = changes.map((change) => change.new_path);
-      scan.findings = this.diffScanService.scanDiffs(changes);
+      scan.findings = await this.diffScanService.scanDiffs(changes);
 
       const indicators = extractIndicators(changes);
       scan.vtPending = indicators.length;

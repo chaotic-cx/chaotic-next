@@ -19,6 +19,7 @@ import { Package, Paginated, SpecificPackageMetrics, formatPkgrel } from '@chaot
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
+import { ChartPackageAverageBuildTimeComponent } from '../chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
@@ -38,6 +39,7 @@ import { StatsService } from '../stats/stats.service';
     FormField,
     SearchSuggestionsComponent,
     ChartPackageBuildStatsComponent,
+    ChartPackageAverageBuildTimeComponent,
     PackageTriggerSourcesComponent,
   ],
   templateUrl: './search-package.component.html',
@@ -108,7 +110,18 @@ export class SearchPackageComponent implements OnInit {
     delete data['pkgrel'];
     delete data['bump'];
 
-    const skippedKeys = new Set(['id', 'isActive', 'skipSignalScan', 'bumpCount', 'bumpTriggers']);
+    const skippedKeys = new Set([
+      'id',
+      'isActive',
+      'skipSignalScan',
+      'bumpCount',
+      'bumpTriggers',
+      'providedSonames',
+      'requiredSonames',
+      'provided_sonames',
+      'required_sonames',
+      'sonames',
+    ]);
     for (const [key, value] of Object.entries(data)) {
       if (skippedKeys.has(key)) continue;
       if (value === null || value === undefined) continue;

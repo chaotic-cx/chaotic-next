@@ -56,7 +56,7 @@ import { resourceValue } from '../functions';
         @if (data()!.explicitTriggers.length > 0) {
           <div class="flex flex-col gap-1">
             <span class="text-ctp-text text-sm font-semibold">Explicit triggers</span>
-            <div class="flex flex-wrap gap-1.5">
+            <div class="flex flex-wrap justify-center gap-1.5">
               @for (trigger of data()!.explicitTriggers; track trigger.pkgname) {
                 <span class="rounded border border-ctp-surface1 bg-ctp-base px-2 py-1 text-xs">
                   {{ trigger.pkgname }} ({{ trigger.archVersion }})

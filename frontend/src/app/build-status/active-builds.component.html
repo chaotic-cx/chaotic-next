@@ -42,4 +42,17 @@
       }
     </ul>
   </section>
+} @else {
+  <section class="flex h-full flex-col">
+    <chaotic-build-status-section
+      title="Active builds"
+      subtitle="These are currently ongoing builds"
+      icon="pi-spinner"
+      iconClass="text-ctp-subtext0"
+    />
+    <div class="flex min-h-[5rem] flex-1 flex-col items-center justify-center gap-2 py-6 text-center text-ctp-subtext0">
+      <i class="pi pi-moon text-3xl"></i>
+      <span class="text-sm font-medium">No running builds at the moment</span>
+    </div>
+  </section>
 }

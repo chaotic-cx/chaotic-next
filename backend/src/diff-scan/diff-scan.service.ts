@@ -1,9 +1,14 @@
 import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
 import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Package } from '../builder/builder.entity';
+import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { errorMessage } from '../utils/functions';
 import { RULES } from './rules';
 import type { RuleHit } from './rules/rule';
+import { isDependencyPresent, isSrcinfoFile, scanSrcinfoDependencies } from './srcinfo-dependency';
 
 const MAX_FINDINGS_PER_MR = 100;
 const MAX_MATCH_LENGTH = 300;
@@ -26,11 +31,28 @@ const SUSPICIOUS_SCORE_THRESHOLD = 4;
 export class DiffScanService {
   private readonly logger = new Logger(DiffScanService.name);
 
-  scanDiffs(diffs: MergeRequestDiffSchema[]): DiffScanFinding[] {
+  constructor(
+    @Optional()
+    @InjectRepository(ArchlinuxPackage)
+    private readonly archPkgRepository?: Repository<ArchlinuxPackage>,
+    @Optional()
+    @InjectRepository(Package)
+    private readonly packageRepository?: Repository<Package>,
+  ) {}
+
+  async scanDiffs(
+    diffs: MergeRequestDiffSchema[],
+    isDepPresentOverride?: (depName: string) => Promise<boolean>,
+  ): Promise<DiffScanFinding[]> {
     const findings: DiffScanFinding[] = [];
+
+    const isDepPresent =
+      isDepPresentOverride ??
+      ((depName: string) => isDependencyPresent(depName, this.archPkgRepository, this.packageRepository));
 
     for (const change of diffs) {
       if (change.deleted_file) continue;
+
       for (const rule of RULES) {
         let hit: RuleHit | null;
         try {
@@ -50,6 +72,18 @@ export class DiffScanService {
           match: hit.match.slice(0, MAX_MATCH_LENGTH),
         });
         if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
+      }
+
+      if (isSrcinfoFile(change.new_path)) {
+        try {
+          const depFindings = await scanSrcinfoDependencies(change, isDepPresent);
+          for (const depFinding of depFindings) {
+            findings.push(depFinding);
+            if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
+          }
+        } catch (err) {
+          this.logger.warn(`SRCINFO dependency scan failed on ${change.new_path}: ${errorMessage(err)}`);
+        }
       }
     }
     return sortFindings(findings);

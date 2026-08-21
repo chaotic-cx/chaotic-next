@@ -14,7 +14,6 @@
   overflow-x: auto;
 }
 
-/* Improve panel spacing */
 .mr-overview-panel {
   @apply rounded-lg shadow-lg;
 }
@@ -28,6 +27,41 @@
 ::ng-deep .p-button.w-50 {
   width: 100% !important;
   min-width: 140px;
+}
+
+::ng-deep .p-button.mr-btn-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+}
+
+::ng-deep .mr-chips .p-tag {
+  max-width: 100%;
+}
+
+::ng-deep .mr-chips .p-tag-label {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+::ng-deep .mr-chips a {
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  ::ng-deep .mr-chips > * {
+    flex-grow: 1;
+  }
+
+  ::ng-deep .mr-chips a {
+    display: flex;
+  }
+
+  ::ng-deep .mr-chips a .p-tag {
+    flex-grow: 1;
+  }
 }
 
 ::ng-deep .mr-btn-approve {
