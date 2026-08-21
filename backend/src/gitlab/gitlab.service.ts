@@ -23,6 +23,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  OnApplicationShutdown,
   OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -30,6 +31,9 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mutex } from 'async-mutex';
+import { existsSync } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Observable } from 'rxjs';
 import { IsNull, Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
@@ -67,6 +71,7 @@ const MAX_VERDICT_NOTE_FINDINGS = 5;
 const DIFF_FETCH_CONCURRENCY = 5;
 const CACHE_MRS_TTL = 30 * 60 * 1000;
 const MAX_CACHED_PIPELINES = 40;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 interface CachedMrData {
   updatedAt: string;
@@ -140,7 +145,7 @@ function mrPkgname(title: string): string | null {
 }
 
 @Injectable()
-export class GitlabService implements OnModuleInit {
+export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(GitlabService.name);
   api!: Gitlab;
   chaoticId!: string;
@@ -148,6 +153,7 @@ export class GitlabService implements OnModuleInit {
   mergeRequestsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
+  private readonly CACHE_FILE_PATH = join(process.cwd(), IS_PRODUCTION ? 'backend-config' : 'tmp', 'mr_cache.json');
 
   private isSeedingPipelines = false;
   private isAutoFlaggingMrs = false;
@@ -157,6 +163,7 @@ export class GitlabService implements OnModuleInit {
 
   private readonly mrDataCache = new Map<number, CachedMrData>();
   private readonly maintainerCheckedAt = new Map<number, string>();
+  private lastKnownMrs: MergeRequestWithDiffs[] = [];
 
   private readonly pipelineMap = new Map<number, PipelineSchema>();
   private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
@@ -183,10 +190,48 @@ export class GitlabService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    await this.restoreDiskCache().catch((err) =>
+      this.logger.warn(`Could not restore MR cache from disk: ${errorMessage(err)}`),
+    );
     await this.initApiClient().catch((err) =>
       this.logger.error(`GitLab client init failed, review features unavailable: ${errorMessage(err)}`),
     );
     void this.seedPipelines().catch((err) => this.logger.error(`Initial pipeline seed failed: ${errorMessage(err)}`));
+    void this.handleAutoFlagRefresh().catch((err) =>
+      this.logger.error(`Initial MR review pre-fetch failed: ${errorMessage(err)}`),
+    );
+  }
+
+  async onApplicationShutdown(signal?: string): Promise<void> {
+    this.logger.log(`Application shutdown signal received (${signal ?? 'unknown'}), saving MR cache to disk...`);
+    await this.saveDiskCache().catch((err) =>
+      this.logger.error(`Could not persist MR cache to disk on shutdown: ${errorMessage(err)}`),
+    );
+  }
+
+  private async restoreDiskCache(): Promise<void> {
+    if (!existsSync(this.CACHE_FILE_PATH)) return;
+    try {
+      const raw = await readFile(this.CACHE_FILE_PATH, 'utf-8');
+      const mrs = JSON.parse(raw) as MergeRequestWithDiffs[];
+      if (Array.isArray(mrs) && mrs.length > 0) {
+        await this.cacheManager.set(this.CACHE_KEY_MRS, mrs, CACHE_MRS_TTL);
+        this.logger.log(`Restored ${mrs.length} MR(s) from disk cache (${this.CACHE_FILE_PATH})`);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to parse disk MR cache: ${errorMessage(err)}`);
+    }
+  }
+
+  private async saveDiskCache(): Promise<void> {
+    if (this.lastKnownMrs.length === 0) return;
+    try {
+      await mkdir(join(process.cwd(), 'tmp'), { recursive: true });
+      await writeFile(this.CACHE_FILE_PATH, JSON.stringify(this.lastKnownMrs), 'utf-8');
+      this.logger.log(`Persisted ${this.lastKnownMrs.length} MR(s) to disk cache (${this.CACHE_FILE_PATH})`);
+    } catch (err) {
+      this.logger.error(`Failed to write disk MR cache: ${errorMessage(err)}`);
+    }
   }
 
   private async initApiClient(): Promise<void> {
@@ -236,19 +281,16 @@ export class GitlabService implements OnModuleInit {
 
       let mergedCount = 0;
       for (const action of recentApprovedActions) {
-        if (openIidMap.has(action.mergeRequestIid)) {
-          const sha = openIidMap.get(action.mergeRequestIid) ?? action.commitSha;
-          if (sha) {
-            this.logger.log(`Processing deferred merge for MR !${action.mergeRequestIid} after scheduled pipeline run`);
-            try {
-              await this.mergeWithRetry(action.mergeRequestIid, sha);
-              mergedCount++;
-            } catch (err) {
-              this.logger.error(
-                `Failed to execute deferred merge for MR !${action.mergeRequestIid}: ${errorMessage(err)}`,
-              );
-            }
-          }
+        if (!openIidMap.has(action.mergeRequestIid)) continue;
+        const sha = openIidMap.get(action.mergeRequestIid) ?? action.commitSha;
+        if (!sha) continue;
+
+        this.logger.log(`Processing deferred merge for MR !${action.mergeRequestIid} after scheduled pipeline run`);
+        try {
+          await this.mergeWithRetry(action.mergeRequestIid, sha);
+          mergedCount++;
+        } catch (err) {
+          this.logger.error(`Failed to execute deferred merge for MR !${action.mergeRequestIid}: ${errorMessage(err)}`);
         }
       }
 
@@ -491,6 +533,7 @@ export class GitlabService implements OnModuleInit {
         }),
       );
 
+      this.lastKnownMrs = data;
       await this.cacheManager.set(this.CACHE_KEY_MRS, data, CACHE_MRS_TTL);
 
       void this.enrichPackageInfo(data).catch((err) =>
@@ -892,7 +935,7 @@ export class GitlabService implements OnModuleInit {
     }
   }
 
-  async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<void> {
+  async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<{ deferred: boolean }> {
     const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
     if (labels.includes('malware')) {
@@ -912,7 +955,8 @@ export class GitlabService implements OnModuleInit {
     await this.postActorComment(iid, '✅ Approved by', actor);
     await this.recordMrAction(iid, 'approve', targetSha, actor);
 
-    if (isOnSchedulePipelineRunning()) {
+    const deferred = isOnSchedulePipelineRunning();
+    if (deferred) {
       this.logger.log(
         `MR !${iid} approved while scheduled pipeline is running. Merge will be executed once the scheduled pipeline completes.`,
       );
@@ -922,6 +966,7 @@ export class GitlabService implements OnModuleInit {
     await this.cacheManager.del(this.CACHE_KEY_MRS);
 
     void this.refreshOpenMergeRequests();
+    return { deferred };
   }
 
   private async mergeWithRetry(iid: number, sha: string): Promise<void> {

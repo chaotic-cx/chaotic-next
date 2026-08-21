@@ -16,9 +16,6 @@ const OPERATION_LABELS: Record<PipelineOperation, string> = {
 export class PipelineOperationLabelPipe implements PipeTransform {
   transform(value: PipelineOperation | string | null | undefined): string {
     if (!value) return '';
-    if (Object.values(PipelineOperation).includes(value as PipelineOperation)) {
-      return OPERATION_LABELS[value as PipelineOperation];
-    }
-    return String(value);
+    return OPERATION_LABELS[value as PipelineOperation] ?? String(value);
   }
 }

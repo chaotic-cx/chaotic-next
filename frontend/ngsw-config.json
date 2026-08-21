@@ -19,5 +19,17 @@
       }
     }
   ],
+  "dataGroups": [
+    {
+      "name": "garuda-api",
+      "urls": ["https://builds.garudalinux.org/**"],
+      "cacheConfig": {
+        "maxSize": 0,
+        "maxAge": "0s",
+        "timeout": "0s",
+        "strategy": "freshness"
+      }
+    }
+  ],
   "navigationUrls": ["/**", "!/backend/**", "!/**/__*", "!/**/sse"]
 }

@@ -1,6 +1,7 @@
 import {
   AddPackagesDto,
   ApproveMrDto,
+  ApproveMrResponseDto,
   AurScanBodyDto,
   BumpPackagesDto,
   DropPackagesDto,
@@ -194,13 +195,16 @@ export class GitlabController {
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Approve a merge request.' })
-  @ApiOkResponse({ description: 'Merge request approved.' })
-  async approve(@Session() session: UserSession<typeof auth>, @Body() body: ApproveMrDto): Promise<void> {
+  @ApiOkResponse({ description: 'Merge request approved.', type: ApproveMrResponseDto })
+  async approve(
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: ApproveMrDto,
+  ): Promise<ApproveMrResponseDto> {
     assertValidIid(body.iid);
     if (typeof body.sha !== 'string' || !SHA_REGEX.test(body.sha)) {
       throw new BadRequestException('Invalid sha');
     }
-    await this.gitlabService.approveMergeRequest(body.iid, body.sha, {
+    return await this.gitlabService.approveMergeRequest(body.iid, body.sha, {
       userId: session.user.id,
       userName: session.user.name,
     });

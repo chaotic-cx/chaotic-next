@@ -32,6 +32,13 @@ export class ApproveMrDto {
   sha!: string;
 }
 
+export class ApproveMrResponseDto {
+  @ApiProperty({
+    description: 'Whether the merge request was merged directly or deferred until after scheduled pipeline',
+  })
+  deferred!: boolean;
+}
+
 export class FlagMrDto {
   @ApiProperty({ description: 'Merge request IID' })
   @IsInt()

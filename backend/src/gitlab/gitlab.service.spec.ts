@@ -526,7 +526,8 @@ describe('GitlabService.approveMergeRequest', () => {
     // 03:35 UTC - inside scheduled pipeline window
     vi.setSystemTime(new Date('2026-08-21T03:35:00Z'));
     try {
-      await service.approveMergeRequest(1, 'abc123', ACTOR);
+      const result = await service.approveMergeRequest(1, 'abc123', ACTOR);
+      expect(result).toEqual({ deferred: true });
       expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
       expect(mrAccept).not.toHaveBeenCalled();
       expect(mrActionInsert).toHaveBeenCalled();
@@ -563,18 +564,25 @@ describe('GitlabService.approveMergeRequest', () => {
     };
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
-    await service.approveMergeRequest(1, 'abc123', ACTOR);
+    vi.useFakeTimers();
+    // 03:00 UTC - outside scheduled pipeline window
+    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+    try {
+      await service.approveMergeRequest(1, 'abc123', ACTOR);
 
-    expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
-    expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved' });
-    expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, '**✅ Approved by** Test User.');
-    expect(mrActionInsert).toHaveBeenCalledWith({
-      mergeRequestIid: 1,
-      action: 'approve',
-      commitSha: 'abc123',
-      ...ACTOR,
-    });
-    expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+      expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+      expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved' });
+      expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, '**✅ Approved by** Test User.');
+      expect(mrActionInsert).toHaveBeenCalledWith({
+        mergeRequestIid: 1,
+        action: 'approve',
+        commitSha: 'abc123',
+        ...ACTOR,
+      });
+      expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('rebases and retries merge if initial accept fails', async () => {
@@ -596,11 +604,18 @@ describe('GitlabService.approveMergeRequest', () => {
     };
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
-    await service.approveMergeRequest(1, 'abc123', ACTOR);
+    vi.useFakeTimers();
+    // 03:00 UTC - outside scheduled pipeline window
+    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+    try {
+      await service.approveMergeRequest(1, 'abc123', ACTOR);
 
-    expect(mrRebase).toHaveBeenCalledWith('test-project-id', 1);
-    expect(mrAccept).toHaveBeenNthCalledWith(1, 'test-project-id', 1, { sha: 'abc123' });
-    expect(mrAccept).toHaveBeenNthCalledWith(2, 'test-project-id', 1, { sha: 'def456' });
+      expect(mrRebase).toHaveBeenCalledWith('test-project-id', 1);
+      expect(mrAccept).toHaveBeenNthCalledWith(1, 'test-project-id', 1, { sha: 'abc123' });
+      expect(mrAccept).toHaveBeenNthCalledWith(2, 'test-project-id', 1, { sha: 'def456' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
