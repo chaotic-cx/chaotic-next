@@ -219,6 +219,15 @@ export const PIPELINE_OPERATIONS: readonly PipelineOperation[] = [
   PipelineOperation.ADD_PACKAGES,
 ];
 
+export const PIPELINE_OPERATION_GITLAB_LABELS: Record<PipelineOperation, string> = {
+  [PipelineOperation.NONE]: 'None',
+  [PipelineOperation.BUMP_PACKAGES]: 'Bump Packages',
+  [PipelineOperation.SCHEDULE_PACKAGES]: 'Schedule Packages',
+  [PipelineOperation.RUN_SCHEDULE]: 'Run Schedule',
+  [PipelineOperation.DROP_PACKAGES]: 'Drop Packages',
+  [PipelineOperation.ADD_PACKAGES]: 'Add Packages',
+};
+
 export const PKGBUILD_SOURCE_AUR = 'aur';
 
 export const PIPELINE_REQUEST_REASONS = [

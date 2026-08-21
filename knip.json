@@ -23,6 +23,7 @@
     "@nx/*",
     "@openng/icons",
     "@openng/optimus-ui-tailwindcss",
+    "@rspack/*",
     "@typescript-eslint/*",
     "angular-eslint",
     "eslint-plugin-*",

@@ -681,7 +681,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       expect(res.statusCode).toBe(400);
     });
 
-    it.each(['Bump Packages', 'Schedule Packages', 'Drop Packages'])(
+    it.each(['bump-packages', 'schedule-packages', 'drop-packages'])(
       'rejects a missing packages input for %s (400)',
       async (operation) => {
         const res = await app.inject({ method: 'POST', url: '/gitlab/trigger', payload: { operation } });
@@ -689,20 +689,20 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       },
     );
 
-    it('rejects a missing trigger input for Run Schedule (400)', async () => {
+    it('rejects a missing trigger input for run-schedule (400)', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/trigger',
-        payload: { operation: 'Run Schedule' },
+        payload: { operation: 'run-schedule' },
       });
       expect(res.statusCode).toBe(400);
     });
 
-    it('rejects an incomplete Add Packages request (400)', async () => {
+    it('rejects an incomplete add-packages request (400)', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/trigger',
-        payload: { operation: 'Add Packages', add_packages: 'paru/aur' },
+        payload: { operation: 'add-packages', add_packages: 'paru/aur' },
       });
       expect(res.statusCode).toBe(400);
     });
@@ -711,7 +711,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/trigger',
-        payload: { operation: 'Bump Packages', packages: 'a;b' },
+        payload: { operation: 'bump-packages', packages: 'a;b' },
       });
       expect(res.statusCode).toBe(400);
     });
@@ -730,7 +730,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       });
 
       expect(res.statusCode).toBe(201);
-      expect(triggerSpy).toHaveBeenCalledWith({ operation: 'bump-packages', packages: 'nodejs:20' }, 'dev', {
+      expect(triggerSpy).toHaveBeenCalledWith({ operation: 'Bump Packages', packages: 'nodejs:20' }, 'dev', {
         userId: 'test-user',
         userName: 'Test User',
       });
@@ -755,7 +755,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
 
       expect(res.statusCode).toBe(201);
       expect(createSpy).toHaveBeenCalledWith(gitlabService.chaoticId, 'main', {
-        inputs: { operation: 'add-packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
+        inputs: { operation: 'Add Packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
         variables: [
           {
             key: 'PIPELINE_TRIGGERED_BY',

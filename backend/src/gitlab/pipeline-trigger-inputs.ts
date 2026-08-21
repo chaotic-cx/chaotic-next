@@ -1,5 +1,6 @@
 import {
   PIPELINE_ADD_PACKAGES_REGEX,
+  PIPELINE_OPERATION_GITLAB_LABELS,
   PIPELINE_OPERATIONS,
   PIPELINE_PACKAGES_REGEX,
   PIPELINE_REF_REGEX,
@@ -57,7 +58,8 @@ export function validatePipelineTriggerInputs(body: unknown): ValidatedPipelineT
 
   const ref =
     record.ref === undefined ? DEFAULT_PIPELINE_REF : assertValidString(record.ref, 'ref', PIPELINE_REF_REGEX);
-  const inputs: Record<string, string> = { operation };
+  const gitlabLabel = PIPELINE_OPERATION_GITLAB_LABELS[operation as PipelineOperation];
+  const inputs: Record<string, string> = { operation: gitlabLabel };
 
   if (OPERATIONS_REQUIRING_PACKAGES.includes(operation as PipelineOperation)) {
     inputs.packages = assertValidString(record.packages, 'packages', PIPELINE_PACKAGES_REGEX);

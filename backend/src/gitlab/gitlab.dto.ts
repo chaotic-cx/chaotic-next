@@ -154,4 +154,24 @@ export class TriggerPipelineDto {
   @IsOptional()
   @IsString()
   trigger?: string;
+
+  @ApiPropertyOptional({ description: 'Add packages list (e.g., paru/aur)', example: 'paru/aur' })
+  @IsOptional()
+  @IsString()
+  add_packages?: string;
+
+  @ApiPropertyOptional({ description: 'Request origin identifier', example: 'github/5678' })
+  @IsOptional()
+  @IsString()
+  request_origin?: string;
+
+  @ApiPropertyOptional({ description: 'Request reason (optional)', example: 'request' })
+  @IsOptional()
+  @IsString()
+  request_reason?: string;
+
+  @ApiPropertyOptional({ description: 'Custom request reason (optional)' })
+  @IsOptional()
+  @IsString()
+  custom_request_reason?: string;
 }
