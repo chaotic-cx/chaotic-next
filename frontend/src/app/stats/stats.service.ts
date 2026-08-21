@@ -25,7 +25,9 @@ const TIME_RANGES: TimeRange[] = [
   { label: '7d', days: 7 },
   { label: '30d', days: 30 },
   { label: '90d', days: 90 },
+  { label: '6m', days: 180 },
   { label: '1y', days: 365 },
+  { label: '2y', days: 730 },
   { label: 'All', days: null },
 ];
 

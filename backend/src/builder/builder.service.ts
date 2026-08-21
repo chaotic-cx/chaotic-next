@@ -450,6 +450,49 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .getRawMany();
   }
 
+  /**
+   * Failed builds per day for the packages that fail most often in the window.
+   * The packages are fixed by the top `amount` over the whole window, so the
+   * chart always shows the worst offenders rather than a shifting set.
+   */
+  async getFailedBuildsOverTime(options: {
+    amount: number;
+    days: number;
+  }): Promise<{ day: string; pkgname: string; count: string }[]> {
+    const amount = clampInt(options.amount, 1, MAX_AMOUNT);
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+    const date = nDaysInPast(days);
+    const failures = [String(BuildStatus.FAILED), String(BuildStatus.TIMED_OUT), String(BuildStatus.SOFTWARE_FAILURE)];
+
+    const top = await this.buildRepository
+      .createQueryBuilder('build')
+      .select('pkg.pkgname AS pkgname')
+      .innerJoin('build.pkgbase', 'pkg')
+      .where('build.status::text IN (:...failures)', { failures })
+      .andWhere('build.timestamp > :date', { date })
+      .groupBy('pkg.pkgname')
+      .orderBy('COUNT(*)', 'DESC')
+      .limit(amount)
+      .getRawMany<{ pkgname: string }>();
+    const pkgnames = top.map((row) => row.pkgname);
+    if (pkgnames.length === 0) return [];
+
+    return this.buildRepository
+      .createQueryBuilder('build')
+      .select("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC') AS day")
+      .addSelect('pkg.pkgname AS pkgname')
+      .addSelect('COUNT(*) AS count')
+      .innerJoin('build.pkgbase', 'pkg')
+      .where('build.status::text IN (:...failures)', { failures })
+      .andWhere('build.timestamp > :date', { date })
+      .andWhere('pkg.pkgname IN (:...pkgnames)', { pkgnames })
+      .groupBy('day')
+      .addGroupBy('pkg.pkgname')
+      .orderBy('day', 'DESC')
+      .cache(`failed-builds-over-time-${amount}-${days}`, CACHE_TTL_MS)
+      .getRawMany<{ day: string; pkgname: string; count: string }>();
+  }
+
   getHeavyPackages(options: { amount: number; days: number }): Promise<{ pkgname: string; average: string }[]> {
     const amount = clampInt(options.amount, 1, MAX_AMOUNT);
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);

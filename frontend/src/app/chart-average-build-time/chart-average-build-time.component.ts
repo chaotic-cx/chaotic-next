@@ -55,7 +55,7 @@ export class ChartAverageBuildTimeComponent {
         datasets: [
           {
             data: values,
-            label: 'Average build time (seconds)',
+            label: 'Average build time (minutes)',
             backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
           },
         ],

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
 import { ChartAverageBuildTimeTrendComponent } from '../../chart-average-build-time-trend/chart-average-build-time-trend.component';
+import { ChartBuildFailuresOverTimeComponent } from '../../chart-build-failures-over-time/chart-build-failures-over-time.component';
 import { ChartDownloadersTrendComponent } from '../../chart-downloaders-trend/chart-downloaders-trend.component';
 import { ChartFailedHotspotsComponent } from '../../chart-failed-hotspots/chart-failed-hotspots.component';
 import { ChartThroughputComponent } from '../../chart-throughput/chart-throughput.component';
@@ -10,13 +11,14 @@ import { ChartThroughputComponent } from '../../chart-throughput/chart-throughpu
   imports: [
     Card,
     ChartAverageBuildTimeTrendComponent,
+    ChartBuildFailuresOverTimeComponent,
     ChartFailedHotspotsComponent,
     ChartThroughputComponent,
     ChartDownloadersTrendComponent,
   ],
   template: `
     <div class="grid h-full grid-cols-1 gap-8 lg:grid-cols-2">
-      <p-card [style]="{ overflow: 'hidden' }" header="Average build time">
+      <p-card [style]="{ overflow: 'hidden' }" header="Average build time (minutes)">
         <chaotic-chart-average-build-time-trend />
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Queue throughput">
@@ -27,6 +29,9 @@ import { ChartThroughputComponent } from '../../chart-throughput/chart-throughpu
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Failed build hotspots">
         <chaotic-chart-failed-hotspots />
+      </p-card>
+      <p-card [style]="{ overflow: 'hidden' }" header="Build failures over time" styleClass="lg:col-span-2">
+        <chaotic-chart-build-failures-over-time />
       </p-card>
     </div>
   `,

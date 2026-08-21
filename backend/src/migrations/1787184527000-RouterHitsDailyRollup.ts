@@ -20,8 +20,6 @@ export class RouterHitsDailyRollup1787184527000 implements MigrationInterface {
       )
     `);
     await queryRunner.query(`CREATE INDEX "router_hits_daily_day_idx" ON "router_hits_daily" ("day")`);
-    await queryRunner.query(`CREATE INDEX "router_hits_daily_country_idx" ON "router_hits_daily" ("country")`);
-    await queryRunner.query(`CREATE INDEX "router_hits_daily_hostname_idx" ON "router_hits_daily" ("hostname")`);
     await queryRunner.query(`CREATE INDEX "router_hits_daily_package_idx" ON "router_hits_daily" ("package")`);
 
     await queryRunner.query(`

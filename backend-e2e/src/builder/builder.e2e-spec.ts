@@ -599,4 +599,50 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       expect(body[1].pkgname).toBe('nano');
     });
   });
+
+  describe('GET /builder/builds/failed/over-time/:amount/:days', () => {
+    it('returns per-day failed builds for the top failing packages', async () => {
+      const firefox = await e2e.seedPackage({ pkgname: 'firefox' });
+      const chromium = await e2e.seedPackage({ pkgname: 'chromium' });
+      const stable = await e2e.seedPackage({ pkgname: 'stable-pkg' });
+
+      await e2e.seedBuild({ pkgbase: firefox, status: BuildStatus.FAILED });
+      await e2e.seedBuild({ pkgbase: firefox, status: BuildStatus.FAILED });
+      await e2e.seedBuild({ pkgbase: chromium, status: BuildStatus.TIMED_OUT });
+      await e2e.seedBuild({ pkgbase: stable, status: BuildStatus.SUCCESS });
+
+      const res = await e2e.inject<Array<{ day: string; pkgname: string; count: string }>>({
+        method: 'GET',
+        url: '/builder/builds/failed/over-time/2/30',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+
+      const firefoxCount = body
+        .filter((row) => row.pkgname === 'firefox')
+        .reduce((sum, row) => sum + Number(row.count), 0);
+      const chromiumCount = body
+        .filter((row) => row.pkgname === 'chromium')
+        .reduce((sum, row) => sum + Number(row.count), 0);
+      const stableCount = body.filter((row) => row.pkgname === 'stable-pkg').length;
+
+      expect(firefoxCount).toBe(2);
+      expect(chromiumCount).toBe(1);
+      expect(stableCount).toBe(0);
+      expect(new Set(body.map((row) => row.pkgname)).size).toBe(2);
+    });
+
+    it('returns an empty array when nothing has failed', async () => {
+      await e2e.seedBuild({ status: BuildStatus.SUCCESS });
+
+      const res = await e2e.inject<unknown[]>({
+        method: 'GET',
+        url: '/builder/builds/failed/over-time/5/30',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([]);
+    });
+  });
 });
