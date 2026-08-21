@@ -42,7 +42,14 @@ import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { applyPackageBump } from '../repo-manager/bump/bump-config';
 import { MAX_DAYS_WINDOW } from '../utils/constants';
-import { clampInt, decryptAes, errorMessage, mapWithConcurrency, nDaysInPast } from '../utils/functions';
+import {
+  clampInt,
+  decryptAes,
+  errorMessage,
+  isOnSchedulePipelineRunning,
+  mapWithConcurrency,
+  nDaysInPast,
+} from '../utils/functions';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
 import { MrAction, MrActionType } from './mr-action.entity';
 import { fetchPackageInfo } from './mr-package-info';
@@ -207,15 +214,50 @@ export class GitlabService implements OnModuleInit {
     this.api = new Gitlab({ token });
   }
 
-  @Cron(CronExpression.EVERY_10_MINUTES)
-  async handlePipelinesRefresh(): Promise<void> {
-    if (this.isSeedingPipelines) return;
-    this.isSeedingPipelines = true;
+  /**
+   * Processes deferred MR merges right after the scheduled pipeline window (HH:30 - HH:40) ends.
+   * Runs at minutes 41, 43, and 45 every 3 hours UTC.
+   */
+  @Cron('41,43,45 */3 * * *')
+  async processDeferredMerges(): Promise<void> {
+    if (isOnSchedulePipelineRunning()) return;
 
     try {
-      await this.seedPipelines();
-    } finally {
-      this.isSeedingPipelines = false;
+      const recentApprovedActions = await this.mrActionRepository.find({
+        where: { action: 'approve' },
+        order: { createdAt: 'DESC' },
+        take: 50,
+      });
+
+      if (recentApprovedActions.length === 0) return;
+
+      const openMrs = await this.api.MergeRequests.all({ state: 'opened', projectId: this.chaoticId });
+      const openIidMap = new Map(openMrs.map((mr) => [mr.iid, mr.sha]));
+
+      let mergedCount = 0;
+      for (const action of recentApprovedActions) {
+        if (openIidMap.has(action.mergeRequestIid)) {
+          const sha = openIidMap.get(action.mergeRequestIid) ?? action.commitSha;
+          if (sha) {
+            this.logger.log(`Processing deferred merge for MR !${action.mergeRequestIid} after scheduled pipeline run`);
+            try {
+              await this.mergeWithRetry(action.mergeRequestIid, sha);
+              mergedCount++;
+            } catch (err) {
+              this.logger.error(
+                `Failed to execute deferred merge for MR !${action.mergeRequestIid}: ${errorMessage(err)}`,
+              );
+            }
+          }
+        }
+      }
+
+      if (mergedCount > 0) {
+        await this.cacheManager.del(this.CACHE_KEY_MRS);
+        void this.refreshOpenMergeRequests();
+      }
+    } catch (err) {
+      this.logger.debug(`Could not query database for deferred MR merges: ${errorMessage(err)}`);
     }
   }
 
@@ -870,7 +912,13 @@ export class GitlabService implements OnModuleInit {
     await this.postActorComment(iid, '✅ Approved by', actor);
     await this.recordMrAction(iid, 'approve', targetSha, actor);
 
-    await this.mergeWithRetry(iid, targetSha);
+    if (isOnSchedulePipelineRunning()) {
+      this.logger.log(
+        `MR !${iid} approved while scheduled pipeline is running. Merge will be executed once the scheduled pipeline completes.`,
+      );
+    } else {
+      await this.mergeWithRetry(iid, targetSha);
+    }
     await this.cacheManager.del(this.CACHE_KEY_MRS);
 
     void this.refreshOpenMergeRequests();

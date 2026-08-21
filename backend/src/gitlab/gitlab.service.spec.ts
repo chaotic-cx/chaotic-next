@@ -506,6 +506,35 @@ describe('GitlabService.getOpenMergeRequests', () => {
 });
 
 describe('GitlabService.approveMergeRequest', () => {
+  it('approves MR on GitLab but defers merge execution while scheduled pipeline is running', async () => {
+    const { service } = createService();
+    const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review'] });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn().mockResolvedValue({});
+    const approvalsApprove = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const mrActionInsert = vi.fn();
+    (service as unknown as { api: unknown }).api = {
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept },
+      MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestNotes: { create: noteCreate },
+    };
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+
+    vi.useFakeTimers();
+
+    // 03:35 UTC - inside scheduled pipeline window
+    vi.setSystemTime(new Date('2026-08-21T03:35:00Z'));
+    try {
+      await service.approveMergeRequest(1, 'abc123', ACTOR);
+      expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+      expect(mrAccept).not.toHaveBeenCalled();
+      expect(mrActionInsert).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('refuses to approve MRs the scan flagged as malware', async () => {
     const { service } = createService();
     const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review', 'malware'] });
