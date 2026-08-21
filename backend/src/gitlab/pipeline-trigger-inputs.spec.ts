@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
-import { PipelineOperation } from '@chaotic-next/shared-lib';
+import { PIPELINE_OPERATION_GITLAB_LABELS, PipelineOperation } from '@chaotic-next/shared-lib';
 import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
 
 describe('validatePipelineTriggerInputs', () => {
@@ -17,7 +17,7 @@ describe('validatePipelineTriggerInputs', () => {
   it('accepts operation None without any further inputs and defaults the ref', () => {
     expect(validatePipelineTriggerInputs({ operation: PipelineOperation.NONE })).toEqual({
       ref: 'main',
-      inputs: { operation: PipelineOperation.NONE },
+      inputs: { operation: PIPELINE_OPERATION_GITLAB_LABELS[PipelineOperation.NONE] },
     });
   });
 
@@ -39,7 +39,10 @@ describe('validatePipelineTriggerInputs', () => {
       expect(() => validatePipelineTriggerInputs({ operation, packages: '   ' })).toThrow(BadRequestException);
 
       const result = validatePipelineTriggerInputs({ operation, packages: 'nodejs:20:hplip' });
-      expect(result.inputs).toEqual({ operation, packages: 'nodejs:20:hplip' });
+      expect(result.inputs).toEqual({
+        operation: PIPELINE_OPERATION_GITLAB_LABELS[operation as PipelineOperation],
+        packages: 'nodejs:20:hplip',
+      });
     },
   );
 
@@ -55,7 +58,10 @@ describe('validatePipelineTriggerInputs', () => {
     );
 
     const result = validatePipelineTriggerInputs({ operation: PipelineOperation.RUN_SCHEDULE, trigger: 'daily' });
-    expect(result.inputs).toEqual({ operation: PipelineOperation.RUN_SCHEDULE, trigger: 'daily' });
+    expect(result.inputs).toEqual({
+      operation: PIPELINE_OPERATION_GITLAB_LABELS[PipelineOperation.RUN_SCHEDULE],
+      trigger: 'daily',
+    });
   });
 
   it('requires add_packages and request_origin for operation Add Packages', () => {
@@ -72,7 +78,7 @@ describe('validatePipelineTriggerInputs', () => {
       request_origin: 'github/5678',
     });
     expect(result.inputs).toEqual({
-      operation: PipelineOperation.ADD_PACKAGES,
+      operation: PIPELINE_OPERATION_GITLAB_LABELS[PipelineOperation.ADD_PACKAGES],
       add_packages: 'paru/aur',
       request_origin: 'github/5678',
     });
@@ -127,7 +133,7 @@ describe('validatePipelineTriggerInputs', () => {
       trigger: null,
       request_reason: undefined,
     });
-    expect(result.inputs).toEqual({ operation: PipelineOperation.NONE });
+    expect(result.inputs).toEqual({ operation: PIPELINE_OPERATION_GITLAB_LABELS[PipelineOperation.NONE] });
   });
 
   it('trims whitespace from inputs', () => {

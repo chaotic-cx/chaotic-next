@@ -168,7 +168,7 @@ describe('Auth & Protected Endpoints (e2e)', () => {
       const res = await realAuthApp.inject({
         method: 'POST',
         url: '/gitlab/trigger',
-        payload: { operation: 'Bump Packages', packages: 'nodejs:20' },
+        payload: { operation: 'bump-packages', packages: 'nodejs:20' },
       });
       expect(res.statusCode).toBe(401);
     });
