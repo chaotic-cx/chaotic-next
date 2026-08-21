@@ -189,6 +189,13 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/count/${pkgname}/${days}` };
   }
 
+  getAverageBuildTimePerDayForPackageResourceRequest(pkgname: string, days: number): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.backendUrl}/builder/average/per-day/package/${encodeURIComponent(pkgname)}`,
+      params: this.daysParams(days),
+    };
+  }
+
   getBackendUrl(): string {
     return this.appConfig.backendUrl;
   }

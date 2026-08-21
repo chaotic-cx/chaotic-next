@@ -1,7 +1,7 @@
-import type { PackageRankList } from '@chaotic-next/shared-lib';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PackageRankList } from '@chaotic-next/shared-lib';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../app.service';
@@ -12,7 +12,7 @@ import { CATPPUCCIN_FLAVOURS } from '../theme';
 
 @Component({
   selector: 'chaotic-chart-downloads',
-  imports: [FormsModule, UIChart, InputNumber],
+  imports: [UIChart, InputNumber, FormsModule],
   templateUrl: './chart-downloads.component.html',
   styleUrl: './chart-downloads.component.css',
 })
@@ -20,11 +20,14 @@ export class ChartDownloadsComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
 
-  readonly range = model(50);
+  readonly range = model(20);
 
-  private readonly resource = httpResource<PackageRankList>(() =>
-    this.appService.getOverallPackageStatsResourceRequest(this.range(), this.statsService.timeRangeDays() ?? undefined),
-  );
+  protected readonly Math = Math;
+
+  private readonly resource = httpResource<PackageRankList>(() => {
+    const val = Math.max(1, this.range() || 1);
+    return this.appService.getOverallPackageStatsResourceRequest(val, this.statsService.timeRangeDays() ?? undefined);
+  });
 
   readonly loading = this.resource.isLoading;
 

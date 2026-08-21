@@ -45,7 +45,7 @@ export class StatsService {
 
   readonly countryRanksRange = signal<number>(15);
 
-  readonly globalPackageMetricRange = signal<number>(50);
+  readonly globalPackageMetricRange = signal<number>(20);
 
   readonly userAgentMetricRange = signal<number>(50);
 

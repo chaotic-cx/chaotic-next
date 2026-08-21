@@ -19,11 +19,14 @@ export class ChartPopularPackagesComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
 
-  readonly amount = signal<number>(20);
+  readonly amount = signal(20);
 
-  private readonly resource = httpResource<{ pkgbase_pkgname: string; count: string }[]>(() =>
-    this.appService.getPopularPackagesResourceRequest(this.amount(), this.statsService.timeRangeDays() ?? undefined),
-  );
+  protected readonly Math = Math;
+
+  private readonly resource = httpResource<{ pkgbase_pkgname: string; count: string }[]>(() => {
+    const val = Math.max(1, this.amount() || 1);
+    return this.appService.getPopularPackagesResourceRequest(val, this.statsService.timeRangeDays() ?? undefined);
+  });
 
   readonly loading = this.resource.isLoading;
 

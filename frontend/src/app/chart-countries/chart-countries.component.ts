@@ -53,9 +53,8 @@ export class ChartCountriesComponent {
         ],
       },
       options: {
-        chartArea: { right: 20, top: 0, width: '75%', height: '100%' },
         plugins: {
-          legend: { labels: mochaLegendLabels(), position: 'right' },
+          legend: { labels: mochaLegendLabels(), position: 'top' },
         },
       },
     };

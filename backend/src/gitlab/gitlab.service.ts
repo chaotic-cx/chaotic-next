@@ -3,7 +3,7 @@ import {
   type ExternalCommitStatus,
   GitlabJob,
   GitlabLogChunk,
-  MergeRequestWithDiffs,
+  type MergeRequestWithDiffs,
   NotificationPayload,
   PipelineScheduleOption,
   PipelineTriggerResult,
@@ -38,10 +38,11 @@ import { extractIndicators } from '../diff-scan/indicators';
 import { VirustotalService } from '../diff-scan/virustotal.service';
 import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
-import { decryptAes, errorMessage, mapWithConcurrency, clampInt, nDaysInPast } from '../utils/functions';
 import { MAX_DAYS_WINDOW } from '../utils/constants';
+import { clampInt, decryptAes, errorMessage, mapWithConcurrency, nDaysInPast } from '../utils/functions';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
 import { MrAction, MrActionType } from './mr-action.entity';
+import { fetchPackageInfo } from './mr-package-info';
 import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
 import { PipelineTrigger } from './pipeline-trigger.entity';
 
@@ -92,6 +93,7 @@ function toMergeRequestWithDiffs(
     ...(previous?.vtReports !== undefined ? { vtReports: previous.vtReports } : {}),
     ...(previous?.maintainers !== undefined ? { maintainers: previous.maintainers } : {}),
     ...(previous?.maintainerChange !== undefined ? { maintainerChange: previous.maintainerChange } : {}),
+    ...(previous?.packageInfo !== undefined ? { packageInfo: previous.packageInfo } : {}),
   };
 }
 
@@ -107,6 +109,7 @@ function mrStateKey(mr: MergeRequestWithDiffs): string {
     mr.vtReports,
     mr.maintainers,
     mr.maintainerChange,
+    mr.packageInfo,
   ]);
 }
 
@@ -232,6 +235,9 @@ export class GitlabService implements OnModuleInit {
       );
       void this.enrichMaintainerInfo(mrs).catch((err) =>
         this.logger.error(`Maintainer enrichment failed: ${errorMessage(err)}`),
+      );
+      void this.enrichPackageInfo(mrs).catch((err) =>
+        this.logger.error(`Package info enrichment failed: ${errorMessage(err)}`),
       );
     } catch (err) {
       this.logger.error(`Auto-flag refresh failed: ${errorMessage(err)}`);
@@ -415,24 +421,30 @@ export class GitlabService implements OnModuleInit {
       const previous = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
       const previousById = new Map(previous?.map((mr) => [mr.id, mr]) ?? []);
 
-      const data = openMrs.map((mr) => {
-        const previousMr = previousById.get(mr.id);
-        const cached = this.mrDataCache.get(mr.iid);
-        if (cached !== undefined && cached.updatedAt === mr.updated_at) {
-          return toMergeRequestWithDiffs(mr, cached.diffs, cached.scanFindings, previousMr);
-        }
-        const diffs = diffsByIid.get(mr.iid) ?? [];
-        const scanFindings = this.diffScanService.scanDiffs(diffs);
-        this.mrDataCache.set(mr.iid, { updatedAt: mr.updated_at, diffs, scanFindings });
-        const ruleIds = [...new Set(scanFindings.map((finding) => finding.ruleId))];
-        this.logger.debug(
-          `MR !${mr.iid}: ${diffs.length} changed file(s), ${scanFindings.length} finding(s)` +
-            (ruleIds.length > 0 ? ` [${ruleIds.join(', ')}]` : ''),
-        );
-        return toMergeRequestWithDiffs(mr, diffs, scanFindings, previousMr);
-      });
+      const data = await Promise.all(
+        openMrs.map(async (mr) => {
+          const previousMr = previousById.get(mr.id);
+          const cached = this.mrDataCache.get(mr.iid);
+          if (cached !== undefined && cached.updatedAt === mr.updated_at) {
+            return toMergeRequestWithDiffs(mr, cached.diffs, cached.scanFindings, previousMr);
+          }
+          const diffs = diffsByIid.get(mr.iid) ?? [];
+          const scanFindings = await this.diffScanService.scanDiffs(diffs);
+          this.mrDataCache.set(mr.iid, { updatedAt: mr.updated_at, diffs, scanFindings });
+          const ruleIds = [...new Set(scanFindings.map((finding) => finding.ruleId))];
+          this.logger.debug(
+            `MR !${mr.iid}: ${diffs.length} changed file(s), ${scanFindings.length} finding(s)` +
+              (ruleIds.length > 0 ? ` [${ruleIds.join(', ')}]` : ''),
+          );
+          return toMergeRequestWithDiffs(mr, diffs, scanFindings, previousMr);
+        }),
+      );
 
       await this.cacheManager.set(this.CACHE_KEY_MRS, data, CACHE_MRS_TTL);
+
+      void this.enrichPackageInfo(data).catch((err) =>
+        this.logger.error(`Package info enrichment failed: ${errorMessage(err)}`),
+      );
 
       return data;
     });
@@ -680,6 +692,33 @@ export class GitlabService implements OnModuleInit {
       await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
       this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: changedMrs, hasNewMr: false } });
     }
+  }
+
+  private async enrichPackageInfo(mrs: MergeRequestWithDiffs[]): Promise<void> {
+    const pending = mrs.filter((mr) => mrPkgname(mr.title) !== null && mr.packageInfo === undefined);
+    if (pending.length === 0) return;
+
+    const byPkgname = new Map<string, MergeRequestWithDiffs[]>();
+    for (const mr of pending) {
+      const pkgname = mrPkgname(mr.title) as string;
+      const group = byPkgname.get(pkgname) ?? [];
+      group.push(mr);
+      byPkgname.set(pkgname, group);
+    }
+
+    const changedMrs: MergeRequestWithDiffs[] = [];
+    for (const [pkgname, mrsForPkg] of byPkgname) {
+      const info = await fetchPackageInfo(this.api, this.chaoticId, pkgname, this.logger);
+      if (!info) continue;
+      for (const mr of mrsForPkg) {
+        mr.packageInfo = info;
+        changedMrs.push(mr);
+      }
+    }
+
+    if (changedMrs.length === 0) return;
+    await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
+    this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: changedMrs, hasNewMr: false } });
   }
 
   private async postVirusTotalNote(iid: number, reports: VtIndicatorReport[]): Promise<boolean> {

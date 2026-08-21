@@ -25,6 +25,14 @@ import { routes } from './app.routes';
 import { provideAuthInitializer } from './auth/auth-initializer';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
 
+/** True when the app runs as an installed PWA (standalone window), not a regular browser tab. */
+function isPwaInstalled(): boolean {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true)
+  );
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -95,7 +103,7 @@ export const appConfig: ApplicationConfig = {
       }),
     ),
     provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode(),
+      enabled: !isDevMode() && isPwaInstalled(),
       registrationStrategy: 'registerWhenStable:30000',
     }),
     provideZonelessChangeDetection(),

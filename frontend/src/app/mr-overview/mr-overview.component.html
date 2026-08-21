@@ -3,7 +3,7 @@
   subtitleHtml="Package updates currently queued for human review with the option to approve the MR for auto-merge."
 />
 
-<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
+<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 !text-left sm:px-2.5">
   <p-tabs [value]="activeTabValue()" (valueChange)="onTabChange($event)">
     <p-tablist>
       <p-tab value="0">
@@ -70,162 +70,273 @@
       animate.leave="ctp-item-leave"
     >
       <ng-template #header>
-        <div class="flex w-full flex-wrap items-center justify-between gap-2">
-          <a class="cursor-pointer text-ctp-mauve" [href]="mr.web_url">{{
+        <div class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <a class="min-w-0 cursor-pointer break-words text-ctp-mauve" [href]="mr.web_url">{{
             mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
           }}</a>
-          @if (scanSummary(mr); as summary) {
-            <p-tag
-              [severity]="summary.tagSeverity"
-              [value]="summary.label"
-              icon="pi pi-shield"
-              pTooltip="Automated security scan found potentially problematic changes. Review the findings below."
-              tooltipPosition="top"
-            />
-          }
+          <div class="mr-chips flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+            @if (packageLink(mr); as link) {
+              <a [href]="link.url" [pTooltip]="link.tooltip" target="_blank" rel="noopener" tooltipPosition="top">
+                <p-tag
+                  [severity]="link.label === 'Custom' ? 'warn' : 'info'"
+                  [value]="link.label"
+                  icon="pi pi-external-link"
+                />
+              </a>
+            }
+            @if (ciOverrideFiles(mr).length > 0) {
+              <a
+                [href]="ciFolderUrl(mr)"
+                target="_blank"
+                rel="noopener"
+                pTooltip="This package applies .CI interfere/build override files. Open the .CI folder."
+                tooltipPosition="top"
+              >
+                <p-tag [value]="ciOverrideFiles(mr).join(', ')" severity="info" icon="pi pi-folder" />
+              </a>
+            }
+            @if (isAurManaged(mr)) {
+              <p-tag
+                severity="info"
+                value="AUR managed"
+                icon="pi pi-arrow-up-right"
+                pTooltip="The CI auto-pushes this package's AUR repo."
+                tooltipPosition="top"
+              />
+            }
+            @if (isNvchecker(mr)) {
+              <p-tag
+                severity="info"
+                value="Auto-updated"
+                icon="pi pi-refresh"
+                pTooltip="Versions are auto-checked via nvchecker."
+                tooltipPosition="top"
+              />
+            }
+            @if (rebuildTriggers(mr).length > 0) {
+              <p-tag
+                [value]="`Rebuilds on: ${rebuildTriggers(mr).join(', ')}`"
+                severity="info"
+                icon="pi pi-sync"
+                pTooltip="This package is rebuilt when these libraries change."
+                tooltipPosition="top"
+              />
+            }
+          </div>
         </div>
       </ng-template>
 
       <div class="chaotic-lazy-viewport">
         @if (scanSummary(mr); as summary) {
-          <p-fieldset
-            class="text-left fieldset-responsive overflow-x-auto block mb-5"
-            [toggleable]="true"
-            [collapsed]="!summary.hasCritical"
-            [attr.data-scan-fieldset]="''"
-            legend="Automated security scan"
-          >
-            <div class="flex flex-col gap-1.5 pl-1.5 pb-1.5">
-              @for (finding of scanFindings(mr); track $index) {
-                <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
-                  <div class="flex min-w-0 items-center gap-2">
-                    <p-tag [severity]="presenter.findingSeverity[finding.severity]" [value]="finding.severity" />
-                    <span
-                      class="min-w-0 break-words font-semibold"
-                      [pTooltip]="finding.description"
-                      tooltipPosition="top"
-                    >
-                      {{ finding.ruleName }}
-                    </span>
-                  </div>
-                  <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
-                    <code class="whitespace-nowrap text-ctp-sky text-xs">
-                      {{ fileLocation(mr, finding) }}
-                    </code>
-                    <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
-                  </div>
-                </div>
-              }
-
-              @if (vtReports(mr).length) {
-                <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
-                  <span class="text-sm font-semibold">VirusTotal indicators</span>
-                  @for (report of vtReports(mr); track $index) {
+          <section class="mb-5 rounded-lg border border-ctp-crust bg-ctp-mantle/40">
+            <header
+              class="flex cursor-pointer items-center justify-between gap-2 border-ctp-crust px-3 py-2"
+              [attr.data-scan-fieldset]="''"
+              [attr.aria-expanded]="isFindingsOpen(mr)"
+              (click)="toggleFindings(mr)"
+              (keydown.enter)="toggleFindings(mr)"
+              (keydown.space)="toggleFindings(mr)"
+              role="button"
+              tabindex="0"
+            >
+              <span class="flex items-center gap-2 text-sm font-semibold text-ctp-text">
+                <i class="pi pi-shield text-ctp-mauve"></i>
+                Security scan
+              </span>
+              <div class="flex items-center gap-2">
+                <p-tag [severity]="summary.tagSeverity" [value]="summary.label" />
+                <i
+                  [class]="
+                    isFindingsOpen(mr) ? 'pi pi-chevron-up text-ctp-subtext' : 'pi pi-chevron-down text-ctp-subtext'
+                  "
+                ></i>
+              </div>
+            </header>
+            <div
+              class="grid transition-[grid-template-rows] duration-150 ease-in-out"
+              [class.grid-rows-[1fr]]="isFindingsOpen(mr)"
+              [class.grid-rows-[0fr]]="!isFindingsOpen(mr)"
+            >
+              <div class="overflow-hidden">
+                <div class="flex flex-col gap-1.5 px-3 py-2">
+                  @for (finding of scanFindings(mr); track $index) {
                     <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
                       <div class="flex min-w-0 items-center gap-2">
-                        <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
-                        <span class="min-w-0 break-all text-xs font-semibold">{{ report.value }}</span>
+                        <p-tag [severity]="presenter.findingSeverity[finding.severity]" [value]="finding.severity" />
+                        <span
+                          class="min-w-0 break-words font-semibold"
+                          [pTooltip]="finding.description"
+                          tooltipPosition="top"
+                        >
+                          {{ finding.ruleName }}
+                        </span>
                       </div>
                       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
-                        <code class="whitespace-nowrap text-xs text-ctp-sky">{{ report.context }}</code>
-                        <span class="text-xs text-ctp-subtext">{{ presenter.vtEngines(report) }}</span>
+                        <code class="whitespace-nowrap text-ctp-sky text-xs">
+                          {{ fileLocation(mr, finding) }}
+                        </code>
+                        <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
                       </div>
                     </div>
                   }
-                </div>
-              }
 
-              @if (maintainers(mr).length || maintainerChange(mr)) {
-                <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
-                  <span class="text-sm font-semibold">Maintainers</span>
-                  @for (maintainer of maintainers(mr); track maintainer.username) {
-                    <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
-                      <div class="flex min-w-0 items-center gap-2">
-                        @if (maintainer.novice) {
-                          <p-tag severity="warn" value="New" />
-                        }
-                        <span class="text-xs font-semibold">{{ maintainer.username }}</span>
-                      </div>
-                      <span class="text-xs text-ctp-subtext">{{ presenter.maintainerSummary(maintainer) }}</span>
+                  @if (vtReports(mr).length) {
+                    <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
+                      <span class="text-sm font-semibold">VirusTotal indicators</span>
+                      @for (report of vtReports(mr); track $index) {
+                        <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+                          <div class="flex min-w-0 items-center gap-2">
+                            <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
+                            <span class="min-w-0 break-all text-xs font-semibold">{{ report.value }}</span>
+                          </div>
+                          <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+                            <code class="whitespace-nowrap text-xs text-ctp-sky">{{ report.context }}</code>
+                            <span class="text-xs text-ctp-subtext">{{ presenter.vtEngines(report) }}</span>
+                          </div>
+                        </div>
+                      }
                     </div>
                   }
-                  @if (maintainerChange(mr); as change) {
-                    <div class="flex flex-wrap items-center gap-2">
-                      @if (presenter.tookOverByNovice(change, maintainers(mr))) {
-                        <p-tag severity="danger" value="New maintainer took over" />
-                      } @else {
-                        <p-tag severity="warn" value="Maintainer changed" />
+
+                  @if (maintainers(mr).length || maintainerChange(mr)) {
+                    <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
+                      <span class="text-sm font-semibold">Maintainers</span>
+                      @for (maintainer of maintainers(mr); track maintainer.username) {
+                        <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+                          <div class="flex min-w-0 items-center gap-2">
+                            @if (maintainer.novice) {
+                              <p-tag severity="warn" value="New" />
+                            }
+                            <span class="text-xs font-semibold">{{ maintainer.username }}</span>
+                          </div>
+                          <span class="text-xs text-ctp-subtext">{{ presenter.maintainerSummary(maintainer) }}</span>
+                        </div>
                       }
-                      <span class="text-xs text-ctp-subtext">{{ presenter.maintainerChangeSummary(change) }}</span>
+                      @if (maintainerChange(mr); as change) {
+                        <div class="flex flex-wrap items-center gap-2">
+                          @if (presenter.tookOverByNovice(change, maintainers(mr))) {
+                            <p-tag severity="danger" value="New maintainer took over" />
+                          } @else {
+                            <p-tag severity="warn" value="Maintainer changed" />
+                          }
+                          <span class="text-xs text-ctp-subtext">{{ presenter.maintainerChangeSummary(change) }}</span>
+                        </div>
+                      }
                     </div>
                   }
                 </div>
-              }
+              </div>
             </div>
-          </p-fieldset>
+          </section>
         }
 
         @if (mr.diffs && mr.diffs.length > 0) {
           @for (change of mr.diffs; track change.new_path) {
-            <p-fieldset
-              class="text-left fieldset-responsive overflow-x-auto block mb-5 chaotic-lazy-viewport"
-              [legend]="stripPkgPrefix(mr, change.new_path) + (fileHasFindings(mr, change.new_path) ? ' ⚠' : '')"
-              [toggleable]="true"
+            <section
+              class="mb-5 overflow-x-auto rounded-lg border border-ctp-crust bg-ctp-mantle/40 chaotic-lazy-viewport"
             >
+              <header class="flex flex-wrap items-center gap-2 border-b border-ctp-crust px-3 py-2">
+                <code class="min-w-0 flex-1 break-all font-mono text-sm text-ctp-text">{{
+                  stripPkgPrefix(mr, change.new_path)
+                }}</code>
+              </header>
               @defer (on viewport; prefetch on idle) {
                 <chaotic-diff-renderer [diff]="change.diff" [findingsByLine]="findingsByLine(mr, change.new_path)" />
               } @placeholder {
                 <div class="chaotic-diff-placeholder" aria-hidden="true"></div>
               }
-            </p-fieldset>
+            </section>
           }
         } @else {
           <span class="text-ctp-text">No changes</span>
         }
 
         @if (isLoggedIn()) {
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-10 md:justify-self-center">
+          @let approve = actionButton(mr, 'approve');
+          @let dangerous = actionButton(mr, 'dangerous');
+          @let hold = actionButton(mr, 'hold');
+
+          <div class="mt-4 flex items-center justify-center gap-3 pb-4 md:hidden">
+            <p-button
+              [disabled]="approve.disabled"
+              [loading]="approve.loading"
+              [icon]="approve.icon"
+              [attr.aria-label]="approve.label"
+              [pTooltip]="approve.tooltip"
+              (onClick)="mrOverviewService.approve(mr)"
+              severity="success"
+              variant="outlined"
+              styleClass="mr-btn-icon"
+              tooltipPosition="top"
+            />
+            <p-button
+              [disabled]="dangerous.disabled"
+              [loading]="dangerous.loading"
+              [icon]="dangerous.icon"
+              [attr.aria-label]="dangerous.label"
+              [pTooltip]="dangerous.tooltip"
+              (onClick)="mrOverviewService.flag(mr, 'dangerous')"
+              severity="danger"
+              variant="outlined"
+              styleClass="mr-btn-icon"
+              tooltipPosition="top"
+            />
+            <p-button
+              [disabled]="hold.disabled"
+              [loading]="hold.loading"
+              [icon]="hold.icon"
+              [attr.aria-label]="hold.label"
+              [pTooltip]="hold.tooltip"
+              (onClick)="mrOverviewService.flag(mr, 'hold')"
+              severity="warn"
+              variant="outlined"
+              styleClass="mr-btn-icon"
+              tooltipPosition="top"
+            />
+          </div>
+
+          <div class="hidden pb-4 md:grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-10 md:justify-self-center">
             <div class="w-full min-w-0">
               <p-button
-                [disabled]="actionsDisabled(mr)"
-                [label]="mr.labels.includes('approved') ? 'Already approved' : 'Approve update'"
-                [loading]="isLoading(mr, 'approve')"
+                [disabled]="approve.disabled"
+                [label]="approve.label"
+                [loading]="approve.loading"
+                [icon]="approve.icon"
+                [pTooltip]="approve.tooltip"
                 (onClick)="mrOverviewService.approve(mr)"
-                icon="pi pi-check"
                 severity="success"
                 variant="outlined"
                 styleClass="w-50 mr-btn-approve"
-                pTooltip="Approve this merge request for auto-merge"
                 tooltipPosition="top"
               />
             </div>
 
             <div class="w-full min-w-0">
               <p-button
-                [disabled]="actionsDisabled(mr) || mr.labels.includes('hold')"
-                [label]="mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous'"
-                [loading]="isLoading(mr, 'flag:dangerous')"
+                [disabled]="dangerous.disabled"
+                [label]="dangerous.label"
+                [loading]="dangerous.loading"
+                [icon]="dangerous.icon"
+                [pTooltip]="dangerous.tooltip"
                 (onClick)="mrOverviewService.flag(mr, 'dangerous')"
-                icon="pi pi-exclamation-triangle"
                 severity="danger"
                 variant="outlined"
                 styleClass="w-50 mr-btn-danger"
-                pTooltip="Flag this merge request as dangerous and prevent auto-merge"
                 tooltipPosition="top"
               />
             </div>
 
             <div class="w-full min-w-0">
               <p-button
-                [disabled]="actionsDisabled(mr) || mr.labels.includes('hold')"
-                [label]="mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now'"
-                [loading]="isLoading(mr, 'flag:hold')"
+                [disabled]="hold.disabled"
+                [label]="hold.label"
+                [loading]="hold.loading"
+                [icon]="hold.icon"
+                [pTooltip]="hold.tooltip"
                 (onClick)="mrOverviewService.flag(mr, 'hold')"
-                icon="pi pi-pause"
                 severity="warn"
                 variant="outlined"
                 styleClass="w-50 mr-btn-warn"
-                pTooltip="Put this merge request on hold for later review"
                 tooltipPosition="top"
               />
             </div>

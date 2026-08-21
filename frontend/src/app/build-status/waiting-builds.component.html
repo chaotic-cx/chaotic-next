@@ -31,4 +31,17 @@
       <chaotic-build-status-pager [page]="currentPage()" [pageCount]="pageCount()" (pageChange)="selectPage($event)" />
     </div>
   </section>
+} @else {
+  <section class="flex h-full flex-col">
+    <chaotic-build-status-section
+      title="Waiting builds"
+      subtitle="These are currently queued builds"
+      icon="pi-hourglass"
+      iconClass="text-ctp-subtext0"
+    />
+    <div class="flex min-h-[5rem] flex-1 flex-col items-center justify-center gap-2 py-6 text-center text-ctp-subtext0">
+      <i class="pi pi-check-circle text-3xl"></i>
+      <span class="text-sm font-medium">No builds waiting in queue</span>
+    </div>
+  </section>
 }
