@@ -1,15 +1,15 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { Card } from '@openng/optimus-ui/card';
 import { Image } from '@openng/optimus-ui/image';
-import { Panel } from '@openng/optimus-ui/panel';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { updateSeoTags } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-memorial',
-  imports: [Panel, Image, TitleComponent, ProgressSpinner],
+  imports: [Card, Image, TitleComponent, ProgressSpinner],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
 })
@@ -80,32 +80,28 @@ export class MemorialComponent implements OnInit {
     'zoe.png',
   ];
 
-  desktopLinks: { full: string; preview: string }[] = [];
-  termLinks: { full: string; preview: string }[] = [];
+  desktopLinks: { author: string; full: string; preview: string }[] = [];
+  termLinks: { author: string; full: string; preview: string }[] = [];
 
   specialTreatmentDesktops: string[] = ['alexjp.jpg', 'fcinq.jpg', 'filo.jpg', 'virusz4274.png'];
   specialTreatmentTerms: string[] = ['kenny.jpg', 'rohit-arm.jpg', 'snowdan.jpg'];
 
   constructor() {
     for (const filename of this.desktops) {
-      if (
-        !this.specialTreatmentDesktops.some((item) => {
-          return item === filename;
-        })
-      ) {
+      if (!this.specialTreatmentDesktops.includes(filename)) {
+        const author = filename.replace(/\.(png|jpg|jpeg|webp)$/i, '');
         this.desktopLinks.push({
+          author,
           full: `/memorials/2021/desktops/${filename}.webp`,
           preview: `/memorials/2021/desktops/${filename}.webp`,
         });
       }
     }
     for (const filename of this.terms) {
-      if (
-        !this.specialTreatmentTerms.some((item) => {
-          return item === filename;
-        })
-      ) {
+      if (!this.specialTreatmentTerms.includes(filename)) {
+        const author = filename.replace(/\.(png|jpg|jpeg|webp)$/i, '');
         this.termLinks.push({
+          author,
           full: `/memorials/2021/terminals/${filename}.webp`,
           preview: `/memorials/2021/terminals/${filename}.webp`,
         });

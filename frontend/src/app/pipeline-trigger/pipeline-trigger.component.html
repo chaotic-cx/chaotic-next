@@ -94,7 +94,7 @@
                     [ngModel]="model().packageRows[$index].pkgbase"
                     [ngModelOptions]="{ standalone: true }"
                     [delay]="0"
-                    [minLength]="2"
+                    [minQueryLength]="2"
                     (ngModelChange)="setPackageRowPkgbase($index, $event)"
                     (onBlur)="onPackageRowBlur($index, $event)"
                     (completeMethod)="onPackageSuggest($event)"
