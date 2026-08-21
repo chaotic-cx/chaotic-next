@@ -158,3 +158,13 @@ export function errorCode(err: unknown): string | undefined {
   const code = (err as { code: unknown }).code;
   return typeof code === 'string' ? code : undefined;
 }
+
+/**
+ * We must not merge MRs while scheduled build pipelines are running.
+ * Scheduled (every 3 hours) between HH:30 and HH:40 UTC.
+ */
+export function isOnSchedulePipelineRunning(date = new Date()): boolean {
+  const utcHours = date.getUTCHours();
+  const utcMinutes = date.getUTCMinutes();
+  return utcHours % 3 === 0 && utcMinutes >= 30 && utcMinutes <= 40;
+}
