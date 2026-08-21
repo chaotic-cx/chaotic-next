@@ -19,6 +19,7 @@ import { TitleComponent } from '../title/title.component';
         subtitleHtml="Where our mirrors are located. Pick a mirror from the overview to see details."
       />
       <chaotic-mirror-map
+        class="backdrop-blur-xs"
         [fillHeight]="true"
         [mirrors]="mirrorsService.mirrors()"
         [self]="mirrorsService.self()"

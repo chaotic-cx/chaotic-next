@@ -122,7 +122,9 @@ function samePosition(a: [number, number], b: [number, number]): boolean {
       .mirror-map {
         position: absolute;
         inset: 0;
-        background-color: var(--p-card-background);
+        background-color: transparent;
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
       }
 
       :host ::ng-deep .maplibregl-ctrl-group {
