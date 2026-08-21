@@ -137,6 +137,8 @@ export class AurScanService {
       scan.sources = parsed?.entries.map((entry) => entry.raw) ?? [];
 
       const sourceFiles = await this.fetchScannableSources(parsed, pkgbuildText.packageBase);
+      scan.sourceFiles = sourceFiles;
+
       for (const file of sourceFiles) {
         changes.push(fullFileDiff(file.name, file.content));
       }

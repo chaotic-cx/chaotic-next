@@ -12,6 +12,23 @@
         "parallel": false
       }
     },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build"],
+      "defaultConfiguration": "development",
+      "outputs": ["{workspaceRoot}/dist/backend"],
+      "options": {
+        "cwd": "backend"
+      },
+      "configurations": {
+        "development": {
+          "command": "rspack build --node-env=development"
+        },
+        "production": {
+          "command": "rspack build --node-env=production"
+        }
+      }
+    },
     "serve": {
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",

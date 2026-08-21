@@ -1,15 +1,16 @@
-import { Component, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { PIPELINE_OPERATIONS, PipelineTriggerAction } from '@chaotic-next/shared-lib';
+import { ActivatedRoute, Router } from '@angular/router';
+import { PIPELINE_OPERATIONS, PipelineScheduleOption, PipelineTriggerAction } from '@chaotic-next/shared-lib';
+import { Button } from '@openng/optimus-ui/button';
+import { Dialog } from '@openng/optimus-ui/dialog';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
-import { ActivatedRoute, Router } from '@angular/router';
-import { AdminService } from '../admin.service';
 import {
   createDebounced,
   pageFromQuery,
@@ -21,12 +22,13 @@ import {
   stringFilterFromQuery,
   stringFilterToQuery,
 } from '../admin-url-sync';
+import { AdminService } from '../admin.service';
 
 const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: operation, value: operation }));
 
 @Component({
   selector: 'chaotic-admin-pipeline-triggers-page',
-  imports: [DatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule],
+  imports: [Button, DatePipe, Dialog, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule],
   template: `
     <div class="table-container">
       <p-table
@@ -44,7 +46,25 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
       >
         <ng-template #caption>
           <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
+            <div class="flex w-full sm:hidden">
+              <p-button
+                class="w-full"
+                (onClick)="openScheduleDialog()"
+                styleClass="w-full justify-center"
+                icon="pi pi-play"
+                label="Run schedule"
+                text
+                severity="primary"
+              />
+            </div>
             <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+              <p-button
+                (onClick)="openScheduleDialog()"
+                icon="pi pi-play"
+                label="Run schedule"
+                text
+                severity="primary"
+              />
               <p-select
                 [options]="operationOptions"
                 [ngModel]="service.pipelineTriggerOperationFilter()"
@@ -122,6 +142,49 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
         </ng-template>
       </p-table>
     </div>
+
+    <p-dialog
+      [(visible)]="scheduleDialogVisible"
+      [header]="'Run Schedule'"
+      [modal]="true"
+      [style]="{ width: '90vw', maxWidth: '500px' }"
+      appendTo="body"
+    >
+      <div class="flex flex-col gap-4 py-2">
+        <div class="flex flex-col gap-1.5">
+          <label class="font-medium text-ctp-text text-sm" for="schedule-select">Schedule</label>
+          <p-select
+            class="w-full"
+            [options]="scheduleOptions()"
+            [ngModel]="selectedScheduleId()"
+            (ngModelChange)="selectedScheduleId.set($event)"
+            inputId="schedule-select"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select schedule..."
+            appendTo="body"
+          />
+        </div>
+
+        <div class="flex justify-end gap-2 mt-4">
+          <p-button
+            (onClick)="scheduleDialogVisible.set(false)"
+            type="button"
+            severity="secondary"
+            text
+            label="Cancel"
+          />
+          <p-button
+            [disabled]="!selectedScheduleId() || isSubmitting()"
+            [icon]="isSubmitting() ? 'pi pi-spinner pi-spin' : 'pi pi-play'"
+            (onClick)="triggerRunSchedule()"
+            type="button"
+            severity="primary"
+            label="Run Schedule"
+          />
+        </div>
+      </div>
+    </p-dialog>
   `,
 })
 export class AdminPipelineTriggersPageComponent {
@@ -134,6 +197,40 @@ export class AdminPipelineTriggersPageComponent {
   private readonly syncSearch = createDebounced(400, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.pipelineTriggerQuery()) }),
   );
+
+  readonly scheduleDialogVisible = signal(false);
+  readonly scheduleOptions = signal<Array<{ label: string; value: number }>>([]);
+  readonly selectedScheduleId = signal<number | null>(null);
+  readonly isSubmitting = signal(false);
+
+  async openScheduleDialog(): Promise<void> {
+    this.selectedScheduleId.set(null);
+    this.scheduleDialogVisible.set(true);
+    try {
+      const schedules = await this.service.getSchedules();
+      this.scheduleOptions.set(
+        schedules.map((schedule: PipelineScheduleOption) => ({
+          label: schedule.description ?? `Schedule #${schedule.id}`,
+          value: schedule.id,
+        })),
+      );
+    } catch {
+      this.scheduleOptions.set([]);
+    }
+  }
+
+  async triggerRunSchedule(): Promise<void> {
+    const id = this.selectedScheduleId();
+    if (!id || this.isSubmitting()) return;
+
+    this.isSubmitting.set(true);
+    try {
+      await this.service.runSchedule(id);
+      this.scheduleDialogVisible.set(false);
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
 
   constructor() {
     restoreQueryParams(this.route, {

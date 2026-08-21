@@ -5,9 +5,11 @@ import {
   GitlabLogChunk,
   type MergeRequestWithDiffs,
   NotificationPayload,
+  PipelineOperation,
   PipelineScheduleOption,
   PipelineTriggerResult,
   PipelineWithExternalStatus,
+  PKGBUILD_SOURCE_AUR,
   totalEngines,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
@@ -29,15 +31,16 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mutex } from 'async-mutex';
 import { Observable } from 'rxjs';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
-import { Repo } from '../builder/builder.entity';
+import { Package, Repo } from '../builder/builder.entity';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { DiffScanService, type DiffScanVerdict, type MrAutoFlagLabel } from '../diff-scan/diff-scan.service';
 import { extractIndicators } from '../diff-scan/indicators';
 import { VirustotalService } from '../diff-scan/virustotal.service';
 import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
+import { applyPackageBump } from '../repo-manager/bump/bump-config';
 import { MAX_DAYS_WINDOW } from '../utils/constants';
 import { clampInt, decryptAes, errorMessage, mapWithConcurrency, nDaysInPast } from '../utils/functions';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
@@ -138,7 +141,6 @@ export class GitlabService implements OnModuleInit {
   mergeRequestsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
-  private readonly mergeBotUserId: number;
 
   private isSeedingPipelines = false;
   private isAutoFlaggingMrs = false;
@@ -147,12 +149,11 @@ export class GitlabService implements OnModuleInit {
   private readonly vtNotedMrIids = new Set<number>();
 
   private readonly mrDataCache = new Map<number, CachedMrData>();
-
-  /** updated_at of the MR revision maintainers were last computed for. */
   private readonly maintainerCheckedAt = new Map<number, string>();
 
   private readonly pipelineMap = new Map<number, PipelineSchema>();
   private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
+  private readonly unlinkedCommitShas = new Set<string>();
   private statusIdCounter = 0;
 
   constructor(
@@ -170,9 +171,9 @@ export class GitlabService implements OnModuleInit {
     private readonly pipelineTriggerRepository: Repository<PipelineTrigger>,
     @InjectRepository(Repo)
     private readonly repoRepository: Repository<Repo>,
-  ) {
-    this.mergeBotUserId = this.configService.getOrThrow<number>('app.mergeBotUserId');
-  }
+    @InjectRepository(Package)
+    private readonly packageRepository: Repository<Package>,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     await this.initApiClient().catch((err) =>
@@ -339,6 +340,14 @@ export class GitlabService implements OnModuleInit {
         this.pipelineMap.delete(oldId);
         this.statusMap.delete(oldId);
       }
+    }
+
+    if (attrs.sha && this.unlinkedCommitShas.has(attrs.sha)) {
+      await this.pipelineTriggerRepository.update(
+        { commitSha: attrs.sha, pipelineId: IsNull() },
+        { pipelineId: attrs.id },
+      );
+      this.unlinkedCommitShas.delete(attrs.sha);
     }
 
     const pipelines = await this.getLastPipelines();
@@ -849,19 +858,38 @@ export class GitlabService implements OnModuleInit {
         'This merge request is flagged as malware by the automated security scan and requires manual review.',
       );
     }
-    await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: mr.sha ?? sha });
+    const targetSha = mr.sha ?? sha;
+    await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: targetSha });
 
     if (!labels.includes('approved')) {
       await this.api.MergeRequests.edit(this.chaoticId, iid, {
         addLabels: 'approved',
-        assigneeId: this.mergeBotUserId,
       });
     }
 
     await this.postActorComment(iid, '✅ Approved by', actor);
-    await this.recordMrAction(iid, 'approve', mr.sha ?? sha, actor);
+    await this.recordMrAction(iid, 'approve', targetSha, actor);
+
+    await this.mergeWithRetry(iid, targetSha);
     await this.cacheManager.del(this.CACHE_KEY_MRS);
+
     void this.refreshOpenMergeRequests();
+  }
+
+  private async mergeWithRetry(iid: number, sha: string): Promise<void> {
+    try {
+      await this.api.MergeRequests.accept(this.chaoticId, iid, { sha });
+    } catch (error) {
+      this.logger.warn(`Initial merge failed for MR !${iid}: ${errorMessage(error)}. Retrying with rebase...`);
+      try {
+        await this.api.MergeRequests.rebase(this.chaoticId, iid);
+        const updatedMr = await this.api.MergeRequests.show(this.chaoticId, iid);
+        await this.api.MergeRequests.accept(this.chaoticId, iid, { sha: updatedMr.sha ?? sha });
+      } catch (retryError) {
+        this.logger.error(`Merge after rebase failed for MR !${iid}: ${errorMessage(retryError)}`);
+        throw new BadRequestException(`Failed to merge MR !${iid}: ${errorMessage(retryError)}`);
+      }
+    }
   }
 
   async flagMergeRequest(iid: number, label: MrActionType, actor: MrActor): Promise<void> {
@@ -904,11 +932,254 @@ export class GitlabService implements OnModuleInit {
     }));
   }
 
-  /**
-   * Triggers a pipeline run with the given spec:inputs, carrying the triggering
-   * user into the pipeline as a CI variable, and records an audit row.
-   */
-  async triggerPipeline(inputs: Record<string, string>, ref: string, actor: MrActor): Promise<PipelineTriggerResult> {
+  async runSchedule(scheduleId: number, actor: MrActor): Promise<PipelineTriggerResult> {
+    if (scheduleId > 0) {
+      this.logger.debug(`Triggering pipeline schedule #${scheduleId}...`);
+      const schedules = this.api.PipelineSchedules as unknown as Record<string, (...args: unknown[]) => unknown>;
+      if (typeof schedules.play === 'function') {
+        await schedules.play(this.chaoticId, scheduleId);
+      } else if (typeof schedules.take === 'function') {
+        await schedules.take(this.chaoticId, scheduleId);
+      } else {
+        await (this.api as unknown as { requester: { post: (...args: unknown[]) => unknown } }).requester.post(
+          `projects/${encodeURIComponent(this.chaoticId)}/pipeline_schedules/${scheduleId}/play`,
+        );
+      }
+    }
+    const webUrl = `${this.chaoticId}/pipeline_schedules`;
+
+    await this.pipelineTriggerRepository.insert({
+      ref: 'main',
+      commitSha: null,
+      operation: PipelineOperation.RUN_SCHEDULE,
+      inputs: { scheduleId: String(scheduleId) },
+      pipelineId: null,
+      webUrl,
+      ...actor,
+    });
+
+    return { pipelineId: 0, webUrl, status: 'scheduled' };
+  }
+
+  async dropPackages(packages: string[], ref: string, actor: MrActor): Promise<PipelineTriggerResult> {
+    const commitActions: Array<{ action: 'delete'; filePath: string }> = [];
+
+    for (const rawPkg of packages) {
+      const pkgname = rawPkg.trim();
+      if (!pkgname) continue;
+      try {
+        const treeItems = await this.api.Repositories.allRepositoryTrees(this.chaoticId, {
+          path: pkgname,
+          ref,
+          recursive: true,
+          pagination: 'keyset',
+          orderBy: 'name',
+          sort: 'asc',
+        });
+
+        // Deleting all files inside a directory automatically removes the directory in Git.
+        const filesToDelete = treeItems.filter((item: { type: string; path: string }) => item.type === 'blob');
+        if (filesToDelete.length > 0) {
+          for (const file of filesToDelete) {
+            commitActions.push({
+              action: 'delete',
+              filePath: (file as { path: string }).path,
+            });
+          }
+        } else {
+          commitActions.push({
+            action: 'delete',
+            filePath: `${pkgname}/.CI/config`,
+          });
+        }
+      } catch {
+        commitActions.push({
+          action: 'delete',
+          filePath: `${pkgname}/.CI/config`,
+        });
+      }
+    }
+
+    const subject =
+      packages.length > 3 ? `chore(drop): packages (${packages.length})` : `chore(drop): ${packages.join(', ')}`;
+    const commitMessage = `${subject}\n\nDropped manually by ${actor.userName}`;
+
+    const commit = await this.api.Commits.create(this.chaoticId, ref, commitMessage, commitActions);
+
+    if (commit.id) {
+      this.unlinkedCommitShas.add(commit.id);
+    }
+    await this.pipelineTriggerRepository.insert({
+      ref,
+      commitSha: commit.id,
+      operation: PipelineOperation.DROP_PACKAGES,
+      inputs: { packages: packages.join(':') },
+      pipelineId: null,
+      webUrl: commit.web_url ?? '',
+      ...actor,
+    });
+
+    return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
+  }
+
+  async addPackages(
+    items: Array<{ pkgname: string; source?: string }>,
+    requestOrigin: string,
+    ref: string,
+    actor: MrActor,
+    requestReason?: string,
+    customRequestReason?: string,
+  ): Promise<PipelineTriggerResult> {
+    const itemNames = items.map((i) => i.pkgname);
+    this.logger.debug(`Processing package addition for [${itemNames.join(', ')}] on ref ${ref} by ${actor.userName}`);
+    const commitActions: Array<{ action: 'create' | 'update'; filePath: string; content: string }> = [];
+
+    for (const item of items) {
+      const pkgname = item.pkgname.trim();
+      if (!pkgname) continue;
+      const source = item.source ?? PKGBUILD_SOURCE_AUR;
+      this.logger.debug(`Fetching AUR metadata and PKGBUILD for ${pkgname} (source: ${source})`);
+
+      const configLines = [`CI_PKGBUILD_SOURCE=${source}`];
+      if (requestOrigin && requestOrigin.trim()) {
+        configLines.push(`CI_REQUEST_ORIGIN=${requestOrigin.trim()}`);
+      }
+      if (requestReason && requestReason !== 'unset') {
+        configLines.push(`CI_REQUEST_REASON=${requestReason.trim()}`);
+      }
+      if (customRequestReason && customRequestReason.trim()) {
+        configLines.push(`CI_CUSTOM_REQUEST_REASON=${customRequestReason.trim()}`);
+      }
+      const ciConfigContent = `${configLines.join('\n')}\n`;
+
+      try {
+        const pkgbuildScan = await this.aurScanService.startScan(pkgname);
+        const pkgbuildText = await this.fetchAurPkgbuildText(pkgbuildScan.packageBase || pkgname);
+
+        commitActions.push({
+          action: 'create',
+          filePath: `${pkgname}/.CI/config`,
+          content: ciConfigContent,
+        });
+
+        if (pkgbuildText) {
+          this.logger.debug(`Successfully fetched PKGBUILD for ${pkgname} (${pkgbuildText.length} bytes)`);
+          commitActions.push({
+            action: 'create',
+            filePath: `${pkgname}/PKGBUILD`,
+            content: pkgbuildText,
+          });
+        } else {
+          this.logger.debug(`No PKGBUILD content returned for ${pkgname}`);
+        }
+
+        for (const file of pkgbuildScan.sourceFiles ?? []) {
+          if (file.name === 'PKGBUILD') continue;
+          this.logger.debug(`Adding auxiliary source file ${file.name} (${file.content.length} bytes) for ${pkgname}`);
+          commitActions.push({
+            action: 'create',
+            filePath: `${pkgname}/${file.name}`,
+            content: file.content,
+          });
+        }
+      } catch (err) {
+        this.logger.warn(`Could not fetch AUR sources for ${pkgname}: ${errorMessage(err)}`);
+        commitActions.push({
+          action: 'create',
+          filePath: `${pkgname}/.CI/config`,
+          content: ciConfigContent,
+        });
+      }
+    }
+
+    const subject =
+      itemNames.length > 3 ? `feat(add): packages (${itemNames.length})` : `feat(add): ${itemNames.join(', ')}`;
+    const commitMessage = `${subject}\n\nAdded manually by ${actor.userName}`;
+
+    this.logger.debug(`Creating GitLab commit with ${commitActions.length} actions for [${itemNames.join(', ')}]`);
+    const commit = await this.api.Commits.create(this.chaoticId, ref, commitMessage, commitActions);
+
+    this.logger.log(
+      `Package(s) added successfully: [${itemNames.join(', ')}] by ${actor.userName} (commit: ${commit.id}, url: ${commit.web_url})`,
+    );
+
+    if (commit.id) {
+      this.unlinkedCommitShas.add(commit.id);
+    }
+    await this.pipelineTriggerRepository.insert({
+      ref,
+      commitSha: commit.id,
+      operation: PipelineOperation.ADD_PACKAGES,
+      inputs: { add_packages: itemNames.join(' '), request_origin: requestOrigin },
+      pipelineId: null,
+      webUrl: commit.web_url ?? '',
+      ...actor,
+    });
+
+    return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
+  }
+
+  async bumpPackages(packages: string[], ref: string, actor: MrActor): Promise<PipelineTriggerResult> {
+    const commitActions: Array<{ action: 'update' | 'create'; filePath: string; content: string }> = [];
+
+    for (const pkg of packages) {
+      const pkgname = pkg.trim();
+      if (!pkgname) continue;
+      const configPath = `${pkgname}/.CI/config`;
+      let existingConfig = '';
+
+      try {
+        const raw = await this.api.RepositoryFiles.showRaw(this.chaoticId, configPath, ref);
+        if (typeof raw === 'string') {
+          existingConfig = raw;
+        } else if (raw && typeof (raw as { text?: () => Promise<string> }).text === 'function') {
+          existingConfig = await (raw as { text: () => Promise<string> }).text();
+        } else if (raw) {
+          existingConfig = String(raw);
+        }
+      } catch {
+        // File may not exist yet
+      }
+
+      const dbPkg = await this.packageRepository.findOne({ where: { pkgname } });
+      const version = dbPkg?.version ?? null;
+      const pkgrel = dbPkg?.pkgrel ?? null;
+
+      const updatedConfig = applyPackageBump(existingConfig, version, pkgrel);
+      commitActions.push({
+        action: existingConfig ? 'update' : 'create',
+        filePath: configPath,
+        content: updatedConfig,
+      });
+    }
+
+    const subject =
+      packages.length > 3 ? `chore(bump): packages (${packages.length})` : `chore(bump): ${packages.join(', ')}`;
+    const commitMessage = `${subject}\n\nBumped manually by ${actor.userName}`;
+
+    const commit = await this.api.Commits.create(this.chaoticId, ref, commitMessage, commitActions);
+
+    if (commit.id) {
+      this.unlinkedCommitShas.add(commit.id);
+    }
+    await this.pipelineTriggerRepository.insert({
+      ref,
+      commitSha: commit.id,
+      operation: PipelineOperation.BUMP_PACKAGES,
+      inputs: { packages: packages.join(':') },
+      pipelineId: null,
+      webUrl: commit.web_url ?? '',
+      ...actor,
+    });
+
+    return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
+  }
+
+  async triggerPipelineRun(
+    inputs: Record<string, string>,
+    ref: string,
+    actor: MrActor,
+  ): Promise<PipelineTriggerResult> {
     const pipeline = await this.api.Pipelines.create(this.chaoticId, ref, {
       inputs,
       variables: [
@@ -933,7 +1204,18 @@ export class GitlabService implements OnModuleInit {
     return { pipelineId: pipeline.id, webUrl: pipeline.web_url, status: pipeline.status };
   }
 
-  /** Jobs of a pipeline, in pipeline order, for the live-log viewer. */
+  private async fetchAurPkgbuildText(packageBase: string): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=${encodeURIComponent(packageBase)}`,
+      );
+      if (response.ok) return await response.text();
+    } catch {
+      // Fallback null
+    }
+    return null;
+  }
+
   async listPipelineJobs(pipelineId: number): Promise<GitlabJob[]> {
     const jobs = await this.api.Jobs.all(this.chaoticId, { pipelineId });
     return jobs.map((job) => ({

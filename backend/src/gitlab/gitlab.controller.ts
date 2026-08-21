@@ -1,4 +1,13 @@
-import { ApproveMrDto, AurScanBodyDto, FlagMrDto, TriggerPipelineDto } from '@chaotic-next/backend/gitlab/gitlab.dto';
+import {
+  AddPackagesDto,
+  ApproveMrDto,
+  AurScanBodyDto,
+  BumpPackagesDto,
+  DropPackagesDto,
+  FlagMrDto,
+  RunScheduleDto,
+  TriggerPipelineDto,
+} from '@chaotic-next/backend/gitlab/gitlab.dto';
 import {
   AurPackageScan,
   AurScanStreamChunk,
@@ -213,17 +222,84 @@ export class GitlabController {
     });
   }
 
+  @Post('bump-packages')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Bump packages via a direct Git commit.' })
+  @ApiOkResponse({ description: 'Bump commit created.' })
+  async bumpPackages(
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: BumpPackagesDto,
+  ): Promise<PipelineTriggerResult> {
+    return await this.gitlabService.bumpPackages(body.packages, body.ref ?? 'main', {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
+  }
+
+  @Post('add-packages')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Add new packages via a direct Git commit.' })
+  @ApiOkResponse({ description: 'Add commit created.' })
+  async addPackages(
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: AddPackagesDto,
+  ): Promise<PipelineTriggerResult> {
+    return await this.gitlabService.addPackages(
+      body.packages,
+      body.request_origin,
+      body.ref ?? 'main',
+      {
+        userId: session.user.id,
+        userName: session.user.name,
+      },
+      body.request_reason,
+      body.custom_request_reason,
+    );
+  }
+
+  @Post('drop-packages')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Drop packages via a direct Git commit.' })
+  @ApiOkResponse({ description: 'Drop commit created.' })
+  async dropPackages(
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: DropPackagesDto,
+  ): Promise<PipelineTriggerResult> {
+    return await this.gitlabService.dropPackages(body.packages, body.ref ?? 'main', {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
+  }
+
+  @Post('run-schedule')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth('better-auth.session_token')
+  @ApiOperation({ summary: 'Trigger a GitLab pipeline schedule directly via API.' })
+  @ApiOkResponse({ description: 'Pipeline schedule triggered.' })
+  async runSchedule(
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: RunScheduleDto,
+  ): Promise<PipelineTriggerResult> {
+    return await this.gitlabService.runSchedule(body.scheduleId, {
+      userId: session.user.id,
+      userName: session.user.name,
+    });
+  }
+
   @Post('trigger')
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
-  @ApiOperation({ summary: 'Trigger a pipeline with the given inputs.' })
+  @ApiOperation({ summary: 'Trigger a custom pipeline with the given inputs.' })
   @ApiOkResponse({ description: 'Pipeline triggered.' })
   async triggerPipeline(
     @Session() session: UserSession<typeof auth>,
     @Body() body: TriggerPipelineDto,
   ): Promise<PipelineTriggerResult> {
     const { ref, inputs } = validatePipelineTriggerInputs(body);
-    return await this.gitlabService.triggerPipeline(inputs, ref, {
+    return await this.gitlabService.triggerPipelineRun(inputs, ref, {
       userId: session.user.id,
       userName: session.user.name,
     });

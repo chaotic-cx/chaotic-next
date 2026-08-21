@@ -138,7 +138,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
 
     if (options.q) {
       query.andWhere(
-        `(package.pkgname ILIKE :q OR package.metadata->>'desc' ILIKE :q OR package.metadata->>'url' ILIKE :q)`,
+        `(package.pkgname ILIKE :q OR package.version ILIKE :q OR package.metadata->>'desc' ILIKE :q OR package.metadata->>'url' ILIKE :q)`,
         { q: `%${options.q}%` },
       );
     }

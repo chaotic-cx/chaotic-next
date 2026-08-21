@@ -1,21 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
+import { type MergeRequestWithDiffs, PipelineOperation } from '@chaotic-next/shared-lib';
 import type { Repository } from 'typeorm';
+import { describe, expect, it, vi } from 'vitest';
 import { DiffScanService } from '../diff-scan/diff-scan.service';
 import { GitlabService } from './gitlab.service';
 import { PipelineTrigger } from './pipeline-trigger.entity';
-import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
 
 const ACTOR = { userId: 'test-user', userName: 'Test User' };
-
-function fakePipeline(id: number) {
-  return {
-    id,
-    status: 'created',
-    sha: 'def456',
-    web_url: `https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/${id}`,
-  };
-}
 
 function createService(
   virustotal: { enabled: boolean; reportOn: ReturnType<typeof vi.fn> } = { enabled: false, reportOn: vi.fn() },
@@ -24,7 +14,11 @@ function createService(
   },
 ): {
   service: GitlabService;
-  pipelineTriggerRepository: { insert: ReturnType<typeof vi.fn> };
+  pipelineTriggerRepository: {
+    insert: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    findOne: ReturnType<typeof vi.fn>;
+  };
   pipelinesCreate: ReturnType<typeof vi.fn>;
   mrEdit: ReturnType<typeof vi.fn>;
   noteCreate: ReturnType<typeof vi.fn>;
@@ -35,12 +29,14 @@ function createService(
   maintainerStatusFor: ReturnType<typeof vi.fn>;
 } {
   const pipelinesCreate = vi.fn();
-  const pipelineTriggerRepository = { insert: vi.fn() };
+  const pipelineTriggerRepository = { insert: vi.fn(), update: vi.fn(), findOne: vi.fn() };
   const mrEdit = vi.fn().mockResolvedValue({});
   const noteCreate = vi.fn().mockResolvedValue({});
   const discussionsCreate = vi.fn().mockResolvedValue({});
   const cacheSet = vi.fn();
   const sseNext = vi.fn();
+
+  const packageRepository = { findOne: vi.fn().mockResolvedValue({ version: '1.0', pkgrel: 1 }) };
 
   const service = new GitlabService(
     { get: vi.fn(), set: cacheSet, del: vi.fn() } as never,
@@ -53,6 +49,7 @@ function createService(
     {} as Repository<never>,
     pipelineTriggerRepository as unknown as Repository<PipelineTrigger>,
     {} as Repository<never>,
+    packageRepository as never,
   );
   (service as unknown as { chaoticId: string }).chaoticId = 'test-project-id';
   (service as unknown as { api: unknown }).api = {
@@ -75,36 +72,111 @@ function createService(
   };
 }
 
-describe('GitlabService.triggerPipeline', () => {
-  it('triggers the pipeline with inputs and the triggering user as CI variable', async () => {
-    const { service, pipelinesCreate, pipelineTriggerRepository } = createService();
-    pipelinesCreate.mockResolvedValue(fakePipeline(4711));
+describe('GitlabService.operations', () => {
+  it('creates bump commit via Commits.create for operation Bump Packages', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    const createCommit = vi.fn().mockResolvedValue({ id: 'bump123', web_url: 'https://gitlab.com/commit/bump123' });
+    const showRaw = vi.fn().mockResolvedValue('CI_PACKAGE_BUMP=1.0-1/1\n');
+    (service as unknown as { api: unknown }).api = {
+      Commits: { create: createCommit },
+      RepositoryFiles: { showRaw },
+    };
 
-    const inputs = { operation: 'Bump Packages', packages: 'nodejs:20' };
-    const result = await service.triggerPipeline(inputs, 'main', ACTOR);
+    const result = await service.bumpPackages(['nodejs'], 'main', ACTOR);
 
-    expect(pipelinesCreate).toHaveBeenCalledWith('test-project-id', 'main', {
-      inputs,
-      variables: [
+    expect(showRaw).toHaveBeenCalledWith('test-project-id', 'nodejs/.CI/config', 'main');
+    expect(createCommit).toHaveBeenCalledWith(
+      'test-project-id',
+      'main',
+      'chore(bump): nodejs\n\nBumped manually by Test User',
+      [
         {
-          key: PIPELINE_TRIGGERED_BY_VARIABLE,
-          value: 'Test User (test-user)',
-          variable_type: 'env_var',
+          action: 'update',
+          filePath: 'nodejs/.CI/config',
+          content: 'CI_PACKAGE_BUMP=1.0-1/2\n',
         },
       ],
-    });
+    );
     expect(result).toEqual({
-      pipelineId: 4711,
-      webUrl: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/4711',
-      status: 'created',
+      pipelineId: 0,
+      webUrl: 'https://gitlab.com/commit/bump123',
+      status: 'committed',
     });
     expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith({
       ref: 'main',
-      commitSha: 'def456',
-      operation: 'Bump Packages',
-      inputs,
-      pipelineId: 4711,
-      webUrl: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/4711',
+      commitSha: 'bump123',
+      operation: PipelineOperation.BUMP_PACKAGES,
+      inputs: { packages: 'nodejs' },
+      pipelineId: null,
+      webUrl: 'https://gitlab.com/commit/bump123',
+      ...ACTOR,
+    });
+  });
+
+  it('deletes package directories via Commits.create for operation Drop Packages', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    const createCommit = vi.fn().mockResolvedValue({ id: 'commit123', web_url: 'https://gitlab.com/commit/123' });
+    const allRepositoryTrees = vi.fn().mockImplementation((projectId, options: { path: string }) =>
+      Promise.resolve([
+        { type: 'blob', path: `${options.path}/.CI/config` },
+        { type: 'blob', path: `${options.path}/PKGBUILD` },
+      ]),
+    );
+    (service as unknown as { api: unknown }).api = {
+      Commits: { create: createCommit },
+      Repositories: { allRepositoryTrees },
+    };
+
+    const result = await service.dropPackages(['paru', 'zen-browser'], 'main', ACTOR);
+
+    expect(createCommit).toHaveBeenCalledWith(
+      'test-project-id',
+      'main',
+      'chore(drop): paru, zen-browser\n\nDropped manually by Test User',
+      [
+        { action: 'delete', filePath: 'paru/.CI/config' },
+        { action: 'delete', filePath: 'paru/PKGBUILD' },
+        { action: 'delete', filePath: 'zen-browser/.CI/config' },
+        { action: 'delete', filePath: 'zen-browser/PKGBUILD' },
+      ],
+    );
+    expect(result).toEqual({
+      pipelineId: 0,
+      webUrl: 'https://gitlab.com/commit/123',
+      status: 'committed',
+    });
+    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith({
+      ref: 'main',
+      commitSha: 'commit123',
+      operation: PipelineOperation.DROP_PACKAGES,
+      inputs: { packages: 'paru:zen-browser' },
+      pipelineId: null,
+      webUrl: 'https://gitlab.com/commit/123',
+      ...ACTOR,
+    });
+  });
+
+  it('adds new package files via Commits.create for operation Add Packages', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    const createCommit = vi.fn().mockResolvedValue({ id: 'commit456', web_url: 'https://gitlab.com/commit/456' });
+    (service as unknown as { api: unknown }).api = {
+      Commits: { create: createCommit },
+    };
+    (service as unknown as { aurScanService: unknown }).aurScanService = {
+      startScan: vi.fn().mockResolvedValue({ packageBase: 'paru' }),
+    };
+
+    const result = await service.addPackages([{ pkgname: 'paru', source: 'aur' }], 'github/5678', 'main', ACTOR);
+
+    expect(createCommit).toHaveBeenCalled();
+    expect(result.status).toBe('committed');
+    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith({
+      ref: 'main',
+      commitSha: 'commit456',
+      operation: PipelineOperation.ADD_PACKAGES,
+      inputs: { add_packages: 'paru', request_origin: 'github/5678' },
+      pipelineId: null,
+      webUrl: 'https://gitlab.com/commit/456',
       ...ACTOR,
     });
   });
@@ -113,7 +185,9 @@ describe('GitlabService.triggerPipeline', () => {
     const { service, pipelinesCreate, pipelineTriggerRepository } = createService();
     pipelinesCreate.mockRejectedValue(new Error('GitLab unavailable'));
 
-    await expect(service.triggerPipeline({ operation: 'None' }, 'main', ACTOR)).rejects.toThrow('GitLab unavailable');
+    await expect(service.triggerPipelineRun({ operation: 'None' }, 'main', ACTOR)).rejects.toThrow(
+      'GitLab unavailable',
+    );
     expect(pipelineTriggerRepository.insert).not.toHaveBeenCalled();
   });
 });
@@ -445,15 +519,16 @@ describe('GitlabService.approveMergeRequest', () => {
     expect(approvalsApprove).not.toHaveBeenCalled();
   });
 
-  it('approves regular MRs and only adds the approved label', async () => {
+  it('approves regular MRs, posts comment, records action, and merges', async () => {
     const { service } = createService();
     const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review'] });
     const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn().mockResolvedValue({});
     const approvalsApprove = vi.fn().mockResolvedValue({});
     const noteCreate = vi.fn().mockResolvedValue({});
     const mrActionInsert = vi.fn();
     (service as unknown as { api: unknown }).api = {
-      MergeRequests: { show, edit: mrEdit },
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept },
       MergeRequestApprovals: { approve: approvalsApprove },
       MergeRequestNotes: { create: noteCreate },
     };
@@ -462,13 +537,41 @@ describe('GitlabService.approveMergeRequest', () => {
     await service.approveMergeRequest(1, 'abc123', ACTOR);
 
     expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
-    expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved', assigneeId: 12345 });
+    expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved' });
+    expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, '**✅ Approved by** Test User.');
     expect(mrActionInsert).toHaveBeenCalledWith({
       mergeRequestIid: 1,
       action: 'approve',
       commitSha: 'abc123',
       ...ACTOR,
     });
+    expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+  });
+
+  it('rebases and retries merge if initial accept fails', async () => {
+    const { service } = createService();
+    const show = vi
+      .fn()
+      .mockResolvedValueOnce({ iid: 1, sha: 'abc123', labels: ['human-review'] })
+      .mockResolvedValueOnce({ iid: 1, sha: 'def456', labels: ['human-review', 'approved'] });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn().mockRejectedValueOnce(new Error('Branch cannot be merged')).mockResolvedValueOnce({});
+    const mrRebase = vi.fn().mockResolvedValue({});
+    const approvalsApprove = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const mrActionInsert = vi.fn();
+    (service as unknown as { api: unknown }).api = {
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: mrRebase },
+      MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestNotes: { create: noteCreate },
+    };
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+
+    await service.approveMergeRequest(1, 'abc123', ACTOR);
+
+    expect(mrRebase).toHaveBeenCalledWith('test-project-id', 1);
+    expect(mrAccept).toHaveBeenNthCalledWith(1, 'test-project-id', 1, { sha: 'abc123' });
+    expect(mrAccept).toHaveBeenNthCalledWith(2, 'test-project-id', 1, { sha: 'def456' });
   });
 });
 
@@ -532,5 +635,58 @@ describe('GitlabService.enrichMaintainerInfo', () => {
     await enrich(service).call(service, [pushedMr]);
     expect(maintainerStatusFor).toHaveBeenCalledTimes(2);
     expect(maintainerStatusFor).toHaveBeenLastCalledWith(['evilpkg']);
+  });
+});
+
+describe('handlePipelineWebhook', () => {
+  it('backfills pipeline ID matching commitSha when tracked in unlinkedCommitShas set', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    pipelineTriggerRepository.update.mockResolvedValue({ affected: 1 });
+    (service as unknown as { unlinkedCommitShas: Set<string> }).unlinkedCommitShas.add('abc123456');
+
+    const webhookPayload = {
+      object_kind: 'pipeline' as const,
+      object_attributes: {
+        id: 9999,
+        iid: 12,
+        ref: 'main',
+        status: 'running',
+        source: 'push',
+        sha: 'abc123456',
+        created_at: '2026-08-21T19:00:00Z',
+        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/9999',
+      },
+    } as unknown as import('./interfaces').PipelineWebhook;
+
+    await service.handlePipelineWebhook(webhookPayload);
+
+    expect(pipelineTriggerRepository.update).toHaveBeenCalledWith(
+      { commitSha: 'abc123456', pipelineId: expect.anything() },
+      { pipelineId: 9999 },
+    );
+    expect((service as unknown as { unlinkedCommitShas: Set<string> }).unlinkedCommitShas.has('abc123456')).toBe(false);
+  });
+
+  it('skips database query when commitSha is not present in unlinkedCommitShas set', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+
+    const webhookPayload = {
+      object_kind: 'pipeline' as const,
+      object_attributes: {
+        id: 8888,
+        iid: 14,
+        ref: 'main',
+        status: 'running',
+        source: 'push',
+        sha: 'untracked123',
+        created_at: '2026-08-21T19:00:00Z',
+        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/8888',
+      },
+    } as unknown as import('./interfaces').PipelineWebhook;
+
+    await service.handlePipelineWebhook(webhookPayload);
+
+    expect(pipelineTriggerRepository.update).not.toHaveBeenCalled();
+    expect(pipelineTriggerRepository.findOne).not.toHaveBeenCalled();
   });
 });

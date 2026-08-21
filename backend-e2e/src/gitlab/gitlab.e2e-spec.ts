@@ -717,7 +717,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
 
     it('forwards validated inputs and the session user to the service (201)', async () => {
-      const triggerSpy = vi.spyOn(gitlabService, 'triggerPipeline').mockResolvedValue({
+      const triggerSpy = vi.spyOn(gitlabService, 'triggerPipelineRun').mockResolvedValue({
         pipelineId: 4711,
         webUrl: 'https://gitlab.com/pipelines/4711',
         status: 'created',

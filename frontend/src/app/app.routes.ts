@@ -76,13 +76,6 @@ export const routes: Routes = [
     loadComponent: () => import('./mr-overview/mr-overview.component').then((c) => c.MrOverviewComponent),
   },
   {
-    title: 'Pipeline trigger',
-    path: 'pipeline-trigger',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./pipeline-trigger/pipeline-trigger.component').then((c) => c.PipelineTriggerComponent),
-  },
-  {
     title: 'Pipeline logs',
     path: 'logs/:pipelineId',
     loadComponent: () => import('./log-viewer/log-viewer.component').then((c) => c.LogViewerComponent),

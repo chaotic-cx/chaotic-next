@@ -4,20 +4,21 @@ import {
   PIPELINE_PACKAGES_REGEX,
   PIPELINE_REF_REGEX,
   PIPELINE_REQUEST_REASONS,
-  type PipelineOperation,
+  PipelineOperation,
 } from '@chaotic-next/shared-lib';
 import { BadRequestException } from '@nestjs/common';
 
-/** CI variable carrying the triggering user into the pipeline. */
 export const PIPELINE_TRIGGERED_BY_VARIABLE = 'PIPELINE_TRIGGERED_BY';
-
 export const DEFAULT_PIPELINE_REF = 'main';
 
-const OPERATIONS_REQUIRING_PACKAGES: PipelineOperation[] = ['Bump Packages', 'Schedule Packages', 'Drop Packages'];
+const OPERATIONS_REQUIRING_PACKAGES: PipelineOperation[] = [
+  PipelineOperation.BUMP_PACKAGES,
+  PipelineOperation.SCHEDULE_PACKAGES,
+  PipelineOperation.DROP_PACKAGES,
+];
 
 export interface ValidatedPipelineTrigger {
   ref: string;
-  /** Only the inputs relevant for the chosen operation, ready for the GitLab API call. */
   inputs: Record<string, string>;
 }
 
@@ -65,11 +66,11 @@ export function validatePipelineTriggerInputs(body: unknown): ValidatedPipelineT
     if (packages !== undefined) inputs.packages = packages;
   }
 
-  if (operation === 'Run Schedule') {
+  if (operation === PipelineOperation.RUN_SCHEDULE) {
     inputs.trigger = assertValidString(record.trigger, 'trigger');
   }
 
-  if (operation === 'Add Packages') {
+  if (operation === PipelineOperation.ADD_PACKAGES) {
     inputs.add_packages = assertValidString(record.add_packages, 'add_packages', PIPELINE_ADD_PACKAGES_REGEX);
     inputs.request_origin = assertValidString(record.request_origin, 'request_origin');
 

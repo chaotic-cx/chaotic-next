@@ -81,10 +81,7 @@ export class MrOverviewService {
         }),
       );
 
-      this.messageToastService.success(
-        'Approval Successful',
-        'Merge request approved successfully. The bot will auto-merge it soon.',
-      );
+      this.messageToastService.success('Approval Successful', 'Merge request approved and merged.');
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 401) {
         this.messageToastService.info(

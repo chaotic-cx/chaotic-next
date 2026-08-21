@@ -9,6 +9,7 @@ import {
   Package as PackageDto,
   PackageBump,
   Paginated,
+  PipelineScheduleOption,
   PipelineTriggerAction,
   Repo,
 } from '@chaotic-next/shared-lib';
@@ -245,6 +246,69 @@ export class AdminService {
     this.packagePage.set(1);
   }
 
+  async bumpPackages(packages: string[], ref = 'main'): Promise<void> {
+    await this.runMutation(
+      () => this.http.post(`${this.backendUrl}/gitlab/bump-packages`, { packages, ref }),
+      'Package bump triggered',
+      'Could not trigger package bump.',
+      () => this.packagesResource.reload(),
+    );
+  }
+
+  async schedulePackages(packages: string[], ref = 'main'): Promise<void> {
+    await this.runMutation(
+      () =>
+        this.http.post(`${this.backendUrl}/gitlab/trigger`, {
+          operation: 'schedule-packages',
+          packages: packages.join(':'),
+          ref,
+        }),
+      'Package scheduling triggered',
+      'Could not trigger package schedule.',
+      () => this.packagesResource.reload(),
+    );
+  }
+
+  async dropPackages(packages: string[], ref = 'main'): Promise<void> {
+    await this.runMutation(
+      () => this.http.post(`${this.backendUrl}/gitlab/drop-packages`, { packages, ref }),
+      'Package drop triggered',
+      'Could not trigger package drop.',
+      () => this.packagesResource.reload(),
+    );
+  }
+
+  async addPackages(
+    packages: Array<{ pkgname: string; source?: string }>,
+    requestOrigin = 'admin',
+    requestReason?: string,
+    customRequestReason?: string,
+    ref = 'main',
+  ): Promise<void> {
+    await this.runMutation(
+      () =>
+        this.http.post(`${this.backendUrl}/gitlab/add-packages`, {
+          packages,
+          request_origin: requestOrigin,
+          request_reason: requestReason !== 'unset' ? requestReason : undefined,
+          custom_request_reason: customRequestReason?.trim() || undefined,
+          ref,
+        }),
+      'Package add triggered',
+      'Could not trigger package add.',
+      () => this.packagesResource.reload(),
+    );
+  }
+
+  async runSchedule(scheduleId: number): Promise<void> {
+    await this.runMutation(
+      () => this.http.post(`${this.backendUrl}/gitlab/run-schedule`, { scheduleId }),
+      'Schedule execution triggered',
+      'Could not trigger schedule execution.',
+      () => this.pipelineTriggersResource.reload(),
+    );
+  }
+
   async updatePackage(id: number, data: Partial<PackageFormData>): Promise<void> {
     await this.runMutation(
       () => this.http.patch(`${this.backendUrl}/admin/packages/${id}`, data),
@@ -404,6 +468,41 @@ export class AdminService {
         this.brokenReportsResource.reload();
       },
     );
+  }
+
+  async getAurSuggestions(query: string): Promise<string[]> {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return [];
+    try {
+      return await lastValueFrom(
+        this.http.get<string[]>(`${this.backendUrl}/gitlab/aur-suggestions`, { params: { query: trimmed } }),
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  async packageExists(pkgname: string): Promise<boolean> {
+    const trimmed = pkgname.trim();
+    if (!trimmed) return false;
+    try {
+      const result = await lastValueFrom(
+        this.http.get<{ exists: boolean }>(`${this.backendUrl}/gitlab/package-exists`, {
+          params: { pkgname: trimmed },
+        }),
+      );
+      return result.exists;
+    } catch {
+      return false;
+    }
+  }
+
+  async getSchedules(): Promise<PipelineScheduleOption[]> {
+    try {
+      return await lastValueFrom(this.http.get<PipelineScheduleOption[]>(`${this.backendUrl}/gitlab/schedules`));
+    } catch {
+      return [];
+    }
   }
 
   private async runMutation(

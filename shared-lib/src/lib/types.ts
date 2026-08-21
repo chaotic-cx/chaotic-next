@@ -201,15 +201,25 @@ export interface MrAction {
   createdAt: string;
 }
 
-export const PIPELINE_OPERATIONS = [
-  'None',
-  'Bump Packages',
-  'Schedule Packages',
-  'Run Schedule',
-  'Drop Packages',
-  'Add Packages',
-] as const;
-export type PipelineOperation = (typeof PIPELINE_OPERATIONS)[number];
+export enum PipelineOperation {
+  NONE = 'none',
+  BUMP_PACKAGES = 'bump-packages',
+  SCHEDULE_PACKAGES = 'schedule-packages',
+  RUN_SCHEDULE = 'run-schedule',
+  DROP_PACKAGES = 'drop-packages',
+  ADD_PACKAGES = 'add-packages',
+}
+
+export const PIPELINE_OPERATIONS: readonly PipelineOperation[] = [
+  PipelineOperation.NONE,
+  PipelineOperation.BUMP_PACKAGES,
+  PipelineOperation.SCHEDULE_PACKAGES,
+  PipelineOperation.RUN_SCHEDULE,
+  PipelineOperation.DROP_PACKAGES,
+  PipelineOperation.ADD_PACKAGES,
+];
+
+export const PKGBUILD_SOURCE_AUR = 'aur';
 
 export const PIPELINE_REQUEST_REASONS = [
   'unset',
@@ -235,6 +245,7 @@ export const PIPELINE_PKG_BASE_REGEX = /^[\w@.+-]+$/;
  */
 export interface PipelineTriggerInputs {
   operation: PipelineOperation;
+  ref?: string;
   packages?: string;
   trigger?: string;
   add_packages?: string;
@@ -507,6 +518,7 @@ export interface AurPackageScan {
   maintainers: AurMaintainerInfo[];
   maintainerChange?: AurMaintainerChange;
   packageMeta: AurPackageMeta;
+  sourceFiles?: { name: string; content: string }[];
   startedAt: string;
 }
 
