@@ -1,4 +1,4 @@
-import type { MrPackageInfo } from '@chaotic-next/shared-lib';
+import { MrPackageInfo, PKGBUILD_SOURCE_AUR } from '@chaotic-next/shared-lib';
 import type { Gitlab } from '@gitbeaker/rest';
 import type { Logger } from '@nestjs/common';
 
@@ -31,7 +31,7 @@ export function parseRebuildTriggers(configText: string): string[] {
 }
 
 export function packageLink(info: MrPackageInfo): { label: string; url: string; tooltip: string } {
-  const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== 'aur';
+  const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== PKGBUILD_SOURCE_AUR;
   if (isCustom) {
     return {
       label: 'Custom',

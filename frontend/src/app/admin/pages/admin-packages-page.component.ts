@@ -1,8 +1,16 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { FormField, form, required, submit } from '@angular/forms/signals';
-import { Package as PackageDto, formatPkgrel } from '@chaotic-next/shared-lib';
+import { debounce, form, FormField, pattern, required, submit } from '@angular/forms/signals';
+import { ActivatedRoute, Router } from '@angular/router';
+import {
+  formatPkgrel,
+  Package as PackageDto,
+  PIPELINE_PKG_BASE_REGEX,
+  PIPELINE_REQUEST_REASONS,
+  type PipelineRequestReason,
+} from '@chaotic-next/shared-lib';
 import { ConfirmationService } from '@openng/optimus-ui/api';
+import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
 import { Checkbox } from '@openng/optimus-ui/checkbox';
 import { Dialog } from '@openng/optimus-ui/dialog';
@@ -13,8 +21,8 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { ActivatedRoute, Router } from '@angular/router';
-import { AdminService, PackageFormData } from '../admin.service';
+import { AurScanResultComponent } from '../../aur-scan/aur-scan-result.component';
+import { AurScanService, isScanSettled } from '../../aur-scan/aur-scan.service';
 import {
   createDebounced,
   pageFromQuery,
@@ -26,6 +34,16 @@ import {
   stringFilterFromQuery,
   stringFilterToQuery,
 } from '../admin-url-sync';
+import { AdminService, PackageFormData } from '../admin.service';
+
+const REQUEST_REASON_DESCRIPTIONS: Record<PipelineRequestReason, string> = {
+  'unset': 'No specific reason.',
+  'request': 'Requested by a user.',
+  'depends': 'Required as a dependency.',
+  'depends:optional': 'Optional dependency.',
+  'depends:make': 'Make dependency.',
+  'depends:check': 'Check dependency.',
+};
 
 interface PackageFormModel {
   pkgname: string;
@@ -42,6 +60,8 @@ const NO_REPO = '0';
 @Component({
   selector: 'chaotic-admin-packages-page',
   imports: [
+    AutoComplete,
+    AurScanResultComponent,
     Button,
     Checkbox,
     Dialog,
@@ -58,12 +78,12 @@ const NO_REPO = '0';
   template: `
     <div class="table-container">
       <p-table
-        [value]="service.packages()?.items ?? []"
+        [value]="adminService.packages()?.items ?? []"
         [rows]="25"
-        [loading]="service.packagesLoading()"
+        [loading]="adminService.packagesLoading()"
         [paginator]="true"
         [lazy]="true"
-        [totalRecords]="service.packagesTotal()"
+        [totalRecords]="adminService.packagesTotal()"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[25, 50, 100]"
         (onLazyLoad)="onLazyLoad($event)"
@@ -72,10 +92,22 @@ const NO_REPO = '0';
       >
         <ng-template #caption>
           <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
+            <div class="flex w-full sm:hidden">
+              <p-button
+                class="w-full"
+                (onClick)="openAddAurDialog()"
+                styleClass="w-full justify-center"
+                icon="pi pi-plus"
+                label="Add package"
+                text
+                severity="primary"
+              />
+            </div>
             <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+              <p-button (onClick)="openAddAurDialog()" icon="pi pi-plus" label="Add package" text severity="primary" />
               <p-select
-                [options]="service.repos() ?? []"
-                [ngModel]="service.packageRepoFilter()"
+                [options]="adminService.repos() ?? []"
+                [ngModel]="adminService.packageRepoFilter()"
                 (ngModelChange)="onRepoChange($event)"
                 optionLabel="name"
                 optionValue="id"
@@ -84,8 +116,8 @@ const NO_REPO = '0';
                 appendTo="body"
               />
               <p-select
-                [options]="service.activeOptions"
-                [ngModel]="service.packageActiveFilter()"
+                [options]="adminService.activeOptions"
+                [ngModel]="adminService.packageActiveFilter()"
                 (ngModelChange)="onActiveChange($event)"
                 optionLabel="label"
                 optionValue="value"
@@ -100,7 +132,7 @@ const NO_REPO = '0';
               </p-inputicon>
               <input
                 class="w-full"
-                [value]="service.packageQuery()"
+                [value]="adminService.packageQuery()"
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
@@ -147,6 +179,15 @@ const NO_REPO = '0';
                   text
                   rounded
                   pTooltip="Bump"
+                  tooltipPosition="left"
+                />
+                <p-button
+                  (onClick)="schedulePackage(pkg)"
+                  icon="pi pi-calendar-plus"
+                  severity="info"
+                  text
+                  rounded
+                  pTooltip="Schedule build"
                   tooltipPosition="left"
                 />
                 <p-button
@@ -254,21 +295,141 @@ const NO_REPO = '0';
         </div>
       </form>
     </p-dialog>
+
+    <p-dialog
+      [(visible)]="addAurDialogVisible"
+      [header]="'Add AUR Package'"
+      [modal]="true"
+      [style]="{ width: '90vw', maxWidth: '800px' }"
+      appendTo="body"
+    >
+      <div class="flex flex-col gap-4 py-2">
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-ctp-text text-sm">Package name</span>
+              @if (aurPackageName() && !isAurMissing()) {
+                <a
+                  class="font-medium text-ctp-mauve text-sm hover:underline flex items-center gap-1"
+                  [href]="'https://aur.archlinux.org/packages/' + aurPackageName()"
+                  target="_blank"
+                  rel="noopener"
+                  pTooltip="Open AUR package page"
+                  tooltipPosition="top"
+                >
+                  AUR <i class="pi pi-external-link text-xs"></i>
+                </a>
+              }
+            </div>
+            <p-autoComplete
+              class="w-full"
+              [ngModel]="aurSearchModel().query"
+              [suggestions]="aurSuggestions()"
+              (ngModelChange)="aurSearchModel.set({ query: $event })"
+              (completeMethod)="searchAurSuggestions($event)"
+              (onBlur)="confirmAurPackage()"
+              (onSelect)="confirmAurPackage()"
+              placeholder="Search AUR package..."
+              appendTo="body"
+            />
+            @if (aurPackageName()) {
+              @if (isExistingPackage()) {
+                <small class="text-ctp-red font-medium"
+                  >Package "{{ aurPackageName() }}" already exists in the repository.</small
+                >
+              } @else if (isAurMissing()) {
+                <small class="text-ctp-red font-medium"
+                  >Package "{{ aurPackageName() }}" does not exist in the AUR.</small
+                >
+              }
+            }
+          </div>
+
+          @if (aurPackageName() && !isExistingPackage() && !isAurMissing()) {
+            <chaotic-aur-scan-result [packageName]="aurPackageName()" />
+          }
+
+          <div class="flex flex-col gap-3 border-t border-ctp-surface0 pt-3 mt-1">
+            <h4 class="text-ctp-text font-semibold text-sm">Request details</h4>
+            <label class="flex flex-col gap-1">
+              <span class="text-ctp-text text-sm">Request origin</span>
+              <input
+                [ngModel]="aurRequestOrigin()"
+                (ngModelChange)="aurRequestOrigin.set($event)"
+                pInputText
+                placeholder="github/5678,chaotic/xiota,forum/tne"
+                type="text"
+              />
+            </label>
+            <div class="flex flex-col gap-2">
+              <span class="text-ctp-text text-sm">Request reason</span>
+              <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                @for (card of requestReasonCards; track card.reason) {
+                  <button
+                    class="flex cursor-pointer flex-col gap-0.5 rounded-lg border p-2.5 text-left transition-colors hover:border-ctp-mauve hover:bg-ctp-surface0/40"
+                    [class.border-ctp-mauve]="aurRequestReason() === card.reason"
+                    [class.border-ctp-surface1]="aurRequestReason() !== card.reason"
+                    (click)="aurRequestReason.set(card.reason)"
+                    type="button"
+                  >
+                    <span class="text-ctp-text text-xs font-bold">{{ card.reason }}</span>
+                    <span class="text-ctp-subtext0 text-[11px] leading-tight">{{ card.description }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+            <label class="flex flex-col gap-1">
+              <span class="text-ctp-text text-sm">Custom request reason</span>
+              <input
+                [ngModel]="aurCustomRequestReason()"
+                (ngModelChange)="aurCustomRequestReason.set($event)"
+                pInputText
+                placeholder="Describe why this package is being added…"
+                type="text"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div class="flex flex-row items-center justify-end gap-2 mt-6 pt-4 border-t border-ctp-surface0/50">
+          <p-button
+            class="flex-1 sm:flex-initial"
+            (onClick)="addAurDialogVisible.set(false)"
+            styleClass="w-full justify-center sm:w-auto"
+            type="button"
+            severity="secondary"
+            text
+            label="Cancel"
+          />
+          <p-button
+            class="flex-1 sm:flex-initial"
+            [disabled]="!canAddAurPackage()"
+            [icon]="isScanOngoing() || isAdding() ? 'pi pi-spinner pi-spin' : 'pi pi-plus-circle'"
+            (onClick)="triggerAddAurPackage()"
+            styleClass="w-full justify-center sm:w-auto"
+            type="button"
+            severity="primary"
+            label="Add Package"
+          />
+        </div>
+      </div>
+    </p-dialog>
   `,
 })
 export class AdminPackagesPageComponent {
-  readonly service = inject(AdminService);
+  private readonly aurScanService = inject(AurScanService);
   private readonly confirmationService = inject(ConfirmationService);
-  private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
+  protected readonly adminService = inject(AdminService);
   protected readonly formatPkgrel = formatPkgrel;
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<PackageDto | null>(null);
 
   private readonly syncSearch = createDebounced(400, () =>
-    patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.packageQuery()) }),
+    patchQueryParams(this.router, this.route, { q: queryToQuery(this.adminService.packageQuery()) }),
   );
 
   protected readonly model = signal<PackageFormModel>(emptyModel());
@@ -278,16 +439,121 @@ export class AdminPackagesPageComponent {
 
   readonly repoOptions = computed(() => [
     { label: 'None', value: NO_REPO },
-    ...(this.service.repos() ?? []).map((repo) => ({ label: repo.name, value: String(repo.id) })),
+    ...(this.adminService.repos() ?? []).map((repo) => ({ label: repo.name, value: String(repo.id) })),
   ]);
+
+  protected readonly aurSearchModel = signal({ query: '' });
+  protected readonly aurSearchForm = form(this.aurSearchModel, (schemaPath) => {
+    debounce(schemaPath.query, 500);
+    pattern(schemaPath.query, PIPELINE_PKG_BASE_REGEX, { message: 'Invalid package name format' });
+  });
+
+  readonly addAurDialogVisible = signal(false);
+  readonly aurPackageName = signal('');
+  readonly aurSuggestions = signal<string[]>([]);
+  readonly isAurMissing = signal(false);
+  readonly isExistingPackage = signal(false);
+  readonly isAdding = signal(false);
+
+  readonly isScanOngoing = computed(() => {
+    const pkg = this.aurPackageName();
+    if (!pkg) return false;
+    const scan = this.aurScanService.scanOf(pkg);
+    return !!scan && !isScanSettled(scan);
+  });
+
+  readonly scanSettled = computed(() => {
+    const pkg = this.aurPackageName();
+    if (!pkg) return false;
+    return isScanSettled(this.aurScanService.scanOf(pkg));
+  });
+
+  readonly canAddAurPackage = computed(() => {
+    const pkg = this.aurPackageName();
+    if (!pkg || this.isAdding()) return false;
+    if (this.isExistingPackage() || this.isAurMissing()) return false;
+    return this.scanSettled();
+  });
+
+  readonly aurRequestOrigin = signal('');
+  readonly aurRequestReason = signal<string>('unset');
+  readonly aurCustomRequestReason = signal('');
+
+  protected readonly requestReasonCards = PIPELINE_REQUEST_REASONS.map((reason) => ({
+    reason,
+    description: REQUEST_REASON_DESCRIPTIONS[reason],
+  }));
+
+  openAddAurDialog(): void {
+    this.aurSearchModel.set({ query: '' });
+    this.aurPackageName.set('');
+    this.aurSuggestions.set([]);
+    this.aurRequestOrigin.set('');
+    this.aurRequestReason.set('unset');
+    this.aurCustomRequestReason.set('');
+    this.isAurMissing.set(false);
+    this.isExistingPackage.set(false);
+    this.addAurDialogVisible.set(true);
+  }
+
+  async searchAurSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
+    const query = event.query.trim();
+    if (query.length < 3 || !this.aurSearchForm.query().valid()) {
+      this.aurSuggestions.set([]);
+      return;
+    }
+    const suggestions = await this.adminService.getAurSuggestions(query);
+    this.aurSuggestions.set(suggestions);
+  }
+
+  async triggerAddAurPackage(): Promise<void> {
+    const pkgname = this.aurPackageName().trim();
+    if (!pkgname || !this.canAddAurPackage()) return;
+
+    this.isAdding.set(true);
+    try {
+      await this.adminService.addPackages(
+        [{ pkgname, source: 'aur' }],
+        this.aurRequestOrigin(),
+        this.aurRequestReason(),
+        this.aurCustomRequestReason(),
+        'main',
+      );
+      this.addAurDialogVisible.set(false);
+    } finally {
+      this.isAdding.set(false);
+    }
+  }
+
+  confirmAurPackage(): void {
+    const name = this.aurSearchModel().query.trim();
+    const isValid = this.aurSearchForm.query().valid();
+    if (!name || name.length < 3 || !isValid) {
+      this.aurPackageName.set('');
+      this.isAurMissing.set(false);
+      this.isExistingPackage.set(false);
+      return;
+    }
+
+    if (this.aurPackageName() === name) return;
+
+    this.aurPackageName.set(name);
+    void Promise.all([this.adminService.packageExists(name), this.adminService.getAurSuggestions(name)]).then(
+      ([existsInChaotic, suggestions]) => {
+        this.isExistingPackage.set(existsInChaotic);
+        this.isAurMissing.set(!suggestions.includes(name));
+      },
+    );
+  }
 
   constructor() {
     restoreQueryParams(this.route, {
-      q: (raw) => this.service.packageQuery.set(queryFromRaw(raw)),
+      q: (raw) => this.adminService.packageQuery.set(queryFromRaw(raw)),
       repo: (raw) =>
-        this.service.packageRepoFilter.set(stringFilterFromQuery(raw) === undefined ? undefined : Number(raw)),
-      active: (raw) => this.service.packageActiveFilter.set(raw === 'active' || raw === 'inactive' ? raw : undefined),
-      page: (raw) => this.service.packagePage.set(pageFromQuery(raw)),
+        this.adminService.packageRepoFilter.set(stringFilterFromQuery(raw) === undefined ? undefined : Number(raw)),
+      active: (raw) =>
+        this.adminService.packageActiveFilter.set(raw === 'active' || raw === 'inactive' ? raw : undefined),
+      page: (raw) => this.adminService.packagePage.set(pageFromQuery(raw)),
     });
   }
 
@@ -309,52 +575,70 @@ export class AdminPackagesPageComponent {
     submit(this.packageForm, async () => {
       const data = this.toFormData(this.model());
       const current = this.editing();
-      if (current) await this.service.updatePackage(current.id, data);
+      if (current) await this.adminService.updatePackage(current.id, data);
       this.dialogVisible.set(false);
     });
   }
 
   confirmDelete(pkg: PackageDto): void {
     this.confirmationService.confirm({
-      message: `Delete package "${pkg.pkgname}"? This cannot be undone.`,
+      message: `Delete package <code>${pkg.pkgname}</code>? This cannot be undone.`,
       header: 'Delete package',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
-      accept: () => void this.service.deletePackage(pkg.id),
+      accept: () => void this.adminService.deletePackage(pkg.id),
     });
   }
 
   bumpPackage(pkg: PackageDto): void {
-    void this.router.navigate(['/pipeline-trigger'], {
-      queryParams: { operation: 'Bump Packages', packages: pkg.pkgname },
+    this.confirmationService.confirm({
+      message: `Bump package <code>${pkg.pkgname}</code>? This will create a Git commit to increment its bump counter in <code>${pkg.pkgname}/.CI/config</code>.`,
+      header: 'Bump package',
+      acceptLabel: 'Bump',
+      rejectLabel: 'Cancel',
+      accept: () => void this.adminService.bumpPackages([pkg.pkgname]),
+    });
+  }
+
+  schedulePackage(pkg: PackageDto): void {
+    this.confirmationService.confirm({
+      message: `Schedule package <code>${pkg.pkgname}</code>? This will trigger a pipeline to build the package.`,
+      header: 'Schedule package build',
+      acceptLabel: 'Schedule',
+      rejectLabel: 'Cancel',
+      accept: () => void this.adminService.schedulePackages([pkg.pkgname]),
     });
   }
 
   dropPackage(pkg: PackageDto): void {
-    void this.router.navigate(['/pipeline-trigger'], {
-      queryParams: { operation: 'Drop Packages', packages: pkg.pkgname },
+    this.confirmationService.confirm({
+      message: `Drop package <code>${pkg.pkgname}</code>? This will create a Git commit to delete <code>${pkg.pkgname}/.CI/config</code>.`,
+      header: 'Drop package',
+      acceptLabel: 'Drop',
+      rejectLabel: 'Cancel',
+      accept: () => void this.adminService.dropPackages([pkg.pkgname]),
     });
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
     const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
-    this.service.packagePage.set(page);
+    this.adminService.packagePage.set(page);
     patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
   }
 
   onSearch(event: Event): void {
-    this.service.packageQuery.set((event.target as HTMLInputElement).value);
-    this.service.packagePage.set(1);
+    this.adminService.packageQuery.set((event.target as HTMLInputElement).value);
+    this.adminService.packagePage.set(1);
     this.syncSearch();
   }
 
   onRepoChange(repoId: number | null | undefined): void {
-    this.service.setPackageRepoFilter(repoId);
+    this.adminService.setPackageRepoFilter(repoId);
     patchQueryParams(this.router, this.route, { repo: stringFilterToQuery(String(repoId ?? '')) });
   }
 
   onActiveChange(active: 'active' | 'inactive' | null | undefined): void {
-    this.service.setPackageActiveFilter(active);
+    this.adminService.setPackageActiveFilter(active);
     patchQueryParams(this.router, this.route, { active: stringFilterToQuery(active ?? undefined) });
   }
 

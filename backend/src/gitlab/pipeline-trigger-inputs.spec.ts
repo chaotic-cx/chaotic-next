@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
+import { PipelineOperation } from '@chaotic-next/shared-lib';
 import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
 
 describe('validatePipelineTriggerInputs', () => {
@@ -14,22 +15,24 @@ describe('validatePipelineTriggerInputs', () => {
   });
 
   it('accepts operation None without any further inputs and defaults the ref', () => {
-    expect(validatePipelineTriggerInputs({ operation: 'None' })).toEqual({
+    expect(validatePipelineTriggerInputs({ operation: PipelineOperation.NONE })).toEqual({
       ref: 'main',
-      inputs: { operation: 'None' },
+      inputs: { operation: PipelineOperation.NONE },
     });
   });
 
   it('accepts a custom ref', () => {
-    const result = validatePipelineTriggerInputs({ operation: 'None', ref: 'dev' });
+    const result = validatePipelineTriggerInputs({ operation: PipelineOperation.NONE, ref: 'dev' });
     expect(result.ref).toBe('dev');
   });
 
   it('rejects an invalid ref', () => {
-    expect(() => validatePipelineTriggerInputs({ operation: 'None', ref: 'not a ref!' })).toThrow(BadRequestException);
+    expect(() => validatePipelineTriggerInputs({ operation: PipelineOperation.NONE, ref: 'not a ref!' })).toThrow(
+      BadRequestException,
+    );
   });
 
-  it.each(['Bump Packages', 'Schedule Packages', 'Drop Packages'])(
+  it.each([PipelineOperation.BUMP_PACKAGES, PipelineOperation.SCHEDULE_PACKAGES, PipelineOperation.DROP_PACKAGES])(
     'requires packages for operation %s',
     (operation) => {
       expect(() => validatePipelineTriggerInputs({ operation })).toThrow(BadRequestException);
@@ -41,31 +44,35 @@ describe('validatePipelineTriggerInputs', () => {
   );
 
   it('rejects packages with an invalid format', () => {
-    expect(() => validatePipelineTriggerInputs({ operation: 'Bump Packages', packages: 'a;b' })).toThrow(
-      BadRequestException,
-    );
+    expect(() =>
+      validatePipelineTriggerInputs({ operation: PipelineOperation.BUMP_PACKAGES, packages: 'a;b' }),
+    ).toThrow(BadRequestException);
   });
 
   it('requires trigger for operation Run Schedule', () => {
-    expect(() => validatePipelineTriggerInputs({ operation: 'Run Schedule' })).toThrow(BadRequestException);
-
-    const result = validatePipelineTriggerInputs({ operation: 'Run Schedule', trigger: 'daily' });
-    expect(result.inputs).toEqual({ operation: 'Run Schedule', trigger: 'daily' });
-  });
-
-  it('requires add_packages and request_origin for operation Add Packages', () => {
-    expect(() => validatePipelineTriggerInputs({ operation: 'Add Packages' })).toThrow(BadRequestException);
-    expect(() => validatePipelineTriggerInputs({ operation: 'Add Packages', add_packages: 'paru/aur' })).toThrow(
+    expect(() => validatePipelineTriggerInputs({ operation: PipelineOperation.RUN_SCHEDULE })).toThrow(
       BadRequestException,
     );
 
+    const result = validatePipelineTriggerInputs({ operation: PipelineOperation.RUN_SCHEDULE, trigger: 'daily' });
+    expect(result.inputs).toEqual({ operation: PipelineOperation.RUN_SCHEDULE, trigger: 'daily' });
+  });
+
+  it('requires add_packages and request_origin for operation Add Packages', () => {
+    expect(() => validatePipelineTriggerInputs({ operation: PipelineOperation.ADD_PACKAGES })).toThrow(
+      BadRequestException,
+    );
+    expect(() =>
+      validatePipelineTriggerInputs({ operation: PipelineOperation.ADD_PACKAGES, add_packages: 'paru/aur' }),
+    ).toThrow(BadRequestException);
+
     const result = validatePipelineTriggerInputs({
-      operation: 'Add Packages',
+      operation: PipelineOperation.ADD_PACKAGES,
       add_packages: 'paru/aur',
       request_origin: 'github/5678',
     });
     expect(result.inputs).toEqual({
-      operation: 'Add Packages',
+      operation: PipelineOperation.ADD_PACKAGES,
       add_packages: 'paru/aur',
       request_origin: 'github/5678',
     });
@@ -73,13 +80,17 @@ describe('validatePipelineTriggerInputs', () => {
 
   it('rejects add_packages with an invalid format', () => {
     expect(() =>
-      validatePipelineTriggerInputs({ operation: 'Add Packages', add_packages: 'paru', request_origin: 'x' }),
+      validatePipelineTriggerInputs({
+        operation: PipelineOperation.ADD_PACKAGES,
+        add_packages: 'paru',
+        request_origin: 'x',
+      }),
     ).toThrow(BadRequestException);
   });
 
   it('accepts multiple space-separated packages with sources', () => {
     const result = validatePipelineTriggerInputs({
-      operation: 'Add Packages',
+      operation: PipelineOperation.ADD_PACKAGES,
       add_packages: 'paru/aur zen-browser/https://github.com/zen-browser/browser',
       request_origin: 'forum/tne',
     });
@@ -89,7 +100,7 @@ describe('validatePipelineTriggerInputs', () => {
   it('rejects an unknown request_reason', () => {
     expect(() =>
       validatePipelineTriggerInputs({
-        operation: 'Add Packages',
+        operation: PipelineOperation.ADD_PACKAGES,
         add_packages: 'paru/aur',
         request_origin: 'github/5678',
         request_reason: 'because',
@@ -99,7 +110,7 @@ describe('validatePipelineTriggerInputs', () => {
 
   it('passes through valid request_reason and custom_request_reason', () => {
     const result = validatePipelineTriggerInputs({
-      operation: 'Add Packages',
+      operation: PipelineOperation.ADD_PACKAGES,
       add_packages: 'paru/aur',
       request_origin: 'github/5678',
       request_reason: 'depends:make',
@@ -111,16 +122,19 @@ describe('validatePipelineTriggerInputs', () => {
 
   it('drops empty optional inputs instead of forwarding them', () => {
     const result = validatePipelineTriggerInputs({
-      operation: 'None',
+      operation: PipelineOperation.NONE,
       packages: '',
       trigger: null,
       request_reason: undefined,
     });
-    expect(result.inputs).toEqual({ operation: 'None' });
+    expect(result.inputs).toEqual({ operation: PipelineOperation.NONE });
   });
 
   it('trims whitespace from inputs', () => {
-    const result = validatePipelineTriggerInputs({ operation: 'Bump Packages', packages: '  nodejs  ' });
+    const result = validatePipelineTriggerInputs({
+      operation: PipelineOperation.BUMP_PACKAGES,
+      packages: '  nodejs  ',
+    });
     expect(result.inputs.packages).toBe('nodejs');
   });
 });

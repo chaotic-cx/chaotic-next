@@ -1,5 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 
 export class AurScanBodyDto {
   @ApiProperty({ description: 'AUR package name to scan' })
@@ -32,35 +44,48 @@ export class FlagMrDto {
   label!: 'dangerous' | 'hold';
 }
 
-export class TriggerPipelineDto {
-  @ApiProperty({ description: 'Pipeline operation name', example: 'Bump Packages' })
-  @IsString()
-  operation!: string;
+export class BumpPackagesDto {
+  @ApiProperty({
+    description: 'List of package names to bump',
+    type: [String],
+    isArray: true,
+    example: ['nodejs', 'hplip'],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  packages!: string[];
 
   @ApiPropertyOptional({ description: 'Git ref', example: 'main' })
   @IsOptional()
   @IsString()
   ref?: string;
+}
 
-  @ApiPropertyOptional({ description: 'Packages to bump', example: 'nodejs:20' })
+export class AddPackageItemDto {
+  @ApiProperty({ description: 'Package name', example: 'paru' })
+  @IsString()
+  @IsNotEmpty()
+  pkgname!: string;
+
+  @ApiPropertyOptional({ description: 'Source type or URL', example: 'aur' })
   @IsOptional()
   @IsString()
-  packages?: string;
+  source?: string;
+}
 
-  @ApiPropertyOptional({ description: 'Trigger name' })
-  @IsOptional()
-  @IsString()
-  trigger?: string;
+export class AddPackagesDto {
+  @ApiProperty({ description: 'List of packages to add', type: AddPackageItemDto, isArray: true })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => AddPackageItemDto)
+  packages!: AddPackageItemDto[];
 
-  @ApiPropertyOptional({ description: 'Packages to add', example: 'paru/aur' })
-  @IsOptional()
+  @ApiProperty({ description: 'Request origin', example: 'github/5678' })
   @IsString()
-  add_packages?: string;
-
-  @ApiPropertyOptional({ description: 'Request origin', example: 'github/5678' })
-  @IsOptional()
-  @IsString()
-  request_origin?: string;
+  @IsNotEmpty()
+  request_origin!: string;
 
   @ApiPropertyOptional({ description: 'Request reason', example: 'request' })
   @IsOptional()
@@ -71,4 +96,55 @@ export class TriggerPipelineDto {
   @IsOptional()
   @IsString()
   custom_request_reason?: string;
+
+  @ApiPropertyOptional({ description: 'Git ref', example: 'main' })
+  @IsOptional()
+  @IsString()
+  ref?: string;
+}
+
+export class DropPackagesDto {
+  @ApiProperty({
+    description: 'List of package names to drop',
+    type: String,
+    isArray: true,
+    example: ['paru', 'zen-browser'],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  packages!: string[];
+
+  @ApiPropertyOptional({ description: 'Git ref', example: 'main' })
+  @IsOptional()
+  @IsString()
+  ref?: string;
+}
+
+export class RunScheduleDto {
+  @ApiProperty({ description: 'Pipeline schedule ID', example: 12 })
+  @IsInt()
+  @Min(1)
+  scheduleId!: number;
+}
+
+export class TriggerPipelineDto {
+  @ApiProperty({ description: 'Pipeline operation name', example: 'bump-packages' })
+  @IsString()
+  operation!: string;
+
+  @ApiPropertyOptional({ description: 'Git ref', example: 'main' })
+  @IsOptional()
+  @IsString()
+  ref?: string;
+
+  @ApiPropertyOptional({ description: 'Packages to bump', example: 'nodejs' })
+  @IsOptional()
+  @IsString()
+  packages?: string;
+
+  @ApiPropertyOptional({ description: 'Trigger name' })
+  @IsOptional()
+  @IsString()
+  trigger?: string;
 }

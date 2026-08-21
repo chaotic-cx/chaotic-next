@@ -10,6 +10,7 @@ import {
   type DiffScanSeverity,
   MergeRequestWithDiffs,
   type MrPackageInfo,
+  PKGBUILD_SOURCE_AUR,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
 import { Button } from '@openng/optimus-ui/button';
@@ -372,7 +373,7 @@ export class MrOverviewComponent implements OnInit {
   protected packageLink(mr: MergeRequestWithDiffs): { label: string; url: string; tooltip: string } | null {
     const info = mr.packageInfo;
     if (!info) return null;
-    const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== 'aur';
+    const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== PKGBUILD_SOURCE_AUR;
     if (isCustom) {
       return {
         label: 'Custom',

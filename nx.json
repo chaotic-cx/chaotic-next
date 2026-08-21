@@ -20,19 +20,6 @@
     "build": {
       "cache": true
     },
-    "backend:build": {
-      "options": {
-        "args": ["--node-env=development"]
-      },
-      "configurations": {
-        "development": {
-          "args": ["--node-env=development"]
-        },
-        "production": {
-          "args": ["--node-env=production"]
-        }
-      }
-    },
     "@nx/js:node": {
       "defaultConfiguration": "development",
       "configurations": {
@@ -123,14 +110,6 @@
         "targetName": "eslint:lint",
         "extensions": ["ts", "js", "html"]
       }
-    },
-    {
-      "plugin": "@nx/rspack/plugin",
-      "options": {
-        "buildTargetName": "build",
-        "serveTargetName": "serve"
-      },
-      "include": ["backend/**/*"]
     },
     {
       "plugin": "@nx/eslint/plugin",
