@@ -16,17 +16,23 @@ export interface RuleDataLoader<T> {
   transform: (raw: string) => T;
 }
 
+export interface RuleLoadResult<T> {
+  data: T;
+  downloaded: boolean;
+}
+
 /**
  * Builds a memoized loader for a remote rule-data source. The first call
  * downloads the URL and applies `transform`; later calls reuse the cached
  * result. When `refetch` is set, every call re-downloads instead. A failed
  * download is not cached, so the next call retries it.
  */
-export function remoteDataLoader<T>(source: RuleDataLoader<T>, refetch = false): () => Promise<T> {
+export function remoteDataLoader<T>(source: RuleDataLoader<T>, refetch = false): () => Promise<RuleLoadResult<T>> {
   let cached: Promise<T> | null = null;
   return () => {
-    if (!refetch && cached) return cached;
-    cached = fetch(source.url, {
+    if (!refetch && cached) return cached.then((data): RuleLoadResult<T> => ({ data, downloaded: false }));
+
+    const fresh = fetch(source.url, {
       headers: { 'user-agent': 'chaotic-next/diff-scan' },
       signal: AbortSignal.timeout(RULE_DATA_TIMEOUT_MS),
     })
@@ -34,12 +40,16 @@ export function remoteDataLoader<T>(source: RuleDataLoader<T>, refetch = false):
         if (!response.ok) throw new Error(`Rule data download failed (${response.status}) for ${source.url}`);
         return response.text();
       })
-      .then(source.transform)
-      .catch((err: unknown) => {
+      .then(source.transform);
+
+    if (!refetch) {
+      cached = fresh;
+      void fresh.catch(() => {
         cached = null;
-        throw err;
       });
-    return cached;
+    }
+
+    return fresh.then((data): RuleLoadResult<T> => ({ data, downloaded: true }));
   };
 }
 
@@ -48,7 +58,7 @@ export interface Rule<T = void> {
   name: string;
   severity: DiffScanSeverity;
   description: string;
-  load?: () => Promise<T>;
+  load?: () => Promise<RuleLoadResult<T>>;
   refetch?: boolean;
   check(change: MergeRequestDiffSchema): RuleHit | null;
 }
@@ -104,9 +114,9 @@ export function regexRule<T>(options: RegexRuleOptions<T>): Rule<T> {
     const { url, transform, buildPattern, refetch } = options.data;
     const loadData = remoteDataLoader({ url, transform }, refetch);
     rule.load = async () => {
-      const data = await loadData();
+      const { data, downloaded } = await loadData();
       pattern = buildPattern(data);
-      return data;
+      return { data, downloaded };
     };
     if (refetch) rule.refetch = true;
   }
@@ -172,9 +182,9 @@ export function listRule(options: ListRuleOptions): Rule<string[]> {
     const { url, transform, refetch } = options.data;
     const loadData = remoteDataLoader({ url, transform }, refetch);
     rule.load = async () => {
-      const loaded = await loadData();
+      const { data: loaded, downloaded } = await loadData();
       patterns = compilePatterns([...options.list, ...loaded]);
-      return loaded;
+      return { data: loaded, downloaded };
     };
     if (refetch) rule.refetch = true;
   }

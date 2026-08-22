@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -53,6 +53,14 @@ function tabFromQueryParam(value: string): '0' | '1' {
   return value === TAB_QUERY_PARAMS[PACKAGE_UPDATES_TAB] ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB;
 }
 
+function parseNewMrIids(raw: string | null): number[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map(Number)
+    .filter((iid) => Number.isInteger(iid) && iid > 0);
+}
+
 @Component({
   selector: 'chaotic-mr-overview',
   imports: [
@@ -99,6 +107,7 @@ export class MrOverviewComponent implements OnInit {
 
   protected readonly hasNewMr = signal(false);
   protected readonly presenter = presenter;
+  private readonly newMrIidsToCheck = signal<number[]>([]);
 
   protected readonly nvcheckerMrs = computed(() =>
     this.mrOverviewService.mergeRequests().filter((mr) => mr.labels.includes('nvchecker')),
@@ -132,6 +141,26 @@ export class MrOverviewComponent implements OnInit {
 
         this.mrOverviewService.mergeRequests.set(updatedMrs);
       });
+
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const iids = parseNewMrIids(params.get('newMr'));
+      if (iids.length === 0) return;
+      this.newMrIidsToCheck.set(iids);
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { newMr: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    });
+
+    effect(() => {
+      const iids = this.newMrIidsToCheck();
+      if (iids.length === 0) return;
+      const visibleIids = new Set(this.mrOverviewService.mergeRequests().map((mr) => mr.iid));
+      if (iids.some((iid) => !visibleIids.has(iid))) this.hasNewMr.set(true);
+      this.newMrIidsToCheck.set([]);
+    });
   }
 
   private readonly focusedMrs = computed<MergeRequestWithDiffs[]>(() =>

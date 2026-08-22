@@ -44,22 +44,11 @@ export class DiffScanService {
     diffs: MergeRequestDiffSchema[],
     isDepPresentOverride?: (depName: string) => Promise<boolean>,
   ): Promise<DiffScanFinding[]> {
-    this.logger.log(`Diff scan started for ${diffs.length} file(s)`);
-    const startedAtMs = Date.now();
-    const findings = await this.collectFindings(diffs, isDepPresentOverride);
-    this.logger.log(`Diff scan finished with ${findings.length} finding(s) in ${Date.now() - startedAtMs}ms`);
-    return findings;
-  }
-
-  private async collectFindings(
-    diffs: MergeRequestDiffSchema[],
-    isDepPresentOverride?: (depName: string) => Promise<boolean>,
-  ): Promise<DiffScanFinding[]> {
     for (const rule of RULES) {
       if (!rule.load) continue;
       try {
-        await rule.load();
-        this.logger.log(`Rule ${rule.id} data loaded`);
+        const { downloaded } = await rule.load();
+        if (downloaded) this.logger.log(`Rule ${rule.id} data loaded`);
       } catch (err) {
         this.logger.warn(`Rule ${rule.id} data load failed: ${errorMessage(err)}`);
       }

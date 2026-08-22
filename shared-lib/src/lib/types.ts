@@ -647,7 +647,7 @@ export interface NotificationPayload {
     title: string;
     icon: string;
     body: string;
-    data: { onActionClick: { default: { operation: 'openWindow'; url: string } } };
+    data: { onActionClick: { default: { operation: 'openWindow' | 'navigateLastFocusedOrOpen'; url: string } } };
   };
 }
 
