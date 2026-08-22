@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { dnsmasqHosts, hostsFileHosts, NETWORK_RULES } from './network.rules';
+import { remoteDataLoader } from './rule';
 import { addedOnlyDiff, makeChange, ruleById } from './test-support';
 
 describe('network rules', () => {
@@ -75,6 +76,19 @@ describe('network rule data loading', () => {
     const body = ['# abuse.ch URLhaus Host file', ...hosts.map((host) => `127.0.0.1\t${host}`)].join('\n');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(body, { status: 200 })));
   }
+
+  it('downloads once for concurrent and repeat loads, reporting freshness per call', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('payload', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const loader = remoteDataLoader({ url: 'https://blocklist.example/list', transform: (raw: string) => raw.length });
+
+    const [first, second, concurrent] = await Promise.all([loader(), loader(), loader()]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first).toEqual({ data: 'payload'.length, downloaded: true });
+    expect(second).toEqual({ data: 'payload'.length, downloaded: false });
+    expect(concurrent).toEqual({ data: 'payload'.length, downloaded: false });
+  });
 
   it('loads URL-005 from the URLhaus hostfile and matches a listed host', async () => {
     stubHostfile(['stage.example.com', 'c2.example.net']);

@@ -55,7 +55,7 @@ import {
   mapWithConcurrency,
   nDaysInPast,
 } from '../utils/functions';
-import { withSseKeepalive, type SseMessage } from '../utils/sse';
+import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
 import { MrAction, MrActionType } from './mr-action.entity';
 import { fetchPackageInfo } from './mr-package-info';
@@ -164,6 +164,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   private isEnrichingVt = false;
 
   private readonly vtNotedMrIids = new Set<number>();
+  private readonly pendingNotificationIids = new Set<number>();
 
   private readonly mrDataCache = new Map<number, CachedMrData>();
   private readonly maintainerCheckedAt = new Map<number, string>();
@@ -319,6 +320,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       this.logger.debug('Starting auto-flag refresh');
       const mrs = await this.getOpenMergeRequests(true);
       await this.autoFlagMergeRequests(mrs);
+
       void this.enrichVirusTotalReports(mrs).catch((err) =>
         this.logger.error(`VirusTotal enrichment failed: ${errorMessage(err)}`),
       );
@@ -328,6 +330,8 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       void this.enrichPackageInfo(mrs).catch((err) =>
         this.logger.error(`Package info enrichment failed: ${errorMessage(err)}`),
       );
+
+      await this.flushDeferredNotifications();
     } catch (err) {
       this.logger.error(`Auto-flag refresh failed: ${errorMessage(err)}`);
     } finally {
@@ -591,6 +595,8 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
         const newMr: MergeRequestWithDiffs[] = newData.filter((mr) => !currentIds.has(mr.id));
         void this.notifySubscribers(newMr);
       }
+
+      await this.flushDeferredNotifications();
 
       this.eventService.sseEvents$.next({
         data: { type: 'merge_request', mr: changedMergeRequests(currentData, newData), hasNewMr },
@@ -862,25 +868,39 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
 
   private async notifySubscribers(newMr: MergeRequestWithDiffs[]) {
     try {
-      const subscriptions = await this.subscriptionRepository.find();
-      if (subscriptions.length === 0) {
-        return;
+      const scannable = newMr.filter((mr) => mr.diffs.length > 0);
+      for (const mr of newMr) {
+        if (mr.diffs.length === 0) this.pendingNotificationIids.add(mr.iid);
       }
+      const deferred = newMr.length - scannable.length;
+      if (deferred > 0) {
+        this.logger.warn(`Deferred notifying about ${deferred} new MR(s): their diffs were unavailable`);
+      }
+      if (scannable.length === 0) return;
 
-      const pkgs = newMr
-        .map((mr) => mr.title.match(/^chore\(update\): ([\w@.+-]+)$/)?.[1])
-        .filter((name): name is string => name !== undefined)
+      const subscriptions = await this.subscriptionRepository.find();
+      if (subscriptions.length === 0) return;
+
+      const summaries = scannable
+        .map((mr) => {
+          const pkg = mr.title.match(/^chore\(update\): ([\w@.+-]+)$/)?.[1];
+          if (pkg === undefined) return null;
+          const findings = mr.scanFindings?.length ?? 0;
+          const detail = findings === 1 ? '1 finding' : `${findings} findings`;
+          return `${pkg} (${detail})`;
+        })
+        .filter((summary): summary is string => summary !== undefined)
         .join(', ');
-      this.logger.log(`Notifying subscribers about new MRs: ${pkgs}`);
+      this.logger.log(`Notifying subscribers about new MRs: ${summaries}`);
 
+      const iids = scannable.map((mr) => mr.iid).join(',');
+      const targetUrl = `https://aur.chaotic.cx/update-review?newMr=${iids}`;
       const notificationPayload: NotificationPayload = {
         notification: {
           title: 'New update for review!',
           icon: '/android-chrome-512x512.png',
-          body: `New package updates requires your review: ${pkgs}`,
-          data: {
-            onActionClick: { default: { operation: 'openWindow', url: 'https://aur.chaotic.cx/update-review' } },
-          },
+          body: `Updates awaiting your review: ${summaries}`,
+          data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: targetUrl } } },
         },
       };
 
@@ -904,6 +924,24 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     } catch (error) {
       this.logger.error(`Error notifying subscribers: ${errorMessage(error)}`);
     }
+  }
+
+  private async flushDeferredNotifications(): Promise<void> {
+    if (this.pendingNotificationIids.size === 0) return;
+
+    const mrs = await this.getOpenMergeRequests(false);
+    const byIid = new Map(mrs.map((mr) => [mr.iid, mr]));
+
+    const ready: MergeRequestWithDiffs[] = [];
+    for (const iid of this.pendingNotificationIids) {
+      const mr = byIid.get(iid);
+      if (!mr || mr.diffs.length > 0) this.pendingNotificationIids.delete(iid);
+      if (mr?.diffs.length) ready.push(mr);
+    }
+
+    if (ready.length === 0) return;
+    this.logger.log(`Flushing ${ready.length} deferred new-MR notification(s) whose diffs are available now`);
+    await this.notifySubscribers(ready);
   }
 
   async getReviewStats(days?: number): Promise<{ username: string; reviews: number }[]> {
