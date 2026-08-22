@@ -3,8 +3,8 @@ import {
   computeQueueEstimates,
   formatEta,
   overallAverageMinutes,
-  sortByStartTime,
   type PackageBuildAverage,
+  sortByStartTime,
 } from './queue-estimates';
 
 const MINUTE_MS = 60_000;

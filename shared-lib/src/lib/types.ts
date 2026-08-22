@@ -299,6 +299,13 @@ export interface PackageBump {
   triggerName?: string;
 }
 export type PkgType = '0' | '1';
+export const PKG_TYPE_ARCH = '0' as const satisfies PkgType;
+export const PKG_TYPE_CHAOTIC = '1' as const satisfies PkgType;
+
+export type PackageKey = `${PkgType}:${number}`;
+export function packageKey(pkgType: PkgType, id: number): PackageKey {
+  return `${pkgType}:${id}`;
+}
 
 export interface IndexResult {
   scanned: number;
