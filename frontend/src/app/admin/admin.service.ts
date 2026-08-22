@@ -496,7 +496,7 @@ export class AdminService {
     if (trimmed.length < 2) return [];
     try {
       return await lastValueFrom(
-        this.http.get<string[]>(`${this.backendUrl}/gitlab/aur-suggestions`, { params: { query: trimmed } }),
+        this.http.get<string[]>(`${this.backendUrl}/aur/suggestions`, { params: { q: trimmed } }),
       );
     } catch {
       return [];
@@ -507,12 +507,8 @@ export class AdminService {
     const trimmed = pkgname.trim();
     if (!trimmed) return false;
     try {
-      const result = await lastValueFrom(
-        this.http.get<{ exists: boolean }>(`${this.backendUrl}/gitlab/package-exists`, {
-          params: { pkgname: trimmed },
-        }),
-      );
-      return result.exists;
+      await lastValueFrom(this.http.get(`${this.backendUrl}/builder/package/${encodeURIComponent(trimmed)}`));
+      return true;
     } catch {
       return false;
     }

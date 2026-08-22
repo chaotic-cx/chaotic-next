@@ -22,6 +22,13 @@ import { PromoteDto, ScheduleBuildDto, ScheduleDto } from './build-api.dto';
 import { parseManagerLogEvent } from './manager-log-parser';
 
 const PROXY_REQUEST_TIMEOUT_MS = 15_000;
+const MANAGER_LOG_BUFFER_FRAMES = 500;
+
+interface ProxySseClient<T> {
+  next: (message: SseMessage<T>) => void;
+  complete: () => void;
+  error: (err: unknown) => void;
+}
 
 @ApiTags('build-api')
 @ApiCookieAuth('better-auth.session_token')
@@ -105,60 +112,94 @@ export class BuildApiController {
     // Native EventSource reconnects replay the last received frame id here.
     @Headers('last-event-id') lastEventIdHeader?: string,
   ): Observable<SseMessage<string>> {
-    const url = `${this.buildServerUrl}/manager/logs`;
     const resumeFrom = lastEventId ?? (Number(lastEventIdHeader) || undefined);
     return withSseKeepalive(
       new Observable<SseMessage<string>>((subscriber) => {
-        const upstream = new AbortController();
-        let sequence = 0;
-
-        const stream = async (): Promise<void> => {
-          try {
-            const headers: Record<string, string> = {};
-            const token = this.managerApiToken;
-            if (token) {
-              headers['Authorization'] = `Bearer ${token}`;
-            }
-            if (resumeFrom !== undefined && Number.isInteger(resumeFrom)) {
-              headers['Last-Event-ID'] = String(resumeFrom);
-            }
-            const response = await fetch(url, { signal: upstream.signal, headers });
-            if (!response.ok || !response.body) throw new ServiceUnavailableException('Could not fetch manager logs');
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            while (!upstream.signal.aborted) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              buffer += decoder.decode(value, { stream: true });
-
-              const events = buffer.split('\n\n');
-              buffer = events.pop() ?? '';
-
-              for (const event of events) {
-                const lines = event.split('\n');
-                const dataLine = lines.find((line) => line.startsWith('data: '));
-                if (!dataLine) continue;
-                const msg = parseManagerLogEvent(dataLine);
-                if (msg) {
-                  sequence += 1;
-                  subscriber.next({ id: String(sequence), data: msg });
-                }
-              }
-            }
-          } catch (error) {
-            if (!upstream.signal.aborted) subscriber.error(error);
-          } finally {
-            subscriber.complete();
-          }
+        const client: ProxySseClient<string> & { resumeFrom?: number } = {
+          resumeFrom,
+          next: (message) => subscriber.next(message),
+          complete: () => subscriber.complete(),
+          error: (err) => subscriber.error(err),
         };
-
-        void stream();
-        return () => upstream.abort();
+        this.addManagerLogClient(client);
+        return () => this.removeManagerLogClient(client);
       }),
     );
+  }
+
+  /**
+   * One shared upstream connection feeds every manager-log viewer; recent frames
+   * are buffered so reconnecting clients can resume without re-fetching.
+   */
+  private readonly managerLogClients = new Set<ProxySseClient<string> & { resumeFrom?: number }>();
+  private readonly managerLogBuffer: SseMessage<string>[] = [];
+  private managerLogSequence = 0;
+  private managerLogsUpstream: AbortController | undefined;
+
+  private addManagerLogClient(client: ProxySseClient<string> & { resumeFrom?: number }): void {
+    this.managerLogClients.add(client);
+    for (const frame of this.managerLogBuffer) {
+      if (client.resumeFrom === undefined || Number(frame.id) > client.resumeFrom) client.next(frame);
+    }
+    if (!this.managerLogsUpstream) void this.streamManagerLogs();
+  }
+
+  private removeManagerLogClient(client: ProxySseClient<string> & { resumeFrom?: number }): void {
+    this.managerLogClients.delete(client);
+    if (this.managerLogClients.size === 0) this.managerLogsUpstream?.abort();
+  }
+
+  private broadcastManagerLogFrame(message: string): void {
+    this.managerLogSequence += 1;
+    const frame: SseMessage<string> = { id: String(this.managerLogSequence), data: message };
+    this.managerLogBuffer.push(frame);
+    if (this.managerLogBuffer.length > MANAGER_LOG_BUFFER_FRAMES) this.managerLogBuffer.shift();
+
+    for (const client of [...this.managerLogClients]) client.next(frame);
+  }
+
+  private async streamManagerLogs(): Promise<void> {
+    const upstream = new AbortController();
+    this.managerLogsUpstream = upstream;
+
+    try {
+      const headers: Record<string, string> = {};
+      const token = this.managerApiToken;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${this.buildServerUrl}/manager/logs`, { signal: upstream.signal, headers });
+      if (!response.ok || !response.body) throw new ServiceUnavailableException('Could not fetch manager logs');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (!upstream.signal.aborted) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+
+        for (const event of events) {
+          const dataLine = event.split('\n').find((line) => line.startsWith('data: '));
+          if (!dataLine) continue;
+          const message = parseManagerLogEvent(dataLine);
+          if (message !== undefined) this.broadcastManagerLogFrame(message);
+        }
+      }
+    } catch (error) {
+      if (!upstream.signal.aborted) {
+        for (const client of [...this.managerLogClients]) client.error(error);
+      }
+    } finally {
+      upstream.abort();
+      for (const client of [...this.managerLogClients]) client.complete();
+      this.managerLogClients.clear();
+      this.managerLogsUpstream = undefined;
+    }
   }
 
   private async proxyPostJson(url: string, body: unknown): Promise<unknown> {

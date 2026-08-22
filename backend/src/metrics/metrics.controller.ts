@@ -1,4 +1,4 @@
-import { type LiveTrafficHit } from '@chaotic-next/shared-lib';
+import { type LiveRouterRps, LIVE_RPS_SSE_EVENT, type LiveTrafficHit } from '@chaotic-next/shared-lib';
 import { Controller, Get, Param, Query, Sse } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -58,15 +58,16 @@ export class MetricsController {
   @Sse('live/traffic')
   @SkipThrottle()
   @ApiOperation({
-    summary: 'Stream real-time ALPM/pacman router traffic as SSE JSON events.',
+    summary: 'Stream real-time ALPM/pacman router traffic and router RPS as SSE JSON events.',
     description:
-      'Emits a continuous Server-Sent Events (SSE) stream of JSON LiveTrafficHitDto objects parsed from live router pings.',
+      'Emits a continuous Server-Sent Events (SSE) stream of default "message" events with JSON LiveTrafficHitDto ' +
+      `payloads parsed from live router pings, plus "${LIVE_RPS_SSE_EVENT}" events carrying the router's real requests-per-second count.`,
   })
   @ApiOkResponse({
     description: 'Server-sent events stream of live traffic hits',
     type: LiveTrafficHitDto,
   })
-  liveTraffic(): Observable<Partial<MessageEvent<LiveTrafficHit>>> {
+  liveTraffic(): Observable<Partial<MessageEvent<LiveTrafficHit | LiveRouterRps>>> {
     return this.metricsService.getLiveTrafficStream();
   }
 }

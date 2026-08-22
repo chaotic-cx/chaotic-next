@@ -662,3 +662,9 @@ export interface LiveTrafficHit {
   hostname: string;
   worker: string;
 }
+
+export const LIVE_RPS_SSE_EVENT = 'rps';
+
+export interface LiveRouterRps {
+  rps: number;
+}

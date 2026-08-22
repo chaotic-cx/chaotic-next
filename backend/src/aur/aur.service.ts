@@ -1,16 +1,27 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { Cache } from 'cache-manager';
+import { cachedResult } from '../utils/cache';
 import { errorMessage } from '../utils/functions';
 
 const AUR_SUGGEST_URL = 'https://aur.archlinux.org/rpc/v5/suggest';
 const AUR_TIMEOUT_MS = 5000;
 const MAX_SUGGESTIONS = 20;
+const SUGGESTIONS_CACHE_TTL_MS = 60_000;
 
 @Injectable()
 export class AurService {
   private readonly logger = new Logger(AurService.name);
 
-  /** AUR name suggestions for autocomplete, best-effort: failures return none. */
+  constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) {}
+
   async getSuggestions(query: string): Promise<string[]> {
+    return cachedResult(this.cache, `aur:suggest:${query}`, SUGGESTIONS_CACHE_TTL_MS, () =>
+      this.fetchSuggestions(query),
+    );
+  }
+
+  private async fetchSuggestions(query: string): Promise<string[]> {
     try {
       const response = await fetch(`${AUR_SUGGEST_URL}/${encodeURIComponent(query)}`, {
         headers: { accept: 'application/json' },

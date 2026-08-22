@@ -1,18 +1,17 @@
 import { computed, inject, Service, signal } from '@angular/core';
-import type { LiveTrafficHit } from '@chaotic-next/shared-lib';
+import { LIVE_RPS_SSE_EVENT, type LiveRouterRps, type LiveTrafficHit } from '@chaotic-next/shared-lib';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import type { EnvironmentModel } from '../../environments/environment.model';
+import { ResilientSseStream } from '../sse-stream';
 
 export type TrafficHit = LiveTrafficHit & { sourceCoordinates?: [number, number] | null };
 
 const MAX_RECENT_HITS = 40;
-const STATS_WINDOW_MS = 10_000;
 
 @Service()
 export class LiveTrafficService {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
-  private readonly hitTimestamps: number[] = [];
-  private rateIntervalId: ReturnType<typeof setInterval> | null = null;
+  private stream: ResilientSseStream | null = null;
 
   readonly isConnected = signal(false);
   readonly isConnecting = signal(false);
@@ -56,53 +55,59 @@ export class LiveTrafficService {
       .slice(0, 4);
   });
 
-  private eventSource: EventSource | null = null;
-
   connect(): void {
-    if (this.isConnected() || this.isConnecting()) return;
-
+    if (this.stream || this.isConnecting()) return;
     this.isConnecting.set(true);
-    this.startRateCalculation();
 
     const url = `${this.appConfig.backendUrl}/metrics/live/traffic?ngsw-bypass`;
-    const source = new EventSource(url);
-    this.eventSource = source;
-
-    source.onopen = () => {
-      this.isConnected.set(true);
-      this.isConnecting.set(false);
-    };
-
-    source.onmessage = (event) => {
-      try {
-        const hit: LiveTrafficHit = JSON.parse(event.data);
-        if (hit && hit.countryCode) {
-          this.handleHit(hit);
+    this.stream = new ResilientSseStream({
+      url: () => url,
+      onMessage: (data) => {
+        try {
+          const hit: LiveTrafficHit = JSON.parse(data);
+          if (hit && hit.countryCode) {
+            this.handleHit(hit);
+          }
+        } catch (err) {
+          console.warn('Failed to parse live traffic SSE message:', err);
         }
-      } catch (err) {
-        console.warn('Failed to parse live traffic SSE message:', err);
-      }
-    };
-
-    source.onerror = () => {
-      this.disconnect();
-    };
+      },
+      namedEvents: [LIVE_RPS_SSE_EVENT],
+      onNamedEvent: (eventType, data) => {
+        if (eventType !== LIVE_RPS_SSE_EVENT) return;
+        try {
+          const payload: LiveRouterRps = JSON.parse(data);
+          if (Number.isFinite(payload.rps)) {
+            this.currentReqPerSec.set(payload.rps);
+          }
+        } catch (err) {
+          console.warn('Failed to parse router RPS SSE message:', err);
+        }
+      },
+      onOpen: () => {
+        this.isConnected.set(true);
+        this.isConnecting.set(false);
+      },
+      onErrorExhausted: () => {
+        this.resetConnectionState();
+      },
+    });
+    this.stream.open();
   }
 
   disconnect(): void {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
+    this.stream?.close();
+    this.stream = null;
+    this.resetConnectionState();
+  }
+
+  private resetConnectionState(): void {
     this.isConnected.set(false);
     this.isConnecting.set(false);
-    this.stopRateCalculation();
+    this.currentReqPerSec.set(0);
   }
 
   private handleHit(hit: TrafficHit): void {
-    const now = Date.now();
-    this.hitTimestamps.push(now);
-
     this.latestHit.set(hit);
     this.totalHitsReceived.update((c) => c + 1);
 
@@ -117,28 +122,5 @@ export class LiveTrafficService {
       const count = (counts[hit.repo] ?? 0) + 1;
       return { ...counts, [hit.repo]: count };
     });
-  }
-
-  private startRateCalculation(): void {
-    this.stopRateCalculation();
-    this.rateIntervalId = setInterval(() => {
-      const now = Date.now();
-      const cutoff = now - STATS_WINDOW_MS;
-
-      while (this.hitTimestamps.length > 0 && this.hitTimestamps[0] < cutoff) {
-        this.hitTimestamps.shift();
-      }
-
-      const rps = this.hitTimestamps.length / (STATS_WINDOW_MS / 1000);
-      this.currentReqPerSec.set(Math.round(rps * 10) / 10);
-    }, 1000);
-  }
-
-  private stopRateCalculation(): void {
-    if (this.rateIntervalId) {
-      clearInterval(this.rateIntervalId);
-      this.rateIntervalId = null;
-    }
-    this.currentReqPerSec.set(0);
   }
 }

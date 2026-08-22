@@ -15,9 +15,26 @@ import { Observable } from 'rxjs';
 
 const DEFAULT_RESUME_OFFSET = 0;
 
+interface PackageLogClient {
+  lastOffset: number;
+  next: (message: Partial<MessageEvent<GitlabLogChunk>>) => void;
+  complete: () => void;
+  error: (err: unknown) => void;
+}
+
+interface PackageLogEntry {
+  clients: Set<PackageLogClient>;
+  controller?: AbortController;
+  /** Full text received so far, so mid-stream joiners can be caught up. */
+  text: string;
+}
+
 @ApiTags('logs')
 @Controller('logs')
 export class PackageLogsController {
+  /** Shared log streams keyed by `pkgname/timestamp`; one upstream fetch per watched log. */
+  private readonly packageLogs = new Map<string, PackageLogEntry>();
+
   constructor(private readonly configService: ConfigService) {}
 
   @Sse(':pkgname/:timestamp')
@@ -32,55 +49,92 @@ export class PackageLogsController {
   ): Observable<Partial<MessageEvent<GitlabLogChunk>>> {
     const base = this.configService.getOrThrow<string>('app.garudaLogsUrl');
     const url = `${base}/${encodeURIComponent(pkgname)}/${encodeURIComponent(timestamp)}`;
-    const resumeAt = offset > DEFAULT_RESUME_OFFSET ? offset : DEFAULT_RESUME_OFFSET;
+    const key = `${encodeURIComponent(pkgname)}/${encodeURIComponent(timestamp)}`;
+
     return new Observable((subscriber) => {
-      // Aborting on teardown cancels the upstream fetch so a disconnecting
-      // client does not leave the build-server connection dangling.
-      const upstream = new AbortController();
-
-      const stream = async (): Promise<void> => {
-        try {
-          const response = await fetch(url, { signal: upstream.signal });
-          if (response.status === 404) throw new NotFoundException('Build log not found');
-          if (!response.ok || !response.body) throw new ServiceUnavailableException('Could not fetch build log');
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          // Chunks report an absolute cumulative character offset so a resumed
-          // client can reconnect again without receiving duplicates; start the
-          // count at the resume point.
-          let offset = resumeAt;
-          // Discard the already-streamed prefix so a resumed client does not
-          // receive duplicate log lines. Resume is expressed in characters, not
-          // bytes, to match the offset the chunks report.
-          let remainingToSkip = resumeAt;
-          while (!upstream.signal.aborted) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            let text = decoder.decode(value, { stream: true });
-            if (remainingToSkip > 0) {
-              if (text.length <= remainingToSkip) {
-                remainingToSkip -= text.length;
-                continue;
-              }
-              text = text.slice(remainingToSkip);
-              remainingToSkip = 0;
-            }
-            if (text) {
-              offset += text.length;
-              subscriber.next({ data: { offset, text, complete: false, status: '' } });
-            }
-          }
-          subscriber.next({ data: { offset, text: '', complete: true, status: '' } });
-        } catch (error) {
-          if (!upstream.signal.aborted) subscriber.error(error);
-        } finally {
-          subscriber.complete();
-        }
+      const client: PackageLogClient = {
+        // Chunks report an absolute cumulative character offset so a resumed
+        // client can reconnect again without receiving duplicates.
+        lastOffset: Math.max(offset, DEFAULT_RESUME_OFFSET),
+        next: (message) => subscriber.next(message),
+        complete: () => subscriber.complete(),
+        error: (err) => subscriber.error(err),
       };
-
-      void stream();
-      return () => upstream.abort();
+      this.attachClient(key, url, client);
+      return () => this.detachClient(key, client);
     });
+  }
+
+  private attachClient(key: string, url: string, client: PackageLogClient): void {
+    let entry = this.packageLogs.get(key);
+    if (!entry) {
+      entry = { clients: new Set(), text: '' };
+      this.packageLogs.set(key, entry);
+      void this.streamPackageLog(key, url);
+    } else {
+      this.sendPackageLogChunk(entry, client);
+    }
+    entry.clients.add(client);
+  }
+
+  private detachClient(key: string, client: PackageLogClient): void {
+    const entry = this.packageLogs.get(key);
+    if (!entry) return;
+    entry.clients.delete(client);
+    if (entry.clients.size === 0) this.disposeEntry(key);
+  }
+
+  private sendPackageLogChunk(entry: PackageLogEntry, client: PackageLogClient): void {
+    if (entry.text.length <= client.lastOffset) return;
+    const offset = entry.text.length;
+    client.next({
+      data: { offset, text: entry.text.slice(client.lastOffset), complete: false, status: '' },
+    });
+    client.lastOffset = offset;
+  }
+
+  private async streamPackageLog(key: string, url: string): Promise<void> {
+    const entry = this.packageLogs.get(key);
+    if (!entry) return;
+
+    // Aborting on teardown cancels the upstream fetch so the last disconnecting
+    // client does not leave the build-server connection dangling.
+    const upstream = new AbortController();
+    entry.controller = upstream;
+
+    try {
+      const response = await fetch(url, { signal: upstream.signal });
+      if (response.status === 404) throw new NotFoundException('Build log not found');
+      if (!response.ok || !response.body) throw new ServiceUnavailableException('Could not fetch build log');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (!upstream.signal.aborted) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        // Resume is expressed in characters, not bytes, to match the offset the chunks report.
+        entry.text += decoder.decode(value, { stream: true });
+        for (const client of [...entry.clients]) this.sendPackageLogChunk(entry, client);
+      }
+
+      for (const client of [...entry.clients]) {
+        client.next({ data: { offset: client.lastOffset, text: '', complete: true, status: '' } });
+        client.complete();
+      }
+      this.disposeEntry(key);
+    } catch (error) {
+      if (!upstream.signal.aborted) {
+        for (const client of [...entry.clients]) client.error(error);
+      }
+      this.disposeEntry(key);
+    }
+  }
+
+  private disposeEntry(key: string): void {
+    const entry = this.packageLogs.get(key);
+    if (!entry) return;
+    entry.controller?.abort();
+    this.packageLogs.delete(key);
   }
 }
