@@ -95,6 +95,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
         }),
       );
       await this.broker.start();
+      this.logger.log('Moleculer broker started');
     } catch (err: unknown) {
       this.logger.error(err);
     }

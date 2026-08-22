@@ -14,7 +14,7 @@ export class AurController {
 
   @Get('suggestions')
   @ApiOperation({ summary: 'Get AUR package name suggestions for a search term.' })
-  @ApiOkResponse({ description: 'List of matching AUR package names', isArray: true })
+  @ApiOkResponse({ description: 'List of matching AUR package names', type: String, isArray: true })
   async getSuggestions(@Query() query: AurSuggestionsQueryDto): Promise<string[]> {
     const q = query.q;
     if (q === undefined || q.length < MIN_QUERY_LENGTH || q.length > MAX_QUERY_LENGTH) {

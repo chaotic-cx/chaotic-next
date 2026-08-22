@@ -57,6 +57,16 @@ import { RequireGroupGuard } from '../guards/require-group.guard';
 import { requireGroups, requireRepoGroup } from '../decorators/require-groups.decorator';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { GitlabService } from './gitlab.service';
+import {
+  AurPackageScanDto,
+  GitlabJobDto,
+  MergeRequestWithDiffsDto,
+  PipelineScheduleOptionDto,
+  PipelineTriggerResultDto,
+  PipelineWithExternalStatusDto,
+  ReviewStatsDto,
+  ReviewStatsOverTimeDto,
+} from './gitlab-response.dto';
 import type { GitLabWebHook } from './interfaces';
 import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
 
@@ -118,7 +128,10 @@ export class GitlabController {
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Scan an AUR package: PKGBUILD sources, static rules and VirusTotal checks.' })
-  @ApiCreatedResponse({ description: 'The scan result; VirusTotal reports follow via GET once completed.' })
+  @ApiCreatedResponse({
+    description: 'The scan result; VirusTotal reports follow via GET once completed.',
+    type: AurPackageScanDto,
+  })
   startAurScan(@Body() body: AurScanBodyDto): Promise<AurPackageScan> {
     return this.aurScanService.startScan(body.package);
   }
@@ -127,7 +140,7 @@ export class GitlabController {
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Fetch the current AUR package scan result.' })
-  @ApiOkResponse({ description: 'The current scan result.' })
+  @ApiOkResponse({ description: 'The current scan result.', type: AurPackageScanDto })
   async getAurScan(@Param('packageName') packageName: string): Promise<AurPackageScan> {
     const scan = this.aurScanService.getScan(packageName);
     if (!scan) throw new NotFoundException(`No scan recorded for "${packageName}"`);
@@ -145,14 +158,14 @@ export class GitlabController {
 
   @Get('pipelines')
   @ApiOperation({ summary: 'Get recent GitLab pipelines.' })
-  @ApiOkResponse({ description: 'List of pipelines', isArray: true })
+  @ApiOkResponse({ description: 'List of pipelines', type: PipelineWithExternalStatusDto, isArray: true })
   async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
     return await this.gitlabService.getLastPipelines();
   }
 
   @Get('pipelines/:pipelineId/jobs')
   @ApiOperation({ summary: 'Get the jobs of a GitLab pipeline.' })
-  @ApiOkResponse({ description: 'List of jobs', isArray: true })
+  @ApiOkResponse({ description: 'List of jobs', type: GitlabJobDto, isArray: true })
   async getPipelineJobs(@Param('pipelineId', ParseIntPipe) pipelineId: number): Promise<GitlabJob[]> {
     return await this.gitlabService.listPipelineJobs(pipelineId);
   }
@@ -176,7 +189,7 @@ export class GitlabController {
 
   @Get('merge-requests')
   @ApiOperation({ summary: 'Get recent open GitLab merge requests with diff data.' })
-  @ApiOkResponse({ description: 'List of open merge requests', isArray: true })
+  @ApiOkResponse({ description: 'List of open merge requests', type: MergeRequestWithDiffsDto, isArray: true })
   async getOpenMergeRequests(): Promise<MergeRequestWithDiffs[]> {
     return await this.gitlabService.getOpenMergeRequests();
   }
@@ -185,7 +198,7 @@ export class GitlabController {
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Get the active pipeline schedules of the chaotic-aur project.' })
-  @ApiOkResponse({ description: 'List of active pipeline schedules', isArray: true })
+  @ApiOkResponse({ description: 'List of active pipeline schedules', type: PipelineScheduleOptionDto, isArray: true })
   async getSchedules(): Promise<PipelineScheduleOption[]> {
     return await this.gitlabService.listPipelineSchedules();
   }
@@ -193,7 +206,7 @@ export class GitlabController {
   @Get('review-stats')
   @ApiOperation({ summary: 'Get GitLab merge request review statistics per user.' })
   @ApiQuery({ name: 'days', required: false, type: Number, description: 'Optional time range in days' })
-  @ApiOkResponse({ description: 'Merge request review statistics' })
+  @ApiOkResponse({ description: 'Merge request review statistics', type: ReviewStatsDto })
   async getReviewStats(@Query('days') days?: string) {
     return await this.gitlabService.getReviewStats(parseOptionalDays(days));
   }
@@ -201,7 +214,7 @@ export class GitlabController {
   @Get('review-stats/over-time')
   @ApiOperation({ summary: 'Get GitLab merge request review statistics per user over time.' })
   @ApiQuery({ name: 'days', required: false, type: Number, description: 'Optional time range in days' })
-  @ApiOkResponse({ description: 'Merge request review statistics over time' })
+  @ApiOkResponse({ description: 'Merge request review statistics over time', type: ReviewStatsOverTimeDto })
   async getReviewStatsOverTime(@Query('days') days?: string) {
     return await this.gitlabService.getReviewStatsOverTime(parseOptionalDays(days));
   }
@@ -248,7 +261,7 @@ export class GitlabController {
   @requireRepoGroup()
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Bump packages via a direct Git commit.' })
-  @ApiOkResponse({ description: 'Bump commit created.' })
+  @ApiOkResponse({ description: 'Bump commit created.', type: PipelineTriggerResultDto })
   async bumpPackages(
     @Session() session: UserSession<typeof auth>,
     @Body() body: BumpPackagesDto,
@@ -264,7 +277,7 @@ export class GitlabController {
   @requireRepoGroup()
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Add new packages via a direct Git commit.' })
-  @ApiOkResponse({ description: 'Add commit created.' })
+  @ApiOkResponse({ description: 'Add commit created.', type: PipelineTriggerResultDto })
   async addPackages(
     @Session() session: UserSession<typeof auth>,
     @Body() body: AddPackagesDto,
@@ -288,7 +301,7 @@ export class GitlabController {
   @requireRepoGroup()
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Drop packages via a direct Git commit.' })
-  @ApiOkResponse({ description: 'Drop commit created.' })
+  @ApiOkResponse({ description: 'Drop commit created.', type: PipelineTriggerResultDto })
   async dropPackages(
     @Session() session: UserSession<typeof auth>,
     @Body() body: DropPackagesDto,
@@ -304,7 +317,7 @@ export class GitlabController {
   @requireGroups(GITLAB_GROUP_CHAOTIC_AUR)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Trigger a GitLab pipeline schedule directly via API.' })
-  @ApiOkResponse({ description: 'Pipeline schedule triggered.' })
+  @ApiOkResponse({ description: 'Pipeline schedule triggered.', type: PipelineTriggerResultDto })
   async runSchedule(
     @Session() session: UserSession<typeof auth>,
     @Body() body: RunScheduleDto,
@@ -320,7 +333,7 @@ export class GitlabController {
   @requireGroups(GITLAB_GROUP_CHAOTIC_AUR)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Trigger a custom pipeline with the given inputs.' })
-  @ApiOkResponse({ description: 'Pipeline triggered.' })
+  @ApiOkResponse({ description: 'Pipeline triggered.', type: PipelineTriggerResultDto })
   async triggerPipeline(
     @Session() session: UserSession<typeof auth>,
     @Body() body: TriggerPipelineDto,

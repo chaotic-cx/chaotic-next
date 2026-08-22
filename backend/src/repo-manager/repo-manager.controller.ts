@@ -26,6 +26,7 @@ import { BumpPackagesBodyDto, BumpPackagesResultDto } from './repo-manager.dto';
 import { PackageElfAnalysis } from './repo-manager.entity';
 import { RepoManagerService } from './repo-manager.service';
 import type { DependencyEdge } from './signal';
+import { BrokenPackageReportDto, DependencyEdgeDto, PackageRebuildTriggerSourcesDto } from '../health/health.dto';
 
 @ApiTags('repo')
 @ApiCookieAuth('better-auth.session_token')
@@ -52,7 +53,7 @@ export class RepoManagerController {
   @ApiOperation({
     summary: 'List packages whose ELF analysis is flagged broken (missing sonames / stale runtime dirs).',
   })
-  @ApiOkResponse({ description: 'Broken packages.', type: Object })
+  @ApiOkResponse({ description: 'Broken packages.', type: BrokenPackageReportDto, isArray: true })
   getBrokenPackages(
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('perPage', new ParseIntPipe({ optional: true })) perPage?: number,
@@ -89,21 +90,25 @@ export class RepoManagerController {
 
   @Get('dependencies')
   @ApiOperation({ summary: 'List dependency edges across all indexed packages (Arch and Chaotic).' })
-  @ApiOkResponse({ description: 'Dependency edges (consumer -> provider by soname).' })
+  @ApiOkResponse({
+    description: 'Dependency edges (consumer -> provider by soname).',
+    type: DependencyEdgeDto,
+    isArray: true,
+  })
   getDependencies(): Promise<DependencyEdge[]> {
     return this.repoManager.getDependencyGraph();
   }
 
   @Get('dependencies/:pkgname')
   @ApiOperation({ summary: 'List what can cause a package to be rebuilt via our system, per trigger channel.' })
-  @ApiOkResponse({ description: 'Rebuild trigger sources for the package.', type: Object })
+  @ApiOkResponse({ description: 'Rebuild trigger sources for the package.', type: PackageRebuildTriggerSourcesDto })
   getRebuildTriggerSources(@Param('pkgname') pkgname: string): Promise<PackageRebuildTriggerSources> {
     return this.repoManager.getRebuildTriggerSources(pkgname);
   }
 
   @Get('signals/export')
   @ApiOperation({ summary: 'Export all stored ELF analyses as a JSON seed.' })
-  @ApiOkResponse({ description: 'Exported ELF analyses.' })
+  @ApiOkResponse({ description: 'Exported ELF analyses.', type: PackageElfAnalysis, isArray: true })
   exportSignalsSeed(): Promise<PackageElfAnalysis[]> {
     return this.repoManager.exportSignalsSeed();
   }

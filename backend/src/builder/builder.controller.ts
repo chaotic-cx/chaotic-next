@@ -3,7 +3,25 @@ import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestj
 import type { Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
-import { GetBuildsQueryDto, GetLatestBuildsQueryDto, GetPackagesQueryDto } from './builder.dto';
+import {
+  AverageBuildTimeDto,
+  AveragePackageBuildTimeDto,
+  BuildWithUrlDto,
+  BuilderCountDto,
+  DayAverageDto,
+  DayCountDto,
+  DayRepoCountDto,
+  DayStatusAverageDto,
+  FailedBuildHotspotDto,
+  FailedBuildOverTimeDto,
+  GetBuildsQueryDto,
+  GetLatestBuildsQueryDto,
+  GetPackagesQueryDto,
+  HeavyPackageDto,
+  PkgCountDto,
+  PopularPackageDto,
+  ThroughputDayDto,
+} from './builder.dto';
 
 @ApiTags('builder')
 @Controller('builder')
@@ -19,7 +37,7 @@ export class BuilderController {
 
   @Get('packages')
   @ApiOperation({ summary: 'Get packages with pagination, search and sorting.' })
-  @ApiOkResponse({ description: 'Paginated list of packages' })
+  @ApiOkResponse({ description: 'Paginated list of packages', type: Package })
   async getPackages(@Query() query: GetPackagesQueryDto): Promise<Paginated<PackageDto>> {
     return await this.builderService.getPackages(query);
   }
@@ -28,7 +46,7 @@ export class BuilderController {
   @ApiOperation({ summary: 'Get a package by name.' })
   @ApiParam({ name: 'name', description: 'Package name' })
   @ApiParam({ name: 'repo', description: 'Repository name', required: false })
-  @ApiOkResponse({ description: 'Package details', type: Object })
+  @ApiOkResponse({ description: 'Package details', type: Package })
   async getPackage(@Param('name') name: string, @Query('repo') repo?: string): Promise<Package> {
     return await this.builderService.getPackage(name, repo);
   }
@@ -42,7 +60,7 @@ export class BuilderController {
 
   @Get('builds')
   @ApiOperation({ summary: 'Get builds with server-side pagination, search and sorting.' })
-  @ApiOkResponse({ description: 'Paginated list of builds' })
+  @ApiOkResponse({ description: 'Paginated list of builds', type: Build })
   async getBuilds(@Query() query: GetBuildsQueryDto): Promise<Paginated<Build>> {
     return await this.builderService.getBuilds({
       builder: query.builder ?? '',
@@ -71,7 +89,7 @@ export class BuilderController {
   @ApiOperation({ summary: 'Get latest builds with URLs.' })
   @ApiParam({ name: 'amount', description: 'Number of builds to return' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiOkResponse({ description: 'List of latest builds with URLs', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'List of latest builds with URLs', type: BuildWithUrlDto, isArray: true })
   async getLatestBuildsByPkgnameWithUrls(
     @Param('amount', new ParseIntPipe({ optional: true })) amount = 50,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
@@ -109,7 +127,7 @@ export class BuilderController {
 
   @Get('count/days')
   @ApiOperation({ summary: 'Get build counts per package per day.' })
-  @ApiOkResponse({ description: 'Build counts per package per day', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Build counts per package per day', type: PkgCountDto, isArray: true })
   async getBuildsPerPackage(): Promise<{ pkgbase: string; count: string }[]> {
     return await this.builderService.getBuildsPerPackage();
   }
@@ -117,7 +135,7 @@ export class BuilderController {
   @Get('count/days/:days')
   @ApiOperation({ summary: 'Get build counts per package for a given number of days.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'Build counts per package for days', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Build counts per package for days', type: PkgCountDto, isArray: true })
   async getBuildsPerPackageWithDays(
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ pkgbase: string; count: string }[]> {
@@ -137,7 +155,7 @@ export class BuilderController {
   @ApiParam({ name: 'pkgname', description: 'Package name' })
   @ApiParam({ name: 'amount', description: 'Amount' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiOkResponse({ description: 'Build count for package per day', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Build count for package per day', type: DayRepoCountDto, isArray: true })
   async getBuildsCountByPkgnamePerDay(
     @Param('pkgname') pkgname: string,
     @Param('amount', new ParseIntPipe({ optional: true })) amount = 50,
@@ -150,7 +168,7 @@ export class BuilderController {
   @ApiOperation({ summary: 'Get average build time per day for a specific package.' })
   @ApiParam({ name: 'pkgname', description: 'Package name' })
   @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
-  @ApiOkResponse({ description: 'Average build time per day for package', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Average build time per day for package', type: DayAverageDto, isArray: true })
   async getAverageBuildTimePerDayForPackage(
     @Param('pkgname') pkgname: string,
     @Query('days', new ParseIntPipe({ optional: true })) days = 50,
@@ -164,7 +182,7 @@ export class BuilderController {
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
   @ApiQuery({ name: 'status', required: false, description: 'Build status', type: Number })
   @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
-  @ApiOkResponse({ description: 'List of popular packages', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'List of popular packages', type: PopularPackageDto, isArray: true })
   async getPopularPackages(
     @Param('amount', ParseIntPipe) amount: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
@@ -177,7 +195,7 @@ export class BuilderController {
   @Get('builders/amount')
   @ApiOperation({ summary: 'Get the number of builds per builder.' })
   @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
-  @ApiOkResponse({ description: 'Number of builds per builder', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Number of builds per builder', type: BuilderCountDto, isArray: true })
   async getBuildsPerBuilder(
     @Query('days', new ParseIntPipe({ optional: true })) days?: number,
   ): Promise<{ name: string; count: string }[]> {
@@ -189,7 +207,7 @@ export class BuilderController {
   @ApiParam({ name: 'pkgname', description: 'Package name' })
   @ApiParam({ name: 'days', description: 'Number of days' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiOkResponse({ description: 'Builds per day for package', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Builds per day for package', type: DayRepoCountDto, isArray: true })
   async getBuildsPerDayDefault(
     @Param('pkgname') pkgname: string,
     @Param('days', ParseIntPipe) days: number,
@@ -207,7 +225,7 @@ export class BuilderController {
   @Get('per-day/:days')
   @ApiOperation({ summary: 'Get builds per day for all packages.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'Builds per day for all packages', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Builds per day for all packages', type: DayCountDto, isArray: true })
   async getBuildsPerDay(@Param('days', ParseIntPipe) days: number): Promise<{ day: string; count: string }[]> {
     return await this.builderService.getBuildsPerDay({ days: days });
   }
@@ -215,7 +233,7 @@ export class BuilderController {
   @Get('added/per-day/:days')
   @ApiOperation({ summary: 'Get number of packages added to the repo per day.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'Packages added per day', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Packages added per day', type: DayCountDto, isArray: true })
   async getPackageAdditionsPerDay(
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ day: string; count: string }[]> {
@@ -225,7 +243,7 @@ export class BuilderController {
   @Get('average/per-day/:days')
   @ApiOperation({ summary: 'Get average build time per day per status.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'Average build time per day', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Average build time per day', type: DayStatusAverageDto, isArray: true })
   async getAverageBuildTimePerDay(
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ day: string; status: string; average: string }[]> {
@@ -235,7 +253,7 @@ export class BuilderController {
   @Get('builds/failed/top/:amount')
   @ApiOperation({ summary: 'Get the packages with the highest amount of failed builds.' })
   @ApiParam({ name: 'amount', description: 'Number of packages' })
-  @ApiOkResponse({ description: 'Top packages by failed build count', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Top packages by failed build count', type: FailedBuildHotspotDto, isArray: true })
   async getFailedBuildHotspots(
     @Param('amount', ParseIntPipe) amount: number,
   ): Promise<{ pkgname: string; count: string }[]> {
@@ -246,7 +264,7 @@ export class BuilderController {
   @ApiOperation({ summary: 'Failed builds per day for the top failing packages.' })
   @ApiParam({ name: 'amount', description: 'Number of packages' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'Per-day failed builds per package', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Per-day failed builds per package', type: FailedBuildOverTimeDto, isArray: true })
   async getFailedBuildsOverTime(
     @Param('amount', ParseIntPipe) amount: number,
     @Param('days', ParseIntPipe) days: number,
@@ -256,7 +274,7 @@ export class BuilderController {
 
   @Get('stats/heavy-packages/:amount/:days')
   @ApiOperation({ summary: 'Get the packages with the highest average build time.' })
-  @ApiOkResponse({ description: 'Packages by average build time', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Packages by average build time', type: HeavyPackageDto, isArray: true })
   async getHeavyPackages(
     @Param('amount', ParseIntPipe) amount: number,
     @Param('days', ParseIntPipe) days: number,
@@ -267,7 +285,7 @@ export class BuilderController {
   @Get('throughput/per-day/:days')
   @ApiOperation({ summary: 'Get successful vs already-built vs skipped vs failed builds per day.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'Throughput per day', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Throughput per day', type: ThroughputDayDto, isArray: true })
   async getThroughputPerDay(
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ day: string; success: string; alreadyBuilt: string; skipped: string; failed: string }[]> {
@@ -277,7 +295,7 @@ export class BuilderController {
   @Get('average/time')
   @ApiOperation({ summary: 'Get average build time per status.' })
   @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
-  @ApiOkResponse({ description: 'Average build time per status', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Average build time per status', type: AverageBuildTimeDto, isArray: true })
   async getAverageBuildTimePerStatus(@Query('days', new ParseIntPipe({ optional: true })) days?: number): Promise<
     {
       average_build_time: string;
@@ -291,7 +309,7 @@ export class BuilderController {
   @ApiOperation({ summary: 'Get average build time per package.' })
   @ApiQuery({ name: 'pkgname', required: true, isArray: true, description: 'Package names to look up' })
   @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
-  @ApiOkResponse({ description: 'Average build time per package', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Average build time per package', type: AveragePackageBuildTimeDto, isArray: true })
   async getAverageBuildTimePerPackage(
     @Query('pkgname') pkgnames: string[],
     @Query('days', new ParseIntPipe({ optional: true })) days?: number,

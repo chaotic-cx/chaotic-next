@@ -40,3 +40,45 @@ export class PerDayStatsDto {
   @IsString()
   count!: string;
 }
+
+export class MirrorOverTimeDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Mirror hostname' })
+  @IsString()
+  mirror!: string;
+
+  @ApiProperty({ description: 'Number of downloads' })
+  @IsString()
+  count!: string;
+}
+
+export class CountryOverTimeDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Country code' })
+  @IsString()
+  country!: string;
+
+  @ApiProperty({ description: 'Number of downloads' })
+  @IsString()
+  count!: string;
+}
+
+export class UserAgentTrendDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'User agent string' })
+  @IsString()
+  userAgent!: string;
+
+  @ApiProperty({ description: 'Number of downloads' })
+  @IsString()
+  count!: string;
+}

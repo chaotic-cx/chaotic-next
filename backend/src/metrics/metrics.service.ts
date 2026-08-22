@@ -11,7 +11,7 @@ import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type { Cache } from 'cache-manager';
 import { Observable } from 'rxjs';
-import { clampInt, nDaysInPast, utcDayStart } from '../utils/functions';
+import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 import { MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
 import { cachedResult } from '../utils/cache';
 import { DataSource } from 'typeorm';
@@ -88,7 +88,8 @@ export class MetricsService {
   @Cron(CronExpression.EVERY_6_HOURS)
   async warmMetricsCache(): Promise<void> {
     const windows = [7, 30, 90, MAX_DAYS_WINDOW];
-    await Promise.allSettled([
+    const startedAtMs = Date.now();
+    const results = await Promise.allSettled([
       ...windows.flatMap((days) => [
         this.uniqueUsers(days),
         this.uniqueUserAgents(days),
@@ -99,6 +100,14 @@ export class MetricsService {
         this.rankPackages('100', days),
       ]),
     ]);
+    const failures = rejectedReasons(results);
+    if (failures.length > 0) {
+      this.logger.error(
+        `Metrics cache warm-up failed for ${failures.length} of ${results.length} queries, ` +
+          `first failure: ${errorMessage(failures[0])}`,
+      );
+    }
+    this.logger.log(`Warmed metrics cache in ${Date.now() - startedAtMs}ms`);
   }
 
   /**

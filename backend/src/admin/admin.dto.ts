@@ -391,6 +391,17 @@ export class RescanPackageItemDto {
   pkgType!: string;
 }
 
+export class RescanResultDto {
+  @ApiProperty({ description: 'Number of packages successfully rescanned' })
+  @IsInt()
+  rescanned!: number;
+
+  @ApiProperty({ description: 'Package names that failed to rescan', type: String, isArray: true })
+  @IsArray()
+  @IsString({ each: true })
+  failed!: string[];
+}
+
 export class RescanPackagesDto {
   @ApiProperty({ description: 'Packages to rescan', type: [RescanPackageItemDto], isArray: true })
   @IsArray()
