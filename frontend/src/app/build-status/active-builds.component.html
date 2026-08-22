@@ -20,7 +20,7 @@
             </span>
           </span>
           <span class="flex shrink-0 items-center gap-2">
-            @if (buildStatusService.activeEtaLabels().get(pkg.name); as eta) {
+            @if (buildStatusService.activeEtaLabels().get(pkg.rawName); as eta) {
               <span
                 class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
                 [pTooltip]="estimateTooltip"

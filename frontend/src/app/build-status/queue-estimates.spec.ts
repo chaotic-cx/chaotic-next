@@ -34,7 +34,7 @@ describe('computeQueueEstimates', () => {
   it('estimates remaining time of running builds', () => {
     const now = 10 * MINUTE_MS;
     const result = computeQueueEstimates({
-      active: [{ pkgname: 'a', startedMs: 0, buildClass: 0 }],
+      active: [{ rawName: 'a', startedMs: 0, buildClass: 0 }],
       waiting: [],
       idle: [{ buildClass: 0 }],
       nowMs: now,
@@ -46,7 +46,7 @@ describe('computeQueueEstimates', () => {
 
   it('clamps finished estimates at zero', () => {
     const result = computeQueueEstimates({
-      active: [{ pkgname: 'a', startedMs: 0, buildClass: 0 }],
+      active: [{ rawName: 'a', startedMs: 0, buildClass: 0 }],
       waiting: [],
       idle: [],
       nowMs: 60 * MINUTE_MS,
@@ -59,9 +59,9 @@ describe('computeQueueEstimates', () => {
     const result = computeQueueEstimates({
       active: [],
       waiting: [
-        { pkgname: 'a', buildClass: 0 },
-        { pkgname: 'b', buildClass: 0 },
-        { pkgname: 'c', buildClass: 0 },
+        { rawName: 'a', buildClass: 0 },
+        { rawName: 'b', buildClass: 0 },
+        { rawName: 'c', buildClass: 0 },
       ],
       idle: [{ buildClass: 0 }, { buildClass: 0 }],
       nowMs: 0,
@@ -77,13 +77,13 @@ describe('computeQueueEstimates', () => {
   it('makes the first wave wait for the running builds', () => {
     const result = computeQueueEstimates({
       active: [
-        { pkgname: 'x', startedMs: 0, buildClass: 0 },
-        { pkgname: 'y', startedMs: 0, buildClass: 0 },
+        { rawName: 'x', startedMs: 0, buildClass: 0 },
+        { rawName: 'y', startedMs: 0, buildClass: 0 },
       ],
       waiting: [
-        { pkgname: 'a', buildClass: 0 },
-        { pkgname: 'b', buildClass: 0 },
-        { pkgname: 'c', buildClass: 0 },
+        { rawName: 'a', buildClass: 0 },
+        { rawName: 'b', buildClass: 0 },
+        { rawName: 'c', buildClass: 0 },
       ],
       idle: [],
       nowMs: 0,
@@ -100,11 +100,11 @@ describe('computeQueueEstimates', () => {
     const result = computeQueueEstimates({
       active: [],
       waiting: [
-        { pkgname: 'a', buildClass: 0 },
-        { pkgname: 'b', buildClass: 0 },
-        { pkgname: 'c', buildClass: 0 },
-        { pkgname: 'd', buildClass: 0 },
-        { pkgname: 'e', buildClass: 0 },
+        { rawName: 'a', buildClass: 0 },
+        { rawName: 'b', buildClass: 0 },
+        { rawName: 'c', buildClass: 0 },
+        { rawName: 'd', buildClass: 0 },
+        { rawName: 'e', buildClass: 0 },
       ],
       idle: [{ buildClass: 0 }, { buildClass: 0 }],
       nowMs: 0,
@@ -118,8 +118,8 @@ describe('computeQueueEstimates', () => {
 
   it('does not start a build before an eligible builder frees up', () => {
     const result = computeQueueEstimates({
-      active: [{ pkgname: 'x', startedMs: 0, buildClass: 2 }],
-      waiting: [{ pkgname: 'a', buildClass: 2 }],
+      active: [{ rawName: 'x', startedMs: 0, buildClass: 2 }],
+      waiting: [{ rawName: 'a', buildClass: 2 }],
       idle: [],
       nowMs: 0,
       avgOf: averages({ x: [10], a: [5] }),
@@ -131,7 +131,7 @@ describe('computeQueueEstimates', () => {
   it('only uses builders that can run the build class', () => {
     const result = computeQueueEstimates({
       active: [],
-      waiting: [{ pkgname: 'a', buildClass: 2 }],
+      waiting: [{ rawName: 'a', buildClass: 2 }],
       idle: [{ buildClass: 1 }, { buildClass: 3 }],
       nowMs: 0,
       avgOf: averages({ a: [5] }),
@@ -143,7 +143,7 @@ describe('computeQueueEstimates', () => {
   it('matches string build classes exactly', () => {
     const result = computeQueueEstimates({
       active: [],
-      waiting: [{ pkgname: 'a', buildClass: 'mybuildclass' }],
+      waiting: [{ rawName: 'a', buildClass: 'mybuildclass' }],
       idle: [{ buildClass: 'other' }, { buildClass: 'mybuildclass' }],
       nowMs: 0,
       avgOf: averages({ a: [5] }),
@@ -154,7 +154,7 @@ describe('computeQueueEstimates', () => {
   it('leaves a build unestimated when no builder can run its class', () => {
     const result = computeQueueEstimates({
       active: [],
-      waiting: [{ pkgname: 'a', buildClass: 2 }],
+      waiting: [{ rawName: 'a', buildClass: 2 }],
       idle: [{ buildClass: 1 }],
       nowMs: 0,
       avgOf: averages({ a: [5] }),
@@ -164,7 +164,7 @@ describe('computeQueueEstimates', () => {
 
   it('falls back when a package has no history', () => {
     const result = computeQueueEstimates({
-      active: [{ pkgname: 'unknown-pkg', startedMs: 0, buildClass: 0 }],
+      active: [{ rawName: 'unknown-pkg', startedMs: 0, buildClass: 0 }],
       waiting: [],
       idle: [],
       nowMs: 0,
@@ -177,7 +177,7 @@ describe('computeQueueEstimates', () => {
   it('returns no estimates without builders', () => {
     const result = computeQueueEstimates({
       active: [],
-      waiting: [{ pkgname: 'a', buildClass: 0 }],
+      waiting: [{ rawName: 'a', buildClass: 0 }],
       idle: [],
       nowMs: 0,
       avgOf: averages({ a: [10] }),
@@ -190,8 +190,8 @@ describe('computeQueueEstimates', () => {
     const result = computeQueueEstimates({
       active: [],
       waiting: [
-        { pkgname: 'a', buildClass: 0 },
-        { pkgname: 'b', buildClass: 0 },
+        { rawName: 'a', buildClass: 0 },
+        { rawName: 'b', buildClass: 0 },
       ],
       idle: [{ buildClass: 0 }, { buildClass: 0 }],
       nowMs: 0,
@@ -201,10 +201,26 @@ describe('computeQueueEstimates', () => {
     expect(result.queueClear).toBeUndefined();
   });
 
+  it('treats same pkgname from different repos as separate entries', () => {
+    const result = computeQueueEstimates({
+      active: [],
+      waiting: [
+        { rawName: 'chaotic-aur/x86_64/firedragon', buildClass: 0 },
+        { rawName: 'garuda/x86_64/firedragon', buildClass: 0 },
+      ],
+      idle: [{ buildClass: 0 }],
+      nowMs: 0,
+      avgOf: (pkgname) => (pkgname.includes('firedragon') ? 10 : undefined),
+    });
+    expect(result.waitingStart.get('chaotic-aur/x86_64/firedragon')).toBe(0);
+    expect(result.waitingStart.get('garuda/x86_64/firedragon')).toBe(10);
+    expect(result.queueClear).toBe(20);
+  });
+
   it('schedules the live queue against eligible builders only', () => {
     const active = [
-      { pkgname: 'detect-it-easy-git', startedMs: 0, buildClass: 5 },
-      { pkgname: 'element-desktop-git', startedMs: 0, buildClass: 5 },
+      { rawName: 'detect-it-easy-git', startedMs: 0, buildClass: 5 },
+      { rawName: 'element-desktop-git', startedMs: 0, buildClass: 5 },
     ];
     const idle = [{ buildClass: 'catbuilder' }];
     const waiting = [
@@ -218,7 +234,7 @@ describe('computeQueueEstimates', () => {
       'ironbar-git',
       'lib32-vulkan-nouveau-git',
       'linux-firmware-git',
-    ].map((pkgname) => ({ pkgname, buildClass: 5 }));
+    ].map((rawName) => ({ rawName, buildClass: 5 }));
 
     const result = computeQueueEstimates({
       active,
@@ -245,14 +261,14 @@ describe('sortByStartTime', () => {
       ['b', 1],
       ['c', 2],
     ]);
-    const entries = [{ name: 'a' }, { name: 'b' }, { name: 'c' }];
-    expect(sortByStartTime(entries, starts).map((entry) => entry.name)).toEqual(['b', 'c', 'a']);
+    const entries = [{ rawName: 'a' }, { rawName: 'b' }, { rawName: 'c' }];
+    expect(sortByStartTime(entries, starts).map((entry) => entry.rawName)).toEqual(['b', 'c', 'a']);
   });
 
   it('keeps entries without a start time last, preserving relative order', () => {
     const starts = new Map([['a', 1]]);
-    const entries = [{ name: 'x' }, { name: 'a' }, { name: 'y' }];
-    expect(sortByStartTime(entries, starts).map((entry) => entry.name)).toEqual(['a', 'x', 'y']);
+    const entries = [{ rawName: 'x' }, { rawName: 'a' }, { rawName: 'y' }];
+    expect(sortByStartTime(entries, starts).map((entry) => entry.rawName)).toEqual(['a', 'x', 'y']);
   });
 
   it('does not mutate the input array', () => {
@@ -260,7 +276,7 @@ describe('sortByStartTime', () => {
       ['a', 2],
       ['b', 1],
     ]);
-    const entries = [{ name: 'a' }, { name: 'b' }];
+    const entries = [{ rawName: 'a' }, { rawName: 'b' }];
     const before = [...entries];
     sortByStartTime(entries, starts);
     expect(entries).toEqual(before);
