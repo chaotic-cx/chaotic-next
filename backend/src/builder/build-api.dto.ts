@@ -1,46 +1,66 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ArrayNotEmpty, IsArray, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class SchedulePackageDto {
   @ApiProperty({ description: 'Package base name' })
   @IsString()
   pkgbase!: string;
 
-  @ApiPropertyOptional({ description: 'Build class' })
+  @ApiPropertyOptional({ description: 'Build class (number or string)' })
   @IsOptional()
-  @IsNumber()
-  build_class?: number;
+  build_class?: number | string;
 
-  @ApiPropertyOptional({ description: 'Package names', type: [String], isArray: true })
+  @ApiPropertyOptional({ description: 'Package names', type: String, isArray: true })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   pkgnames?: string[];
 
-  @ApiPropertyOptional({ description: 'Dependencies', type: [String], isArray: true })
+  @ApiPropertyOptional({ description: 'Dependencies', type: String, isArray: true })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   dependencies?: string[];
 }
 
+export class ScheduleBuildDto {
+  @ApiProperty({ description: 'Package names to schedule', type: String, isArray: true })
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  packages!: string[];
+
+  @ApiPropertyOptional({ description: 'Source repository name' })
+  @IsOptional()
+  @IsString()
+  source_repo?: string;
+
+  @ApiPropertyOptional({ description: 'Target repository name' })
+  @IsOptional()
+  @IsString()
+  target_repo?: string;
+}
+
 export class ScheduleDto {
-  @ApiProperty({ description: 'Target architecture' })
+  @ApiPropertyOptional({ description: 'Target architecture' })
+  @IsOptional()
   @IsString()
-  arch!: string;
+  arch?: string;
 
-  @ApiProperty({ description: 'Source repository name' })
+  @ApiPropertyOptional({ description: 'Source repository name' })
+  @IsOptional()
   @IsString()
-  source_repo!: string;
+  source_repo?: string;
 
-  @ApiProperty({ description: 'Target repository name' })
+  @ApiPropertyOptional({ description: 'Target repository name' })
+  @IsOptional()
   @IsString()
-  target_repo!: string;
+  target_repo?: string;
 
-  @ApiProperty({ description: 'Commit hash' })
+  @ApiPropertyOptional({ description: 'Commit hash' })
+  @IsOptional()
   @IsString()
-  commit!: string;
+  commit?: string;
 
   @ApiProperty({ description: 'Packages to schedule', type: [SchedulePackageDto], isArray: true })
   @IsArray()

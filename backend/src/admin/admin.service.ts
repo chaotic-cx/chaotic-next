@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -7,10 +7,17 @@ import {
   Paginated,
   Package as PackageDto,
   PackageBump,
+  PackageKey,
+  packageKey,
+  PKG_TYPE_ARCH,
+  PKG_TYPE_CHAOTIC,
   PipelineTriggerAction,
   PkgType,
 } from '@chaotic-next/shared-lib';
 import { In, ILike, Repository } from 'typeorm';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Builder, Package, Repo } from '../builder/builder.entity';
 import { MrAction as MrActionEntity } from '../gitlab/mr-action.entity';
 import { PipelineTrigger as PipelineTriggerEntity } from '../gitlab/pipeline-trigger.entity';
@@ -20,11 +27,10 @@ import {
   PackageElfAnalysis,
 } from '../repo-manager/repo-manager.entity';
 import { TriggerType } from '../interfaces/repo-manager';
+import { SignalScanService } from '../repo-manager/scan';
 import { paginate, resolvePagination } from '../utils/pagination';
-import { encryptAes } from '../utils/functions';
-
-export const PKG_TYPE_ARCH = '0' as const;
-export const PKG_TYPE_CHAOTIC = '1' as const;
+import { encryptAes, errorMessage } from '../utils/functions';
+import { HttpService } from '@nestjs/axios';
 
 export interface CreatePackageBody {
   pkgname: string;
@@ -75,6 +81,8 @@ const INTEGRITY_VIOLATION_CODES = new Set([FK_VIOLATION_CODE, RESTRICT_VIOLATION
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     @InjectRepository(Package) private readonly packageRepository: Repository<Package>,
     @InjectRepository(ArchlinuxPackage) private readonly archPackageRepository: Repository<ArchlinuxPackage>,
@@ -86,6 +94,8 @@ export class AdminService {
     @InjectRepository(PackageBumpEntity) private readonly packageBumpRepository: Repository<PackageBumpEntity>,
     @InjectRepository(PackageElfAnalysis) private readonly elfAnalysisRepository: Repository<PackageElfAnalysis>,
     private readonly configService: ConfigService,
+    private readonly signalScanService: SignalScanService,
+    private readonly httpService: HttpService,
   ) {}
 
   async listPackages(
@@ -430,11 +440,11 @@ export class AdminService {
       const conditions = [`analysis.version ILIKE :q`];
       const params: Record<string, unknown> = { q: `%${q}%` };
       if (resolvedIds.arch.length > 0) {
-        conditions.push(`(analysis.pkgType = '0' AND analysis.pkgId IN (:...archIds))`);
+        conditions.push(`(analysis.pkgType = '${PKG_TYPE_ARCH}' AND analysis.pkgId IN (:...archIds))`);
         params.archIds = resolvedIds.arch;
       }
       if (resolvedIds.chaotic.length > 0) {
-        conditions.push(`(analysis.pkgType = '1' AND analysis.pkgId IN (:...chaoticIds))`);
+        conditions.push(`(analysis.pkgType = '${PKG_TYPE_CHAOTIC}' AND analysis.pkgId IN (:...chaoticIds))`);
         params.chaoticIds = resolvedIds.chaotic;
       }
       const numericId = /^\d+$/.test(q) ? Number(q) : undefined;
@@ -461,7 +471,7 @@ export class AdminService {
       id: row.id,
       pkgType: row.pkgType,
       pkgId: row.pkgId,
-      pkgname: names.get(`${row.pkgType}:${row.pkgId}`),
+      pkgname: names.get(packageKey(row.pkgType, row.pkgId)),
       version: row.version,
       broken: row.broken,
       brokenReasons: row.brokenReasons ?? [],
@@ -485,6 +495,77 @@ export class AdminService {
 
   async deleteElfAnalysis(id: number): Promise<void> {
     await this.deleteEntity(() => this.elfAnalysisRepository.delete(id), `Package ELF analysis ${id}`);
+  }
+
+  async rescanPackages(
+    packages: Array<{ pkgname: string; pkgType: string }>,
+  ): Promise<{ rescanned: number; failed: string[] }> {
+    const secretMirrorUrl = this.configService.get<string>('app.secretMirrorUrl');
+    if (!secretMirrorUrl) throw new ConflictException('SECRET_MIRROR_URL is not configured');
+
+    const tempDir = await mkdtemp(join(tmpdir(), 'admin-rescan-'));
+    const failed: string[] = [];
+    let rescanned = 0;
+
+    try {
+      for (const entry of packages) {
+        try {
+          if (entry.pkgType === PKG_TYPE_ARCH) {
+            await this.rescanArchPackage(entry.pkgname, secretMirrorUrl, tempDir);
+          } else {
+            await this.rescanChaoticPackage(entry.pkgname, secretMirrorUrl, tempDir);
+          }
+          rescanned++;
+        } catch (err: unknown) {
+          failed.push(`${entry.pkgname}: ${errorMessage(err)}`);
+        }
+      }
+      await this.signalScanService.recomputeBroken();
+    } finally {
+      const { rm } = await import('node:fs/promises');
+      await rm(tempDir, { recursive: true, force: true });
+    }
+
+    this.logger.log(`Rescanned ${rescanned} package(s), ${failed.length} failed`);
+    return { rescanned, failed };
+  }
+
+  private async rescanArchPackage(pkgname: string, secretMirrorUrl: string, tempDir: string): Promise<void> {
+    const pkg = await this.archPackageRepository.findOne({ where: { pkgname } });
+    if (!pkg) throw new NotFoundException('not found');
+
+    const filename = (pkg.metadata as { filename?: string } | null)?.filename;
+    if (!filename || !pkg.version) throw new Error('no filename/version');
+
+    const file = join(tempDir, filename);
+    await this.downloadPackage(secretMirrorUrl, pkg.pkgname, filename, file);
+    await this.signalScanService.scanPackages([
+      { file, pkgType: TriggerType.ARCH, pkgId: pkg.id, version: pkg.version },
+    ]);
+  }
+
+  private async rescanChaoticPackage(pkgname: string, secretMirrorUrl: string, tempDir: string): Promise<void> {
+    const pkg = await this.packageRepository.findOne({
+      where: { pkgname },
+      relations: { repo: true },
+    });
+    if (!pkg) throw new NotFoundException('not found');
+    if (pkg.skipSignalScan) throw new Error('skip signal scan is enabled');
+
+    const filename = (pkg.metadata as { filename?: string } | null)?.filename;
+    if (!filename || !pkg.version || !pkg.repo?.name) throw new Error('no filename/version/repo');
+
+    const file = join(tempDir, filename);
+    await this.downloadPackage(secretMirrorUrl, pkg.repo.name, filename, file);
+    await this.signalScanService.scanPackages([
+      { file, pkgType: TriggerType.CHAOTIC, pkgId: pkg.id, version: pkg.version },
+    ]);
+  }
+
+  private async downloadPackage(mirrorUrl: string, repoName: string, filename: string, dest: string): Promise<void> {
+    const url = `${mirrorUrl}/${repoName}/x86_64/${filename}`;
+    const { data } = await this.httpService.axiosRef({ url, method: 'GET', responseType: 'arraybuffer' });
+    await writeFile(dest, Buffer.from(data));
   }
 
   /**
@@ -532,9 +613,9 @@ export class AdminService {
     };
   }
 
-  /** Resolve package names for ELF rows, keyed by `${pkgType}:${pkgId}`. */
-  private async resolveElfPackageNames(rows: PackageElfAnalysis[]): Promise<Map<string, string>> {
-    const names = new Map<string, string>();
+  /** Resolve package names for ELF rows, keyed by packageKey(pkgType, pkgId). */
+  private async resolveElfPackageNames(rows: PackageElfAnalysis[]): Promise<Map<PackageKey, string>> {
+    const names = new Map<PackageKey, string>();
     if (rows.length === 0) return names;
 
     const archIds = rows.filter((row) => row.pkgType === PKG_TYPE_ARCH).map((row) => row.pkgId);
@@ -542,12 +623,12 @@ export class AdminService {
 
     if (archIds.length > 0) {
       for (const pkg of await this.archPackageRepository.find({ where: { id: In(archIds) } })) {
-        names.set(`${PKG_TYPE_ARCH}:${pkg.id}`, pkg.pkgname);
+        names.set(packageKey(PKG_TYPE_ARCH, pkg.id), pkg.pkgname);
       }
     }
     if (chaoticIds.length > 0) {
       for (const pkg of await this.packageRepository.find({ where: { id: In(chaoticIds) } })) {
-        names.set(`${PKG_TYPE_CHAOTIC}:${pkg.id}`, pkg.pkgname);
+        names.set(packageKey(PKG_TYPE_CHAOTIC, pkg.id), pkg.pkgname);
       }
     }
     return names;
