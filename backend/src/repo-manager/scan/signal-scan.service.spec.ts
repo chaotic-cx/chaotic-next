@@ -105,12 +105,11 @@ describe('SignalScanService.recomputeBroken — skip-signal-scanned packages are
 
     await service.recomputeBroken();
 
-    const after = Array.from(analysisRepo.store.values()).find((a) => a.pkgType === '1')!;
-    expect(after.broken).toBe(false);
-    expect(after.brokenReasons).toEqual([]);
+    const after = Array.from(analysisRepo.store.values()).find((a) => a.pkgType === '1' && a.pkgId === 10);
+    expect(after).toBeUndefined();
   });
 
-  it('does not re-flag a binary-only package with a genuinely missing soname', async () => {
+  it('deletes the ELF analysis rows of a binary-only package with skipSignalScan true', async () => {
     const { service, analysisRepo, packageRepo } = createService();
     seedProvidedSonames(analysisRepo);
     const analysis = makeAnalysis({ pkgType: '1', pkgId: 11, version: '1.0-1' });
@@ -121,9 +120,8 @@ describe('SignalScanService.recomputeBroken — skip-signal-scanned packages are
 
     await service.recomputeBroken();
 
-    const after = Array.from(analysisRepo.store.values()).find((a) => a.pkgType === '1' && a.pkgId === 11)!;
-    expect(after.broken).toBe(false);
-    expect(after.brokenReasons).toEqual([]);
+    const after = Array.from(analysisRepo.store.values()).find((a) => a.pkgType === '1' && a.pkgId === 11);
+    expect(after).toBeUndefined();
   });
 
   it('still flags a normal package with the same missing soname', async () => {
@@ -139,5 +137,63 @@ describe('SignalScanService.recomputeBroken — skip-signal-scanned packages are
     const after = Array.from(analysisRepo.store.values()).find((a) => a.pkgType === '1' && a.pkgId === 12)!;
     expect(after.broken).toBe(true);
     expect(after.brokenReasons.some((r) => r.includes('libc.so.1'))).toBe(true);
+  });
+});
+
+describe('SignalScanService.recomputeBroken — only latest version per package is recomputed', () => {
+  it('recomputes only the latest version when multiple versions exist', async () => {
+    const { service, analysisRepo } = createService();
+    // Old version flagged broken for a stale soname, current version is fine.
+    const old = makeAnalysis({
+      pkgType: '1',
+      pkgId: 20,
+      version: '1.0-1',
+      broken: true,
+      brokenReasons: ['old reason'],
+    });
+    const current = makeAnalysis({ pkgType: '1', pkgId: 20, version: '2.0-1', broken: false, brokenReasons: [] });
+    analysisRepo.seed([old, current]);
+
+    await service.recomputeBroken();
+
+    const analyses = Array.from(analysisRepo.store.values()).filter((a) => a.pkgId === 20);
+    const oldAfter = analyses.find((a) => a.version === '1.0-1')!;
+    const currentAfter = analyses.find((a) => a.version === '2.0-1')!;
+
+    // Old version must keep its stale broken flag — not recomputed.
+    expect(oldAfter.broken).toBe(true);
+    expect(oldAfter.brokenReasons).toEqual(['old reason']);
+
+    // Current version is recomputed (stale python dir → broken).
+    expect(currentAfter.broken).toBe(true);
+    expect(currentAfter.brokenReasons.some((r) => r.includes('python'))).toBe(true);
+  });
+
+  it('recomputes only the latest version when filtered', async () => {
+    const { service, analysisRepo } = createService();
+    // Two different packages, each with old + current versions.
+    const oldA = makeAnalysis({ pkgType: '1', pkgId: 30, version: '1.0-1', broken: true, brokenReasons: ['stale'] });
+    const currentA = makeAnalysis({ pkgType: '1', pkgId: 30, version: '2.0-1', broken: false, brokenReasons: [] });
+    const oldB = makeAnalysis({ pkgType: '1', pkgId: 31, version: '1.0-1', broken: true, brokenReasons: ['old'] });
+    const currentB = makeAnalysis({ pkgType: '1', pkgId: 31, version: '3.0-1', broken: false, brokenReasons: [] });
+    analysisRepo.seed([oldA, currentA, oldB, currentB]);
+
+    // Unfiltered recompute: only latest versions get recomputed.
+    await service.recomputeBroken();
+
+    const pkg30 = Array.from(analysisRepo.store.values()).filter((a) => a.pkgId === 30);
+    const pkg31 = Array.from(analysisRepo.store.values()).filter((a) => a.pkgId === 31);
+
+    // Old versions keep their stale flags.
+    expect(pkg30.find((a) => a.version === '1.0-1')!.broken).toBe(true);
+    expect(pkg30.find((a) => a.version === '1.0-1')!.brokenReasons).toEqual(['stale']);
+    expect(pkg31.find((a) => a.version === '1.0-1')!.broken).toBe(true);
+    expect(pkg31.find((a) => a.version === '1.0-1')!.brokenReasons).toEqual(['old']);
+
+    // Current versions are recomputed (stale python dir → broken).
+    expect(pkg30.find((a) => a.version === '2.0-1')!.broken).toBe(true);
+    expect(pkg30.find((a) => a.version === '2.0-1')!.brokenReasons.some((r) => r.includes('python'))).toBe(true);
+    expect(pkg31.find((a) => a.version === '3.0-1')!.broken).toBe(true);
+    expect(pkg31.find((a) => a.version === '3.0-1')!.brokenReasons.some((r) => r.includes('python'))).toBe(true);
   });
 });

@@ -26,6 +26,8 @@ export interface RepoSettings {
   mirrorUrl?: string;
   /** Whether the ELF signal scanner is active. */
   signalScanEnabled?: boolean;
+  /** Base URL for downloading packages from the build server (e.g. `https://builds.garudalinux.org/repos`). */
+  secretMirrorUrl?: string;
 }
 
 export interface RepoUpdateRunParams {

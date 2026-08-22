@@ -17,6 +17,7 @@ import {
   encodeOwnerKey,
   findBrokenDependencies,
   formatBrokenDependency,
+  latestAnalysisByKey,
   MIN_PROVIDED_SONAMES,
   pkgTypeOf,
   triggerTypeOf,
@@ -226,7 +227,11 @@ export class SignalScanService {
     // Only the columns needed to judge brokenness are fetched; the full rows
     // carry heavy `files`/symbol/vtable JSONB that is never rewritten here.
     const candidates = await this.loadBrokenCandidates(filter);
-    const notSkipped = candidates.filter((analysis) => !skipIds.has(analysis.pkgId));
+    // Only the latest version per package matters for repo operations — old
+    // versions that were broken for stale sonames must not be recomputed or
+    // shown in the broken table.
+    const latest = latestAnalysisByKey(candidates, (a) => `${a.pkgType}:${a.pkgId}`);
+    const notSkipped = [...latest.values()].filter((analysis) => !skipIds.has(analysis.pkgId));
 
     if (notSkipped.length === 0) return;
 
@@ -270,7 +275,7 @@ export class SignalScanService {
     }
 
     await saveInBatches(this.analysisRepository, updates);
-    const skipped = candidates.length - notSkipped.length;
+    const skipped = latest.size - notSkipped.length;
     this.logger.log(
       `Recomputed broken flags for ${notSkipped.length} analyses (${changed} broken, ${skipped} skip-signal-scanned)`,
       'SignalScanService',
@@ -287,10 +292,10 @@ export class SignalScanService {
 
   private async clearSkipFlags(skipIds: Set<number>): Promise<void> {
     if (skipIds.size === 0) return;
-    await this.analysisRepository.update(
-      { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: In([...skipIds]) },
-      { broken: false, brokenReasons: [] },
-    );
+    await this.analysisRepository.delete({
+      pkgType: pkgTypeOf(TriggerType.CHAOTIC),
+      pkgId: In([...skipIds]),
+    });
   }
 
   private async loadBrokenCandidates(
