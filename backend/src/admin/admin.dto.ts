@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsDefined, IsEnum, IsInt, IsObject, IsOptional, IsString } from 'class-validator';
-import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from './admin.service';
+import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
 
 export class MrActionDto {
   @ApiProperty({ description: 'Record ID' })
@@ -379,4 +379,21 @@ export class ListElfAnalysisQueryDto {
   @IsOptional()
   @IsString()
   broken?: string;
+}
+
+export class RescanPackageItemDto {
+  @ApiProperty({ description: 'Package name' })
+  @IsString()
+  pkgname!: string;
+
+  @ApiProperty({ description: 'Package type: "0" for Arch, "1" for Chaotic' })
+  @IsString()
+  pkgType!: string;
+}
+
+export class RescanPackagesDto {
+  @ApiProperty({ description: 'Packages to rescan', type: [RescanPackageItemDto], isArray: true })
+  @IsArray()
+  @Type(() => RescanPackageItemDto)
+  packages!: RescanPackageItemDto[];
 }

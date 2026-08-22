@@ -7,4 +7,5 @@ export default registerAs('app', () => ({
   port: process.env.CAUR_PORT ?? 3000,
   buildServerUrl: process.env.BUILD_SERVER_URL ?? 'https://builds.garudalinux.org/api',
   garudaLogsUrl: process.env.GARUDA_LOGS_URL ?? 'https://builds.garudalinux.org/logs/api/logs',
+  secretMirrorUrl: process.env.SECRET_MIRROR_URL ?? 'https://builds.garudalinux.org/repos',
 }));

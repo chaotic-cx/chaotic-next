@@ -18,9 +18,11 @@ import {
   MrActionDto,
   PackageBumpDto,
   PipelineTriggerDto,
+  RescanPackagesDto,
 } from './admin.dto';
 import type { CreateArchPackageBody, CreatePackageBody, CreateRepoBody } from './admin.service';
-import { AdminService, PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from './admin.service';
+import { AdminService } from './admin.service';
+import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
 
 @ApiTags('admin')
 @ApiCookieAuth('better-auth.session_token')
@@ -203,5 +205,12 @@ export class AdminController {
   @ApiOkResponse({ description: 'Package ELF analysis row deleted' })
   deleteElfAnalysis(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.adminService.deleteElfAnalysis(id);
+  }
+
+  @Post('rescan')
+  @ApiOperation({ summary: 'Trigger an ELF signal rescan for packages by name.' })
+  @ApiOkResponse({ description: 'Rescan result' })
+  rescanPackages(@Body() body: RescanPackagesDto): Promise<{ rescanned: number; failed: string[] }> {
+    return this.adminService.rescanPackages(body.packages);
   }
 }
