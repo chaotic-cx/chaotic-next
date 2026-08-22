@@ -11,10 +11,12 @@
         <li class="flex items-center justify-between gap-3 py-2.5">
           <div class="min-w-0 flex-1">
             <span class="block truncate font-semibold">{{ pkg.name }}</span>
-            <span class="block text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+            <span class="block text-sm text-ctp-subtext1"
+              >{{ pkg.repo }} &middot; {{ pkg.build_class | buildClass }}</span
+            >
           </div>
           <div class="flex shrink-0 items-center gap-2">
-            @if (buildStatusService.waitingStartEtaLabels().get(pkg.name); as eta) {
+            @if (buildStatusService.waitingStartEtaLabels().get(pkg.rawName); as eta) {
               <span
                 class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
                 [pTooltip]="estimateTooltip"

@@ -23,15 +23,15 @@ export function overallAverageMinutes(entries: PackageBuildAverage[]): number | 
   return samples > 0 ? weighted / samples : undefined;
 }
 
-/** Sorts queue entries keyed by `name` by their start time, earliest first.
+/** Sorts queue entries keyed by `rawName` by their start time, earliest first.
  * Entries without a recorded start time sort last, preserving relative order. */
-export function sortByStartTime<T extends { name: string }>(
+export function sortByStartTime<T extends { rawName: string }>(
   entries: readonly T[],
   startTime: ReadonlyMap<string, number>,
 ): T[] {
   return [...entries].sort((a, b) => {
-    const aStart = startTime.get(a.name);
-    const bStart = startTime.get(b.name);
+    const aStart = startTime.get(a.rawName);
+    const bStart = startTime.get(b.rawName);
     if (aStart === undefined && bStart === undefined) return 0;
     if (aStart === undefined) return 1;
     if (bStart === undefined) return -1;
@@ -40,14 +40,14 @@ export function sortByStartTime<T extends { name: string }>(
 }
 
 export interface ActiveBuildInput {
-  pkgname: string;
+  rawName: string;
   /** When the build was first seen running; wall-clock ms. */
   startedMs: number;
   buildClass: number | string | null;
 }
 
 export interface WaitingBuildInput {
-  pkgname: string;
+  rawName: string;
   buildClass: number | string | null;
 }
 
@@ -97,11 +97,11 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
   const activeFinish = new Map<string, number>();
   const builders: Builder[] = [];
   for (const build of active) {
-    const average = avgOf(build.pkgname);
+    const average = avgOf(build.rawName);
     if (average === undefined) continue;
     const elapsedMinutes = Math.max(0, (nowMs - build.startedMs) / MS_PER_MINUTE);
     const remaining = Math.max(0, average - elapsedMinutes);
-    activeFinish.set(build.pkgname, remaining);
+    activeFinish.set(build.rawName, remaining);
     builders.push({ freeMinutes: remaining, buildClass: build.buildClass });
   }
   for (const node of idle) {
@@ -113,7 +113,7 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
     return { ...empty, queueClear: maxOf(activeFinish.values()) };
   }
   // Without any historical data there is no basis for an estimate at all.
-  if (activeFinish.size === 0 && !waiting.some((pkg) => avgOf(pkg.pkgname) !== undefined)) {
+  if (activeFinish.size === 0 && !waiting.some((pkg) => avgOf(pkg.rawName) !== undefined)) {
     return empty;
   }
 
@@ -125,11 +125,11 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
     if (eligible.length === 0) continue;
     const builder = earliestFree(eligible);
     const start = builder.freeMinutes;
-    waitingStart.set(pkg.pkgname, start);
-    const average = avgOf(pkg.pkgname);
+    waitingStart.set(pkg.rawName, start);
+    const average = avgOf(pkg.rawName);
     if (average !== undefined) {
       builder.freeMinutes = start + average;
-      waitingFinish.set(pkg.pkgname, start + average);
+      waitingFinish.set(pkg.rawName, start + average);
     }
   }
 

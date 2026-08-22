@@ -31,6 +31,7 @@ export interface PipelineView {
 interface QueueEntry {
   name: string;
   rawName: string;
+  repo: string;
   build_class: number | string | null;
 }
 
@@ -81,6 +82,7 @@ export class BuildStatusService {
     (resourceValue(this.queueStatsResource)?.active.packages ?? []).map((pkg) => ({
       name: this.shortName(pkg.name),
       rawName: pkg.name,
+      repo: this.extractRepo(pkg.name),
       build_class: pkg.build_class ?? pkg.node,
       node: pkg.node,
       liveLogUrl: pkg.liveLog ?? '',
@@ -90,6 +92,7 @@ export class BuildStatusService {
     (resourceValue(this.queueStatsResource)?.waiting.packages ?? []).map((pkg) => ({
       name: this.shortName(pkg.name),
       rawName: pkg.name,
+      repo: this.extractRepo(pkg.name),
       build_class: pkg.build_class,
     })),
   );
@@ -97,6 +100,7 @@ export class BuildStatusService {
     (resourceValue(this.queueStatsResource)?.idle.nodes ?? []).map((node) => ({
       name: node.name,
       rawName: node.name,
+      repo: this.extractRepo(node.name),
       build_class: node.build_class ?? node.name,
     })),
   );
@@ -124,24 +128,24 @@ export class BuildStatusService {
    * time is never underestimated. */
   private readonly activeFirstSeen = signal<ReadonlyMap<string, number>>(new Map());
 
-  /** Wall-clock start time of each running build, keyed by pkgname. */
+  /** Wall-clock start time of each running build, keyed by rawName. */
   readonly activeStartedMs = computed<ReadonlyMap<string, number>>(() => {
     const firstSeen = this.activeFirstSeen();
     const now = Date.now();
-    return new Map(this.activeQueue().map((pkg) => [pkg.name, firstSeen.get(pkg.name) ?? now]));
+    return new Map(this.activeQueue().map((pkg) => [pkg.rawName, firstSeen.get(pkg.rawName) ?? now]));
   });
 
   readonly estimates = computed<QueueEstimates>(() =>
     computeQueueEstimates({
       active: this.activeQueue().map((pkg) => ({
-        pkgname: pkg.name,
-        startedMs: this.activeFirstSeen().get(pkg.name) ?? Date.now(),
+        rawName: pkg.rawName,
+        startedMs: this.activeFirstSeen().get(pkg.rawName) ?? Date.now(),
         buildClass: pkg.build_class,
       })),
-      waiting: this.waitingQueue().map((pkg) => ({ pkgname: pkg.name, buildClass: pkg.build_class })),
+      waiting: this.waitingQueue().map((pkg) => ({ rawName: pkg.rawName, buildClass: pkg.build_class })),
       idle: this.idleQueue().map((node) => ({ buildClass: node.build_class })),
       nowMs: this.now(),
-      avgOf: (pkgname) => this.averageMinutes(pkgname),
+      avgOf: (rawName) => this.averageMinutes(rawName),
     }),
   );
 
@@ -189,9 +193,9 @@ export class BuildStatusService {
     return minutes === undefined ? undefined : `Queue empty in ${formatEta(minutes)}`;
   });
 
-  private averageMinutes(pkgname: string): number | undefined {
+  private averageMinutes(rawName: string): number | undefined {
     const lookup = this.averageLookup();
-    return lookup.byName.get(pkgname) ?? lookup.overall;
+    return lookup.byName.get(this.shortName(rawName)) ?? lookup.overall;
   }
 
   private trackFirstSeenActive(): void {
@@ -202,9 +206,9 @@ export class BuildStatusService {
     const next = new Map<string, number>();
     const nowMs = Date.now();
     for (const pkg of active) {
-      const seen = previous.get(pkg.name);
+      const seen = previous.get(pkg.rawName);
       if (seen === undefined) changed = true;
-      next.set(pkg.name, seen ?? nowMs);
+      next.set(pkg.rawName, seen ?? nowMs);
     }
     if (changed || previous.size !== next.size) this.activeFirstSeen.set(next);
   }
@@ -257,5 +261,10 @@ export class BuildStatusService {
   private shortName(name: string): string {
     const parts = name.split('/');
     return parts.length > 2 ? parts[2] : name;
+  }
+
+  private extractRepo(name: string): string {
+    const parts = name.split('/');
+    return parts.length > 1 ? parts[0] : '';
   }
 }
