@@ -1,13 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiffScanFinding, DiffScanSeverity } from '@chaotic-next/shared-lib';
 import { DiffScanService } from './diff-scan.service';
 import { RULES } from './rules';
-import type { DiffScanRule } from './rules/rule';
+import type { Rule } from './rules/rule';
 import { addedOnlyDiff, makeChange } from './rules/test-support';
 
 const service = new DiffScanService();
 
 describe('DiffScanService', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network disabled in tests')));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('aggregates findings across rules and files, sorted by severity', async () => {
     const findings = await service.scanDiffs([
       makeChange(addedOnlyDiff(['eval "$x"']), { new_path: 'foo/PKGBUILD' }),
@@ -43,7 +51,7 @@ describe('DiffScanService', () => {
   });
 
   it('continues when a rule throws', async () => {
-    const broken: DiffScanRule = {
+    const broken: Rule = {
       id: 'BROKEN',
       name: 'Broken',
       severity: 'info',
@@ -67,8 +75,7 @@ describe('DiffScanService', () => {
       new_file: true,
     });
 
-    const findings = await service.scanDiffs([change]);
-    const ids = findings.map((finding) => finding.ruleId);
+    const ids = (await service.scanDiffs([change])).map((finding) => finding.ruleId);
     expect(ids).toContain('CAUR-INSTALL-NEW');
     expect(ids).toContain('NPM-001');
     expect(ids).toContain('NPM-002');

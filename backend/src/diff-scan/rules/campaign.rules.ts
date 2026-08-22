@@ -1,5 +1,5 @@
 import { addedLines, isInScope, removedLineTexts } from './diff-utils';
-import type { DiffScanRule } from './rule';
+import type { Rule } from './rule';
 import { regexRule } from './rule';
 
 /** Flags between the subcommand and the package name, e.g. "npm install -g pkg". */
@@ -45,7 +45,7 @@ function identitiesByPerson(lines: string[]): Map<string, Set<string>> {
   return identities;
 }
 
-export const CAMPAIGN_RULES: DiffScanRule[] = [
+export const CAMPAIGN_RULES: Rule[] = [
   regexRule({
     id: 'NPM-001',
     name: 'Package manager fetch at build/install time',
@@ -95,7 +95,7 @@ export const CAMPAIGN_RULES: DiffScanRule[] = [
     name: 'Known campaign account',
     severity: 'critical',
     description:
-      'References an account or email observed previous malware campaigns, which impersonated existing maintainers to take over packages.',
+      'References an account or email observed in previous malware campaigns, which impersonated existing maintainers to take over packages.',
     check(change) {
       if (!isInScope(change, ['pkgbuild', 'install'])) return null;
       const hit = addedLines(change).find((line) => CAMPAIGN_EMAIL.test(line.text));

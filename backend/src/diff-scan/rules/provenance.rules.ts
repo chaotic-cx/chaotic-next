@@ -1,6 +1,6 @@
 import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { isReputable, parsePkgbuild, type SourceEntry } from '../pkgbuild';
-import type { DiffScanRule, RuleHit } from './rule';
+import type { Rule, RuleHit } from './rule';
 
 const GENERIC_FILE_HOST_SUFFIXES = [
   'anonfiles.com',
@@ -50,7 +50,7 @@ function firstEntry(change: MergeRequestDiffSchema, predicate: (entry: SourceEnt
   return entry ? { match: entry.raw, note: `Host: ${entry.host}` } : null;
 }
 
-export const PROVENANCE_RULES: DiffScanRule[] = [
+export const PROVENANCE_RULES: Rule[] = [
   {
     id: 'SRC-001',
     name: 'VCS source outside reputable forges',

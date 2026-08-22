@@ -44,6 +44,15 @@ export class DiffScanService {
     diffs: MergeRequestDiffSchema[],
     isDepPresentOverride?: (depName: string) => Promise<boolean>,
   ): Promise<DiffScanFinding[]> {
+    for (const rule of RULES) {
+      if (!rule.load) continue;
+      try {
+        await rule.load();
+      } catch (err) {
+        this.logger.warn(`Rule ${rule.id} data load failed: ${errorMessage(err)}`);
+      }
+    }
+
     const findings: DiffScanFinding[] = [];
 
     const isDepPresent =

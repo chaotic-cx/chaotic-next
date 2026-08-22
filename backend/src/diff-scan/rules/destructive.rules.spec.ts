@@ -39,4 +39,11 @@ describe('destructive rules', () => {
   ])('does not flag %j outside sensitive targets', (line) => {
     expect(rule().check(makeChange(addedOnlyDiff([line])))).toBeNull();
   });
+
+  it('does not flag destructive command examples inside documentation files', () => {
+    const change = makeChange(addedOnlyDiff(['dd if=boot.img of=/dev/sdX bs=1M']), {
+      new_path: 'flasher/README.md',
+    });
+    expect(rule().check(change)).toBeNull();
+  });
 });

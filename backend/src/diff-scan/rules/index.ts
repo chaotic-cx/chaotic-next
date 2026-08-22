@@ -8,7 +8,7 @@ import { PERSISTENCE_RULES } from './persistence.rules';
 import { PRIVILEGE_RULES } from './privilege.rules';
 import { PROVENANCE_RULES } from './provenance.rules';
 import { REVERSE_SHELL_RULES } from './reverse-shell.rules';
-import type { DiffScanRule } from './rule';
+import type { Rule } from './rule';
 
 /**
  * Rule ID sources:
@@ -21,7 +21,7 @@ import type { DiffScanRule } from './rule';
  * - CAUR-* rules are our own additions, motivated by the June 2026 AUR
  *   supply-chain campaign IOCs: https://github.com/lenucksi/aur-malware-check.
  */
-export const RULES: DiffScanRule[] = [
+export const RULES: Rule<unknown>[] = [
   ...CAMPAIGN_RULES,
   ...CREDENTIAL_RULES,
   ...DESTRUCTIVE_RULES,
