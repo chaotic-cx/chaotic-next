@@ -231,7 +231,12 @@ describe('AUR package scan (e2e, real PostgreSQL, mocked AUR and VirusTotal upst
     const gitlabService = e2e.app.get(GitlabService);
     const refreshSpy = vi.spyOn(gitlabService, 'handleAutoFlagRefresh').mockResolvedValue(undefined);
 
-    const res = await e2e.inject({ method: 'POST', url: '/gitlab/mr-scan', payload: {} });
+    const res = await e2e.inject({
+      method: 'POST',
+      url: '/gitlab/mr-scan',
+      payload: {},
+      headers: { 'x-test-user-groups': 'chaotic-aur' },
+    });
 
     expect(res.statusCode).toBe(201);
     expect(refreshSpy).toHaveBeenCalledTimes(1);

@@ -69,9 +69,12 @@ export function errorMessage(error: unknown): string {
 }
 
 export function formatDuration(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+  // Sub-second precision is noise in a human-readable duration; round before
+  // splitting so the seconds part never carries over into 60.
+  const rounded = Math.round(totalSeconds);
+  const hours = Math.floor(rounded / 3600);
+  const minutes = Math.floor((rounded % 3600) / 60);
+  const seconds = rounded % 60;
 
   const parts: string[] = [];
   if (hours > 0) parts.push(`${hours}h`);

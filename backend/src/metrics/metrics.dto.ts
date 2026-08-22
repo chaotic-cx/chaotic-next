@@ -12,6 +12,16 @@ export class UserAgentMetricDto {
   count!: number;
 }
 
+export class RpsHistorySampleDto {
+  @ApiProperty({ description: 'Unix timestamp in milliseconds' })
+  @IsInt()
+  timestamp!: number;
+
+  @ApiProperty({ description: 'Requests during that second' })
+  @IsInt()
+  requests!: number;
+}
+
 export class CountNameDto {
   @ApiProperty({ description: 'Name (e.g. country or package)' })
   @IsString()
@@ -83,10 +93,4 @@ export class LiveTrafficHitDto {
   @ApiProperty({ description: 'Routing worker instance' })
   @IsString()
   worker!: string;
-}
-
-export class LiveRouterRpsDto {
-  @ApiProperty({ description: 'Requests per second reported by the router' })
-  @IsInt()
-  rps!: number;
 }

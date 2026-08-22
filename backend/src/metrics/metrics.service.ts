@@ -3,6 +3,7 @@ import {
   LIVE_RPS_SSE_EVENT,
   type LiveRouterRps,
   type LiveTrafficHit,
+  type RpsHistorySample,
   type SpecificPackageMetrics,
   type UserAgentList,
 } from '@chaotic-next/shared-lib';
@@ -17,7 +18,7 @@ import { DataSource } from 'typeorm';
 import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
 import { RouterHitDaily } from '../router/router-hit-daily.entity';
 import { cachedResult } from '../utils/cache';
-import { MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
+import { CACHE_TTL_MS, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
 import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 
 let hitCounter = 0;
@@ -289,5 +290,16 @@ export class MetricsService {
 
   getLiveTrafficStream(): Observable<Partial<MessageEvent<LiveTrafficHit | LiveRouterRps>>> {
     return this.liveTraffic$;
+  }
+
+  /** Proxies the router's per-second RPS history of the last hour; the
+   * upstream does not send CORS headers, so browsers cannot call it directly. */
+  getRpsHistory(): Promise<RpsHistorySample[]> {
+    return cachedResult(this.cache, 'metrics:rps-history', CACHE_TTL_MS, async () => {
+      const response = await this.httpService.axiosRef.get<RpsHistorySample[]>(
+        `${METRICS_UPSTREAM_BASE_URL}/rps/history`,
+      );
+      return response.data;
+    });
   }
 }

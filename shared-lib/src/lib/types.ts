@@ -732,3 +732,8 @@ export const LIVE_RPS_SSE_EVENT = 'rps';
 export interface LiveRouterRps {
   rps: number;
 }
+
+export interface RpsHistorySample {
+  timestamp: number;
+  requests: number;
+}

@@ -112,7 +112,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: `/admin/packages/${pkg.id}`,
       });
 
-      expect(delRes.statusCode).toBe(200);
+      expect(delRes.statusCode).toBe(204);
 
       const listRes = await e2e.inject({
         method: 'GET',
@@ -180,7 +180,7 @@ describe('Admin Endpoints (e2e)', () => {
         method: 'DELETE',
         url: `/admin/arch-packages/${archPkg.id}`,
       });
-      expect(delRes.statusCode).toBe(200);
+      expect(delRes.statusCode).toBe(204);
     });
   });
 
@@ -220,7 +220,7 @@ describe('Admin Endpoints (e2e)', () => {
         method: 'DELETE',
         url: `/admin/repos/${created.id}`,
       });
-      expect(delRes.statusCode).toBe(200);
+      expect(delRes.statusCode).toBe(204);
     });
   });
 
@@ -249,7 +249,7 @@ describe('Admin Endpoints (e2e)', () => {
         method: 'DELETE',
         url: `/admin/builders/${builder1.id}`,
       });
-      expect(delRes.statusCode).toBe(200);
+      expect(delRes.statusCode).toBe(204);
     });
   });
 
@@ -367,7 +367,7 @@ describe('Admin Endpoints (e2e)', () => {
         method: 'DELETE',
         url: `/admin/package-elf-analysis/${analysis.id}`,
       });
-      expect(delRes.statusCode).toBe(200);
+      expect(delRes.statusCode).toBe(204);
     });
   });
 
