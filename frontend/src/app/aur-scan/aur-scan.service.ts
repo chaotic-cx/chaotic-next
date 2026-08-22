@@ -4,6 +4,7 @@ import type { AurPackageScan, AurScanStreamChunk } from '@chaotic-next/shared-li
 import { MessageToastService } from '@garudalinux/core';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
+import { ResilientSseStream } from '../sse-stream';
 
 export function isScanSettled(scan: AurPackageScan | undefined): boolean {
   return scan?.status === 'done' || scan?.status === 'failed';
@@ -16,7 +17,7 @@ export class AurScanService {
   private readonly messageToastService = inject(MessageToastService);
 
   readonly scans = signal<ReadonlyMap<string, AurPackageScan>>(new Map());
-  private readonly streams = new Map<string, EventSource>();
+  private readonly streams = new Map<string, ResilientSseStream>();
 
   scanOf(packageName: string): AurPackageScan | undefined {
     return this.scans().get(packageName.trim().toLowerCase());
@@ -42,19 +43,20 @@ export class AurScanService {
     const key = packageName.toLowerCase();
     if (this.streams.has(key)) return;
 
-    const stream = new EventSource(
-      `${this.backendUrl}/gitlab/aur-scan/${encodeURIComponent(packageName)}/stream?ngsw-bypass`,
-    );
+    const stream = new ResilientSseStream({
+      url: () => `${this.backendUrl}/gitlab/aur-scan/${encodeURIComponent(packageName)}/stream?ngsw-bypass`,
+      onMessage: (data) => {
+        const chunk = parseChunk(data);
+        if (!chunk) return;
+        this.store(chunk.scan);
+        if (chunk.complete) this.closeStream(chunk.scan.packageName);
+      },
+      // A settled scan closes its own stream; exhaustion only frees the key
+      // so a fresh startScan can open a new one.
+      onErrorExhausted: () => this.streams.delete(key),
+    });
     this.streams.set(key, stream);
-
-    stream.onmessage = (event) => {
-      const chunk = parseChunk(event.data);
-      if (!chunk) return;
-      this.store(chunk.scan);
-      if (chunk.complete) this.closeStream(chunk.scan.packageName);
-    };
-    // EventSource auto-reconnects; a dropped stream resumes with the next update.
-    stream.onerror = () => undefined;
+    stream.open();
   }
 
   private closeStream(packageName: string): void {

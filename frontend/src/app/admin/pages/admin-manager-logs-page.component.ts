@@ -1,10 +1,9 @@
 import { AfterViewInit, Component, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { APP_CONFIG } from '../../../environments/app-config.token';
+import { ResilientSseStream } from '../../sse-stream';
 import { XtermLogComponent } from '../../xterm-log/xterm-log.component';
 
-const RECONNECT_DELAY_MS = 1000;
-const MAX_RECONNECT_ATTEMPTS = 5;
 const ESC = String.fromCharCode(27);
 const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z${ESC}\\[0m `);
 
@@ -59,21 +58,11 @@ export class AdminManagerLogsPageComponent implements AfterViewInit, OnDestroy {
   readonly error = signal<string | undefined>(undefined);
   readonly logHeight = signal(600);
 
-  private eventSource: EventSource | undefined;
-  private reconnectTimer: number | undefined;
-  private reconnectAttempts = 0;
+  private stream: ResilientSseStream | undefined;
   private resizeObserver: ResizeObserver | undefined;
   private readonly isMobile = window.matchMedia('(pointer: coarse)').matches;
 
-  private readonly onVisibilityChange = (): void => {
-    if (document.visibilityState === 'visible' && !this.eventSource && !this.error()) {
-      this.reconnectAttempts = 0;
-      this.connect();
-    }
-  };
-
   constructor() {
-    document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.connect();
   }
 
@@ -84,9 +73,8 @@ export class AdminManagerLogsPageComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.resizeObserver?.disconnect();
-    this.closeStream();
+    this.stream?.close();
   }
 
   private updateHeight(): void {
@@ -96,52 +84,27 @@ export class AdminManagerLogsPageComponent implements AfterViewInit, OnDestroy {
   }
 
   private connect(): void {
-    this.closeStream();
     this.error.set(undefined);
 
-    const source = new EventSource(`${this.backendUrl}/api/manager/logs?ngsw-bypass`);
-    this.eventSource = source;
-
-    source.onopen = () => {
-      this.loading.set(false);
-      this.streaming.set(true);
-      this.reconnectAttempts = 0;
-    };
-
-    source.onmessage = (event) => {
-      let data = event.data as string;
-      if (data && this.isMobile) data = data.replace(TIMESTAMP_RE, '');
-      if (data) {
-        this.logChunks.update((chunks) => [...chunks, data]);
-      }
-    };
-
-    source.onerror = () => {
-      this.streaming.set(false);
-      this.closeStream();
-
-      if (document.visibilityState !== 'visible') return;
-
-      if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    this.stream?.close();
+    this.stream = new ResilientSseStream({
+      url: () => `${this.backendUrl}/api/manager/logs?ngsw-bypass`,
+      onOpen: () => {
         this.loading.set(false);
+        this.streaming.set(true);
+      },
+      onMessage: (data) => {
+        const line = this.isMobile ? data.replace(TIMESTAMP_RE, '') : data;
+        if (line) {
+          this.logChunks.update((chunks) => [...chunks, line]);
+        }
+      },
+      onErrorExhausted: () => {
+        this.loading.set(false);
+        this.streaming.set(false);
         this.error.set('Log stream ended unexpectedly. Reload the page to retry.');
-        return;
-      }
-
-      this.reconnectAttempts += 1;
-      this.reconnectTimer = window.setTimeout(() => {
-        this.reconnectTimer = undefined;
-        this.connect();
-      }, RECONNECT_DELAY_MS);
-    };
-  }
-
-  private closeStream(): void {
-    if (this.reconnectTimer !== undefined) {
-      window.clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = undefined;
-    }
-    this.eventSource?.close();
-    this.eventSource = undefined;
+      },
+    });
+    this.stream.open();
   }
 }

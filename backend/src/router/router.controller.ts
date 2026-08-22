@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CountryStatsDto, MirrorStatsDto, PackageStatsDto, PerDayStatsDto } from './router.dto';
 import { RouterService } from './router.service';
@@ -8,7 +8,6 @@ import { RouterService } from './router.service';
 export class RouterController {
   constructor(private routerService: RouterService) {}
 
-  @HttpCode(HttpStatus.OK)
   @Get('/country/:days')
   @ApiOperation({ summary: 'Get router country stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -17,7 +16,6 @@ export class RouterController {
     return this.routerService.getCountryStats(days);
   }
 
-  @HttpCode(HttpStatus.OK)
   @Get('/mirror/:days')
   @ApiOperation({ summary: 'Get router mirror stats.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -26,7 +24,6 @@ export class RouterController {
     return this.routerService.getMirrorStats(days);
   }
 
-  @HttpCode(HttpStatus.OK)
   @Get('stats/mirror-over-time/:days')
   @ApiOperation({ summary: 'Get mirror downloads over time' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -55,7 +52,6 @@ export class RouterController {
     return this.routerService.getPackageStats(days);
   }
 
-  @HttpCode(HttpStatus.OK)
   @Get('/per-day/:days')
   @ApiOperation({ summary: 'Get router stats per day.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
@@ -64,7 +60,6 @@ export class RouterController {
     return this.routerService.getPerDayStats(days);
   }
 
-  @HttpCode(HttpStatus.OK)
   @Get('/useragents/trend/:days')
   @ApiOperation({ summary: 'Get download counts per day for the top user agents.' })
   @ApiParam({ name: 'days', description: 'Number of days' })

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Headers,
   Logger,
   NotFoundException,
   Post,
@@ -16,6 +17,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
 import { GitlabService } from '../gitlab/gitlab.service';
+import { withSseKeepalive, type SseMessage } from '../utils/sse';
 import { PromoteDto, ScheduleBuildDto, ScheduleDto } from './build-api.dto';
 import { parseManagerLogEvent } from './manager-log-parser';
 
@@ -97,56 +99,66 @@ export class BuildApiController {
   @SkipThrottle()
   @ApiOperation({ summary: 'Proxy manager log stream from the build server as server-sent events.' })
   @ApiOkResponse({ description: 'SSE stream of manager logs' })
-  @ApiQuery({ name: 'Last-Event-ID', required: false, description: 'Sequence number to resume from', type: Number })
-  getManagerLogs(@Query('Last-Event-ID') lastEventId?: number): Observable<Partial<MessageEvent<string>>> {
+  @ApiQuery({ name: 'lastEventId', required: false, description: 'Sequence number to resume from', type: Number })
+  getManagerLogs(
+    @Query('lastEventId') lastEventId?: number,
+    // Native EventSource reconnects replay the last received frame id here.
+    @Headers('last-event-id') lastEventIdHeader?: string,
+  ): Observable<SseMessage<string>> {
     const url = `${this.buildServerUrl}/manager/logs`;
-    return new Observable((subscriber) => {
-      const upstream = new AbortController();
+    const resumeFrom = lastEventId ?? (Number(lastEventIdHeader) || undefined);
+    return withSseKeepalive(
+      new Observable<SseMessage<string>>((subscriber) => {
+        const upstream = new AbortController();
+        let sequence = 0;
 
-      const stream = async (): Promise<void> => {
-        try {
-          const headers: Record<string, string> = {};
-          const token = this.managerApiToken;
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-          if (lastEventId !== undefined) {
-            headers['Last-Event-ID'] = String(lastEventId);
-          }
-          const response = await fetch(url, { signal: upstream.signal, headers });
-          if (!response.ok || !response.body) throw new ServiceUnavailableException('Could not fetch manager logs');
+        const stream = async (): Promise<void> => {
+          try {
+            const headers: Record<string, string> = {};
+            const token = this.managerApiToken;
+            if (token) {
+              headers['Authorization'] = `Bearer ${token}`;
+            }
+            if (resumeFrom !== undefined && Number.isInteger(resumeFrom)) {
+              headers['Last-Event-ID'] = String(resumeFrom);
+            }
+            const response = await fetch(url, { signal: upstream.signal, headers });
+            if (!response.ok || !response.body) throw new ServiceUnavailableException('Could not fetch manager logs');
 
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
 
-          while (!upstream.signal.aborted) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
+            while (!upstream.signal.aborted) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
 
-            const events = buffer.split('\n\n');
-            buffer = events.pop() ?? '';
+              const events = buffer.split('\n\n');
+              buffer = events.pop() ?? '';
 
-            for (const event of events) {
-              const dataLine = event.split('\n').find((line) => line.startsWith('data: '));
-              if (!dataLine) continue;
-              const msg = parseManagerLogEvent(dataLine);
-              if (msg) {
-                subscriber.next({ data: msg });
+              for (const event of events) {
+                const lines = event.split('\n');
+                const dataLine = lines.find((line) => line.startsWith('data: '));
+                if (!dataLine) continue;
+                const msg = parseManagerLogEvent(dataLine);
+                if (msg) {
+                  sequence += 1;
+                  subscriber.next({ id: String(sequence), data: msg });
+                }
               }
             }
+          } catch (error) {
+            if (!upstream.signal.aborted) subscriber.error(error);
+          } finally {
+            subscriber.complete();
           }
-        } catch (error) {
-          if (!upstream.signal.aborted) subscriber.error(error);
-        } finally {
-          subscriber.complete();
-        }
-      };
+        };
 
-      void stream();
-      return () => upstream.abort();
-    });
+        void stream();
+        return () => upstream.abort();
+      }),
+    );
   }
 
   private async proxyPostJson(url: string, body: unknown): Promise<unknown> {

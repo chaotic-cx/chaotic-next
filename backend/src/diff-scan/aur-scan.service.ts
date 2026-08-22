@@ -11,6 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { filter, Observable, Subject } from 'rxjs';
 import { Repository } from 'typeorm';
 import { errorMessage, mapWithConcurrency } from '../utils/functions';
+import { withSseKeepalive, type SseMessage } from '../utils/sse';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
 import { DiffScanService } from './diff-scan.service';
 import type { ScanIndicator } from './indicators';
@@ -86,21 +87,27 @@ export class AurScanService {
     return this.scans.get(packageName.toLowerCase()) ?? null;
   }
 
-  streamScan(packageName: string): Observable<Partial<MessageEvent<AurScanStreamChunk>>> {
+  streamScan(packageName: string): Observable<SseMessage<AurScanStreamChunk>> {
     const current = this.getScan(packageName);
     if (!current) throw new NotFoundException(`No scan recorded for "${packageName}"`);
 
-    return new Observable((subscriber) => {
-      const emit = (scan: AurPackageScan): void => {
-        const settled = scan.status === 'done' || scan.status === 'failed';
-        subscriber.next({ data: { scan: { ...scan }, complete: settled } });
-        if (settled) subscriber.complete();
-      };
+    // Scans can stay quiet for a long time (e.g. VirusTotal lookups), so the
+    // stream needs keepalives to survive proxy idle timeouts.
+    return withSseKeepalive(
+      new Observable<SseMessage<AurScanStreamChunk>>((subscriber) => {
+        const emit = (scan: AurPackageScan): void => {
+          const settled = scan.status === 'done' || scan.status === 'failed';
+          subscriber.next({ data: { scan: { ...scan }, complete: settled } });
+          if (settled) subscriber.complete();
+        };
 
-      emit(current);
-      const updates = this.scanUpdates.pipe(filter((scan) => scan.packageName === current.packageName)).subscribe(emit);
-      return () => updates.unsubscribe();
-    });
+        emit(current);
+        const updates = this.scanUpdates
+          .pipe(filter((scan) => scan.packageName === current.packageName))
+          .subscribe(emit);
+        return () => updates.unsubscribe();
+      }),
+    );
   }
 
   async startScan(packageName: string): Promise<AurPackageScan> {

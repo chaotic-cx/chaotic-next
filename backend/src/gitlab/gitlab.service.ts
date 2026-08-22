@@ -55,6 +55,7 @@ import {
   mapWithConcurrency,
   nDaysInPast,
 } from '../utils/functions';
+import { withSseKeepalive, type SseMessage } from '../utils/sse';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
 import { MrAction, MrActionType } from './mr-action.entity';
 import { fetchPackageInfo } from './mr-package-info';
@@ -1422,50 +1423,51 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
    * `complete` message once the job reaches a terminal status. The teardown on
    * unsubscribe stops the polling when the client disconnects.
    */
-  getJobTraceStream(
-    pipelineId: number,
-    jobId: number,
-    resumeAt = 0,
-  ): Observable<Partial<MessageEvent<GitlabLogChunk>>> {
+  getJobTraceStream(pipelineId: number, jobId: number, resumeAt = 0): Observable<SseMessage<GitlabLogChunk>> {
     const { api, chaoticId } = this;
-    return new Observable((subscriber) => {
-      // lastOffset seeds from the resume point so a reconnecting client only
-      // receives bytes appended after its last received chunk.
-      let lastOffset = resumeAt > 0 ? resumeAt : 0;
-      let lastStatus: string | undefined;
-      let running = true;
+    return withSseKeepalive(
+      new Observable<SseMessage<GitlabLogChunk>>((subscriber) => {
+        // lastOffset seeds from the resume point so a reconnecting client only
+        // receives bytes appended after its last received chunk.
+        let lastOffset = resumeAt > 0 ? resumeAt : 0;
+        let lastStatus: string | undefined;
+        let running = true;
 
-      const stop = (): void => {
-        if (!running) return;
-        running = false;
-        clearInterval(timer);
-        subscriber.complete();
-      };
+        const stop = (): void => {
+          if (!running) return;
+          running = false;
+          clearInterval(timer);
+          subscriber.complete();
+        };
 
-      const poll = async (): Promise<void> => {
-        try {
-          const job = await api.Jobs.show(chaoticId, jobId);
-          lastStatus = job.status;
-          const raw = await api.Jobs.showLog(chaoticId, jobId);
-          if (raw.length > lastOffset) {
-            subscriber.next({
-              data: { offset: raw.length, text: raw.slice(lastOffset), complete: false, status: lastStatus },
-            });
-            lastOffset = raw.length;
-          }
-          if (TERMINAL_JOB_STATUSES.includes(lastStatus)) {
-            subscriber.next({ data: { offset: lastOffset, text: '', complete: true, status: lastStatus } });
+        const poll = async (): Promise<void> => {
+          try {
+            const job = await api.Jobs.show(chaoticId, jobId);
+            lastStatus = job.status;
+            const raw = await api.Jobs.showLog(chaoticId, jobId);
+            if (raw.length > lastOffset) {
+              // The id carries the offset so the browser's native EventSource
+              // reconnect resumes via Last-Event-ID without manual bookkeeping.
+              subscriber.next({
+                id: String(raw.length),
+                data: { offset: raw.length, text: raw.slice(lastOffset), complete: false, status: lastStatus },
+              });
+              lastOffset = raw.length;
+            }
+            if (TERMINAL_JOB_STATUSES.includes(lastStatus)) {
+              subscriber.next({ data: { offset: lastOffset, text: '', complete: true, status: lastStatus } });
+              stop();
+            }
+          } catch (error) {
+            subscriber.error(error);
             stop();
           }
-        } catch (error) {
-          subscriber.error(error);
-          stop();
-        }
-      };
+        };
 
-      const timer = setInterval(() => void poll(), JOB_TRACE_POLL_MS);
-      void poll();
-      return () => stop();
-    });
+        const timer = setInterval(() => void poll(), JOB_TRACE_POLL_MS);
+        void poll();
+        return () => stop();
+      }),
+    );
   }
 }
