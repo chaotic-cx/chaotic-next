@@ -1,25 +1,27 @@
-import { type DiffScanRule, regexRule } from './rule';
+import { type Rule, regexRule } from './rule';
 
 const PASTE_HOSTS = ['0x0.st', 'paste.ee', 'pastebin.com', 'ptpb.pw', 'temp.sh', 'transfer.sh'];
+// The lookbehind keeps hostnames like mypastebin.com out, mirroring the network
+// rules' host boundary; subdomains (evil.pastebin.com) still match via the label prefix.
 const pasteHostsPattern = new RegExp(
-  `(?:[\\w-]+\\.)*(?:${PASTE_HOSTS.join('|').replace(/\./g, '\\.')})(?:/|\\s|$)`,
+  `(?<![a-z0-9-])(?:[\\w-]+\\.)*(?:${PASTE_HOSTS.join('|').replace(/\./g, '\\.')})(?:/|\\s|$)`,
   'i',
 );
 
-export const DOWNLOAD_EXECUTE_RULES: DiffScanRule[] = [
+export const DOWNLOAD_EXECUTE_RULES: Rule[] = [
   regexRule({
     id: 'DLE-001',
     name: 'Curl piped into a shell',
     severity: 'critical',
     description: 'Downloads remote content and executes it immediately, bypassing any review of what actually runs.',
-    pattern: /\bcurl\b[^|]*\|\s*(?:ba|da|z)?sh\b/i,
+    pattern: /\bcurl\b[^|]*\|\s*(?:sudo\s+|doas\s+)?(?:ba|da|z)?sh\b/i,
   }),
   regexRule({
     id: 'DLE-002',
     name: 'Wget piped into a shell',
     severity: 'critical',
     description: 'Downloads remote content and executes it immediately, bypassing any review of what actually runs.',
-    pattern: /\bwget\b[^|]*\|\s*(?:ba|da|z)?sh\b/i,
+    pattern: /\bwget\b[^|]*\|\s*(?:sudo\s+|doas\s+)?(?:ba|da|z)?sh\b/i,
   }),
   regexRule({
     id: 'DLE-003',

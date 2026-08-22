@@ -1,6 +1,6 @@
-import { regexRule, type DiffScanRule } from './rule';
+import { regexRule, type Rule } from './rule';
 
-export const REVERSE_SHELL_RULES: DiffScanRule[] = [
+export const REVERSE_SHELL_RULES: Rule[] = [
   regexRule({
     id: 'SHELL-001',
     name: 'Bash reverse shell',

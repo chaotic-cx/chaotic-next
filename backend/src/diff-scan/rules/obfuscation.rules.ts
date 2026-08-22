@@ -1,5 +1,5 @@
-import { addedLines } from './diff-utils';
-import type { DiffScanRule } from './rule';
+import { addedLines, isInScope } from './diff-utils';
+import type { Rule } from './rule';
 import { regexRule } from './rule';
 
 /** Length at which a base64-looking run of characters is considered a payload blob. */
@@ -7,7 +7,7 @@ const BASE64_BLOB_LENGTH = 120;
 const BASE64_BLOB = new RegExp(`[A-Za-z0-9+/]{${BASE64_BLOB_LENGTH},}={0,2}`);
 const HEX_ONLY = /^[0-9a-f]+={0,2}$/i;
 
-export const OBFUSCATION_RULES: DiffScanRule[] = [
+export const OBFUSCATION_RULES: Rule[] = [
   regexRule({
     id: 'OBF-001',
     name: 'Base64 decoding',
@@ -69,6 +69,7 @@ export const OBFUSCATION_RULES: DiffScanRule[] = [
     severity: 'critical',
     description: `Contains an inline base64 blob of at least ${BASE64_BLOB_LENGTH} characters, typically an embedded binary payload. Checksum updates are excluded.`,
     check(change) {
+      if (!isInScope(change, ['code'])) return null;
       const hit = addedLines(change).find((line) => {
         const blob = line.text.match(BASE64_BLOB);
         return blob !== null && !HEX_ONLY.test(blob[0]);

@@ -1,13 +1,58 @@
-import { type DiffScanRule, regexRule } from './rule';
+import { addedLines, isCommentLine, isInScope } from './diff-utils';
+import { listRule, regexRule, type Rule } from './rule';
 
 const SHORTENER_HOSTS = ['bit.ly', 'cutt.ly', 'goo.gl', 'is.gd', 'rb.gy', 't.co', 'tinyurl.com'];
 const DDNS_HOSTS = ['ddns.net', 'duckdns.org', 'hopto.org', 'no-ip.com', 'no-ip.org', 'serveo.net', 'zapto.org'];
 
-function hostAlternation(hosts: string[]): string {
-  return hosts.join('|').replace(/\./g, '\\.');
+// HaGeZi's DNS blocklists, refreshed on first scan and then memoized.
+const SHORTENER_BLOCKLIST_URL =
+  'https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/urlshortener.txt';
+const DDNS_BLOCKLIST_URL = 'https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/dnsmasq/dyndns.txt';
+
+// abuse.ch's live malware-host feed; refreshed on first scan and then memoized.
+const MALWARE_HOST_BLOCKLIST_URL = 'https://urlhaus.abuse.ch/downloads/hostfile/';
+
+/** Parses a dnsmasq blocklist ("local=/host/") into the bare host list it blocks. */
+export function dnsmasqHosts(raw: string): string[] {
+  const hosts: string[] = [];
+  for (const line of raw.split('\n')) {
+    const match = line.match(/^local=\/([^/]+)\/$/);
+    if (match) hosts.push(match[1]);
+  }
+  return hosts;
 }
 
-export const NETWORK_RULES: DiffScanRule[] = [
+/** Parses an abuse.ch hosts-file dump ("127.0.0.1 host") into the bare host list it blocks. */
+export function hostsFileHosts(raw: string): string[] {
+  const hosts: string[] = [];
+  for (const line of raw.split('\n')) {
+    const match = line.match(/^(?:\d{1,3}\.){3}\d{1,3}\s+(\S+)\s*$/);
+    if (match && !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(match[1])) hosts.push(match[1]);
+  }
+  return hosts;
+}
+
+/**
+ * Turns a bare host into a regex source for `listRule`. Dots are escaped, a
+ * lookbehind skips matches mid-label ("notduckdns.org" won't hit "duckdns.org"),
+ * and the trailing boundary requires a real URL separator or port colon, so
+ * subdomains ("myhost.duckdns.org") and "host:8080" still match.
+ */
+function hostRegexSource(host: string): string {
+  return `(?<![a-z0-9-])${host.replace(/\./g, '\\.')}(?=[/:\\s]|$)`;
+}
+
+function hostsFromList(hosts: string[]): string[] {
+  return hosts.map(hostRegexSource);
+}
+
+const ARCHIVE_PIPE_UPLOAD = /\b(?:tar|zip|7z|gzip)\b[^|;&]*\|\s*(?:curl|wget|nc(?:at)?|socat)\b/i;
+/** Upload flags whose payload argument points at user-home or credential material. */
+const UPLOAD_FLAG = /\b(?:curl|wget)\b[^\n]*\s(?:--upload-file|-T|-F|--form|--post-file)[=\s]/i;
+const SENSITIVE_PAYLOAD =
+  /(?:^|[\s"'=@])(?:~|\$\{?HOME\}?)|\/home\/[^\s/"']+|\/root\b|[/"'\s]\.(?:ssh|gnupg|aws|password-store)\b|\/etc\/(?:shadow|gshadow|sudoers)\b/i;
+
+export const NETWORK_RULES: Rule<unknown>[] = [
   regexRule({
     id: 'URL-001',
     name: 'Raw IP address URL',
@@ -16,20 +61,28 @@ export const NETWORK_RULES: DiffScanRule[] = [
     // Loopback is excluded: http://127.0.0.1 is a local service, not a remote download source.
     pattern: /https?:\/\/(?!127\.)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/,
   }),
-  regexRule({
+  listRule({
     id: 'URL-002',
     name: 'URL shortener',
     severity: 'warning',
     description: 'References a URL shortener, which hides the actual download destination.',
-    pattern: new RegExp(`(?:[\\w-]+\\.)*(?:${hostAlternation(SHORTENER_HOSTS)})(?:/|\\s|$)`, 'i'),
+    list: hostsFromList(SHORTENER_HOSTS),
+    data: {
+      url: SHORTENER_BLOCKLIST_URL,
+      transform: (raw) => hostsFromList(dnsmasqHosts(raw)),
+    },
   }),
-  regexRule({
+  listRule({
     id: 'URL-003',
     name: 'Dynamic-DNS host',
     severity: 'warning',
     description:
       'References a dynamic-DNS hostname, which lets an attacker rotate the backing IP behind a stable name.',
-    pattern: new RegExp(`(?:[\\w-]+\\.)*(?:${hostAlternation(DDNS_HOSTS)})(?:/|\\s|$)`, 'i'),
+    list: hostsFromList(DDNS_HOSTS),
+    data: {
+      url: DDNS_BLOCKLIST_URL,
+      transform: (raw) => hostsFromList(dnsmasqHosts(raw)),
+    },
   }),
   regexRule({
     id: 'URL-004',
@@ -37,6 +90,18 @@ export const NETWORK_RULES: DiffScanRule[] = [
     severity: 'warning',
     description: 'Contains an internationalized domain encoded as punycode, commonly used for look-alike domains.',
     pattern: /https?:\/\/(?:[a-z0-9-]+\.)*xn--/i,
+  }),
+  listRule({
+    id: 'URL-005',
+    name: 'Known malware host',
+    severity: 'critical',
+    description: 'Contacts a host that abuse.ch URLhaus currently lists as distributing malware.',
+    // Data-only rule: it stays inert until its first successful blocklist load.
+    list: [],
+    data: {
+      url: MALWARE_HOST_BLOCKLIST_URL,
+      transform: (raw) => hostsFromList(hostsFileHosts(raw)),
+    },
   }),
   regexRule({
     id: 'CAUR-ONION-URL',
@@ -54,6 +119,23 @@ export const NETWORK_RULES: DiffScanRule[] = [
       'Contains a Discord, Telegram or Slack webhook URL, a common channel for data exfiltration and command delivery.',
     pattern: /discord(?:app)?\.com\/api\/(?:v\d+\/)?webhooks|api\.telegram\.org\/bot|hooks\.slack\.com\/services/i,
   }),
+  {
+    id: 'EXFIL-004',
+    name: 'Archive-and-upload exfiltration',
+    severity: 'critical',
+    description:
+      'Streams an archive of local files into a network tool or uploads home-directory material, e.g. tar czf - ~ | curl --data-binary @-, direct bulk data theft.',
+    check(change) {
+      if (!isInScope(change, ['code'])) return null;
+      for (const line of addedLines(change)) {
+        if (isCommentLine(line.text)) continue;
+        const exfil =
+          ARCHIVE_PIPE_UPLOAD.test(line.text) || (UPLOAD_FLAG.test(line.text) && SENSITIVE_PAYLOAD.test(line.text));
+        if (exfil) return { line: line.line, match: line.text.trim() };
+      }
+      return null;
+    },
+  },
   regexRule({
     id: 'CRYPTO-001',
     name: 'Mining pool connection',

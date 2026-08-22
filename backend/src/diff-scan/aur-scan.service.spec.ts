@@ -293,7 +293,7 @@ describe('AurScanService', () => {
     const streamDone = new Promise<void>((resolve) => {
       service.streamScan('evilpkg').subscribe({
         next: (message) => {
-          if (!message.data) return;
+          if (!message.data || typeof message.data === 'string') return;
           chunks.push({ complete: message.data.complete, status: message.data.scan.status });
         },
         complete: () => resolve(),
@@ -316,7 +316,7 @@ describe('AurScanService', () => {
     await new Promise<void>((resolve) => {
       service.streamScan('evilpkg').subscribe({
         next: (message) => {
-          if (message.data) chunks.push(message.data.complete);
+          if (message.data && typeof message.data !== 'string') chunks.push(message.data.complete);
         },
         complete: () => resolve(),
       });

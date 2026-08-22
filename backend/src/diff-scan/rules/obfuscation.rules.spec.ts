@@ -37,6 +37,13 @@ describe('obfuscation rules', () => {
     expect(ruleById(OBFUSCATION_RULES, 'CAUR-BASE64-BLOB').check(change)).toBeNull();
   });
 
+  it('does not flag embedded base64 like inline images inside documentation files', () => {
+    const change = makeChange(addedOnlyDiff([`![logo](data:image/png;base64,${'QUFB'.repeat(50)})`]), {
+      new_path: 'docs/manual.md',
+    });
+    expect(ruleById(OBFUSCATION_RULES, 'CAUR-BASE64-BLOB').check(change)).toBeNull();
+  });
+
   it('does not flag normal quoting', () => {
     const change = makeChange(addedOnlyDiff(['msg2 "Building %s" "$pkgname"', 'url="https://example.org"']));
     expect(OBFUSCATION_RULES.flatMap((rule) => rule.check(change) ?? [])).toHaveLength(0);

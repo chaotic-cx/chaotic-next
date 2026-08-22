@@ -1,4 +1,4 @@
-import type { DiffScanRule } from './rule';
+import type { Rule } from './rule';
 import { addedLines, isCommentLine, isInScope } from './diff-utils';
 
 const RM_RECURSIVE = /\brm\s[^;&|]*?(?:-[a-z]*r[a-z]*\b|--recursive\b)/i;
@@ -7,7 +7,7 @@ const SENSITIVE_TARGET =
   /\s["']?(?:\/\*?|~|\$HOME|\$\{HOME\})["']?(?:\/|\s|$)|\s\/(?:home|etc|usr|var|boot|opt|srv|root|lib|bin|sbin)(?:\/|\s|$)/;
 const DISK_WIPE = /\bmkfs(?:\.\w+)?\b|\bwipefs\b|\bdd\b[^;&|]*\bof=\/dev\//i;
 
-export const DESTRUCTIVE_RULES: DiffScanRule[] = [
+export const DESTRUCTIVE_RULES: Rule[] = [
   {
     id: 'CAUR-DESTRUCTIVE',
     name: 'Destructive filesystem command',
@@ -15,6 +15,7 @@ export const DESTRUCTIVE_RULES: DiffScanRule[] = [
     description:
       'Runs a destructive command: rm with recursive force against system or home paths, recursive rm inside an install scriptlet (which runs as root on user machines), or a disk-wiping tool.',
     check(change) {
+      if (!isInScope(change, ['code'])) return null;
       const installScript = isInScope(change, ['install']);
       for (const line of addedLines(change)) {
         if (isCommentLine(line.text)) continue;

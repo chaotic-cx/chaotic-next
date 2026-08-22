@@ -1,6 +1,6 @@
-import { regexRule, type DiffScanRule } from './rule';
+import { regexRule, type Rule } from './rule';
 
-export const CREDENTIAL_RULES: DiffScanRule[] = [
+export const CREDENTIAL_RULES: Rule[] = [
   regexRule({
     id: 'CRED-001',
     name: 'SSH key access',

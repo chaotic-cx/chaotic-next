@@ -63,6 +63,7 @@ describe('persistence rules', () => {
     ['PERSIST-002', 'OnCalendar=*-*-* 04:00:00'],
     ['PERSIST-004', 'echo x > /etc/rc.local'],
     ['PERSIST-006', 'ExecStart=/usr/bin/systemd-cacheupd'],
+    ['PERSIST-006', 'systemctl start systemd-updated'],
   ])('flags %s for %j', (id, line) => {
     expect(ruleById(PERSISTENCE_RULES, id).check(makeChange(addedOnlyDiff([line])))).not.toBeNull();
   });
@@ -88,6 +89,20 @@ describe('persistence rules', () => {
       new_path: 'pcloudcc/pcloudcc-systemd.md',
     });
     expect(ruleById(PERSISTENCE_RULES, 'PERSIST-001').check(change)).toBeNull();
+
+    const timerExample = makeChange(addedOnlyDiff(['[Timer]', 'OnCalendar=weekly']), {
+      new_path: 'backup/README.md',
+    });
+    expect(ruleById(PERSISTENCE_RULES, 'PERSIST-002').check(timerExample)).toBeNull();
+  });
+
+  it.each([
+    ['ExecStart=/usr/lib/systemd/systemd-journald'],
+    ['systemctl start systemd-networkd'],
+    ['After=systemd-resolved.service'],
+    ['Wants=systemd-timesyncd.service systemd-logind.service'],
+  ])('does not flag PERSIST-006 for the real daemon %j', (line) => {
+    expect(ruleById(PERSISTENCE_RULES, 'PERSIST-006').check(makeChange(addedOnlyDiff([line])))).toBeNull();
   });
 
   it('does not flag profile.d files shipped inside the package', () => {

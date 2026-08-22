@@ -7,13 +7,35 @@ import {
   INSTALL_SCRIPT_PATTERN,
   SYSTEMD_UNIT_PATTERN,
 } from './diff-utils';
-import type { DiffScanRule } from './rule';
+import type { Rule } from './rule';
 import { regexRule } from './rule';
 
 const RESTART_ALWAYS_PATTERN = /Restart\s*=\s*always/;
 const RESTART_DELAY_PATTERN = /RestartSec\s*=\s*(?:[3-9]\d|\d{3,})/;
 
-export const PERSISTENCE_RULES: DiffScanRule[] = [
+const REAL_SYSTEMD_DAEMONS = [
+  'homed',
+  'hostnamed',
+  'importd',
+  'journald',
+  'localed',
+  'logind',
+  'machined',
+  'networkd',
+  'oomd',
+  'portabled',
+  'resolved',
+  'sysupdated',
+  'timesyncd',
+  'timedated',
+  'udevd',
+  'userdbd',
+];
+const SYSTEMD_MASQUERADE_PATTERN = new RegExp(
+  `\\bsystemd-(?!${REAL_SYSTEMD_DAEMONS.map((daemon) => `${daemon}\\b`).join('|')})[a-z]+d\\b`,
+);
+
+export const PERSISTENCE_RULES: Rule[] = [
   {
     id: 'CAUR-INSTALL-NEW',
     name: 'New install scriptlet added',
@@ -82,7 +104,8 @@ export const PERSISTENCE_RULES: DiffScanRule[] = [
     name: 'Systemd timer scheduling',
     severity: 'critical',
     description: 'Schedules systemd timers, which grant recurring execution on user machines.',
-    pattern: /\[Timer\]|OnBootSec|OnCalendar|OnUnitActiveSec|AccuracySec/,
+    pattern: /\[Timer]|OnBootSec|OnCalendar|OnUnitActiveSec|AccuracySec/,
+    scopes: ['code'],
   }),
   {
     id: 'CAUR-RESTART-ALWAYS',
@@ -112,6 +135,6 @@ export const PERSISTENCE_RULES: DiffScanRule[] = [
     severity: 'critical',
     description:
       'References a systemd-*d-named binary that is not a real systemd component, a trick to hide malicious daemons from casual review.',
-    pattern: /\bsystemd-[a-z]+d\b/,
+    pattern: SYSTEMD_MASQUERADE_PATTERN,
   }),
 ];

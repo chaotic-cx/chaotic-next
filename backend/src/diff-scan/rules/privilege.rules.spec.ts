@@ -32,6 +32,14 @@ describe('privilege rules', () => {
     expect(ruleById(PRIVILEGE_RULES, 'PRIV-001').check(change)).toBeNull();
   });
 
+  it('does not flag unquoted dependency arrays containing sudo/doas/pkexec', () => {
+    const change = makeChange(
+      addedOnlyDiff(['depends=(sudo curl)', 'makedepends=(git doas)', 'checkdepends=(pkexec sudo)']),
+      { new_path: 'foo/PKGBUILD' },
+    );
+    expect(ruleById(PRIVILEGE_RULES, 'PRIV-001').check(change)).toBeNull();
+  });
+
   it.each([
     ['PRIV-003', 'echo "ALL ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/backdoor'],
     ['PRIV-003', 'sed -i s/+/x/ /etc/sudoers'],

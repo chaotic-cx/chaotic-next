@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiffScanService } from '../diff-scan.service';
 import { makeChange } from './test-support';
 
@@ -54,6 +54,14 @@ const AKIRA_INSTALL = [
 const service = new DiffScanService();
 
 describe('real-world campaign MRs (regression)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network disabled in tests')));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('flags !2224 (alvr): npm payload install plus identity takeover', async () => {
     const findings = await service.scanDiffs([
       makeChange(ALVR_PKGBUILD, { new_path: 'alvr/PKGBUILD' }),

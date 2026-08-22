@@ -129,7 +129,7 @@ describe('VirustotalService', () => {
   });
 
   it('persists notable verdicts and dedupes them within the cache window', async () => {
-    const rows: Array<Partial<VirusTotalVerdict>> = [];
+    const rows: Partial<VirusTotalVerdict>[] = [];
     const repository = {
       findOne: vi.fn(async ({ where }: { where: { type: string; value: string } }) =>
         rows.find((row) => row.type === where.type && row.value === where.value),
