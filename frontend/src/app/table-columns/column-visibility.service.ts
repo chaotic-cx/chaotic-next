@@ -1,17 +1,27 @@
 import { Service, type Signal, type WritableSignal, signal } from '@angular/core';
+import { type ColumnDef } from './column-visibility.component';
 
 const STORAGE_KEY = 'chaotic-column-visibility';
 
+function sameSet(values: string[], reference: Set<string> | undefined): boolean {
+  if (!reference || values.length !== reference.size) return false;
+  return values.every((value) => reference.has(value));
+}
+
 @Service()
 export class ColumnVisibilityService {
-  private readonly defaults = new Map<string, string[]>();
+  private readonly defaults = new Map<string, Set<string>>();
   private readonly states = new Map<string, WritableSignal<Set<string>>>();
 
-  register(tableKey: string, columns: string[]): void {
+  register(tableKey: string, columns: (string | ColumnDef)[]): void {
     if (this.states.has(tableKey)) return;
-    this.defaults.set(tableKey, columns);
+    const defs: ColumnDef[] = columns.map((column) =>
+      typeof column === 'string' ? { key: column, label: column } : column,
+    );
+    const defaultVisible = defs.filter((def) => def.defaultVisible !== false).map((def) => def.key);
+    this.defaults.set(tableKey, new Set(defaultVisible));
     const saved = this.read()[tableKey];
-    this.states.set(tableKey, signal(new Set(saved ?? columns)));
+    this.states.set(tableKey, signal(new Set(saved ?? defaultVisible)));
   }
 
   visible(tableKey: string): Signal<Set<string>> {
@@ -53,10 +63,12 @@ export class ColumnVisibilityService {
     }
   }
 
+  /** Persists the selection unless it equals the table's defaults; storing
+   * identical selections would pin stale defaults when new columns ship. */
   private write(tableKey: string, columns: string[]): void {
     if (typeof window === 'undefined') return;
     const all = this.read();
-    if (columns.length === this.defaults.get(tableKey)?.length) delete all[tableKey];
+    if (sameSet(columns, this.defaults.get(tableKey))) delete all[tableKey];
     else all[tableKey] = columns;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
   }

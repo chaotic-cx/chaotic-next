@@ -97,7 +97,19 @@ export type SortOrder = 'ASC' | 'DESC';
 export const PACKAGE_SORT_FIELDS = ['id', 'pkgname', 'lastUpdated', 'createdAt', 'version', 'pkgrel', 'repo'] as const;
 export type PackageSortField = (typeof PACKAGE_SORT_FIELDS)[number];
 
-export const BUILD_SORT_FIELDS = ['id', 'timestamp', 'timeToEnd', 'status', 'pkgname', 'builder', 'repo'] as const;
+export const BUILD_RESOURCE_SORT_FIELDS = ['peakMemory', 'cpuTime', 'diskIo', 'networkIo'] as const;
+export type BuildResourceSortField = (typeof BUILD_RESOURCE_SORT_FIELDS)[number];
+
+export const BUILD_SORT_FIELDS = [
+  'id',
+  'timestamp',
+  'timeToEnd',
+  'status',
+  'pkgname',
+  'builder',
+  'repo',
+  ...BUILD_RESOURCE_SORT_FIELDS,
+] as const;
 export type BuildSortField = (typeof BUILD_SORT_FIELDS)[number];
 
 export function isPackageSortField(value: string): value is PackageSortField {
@@ -376,6 +388,58 @@ export interface Build {
   commit?: string;
   timeToEnd?: number;
   replaced?: boolean;
+  resourceStats?: BuildResourceMetrics | null;
+}
+
+/**
+ * Aggregated resource usage of a build container, sampled periodically while it ran. All byte and
+ * time values are totals consumed over the whole container runtime, memory is aggregated across
+ * samples since usage fluctuates constantly.
+ */
+export interface BuildResourceStats {
+  /** Mean of all sampled memory usage values in bytes. */
+  avg_memory_bytes: number;
+  /** Total CPU time consumed by the container in nanoseconds. */
+  cpu_time_ns: number;
+  /** Total bytes read from block devices by the container. Zero if the engine reports no blkio data. */
+  disk_read_bytes: number;
+  /** Total bytes written to block devices by the container. Zero if the engine reports no blkio data. */
+  disk_write_bytes: number;
+  /** How long the build container was running. */
+  duration_ms: number;
+  /** Total bytes received over all network interfaces during the build. */
+  network_rx_bytes: number;
+  /** Total bytes sent over all network interfaces during the build. */
+  network_tx_bytes: number;
+  /** Highest observed memory usage in bytes. */
+  peak_memory_bytes: number;
+  /** Highest number of processes observed inside the container. */
+  peak_pids: number;
+  /** How many samples the aggregation is based on; short builds may yield very few. */
+  sample_count: number;
+}
+
+export interface BuildResourceMetrics {
+  avgMemoryBytes?: number | null;
+  cpuTimeNs?: number | null;
+  diskReadBytes?: number | null;
+  diskWriteBytes?: number | null;
+  durationMs?: number | null;
+  networkRxBytes?: number | null;
+  networkTxBytes?: number | null;
+  peakMemoryBytes?: number | null;
+  peakPids?: number | null;
+  sampleCount?: number | null;
+}
+
+export interface PackageResourceDayRow {
+  day: string;
+  avg_memory_bytes: string;
+  peak_memory_bytes: string;
+  cpu_time_ns: string;
+  disk_io_bytes: string;
+  network_io_bytes: string;
+  samples: string;
 }
 
 export type BuildClass = string | number;

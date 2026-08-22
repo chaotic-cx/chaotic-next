@@ -334,6 +334,7 @@ const NO_REPO = '0';
               class="w-full"
               [ngModel]="aurSearchModel().query"
               [suggestions]="aurSuggestions()"
+              [delay]="AUR_SUGGEST_DEBOUNCE_MS"
               (ngModelChange)="aurSearchModel.set({ query: $event })"
               (completeMethod)="searchAurSuggestions($event)"
               (onBlur)="confirmAurPackage()"
@@ -454,6 +455,7 @@ export class AdminPackagesPageComponent {
   ]);
 
   protected readonly aurSearchModel = signal({ query: '' });
+  protected readonly AUR_SUGGEST_DEBOUNCE_MS = 400;
   protected readonly aurSearchForm = form(this.aurSearchModel, (schemaPath) => {
     debounce(schemaPath.query, 500);
     pattern(schemaPath.query, PIPELINE_PKG_BASE_REGEX, { message: 'Invalid package name format' });

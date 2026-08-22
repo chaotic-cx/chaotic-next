@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
 import { Build, Builder, Package, Repo } from './builder.entity';
@@ -18,10 +18,12 @@ import {
   GetLatestBuildsQueryDto,
   GetPackagesQueryDto,
   HeavyPackageDto,
+  PackageResourceDayDto,
   PkgCountDto,
   PopularPackageDto,
   ThroughputDayDto,
 } from './builder.dto';
+import { isBuildResourceMetricKey, RESOURCE_METRIC_KEYS } from './resource-stats';
 
 @ApiTags('builder')
 @Controller('builder')
@@ -280,6 +282,37 @@ export class BuilderController {
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ pkgname: string; average: string }[]> {
     return await this.builderService.getHeavyPackages({ amount, days });
+  }
+
+  @Get('stats/resource/package/:pkgname/:days')
+  @ApiOperation({ summary: 'Get daily container resource usage aggregates for a package.' })
+  @ApiParam({ name: 'pkgname', description: 'Package name' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Daily resource usage aggregates', type: PackageResourceDayDto, isArray: true })
+  async getPackageResourceStatsPerDay(
+    @Param('pkgname') pkgname: string,
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<PackageResourceDayDto[]> {
+    return await this.builderService.getPackageResourceStatsPerDay({ pkgname, days });
+  }
+
+  @Get('stats/heavy-packages/resource/:metric/:amount/:days')
+  @ApiOperation({ summary: 'Get the packages with the highest average consumption of a resource metric.' })
+  @ApiParam({ name: 'metric', description: 'Resource metric', enum: [...RESOURCE_METRIC_KEYS] })
+  @ApiParam({ name: 'amount', description: 'Number of packages' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Packages by average resource consumption', type: HeavyPackageDto, isArray: true })
+  async getHeavyPackagesByResourceMetric(
+    @Param('metric') metric: string,
+    @Param('amount', ParseIntPipe) amount: number,
+    @Param('days', ParseIntPipe) days: number,
+  ): Promise<{ pkgname: string; average: string }[]> {
+    if (!isBuildResourceMetricKey(metric)) {
+      throw new BadRequestException(
+        `Unknown resource metric "${metric}", expected one of ${RESOURCE_METRIC_KEYS.join(', ')}`,
+      );
+    }
+    return await this.builderService.getHeavyPackagesByResourceMetric({ metric, amount, days });
   }
 
   @Get('throughput/per-day/:days')

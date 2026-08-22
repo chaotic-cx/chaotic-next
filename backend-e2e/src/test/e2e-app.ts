@@ -1,19 +1,19 @@
 import 'reflect-metadata';
 import { AppModule } from '@chaotic-next/backend/app.module';
-import { Build, Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
+import { Build, Builder, BuildResourceUsage, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { BuilderService } from '@chaotic-next/backend/builder/builder.service';
-import { NotificationSubscription } from '@chaotic-next/backend/notifications/notification-subscription.entity';
 import { MrAction as MrActionEntity } from '@chaotic-next/backend/gitlab/mr-action.entity';
 import { PipelineTrigger as PipelineTriggerEntity } from '@chaotic-next/backend/gitlab/pipeline-trigger.entity';
+import { NotificationSubscription } from '@chaotic-next/backend/notifications/notification-subscription.entity';
 import {
   ArchlinuxPackage,
   PackageBump as PackageBumpEntity,
   PackageElfAnalysis,
 } from '@chaotic-next/backend/repo-manager/repo-manager.entity';
 import { BuildStatus } from '@chaotic-next/backend/types/types';
-import { RepoStatus } from '@chaotic-next/shared-lib';
-import { utcDayStart } from '@chaotic-next/backend/utils/functions';
 import { HLL_LOG2M } from '@chaotic-next/backend/utils/constants';
+import { utcDayStart } from '@chaotic-next/backend/utils/functions';
+import { RepoStatus } from '@chaotic-next/shared-lib';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ExecutionContext, Logger } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -52,7 +52,9 @@ export type BuildSeed = Partial<
     builder: Builder;
     repo: Repo;
   }
->;
+> & {
+  resourceStats?: Partial<BuildResourceUsage>;
+};
 
 export type ArchPackageSeed = Partial<
   Pick<ArchlinuxPackage, 'pkgname' | 'version' | 'pkgrel' | 'arch' | 'previousVersion' | 'metadata'>
@@ -374,6 +376,9 @@ async function seedBuild(dataSource: DataSource, overrides: BuildSeed | undefine
     commit: overrides?.commit ?? '4a70b438f76d5c8f6f739ea110f8c071efe8067f',
     timeToEnd: overrides?.timeToEnd ?? 1.5,
     replaced: overrides?.replaced ?? false,
+    resourceStats: overrides?.resourceStats
+      ? Object.assign(new BuildResourceUsage(), overrides.resourceStats)
+      : undefined,
   });
 }
 

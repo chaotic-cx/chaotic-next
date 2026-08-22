@@ -1,7 +1,9 @@
 import { computed, type Signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import type { ParamMap } from '@angular/router';
 import type { ChaoticEvent, GitlabLogChunk } from '@chaotic-next/shared-lib';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 
 const CHAOTIC_EVENT_TYPES = new Set(['build', 'pipeline', 'merge_request', 'queue', 'queue_promoted']);
 
@@ -78,6 +80,29 @@ export function formatDuration(totalSeconds: number): string {
   return parts.join(' ');
 }
 
+const BYTE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB'] as const;
+
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes)) return 'n/a';
+  let value = Math.abs(bytes);
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  const sign = bytes < 0 ? '-' : '';
+  return unitIndex === 0
+    ? `${sign}${value} ${BYTE_UNITS[unitIndex]}`
+    : `${sign}${value.toFixed(1)} ${BYTE_UNITS[unitIndex]}`;
+}
+
+const NANOSECONDS_PER_SECOND = 1_000_000_000;
+
+export function formatCpuTime(nanoseconds: number): string {
+  if (!Number.isFinite(nanoseconds)) return 'n/a';
+  return formatDuration(nanoseconds / NANOSECONDS_PER_SECOND);
+}
+
 export function packageLogRouteFromUrl(logUrl: string): string[] {
   try {
     const url = new URL(logUrl);
@@ -92,6 +117,12 @@ export function packageLogRouteFromUrl(logUrl: string): string[] {
 
 export function resourceValue<T>(resource: { hasValue(): boolean; value(): T }): T | undefined {
   return resource.hasValue() ? resource.value() : undefined;
+}
+
+export function debouncedSignal<T>(source: Signal<T>, delayMs: number): Signal<T> {
+  return toSignal(toObservable(source).pipe(debounceTime(delayMs), distinctUntilChanged()), {
+    initialValue: source(),
+  });
 }
 
 export function resourceSignal<T>(resource: { hasValue(): boolean; value(): T }): Signal<T | undefined> {

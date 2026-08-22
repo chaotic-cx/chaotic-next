@@ -117,10 +117,37 @@ const CIRCLE_STEPS = 128;
 const FOCUS_ZOOM = 3;
 const FOCUS_SPEED = 1.2;
 
+const TRAFFIC_METEORS_SOURCE_ID = 'traffic-meteors-source';
+const TRAFFIC_METEORS_LAYER_ID = 'traffic-meteors-layer';
 const TRAFFIC_PINGS_SOURCE_ID = 'traffic-pings-source';
 const TRAFFIC_PINGS_LAYER_ID = 'traffic-pings-layer';
 const TRAFFIC_ARCS_SOURCE_ID = 'traffic-arcs-source';
 const TRAFFIC_ARCS_LAYER_ID = 'traffic-arcs-layer';
+
+const METEOR_DURATION_MS = 380;
+const IMPACT_DURATION_MS = 1420;
+const TOTAL_PING_DURATION_MS = METEOR_DURATION_MS + IMPACT_DURATION_MS;
+const ARC_DURATION_MS = 1200;
+const MAX_ACTIVE_PINGS = 50;
+const MAX_ACTIVE_ARCS = 30;
+
+const METEOR_HEAD_RADIUS_BASE = 4;
+const METEOR_HEAD_RADIUS_SCALE = 2;
+const IMPACT_FLASH_DURATION_MS = 100;
+const IMPACT_FLASH_RADIUS_BASE = 8;
+const IMPACT_FLASH_RADIUS_SCALE = 10;
+const SHOCKWAVE_MAX_RADIUS = 55;
+const CRATER_WAVE_MAX_RADIUS = 75;
+const ARC_STEP_COUNT = 15;
+const ARC_HEIGHT_OFFSET = 12;
+
+const GARUDA_COLOR = '#89dceb';
+const DEFAULT_PING_COLOR = '#cba6f7';
+const FIREBALL_CORE_COLOR = '#f9e2af';
+const FIREBALL_TRAIL_COLOR = '#fab387';
+const IMPACT_FLASH_COLOR = '#ffffff';
+const IMPACT_STROKE_COLOR = '#f38ba8';
+const IMPACT_ACCENT_COLOR = '#eba0ac';
 
 const MARKER_COLORS = {
   active: '#cba6f7',
@@ -176,10 +203,10 @@ function samePosition(a: [number, number], b: [number, number]): boolean {
 
 interface ActivePing {
   id: string;
-  lng: number;
-  lat: number;
-  radius: number;
-  opacity: number;
+  targetLng: number;
+  targetLat: number;
+  startLng: number;
+  startLat: number;
   color: string;
   createdAt: number;
 }
@@ -188,8 +215,6 @@ interface ActiveArc {
   id: string;
   source: [number, number];
   target: [number, number];
-  progress: number;
-  opacity: number;
   color: string;
   createdAt: number;
 }
@@ -548,6 +573,27 @@ export class MirrorMapComponent implements OnDestroy {
       });
     }
 
+    if (!this.map.getSource(TRAFFIC_METEORS_SOURCE_ID)) {
+      this.map.addSource(TRAFFIC_METEORS_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      this.map.addLayer({
+        id: TRAFFIC_METEORS_LAYER_ID,
+        type: 'line',
+        source: TRAFFIC_METEORS_SOURCE_ID,
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': ['get', 'width'],
+          'line-opacity': ['get', 'opacity'],
+        },
+      });
+    }
+
     if (!this.map.getSource(TRAFFIC_PINGS_SOURCE_ID)) {
       this.map.addSource(TRAFFIC_PINGS_SOURCE_ID, {
         type: 'geojson',
@@ -577,16 +623,24 @@ export class MirrorMapComponent implements OnDestroy {
     if (!coords) return;
 
     const isGaruda = hit.repo.toLowerCase().includes('garuda');
-    const color = isGaruda ? '#89dceb' : '#cba6f7';
+    const color = isGaruda ? GARUDA_COLOR : DEFAULT_PING_COLOR;
+
+    const targetLng = coords[0] + (Math.random() - 0.5) * 1.5;
+    const targetLat = coords[1] + (Math.random() - 0.5) * 1.5;
+    const deltaLng = 6.0 + Math.random() * 4.0;
+    const deltaLat = 8.0 + Math.random() * 5.0;
+    const startLng = targetLng - deltaLng;
+    const startLat = Math.min(84, targetLat + deltaLat);
+    const now = performance.now();
 
     this.activePings.push({
       id: hit.id,
-      lng: coords[0] + (Math.random() - 0.5) * 1.5,
-      lat: coords[1] + (Math.random() - 0.5) * 1.5,
-      radius: 4,
-      opacity: 0.9,
+      targetLng,
+      targetLat,
+      startLng,
+      startLat,
       color,
-      createdAt: performance.now(),
+      createdAt: now,
     });
 
     const targetMirror = this.mirrors().find(
@@ -600,20 +654,18 @@ export class MirrorMapComponent implements OnDestroy {
     if (targetPos) {
       this.activeArcs.push({
         id: hit.id,
-        source: coords,
+        source: [targetLng, targetLat],
         target: targetPos,
-        progress: 0,
-        opacity: 0.9,
         color,
-        createdAt: performance.now(),
+        createdAt: now + METEOR_DURATION_MS,
       });
     }
 
-    if (this.activePings.length > 50) {
-      this.activePings.splice(0, this.activePings.length - 50);
+    if (this.activePings.length > MAX_ACTIVE_PINGS) {
+      this.activePings.splice(0, this.activePings.length - MAX_ACTIVE_PINGS);
     }
-    if (this.activeArcs.length > 30) {
-      this.activeArcs.splice(0, this.activeArcs.length - 30);
+    if (this.activeArcs.length > MAX_ACTIVE_ARCS) {
+      this.activeArcs.splice(0, this.activeArcs.length - MAX_ACTIVE_ARCS);
     }
   }
 
@@ -639,6 +691,8 @@ export class MirrorMapComponent implements OnDestroy {
     if (!showHits) {
       if (this.activePings.length > 0) this.activePings = [];
       if (this.activeArcs.length > 0) this.activeArcs = [];
+      const meteorSource = this.map.getSource(TRAFFIC_METEORS_SOURCE_ID) as GeoJSONSource | undefined;
+      meteorSource?.setData({ type: 'FeatureCollection', features: [] });
       const pingSource = this.map.getSource(TRAFFIC_PINGS_SOURCE_ID) as GeoJSONSource | undefined;
       pingSource?.setData({ type: 'FeatureCollection', features: [] });
       const arcSource = this.map.getSource(TRAFFIC_ARCS_SOURCE_ID) as GeoJSONSource | undefined;
@@ -647,51 +701,147 @@ export class MirrorMapComponent implements OnDestroy {
     }
 
     const now = performance.now();
-    const pingDuration = 1800; // ms
-    const arcDuration = 1200; // ms
-
+    const meteorFeatures: GeoJSON.Feature[] = [];
     const pingFeatures: GeoJSON.Feature[] = [];
+
     this.activePings = this.activePings.filter((ping) => {
       const elapsed = now - ping.createdAt;
-      if (elapsed > pingDuration) return false;
+      if (elapsed > TOTAL_PING_DURATION_MS) return false;
 
-      const factor = elapsed / pingDuration;
-      const rippleRadius = 8 + factor * 60;
-      const ringOpacity = Math.max(0, 1 - factor);
+      if (elapsed < METEOR_DURATION_MS) {
+        // Phase 1: Meteor entry streak descending into the country
+        const t = elapsed / METEOR_DURATION_MS;
+        const eased = t * t; // accelerate downward under gravity
 
-      pingFeatures.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [ping.lng, ping.lat],
-        },
-        properties: {
-          radius: 7,
-          color: '#f38ba8',
-          opacity: 0.95,
-          strokeWidth: 2,
-          strokeColor: '#eba0ac',
-          strokeOpacity: 1.0,
-        },
-      });
+        const headLng = ping.startLng + (ping.targetLng - ping.startLng) * eased;
+        const headLat = ping.startLat + (ping.targetLat - ping.startLat) * eased;
 
-      pingFeatures.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [ping.lng, ping.lat],
-        },
-        properties: {
-          radius: rippleRadius,
-          color: '#f38ba8',
-          opacity: ringOpacity * 0.45,
-          strokeWidth: 2.5,
-          strokeColor: '#f38ba8',
-          strokeOpacity: ringOpacity * 0.9,
-        },
-      });
+        const tailT = Math.max(0, eased - 0.35);
+        const tailLng = ping.startLng + (ping.targetLng - ping.startLng) * tailT;
+        const tailLat = ping.startLat + (ping.targetLat - ping.startLat) * tailT;
+
+        const isGaruda = ping.color === GARUDA_COLOR;
+        const streakColor = isGaruda ? GARUDA_COLOR : FIREBALL_TRAIL_COLOR;
+
+        meteorFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [tailLng, tailLat],
+              [headLng, headLat],
+            ],
+          },
+          properties: {
+            color: streakColor,
+            width: 2.5 + eased * 2.5,
+            opacity: Math.min(1, t * 2.2),
+          },
+        });
+
+        // Glowing incandescent meteor head
+        pingFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [headLng, headLat],
+          },
+          properties: {
+            radius: METEOR_HEAD_RADIUS_BASE + eased * METEOR_HEAD_RADIUS_SCALE,
+            color: isGaruda ? GARUDA_COLOR : FIREBALL_CORE_COLOR,
+            opacity: 0.95,
+            strokeWidth: 2,
+            strokeColor: FIREBALL_TRAIL_COLOR,
+            strokeOpacity: 0.85,
+          },
+        });
+      } else {
+        // Phase 2: Meteor impact, flash & shockwaves
+        const impactElapsed = elapsed - METEOR_DURATION_MS;
+        const factor = impactElapsed / IMPACT_DURATION_MS;
+        const invFactor = Math.max(0, 1 - factor);
+
+        // Flash core during immediate impact
+        if (impactElapsed < IMPACT_FLASH_DURATION_MS) {
+          const flashFactor = 1 - impactElapsed / IMPACT_FLASH_DURATION_MS;
+          pingFeatures.push({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [ping.targetLng, ping.targetLat],
+            },
+            properties: {
+              radius: IMPACT_FLASH_RADIUS_BASE + flashFactor * IMPACT_FLASH_RADIUS_SCALE,
+              color: IMPACT_FLASH_COLOR,
+              opacity: flashFactor * 0.95,
+              strokeWidth: 3 * flashFactor,
+              strokeColor: FIREBALL_CORE_COLOR,
+              strokeOpacity: flashFactor * 0.9,
+            },
+          });
+        }
+
+        // Primary shockwave
+        const shockRadius = 6 + Math.sqrt(factor) * SHOCKWAVE_MAX_RADIUS;
+        const strokeColor = ping.color === GARUDA_COLOR ? GARUDA_COLOR : IMPACT_STROKE_COLOR;
+
+        pingFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [ping.targetLng, ping.targetLat],
+          },
+          properties: {
+            radius: shockRadius,
+            color: ping.color,
+            opacity: invFactor * 0.25,
+            strokeWidth: 2.5,
+            strokeColor,
+            strokeOpacity: invFactor * 0.85,
+          },
+        });
+
+        // Secondary crater wave
+        const waveRadius = 4 + Math.pow(factor, 0.7) * CRATER_WAVE_MAX_RADIUS;
+        pingFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [ping.targetLng, ping.targetLat],
+          },
+          properties: {
+            radius: waveRadius,
+            color: FIREBALL_TRAIL_COLOR,
+            opacity: 0,
+            strokeWidth: 1.5,
+            strokeColor: FIREBALL_TRAIL_COLOR,
+            strokeOpacity: invFactor * 0.45,
+          },
+        });
+
+        // Residual impact ember
+        pingFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [ping.targetLng, ping.targetLat],
+          },
+          properties: {
+            radius: 4,
+            color: ping.color === GARUDA_COLOR ? GARUDA_COLOR : IMPACT_STROKE_COLOR,
+            opacity: invFactor * 0.95,
+            strokeWidth: 1.5,
+            strokeColor: IMPACT_ACCENT_COLOR,
+            strokeOpacity: invFactor * 0.95,
+          },
+        });
+      }
+
       return true;
     });
+
+    const meteorSource = this.map.getSource(TRAFFIC_METEORS_SOURCE_ID) as GeoJSONSource | undefined;
+    meteorSource?.setData({ type: 'FeatureCollection', features: meteorFeatures });
 
     const pingSource = this.map.getSource(TRAFFIC_PINGS_SOURCE_ID) as GeoJSONSource | undefined;
     pingSource?.setData({ type: 'FeatureCollection', features: pingFeatures });
@@ -699,20 +849,20 @@ export class MirrorMapComponent implements OnDestroy {
     const arcFeatures: GeoJSON.Feature[] = [];
     this.activeArcs = this.activeArcs.filter((arc) => {
       const elapsed = now - arc.createdAt;
-      if (elapsed > arcDuration) return false;
+      if (elapsed > ARC_DURATION_MS) return false;
+      if (elapsed < 0) return true; // waiting for meteor strike before shooting arc
 
-      const progress = elapsed / arcDuration;
+      const progress = elapsed / ARC_DURATION_MS;
       const opacity = Math.max(0, 1 - progress);
 
       const points: [number, number][] = [];
-      const numSteps = 15;
-      const maxStep = Math.min(numSteps, Math.ceil(progress * numSteps) + 1);
+      const maxStep = Math.min(ARC_STEP_COUNT, Math.ceil(progress * ARC_STEP_COUNT) + 1);
 
       for (let s = 0; s <= maxStep; s++) {
-        const t = s / numSteps;
+        const t = s / ARC_STEP_COUNT;
         const lng = arc.source[0] + (arc.target[0] - arc.source[0]) * t;
         // parabolic curve height offset
-        const latArcOffset = Math.sin(t * Math.PI) * 12;
+        const latArcOffset = Math.sin(t * Math.PI) * ARC_HEIGHT_OFFSET;
         const lat = arc.source[1] + (arc.target[1] - arc.source[1]) * t + latArcOffset;
         points.push([lng, lat]);
       }

@@ -18,7 +18,9 @@ import { MessageToastService } from '@garudalinux/core';
 import { lastValueFrom, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { backendErrorMessage } from '../api-errors';
-import { resourceSignal, resourceValue } from '../functions';
+import { debouncedSignal, resourceSignal, resourceValue } from '../functions';
+
+const SEARCH_DEBOUNCE_MS = 400;
 
 export interface PackageFormData {
   pkgname: string;
@@ -122,12 +124,20 @@ export class AdminService {
 
   readonly activeOptions = ACTIVE_OPTIONS;
 
+  private readonly debouncedPackageQuery = debouncedSignal(this.packageQuery, SEARCH_DEBOUNCE_MS);
+  private readonly debouncedArchQuery = debouncedSignal(this.archQuery, SEARCH_DEBOUNCE_MS);
+  private readonly debouncedBuilderQuery = debouncedSignal(this.builderQuery, SEARCH_DEBOUNCE_MS);
+  private readonly debouncedMrActionQuery = debouncedSignal(this.mrActionQuery, SEARCH_DEBOUNCE_MS);
+  private readonly debouncedPipelineTriggerQuery = debouncedSignal(this.pipelineTriggerQuery, SEARCH_DEBOUNCE_MS);
+  private readonly debouncedPackageBumpQuery = debouncedSignal(this.packageBumpQuery, SEARCH_DEBOUNCE_MS);
+  private readonly debouncedElfAnalysisQuery = debouncedSignal(this.elfAnalysisQuery, SEARCH_DEBOUNCE_MS);
+
   private readonly packagesResource = httpResource<Paginated<PackageDto>>(() => ({
     url: `${this.backendUrl}/admin/packages`,
     params: {
       page: String(this.packagePage()),
       perPage: String(this.packagePerPage()),
-      q: this.packageQuery(),
+      q: this.debouncedPackageQuery(),
       ...(this.packageRepoFilter() === undefined ? {} : { repoId: String(this.packageRepoFilter()) }),
       ...(this.packageActiveFilter() === undefined ? {} : { active: this.packageActiveFilter() }),
     },
@@ -138,7 +148,7 @@ export class AdminService {
     params: {
       page: String(this.archPage()),
       perPage: String(this.archPerPage()),
-      q: this.archQuery(),
+      q: this.debouncedArchQuery(),
     },
   }));
 
@@ -149,7 +159,7 @@ export class AdminService {
     params: {
       page: String(this.builderPage()),
       perPage: String(this.builderPerPage()),
-      q: this.builderQuery(),
+      q: this.debouncedBuilderQuery(),
       ...(this.builderActiveFilter() === undefined ? {} : { active: this.builderActiveFilter() }),
     },
   }));
@@ -159,7 +169,7 @@ export class AdminService {
     params: {
       page: String(this.mrActionPage()),
       perPage: String(this.mrActionPerPage()),
-      q: this.mrActionQuery(),
+      q: this.debouncedMrActionQuery(),
       ...(this.mrActionActionFilter() === undefined ? {} : { action: this.mrActionActionFilter() }),
     },
   }));
@@ -169,7 +179,7 @@ export class AdminService {
     params: {
       page: String(this.pipelineTriggerPage()),
       perPage: String(this.pipelineTriggerPerPage()),
-      q: this.pipelineTriggerQuery(),
+      q: this.debouncedPipelineTriggerQuery(),
       ...(this.pipelineTriggerOperationFilter() === undefined
         ? {}
         : { operation: this.pipelineTriggerOperationFilter() }),
@@ -181,7 +191,7 @@ export class AdminService {
     params: {
       page: String(this.packageBumpPage()),
       perPage: String(this.packageBumpPerPage()),
-      q: this.packageBumpQuery(),
+      q: this.debouncedPackageBumpQuery(),
       ...(this.packageBumpTypeFilter() === undefined ? {} : { bumpType: String(this.packageBumpTypeFilter()) }),
       ...(this.packageBumpSourceFilter() === undefined ? {} : { triggerFrom: String(this.packageBumpSourceFilter()) }),
     },
@@ -192,7 +202,7 @@ export class AdminService {
     params: {
       page: String(this.elfAnalysisPage()),
       perPage: String(this.elfAnalysisPerPage()),
-      q: this.elfAnalysisQuery(),
+      q: this.debouncedElfAnalysisQuery(),
       ...(this.elfAnalysisPkgTypeFilter() === undefined ? {} : { pkgType: this.elfAnalysisPkgTypeFilter() }),
       ...(this.elfAnalysisBrokenFilter() === undefined ? {} : { broken: String(this.elfAnalysisBrokenFilter()) }),
     },

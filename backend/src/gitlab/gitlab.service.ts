@@ -46,6 +46,7 @@ import { VirustotalService } from '../diff-scan/virustotal.service';
 import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { applyPackageBump } from '../repo-manager/bump/bump-config';
+import { cachedResult } from '../utils/cache';
 import { MAX_DAYS_WINDOW } from '../utils/constants';
 import {
   clampInt,
@@ -73,6 +74,9 @@ const JOB_TRACE_POLL_MS = 2000;
 const MAX_VERDICT_NOTE_FINDINGS = 5;
 const DIFF_FETCH_CONCURRENCY = 5;
 const CACHE_MRS_TTL = 30 * 60 * 1000;
+const REVIEW_STATS_CACHE_TTL_MS = 60_000;
+const PIPELINE_JOBS_CACHE_TTL_MS = 30_000;
+const PIPELINE_SCHEDULES_CACHE_TTL_MS = 5 * 60_000;
 const MAX_CACHED_PIPELINES = 40;
 const GITLAB_API_TIMEOUT_MS = 10_000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -81,6 +85,20 @@ interface CachedMrData {
   updatedAt: string;
   diffs: MergeRequestDiffSchema[];
   scanFindings: DiffScanFinding[];
+}
+
+interface JobTraceClient {
+  lastOffset: number;
+  next: (message: SseMessage<GitlabLogChunk>) => void;
+  complete: () => void;
+  error: (err: unknown) => void;
+}
+
+interface JobTraceEntry {
+  clients: Set<JobTraceClient>;
+  timer?: ReturnType<typeof setInterval>;
+  trace: string;
+  status?: string;
 }
 
 function toLabelStrings(labels: MergeRequestSchema['labels']): string[] {
@@ -193,6 +211,8 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     @InjectRepository(Package)
     private readonly packageRepository: Repository<Package>,
   ) {}
+
+  private readonly jobTraces = new Map<string, JobTraceEntry>();
 
   async onModuleInit(): Promise<void> {
     await this.restoreDiskCache().catch((err) =>
@@ -945,31 +965,45 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   }
 
   async getReviewStats(days?: number): Promise<{ username: string; reviews: number }[]> {
-    const rows = await this.reviewStatsBaseQuery(days)
-      .select('mr.userName', 'username')
-      .addSelect('COUNT(*)', 'reviews')
-      .groupBy('mr.userName')
-      .getRawMany();
-
-    return rows.map((row) => ({ username: String(row.username), reviews: Number(row.reviews) }));
+    const clampedDays = days === undefined ? 'all' : clampInt(days, 1, MAX_DAYS_WINDOW);
+    return cachedResult(
+      this.cacheManager,
+      `gitlab:review-stats:${clampedDays}`,
+      REVIEW_STATS_CACHE_TTL_MS,
+      async () => {
+        const rows = await this.reviewStatsBaseQuery(days)
+          .select('mr.userName', 'username')
+          .addSelect('COUNT(*)', 'reviews')
+          .groupBy('mr.userName')
+          .getRawMany();
+        return rows.map((row) => ({ username: String(row.username), reviews: Number(row.reviews) }));
+      },
+    );
   }
 
   async getReviewStatsOverTime(days?: number): Promise<{ date: string; username: string; reviews: number }[]> {
-    const dateExpr = `TO_CHAR(mr.createdAt AT TIME ZONE 'UTC', 'YYYY-MM-DD')`;
-    const rows = await this.reviewStatsBaseQuery(days)
-      .select(dateExpr, 'date')
-      .addSelect('mr.userName', 'username')
-      .addSelect('COUNT(*)', 'reviews')
-      .groupBy(dateExpr)
-      .addGroupBy('mr.userName')
-      .orderBy('date', 'ASC')
-      .getRawMany();
-
-    return rows.map((row) => ({
-      date: String(row.date),
-      username: String(row.username),
-      reviews: Number(row.reviews),
-    }));
+    const clampedDays = days === undefined ? 'all' : clampInt(days, 1, MAX_DAYS_WINDOW);
+    return cachedResult(
+      this.cacheManager,
+      `gitlab:review-stats-over-time:${clampedDays}`,
+      REVIEW_STATS_CACHE_TTL_MS,
+      async () => {
+        const dateExpr = `TO_CHAR(mr.createdAt AT TIME ZONE 'UTC', 'YYYY-MM-DD')`;
+        const rows = await this.reviewStatsBaseQuery(days)
+          .select(dateExpr, 'date')
+          .addSelect('mr.userName', 'username')
+          .addSelect('COUNT(*)', 'reviews')
+          .groupBy(dateExpr)
+          .addGroupBy('mr.userName')
+          .orderBy('date', 'ASC')
+          .getRawMany();
+        return rows.map((row) => ({
+          date: String(row.date),
+          username: String(row.username),
+          reviews: Number(row.reviews),
+        }));
+      },
+    );
   }
 
   /** Base query over recorded approval actions, optionally restricted to the last `days`. */
@@ -1071,12 +1105,14 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   }
 
   async listPipelineSchedules(): Promise<PipelineScheduleOption[]> {
-    const schedules = await this.api.PipelineSchedules.all(this.chaoticId, { perPage: 100 });
-    return schedules.map((schedule) => ({
-      id: schedule.id,
-      description: schedule.description ?? null,
-      active: schedule.active,
-    }));
+    return cachedResult(this.cacheManager, 'gitlab:schedules', PIPELINE_SCHEDULES_CACHE_TTL_MS, async () => {
+      const schedules = await this.api.PipelineSchedules.all(this.chaoticId, { perPage: 100 });
+      return schedules.map((schedule) => ({
+        id: schedule.id,
+        description: schedule.description ?? null,
+        active: schedule.active,
+      }));
+    });
   }
 
   async getDecryptedToken(repoName: string): Promise<string> {
@@ -1441,18 +1477,25 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   }
 
   async listPipelineJobs(pipelineId: number): Promise<GitlabJob[]> {
-    const jobs = await this.api.Jobs.all(this.chaoticId, { pipelineId });
-    return jobs.map((job) => ({
-      id: job.id,
-      name: job.name,
-      stage: job.stage,
-      status: job.status,
-      ref: job.ref,
-      webUrl: job.web_url,
-      startedAt: job.started_at,
-      finishedAt: job.finished_at,
-      duration: job.duration,
-    }));
+    return cachedResult(
+      this.cacheManager,
+      `gitlab:pipeline-jobs:${pipelineId}`,
+      PIPELINE_JOBS_CACHE_TTL_MS,
+      async () => {
+        const jobs = await this.api.Jobs.all(this.chaoticId, { pipelineId });
+        return jobs.map((job) => ({
+          id: job.id,
+          name: job.name,
+          stage: job.stage,
+          status: job.status,
+          ref: job.ref,
+          webUrl: job.web_url,
+          startedAt: job.started_at,
+          finishedAt: job.finished_at,
+          duration: job.duration,
+        }));
+      },
+    );
   }
 
   /**

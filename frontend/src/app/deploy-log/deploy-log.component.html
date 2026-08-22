@@ -115,6 +115,18 @@
         @if (columnVisibility.isVisible('deploy-log-table', 'duration')) {
           <th pSortableColumn="timeToEnd">Duration&nbsp;<p-sortIcon field="timeToEnd" /></th>
         }
+        @if (columnVisibility.isVisible('deploy-log-table', 'peakMemory')) {
+          <th pSortableColumn="peakMemory">Peak memory&nbsp;<p-sortIcon field="peakMemory" /></th>
+        }
+        @if (columnVisibility.isVisible('deploy-log-table', 'cpuTime')) {
+          <th pSortableColumn="cpuTime">CPU time&nbsp;<p-sortIcon field="cpuTime" /></th>
+        }
+        @if (columnVisibility.isVisible('deploy-log-table', 'diskIo')) {
+          <th pSortableColumn="diskIo">Disk I/O&nbsp;<p-sortIcon field="diskIo" /></th>
+        }
+        @if (columnVisibility.isVisible('deploy-log-table', 'networkIo')) {
+          <th pSortableColumn="networkIo">Network I/O&nbsp;<p-sortIcon field="networkIo" /></th>
+        }
         @if (columnVisibility.isVisible('deploy-log-table', 'timestamp')) {
           <th pSortableColumn="timestamp">
             <div class="flex items-center">Time of finish&nbsp;<p-sortIcon field="timestamp" /></div>
@@ -187,6 +199,26 @@
               <span class="ml-1 align-middle">{{ build.timeToEnd | duration }}</span>
             </td>
           }
+          @if (columnVisibility.isVisible('deploy-log-table', 'peakMemory')) {
+            <td>
+              <span class="ml-1 align-middle">{{ build.resourceStats?.peakMemoryBytes | bytes }}</span>
+            </td>
+          }
+          @if (columnVisibility.isVisible('deploy-log-table', 'cpuTime')) {
+            <td>
+              <span class="ml-1 align-middle">{{ build.resourceStats?.cpuTimeNs | cpuTime }}</span>
+            </td>
+          }
+          @if (columnVisibility.isVisible('deploy-log-table', 'diskIo')) {
+            <td>
+              <span class="ml-1 align-middle">{{ diskIoOf(build) | bytes }}</span>
+            </td>
+          }
+          @if (columnVisibility.isVisible('deploy-log-table', 'networkIo')) {
+            <td>
+              <span class="ml-1 align-middle">{{ networkIoOf(build) | bytes }}</span>
+            </td>
+          }
           @if (columnVisibility.isVisible('deploy-log-table', 'timestamp')) {
             <td>
               <span
@@ -216,7 +248,7 @@
     </ng-template>
     <ng-template #emptymessage>
       <tr>
-        <td colspan="8">No packages found.</td>
+        <td [attr.colspan]="deployColumns.length">No packages found.</td>
       </tr>
     </ng-template>
   </p-table>

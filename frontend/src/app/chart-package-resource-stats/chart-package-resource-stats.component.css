@@ -1,0 +1,6 @@
+p-chart,
+p-chart ::ng-deep canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

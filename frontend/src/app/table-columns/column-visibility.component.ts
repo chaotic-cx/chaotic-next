@@ -6,6 +6,7 @@ import { ColumnVisibilityService } from './column-visibility.service';
 export interface ColumnDef {
   key: string;
   label: string;
+  defaultVisible?: boolean;
 }
 
 @Component({
