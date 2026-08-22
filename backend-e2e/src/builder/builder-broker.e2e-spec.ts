@@ -6,7 +6,7 @@ import {
 } from '@chaotic-next/backend/builder/builder-database.service';
 import { Build, Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
 import type { BuildStatus, MoleculerBuildObject } from '@chaotic-next/backend/types/types';
-import type { ChaoticEvent } from '@chaotic-next/shared-lib';
+import type { BuildResourceStats, ChaoticEvent } from '@chaotic-next/shared-lib';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { type Context, ServiceBroker } from 'moleculer';
@@ -29,6 +29,22 @@ function buildEventPayload(overrides: Partial<MoleculerBuildObject>): MoleculerB
     status: 0,
     target_repo: 'garuda',
     timestamp: Date.now(),
+    ...overrides,
+  };
+}
+
+function buildResourceStats(overrides: Partial<BuildResourceStats> = {}): BuildResourceStats {
+  return {
+    avg_memory_bytes: 4_000_000_000,
+    cpu_time_ns: 3_600_000_000_000,
+    disk_read_bytes: 1_000_000_000,
+    disk_write_bytes: 5_000_000_000,
+    duration_ms: 600_000,
+    network_rx_bytes: 100_000_000,
+    network_tx_bytes: 300_000_000,
+    peak_memory_bytes: 6_000_000_000,
+    peak_pids: 400,
+    sample_count: 60,
     ...overrides,
   };
 }
@@ -234,6 +250,61 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       const yayRow = rows.find((r: { pkgname: string }) => r.pkgname === 'yay');
       expect(paruRow.buildClass).toBeNull();
       expect(yayRow.buildClass).toBe('7');
+    });
+
+    it('persists broadcast resource stats onto the build row', async () => {
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({
+            pkgname: 'linux-tkg',
+            resourceStats: {
+              avg_memory_bytes: 4_000_000_000,
+              cpu_time_ns: 3_600_000_000_000,
+              disk_read_bytes: 1_000_000_000,
+              disk_write_bytes: 5_000_000_000,
+              duration_ms: 600_000,
+              network_rx_bytes: 100_000_000,
+              network_tx_bytes: 300_000_000,
+              peak_memory_bytes: 6_000_000_000,
+              peak_pids: 400,
+              sample_count: 60,
+            },
+          }),
+        ),
+      );
+
+      const [row] = await dataSource.query(
+        `SELECT "resourceStatsAvgMemoryBytes" AS avg_memory, "resourceStatsPeakMemoryBytes" AS peak_memory,
+                "resourceStatsCpuTimeNs" AS cpu_time, "resourceStatsSampleCount" AS sample_count,
+                "resourceStatsDurationMs" AS duration_ms, "resourceStatsPeakPids" AS peak_pids
+         FROM build`,
+      );
+      expect(row.avg_memory).toBe('4000000000');
+      expect(row.peak_memory).toBe('6000000000');
+      expect(row.cpu_time).toBe('3600000000000');
+      expect(row.sample_count).toBe(60);
+      expect(row.duration_ms).toBe(600000);
+      expect(row.peak_pids).toBe(400);
+    });
+
+    it('leaves resource stats empty when the event carries none', async () => {
+      await service.logBuild(makeCtx('builds.success', buildEventPayload({ pkgname: 'nano' })));
+
+      const [row] = await dataSource.query(`SELECT "resourceStatsSampleCount" AS sample_count FROM build`);
+      expect(row.sample_count).toBeNull();
+    });
+
+    it('discards resource stats without a usable sample count', async () => {
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({ pkgname: 'nano', resourceStats: buildResourceStats({ sample_count: Number.NaN }) }),
+        ),
+      );
+
+      const [row] = await dataSource.query(`SELECT "resourceStatsSampleCount" AS sample_count FROM build`);
+      expect(row.sample_count).toBeNull();
     });
   });
 

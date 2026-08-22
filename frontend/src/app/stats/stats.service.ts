@@ -7,6 +7,7 @@ export const STATS_TABS = [
   'downloads',
   'update-review',
   'builder-stats',
+  'resource-usage',
   'additions',
   'insights',
 ] as const;

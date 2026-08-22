@@ -1,4 +1,4 @@
-import { ChaoticEvent, MoleculerCurrentQueueObject } from '@chaotic-next/shared-lib';
+import { type BuildResourceStats, ChaoticEvent, MoleculerCurrentQueueObject } from '@chaotic-next/shared-lib';
 import { type Context, Service, type ServiceBroker } from 'moleculer';
 import { Subject } from 'rxjs';
 import { GitlabService } from '../gitlab/gitlab.service';
@@ -6,7 +6,14 @@ import { GitlabStatusEvent } from '../gitlab/interfaces';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { BuilderDbConnections, BuildStatus, MoleculerBuildObject, QueuePromotedEvent } from '../types/types';
 import { errorMessage } from '../utils/functions';
-import { Build, getOrCreateBuilder, Package, getOrCreatePackage, getOrCreateRepo } from './builder.entity';
+import {
+  Build,
+  BuildResourceUsage,
+  getOrCreateBuilder,
+  getOrCreatePackage,
+  getOrCreateRepo,
+  Package,
+} from './builder.entity';
 import { moleculerConfigCommonService } from './moleculer.config';
 
 export interface BuilderDatabaseServiceOptions {
@@ -18,6 +25,27 @@ export interface BuilderDatabaseServiceOptions {
 }
 
 const BUILD_OUTCOME_EVENTS = new Set(['builds.success', 'builds.failed', 'builds.cancelled', 'builds.canceling']);
+
+function finiteOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function resourceUsageFromStats(stats: BuildResourceStats): BuildResourceUsage | undefined {
+  const sampleCount = finiteOrNull(stats.sample_count);
+  if (sampleCount === null) return undefined;
+  const usage = new BuildResourceUsage();
+  usage.avgMemoryBytes = finiteOrNull(stats.avg_memory_bytes);
+  usage.cpuTimeNs = finiteOrNull(stats.cpu_time_ns);
+  usage.diskReadBytes = finiteOrNull(stats.disk_read_bytes);
+  usage.diskWriteBytes = finiteOrNull(stats.disk_write_bytes);
+  usage.durationMs = finiteOrNull(stats.duration_ms);
+  usage.networkRxBytes = finiteOrNull(stats.network_rx_bytes);
+  usage.networkTxBytes = finiteOrNull(stats.network_tx_bytes);
+  usage.peakMemoryBytes = finiteOrNull(stats.peak_memory_bytes);
+  usage.peakPids = finiteOrNull(stats.peak_pids);
+  usage.sampleCount = sampleCount;
+  return usage;
+}
 
 /**
  * Moleculer service writing build events (received over the broker) to the
@@ -123,6 +151,10 @@ export class BuilderDatabaseService extends Service {
       status: params.status,
       replaced: params.replaced,
     };
+
+    if (params.resourceStats) {
+      build.resourceStats = resourceUsageFromStats(params.resourceStats);
+    }
 
     // Update the chaotic versions as they changed with new successful builds
     if (params.status === BuildStatus.SUCCESS) {

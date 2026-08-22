@@ -21,6 +21,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
+import { ChartPackageResourceStatsComponent } from '../chart-package-resource-stats/chart-package-resource-stats.component';
 import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
@@ -40,6 +41,7 @@ import { StatsService } from '../stats/stats.service';
     SearchSuggestionsComponent,
     ChartPackageBuildStatsComponent,
     ChartPackageAverageBuildTimeComponent,
+    ChartPackageResourceStatsComponent,
     PackageTriggerSourcesComponent,
   ],
   templateUrl: './search-package.component.html',

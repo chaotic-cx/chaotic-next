@@ -11,6 +11,7 @@ import {
 import { Subject } from 'rxjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
+import { type ResourceMetricKey } from './chart-resource-metrics';
 import { isChaoticEvent, type SeoTags, updateSeoTags } from './functions';
 
 export interface PackagesQueryParams {
@@ -156,6 +157,16 @@ export class AppService {
 
   getHeavyPackagesResourceRequest(amount: number, days: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/stats/heavy-packages/${amount}/${days}` };
+  }
+
+  getHeavyPackagesByResourceRequest(metric: ResourceMetricKey, amount: number, days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/stats/heavy-packages/resource/${metric}/${amount}/${days}` };
+  }
+
+  getPackageResourceStatsResourceRequest(pkgname: string, days: number): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.backendUrl}/builder/stats/resource/package/${encodeURIComponent(pkgname)}/${days}`,
+    };
   }
 
   getThroughputResourceRequest(days: number): HttpResourceRequest {

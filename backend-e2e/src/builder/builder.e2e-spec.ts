@@ -282,6 +282,26 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       const body = await res.json();
       expect(body.total).toBe(1);
     });
+
+    it('sorts by resource metric with unsampled builds last', async () => {
+      const light = await e2e.seedPackage({ pkgname: 'nano' });
+      const hungry = await e2e.seedPackage({ pkgname: 'linux-tkg' });
+      const unsampled = await e2e.seedPackage({ pkgname: 'bash' });
+      await e2e.seedBuild({ pkgbase: light, resourceStats: { peakMemoryBytes: 50_000_000, sampleCount: 5 } });
+
+      // Inserted last on purpose: id order would put it first, so the sort must win.
+      await e2e.seedBuild({ pkgbase: hungry, resourceStats: { peakMemoryBytes: 8_000_000_000, sampleCount: 10 } });
+      await e2e.seedBuild({ pkgbase: unsampled });
+
+      const res = await e2e.inject<Paginated<{ resourceStats: { peakMemoryBytes: string | null } | null }>>({
+        method: 'GET',
+        url: '/builder/builds?sort=peakMemory&order=DESC',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body.items.map((b) => b.resourceStats?.peakMemoryBytes ?? null)).toEqual(['8000000000', '50000000', null]);
+    });
   });
 
   describe('GET /builder/latest', () => {
@@ -597,6 +617,114 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       expect(body).toHaveLength(2);
       expect(body[0].pkgname).toBe('linux-tkg');
       expect(body[1].pkgname).toBe('nano');
+    });
+  });
+
+  describe('GET /builder/stats/resource/package/:pkgname/:days', () => {
+    it('returns daily resource usage aggregates per build', async () => {
+      const pkg = await e2e.seedPackage({ pkgname: 'linux-tkg' });
+      await e2e.seedBuild({
+        pkgbase: pkg,
+        resourceStats: {
+          avgMemoryBytes: 4_000_000_000,
+          peakMemoryBytes: 6_000_000_000,
+          cpuTimeNs: 3_600_000_000_000,
+          diskReadBytes: 1_000_000_000,
+          diskWriteBytes: 5_000_000_000,
+          networkRxBytes: 100_000_000,
+          networkTxBytes: 300_000_000,
+          durationMs: 600_000,
+          peakPids: 400,
+          sampleCount: 60,
+        },
+      });
+      await e2e.seedBuild({ pkgbase: pkg });
+      await e2e.seedBuild({
+        pkgbase: pkg,
+        resourceStats: { avgMemoryBytes: 2_000_000_000, peakMemoryBytes: 8_000_000_000, sampleCount: 30 },
+      });
+
+      const res = await e2e.inject<
+        { day: string; avg_memory_bytes: string; peak_memory_bytes: string; samples: string }[]
+      >({ method: 'GET', url: '/builder/stats/resource/package/linux-tkg/30' });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(1);
+      // AVG over sampled builds only; the unsampled build must not drag values down.
+      expect(Number(body[0].avg_memory_bytes)).toBe(3_000_000_000);
+      expect(Number(body[0].peak_memory_bytes)).toBe(8_000_000_000);
+      expect(Number(body[0].samples)).toBe(2);
+    });
+
+    it('404s for unknown packages', async () => {
+      const res = await e2e.inject<unknown>({ method: 'GET', url: '/builder/stats/resource/package/nope/30' });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe('GET /builder/stats/heavy-packages/resource/:metric/:amount/:days', () => {
+    it('ranks packages by the requested metric', async () => {
+      const hungry = await e2e.seedPackage({ pkgname: 'linux-tkg' });
+      const light = await e2e.seedPackage({ pkgname: 'nano' });
+      await e2e.seedBuild({
+        pkgbase: hungry,
+        resourceStats: {
+          peakMemoryBytes: 8_000_000_000,
+          cpuTimeNs: 1_000_000_000_000,
+          diskReadBytes: 4_000_000_000,
+          diskWriteBytes: 6_000_000_000,
+          networkRxBytes: 500_000_000,
+          networkTxBytes: 500_000_000,
+          sampleCount: 120,
+        },
+      });
+      await e2e.seedBuild({
+        pkgbase: light,
+        resourceStats: {
+          peakMemoryBytes: 50_000_000,
+          cpuTimeNs: 10_000_000_000,
+          diskReadBytes: 1_000_000,
+          diskWriteBytes: 1_000_000,
+          networkRxBytes: 10_000,
+          networkTxBytes: 10_000,
+          sampleCount: 10,
+        },
+      });
+
+      const memoryRes = await e2e.inject<{ pkgname: string; average: string }[]>({
+        method: 'GET',
+        url: '/builder/stats/heavy-packages/resource/memory/10/30',
+      });
+      expect(memoryRes.statusCode).toBe(200);
+      expect((await memoryRes.json())[0].pkgname).toBe('linux-tkg');
+
+      const diskRes = await e2e.inject<{ pkgname: string; average: string }[]>({
+        method: 'GET',
+        url: '/builder/stats/heavy-packages/resource/disk/10/30',
+      });
+      expect(diskRes.statusCode).toBe(200);
+      expect(Number((await diskRes.json())[0].average)).toBe(10_000_000_000);
+    });
+
+    it('rejects unknown metrics', async () => {
+      const res = await e2e.inject<unknown>({
+        method: 'GET',
+        url: '/builder/stats/heavy-packages/resource/bogus/10/30',
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('ignores builds without sampling', async () => {
+      await e2e.seedBuild({});
+
+      const res = await e2e.inject<unknown[]>({
+        method: 'GET',
+        url: '/builder/stats/heavy-packages/resource/cpu/10/30',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([]);
     });
   });
 

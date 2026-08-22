@@ -3,7 +3,6 @@ import { RepoStatus } from '@chaotic-next/shared-lib';
 import { Logger } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import { Mutex } from 'async-mutex';
-import { BuildStatus } from '../types/types';
 import {
   Column,
   CreateDateColumn,
@@ -19,6 +18,7 @@ import {
   type Repository,
   type UpdateResult,
 } from 'typeorm';
+import { BuildStatus } from '../types/types';
 
 const moduleLogger = new Logger('BuilderEntity');
 
@@ -152,6 +152,48 @@ export class Package {
   repo!: Repo;
 }
 
+export class BuildResourceUsage {
+  @ApiProperty({ description: 'Mean of all sampled memory usage values in bytes' })
+  @Column({ name: 'resourceStatsAvgMemoryBytes', type: 'bigint', nullable: true })
+  avgMemoryBytes!: number | null;
+
+  @ApiProperty({ description: 'Total CPU time consumed by the container in nanoseconds' })
+  @Column({ name: 'resourceStatsCpuTimeNs', type: 'bigint', nullable: true })
+  cpuTimeNs!: number | null;
+
+  @ApiProperty({ description: 'Total bytes read from block devices by the container' })
+  @Column({ name: 'resourceStatsDiskReadBytes', type: 'bigint', nullable: true })
+  diskReadBytes!: number | null;
+
+  @ApiProperty({ description: 'Total bytes written to block devices by the container' })
+  @Column({ name: 'resourceStatsDiskWriteBytes', type: 'bigint', nullable: true })
+  diskWriteBytes!: number | null;
+
+  @ApiProperty({ description: 'How long the build container was running, in milliseconds' })
+  @Column({ name: 'resourceStatsDurationMs', type: 'int', nullable: true })
+  durationMs!: number | null;
+
+  @ApiProperty({ description: 'Total bytes received over all network interfaces during the build' })
+  @Column({ name: 'resourceStatsNetworkRxBytes', type: 'bigint', nullable: true })
+  networkRxBytes!: number | null;
+
+  @ApiProperty({ description: 'Total bytes sent over all network interfaces during the build' })
+  @Column({ name: 'resourceStatsNetworkTxBytes', type: 'bigint', nullable: true })
+  networkTxBytes!: number | null;
+
+  @ApiProperty({ description: 'Highest observed memory usage in bytes' })
+  @Column({ name: 'resourceStatsPeakMemoryBytes', type: 'bigint', nullable: true })
+  peakMemoryBytes!: number | null;
+
+  @ApiProperty({ description: 'Highest number of processes observed inside the container' })
+  @Column({ name: 'resourceStatsPeakPids', type: 'int', nullable: true })
+  peakPids!: number | null;
+
+  @ApiProperty({ description: 'How many samples the aggregation is based on' })
+  @Column({ name: 'resourceStatsSampleCount', type: 'int', nullable: true })
+  sampleCount!: number | null;
+}
+
 @Entity()
 @Index('IDX_build_pkgbaseId', ['pkgbase'])
 @Index('IDX_build_builderId', ['builder'])
@@ -206,6 +248,14 @@ export class Build {
   @ApiProperty({ description: 'Whether the build was replaced by a newer one' })
   @Column({ type: 'boolean', nullable: true })
   replaced!: boolean;
+
+  @ApiProperty({
+    description: 'Aggregated container resource usage of the build, all fields null when it was never sampled',
+    type: BuildResourceUsage,
+    nullable: true,
+  })
+  @Column(() => BuildResourceUsage, { prefix: false })
+  resourceStats!: BuildResourceUsage;
 }
 
 /**

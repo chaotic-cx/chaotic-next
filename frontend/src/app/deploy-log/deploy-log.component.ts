@@ -16,6 +16,8 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { castTo, packageLogRouteFromUrl } from '../functions';
+import { BytesPipe } from '../pipes/bytes.pipe';
+import { CpuTimePipe } from '../pipes/cpu-time.pipe';
 import { DurationPipe } from '../pipes/duration.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
@@ -34,6 +36,8 @@ import { DeployLogService } from './deploy-log.service';
     InputText,
     Select,
     DurationPipe,
+    BytesPipe,
+    CpuTimePipe,
     RelativeTimePipe,
     TitleComponent,
     FormsModule,
@@ -74,6 +78,12 @@ export class DeployLogComponent {
     { key: 'outcome', label: 'Outcome' },
     { key: 'logUrl', label: 'Log URL' },
     { key: 'duration', label: 'Duration' },
+    // Resource usage columns stay hidden unless explicitly enabled; most
+    // builds predate sampling and would only show "n/a".
+    { key: 'peakMemory', label: 'Peak memory', defaultVisible: false },
+    { key: 'cpuTime', label: 'CPU time', defaultVisible: false },
+    { key: 'diskIo', label: 'Disk I/O', defaultVisible: false },
+    { key: 'networkIo', label: 'Network I/O', defaultVisible: false },
     { key: 'timestamp', label: 'Time of finish' },
     { key: 'actions', label: 'Details' },
   ];
@@ -84,16 +94,7 @@ export class DeployLogComponent {
   });
 
   constructor() {
-    this.columnVisibility.register('deploy-log-table', [
-      'pkgname',
-      'builder',
-      'repo',
-      'outcome',
-      'logUrl',
-      'duration',
-      'timestamp',
-      'actions',
-    ]);
+    this.columnVisibility.register('deploy-log-table', this.deployColumns);
     this.appService.chaoticEvent
       .pipe(
         filter((event) => event.type === 'build'),
@@ -127,6 +128,20 @@ export class DeployLogComponent {
   }
 
   readonly typed = castTo<Build>;
+
+  /** Combined disk I/O of a build; null when the build was never sampled. */
+  protected diskIoOf(build: Build): number | null {
+    const stats = build.resourceStats;
+    if (!stats || (stats.diskReadBytes == null && stats.diskWriteBytes == null)) return null;
+    return Number(stats.diskReadBytes ?? 0) + Number(stats.diskWriteBytes ?? 0);
+  }
+
+  /** Combined network I/O of a build; null when the build was never sampled. */
+  protected networkIoOf(build: Build): number | null {
+    const stats = build.resourceStats;
+    if (!stats || (stats.networkRxBytes == null && stats.networkTxBytes == null)) return null;
+    return Number(stats.networkRxBytes ?? 0) + Number(stats.networkTxBytes ?? 0);
+  }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
     this.deployLogService.setPage(event.first ?? 0, event.rows ?? 25);

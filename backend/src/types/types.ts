@@ -1,4 +1,4 @@
-import { type BuildClass, BuildStatus } from '@chaotic-next/shared-lib';
+import { type BuildClass, type BuildResourceStats, BuildStatus } from '@chaotic-next/shared-lib';
 import type { Repository } from 'typeorm';
 import type { Build, Builder, Package, Repo } from '../builder/builder.entity';
 
@@ -13,6 +13,7 @@ export interface MoleculerBuildObject {
   logUrl?: string;
   pkgname: string;
   replaced: boolean;
+  resourceStats?: BuildResourceStats;
   status?: BuildStatus;
   target_repo: string;
   timestamp: number;

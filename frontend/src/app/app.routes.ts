@@ -64,6 +64,11 @@ export const routes: Routes = [
           import('./stats/pages/stats-builder-stats-page.component').then((c) => c.StatsBuilderStatsPageComponent),
       },
       {
+        path: 'resource-usage',
+        loadComponent: () =>
+          import('./stats/pages/stats-resource-usage-page.component').then((c) => c.StatsResourceUsagePageComponent),
+      },
+      {
         path: 'additions',
         loadComponent: () =>
           import('./stats/pages/stats-additions-page.component').then((c) => c.StatsAdditionsPageComponent),

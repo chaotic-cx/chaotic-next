@@ -78,7 +78,10 @@ export class GetBuildsQueryDto {
   @IsString()
   q?: string;
 
-  @ApiPropertyOptional({ description: 'Sort field (id, timestamp, timeToEnd, pkgname, builder, repo, status)' })
+  @ApiPropertyOptional({
+    description:
+      'Sort field (id, timestamp, timeToEnd, pkgname, builder, repo, status, peakMemory, cpuTime, diskIo, networkIo)',
+  })
   @IsOptional()
   @IsString()
   sort?: string;
@@ -221,6 +224,36 @@ export class HeavyPackageDto {
   @ApiProperty({ description: 'Average build time (seconds)' })
   @IsString()
   average!: string;
+}
+
+export class PackageResourceDayDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Average sampled memory usage per build (bytes)' })
+  @IsString()
+  avg_memory_bytes!: string;
+
+  @ApiProperty({ description: 'Highest peak memory usage of a single build that day (bytes)' })
+  @IsString()
+  peak_memory_bytes!: string;
+
+  @ApiProperty({ description: 'Average CPU time consumed per build (nanoseconds)' })
+  @IsString()
+  cpu_time_ns!: string;
+
+  @ApiProperty({ description: 'Average bytes read from and written to block devices per build' })
+  @IsString()
+  disk_io_bytes!: string;
+
+  @ApiProperty({ description: 'Average bytes received and sent over the network per build' })
+  @IsString()
+  network_io_bytes!: string;
+
+  @ApiProperty({ description: 'Number of sampled builds that day' })
+  @IsString()
+  samples!: string;
 }
 
 export class ThroughputDayDto {

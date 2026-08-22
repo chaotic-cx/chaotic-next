@@ -1,4 +1,4 @@
-import type { Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
+import type { Package as PackageDto, PackageResourceDayRow, Paginated } from '@chaotic-next/shared-lib';
 import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +15,13 @@ import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
 import { BuilderDatabaseService } from './builder-database.service';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { brokerConfig } from './moleculer.config';
+import {
+  BUILD_RESOURCE_COLUMNS,
+  type BuildResourceMetricKey,
+  DAY_ROW_KEYS,
+  HEAVY_RESOURCE_METRIC_EXPRESSIONS,
+  isBuildResourceSortField,
+} from './resource-stats';
 
 @Injectable()
 export class BuilderService implements OnModuleInit, OnModuleDestroy {
@@ -237,9 +244,16 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    query.orderBy(this.buildSortExpression(options.sort), resolveOrder(options.order));
+    // Postgres puts NULLs first in DESC order, which would lead rankings with
+    // unsampled builds; resource counters must therefore sort NULLS LAST.
+    const isResourceSort = isBuildResourceSortField(options.sort ?? '');
+    query.orderBy(
+      this.buildSortExpression(options.sort),
+      resolveOrder(options.order),
+      isResourceSort ? 'NULLS LAST' : undefined,
+    );
 
-    const [items, total] = await query.skip(skip).take(perPage).getManyAndCount();
+    const [items, total] = await query.offset(skip).limit(perPage).getManyAndCount();
     return paginate(items, total, page, perPage);
   }
 
@@ -252,6 +266,10 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       pkgname: 'package.pkgname',
       builder: 'builder.name',
       repo: 'repo.name',
+      peakMemory: BUILD_RESOURCE_COLUMNS.peakMemory,
+      cpuTime: BUILD_RESOURCE_COLUMNS.cpuTime,
+      diskIo: `(${BUILD_RESOURCE_COLUMNS.diskRead} + ${BUILD_RESOURCE_COLUMNS.diskWrite})`,
+      networkIo: `(${BUILD_RESOURCE_COLUMNS.networkRx} + ${BUILD_RESOURCE_COLUMNS.networkTx})`,
     });
   }
 
@@ -535,6 +553,60 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .orderBy('average', 'DESC')
       .limit(amount)
       .cache(`heavy-packages-${amount}-${days}`, CACHE_TTL_MS)
+      .getRawMany();
+  }
+
+  async getPackageResourceStatsPerDay(options: { pkgname: string; days: number }): Promise<PackageResourceDayRow[]> {
+    const requestedPackage = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
+    if (!requestedPackage) {
+      throw new NotFoundException('Package not found');
+    }
+
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+
+    return this.buildRepository
+      .createQueryBuilder('build')
+      .select("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC') AS day")
+      .addSelect(`AVG(${BUILD_RESOURCE_COLUMNS.avgMemory}) AS ${DAY_ROW_KEYS.avgMemory}`)
+      .addSelect(`MAX(${BUILD_RESOURCE_COLUMNS.peakMemory}) AS ${DAY_ROW_KEYS.peakMemory}`)
+      .addSelect(`AVG(${BUILD_RESOURCE_COLUMNS.cpuTime}) AS ${DAY_ROW_KEYS.cpuTime}`)
+      .addSelect(
+        `AVG(${BUILD_RESOURCE_COLUMNS.diskRead} + ${BUILD_RESOURCE_COLUMNS.diskWrite}) AS ${DAY_ROW_KEYS.diskIo}`,
+      )
+      .addSelect(
+        `AVG(${BUILD_RESOURCE_COLUMNS.networkRx} + ${BUILD_RESOURCE_COLUMNS.networkTx}) AS ${DAY_ROW_KEYS.networkIo}`,
+      )
+      .addSelect('COUNT(*) AS samples')
+      .innerJoin('build.pkgbase', 'pkgbase')
+      .where('pkgbase.pkgname = :pkgname', { pkgname: options.pkgname })
+      .andWhere(`${BUILD_RESOURCE_COLUMNS.sampleCount} IS NOT NULL`)
+      .andWhere('build.timestamp > :date', { date: nDaysInPast(days) })
+      .groupBy("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC')")
+      .orderBy('day', 'DESC')
+      .limit(days)
+      .cache(`package-resource-stats-${options.pkgname}-${days}`, CACHE_TTL_MS)
+      .getRawMany();
+  }
+
+  async getHeavyPackagesByResourceMetric(options: {
+    metric: BuildResourceMetricKey;
+    amount: number;
+    days: number;
+  }): Promise<{ pkgname: string; average: string }[]> {
+    const amount = clampInt(options.amount, 1, MAX_AMOUNT);
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+
+    return this.buildRepository
+      .createQueryBuilder('build')
+      .select('pkg.pkgname AS pkgname')
+      .addSelect(`${HEAVY_RESOURCE_METRIC_EXPRESSIONS[options.metric]} AS average`)
+      .innerJoin('build.pkgbase', 'pkg')
+      .where(`${BUILD_RESOURCE_COLUMNS.sampleCount} IS NOT NULL`)
+      .andWhere('build.timestamp > :date', { date: nDaysInPast(days) })
+      .groupBy('pkg.pkgname')
+      .orderBy('average', 'DESC')
+      .limit(amount)
+      .cache(`heavy-packages-resource-${options.metric}-${amount}-${days}`, CACHE_TTL_MS)
       .getRawMany();
   }
 
