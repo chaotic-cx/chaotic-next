@@ -51,7 +51,12 @@ export class AppService {
   private eventSource: EventSource | undefined;
   private reconnectTimer: number | undefined;
   private readonly onVisibilityChange = (): void => {
-    if (document.visibilityState === 'visible') this.reconnect();
+    if (
+      document.visibilityState === 'visible' &&
+      (!this.eventSource || this.eventSource.readyState === EventSource.CLOSED)
+    ) {
+      this.reconnect();
+    }
   };
 
   constructor() {

@@ -5,7 +5,7 @@ import { PassThrough } from 'node:stream';
 import { DataSource } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { nDaysInPast, utcDayStart } from '../utils/functions';
-import { MetricsService, parseTrafficLine } from './metrics.service';
+import { MetricsService, parseRpsLine, parseTrafficLine } from './metrics.service';
 
 const MIN_DAYS = 1;
 const MAX_DAYS = 3650;
@@ -237,21 +237,57 @@ describe('MetricsService', () => {
     });
   });
 
+  describe('parseRpsLine', () => {
+    it.each([
+      ['data: 42', 42],
+      ['data:0', 0],
+      ['data: 7 \n', 7],
+    ])('parses SSE count frame: %s', (line, expected) => {
+      expect(parseRpsLine(line)).toEqual({ rps: expected });
+    });
+
+    it('returns null on non-data lines', () => {
+      expect(parseRpsLine('retry: 1000')).toBeNull();
+      expect(parseRpsLine('data: not-a-number')).toBeNull();
+      expect(parseRpsLine('')).toBeNull();
+    });
+  });
+
   describe('getLiveTrafficStream', () => {
-    it('emits parsed SSE events from upstream stream data', async () => {
-      const stream = new PassThrough();
-      const mockHttp = {
-        axiosRef: vi.fn().mockResolvedValue({ data: stream }),
-      } as unknown as HttpService;
+    const TRAFFIC_URL = 'https://metrics.chaotic.cx/live/traffic';
+
+    function createStreamService(): {
+      service: MetricsService;
+      trafficStream: PassThrough;
+      rpsStream: PassThrough;
+      axiosRef: ReturnType<typeof vi.fn>;
+    } {
+      const trafficStream = new PassThrough();
+      const rpsStream = new PassThrough();
+      const axiosRef = vi
+        .fn()
+        .mockImplementation(({ url }: { url: string }) =>
+          Promise.resolve({ data: url === TRAFFIC_URL ? trafficStream : rpsStream }),
+        );
+      const mockHttp = { axiosRef } as unknown as HttpService;
       const dataSource = { getRepository: vi.fn(), query: vi.fn() } as unknown as DataSource;
-      const service = new MetricsService(dataSource, makeCache() as never, mockHttp);
+      return {
+        service: new MetricsService(dataSource, makeCache() as never, mockHttp),
+        trafficStream,
+        rpsStream,
+        axiosRef,
+      };
+    }
+
+    it('emits parsed SSE events from upstream stream data', async () => {
+      const { service, trafficStream } = createStreamService();
 
       const events: { data: LiveTrafficHit }[] = [];
       const sub = service.getLiveTrafficStream().subscribe({
         next: (ev) => events.push(ev as { data: LiveTrafficHit }),
       });
 
-      stream.write(
+      trafficStream.write(
         '1787394450940|(PL) de6cbd|garuda|303|||||pacman/7.1.0 (Linux x86_64) libalpm/16.0.1|geo-mirror.chaotic.cx|web.1\n',
       );
 
@@ -261,6 +297,42 @@ describe('MetricsService', () => {
       expect(events[0].data.repo).toBe('garuda');
 
       sub.unsubscribe();
+    });
+
+    it('emits router RPS as a named "rps" event from upstream stream data', async () => {
+      const { service, rpsStream } = createStreamService();
+
+      const events: { type?: string; data: unknown }[] = [];
+      const sub = service.getLiveTrafficStream().subscribe({
+        next: (ev) => events.push(ev as { type?: string; data: unknown }),
+      });
+
+      rpsStream.write('retry: 1000\ndata: 0\ndata: 42\n');
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(events).toEqual([
+        { type: 'rps', data: { rps: 0 } },
+        { type: 'rps', data: { rps: 42 } },
+      ]);
+
+      sub.unsubscribe();
+    });
+
+    it('shares one upstream connection pair across concurrent subscribers', async () => {
+      const { service, trafficStream, axiosRef } = createStreamService();
+
+      const first = service.getLiveTrafficStream().subscribe();
+      const second = service.getLiveTrafficStream().subscribe();
+
+      trafficStream.write(
+        '1787394450940|(PL) de6cbd|garuda|303|||||pacman/7.1.0 (Linux x86_64) libalpm/16.0.1|geo-mirror.chaotic.cx|web.1\n',
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(axiosRef).toHaveBeenCalledTimes(2);
+
+      first.unsubscribe();
+      second.unsubscribe();
     });
   });
 });

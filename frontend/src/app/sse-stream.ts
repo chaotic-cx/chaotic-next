@@ -8,6 +8,12 @@ export interface ResilientSseOptions {
    */
   url: () => string;
   onMessage: (data: string) => void;
+  /**
+   * Additional named SSE event types to subscribe to besides the default
+   * message event; their frames are forwarded to `onNamedEvent`.
+   */
+  namedEvents?: readonly string[];
+  onNamedEvent?: (eventType: string, data: string) => void;
   onOpen?: () => void;
   /** Fired when reconnect attempts are exhausted while the tab is visible. */
   onErrorExhausted?: () => void;
@@ -22,7 +28,10 @@ export interface ResilientSseOptions {
  * Consumers call `close()` once they receive a terminal frame.
  */
 export class ResilientSseStream {
-  private readonly options: Required<Pick<ResilientSseOptions, 'maxAttempts' | 'delayMs'>> & ResilientSseOptions;
+  private readonly options: Required<
+    Pick<ResilientSseOptions, 'maxAttempts' | 'delayMs' | 'namedEvents' | 'onMessage'>
+  > &
+    ResilientSseOptions;
   private source: EventSource | undefined;
   private reconnectTimer: number | undefined;
   private attempts = 0;
@@ -32,6 +41,7 @@ export class ResilientSseStream {
     this.options = {
       maxAttempts: SSE_MAX_RECONNECT_ATTEMPTS,
       delayMs: SSE_RECONNECT_DELAY_MS,
+      namedEvents: [],
       ...options,
     };
     document.addEventListener('visibilitychange', this.onVisibilityChange);
@@ -53,6 +63,13 @@ export class ResilientSseStream {
       if (event.data !== '') this.attempts = 0;
       this.options.onMessage(event.data);
     };
+
+    for (const eventType of this.options.namedEvents ?? []) {
+      source.addEventListener(eventType, (event: MessageEvent) => {
+        if (event.data !== '') this.attempts = 0;
+        this.options.onNamedEvent?.(eventType, event.data);
+      });
+    }
 
     source.onerror = () => {
       // Backgrounded tabs get their connections dropped by the browser; park

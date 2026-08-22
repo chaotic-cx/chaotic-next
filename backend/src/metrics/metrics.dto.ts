@@ -84,3 +84,9 @@ export class LiveTrafficHitDto {
   @IsString()
   worker!: string;
 }
+
+export class LiveRouterRpsDto {
+  @ApiProperty({ description: 'Requests per second reported by the router' })
+  @IsInt()
+  rps!: number;
+}

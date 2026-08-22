@@ -7,8 +7,10 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
   imports: [DatePipe],
   template: `
     <div class="live-feed-card mt-4 rounded-xl border border-ctp-surface0 p-4 backdrop-blur-xs">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ctp-surface0 pb-3">
-        <div class="flex items-center gap-3">
+      <div
+        class="flex flex-col items-center gap-3 border-b border-ctp-surface0 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+      >
+        <div class="flex items-center gap-3 sm:order-1">
           <div class="relative flex h-3 w-3 items-center justify-center">
             @if (trafficService.isConnected()) {
               <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-ctp-green opacity-75"></span>
@@ -22,7 +24,59 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
           <span class="font-bold text-ctp-text">Live Traffic Stream</span>
         </div>
 
-        <div class="flex items-center gap-4 text-xs font-medium text-ctp-subtext0">
+        <div class="grid w-full grid-cols-3 gap-2 text-xs font-semibold sm:flex sm:w-auto sm:order-3">
+          <button
+            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
+            [class.bg-ctp-blue]="trafficService.showHits()"
+            [class.text-ctp-crust]="trafficService.showHits()"
+            [class.border-ctp-blue]="trafficService.showHits()"
+            [class.bg-ctp-surface0]="!trafficService.showHits()"
+            [class.text-ctp-overlay1]="!trafficService.showHits()"
+            [class.border-ctp-surface1]="!trafficService.showHits()"
+            (click)="trafficService.toggleHits()"
+            type="button"
+          >
+            <i class="text-[11px]" [class]="trafficService.showHits() ? 'pi pi-bolt' : 'pi pi-eye-slash'"></i>
+            <span>Hits</span>
+          </button>
+
+          <button
+            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
+            [class.bg-ctp-peach]="trafficService.mapProjection() === 'globe'"
+            [class.text-ctp-crust]="trafficService.mapProjection() === 'globe'"
+            [class.border-ctp-peach]="trafficService.mapProjection() === 'globe'"
+            [class.bg-ctp-surface0]="trafficService.mapProjection() !== 'globe'"
+            [class.text-ctp-overlay1]="trafficService.mapProjection() !== 'globe'"
+            [class.border-ctp-surface1]="trafficService.mapProjection() !== 'globe'"
+            (click)="trafficService.toggleProjection()"
+            type="button"
+          >
+            <i
+              class="text-[11px]"
+              [class]="trafficService.mapProjection() === 'globe' ? 'pi pi-compass' : 'pi pi-map'"
+            ></i>
+            <span>{{ trafficService.mapProjection() === 'globe' ? '3D Globe' : '2D Map' }}</span>
+          </button>
+
+          <button
+            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
+            [class.bg-ctp-mauve]="trafficService.showMirrors()"
+            [class.text-ctp-crust]="trafficService.showMirrors()"
+            [class.border-ctp-mauve]="trafficService.showMirrors()"
+            [class.bg-ctp-surface0]="!trafficService.showMirrors()"
+            [class.text-ctp-overlay1]="!trafficService.showMirrors()"
+            [class.border-ctp-surface1]="!trafficService.showMirrors()"
+            (click)="trafficService.toggleMirrors()"
+            type="button"
+          >
+            <i class="text-[11px]" [class]="trafficService.showMirrors() ? 'pi pi-globe' : 'pi pi-eye-slash'"></i>
+            <span>Mirrors</span>
+          </button>
+        </div>
+
+        <div
+          class="flex items-center gap-4 text-xs font-medium text-ctp-subtext0 sm:order-2 sm:border-l sm:border-ctp-surface0 sm:pl-3"
+        >
           <div class="flex items-center gap-1.5">
             <span class="text-ctp-text font-bold text-sm">{{ trafficService.currentReqPerSec() }}</span>
             <span>req/s</span>
@@ -30,56 +84,6 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
           <div class="flex items-center gap-1.5">
             <span class="text-ctp-text font-bold text-sm">{{ trafficService.totalHitsReceived() }}</span>
             <span>hits</span>
-          </div>
-
-          <div class="flex items-center gap-2 border-l border-ctp-surface0 pl-3">
-            <button
-              class="flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
-              [class.bg-ctp-blue]="trafficService.showHits()"
-              [class.text-ctp-crust]="trafficService.showHits()"
-              [class.border-ctp-blue]="trafficService.showHits()"
-              [class.bg-ctp-surface0]="!trafficService.showHits()"
-              [class.text-ctp-overlay1]="!trafficService.showHits()"
-              [class.border-ctp-surface1]="!trafficService.showHits()"
-              (click)="trafficService.toggleHits()"
-              type="button"
-            >
-              <i class="text-[11px]" [class]="trafficService.showHits() ? 'pi pi-bolt' : 'pi pi-eye-slash'"></i>
-              <span>Hits</span>
-            </button>
-
-            <button
-              class="flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
-              [class.bg-ctp-peach]="trafficService.mapProjection() === 'globe'"
-              [class.text-ctp-crust]="trafficService.mapProjection() === 'globe'"
-              [class.border-ctp-peach]="trafficService.mapProjection() === 'globe'"
-              [class.bg-ctp-surface0]="trafficService.mapProjection() !== 'globe'"
-              [class.text-ctp-overlay1]="trafficService.mapProjection() !== 'globe'"
-              [class.border-ctp-surface1]="trafficService.mapProjection() !== 'globe'"
-              (click)="trafficService.toggleProjection()"
-              type="button"
-            >
-              <i
-                class="text-[11px]"
-                [class]="trafficService.mapProjection() === 'globe' ? 'pi pi-compass' : 'pi pi-map'"
-              ></i>
-              <span>{{ trafficService.mapProjection() === 'globe' ? '3D Globe' : '2D Map' }}</span>
-            </button>
-
-            <button
-              class="flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
-              [class.bg-ctp-mauve]="trafficService.showMirrors()"
-              [class.text-ctp-crust]="trafficService.showMirrors()"
-              [class.border-ctp-mauve]="trafficService.showMirrors()"
-              [class.bg-ctp-surface0]="!trafficService.showMirrors()"
-              [class.text-ctp-overlay1]="!trafficService.showMirrors()"
-              [class.border-ctp-surface1]="!trafficService.showMirrors()"
-              (click)="trafficService.toggleMirrors()"
-              type="button"
-            >
-              <i class="text-[11px]" [class]="trafficService.showMirrors() ? 'pi pi-globe' : 'pi pi-eye-slash'"></i>
-              <span>Mirrors & Radius</span>
-            </button>
           </div>
         </div>
       </div>
@@ -129,11 +133,14 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
                 <span class="rounded bg-ctp-crust/60 px-2 py-0.5 font-semibold text-ctp-sapphire">
                   {{ hit.repo }}
                 </span>
-                <span class="text-ctp-subtext0 truncate max-w-xs sm:max-w-md font-normal" [title]="hit.userAgent">
+                <span
+                  class="hidden truncate max-w-xs font-normal text-ctp-subtext0 sm:block sm:max-w-md"
+                  [title]="hit.userAgent"
+                >
                   {{ hit.userAgent }}
                 </span>
                 <span class="ml-auto text-[11px] text-ctp-overlay1 font-medium">
-                  {{ hit.hostname }}
+                  {{ shortHostname(hit.hostname) }}
                 </span>
               </div>
             }
@@ -172,4 +179,12 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
 })
 export class LiveTrafficFeedComponent {
   protected readonly trafficService = inject(LiveTrafficService);
+
+  private readonly isMobile = window.matchMedia('(pointer: coarse)').matches;
+
+  /** Mobile rows are too narrow for full hostnames; drop the shared suffix. */
+  protected shortHostname(hostname: string): string {
+    const suffix = '.chaotic.cx';
+    return this.isMobile && hostname.endsWith(suffix) ? hostname.slice(0, -suffix.length) : hostname;
+  }
 }

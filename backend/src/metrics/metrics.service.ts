@@ -1,6 +1,7 @@
-import * as readline from 'node:readline';
 import {
   type CountNameObject,
+  LIVE_RPS_SSE_EVENT,
+  type LiveRouterRps,
   type LiveTrafficHit,
   type SpecificPackageMetrics,
   type UserAgentList,
@@ -10,15 +11,18 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type { Cache } from 'cache-manager';
-import { Observable } from 'rxjs';
-import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
-import { MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
-import { cachedResult } from '../utils/cache';
+import { createInterface } from 'node:readline';
+import { merge, Observable, share } from 'rxjs';
 import { DataSource } from 'typeorm';
 import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
 import { RouterHitDaily } from '../router/router-hit-daily.entity';
+import { cachedResult } from '../utils/cache';
+import { MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
+import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 
 let hitCounter = 0;
+
+const METRICS_UPSTREAM_BASE_URL = 'https://metrics.chaotic.cx';
 
 export function parseTrafficLine(line: string): LiveTrafficHit | null {
   const trimmed = line.trim();
@@ -53,6 +57,12 @@ export function parseTrafficLine(line: string): LiveTrafficHit | null {
 }
 
 const PKGNAME_REGEX = /^[a-zA-Z0-9.@+_-]{1,255}$/;
+
+export function parseRpsLine(line: string): LiveRouterRps | null {
+  const match = line.trim().match(/^data:\s*(\d+)$/);
+  if (!match) return null;
+  return { rps: Number(match[1]) };
+}
 
 function assertPackageName(name: string): string {
   if (!PKGNAME_REGEX.test(name)) {
@@ -222,28 +232,32 @@ export class MetricsService {
     );
   }
 
-  getLiveTrafficStream(): Observable<MessageEvent<LiveTrafficHit>> {
-    return new Observable<MessageEvent<LiveTrafficHit>>((subscriber) => {
+  private upstreamSse<T>(
+    path: string,
+    parseLine: (line: string) => T | null,
+    eventType?: string,
+  ): Observable<Partial<MessageEvent<T>>> {
+    return new Observable<Partial<MessageEvent<T>>>((subscriber) => {
       const abortController = new AbortController();
 
       (async () => {
         try {
           const upstream = await this.httpService.axiosRef({
             method: 'GET',
-            url: 'https://metrics.chaotic.cx/live/traffic',
+            url: `${METRICS_UPSTREAM_BASE_URL}/${path}`,
             responseType: 'stream',
             signal: abortController.signal,
           });
 
-          const rl = readline.createInterface({
+          const rl = createInterface({
             input: upstream.data,
             crlfDelay: Infinity,
           });
 
           rl.on('line', (line: string) => {
-            const hit = parseTrafficLine(line);
-            if (hit) {
-              subscriber.next({ data: hit } as MessageEvent<LiveTrafficHit>);
+            const parsed = parseLine(line);
+            if (parsed) {
+              subscriber.next({ data: parsed, type: eventType } as Partial<MessageEvent<T>>);
             }
           });
 
@@ -263,5 +277,17 @@ export class MetricsService {
         abortController.abort();
       };
     });
+  }
+
+  /**
+   * One shared upstream connection pair (traffic + RPS). Drops once last subscriber disconnects.
+   */
+  private readonly liveTraffic$ = merge(
+    this.upstreamSse('live/traffic', parseTrafficLine),
+    this.upstreamSse('live/rps', parseRpsLine, LIVE_RPS_SSE_EVENT),
+  ).pipe(share());
+
+  getLiveTrafficStream(): Observable<Partial<MessageEvent<LiveTrafficHit | LiveRouterRps>>> {
+    return this.liveTraffic$;
   }
 }
