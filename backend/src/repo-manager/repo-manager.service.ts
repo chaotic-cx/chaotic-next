@@ -34,11 +34,12 @@ import { paginate, resolvePagination } from '../utils/pagination';
 import { ArchMirrorService } from './arch-mirror.service';
 import { BumpService, parseCiConfig } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
+import { isBinaryPackage } from './pkgbuild-classifier';
 import { RepoManager } from './repo-manager';
+import { BumpPackagesResultDto } from './repo-manager.dto';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from './repo-manager.entity';
 import { REPO_READER_FACTORY, REPO_WRITER, type RepoReader, type RepoReaderFactory, type RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
-import { BumpPackagesResultDto } from './repo-manager.dto';
 import { latestAnalysesByPackage } from './scan/latest-analyses';
 import { SeedTransferService } from './seed-transfer.service';
 import {
@@ -176,35 +177,39 @@ export class RepoManagerService implements OnModuleInit {
   }
 
   async getBrokenPackages(page?: number, perPage?: number): Promise<Paginated<BrokenPackageReport>> {
-    // Arch packages are reference data and never judged broken, so only Chaotic
-    // analyses are queried (and reported).
     const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
-    const [analyses, total] = await this.elfAnalysisRepository.findAndCount({
-      where: { broken: true, pkgType: pkgTypeOf(TriggerType.CHAOTIC) },
-      order: { pkgId: 'ASC' },
-      skip,
-      take: safePerPage,
+    const allChaotic = await this.elfAnalysisRepository.find({
+      where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC) },
+      select: { pkgId: true, version: true, broken: true, brokenReasons: true },
     });
+    const latest = latestAnalysisByKey(allChaotic, (row) => String(row.pkgId));
+    const brokenAnalyses = [...latest.values()].filter((a) => a.broken);
+    if (brokenAnalyses.length === 0) return paginate([], 0, safePage, safePerPage);
 
-    const chaoticIds = analyses.map((a) => a.pkgId);
-    const chaoticPkgs = chaoticIds.length
-      ? await this.packageRepository.find({
-          where: { id: In(chaoticIds) },
-          relations: { repo: true },
-        })
-      : [];
+    const chaoticIds = [...new Set(brokenAnalyses.map((a) => a.pkgId))];
+    const chaoticPkgs = await this.packageRepository.find({
+      where: { id: In(chaoticIds) },
+      relations: { repo: true },
+    });
     const chaoticById = new Map(chaoticPkgs.map((p) => [p.id, p]));
 
-    const items = analyses.map((analysis) => {
-      const pkg = chaoticById.get(analysis.pkgId);
-      return {
-        pkgType: 'chaotic' as const,
-        pkgname: pkg?.pkgname ?? String(analysis.pkgId),
-        version: analysis.version,
-        repoName: pkg?.repo?.name,
-        reasons: analysis.brokenReasons,
-      };
-    });
+    const allBrokenReports: BrokenPackageReport[] = brokenAnalyses
+      .map((analysis) => {
+        const pkg = chaoticById.get(analysis.pkgId);
+        return {
+          pkgType: 'chaotic' as const,
+          pkgname: pkg?.pkgname ?? String(analysis.pkgId),
+          version: analysis.version,
+          repoName: pkg?.repo?.name,
+          reasons: analysis.brokenReasons,
+          skipSignalScan: pkg?.skipSignalScan ?? false,
+        };
+      })
+      .filter((report) => !report.skipSignalScan && !isBinaryPackage(report.pkgname));
+
+    const total = allBrokenReports.length;
+    allBrokenReports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));
+    const items = allBrokenReports.slice(skip, skip + safePerPage);
     return paginate(items, total, safePage, safePerPage);
   }
 
@@ -581,6 +586,7 @@ export class RepoManagerService implements OnModuleInit {
       abiDryRun: this.configService.get<boolean>('repoMan.abiDryRun') ?? true,
       mirrorUrl: this.configService.get<string>('repoMan.mirrorUrl'),
       signalScanEnabled: this.configService.get<boolean>('repoMan.signalScanEnabled') ?? false,
+      secretMirrorUrl: this.configService.get<string>('app.secretMirrorUrl'),
     };
 
     return new RepoManager(

@@ -25,6 +25,10 @@ import { type RepoReader, type RepoReaderFactory } from './repo-rw';
 import { CI_FLAG_REBUILD_IGNORE_ABI, RebuildTriggerService, SignalScanService } from './scan';
 import { formatConsumerAbiBreak } from './signal';
 
+const MAX_DOWNLOAD_RETRIES = 5;
+const BASE_RETRY_DELAY_MS = 1000;
+const MAX_RETRY_DELAY_MS = 30_000;
+
 export class RepoManager {
   private readonly logger = new Logger(RepoManager.name);
 
@@ -147,23 +151,24 @@ export class RepoManager {
       return;
     }
 
-    const dbPath: string | undefined = build.repo?.dbPath;
-    if (!dbPath) {
-      this.logger.warn(`No dbPath for repo ${build.repo?.name}, skipping scan of ${pkg.pkgname}`);
+    const repoName: string | undefined = build.repo?.name;
+    if (!repoName) {
+      this.logger.warn(`No repo name for ${pkg.pkgname}, skipping scan`);
       return;
     }
 
-    const repoUrl: string = dbPath.replace(/\/[^/]+$/, '');
+    const secretMirrorUrl: string | undefined = this.settings.secretMirrorUrl;
+    if (!secretMirrorUrl) {
+      this.logger.warn(`No secretMirrorUrl configured, skipping scan of ${pkg.pkgname}`);
+      return;
+    }
+
+    const downloadUrl = `${secretMirrorUrl}/${repoName}/x86_64/${filename}`;
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-signal-'));
     const downloadPath: string = join(tempDir, filename);
 
     try {
-      const response = await this.httpService.axiosRef({
-        url: `${repoUrl}/${filename}`,
-        method: 'GET',
-        responseType: 'arraybuffer',
-      });
-      await writeFile(downloadPath, Buffer.from(response.data, 'binary'));
+      await this.downloadWithRetry(downloadUrl, downloadPath);
 
       this.logger.log(`Scanning built package ${pkg.pkgname} (${pkg.version}) for ELF signals`);
       await this.signalScanService.scanPackages([
@@ -179,6 +184,29 @@ export class RepoManager {
     } finally {
       await this.archMirror.cleanUp([tempDir]);
     }
+  }
+
+  private async downloadWithRetry(url: string, dest: string, maxRetries = MAX_DOWNLOAD_RETRIES): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.httpService.axiosRef({
+          url,
+          method: 'GET',
+          responseType: 'arraybuffer',
+        });
+        await writeFile(dest, Buffer.from(response.data, 'binary'));
+        return;
+      } catch (err: unknown) {
+        lastError = err;
+        if (attempt < maxRetries) {
+          const delay = Math.min(BASE_RETRY_DELAY_MS * 2 ** attempt, MAX_RETRY_DELAY_MS);
+          this.logger.warn(`Download attempt ${attempt + 1} failed for ${url}, retrying in ${delay}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+    throw lastError;
   }
 
   async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<BumpResult> {
