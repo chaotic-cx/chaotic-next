@@ -275,6 +275,10 @@ export class AppService {
     return { url: this.appConfig.mirrorsUrl };
   }
 
+  getRpsHistoryResourceRequest(): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/metrics/rps/history` };
+  }
+
   getUpdateReviewStatsResourceRequest(timeRangeDays?: number): HttpResourceRequest {
     const url = new URL(`${this.appConfig.backendUrl}/gitlab/review-stats`);
     if (timeRangeDays !== undefined) {

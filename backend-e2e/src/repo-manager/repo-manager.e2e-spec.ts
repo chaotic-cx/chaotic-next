@@ -46,7 +46,7 @@ describe('Repo-manager endpoints (e2e, real PostgreSQL)', () => {
         payload: seed,
       });
 
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(202);
 
       const rows = (await e2e.dataSource.query(
         `SELECT "pkgType", "pkgId", version FROM package_elf_analysis WHERE "pkgId" = $1`,

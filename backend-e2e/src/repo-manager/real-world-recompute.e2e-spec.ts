@@ -136,7 +136,7 @@ describe('Real-world broken recompute + dependency graph (e2e, real PostgreSQL)'
 
   const importSeed = async (payload: SeedEntry[]): Promise<void> => {
     const res = await e2e.inject({ method: 'POST', url: '/repo/signals/import', payload });
-    expect(res.statusCode).toBe(201);
+    expect(res.statusCode).toBe(202);
   };
 
   const fetchBroken = async (): Promise<BrokenEntry[]> => {

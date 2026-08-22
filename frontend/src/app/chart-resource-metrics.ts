@@ -19,8 +19,3 @@ export const RESOURCE_METRICS: Record<ResourceMetricKey, ResourceMetricDef> = {
 };
 
 export const RESOURCE_METRIC_ORDER: ResourceMetricKey[] = ['memory', 'cpu', 'disk', 'network'];
-
-export const RESOURCE_METRIC_SELECT_OPTIONS = RESOURCE_METRIC_ORDER.map((key) => ({
-  label: RESOURCE_METRICS[key].label,
-  value: key,
-}));

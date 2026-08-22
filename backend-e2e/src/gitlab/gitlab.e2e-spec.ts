@@ -27,8 +27,9 @@ const WEBHOOK_TOKEN = 'test-webhook-token';
 
 class FakeAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<{ session: unknown }>();
-    request.session = { user: { id: 'test-user', name: 'Test User' } };
+    const request = context.switchToHttp().getRequest<{ session: unknown; user?: unknown }>();
+    request.user = { id: 'test-user', name: 'Test User', groups: ['chaotic-aur', 'garuda-linux'] };
+    request.session = { user: request.user };
     return true;
   }
 }

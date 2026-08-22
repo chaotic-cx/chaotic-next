@@ -1,4 +1,9 @@
-import { type LiveRouterRps, LIVE_RPS_SSE_EVENT, type LiveTrafficHit } from '@chaotic-next/shared-lib';
+import {
+  type LiveRouterRps,
+  LIVE_RPS_SSE_EVENT,
+  type LiveTrafficHit,
+  type RpsHistorySample,
+} from '@chaotic-next/shared-lib';
 import { Controller, Get, Param, Query, Sse } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -7,6 +12,7 @@ import {
   CountNameDto,
   LiveTrafficHitDto,
   MetricsQueryDto,
+  RpsHistorySampleDto,
   SpecificPackageMetricsDto,
   UserAgentMetricDto,
 } from './metrics.dto';
@@ -53,6 +59,13 @@ export class MetricsController {
   @ApiOkResponse({ description: 'Package rank list', type: CountNameDto, isArray: true })
   rankPackages(@Param('range') range: string, @Query() query: MetricsQueryDto): Promise<CountNameDto[]> {
     return this.metricsService.rankPackages(range, query.days);
+  }
+
+  @Get('rps/history')
+  @ApiOperation({ summary: 'Get the router requests-per-second samples of the last hour.' })
+  @ApiOkResponse({ description: 'Per-second RPS samples', type: RpsHistorySampleDto, isArray: true })
+  rpsHistory(): Promise<RpsHistorySample[]> {
+    return this.metricsService.getRpsHistory();
   }
 
   @Sse('live/traffic')

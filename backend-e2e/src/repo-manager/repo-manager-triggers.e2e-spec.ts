@@ -65,7 +65,7 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
 
       const res = await app.inject({ method: 'POST', url: '/repo/index/arch' });
 
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(202);
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });
@@ -79,7 +79,7 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
         url: '/repo/index/chaotic',
       });
 
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(202);
       expect(spy).toHaveBeenCalledWith();
     });
   });
