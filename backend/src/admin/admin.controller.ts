@@ -1,6 +1,27 @@
 import type { Package as PackageDto, Paginated, PipelineTriggerAction } from '@chaotic-next/shared-lib';
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiCookieAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Builder, Package, Repo } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
@@ -22,7 +43,6 @@ import {
 } from './admin.dto';
 import type { CreateArchPackageBody, CreatePackageBody, CreateRepoBody } from './admin.service';
 import { AdminService } from './admin.service';
-import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
 
 @ApiTags('admin')
 @ApiCookieAuth('better-auth.session_token')
@@ -52,8 +72,9 @@ export class AdminController {
   }
 
   @Delete('packages/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a package' })
-  @ApiOkResponse({ description: 'Package deleted' })
+  @ApiNoContentResponse({ description: 'Package deleted' })
   deletePackage(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.adminService.deletePackage(id);
   }
@@ -76,8 +97,9 @@ export class AdminController {
   }
 
   @Delete('arch-packages/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an Arch package' })
-  @ApiOkResponse({ description: 'Arch package deleted' })
+  @ApiNoContentResponse({ description: 'Arch package deleted' })
   deleteArchPackage(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.adminService.deleteArchPackage(id);
   }
@@ -90,6 +112,7 @@ export class AdminController {
   }
 
   @Post('repos')
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a repo' })
   @ApiCreatedResponse({ description: 'The created repo', type: Repo })
   createRepo(@Body() body: CreateRepoBody): Promise<Repo> {
@@ -104,8 +127,9 @@ export class AdminController {
   }
 
   @Delete('repos/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a repo' })
-  @ApiOkResponse({ description: 'Repo deleted' })
+  @ApiNoContentResponse({ description: 'Repo deleted' })
   deleteRepo(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.adminService.deleteRepo(id);
   }
@@ -123,6 +147,7 @@ export class AdminController {
   }
 
   @Post('builders')
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a builder' })
   @ApiCreatedResponse({ description: 'The created builder', type: Builder })
   createBuilder(@Body() body: CreateBuilderBodyDto): Promise<Builder> {
@@ -137,8 +162,9 @@ export class AdminController {
   }
 
   @Delete('builders/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a builder' })
-  @ApiOkResponse({ description: 'Builder deleted' })
+  @ApiNoContentResponse({ description: 'Builder deleted' })
   deleteBuilder(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.adminService.deleteBuilder(id);
   }
@@ -201,8 +227,9 @@ export class AdminController {
   }
 
   @Delete('package-elf-analysis/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a package ELF analysis row' })
-  @ApiOkResponse({ description: 'Package ELF analysis row deleted' })
+  @ApiNoContentResponse({ description: 'Package ELF analysis row deleted' })
   deleteElfAnalysis(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.adminService.deleteElfAnalysis(id);
   }

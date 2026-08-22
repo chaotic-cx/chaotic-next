@@ -1,14 +1,31 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiCookieAuth } from '@nestjs/swagger';
+import { BrokenPackageReport, PackageRebuildTriggerSources, Paginated } from '@chaotic-next/shared-lib';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiAcceptedResponse,
+  ApiCookieAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
-import { Paginated } from '@chaotic-next/shared-lib';
-import { BrokenPackageReport, PackageRebuildTriggerSources } from '../interfaces/repo-manager';
-import { BumpPackagesBodyDto, BumpPackagesResultDto } from './repo-manager.dto';
-import { RepoManagerService } from './repo-manager.service';
-import { PackageElfAnalysis } from './repo-manager.entity';
-import type { DependencyEdge } from './signal';
 import { auth } from '../auth/auth';
 import { userGroupsOf } from '../auth/gitlab-groups';
+import { BumpPackagesBodyDto, BumpPackagesResultDto } from './repo-manager.dto';
+import { PackageElfAnalysis } from './repo-manager.entity';
+import { RepoManagerService } from './repo-manager.service';
+import type { DependencyEdge } from './signal';
 
 @ApiTags('repo')
 @ApiCookieAuth('better-auth.session_token')
@@ -55,15 +72,17 @@ export class RepoManagerController {
   }
 
   @Post('index/arch')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Index the full Arch mirror into the ELF signal index.' })
-  @ApiCreatedResponse({ description: 'Full Arch mirror index triggered.' })
+  @ApiAcceptedResponse({ description: 'Full Arch mirror index triggered.' })
   indexArchMirror(): void {
     void this.repoManager.indexArchMirror();
   }
 
   @Post('index/chaotic')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Index the full Chaotic-AUR repo (CDN mirror) into the ELF signal index.' })
-  @ApiCreatedResponse({ description: 'Full Chaotic repo index triggered.' })
+  @ApiAcceptedResponse({ description: 'Full Chaotic repo index triggered.' })
   indexChaoticRepo(): void {
     void this.repoManager.indexChaoticRepo();
   }
@@ -90,15 +109,17 @@ export class RepoManagerController {
   }
 
   @Post('signals/import')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Import a JSON seed of ELF analyses.' })
-  @ApiCreatedResponse({ description: 'ELF analyses imported.' })
+  @ApiAcceptedResponse({ description: 'ELF analyses imported.' })
   importSignalsSeed(@Body() seed: unknown[]): Promise<void> {
     return this.repoManager.importSignalsSeed(seed);
   }
 
   @Post('signals/import-file')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Stream-import a newline-delimited JSON seed file of ELF analyses from disk.' })
-  @ApiCreatedResponse({ description: 'ELF analyses imported.' })
+  @ApiAcceptedResponse({ description: 'ELF analyses imported.' })
   importSignalsSeedFile(@Body('path') path: string): Promise<void> {
     return this.repoManager.importSignalsSeedFile(path);
   }

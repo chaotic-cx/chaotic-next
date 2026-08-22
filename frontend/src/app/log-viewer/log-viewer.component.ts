@@ -8,14 +8,12 @@ import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { Select } from '@openng/optimus-ui/select';
 import { AppService } from '../app.service';
 import { copyLineLink, errorMessage, parseLogChunk } from '../functions';
+import { ResilientSseStream } from '../sse-stream';
 import { TitleComponent } from '../title/title.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
 import { LogViewerService } from './log-viewer.service';
 
 const RUNNING_STATUSES = new Set(['created', 'waiting_for_resource', 'preparing', 'pending', 'running']);
-
-const RECONNECT_DELAY_MS = 1000;
-const MAX_RECONNECT_ATTEMPTS = 5;
 
 @Component({
   selector: 'chaotic-log-viewer',
@@ -53,25 +51,11 @@ export class LogViewerComponent implements OnDestroy {
     return job ? job.name : 'No job selected';
   });
 
-  private eventSource: EventSource | undefined;
-  private reconnectTimer: number | undefined;
+  private stream: ResilientSseStream | undefined;
   private isCompleted = false;
-  private reconnectAttempts = 0;
   private cumulativeOffset = 0;
-  private readonly onVisibilityChange = (): void => {
-    // Backgrounded tabs get their SSE throttled and dropped by the browser;
-    // reconnect (resuming from the last offset) when the tab regains focus and stream is incomplete.
-    if (document.visibilityState === 'visible' && !this.isCompleted) {
-      if (!this.eventSource || this.eventSource.readyState === EventSource.CLOSED) {
-        this.error.set(undefined);
-        this.reconnectAttempts = 0;
-        this.reconnect();
-      }
-    }
-  };
 
   constructor() {
-    document.addEventListener('visibilitychange', this.onVisibilityChange);
     effect(() => {
       const raw = this.pipelineId();
       if (raw) void this.loadPipeline(Number(raw));
@@ -87,8 +71,7 @@ export class LogViewerComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    document.removeEventListener('visibilitychange', this.onVisibilityChange);
-    this.closeStream();
+    this.stream?.close();
   }
 
   protected selectJob(job: GitlabJob): void {
@@ -101,7 +84,6 @@ export class LogViewerComponent implements OnDestroy {
     this.streaming.set(false);
     this.isCompleted = false;
     this.cumulativeOffset = 0;
-    this.reconnectAttempts = 0;
     this.scrollToLine.set(job.id === this.requestedJobId() ? this.requestedLine() : undefined);
     if (this.scrollToLine() === undefined && this.route.snapshot.queryParamMap.has('line')) {
       void this.router.navigate([], {
@@ -136,7 +118,6 @@ export class LogViewerComponent implements OnDestroy {
     this.streaming.set(false);
     this.isCompleted = false;
     this.cumulativeOffset = 0;
-    this.reconnectAttempts = 0;
     this.scrollToLine.set(undefined);
 
     this.appService.updateSeoTags(this.meta, {
@@ -180,72 +161,38 @@ export class LogViewerComponent implements OnDestroy {
   private openStream(jobId: number): void {
     const raw = this.pipelineId();
     if (!raw) return;
-    this.eventSource?.close();
-    this.eventSource = undefined;
-    const source = new EventSource(this.logService.traceStreamUrl(Number(raw), jobId, this.cumulativeOffset));
-    this.eventSource = source;
-
-    source.onmessage = (event) => {
-      const chunk = parseLogChunk(event.data);
-      if (!chunk) return;
-      this.loading.set(false);
-      if (chunk.complete) {
-        this.isCompleted = true;
+    this.stream?.close();
+    this.stream = new ResilientSseStream({
+      url: () => this.logService.traceStreamUrl(Number(raw), jobId, this.cumulativeOffset),
+      onMessage: (data) => {
+        const chunk = parseLogChunk(data);
+        if (!chunk) return;
+        if (chunk.complete) {
+          this.isCompleted = true;
+          this.streaming.set(false);
+          this.closeStream();
+          return;
+        }
+        // Only once a running job produces output is it actually "live".
+        this.loading.set(false);
+        this.streaming.set(true);
+        if (chunk.text) {
+          this.cumulativeOffset = chunk.offset;
+          this.logChunks.update((chunks) => [...chunks, chunk.text]);
+        }
+      },
+      onErrorExhausted: () => {
+        this.loading.set(false);
         this.streaming.set(false);
-        this.closeStream();
-        return;
-      }
-      this.reconnectAttempts = 0;
-      // Only once a running job produces output is it actually "live".
-      this.streaming.set(true);
-      if (chunk.text) {
-        this.cumulativeOffset = chunk.offset;
-        this.logChunks.update((chunks) => [...chunks, chunk.text]);
-      }
-    };
-
-    // Do not treat a transient drop as fatal: the browser throttles SSE in
-    // backgrounded tabs. Reconnect (resuming from the last offset) instead of
-    // permanently closing.
-    source.onerror = () => {
-      this.loading.set(false);
-      this.streaming.set(false);
-      if (document.visibilityState !== 'visible') {
-        this.closeStream();
-        return;
-      }
-      if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         this.error.set('Log stream ended unexpectedly. Please retry in a moment.');
-        this.closeStream();
-        return;
-      }
-      this.reconnectAttempts += 1;
-      this.closeStream();
-      this.scheduleReconnect();
-    };
-  }
-
-  private reconnect(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = undefined;
-    const jobId = this.selectedJobId();
-    if (jobId !== undefined) this.openStream(jobId);
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectTimer !== undefined) return;
-    this.reconnectTimer = window.setTimeout(() => {
-      this.reconnectTimer = undefined;
-      const jobId = this.selectedJobId();
-      if (jobId !== undefined) this.openStream(jobId);
-    }, RECONNECT_DELAY_MS);
+      },
+    });
+    this.stream.open();
   }
 
   private closeStream(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = undefined;
-    this.eventSource?.close();
-    this.eventSource = undefined;
+    this.stream?.close();
+    this.stream = undefined;
   }
 
   protected onLineClick(line: number): void {

@@ -18,6 +18,7 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { AppService } from '../app.service';
 import { BuildStatusService } from '../build-status/build-status.service';
 import { copyLineLink, formatDuration, parseLogChunk } from '../functions';
+import { ResilientSseStream } from '../sse-stream';
 import { TitleComponent } from '../title/title.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
 import {
@@ -95,31 +96,14 @@ export class PackageLogComponent implements OnDestroy {
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   /** Character count already received, used to resume a dropped stream. */
-  private static readonly RECONNECT_DELAY_MS = 1000;
-  private static readonly MAX_RECONNECT_ATTEMPTS = 5;
-
-  private eventSource: EventSource | undefined;
+  private stream: ResilientSseStream | undefined;
   private elapsedTimer: number | undefined;
-  private reconnectTimer: number | undefined;
   private isCompleted = false;
-  private reconnectAttempts = 0;
   private cumulativeOffset = 0;
   /** Rolling tail of the log used to find markers without re-scanning the whole log. */
   private scanBuffer = '';
-  private readonly onVisibilityChange = (): void => {
-    // Backgrounded tabs get their SSE throttled and dropped by the browser.
-    // When the tab regains focus and the stream is not yet complete, resume it.
-    if (document.visibilityState === 'visible' && !this.isCompleted) {
-      if (!this.eventSource || this.eventSource.readyState === EventSource.CLOSED) {
-        this.error.set(undefined);
-        this.reconnectAttempts = 0;
-        this.reconnect();
-      }
-    }
-  };
 
   constructor() {
-    document.addEventListener('visibilitychange', this.onVisibilityChange);
     effect(() => {
       const pkgname = this.pkgname();
       const timestamp = this.timestamp();
@@ -144,9 +128,8 @@ export class PackageLogComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.stopElapsedTimer();
-    this.closeStream();
+    this.stream?.close();
   }
 
   private loadLog(pkgname: string): void {
@@ -161,7 +144,6 @@ export class PackageLogComponent implements OnDestroy {
     this.endReason.set(undefined);
     this.scrollToLine.set(this.requestedLine());
     this.cumulativeOffset = 0;
-    this.reconnectAttempts = 0;
 
     this.appService.updateSeoTags(this.meta, {
       title: `${pkgname} build log`,
@@ -177,71 +159,38 @@ export class PackageLogComponent implements OnDestroy {
     const pkgname = this.pkgname();
     const timestamp = this.timestamp();
     if (!pkgname || !timestamp) return;
-    // Guard against duplicate connections when re-opening while a stream is
-    // still open (e.g. reconnecting on tab focus before the old one errors).
-    this.eventSource?.close();
-    this.eventSource = undefined;
-    const source = new EventSource(this.logService.getLogUrl(pkgname, timestamp, this.cumulativeOffset));
-    this.eventSource = source;
-
-    source.onmessage = (event) => {
-      const chunk = parseLogChunk(event.data);
-      if (!chunk) return;
-      if (chunk.complete) {
-        this.isCompleted = true;
-        this.streaming.set(false);
-        this.stopElapsedTimer();
-        this.closeStream();
-        return;
-      }
-      this.reconnectAttempts = 0;
-      this.streaming.set(true);
-      if (chunk.text) {
-        this.cumulativeOffset = chunk.offset;
-        this.logChunks.update((chunks) => [...chunks, chunk.text]);
-        this.scanBuffer += chunk.text;
-        // Scan before trimming: markers sit near the top of the log and must be
-        // seen before the buffer is cut down to its tail.
-        this.scanMarkers();
-        if (this.scanBuffer.length > SCAN_BUFFER_LENGTH) {
-          this.scanBuffer = this.scanBuffer.slice(-SCAN_BUFFER_LENGTH);
+    this.stream?.close();
+    this.stream = new ResilientSseStream({
+      url: () => this.logService.getLogUrl(pkgname, timestamp, this.cumulativeOffset),
+      onMessage: (data) => {
+        const chunk = parseLogChunk(data);
+        if (!chunk) return;
+        if (chunk.complete) {
+          this.isCompleted = true;
+          this.streaming.set(false);
+          this.stopElapsedTimer();
+          this.closeStream();
+          return;
         }
-      }
-    };
-
-    source.onerror = () => {
-      // Do not treat a transient drop as fatal: the browser throttles SSE in
-      // backgrounded tabs. Reconnect (resuming from the last offset) instead of
-      // permanently closing, and only surface an error once retries are spent.
-      this.streaming.set(false);
-      if (document.visibilityState !== 'visible') {
-        this.closeStream();
-        return;
-      }
-      if (this.reconnectAttempts >= PackageLogComponent.MAX_RECONNECT_ATTEMPTS) {
+        this.streaming.set(true);
+        if (chunk.text) {
+          this.cumulativeOffset = chunk.offset;
+          this.logChunks.update((chunks) => [...chunks, chunk.text]);
+          this.scanBuffer += chunk.text;
+          // Scan before trimming: markers sit near the top of the log and must be
+          // seen before the buffer is cut down to its tail.
+          this.scanMarkers();
+          if (this.scanBuffer.length > SCAN_BUFFER_LENGTH) {
+            this.scanBuffer = this.scanBuffer.slice(-SCAN_BUFFER_LENGTH);
+          }
+        }
+      },
+      onErrorExhausted: () => {
+        this.streaming.set(false);
         this.error.set('Log stream ended unexpectedly. Please retry in a moment.');
-        this.closeStream();
-        return;
-      }
-      this.reconnectAttempts += 1;
-      this.closeStream();
-      this.scheduleReconnect();
-    };
-  }
-
-  /** Re-opens the stream from the last received offset, immediately. */
-  private reconnect(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = undefined;
-    this.openStream();
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectTimer !== undefined) return;
-    this.reconnectTimer = window.setTimeout(() => {
-      this.reconnectTimer = undefined;
-      this.openStream();
-    }, PackageLogComponent.RECONNECT_DELAY_MS);
+      },
+    });
+    this.stream.open();
   }
 
   /** Finds builder/start/end markers in the recent log tail. Runs per chunk on a
@@ -276,10 +225,8 @@ export class PackageLogComponent implements OnDestroy {
   }
 
   private closeStream(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = undefined;
-    this.eventSource?.close();
-    this.eventSource = undefined;
+    this.stream?.close();
+    this.stream = undefined;
   }
 
   private startElapsedTimer(): void {

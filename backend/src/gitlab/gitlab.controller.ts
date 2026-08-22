@@ -26,6 +26,8 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   ParseIntPipe,
@@ -50,6 +52,7 @@ import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-au
 import { Observable } from 'rxjs';
 import { auth } from '../auth/auth';
 import { GITLAB_GROUP_CHAOTIC_AUR } from '../auth/gitlab-groups';
+import { type SseMessage } from '../utils/sse';
 import { RequireGroupGuard } from '../guards/require-group.guard';
 import { requireGroups, requireRepoGroup } from '../decorators/require-groups.decorator';
 import { AurScanService } from '../diff-scan/aur-scan.service';
@@ -111,6 +114,7 @@ export class GitlabController {
   }
 
   @Post('aur-scan')
+  @HttpCode(HttpStatus.CREATED)
   @UseGuards(AuthGuard)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Scan an AUR package: PKGBUILD sources, static rules and VirusTotal checks.' })
@@ -135,7 +139,7 @@ export class GitlabController {
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Stream AUR package scan updates until the scan completes.' })
   @ApiOkResponse({ description: 'Stream of AurScanStreamChunk messages', type: Object })
-  streamAurScan(@Param('packageName') packageName: string): Observable<Partial<MessageEvent<AurScanStreamChunk>>> {
+  streamAurScan(@Param('packageName') packageName: string): Observable<SseMessage<AurScanStreamChunk>> {
     return this.aurScanService.streamScan(packageName);
   }
 
@@ -162,8 +166,12 @@ export class GitlabController {
     @Param('pipelineId', ParseIntPipe) pipelineId: number,
     @Param('jobId', ParseIntPipe) jobId: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
-  ): Promise<Observable<Partial<MessageEvent<GitlabLogChunk>>>> {
-    return await this.gitlabService.getJobTraceStream(pipelineId, jobId, offset);
+    // Native EventSource reconnects replay the last received frame id here.
+    @Headers('last-event-id') lastEventId?: string,
+  ): Promise<Observable<SseMessage<GitlabLogChunk>>> {
+    const headerOffset = Number(lastEventId);
+    const resumeAt = offset > 0 ? offset : Number.isInteger(headerOffset) && headerOffset > 0 ? headerOffset : 0;
+    return await this.gitlabService.getJobTraceStream(pipelineId, jobId, resumeAt);
   }
 
   @Get('merge-requests')
