@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Observable } from 'rxjs';
 
 const DEFAULT_RESUME_OFFSET = 0;
@@ -20,6 +21,7 @@ export class PackageLogsController {
   constructor(private readonly configService: ConfigService) {}
 
   @Sse(':pkgname/:timestamp')
+  @SkipThrottle()
   @ApiOperation({ summary: 'Stream a package build log from the build server.' })
   @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
   @ApiQuery({ name: 'offset', required: false, description: 'Resume from this character offset', type: Number })

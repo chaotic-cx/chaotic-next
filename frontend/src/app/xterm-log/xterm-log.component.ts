@@ -1,4 +1,5 @@
 import { Component, effect, ElementRef, input, OnDestroy, OnInit, output, viewChild } from '@angular/core';
+import { flavors } from '@catppuccin/palette';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
@@ -6,34 +7,35 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
 
+const { mocha } = flavors;
 const DEFAULT_FONT_SIZE = 12;
 const SCROLLBACK_LINES = 9999999;
 const PIXELS_PER_SCROLL_LINE = 16;
-const SCROLLBAR_COLOR = '#f5e0dc';
+const SCROLLBAR_COLOR = mocha.colors.rosewater.hex;
 const LINE_NUMBER_TOP_OFFSET_PX = 1;
 const GUTTER_MIN_FONT_SIZE_PX = 10;
 
 const XTERM_THEME = {
   background: 'rgba(0, 0, 0, 0)',
-  black: '#45475a',
-  blue: '#89b4fa',
-  brightBlack: '#585b70',
-  brightBlue: '#89b4fa',
-  brightCyan: '#94e2d5',
-  brightGreen: '#a6e3a1',
-  brightMagenta: '#f5c2e7',
-  brightRed: '#f38ba8',
-  brightWhite: '#a6adc8',
-  brightYellow: '#f9e2af',
-  cursor: '#f5e0dc',
-  cursorAccent: '#f5e0dc',
-  cyan: '#94e2d5',
-  foreground: '#cdd6f4',
-  green: '#a6e3a1',
-  magenta: '#f5c2e7',
-  red: '#f38ba8',
-  white: '#bac2de',
-  yellow: '#f9e2af',
+  black: mocha.colors.surface1.hex,
+  blue: mocha.colors.blue.hex,
+  brightBlack: mocha.colors.overlay0.hex,
+  brightBlue: mocha.colors.blue.hex,
+  brightCyan: mocha.colors.teal.hex,
+  brightGreen: mocha.colors.green.hex,
+  brightMagenta: mocha.colors.pink.hex,
+  brightRed: mocha.colors.red.hex,
+  brightWhite: mocha.colors.overlay2.hex,
+  brightYellow: mocha.colors.yellow.hex,
+  cursor: mocha.colors.rosewater.hex,
+  cursorAccent: mocha.colors.rosewater.hex,
+  cyan: mocha.colors.teal.hex,
+  foreground: mocha.colors.text.hex,
+  green: mocha.colors.green.hex,
+  magenta: mocha.colors.pink.hex,
+  red: mocha.colors.red.hex,
+  white: mocha.colors.overlay1.hex,
+  yellow: mocha.colors.yellow.hex,
 };
 
 @Component({
@@ -235,7 +237,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       this.terminal.registerDecoration({
         marker,
         layer: 'bottom',
-        backgroundColor: '#313244',
+        backgroundColor: mocha.colors.surface0.hex,
         width: this.terminal.cols,
       });
     } catch {

@@ -51,7 +51,7 @@ describe('Repo-manager endpoints (e2e, real PostgreSQL)', () => {
       const rows = (await e2e.dataSource.query(
         `SELECT "pkgType", "pkgId", version FROM package_elf_analysis WHERE "pkgId" = $1`,
         [archPkg.id],
-      )) as Array<{ pkgType: string; pkgId: string; version: string }>;
+      )) as { pkgType: string; pkgId: string; version: string }[];
       expect(rows).toHaveLength(1);
       expect(rows[0].version).toBe('2.4.0');
     });
@@ -82,7 +82,7 @@ describe('Repo-manager endpoints (e2e, real PostgreSQL)', () => {
       const rows = (await e2e.dataSource.query(
         `SELECT COUNT(*)::int AS count FROM package_elf_analysis WHERE "pkgId" = $1`,
         [archPkg.id],
-      )) as Array<{ count: number }>;
+      )) as { count: number }[];
       expect(rows[0].count).toBe(1);
     });
   });

@@ -157,6 +157,11 @@ export interface PackageElfAnalysis {
   broken: boolean;
   /** Empty when not broken. */
   brokenReasons: string[];
+  /**
+   * Whether this package contains compiled ELF code (binaries/libraries) that
+   * can be analyzed for ABI compatibility.
+   */
+  hasCompiledCode: boolean;
   scannedAt: string;
 }
 
@@ -353,6 +358,7 @@ export interface AdminPackageElfAnalysis {
   version: string;
   broken: boolean;
   brokenReasons: string[];
+  hasCompiledCode: boolean;
   scannedAt: string;
 }
 

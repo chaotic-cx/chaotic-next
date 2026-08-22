@@ -24,7 +24,7 @@
 }
 
 .suggestion-list {
-  scrollbar-color: #313244 rgba(24, 24, 37, 0.5);
+  scrollbar-color: var(--ctp-mocha-surface0) rgba(24, 24, 37, 0.5);
 }
 
 ng-terminal,

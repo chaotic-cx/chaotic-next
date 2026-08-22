@@ -129,12 +129,14 @@ export class PackageElfAnalysis {
   @Column({ type: 'jsonb', default: () => "'[]'" })
   pluginOf!: string[];
 
-  /** Whether the package is broken in the current repo state (see brokenReasons). */
   @Column({ type: 'boolean', default: false })
   broken!: boolean;
 
   @Column({ type: 'jsonb', default: () => "'[]'" })
   brokenReasons!: string[];
+
+  @Column({ type: 'boolean', default: false })
+  hasCompiledCode!: boolean;
 
   @CreateDateColumn()
   scannedAt!: Date;
@@ -153,6 +155,7 @@ export class PackageElfAnalysis {
       pluginOf: this.pluginOf,
       broken: this.broken,
       brokenReasons: this.brokenReasons,
+      hasCompiledCode: this.hasCompiledCode,
       scannedAt: this.scannedAt.toISOString(),
     };
   }

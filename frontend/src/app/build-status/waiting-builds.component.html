@@ -29,7 +29,7 @@
                 class="cursor-pointer text-ctp-green hover:text-ctp-text disabled:cursor-not-allowed disabled:opacity-50"
                 [disabled]="promoting() !== null"
                 [attr.aria-label]="`Promote ${pkg.name} to front of queue`"
-                (click)="promote(pkg.name, pkg.rawName)"
+                (click)="promote(pkg.name, pkg.rawName, pkg.repo)"
                 type="button"
                 pTooltip="Promote to front of queue"
                 tooltipPosition="left"

@@ -141,7 +141,7 @@ export async function mapWithConcurrency<T, R>(
   mapper: (item: T) => Promise<R>,
   concurrency: number,
 ): Promise<R[]> {
-  const results = new Array<R>(items.length);
+  const results: R[] = new Array(items.length);
   let nextIndex = 0;
   const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
     while (nextIndex < items.length) {

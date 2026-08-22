@@ -37,7 +37,7 @@ function lcsMatched(a: WordToken[], b: WordToken[]): boolean[] {
     }
   }
 
-  const matched = new Array<boolean>(b.length).fill(false);
+  const matched: boolean[] = new Array(b.length).fill(false);
   let i = 0;
   let j = 0;
   while (i < a.length && j < b.length) {

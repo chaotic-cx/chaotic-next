@@ -475,6 +475,7 @@ export class AdminService {
       version: row.version,
       broken: row.broken,
       brokenReasons: row.brokenReasons ?? [],
+      hasCompiledCode: row.hasCompiledCode,
       scannedAt: row.scannedAt.toISOString(),
     }));
     return paginate(items, total, safePage, safePerPage);
@@ -498,7 +499,7 @@ export class AdminService {
   }
 
   async rescanPackages(
-    packages: Array<{ pkgname: string; pkgType: string }>,
+    packages: { pkgname: string; pkgType: string }[],
   ): Promise<{ rescanned: number; failed: string[] }> {
     const secretMirrorUrl = this.configService.get<string>('app.secretMirrorUrl');
     if (!secretMirrorUrl) throw new ConflictException('SECRET_MIRROR_URL is not configured');
@@ -642,6 +643,7 @@ export class AdminService {
       version: row.version,
       broken: row.broken,
       brokenReasons: row.brokenReasons ?? [],
+      hasCompiledCode: row.hasCompiledCode,
       scannedAt: row.scannedAt.toISOString(),
     };
   }

@@ -6,7 +6,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
   selector: 'chaotic-live-traffic-feed',
   imports: [DatePipe],
   template: `
-    <div class="live-feed-card mt-4 rounded-xl border border-ctp-surface0 bg-ctp-mantle/80 p-4 backdrop-blur-md">
+    <div class="live-feed-card mt-4 rounded-xl border border-ctp-surface0 p-4 backdrop-blur-xs">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ctp-surface0 pb-3">
         <div class="flex items-center gap-3">
           <div class="relative flex h-3 w-3 items-center justify-center">

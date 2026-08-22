@@ -1,6 +1,7 @@
+import { type LiveTrafficHit } from '@chaotic-next/shared-lib';
 import { Controller, Get, Param, Query, Sse } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { type LiveTrafficHit } from '@chaotic-next/shared-lib';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Observable } from 'rxjs';
 import {
   CountNameDto,
@@ -55,6 +56,7 @@ export class MetricsController {
   }
 
   @Sse('live/traffic')
+  @SkipThrottle()
   @ApiOperation({
     summary: 'Stream real-time ALPM/pacman router traffic as SSE JSON events.',
     description:

@@ -1,9 +1,10 @@
-import { PassThrough } from 'node:stream';
+import { LiveTrafficHit } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
 import { BadRequestException } from '@nestjs/common';
-import { nDaysInPast, utcDayStart } from '../utils/functions';
+import { PassThrough } from 'node:stream';
 import { DataSource } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
+import { nDaysInPast, utcDayStart } from '../utils/functions';
 import { MetricsService, parseTrafficLine } from './metrics.service';
 
 const MIN_DAYS = 1;
@@ -245,7 +246,7 @@ describe('MetricsService', () => {
       const dataSource = { getRepository: vi.fn(), query: vi.fn() } as unknown as DataSource;
       const service = new MetricsService(dataSource, makeCache() as never, mockHttp);
 
-      const events: Array<{ data: LiveTrafficHit }> = [];
+      const events: { data: LiveTrafficHit }[] = [];
       const sub = service.getLiveTrafficStream().subscribe({
         next: (ev) => events.push(ev as { data: LiveTrafficHit }),
       });

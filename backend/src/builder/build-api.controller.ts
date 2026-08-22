@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBody, ApiCookieAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
 import { GitlabService } from '../gitlab/gitlab.service';
@@ -93,6 +94,7 @@ export class BuildApiController {
   }
 
   @Sse('manager/logs')
+  @SkipThrottle()
   @ApiOperation({ summary: 'Proxy manager log stream from the build server as server-sent events.' })
   @ApiOkResponse({ description: 'SSE stream of manager logs' })
   @ApiQuery({ name: 'Last-Event-ID', required: false, description: 'Sequence number to resume from', type: Number })

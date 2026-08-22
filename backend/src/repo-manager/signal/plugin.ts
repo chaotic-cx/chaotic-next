@@ -74,6 +74,23 @@ const GENERIC_DIRS = new Set<string>([
   'usr/lib/udev',
   'usr/lib/modules',
   'usr/lib/firmware',
+  'usr/lib/pkgconfig',
+  'usr/lib/cmake',
+  'usr/share/gir-1.0',
+  'usr/share/dbus-1',
+  'usr/share/polkit-1',
+  'usr/share/bash-completion',
+  'usr/share/fish',
+  'usr/share/zsh',
+  'usr/share/desktop-directories',
+  'usr/share/sounds',
+  'usr/share/glib-2.0',
+  'usr/share/gsettings-schemas',
+  'usr/share/installed-tests',
+  'usr/share/metainfo',
+  'usr/share/vala',
+  'etc/xdg',
+  'etc/profile.d',
   ...PYTHON_GENERIC_MINORS.map((minor) => `usr/lib/python3.${minor}/site-packages`),
 ]);
 
@@ -85,7 +102,9 @@ export function deriveDirectoriesOwned(files: string[]): string[] {
   return dedupe([...dirs]).sort();
 }
 
-export function derivePluginOf(files: string[], index: DirectoryIndex): string[] {
+export function derivePluginOf(files: string[], index: DirectoryIndex, hasCompiledCode = false): string[] {
+  if (!hasCompiledCode) return [];
+
   const plugins = new Set<string>();
   for (const file of files) {
     const parent = parentDirectory(file);
@@ -108,7 +127,36 @@ export function derivePluginOf(files: string[], index: DirectoryIndex): string[]
       }
     }
   }
-  return dedupe([...plugins]).sort();
+  const result = dedupe([...plugins]).sort();
+
+  if (result.length === 0) return result;
+
+  const ownedDirs = deriveDirectoriesOwned(files);
+
+  if (result.length > 100 && ownedDirs.length < 10 && files.length < 50) {
+    const filteredByDir = result.filter((ownerKey) => {
+      const ownerName = index.keyToPkgname.get(ownerKey);
+      if (!ownerName) return false;
+
+      return files.some((file) => {
+        const parent = parentDirectory(file);
+        if (!parent) return false;
+
+        const directOwners = index.direct.get(parent);
+        if (directOwners?.includes(ownerKey)) {
+          return !GENERIC_DIRS.has(parent) && parent.includes(ownerName);
+        }
+
+        return false;
+      });
+    });
+
+    if (filteredByDir.length > 0 && filteredByDir.length < result.length) {
+      return filteredByDir;
+    }
+  }
+
+  return result;
 }
 
 export function buildAnalysis(opts: {
@@ -163,6 +211,8 @@ export function buildAnalysis(opts: {
   const directoriesOwned = deriveDirectoriesOwned(files);
   const directDirectories = dedupe(files.map(parentDirectory).filter((d): d is string => d !== null)).sort();
 
+  const hasCompiledCode = needed.size > 0 || provided.size > 0;
+
   return {
     version: opts.version,
     files,
@@ -176,6 +226,7 @@ export function buildAnalysis(opts: {
     pluginOf: [],
     broken: false,
     brokenReasons: [],
+    hasCompiledCode,
     scannedAt: new Date().toISOString(),
   };
 }

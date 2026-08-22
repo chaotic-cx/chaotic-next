@@ -17,6 +17,7 @@ import {
 import { MessageToastService } from '@garudalinux/core';
 import { lastValueFrom, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
+import { backendErrorMessage } from '../api-errors';
 import { resourceSignal, resourceValue } from '../functions';
 
 export interface PackageFormData {
@@ -255,9 +256,9 @@ export class AdminService {
     this.packagePage.set(1);
   }
 
-  async bumpPackages(packages: string[], ref = 'main'): Promise<void> {
+  async bumpPackages(packages: string[], repo = 'chaotic-aur', ref = 'main'): Promise<void> {
     await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/gitlab/bump-packages`, { packages, ref }),
+      () => this.http.post(`${this.backendUrl}/gitlab/bump-packages`, { packages, repo, ref }),
       'Package bump triggered',
       'Could not trigger package bump.',
       () => this.packagesResource.reload(),
@@ -279,9 +280,9 @@ export class AdminService {
     );
   }
 
-  async dropPackages(packages: string[], ref = 'main'): Promise<void> {
+  async dropPackages(packages: string[], repo = 'chaotic-aur', ref = 'main'): Promise<void> {
     await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/gitlab/drop-packages`, { packages, ref }),
+      () => this.http.post(`${this.backendUrl}/gitlab/drop-packages`, { packages, repo, ref }),
       'Package drop triggered',
       'Could not trigger package drop.',
       () => this.packagesResource.reload(),
@@ -289,7 +290,8 @@ export class AdminService {
   }
 
   async addPackages(
-    packages: Array<{ pkgname: string; source?: string }>,
+    packages: { pkgname: string; source?: string }[],
+    repo = 'chaotic-aur',
     requestOrigin = 'admin',
     requestReason?: string,
     customRequestReason?: string,
@@ -299,6 +301,7 @@ export class AdminService {
       () =>
         this.http.post(`${this.backendUrl}/gitlab/add-packages`, {
           packages,
+          repo,
           request_origin: requestOrigin,
           request_reason: requestReason !== 'unset' ? requestReason : undefined,
           custom_request_reason: customRequestReason?.trim() || undefined,
@@ -534,7 +537,7 @@ export class AdminService {
       this.messageToastService.success('Success', successDetail);
       onSuccess?.();
     } catch (error) {
-      this.messageToastService.error('Operation failed', errorDetail);
+      this.messageToastService.error('Operation failed', backendErrorMessage(error, errorDetail));
       console.error(errorDetail, error);
     }
   }

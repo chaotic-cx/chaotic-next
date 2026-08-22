@@ -1,12 +1,14 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiCookieAuth } from '@nestjs/swagger';
-import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { Paginated } from '@chaotic-next/shared-lib';
 import { BrokenPackageReport, PackageRebuildTriggerSources } from '../interfaces/repo-manager';
 import { BumpPackagesBodyDto, BumpPackagesResultDto } from './repo-manager.dto';
 import { RepoManagerService } from './repo-manager.service';
 import { PackageElfAnalysis } from './repo-manager.entity';
 import type { DependencyEdge } from './signal';
+import { auth } from '../auth/auth';
+import { userGroupsOf } from '../auth/gitlab-groups';
 
 @ApiTags('repo')
 @ApiCookieAuth('better-auth.session_token')
@@ -42,10 +44,14 @@ export class RepoManagerController {
   }
 
   @Post('broken/bump')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Manually bump a set of packages selected in the admin UI.' })
   @ApiCreatedResponse({ description: 'The package names that were bumped.', type: BumpPackagesResultDto })
-  bumpBrokenPackages(@Body() body: BumpPackagesBodyDto): Promise<BumpPackagesResultDto> {
-    return this.repoManager.bumpSelectedPackages(body.pkgnames);
+  bumpBrokenPackages(
+    @Session() session: UserSession<typeof auth>,
+    @Body() body: BumpPackagesBodyDto,
+  ): Promise<BumpPackagesResultDto> {
+    return this.repoManager.bumpSelectedPackages(body.pkgnames, userGroupsOf(session.user));
   }
 
   @Post('index/arch')

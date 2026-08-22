@@ -12,6 +12,7 @@ function createService(
   aurScan: { maintainerStatusFor: ReturnType<typeof vi.fn> } = {
     maintainerStatusFor: vi.fn(async () => new Map()),
   },
+  repoRepository?: Repository<never>,
 ): {
   service: GitlabService;
   pipelineTriggerRepository: {
@@ -37,6 +38,7 @@ function createService(
   const sseNext = vi.fn();
 
   const packageRepository = { findOne: vi.fn().mockResolvedValue({ version: '1.0', pkgrel: 1 }) };
+  const defaultRepoRepository = { findOne: vi.fn().mockResolvedValue({ gitlabProjectId: 'test-project-id' }) };
 
   const service = new GitlabService(
     { get: vi.fn(), set: cacheSet, del: vi.fn() } as never,
@@ -48,7 +50,7 @@ function createService(
     {} as Repository<never>,
     {} as Repository<never>,
     pipelineTriggerRepository as unknown as Repository<PipelineTrigger>,
-    {} as Repository<never>,
+    repoRepository ?? (defaultRepoRepository as unknown as Repository<never>),
     packageRepository as never,
   );
   (service as unknown as { chaoticId: string }).chaoticId = 'test-project-id';
@@ -82,7 +84,7 @@ describe('GitlabService.operations', () => {
       RepositoryFiles: { showRaw },
     };
 
-    const result = await service.bumpPackages(['nodejs'], 'main', ACTOR);
+    const result = await service.bumpPackages(['nodejs'], 'chaotic-aur', 'main', ACTOR);
 
     expect(showRaw).toHaveBeenCalledWith('test-project-id', 'nodejs/.CI/config', 'main');
     expect(createCommit).toHaveBeenCalledWith(
@@ -113,6 +115,29 @@ describe('GitlabService.operations', () => {
     });
   });
 
+  it('throws NotFoundException when bumping non-existent package', async () => {
+    const packageRepository = { findOne: vi.fn().mockResolvedValue(null) };
+    const repoRepository = { findOne: vi.fn().mockResolvedValue({ gitlabProjectId: 'test-project-id' }) };
+    const service = new GitlabService(
+      { get: vi.fn(), set: vi.fn(), del: vi.fn() } as never,
+      { get: vi.fn(), getOrThrow: vi.fn().mockReturnValue(12345) } as never,
+      new DiffScanService(),
+      { enabled: false, reportOn: vi.fn() } as never,
+      { maintainerStatusFor: vi.fn(async () => new Map()) } as never,
+      { sseEvents$: { next: vi.fn() } } as never,
+      {} as Repository<never>,
+      {} as Repository<never>,
+      { insert: vi.fn(), update: vi.fn(), findOne: vi.fn() } as unknown as Repository<PipelineTrigger>,
+      repoRepository as unknown as Repository<never>,
+      packageRepository as never,
+    );
+    (service as unknown as { chaoticId: string }).chaoticId = 'test-project-id';
+
+    await expect(service.bumpPackages(['nonexistent'], 'chaotic-aur', 'main', ACTOR)).rejects.toThrow(
+      "Package 'nonexistent' not found",
+    );
+  });
+
   it('deletes package directories via Commits.create for operation Drop Packages', async () => {
     const { service, pipelineTriggerRepository } = createService();
     const createCommit = vi.fn().mockResolvedValue({ id: 'commit123', web_url: 'https://gitlab.com/commit/123' });
@@ -127,7 +152,7 @@ describe('GitlabService.operations', () => {
       Repositories: { allRepositoryTrees },
     };
 
-    const result = await service.dropPackages(['paru', 'zen-browser'], 'main', ACTOR);
+    const result = await service.dropPackages(['paru', 'zen-browser'], 'chaotic-aur', 'main', ACTOR);
 
     expect(createCommit).toHaveBeenCalledWith(
       'test-project-id',
@@ -166,7 +191,13 @@ describe('GitlabService.operations', () => {
       startScan: vi.fn().mockResolvedValue({ packageBase: 'paru' }),
     };
 
-    const result = await service.addPackages([{ pkgname: 'paru', source: 'aur' }], 'github/5678', 'main', ACTOR);
+    const result = await service.addPackages(
+      [{ pkgname: 'paru', source: 'aur' }],
+      'chaotic-aur',
+      'github/5678',
+      'main',
+      ACTOR,
+    );
 
     expect(createCommit).toHaveBeenCalled();
     expect(result.status).toBe('committed');

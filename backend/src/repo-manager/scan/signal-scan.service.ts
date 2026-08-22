@@ -134,14 +134,15 @@ export class SignalScanService {
     // Pass 1: scan and persist analyses (pluginOf is left empty; it depends on
     // the directory index reflecting the whole batch). The directory index is
     // rebuilt per package so it is current before pass 2.
-    const scanned: { job: ScanJob; files: string[] }[] = [];
+    const scanned: { job: ScanJob; files: string[]; hasCompiledCode: boolean }[] = [];
     let cursor = 0;
     const worker = async (): Promise<void> => {
       while (cursor < jobs.length) {
         const job = jobs[cursor++];
         const analysis = await this.scanOne(job);
         if (!analysis) continue;
-        scanned.push({ job, files: analysis.files });
+        const hasCompiledCode = analysis.providedSonames.length > 0 || analysis.neededSonames.length > 0;
+        scanned.push({ job, files: analysis.files, hasCompiledCode });
 
         await this.analysisRepository.upsert(
           {
@@ -157,6 +158,7 @@ export class SignalScanService {
             directoriesOwned: analysis.directoriesOwned,
             directDirectories: analysis.directDirectories,
             pluginOf: [],
+            hasCompiledCode: analysis.hasCompiledCode,
           },
           ['pkgType', 'pkgId', 'version'],
         );
@@ -171,8 +173,8 @@ export class SignalScanService {
     // scheduling under concurrency > 1.
     await this.updateDirectoryIndex(scanned.map(({ job }) => ({ pkgType: pkgTypeOf(job.pkgType), pkgId: job.pkgId })));
     const index = await this.getDirectoryIndex();
-    for (const { job, files } of scanned) {
-      const pluginOf = derivePluginOf(files, index);
+    for (const { job, files, hasCompiledCode } of scanned) {
+      const pluginOf = derivePluginOf(files, index, hasCompiledCode);
       await this.analysisRepository.update(
         { pkgType: pkgTypeOf(job.pkgType), pkgId: job.pkgId, version: job.version },
         { pluginOf },
@@ -301,9 +303,7 @@ export class SignalScanService {
   private async loadBrokenCandidates(
     filter: { pkgType: TriggerType; pkgId: number }[] | undefined,
   ): Promise<
-    Array<
-      Pick<PackageElfAnalysis, 'id' | 'pkgType' | 'pkgId' | 'version' | 'neededSonames' | 'providedSonames' | 'files'>
-    >
+    Pick<PackageElfAnalysis, 'id' | 'pkgType' | 'pkgId' | 'version' | 'neededSonames' | 'providedSonames' | 'files'>[]
   > {
     const select = {
       id: true,
@@ -367,7 +367,7 @@ export class SignalScanService {
     return map;
   }
 
-  private async updateDirectoryIndex(packages: Array<Pick<PackageElfAnalysis, 'pkgType' | 'pkgId'>>): Promise<void> {
+  private async updateDirectoryIndex(packages: Pick<PackageElfAnalysis, 'pkgType' | 'pkgId'>[]): Promise<void> {
     if (packages.length === 0) return;
     const cache = await this.loadDirectoryCache();
 
@@ -445,7 +445,7 @@ export class SignalScanService {
   }
 
   private async recomputePluginOf(
-    analyses: Array<Pick<PackageElfAnalysis, 'pkgType' | 'pkgId' | 'version'>>,
+    analyses: Pick<PackageElfAnalysis, 'pkgType' | 'pkgId' | 'version'>[],
   ): Promise<void> {
     if (analyses.length === 0) return;
     const index = await this.getDirectoryIndex();
@@ -455,7 +455,15 @@ export class SignalScanService {
     // symbol/vtable JSONB that is never rewritten here.
     const rows = await this.analysisRepository.find({
       where: { pkgId: In(pkgIds) },
-      select: { id: true, pkgType: true, pkgId: true, version: true, files: true },
+      select: {
+        id: true,
+        pkgType: true,
+        pkgId: true,
+        version: true,
+        files: true,
+        providedSonames: true,
+        neededSonames: true,
+      },
     });
 
     const byIdentity = new Map<string, PackageElfAnalysis>();
@@ -471,7 +479,8 @@ export class SignalScanService {
       const analysis = byIdentity.get(analysisKey({ pkgType, pkgId, version }));
       i++;
       if (!analysis) continue;
-      const pluginOf = derivePluginOf(analysis.files, index);
+      const hasCompiledCode = analysis.providedSonames.length > 0 || analysis.neededSonames.length > 0;
+      const pluginOf = derivePluginOf(analysis.files, index, hasCompiledCode);
       toSave.push({ id: analysis.id, pkgType, pkgId, version, pluginOf });
       if (i % step === 0) {
         this.logger.debug(`Derived pluginOf ${i}/${total}`, 'SignalScanService');

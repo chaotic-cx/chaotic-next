@@ -46,11 +46,11 @@ export class WaitingBuildsComponent {
     this.page.set(Math.min(Math.max(1, page), this.pageCount()));
   }
 
-  async promote(pkgName: string, rawName: string): Promise<void> {
+  async promote(pkgName: string, rawName: string, repo: string): Promise<void> {
     const pkgbase = rawName.split('/').pop() ?? pkgName;
     this.promoting.set(pkgName);
     try {
-      await this.buildStatusService.promote(pkgbase);
+      await this.buildStatusService.promote(pkgbase, 'x86_64', repo);
       this.messageToastService.success('Build promoted', `${pkgName} has been promoted to the front of the queue.`);
       this.buildStatusService.refreshQueueStats();
     } catch {

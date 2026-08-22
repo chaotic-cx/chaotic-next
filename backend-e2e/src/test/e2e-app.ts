@@ -15,7 +15,7 @@ import { RepoStatus } from '@chaotic-next/shared-lib';
 import { utcDayStart } from '@chaotic-next/backend/utils/functions';
 import { HLL_LOG2M } from '@chaotic-next/backend/utils/constants';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Logger } from '@nestjs/common';
+import { ExecutionContext, Logger } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
@@ -137,7 +137,31 @@ export async function createE2eApp(): Promise<E2eApp> {
   Logger.overrideLogger([]);
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideGuard(AuthGuard)
-    .useValue({ canActivate: () => true })
+    .useValue({
+      canActivate: (context: ExecutionContext) => {
+        const request = context.switchToHttp().getRequest<{
+          headers: Record<string, string | string[] | undefined>;
+          user?: unknown;
+          session?: unknown;
+        }>();
+        const groupsHeader = request.headers['x-test-user-groups'];
+        request.user = {
+          id: 'e2e-user',
+          name: 'E2E User',
+          email: 'e2e@example.com',
+          emailVerified: true,
+          groups:
+            typeof groupsHeader === 'string'
+              ? groupsHeader
+                  .split(',')
+                  .map((g) => g.trim())
+                  .filter(Boolean)
+              : [],
+        };
+        request.session = { user: request.user };
+        return true;
+      },
+    })
     .compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {

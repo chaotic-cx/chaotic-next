@@ -136,7 +136,7 @@ export class RouterService implements OnModuleInit {
     days: number,
     groupColumn: string,
     groupAlias: K,
-  ): Promise<Array<{ day: string; count: string } & Record<K, string>>> {
+  ): Promise<({ day: string; count: string } & Record<K, string>)[]> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
     const key = `router:${groupAlias}-over-time:${clampedDays}`;
     return cachedResult(
@@ -155,7 +155,7 @@ export class RouterService implements OnModuleInit {
           .addGroupBy(groupColumn)
           .orderBy('day', 'ASC')
           .getRawMany<{ day: string; count: string } & Record<K, string>>() as Promise<
-          Array<{ day: string; count: string } & Record<K, string>>
+          ({ day: string; count: string } & Record<K, string>)[]
         >,
     );
   }
