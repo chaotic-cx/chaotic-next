@@ -68,6 +68,15 @@ describe('Admin Endpoints (e2e)', () => {
       const bodyActive = (await resActive.json()) as { total: number; items: Array<{ pkgname: string }> };
       expect(bodyActive.total).toBe(2);
       expect(bodyActive.items.map((p) => p.pkgname)).toEqual(['baz-tool', 'libfoo']);
+
+      const resInactive = await e2e.inject({
+        method: 'GET',
+        url: '/admin/packages?active=false',
+      });
+      expect(resInactive.statusCode).toBe(200);
+      const bodyInactive = (await resInactive.json()) as { total: number; items: Array<{ pkgname: string }> };
+      expect(bodyInactive.total).toBe(1);
+      expect(bodyInactive.items[0].pkgname).toBe('libbar');
     });
 
     it('rejects invalid pagination/query parameters with 400 Bad Request', async () => {
@@ -361,6 +370,64 @@ describe('Admin Endpoints (e2e)', () => {
       expect(delRes.statusCode).toBe(200);
     });
   });
+
+  describe('POST /admin/rescan', () => {
+    it('reports packages not found when rescan list is empty', async () => {
+      const res = await e2e.inject({
+        method: 'POST',
+        url: '/admin/rescan',
+        payload: { packages: [] },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = (await res.json()) as { rescanned: number; failed: string[] };
+      expect(body.rescanned).toBe(0);
+      expect(body.failed).toEqual([]);
+    });
+
+    it('reports failure for unknown chaotic package', async () => {
+      const res = await e2e.inject({
+        method: 'POST',
+        url: '/admin/rescan',
+        payload: { packages: [{ pkgname: 'nonexistent-pkg', pkgType: '1' }] },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = (await res.json()) as { rescanned: number; failed: string[] };
+      expect(body.rescanned).toBe(0);
+      expect(body.failed).toEqual(['nonexistent-pkg: not found']);
+    });
+
+    it('reports failure for unknown arch package', async () => {
+      const res = await e2e.inject({
+        method: 'POST',
+        url: '/admin/rescan',
+        payload: { packages: [{ pkgname: 'nonexistent-arch-pkg', pkgType: '0' }] },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = (await res.json()) as { rescanned: number; failed: string[] };
+      expect(body.rescanned).toBe(0);
+      expect(body.failed).toEqual(['nonexistent-arch-pkg: not found']);
+    });
+
+    it('reports failure when download fails (no real mirror)', async () => {
+      await e2e.seedPackage({ pkgname: 'test-rescan-pkg' });
+
+      const res = await e2e.inject({
+        method: 'POST',
+        url: '/admin/rescan',
+        payload: { packages: [{ pkgname: 'test-rescan-pkg', pkgType: '1' }] },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = (await res.json()) as { rescanned: number; failed: string[] };
+      expect(body.rescanned).toBe(0);
+      expect(body.failed.length).toBe(1);
+      expect(body.failed[0]).toContain('test-rescan-pkg');
+    });
+  });
+
   describe('GET /admin/package-elf-analysis/:id/bumps', () => {
     it('lists the rebuild bumps of an analysis row', async () => {
       const archPkg = await e2e.seedArchlinuxPackage({ pkgname: 'bash' });
