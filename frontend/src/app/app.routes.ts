@@ -1,5 +1,6 @@
 import { type Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
+import { backendChildGuard, backendGuard } from './backend-status/backend-required.guard';
 
 export const routes: Routes = [
   {
@@ -15,21 +16,25 @@ export const routes: Routes = [
   {
     title: 'Build status',
     path: 'status',
+    canActivate: [backendGuard],
     loadComponent: () => import('./build-status/build-status.component').then((c) => c.BuildStatusComponent),
   },
   {
     title: 'Deployments',
     path: 'deployments',
+    canActivate: [backendGuard],
     loadComponent: () => import('./deploy-log/deploy-log.component').then((c) => c.DeployLogComponent),
   },
   {
     title: 'Packages',
     path: 'packages',
+    canActivate: [backendGuard],
     loadComponent: () => import('./package-list/package-list.component').then((c) => c.PackageListComponent),
   },
   {
     title: 'Statistics and data',
     path: 'stats',
+    canActivate: [backendGuard],
     loadComponent: () => import('./stats/stats.component').then((c) => c.StatsComponent),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'search' },
@@ -73,16 +78,19 @@ export const routes: Routes = [
   {
     title: 'Update review',
     path: 'update-review',
+    canActivate: [backendGuard],
     loadComponent: () => import('./mr-overview/mr-overview.component').then((c) => c.MrOverviewComponent),
   },
   {
     title: 'Pipeline logs',
     path: 'logs/:pipelineId',
+    canActivate: [backendGuard],
     loadComponent: () => import('./log-viewer/log-viewer.component').then((c) => c.LogViewerComponent),
   },
   {
     title: 'Package log',
     path: 'logs/package/:pkgname/:timestamp',
+    canActivate: [backendGuard],
     loadComponent: () => import('./package-log/package-log.component').then((c) => c.PackageLogComponent),
   },
   {
@@ -93,6 +101,7 @@ export const routes: Routes = [
   {
     title: 'Mirror map',
     path: 'map',
+    canActivate: [backendGuard],
     loadComponent: () => import('./map/map.component').then((c) => c.MapComponent),
   },
   {
@@ -123,6 +132,7 @@ export const routes: Routes = [
     title: 'Admin',
     path: 'admin',
     canActivate: [authGuard],
+    canActivateChild: [backendChildGuard],
     loadComponent: () => import('./admin/admin.component').then((c) => c.AdminComponent),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'packages' },
@@ -185,6 +195,11 @@ export const routes: Routes = [
           import('./admin/pages/admin-manager-logs-page.component').then((c) => c.AdminManagerLogsPageComponent),
       },
     ],
+  },
+  {
+    title: 'Backend unavailable',
+    path: 'backend-down',
+    loadComponent: () => import('./backend-down/backend-down.component').then((c) => c.BackendDownComponent),
   },
   {
     title: 'Not found',

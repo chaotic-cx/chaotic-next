@@ -1,20 +1,23 @@
-<div class="flex w-full justify-center px-4 py-28 md:py-36">
-  <div class="w-full max-w-sm rounded-2xl border border-ctp-surface1 p-8 shadow-lg backdrop-blur-md">
-    <div class="mb-8 flex flex-col items-center gap-4 text-center">
-      <img class="rounded-xl" ngSrc="/assets/logo_400.png" width="72" height="72" priority alt="Chaotic-AUR logo" />
-      <div>
-        <h1 class="text-ctp-text text-2xl font-extrabold">Sign in</h1>
-        <p class="text-ctp-subtext mt-2 text-sm">
-          Sign in with your GitLab account to review and manage Chaotic-AUR packages.
-        </p>
-      </div>
-    </div>
+<div class="flex justify-center px-4 pt-36 pb-8">
+  <div class="hero-card mx-auto w-full max-w-xl p-8 text-center">
+    <img
+      class="mx-auto rounded-xl"
+      ngSrc="/assets/logo_400.png"
+      width="64"
+      height="64"
+      priority
+      alt="Chaotic-AUR logo"
+    />
+    <h1 class="text-ctp-maroon mt-6 text-2xl font-bold">Sign in</h1>
+    <p class="text-ctp-subtext1 mt-3 text-sm">
+      Sign in with your GitLab account to review and manage Chaotic-AUR packages.
+    </p>
     <p-button
       [loading]="isLoading()"
       (onClick)="login()"
       severity="secondary"
       ariaLabel="Continue with GitLab"
-      styleClass="w-full"
+      styleClass="mt-6 w-full"
     >
       <span class="flex w-full items-center justify-center gap-2">
         <svg class="h-5 w-5" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">

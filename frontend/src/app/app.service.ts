@@ -1,5 +1,5 @@
 import { HttpClient, HttpParams, type HttpResourceRequest } from '@angular/common/http';
-import { inject, Service } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import {
   type BuildSortField,
@@ -45,6 +45,9 @@ export class AppService {
   chaoticSse$ = new Subject<ChaoticEvent>();
   chaoticEvent = this.chaoticSse$.asObservable();
 
+  private readonly internalSseConnected = signal(false);
+  readonly sseConnected = this.internalSseConnected.asReadonly();
+
   private eventSource: EventSource | undefined;
   private reconnectTimer: number | undefined;
   private readonly onVisibilityChange = (): void => {
@@ -69,12 +72,15 @@ export class AppService {
     const source = new EventSource(`${this.appConfig.backendUrl}/sse?ngsw-bypass`);
     this.eventSource = source;
 
+    source.onopen = () => this.internalSseConnected.set(true);
+
     source.onmessage = ({ data }) => {
       const event: unknown = JSON.parse(data);
       if (isChaoticEvent(event)) this.chaoticSse$.next(event);
     };
 
     source.onerror = () => {
+      this.internalSseConnected.set(false);
       this.eventSource?.close();
       this.eventSource = undefined;
       this.scheduleReconnect();
