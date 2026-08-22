@@ -40,6 +40,7 @@ import {
   PackageBumpDto,
   PipelineTriggerDto,
   RescanPackagesDto,
+  RescanResultDto,
 } from './admin.dto';
 import type { CreateArchPackageBody, CreatePackageBody, CreateRepoBody } from './admin.service';
 import { AdminService } from './admin.service';
@@ -53,7 +54,7 @@ export class AdminController {
 
   @Get('packages')
   @ApiOperation({ summary: 'List packages (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of packages' })
+  @ApiOkResponse({ description: 'Paginated list of packages', type: Package })
   async listPackages(@Query() query: ListAdminPackagesQueryDto): Promise<Paginated<PackageDto>> {
     return this.adminService.listPackages(
       query.page,
@@ -81,7 +82,7 @@ export class AdminController {
 
   @Get('arch-packages')
   @ApiOperation({ summary: 'List Arch packages (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of Arch packages' })
+  @ApiOkResponse({ description: 'Paginated list of Arch packages', type: ArchlinuxPackage })
   async listArchPackages(@Query() query: ListArchPackagesQueryDto): Promise<Paginated<ArchlinuxPackage>> {
     return this.adminService.listArchPackages(query.page, query.perPage, query.q);
   }
@@ -136,7 +137,7 @@ export class AdminController {
 
   @Get('builders')
   @ApiOperation({ summary: 'List builders (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of builders' })
+  @ApiOkResponse({ description: 'Paginated list of builders', type: Builder })
   async listBuilders(@Query() query: ListBuildersQueryDto): Promise<Paginated<Builder>> {
     return this.adminService.listBuilders(
       query.page,
@@ -236,7 +237,7 @@ export class AdminController {
 
   @Post('rescan')
   @ApiOperation({ summary: 'Trigger an ELF signal rescan for packages by name.' })
-  @ApiOkResponse({ description: 'Rescan result' })
+  @ApiOkResponse({ description: 'Rescan result', type: RescanResultDto })
   rescanPackages(@Body() body: RescanPackagesDto): Promise<{ rescanned: number; failed: string[] }> {
     return this.adminService.rescanPackages(body.packages);
   }

@@ -5,7 +5,7 @@ import type { Cache } from 'cache-manager';
 import { DataSource } from 'typeorm';
 import { HLL_LOG2M, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
 import { cachedResult } from '../utils/cache';
-import { clampInt, errorMessage, nDaysInPast, utcDayStart } from '../utils/functions';
+import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 import { RouterHitDailyAgent } from './router-hit-daily-agent.entity';
 import { RouterHitDaily } from './router-hit-daily.entity';
 
@@ -80,7 +80,7 @@ export class RouterService implements OnModuleInit {
   /** Precomputes the common aggregation windows so requests never hit a cold cache. */
   private async warmAggregationCache(): Promise<void> {
     const windows = [7, 30, 90, MAX_DAYS_WINDOW];
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       ...windows.flatMap((days) => [
         this.getCountryStats(days),
         this.getMirrorStats(days),
@@ -91,6 +91,13 @@ export class RouterService implements OnModuleInit {
         this.getUserAgentTrend(days),
       ]),
     ]);
+    const failures = rejectedReasons(results);
+    if (failures.length > 0) {
+      this.logger.error(
+        `Router aggregation cache warm-up failed for ${failures.length} of ${results.length} queries, ` +
+          `first failure: ${errorMessage(failures[0])}`,
+      );
+    }
   }
 
   async getCountryStats(days: number): Promise<{ country: string; count: string }[]> {

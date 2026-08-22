@@ -222,6 +222,7 @@ export class RepoManager {
       this.deployInProgress = RepoStatus.INACTIVE;
       return { repo: repo?.name ?? '', bumped: [], origin: TriggerType.CHAOTIC };
     }
+    this.logger.log(`Checking rebuild triggers after deployment of ${pkgbase.pkgname} in ${repo.name}`);
 
     try {
       if (this.settings.signalScanEnabled) {
@@ -320,7 +321,7 @@ export class RepoManager {
         origin: TriggerType.CHAOTIC,
       };
     } catch (err: unknown) {
-      this.logger.error(err instanceof Error ? errorMessage(err) : String(err));
+      this.logger.error(`Rebuild-trigger check after deployment of ${pkgbase.pkgname} failed: ${errorMessage(err)}`);
       return { repo: repo.name, bumped: [], origin: TriggerType.CHAOTIC };
     } finally {
       this.deployInProgress = RepoStatus.INACTIVE;

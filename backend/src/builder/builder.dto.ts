@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import { BuildStatus } from '@chaotic-next/shared-lib';
@@ -87,6 +87,186 @@ export class GetBuildsQueryDto {
   @IsOptional()
   @IsString()
   order?: string;
+}
+
+export class BuildWithUrlDto {
+  @ApiProperty({ description: 'Commit hash' })
+  @IsString()
+  commit!: string;
+
+  @ApiProperty({ description: 'Build log URL' })
+  @IsString()
+  logUrl!: string;
+
+  @ApiProperty({ description: 'Package name' })
+  @IsString()
+  pkgname!: string;
+
+  @ApiProperty({ description: 'Time to end (human-readable)' })
+  @IsString()
+  timeToEnd!: string;
+
+  @ApiProperty({ description: 'Package version' })
+  @IsString()
+  version!: string;
+}
+
+export class PkgCountDto {
+  @ApiProperty({ description: 'Package base name' })
+  @IsString()
+  pkgbase!: string;
+
+  @ApiProperty({ description: 'Number of builds' })
+  @IsString()
+  count!: string;
+}
+
+export class BuilderCountDto {
+  @ApiProperty({ description: 'Builder name' })
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ description: 'Number of builds' })
+  @IsString()
+  count!: string;
+}
+
+export class DayRepoCountDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Repository name' })
+  @IsString()
+  repo!: string;
+
+  @ApiProperty({ description: 'Number of builds' })
+  @IsString()
+  count!: string;
+}
+
+export class DayAverageDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Average build time (seconds)' })
+  @IsString()
+  average!: string;
+}
+
+export class PopularPackageDto {
+  @ApiProperty({ description: 'Package base and name' })
+  @IsString()
+  pkgbase_pkgname!: string;
+
+  @ApiProperty({ description: 'Number of builds' })
+  @IsString()
+  count!: string;
+}
+
+export class DayCountDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Number of builds' })
+  @IsString()
+  count!: string;
+}
+
+export class DayStatusAverageDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Build status' })
+  @IsString()
+  status!: string;
+
+  @ApiProperty({ description: 'Average build time (seconds)' })
+  @IsString()
+  average!: string;
+}
+
+export class FailedBuildHotspotDto {
+  @ApiProperty({ description: 'Package name' })
+  @IsString()
+  pkgname!: string;
+
+  @ApiProperty({ description: 'Number of failed builds' })
+  @IsString()
+  count!: string;
+}
+
+export class FailedBuildOverTimeDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Package name' })
+  @IsString()
+  pkgname!: string;
+
+  @ApiProperty({ description: 'Number of failed builds' })
+  @IsString()
+  count!: string;
+}
+
+export class HeavyPackageDto {
+  @ApiProperty({ description: 'Package name' })
+  @IsString()
+  pkgname!: string;
+
+  @ApiProperty({ description: 'Average build time (seconds)' })
+  @IsString()
+  average!: string;
+}
+
+export class ThroughputDayDto {
+  @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
+  @IsString()
+  day!: string;
+
+  @ApiProperty({ description: 'Successful builds' })
+  @IsString()
+  success!: string;
+
+  @ApiProperty({ description: 'Already-built (skipped)' })
+  @IsString()
+  alreadyBuilt!: string;
+
+  @ApiProperty({ description: 'Skipped builds' })
+  @IsString()
+  skipped!: string;
+
+  @ApiProperty({ description: 'Failed builds' })
+  @IsString()
+  failed!: string;
+}
+
+export class AverageBuildTimeDto {
+  @ApiProperty({ description: 'Average build time (seconds)' })
+  @IsString()
+  average_build_time!: string;
+
+  @ApiProperty({ description: 'Build status' })
+  @IsString()
+  status!: string;
+}
+
+export class AveragePackageBuildTimeDto {
+  @ApiProperty({ description: 'Package name' })
+  @IsString()
+  pkgname!: string;
+
+  @ApiProperty({ description: 'Average build time (seconds)' })
+  @IsString()
+  average_build_time!: string;
+
+  @ApiProperty({ description: 'Number of samples' })
+  @IsString()
+  samples!: string;
 }
 
 export class GetLatestBuildsQueryDto {

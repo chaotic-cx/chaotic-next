@@ -131,6 +131,7 @@ export class AurScanService {
       startedAt: new Date().toISOString(),
     };
     this.rememberScan(scan);
+    this.logger.log(`AUR scan of ${packageName} started`);
 
     try {
       const pkgbuildText = await this.fetchPkgbuild(packageName);
@@ -167,6 +168,10 @@ export class AurScanService {
       scan.error = errorMessage(err);
       this.logger.warn(`AUR scan of ${packageName} failed: ${scan.error}`);
     }
+    this.logger.log(
+      `AUR scan of ${packageName} finished after ${Date.now() - Date.parse(scan.startedAt)}ms with ` +
+        `${scan.findings.length} finding(s)`,
+    );
     this.scanUpdates.next({ ...scan });
     return { ...scan };
   }

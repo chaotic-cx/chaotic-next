@@ -12,7 +12,7 @@ export class NotificationController {
   @Post('subscribe')
   @ApiOperation({ summary: 'Subscribe to push events' })
   @ApiBody({ type: Object, description: 'Subscription details' })
-  @ApiCreatedResponse({ description: 'Subscription successful.' })
+  @ApiCreatedResponse({ description: 'Subscription successful.', type: Object })
   async subscribeToPushEvents(@Body() body: PushSubscription) {
     return this.notificationService.subscribeToPushEvents(body);
   }

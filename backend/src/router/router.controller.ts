@@ -1,6 +1,14 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { CountryStatsDto, MirrorStatsDto, PackageStatsDto, PerDayStatsDto } from './router.dto';
+import {
+  CountryStatsDto,
+  CountryOverTimeDto,
+  MirrorOverTimeDto,
+  MirrorStatsDto,
+  PackageStatsDto,
+  PerDayStatsDto,
+  UserAgentTrendDto,
+} from './router.dto';
 import { RouterService } from './router.service';
 
 @ApiTags('router')
@@ -27,7 +35,7 @@ export class RouterController {
   @Get('stats/mirror-over-time/:days')
   @ApiOperation({ summary: 'Get mirror downloads over time' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'Mirror downloads over time', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Mirror downloads over time', type: MirrorOverTimeDto, isArray: true })
   async getRouterStatsMirrorOverTime(
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ day: string; mirror: string; count: string }[]> {
@@ -37,7 +45,7 @@ export class RouterController {
   @Get('stats/country-over-time/:days')
   @ApiOperation({ summary: 'Get country downloads over time' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'Country downloads over time', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'Country downloads over time', type: CountryOverTimeDto, isArray: true })
   async getRouterStatsCountryOverTime(
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ day: string; country: string; count: string }[]> {
@@ -63,7 +71,7 @@ export class RouterController {
   @Get('/useragents/trend/:days')
   @ApiOperation({ summary: 'Get download counts per day for the top user agents.' })
   @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiOkResponse({ description: 'User-agent download trend', type: Object, isArray: true })
+  @ApiOkResponse({ description: 'User-agent download trend', type: UserAgentTrendDto, isArray: true })
   async getUserAgentTrend(
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ day: string; userAgent: string; count: string }[]> {
