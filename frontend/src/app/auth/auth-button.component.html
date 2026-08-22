@@ -7,7 +7,7 @@
         aria-label="Admin"
         title="Manage packages and repositories"
       >
-        <i class="pi pi-cog"></i>
+        <i class="pi pi-shield"></i>
       </a>
       <p-button
         [loading]="isLogoutLoading()"
@@ -49,12 +49,13 @@
     <p-button
       [loading]="isLoginLoading()"
       (onClick)="login()"
-      label="Login"
       icon="pi pi-sign-in"
       severity="secondary"
       styleClass="ml-3"
       pTooltip="Sign in with GitLab"
       tooltipPosition="left"
+      text
+      rounded
     />
   </span>
 }
