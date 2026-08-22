@@ -24,7 +24,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuilder({ name: 'immortalis-1', isActive: true });
       await e2e.seedBuilder({ name: 'stormwing-2', isActive: false });
 
-      const res = await e2e.inject<Array<{ name: string }>>({ method: 'GET', url: '/builder/builders' });
+      const res = await e2e.inject<{ name: string }[]>({ method: 'GET', url: '/builder/builders' });
 
       expect(res.statusCode).toBe(200);
       const body = await res.json();
@@ -43,7 +43,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedRepo({ name: GARUDA_REPO.name, isActive: true });
       await e2e.seedRepo({ name: 'no-failover', isActive: false });
 
-      const res = await e2e.inject<Array<{ name: string }>>({ method: 'GET', url: '/builder/repos' });
+      const res = await e2e.inject<{ name: string }[]>({ method: 'GET', url: '/builder/repos' });
 
       expect(res.statusCode).toBe(200);
       const body = await res.json();
@@ -301,7 +301,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({ status: BuildStatus.SUCCESS });
       await e2e.seedBuild({ status: BuildStatus.FAILED });
 
-      const res = await e2e.inject<Array<{ status: number }>>({ method: 'GET', url: '/builder/latest?status=0' });
+      const res = await e2e.inject<{ status: number }[]>({ method: 'GET', url: '/builder/latest?status=0' });
 
       expect(res.statusCode).toBe(200);
       const body = await res.json();
@@ -332,7 +332,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
         commit: 'abc123',
       });
 
-      const res = await e2e.inject<Array<{ pkgname: string; logUrl: string; commit: string; version: string }>>({
+      const res = await e2e.inject<{ pkgname: string; logUrl: string; commit: string; version: string }[]>({
         method: 'GET',
         url: '/builder/latest/url/10',
       });
@@ -384,7 +384,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
     it('returns build counts per package across all time', async () => {
       await e2e.seedBuild({});
 
-      const res = await e2e.inject<Array<{ pkgbase: string; count: string }>>({
+      const res = await e2e.inject<{ pkgbase: string; count: string }[]>({
         method: 'GET',
         url: '/builder/count/days',
       });
@@ -399,7 +399,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
     it('returns build counts per package', async () => {
       await e2e.seedBuild({});
 
-      const res = await e2e.inject<Array<{ pkgbase: string; count: string }>>({
+      const res = await e2e.inject<{ pkgbase: string; count: string }[]>({
         method: 'GET',
         url: '/builder/count/days/30',
       });
@@ -433,7 +433,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       const pkg = await e2e.seedPackage({ pkgname: 'firedragon', version: '2:13.1.1', repo });
       await e2e.seedBuild({ pkgbase: pkg });
 
-      const res = await e2e.inject<Array<{ day: string; repo: string; count: string }>>({
+      const res = await e2e.inject<{ day: string; repo: string; count: string }[]>({
         method: 'GET',
         url: '/builder/count/firedragon/30',
       });
@@ -457,7 +457,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({ pkgbase: pkg });
       await e2e.seedBuild({});
 
-      const res = await e2e.inject<Array<{ pkgbase_pkgname: string; count: string }>>({
+      const res = await e2e.inject<{ pkgbase_pkgname: string; count: string }[]>({
         method: 'GET',
         url: '/builder/popular/10',
       });
@@ -473,7 +473,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({ pkgbase: pkg, status: BuildStatus.SUCCESS });
       await e2e.seedBuild({ pkgbase: pkg, status: BuildStatus.FAILED });
 
-      const res = await e2e.inject<Array<{ pkgbase_pkgname: string; count: string }>>({
+      const res = await e2e.inject<{ pkgbase_pkgname: string; count: string }[]>({
         method: 'GET',
         url: '/builder/popular/10?status=0',
       });
@@ -490,7 +490,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({ status: BuildStatus.SUCCESS, timeToEnd: 1.5 });
       await e2e.seedBuild({ status: BuildStatus.SUCCESS, timeToEnd: 3.5 });
 
-      const res = await e2e.inject<Array<{ status: string; average_build_time: string }>>({
+      const res = await e2e.inject<{ status: string; average_build_time: string }[]>({
         method: 'GET',
         url: '/builder/average/time',
       });
@@ -505,7 +505,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
     it('filters by days lookback window', async () => {
       await e2e.seedBuild({ status: BuildStatus.SUCCESS, timeToEnd: 1.5 });
 
-      const res = await e2e.inject<Array<{ status: string }>>({ method: 'GET', url: '/builder/average/time?days=7' });
+      const res = await e2e.inject<{ status: string }[]>({ method: 'GET', url: '/builder/average/time?days=7' });
 
       expect(res.statusCode).toBe(200);
       const body = await res.json();
@@ -519,7 +519,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({ builder });
       await e2e.seedBuild({ builder });
 
-      const res = await e2e.inject<Array<{ name: string; count: string }>>({
+      const res = await e2e.inject<{ name: string; count: string }[]>({
         method: 'GET',
         url: '/builder/builders/amount',
       });
@@ -535,7 +535,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       const builder = await e2e.seedBuilder({ name: 'immortalis-1' });
       await e2e.seedBuild({ builder });
 
-      const res = await e2e.inject<Array<{ name: string; count: string }>>({
+      const res = await e2e.inject<{ name: string; count: string }[]>({
         method: 'GET',
         url: '/builder/builders/amount?days=7',
       });
@@ -551,7 +551,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({});
       await e2e.seedBuild({});
 
-      const res = await e2e.inject<Array<{ day: string; count: string }>>({
+      const res = await e2e.inject<{ day: string; count: string }[]>({
         method: 'GET',
         url: '/builder/per-day/30',
       });
@@ -569,7 +569,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({ pkgbase: pkg });
       await e2e.seedBuild({ pkgbase: pkg });
 
-      const res = await e2e.inject<Array<{ day: string; repo: string; count: string }>>({
+      const res = await e2e.inject<{ day: string; repo: string; count: string }[]>({
         method: 'GET',
         url: '/builder/per-day/pkgname/firedragon/30?offset=0',
       });
@@ -587,7 +587,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({ pkgbase: pkg1, timeToEnd: 5000 });
       await e2e.seedBuild({ pkgbase: pkg2, timeToEnd: 10 });
 
-      const res = await e2e.inject<Array<{ pkgname: string; average: string }>>({
+      const res = await e2e.inject<{ pkgname: string; average: string }[]>({
         method: 'GET',
         url: '/builder/stats/heavy-packages/10/30',
       });
@@ -611,7 +611,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       await e2e.seedBuild({ pkgbase: chromium, status: BuildStatus.TIMED_OUT });
       await e2e.seedBuild({ pkgbase: stable, status: BuildStatus.SUCCESS });
 
-      const res = await e2e.inject<Array<{ day: string; pkgname: string; count: string }>>({
+      const res = await e2e.inject<{ day: string; pkgname: string; count: string }[]>({
         method: 'GET',
         url: '/builder/builds/failed/over-time/2/30',
       });

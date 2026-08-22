@@ -365,13 +365,13 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({ method: 'GET', url: '/gitlab/pipelines/42/jobs' });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as Array<{
+      const body = (await res.json()) as {
         id: number;
         name: string;
         stage: string;
         status: string;
         webUrl: string;
-      }>;
+      }[];
       expect(body).toEqual([
         {
           id: 501,
@@ -412,7 +412,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({ method: 'GET', url: '/gitlab/pipelines' });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as Array<{ pipeline: { id: number } }>;
+      const body = (await res.json()) as { pipeline: { id: number } }[];
       expect(body.map((p) => p.pipeline.id)).toEqual([3001, 2001, 1001]);
     });
 
@@ -466,7 +466,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({ method: 'GET', url: '/gitlab/merge-requests' });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as Array<{ title: string }>;
+      const body = (await res.json()) as { title: string }[];
       expect(body).toHaveLength(1);
       expect(body[0].title).toBe('chore(update): firedragon');
     });
@@ -515,7 +515,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({ method: 'GET', url: '/gitlab/merge-requests' });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as Array<{ scanFindings?: Array<{ ruleId: string; severity: string }> }>;
+      const body = (await res.json()) as { scanFindings?: { ruleId: string; severity: string }[] }[];
       const ruleIds = body[0]?.scanFindings?.map((finding) => finding.ruleId);
       expect(ruleIds).toContain('CAUR-INSTALL-NEW');
       expect(ruleIds).toContain('NPM-001');
@@ -530,7 +530,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({ method: 'GET', url: '/gitlab/review-stats' });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as Array<{ username: string; reviews: number }>;
+      const body = (await res.json()) as { username: string; reviews: number }[];
       expect(body).toHaveLength(1);
       expect(body[0].username).toBe('dr460nf1r3');
       expect(body[0].reviews).toBe(42);
@@ -605,7 +605,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({ method: 'GET', url: '/gitlab/schedules' });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as Array<{ id: number; description: string | null; active: boolean }>;
+      const body = (await res.json()) as { id: number; description: string | null; active: boolean }[];
       expect(body).toEqual([
         { id: 13, description: 'Daily rebuilds', active: true },
         { id: 14, description: 'One-off cleanup', active: false },
@@ -640,7 +640,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({ method: 'GET', url: '/gitlab/review-stats?days=30' });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as Array<{ username: string; reviews: number }>;
+      const body = (await res.json()) as { username: string; reviews: number }[];
       expect(body).toHaveLength(2);
       expect(body.find((u) => u.username === 'Alice')?.reviews).toBe(1);
       expect(body.find((u) => u.username === 'Bob')?.reviews).toBe(1);
@@ -663,7 +663,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({ method: 'GET', url: '/gitlab/review-stats/over-time?days=30' });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as Array<{ date: string; username: string; reviews: number }>;
+      const body = (await res.json()) as { date: string; username: string; reviews: number }[];
       expect(body.length).toBeGreaterThanOrEqual(1);
       const aliceEntry = body.find((r) => r.username === 'Alice');
       expect(aliceEntry).toBeDefined();

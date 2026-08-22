@@ -1,6 +1,6 @@
-import * as flavors from '@catppuccin/palette';
+import { flavors } from '@catppuccin/palette';
 
-const { mocha } = flavors.flavors;
+const { mocha } = flavors;
 
 export const CATPPUCCIN_FLAVOURS: string[] = [
   mocha.colors.blue.hex,

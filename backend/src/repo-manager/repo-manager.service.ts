@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -16,6 +17,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 import { In, IsNull, Not, Repository } from 'typeorm';
 import { Build, Package, Repo } from '../builder/builder.entity';
+import { requiredGroupForRepo } from '../auth/gitlab-groups';
 import {
   BrokenPackageReport,
   BumpLogEntry,
@@ -219,7 +221,7 @@ export class RepoManagerService implements OnModuleInit {
    * GitLab commit. This is an explicit admin action, so it always bumps
    * regardless of the ABI dry-run setting.
    */
-  async bumpSelectedPackages(pkgnames: string[]): Promise<BumpPackagesResultDto> {
+  async bumpSelectedPackages(pkgnames: string[], actorGroups: string[]): Promise<BumpPackagesResultDto> {
     const uniqueNames = [...new Set(pkgnames.map((name) => name.trim()).filter(Boolean))];
     if (uniqueNames.length === 0) {
       throw new BadRequestException('No packages provided');
@@ -238,6 +240,15 @@ export class RepoManagerService implements OnModuleInit {
     }
     if (byRepo.size === 0) {
       throw new NotFoundException('No active packages matched the selection');
+    }
+
+    for (const repoPkgs of byRepo.values()) {
+      const repoName = repoPkgs[0]?.repo?.name;
+      if (!repoName) continue;
+      const requiredGroup = requiredGroupForRepo(repoName);
+      if (requiredGroup && !actorGroups.includes(requiredGroup)) {
+        throw new ForbiddenException(`Bumping '${repoName}' packages requires membership in '${requiredGroup}'`);
+      }
     }
 
     // The commit must carry the reason each package is broken (missing sonames),

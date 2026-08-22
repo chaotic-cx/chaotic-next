@@ -51,7 +51,7 @@ describe('Metrics endpoints (e2e, real PostgreSQL)', () => {
         routerHit({ package: 'spotify' }),
       ]);
 
-      const res = await e2e.inject<Array<{ name: string; count: string }>>({
+      const res = await e2e.inject<{ name: string; count: string }[]>({
         method: 'GET',
         url: '/metrics/rank/10/packages?days=30',
       });
@@ -90,7 +90,7 @@ describe('Metrics endpoints (e2e, real PostgreSQL)', () => {
         routerHit({ country: 'US' }),
       ]);
 
-      const res = await e2e.inject<Array<{ name: string; count: string }>>({
+      const res = await e2e.inject<{ name: string; count: string }[]>({
         method: 'GET',
         url: '/metrics/rank/10/countries?days=30',
       });
@@ -184,7 +184,7 @@ describe('Metrics endpoints (e2e, real PostgreSQL)', () => {
         routerHit({ userAgent: USER_AGENTS[3] }),
       ]);
 
-      const res = await e2e.inject<Array<{ name: string; count: number }>>({
+      const res = await e2e.inject<{ name: string; count: number }[]>({
         method: 'GET',
         url: '/metrics/user-agents?days=30',
       });

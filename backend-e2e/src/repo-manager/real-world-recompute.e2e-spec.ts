@@ -174,14 +174,14 @@ describe('Real-world broken recompute + dependency graph (e2e, real PostgreSQL)'
       const archRows = (await e2e.dataSource.query(
         `SELECT COUNT(*)::int AS count FROM package_elf_analysis WHERE "pkgType" = $1`,
         [ARCH_PKG_TYPE],
-      )) as Array<{ count: number }>;
+      )) as { count: number }[];
       expect(archRows).toHaveLength(1);
       expect(archRows[0].count).toBe(REAL_ARCH_PROVIDERS.length);
 
       const chaoticRows = (await e2e.dataSource.query(
         `SELECT COUNT(*)::int AS count FROM package_elf_analysis WHERE "pkgType" = $1`,
         [CHAOTIC_PKG_TYPE],
-      )) as Array<{ count: number }>;
+      )) as { count: number }[];
       expect(chaoticRows).toHaveLength(1);
       expect(chaoticRows[0].count).toBe(REAL_CHAOTIC_CONSUMERS.length + REAL_CHAOTIC_PROVIDERS.length);
     });
@@ -298,13 +298,13 @@ describe('Real-world broken recompute + dependency graph (e2e, real PostgreSQL)'
            JOIN package p ON p.id = a."pkgId" AND a."pkgType" = $1
            WHERE p.pkgname = 'kwin-effects-better-blur-dx'`,
         [CHAOTIC_PKG_TYPE],
-      )) as Array<{ pluginOf: string[] }>;
+      )) as { pluginOf: string[] }[];
       expect(rows).toHaveLength(1);
       expect(rows[0].pluginOf.length).toBeGreaterThan(0);
 
-      const kwinRow = (await e2e.dataSource.query(`SELECT id FROM archlinux_package WHERE pkgname = 'kwin'`)) as Array<{
+      const kwinRow = (await e2e.dataSource.query(`SELECT id FROM archlinux_package WHERE pkgname = 'kwin'`)) as {
         id: number;
-      }>;
+      }[];
       expect(kwinRow).toHaveLength(1);
       expect(rows[0].pluginOf).toContain(encodeOwnerKey(TriggerType.ARCH, kwinRow[0].id));
     });
@@ -370,11 +370,11 @@ describe('Real-world broken recompute + dependency graph (e2e, real PostgreSQL)'
 
       const self = (await e2e.dataSource.query(
         `SELECT id FROM package WHERE pkgname = 'kwin-effects-better-blur-dx'`,
-      )) as Array<{ id: number }>;
+      )) as { id: number }[];
       expect(self).toHaveLength(1);
-      const nonDep = (await e2e.dataSource.query(
-        `SELECT id FROM archlinux_package WHERE pkgname = 'kcmutils'`,
-      )) as Array<{ id: number }>;
+      const nonDep = (await e2e.dataSource.query(`SELECT id FROM archlinux_package WHERE pkgname = 'kcmutils'`)) as {
+        id: number;
+      }[];
       expect(nonDep).toHaveLength(1);
 
       const extraOwners = [

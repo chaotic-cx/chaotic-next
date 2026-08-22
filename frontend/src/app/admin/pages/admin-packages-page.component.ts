@@ -521,10 +521,14 @@ export class AdminPackagesPageComponent {
     const pkgname = this.aurPackageName().trim();
     if (!pkgname || !this.canAddAurPackage()) return;
 
+    const repoFilter = this.adminService.packageRepoFilter();
+    const currentRepo = repoFilter !== undefined ? this.adminService.reposById().get(repoFilter)?.name : 'chaotic-aur';
+
     this.isAdding.set(true);
     try {
       await this.adminService.addPackages(
         [{ pkgname, source: 'aur' }],
+        currentRepo ?? 'chaotic-aur',
         this.aurRequestOrigin(),
         this.aurRequestReason(),
         this.aurCustomRequestReason(),
@@ -612,7 +616,7 @@ export class AdminPackagesPageComponent {
       header: 'Bump package',
       acceptLabel: 'Bump',
       rejectLabel: 'Cancel',
-      accept: () => void this.adminService.bumpPackages([pkg.pkgname]),
+      accept: () => void this.adminService.bumpPackages([pkg.pkgname], pkg.reponame),
     });
   }
 
@@ -642,7 +646,7 @@ export class AdminPackagesPageComponent {
       header: 'Drop package',
       acceptLabel: 'Drop',
       rejectLabel: 'Cancel',
-      accept: () => void this.adminService.dropPackages([pkg.pkgname]),
+      accept: () => void this.adminService.dropPackages([pkg.pkgname], pkg.reponame),
     });
   }
 

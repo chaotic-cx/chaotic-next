@@ -11,6 +11,8 @@ import { CreateAccount1786779403609 } from './generated/migrations/1786779403609
 import { CreateSession1786779403609 } from './generated/migrations/1786779403609-create-session';
 import { CreateUser1786779403609 } from './generated/migrations/1786779403609-create-user';
 import { CreateVerification1786779403609 } from './generated/migrations/1786779403609-create-verification';
+import { AddUserGroups1787411324082 } from './generated/migrations/1787411324082-add-user-groups';
+import { GITLAB_LOGIN_GROUPS } from './gitlab-groups';
 
 interface GitLabProfile {
   id: number;
@@ -35,6 +37,7 @@ const authDataSource = new DataSource({
     CreateSession1786779403609,
     CreateAccount1786779403609,
     CreateVerification1786779403609,
+    AddUserGroups1787411324082,
   ],
   migrationsRun: true,
   migrationsTableName: 'auth_migrations',
@@ -76,6 +79,7 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
         userInfoUrl: 'https://gitlab.com/api/v4/user',
         redirectURI: process.env.GITLAB_REDIRECT_URI ?? defaultRedirectUri,
         scopes: ['read_user'],
+        overrideUserInfo: true,
         getUserInfo: async (tokens) => {
           const response = await fetch('https://gitlab.com/api/v4/user', {
             headers: { Authorization: `Bearer ${tokens.accessToken}` },
@@ -85,14 +89,16 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
           }
           const profile = (await response.json()) as GitLabProfile;
 
-          if (allowedGroup) {
-            const memberToken = process.env.GITLAB_TOKEN || process.env.CAUR_GITLAB_TOKEN || tokens.accessToken;
-            const isMember = await checkGitLabGroupMembership(allowedGroup, profile.id, memberToken);
-
-            if (!isMember) {
-              return null;
-            }
+          const memberToken = process.env.GITLAB_TOKEN || process.env.CAUR_GITLAB_TOKEN || tokens.accessToken;
+          if (allowedGroup && !(await checkGitLabGroupMembership(allowedGroup, profile.id, memberToken))) {
+            return null;
           }
+
+          const memberships = await Promise.all(
+            GITLAB_LOGIN_GROUPS.map(async (group) =>
+              (await checkGitLabGroupMembership(group, profile.id, memberToken)) ? group : null,
+            ),
+          );
 
           return {
             id: String(profile.id),
@@ -101,6 +107,7 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
             image: profile.avatar_url,
             emailVerified: true,
             webUrl: profile.web_url,
+            groups: memberships.filter((group): group is (typeof GITLAB_LOGIN_GROUPS)[number] => group !== null),
           };
         },
       },
@@ -123,6 +130,7 @@ const SESSION_UPDATE_AGE_SECONDS = SECONDS_PER_DAY;
 const DISABLED_PATHS = [
   '/sign-up/email',
   '/sign-in/email',
+  '/update-user',
   '/request-password-reset',
   '/reset-password/:token',
   '/reset-password',
@@ -153,6 +161,17 @@ export const auth = betterAuth({
   session: {
     expiresIn: SESSION_EXPIRES_IN_SECONDS,
     updateAge: SESSION_UPDATE_AGE_SECONDS,
+  },
+  user: {
+    additionalFields: {
+      // Written from the GitLab profile at login (overrideUserInfo) and
+      // consumed by RequireGroupGuard. '/update-user' is disabled below so
+      // clients cannot forge memberships.
+      groups: {
+        type: 'string[]',
+        defaultValue: [],
+      },
+    },
   },
   account: {
     encryptOAuthTokens: true,

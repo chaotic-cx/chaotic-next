@@ -63,6 +63,10 @@ export class BumpPackagesDto {
   @IsString({ each: true })
   packages!: string[];
 
+  @ApiProperty({ description: 'Repository name', example: 'chaotic-aur' })
+  @IsString()
+  repo!: string;
+
   @ApiPropertyOptional({ description: 'Git ref', example: 'main' })
   @IsOptional()
   @IsString()
@@ -88,6 +92,10 @@ export class AddPackagesDto {
   @ValidateNested({ each: true })
   @Type(() => AddPackageItemDto)
   packages!: AddPackageItemDto[];
+
+  @ApiProperty({ description: 'Repository name', example: 'chaotic-aur' })
+  @IsString()
+  repo!: string;
 
   @ApiProperty({ description: 'Request origin', example: 'github/5678' })
   @IsString()
@@ -121,6 +129,10 @@ export class DropPackagesDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   packages!: string[];
+
+  @ApiProperty({ description: 'Repository name', example: 'chaotic-aur' })
+  @IsString()
+  repo!: string;
 
   @ApiPropertyOptional({ description: 'Git ref', example: 'main' })
   @IsOptional()

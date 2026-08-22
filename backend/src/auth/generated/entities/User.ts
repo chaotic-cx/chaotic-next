@@ -17,6 +17,9 @@ export class User {
   @Column('text', { name: 'image', nullable: true })
   image!: string | null;
 
+  @Column('jsonb', { name: 'groups', default: () => "'[]'::jsonb" })
+  groups!: string[];
+
   @Column('timestamptz', { name: 'createdAt', default: () => 'CURRENT_TIMESTAMP' })
   createdAt!: Date;
 

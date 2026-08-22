@@ -23,6 +23,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
   OnApplicationShutdown,
   OnModuleInit,
   ServiceUnavailableException,
@@ -1066,7 +1067,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     if (!response.ok) {
       throw new ServiceUnavailableException(`GitLab API returned ${response.status} for project ${projectId}`);
     }
-    const commits = (await response.json()) as Array<{ id: string }>;
+    const commits = (await response.json()) as { id: string }[];
     const head = commits[0];
     if (!head?.id) {
       throw new ServiceUnavailableException('Could not fetch HEAD commit from GitLab');
@@ -1119,14 +1120,20 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     return { pipelineId: pipelineId ?? 0, webUrl, status: 'scheduled' };
   }
 
-  async dropPackages(packages: string[], ref: string, actor: MrActor): Promise<PipelineTriggerResult> {
-    const commitActions: Array<{ action: 'delete'; filePath: string }> = [];
+  async dropPackages(
+    packages: string[],
+    repoName: string,
+    ref: string,
+    actor: MrActor,
+  ): Promise<PipelineTriggerResult> {
+    const commitActions: { action: 'delete'; filePath: string }[] = [];
+    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
 
     for (const rawPkg of packages) {
       const pkgname = rawPkg.trim();
       if (!pkgname) continue;
       try {
-        const treeItems = await this.api.Repositories.allRepositoryTrees(this.chaoticId, {
+        const treeItems = await this.api.Repositories.allRepositoryTrees(gitlabProjectId, {
           path: pkgname,
           ref,
           recursive: true,
@@ -1162,7 +1169,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       packages.length > 3 ? `chore(drop): packages (${packages.length})` : `chore(drop): ${packages.join(', ')}`;
     const commitMessage = `${subject}\n\nDropped manually by ${actor.userName}`;
 
-    const commit = await this.api.Commits.create(this.chaoticId, ref, commitMessage, commitActions);
+    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
 
     if (commit.id) {
       this.unlinkedCommitShas.add(commit.id);
@@ -1181,7 +1188,8 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   }
 
   async addPackages(
-    items: Array<{ pkgname: string; source?: string }>,
+    items: { pkgname: string; source?: string }[],
+    repoName: string,
     requestOrigin: string,
     ref: string,
     actor: MrActor,
@@ -1190,7 +1198,8 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   ): Promise<PipelineTriggerResult> {
     const itemNames = items.map((i) => i.pkgname);
     this.logger.debug(`Processing package addition for [${itemNames.join(', ')}] on ref ${ref} by ${actor.userName}`);
-    const commitActions: Array<{ action: 'create' | 'update'; filePath: string; content: string }> = [];
+    const commitActions: { action: 'create' | 'update'; filePath: string; content: string }[] = [];
+    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
 
     for (const item of items) {
       const pkgname = item.pkgname.trim();
@@ -1255,7 +1264,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     const commitMessage = `${subject}\n\nAdded manually by ${actor.userName}`;
 
     this.logger.debug(`Creating GitLab commit with ${commitActions.length} actions for [${itemNames.join(', ')}]`);
-    const commit = await this.api.Commits.create(this.chaoticId, ref, commitMessage, commitActions);
+    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
 
     this.logger.log(
       `Package(s) added successfully: [${itemNames.join(', ')}] by ${actor.userName} (commit: ${commit.id}, url: ${commit.web_url})`,
@@ -1277,8 +1286,22 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
   }
 
-  async bumpPackages(packages: string[], ref: string, actor: MrActor): Promise<PipelineTriggerResult> {
-    const commitActions: Array<{ action: 'update' | 'create'; filePath: string; content: string }> = [];
+  private async getRepoGitlabProjectId(repoName: string): Promise<string> {
+    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
+    if (!repo?.gitlabProjectId) {
+      throw new NotFoundException(`Repository '${repoName}' not found or has no GitLab project ID`);
+    }
+    return repo.gitlabProjectId;
+  }
+
+  async bumpPackages(
+    packages: string[],
+    repoName: string,
+    ref: string,
+    actor: MrActor,
+  ): Promise<PipelineTriggerResult> {
+    const commitActions: { action: 'update' | 'create'; filePath: string; content: string }[] = [];
+    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
 
     for (const pkg of packages) {
       const pkgname = pkg.trim();
@@ -1287,7 +1310,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       let existingConfig = '';
 
       try {
-        const raw = await this.api.RepositoryFiles.showRaw(this.chaoticId, configPath, ref);
+        const raw = await this.api.RepositoryFiles.showRaw(gitlabProjectId, configPath, ref);
         if (typeof raw === 'string') {
           existingConfig = raw;
         } else if (raw && typeof (raw as { text?: () => Promise<string> }).text === 'function') {
@@ -1300,8 +1323,12 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       }
 
       const dbPkg = await this.packageRepository.findOne({ where: { pkgname } });
-      const version = dbPkg?.version ?? null;
-      const pkgrel = dbPkg?.pkgrel ?? null;
+      if (!dbPkg) {
+        throw new NotFoundException(`Package '${pkgname}' not found`);
+      }
+
+      const version = dbPkg.version;
+      const pkgrel = dbPkg.pkgrel;
 
       const updatedConfig = applyPackageBump(existingConfig, version, pkgrel);
       commitActions.push({
@@ -1315,7 +1342,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       packages.length > 3 ? `chore(bump): packages (${packages.length})` : `chore(bump): ${packages.join(', ')}`;
     const commitMessage = `${subject}\n\nBumped manually by ${actor.userName}`;
 
-    const commit = await this.api.Commits.create(this.chaoticId, ref, commitMessage, commitActions);
+    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
 
     if (commit.id) {
       this.unlinkedCommitShas.add(commit.id);

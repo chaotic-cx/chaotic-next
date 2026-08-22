@@ -28,6 +28,15 @@ describe('Auth Configuration & Guard Protection', () => {
     expect(auth.options.advanced?.defaultCookieAttributes?.sameSite).toBe('lax');
   });
 
+  it('stores GitLab group memberships as a user field refreshed on sign-in', () => {
+    const groupsField = (auth.options.user?.additionalFields as Record<string, { type: string }> | undefined)?.groups;
+    expect(groupsField?.type).toBe('string[]');
+  });
+
+  it('blocks client-side profile updates so group memberships cannot be forged', () => {
+    expect(auth.options.disabledPaths).toContain('/update-user');
+  });
+
   describe('Route protection (AuthGuard)', () => {
     let app: NestFastifyApplication;
 

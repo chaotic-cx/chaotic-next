@@ -5,6 +5,7 @@ import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
+import { backendErrorMessage } from '../api-errors';
 
 export type MrFlagLabel = 'dangerous' | 'hold';
 
@@ -105,7 +106,10 @@ export class MrOverviewService {
         );
         return;
       }
-      this.messageToastService.error('Approval Failed', 'Failed to approve the merge request. Please try again later.');
+      this.messageToastService.error(
+        'Approval Failed',
+        backendErrorMessage(error, 'Failed to approve the merge request. Please try again later.'),
+      );
       console.error('Error approving merge request:', error);
     } finally {
       const finalLoadingMap = new Map(this.loadingMap());
@@ -138,7 +142,7 @@ export class MrOverviewService {
         }),
       );
     } catch (error) {
-      this.messageToastService.error(copy.error[0], copy.error[1]);
+      this.messageToastService.error(copy.error[0], backendErrorMessage(error, copy.error[1]));
       console.error(`Error flagging merge request as ${label}:`, error);
     } finally {
       const finalLoadingMap = new Map(this.loadingMap());

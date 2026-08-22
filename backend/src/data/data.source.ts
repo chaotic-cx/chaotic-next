@@ -1,4 +1,5 @@
 import { AddPackageBump1787139892583 } from '@chaotic-next/backend/migrations/1787139892583-AddPackageBump';
+import { AddHasCompiledCode1787402061455 } from '@chaotic-next/backend/migrations/1787402061455-AddHasCompiledCode';
 import { type DataSourceOptions } from 'typeorm';
 import { Build, Builder, Repo, UpdateLastBuilderActive } from '../builder/builder.entity';
 import { AurMaintainerSnapshot } from '../diff-scan/aur-maintainer-snapshot.entity';
@@ -62,6 +63,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AddManualBumpType1787174029311,
     RouterHitsDailyRollup1787184527000,
     RouterHitsDailyUsers1787192834000,
+    AddHasCompiledCode1787402061455,
   ],
   migrationsRun: true,
   cache: true,

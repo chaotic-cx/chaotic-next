@@ -200,7 +200,7 @@ export class AdminPipelineTriggersPageComponent {
   );
 
   readonly scheduleDialogVisible = signal(false);
-  readonly scheduleOptions = signal<Array<{ label: string; value: number }>>([]);
+  readonly scheduleOptions = signal<{ label: string; value: number }[]>([]);
   readonly selectedScheduleId = signal<number | null>(null);
   readonly isSubmitting = signal(false);
 

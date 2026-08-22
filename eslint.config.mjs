@@ -13,6 +13,7 @@ export default [
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/array-type': ['error', { default: 'array' }],
       '@nx/enforce-module-boundaries': [
         'error',
         {

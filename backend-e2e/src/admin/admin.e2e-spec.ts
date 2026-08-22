@@ -47,7 +47,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/packages?q=lib',
       });
       expect(resQ.statusCode).toBe(200);
-      const bodyQ = (await resQ.json()) as { total: number; items: Array<{ pkgname: string }> };
+      const bodyQ = (await resQ.json()) as { total: number; items: { pkgname: string }[] };
       expect(bodyQ.total).toBe(2);
       expect(bodyQ.items.map((p) => p.pkgname)).toEqual(['libbar', 'libfoo']);
 
@@ -56,7 +56,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: `/admin/packages?repoId=${repo2.id}`,
       });
       expect(resRepo.statusCode).toBe(200);
-      const bodyRepo = (await resRepo.json()) as { total: number; items: Array<{ pkgname: string }> };
+      const bodyRepo = (await resRepo.json()) as { total: number; items: { pkgname: string }[] };
       expect(bodyRepo.total).toBe(1);
       expect(bodyRepo.items[0].pkgname).toBe('baz-tool');
 
@@ -65,7 +65,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/packages?active=true',
       });
       expect(resActive.statusCode).toBe(200);
-      const bodyActive = (await resActive.json()) as { total: number; items: Array<{ pkgname: string }> };
+      const bodyActive = (await resActive.json()) as { total: number; items: { pkgname: string }[] };
       expect(bodyActive.total).toBe(2);
       expect(bodyActive.items.map((p) => p.pkgname)).toEqual(['baz-tool', 'libfoo']);
 
@@ -74,7 +74,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/packages?active=false',
       });
       expect(resInactive.statusCode).toBe(200);
-      const bodyInactive = (await resInactive.json()) as { total: number; items: Array<{ pkgname: string }> };
+      const bodyInactive = (await resInactive.json()) as { total: number; items: { pkgname: string }[] };
       expect(bodyInactive.total).toBe(1);
       expect(bodyInactive.items[0].pkgname).toBe('libbar');
     });
@@ -163,7 +163,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/arch-packages?q=gcc',
       });
       expect(listRes.statusCode).toBe(200);
-      const listBody = (await listRes.json()) as { total: number; items: Array<{ pkgname: string }> };
+      const listBody = (await listRes.json()) as { total: number; items: { pkgname: string }[] };
       expect(listBody.total).toBe(1);
       expect(listBody.items[0].pkgname).toBe('gcc');
 
@@ -193,7 +193,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/repos',
       });
       expect(listRes.statusCode).toBe(200);
-      const repos = (await listRes.json()) as Array<{ id: number; name: string }>;
+      const repos = (await listRes.json()) as { id: number; name: string }[];
       expect(repos.some((r) => r.name === 'main-repo')).toBe(true);
 
       const createRes = await e2e.inject({
@@ -212,7 +212,7 @@ describe('Admin Endpoints (e2e)', () => {
       const patchRes = await e2e.inject({
         method: 'PATCH',
         url: `/admin/repos/${created.id}`,
-        payload: { isActive: false },
+        payload: { name: 'renamed-repo' },
       });
       expect(patchRes.statusCode).toBe(200);
 
@@ -224,8 +224,8 @@ describe('Admin Endpoints (e2e)', () => {
     });
   });
 
-  describe('GET, PATCH, DELETE /admin/builders', () => {
-    it('manages builders with pagination, filter, update, delete', async () => {
+  describe('GET, POST, PATCH, DELETE /admin/builders', () => {
+    it('manages builders (list, patch, delete)', async () => {
       const builder1 = await e2e.seedBuilder({ name: 'builder-alpha', isActive: true });
       await e2e.seedBuilder({ name: 'builder-beta', isActive: false });
 
@@ -234,7 +234,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/builders?active=true',
       });
       expect(listRes.statusCode).toBe(200);
-      const listBody = (await listRes.json()) as { total: number; items: Array<{ name: string }> };
+      const listBody = (await listRes.json()) as { total: number; items: { name: string }[] };
       expect(listBody.total).toBe(1);
       expect(listBody.items[0].name).toBe('builder-alpha');
 
@@ -263,7 +263,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/mr-actions?q=Alice',
       });
       expect(resQ.statusCode).toBe(200);
-      const bodyQ = (await resQ.json()) as { total: number; items: Array<{ userName: string }> };
+      const bodyQ = (await resQ.json()) as { total: number; items: { userName: string }[] };
       expect(bodyQ.total).toBe(1);
       expect(bodyQ.items[0].userName).toBe('Alice');
 
@@ -272,7 +272,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/mr-actions?action=hold',
       });
       expect(resAction.statusCode).toBe(200);
-      const bodyAction = (await resAction.json()) as { total: number; items: Array<{ action: string }> };
+      const bodyAction = (await resAction.json()) as { total: number; items: { action: string }[] };
       expect(bodyAction.total).toBe(1);
       expect(bodyAction.items[0].action).toBe('hold');
     });
@@ -293,7 +293,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/pipeline-triggers?q=Alice',
       });
       expect(resQ.statusCode).toBe(200);
-      const bodyQ = (await resQ.json()) as { total: number; items: Array<{ userName: string }> };
+      const bodyQ = (await resQ.json()) as { total: number; items: { userName: string }[] };
       expect(bodyQ.total).toBe(1);
       expect(bodyQ.items[0].userName).toBe('Alice');
 
@@ -312,7 +312,7 @@ describe('Admin Endpoints (e2e)', () => {
       expect(resOperation.statusCode).toBe(200);
       const bodyOperation = (await resOperation.json()) as {
         total: number;
-        items: Array<{ operation: string; inputs: Record<string, string>; webUrl: string }>;
+        items: { operation: string; inputs: Record<string, string>; webUrl: string }[];
       };
       expect(bodyOperation.total).toBe(1);
       expect(bodyOperation.items[0].operation).toBe('None');
@@ -334,7 +334,7 @@ describe('Admin Endpoints (e2e)', () => {
       });
 
       expect(res.statusCode).toBe(200);
-      const body = (await res.json()) as { total: number; items: Array<{ pkgname: string }> };
+      const body = (await res.json()) as { total: number; items: { pkgname: string }[] };
       expect(body.total).toBe(1);
       expect(body.items[0].pkgname).toBe('firefox');
     });
@@ -350,7 +350,7 @@ describe('Admin Endpoints (e2e)', () => {
         url: '/admin/package-elf-analysis?pkgType=0&broken=true',
       });
       expect(listRes.statusCode).toBe(200);
-      const listBody = (await listRes.json()) as { total: number; items: Array<{ version: string; broken: boolean }> };
+      const listBody = (await listRes.json()) as { total: number; items: { version: string; broken: boolean }[] };
       expect(listBody.total).toBe(1);
       expect(listBody.items[0].broken).toBe(true);
 
@@ -438,7 +438,7 @@ describe('Admin Endpoints (e2e)', () => {
       const res = await e2e.inject({ method: 'GET', url: `/admin/package-elf-analysis/${analysis.id}/bumps` });
 
       expect(res.statusCode).toBe(200);
-      const bumps = (await res.json()) as Array<{ bumpType: number }>;
+      const bumps = (await res.json()) as { bumpType: number }[];
       expect(bumps).toHaveLength(1);
       expect(bumps[0].bumpType).toBe(1);
     });

@@ -66,7 +66,7 @@ export class ArchMirrorService {
 
     this.logger.debug('Done pulling all databases');
 
-    const pulled: Array<RepoWorkDir | null> = downloads.map((download) =>
+    const pulled: (RepoWorkDir | null)[] = downloads.map((download) =>
       download.status === 'fulfilled' ? download.value : null,
     );
     const currentArchVersions: ParsedPackage[] = await this.parsePacmanDatabases(pulled);
@@ -293,7 +293,7 @@ export class ArchMirrorService {
     }
   }
 
-  async parsePacmanDatabases(databases: Array<RepoWorkDir | null>): Promise<ParsedPackage[]> {
+  async parsePacmanDatabases(databases: (RepoWorkDir | null)[]): Promise<ParsedPackage[]> {
     this.logger.debug('Started extracting databases...');
     const workDirsPromises: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
       databases.map(async (repo): Promise<RepoWorkDir> => {
@@ -313,7 +313,7 @@ export class ArchMirrorService {
     this.logger.debug('Done extracting databases');
 
     const currentPackageVersions: ParsedPackage[] = [];
-    const actualWorkDirs: Array<RepoWorkDir | null> = workDirsPromises.map((workDir) =>
+    const actualWorkDirs: (RepoWorkDir | null)[] = workDirsPromises.map((workDir) =>
       workDir.status === 'fulfilled' ? workDir.value : null,
     );
 

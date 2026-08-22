@@ -129,11 +129,15 @@ describe('derivePluginOf', () => {
 
   it('flags a consumer writing into a really-owned directory (exact parent)', () => {
     const direct = mk({ 'usr/lib/qt6/plugins/kwin/effects/configs': [KWIN] });
-    const plugins = derivePluginOf(['usr/lib/qt6/plugins/kwin/effects/configs/kwin_better_blur_dx_config.so'], {
-      direct,
-      ancestors: direct,
-      keyToPkgname: names,
-    });
+    const plugins = derivePluginOf(
+      ['usr/lib/qt6/plugins/kwin/effects/configs/kwin_better_blur_dx_config.so'],
+      {
+        direct,
+        ancestors: direct,
+        keyToPkgname: names,
+      },
+      true,
+    );
     expect(plugins).toEqual([KWIN]);
   });
 
@@ -144,11 +148,15 @@ describe('derivePluginOf', () => {
       'usr/lib/qt6/plugins/kwin/effects': [KWIN],
       'usr/lib/qt6/plugins/kwin': [KWIN],
     });
-    const plugins = derivePluginOf(['usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so'], {
-      direct,
-      ancestors,
-      keyToPkgname: names,
-    });
+    const plugins = derivePluginOf(
+      ['usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so'],
+      {
+        direct,
+        ancestors,
+        keyToPkgname: names,
+      },
+      true,
+    );
     expect(plugins).toEqual([KWIN]);
   });
 
@@ -159,11 +167,15 @@ describe('derivePluginOf', () => {
     // the keyToPkgname resolver was wired through.
     const direct = mk({});
     const ancestors = mk({ 'usr/lib/qt6/plugins/kwin': [KWIN] });
-    const plugins = derivePluginOf(['usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so'], {
-      direct,
-      ancestors,
-      keyToPkgname: names,
-    });
+    const plugins = derivePluginOf(
+      ['usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so'],
+      {
+        direct,
+        ancestors,
+        keyToPkgname: names,
+      },
+      true,
+    );
     expect(plugins).toEqual([KWIN]);
   });
 
@@ -174,11 +186,15 @@ describe('derivePluginOf', () => {
     const direct = mk({});
     const ancestors = mk({ 'usr/lib/someapp': [KWIN] });
     const namesNoKwin = new Map<string, string>([[KWIN, 'kwin']]);
-    const plugins = derivePluginOf(['usr/lib/someapp/plugins/whatever.so'], {
-      direct,
-      ancestors,
-      keyToPkgname: namesNoKwin,
-    });
+    const plugins = derivePluginOf(
+      ['usr/lib/someapp/plugins/whatever.so'],
+      {
+        direct,
+        ancestors,
+        keyToPkgname: namesNoKwin,
+      },
+      true,
+    );
     expect(plugins).toEqual([]);
   });
 
@@ -195,24 +211,29 @@ describe('derivePluginOf', () => {
         'usr/lib/qt6/plugins/kwin/effects/configs/kwin_better_blur_dx_config.so',
       ],
       { direct, ancestors, keyToPkgname: names },
+      true,
     );
     expect(plugins).toEqual([KWIN]);
   });
 
   it('ignores files not in any owned directory', () => {
     expect(
-      derivePluginOf(['usr/bin/foo'], { direct: new Map(), ancestors: new Map(), keyToPkgname: new Map() }),
+      derivePluginOf(['usr/bin/foo'], { direct: new Map(), ancestors: new Map(), keyToPkgname: new Map() }, false),
     ).toEqual([]);
   });
 
   it('does not flag a package merely shipping under a generic shared dir', () => {
     const direct = mk({});
     const ancestors = mk({ 'usr/lib': [KWIN], 'usr/lib/x86_64-linux-gnu': [KWIN] });
-    const plugins = derivePluginOf(['usr/lib/x86_64-linux-gnu/libfoo.so.1'], {
-      direct,
-      ancestors,
-      keyToPkgname: names,
-    });
+    const plugins = derivePluginOf(
+      ['usr/lib/x86_64-linux-gnu/libfoo.so.1'],
+      {
+        direct,
+        ancestors,
+        keyToPkgname: names,
+      },
+      true,
+    );
     expect(plugins).toEqual([]);
   });
 
@@ -229,12 +250,71 @@ describe('derivePluginOf', () => {
       'usr/share': [KWIN],
       'usr/lib/qt6/plugins/kwin': [KWIN],
     });
-    const plugins = derivePluginOf(['usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so'], {
-      direct,
-      ancestors,
-      keyToPkgname: names,
-    });
+    const plugins = derivePluginOf(
+      ['usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so'],
+      {
+        direct,
+        ancestors,
+        keyToPkgname: names,
+      },
+      true,
+    );
     expect(plugins).toEqual([KWIN]);
+  });
+
+  it('returns empty array for packages without compiled code', () => {
+    const direct = mk({ 'usr/lib/qt6/plugins/kwin/effects/configs': [KWIN] });
+    const plugins = derivePluginOf(
+      ['usr/lib/qt6/plugins/kwin/effects/configs/kwin_better_blur_dx_config.so'],
+      {
+        direct,
+        ancestors: direct,
+        keyToPkgname: names,
+      },
+      false,
+    );
+    expect(plugins).toEqual([]);
+  });
+
+  it('allows plugin detection for packages with compiled code', () => {
+    const direct = mk({ 'usr/lib/qt6/plugins/kwin/effects/configs': [KWIN] });
+    const plugins = derivePluginOf(
+      ['usr/lib/qt6/plugins/kwin/effects/configs/kwin_better_blur_dx_config.so'],
+      {
+        direct,
+        ancestors: direct,
+        keyToPkgname: names,
+      },
+      true,
+    );
+    expect(plugins).toEqual([KWIN]);
+  });
+
+  it('applies threshold filtering for packages with high pluginOf but minimal file/directory ownership', () => {
+    const owners = Array.from({ length: 150 }, (ignored, index) => `a${index}`);
+    const names = new Map(owners.map((owner) => [owner, `owner-${owner.slice(1)}`]));
+
+    // Create a scenario where many packages own the same directory, triggering high pluginOf count
+    const direct = mk({ 'usr/lib/plugins': owners });
+    const ancestors = mk({});
+
+    // But the files don't actually use those directories, and the package owns few directories
+    const files = ['usr/lib/plugin.so', 'usr/bin/exec', 'etc/config.conf'];
+
+    const plugins = derivePluginOf(
+      files,
+      {
+        direct,
+        ancestors,
+        keyToPkgname: names,
+      },
+      true,
+    );
+
+    // Should apply threshold filtering since 150 owners > 100 threshold but only 3 files
+    expect(plugins.length).toBe(0);
+    // The threshold filtering should completely filter out all pluginOf entries because
+    // the files don't match the owner directories
   });
 });
 

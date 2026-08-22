@@ -1,4 +1,5 @@
 import { Component, computed, effect, ElementRef, inject, input, OnDestroy, viewChild } from '@angular/core';
+import { flavors } from '@catppuccin/palette';
 import type { Mirror, MirrorSelf } from '@chaotic-next/shared-lib';
 import * as turf from '@turf/turf';
 import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
@@ -6,6 +7,7 @@ import { Map as MaplibreMap, Marker, NavigationControl, Popup, setWorkerUrl } fr
 import { getCountryCoordinates } from './country-coordinates';
 import { LiveTrafficService, type TrafficHit } from './live-traffic.service';
 
+const { mocha } = flavors;
 const WORKER_URL = '/maplibre-gl-worker.mjs';
 
 function createCatppuccinStyle(projection: 'globe' | 'flat'): StyleSpecification {
@@ -203,17 +205,17 @@ interface ActiveArc {
     <!-- Map Overlays -->
     <div class="stats">
       <div class="stat-item">
-        <span class="stat-dot" style="background:#cba6f7"></span>
+        <span class="stat-dot" [style.background]="mocha.colors.mauve.hex"></span>
         <span class="stat-label">Active</span>
         <span class="stat-count">{{ counts().active }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-dot" style="background:#a6e3a1"></span>
+        <span class="stat-dot" [style.background]="mocha.colors.green.hex"></span>
         <span class="stat-label">Healthy</span>
         <span class="stat-count">{{ counts().healthy }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-dot" style="background:#f38ba8"></span>
+        <span class="stat-dot" [style.background]="mocha.colors.red.hex"></span>
         <span class="stat-label">Down</span>
         <span class="stat-count">{{ counts().down }}</span>
       </div>
@@ -387,6 +389,7 @@ interface ActiveArc {
 })
 export class MirrorMapComponent implements OnDestroy {
   private readonly liveTraffic = inject(LiveTrafficService);
+  private readonly ctp = mocha;
 
   readonly mirrors = input<Mirror[]>([]);
   readonly self = input<MirrorSelf | undefined>(undefined);
@@ -823,4 +826,6 @@ export class MirrorMapComponent implements OnDestroy {
       this.lastFocus = target;
     }
   }
+
+  protected readonly mocha = mocha;
 }

@@ -119,7 +119,7 @@ export class MetricsService {
          FROM "router_hits_daily_users"
          WHERE "day" >= $1`,
           [utcDayStart(nDaysInPast(clampedDays))],
-        ) as Promise<Array<{ count: number }>>,
+        ) as Promise<{ count: number }[]>,
     ).then((rows) => rows[0]?.count ?? 0);
   }
 
