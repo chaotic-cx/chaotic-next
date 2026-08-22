@@ -66,11 +66,13 @@ export interface MrActor {
 }
 
 const TERMINAL_JOB_STATUSES = ['success', 'failed', 'canceled', 'skipped', 'manual', 'waiting_for_resource'];
+const SKIPPED_PIPELINE_STATUS = 'skipped';
 const JOB_TRACE_POLL_MS = 2000;
 const MAX_VERDICT_NOTE_FINDINGS = 5;
 const DIFF_FETCH_CONCURRENCY = 5;
 const CACHE_MRS_TTL = 30 * 60 * 1000;
 const MAX_CACHED_PIPELINES = 40;
+const GITLAB_API_TIMEOUT_MS = 10_000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 interface CachedMrData {
@@ -342,6 +344,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
 
   async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
     return [...this.pipelineMap.entries()]
+      .filter(([, pipeline]) => pipeline.status !== SKIPPED_PIPELINE_STATUS)
       .map(([id, pipeline]) => ({ pipeline, commit: this.statusMap.get(id) ?? [] }))
       .sort((a, b) => b.pipeline.id - a.pipeline.id)
       .slice(0, MAX_CACHED_PIPELINES);
@@ -352,7 +355,9 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       maxPages: 2,
       perPage: 100,
     });
-    allPipelines = allPipelines.filter((pipeline) => pipeline.status !== 'skipped').slice(0, MAX_CACHED_PIPELINES);
+    allPipelines = allPipelines
+      .filter((pipeline) => pipeline.status !== SKIPPED_PIPELINE_STATUS)
+      .slice(0, MAX_CACHED_PIPELINES);
 
     this.logger.log(`Fetched ${allPipelines.length} pipelines`);
 
@@ -1032,6 +1037,41 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       description: schedule.description ?? null,
       active: schedule.active,
     }));
+  }
+
+  async getDecryptedToken(repoName: string): Promise<string> {
+    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
+    if (!repo?.apiToken) {
+      throw new ServiceUnavailableException(`Repo ${repoName} has no apiToken`);
+    }
+    return decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
+  }
+
+  async getHeadCommitForRepo(repoName: string, ref = 'main'): Promise<string> {
+    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
+    if (!repo?.gitlabProjectId) {
+      throw new ServiceUnavailableException(`Repo ${repoName} has no gitlabProjectId`);
+    }
+    const token = await this.getDecryptedToken(repoName);
+    return this.fetchHeadCommitFromApi(repo.gitlabProjectId, ref, token);
+  }
+
+  private async fetchHeadCommitFromApi(projectId: string, ref: string, token?: string): Promise<string> {
+    const url = `https://gitlab.com/api/v4/projects/${encodeURIComponent(projectId)}/repository/commits?ref_name=${encodeURIComponent(ref)}&per_page=1`;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['PRIVATE-TOKEN'] = token;
+    }
+    const response = await fetch(url, { signal: AbortSignal.timeout(GITLAB_API_TIMEOUT_MS), headers });
+    if (!response.ok) {
+      throw new ServiceUnavailableException(`GitLab API returned ${response.status} for project ${projectId}`);
+    }
+    const commits = (await response.json()) as Array<{ id: string }>;
+    const head = commits[0];
+    if (!head?.id) {
+      throw new ServiceUnavailableException('Could not fetch HEAD commit from GitLab');
+    }
+    return head.id;
   }
 
   async runSchedule(scheduleId: number, actor: MrActor): Promise<PipelineTriggerResult> {
