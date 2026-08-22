@@ -23,6 +23,7 @@ import { APP_CONFIG } from '../environments/app-config.token';
 import { environment } from '../environments/environment.dev';
 import { routes } from './app.routes';
 import { provideAuthInitializer } from './auth/auth-initializer';
+import { provideBackendStatusInitializer } from './backend-status/backend-status-initializer';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
 
 /** True when the app runs as an installed PWA (standalone window), not a regular browser tab. */
@@ -58,6 +59,7 @@ export const appConfig: ApplicationConfig = {
       baseURL: environment.authBaseUrl,
     }),
     provideAuthInitializer(),
+    provideBackendStatusInitializer(),
     provideHttpClient(withInterceptorsFromDi()),
     provideRouter(
       routes,
