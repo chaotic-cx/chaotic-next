@@ -19,9 +19,8 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { PackageTriggerSourcesComponent } from '../../package-trigger-sources/package-trigger-sources.component';
 import { AdminService, ElfAnalysisFormData } from '../admin.service';
 import {
+  createAdminPagination,
   createDebounced,
-  pageFromQuery,
-  pageToQuery,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
@@ -65,7 +64,7 @@ const PKG_TYPE_OPTIONS = [
     <div class="table-container">
       <p-table
         [value]="service.elfAnalysis()?.items ?? []"
-        [rows]="25"
+        [rows]="pagination.perPage()"
         [loading]="service.elfAnalysisLoading()"
         [paginator]="true"
         [lazy]="true"
@@ -286,6 +285,8 @@ export class AdminPackageElfAnalysisPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  readonly pagination = createAdminPagination({ router: this.router, route: this.route });
+
   readonly dialogVisible = signal(false);
   readonly editing = signal<AdminPackageElfAnalysis | null>(null);
 
@@ -300,11 +301,13 @@ export class AdminPackageElfAnalysisPageComponent {
   );
 
   constructor() {
+    this.pagination.restoreFromQuery(this.route);
+    this.service.elfAnalysisPage.set(this.pagination.page());
+    this.service.elfAnalysisPerPage.set(this.pagination.perPage());
     restoreQueryParams(this.route, {
       q: (raw) => this.service.elfAnalysisQuery.set(queryFromRaw(raw)),
       pkgType: (raw) => this.service.elfAnalysisPkgTypeFilter.set(raw === '0' || raw === '1' ? raw : undefined),
       broken: (raw) => this.service.elfAnalysisBrokenFilter.set(raw === null ? undefined : raw === 'true'),
-      page: (raw) => this.service.elfAnalysisPage.set(pageFromQuery(raw)),
     });
   }
 
@@ -364,7 +367,7 @@ export class AdminPackageElfAnalysisPageComponent {
 
   setPkgTypeFilter(value: string | null | undefined): void {
     this.service.elfAnalysisPkgTypeFilter.set(value === null || value === undefined ? undefined : (value as '0' | '1'));
-    this.service.elfAnalysisPage.set(1);
+    this.pagination.resetPage();
     patchQueryParams(this.router, this.route, {
       pkgType: value === null || value === undefined ? null : (value as '0' | '1'),
     });
@@ -372,21 +375,21 @@ export class AdminPackageElfAnalysisPageComponent {
 
   setBrokenFilter(value: boolean | null | undefined): void {
     this.service.elfAnalysisBrokenFilter.set(value === null || value === undefined ? undefined : value);
-    this.service.elfAnalysisPage.set(1);
+    this.pagination.resetPage();
     patchQueryParams(this.router, this.route, {
       broken: value === null || value === undefined ? null : String(value),
     });
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
-    this.service.elfAnalysisPage.set(page);
-    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
+    this.pagination.handleLazyLoad(event);
+    this.service.elfAnalysisPage.set(this.pagination.page());
+    this.service.elfAnalysisPerPage.set(event.rows ?? 25);
   }
 
   onSearch(event: Event): void {
     this.service.elfAnalysisQuery.set((event.target as HTMLInputElement).value);
-    this.service.elfAnalysisPage.set(1);
+    this.pagination.resetPage();
     this.syncSearch();
   }
 

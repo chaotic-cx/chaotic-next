@@ -6,7 +6,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
-import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from '../admin-url-sync';
+import { createAdminPagination } from '../admin-url-sync';
 
 @Component({
   selector: 'chaotic-admin-repo-operations-page',
@@ -83,7 +83,7 @@ import { pageFromQuery, pageToQuery, patchQueryParams, restoreQueryParams } from
           <p-table
             [(selection)]="service.brokenSelection"
             [value]="service.brokenReports()"
-            [rows]="25"
+            [rows]="pagination.perPage()"
             [loading]="service.brokenReportsLoading()"
             [paginator]="true"
             [lazy]="true"
@@ -130,10 +130,12 @@ export class AdminRepoOperationsPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly confirmationService = inject(ConfirmationService);
 
+  readonly pagination = createAdminPagination({ router: this.router, route: this.route });
+
   constructor() {
-    restoreQueryParams(this.route, {
-      page: (raw) => this.service.brokenPage.set(pageFromQuery(raw)),
-    });
+    this.pagination.restoreFromQuery(this.route);
+    this.service.brokenPage.set(this.pagination.page());
+    this.service.brokenPerPage.set(this.pagination.perPage());
   }
 
   confirmBump(): void {
@@ -149,8 +151,8 @@ export class AdminRepoOperationsPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
-    this.service.brokenPage.set(page);
-    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
+    this.pagination.handleLazyLoad(event);
+    this.service.brokenPage.set(this.pagination.page());
+    this.service.brokenPerPage.set(event.rows ?? 25);
   }
 }

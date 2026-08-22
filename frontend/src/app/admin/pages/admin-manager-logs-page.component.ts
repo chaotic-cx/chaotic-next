@@ -99,7 +99,7 @@ export class AdminManagerLogsPageComponent implements AfterViewInit, OnDestroy {
     this.closeStream();
     this.error.set(undefined);
 
-    const source = new EventSource(`${this.backendUrl}/api/manager/logs`);
+    const source = new EventSource(`${this.backendUrl}/api/manager/logs?ngsw-bypass`);
     this.eventSource = source;
 
     source.onopen = () => {

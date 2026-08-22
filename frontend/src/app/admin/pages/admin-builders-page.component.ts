@@ -16,9 +16,8 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService, BuilderFormData } from '../admin.service';
 import {
+  createAdminPagination,
   createDebounced,
-  pageFromQuery,
-  pageToQuery,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
@@ -53,7 +52,7 @@ interface BuilderFormModel {
     <div class="table-container">
       <p-table
         [value]="service.builders()?.items ?? []"
-        [rows]="25"
+        [rows]="pagination.perPage()"
         [loading]="service.buildersLoading()"
         [paginator]="true"
         [lazy]="true"
@@ -197,6 +196,8 @@ export class AdminBuildersPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  readonly pagination = createAdminPagination({ router: this.router, route: this.route });
+
   readonly dialogVisible = signal(false);
   readonly editing = signal<Builder | null>(null);
 
@@ -210,10 +211,12 @@ export class AdminBuildersPageComponent {
   });
 
   constructor() {
+    this.pagination.restoreFromQuery(this.route);
+    this.service.builderPage.set(this.pagination.page());
+    this.service.builderPerPage.set(this.pagination.perPage());
     restoreQueryParams(this.route, {
       q: (raw) => this.service.builderQuery.set(queryFromRaw(raw)),
-      active: (raw) => this.service.builderActiveFilter.set(raw === 'active' || raw === 'inactive' ? raw : undefined),
-      page: (raw) => this.service.builderPage.set(pageFromQuery(raw)),
+      active: (raw) => this.service.builderActiveFilter.set(raw === 'true' || raw === 'false' ? raw : undefined),
     });
   }
 
@@ -248,20 +251,20 @@ export class AdminBuildersPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
-    this.service.builderPage.set(page);
-    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
+    this.pagination.handleLazyLoad(event);
+    this.service.builderPage.set(this.pagination.page());
+    this.service.builderPerPage.set(event.rows ?? 25);
   }
 
   onSearch(event: Event): void {
     this.service.builderQuery.set((event.target as HTMLInputElement).value);
-    this.service.builderPage.set(1);
+    this.pagination.resetPage();
     this.syncSearch();
   }
 
-  setActiveFilter(value: 'active' | 'inactive' | null | undefined): void {
+  setActiveFilter(value: 'true' | 'false' | null | undefined): void {
     this.service.builderActiveFilter.set(value ?? undefined);
-    this.service.builderPage.set(1);
+    this.pagination.resetPage();
     patchQueryParams(this.router, this.route, { active: stringFilterToQuery(value ?? undefined) });
   }
 

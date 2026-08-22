@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormField, form, required, submit } from '@angular/forms/signals';
-import { ArchPackage } from '@chaotic-next/shared-lib';
+import { ArchPackage, PKG_TYPE_ARCH } from '@chaotic-next/shared-lib';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Dialog } from '@openng/optimus-ui/dialog';
@@ -13,9 +13,8 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService, ArchPackageFormData } from '../admin.service';
 import {
+  createAdminPagination,
   createDebounced,
-  pageFromQuery,
-  pageToQuery,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
@@ -36,7 +35,7 @@ interface ArchPackageFormModel {
     <div class="table-container">
       <p-table
         [value]="service.archPackages()?.items ?? []"
-        [rows]="25"
+        [rows]="pagination.perPage()"
         [loading]="service.archPackagesLoading()"
         [paginator]="true"
         [lazy]="true"
@@ -81,6 +80,15 @@ interface ArchPackageFormModel {
             <td>{{ pkg.arch }}</td>
             <td class="cell-actions">
               <div class="flex gap-2">
+                <p-button
+                  (onClick)="rescanPackage(pkg)"
+                  icon="pi pi-refresh"
+                  severity="success"
+                  text
+                  rounded
+                  pTooltip="Rescan ELF signals"
+                  tooltipPosition="left"
+                />
                 <p-button
                   (onClick)="openEdit(pkg)"
                   icon="pi pi-pencil"
@@ -162,6 +170,8 @@ export class AdminArchPackagesPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  readonly pagination = createAdminPagination({ router: this.router, route: this.route });
+
   readonly dialogVisible = signal(false);
   readonly editing = signal<ArchPackage | null>(null);
 
@@ -175,9 +185,11 @@ export class AdminArchPackagesPageComponent {
   });
 
   constructor() {
+    this.pagination.restoreFromQuery(this.route);
+    this.service.archPage.set(this.pagination.page());
+    this.service.archPerPage.set(this.pagination.perPage());
     restoreQueryParams(this.route, {
       q: (raw) => this.service.archQuery.set(queryFromRaw(raw)),
-      page: (raw) => this.service.archPage.set(pageFromQuery(raw)),
     });
   }
 
@@ -211,15 +223,25 @@ export class AdminArchPackagesPageComponent {
     });
   }
 
+  rescanPackage(pkg: ArchPackage): void {
+    this.confirmationService.confirm({
+      message: `Rescan ELF signals for <code>${pkg.pkgname}</code>? This will download and scan the package archive.`,
+      header: 'Rescan ELF signals',
+      acceptLabel: 'Rescan',
+      rejectLabel: 'Cancel',
+      accept: () => void this.service.rescanPackage(pkg.pkgname, PKG_TYPE_ARCH),
+    });
+  }
+
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
-    this.service.archPage.set(page);
-    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
+    this.pagination.handleLazyLoad(event);
+    this.service.archPage.set(this.pagination.page());
+    this.service.archPerPage.set(event.rows ?? 25);
   }
 
   onSearch(event: Event): void {
     this.service.archQuery.set((event.target as HTMLInputElement).value);
-    this.service.archPage.set(1);
+    this.pagination.resetPage();
     this.syncSearch();
   }
 

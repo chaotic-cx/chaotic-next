@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   formatPkgrel,
   Package as PackageDto,
+  PKG_TYPE_CHAOTIC,
   PIPELINE_PKG_BASE_REGEX,
   PIPELINE_REQUEST_REASONS,
   type PipelineRequestReason,
@@ -24,9 +25,8 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AurScanResultComponent } from '../../aur-scan/aur-scan-result.component';
 import { AurScanService, isScanSettled } from '../../aur-scan/aur-scan.service';
 import {
+  createAdminPagination,
   createDebounced,
-  pageFromQuery,
-  pageToQuery,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
@@ -79,7 +79,7 @@ const NO_REPO = '0';
     <div class="table-container">
       <p-table
         [value]="adminService.packages()?.items ?? []"
-        [rows]="25"
+        [rows]="pagination.perPage()"
         [loading]="adminService.packagesLoading()"
         [paginator]="true"
         [lazy]="true"
@@ -188,6 +188,15 @@ const NO_REPO = '0';
                   text
                   rounded
                   pTooltip="Schedule build"
+                  tooltipPosition="left"
+                />
+                <p-button
+                  (onClick)="rescanPackage(pkg)"
+                  icon="pi pi-refresh"
+                  severity="success"
+                  text
+                  rounded
+                  pTooltip="Rescan ELF signals"
                   tooltipPosition="left"
                 />
                 <p-button
@@ -425,6 +434,8 @@ export class AdminPackagesPageComponent {
   protected readonly adminService = inject(AdminService);
   protected readonly formatPkgrel = formatPkgrel;
 
+  readonly pagination = createAdminPagination({ router: this.router, route: this.route });
+
   readonly dialogVisible = signal(false);
   readonly editing = signal<PackageDto | null>(null);
 
@@ -547,13 +558,18 @@ export class AdminPackagesPageComponent {
   }
 
   constructor() {
+    this.pagination.restoreFromQuery(this.route);
+    this.adminService.packagePage.set(this.pagination.page());
+    this.adminService.packagePerPage.set(this.pagination.perPage());
     restoreQueryParams(this.route, {
       q: (raw) => this.adminService.packageQuery.set(queryFromRaw(raw)),
       repo: (raw) =>
         this.adminService.packageRepoFilter.set(stringFilterFromQuery(raw) === undefined ? undefined : Number(raw)),
-      active: (raw) =>
-        this.adminService.packageActiveFilter.set(raw === 'active' || raw === 'inactive' ? raw : undefined),
-      page: (raw) => this.adminService.packagePage.set(pageFromQuery(raw)),
+      active: (raw) => {
+        if (raw === 'true' || raw === 'false') {
+          this.adminService.packageActiveFilter.set(raw);
+        }
+      },
     });
   }
 
@@ -602,11 +618,21 @@ export class AdminPackagesPageComponent {
 
   schedulePackage(pkg: PackageDto): void {
     this.confirmationService.confirm({
-      message: `Schedule package <code>${pkg.pkgname}</code>? This will trigger a pipeline to build the package.`,
+      message: `Schedule package <code>${pkg.pkgname}</code>? This will trigger a build on the manager.`,
       header: 'Schedule package build',
       acceptLabel: 'Schedule',
       rejectLabel: 'Cancel',
-      accept: () => void this.adminService.schedulePackages([pkg.pkgname]),
+      accept: () => void this.adminService.schedulePackages([pkg]),
+    });
+  }
+
+  rescanPackage(pkg: PackageDto): void {
+    this.confirmationService.confirm({
+      message: `Rescan ELF signals for <code>${pkg.pkgname}</code>? This will download and scan the package archive.`,
+      header: 'Rescan ELF signals',
+      acceptLabel: 'Rescan',
+      rejectLabel: 'Cancel',
+      accept: () => void this.adminService.rescanPackage(pkg.pkgname, PKG_TYPE_CHAOTIC),
     });
   }
 
@@ -621,23 +647,26 @@ export class AdminPackagesPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
-    this.adminService.packagePage.set(page);
-    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
+    this.pagination.handleLazyLoad(event);
+    this.adminService.packagePage.set(this.pagination.page());
+    this.adminService.packagePerPage.set(event.rows ?? 25);
   }
 
   onSearch(event: Event): void {
     this.adminService.packageQuery.set((event.target as HTMLInputElement).value);
+    this.pagination.resetPage();
     this.adminService.packagePage.set(1);
     this.syncSearch();
   }
 
   onRepoChange(repoId: number | null | undefined): void {
+    this.pagination.resetPage();
     this.adminService.setPackageRepoFilter(repoId);
     patchQueryParams(this.router, this.route, { repo: stringFilterToQuery(String(repoId ?? '')) });
   }
 
-  onActiveChange(active: 'active' | 'inactive' | null | undefined): void {
+  onActiveChange(active: 'true' | 'false' | null | undefined): void {
+    this.pagination.resetPage();
     this.adminService.setPackageActiveFilter(active);
     patchQueryParams(this.router, this.route, { active: stringFilterToQuery(active ?? undefined) });
   }

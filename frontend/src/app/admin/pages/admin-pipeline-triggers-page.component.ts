@@ -12,9 +12,8 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import {
+  createAdminPagination,
   createDebounced,
-  pageFromQuery,
-  pageToQuery,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
@@ -33,7 +32,7 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
     <div class="table-container">
       <p-table
         [value]="service.pipelineTriggers()?.items ?? []"
-        [rows]="25"
+        [rows]="pagination.perPage()"
         [loading]="service.pipelineTriggersLoading()"
         [paginator]="true"
         [lazy]="true"
@@ -192,6 +191,8 @@ export class AdminPipelineTriggersPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  readonly pagination = createAdminPagination({ router: this.router, route: this.route });
+
   readonly operationOptions = OPERATION_OPTIONS;
 
   private readonly syncSearch = createDebounced(400, () =>
@@ -233,10 +234,12 @@ export class AdminPipelineTriggersPageComponent {
   }
 
   constructor() {
+    this.pagination.restoreFromQuery(this.route);
+    this.service.pipelineTriggerPage.set(this.pagination.page());
+    this.service.pipelineTriggerPerPage.set(this.pagination.perPage());
     restoreQueryParams(this.route, {
       q: (raw) => this.service.pipelineTriggerQuery.set(queryFromRaw(raw)),
       operation: (raw) => this.service.pipelineTriggerOperationFilter.set(stringFilterFromQuery(raw)),
-      page: (raw) => this.service.pipelineTriggerPage.set(pageFromQuery(raw)),
     });
   }
 
@@ -252,20 +255,20 @@ export class AdminPipelineTriggersPageComponent {
   }
 
   onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? 25)) + 1;
-    this.service.pipelineTriggerPage.set(page);
-    patchQueryParams(this.router, this.route, { page: pageToQuery(page) });
+    this.pagination.handleLazyLoad(event);
+    this.service.pipelineTriggerPage.set(this.pagination.page());
+    this.service.pipelineTriggerPerPage.set(event.rows ?? 25);
   }
 
   onSearch(event: Event): void {
     this.service.pipelineTriggerQuery.set((event.target as HTMLInputElement).value);
-    this.service.pipelineTriggerPage.set(1);
+    this.pagination.resetPage();
     this.syncSearch();
   }
 
   setOperationFilter(value: string | null | undefined): void {
     this.service.pipelineTriggerOperationFilter.set(value ?? undefined);
-    this.service.pipelineTriggerPage.set(1);
+    this.pagination.resetPage();
     patchQueryParams(this.router, this.route, { operation: stringFilterToQuery(value ?? undefined) });
   }
 }
