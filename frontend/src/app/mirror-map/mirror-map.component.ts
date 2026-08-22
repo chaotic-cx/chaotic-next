@@ -1,11 +1,111 @@
-import { Component, computed, effect, ElementRef, input, OnDestroy, viewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, input, OnDestroy, viewChild } from '@angular/core';
 import type { Mirror, MirrorSelf } from '@chaotic-next/shared-lib';
-import { Map as MaplibreMap, Marker, NavigationControl, Popup, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
 import * as turf from '@turf/turf';
+import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
+import { Map as MaplibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl';
+import { getCountryCoordinates } from './country-coordinates';
+import { LiveTrafficService, type TrafficHit } from './live-traffic.service';
 
 const WORKER_URL = '/maplibre-gl-worker.mjs';
 
-const STYLE_URL = 'https://demotiles.maplibre.org/globe.json';
+function createCatppuccinStyle(projection: 'globe' | 'flat'): StyleSpecification {
+  const isGlobe = projection === 'globe';
+
+  return {
+    version: 8,
+    name: `Catppuccin ${isGlobe ? 'Globe' : 'Flat'}`,
+    ...(isGlobe ? { projection: { type: 'globe' } } : {}),
+    sources: {
+      maplibre: {
+        type: 'vector',
+        url: 'https://demotiles.maplibre.org/tiles/tiles.json',
+      },
+    },
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    layers: [
+      {
+        id: 'background',
+        type: 'background',
+        paint: {
+          'background-color': '#11111b', // Catppuccin Crust
+        },
+        layout: {
+          visibility: 'visible',
+        },
+        maxzoom: 24,
+      },
+      {
+        'id': 'countries-fill',
+        'type': 'fill',
+        'source': 'maplibre',
+        'source-layer': 'countries',
+        'paint': {
+          'fill-color': '#1e1e2e', // Catppuccin Base (solid elegant land)
+          'fill-opacity': 0.95,
+        },
+        'layout': {
+          visibility: 'visible',
+        },
+        'minzoom': 0,
+        'maxzoom': 24,
+      },
+      {
+        'id': 'coastline',
+        'type': 'line',
+        'source': 'maplibre',
+        'source-layer': 'countries',
+        'paint': {
+          'line-color': '#89b4fa', // Catppuccin Blue subtle coastal accent
+          'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.8, 6, 1.5, 14, 2.5],
+          'line-opacity': 0.45,
+        },
+        'layout': {
+          'line-cap': 'round',
+          'line-join': 'round',
+          'visibility': 'visible',
+        },
+        'minzoom': 0,
+        'maxzoom': 24,
+      },
+      {
+        'id': 'countries-boundary',
+        'type': 'line',
+        'source': 'maplibre',
+        'source-layer': 'countries',
+        'paint': {
+          'line-color': '#313244', // Catppuccin Surface0 crisp border
+          'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.5, 6, 1, 14, 1.5],
+          'line-opacity': 0.8,
+        },
+        'layout': {
+          'line-cap': 'round',
+          'line-join': 'round',
+          'visibility': 'visible',
+        },
+        'minzoom': 0,
+        'maxzoom': 24,
+      },
+      {
+        'id': 'geolines',
+        'type': 'line',
+        'source': 'maplibre',
+        'source-layer': 'geolines',
+        'paint': {
+          'line-color': '#45475a',
+          'line-width': 0.5,
+          'line-dasharray': [2, 3],
+          'line-opacity': 0.2,
+        },
+        'layout': {
+          visibility: 'visible',
+        },
+        'minzoom': 0,
+        'maxzoom': 24,
+      },
+    ],
+  };
+}
+
 const CIRCLE_SOURCE_ID = 'circles';
 const CIRCLE_FILL_LAYER_ID = 'circles-layer';
 const CIRCLE_OUTLINE_LAYER_ID = 'circles-outline';
@@ -14,6 +114,11 @@ const CIRCLE_RADIUS_KM = 2414.016;
 const CIRCLE_STEPS = 128;
 const FOCUS_ZOOM = 3;
 const FOCUS_SPEED = 1.2;
+
+const TRAFFIC_PINGS_SOURCE_ID = 'traffic-pings-source';
+const TRAFFIC_PINGS_LAYER_ID = 'traffic-pings-layer';
+const TRAFFIC_ARCS_SOURCE_ID = 'traffic-arcs-source';
+const TRAFFIC_ARCS_LAYER_ID = 'traffic-arcs-layer';
 
 const MARKER_COLORS = {
   active: '#cba6f7',
@@ -67,6 +172,26 @@ function samePosition(a: [number, number], b: [number, number]): boolean {
   return a[0] === b[0] && a[1] === b[1];
 }
 
+interface ActivePing {
+  id: string;
+  lng: number;
+  lat: number;
+  radius: number;
+  opacity: number;
+  color: string;
+  createdAt: number;
+}
+
+interface ActiveArc {
+  id: string;
+  source: [number, number];
+  target: [number, number];
+  progress: number;
+  opacity: number;
+  color: string;
+  createdAt: number;
+}
+
 @Component({
   selector: 'chaotic-mirror-map',
   host: {
@@ -74,6 +199,8 @@ function samePosition(a: [number, number], b: [number, number]): boolean {
   },
   template: `
     <div class="mirror-map" #mapDiv></div>
+
+    <!-- Map Overlays -->
     <div class="stats">
       <div class="stat-item">
         <span class="stat-dot" style="background:#cba6f7"></span>
@@ -98,19 +225,26 @@ function samePosition(a: [number, number], b: [number, number]): boolean {
         position: relative;
         display: block;
         width: 100%;
-        height: 24rem;
+        height: 36rem;
+        min-height: 20rem;
         border-radius: 12px;
         overflow: hidden;
       }
 
       :host.fill-height {
-        height: auto;
+        height: 100%;
+        min-height: 22rem;
         flex: 1 1 0%;
       }
 
       @media (max-width: 640px) {
         :host {
-          height: 16rem;
+          height: 22rem;
+          min-height: 18rem;
+        }
+
+        :host.fill-height {
+          min-height: 18rem;
         }
 
         .stats {
@@ -252,10 +386,17 @@ function samePosition(a: [number, number], b: [number, number]): boolean {
   ],
 })
 export class MirrorMapComponent implements OnDestroy {
+  private readonly liveTraffic = inject(LiveTrafficService);
+
   readonly mirrors = input<Mirror[]>([]);
   readonly self = input<MirrorSelf | undefined>(undefined);
   readonly focus = input<[number, number] | null>(null);
   readonly fillHeight = input(false);
+  readonly livePingsEnabled = input(false);
+  readonly showHits = input(true);
+  readonly showMirrors = input(true);
+  readonly projection = input<'globe' | 'flat'>('globe');
+  readonly customStyleUrl = input<string | null>(null);
 
   private readonly mapDiv = viewChild<ElementRef<HTMLDivElement>>('mapDiv');
 
@@ -263,6 +404,11 @@ export class MirrorMapComponent implements OnDestroy {
   private readonly markers = new Map<string, Marker>();
   private resizeObserver?: ResizeObserver;
   private lastFocus: [number, number] | null = null;
+
+  private activePings: ActivePing[] = [];
+  private activeArcs: ActiveArc[] = [];
+  private animationFrameId: number | null = null;
+  private currentAppliedStyle: string | null = null;
 
   readonly counts = computed(() => {
     const counts = { active: 0, healthy: 0, down: 0 };
@@ -278,13 +424,37 @@ export class MirrorMapComponent implements OnDestroy {
       if (div && !this.map) {
         this.initMap(div.nativeElement);
       }
-      if (this.map?.isStyleLoaded()) {
+
+      this.mirrors();
+      this.self();
+      this.focus();
+      this.showMirrors();
+      if (this.map) {
         this.updateMap();
+      }
+    });
+
+    effect(() => {
+      const proj = this.projection();
+      const custom = this.customStyleUrl();
+      const targetStyle = custom || createCatppuccinStyle(proj);
+
+      if (this.map) {
+        this.map.setStyle(targetStyle);
+      }
+    });
+
+    effect(() => {
+      const hit = this.liveTraffic.latestHit();
+      const enabled = this.livePingsEnabled() && this.showHits();
+      if (enabled && hit && this.map && (this.map.isStyleLoaded() || this.map.loaded())) {
+        this.triggerTrafficPing(hit);
       }
     });
   }
 
   ngOnDestroy(): void {
+    this.stopAnimationLoop();
     this.resizeObserver?.disconnect();
     this.map?.remove();
   }
@@ -292,11 +462,14 @@ export class MirrorMapComponent implements OnDestroy {
   private initMap(container: HTMLDivElement): void {
     setWorkerUrl(WORKER_URL);
 
+    const proj = this.projection();
+    const initialStyle = this.customStyleUrl() || createCatppuccinStyle(proj);
+
     this.map = new MaplibreMap({
       container,
-      style: STYLE_URL,
+      style: initialStyle,
       center: [0, 30],
-      zoom: 0.5,
+      zoom: proj === 'globe' ? 0.95 : 1.2,
       transformRequest: (url: string) => {
         if (url.includes('demotiles.maplibre.org')) {
           const separator = url.includes('?') ? '&' : '?';
@@ -309,10 +482,22 @@ export class MirrorMapComponent implements OnDestroy {
     this.map.addControl(new NavigationControl(), 'top-right');
 
     this.resizeObserver = new ResizeObserver(() => this.map?.resize());
-    this.resizeObserver.observe(container);
-
-    this.map.on('load', () => {
+    const onReady = () => {
       this.addCircleLayers();
+      this.addTrafficLayers();
+      this.updateMap();
+      this.startAnimationLoop();
+    };
+
+    if (this.map.isStyleLoaded()) {
+      onReady();
+    } else {
+      this.map.once('load', onReady);
+    }
+
+    this.map.on('styledata', () => {
+      this.addCircleLayers();
+      this.addTrafficLayers();
       this.updateMap();
     });
   }
@@ -326,44 +511,260 @@ export class MirrorMapComponent implements OnDestroy {
       id: CIRCLE_FILL_LAYER_ID,
       type: 'fill',
       source: CIRCLE_SOURCE_ID,
-      paint: { 'fill-color': CIRCLE_COLOR, 'fill-opacity': 0.1 },
+      paint: { 'fill-color': CIRCLE_COLOR, 'fill-opacity': 0.015 },
     });
     this.map.addLayer({
       id: CIRCLE_OUTLINE_LAYER_ID,
       type: 'line',
       source: CIRCLE_SOURCE_ID,
-      paint: { 'line-color': CIRCLE_COLOR, 'line-width': 1, 'line-opacity': 1.0 },
+      paint: { 'line-color': CIRCLE_COLOR, 'line-width': 0.5, 'line-opacity': 0.18 },
     });
+  }
+
+  private addTrafficLayers(): void {
+    if (!this.map) return;
+
+    if (!this.map.getSource(TRAFFIC_ARCS_SOURCE_ID)) {
+      this.map.addSource(TRAFFIC_ARCS_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      this.map.addLayer({
+        id: TRAFFIC_ARCS_LAYER_ID,
+        type: 'line',
+        source: TRAFFIC_ARCS_SOURCE_ID,
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 3,
+          'line-opacity': ['get', 'opacity'],
+        },
+      });
+    }
+
+    if (!this.map.getSource(TRAFFIC_PINGS_SOURCE_ID)) {
+      this.map.addSource(TRAFFIC_PINGS_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      this.map.addLayer({
+        id: TRAFFIC_PINGS_LAYER_ID,
+        type: 'circle',
+        source: TRAFFIC_PINGS_SOURCE_ID,
+        paint: {
+          'circle-radius': ['get', 'radius'],
+          'circle-color': ['get', 'color'],
+          'circle-opacity': ['get', 'opacity'],
+          'circle-stroke-width': ['get', 'strokeWidth'],
+          'circle-stroke-color': ['get', 'strokeColor'],
+          'circle-stroke-opacity': ['get', 'strokeOpacity'],
+        },
+      });
+    }
+  }
+
+  private triggerTrafficPing(hit: TrafficHit): void {
+    if (!this.map) return;
+    this.addTrafficLayers();
+
+    const coords = getCountryCoordinates(hit.countryCode);
+    if (!coords) return;
+
+    const isGaruda = hit.repo.toLowerCase().includes('garuda');
+    const color = isGaruda ? '#89dceb' : '#cba6f7';
+
+    this.activePings.push({
+      id: hit.id,
+      lng: coords[0] + (Math.random() - 0.5) * 1.5,
+      lat: coords[1] + (Math.random() - 0.5) * 1.5,
+      radius: 4,
+      opacity: 0.9,
+      color,
+      createdAt: performance.now(),
+    });
+
+    const targetMirror = this.mirrors().find(
+      (m) =>
+        hit.hostname.includes(m.subdomain) ||
+        (hit.hostname.includes('geo-mirror') && m.geo_active) ||
+        (m.official && m.healthy),
+    );
+
+    const targetPos = targetMirror ? markerPosition(targetMirror, this.self()) : null;
+    if (targetPos) {
+      this.activeArcs.push({
+        id: hit.id,
+        source: coords,
+        target: targetPos,
+        progress: 0,
+        opacity: 0.9,
+        color,
+        createdAt: performance.now(),
+      });
+    }
+
+    if (this.activePings.length > 50) {
+      this.activePings.splice(0, this.activePings.length - 50);
+    }
+    if (this.activeArcs.length > 30) {
+      this.activeArcs.splice(0, this.activeArcs.length - 30);
+    }
+  }
+
+  private startAnimationLoop(): void {
+    const animate = () => {
+      this.tickAnimations();
+      this.animationFrameId = requestAnimationFrame(animate);
+    };
+    this.animationFrameId = requestAnimationFrame(animate);
+  }
+
+  private stopAnimationLoop(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
+  private tickAnimations(): void {
+    if (!this.map || !this.map.isStyleLoaded()) return;
+
+    const showHits = this.showHits();
+    if (!showHits) {
+      if (this.activePings.length > 0) this.activePings = [];
+      if (this.activeArcs.length > 0) this.activeArcs = [];
+      const pingSource = this.map.getSource(TRAFFIC_PINGS_SOURCE_ID) as GeoJSONSource | undefined;
+      pingSource?.setData({ type: 'FeatureCollection', features: [] });
+      const arcSource = this.map.getSource(TRAFFIC_ARCS_SOURCE_ID) as GeoJSONSource | undefined;
+      arcSource?.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    const now = performance.now();
+    const pingDuration = 1800; // ms
+    const arcDuration = 1200; // ms
+
+    const pingFeatures: GeoJSON.Feature[] = [];
+    this.activePings = this.activePings.filter((ping) => {
+      const elapsed = now - ping.createdAt;
+      if (elapsed > pingDuration) return false;
+
+      const factor = elapsed / pingDuration;
+      const rippleRadius = 8 + factor * 60;
+      const ringOpacity = Math.max(0, 1 - factor);
+
+      pingFeatures.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [ping.lng, ping.lat],
+        },
+        properties: {
+          radius: 7,
+          color: '#f38ba8',
+          opacity: 0.95,
+          strokeWidth: 2,
+          strokeColor: '#eba0ac',
+          strokeOpacity: 1.0,
+        },
+      });
+
+      pingFeatures.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [ping.lng, ping.lat],
+        },
+        properties: {
+          radius: rippleRadius,
+          color: '#f38ba8',
+          opacity: ringOpacity * 0.45,
+          strokeWidth: 2.5,
+          strokeColor: '#f38ba8',
+          strokeOpacity: ringOpacity * 0.9,
+        },
+      });
+      return true;
+    });
+
+    const pingSource = this.map.getSource(TRAFFIC_PINGS_SOURCE_ID) as GeoJSONSource | undefined;
+    pingSource?.setData({ type: 'FeatureCollection', features: pingFeatures });
+
+    const arcFeatures: GeoJSON.Feature[] = [];
+    this.activeArcs = this.activeArcs.filter((arc) => {
+      const elapsed = now - arc.createdAt;
+      if (elapsed > arcDuration) return false;
+
+      const progress = elapsed / arcDuration;
+      const opacity = Math.max(0, 1 - progress);
+
+      const points: [number, number][] = [];
+      const numSteps = 15;
+      const maxStep = Math.min(numSteps, Math.ceil(progress * numSteps) + 1);
+
+      for (let s = 0; s <= maxStep; s++) {
+        const t = s / numSteps;
+        const lng = arc.source[0] + (arc.target[0] - arc.source[0]) * t;
+        // parabolic curve height offset
+        const latArcOffset = Math.sin(t * Math.PI) * 12;
+        const lat = arc.source[1] + (arc.target[1] - arc.source[1]) * t + latArcOffset;
+        points.push([lng, lat]);
+      }
+
+      if (points.length >= 2) {
+        arcFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: points,
+          },
+          properties: {
+            color: arc.color,
+            opacity,
+          },
+        });
+      }
+      return true;
+    });
+
+    const arcSource = this.map.getSource(TRAFFIC_ARCS_SOURCE_ID) as GeoJSONSource | undefined;
+    arcSource?.setData({ type: 'FeatureCollection', features: arcFeatures });
   }
 
   private updateMap(): void {
     if (!this.map) return;
 
+    const showMirrors = this.showMirrors();
     const mirrors = this.mirrors();
     const self = this.self();
     const currentSubdomains = new Set<string>();
     const circleFeatures: GeoJSON.Feature[] = [];
 
-    for (const mirror of mirrors) {
-      const position = markerPosition(mirror, self);
-      if (!position) continue;
+    if (showMirrors) {
+      for (const mirror of mirrors) {
+        const position = markerPosition(mirror, self);
+        if (!position) continue;
 
-      currentSubdomains.add(mirror.subdomain);
-      const status = mirrorStatus(mirror);
-      const existing = this.markers.get(mirror.subdomain);
+        currentSubdomains.add(mirror.subdomain);
+        const status = mirrorStatus(mirror);
+        const existing = this.markers.get(mirror.subdomain);
 
-      if (existing) {
-        existing.setLngLat(position);
-        const element = existing.getElement();
-        element.classList.toggle('marker-active', status === 'active');
-        const svgPath = element.querySelector('svg path');
-        if (svgPath) svgPath.setAttribute('fill', MARKER_COLORS[status]);
-      } else {
-        this.addMarker(mirror, position, status);
-      }
+        if (existing) {
+          existing.setLngLat(position);
+          const element = existing.getElement();
+          element.classList.toggle('marker-active', status === 'active');
+          const svgPath = element.querySelector('svg path');
+          if (svgPath) svgPath.setAttribute('fill', MARKER_COLORS[status]);
+        } else {
+          this.addMarker(mirror, position, status);
+        }
 
-      if (mirror.latlon && mirror.healthy) {
-        circleFeatures.push(turf.circle(position, CIRCLE_RADIUS_KM, { steps: CIRCLE_STEPS, units: 'kilometers' }));
+        if (mirror.latlon && mirror.healthy) {
+          circleFeatures.push(turf.circle(position, CIRCLE_RADIUS_KM, { steps: CIRCLE_STEPS, units: 'kilometers' }));
+        }
       }
     }
 

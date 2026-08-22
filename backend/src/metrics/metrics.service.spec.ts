@@ -1,8 +1,10 @@
+import { PassThrough } from 'node:stream';
+import { HttpService } from '@nestjs/axios';
 import { BadRequestException } from '@nestjs/common';
 import { nDaysInPast, utcDayStart } from '../utils/functions';
 import { DataSource } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
-import { MetricsService } from './metrics.service';
+import { MetricsService, parseTrafficLine } from './metrics.service';
 
 const MIN_DAYS = 1;
 const MAX_DAYS = 3650;
@@ -36,17 +38,26 @@ function makeCache() {
   return { get: vi.fn().mockResolvedValue(undefined), set: vi.fn().mockResolvedValue(undefined) };
 }
 
+function makeHttpService() {
+  return { axiosRef: vi.fn() } as unknown as HttpService;
+}
+
 function createService(qb: QbMock) {
   const repository = { createQueryBuilder: vi.fn(() => qb) };
   const dataSource = {
     getRepository: vi.fn(() => repository),
     query: vi.fn(),
   } as unknown as DataSource;
-  return { service: new MetricsService(dataSource, makeCache() as never), qb, repository, dataSource };
+  return {
+    service: new MetricsService(dataSource, makeCache() as never, makeHttpService()),
+    qb,
+    repository,
+    dataSource,
+  };
 }
 
 function createServiceWithQuery(dataSource: DataSource) {
-  return { service: new MetricsService(dataSource, makeCache() as never) };
+  return { service: new MetricsService(dataSource, makeCache() as never, makeHttpService()) };
 }
 
 describe('MetricsService', () => {
@@ -200,6 +211,55 @@ describe('MetricsService', () => {
       const { service, qb: mqb } = createService(qb);
       await service.rankPackages(range, 30);
       expect(mqb.limit).toHaveBeenCalledWith(Number(range));
+    });
+  });
+
+  describe('parseTrafficLine', () => {
+    it('parses pipe-delimited raw metric line correctly', () => {
+      const line =
+        '1787394450940|(PL) de6cbd|garuda|303|||||pacman/7.1.0 (Linux x86_64) libalpm/16.0.1|geo-mirror.chaotic.cx|web.1';
+      const hit = parseTrafficLine(line);
+      expect(hit).not.toBeNull();
+      expect(hit?.timestamp).toBe(1787394450940);
+      expect(hit?.countryCode).toBe('PL');
+      expect(hit?.userHash).toBe('de6cbd');
+      expect(hit?.repo).toBe('garuda');
+      expect(hit?.statusCode).toBe(303);
+      expect(hit?.userAgent).toBe('pacman/7.1.0 (Linux x86_64) libalpm/16.0.1');
+      expect(hit?.hostname).toBe('geo-mirror.chaotic.cx');
+      expect(hit?.worker).toBe('web.1');
+    });
+
+    it('returns null on invalid or empty lines', () => {
+      expect(parseTrafficLine('')).toBeNull();
+      expect(parseTrafficLine('short|line')).toBeNull();
+    });
+  });
+
+  describe('getLiveTrafficStream', () => {
+    it('emits parsed SSE events from upstream stream data', async () => {
+      const stream = new PassThrough();
+      const mockHttp = {
+        axiosRef: vi.fn().mockResolvedValue({ data: stream }),
+      } as unknown as HttpService;
+      const dataSource = { getRepository: vi.fn(), query: vi.fn() } as unknown as DataSource;
+      const service = new MetricsService(dataSource, makeCache() as never, mockHttp);
+
+      const events: Array<{ data: LiveTrafficHit }> = [];
+      const sub = service.getLiveTrafficStream().subscribe({
+        next: (ev) => events.push(ev as { data: LiveTrafficHit }),
+      });
+
+      stream.write(
+        '1787394450940|(PL) de6cbd|garuda|303|||||pacman/7.1.0 (Linux x86_64) libalpm/16.0.1|geo-mirror.chaotic.cx|web.1\n',
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(events.length).toBe(1);
+      expect(events[0].data.countryCode).toBe('PL');
+      expect(events[0].data.repo).toBe('garuda');
+
+      sub.unsubscribe();
     });
   });
 });

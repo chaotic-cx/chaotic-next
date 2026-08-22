@@ -1,12 +1,20 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Sse } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { CountNameDto, MetricsQueryDto, SpecificPackageMetricsDto, UserAgentMetricDto } from './metrics.dto';
+import { type LiveTrafficHit } from '@chaotic-next/shared-lib';
+import type { Observable } from 'rxjs';
+import {
+  CountNameDto,
+  LiveTrafficHitDto,
+  MetricsQueryDto,
+  SpecificPackageMetricsDto,
+  UserAgentMetricDto,
+} from './metrics.dto';
 import { MetricsService } from './metrics.service';
 
 @ApiTags('metrics')
 @Controller('metrics')
 export class MetricsController {
-  constructor(private metricsService: MetricsService) {}
+  constructor(private readonly metricsService: MetricsService) {}
 
   @Get('users')
   @ApiOperation({ summary: 'Get unique user count for a given number of days.' })
@@ -44,5 +52,19 @@ export class MetricsController {
   @ApiOkResponse({ description: 'Package rank list', type: CountNameDto, isArray: true })
   rankPackages(@Param('range') range: string, @Query() query: MetricsQueryDto): Promise<CountNameDto[]> {
     return this.metricsService.rankPackages(range, query.days);
+  }
+
+  @Sse('live/traffic')
+  @ApiOperation({
+    summary: 'Stream real-time ALPM/pacman router traffic as SSE JSON events.',
+    description:
+      'Emits a continuous Server-Sent Events (SSE) stream of JSON LiveTrafficHitDto objects parsed from live router pings.',
+  })
+  @ApiOkResponse({
+    description: 'Server-sent events stream of live traffic hits',
+    type: LiveTrafficHitDto,
+  })
+  liveTraffic(): Observable<Partial<MessageEvent<LiveTrafficHit>>> {
+    return this.metricsService.getLiveTrafficStream();
   }
 }

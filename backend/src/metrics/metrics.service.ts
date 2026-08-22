@@ -1,14 +1,56 @@
-import { type CountNameObject, type SpecificPackageMetrics, type UserAgentList } from '@chaotic-next/shared-lib';
+import * as readline from 'node:readline';
+import {
+  type CountNameObject,
+  type LiveTrafficHit,
+  type SpecificPackageMetrics,
+  type UserAgentList,
+} from '@chaotic-next/shared-lib';
+import { HttpService } from '@nestjs/axios';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type { Cache } from 'cache-manager';
+import { Observable } from 'rxjs';
 import { clampInt, nDaysInPast, utcDayStart } from '../utils/functions';
 import { MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
 import { cachedResult } from '../utils/cache';
 import { DataSource } from 'typeorm';
 import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
 import { RouterHitDaily } from '../router/router-hit-daily.entity';
+
+let hitCounter = 0;
+
+export function parseTrafficLine(line: string): LiveTrafficHit | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  // Format: timestamp|(CC) hash|repo|status|||||userAgent|hostname|worker
+  const parts = trimmed.split('|');
+  if (parts.length < 4) return null;
+
+  const timestamp = Number(parts[0]) || Date.now();
+  const clientMatch = parts[1]?.match(/\(([^)]+)\)\s*([a-zA-Z0-9_-]+)/);
+  const countryCode = clientMatch ? clientMatch[1].toUpperCase() : 'UNKNOWN';
+  const userHash = clientMatch ? clientMatch[2] : (parts[1] ?? '');
+  const repo = parts[2] || 'chaotic-aur';
+  const statusCode = Number(parts[3]) || 200;
+  const userAgent = parts[8] || 'Unknown';
+  const hostname = parts[9] || 'geo-mirror.chaotic.cx';
+  const worker = parts[10] || 'web.1';
+
+  hitCounter++;
+  return {
+    id: `${timestamp}-${hitCounter}`,
+    timestamp,
+    countryCode,
+    userHash,
+    repo,
+    statusCode,
+    userAgent,
+    hostname,
+    worker,
+  };
+}
 
 const PKGNAME_REGEX = /^[a-zA-Z0-9.@+_-]{1,255}$/;
 
@@ -37,6 +79,7 @@ export class MetricsService {
   constructor(
     private dataSource: DataSource,
     @Inject(CACHE_MANAGER) private cache: Cache,
+    private readonly httpService: HttpService,
   ) {
     this.logger.log('MetricsService initialized');
   }
@@ -168,5 +211,48 @@ export class MetricsService {
         .limit(rankRange)
         .getRawMany<CountNameObject>(),
     );
+  }
+
+  getLiveTrafficStream(): Observable<MessageEvent<LiveTrafficHit>> {
+    return new Observable<MessageEvent<LiveTrafficHit>>((subscriber) => {
+      const abortController = new AbortController();
+
+      (async () => {
+        try {
+          const upstream = await this.httpService.axiosRef({
+            method: 'GET',
+            url: 'https://metrics.chaotic.cx/live/traffic',
+            responseType: 'stream',
+            signal: abortController.signal,
+          });
+
+          const rl = readline.createInterface({
+            input: upstream.data,
+            crlfDelay: Infinity,
+          });
+
+          rl.on('line', (line: string) => {
+            const hit = parseTrafficLine(line);
+            if (hit) {
+              subscriber.next({ data: hit } as MessageEvent<LiveTrafficHit>);
+            }
+          });
+
+          rl.on('close', () => {
+            subscriber.complete();
+          });
+
+          rl.on('error', (err) => {
+            subscriber.error(err);
+          });
+        } catch (err) {
+          subscriber.error(err);
+        }
+      })();
+
+      return () => {
+        abortController.abort();
+      };
+    });
   }
 }
