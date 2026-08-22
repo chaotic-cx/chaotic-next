@@ -644,3 +644,15 @@ export interface NotificationPayload {
     data: { onActionClick: { default: { operation: 'openWindow'; url: string } } };
   };
 }
+
+export interface LiveTrafficHit {
+  id: string;
+  timestamp: number;
+  countryCode: string;
+  userHash: string;
+  repo: string;
+  statusCode: number;
+  userAgent: string;
+  hostname: string;
+  worker: string;
+}

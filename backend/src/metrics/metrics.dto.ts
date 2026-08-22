@@ -46,3 +46,41 @@ export class MetricsQueryDto {
   @IsInt()
   days?: number;
 }
+
+export class LiveTrafficHitDto {
+  @ApiProperty({ description: 'Unique hit event id' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Timestamp (epoch ms)' })
+  @IsInt()
+  timestamp!: number;
+
+  @ApiProperty({ description: 'Client two-letter ISO country code' })
+  @IsString()
+  countryCode!: string;
+
+  @ApiProperty({ description: 'Client hashed identity' })
+  @IsString()
+  userHash!: string;
+
+  @ApiProperty({ description: 'Repository or distro' })
+  @IsString()
+  repo!: string;
+
+  @ApiProperty({ description: 'HTTP status code' })
+  @IsInt()
+  statusCode!: number;
+
+  @ApiProperty({ description: 'User-Agent header' })
+  @IsString()
+  userAgent!: string;
+
+  @ApiProperty({ description: 'Target mirror hostname' })
+  @IsString()
+  hostname!: string;
+
+  @ApiProperty({ description: 'Routing worker instance' })
+  @IsString()
+  worker!: string;
+}

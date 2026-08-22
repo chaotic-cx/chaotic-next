@@ -8,7 +8,7 @@
     "changeOrigin": true,
     "logLevel": "debug"
   },
-  "/backend": {
+  "^/backend/": {
     "target": "http://localhost:3000",
     "secure": false,
     "pathRewrite": {
