@@ -11,6 +11,7 @@ import {
   Paginated,
   PipelineScheduleOption,
   PipelineTriggerAction,
+  PkgType,
   Repo,
 } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
@@ -60,16 +61,16 @@ export interface ElfAnalysisFormData {
   brokenReasons: string[];
 }
 
-const ADMIN_PAGE_SIZE = 25;
+export const DEFAULT_ADMIN_PER_PAGE = 25;
 
 export interface ActiveOption {
   label: string;
-  value: 'active' | 'inactive';
+  value: 'true' | 'false';
 }
 
 export const ACTIVE_OPTIONS: ActiveOption[] = [
-  { label: 'Active', value: 'active' },
-  { label: 'Inactive', value: 'inactive' },
+  { label: 'Active', value: 'true' },
+  { label: 'Inactive', value: 'false' },
 ];
 
 @Service()
@@ -79,35 +80,43 @@ export class AdminService {
   private readonly messageToastService = inject(MessageToastService);
 
   readonly packagePage = signal(1);
+  readonly packagePerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly packageQuery = signal('');
   readonly packageRepoFilter = signal<number | undefined>(undefined);
-  readonly packageActiveFilter = signal<'active' | 'inactive' | undefined>(undefined);
+  readonly packageActiveFilter = signal<'true' | 'false' | undefined>('true');
   readonly archPage = signal(1);
+  readonly archPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly archQuery = signal('');
 
   readonly builderPage = signal(1);
+  readonly builderPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly builderQuery = signal('');
-  readonly builderActiveFilter = signal<'active' | 'inactive' | undefined>(undefined);
+  readonly builderActiveFilter = signal<'true' | 'false' | undefined>(undefined);
 
   readonly mrActionPage = signal(1);
+  readonly mrActionPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly mrActionQuery = signal('');
   readonly mrActionActionFilter = signal<string | undefined>(undefined);
 
   readonly pipelineTriggerPage = signal(1);
+  readonly pipelineTriggerPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly pipelineTriggerQuery = signal('');
   readonly pipelineTriggerOperationFilter = signal<string | undefined>(undefined);
 
   readonly packageBumpPage = signal(1);
+  readonly packageBumpPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly packageBumpQuery = signal('');
   readonly packageBumpTypeFilter = signal<number | undefined>(undefined);
   readonly packageBumpSourceFilter = signal<number | undefined>(undefined);
 
   readonly elfAnalysisPage = signal(1);
+  readonly elfAnalysisPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly elfAnalysisQuery = signal('');
   readonly elfAnalysisPkgTypeFilter = signal<'0' | '1' | undefined>(undefined);
   readonly elfAnalysisBrokenFilter = signal<boolean | undefined>(undefined);
 
   readonly brokenPage = signal(1);
+  readonly brokenPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly brokenSelection = signal<BrokenPackageReport[]>([]);
 
   readonly activeOptions = ACTIVE_OPTIONS;
@@ -116,7 +125,7 @@ export class AdminService {
     url: `${this.backendUrl}/admin/packages`,
     params: {
       page: String(this.packagePage()),
-      perPage: String(ADMIN_PAGE_SIZE),
+      perPage: String(this.packagePerPage()),
       q: this.packageQuery(),
       ...(this.packageRepoFilter() === undefined ? {} : { repoId: String(this.packageRepoFilter()) }),
       ...(this.packageActiveFilter() === undefined ? {} : { active: this.packageActiveFilter() }),
@@ -127,7 +136,7 @@ export class AdminService {
     url: `${this.backendUrl}/admin/arch-packages`,
     params: {
       page: String(this.archPage()),
-      perPage: String(ADMIN_PAGE_SIZE),
+      perPage: String(this.archPerPage()),
       q: this.archQuery(),
     },
   }));
@@ -138,7 +147,7 @@ export class AdminService {
     url: `${this.backendUrl}/admin/builders`,
     params: {
       page: String(this.builderPage()),
-      perPage: String(ADMIN_PAGE_SIZE),
+      perPage: String(this.builderPerPage()),
       q: this.builderQuery(),
       ...(this.builderActiveFilter() === undefined ? {} : { active: this.builderActiveFilter() }),
     },
@@ -148,7 +157,7 @@ export class AdminService {
     url: `${this.backendUrl}/admin/mr-actions`,
     params: {
       page: String(this.mrActionPage()),
-      perPage: String(ADMIN_PAGE_SIZE),
+      perPage: String(this.mrActionPerPage()),
       q: this.mrActionQuery(),
       ...(this.mrActionActionFilter() === undefined ? {} : { action: this.mrActionActionFilter() }),
     },
@@ -158,7 +167,7 @@ export class AdminService {
     url: `${this.backendUrl}/admin/pipeline-triggers`,
     params: {
       page: String(this.pipelineTriggerPage()),
-      perPage: String(ADMIN_PAGE_SIZE),
+      perPage: String(this.pipelineTriggerPerPage()),
       q: this.pipelineTriggerQuery(),
       ...(this.pipelineTriggerOperationFilter() === undefined
         ? {}
@@ -170,7 +179,7 @@ export class AdminService {
     url: `${this.backendUrl}/admin/package-bumps`,
     params: {
       page: String(this.packageBumpPage()),
-      perPage: String(ADMIN_PAGE_SIZE),
+      perPage: String(this.packageBumpPerPage()),
       q: this.packageBumpQuery(),
       ...(this.packageBumpTypeFilter() === undefined ? {} : { bumpType: String(this.packageBumpTypeFilter()) }),
       ...(this.packageBumpSourceFilter() === undefined ? {} : { triggerFrom: String(this.packageBumpSourceFilter()) }),
@@ -181,7 +190,7 @@ export class AdminService {
     url: `${this.backendUrl}/admin/package-elf-analysis`,
     params: {
       page: String(this.elfAnalysisPage()),
-      perPage: String(ADMIN_PAGE_SIZE),
+      perPage: String(this.elfAnalysisPerPage()),
       q: this.elfAnalysisQuery(),
       ...(this.elfAnalysisPkgTypeFilter() === undefined ? {} : { pkgType: this.elfAnalysisPkgTypeFilter() }),
       ...(this.elfAnalysisBrokenFilter() === undefined ? {} : { broken: String(this.elfAnalysisBrokenFilter()) }),
@@ -241,7 +250,7 @@ export class AdminService {
     this.packagePage.set(1);
   }
 
-  setPackageActiveFilter(active: 'active' | 'inactive' | null | undefined): void {
+  setPackageActiveFilter(active: 'true' | 'false' | null | undefined): void {
     this.packageActiveFilter.set(active ?? undefined);
     this.packagePage.set(1);
   }
@@ -255,16 +264,17 @@ export class AdminService {
     );
   }
 
-  async schedulePackages(packages: string[], ref = 'main'): Promise<void> {
+  async schedulePackages(packages: PackageDto[]): Promise<void> {
+    const reponame = packages[0]?.reponame ?? 'chaotic-aur';
     await this.runMutation(
       () =>
-        this.http.post(`${this.backendUrl}/gitlab/trigger`, {
-          operation: 'schedule-packages',
-          packages: packages.join(':'),
-          ref,
+        this.http.post(`${this.backendUrl}/api/queue/schedule`, {
+          packages: packages.map((pkg) => pkg.pkgname),
+          source_repo: reponame,
+          target_repo: reponame,
         }),
-      'Package scheduling triggered',
-      'Could not trigger package schedule.',
+      'Package build scheduled',
+      'Could not schedule package build.',
       () => this.packagesResource.reload(),
     );
   }
@@ -410,7 +420,7 @@ export class AdminService {
 
   private readonly brokenReportsResource = httpResource<Paginated<BrokenPackageReport>>(() => ({
     url: `${this.backendUrl}/repo/broken`,
-    params: { page: String(this.brokenPage()), perPage: String(ADMIN_PAGE_SIZE) },
+    params: { page: String(this.brokenPage()), perPage: String(this.brokenPerPage()) },
   }));
 
   readonly brokenReports = computed(() => resourceValue(this.brokenReportsResource)?.items ?? []);
@@ -454,6 +464,14 @@ export class AdminService {
       () => this.http.post(`${this.backendUrl}/repo/index/chaotic`, {}),
       'Chaotic repo index started. It can take a while depending on load.',
       'Could not trigger the Chaotic repo index.',
+    );
+  }
+
+  async rescanPackage(pkgname: string, pkgType: PkgType): Promise<void> {
+    await this.runMutation(
+      () => this.http.post(`${this.backendUrl}/admin/rescan`, { packages: [{ pkgname, pkgType }] }),
+      `Rescan of ${pkgname} completed.`,
+      `Could not rescan ${pkgname}.`,
     );
   }
 
