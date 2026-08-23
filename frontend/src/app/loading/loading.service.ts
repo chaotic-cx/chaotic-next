@@ -1,28 +1,20 @@
-import { Service } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { BehaviorSubject } from 'rxjs';
+import { Service } from '@angular/core';
 
 @Service()
 export class LoadingService {
-  loading$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  private readonly loading$ = new BehaviorSubject<boolean>(false);
+  private readonly pendingRequests = new Set<string>();
 
   readonly isLoading = toSignal(this.loading$);
 
-  loadingMap: Map<string, boolean> = new Map<string, boolean>();
-
-  setLoading(loading: boolean, url: string): void {
-    if (!url) {
-      throw new Error('The request URL must be provided to the LoadingService.setLoading function');
-    }
-
+  setLoading(loading: boolean, requestId: string): void {
     if (loading) {
-      this.loadingMap.set(url, loading);
-      this.loading$.next(true);
-    } else if (!loading && this.loadingMap.has(url)) {
-      this.loadingMap.delete(url);
+      this.pendingRequests.add(requestId);
+    } else {
+      this.pendingRequests.delete(requestId);
     }
-    if (this.loadingMap.size === 0) {
-      this.loading$.next(false);
-    }
+    this.loading$.next(this.pendingRequests.size > 0);
   }
 }

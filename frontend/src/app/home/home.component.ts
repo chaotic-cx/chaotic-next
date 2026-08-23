@@ -1,30 +1,33 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { HttpClient } from '@angular/common/http';
 import { NgOptimizedImage } from '@angular/common';
-import { httpResource } from '@angular/common/http';
-import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { debounce, FormField, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Package, Paginated } from '@chaotic-next/shared-lib';
 import { AnimateOnScrollModule } from '@openng/optimus-ui/animateonscroll';
+import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { map } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 import { AppService } from '../app.service';
 import { BuildStatusService } from '../build-status/build-status.service';
-import { PACKAGE_NAME_PATTERN, parseFocusQuery, resourceValue } from '../functions';
+import { PACKAGE_NAME_PATTERN, parseFocusQuery } from '../functions';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { MirrorsService } from '../mirrors/mirrors.service';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
 import { RecentlyAddedComponent } from '../recently-added/recently-added.component';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
-import { SearchSuggestionsComponent } from '../search-suggestions/search-suggestions.component';
 
 @Component({
   selector: 'chaotic-home',
   imports: [
     AnimateOnScrollModule,
+    AutoComplete,
+    FormsModule,
     NewsfeedComponent,
     RecentlyAddedComponent,
     MirrorMapComponent,
@@ -34,13 +37,13 @@ import { SearchSuggestionsComponent } from '../search-suggestions/search-suggest
     Tooltip,
     InputText,
     FormField,
-    SearchSuggestionsComponent,
     RelativeTimePipe,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
 })
 export class HomeComponent {
+  private readonly http = inject(HttpClient);
   observer = inject(BreakpointObserver);
 
   private readonly appService = inject(AppService);
@@ -62,22 +65,8 @@ export class HomeComponent {
     pattern(schemaPath.query, PACKAGE_NAME_PATTERN, { message: 'Invalid package name' });
   });
 
-  protected readonly suggestionsVisible = signal(false);
-
-  private readonly suggestionsResource = httpResource<Paginated<Package>>(() => {
-    const query = this.searchModel().query.trim();
-    return query.length >= 3
-      ? this.appService.getPackagesResourceRequest({ page: 1, perPage: 200, q: query })
-      : undefined;
-  });
-
-  protected readonly suggestions = computed<string[]>(() => [
-    ...new Set(
-      (resourceValue(this.suggestionsResource)?.items ?? [])
-        .filter((pkg) => pkg.reponame === 'chaotic-aur')
-        .map((pkg) => pkg.pkgname),
-    ),
-  ]);
+  protected readonly suggestions = signal<string[]>([]);
+  private suggestionGeneration = 0;
 
   constructor() {
     this.observer
@@ -89,8 +78,26 @@ export class HomeComponent {
       });
   }
 
+  async searchSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
+    const query = event.query.trim();
+    if (query.length < 3) {
+      this.suggestions.set([]);
+      return;
+    }
+    const generation = ++this.suggestionGeneration;
+    try {
+      const request = this.appService.getPackagesResourceRequest({ page: 1, perPage: 200, q: query });
+      const result = await firstValueFrom(this.http.get<Paginated<Package>>(request.url, { params: request.params }));
+      if (generation !== this.suggestionGeneration) return;
+      this.suggestions.set([
+        ...new Set((result.items ?? []).filter((pkg) => pkg.reponame === 'chaotic-aur').map((pkg) => pkg.pkgname)),
+      ]);
+    } catch {
+      if (generation === this.suggestionGeneration) this.suggestions.set([]);
+    }
+  }
+
   searchPackages(query: string): void {
-    this.suggestionsVisible.set(false);
     void this.router.navigate(['/stats/search'], {
       queryParams: { search: query || null },
       info: { disableViewTransition: true },
@@ -102,8 +109,8 @@ export class HomeComponent {
     this.searchPackages(this.searchModel().query);
   }
 
-  hideSuggestions(): void {
-    setTimeout(() => this.suggestionsVisible.set(false), 150);
+  onKeyUp(event: KeyboardEvent): void {
+    if (event.key === 'Enter') this.onSearchEnter();
   }
 
   scrollToNews(newsTarget: HTMLElement): void {

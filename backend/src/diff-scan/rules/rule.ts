@@ -11,6 +11,9 @@ export interface RuleHit {
   severity?: DiffScanSeverity;
 }
 
+/** Where a rule makes sense: MR changesets compare old vs new; full-file scans see only content. */
+export type RuleSurface = 'mr-diff' | 'full-file';
+
 export interface RuleDataLoader<T> {
   url: string;
   transform: (raw: string) => T;
@@ -58,9 +61,15 @@ export interface Rule<T = void> {
   name: string;
   severity: DiffScanSeverity;
   description: string;
+  /** Limits the rule to certain scan surfaces; defaults to running everywhere. */
+  runsOn?: readonly RuleSurface[];
   load?: () => Promise<RuleLoadResult<T>>;
   refetch?: boolean;
   check(change: MergeRequestDiffSchema): RuleHit | null;
+}
+
+export function ruleRunsOn(rule: Rule<unknown>, surface: RuleSurface): boolean {
+  return (rule.runsOn ?? ['mr-diff', 'full-file']).includes(surface);
 }
 
 export interface RegexRuleDataOptions<T> {

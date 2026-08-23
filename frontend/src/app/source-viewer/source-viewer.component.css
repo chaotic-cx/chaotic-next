@@ -1,0 +1,77 @@
+@reference '../../styles.css';
+
+.source-viewer {
+  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  border-radius: 0.25rem;
+  max-width: 100%;
+  overflow-x: auto;
+  @apply text-left;
+}
+
+pre {
+  @apply m-0 p-0.5 text-left;
+  line-height: 1;
+  font-size: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+code {
+  @apply block text-left;
+}
+
+.line {
+  @apply m-0 flex w-full items-start gap-2 text-xs leading-tight;
+  white-space: pre;
+  color: var(--ctp-mocha-text);
+}
+
+.line-number {
+  @apply w-8 shrink-0 text-right select-none;
+  color: var(--ctp-mocha-overlay0);
+}
+
+.line-content {
+  @apply flex-1;
+}
+
+.flagged {
+  background: rgba(249, 226, 175, 0.18);
+  box-shadow: inset 2px 0 0 var(--ctp-mocha-yellow);
+  cursor: pointer;
+}
+
+.flagged:hover,
+.flagged.expanded {
+  background: rgba(249, 226, 175, 0.28);
+}
+
+.findings {
+  @apply m-0 pr-1 pl-2;
+  background: transparent;
+  border-left: 2px solid var(--ctp-mocha-yellow);
+  white-space: normal;
+  padding-top: 0.25rem;
+}
+
+.finding {
+  @apply flex flex-col gap-0.5 py-1;
+  border-bottom: 1px solid var(--ctp-mocha-surface0);
+}
+
+.finding:last-child {
+  border-bottom: none;
+}
+
+.finding-rule {
+  color: var(--ctp-mocha-yellow);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.finding-description {
+  color: var(--ctp-mocha-subtext);
+  font-size: 0.7rem;
+  white-space: normal;
+  word-break: break-word;
+}

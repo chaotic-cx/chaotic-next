@@ -2,7 +2,6 @@ import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { isInScope, visibleFileLines, type RuleScope } from './rules/diff-utils';
 
 const PKGBUILD_SCOPE: RuleScope[] = ['pkgbuild'];
-
 const REPUTABLE_HOSTS = [
   'apache.org',
   'archlinux.org',
@@ -39,8 +38,14 @@ export function isVcsSource(raw: string): boolean {
 }
 export interface SourceEntry {
   raw: string;
+  /** The download URL, split off a makepkg `filename::url` prefix when present. */
+  url: string;
+  /** Optional rename target from the `filename::url` syntax. */
+  fileName: string | null;
   host: string | null;
   isVcs: boolean;
+  /** Line number of the source entry in the PKGBUILD, when it could be located. */
+  line?: number;
 }
 
 export interface ParsedPkgbuild {
@@ -50,24 +55,22 @@ export interface ParsedPkgbuild {
   vars: ReadonlyMap<string, string>;
 }
 
-function visibleText(change: MergeRequestDiffSchema): string {
-  return [...visibleFileLines(change).entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([, line]) => line)
-    .join('\n');
-}
-
 export function extractArray(pkbuildText: string, name: string): string[] | null {
   const match = pkbuildText.match(new RegExp(`(?:^|\\s)${name}=\\(([^)]*)\\)`, 'm'));
   return match ? match[1].split(/\s+/).filter((entry) => entry.length > 0) : null;
 }
 
-export function parseSourceEntry(raw: string): SourceEntry {
-  const stripped = raw.replace(/^["']|["']$/g, '');
+export function parseSourceEntry(resolved: string): SourceEntry {
+  const stripped = resolved.replace(/^["']|["']$/g, '');
+  const separator = stripped.indexOf('::');
+  const fileName = separator === -1 ? null : stripped.slice(0, separator);
+  const url = separator === -1 ? stripped : stripped.slice(separator + 2);
   return {
     raw: stripped,
-    host: hostOf(stripped),
-    isVcs: isVcsSource(stripped),
+    url,
+    fileName: fileName === '' ? null : fileName,
+    host: hostOf(url),
+    isVcs: isVcsSource(url),
   };
 }
 
@@ -116,11 +119,22 @@ export function substituteVars(template: string, vars: ReadonlyMap<string, strin
 
 export function parsePkgbuild(change: MergeRequestDiffSchema): ParsedPkgbuild | null {
   if (!isInScope(change, PKGBUILD_SCOPE)) return null;
-  const text = visibleText(change);
+  const numberedLines = [...visibleFileLines(change).entries()];
+  const text = numberedLines.map(([, line]) => line).join('\n');
+  const vars = extractScalarVars(text);
+
+  // Resolve variables up front so host detection works for "$url/..." style
+  // sources and findings display the actual URL instead of the template.
+  const entries = (extractArray(text, 'source') ?? []).map((raw) => {
+    const entry = parseSourceEntry(substituteVars(raw, vars) ?? raw);
+    // The unresolved template is what appears verbatim in the file; use it to locate the line.
+    const template = raw.replace(/^["']|["']$/g, '');
+    return { ...entry, line: numberedLines.find(([, line]) => line.includes(template))?.[0] };
+  });
   return {
     text,
-    entries: (extractArray(text, 'source') ?? []).map(parseSourceEntry),
+    entries,
     urlHost: extractUrlHost(text),
-    vars: extractScalarVars(text),
+    vars,
   };
 }

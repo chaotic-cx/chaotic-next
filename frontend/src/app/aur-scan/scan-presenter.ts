@@ -41,7 +41,8 @@ const BROWSER_LOCALE = navigator.language;
 const MONTH_YEAR = new Intl.DateTimeFormat(BROWSER_LOCALE, { month: 'short', year: 'numeric' });
 
 export function maintainerSince(maintainer: AurMaintainerInfo): string {
-  return MONTH_YEAR.format(new Date(maintainer.registeredDate));
+  const date = new Date(maintainer.registeredDate);
+  return Number.isNaN(date.getTime()) ? 'unknown' : MONTH_YEAR.format(date);
 }
 
 export function maintainerSummary(maintainer: AurMaintainerInfo): string {

@@ -208,6 +208,7 @@ samp {
 
 .p-autocomplete > input {
   width: 100%;
+  text-align: center;
 }
 
 .p-card,

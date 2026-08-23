@@ -1,0 +1,32 @@
+<div class="source-viewer">
+  <pre><code>
+    @for (line of lines(); track line.number) {
+      @if (findingsFor(line.number); as findings) {
+        <div
+          class="line flagged"
+          [class.expanded]="expandedLine() === line.number"
+          role="button"
+          tabindex="0"
+          (click)="toggle(line.number)"
+          (keydown.enter)="toggle(line.number)"
+        >
+          <span class="line-number">{{ line.number }}</span><span class="line-content" [innerHTML]="line.html"></span>
+        </div>
+        @if (expandedLine() === line.number) {
+          <div class="findings">
+            @for (finding of findings; track finding.ruleId) {
+              <div class="finding">
+                <span class="finding-rule">{{ finding.ruleName }}</span>
+                <span class="finding-description">{{ finding.description }}</span>
+              </div>
+            }
+          </div>
+        }
+      } @else {
+        <div class="line">
+          <span class="line-number">{{ line.number }}</span><span class="line-content" [innerHTML]="line.html"></span>
+        </div>
+      }
+    }
+  </code></pre>
+</div>

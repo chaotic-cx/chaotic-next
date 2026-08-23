@@ -18,12 +18,14 @@ import { AurAuthService } from './aur-auth.service';
 import { DiffScanService } from './diff-scan.service';
 import type { ScanIndicator } from './indicators';
 import { extractIndicators } from './indicators';
-import { hostOf, parsePkgbuild, substituteVars } from './pkgbuild';
+import { parsePkgbuild } from './pkgbuild';
 import { VirustotalService } from './virustotal.service';
 
 const AUR_INFO_URL = 'https://aur.archlinux.org/rpc/v5/info';
 const AUR_SEARCH_URL = 'https://aur.archlinux.org/rpc/v5/search';
 const AUR_FILE_URL = 'https://aur.archlinux.org/cgit/aur.git/plain';
+const AUR_CGIT_TREE_URL = 'https://aur.archlinux.org/cgit/aur.git/tree';
+const REPO_TREE_MAX_DEPTH = 3;
 const AUR_FETCH_TIMEOUT_MS = 15_000;
 const MAX_SCANNED_FILES = 10;
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -32,20 +34,6 @@ const INFO_BATCH_WINDOW_MS = 50;
 const INFO_BATCH_SIZE = 50;
 const MAINTAINER_PROFILE_TTL_MS = 60 * 60 * 1000;
 const MAINTAINER_LOOKUP_CONCURRENCY = 3;
-const SCANNABLE_EXTENSIONS = new Set([
-  'sh',
-  'install',
-  'hook',
-  'patch',
-  'diff',
-  'py',
-  'pl',
-  'rb',
-  'conf',
-  'service',
-  'timer',
-  'desktop',
-]);
 const MAX_RECENT_SCANS = 10;
 const SECONDS_TO_MS = 1000;
 
@@ -156,16 +144,25 @@ export class AurScanService {
 
       const changes = [fullFileDiff('PKGBUILD', pkgbuildText.text)];
       const parsed = parsePkgbuild(changes[0]);
+
+      // parsePkgbuild already resolves PKGBUILD variables, so sources are actual URLs.
       scan.sources = parsed?.entries.map((entry) => entry.raw) ?? [];
 
-      const sourceFiles = await this.fetchScannableSources(parsed, pkgbuildText.packageBase);
-      scan.sourceFiles = sourceFiles;
+      const { files, skippedBinaryFiles } = await this.collectRepoFiles(pkgbuildText.packageBase);
 
-      for (const file of sourceFiles) {
+      // The PKGBUILD is part of the tree; ship exactly one copy (first) and scan it exactly once.
+      scan.sourceFiles = [
+        { name: 'PKGBUILD', content: pkgbuildText.text },
+        ...files.filter((file) => file.name !== 'PKGBUILD'),
+      ];
+      scan.skippedBinaryFiles = skippedBinaryFiles;
+
+      for (const file of files) {
+        if (file.name === 'PKGBUILD') continue;
         changes.push(fullFileDiff(file.name, file.content));
       }
       scan.scannedFiles = changes.map((change) => change.new_path);
-      scan.findings = await this.diffScanService.scanDiffs(changes);
+      scan.findings = await this.diffScanService.scanDiffs(changes, undefined, 'full-file');
 
       const indicators = extractIndicators(changes);
       scan.vtPending = indicators.length;
@@ -368,37 +365,69 @@ export class AurScanService {
     }
   }
 
-  private async fetchScannableSources(
-    parsed: ReturnType<typeof parsePkgbuild>,
-    packageBase: string,
-  ): Promise<{ name: string; content: string }[]> {
-    if (!parsed) return [];
+  /** Ships every textual file of the AUR repo; binary/oversized paths are reported instead. */
+  private async collectRepoFiles(packageBase: string): Promise<{
+    files: { name: string; content: string }[];
+    skippedBinaryFiles: string[];
+  }> {
     const files: { name: string; content: string }[] = [];
+    const skippedBinaryFiles: string[] = [];
+    const paths = await this.listRepoPaths(packageBase);
 
-    for (const entry of parsed.entries) {
+    for (const path of paths) {
       if (files.length >= MAX_SCANNED_FILES) break;
-      if (entry.isVcs) continue;
 
-      const raw = substituteVars(entry.raw, parsed.vars);
-      if (raw === null) continue;
-
-      const remote = hostOf(raw) !== null;
-      if (remote && !isScannableName(raw)) continue;
-
-      const url = remote ? raw : `${AUR_FILE_URL}/${encodeURIComponent(raw)}?h=${encodeURIComponent(packageBase)}`;
-      const name = raw.slice(raw.lastIndexOf('/') + 1).replace(/[?#].*$/, '');
+      const url = `${AUR_FILE_URL}/${path.split('/').map(encodeURIComponent).join('/')}?h=${encodeURIComponent(packageBase)}`;
       try {
         const response = await this.fetchAur(url);
         if (!response.ok) continue;
-        const content = await response.text();
-        if (content.length > MAX_FILE_BYTES) continue;
-        files.push({ name, content });
-        this.logger.debug(`Fetched ${url} for scanning (${content.length} bytes)`);
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (!looksTextual(bytes) || bytes.length > MAX_FILE_BYTES) {
+          skippedBinaryFiles.push(path);
+          continue;
+        }
+        const content = new TextDecoder().decode(bytes);
+        files.push({ name: path, content });
+        this.logger.debug(`Fetched ${url} for scanning (${bytes.length} bytes)`);
       } catch (err) {
-        this.logger.debug(`Skipping source ${raw}: ${errorMessage(err)}`);
+        this.logger.debug(`Skipping repo file ${path}: ${errorMessage(err)}`);
       }
     }
-    return files;
+    return { files, skippedBinaryFiles };
+  }
+
+  /** Walks the cgit tree listing, recursing into subdirectories up to a small depth. */
+  private async listRepoPaths(packageBase: string, maxDepth = REPO_TREE_MAX_DEPTH): Promise<string[]> {
+    const paths: string[] = [];
+    const seen = new Set<string>();
+    const queue: { depth: number; path: string }[] = [{ depth: 0, path: '' }];
+
+    while (queue.length > 0) {
+      const next = queue.shift();
+      if (!next) break;
+      const { depth, path } = next;
+      let response: Response;
+      try {
+        response = await this.fetchAur(`${AUR_CGIT_TREE_URL}/${path}?h=${encodeURIComponent(packageBase)}`);
+      } catch (err) {
+        this.logger.debug(`Repo tree listing for "${path}" unavailable: ${errorMessage(err)}`);
+        continue;
+      }
+      if (!response.ok) continue;
+
+      const html = await response.text();
+      for (const entry of extractTreeEntries(html)) {
+        if (seen.has(entry.path)) continue;
+        seen.add(entry.path);
+        if (paths.length + queue.length >= MAX_SCANNED_FILES) return paths;
+        if (entry.isDirectory && depth + 1 < maxDepth) {
+          queue.push({ depth: depth + 1, path: `${entry.path}/` });
+        } else if (!entry.isDirectory) {
+          paths.push(entry.path);
+        }
+      }
+    }
+    return paths;
   }
 
   private async fetchAur(url: string): Promise<Response> {
@@ -410,7 +439,6 @@ export class AurScanService {
     );
   }
 
-  /** Drops all cached AUR responses so subsequent scans refetch from upstream. */
   clearAurCache(): void {
     this.aurResponses.clear();
   }
@@ -438,13 +466,43 @@ export class AurScanService {
   }
 }
 
-function isScannableName(name: string): boolean {
-  const extension = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
-  return SCANNABLE_EXTENSIONS.has(extension);
-}
-
 function unixSecondsToMs(seconds: number): number {
   return seconds * SECONDS_TO_MS;
+}
+
+const TEXT_SNIFF_BYTES = 8192;
+const CONTROL_BYTE_RATIO_LIMIT = 0.1;
+/** cgit tree links look like href="/cgit/aur.git/tree/<path>?h=<base>" (directories end in "/"). */
+const CGIT_TREE_HREF_PREFIX = '/cgit/aur.git/tree/';
+
+interface TreeEntry {
+  path: string;
+  isDirectory: boolean;
+}
+
+function looksTextual(bytes: Uint8Array): boolean {
+  const sample = bytes.subarray(0, TEXT_SNIFF_BYTES);
+  let controlBytes = 0;
+  for (const byte of sample) {
+    if (byte === 0) return false;
+    if (byte < 7 || (byte > 13 && byte < 32)) controlBytes++;
+  }
+  return sample.length === 0 || controlBytes / sample.length < CONTROL_BYTE_RATIO_LIMIT;
+}
+
+function extractTreeEntries(html: string): TreeEntry[] {
+  const entries: TreeEntry[] = [];
+  const seen = new Set<string>();
+  // cgit renders attributes in single quotes; directories end with a slash.
+  const pattern = new RegExp(`${CGIT_TREE_HREF_PREFIX}([^'"?]*/?)\\?h=[^'"]*['"]`, 'g');
+  for (const match of html.matchAll(pattern)) {
+    const rawPath = decodeURIComponent(match[1] ?? '');
+    if (rawPath === '' || rawPath === '/' || seen.has(rawPath)) continue;
+    seen.add(rawPath);
+    const isDirectory = rawPath.endsWith('/');
+    entries.push({ path: isDirectory ? rawPath.slice(0, -1) : rawPath, isDirectory });
+  }
+  return entries;
 }
 
 function packageMetaOf(info: AurPackageInfo): AurPackageMeta {
@@ -464,5 +522,6 @@ function fullFileDiff(path: string, content: string): MergeRequestDiffSchema {
     diff: [`@@ -0,0 +1,${lines.length} @@`, ...lines.map((line) => `+${line}`)].join('\n'),
     new_path: path,
     old_path: path,
+    new_file: true,
   } as MergeRequestDiffSchema;
 }

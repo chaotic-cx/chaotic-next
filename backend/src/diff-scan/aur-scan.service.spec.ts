@@ -56,8 +56,33 @@ function aurFetchMock(): ReturnType<typeof vi.fn> {
       );
     }
     if (url.endsWith('/PKGBUILD?h=evilpkg')) return textResponse(PKGBUILD);
+    if (url.includes('/cgit/aur.git/tree/sub/'))
+      return textResponse(
+        [
+          '<html><body>',
+          "<a class='ls-blob' href='/cgit/aur.git/tree/sub/deep.conf?h=evilpkg'>deep.conf</a>",
+          '</body></html>',
+        ].join('\n'),
+      );
+    if (url.includes('/cgit/aur.git/tree/'))
+      return textResponse(
+        [
+          '<html><body>',
+          "<a class='active' href='/cgit/aur.git/tree/?h=evilpkg'>..</a>",
+          "<a class='ls-blob SRCINFO' href='/cgit/aur.git/tree/.SRCINFO?h=evilpkg'>.SRCINFO</a>",
+          "<a class='ls-blob' href='/cgit/aur.git/tree/PKGBUILD?h=evilpkg'>PKGBUILD</a>",
+          "<a class='ls-blob install' href='/cgit/aur.git/tree/helper.install?h=evilpkg'>helper.install</a>",
+          "<a class='ls-blob' href='/cgit/aur.git/tree/payload.sh?h=evilpkg'>payload.sh</a>",
+          "<a class='ls-tree dir' href='/cgit/aur.git/tree/sub/?h=evilpkg'>sub/</a>",
+          "<a class='ls-blob' href='/cgit/aur.git/tree/blob.bin?h=evilpkg'>blob.bin</a>",
+          '</body></html>',
+        ].join('\n'),
+      );
     if (url.includes('helper.install')) return textResponse(HELPER_INSTALL);
     if (url.includes('payload.sh')) return textResponse('#!/bin/sh\nid > /tmp/pwned\n');
+    if (url.includes('.SRCINFO')) return textResponse('pkgbase = evilpkg\npkgname = evilpkg\n');
+    if (url.includes('deep.conf')) return textResponse('key=value\n');
+    if (url.includes('blob.bin')) return new Response(new Uint8Array([0x00, 0x01, 0x02, 0x00]), { status: 200 });
     return new Response('not found', { status: 404 });
   });
 }
@@ -109,9 +134,21 @@ describe('AurScanService', () => {
 
     expect(scan.status).toBe('done');
     expect(scan.packageBase).toBe('evilpkg');
-    expect(scan.scannedFiles).toEqual(['PKGBUILD', 'payload.sh', 'helper.install']);
+    expect(scan.scannedFiles).toEqual(['PKGBUILD', '.SRCINFO', 'helper.install', 'payload.sh', 'sub/deep.conf']);
+    expect(scan.sourceFiles?.map((file) => file.name)).toEqual([
+      'PKGBUILD',
+      '.SRCINFO',
+      'helper.install',
+      'payload.sh',
+      'sub/deep.conf',
+    ]);
+    expect(scan.skippedBinaryFiles).toEqual(['blob.bin']);
+    expect(scan.findings.map((finding) => finding.ruleId)).toContain('CAUR-INSTALL-NEW');
     expect(scan.findings.length).toBeGreaterThan(0);
     expect(scan.findings.some((finding) => finding.file === 'PKGBUILD')).toBe(true);
+    // The source viewer flags lines by number, so findings must carry one.
+    const pkgFinding = scan.findings.find((finding) => finding.file === 'PKGBUILD');
+    expect(pkgFinding?.line).toBeGreaterThan(0);
     expect(scan.findings.some((finding) => finding.file === 'helper.install')).toBe(true);
     expect(scan.vtPending).toBe(0);
   });
@@ -149,6 +186,48 @@ describe('AurScanService', () => {
     expect(scan.status).toBe('done');
     expect(scan.vtPending).toBe(0);
     expect(reportOn).not.toHaveBeenCalled();
+  });
+
+  it('ships all repo-tree text files including .SRCINFO and reports skipped binaries', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('rpc/v5/info'))
+          return new Response(
+            JSON.stringify({ results: [{ Name: 'metapkg', PackageBase: 'metapkg', FirstSubmitted: NOW_SECONDS }] }),
+            { headers: { 'content-type': 'application/json' } },
+          );
+        if (url.includes('by=maintainer'))
+          return new Response(JSON.stringify({ results: [] }), { headers: { 'content-type': 'application/json' } });
+        if (url.includes('/cgit/aur.git/tree/'))
+          return textResponse(
+            [
+              '<html><body>',
+              '<a href="/cgit/aur.git/tree/PKGBUILD?h=metapkg">PKGBUILD</a>',
+              '<a href="/cgit/aur.git/tree/data.txt?h=metapkg">data.txt</a>',
+              '<a href="/cgit/aur.git/tree/.SRCINFO?h=metapkg">.SRCINFO</a>',
+              '<a href="/cgit/aur.git/tree/blob.tar.xz?h=metapkg">blob.tar.xz</a>',
+              '</body></html>',
+            ].join('\n'),
+          );
+        if (url.endsWith('/PKGBUILD?h=metapkg')) return textResponse('pkgname=metapkg\n');
+        if (url.includes('data.txt')) return textResponse('hello\n');
+        if (url.includes('.SRCINFO')) return textResponse('pkgbase = metapkg\n');
+        if (url.includes('blob.tar.xz')) return new Response(new Uint8Array([0x00, 0x50, 0x4b, 0x00]), { status: 200 });
+        return new Response('not found', { status: 404 });
+      }),
+    );
+    const service = new AurScanService(
+      new DiffScanService(),
+      { enabled: false } as never,
+      { getMaintainerRegistrationDate: vi.fn(async () => null) } as never,
+    );
+
+    const scan = await service.startScan('metapkg');
+
+    expect(scan.status, `scan failed: ${scan.error ?? 'no error'}`).toBe('done');
+    expect(scan.sourceFiles?.map((file) => file.name)).toEqual(['PKGBUILD', 'data.txt', '.SRCINFO']);
+    expect(scan.skippedBinaryFiles).toEqual(['blob.tar.xz']);
   });
 
   it('fails with a speaking error for unknown packages', async () => {

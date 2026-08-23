@@ -52,6 +52,7 @@ export const appConfig: ApplicationConfig = {
     provideHighlightOptions({
       coreLibraryLoader: () => import('highlight.js/lib/core'),
       languages: {
+        bash: () => import('highlight.js/lib/languages/bash.js'),
         shell: () => import('highlight.js/lib/languages/shell.js'),
       },
     }),

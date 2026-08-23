@@ -48,7 +48,23 @@ describe('provenance rules', () => {
         ' )',
       ].join('\n'),
     );
-    expect(ruleById(PROVENANCE_RULES, 'SRC-003').check(change)).not.toBeNull();
+    const hit = ruleById(PROVENANCE_RULES, 'SRC-003').check(change);
+    expect(hit).not.toBeNull();
+    expect(hit?.line).toBe(14);
+  });
+
+  it('reports the line of a variable-resolved source entry', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,5 @@',
+        '+pkgver=1.0',
+        '+_gentoo=firefox-154-patches-01.tar.xz',
+        '+url="https://gitlab.com/upstream/pkg"',
+        '+source=("https://dev.gentoo.org/~someone/mozilla/patchsets/$_gentoo")',
+      ].join('\n'),
+    );
+    const hit = ruleById(PROVENANCE_RULES, 'SRC-003').check(change);
+    expect(hit?.line).toBe(4);
   });
 
   it('does not compare against url= when the diff does not show it', () => {

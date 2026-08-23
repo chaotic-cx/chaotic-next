@@ -609,7 +609,10 @@ export interface AurPackageScan {
   maintainers: AurMaintainerInfo[];
   maintainerChange?: AurMaintainerChange;
   packageMeta: AurPackageMeta;
+  /** All textual repository files shipped for review, PKGBUILD first. */
   sourceFiles?: { name: string; content: string }[];
+  /** Repo files detected as binary (or oversized) and therefore not shipped. */
+  skippedBinaryFiles?: string[];
   startedAt: string;
 }
 

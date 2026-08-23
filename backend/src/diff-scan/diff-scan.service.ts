@@ -7,7 +7,8 @@ import { Package } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { errorMessage } from '../utils/functions';
 import { RULES } from './rules';
-import type { RuleHit } from './rules/rule';
+import type { RuleHit, RuleSurface } from './rules/rule';
+import { ruleRunsOn } from './rules/rule';
 import { isDependencyPresent, isSrcinfoFile, scanSrcinfoDependencies } from './srcinfo-dependency';
 
 const MAX_FINDINGS_PER_MR = 100;
@@ -43,6 +44,7 @@ export class DiffScanService {
   async scanDiffs(
     diffs: MergeRequestDiffSchema[],
     isDepPresentOverride?: (depName: string) => Promise<boolean>,
+    surface: RuleSurface = 'mr-diff',
   ): Promise<DiffScanFinding[]> {
     for (const rule of RULES) {
       if (!rule.load) continue;
@@ -64,6 +66,7 @@ export class DiffScanService {
       if (change.deleted_file) continue;
 
       for (const rule of RULES) {
+        if (!ruleRunsOn(rule, surface)) continue;
         let hit: RuleHit | null;
         try {
           hit = rule.check(change);
