@@ -1,10 +1,5 @@
-const BINARY_PACKAGE_SUFFIX_REGEX = /-(?:bin|appimage|snap|flatpak|bundled(?:-[a-zA-Z0-9_-]+)?)(?:-(?:git|nightly))?$/i;
-const BINARY_PACKAGE_EXTENSIONS_REGEX =
-  /\.(?:deb|rpm|appimage|dmg|run|apk|jar|snap|pkg\.tar(?:\.[a-z0-9]+)?)(?:["'\s?#]|$)/i;
 const COMPILER_TOOLS_REGEX =
   /\b(?:cmake|ninja|meson|gcc|g\+\+|clang|clang\+\+|cargo|rust|rustc|go|go-pie|ghc|dotnet|mvn|gradle|ant|bazel|make|autoconf|automake|qmake|setuptools|bison|flex|libtool|perl|python|java|gradlew)\b/i;
-const EXTRACTION_COMMANDS_REGEX =
-  /\b(?:dpkg-deb|ar\s+-[a-zA-Z]*x|rpmextract(?:\.sh)?|bsdtar\s+-[a-zA-Z]*x|unsquashfs|7z\s+[xe]|unzip|tar\s+-[a-zA-Z]*x)\b/i;
 const ELECTRON_REGEX = /electron/i;
 const NODEJS_PACKAGE_REGEX = /nodejs|npm|yarn|pnpm/i;
 const NODEJS_BUILD_REGEX = /\bnpm\s|npm\srun\b|yarn\s|pnpm\s|node\s/i;
@@ -57,74 +52,6 @@ function collectAllDepends(pkgbuildText: string): { depends: string[]; makedepen
   const dependsX8664 = extractArray(pkgbuildText, 'depends_x86_64') ?? [];
   const dependsI686 = extractArray(pkgbuildText, 'depends_i686') ?? [];
   return { depends, makedepends, allDepends: [...depends, ...dependsX8664, ...dependsI686] };
-}
-
-export function isBinaryPackage(pkgname: string, pkgbuildText?: string | null): boolean {
-  if (BINARY_PACKAGE_SUFFIX_REGEX.test(pkgname)) {
-    return true;
-  }
-
-  if (!pkgbuildText) {
-    return false;
-  }
-
-  const options = extractArray(pkgbuildText, 'options') ?? [];
-  const hasNoStrip = options.some((opt) => opt.includes('!strip'));
-
-  const makedepends = extractArray(pkgbuildText, 'makedepends') ?? [];
-  const hasCompilerInMakedepends = hasCompilerInList(makedepends);
-
-  const sources = [
-    ...(extractArray(pkgbuildText, 'source') ?? []),
-    ...(extractArray(pkgbuildText, 'source_x86_64') ?? []),
-    ...(extractArray(pkgbuildText, 'source_aarch64') ?? []),
-    ...(extractArray(pkgbuildText, 'source_i686') ?? []),
-  ];
-
-  const hasExplicitBinarySource =
-    sources.some((src) => BINARY_PACKAGE_EXTENSIONS_REGEX.test(src.replace(/^["']|["']$/g, ''))) ||
-    BINARY_PACKAGE_EXTENSIONS_REGEX.test(pkgbuildText);
-
-  const hasPrebuiltArchiveSource = sources.some(
-    (src) =>
-      /-bin\./i.test(src) ||
-      /-linux\./i.test(src) ||
-      /-x86_64\./i.test(src) ||
-      /\.(?:zip|tar\.gz|tgz|tar\.xz)\b/i.test(src),
-  );
-
-  const isSourcePrecompiledRelease = sources.some(
-    (src) => /-bin\./i.test(src) || /-linux\./i.test(src) || /-x86_64\./i.test(src),
-  );
-
-  const hasBuildFunc = hasBuildFunction(pkgbuildText);
-  const usesExtractionCommands = EXTRACTION_COMMANDS_REGEX.test(pkgbuildText);
-
-  if (hasExplicitBinarySource && (!hasBuildFunc || usesExtractionCommands || !hasCompilerInMakedepends)) {
-    return true;
-  }
-
-  if (hasNoStrip && !hasCompilerInMakedepends && (!hasBuildFunc || usesExtractionCommands)) {
-    return true;
-  }
-
-  if (isSourcePrecompiledRelease && !hasCompilerInMakedepends) {
-    return true;
-  }
-
-  if (!hasCompilerInMakedepends && (hasExplicitBinarySource || hasPrebuiltArchiveSource)) {
-    if (!hasBuildFunc || usesExtractionCommands || /install\s+-(?:dm755|d).*opt\//i.test(pkgbuildText)) {
-      return true;
-    }
-  }
-
-  if (/(?:curl|wget)\b.*?\.(?:run|deb|rpm)\b/i.test(pkgbuildText) || /sh\s+.*?\.run\s+--target/i.test(pkgbuildText)) {
-    if (/install\s+.*\.so\b/i.test(pkgbuildText) || /cp\s+.*\.so\b/i.test(pkgbuildText)) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 export function isSourceCompiledPackage(pkgbuildText?: string | null): boolean {

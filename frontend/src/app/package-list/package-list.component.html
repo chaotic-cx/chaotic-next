@@ -131,7 +131,7 @@
             <td>
               <span
                 class="ml-1 align-middle"
-                [pTooltip]="(pkg.lastUpdated | date: 'short') ?? undefined"
+                [pTooltip]="(pkg.lastUpdated | localeDate) ?? undefined"
                 tooltipPosition="top"
                 >{{ pkg.lastUpdated | relativeTime }}</span
               >

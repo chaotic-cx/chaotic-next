@@ -27,6 +27,7 @@ import { ChartPackageResourceStatsComponent } from '../chart-package-resource-st
 import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
+import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StatsService } from '../stats/stats.service';
 
@@ -38,6 +39,7 @@ import { StatsService } from '../stats/stats.service';
     FormsModule,
     PackageDetailKeyPipe,
     RelativeTimePipe,
+    LocaleDatePipe,
     Tooltip,
     ChartPackageBuildStatsComponent,
     ChartPackageAverageBuildTimeComponent,

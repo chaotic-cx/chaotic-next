@@ -5,6 +5,7 @@ import { MessageToastService } from '@garudalinux/core';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Panel } from '@openng/optimus-ui/panel';
+import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
 import { Message } from './interfaces';
@@ -14,7 +15,7 @@ const NEWS_INCREMENT = 3;
 
 @Component({
   selector: 'chaotic-newsfeed',
-  imports: [CommonModule, Panel, Button, PrimeTemplate],
+  imports: [CommonModule, Panel, Button, PrimeTemplate, LocaleDatePipe],
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],

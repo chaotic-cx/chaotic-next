@@ -1,12 +1,12 @@
 import 'reflect-metadata';
-
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { AurMaintainerSnapshot } from '@chaotic-next/backend/diff-scan/aur-maintainer-snapshot.entity';
 import { AurScanService } from '@chaotic-next/backend/diff-scan/aur-scan.service';
 import { VirusTotalVerdict } from '@chaotic-next/backend/diff-scan/virus-total-verdict.entity';
 import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
+
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { createE2eApp, type E2eApp } from '../test/e2e-app';
 
 const NOW_SECONDS = Math.floor(Date.now() / 1000);
@@ -49,6 +49,15 @@ function aurFetch(info: Record<string, unknown>, pkgbuild: string): Mock<typeof 
           ? [{ Name: `${username}-other`, FirstSubmitted: NOW_SECONDS - 5 * 365 * DAY_SECONDS, NumVotes: 40 }]
           : [],
       });
+    }
+
+    // cgit renders attributes in single quotes; extractTreeEntries parses these links.
+    if (url.includes('/cgit/aur.git/tree')) {
+      return new Response(
+        "<a href='/cgit/aur.git/tree/PKGBUILD?h=evilpkg'>PKGBUILD</a>" +
+          "<a href='/cgit/aur.git/tree/helper.install?h=evilpkg'>helper.install</a>",
+        { status: 200, headers: { 'content-type': 'text/html' } },
+      );
     }
     if (url.endsWith('/PKGBUILD?h=evilpkg')) {
       return new Response(pkgbuild, { status: 200, headers: { 'content-type': 'text/plain' } });

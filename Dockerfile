@@ -16,6 +16,10 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 COPY . .
+
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
 RUN --mount=type=cache,target=/root/.nx \
     pnpm exec nx run backend:build && \
     cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml && \

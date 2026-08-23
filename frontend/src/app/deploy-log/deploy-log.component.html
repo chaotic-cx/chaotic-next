@@ -224,7 +224,7 @@
             <td>
               <span
                 class="ml-1 align-middle"
-                [pTooltip]="(build.timestamp | date: 'short') ?? undefined"
+                [pTooltip]="(build.timestamp | localeDate) ?? undefined"
                 tooltipPosition="top"
                 >{{ build.timestamp | relativeTime }}</span
               >

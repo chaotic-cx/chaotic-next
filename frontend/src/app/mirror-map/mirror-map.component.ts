@@ -168,7 +168,7 @@ const STATUS_LABELS: Record<MirrorStatus, string> = {
 };
 
 function mirrorPopupHtml(mirror: Mirror, status: MirrorStatus): string {
-  const lastUpdate = new Date(mirror.last_update).toLocaleString(undefined, {
+  const lastUpdate = new Date(mirror.last_update).toLocaleString(navigator.language, {
     dateStyle: 'short',
     timeStyle: 'short',
   });

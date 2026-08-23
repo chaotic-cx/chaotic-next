@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { FormField, form, pattern, required, submit } from '@angular/forms/signals';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
@@ -45,7 +45,7 @@ const PKG_TYPE_OPTIONS = [
   imports: [
     Button,
     Checkbox,
-    DatePipe,
+    LocaleDatePipe,
     Dialog,
     FormField,
     FormsModule,
@@ -169,7 +169,7 @@ const PKG_TYPE_OPTIONS = [
               }
             </td>
             <td class="text-ctp-subtext">{{ row.brokenReasons?.join(', ') }}</td>
-            <td>{{ row.scannedAt | date: 'short' }}</td>
+            <td>{{ row.scannedAt | localeDate }}</td>
             <td class="cell-actions">
               <div class="flex gap-2">
                 <p-button
@@ -260,7 +260,7 @@ const PKG_TYPE_OPTIONS = [
                         <span class="text-ctp-subtext">(triggered by {{ bump.triggerName }})</span>
                       }
                     </span>
-                    <span class="text-ctp-subtext text-xs">{{ bump.timestamp | date: 'short' }}</span>
+                    <span class="text-ctp-subtext text-xs">{{ bump.timestamp | localeDate }}</span>
                     @if (bump.details?.length) {
                       <span class="text-ctp-subtext text-xs">{{ bump.details!.join(', ') }}</span>
                     }

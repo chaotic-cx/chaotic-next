@@ -3,6 +3,7 @@ import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { Mirror } from '@chaotic-next/shared-lib';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 
 const STATUS = {
@@ -25,7 +26,7 @@ const STATUS = {
 
 @Component({
   selector: 'chaotic-mirror-card',
-  imports: [CommonModule, RelativeTimePipe, Tooltip, RouterLink],
+  imports: [CommonModule, RelativeTimePipe, Tooltip, RouterLink, LocaleDatePipe],
   templateUrl: './mirror-card.component.html',
   styleUrl: './mirror-card.component.css',
 })
