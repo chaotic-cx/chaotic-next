@@ -47,7 +47,7 @@ function registrableDomain(host: string): string {
 
 function firstEntry(change: MergeRequestDiffSchema, predicate: (entry: SourceEntry) => boolean): RuleHit | null {
   const entry = parsePkgbuild(change)?.entries.find(predicate);
-  return entry ? { match: entry.raw, note: `Host: ${entry.host}` } : null;
+  return entry ? { line: entry.line, match: entry.raw, note: `Host: ${entry.host}` } : null;
 }
 
 export const PROVENANCE_RULES: Rule[] = [
@@ -87,7 +87,9 @@ export const PROVENANCE_RULES: Rule[] = [
           !isReputable(candidate.host) &&
           registrableDomain(candidate.host) !== upstreamDomain,
       );
-      return entry ? { match: entry.raw, note: `Host ${entry.host} vs upstream ${parsed.urlHost}` } : null;
+      return entry
+        ? { line: entry.line, match: entry.raw, note: `Host ${entry.host} vs upstream ${parsed.urlHost}` }
+        : null;
     },
   },
 ];

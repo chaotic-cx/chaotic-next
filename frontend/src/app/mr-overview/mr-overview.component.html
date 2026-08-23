@@ -160,21 +160,25 @@
               <div class="overflow-hidden">
                 <div class="flex flex-col gap-1.5 px-3 py-2">
                   @for (finding of scanFindings(mr); track $index) {
-                    <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+                    <div class="flex flex-col gap-y-1 sm:flex-row sm:items-center sm:gap-x-2">
                       <div class="flex min-w-0 items-center gap-2">
-                        <p-tag [severity]="presenter.findingSeverity[finding.severity]" [value]="finding.severity" />
                         <span
                           class="min-w-0 break-words font-semibold"
+                          [class.text-ctp-red]="finding.severity === 'critical'"
+                          [class.text-ctp-peach]="finding.severity === 'warning'"
+                          [class.text-ctp-subtext0]="finding.severity === 'info'"
                           [pTooltip]="finding.description"
                           tooltipPosition="top"
                         >
                           {{ finding.ruleName }}
                         </span>
                       </div>
-                      <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+                      <span class="hidden text-ctp-subtext0 sm:inline">·</span>
+                      <div class="flex items-center flex-wrap gap-x-2 sm:flex-nowrap">
                         <code class="whitespace-nowrap text-ctp-sky text-xs">
                           {{ fileLocation(mr, finding) }}
                         </code>
+                        <span class="hidden text-ctp-subtext0 sm:inline">·</span>
                         <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
                       </div>
                     </div>
@@ -184,12 +188,12 @@
                     <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
                       <span class="text-sm font-semibold">VirusTotal indicators</span>
                       @for (report of vtReports(mr); track $index) {
-                        <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+                        <div class="flex flex-col gap-y-1 sm:flex-row sm:items-center sm:gap-x-2">
                           <div class="flex min-w-0 items-center gap-2">
-                            <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
                             <span class="min-w-0 break-all text-xs font-semibold">{{ report.value }}</span>
                           </div>
-                          <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+                          <span class="hidden text-ctp-subtext0 sm:inline">·</span>
+                          <div class="flex items-center flex-wrap gap-x-2 sm:flex-nowrap">
                             <code class="whitespace-nowrap text-xs text-ctp-sky">{{ report.context }}</code>
                             <span class="text-xs text-ctp-subtext">{{ presenter.vtEngines(report) }}</span>
                           </div>

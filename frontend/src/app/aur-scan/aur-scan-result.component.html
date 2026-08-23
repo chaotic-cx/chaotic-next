@@ -1,12 +1,12 @@
 <div class="flex flex-col gap-2 py-2">
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="flex flex-wrap items-center justify-center gap-2 text-center">
     @switch (scan()?.status) {
       @case ('scanning') {
         <i class="pi pi-spinner pi-spin text-ctp-subtext text-xs"></i>
         <span class="text-ctp-subtext text-sm">Scanning sources…</span>
       }
       @case ('awaiting-vt') {
-        <div class="flex items-center justify-center gap-2 text-center w-full">
+        <div class="flex flex-col items-center justify-center gap-2 text-center w-full sm:flex-row">
           <i class="pi pi-spinner pi-spin text-ctp-subtext text-xs"></i>
           <span class="text-ctp-subtext text-sm">Checking VirusTotal (this can take a while based on rate limit)…</span>
         </div>
@@ -50,24 +50,44 @@
 
   @if (scan(); as current) {
     <div
-      class="mx-auto w-full min-w-[300px] flex flex-col gap-2 rounded-xl border border-ctp-surface1/60 p-5"
+      class="w-full flex flex-col gap-2 rounded-xl border border-ctp-surface1/60 p-5 text-left sm:text-center"
       style="background: var(--p-card-background)"
     >
       @if (current.findings.length > 0) {
-        <span class="text-sm font-semibold">Scan findings</span>
+        <div class="flex w-full items-center justify-between text-left sm:text-center">
+          <span class="block text-sm font-semibold">Scan findings</span>
+          <p-tag
+            [severity]="
+              current.findings.some((f) => f.severity === 'critical')
+                ? 'danger'
+                : current.findings.some((f) => f.severity === 'warning')
+                  ? 'warn'
+                  : 'info'
+            "
+            [value]="`${current.findings.length} finding${current.findings.length !== 1 ? 's' : ''}`"
+          />
+        </div>
       } @else if (current.status === 'done') {
-        <span class="text-sm text-ctp-subtext">No findings</span>
+        <span class="block w-full text-left text-sm text-ctp-subtext sm:text-center">No findings</span>
       }
       @for (finding of current.findings; track finding) {
-        <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+        <div class="flex flex-col gap-y-1 sm:flex-row sm:items-center sm:gap-x-2">
           <div class="flex min-w-0 items-center gap-2">
-            <p-tag [severity]="presenter.findingSeverity[finding.severity]" [value]="finding.severity" />
-            <span class="min-w-0 wrap-break-word font-semibold" [pTooltip]="finding.description" tooltipPosition="top">
+            <span
+              class="min-w-0 wrap-break-word font-semibold text-sm"
+              [class.text-ctp-red]="finding.severity === 'critical'"
+              [class.text-ctp-peach]="finding.severity === 'warning'"
+              [class.text-ctp-subtext0]="finding.severity === 'info'"
+              [pTooltip]="finding.description"
+              tooltipPosition="top"
+            >
               {{ finding.ruleName }}
             </span>
           </div>
-          <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+          <span class="hidden text-ctp-subtext0 sm:inline">·</span>
+          <div class="flex items-center flex-wrap gap-x-2 sm:flex-nowrap">
             <code class="whitespace-nowrap text-ctp-sky text-xs">{{ fileLocation(finding) }}</code>
+            <span class="hidden text-ctp-subtext0 sm:inline">·</span>
             <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
           </div>
         </div>
@@ -111,7 +131,7 @@
               </table>
             }
             @if (current.maintainerChange; as change) {
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center justify-center gap-2 text-center">
                 @if (presenter.tookOverByNovice(change, current.maintainers)) {
                   <p-tag severity="danger" value="New maintainer took over" />
                 } @else {
@@ -134,10 +154,10 @@
           </span>
         </div>
       } @else if (current.vtReports.length > 0) {
-        <div class="flex flex-col gap-1.5 border-t border-ctp-surface0 pt-5">
+        <div class="flex flex-col gap-1.5 border-t border-ctp-surface0 pt-2">
           <span class="text-sm font-semibold">VirusTotal indicators</span>
           @for (report of current.vtReports; track report) {
-            <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+            <div class="flex flex-col gap-y-1 text-left sm:text-center">
               <div class="flex min-w-0 items-center gap-2">
                 <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
                 <a
@@ -148,12 +168,43 @@
                   >{{ report.value }}</a
                 >
               </div>
-              <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+              <div class="flex flex-wrap items-start gap-x-2">
                 <code class="break-all text-ctp-subtext text-xs">{{ report.context }}</code>
                 <span class="text-ctp-subtext text-xs">{{ presenter.vtEngines(report) }}</span>
               </div>
             </div>
           }
+        </div>
+      }
+
+      @if (current.sourceFiles?.length) {
+        <div class="border-t border-ctp-surface0 pt-2">
+          <span class="text-sm font-semibold">Scanned sources</span>
+          <div class="mt-1.5 flex flex-col gap-1">
+            @for (file of current.sourceFiles; track file.name) {
+              <div class="flex flex-col">
+                <button
+                  class="flex w-fit cursor-pointer items-center gap-2 text-left text-xs transition-colors hover:text-ctp-text"
+                  (click)="toggleFile(file.name)"
+                  type="button"
+                >
+                  <i
+                    class="pi text-ctp-subtext"
+                    [class.pi-chevron-right]="!isOpen(file.name)"
+                    [class.pi-chevron-down]="isOpen(file.name)"
+                  ></i>
+                  <code class="text-ctp-sky">{{ file.name }}</code>
+                </button>
+                @if (isOpen(file.name)) {
+                  <chaotic-source-viewer
+                    class="mt-1 block"
+                    [code]="file.content"
+                    [findingsByLine]="findingsByLine(file.name)"
+                  />
+                }
+              </div>
+            }
+          </div>
         </div>
       }
     </div>

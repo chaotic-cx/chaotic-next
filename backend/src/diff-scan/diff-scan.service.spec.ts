@@ -69,6 +69,21 @@ describe('DiffScanService', () => {
     }
   });
 
+  it('skips diff-only rules on full-file scans but keeps content rules', async () => {
+    const scriptletChange = makeChange(addedOnlyDiff(['post_upgrade() {', '  true', '}']), {
+      new_path: 'foo/foo.install',
+      old_path: 'foo/foo.install',
+    });
+    const obfuscatedChange = makeChange(addedOnlyDiff(['eval "$x"']), { new_path: 'foo/PKGBUILD' });
+
+    const mrFindings = await service.scanDiffs([scriptletChange, obfuscatedChange]);
+    expect(mrFindings.map((finding) => finding.ruleId)).toContain('CAUR-INSTALL-CHANGED');
+
+    const fullFileFindings = await service.scanDiffs([scriptletChange, obfuscatedChange], undefined, 'full-file');
+    expect(fullFileFindings.map((finding) => finding.ruleId)).not.toContain('CAUR-INSTALL-CHANGED');
+    expect(fullFileFindings.map((finding) => finding.ruleId)).toContain('OBF-002');
+  });
+
   it('replicates the 2026 campaign: new .install installing a malicious npm package', async () => {
     const change = makeChange(addedOnlyDiff(['post_install() {', '  npm install atomic-lockfile', '}']), {
       new_path: 'foo/foo.install',

@@ -7,21 +7,23 @@ import { LoadingService } from './loading.service';
 @Injectable()
 export class HttpRequestInterceptor implements HttpInterceptor {
   private readonly loading = inject(LoadingService);
+  private counter = 0;
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    this.loading.setLoading(true, request.url);
+    const requestId = `${request.url}#${++this.counter}`;
+    this.loading.setLoading(true, requestId);
     return next
       .handle(request)
       .pipe(
         catchError((err) => {
-          this.loading.setLoading(false, request.url);
+          this.loading.setLoading(false, requestId);
           return throwError(() => err);
         }),
       )
       .pipe(
         map((evt: HttpEvent<unknown>) => {
           if (evt instanceof HttpResponse) {
-            this.loading.setLoading(false, request.url);
+            this.loading.setLoading(false, requestId);
           }
           return evt;
         }),

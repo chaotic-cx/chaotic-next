@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { httpResource } from '@angular/common/http';
+import { HttpClient, httpResource } from '@angular/common/http';
 import {
   ChangeDetectorRef,
   Component,
@@ -12,12 +12,14 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { debounce, form, FormField, pattern } from '@angular/forms/signals';
+import { FormsModule } from '@angular/forms';
+import { debounce, form, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { formatPkgrel, Package, Paginated, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
-import { InputText } from '@openng/optimus-ui/inputtext';
+import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { firstValueFrom } from 'rxjs';
 import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
@@ -26,19 +28,17 @@ import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
-import { SearchSuggestionsComponent } from '../search-suggestions/search-suggestions.component';
 import { StatsService } from '../stats/stats.service';
 
 @Component({
   selector: 'chaotic-search-package',
   imports: [
+    AutoComplete,
     CommonModule,
+    FormsModule,
     PackageDetailKeyPipe,
     RelativeTimePipe,
     Tooltip,
-    InputText,
-    FormField,
-    SearchSuggestionsComponent,
     ChartPackageBuildStatsComponent,
     ChartPackageAverageBuildTimeComponent,
     ChartPackageResourceStatsComponent,
@@ -48,6 +48,7 @@ import { StatsService } from '../stats/stats.service';
   styleUrl: './search-package.component.css',
 })
 export class SearchPackageComponent implements OnInit {
+  private readonly http = inject(HttpClient);
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly meta = inject(Meta);
@@ -67,14 +68,8 @@ export class SearchPackageComponent implements OnInit {
     pattern(schemaPath.query, PACKAGE_NAME_PATTERN, { message: 'Invalid package name' });
   });
 
-  protected readonly suggestionsVisible = signal(false);
-
-  private readonly suggestionsResource = httpResource<Paginated<Package>>(() => {
-    const query = this.searchModel().query.trim();
-    return query.length >= 3
-      ? this.appService.getPackagesResourceRequest({ page: 1, perPage: 200, q: query })
-      : undefined;
-  });
+  protected readonly suggestions = signal<string[]>([]);
+  private suggestionGeneration = 0;
 
   private readonly packageResource = httpResource<Package>(() => {
     const name = this.currentPackageName();
@@ -90,14 +85,6 @@ export class SearchPackageComponent implements OnInit {
       this.packageStatsService.timeRangeDays() ?? undefined,
     );
   });
-
-  protected readonly suggestions = computed<string[]>(() => [
-    ...new Set(
-      (resourceValue(this.suggestionsResource)?.items ?? [])
-        .filter((pkg) => pkg.reponame === this.packageStatsService.packageSearchSelectedRepo())
-        .map((pkg) => pkg.pkgname),
-    ),
-  ]);
 
   protected readonly packageSearchData = computed<{ key: string; value: unknown }[]>(() => {
     const result = resourceValue(this.packageResource);
@@ -226,11 +213,33 @@ export class SearchPackageComponent implements OnInit {
     });
   }
 
+  async searchSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
+    const query = event.query.trim();
+    if (query.length < 3) {
+      this.suggestions.set([]);
+      return;
+    }
+    const generation = ++this.suggestionGeneration;
+    try {
+      const request = this.appService.getPackagesResourceRequest({ page: 1, perPage: 200, q: query });
+      const result = await firstValueFrom(this.http.get<Paginated<Package>>(request.url, { params: request.params }));
+      if (generation !== this.suggestionGeneration) return;
+      this.suggestions.set([
+        ...new Set(
+          (result.items ?? [])
+            .filter((pkg) => pkg.reponame === this.packageStatsService.packageSearchSelectedRepo())
+            .map((pkg) => pkg.pkgname),
+        ),
+      ]);
+    } catch {
+      if (generation === this.suggestionGeneration) this.suggestions.set([]);
+    }
+  }
+
   selectPackage(query: string): void {
     if (!query.trim()) return;
     this.searchModel.update((model) => ({ ...model, query }));
     this.currentPackageName.set(query);
-    this.suggestionsVisible.set(false);
     this.syncSearchParam(query);
     this.cdr.markForCheck();
   }
@@ -240,8 +249,11 @@ export class SearchPackageComponent implements OnInit {
     this.selectPackage(this.searchModel().query);
   }
 
+  onKeyUp(event: KeyboardEvent): void {
+    if (event.key === 'Enter') this.onEnter();
+  }
+
   onInputBlur(): void {
-    setTimeout(() => this.suggestionsVisible.set(false), 150);
     if (!this.searchForm.query().valid()) return;
     const typed = this.searchModel().query.trim();
     if (typed) {

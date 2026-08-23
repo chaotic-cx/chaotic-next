@@ -2,8 +2,8 @@
 
 <div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
   <p-card>
-    <div class="flex flex-col items-center w-full">
-      <div class="flex w-full max-w-xl flex-col items-center gap-6 px-4 py-4 transition-all duration-300">
+    <div class="flex w-full flex-col">
+      <div class="flex w-full max-w-xl flex-col items-center gap-6 self-center px-4 py-4 transition-all duration-300">
         <div
           class="flex flex-col items-center justify-center transition-all duration-300"
           [class.py-8]="!hasResults()"
@@ -15,23 +15,17 @@
           ></i>
         </div>
         <div class="relative w-full">
-          <input
-            class="w-full text-center"
-            #searchInput
-            [formField]="searchForm.query"
-            [class.ng-invalid]="searchForm.query().invalid()"
-            [class.ng-dirty]="searchForm.query().dirty()"
-            (focus)="onFocus()"
-            (blur)="onBlur()"
-            pInputText
-            type="text"
-            placeholder="AUR package name, e.g. firefox"
-          />
-          <chaotic-search-suggestions
-            [anchor]="searchInput"
+          <p-autoComplete
+            class="w-full"
+            [ngModel]="searchModel().query"
             [suggestions]="suggestions()"
-            [visible]="suggestionsVisible()"
-            (selectSuggestion)="selectSuggestion($event)"
+            [delay]="300"
+            [minQueryLength]="3"
+            (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event }))"
+            (completeMethod)="searchSuggestions($event)"
+            (onSelect)="selectSuggestion($event.value)"
+            placeholder="AUR package name, e.g. firedragon"
+            appendTo="body"
           />
         </div>
       </div>
@@ -44,7 +38,7 @@
         [class.opacity-0]="!hasResults()"
       >
         <div class="overflow-hidden">
-          <div class="scroll-mt-24 mt-4 flex w-full flex-col items-center">
+          <div class="scroll-mt-24 mt-4 flex w-full flex-col">
             @if (currentPackageName(); as name) {
               <chaotic-aur-scan-result [packageName]="name" [showTitle]="false" />
             }

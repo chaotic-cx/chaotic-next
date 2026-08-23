@@ -5,10 +5,14 @@ import {
   hasBinaryContent,
   hasBinaryExtension,
   INSTALL_SCRIPT_PATTERN,
+  removedLineTexts,
   SYSTEMD_UNIT_PATTERN,
 } from './diff-utils';
 import type { Rule } from './rule';
 import { regexRule } from './rule';
+
+/** Rules that reason about old-vs-new context, which full-file scans cannot provide. */
+const MR_DIFF_ONLY = ['mr-diff'] as const;
 
 const RESTART_ALWAYS_PATTERN = /Restart\s*=\s*always/;
 const RESTART_DELAY_PATTERN = /RestartSec\s*=\s*(?:[3-9]\d|\d{3,})/;
@@ -41,18 +45,25 @@ export const PERSISTENCE_RULES: Rule[] = [
     name: 'New install scriptlet added',
     severity: 'warning',
     description:
-      'Adds a new .install or .hook file. These scriptlets run as root on every user machine during package install/upgrade and were the injection point of the 2026 AUR malware campaign.',
+      'Adds or ships a new .install or .hook file. These scriptlets run as root on every user machine during package install/upgrade and were the injection point of the 2026 AUR malware campaign.',
     check(change) {
-      if (change.new_file && INSTALL_SCRIPT_PATTERN.test(change.new_path)) {
-        return { line: 1, match: change.new_path, note: 'New install scriptlet' };
-      }
-      return null;
+      if (change.deleted_file || !INSTALL_SCRIPT_PATTERN.test(change.new_path)) return null;
+      // Modifications of an existing scriptlet are CAUR-INSTALL-CHANGED's job;
+      // full-file scans have no removed lines and flag the shipped scriptlet.
+      if (removedLineTexts(change).length > 0) return null;
+      if (!addedLines(change)[0]) return null;
+      return {
+        line: 1,
+        match: change.new_path,
+        note: change.new_file ? 'New install scriptlet' : 'Install scriptlet present',
+      };
     },
   },
   {
     id: 'CAUR-INSTALL-CHANGED',
     name: 'Install scriptlet modified',
     severity: 'info',
+    runsOn: MR_DIFF_ONLY,
     description:
       'Modifies an existing .install or .hook file. These scriptlets run as root on user machines and should be reviewed line by line.',
     check(change) {
@@ -65,6 +76,7 @@ export const PERSISTENCE_RULES: Rule[] = [
     id: 'CAUR-BINARY-ADDED',
     name: 'Binary file added',
     severity: 'critical',
+    runsOn: MR_DIFF_ONLY,
     description:
       'Adds a binary blob to the repository. Binaries cannot be reviewed as text and can hide arbitrary payloads; packages should build from source or download sources via source=() checksums. Committed archives and images are reported as a warning.',
     check(change) {
@@ -81,6 +93,7 @@ export const PERSISTENCE_RULES: Rule[] = [
     id: 'CAUR-SYSTEMD-UNIT-ADDED',
     name: 'New systemd unit added',
     severity: 'warning',
+    runsOn: MR_DIFF_ONLY,
     description:
       'Adds a systemd .service or .timer unit. Units grant persistence on user machines and their ExecStart must be reviewed carefully; the unit contents themselves are scanned by the persistence content rules.',
     check(change) {

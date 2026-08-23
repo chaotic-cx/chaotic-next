@@ -14,25 +14,18 @@
         <p class="text-ctp-mauve my-10 text-2xl font-bold">Automated building repo for AUR packages 👨🏻‍💻</p>
         <p class="text-ctp-text my-5 text-xl">Building AUR packages for you, so you don't have to!</p>
         <div class="relative mx-auto my-6 w-full max-w-md">
-          <input
-            class="w-full text-center h-12"
-            #searchInputEl
-            [formField]="searchForm.query"
-            [class.ng-invalid]="searchForm.query().invalid()"
-            [class.ng-dirty]="searchForm.query().dirty()"
-            (focus)="suggestionsVisible.set(true)"
-            (keydown.enter)="onSearchEnter()"
-            (blur)="hideSuggestions()"
-            pInputText
-            type="text"
-            placeholder="Search packages"
-            aria-label="Search packages"
-          />
-          <chaotic-search-suggestions
-            [anchor]="searchInputEl"
+          <p-autoComplete
+            class="w-full"
+            [ngModel]="searchModel().query"
             [suggestions]="suggestions()"
-            [visible]="suggestionsVisible() && searchModel().query.length >= 3"
-            (selectSuggestion)="searchPackages($event)"
+            [delay]="300"
+            [minQueryLength]="3"
+            (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event }))"
+            (completeMethod)="searchSuggestions($event)"
+            (onSelect)="searchPackages($event.value)"
+            (onKeyUp)="onKeyUp($event)"
+            placeholder="Search packages"
+            appendTo="body"
           />
         </div>
         <div class="mx-auto flex max-w-2xl flex-col items-stretch justify-center gap-3 sm:flex-row">

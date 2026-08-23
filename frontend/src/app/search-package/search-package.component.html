@@ -11,24 +11,18 @@
       ></i>
     </div>
     <div class="relative w-full">
-      <input
-        class="w-full text-center"
-        #searchInputEl
-        [formField]="searchForm.query"
-        [class.ng-invalid]="searchForm.query().invalid()"
-        [class.ng-dirty]="searchForm.query().dirty()"
-        (focus)="suggestionsVisible.set(true)"
-        (keydown.enter)="onEnter()"
-        (blur)="onInputBlur()"
-        pInputText
-        type="text"
-        placeholder="Start searching"
-      />
-      <chaotic-search-suggestions
-        [anchor]="searchInputEl"
+      <p-autoComplete
+        class="w-full"
+        [ngModel]="searchModel().query"
         [suggestions]="suggestions()"
-        [visible]="suggestionsVisible() && searchModel().query.length >= 3"
-        (selectSuggestion)="selectPackage($event)"
+        [delay]="300"
+        [minQueryLength]="3"
+        (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event }))"
+        (completeMethod)="searchSuggestions($event)"
+        (onSelect)="selectPackage($event.value)"
+        (onKeyUp)="onKeyUp($event)"
+        (onBlur)="onInputBlur()"
+        placeholder="Start searching"
       />
     </div>
   </div>

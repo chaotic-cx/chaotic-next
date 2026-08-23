@@ -72,6 +72,7 @@ export const CAMPAIGN_RULES: Rule[] = [
     id: 'CAUR-IDENTITY-SWAP',
     name: 'Maintainer email swapped',
     severity: 'warning',
+    runsOn: ['mr-diff'],
     description:
       'Replaces the email address of an existing maintainer or contributor while keeping their name. Update MRs rarely change packager identities.',
     check(change) {

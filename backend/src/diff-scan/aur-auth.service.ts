@@ -29,7 +29,6 @@ export class AurAuthService {
     private readonly maintainerInfoRepository: Repository<AurMaintainerInfoEntity>,
   ) {}
 
-  /** Returns the account creation date, using the persisted value once scraped (it never changes). */
   async getMaintainerRegistrationDate(username: string): Promise<Date | null> {
     const cached = await this.maintainerInfoRepository.findOne({ where: { username } });
     if (cached) return cached.registeredDate;
@@ -86,7 +85,6 @@ export class AurAuthService {
 
   private async ensureSession(): Promise<boolean> {
     if (this.sessionCookie && Date.now() < this.sessionExpiresAt) return true;
-    // Concurrent callers share a single in-flight login instead of racing.
     this.loginPromise ??= this.login().finally(() => {
       this.loginPromise = null;
     });

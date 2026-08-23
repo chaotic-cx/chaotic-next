@@ -1,24 +1,26 @@
-import { httpResource } from '@angular/common/http';
-import { Component, computed, ElementRef, effect, inject, input, OnInit, signal, viewChild } from '@angular/core';
-import { debounce, form, FormField, pattern } from '@angular/forms/signals';
+import { HttpClient } from '@angular/common/http';
+import { Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { debounce, form, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Card } from '@openng/optimus-ui/card';
-import { InputText } from '@openng/optimus-ui/inputtext';
+import { firstValueFrom } from 'rxjs';
 import { AppService } from '../../app.service';
+import { PACKAGE_NAME_PATTERN } from '../../functions';
 import { TitleComponent } from '../../title/title.component';
 import { AurScanResultComponent } from '../aur-scan-result.component';
 import { AurScanService } from '../aur-scan.service';
-import { PACKAGE_NAME_PATTERN } from '../../functions';
-import { SearchSuggestionsComponent } from '../../search-suggestions/search-suggestions.component';
 
 @Component({
   selector: 'chaotic-aur-scan-page',
-  imports: [Card, FormField, InputText, TitleComponent, AurScanResultComponent, SearchSuggestionsComponent],
+  imports: [AutoComplete, Card, FormsModule, TitleComponent, AurScanResultComponent],
   styleUrl: './aur-scan-page.css',
   templateUrl: './aur-scan-page.component.html',
 })
 export class AurScanPageComponent implements OnInit {
+  private readonly http = inject(HttpClient);
   private readonly appService = inject(AppService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
@@ -28,7 +30,7 @@ export class AurScanPageComponent implements OnInit {
   readonly search = input<string>();
 
   readonly subtitle =
-    'Scan AUR packages for malicious PKGBUILD content, suspicious URLs and risky maintainership changes.';
+    'Scan AUR packages for potentially malicious and suspicious content and other indicators for a problematic PKGBUILD.';
 
   protected readonly currentPackageName = signal('');
   protected readonly hasResults = computed(() => this.currentPackageName() !== '');
@@ -39,15 +41,8 @@ export class AurScanPageComponent implements OnInit {
     pattern(schemaPath.query, PACKAGE_NAME_PATTERN, { message: 'Invalid package name' });
   });
 
-  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
-  protected readonly suggestionsVisible = signal(false);
-
-  private readonly suggestionsResource = httpResource<string[]>(() => {
-    const query = this.searchModel().query.trim();
-    return query.length >= 3 ? this.appService.getAurSuggestions(query) : undefined;
-  });
-
-  protected readonly suggestions = computed(() => this.suggestionsResource.value() ?? []);
+  protected readonly suggestions = signal<string[]>([]);
+  private suggestionGeneration = 0;
 
   private lastHandledDeepLink = '';
 
@@ -83,21 +78,26 @@ export class AurScanPageComponent implements OnInit {
     });
   }
 
-  protected onFocus(): void {
-    this.suggestionsVisible.set(true);
-  }
-
-  protected onBlur(): void {
-    setTimeout(() => this.suggestionsVisible.set(false), 150);
-    if (!this.searchForm.query().valid()) return;
-    const query = this.searchModel().query.trim();
-    if (query) this.selectPackage(query);
+  async searchSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
+    const query = event.query.trim();
+    if (query.length < 3) {
+      this.suggestions.set([]);
+      return;
+    }
+    const generation = ++this.suggestionGeneration;
+    try {
+      const request = this.appService.getAurSuggestions(query);
+      const result = await firstValueFrom(this.http.get<string[]>(request.url, { params: request.params }));
+      if (generation !== this.suggestionGeneration) return;
+      this.suggestions.set(result);
+    } catch {
+      if (generation === this.suggestionGeneration) this.suggestions.set([]);
+    }
   }
 
   protected selectSuggestion(name: string): void {
     this.searchModel.update((model) => ({ ...model, query: name }));
     this.currentPackageName.set(name);
-    this.suggestionsVisible.set(false);
     this.syncSearchParam(name);
   }
 

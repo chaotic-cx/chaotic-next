@@ -169,6 +169,14 @@ export class AurPackageScanDto {
   @IsOptional()
   @IsArray()
   sourceFiles?: { name: string; content: string }[];
+  @ApiPropertyOptional({
+    description: 'Repo files detected as binary and therefore not shipped',
+    type: String,
+    isArray: true,
+  })
+  @IsOptional()
+  @IsArray()
+  skippedBinaryFiles?: string[];
   @ApiProperty({ description: 'ISO 8601 timestamp when the scan started' }) @IsString() startedAt!: string;
 }
 
