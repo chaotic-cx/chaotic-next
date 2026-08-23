@@ -372,6 +372,41 @@ describe('Admin Endpoints (e2e)', () => {
   });
 
   describe('POST /admin/rescan', () => {
+    const RESCAN_POLL_TIMEOUT_MS = 10_000;
+    const RESCAN_POLL_INTERVAL_MS = 100;
+
+    interface RescanJobState {
+      jobId: string;
+      status: 'running' | 'done';
+      startedAt: string;
+      finishedAt: string | null;
+      rescanned: number;
+      failed: string[];
+    }
+
+    async function waitForRescanJob(jobId: string): Promise<RescanJobState> {
+      const deadline = Date.now() + RESCAN_POLL_TIMEOUT_MS;
+      while (Date.now() < deadline) {
+        const res = await e2e.inject({ method: 'GET', url: `/admin/rescan/${jobId}` });
+        expect(res.statusCode).toBe(200);
+        const body = (await res.json()) as RescanJobState;
+        if (body.status === 'done') return body;
+        await new Promise((resolve) => setTimeout(resolve, RESCAN_POLL_INTERVAL_MS));
+      }
+      throw new Error(`Rescan job ${jobId} did not finish within ${RESCAN_POLL_TIMEOUT_MS}ms`);
+    }
+
+    async function startRescan(packages: { pkgname: string; pkgType: string }[]): Promise<string> {
+      const res = await e2e.inject({
+        method: 'POST',
+        url: '/admin/rescan',
+        payload: { packages },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = (await res.json()) as { started: number; jobId: string };
+      return body.jobId;
+    }
+
     it('rejects an empty rescan list with 400', async () => {
       const res = await e2e.inject({
         method: 'POST',
@@ -382,44 +417,39 @@ describe('Admin Endpoints (e2e)', () => {
       expect(res.statusCode).toBe(400);
     });
 
-    it('accepts a rescan request for an unknown chaotic package', async () => {
-      const res = await e2e.inject({
-        method: 'POST',
-        url: '/admin/rescan',
-        payload: { packages: [{ pkgname: 'nonexistent-pkg', pkgType: '1' }] },
-      });
+    it('reports 404 for an unknown rescan job id', async () => {
+      const res = await e2e.inject({ method: 'GET', url: '/admin/rescan/no-such-job' });
 
-      // The rescan runs in the background; per-item failures are logged
-      // server-side, so the response only reports how many were queued.
-      expect(res.statusCode).toBe(201);
-      const body = (await res.json()) as { started: number };
-      expect(body.started).toBe(1);
+      expect(res.statusCode).toBe(404);
     });
 
-    it('accepts a rescan request for an unknown arch package', async () => {
-      const res = await e2e.inject({
-        method: 'POST',
-        url: '/admin/rescan',
-        payload: { packages: [{ pkgname: 'nonexistent-arch-pkg', pkgType: '0' }] },
-      });
+    it('records a not-found failure for an unknown chaotic package', async () => {
+      const jobId = await startRescan([{ pkgname: 'nonexistent-pkg', pkgType: '1' }]);
 
-      expect(res.statusCode).toBe(201);
-      const body = (await res.json()) as { started: number };
-      expect(body.started).toBe(1);
+      const job = await waitForRescanJob(jobId);
+
+      expect(job.rescanned).toBe(0);
+      expect(job.failed).toEqual(['nonexistent-pkg: not found']);
     });
 
-    it('accepts a rescan request for a seeded package (download may fail in background)', async () => {
+    it('records a not-found failure for an unknown arch package', async () => {
+      const jobId = await startRescan([{ pkgname: 'nonexistent-arch-pkg', pkgType: '0' }]);
+
+      const job = await waitForRescanJob(jobId);
+
+      expect(job.rescanned).toBe(0);
+      expect(job.failed).toEqual(['nonexistent-arch-pkg: not found']);
+    });
+
+    it('records a failure when the package archive cannot be downloaded', async () => {
       await e2e.seedPackage({ pkgname: 'test-rescan-pkg' });
+      const jobId = await startRescan([{ pkgname: 'test-rescan-pkg', pkgType: '1' }]);
 
-      const res = await e2e.inject({
-        method: 'POST',
-        url: '/admin/rescan',
-        payload: { packages: [{ pkgname: 'test-rescan-pkg', pkgType: '1' }] },
-      });
+      const job = await waitForRescanJob(jobId);
 
-      expect(res.statusCode).toBe(201);
-      const body = (await res.json()) as { started: number };
-      expect(body.started).toBe(1);
+      expect(job.rescanned).toBe(0);
+      expect(job.failed.length).toBe(1);
+      expect(job.failed[0]).toContain('test-rescan-pkg');
     });
   });
 

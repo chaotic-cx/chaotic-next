@@ -352,6 +352,18 @@ export interface BrokenPackageReport {
   reasons: string[];
 }
 
+/** Outcome of one background ELF-signal rescan, served by GET /admin/rescan/:jobId. */
+export interface RescanJob {
+  jobId: string;
+  status: 'running' | 'done';
+  startedAt: string;
+  /** Null until the job finished. */
+  finishedAt: string | null;
+  rescanned: number;
+  /** Per-package failure reasons ("pkgname: reason"). */
+  failed: string[];
+}
+
 export interface RebuildTriggerSourcePackage {
   pkgname: string;
   pkgType: 'arch' | 'chaotic';

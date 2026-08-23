@@ -1,4 +1,4 @@
-import type { Package as PackageDto, Paginated, PipelineTriggerAction } from '@chaotic-next/shared-lib';
+import type { Package as PackageDto, Paginated, PipelineTriggerAction, RescanJob } from '@chaotic-next/shared-lib';
 import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
 import {
   Body,
@@ -40,6 +40,7 @@ import {
   PackageBumpDto,
   PipelineTriggerDto,
   RescanPackagesDto,
+  RescanJobDto,
   RescanStartedDto,
 } from './admin.dto';
 import type { CreateArchPackageBody, CreatePackageBody, CreateRepoBody } from './admin.service';
@@ -238,7 +239,14 @@ export class AdminController {
   @Post('rescan')
   @ApiOperation({ summary: 'Start a background ELF signal rescan for packages by name.' })
   @ApiOkResponse({ description: 'Rescan accepted for background processing', type: RescanStartedDto })
-  startRescan(@Body() body: RescanPackagesDto): RescanStartedDto {
+  startRescan(@Body() body: RescanPackagesDto): { started: number; jobId: string } {
     return this.adminService.startRescanPackages(body.packages);
+  }
+
+  @Get('rescan/:jobId')
+  @ApiOperation({ summary: 'Status and outcome of a background ELF signal rescan job.' })
+  @ApiOkResponse({ description: 'The rescan job state', type: RescanJobDto })
+  getRescanStatus(@Param('jobId') jobId: string): RescanJob {
+    return this.adminService.getRescanJob(jobId);
   }
 }
