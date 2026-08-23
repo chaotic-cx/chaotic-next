@@ -102,8 +102,13 @@ export function deriveDirectoriesOwned(files: string[]): string[] {
   return dedupe([...dirs]).sort();
 }
 
-export function derivePluginOf(files: string[], index: DirectoryIndex, hasCompiledCode = false): string[] {
-  if (!hasCompiledCode) return [];
+export function derivePluginOf(
+  files: string[],
+  index: DirectoryIndex,
+  hasCompiledCode = false,
+  isSourceCompiled = false,
+): string[] {
+  if (!hasCompiledCode && !isSourceCompiled) return [];
 
   const plugins = new Set<string>();
   for (const file of files) {
@@ -227,6 +232,7 @@ export function buildAnalysis(opts: {
     broken: false,
     brokenReasons: [],
     hasCompiledCode,
+    isSourceCompiled: false,
     scannedAt: new Date().toISOString(),
   };
 }

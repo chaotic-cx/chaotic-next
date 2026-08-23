@@ -174,6 +174,11 @@ export interface PackageElfAnalysis {
    * can be analyzed for ABI compatibility.
    */
   hasCompiledCode: boolean;
+  /**
+   * Whether this package is compiled from source (as opposed to being a
+   * binary package that repackages prebuilt binaries).
+   */
+  isSourceCompiled: boolean;
   scannedAt: string;
 }
 
@@ -371,6 +376,7 @@ export interface AdminPackageElfAnalysis {
   broken: boolean;
   brokenReasons: string[];
   hasCompiledCode: boolean;
+  isSourceCompiled: boolean;
   scannedAt: string;
 }
 
@@ -571,8 +577,7 @@ export interface AurMaintainerInfo {
   username: string;
   packagesMaintained: number;
   totalVotes: number;
-  /** Submission date of the maintainer's oldest package; the closest available proxy for account age. */
-  oldestFirstSubmitted: string;
+  registeredDate: string;
   novice: boolean;
 }
 

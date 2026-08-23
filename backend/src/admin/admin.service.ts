@@ -476,6 +476,7 @@ export class AdminService {
       broken: row.broken,
       brokenReasons: row.brokenReasons ?? [],
       hasCompiledCode: row.hasCompiledCode,
+      isSourceCompiled: row.isSourceCompiled,
       scannedAt: row.scannedAt.toISOString(),
     }));
     return paginate(items, total, safePage, safePerPage);
@@ -644,6 +645,7 @@ export class AdminService {
       broken: row.broken,
       brokenReasons: row.brokenReasons ?? [],
       hasCompiledCode: row.hasCompiledCode,
+      isSourceCompiled: row.isSourceCompiled,
       scannedAt: row.scannedAt.toISOString(),
     };
   }

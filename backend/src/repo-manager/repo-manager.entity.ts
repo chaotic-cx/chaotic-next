@@ -138,6 +138,9 @@ export class PackageElfAnalysis {
   @Column({ type: 'boolean', default: false })
   hasCompiledCode!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  isSourceCompiled!: boolean;
+
   @CreateDateColumn()
   scannedAt!: Date;
 
@@ -156,6 +159,7 @@ export class PackageElfAnalysis {
       broken: this.broken,
       brokenReasons: this.brokenReasons,
       hasCompiledCode: this.hasCompiledCode,
+      isSourceCompiled: this.isSourceCompiled,
       scannedAt: this.scannedAt.toISOString(),
     };
   }
