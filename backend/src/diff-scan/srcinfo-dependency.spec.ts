@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeChange } from './rules/test-support';
-import { cleanDepName, parseSrcinfoDepLine, scanSrcinfoDependencies } from './srcinfo-dependency';
+import { cleanDepName, parseSrcinfoDepLine, scanSrcinfoDependencies, stripVcsSuffix } from './srcinfo-dependency';
 
 describe('srcinfo-dependency scanner', () => {
   describe('cleanDepName', () => {
@@ -38,6 +38,15 @@ describe('srcinfo-dependency scanner', () => {
       expect(parseSrcinfoDepLine('pkgname = mypkg')).toBeNull();
       expect(parseSrcinfoDepLine('pkgver = 1.0.0')).toBeNull();
       expect(parseSrcinfoDepLine('optdepends = git: for vcs')).toBeNull();
+    });
+  });
+
+  describe('stripVcsSuffix', () => {
+    it('removes trailing VCS suffixes only', () => {
+      expect(stripVcsSuffix('apparmor.d-base-git')).toBe('apparmor.d-base');
+      expect(stripVcsSuffix('firefox-svn')).toBe('firefox');
+      expect(stripVcsSuffix('plain-pkg')).toBe('plain-pkg');
+      expect(stripVcsSuffix('git')).toBe('git');
     });
   });
 
@@ -82,6 +91,64 @@ describe('srcinfo-dependency scanner', () => {
 
       const change = makeChange(diff, { new_path: '.SRCINFO' });
       const isDepPresent = async () => true;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent);
+      expect(findings).toHaveLength(0);
+    });
+
+    it('does not warn for split packages depending on their -git siblings', async () => {
+      const diff = [
+        '@@ -0,0 +1,10 @@',
+        '+pkgbase = apparmor.d-git',
+        '+depends = apparmor>=4.1.3',
+        '+pkgname = apparmor.d-git',
+        '+depends = apparmor',
+        '+depends = apparmor.d-base',
+        '+depends = apparmor.d-tools',
+        '+pkgname = apparmor.d-base-git',
+        '+pkgdesc = Full set of apparmor profiles (base abstractions)',
+        '+pkgname = apparmor.d-tools-git',
+      ].join('\n');
+
+      const change = makeChange(diff, { new_path: 'apparmor.d-git/.SRCINFO' });
+      const isDepPresent = async (dep: string) => dep === 'apparmor';
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent);
+      expect(findings).toHaveLength(0);
+    });
+
+    it('does not warn when a dependency matches a sibling pkgname exactly', async () => {
+      const diff = [
+        '@@ -0,0 +1,4 @@',
+        '+pkgname = mytool',
+        '+depends = mylib',
+        '+pkgname = mylib',
+        '+makedepends = truly-missing-dep',
+      ].join('\n');
+
+      const change = makeChange(diff, { new_path: 'mytool/.SRCINFO' });
+      const isDepPresent = async () => false;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent);
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.description).toContain('truly-missing-dep');
+    });
+
+    it('does not warn when a dependency is satisfied by a provides entry of the same source', async () => {
+      const diff = ['@@ -0,0 +1,3 @@', '+pkgname = myfs-git', '+provides = myfs=1.2.3', '+depends = myfs'].join('\n');
+
+      const change = makeChange(diff, { new_path: 'myfs-git/.SRCINFO' });
+      const isDepPresent = async () => false;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent);
+      expect(findings).toHaveLength(0);
+    });
+
+    it('considers pkgname declarations outside the edited hunks', async () => {
+      const diff = ['@@ -1,2 +1,3 @@', ' pkgname = libfoo-git', '+depends = libfoo'].join('\n');
+
+      const change = makeChange(diff, { new_path: 'libfoo-git/.SRCINFO' });
+      const isDepPresent = async () => false;
 
       const findings = await scanSrcinfoDependencies(change, isDepPresent);
       expect(findings).toHaveLength(0);

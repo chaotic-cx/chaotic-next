@@ -3,9 +3,12 @@ import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import type { Repository } from 'typeorm';
 import type { Package } from '../builder/builder.entity';
 import type { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
-import { addedLines, isCommentLine } from './rules/diff-utils';
+import { addedLines, isCommentLine, visibleFileLines } from './rules/diff-utils';
 
 const SRCINFO_DEP_PATTERN = /^\s*(depends|makedepends|checkdepends)\s*=\s*(.+)$/i;
+const SRCINFO_PACKAGE_DECLARATION_PATTERN = /^\s*(?:pkgname|provides)\s*=\s*(.+)$/i;
+const DEP_NAME_PATTERN = /^[a-z0-9@._+-]+$/i;
+const VCS_SUFFIXES = ['-git', '-svn', '-hg', '-bzr', '-cvs', '-darcs'] as const;
 
 export interface SrcinfoDepMatch {
   type: 'depends' | 'makedepends' | 'checkdepends';
@@ -23,6 +26,13 @@ export function cleanDepName(raw: string): string {
   return withoutVersion.trim();
 }
 
+export function stripVcsSuffix(pkgName: string): string {
+  for (const suffix of VCS_SUFFIXES) {
+    if (pkgName.endsWith(suffix)) return pkgName.slice(0, -suffix.length);
+  }
+  return pkgName;
+}
+
 export function parseSrcinfoDepLine(text: string): SrcinfoDepMatch | null {
   if (isCommentLine(text)) return null;
   const match = text.match(SRCINFO_DEP_PATTERN);
@@ -32,7 +42,7 @@ export function parseSrcinfoDepLine(text: string): SrcinfoDepMatch | null {
   const rawValue = match[2].trim();
   const depName = cleanDepName(rawValue);
 
-  if (!depName || !/^[a-z0-9@._+-]+$/i.test(depName)) {
+  if (!depName || !DEP_NAME_PATTERN.test(depName)) {
     return null;
   }
 
@@ -97,6 +107,27 @@ export async function isDependencyPresent(
   return false;
 }
 
+/**
+ * Package names the scanned source itself provides: every pkgname/provides entry
+ * visible in the diff, plus their VCS-suffix-stripped variants. Split packages
+ * (e.g. a "-git" PKGBUILD producing unsuffixed siblings) depend on each other,
+ * which repo lookups cannot resolve before the build lands.
+ */
+export function selfProvidedDepNames(change: Pick<MergeRequestDiffSchema, 'diff'>): Set<string> {
+  const names = new Set<string>();
+  for (const text of visibleFileLines(change).values()) {
+    if (isCommentLine(text)) continue;
+    const match = text.match(SRCINFO_PACKAGE_DECLARATION_PATTERN);
+    if (!match) continue;
+    const name = cleanDepName(match[1]);
+    if (!name || !DEP_NAME_PATTERN.test(name)) continue;
+    names.add(name);
+    const unsuffixed = stripVcsSuffix(name);
+    if (unsuffixed !== name) names.add(unsuffixed);
+  }
+  return names;
+}
+
 export async function scanSrcinfoDependencies(
   change: MergeRequestDiffSchema,
   isDepPresent: (depName: string) => Promise<boolean>,
@@ -107,6 +138,7 @@ export async function scanSrcinfoDependencies(
 
   const findings: DiffScanFinding[] = [];
   const checkedDeps = new Set<string>();
+  const selfProvided = selfProvidedDepNames(change);
 
   for (const line of addedLines(change)) {
     const parsed = parseSrcinfoDepLine(line.text);
@@ -115,6 +147,8 @@ export async function scanSrcinfoDependencies(
     const { depName } = parsed;
     if (checkedDeps.has(depName)) continue;
     checkedDeps.add(depName);
+
+    if (selfProvided.has(depName)) continue;
 
     const exists = await isDepPresent(depName);
     if (!exists) {
