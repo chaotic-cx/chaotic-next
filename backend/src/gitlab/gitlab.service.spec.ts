@@ -526,9 +526,7 @@ describe('GitlabService.getOpenMergeRequests', () => {
             verdict: 'malicious',
           },
         ],
-        maintainers: [
-          { username: 'stranger', packagesMaintained: 1, totalVotes: 0, oldestFirstSubmitted: '', novice: true },
-        ],
+        maintainers: [{ username: 'stranger', packagesMaintained: 1, totalVotes: 0, registeredDate: '', novice: true }],
       }),
     ];
     (service as unknown as { cacheManager: unknown }).cacheManager = {
@@ -934,9 +932,39 @@ describe('GitlabService.new-MR push notifications', () => {
     const payload = JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string) as {
       notification: { body: string; data: { onActionClick: { default: { operation: string; url: string } } } };
     };
-    expect(payload.notification.body).toBe('Updates awaiting your review: pkg1 (2 findings), pkg2 (0 findings)');
+    expect(payload.notification.body).toBe('Updates awaiting your review: pkg1 (2 findings), pkg2');
     expect(payload.notification.data.onActionClick.default.operation).toBe('navigateLastFocusedOrOpen');
     expect(payload.notification.data.onActionClick.default.url).toContain('/update-review?newMr=1,2');
+  });
+
+  it('omits finding counts when there are zero findings', async () => {
+    const { service } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const mrs = [mrFixture(1), mrFixture(2)];
+
+    await notificationAccess(service).notifySubscribers(mrs);
+
+    const payload = JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string) as {
+      notification: { body: string };
+    };
+    expect(payload.notification.body).toBe('Updates awaiting your review: pkg1, pkg2');
+  });
+
+  it('includes finding counts only when there are findings', async () => {
+    const { service } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const mrs = [
+      mrFixture(1, { scanFindings: [{ ruleId: 'a' }] as never }),
+      mrFixture(2),
+      mrFixture(3, { scanFindings: [{ ruleId: 'b' }, { ruleId: 'c' }, { ruleId: 'd' }] as never }),
+    ];
+
+    await notificationAccess(service).notifySubscribers(mrs);
+
+    const payload = JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string) as {
+      notification: { body: string };
+    };
+    expect(payload.notification.body).toBe('Updates awaiting your review: pkg1 (1 finding), pkg2, pkg3 (3 findings)');
   });
 
   it('parks MRs whose diffs are unavailable instead of notifying', async () => {
@@ -961,7 +989,7 @@ describe('GitlabService.new-MR push notifications', () => {
 
     expect(sendNotification).toHaveBeenCalledTimes(1);
     expect(JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string)).toMatchObject({
-      notification: { body: 'Updates awaiting your review: pkg7 (0 findings)' },
+      notification: { body: 'Updates awaiting your review: pkg7' },
     });
     expect(access.pendingNotificationIids.size).toBe(0);
   });
@@ -990,7 +1018,7 @@ describe('GitlabService.new-MR push notifications', () => {
 
     expect(sendNotification).toHaveBeenCalledTimes(1);
     expect(JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string)).toMatchObject({
-      notification: { body: 'Updates awaiting your review: pkg9 (0 findings)' },
+      notification: { body: 'Updates awaiting your review: pkg9' },
     });
     expect([...access.pendingNotificationIids]).toEqual([7]);
   });

@@ -3,7 +3,7 @@ import { NgOptimizedImage } from '@angular/common';
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { TeamList } from '@chaotic-next/shared-lib';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from '@openng/optimus-ui/accordion';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
@@ -25,6 +25,7 @@ import { TitleComponent } from '../title/title.component';
     AccordionHeader,
     AccordionContent,
     TitleComponent,
+    RouterLink,
     PrimeTemplate,
   ],
   templateUrl: './about.component.html',

@@ -3,22 +3,17 @@
     @switch (scan()?.status) {
       @case ('scanning') {
         <i class="pi pi-spinner pi-spin text-ctp-subtext text-xs"></i>
+        <span class="text-ctp-subtext text-sm">Scanning sources…</span>
       }
       @case ('awaiting-vt') {
-        @if (scan()?.findings?.length) {
-          <p-tag [value]="`${scan()?.findings?.length} findings`" severity="danger" />
-        } @else {
-          <p-tag severity="success" value="No findings" />
-        }
+        <div class="flex items-center justify-center gap-2 text-center w-full">
+          <i class="pi pi-spinner pi-spin text-ctp-subtext text-xs"></i>
+          <span class="text-ctp-subtext text-sm">Checking VirusTotal (this can take a while based on rate limit)…</span>
+        </div>
       }
       @case ('done') {
-        @if (scan()?.findings?.length) {
-          <p-tag [value]="`${scan()?.findings?.length} findings`" severity="danger" />
-        } @else {
-          <p-tag severity="success" value="No findings" />
-        }
         @if (flaggedVtCount() > 0) {
-          <p-tag [value]="`${flaggedVtCount()} VT flags`" severity="warn" />
+          <p-tag [value]="flaggedVtCount().toString()" severity="warn" />
         }
       }
       @case ('failed') {
@@ -42,18 +37,10 @@
         tooltipPosition="bottom"
       />
     }
-    <span class="font-semibold" [pTooltip]="scanDetails()" tooltipPosition="bottom">
-      {{ packageName() }}
-    </span>
-    @switch (scan()?.status) {
-      @case ('scanning') {
-        <span class="text-ctp-subtext text-sm">Scanning sources…</span>
-      }
-      @case ('awaiting-vt') {
-        <i class="pi pi-spinner pi-spin text-ctp-subtext text-xs"></i>
-        <span class="text-ctp-subtext text-sm">Checking VirusTotal…</span>
-      }
-      @default {}
+    @if (showTitle()) {
+      <span class="font-semibold" [pTooltip]="scanDetails()" tooltipPosition="bottom">
+        {{ packageName() }}
+      </span>
     }
   </div>
 
@@ -62,49 +49,66 @@
   }
 
   @if (scan(); as current) {
-    @if (
-      current.findings.length > 0 ||
-      current.status === 'awaiting-vt' ||
-      current.vtReports.length > 0 ||
-      current.maintainers.length > 0 ||
-      current.packageMeta.orphaned
-    ) {
-      <div class="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-lg border border-ctp-surface0 p-3">
-        @if (current.findings.length > 0) {
-          <span class="text-sm font-semibold">Scan findings</span>
-        }
-        @for (finding of current.findings; track $index) {
-          <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
-            <div class="flex min-w-0 items-center gap-2">
-              <p-tag [severity]="presenter.findingSeverity[finding.severity]" [value]="finding.severity" />
-              <span
-                class="min-w-0 wrap-break-word font-semibold"
-                [pTooltip]="finding.description"
-                tooltipPosition="top"
-              >
-                {{ finding.ruleName }}
-              </span>
-            </div>
-            <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
-              <code class="whitespace-nowrap text-ctp-sky text-xs">{{ fileLocation(finding) }}</code>
-              <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
-            </div>
+    <div
+      class="mx-auto w-full min-w-[300px] flex flex-col gap-2 rounded-xl border border-ctp-surface1/60 p-5"
+      style="background: var(--p-card-background)"
+    >
+      @if (current.findings.length > 0) {
+        <span class="text-sm font-semibold">Scan findings</span>
+      } @else if (current.status === 'done') {
+        <span class="text-sm text-ctp-subtext">No findings</span>
+      }
+      @for (finding of current.findings; track finding) {
+        <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+          <div class="flex min-w-0 items-center gap-2">
+            <p-tag [severity]="presenter.findingSeverity[finding.severity]" [value]="finding.severity" />
+            <span class="min-w-0 wrap-break-word font-semibold" [pTooltip]="finding.description" tooltipPosition="top">
+              {{ finding.ruleName }}
+            </span>
           </div>
-        }
+          <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+            <code class="whitespace-nowrap text-ctp-sky text-xs">{{ fileLocation(finding) }}</code>
+            <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
+          </div>
+        </div>
+      }
 
-        @if (current.maintainers.length > 0 || current.packageMeta.orphaned || current.maintainerChange) {
-          <div class="flex flex-col gap-1.5 border-t border-ctp-surface0 pt-2">
+      @if (current.maintainers.length > 0 || current.packageMeta.orphaned || current.maintainerChange) {
+        <div class="border-t border-ctp-surface0 py-5">
+          <div class="mx-auto w-fit max-w-full">
             <span class="text-sm font-semibold">Maintainers</span>
-            @for (maintainer of current.maintainers; track maintainer.username) {
-              <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
-                <div class="flex min-w-0 items-center gap-2">
-                  @if (maintainer.novice) {
-                    <p-tag severity="warn" value="New" />
+            @if (current.maintainers.length > 0) {
+              <table class="mt-1.5 text-xs tabular-nums">
+                <thead>
+                  <tr class="text-ctp-subtext0 uppercase tracking-wider">
+                    <th class="py-1 pr-4 text-left font-semibold">Maintainer</th>
+                    <th class="py-2 pr-4 text-right font-semibold">Packages</th>
+                    <th class="py-2 pr-4 text-right font-semibold">Since</th>
+                    <th class="py-2 text-right font-semibold">Votes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (maintainer of current.maintainers; track maintainer.username) {
+                    <tr class="border-t border-ctp-surface0/60">
+                      <td class="flex items-center gap-2 py-2 pr-4 text-left">
+                        @if (maintainer.novice) {
+                          <p-tag severity="warn" value="New" />
+                        }
+                        <a
+                          class="font-semibold text-ctp-mauve transition-colors hover:text-ctp-pink"
+                          [href]="`https://aur.archlinux.org/account/${maintainer.username}`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          >{{ maintainer.username }}</a
+                        >
+                      </td>
+                      <td class="py-2 pr-4 text-right">{{ maintainer.packagesMaintained }}</td>
+                      <td class="py-2 pr-4 text-right">{{ presenter.maintainerSince(maintainer) }}</td>
+                      <td class="py-2 text-right">{{ maintainer.totalVotes }}</td>
+                    </tr>
                   }
-                  <span class="text-xs font-semibold">{{ maintainer.username }}</span>
-                </div>
-                <span class="text-ctp-subtext text-xs">{{ presenter.maintainerSummary(maintainer) }}</span>
-              </div>
+                </tbody>
+              </table>
             }
             @if (current.maintainerChange; as change) {
               <div class="flex flex-wrap items-center gap-2">
@@ -120,32 +124,38 @@
               <span class="text-ctp-subtext text-sm">No maintainer — this package is orphaned in the AUR.</span>
             }
           </div>
-        }
+        </div>
+      }
 
-        @if (current.status === 'awaiting-vt') {
-          <div class="border-t border-ctp-surface0 pt-2">
-            <span class="text-ctp-subtext text-sm">
-              VirusTotal results follow once every indicator has been checked
-            </span>
-          </div>
-        } @else if (current.vtReports.length > 0) {
-          <div class="flex flex-col gap-1.5 border-t border-ctp-surface0 pt-2">
-            <span class="text-sm font-semibold">VirusTotal indicators</span>
-            @for (report of current.vtReports; track $index) {
-              <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
-                <div class="flex min-w-0 items-center gap-2">
-                  <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
-                  <span class="min-w-0 break-all text-xs font-semibold">{{ report.value }}</span>
-                </div>
-                <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
-                  <code class="break-all text-ctp-subtext text-xs">{{ report.context }}</code>
-                  <span class="text-ctp-subtext text-xs">{{ presenter.vtEngines(report) }}</span>
-                </div>
+      @if (current.status === 'awaiting-vt') {
+        <div class="border-t border-ctp-surface0 pt-5">
+          <span class="text-ctp-subtext text-sm">
+            VirusTotal results follow once every indicator has been checked
+          </span>
+        </div>
+      } @else if (current.vtReports.length > 0) {
+        <div class="flex flex-col gap-1.5 border-t border-ctp-surface0 pt-5">
+          <span class="text-sm font-semibold">VirusTotal indicators</span>
+          @for (report of current.vtReports; track report) {
+            <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+              <div class="flex min-w-0 items-center gap-2">
+                <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
+                <a
+                  class="min-w-0 break-all text-xs font-semibold text-ctp-mauve hover:text-ctp-pink transition-colors cursor-pointer"
+                  [href]="getVtReportLink(report)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ report.value }}</a
+                >
               </div>
-            }
-          </div>
-        }
-      </div>
-    }
+              <div class="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-2">
+                <code class="break-all text-ctp-subtext text-xs">{{ report.context }}</code>
+                <span class="text-ctp-subtext text-xs">{{ presenter.vtEngines(report) }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
   }
 </div>

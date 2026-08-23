@@ -1,6 +1,8 @@
 import { AddPackageBump1787139892583 } from '@chaotic-next/backend/migrations/1787139892583-AddPackageBump';
 import { AddHasCompiledCode1787402061455 } from '@chaotic-next/backend/migrations/1787402061455-AddHasCompiledCode';
 import { AddBuildResourceStats1787428076689 } from '@chaotic-next/backend/migrations/1787428076689-AddBuildResourceStats';
+import { AddIsSourceCompiled1787477203212 } from '@chaotic-next/backend/migrations/1787477203212-AddIsSourceCompiled';
+import { AddAurMaintainerInfo1787477206135 } from '@chaotic-next/backend/migrations/1787477206135-AddAurMaintainerInfo';
 import { type DataSourceOptions } from 'typeorm';
 import { Build, Builder, Repo, UpdateLastBuilderActive } from '../builder/builder.entity';
 import { AurMaintainerSnapshot } from '../diff-scan/aur-maintainer-snapshot.entity';
@@ -66,6 +68,8 @@ export const dataSourceOptions: DataSourceOptions = {
     RouterHitsDailyUsers1787192834000,
     AddHasCompiledCode1787402061455,
     AddBuildResourceStats1787428076689,
+    AddIsSourceCompiled1787477203212,
+    AddAurMaintainerInfo1787477206135,
   ],
   migrationsRun: true,
   cache: true,

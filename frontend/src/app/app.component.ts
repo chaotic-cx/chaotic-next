@@ -86,6 +86,12 @@ export class AppComponent implements OnInit {
       tooltip: 'Browse available packages',
     },
     {
+      icon: 'pi pi-verified',
+      label: 'AUR Scan',
+      routerLink: '/aur-scan',
+      tooltip: 'Scan AUR packages for security issues',
+    },
+    {
       icon: 'pi pi-chart-bar',
       label: 'Statistics',
       routerLink: '/stats',
@@ -93,7 +99,7 @@ export class AppComponent implements OnInit {
     },
     {
       icon: 'pi pi-check-square',
-      label: 'Pending reviews',
+      label: 'Review Queue',
       routerLink: '/update-review',
       tooltip: 'Review and approve pending package updates',
     },
@@ -102,12 +108,6 @@ export class AppComponent implements OnInit {
       label: 'Mirrors',
       routerLink: '/mirrors',
       tooltip: 'Find mirror servers for downloads',
-    },
-    {
-      icon: 'pi pi-trophy',
-      label: 'Memorial',
-      routerLink: '/memorial-v2',
-      tooltip: 'View contributor memorial',
     },
     {
       icon: 'pi pi-user',
@@ -167,7 +167,6 @@ export class AppComponent implements OnInit {
     const lang = navigator.language.split('-')[0];
 
     try {
-      /* @vite-ignore */
       const localeModule = await import(`@angular/common/locales/${lang}.mjs`);
       registerLocaleData(localeModule.default, lang);
     } catch {

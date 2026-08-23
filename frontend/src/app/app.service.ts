@@ -304,4 +304,8 @@ export class AppService {
     }
     return { url: url.toString() };
   }
+
+  getAurSuggestions(query: string): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/gitlab/aur-search`, params: new HttpParams().set('arg', query) };
+  }
 }

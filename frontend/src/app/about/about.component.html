@@ -237,6 +237,23 @@
     </div>
 
     <div class="mt-5">
+      <p-panel id="memorial">
+        <ng-template pTemplate="header">
+          <button class="cursor-pointer font-bold" (click)="scrollTo('memorial')">Memorial</button>
+        </ng-template>
+        <div class="chaotic-panel text-md">
+          <p>
+            For the 3rd and 6th birthday of Chaotic-AUR, our community contributed desktop and terminal screenshots.
+          </p>
+          <div class="mt-4 flex gap-4">
+            <a class="text-ctp-mauve" routerLink="/memorial-v2">Memorial — 2024 Edition</a>
+            <a class="text-ctp-mauve" routerLink="/memorial">Memorial — 2021 Edition</a>
+          </div>
+        </div>
+      </p-panel>
+    </div>
+
+    <div class="mt-5">
       <p-panel id="special-thanks">
         <ng-template pTemplate="header">
           <button class="cursor-pointer font-bold" (click)="scrollTo('special-thanks')">Special thanks</button>
@@ -282,7 +299,7 @@
         </ul>
       </p-panel>
     </div>
-    <div class="my-10 px-2.5">
+    <div class="my-10 px-2.5 text-center">
       <a class="text-ctp-subtext0">
         In memory of our colleague Rustem Bakirov. A proactive co-maintainer who in Dec/2021 left us at the age of 20.
       </a>

@@ -906,6 +906,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
           const pkg = mr.title.match(/^chore\(update\): ([\w@.+-]+)$/)?.[1];
           if (pkg === undefined) return null;
           const findings = mr.scanFindings?.length ?? 0;
+          if (findings === 0) return pkg;
           const detail = findings === 1 ? '1 finding' : `${findings} findings`;
           return `${pkg} (${detail})`;
         })

@@ -36,12 +36,20 @@ function submissionYear(iso: string): string {
   return iso.slice(0, YEAR_LENGTH);
 }
 
+/** Same source as the global LOCALE_ID provider in app.config.ts. */
+const BROWSER_LOCALE = navigator.language;
+const MONTH_YEAR = new Intl.DateTimeFormat(BROWSER_LOCALE, { month: 'short', year: 'numeric' });
+
+export function maintainerSince(maintainer: AurMaintainerInfo): string {
+  return MONTH_YEAR.format(new Date(maintainer.registeredDate));
+}
+
 export function maintainerSummary(maintainer: AurMaintainerInfo): string {
-  const since = submissionYear(maintainer.oldestFirstSubmitted);
+  const since = maintainerSince(maintainer);
   return `${maintainer.packagesMaintained} package(s) · since ${since} · ${maintainer.totalVotes} votes`;
 }
 
-const MONTH_DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+const MONTH_DAY = new Intl.DateTimeFormat(BROWSER_LOCALE, { month: 'short', day: 'numeric' });
 
 export function maintainerChangeSummary(change: AurMaintainerChange): string {
   const parts: string[] = [];
@@ -60,6 +68,7 @@ export const presenter = {
   vtVerdictSeverity: VT_VERDICT_SEVERITY,
   submissionYear,
   vtEngines,
+  maintainerSince,
   maintainerSummary,
   maintainerChangeSummary,
   tookOverByNovice,

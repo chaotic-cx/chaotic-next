@@ -13,6 +13,8 @@ import { Repository } from 'typeorm';
 import { errorMessage, mapWithConcurrency } from '../utils/functions';
 import { withSseKeepalive, type SseMessage } from '../utils/sse';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
+import { AurResponseCache } from './aur-response-cache';
+import { AurAuthService } from './aur-auth.service';
 import { DiffScanService } from './diff-scan.service';
 import type { ScanIndicator } from './indicators';
 import { extractIndicators } from './indicators';
@@ -47,6 +49,15 @@ const SCANNABLE_EXTENSIONS = new Set([
 const MAX_RECENT_SCANS = 10;
 const SECONDS_TO_MS = 1000;
 
+export interface AurScanOptions {
+  /**
+   * VirusTotal enrichment runs by default (internal/MR scans). The controller
+   * derives this server-side from the request's auth session — anonymous
+   * frontend scans get no VirusTotal lookups.
+   */
+  withVirusTotal?: boolean;
+}
+
 interface AurPackageInfo {
   Name?: string;
   PackageBase?: string;
@@ -72,12 +83,14 @@ export class AurScanService {
   private readonly scans = new Map<string, AurPackageScan>();
   private readonly scanUpdates = new Subject<AurPackageScan>();
   private readonly maintainerProfiles = new Map<string, { profile: AurMaintainerInfo; fetchedAt: number }>();
+  private readonly aurResponses = new AurResponseCache();
   private infoBatch: { name: string; resolve: (info: AurPackageInfo | undefined) => void }[] = [];
   private infoBatchTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly diffScanService: DiffScanService,
     private readonly virustotalService: VirustotalService,
+    private readonly aurAuthService: AurAuthService,
     @Optional()
     @InjectRepository(AurMaintainerSnapshot)
     private readonly snapshotRepository?: Repository<AurMaintainerSnapshot>,
@@ -110,7 +123,7 @@ export class AurScanService {
     );
   }
 
-  async startScan(packageName: string): Promise<AurPackageScan> {
+  async startScan(packageName: string, options?: AurScanOptions): Promise<AurPackageScan> {
     const scan: AurPackageScan = {
       packageName,
       packageBase: '',
@@ -156,7 +169,8 @@ export class AurScanService {
 
       const indicators = extractIndicators(changes);
       scan.vtPending = indicators.length;
-      if (this.virustotalService.enabled && indicators.length > 0) {
+      const withVirusTotal = options?.withVirusTotal ?? true;
+      if (withVirusTotal && this.virustotalService.enabled && indicators.length > 0) {
         scan.status = 'awaiting-vt';
         void this.enrichVirusTotal(scan, indicators);
       } else {
@@ -305,33 +319,42 @@ export class AurScanService {
     const usernames = [...new Set([info.Maintainer ?? '', ...(info.CoMaintainers ?? [])])].filter(
       (username) => username !== '',
     );
-    const fallbackOldestMs = unixSecondsToMs(info.FirstSubmitted ?? 0);
-    return await Promise.all(usernames.map((username) => this.maintainerProfile(username, fallbackOldestMs)));
+    const fallbackDate = new Date(unixSecondsToMs(info.FirstSubmitted ?? 0));
+    return await Promise.all(usernames.map((username) => this.maintainerProfile(username, fallbackDate)));
   }
 
-  private async maintainerProfile(username: string, fallbackOldestMs: number): Promise<AurMaintainerInfo> {
+  private async maintainerProfile(username: string, fallbackDate: Date): Promise<AurMaintainerInfo> {
     const cached = this.maintainerProfiles.get(username);
     if (cached && Date.now() - cached.fetchedAt < MAINTAINER_PROFILE_TTL_MS) return cached.profile;
 
-    const profile = await this.fetchMaintainerProfile(username, fallbackOldestMs);
+    const profile = await this.fetchMaintainerProfile(username, fallbackDate);
     this.maintainerProfiles.set(username, { profile, fetchedAt: Date.now() });
     return profile;
   }
 
-  private async fetchMaintainerProfile(username: string, fallbackOldestMs: number): Promise<AurMaintainerInfo> {
+  private async fetchMaintainerProfile(username: string, fallbackDate: Date): Promise<AurMaintainerInfo> {
     try {
       const response = await this.fetchAur(`${AUR_SEARCH_URL}?by=maintainer&arg=${encodeURIComponent(username)}`);
       const results = response.ok ? (((await response.json()) as AurSearchResponse).results ?? []) : [];
-      const oldestFirstSubmittedMs = results.reduce(
-        (oldest, pkg) => Math.min(oldest, unixSecondsToMs(pkg.FirstSubmitted ?? 0)),
-        fallbackOldestMs,
-      );
+
+      // Real account age comes from the scraped AUR profile; until it is
+      // available, the maintainer's oldest package submission approximates it.
+      const registeredDate =
+        (await this.aurAuthService.getMaintainerRegistrationDate(username)) ??
+        new Date(
+          results.reduce(
+            (oldest, pkg) => Math.min(oldest, unixSecondsToMs(pkg.FirstSubmitted ?? 0)),
+            fallbackDate.getTime(),
+          ),
+        );
+      const novice = Date.now() - registeredDate.getTime() < MAINTAINER_NOVICE_TENURE_MS;
+
       return {
         username,
         packagesMaintained: results.length,
         totalVotes: results.reduce((sum, pkg) => sum + (pkg.NumVotes ?? 0), 0),
-        oldestFirstSubmitted: new Date(oldestFirstSubmittedMs).toISOString(),
-        novice: Date.now() - oldestFirstSubmittedMs < MAINTAINER_NOVICE_TENURE_MS,
+        registeredDate: registeredDate.toISOString(),
+        novice,
       };
     } catch (err) {
       this.logger.debug(`Maintainer profile for ${username} unavailable: ${errorMessage(err)}`);
@@ -339,8 +362,8 @@ export class AurScanService {
         username,
         packagesMaintained: 0,
         totalVotes: 0,
-        oldestFirstSubmitted: new Date(fallbackOldestMs).toISOString(),
-        novice: Date.now() - fallbackOldestMs < MAINTAINER_NOVICE_TENURE_MS,
+        registeredDate: fallbackDate.toISOString(),
+        novice: Date.now() - fallbackDate.getTime() < MAINTAINER_NOVICE_TENURE_MS,
       };
     }
   }
@@ -379,10 +402,30 @@ export class AurScanService {
   }
 
   private async fetchAur(url: string): Promise<Response> {
-    return await fetch(url, {
-      headers: { 'user-agent': 'chaotic-next/aur-scan' },
-      signal: AbortSignal.timeout(AUR_FETCH_TIMEOUT_MS),
-    });
+    return await this.aurResponses.run(url, () =>
+      fetch(url, {
+        headers: { 'user-agent': 'chaotic-next/aur-scan' },
+        signal: AbortSignal.timeout(AUR_FETCH_TIMEOUT_MS),
+      }),
+    );
+  }
+
+  /** Drops all cached AUR responses so subsequent scans refetch from upstream. */
+  clearAurCache(): void {
+    this.aurResponses.clear();
+  }
+
+  async searchAur(query: string): Promise<string[]> {
+    if (query.length < 3) return [];
+
+    try {
+      const response = await this.fetchAur(`${AUR_SEARCH_URL}?arg=${encodeURIComponent(query)}`);
+      const data = (await response.json()) as AurSearchResponse;
+      return data.results?.map((pkg) => pkg.Name ?? '') ?? [];
+    } catch (err) {
+      this.logger.warn(`AUR search for "${query}" failed: ${errorMessage(err)}`);
+      return [];
+    }
   }
 
   private rememberScan(scan: AurPackageScan): void {

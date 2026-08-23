@@ -30,7 +30,7 @@ interface VtAnalysisResponse {
   data?: { attributes?: { status?: string; stats?: Partial<VtEngineStats> } };
 }
 
-interface VtFileResponse {
+interface VtStatsResponse {
   data?: { attributes?: { last_analysis_stats?: Partial<VtEngineStats> } };
 }
 
@@ -70,6 +70,9 @@ export class VirustotalService {
       return { ...cached, context: indicator.context };
     }
 
+    const stored = await this.storedReport(indicator, cacheKey);
+    if (stored) return stored;
+
     const stats =
       indicator.type === 'file' ? await this.lookupFile(indicator.value) : await this.scanUrl(indicator.value);
     if (stats === null) return null;
@@ -87,6 +90,39 @@ export class VirustotalService {
       this.logger.warn(`Could not persist VirusTotal verdict: ${errorMessage(err)}`),
     );
     return report;
+  }
+
+  /** Serves a previously persisted verdict, sparing the API quota; re-primes the cache from the row. */
+  private async storedReport(indicator: ScanIndicator, cacheKey: string): Promise<VtIndicatorReport | null> {
+    const row = await this.findStoredVerdict(indicator);
+    if (!row || row.malicious === null) return null;
+
+    const stats = normalizeStats({
+      malicious: row.malicious,
+      suspicious: row.suspicious ?? 0,
+      undetected: row.undetected ?? 0,
+      harmless: row.harmless ?? 0,
+      timeout: row.timeout ?? 0,
+    });
+    const report: VtIndicatorReport = {
+      type: indicator.type,
+      value: indicator.value,
+      context: indicator.context,
+      verdict: row.verdict,
+      stats,
+    };
+    this.logger.debug(`VirusTotal verdict store hit for ${indicator.type} ${indicator.value}`);
+    await this.cacheManager.set(cacheKey, report, VT_CACHE_TTL_MS).catch(() => undefined);
+    return report;
+  }
+
+  private async findStoredVerdict(indicator: ScanIndicator): Promise<VirusTotalVerdict | null> {
+    if (!this.verdictRepository) return null;
+    try {
+      return await this.verdictRepository.findOne({ where: { type: indicator.type, value: indicator.value } });
+    } catch {
+      return null;
+    }
   }
 
   private async recordVerdict(report: VtIndicatorReport): Promise<void> {
@@ -129,6 +165,9 @@ export class VirustotalService {
   }
 
   private async scanUrl(url: string): Promise<EngineStatsOrUnknown | null> {
+    const known = await this.lookupUrlReport(url);
+    if (known !== null) return known;
+
     const submit = await this.vtFetch('/urls', {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -154,6 +193,19 @@ export class VirustotalService {
     return 'unknown';
   }
 
+  /** VT indexes URL reports by unpadded base64; a hit returns finished stats without submitting a live scan. */
+  private async lookupUrlReport(url: string): Promise<EngineStatsOrUnknown | null> {
+    const id = Buffer.from(url).toString('base64').replace(/=+$/, '');
+    const response = await this.vtFetch(`/urls/${id}`, { method: 'GET' });
+    if (response === null || response.status === 404) return null;
+    if (!response.ok) {
+      this.logger.warn(`VirusTotal URL report lookup failed (${response.status})`);
+      return null;
+    }
+    const stats = ((await response.json()) as VtStatsResponse).data?.attributes?.last_analysis_stats;
+    return stats ? normalizeStats(stats) : null;
+  }
+
   private async lookupFile(hash: string): Promise<EngineStatsOrUnknown | null> {
     const response = await this.vtFetch(`/files/${hash}`, { method: 'GET' });
     if (response === null) return null;
@@ -165,7 +217,7 @@ export class VirustotalService {
       this.logger.warn(`VirusTotal file lookup failed (${response.status})`);
       return null;
     }
-    return normalizeStats(((await response.json()) as VtFileResponse).data?.attributes?.last_analysis_stats);
+    return normalizeStats(((await response.json()) as VtStatsResponse).data?.attributes?.last_analysis_stats);
   }
 
   private async vtFetch(path: string, init: RequestInit): Promise<Response | null> {
