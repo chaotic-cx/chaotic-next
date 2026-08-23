@@ -1,10 +1,11 @@
 import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Card } from '@openng/optimus-ui/card';
 import { AppService } from '../app.service';
 
 @Component({
   selector: 'chaotic-footer',
-  imports: [Card],
+  imports: [Card, RouterLink],
   templateUrl: './footer.component.html',
   styleUrl: './footer.component.css',
 })
