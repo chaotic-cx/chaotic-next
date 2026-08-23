@@ -73,8 +73,13 @@ function decodeBase64Run(blob: string): string | null {
   }
 }
 
-function basename(path: string): string {
+export function basename(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
+}
+
+export function dirname(path: string): string {
+  const separator = path.lastIndexOf('/');
+  return separator === -1 ? '' : path.slice(0, separator);
 }
 
 export function isInScope(change: Pick<MergeRequestDiffSchema, 'new_path'>, scopes: RuleScope[]): boolean {

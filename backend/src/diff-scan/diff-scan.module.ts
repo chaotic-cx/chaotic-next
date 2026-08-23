@@ -11,6 +11,8 @@ import { AurMaintainerInfoEntity } from './aur-maintainer-info.entity';
 import { AurAuthService } from './aur-auth.service';
 import { AurScanService } from './aur-scan.service';
 import { DiffScanService } from './diff-scan.service';
+import { DiffScanRuleData } from './rule-data.entity';
+import { RuleDataService } from './rule-data.service';
 import { VirusTotalVerdict } from './virus-total-verdict.entity';
 import { VirustotalService } from './virustotal.service';
 
@@ -23,11 +25,12 @@ import { VirustotalService } from './virustotal.service';
       VirusTotalVerdict,
       AurMaintainerSnapshot,
       AurMaintainerInfoEntity,
+      DiffScanRuleData,
       ArchlinuxPackage,
       Package,
     ]),
   ],
-  providers: [AurScanService, DiffScanService, VirustotalService, AurAuthService],
+  providers: [AurScanService, DiffScanService, VirustotalService, AurAuthService, RuleDataService],
   exports: [AurScanService, DiffScanService, VirustotalService, AurAuthService],
 })
 export class DiffScanModule {}

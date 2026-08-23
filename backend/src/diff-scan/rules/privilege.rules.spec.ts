@@ -43,8 +43,28 @@ describe('privilege rules', () => {
   it.each([
     ['PRIV-003', 'echo "ALL ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/backdoor'],
     ['PRIV-003', 'sed -i s/+/x/ /etc/sudoers'],
+    ['CAUR-SETUID', 'chmod u+s backdoor'],
+    ['CAUR-SETUID', 'chmod 4755 /usr/local/bin/payload'],
+    ['CAUR-SETUID', 'install -Dm4755 backdoor "$pkgdir"/usr/bin/bd'],
+    ['CAUR-ADMIN-GROUP', 'usermod -aG wheel svc'],
+    ['CAUR-ADMIN-GROUP', 'gpasswd -a attacker wheel'],
+    ['CAUR-UID0-USER', 'useradd -o -u 0 -g 0 hax'],
+    ['CAUR-UID0-USER', 'useradd --uid=0 backdoor'],
+    ['CAUR-PASSWORD-DELETE', 'passwd -d root'],
+    ['CAUR-PASSWORD-DELETE', 'passwd --delete svc'],
   ])('flags %s for %j', (id, line) => {
     expect(ruleById(PRIVILEGE_RULES, id).check(makeChange(addedOnlyDiff([line])))).not.toBeNull();
+  });
+
+  it.each([
+    ['CAUR-SETUID', 'chmod 755 ./configure'],
+    ['CAUR-SETUID', 'install -Dm755 build/app "$pkgdir"/usr/bin/app'],
+    ['CAUR-ADMIN-GROUP', 'useradd -r -d /var/lib/foo foo'],
+    ['CAUR-ADMIN-GROUP', 'usermod -aG video alice'],
+    ['CAUR-UID0-USER', 'useradd -u 1000 build'],
+    ['CAUR-PASSWORD-DELETE', 'passwd -S root'],
+  ])('does not flag %s for %j', (id, line) => {
+    expect(ruleById(PRIVILEGE_RULES, id).check(makeChange(addedOnlyDiff([line])))).toBeNull();
   });
 
   it('does not flag sudo inside quoted upgrade messages', () => {

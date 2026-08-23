@@ -1,6 +1,74 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { makeChange } from './rules/test-support';
-import { cleanDepName, parseSrcinfoDepLine, scanSrcinfoDependencies, stripVcsSuffix } from './srcinfo-dependency';
+import {
+  cleanDepName,
+  isDependencyPresent,
+  parseSrcinfoDepLine,
+  providesSatisfied,
+  scanSrcinfoDependencies,
+} from './srcinfo-dependency';
+
+function fakeRepo(options: { foundRow?: { id: number }; providesHit?: boolean } = {}) {
+  const queryState = { sql: '', params: {} as Record<string, unknown> };
+  const builder = {
+    where: (sql: string) => {
+      queryState.sql += ` ${sql}`;
+      return builder;
+    },
+    andWhere: (sql: string) => {
+      queryState.sql += ` ${sql}`;
+      return builder;
+    },
+    setParameter: (name: string, value: unknown) => {
+      queryState.params[name] = value;
+      return builder;
+    },
+    select: () => builder,
+    getOne: async () => (options.providesHit ? { id: 1 } : null),
+  };
+  return {
+    queryState,
+    findOne: vi.fn(async () => options.foundRow ?? null),
+    createQueryBuilder: vi.fn(() => builder),
+  };
+}
+
+describe('isDependencyPresent', () => {
+  it('short-circuits when the dependency is a package name', async () => {
+    const archRepo = fakeRepo({ foundRow: { id: 1 } });
+    const present = await isDependencyPresent('curl', archRepo as never);
+    expect(present).toBe(true);
+    expect(archRepo.createQueryBuilder).not.toHaveBeenCalled();
+  });
+
+  it('matches versioned soname provides from Arch metadata', async () => {
+    const archRepo = fakeRepo({ providesHit: true });
+    const present = await isDependencyPresent('libcurl.so', archRepo as never);
+
+    expect(present).toBe(true);
+    expect(archRepo.queryState.params.dep).toBe('libcurl.so');
+    expect(providesSatisfied('arch')).toContain("split_part(provided, '=', 1)");
+  });
+
+  it('checks Chaotic packages for provides when Arch misses', async () => {
+    const chaoticRepo = fakeRepo({ providesHit: true });
+    const present = await isDependencyPresent('libzstd.so', undefined, chaoticRepo as never);
+
+    expect(present).toBe(true);
+    expect(chaoticRepo.queryState.params.dep).toBe('libzstd.so');
+    expect(chaoticRepo.queryState.sql).toContain('isActive');
+  });
+
+  it('reports absent dependencies only after both repos miss', async () => {
+    const archRepo = fakeRepo();
+    const chaoticRepo = fakeRepo();
+    const present = await isDependencyPresent('totally-missing', archRepo as never, chaoticRepo as never);
+
+    expect(present).toBe(false);
+    expect(archRepo.findOne).toHaveBeenCalled();
+    expect(chaoticRepo.createQueryBuilder).toHaveBeenCalled();
+  });
+});
 
 describe('srcinfo-dependency scanner', () => {
   describe('cleanDepName', () => {
@@ -38,15 +106,6 @@ describe('srcinfo-dependency scanner', () => {
       expect(parseSrcinfoDepLine('pkgname = mypkg')).toBeNull();
       expect(parseSrcinfoDepLine('pkgver = 1.0.0')).toBeNull();
       expect(parseSrcinfoDepLine('optdepends = git: for vcs')).toBeNull();
-    });
-  });
-
-  describe('stripVcsSuffix', () => {
-    it('removes trailing VCS suffixes only', () => {
-      expect(stripVcsSuffix('apparmor.d-base-git')).toBe('apparmor.d-base');
-      expect(stripVcsSuffix('firefox-svn')).toBe('firefox');
-      expect(stripVcsSuffix('plain-pkg')).toBe('plain-pkg');
-      expect(stripVcsSuffix('git')).toBe('git');
     });
   });
 
@@ -96,25 +155,42 @@ describe('srcinfo-dependency scanner', () => {
       expect(findings).toHaveLength(0);
     });
 
-    it('does not warn for split packages depending on their -git siblings', async () => {
+    it('does not warn for split packages depending on their exact siblings', async () => {
       const diff = [
-        '@@ -0,0 +1,10 @@',
+        '@@ -0,0 +1,9 @@',
+        '+pkgbase = kernel-modules-hook-git',
+        '+pkgname = kernel-modules-hook-git',
+        '+depends = systemd',
+        '+depends = cleanup',
+        '+pkgname = cleanup',
+        '+provides = kernel-modules-cleanup',
+        '+pkgname = hardcode',
+      ].join('\n');
+
+      const change = makeChange(diff, { new_path: 'kernel-modules-hook-git/.SRCINFO' });
+      const isDepPresent = async (dep: string) => dep === 'systemd';
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent);
+      expect(findings).toHaveLength(0);
+    });
+
+    it('still warns when a dependency only differs from a sibling by a VCS suffix', async () => {
+      const diff = [
+        '@@ -0,0 +1,7 @@',
         '+pkgbase = apparmor.d-git',
-        '+depends = apparmor>=4.1.3',
         '+pkgname = apparmor.d-git',
         '+depends = apparmor',
         '+depends = apparmor.d-base',
-        '+depends = apparmor.d-tools',
         '+pkgname = apparmor.d-base-git',
         '+pkgdesc = Full set of apparmor profiles (base abstractions)',
-        '+pkgname = apparmor.d-tools-git',
       ].join('\n');
 
       const change = makeChange(diff, { new_path: 'apparmor.d-git/.SRCINFO' });
       const isDepPresent = async (dep: string) => dep === 'apparmor';
 
       const findings = await scanSrcinfoDependencies(change, isDepPresent);
-      expect(findings).toHaveLength(0);
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.description).toContain('apparmor.d-base');
     });
 
     it('does not warn when a dependency matches a sibling pkgname exactly', async () => {
@@ -145,7 +221,7 @@ describe('srcinfo-dependency scanner', () => {
     });
 
     it('considers pkgname declarations outside the edited hunks', async () => {
-      const diff = ['@@ -1,2 +1,3 @@', ' pkgname = libfoo-git', '+depends = libfoo'].join('\n');
+      const diff = ['@@ -1,2 +1,3 @@', ' pkgname = libfoo', '+depends = libfoo'].join('\n');
 
       const change = makeChange(diff, { new_path: 'libfoo-git/.SRCINFO' });
       const isDepPresent = async () => false;
