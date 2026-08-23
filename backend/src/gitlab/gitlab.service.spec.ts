@@ -826,6 +826,39 @@ describe('handlePipelineWebhook', () => {
     });
     expect(pipelineTriggerRepository.update).not.toHaveBeenCalled();
   });
+
+  it('backfills schedule trigger with null pipelineId via source fallback', async () => {
+    const { service, pipelineTriggerRepository } = createService();
+    pipelineTriggerRepository.update.mockResolvedValue({ affected: 1 });
+    pipelineTriggerRepository.findOne
+      .mockResolvedValueOnce({ id: 55, pipelineId: null, commitSha: null }) // source fallback (line 469)
+      .mockResolvedValueOnce(null); // reverse match for commitSha (line 479)
+
+    const webhookPayload = {
+      object_kind: 'pipeline' as const,
+      object_attributes: {
+        id: 3333,
+        iid: 1,
+        ref: 'main',
+        status: 'created',
+        source: 'schedule',
+        sha: 'newschedule123',
+        created_at: '2026-08-21T19:00:00Z',
+        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/3333',
+      },
+    } as unknown as import('./interfaces').PipelineWebhook;
+
+    await service.handlePipelineWebhook(webhookPayload);
+
+    expect(pipelineTriggerRepository.findOne).toHaveBeenCalledWith({
+      where: { operation: 'run-schedule', pipelineId: expect.anything(), ref: 'main' },
+      order: { createdAt: 'DESC' },
+    });
+    expect(pipelineTriggerRepository.update).toHaveBeenCalledWith(55, {
+      pipelineId: 3333,
+      commitSha: 'newschedule123',
+    });
+  });
 });
 
 describe('GitlabService.runSchedule', () => {
@@ -841,7 +874,7 @@ describe('GitlabService.runSchedule', () => {
       PipelineSchedules: { play: schedulesPlay },
     };
 
-    const result = await service.runSchedule(15, ACTOR);
+    const result = await service.runSchedule(15, 'chaotic-aur', ACTOR);
 
     expect(schedulesPlay).toHaveBeenCalledWith('test-project-id', 15);
     expect(result.pipelineId).toBe(5555);
@@ -851,7 +884,7 @@ describe('GitlabService.runSchedule', () => {
         ref: 'main',
         commitSha: 'abc123sha',
         operation: PipelineOperation.RUN_SCHEDULE,
-        inputs: { scheduleId: '15' },
+        inputs: { scheduleId: '15', repo: 'chaotic-aur' },
         pipelineId: 5555,
       }),
     );
@@ -865,7 +898,7 @@ describe('GitlabService.runSchedule', () => {
       PipelineSchedules: { play: schedulesPlay },
     };
 
-    const result = await service.runSchedule(15, ACTOR);
+    const result = await service.runSchedule(15, 'chaotic-aur', ACTOR);
 
     expect(result.pipelineId).toBe(0);
     expect(result.status).toBe('scheduled');
@@ -886,7 +919,7 @@ describe('GitlabService.runSchedule', () => {
       PipelineSchedules: { play: schedulesPlay },
     };
 
-    const result = await service.runSchedule(30, ACTOR);
+    const result = await service.runSchedule(30, 'chaotic-aur', ACTOR);
 
     expect(result.pipelineId).toBe(7777);
     expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith(

@@ -306,6 +306,7 @@ const NO_REPO = '0';
             severity="secondary"
             text
             label="Cancel"
+            size="small"
             styleClass="w-full sm:w-auto"
           />
           <p-button
@@ -313,6 +314,7 @@ const NO_REPO = '0';
             type="submit"
             severity="primary"
             label="Save"
+            size="small"
             styleClass="w-full sm:w-auto"
           />
         </div>
@@ -424,6 +426,7 @@ const NO_REPO = '0';
             severity="secondary"
             text
             label="Cancel"
+            size="small"
           />
           <p-button
             class="flex-1 sm:flex-initial"
@@ -434,6 +437,7 @@ const NO_REPO = '0';
             type="button"
             severity="primary"
             label="Add Package"
+            size="small"
           />
         </div>
       </div>

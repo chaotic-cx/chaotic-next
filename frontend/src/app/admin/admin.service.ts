@@ -11,6 +11,7 @@ import {
   Paginated,
   PipelineScheduleOption,
   PipelineTriggerAction,
+  PKG_TYPE_CHAOTIC,
   PkgType,
   Repo,
 } from '@chaotic-next/shared-lib';
@@ -323,9 +324,9 @@ export class AdminService {
     );
   }
 
-  async runSchedule(scheduleId: number): Promise<void> {
+  async runSchedule(scheduleId: number, repo: string): Promise<void> {
     await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/gitlab/run-schedule`, { scheduleId }),
+      () => this.http.post(`${this.backendUrl}/gitlab/run-schedule`, { scheduleId, repo }),
       'Schedule execution triggered',
       'Could not trigger schedule execution.',
       () => this.pipelineTriggersResource.reload(),
@@ -483,8 +484,23 @@ export class AdminService {
   async rescanPackage(pkgname: string, pkgType: PkgType): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/admin/rescan`, { packages: [{ pkgname, pkgType }] }),
-      `Rescan of ${pkgname} completed.`,
-      `Could not rescan ${pkgname}.`,
+      `Rescan of ${pkgname} started. It runs in the background and may take a while.`,
+      `Could not start the rescan of ${pkgname}.`,
+    );
+  }
+
+  async rescanBrokenPackages(): Promise<void> {
+    const packages = this.brokenSelection().map((report) => ({
+      pkgname: report.pkgname,
+      pkgType: PKG_TYPE_CHAOTIC,
+      repo: report.repoName,
+    }));
+    await this.runMutation(
+      () => this.http.post(`${this.backendUrl}/admin/rescan`, { packages }),
+      `Rescan of ${packages.length} package(s) started. It runs in the background and may take a while; ` +
+        'reload the table afterwards to see updated results.',
+      'Could not start the rescan.',
+      () => this.brokenSelection.set([]),
     );
   }
 
@@ -524,9 +540,11 @@ export class AdminService {
     }
   }
 
-  async getSchedules(): Promise<PipelineScheduleOption[]> {
+  async getSchedules(repo: string): Promise<PipelineScheduleOption[]> {
     try {
-      return await lastValueFrom(this.http.get<PipelineScheduleOption[]>(`${this.backendUrl}/gitlab/schedules`));
+      return await lastValueFrom(
+        this.http.get<PipelineScheduleOption[]>(`${this.backendUrl}/gitlab/schedules`, { params: { repo } }),
+      );
     } catch {
       return [];
     }

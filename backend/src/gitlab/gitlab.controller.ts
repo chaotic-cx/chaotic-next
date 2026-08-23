@@ -19,7 +19,6 @@ import {
   PipelineTriggerResult,
   PipelineWithExternalStatus,
 } from '@chaotic-next/shared-lib';
-import { SkipThrottle } from '@nestjs/throttler';
 import {
   BadRequestException,
   Body,
@@ -48,15 +47,15 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard, OptionalAuth, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
 import { auth } from '../auth/auth';
 import { GITLAB_GROUP_CHAOTIC_AUR } from '../auth/gitlab-groups';
-import { type SseMessage } from '../utils/sse';
-import { RequireGroupGuard } from '../guards/require-group.guard';
-import { requireGroups, requireRepoGroup } from '../decorators/require-groups.decorator';
+import { RequireGroups, RequireRepoGroup } from '../decorators/require-groups.decorator';
 import { AurScanService } from '../diff-scan/aur-scan.service';
-import { GitlabService } from './gitlab.service';
+import { RequireGroupGuard } from '../guards/require-group.guard';
+import { type SseMessage } from '../utils/sse';
 import {
   AurPackageScanDto,
   GitlabJobDto,
@@ -67,6 +66,7 @@ import {
   ReviewStatsDto,
   ReviewStatsOverTimeDto,
 } from './gitlab-response.dto';
+import { GitlabService } from './gitlab.service';
 import type { GitLabWebHook } from './interfaces';
 import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
 
@@ -115,7 +115,7 @@ export class GitlabController {
 
   @Post('mr-scan')
   @UseGuards(AuthGuard, RequireGroupGuard)
-  @requireGroups(GITLAB_GROUP_CHAOTIC_AUR)
+  @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Run the merge request security scan now (auto-flag labels and VirusTotal checks).' })
   @ApiOkResponse({ description: 'Merge request scan triggered.' })
@@ -212,12 +212,14 @@ export class GitlabController {
   }
 
   @Get('schedules')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RequireGroupGuard)
+  @RequireRepoGroup()
   @ApiCookieAuth('better-auth.session_token')
-  @ApiOperation({ summary: 'Get the active pipeline schedules of the chaotic-aur project.' })
+  @ApiOperation({ summary: 'Get the active pipeline schedules of the given repository.' })
+  @ApiQuery({ name: 'repo', description: 'Repository name', example: 'chaotic-aur' })
   @ApiOkResponse({ description: 'List of active pipeline schedules', type: PipelineScheduleOptionDto, isArray: true })
-  async getSchedules(): Promise<PipelineScheduleOption[]> {
-    return await this.gitlabService.listPipelineSchedules();
+  async getSchedules(@Query('repo') repo: string): Promise<PipelineScheduleOption[]> {
+    return await this.gitlabService.listPipelineSchedules(repo);
   }
 
   @Get('review-stats')
@@ -238,7 +240,7 @@ export class GitlabController {
 
   @Post('approve')
   @UseGuards(AuthGuard, RequireGroupGuard)
-  @requireGroups(GITLAB_GROUP_CHAOTIC_AUR)
+  @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Approve a merge request.' })
   @ApiOkResponse({ description: 'Merge request approved.', type: ApproveMrResponseDto })
@@ -258,7 +260,7 @@ export class GitlabController {
 
   @Post('flag')
   @UseGuards(AuthGuard, RequireGroupGuard)
-  @requireGroups(GITLAB_GROUP_CHAOTIC_AUR)
+  @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Flag a merge request.' })
   @ApiOkResponse({ description: 'Merge request flagged.' })
@@ -275,7 +277,7 @@ export class GitlabController {
 
   @Post('bump-packages')
   @UseGuards(AuthGuard, RequireGroupGuard)
-  @requireRepoGroup()
+  @RequireRepoGroup()
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Bump packages via a direct Git commit.' })
   @ApiOkResponse({ description: 'Bump commit created.', type: PipelineTriggerResultDto })
@@ -291,7 +293,7 @@ export class GitlabController {
 
   @Post('add-packages')
   @UseGuards(AuthGuard, RequireGroupGuard)
-  @requireRepoGroup()
+  @RequireRepoGroup()
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Add new packages via a direct Git commit.' })
   @ApiOkResponse({ description: 'Add commit created.', type: PipelineTriggerResultDto })
@@ -315,7 +317,7 @@ export class GitlabController {
 
   @Post('drop-packages')
   @UseGuards(AuthGuard, RequireGroupGuard)
-  @requireRepoGroup()
+  @RequireRepoGroup()
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Drop packages via a direct Git commit.' })
   @ApiOkResponse({ description: 'Drop commit created.', type: PipelineTriggerResultDto })
@@ -331,7 +333,7 @@ export class GitlabController {
 
   @Post('run-schedule')
   @UseGuards(AuthGuard, RequireGroupGuard)
-  @requireGroups(GITLAB_GROUP_CHAOTIC_AUR)
+  @RequireRepoGroup()
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Trigger a GitLab pipeline schedule directly via API.' })
   @ApiOkResponse({ description: 'Pipeline schedule triggered.', type: PipelineTriggerResultDto })
@@ -339,7 +341,7 @@ export class GitlabController {
     @Session() session: UserSession<typeof auth>,
     @Body() body: RunScheduleDto,
   ): Promise<PipelineTriggerResult> {
-    return await this.gitlabService.runSchedule(body.scheduleId, {
+    return await this.gitlabService.runSchedule(body.scheduleId, body.repo, {
       userId: session.user.id,
       userName: session.user.name,
     });
@@ -347,7 +349,7 @@ export class GitlabController {
 
   @Post('trigger')
   @UseGuards(AuthGuard, RequireGroupGuard)
-  @requireGroups(GITLAB_GROUP_CHAOTIC_AUR)
+  @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
   @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Trigger a custom pipeline with the given inputs.' })
   @ApiOkResponse({ description: 'Pipeline triggered.', type: PipelineTriggerResultDto })
