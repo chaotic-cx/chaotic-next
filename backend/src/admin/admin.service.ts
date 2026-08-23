@@ -1,36 +1,38 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   AdminPackageElfAnalysis,
+  type BuildClassSuggestion,
   MrAction,
-  Paginated,
   Package as PackageDto,
   PackageBump,
   PackageKey,
   packageKey,
+  Paginated,
+  PipelineTriggerAction,
   PKG_TYPE_ARCH,
   PKG_TYPE_CHAOTIC,
-  PipelineTriggerAction,
   PkgType,
 } from '@chaotic-next/shared-lib';
-import { In, ILike, Repository } from 'typeorm';
+import { HttpService } from '@nestjs/axios';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ILike, In, Repository } from 'typeorm';
+import { BuildClassSuggesterService } from '../builder/build-class-suggester.service';
 import { Builder, Package, Repo } from '../builder/builder.entity';
 import { MrAction as MrActionEntity } from '../gitlab/mr-action.entity';
 import { PipelineTrigger as PipelineTriggerEntity } from '../gitlab/pipeline-trigger.entity';
+import { TriggerType } from '../interfaces/repo-manager';
 import {
   ArchlinuxPackage,
   PackageBump as PackageBumpEntity,
   PackageElfAnalysis,
 } from '../repo-manager/repo-manager.entity';
-import { TriggerType } from '../interfaces/repo-manager';
 import { SignalScanService } from '../repo-manager/scan';
-import { paginate, resolvePagination } from '../utils/pagination';
 import { encryptAes, errorMessage } from '../utils/functions';
-import { HttpService } from '@nestjs/axios';
+import { paginate, resolvePagination } from '../utils/pagination';
 
 export interface CreatePackageBody {
   pkgname: string;
@@ -96,6 +98,7 @@ export class AdminService {
     private readonly configService: ConfigService,
     private readonly signalScanService: SignalScanService,
     private readonly httpService: HttpService,
+    private readonly buildClassSuggester: BuildClassSuggesterService,
   ) {}
 
   async listPackages(
@@ -132,6 +135,7 @@ export class AdminService {
 
     const [rows, total] = await query.getManyAndCount();
 
+    const suggestions = await this.resolveBuildClassSuggestions(rows.map((pkg) => pkg.pkgname));
     const items = rows.map((pkg) => ({
       id: pkg.id,
       pkgname: pkg.pkgname,
@@ -145,8 +149,19 @@ export class AdminService {
       bump: pkg.bump,
       repo: pkg.repo?.id,
       reponame: pkg.repo?.name,
+      buildClassSuggestion: suggestions.get(pkg.pkgname) ?? null,
     }));
     return paginate(items, total, safePage, safePerPage);
+  }
+
+  private async resolveBuildClassSuggestions(pkgnames: string[]) {
+    try {
+      const suggestions = await this.buildClassSuggester.suggestForPackages(pkgnames);
+      return new Map(suggestions.map((suggestion) => [suggestion.pkgname, suggestion]));
+    } catch (err) {
+      this.logger.warn(`Build class suggestions failed, rendering without them: ${errorMessage(err)}`);
+      return new Map<string, BuildClassSuggestion>();
+    }
   }
 
   async updatePackage(id: number, body: Partial<CreatePackageBody>): Promise<Package> {
