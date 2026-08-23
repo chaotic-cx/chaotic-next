@@ -1,7 +1,7 @@
+import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsDefined, IsEnum, IsInt, IsObject, IsOptional, IsString } from 'class-validator';
-import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
 
 export class MrActionDto {
   @ApiProperty({ description: 'Record ID' })
@@ -402,10 +402,41 @@ export class RescanStartedDto {
   @ApiProperty({ description: 'Number of packages queued for background rescanning' })
   @IsInt()
   started!: number;
+
+  @ApiProperty({ description: 'Poll GET /admin/rescan/{jobId} for the job outcome' })
+  @IsString()
+  jobId!: string;
+}
+
+export class RescanJobDto {
+  @ApiProperty({ description: 'The rescan job id' })
+  @IsString()
+  jobId!: string;
+
+  @ApiProperty({ description: '"running" until the job finished, then "done"', enum: ['running', 'done'] })
+  @IsString()
+  status!: 'running' | 'done';
+
+  @ApiProperty({ description: 'When the job was accepted (ISO 8601)' })
+  @IsString()
+  startedAt!: string;
+
+  @ApiProperty({ description: 'When the job finished (ISO 8601), null while running' })
+  @IsOptional()
+  @IsString()
+  finishedAt!: string | null;
+
+  @ApiProperty({ description: 'Packages successfully scanned so far' })
+  @IsInt()
+  rescanned!: number;
+
+  @ApiProperty({ description: 'Per-package failure reasons ("pkgname: reason")', type: String, isArray: true })
+  @IsArray()
+  failed!: string[];
 }
 
 export class RescanPackagesDto {
-  @ApiProperty({ description: 'Packages to rescan', type: [RescanPackageItemDto], isArray: true })
+  @ApiProperty({ description: 'Packages to rescan', type: RescanPackageItemDto, isArray: true })
   @IsArray()
   @Type(() => RescanPackageItemDto)
   packages!: RescanPackageItemDto[];

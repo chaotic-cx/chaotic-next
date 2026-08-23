@@ -11,11 +11,13 @@ import {
   PKG_TYPE_ARCH,
   PKG_TYPE_CHAOTIC,
   PkgType,
+  type RescanJob,
 } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -38,6 +40,17 @@ export interface RescanPackageInput {
   pkgname: string;
   pkgType: string;
   repo?: string;
+}
+
+const RESCAN_JOB_HISTORY_LIMIT = 20;
+
+interface RescanJobRecord {
+  jobId: string;
+  startedAt: string;
+  finishedAt: string | null;
+  total: number;
+  rescanned: number;
+  failed: string[];
 }
 
 export interface CreatePackageBody {
@@ -520,29 +533,69 @@ export class AdminService {
     await this.deleteEntity(() => this.elfAnalysisRepository.delete(id), `Package ELF analysis ${id}`);
   }
 
-  startRescanPackages(packages: RescanPackageInput[]): { started: number } {
+  startRescanPackages(packages: RescanPackageInput[]): { started: number; jobId: string } {
     if (packages.length === 0) throw new BadRequestException('No packages provided');
     const secretMirrorUrl = this.configService.get<string>('app.secretMirrorUrl');
     if (!secretMirrorUrl) throw new ConflictException('SECRET_MIRROR_URL is not configured');
-    if (this.rescanRunning) throw new ConflictException('A rescan is already in progress');
+    if (this.activeRescanJobId) throw new ConflictException('A rescan is already in progress');
 
     this.logger.log(
       `Rescan started for ${packages.length} package(s): ` +
         packages.map((entry) => `${entry.pkgname}${entry.repo ? ` (${entry.repo})` : ''}`).join(', '),
     );
-    this.rescanRunning = true;
-    void this.runRescan(packages, secretMirrorUrl)
-      .catch((err: unknown) => this.logger.error(`Background rescan crashed: ${errorMessage(err)}`))
-      .finally(() => (this.rescanRunning = false));
-    return { started: packages.length };
+    const job: RescanJobRecord = {
+      jobId: randomUUID(),
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      total: packages.length,
+      rescanned: 0,
+      failed: [],
+    };
+    this.rescanJobs.set(job.jobId, job);
+    this.activeRescanJobId = job.jobId;
+    void this.runRescan(job, packages, secretMirrorUrl)
+      .catch((err: unknown) => {
+        job.failed.push(`rescan crashed: ${errorMessage(err)}`);
+        this.logger.error(`Background rescan crashed: ${errorMessage(err)}`);
+      })
+      .finally(() => {
+        job.finishedAt = new Date().toISOString();
+        this.activeRescanJobId = null;
+        this.trimRescanJobHistory();
+      });
+    return { started: packages.length, jobId: job.jobId };
   }
 
-  private rescanRunning = false;
+  getRescanJob(jobId: string): RescanJob {
+    const job = this.rescanJobs.get(jobId);
+    if (!job) throw new NotFoundException(`Rescan job ${jobId} not found`);
+    return {
+      jobId: job.jobId,
+      status: job.finishedAt === null ? 'running' : 'done',
+      startedAt: job.startedAt,
+      finishedAt: job.finishedAt,
+      rescanned: job.rescanned,
+      failed: [...job.failed],
+    };
+  }
 
-  private async runRescan(packages: RescanPackageInput[], secretMirrorUrl: string): Promise<void> {
+  private rescanJobs = new Map<string, RescanJobRecord>();
+  private activeRescanJobId: string | null = null;
+
+  private trimRescanJobHistory(): void {
+    const finished = [...this.rescanJobs.values()]
+      .filter((job) => job.finishedAt !== null)
+      .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+    const excess = finished.length - RESCAN_JOB_HISTORY_LIMIT;
+    for (const job of finished.slice(0, Math.max(0, excess))) this.rescanJobs.delete(job.jobId);
+  }
+
+  private async runRescan(
+    job: RescanJobRecord,
+    packages: RescanPackageInput[],
+    secretMirrorUrl: string,
+  ): Promise<void> {
     const tempDir = await mkdtemp(join(tmpdir(), 'admin-rescan-'));
-    const failed: string[] = [];
-    let rescanned = 0;
 
     try {
       for (const entry of packages) {
@@ -552,12 +605,12 @@ export class AdminService {
           } else {
             await this.rescanChaoticPackage(entry, secretMirrorUrl, tempDir);
           }
-          rescanned++;
+          job.rescanned++;
         } catch (err: unknown) {
-          // Failures are only summarized in the response of an otherwise
-          // fire-and-forget request, so they must be logged server-side too.
+          // The HTTP response only acknowledges the job; per-package failures
+          // are recorded on the job (and logged) for GET /admin/rescan/:jobId.
           const reason = `${entry.pkgname}: ${errorMessage(err)}`;
-          failed.push(reason);
+          job.failed.push(reason);
           this.logger.warn(`Rescan failed for ${reason}`);
         }
       }
@@ -567,7 +620,7 @@ export class AdminService {
       await rm(tempDir, { recursive: true, force: true });
     }
 
-    this.logger.log(`Rescan finished: ${rescanned} package(s) scanned, ${failed.length} failed`);
+    this.logger.log(`Rescan finished: ${job.rescanned}/${job.total} scanned, ${job.failed.length} failed`);
   }
 
   private async rescanArchPackage(target: RescanPackageInput, secretMirrorUrl: string, tempDir: string): Promise<void> {

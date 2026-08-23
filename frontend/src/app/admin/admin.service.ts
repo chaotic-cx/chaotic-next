@@ -14,6 +14,7 @@ import {
   PKG_TYPE_CHAOTIC,
   PkgType,
   Repo,
+  RescanJob,
 } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { lastValueFrom, Observable } from 'rxjs';
@@ -22,6 +23,9 @@ import { backendErrorMessage } from '../api-errors';
 import { debouncedSignal, resourceSignal, resourceValue } from '../functions';
 
 const SEARCH_DEBOUNCE_MS = 400;
+
+const RESCAN_POLL_TIMEOUT_MS = 120_000;
+const RESCAN_POLL_INTERVAL_MS = 1_000;
 
 export interface PackageFormData {
   pkgname: string;
@@ -482,11 +486,16 @@ export class AdminService {
   }
 
   async rescanPackage(pkgname: string, pkgType: PkgType): Promise<void> {
-    await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/admin/rescan`, { packages: [{ pkgname, pkgType }] }),
-      `Rescan of ${pkgname} started. It runs in the background and may take a while.`,
-      `Could not start the rescan of ${pkgname}.`,
-    );
+    try {
+      const jobId = await this.startRescan([{ pkgname, pkgType }]);
+      this.messageToastService.success('Success', `Rescan of ${pkgname} started.`);
+      const job = await this.waitForRescan(jobId);
+      this.reportRescanOutcome(job);
+    } catch (error) {
+      const detail = `Could not start the rescan of ${pkgname}.`;
+      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
+      console.error(detail, error);
+    }
   }
 
   async rescanBrokenPackages(): Promise<void> {
@@ -495,13 +504,18 @@ export class AdminService {
       pkgType: PKG_TYPE_CHAOTIC,
       repo: report.repoName,
     }));
-    await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/admin/rescan`, { packages }),
-      `Rescan of ${packages.length} package(s) started. It runs in the background and may take a while; ` +
-        'reload the table afterwards to see updated results.',
-      'Could not start the rescan.',
-      () => this.brokenSelection.set([]),
-    );
+    try {
+      const jobId = await this.startRescan(packages);
+      this.brokenSelection.set([]);
+      this.messageToastService.success('Success', `Rescan of ${packages.length} package(s) started.`);
+      const job = await this.waitForRescan(jobId);
+      this.reportRescanOutcome(job);
+      this.brokenReportsResource.reload();
+    } catch (error) {
+      const detail = 'Could not start the rescan.';
+      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
+      console.error(detail, error);
+    }
   }
 
   async bumpBrokenPackages(): Promise<void> {
@@ -564,5 +578,41 @@ export class AdminService {
       this.messageToastService.error('Operation failed', backendErrorMessage(error, errorDetail));
       console.error(errorDetail, error);
     }
+  }
+
+  private async startRescan(packages: { pkgname: string; pkgType: string; repo?: string }[]): Promise<string> {
+    const { jobId } = await lastValueFrom(
+      this.http.post<{ started: number; jobId: string }>(`${this.backendUrl}/admin/rescan`, { packages }),
+    );
+    return jobId;
+  }
+
+  private async waitForRescan(jobId: string): Promise<RescanJob | null> {
+    const deadline = Date.now() + RESCAN_POLL_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, RESCAN_POLL_INTERVAL_MS));
+      try {
+        const job = await lastValueFrom(this.http.get<RescanJob>(`${this.backendUrl}/admin/rescan/${jobId}`));
+        if (job.status === 'done') return job;
+      } catch {
+        // Transient poll failures are tolerated; the deadline bounds the wait.
+      }
+    }
+    return null;
+  }
+
+  private reportRescanOutcome(job: RescanJob | null): void {
+    if (!job) {
+      this.messageToastService.info('Rescan still running', 'It keeps running in the background; check back later.');
+      return;
+    }
+    if (job.failed.length === 0) {
+      this.messageToastService.success('Rescan finished', `${job.rescanned} package(s) scanned successfully.`);
+      return;
+    }
+    this.messageToastService.warn(
+      'Rescan finished with failures',
+      `${job.rescanned} scanned, ${job.failed.length} failed: ${job.failed.join('; ')}`,
+    );
   }
 }

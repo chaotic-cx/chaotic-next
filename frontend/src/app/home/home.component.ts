@@ -1,16 +1,15 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { HttpClient } from '@angular/common/http';
 import { NgOptimizedImage } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { debounce, FormField, form, pattern } from '@angular/forms/signals';
+import { FormsModule } from '@angular/forms';
+import { debounce, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Package, Paginated } from '@chaotic-next/shared-lib';
 import { AnimateOnScrollModule } from '@openng/optimus-ui/animateonscroll';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
-import { InputText } from '@openng/optimus-ui/inputtext';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { firstValueFrom, map } from 'rxjs';
 import { AppService } from '../app.service';
@@ -19,8 +18,8 @@ import { PACKAGE_NAME_PATTERN, parseFocusQuery } from '../functions';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { MirrorsService } from '../mirrors/mirrors.service';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
-import { RecentlyAddedComponent } from '../recently-added/recently-added.component';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
+import { RecentlyAddedComponent } from '../recently-added/recently-added.component';
 
 @Component({
   selector: 'chaotic-home',
@@ -35,8 +34,6 @@ import { RelativeTimePipe } from '../pipes/relative-time.pipe';
     NgOptimizedImage,
     Button,
     Tooltip,
-    InputText,
-    FormField,
     RelativeTimePipe,
   ],
   templateUrl: './home.component.html',
