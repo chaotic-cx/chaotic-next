@@ -1,7 +1,8 @@
 const { NxAppRspackPlugin } = require('@nx/rspack/app-plugin');
-const { SwcJsMinimizerRspackPlugin } = require('@rspack/core');
+const { DefinePlugin, SwcJsMinimizerRspackPlugin } = require('@rspack/core');
 const { join } = require('path');
 const { basename, resolve } = require('node:path');
+const { execSync } = require('node:child_process');
 
 class RspackPlugin {
   apply(compiler) {
@@ -72,6 +73,13 @@ module.exports = (options = {}) => {
   const isProduction = options.mode === 'production' || process.env.NODE_ENV === 'production';
   const mode = isProduction ? 'production' : 'development';
 
+  let version = 'dev';
+  try {
+    version = execSync('git describe --tags --abbrev=0', { encoding: 'utf-8', timeout: 2000 }).trim();
+  } catch {
+    // fallback to 'dev' if git is unavailable (e.g. in CI or container builds)
+  }
+
   return {
     mode,
     context: __dirname,
@@ -128,6 +136,7 @@ module.exports = (options = {}) => {
           },
         },
       }),
+      new DefinePlugin({ __VERSION__: JSON.stringify(version) }),
       new RspackPlugin(),
     ].filter(Boolean),
   };

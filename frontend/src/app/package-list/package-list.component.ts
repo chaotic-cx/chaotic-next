@@ -1,15 +1,5 @@
 import { DatePipe } from '@angular/common';
-import {
-  ChangeDetectorRef,
-  Component,
-  effect,
-  ElementRef,
-  inject,
-  input,
-  LOCALE_ID,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
@@ -58,7 +48,7 @@ import { PackageListService } from './package-list.service';
   ],
   templateUrl: './package-list.component.html',
   styleUrl: './package-list.component.css',
-  providers: [MessageToastService, PackageListService, { provide: LOCALE_ID, useValue: 'en-GB' }],
+  providers: [MessageToastService, PackageListService],
   host: {
     '(document:keydown)': 'focusSearchOnShortcut($event)',
   },

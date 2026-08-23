@@ -49,6 +49,8 @@ export class AppService {
   private readonly internalSseConnected = signal(false);
   readonly sseConnected = this.internalSseConnected.asReadonly();
 
+  readonly backendVersion = signal<string | undefined>(undefined);
+
   private eventSource: EventSource | undefined;
   private reconnectTimer: number | undefined;
   private readonly onVisibilityChange = (): void => {
@@ -66,6 +68,7 @@ export class AppService {
     // connection. Instead, re-establish the stream on error and on tab focus.
     document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.reconnect();
+    this.fetchVersion();
   }
 
   private reconnect(): void {
@@ -99,6 +102,13 @@ export class AppService {
       this.reconnectTimer = undefined;
       this.reconnect();
     }, SSE_RECONNECT_DELAY_MS);
+  }
+
+  private fetchVersion(): void {
+    this.http.get<{ version: string }>(`${this.appConfig.backendUrl}/health/version`).subscribe({
+      next: (res) => this.backendVersion.set(res.version),
+      error: () => this.backendVersion.set('unknown'),
+    });
   }
 
   getNewsResourceRequest(): HttpResourceRequest {

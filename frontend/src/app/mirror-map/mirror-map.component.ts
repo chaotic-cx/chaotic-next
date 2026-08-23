@@ -168,10 +168,9 @@ const STATUS_LABELS: Record<MirrorStatus, string> = {
 };
 
 function mirrorPopupHtml(mirror: Mirror, status: MirrorStatus): string {
-  const lastUpdate = new Date(mirror.last_update).toLocaleString('en-US', {
+  const lastUpdate = new Date(mirror.last_update).toLocaleString(undefined, {
     dateStyle: 'short',
     timeStyle: 'short',
-    timeZone: 'UTC',
   });
   return `
     <b>${mirror.subdomain}</b>
@@ -180,7 +179,7 @@ function mirrorPopupHtml(mirror: Mirror, status: MirrorStatus): string {
     <br />
     <a href="https://${mirror.subdomain}.chaotic.cx" target="_blank" rel="noopener" tabindex="-1">${mirror.subdomain}.chaotic.cx</a>
     <br />
-    <span style="opacity: 0.7">Last update: ${lastUpdate} UTC</span>
+    <span style="opacity: 0.7">Last update: ${lastUpdate}</span>
   `;
 }
 

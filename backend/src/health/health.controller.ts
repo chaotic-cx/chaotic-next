@@ -1,9 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import type { HealthCheckResult } from '@nestjs/terminus';
 import { HealthCheck, HealthCheckService, MemoryHealthIndicator, TypeOrmHealthIndicator } from '@nestjs/terminus';
 import { RedisHealthIndicator } from './redis.health';
 import { HealthCheckResultDto } from './health.dto';
+
+class VersionDto {
+  @ApiProperty({ description: 'Application version' }) version!: string;
+}
 
 @ApiTags('health')
 @Controller('health')
@@ -32,5 +36,12 @@ export class HealthController {
   @HealthCheck()
   ready(): Promise<HealthCheckResult> {
     return this.health.check([() => this.orm.pingCheck('db'), () => this.redis.pingCheck('redis')]);
+  }
+
+  @Get('version')
+  @ApiOperation({ summary: 'Application version.' })
+  @ApiOkResponse({ description: 'Version info', type: VersionDto })
+  getVersion(): VersionDto {
+    return { version: __VERSION__ };
   }
 }

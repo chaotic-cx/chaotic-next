@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject, LOCALE_ID, OnInit } from '@angular/core';
+import { Component, effect, inject, OnInit } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
@@ -16,7 +16,7 @@ import { MirrorsService } from './mirrors.service';
   imports: [CommonModule, TitleComponent, Tooltip, Panel, Skeleton, MirrorCardComponent, RouterLink],
   templateUrl: './mirrors.component.html',
   styleUrl: './mirrors.component.css',
-  providers: [MessageToastService, { provide: LOCALE_ID, useValue: 'en-GB' }],
+  providers: [MessageToastService],
 })
 export class MirrorsComponent implements OnInit {
   private readonly appService = inject(AppService);
