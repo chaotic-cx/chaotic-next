@@ -128,6 +128,11 @@
                 extensions = "\\.(ts|js|mjs|html)$";
               };
             };
+            knip = {
+              enable = true;
+              entry = "./node_modules/.bin/knip";
+              pass_filenames = false;
+            };
             prettier = {
               enable = true;
               settings = {

@@ -95,15 +95,6 @@ export enum TriggerType {
   CHAOTIC = 1,
 }
 
-export interface BumpLogEntry {
-  bumpType: BumpType;
-  pkgname: string;
-  trigger: string;
-  triggerFrom: TriggerType;
-  timestamp: string;
-  details?: string[];
-}
-
 /**
  * A symbol-level ABI break: a package imports a dynamic symbol from another
  * package's library, and the new version of the owner no longer exports it.
