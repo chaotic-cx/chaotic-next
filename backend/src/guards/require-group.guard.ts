@@ -7,6 +7,7 @@ interface RequestWithUser {
   user?: { groups?: string[] | null } | null;
   body?: Record<string, unknown>;
   params?: Record<string, string>;
+  query?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -45,7 +46,7 @@ export class RequireGroupGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    const repoName = request.body?.['repo'] ?? request.params?.['repo'];
+    const repoName = request.body?.['repo'] ?? request.params?.['repo'] ?? request.query?.['repo'];
     if (typeof repoName !== 'string' || repoName.length === 0) {
       throw new ForbiddenException('No repository specified');
     }

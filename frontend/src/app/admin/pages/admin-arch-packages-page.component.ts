@@ -150,6 +150,7 @@ interface ArchPackageFormModel {
             severity="secondary"
             text
             label="Cancel"
+            size="small"
             styleClass="w-full sm:w-auto"
           />
           <p-button
@@ -157,6 +158,7 @@ interface ArchPackageFormModel {
             type="submit"
             severity="primary"
             label="Save"
+            size="small"
             styleClass="w-full sm:w-auto"
           />
         </div>

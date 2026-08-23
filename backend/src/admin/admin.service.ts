@@ -13,7 +13,7 @@ import {
   PkgType,
 } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { mkdtemp, writeFile } from 'node:fs/promises';
@@ -33,6 +33,12 @@ import {
 import { SignalScanService } from '../repo-manager/scan';
 import { encryptAes, errorMessage } from '../utils/functions';
 import { paginate, resolvePagination } from '../utils/pagination';
+
+export interface RescanPackageInput {
+  pkgname: string;
+  pkgType: string;
+  repo?: string;
+}
 
 export interface CreatePackageBody {
   pkgname: string;
@@ -514,12 +520,26 @@ export class AdminService {
     await this.deleteEntity(() => this.elfAnalysisRepository.delete(id), `Package ELF analysis ${id}`);
   }
 
-  async rescanPackages(
-    packages: { pkgname: string; pkgType: string }[],
-  ): Promise<{ rescanned: number; failed: string[] }> {
+  startRescanPackages(packages: RescanPackageInput[]): { started: number } {
+    if (packages.length === 0) throw new BadRequestException('No packages provided');
     const secretMirrorUrl = this.configService.get<string>('app.secretMirrorUrl');
     if (!secretMirrorUrl) throw new ConflictException('SECRET_MIRROR_URL is not configured');
+    if (this.rescanRunning) throw new ConflictException('A rescan is already in progress');
 
+    this.logger.log(
+      `Rescan started for ${packages.length} package(s): ` +
+        packages.map((entry) => `${entry.pkgname}${entry.repo ? ` (${entry.repo})` : ''}`).join(', '),
+    );
+    this.rescanRunning = true;
+    void this.runRescan(packages, secretMirrorUrl)
+      .catch((err: unknown) => this.logger.error(`Background rescan crashed: ${errorMessage(err)}`))
+      .finally(() => (this.rescanRunning = false));
+    return { started: packages.length };
+  }
+
+  private rescanRunning = false;
+
+  private async runRescan(packages: RescanPackageInput[], secretMirrorUrl: string): Promise<void> {
     const tempDir = await mkdtemp(join(tmpdir(), 'admin-rescan-'));
     const failed: string[] = [];
     let rescanned = 0;
@@ -528,13 +548,17 @@ export class AdminService {
       for (const entry of packages) {
         try {
           if (entry.pkgType === PKG_TYPE_ARCH) {
-            await this.rescanArchPackage(entry.pkgname, secretMirrorUrl, tempDir);
+            await this.rescanArchPackage(entry, secretMirrorUrl, tempDir);
           } else {
-            await this.rescanChaoticPackage(entry.pkgname, secretMirrorUrl, tempDir);
+            await this.rescanChaoticPackage(entry, secretMirrorUrl, tempDir);
           }
           rescanned++;
         } catch (err: unknown) {
-          failed.push(`${entry.pkgname}: ${errorMessage(err)}`);
+          // Failures are only summarized in the response of an otherwise
+          // fire-and-forget request, so they must be logged server-side too.
+          const reason = `${entry.pkgname}: ${errorMessage(err)}`;
+          failed.push(reason);
+          this.logger.warn(`Rescan failed for ${reason}`);
         }
       }
       await this.signalScanService.recomputeBroken();
@@ -543,12 +567,11 @@ export class AdminService {
       await rm(tempDir, { recursive: true, force: true });
     }
 
-    this.logger.log(`Rescanned ${rescanned} package(s), ${failed.length} failed`);
-    return { rescanned, failed };
+    this.logger.log(`Rescan finished: ${rescanned} package(s) scanned, ${failed.length} failed`);
   }
 
-  private async rescanArchPackage(pkgname: string, secretMirrorUrl: string, tempDir: string): Promise<void> {
-    const pkg = await this.archPackageRepository.findOne({ where: { pkgname } });
+  private async rescanArchPackage(target: RescanPackageInput, secretMirrorUrl: string, tempDir: string): Promise<void> {
+    const pkg = await this.archPackageRepository.findOne({ where: { pkgname: target.pkgname } });
     if (!pkg) throw new NotFoundException('not found');
 
     const filename = (pkg.metadata as { filename?: string } | null)?.filename;
@@ -561,9 +584,13 @@ export class AdminService {
     ]);
   }
 
-  private async rescanChaoticPackage(pkgname: string, secretMirrorUrl: string, tempDir: string): Promise<void> {
+  private async rescanChaoticPackage(
+    target: RescanPackageInput,
+    secretMirrorUrl: string,
+    tempDir: string,
+  ): Promise<void> {
     const pkg = await this.packageRepository.findOne({
-      where: { pkgname },
+      where: { pkgname: target.pkgname, ...(target.repo ? { repo: { name: target.repo } } : {}) },
       relations: { repo: true },
     });
     if (!pkg) throw new NotFoundException('not found');

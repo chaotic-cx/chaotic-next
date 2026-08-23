@@ -7,6 +7,7 @@
         [icon]="mobileNavOpen() ? 'pi pi-times' : 'pi pi-bars'"
         [ariaLabel]="mobileNavOpen() ? 'Close navigation menu' : 'Open navigation menu'"
         (onClick)="mobileNavOpen.update((open) => !open)"
+        size="small"
         text
         rounded
       />
@@ -30,4 +31,4 @@
 
 <chaotic-overlay-scrollbar />
 
-<p-confirm-dialog [appendTo]="'body'" />
+<p-confirm-dialog [appendTo]="'body'" acceptButtonStyleClass="p-button-sm" rejectButtonStyleClass="p-button-sm" />

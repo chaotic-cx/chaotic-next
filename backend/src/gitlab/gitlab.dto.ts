@@ -145,6 +145,10 @@ export class RunScheduleDto {
   @IsInt()
   @Min(1)
   scheduleId!: number;
+
+  @ApiProperty({ description: 'Repository name', example: 'chaotic-aur' })
+  @IsString()
+  repo!: string;
 }
 
 export class TriggerPipelineDto {

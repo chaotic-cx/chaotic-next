@@ -1,9 +1,4 @@
-import {
-  BUILD_CLASS_MAX,
-  BUILD_CLASS_MIN,
-  buildClassTierName,
-  type BuildResourceAverages,
-} from '@chaotic-next/shared-lib';
+import { BUILD_CLASS_MAX, BUILD_CLASS_MIN, type BuildResourceAverages } from '@chaotic-next/shared-lib';
 
 const BYTES_PER_MIB = 1024 ** 2;
 const BYTES_PER_GIB = 1024 ** 3;
@@ -48,10 +43,6 @@ function logScaleScore(value: number, scale: MetricScale): number {
 
 function clampToClassRange(score: number): number {
   return Math.min(BUILD_CLASS_MAX, Math.max(BUILD_CLASS_MIN, score));
-}
-
-export function buildClassName(buildClass: number): string {
-  return `${buildClass} (${buildClassTierName(buildClass)})`;
 }
 
 /**

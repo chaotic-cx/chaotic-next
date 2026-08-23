@@ -40,7 +40,7 @@ import {
   PackageBumpDto,
   PipelineTriggerDto,
   RescanPackagesDto,
-  RescanResultDto,
+  RescanStartedDto,
 } from './admin.dto';
 import type { CreateArchPackageBody, CreatePackageBody, CreateRepoBody } from './admin.service';
 import { AdminService } from './admin.service';
@@ -236,9 +236,9 @@ export class AdminController {
   }
 
   @Post('rescan')
-  @ApiOperation({ summary: 'Trigger an ELF signal rescan for packages by name.' })
-  @ApiOkResponse({ description: 'Rescan result', type: RescanResultDto })
-  rescanPackages(@Body() body: RescanPackagesDto): Promise<{ rescanned: number; failed: string[] }> {
-    return this.adminService.rescanPackages(body.packages);
+  @ApiOperation({ summary: 'Start a background ELF signal rescan for packages by name.' })
+  @ApiOkResponse({ description: 'Rescan accepted for background processing', type: RescanStartedDto })
+  startRescan(@Body() body: RescanPackagesDto): RescanStartedDto {
+    return this.adminService.startRescanPackages(body.packages);
   }
 }

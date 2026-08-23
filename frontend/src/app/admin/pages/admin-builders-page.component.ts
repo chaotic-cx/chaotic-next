@@ -176,6 +176,7 @@ interface BuilderFormModel {
             severity="secondary"
             text
             label="Cancel"
+            size="small"
             styleClass="w-full sm:w-auto"
           />
           <p-button
@@ -183,6 +184,7 @@ interface BuilderFormModel {
             type="submit"
             severity="primary"
             label="Save"
+            size="small"
             styleClass="w-full sm:w-auto"
           />
         </div>

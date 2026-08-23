@@ -1,7 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PackageBump } from '@chaotic-next/shared-lib';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
@@ -9,8 +8,7 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
-import { ActivatedRoute, Router } from '@angular/router';
-import { AdminService } from '../admin.service';
+import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
 import {
   createAdminPagination,
   createDebounced,
@@ -19,6 +17,7 @@ import {
   queryToQuery,
   restoreQueryParams,
 } from '../admin-url-sync';
+import { AdminService } from '../admin.service';
 
 const BUMP_TYPE_OPTIONS = [
   { label: 'Explicit', value: 0 },
@@ -43,6 +42,8 @@ const SOURCE_LABELS: Record<number, string> = {
   0: 'arch',
   1: 'chaotic',
 };
+
+const BUMP_TYPE_MANUAL = 8;
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | null | undefined;
 
@@ -143,7 +144,11 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               }
             </td>
             <td>
-              <p-tag [value]="sourceLabel(bump.triggerFrom)" [severity]="sourceSeverity(bump.triggerFrom)" />
+              @if (bump.bumpType === manualBumpType) {
+                <p-tag value="Manual" severity="success" />
+              } @else {
+                <p-tag [value]="sourceLabel(bump.triggerFrom)" [severity]="sourceSeverity(bump.triggerFrom)" />
+              }
             </td>
             <td class="text-ctp-subtext">{{ detailsText(bump) }}</td>
             <td>{{ bump.timestamp | localeDate }}</td>
@@ -162,6 +167,7 @@ export class AdminPackageBumpsPageComponent {
 
   readonly bumpTypeOptions = BUMP_TYPE_OPTIONS;
   readonly sourceOptions = SOURCE_OPTIONS;
+  readonly manualBumpType = BUMP_TYPE_MANUAL;
 
   private readonly syncSearch = createDebounced(400, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.packageBumpQuery()) }),

@@ -463,6 +463,15 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
         { pipelineId: attrs.id },
       );
       this.unlinkedCommitShas.delete(attrs.sha);
+    } else if (attrs.source === 'schedule') {
+      // Fallback: link to the most recent unlinked RUN_SCHEDULE trigger when the API didn't return pipeline info
+      const unlinked = await this.pipelineTriggerRepository.findOne({
+        where: { operation: PipelineOperation.RUN_SCHEDULE, pipelineId: IsNull(), ref: attrs.ref },
+        order: { createdAt: 'DESC' },
+      });
+      if (unlinked) {
+        await this.pipelineTriggerRepository.update(unlinked.id, { pipelineId: attrs.id, commitSha: attrs.sha });
+      }
     }
 
     if (attrs.sha) {
@@ -1105,15 +1114,21 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     await this.mrActionRepository.insert({ mergeRequestIid: iid, action, commitSha, ...actor });
   }
 
-  async listPipelineSchedules(): Promise<PipelineScheduleOption[]> {
-    return cachedResult(this.cacheManager, 'gitlab:schedules', PIPELINE_SCHEDULES_CACHE_TTL_MS, async () => {
-      const schedules = await this.api.PipelineSchedules.all(this.chaoticId, { perPage: 100 });
-      return schedules.map((schedule) => ({
-        id: schedule.id,
-        description: schedule.description ?? null,
-        active: schedule.active,
-      }));
-    });
+  async listPipelineSchedules(repoName: string): Promise<PipelineScheduleOption[]> {
+    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
+    return cachedResult(
+      this.cacheManager,
+      `gitlab:schedules:${repoName}`,
+      PIPELINE_SCHEDULES_CACHE_TTL_MS,
+      async () => {
+        const schedules = await this.api.PipelineSchedules.all(gitlabProjectId, { perPage: 100 });
+        return schedules.map((schedule) => ({
+          id: schedule.id,
+          description: schedule.description ?? null,
+          active: schedule.active,
+        }));
+      },
+    );
   }
 
   async getDecryptedToken(repoName: string): Promise<string> {
@@ -1151,20 +1166,21 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     return head.id;
   }
 
-  async runSchedule(scheduleId: number, actor: MrActor): Promise<PipelineTriggerResult> {
+  async runSchedule(scheduleId: number, repoName: string, actor: MrActor): Promise<PipelineTriggerResult> {
+    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
     let lastPipeline: { id?: number; sha?: string } | undefined;
 
     if (scheduleId > 0) {
-      this.logger.debug(`Triggering pipeline schedule #${scheduleId}...`);
+      this.logger.debug(`Triggering pipeline schedule #${scheduleId} on ${repoName}...`);
       const schedules = this.api.PipelineSchedules as unknown as Record<string, (...args: unknown[]) => unknown>;
       let result: unknown;
       if (typeof schedules.play === 'function') {
-        result = await schedules.play(this.chaoticId, scheduleId);
+        result = await schedules.play(gitlabProjectId, scheduleId);
       } else if (typeof schedules.take === 'function') {
-        result = await schedules.take(this.chaoticId, scheduleId);
+        result = await schedules.take(gitlabProjectId, scheduleId);
       } else {
         result = await (this.api as unknown as { requester: { post: (...args: unknown[]) => unknown } }).requester.post(
-          `projects/${encodeURIComponent(this.chaoticId)}/pipeline_schedules/${scheduleId}/play`,
+          `projects/${encodeURIComponent(gitlabProjectId)}/pipeline_schedules/${scheduleId}/play`,
         );
       }
 
@@ -1177,7 +1193,9 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
 
     const pipelineId = lastPipeline?.id ?? null;
     const commitSha = lastPipeline?.sha ?? null;
-    const webUrl = pipelineId ? `${this.chaoticId}/-/pipelines/${pipelineId}` : `${this.chaoticId}/pipeline_schedules`;
+    const webUrl = pipelineId
+      ? `${gitlabProjectId}/-/pipelines/${pipelineId}`
+      : `${gitlabProjectId}/pipeline_schedules`;
 
     if (commitSha) {
       this.unlinkedCommitShas.add(commitSha);
@@ -1187,7 +1205,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       ref: 'main',
       commitSha,
       operation: PipelineOperation.RUN_SCHEDULE,
-      inputs: { scheduleId: String(scheduleId) },
+      inputs: { scheduleId: String(scheduleId), repo: repoName },
       pipelineId,
       webUrl,
       ...actor,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUILD_CLASS_MAX, BUILD_CLASS_MIN } from '@chaotic-next/shared-lib';
-import { buildClassName, suggestBuildClass } from './build-class-suggester';
+import { suggestBuildClass } from './build-class-suggester';
 
 const BYTES_PER_MIB = 1024 ** 2;
 const BYTES_PER_GIB = 1024 ** 3;
@@ -93,15 +93,5 @@ describe('suggestBuildClass', () => {
       expect(suggested).toBeGreaterThanOrEqual(BUILD_CLASS_MIN);
       expect(suggested).toBeLessThanOrEqual(BUILD_CLASS_MAX);
     }
-  });
-});
-
-describe('buildClassName', () => {
-  it('appends the tier name to the numeric class', () => {
-    expect(buildClassName(0)).toBe('0 (None)');
-    expect(buildClassName(3)).toBe('3 (Light)');
-    expect(buildClassName(6)).toBe('6 (Medium)');
-    expect(buildClassName(8)).toBe('8 (Heavy)');
-    expect(buildClassName(10)).toBe('10 (Very Heavy)');
   });
 });

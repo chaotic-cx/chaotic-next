@@ -389,17 +389,19 @@ export class RescanPackageItemDto {
   @ApiProperty({ description: 'Package type: "0" for Arch, "1" for Chaotic' })
   @IsString()
   pkgType!: string;
+
+  @ApiPropertyOptional({
+    description: 'Repository name; disambiguates Chaotic packages that exist in more than one repo',
+  })
+  @IsOptional()
+  @IsString()
+  repo?: string;
 }
 
-export class RescanResultDto {
-  @ApiProperty({ description: 'Number of packages successfully rescanned' })
+export class RescanStartedDto {
+  @ApiProperty({ description: 'Number of packages queued for background rescanning' })
   @IsInt()
-  rescanned!: number;
-
-  @ApiProperty({ description: 'Package names that failed to rescan', type: String, isArray: true })
-  @IsArray()
-  @IsString({ each: true })
-  failed!: string[];
+  started!: number;
 }
 
 export class RescanPackagesDto {

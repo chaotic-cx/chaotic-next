@@ -20,6 +20,7 @@ import { createAdminPagination } from '../admin-url-sync';
               (onClick)="service.triggerRepoRun()"
               label="Trigger repo run"
               icon="pi pi-play"
+              size="small"
               styleClass="w-full sm:w-auto"
               pTooltip="Run the repo manager over the configured repositories"
               tooltipPosition="bottom"
@@ -29,6 +30,7 @@ import { createAdminPagination } from '../admin-url-sync';
               label="Trigger signal scan"
               icon="pi pi-microchip"
               severity="secondary"
+              size="small"
               styleClass="w-full sm:w-auto"
               pTooltip="Scan changed Arch packages for ELF signals"
               tooltipPosition="bottom"
@@ -38,6 +40,7 @@ import { createAdminPagination } from '../admin-url-sync';
               label="Trigger MR scan"
               icon="pi pi-shield"
               severity="secondary"
+              size="small"
               styleClass="w-full sm:w-auto"
               pTooltip="Scan open merge requests for malicious changes: rule findings, auto-flag labels and VirusTotal checks"
               tooltipPosition="bottom"
@@ -47,6 +50,7 @@ import { createAdminPagination } from '../admin-url-sync';
               label="Index Arch mirror"
               icon="pi pi-database"
               severity="secondary"
+              size="small"
               styleClass="w-full sm:w-auto"
               pTooltip="Index the full Arch mirror into the ELF signal index"
               tooltipPosition="bottom"
@@ -56,6 +60,7 @@ import { createAdminPagination } from '../admin-url-sync';
               label="Index Chaotic repo"
               icon="pi pi-database"
               severity="secondary"
+              size="small"
               styleClass="w-full sm:w-auto"
               pTooltip="Index the full Chaotic-AUR repo (CDN mirror) into the ELF signal index"
               tooltipPosition="bottom"
@@ -67,17 +72,30 @@ import { createAdminPagination } from '../admin-url-sync';
       <div class="min-w-0">
         <div class="mb-2 flex items-center justify-between gap-3 px-4">
           <span class="p-panel-title block text-ctp-text">Broken packages</span>
-          <p-button
-            [disabled]="service.brokenSelection().length === 0"
-            [badge]="service.brokenSelection().length.toString()"
-            (onClick)="confirmBump()"
-            label="Bump selected"
-            icon="pi pi-arrow-up"
-            size="small"
-            severity="danger"
-            pTooltip="Rebuild the selected broken packages and commit the changes"
-            tooltipPosition="left"
-          />
+          <div class="flex flex-wrap items-center gap-2">
+            <p-button
+              [disabled]="service.brokenSelection().length === 0"
+              [badge]="service.brokenSelection().length.toString()"
+              (onClick)="confirmRescan()"
+              label="Rescan selected"
+              icon="pi pi-microchip"
+              size="small"
+              severity="secondary"
+              pTooltip="Re-run the ELF signal analysis for the selected broken packages; may take a while"
+              tooltipPosition="left"
+            />
+            <p-button
+              [disabled]="service.brokenSelection().length === 0"
+              [badge]="service.brokenSelection().length.toString()"
+              (onClick)="confirmBump()"
+              label="Bump selected"
+              icon="pi pi-arrow-up"
+              size="small"
+              severity="danger"
+              pTooltip="Rebuild the selected broken packages and commit the changes"
+              tooltipPosition="left"
+            />
+          </div>
         </div>
         <div class="overflow-x-auto">
           <p-table
@@ -147,6 +165,20 @@ export class AdminRepoOperationsPageComponent {
       acceptLabel: 'Bump',
       rejectLabel: 'Cancel',
       accept: () => void this.service.bumpBrokenPackages(),
+    });
+  }
+
+  confirmRescan(): void {
+    const count = this.service.brokenSelection().length;
+    if (count === 0) return;
+    this.confirmationService.confirm({
+      message:
+        `Re-run the ELF signal analysis for ${count} selected package(s)? ` +
+        'Each archive is downloaded and scanned in the background, so results are not immediate.',
+      header: 'Rescan selected packages',
+      acceptLabel: 'Rescan',
+      rejectLabel: 'Cancel',
+      accept: () => void this.service.rescanBrokenPackages(),
     });
   }
 

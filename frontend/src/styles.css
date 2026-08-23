@@ -186,9 +186,40 @@ samp {
   will-change: backdrop-filter;
 }
 
+.p-confirmdialog .p-confirmdialog-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.p-confirmdialog .p-confirmdialog-footer .p-confirmdialog-accept-button,
+.p-confirmdialog .p-confirmdialog-footer .p-confirmdialog-reject-button {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .p-confirmdialog .p-confirmdialog-footer {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .p-confirmdialog .p-confirmdialog-footer .p-confirmdialog-accept-button,
+  .p-confirmdialog .p-confirmdialog-footer .p-confirmdialog-reject-button {
+    width: auto;
+  }
+}
+
 .p-toast {
   padding-left: 20px;
   max-width: calc(100vw - 20px);
+}
+
+@media (max-width: 640px) {
+  .p-toast-top-center {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .p-fieldset,

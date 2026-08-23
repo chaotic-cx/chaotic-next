@@ -1,29 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { DataSource } from 'typeorm';
+import { describe, it, expect } from 'vitest';
 import { buildAnalysis, derivePluginOf } from './signal/plugin';
 
 describe('Compiled Code Detection Integration', () => {
-  let dataSource: DataSource;
-
-  beforeAll(async () => {
-    dataSource = new DataSource({
-      type: 'postgres',
-      host: process.env.PG_HOST || 'localhost',
-      port: Number(process.env.PG_PORT) || 5432,
-      username: process.env.PG_USER || 'chaotic',
-      password: process.env.PG_PASSWORD || 'chaotic',
-      database: process.env.PG_DATABASE || 'chaotic-prod',
-      synchronize: false,
-      logging: false,
-    });
-
-    await dataSource.initialize();
-  });
-
-  afterAll(async () => {
-    await dataSource.destroy();
-  });
-
   it('buildAnalysis correctly identifies packages with compiled code', () => {
     // Test case: package with compiled code (has provided sonames)
     const compiledAnalysis = buildAnalysis({

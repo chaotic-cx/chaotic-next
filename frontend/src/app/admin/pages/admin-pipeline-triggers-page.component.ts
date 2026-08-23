@@ -25,6 +25,11 @@ import { AdminService } from '../admin.service';
 
 const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: operation, value: operation }));
 
+const REPO_OPTIONS = [
+  { label: 'chaotic-aur', value: 'chaotic-aur' },
+  { label: 'garuda', value: 'garuda' },
+];
+
 @Component({
   selector: 'chaotic-admin-pipeline-triggers-page',
   imports: [
@@ -162,16 +167,32 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
     >
       <div class="flex flex-col gap-4 py-2">
         <div class="flex flex-col gap-1.5">
+          <label class="font-medium text-ctp-text text-sm" for="repo-select">Repository</label>
+          <p-select
+            class="w-full"
+            [options]="repoOptions"
+            [ngModel]="selectedRepo()"
+            (ngModelChange)="onRepoChange($event)"
+            inputId="repo-select"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select repository..."
+            appendTo="body"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
           <label class="font-medium text-ctp-text text-sm" for="schedule-select">Schedule</label>
           <p-select
             class="w-full"
             [options]="scheduleOptions()"
             [ngModel]="selectedScheduleId()"
+            [disabled]="!selectedRepo() || schedulesLoading()"
+            [placeholder]="selectedRepo() ? 'Select schedule...' : 'Select repository first...'"
             (ngModelChange)="selectedScheduleId.set($event)"
             inputId="schedule-select"
             optionLabel="label"
             optionValue="value"
-            placeholder="Select schedule..."
             appendTo="body"
           />
         </div>
@@ -183,6 +204,7 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
             severity="secondary"
             text
             label="Cancel"
+            size="small"
           />
           <p-button
             [disabled]="!selectedScheduleId() || isSubmitting()"
@@ -191,6 +213,7 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
             type="button"
             severity="primary"
             label="Run Schedule"
+            size="small"
           />
         </div>
       </div>
@@ -205,6 +228,7 @@ export class AdminPipelineTriggersPageComponent {
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
   readonly operationOptions = OPERATION_OPTIONS;
+  readonly repoOptions = REPO_OPTIONS;
 
   private readonly syncSearch = createDebounced(400, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.pipelineTriggerQuery()) }),
@@ -213,13 +237,23 @@ export class AdminPipelineTriggersPageComponent {
   readonly scheduleDialogVisible = signal(false);
   readonly scheduleOptions = signal<{ label: string; value: number }[]>([]);
   readonly selectedScheduleId = signal<number | null>(null);
+  readonly selectedRepo = signal<string | null>(null);
+  readonly schedulesLoading = signal(false);
   readonly isSubmitting = signal(false);
 
   async openScheduleDialog(): Promise<void> {
     this.selectedScheduleId.set(null);
+    this.selectedRepo.set(null);
+    this.scheduleOptions.set([]);
     this.scheduleDialogVisible.set(true);
+  }
+
+  async onRepoChange(repo: string): Promise<void> {
+    this.selectedRepo.set(repo);
+    this.selectedScheduleId.set(null);
+    this.schedulesLoading.set(true);
     try {
-      const schedules = await this.service.getSchedules();
+      const schedules = await this.service.getSchedules(repo);
       this.scheduleOptions.set(
         schedules.map((schedule: PipelineScheduleOption) => ({
           label: schedule.description ?? `Schedule #${schedule.id}`,
@@ -228,16 +262,19 @@ export class AdminPipelineTriggersPageComponent {
       );
     } catch {
       this.scheduleOptions.set([]);
+    } finally {
+      this.schedulesLoading.set(false);
     }
   }
 
   async triggerRunSchedule(): Promise<void> {
     const id = this.selectedScheduleId();
-    if (!id || this.isSubmitting()) return;
+    const repo = this.selectedRepo();
+    if (!id || !repo || this.isSubmitting()) return;
 
     this.isSubmitting.set(true);
     try {
-      await this.service.runSchedule(id);
+      await this.service.runSchedule(id, repo);
       this.scheduleDialogVisible.set(false);
     } finally {
       this.isSubmitting.set(false);
