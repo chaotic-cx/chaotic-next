@@ -1,3 +1,4 @@
+import type { BuildClassSuggestion } from '@chaotic-next/shared-lib';
 import {
   BadRequestException,
   Body,
@@ -17,8 +18,10 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
 import { GitlabService } from '../gitlab/gitlab.service';
-import { withSseKeepalive, type SseMessage } from '../utils/sse';
-import { PromoteDto, ScheduleBuildDto, ScheduleDto } from './build-api.dto';
+import { errorMessage } from '../utils/functions';
+import { type SseMessage, withSseKeepalive } from '../utils/sse';
+import { PromoteDto, ScheduleBuildDto, ScheduleDto, SchedulePackageDto } from './build-api.dto';
+import { BuildClassSuggesterService } from './build-class-suggester.service';
 import { parseManagerLogEvent } from './manager-log-parser';
 
 const PROXY_REQUEST_TIMEOUT_MS = 15_000;
@@ -40,6 +43,7 @@ export class BuildApiController {
   constructor(
     private readonly configService: ConfigService,
     private readonly gitlabService: GitlabService,
+    private readonly buildClassSuggester: BuildClassSuggesterService,
   ) {}
 
   private get buildServerUrl(): string {
@@ -75,7 +79,7 @@ export class BuildApiController {
       source_repo: sourceRepo,
       target_repo: targetRepo,
       commit,
-      packages: body.packages.map((pkgbase: string) => ({ pkgbase })),
+      packages: await this.withSuggestedBuildClasses(body.packages),
     };
     const url = `${this.buildServerUrl}/queue/schedule`;
     this.logger.log(
@@ -91,6 +95,22 @@ export class BuildApiController {
       this.logger.warn(`Could not fetch HEAD commit for ${repoName}, proceeding without it`);
       return undefined;
     }
+  }
+
+  private async withSuggestedBuildClasses(pkgbases: string[]): Promise<SchedulePackageDto[]> {
+    let suggestions: BuildClassSuggestion[] = [];
+    try {
+      suggestions = await this.buildClassSuggester.suggestForPackages(pkgbases);
+    } catch (err) {
+      this.logger.warn(`Build class suggestion failed, scheduling without classes: ${errorMessage(err)}`);
+    }
+    const classByPkgbase = new Map(
+      suggestions.map((suggestion) => [suggestion.pkgname, suggestion.suggestedBuildClass]),
+    );
+    return pkgbases.map((pkgbase) => ({
+      pkgbase,
+      build_class: classByPkgbase.get(pkgbase) ?? undefined,
+    }));
   }
 
   @Post('queue/promote')

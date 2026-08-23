@@ -1,8 +1,9 @@
 import { BadRequestException, Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
-import type { Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
+import type { BuildClassSuggestion, Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
+import { BuildClassSuggesterService } from './build-class-suggester.service';
 import {
   AverageBuildTimeDto,
   AveragePackageBuildTimeDto,
@@ -28,7 +29,10 @@ import { isBuildResourceMetricKey, RESOURCE_METRIC_KEYS } from './resource-stats
 @ApiTags('builder')
 @Controller('builder')
 export class BuilderController {
-  constructor(private builderService: BuilderService) {}
+  constructor(
+    private builderService: BuilderService,
+    private suggesterService: BuildClassSuggesterService,
+  ) {}
 
   @Get('builders')
   @ApiOperation({ summary: 'Get all builders.' })
@@ -357,5 +361,17 @@ export class BuilderController {
       Array.isArray(pkgnames) ? pkgnames : [pkgnames],
       days,
     );
+  }
+
+  @Get('class/suggestions')
+  @ApiOperation({ summary: 'Suggest a build class per package based on averaged resource usage of past builds.' })
+  @ApiQuery({ name: 'pkgname', required: true, isArray: true, description: 'Package names to look up' })
+  @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
+  @ApiOkResponse({ description: 'Build class suggestions per package', type: [Object] })
+  async getBuildClassSuggestions(
+    @Query('pkgname') pkgnames: string[],
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
+  ): Promise<BuildClassSuggestion[]> {
+    return await this.suggesterService.suggestForPackages(Array.isArray(pkgnames) ? pkgnames : [pkgnames], days);
   }
 }

@@ -241,7 +241,7 @@ export class Build {
   @Column({ type: 'varchar', nullable: true })
   commit!: string;
 
-  @ApiProperty({ description: 'Time until the build finished, in seconds' })
+  @ApiProperty({ description: 'Time until the build finished, in minutes' })
   @Column({ type: 'float', nullable: true })
   timeToEnd!: number;
 

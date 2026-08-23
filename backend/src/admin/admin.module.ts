@@ -6,6 +6,7 @@ import { MrAction } from '../gitlab/mr-action.entity';
 import { PipelineTrigger } from '../gitlab/pipeline-trigger.entity';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { RepoManagerModule } from '../repo-manager/repo-manager.module';
+import { BuilderModule } from '../builder/builder.module';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
@@ -14,6 +15,7 @@ import { AdminService } from './admin.service';
   imports: [
     HttpModule,
     RepoManagerModule,
+    BuilderModule,
     TypeOrmModule.forFeature([
       Package,
       Repo,

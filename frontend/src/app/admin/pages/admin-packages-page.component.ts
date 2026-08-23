@@ -10,6 +10,7 @@ import {
   PIPELINE_REQUEST_REASONS,
   type PipelineRequestReason,
 } from '@chaotic-next/shared-lib';
+import type { BuildClassSuggestion } from '@chaotic-next/shared-lib';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
@@ -24,6 +25,8 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AurScanResultComponent } from '../../aur-scan/aur-scan-result.component';
 import { AurScanService, isScanSettled } from '../../aur-scan/aur-scan.service';
+import { BuildClassPipe } from '../../pipes/build-class.pipe';
+import { formatBytes, formatCpuTime, formatDuration } from '../../functions';
 import {
   createAdminPagination,
   createDebounced,
@@ -62,6 +65,7 @@ const NO_REPO = '0';
   imports: [
     AutoComplete,
     AurScanResultComponent,
+    BuildClassPipe,
     Button,
     Checkbox,
     Dialog,
@@ -147,6 +151,7 @@ const NO_REPO = '0';
             <th style="min-width: 12rem">Name</th>
             <th style="min-width: 10rem">Version</th>
             <th style="min-width: 8rem">Repo</th>
+            <th style="min-width: 10rem">Suggested class</th>
             <th style="min-width: 6rem">Active</th>
             <th class="cell-actions" style="min-width: 8rem">Actions</th>
           </tr>
@@ -161,6 +166,15 @@ const NO_REPO = '0';
                 <button class="cursor-pointer text-ctp-mauve hover:underline" (click)="goToRepos()" type="button">
                   {{ pkg.reponame }}
                 </button>
+              }
+            </td>
+            <td>
+              @if (pkg.buildClassSuggestion; as suggestion) {
+                @if (suggestion.suggestedBuildClass !== null) {
+                  <span [pTooltip]="buildClassSuggestionTooltip(suggestion)" tooltipPosition="left">
+                    {{ suggestion.suggestedBuildClass | buildClass }}
+                  </span>
+                }
               }
             </td>
             <td>
@@ -434,6 +448,17 @@ export class AdminPackagesPageComponent {
 
   protected readonly adminService = inject(AdminService);
   protected readonly formatPkgrel = formatPkgrel;
+
+  protected buildClassSuggestionTooltip(suggestion: BuildClassSuggestion): string {
+    const { samples, averages } = suggestion;
+    const metrics = [
+      averages.avgPeakMemoryBytes != null ? `peak ${formatBytes(averages.avgPeakMemoryBytes)}` : null,
+      averages.avgCpuTimeNs != null ? `CPU ${formatCpuTime(averages.avgCpuTimeNs)}` : null,
+      averages.avgDiskIoBytes != null ? `disk ${formatBytes(averages.avgDiskIoBytes)}` : null,
+      averages.avgDurationSeconds != null ? `took ${formatDuration(averages.avgDurationSeconds)}` : null,
+    ].filter((part) => part !== null);
+    return [`${samples} ${samples === 1 ? 'build' : 'builds'}`, ...metrics].join(' · ');
+  }
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 

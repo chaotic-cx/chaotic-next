@@ -82,6 +82,11 @@ export interface Package {
   repo?: number;
   /** Repository name, resolved server-side when the repo relation is joined. */
   reponame?: string;
+  /**
+   * Build class derived from the package's averaged build resource usage,
+   * resolved server-side for admin views; null when nothing was ever sampled.
+   */
+  buildClassSuggestion?: Pick<BuildClassSuggestion, 'averages' | 'samples' | 'suggestedBuildClass'> | null;
 }
 
 export interface Paginated<T> {
@@ -449,6 +454,31 @@ export interface PackageResourceDayRow {
 }
 
 export type BuildClass = string | number;
+
+export const BUILD_CLASS_MIN = 0;
+export const BUILD_CLASS_MAX = 10;
+
+export const BUILD_CLASS_TIER_NAMES = ['None', 'Light', 'Medium', 'Heavy', 'Very Heavy'] as const;
+const BUILD_CLASS_TIER_UPPER_BOUNDS = [1, 4, 6, 8, BUILD_CLASS_MAX];
+
+export function buildClassTierName(buildClass: number): string {
+  const tierIndex = BUILD_CLASS_TIER_UPPER_BOUNDS.findIndex((upperBound) => buildClass <= upperBound);
+  return BUILD_CLASS_TIER_NAMES[tierIndex === -1 ? BUILD_CLASS_TIER_NAMES.length - 1 : tierIndex];
+}
+
+export interface BuildResourceAverages {
+  avgPeakMemoryBytes?: number | null;
+  avgCpuTimeNs?: number | null;
+  avgDiskIoBytes?: number | null;
+  avgDurationSeconds?: number | null;
+}
+
+export interface BuildClassSuggestion {
+  pkgname: string;
+  suggestedBuildClass: number | null;
+  samples: number;
+  averages: Required<BuildResourceAverages>;
+}
 
 export enum BuildStatus {
   SUCCESS = 0,
