@@ -216,7 +216,7 @@ export class SignalScanService {
    */
   async recomputeBroken(filter?: { pkgType: TriggerType; pkgId: number }[]): Promise<void> {
     const skipIds = await this.loadSkipSignalScanIds();
-    await this.clearSkipFlags(skipIds);
+    await this.deleteSkippedPackageAnalyses(skipIds);
 
     // Only the columns needed to judge brokenness are fetched; the full rows
     // carry heavy `files`/symbol/vtable JSONB that is never rewritten here.
@@ -284,7 +284,8 @@ export class SignalScanService {
     return new Set(rows.map((row) => row.id));
   }
 
-  private async clearSkipFlags(skipIds: Set<number>): Promise<void> {
+  /** Analyses of skip-signal-scanned packages are stale by definition; drop them. */
+  private async deleteSkippedPackageAnalyses(skipIds: Set<number>): Promise<void> {
     if (skipIds.size === 0) return;
     await this.analysisRepository.delete({
       pkgType: pkgTypeOf(TriggerType.CHAOTIC),

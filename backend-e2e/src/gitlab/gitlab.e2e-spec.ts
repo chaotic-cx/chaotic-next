@@ -603,7 +603,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         { id: 15, description: null, active: false },
       ] as never);
 
-      const res = await app.inject({ method: 'GET', url: '/gitlab/schedules' });
+      const res = await app.inject({ method: 'GET', url: '/gitlab/schedules?repo=chaotic-aur' });
 
       expect(res.statusCode).toBe(200);
       const body = (await res.json()) as { id: number; description: string | null; active: boolean }[];
@@ -806,7 +806,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/run-schedule',
-        payload: { scheduleId: 15 },
+        payload: { scheduleId: 15, repo: 'chaotic-aur' },
       });
 
       expect(res.statusCode).toBe(201);
@@ -847,7 +847,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/run-schedule',
-        payload: { scheduleId: 15 },
+        payload: { scheduleId: 15, repo: 'chaotic-aur' },
       });
 
       expect(res.statusCode).toBe(201);

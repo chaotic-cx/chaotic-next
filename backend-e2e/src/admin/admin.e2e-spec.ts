@@ -372,33 +372,31 @@ describe('Admin Endpoints (e2e)', () => {
   });
 
   describe('POST /admin/rescan', () => {
-    it('reports packages not found when rescan list is empty', async () => {
+    it('rejects an empty rescan list with 400', async () => {
       const res = await e2e.inject({
         method: 'POST',
         url: '/admin/rescan',
         payload: { packages: [] },
       });
 
-      expect(res.statusCode).toBe(201);
-      const body = (await res.json()) as { rescanned: number; failed: string[] };
-      expect(body.rescanned).toBe(0);
-      expect(body.failed).toEqual([]);
+      expect(res.statusCode).toBe(400);
     });
 
-    it('reports failure for unknown chaotic package', async () => {
+    it('accepts a rescan request for an unknown chaotic package', async () => {
       const res = await e2e.inject({
         method: 'POST',
         url: '/admin/rescan',
         payload: { packages: [{ pkgname: 'nonexistent-pkg', pkgType: '1' }] },
       });
 
+      // The rescan runs in the background; per-item failures are logged
+      // server-side, so the response only reports how many were queued.
       expect(res.statusCode).toBe(201);
-      const body = (await res.json()) as { rescanned: number; failed: string[] };
-      expect(body.rescanned).toBe(0);
-      expect(body.failed).toEqual(['nonexistent-pkg: not found']);
+      const body = (await res.json()) as { started: number };
+      expect(body.started).toBe(1);
     });
 
-    it('reports failure for unknown arch package', async () => {
+    it('accepts a rescan request for an unknown arch package', async () => {
       const res = await e2e.inject({
         method: 'POST',
         url: '/admin/rescan',
@@ -406,12 +404,11 @@ describe('Admin Endpoints (e2e)', () => {
       });
 
       expect(res.statusCode).toBe(201);
-      const body = (await res.json()) as { rescanned: number; failed: string[] };
-      expect(body.rescanned).toBe(0);
-      expect(body.failed).toEqual(['nonexistent-arch-pkg: not found']);
+      const body = (await res.json()) as { started: number };
+      expect(body.started).toBe(1);
     });
 
-    it('reports failure when download fails (no real mirror)', async () => {
+    it('accepts a rescan request for a seeded package (download may fail in background)', async () => {
       await e2e.seedPackage({ pkgname: 'test-rescan-pkg' });
 
       const res = await e2e.inject({
@@ -421,10 +418,8 @@ describe('Admin Endpoints (e2e)', () => {
       });
 
       expect(res.statusCode).toBe(201);
-      const body = (await res.json()) as { rescanned: number; failed: string[] };
-      expect(body.rescanned).toBe(0);
-      expect(body.failed.length).toBe(1);
-      expect(body.failed[0]).toContain('test-rescan-pkg');
+      const body = (await res.json()) as { started: number };
+      expect(body.started).toBe(1);
     });
   });
 

@@ -20,7 +20,6 @@ import { Build, Package, Repo } from '../builder/builder.entity';
 import { requiredGroupForRepo } from '../auth/gitlab-groups';
 import {
   BrokenPackageReport,
-  BumpLogEntry,
   BumpResult,
   BumpType,
   IndexResult,
@@ -39,14 +38,16 @@ import { ChaoticIndexService } from './chaotic-index.service';
 
 import { RepoManager } from './repo-manager';
 import { BumpPackagesResultDto } from './repo-manager.dto';
-import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from './repo-manager.entity';
-import { REPO_READER_FACTORY, REPO_WRITER, type RepoReader, type RepoReaderFactory, type RepoWriter } from './repo-rw';
+import { ArchlinuxPackage, PackageElfAnalysis } from './repo-manager.entity';
+import { REPO_WRITER, REPO_READER_FACTORY, type RepoReader, type RepoReaderFactory, type RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
 import { latestAnalysesByPackage } from './scan/latest-analyses';
 import { SeedTransferService } from './seed-transfer.service';
 import {
+  ARCH_PKG_TYPE,
   BASE_SYSTEM_SONAMES,
   buildDependencyGraph,
+  CHAOTIC_PKG_TYPE,
   compareArchVersions,
   decodeOwnerKey,
   type DependencyEdge,
@@ -54,6 +55,9 @@ import {
   latestAnalysisByKey,
   pkgTypeOf,
 } from './signal';
+
+/** The cron scheduler runs on German time so runs align with Arch mirror syncs. */
+const CRON_TIME_ZONE = 'Europe/Berlin';
 
 @Injectable()
 export class RepoManagerService implements OnModuleInit {
@@ -74,8 +78,6 @@ export class RepoManagerService implements OnModuleInit {
     private repoRepository: Repository<Repo>,
     @InjectRepository(Package)
     private packageRepository: Repository<Package>,
-    @InjectRepository(PackageBump)
-    private packageBumpRepository: Repository<PackageBump>,
     @InjectRepository(PackageElfAnalysis)
     private elfAnalysisRepository: Repository<PackageElfAnalysis>,
     private signalScanService: SignalScanService,
@@ -105,7 +107,7 @@ export class RepoManagerService implements OnModuleInit {
         cronTime: this.configService.getOrThrow<string>('repoMan.schedulerInterval'),
         onTick: runWithThis,
         start: true,
-        timeZone: 'Europe/Berlin',
+        timeZone: CRON_TIME_ZONE,
       }),
     );
 
@@ -117,7 +119,7 @@ export class RepoManagerService implements OnModuleInit {
         cronTime: this.configService.getOrThrow<string>('repoMan.mirrorPollInterval'),
         onTick: pollWithThis,
         start: true,
-        timeZone: 'Europe/Berlin',
+        timeZone: CRON_TIME_ZONE,
       }),
     );
 
@@ -288,11 +290,7 @@ export class RepoManagerService implements OnModuleInit {
           });
         }
         if (needsRebuild.length === 0) continue;
-        const bumpedEntries = await this.bumpService.bumpPackages(needsRebuild, reader);
-        const needsPush = needsRebuild.filter((entry) => entry.gotBumped === true);
-        if (needsPush.length > 0) {
-          await this.bumpService.pushChanges(needsPush, repo);
-        }
+        const bumpedEntries = await this.bumpService.bumpAndPush(needsRebuild, reader, repo);
         bumped.push(...bumpedEntries.map((entry) => entry.pkg.pkgname));
       } finally {
         await reader?.dispose();
@@ -315,6 +313,21 @@ export class RepoManagerService implements OnModuleInit {
     return new Map([...latest.values()].map((row) => [row.pkgId, row.brokenReasons]));
   }
 
+  /**
+   * Fetch Arch and Chaotic package rows for the given analysis pkgIds in two
+   * batched queries, one per namespace.
+   */
+  private async fetchPackagesByIds(
+    archIds: number[],
+    chaoticIds: number[],
+  ): Promise<{ archPkgs: ArchlinuxPackage[]; chaoticPkgs: Package[] }> {
+    const [archPkgs, chaoticPkgs] = await Promise.all([
+      archIds.length ? this.archlinuxPackageRepository.findBy({ id: In(archIds) }) : Promise.resolve([]),
+      chaoticIds.length ? this.packageRepository.findBy({ id: In(chaoticIds) }) : Promise.resolve([]),
+    ]);
+    return { archPkgs, chaoticPkgs };
+  }
+
   async getDependencyGraph(): Promise<DependencyEdge[]> {
     // Select only the columns the graph needs; the full rows carry large jsonb
     // payloads (files/exportedSymbols/vtables) that would otherwise be loaded
@@ -330,19 +343,12 @@ export class RepoManagerService implements OnModuleInit {
     });
     if (analyses.length === 0) return [];
 
-    const archIds = analyses.filter((a) => a.pkgType === pkgTypeOf(TriggerType.ARCH)).map((a) => a.pkgId);
-    const chaoticIds = analyses.filter((a) => a.pkgType === pkgTypeOf(TriggerType.CHAOTIC)).map((a) => a.pkgId);
-    const [archPkgs, chaoticPkgs] = await Promise.all([
-      archIds.length
-        ? this.archlinuxPackageRepository.findBy({ id: In(archIds) })
-        : Promise.resolve([] as ArchlinuxPackage[]),
-      chaoticIds.length
-        ? this.packageRepository.find({ where: { id: In(chaoticIds) } })
-        : Promise.resolve([] as Package[]),
-    ]);
-    const nameById = new Map<`${string}:${number}`, string>();
-    for (const pkg of archPkgs) nameById.set(`0:${pkg.id}`, pkg.pkgname);
-    for (const pkg of chaoticPkgs) nameById.set(`1:${pkg.id}`, pkg.pkgname);
+    const archIds = analyses.filter((a) => a.pkgType === ARCH_PKG_TYPE).map((a) => a.pkgId);
+    const chaoticIds = analyses.filter((a) => a.pkgType === CHAOTIC_PKG_TYPE).map((a) => a.pkgId);
+    const { archPkgs, chaoticPkgs } = await this.fetchPackagesByIds(archIds, chaoticIds);
+    const nameById = new Map<string, string>();
+    for (const pkg of archPkgs) nameById.set(`${ARCH_PKG_TYPE}:${pkg.id}`, pkg.pkgname);
+    for (const pkg of chaoticPkgs) nameById.set(`${CHAOTIC_PKG_TYPE}:${pkg.id}`, pkg.pkgname);
 
     // Keep only the latest analysis per package.
     const latest = latestAnalysisByKey(analyses, (a) => `${a.pkgType}:${a.pkgId}`);
@@ -487,25 +493,18 @@ export class RepoManagerService implements OnModuleInit {
         this.logger.warn(`Skipping malformed analysis key: "${key}"`);
         continue;
       }
-      if (type === pkgTypeOf(TriggerType.ARCH)) archIds.push(id);
+      if (type === ARCH_PKG_TYPE) archIds.push(id);
       else chaoticIds.push(id);
     }
 
-    const [archPkgs, chaoticPkgs] = await Promise.all([
-      archIds.length
-        ? this.archlinuxPackageRepository.findBy({ id: In(archIds) })
-        : Promise.resolve([] as ArchlinuxPackage[]),
-      chaoticIds.length
-        ? this.packageRepository.find({ where: { id: In(chaoticIds) } })
-        : Promise.resolve([] as Package[]),
-    ]);
+    const { archPkgs, chaoticPkgs } = await this.fetchPackagesByIds(archIds, chaoticIds);
 
     const nameByKey = new Map<string, RebuildTriggerSourcePackage>();
     for (const pkg of archPkgs) {
-      nameByKey.set(`${pkgTypeOf(TriggerType.ARCH)}:${pkg.id}`, { pkgname: pkg.pkgname, pkgType: 'arch' });
+      nameByKey.set(`${ARCH_PKG_TYPE}:${pkg.id}`, { pkgname: pkg.pkgname, pkgType: 'arch' });
     }
     for (const pkg of chaoticPkgs) {
-      nameByKey.set(`${pkgTypeOf(TriggerType.CHAOTIC)}:${pkg.id}`, { pkgname: pkg.pkgname, pkgType: 'chaotic' });
+      nameByKey.set(`${CHAOTIC_PKG_TYPE}:${pkg.id}`, { pkgname: pkg.pkgname, pkgType: 'chaotic' });
     }
     return nameByKey;
   }
@@ -527,14 +526,7 @@ export class RepoManagerService implements OnModuleInit {
 
     if (archIds.length === 0 && chaoticIds.length === 0) return [];
 
-    const [archPkgs, chaoticPkgs] = await Promise.all([
-      archIds.length
-        ? this.archlinuxPackageRepository.findBy({ id: In(archIds) })
-        : Promise.resolve([] as ArchlinuxPackage[]),
-      chaoticIds.length
-        ? this.packageRepository.find({ where: { id: In(chaoticIds) } })
-        : Promise.resolve([] as Package[]),
-    ]);
+    const { archPkgs, chaoticPkgs } = await this.fetchPackagesByIds(archIds, chaoticIds);
 
     const isDependency = (pkgname: string): boolean => deps.size === 0 || deps.has(pkgname);
     return [
@@ -549,10 +541,6 @@ export class RepoManagerService implements OnModuleInit {
 
   async importSignalsSeed(seed: unknown[]): Promise<void> {
     await this.seedTransferService.importSeed(seed);
-  }
-
-  async importSignalsSeedFile(path: string): Promise<void> {
-    await this.seedTransferService.importSeedFile(path);
   }
 
   async run(): Promise<void> {
@@ -644,49 +632,5 @@ export class RepoManagerService implements OnModuleInit {
     if (result.length > 0) {
       this.summarizeChanges(result, this.repoManager);
     }
-  }
-
-  async getBumpLogs(options: { amount: number; skip: number }): Promise<BumpLogEntry[]> {
-    const amount = options.amount || 100;
-    const skip = options.skip || 0;
-
-    const logEntries: PackageBump[] = await this.packageBumpRepository.find({
-      take: amount,
-      skip,
-      relations: {
-        pkg: true,
-      },
-    });
-    if (logEntries.length === 0) return [];
-
-    // Resolve every trigger name in two batched queries (one per trigger type)
-    // instead of one findOne per bump entry.
-    const archIds = [...new Set(logEntries.filter((e) => e.triggerFrom === TriggerType.ARCH).map((e) => e.trigger))];
-    const chaoticIds = [
-      ...new Set(logEntries.filter((e) => e.triggerFrom === TriggerType.CHAOTIC).map((e) => e.trigger)),
-    ];
-    const [archTriggers, chaoticTriggers] = await Promise.all([
-      archIds.length
-        ? this.archlinuxPackageRepository.findBy({ id: In(archIds) })
-        : Promise.resolve([] as ArchlinuxPackage[]),
-      chaoticIds.length ? this.packageRepository.findBy({ id: In(chaoticIds) }) : Promise.resolve([] as Package[]),
-    ]);
-    const archNameById = new Map(archTriggers.map((p) => [p.id, p.pkgname]));
-    const chaoticNameById = new Map(chaoticTriggers.map((p) => [p.id, p.pkgname]));
-
-    return logEntries.map((logEntry) => {
-      const trigger =
-        logEntry.triggerFrom === TriggerType.ARCH
-          ? archNameById.get(logEntry.trigger)
-          : chaoticNameById.get(logEntry.trigger);
-      return {
-        bumpType: logEntry.bumpType,
-        timestamp: logEntry.timestamp.toISOString(),
-        triggerFrom: logEntry.triggerFrom,
-        pkgname: logEntry.pkg.pkgname,
-        trigger: trigger ?? String(logEntry.trigger),
-        details: logEntry.details,
-      };
-    });
   }
 }

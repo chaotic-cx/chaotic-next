@@ -28,19 +28,19 @@ export class ArchlinuxPackage {
 
   @ApiProperty({ description: 'Current package version' })
   @Column({ type: 'varchar', nullable: true })
-  version!: string;
+  version!: string | null;
 
   @ApiProperty({ description: 'Package release number' })
   @Column({ type: 'int', nullable: true })
-  pkgrel!: number;
+  pkgrel!: number | null;
 
   @ApiProperty({ description: 'Target architecture' })
   @Column({ type: 'varchar', nullable: true })
-  arch!: string;
+  arch!: string | null;
 
   @ApiProperty({ description: 'When the package was last updated (ISO 8601)' })
   @Column({ type: 'timestamp', nullable: true })
-  lastUpdated!: Date;
+  lastUpdated!: Date | null;
 
   @ApiProperty({ description: 'Previous package version' })
   @Column({ type: 'varchar', nullable: true })
@@ -48,7 +48,7 @@ export class ArchlinuxPackage {
 
   @ApiProperty({ description: 'Parsed package metadata', type: Object })
   @Column({ type: 'jsonb', nullable: true })
-  metadata!: ParsedPackageMetadata;
+  metadata!: ParsedPackageMetadata | null;
 }
 
 @Entity()

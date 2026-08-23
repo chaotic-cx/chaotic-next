@@ -82,7 +82,7 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
   }
 
   function makeBumpService(writer: RepoWriter): BumpService {
-    return new BumpService(dataSource.getRepository(Package), writer);
+    return new BumpService(dataSource.getRepository(Package), dataSource.getRepository(PackageElfAnalysis), writer);
   }
 
   it('executes a BROKEN_DEPS verdict: persists the PackageBump row and commits a surgically-rewritten config', async () => {

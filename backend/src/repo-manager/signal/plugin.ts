@@ -102,6 +102,16 @@ export function deriveDirectoriesOwned(files: string[]): string[] {
   return dedupe([...dirs]).sort();
 }
 
+/**
+ * Suspicious-ownership heuristic: a tiny package (few files, few of its own
+ * directories) claimed as plugin by more than SUSPICIOUS_PLUGIN_OWNERS owners
+ * almost certainly dropped shared payloads into popular parent directories.
+ * Such results are re-verified against directory-name matches before use.
+ */
+const SUSPICIOUS_PLUGIN_OWNERS = 100;
+const SUSPICION_MAX_OWNED_DIRS = 10;
+const SUSPICION_MAX_FILES = 50;
+
 export function derivePluginOf(
   files: string[],
   index: DirectoryIndex,
@@ -138,7 +148,11 @@ export function derivePluginOf(
 
   const ownedDirs = deriveDirectoriesOwned(files);
 
-  if (result.length > 100 && ownedDirs.length < 10 && files.length < 50) {
+  if (
+    result.length > SUSPICIOUS_PLUGIN_OWNERS &&
+    ownedDirs.length < SUSPICION_MAX_OWNED_DIRS &&
+    files.length < SUSPICION_MAX_FILES
+  ) {
     const filteredByDir = result.filter((ownerKey) => {
       const ownerName = index.keyToPkgname.get(ownerKey);
       if (!ownerName) return false;

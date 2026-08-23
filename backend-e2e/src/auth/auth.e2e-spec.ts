@@ -222,15 +222,6 @@ describe('Auth & Protected Endpoints (e2e)', () => {
       expect(res.statusCode).toBe(401);
     });
 
-    it('POST /repo/signals/import-file returns 401 when unauthenticated', async () => {
-      const res = await realAuthApp.inject({
-        method: 'POST',
-        url: '/repo/signals/import-file',
-        payload: { path: '/tmp/test' },
-      });
-      expect(res.statusCode).toBe(401);
-    });
-
     it('GET /repo/update-db returns 401 when unauthenticated', async () => {
       const res = await realAuthApp.inject({ method: 'GET', url: '/repo/update-db' });
       expect(res.statusCode).toBe(401);

@@ -8,7 +8,7 @@ import { BumpService } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
 import { ArchMirrorService } from './arch-mirror.service';
 import { RepoManagerService } from './repo-manager.service';
-import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from './repo-manager.entity';
+import { ArchlinuxPackage, PackageElfAnalysis } from './repo-manager.entity';
 import type { RepoReaderFactory, RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
 import { SeedTransferService } from './seed-transfer.service';
@@ -301,7 +301,6 @@ function buildService(
     archlinuxPackageRepository,
     {} as Repository<Repo>,
     packageRepository,
-    {} as Repository<PackageBump>,
     elfAnalysisRepository,
     {} as SignalScanService,
     {} as SeedTransferService,
