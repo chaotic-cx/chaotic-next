@@ -42,6 +42,12 @@ export const routes: Routes = [
     loadComponent: () => import('./package-list/package-list.component').then((c) => c.PackageListComponent),
   },
   {
+    title: 'AUR Scan',
+    path: 'aur-scan',
+    canActivate: [backendGuard],
+    loadComponent: () => import('./aur-scan/pages/aur-scan-page.component').then((c) => c.AurScanPageComponent),
+  },
+  {
     title: 'Statistics and data',
     path: 'stats',
     canActivate: [backendGuard],

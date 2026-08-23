@@ -1,0 +1,56 @@
+<chaotic-title [subtitleHtml]="subtitle" title="AUR Scan" />
+
+<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
+  <p-card>
+    <div class="flex flex-col items-center w-full">
+      <div class="flex w-full max-w-xl flex-col items-center gap-6 px-4 py-4 transition-all duration-300">
+        <div
+          class="flex flex-col items-center justify-center transition-all duration-300"
+          [class.py-8]="!hasResults()"
+          [class.py-2]="hasResults()"
+        >
+          <i
+            class="pi pi-search text-ctp-maroon transition-all duration-300"
+            [style.font-size]="hasResults() ? '3rem' : '8rem'"
+          ></i>
+        </div>
+        <div class="relative w-full">
+          <input
+            class="w-full text-center"
+            #searchInput
+            [formField]="searchForm.query"
+            [class.ng-invalid]="searchForm.query().invalid()"
+            [class.ng-dirty]="searchForm.query().dirty()"
+            (focus)="onFocus()"
+            (blur)="onBlur()"
+            pInputText
+            type="text"
+            placeholder="AUR package name, e.g. firefox"
+          />
+          <chaotic-search-suggestions
+            [anchor]="searchInput"
+            [suggestions]="suggestions()"
+            [visible]="suggestionsVisible()"
+            (selectSuggestion)="selectSuggestion($event)"
+          />
+        </div>
+      </div>
+
+      <div
+        class="w-full grid transition-[grid-template-rows,opacity] duration-300 ease-out"
+        [class.grid-rows-[1fr]]="hasResults()"
+        [class.opacity-100]="hasResults()"
+        [class.grid-rows-[0fr]]="!hasResults()"
+        [class.opacity-0]="!hasResults()"
+      >
+        <div class="overflow-hidden">
+          <div class="scroll-mt-24 mt-4 flex w-full flex-col items-center">
+            @if (currentPackageName(); as name) {
+              <chaotic-aur-scan-result [packageName]="name" [showTitle]="false" />
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </p-card>
+</div>

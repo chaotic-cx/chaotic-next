@@ -48,7 +48,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import { AuthGuard, OptionalAuth, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
 import { auth } from '../auth/auth';
 import { GITLAB_GROUP_CHAOTIC_AUR } from '../auth/gitlab-groups';
@@ -126,19 +126,26 @@ export class GitlabController {
   @Post('aur-scan')
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(AuthGuard)
+  @OptionalAuth()
   @ApiCookieAuth('better-auth.session_token')
-  @ApiOperation({ summary: 'Scan an AUR package: PKGBUILD sources, static rules and VirusTotal checks.' })
+  @ApiOperation({
+    summary:
+      'Scan an AUR package: PKGBUILD sources and static rules for everyone, VirusTotal checks for authenticated sessions.',
+  })
   @ApiCreatedResponse({
     description: 'The scan result; VirusTotal reports follow via GET once completed.',
     type: AurPackageScanDto,
   })
-  startAurScan(@Body() body: AurScanBodyDto): Promise<AurPackageScan> {
-    return this.aurScanService.startScan(body.package);
+  async startAurScan(
+    @Session() session?: UserSession<typeof auth>,
+    @Body() body?: AurScanBodyDto,
+  ): Promise<AurPackageScan> {
+    if (!body) throw new BadRequestException('Missing request body');
+    const withVirusTotal = session?.user !== undefined;
+    return this.aurScanService.startScan(body.package, { withVirusTotal });
   }
 
   @Get('aur-scan/:packageName')
-  @UseGuards(AuthGuard)
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Fetch the current AUR package scan result.' })
   @ApiOkResponse({ description: 'The current scan result.', type: AurPackageScanDto })
   async getAurScan(@Param('packageName') packageName: string): Promise<AurPackageScan> {
@@ -149,11 +156,21 @@ export class GitlabController {
 
   @Sse('aur-scan/:packageName/stream')
   @SkipThrottle()
-  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Stream AUR package scan updates until the scan completes.' })
   @ApiOkResponse({ description: 'Stream of AurScanStreamChunk messages', type: Object })
   streamAurScan(@Param('packageName') packageName: string): Observable<SseMessage<AurScanStreamChunk>> {
     return this.aurScanService.streamScan(packageName);
+  }
+
+  @Get('aur-search')
+  @ApiOperation({ summary: 'Search AUR for packages matching a query.' })
+  @ApiOkResponse({
+    description: 'Array of AUR package names matching the search query.',
+    type: [String],
+  })
+  async searchAur(@Query('arg') arg: string): Promise<string[]> {
+    if (!arg || arg.length < 3) return [];
+    return await this.aurScanService.searchAur(arg);
   }
 
   @Get('pipelines')

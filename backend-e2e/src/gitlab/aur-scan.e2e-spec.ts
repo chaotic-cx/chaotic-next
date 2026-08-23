@@ -4,6 +4,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { AurMaintainerSnapshot } from '@chaotic-next/backend/diff-scan/aur-maintainer-snapshot.entity';
+import { AurScanService } from '@chaotic-next/backend/diff-scan/aur-scan.service';
 import { VirusTotalVerdict } from '@chaotic-next/backend/diff-scan/virus-total-verdict.entity';
 import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
 import { createE2eApp, type E2eApp } from '../test/e2e-app';
@@ -109,6 +110,7 @@ describe('AUR package scan (e2e, real PostgreSQL, mocked AUR and VirusTotal upst
     await e2e.dataSource.getRepository(AurMaintainerSnapshot).clear();
     await e2e.dataSource.getRepository(VirusTotalVerdict).clear();
     await cache.clear();
+    e2e.app.get(AurScanService).clearAurCache();
   });
 
   it('rejects a scan request without a package name (400)', async () => {
@@ -146,6 +148,7 @@ describe('AUR package scan (e2e, real PostgreSQL, mocked AUR and VirusTotal upst
   it('reports a maintainer takeover against the persisted snapshot', async () => {
     await e2e.inject({ method: 'POST', url: '/gitlab/aur-scan', payload: { package: 'evilpkg' } });
     fetchMock.mockImplementation(aurFetch(infoWith('stranger', 10 * DAY_SECONDS), PKGBUILD_WITHOUT_URLS) as never);
+    e2e.app.get(AurScanService).clearAurCache();
 
     const res = await e2e.inject({ method: 'POST', url: '/gitlab/aur-scan', payload: { package: 'evilpkg' } });
     const scan = (await res.json()) as {

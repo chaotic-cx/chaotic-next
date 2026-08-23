@@ -7,7 +7,6 @@ export const ADMIN_TABS = [
   'pipeline-triggers',
   'package-bumps',
   'package-elf-analysis',
-  'aur-scan',
   'repo-operations',
   'manager-logs',
 ] as const;

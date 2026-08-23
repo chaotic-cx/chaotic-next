@@ -84,6 +84,7 @@ describe('VirustotalService', () => {
   it('submits URLs for scanning and polls the analysis to completion', async () => {
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce(jsonResponse(404, {}))
       .mockResolvedValueOnce(jsonResponse(200, { data: { id: 'analysis-1' } }))
       .mockResolvedValueOnce(jsonResponse(200, { data: { attributes: { status: 'in-progress' } } }))
       .mockResolvedValueOnce(
@@ -96,16 +97,35 @@ describe('VirustotalService', () => {
 
     const reports = await service.reportOn([URL_INDICATOR]);
 
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://www.virustotal.com/api/v3/urls');
-    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe('url=https%3A%2F%2Fevil.example%2Fpayload');
+    const urlId = Buffer.from(URL_INDICATOR.value).toString('base64').replace(/=+$/, '');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`https://www.virustotal.com/api/v3/urls/${urlId}`);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://www.virustotal.com/api/v3/urls');
+    expect(fetchMock.mock.calls[1]?.[1]?.body).toBe('url=https%3A%2F%2Fevil.example%2Fpayload');
     expect(reports[0]?.verdict).toBe('suspicious');
     expect(reports[0]?.stats).toEqual({ malicious: 0, suspicious: 2, undetected: 40, harmless: 20, timeout: 0 });
+  });
+
+  it('serves URLs from the existing VirusTotal report without submitting a scan', async () => {
+    const stats = { malicious: 9, suspicious: 0, undetected: 30, harmless: 20, timeout: 0 };
+    const urlId = Buffer.from(URL_INDICATOR.value).toString('base64').replace(/=+$/, '');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { data: { attributes: { last_analysis_stats: stats } } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const service = makeService({ apiKey: 'key' });
+
+    const reports = await service.reportOn([URL_INDICATOR]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`https://www.virustotal.com/api/v3/urls/${urlId}`);
+    expect(reports[0]).toMatchObject({ verdict: 'malicious', stats });
   });
 
   it('does not flag a single flagged engine as suspicious (noise reduction)', async () => {
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce(jsonResponse(404, {}))
       .mockResolvedValueOnce(jsonResponse(200, { data: { id: 'analysis-1' } }))
       .mockResolvedValueOnce(
         jsonResponse(200, {
@@ -144,6 +164,7 @@ describe('VirustotalService', () => {
       'fetch',
       vi
         .fn()
+        .mockResolvedValueOnce(jsonResponse(404, {}))
         .mockResolvedValueOnce(jsonResponse(200, { data: { id: 'analysis-1' } }))
         .mockResolvedValueOnce(
           jsonResponse(200, {
@@ -173,6 +194,38 @@ describe('VirustotalService', () => {
     const service = makeService({ apiKey: 'key' }, repository);
 
     await service.reportOn([FILE_INDICATOR]);
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('serves flagged indicators from the persisted verdict store without an API call', async () => {
+    const repository = {
+      findOne: vi.fn(async () => ({
+        type: FILE_INDICATOR.type,
+        value: FILE_INDICATOR.value,
+        context: 'old scan',
+        verdict: 'malicious',
+        malicious: 5,
+        suspicious: 1,
+        undetected: 40,
+        harmless: 10,
+        timeout: 0,
+      })),
+      save: vi.fn(),
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const service = makeService({ apiKey: 'key' }, repository);
+
+    await expect(service.reportOn([FILE_INDICATOR])).resolves.toEqual([
+      {
+        type: 'file',
+        value: FILE_INDICATOR.value,
+        context: FILE_INDICATOR.context,
+        verdict: 'malicious',
+        stats: { malicious: 5, suspicious: 1, undetected: 40, harmless: 10, timeout: 0 },
+      },
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(repository.save).not.toHaveBeenCalled();
   });
 

@@ -85,9 +85,13 @@ function makeService(
     enabled,
     reportOn: reportOn ?? vi.fn(async () => [] as VtIndicatorReport[]),
   };
+  const aurAuthService = {
+    getMaintainerRegistrationDate: vi.fn(async () => null),
+  };
   const service = new AurScanService(
     diffScanService,
     virustotalService as never,
+    aurAuthService as never,
     snapshotRepository as never | undefined,
   );
   return { service, virustotalService, fetchMock };
@@ -120,7 +124,7 @@ describe('AurScanService', () => {
     const reportOn = vi.fn(() => pending);
     const { service } = makeService(true, reportOn);
 
-    const scan = await service.startScan('evilpkg');
+    const scan = await service.startScan('evilpkg', { withVirusTotal: true });
     expect(scan.status).toBe('awaiting-vt');
     expect(scan.vtPending).toBeGreaterThan(0);
 
@@ -136,6 +140,17 @@ describe('AurScanService', () => {
     expect(stored.vtPending).toBe(0);
   });
 
+  it('skips VirusTotal when the session-derived flag disables it', async () => {
+    const reportOn = vi.fn(async () => [] as VtIndicatorReport[]);
+    const { service } = makeService(true, reportOn);
+
+    const scan = await service.startScan('evilpkg', { withVirusTotal: false });
+
+    expect(scan.status).toBe('done');
+    expect(scan.vtPending).toBe(0);
+    expect(reportOn).not.toHaveBeenCalled();
+  });
+
   it('fails with a speaking error for unknown packages', async () => {
     vi.stubGlobal(
       'fetch',
@@ -145,7 +160,11 @@ describe('AurScanService', () => {
           : new Response('not found', { status: 404 }),
       ),
     );
-    const service = new AurScanService(new DiffScanService(), { enabled: false } as never);
+    const service = new AurScanService(
+      new DiffScanService(),
+      { enabled: false } as never,
+      { getMaintainerRegistrationDate: vi.fn(async () => null) } as never,
+    );
 
     const scan = await service.startScan('doesnotexist');
 
@@ -197,7 +216,11 @@ describe('AurScanService', () => {
         return new Response('not found', { status: 404 });
       }),
     );
-    const service = new AurScanService(new DiffScanService(), { enabled: false } as never);
+    const service = new AurScanService(
+      new DiffScanService(),
+      { enabled: false } as never,
+      { getMaintainerRegistrationDate: vi.fn(async () => null) } as never,
+    );
 
     const scan = await service.startScan('orphanpkg');
 
@@ -266,6 +289,7 @@ describe('AurScanService', () => {
       return new Response(JSON.stringify({ results: [] }), { headers: { 'content-type': 'application/json' } });
     });
     vi.stubGlobal('fetch', takeoverFetch);
+    service.clearAurCache();
 
     const second = await service.maintainerStatusOf('evilpkg');
     expect(second?.change?.added).toEqual(['stranger']);
@@ -286,7 +310,7 @@ describe('AurScanService', () => {
     });
     const { service } = makeService(true, () => pending);
 
-    const scan = await service.startScan('evilpkg');
+    const scan = await service.startScan('evilpkg', { withVirusTotal: true });
     expect(scan.status).toBe('awaiting-vt');
 
     const chunks: { complete: boolean; status: string }[] = [];

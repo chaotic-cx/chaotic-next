@@ -16,6 +16,7 @@ export class AurScanResultComponent {
   private readonly scanService = inject(AurScanService);
 
   readonly packageName = input.required<string>();
+  readonly showTitle = input(true);
 
   protected readonly scan = computed(() => this.scanService.scanOf(this.packageName()));
   protected readonly presenter = presenter;
@@ -50,5 +51,11 @@ export class AurScanResultComponent {
 
   protected fileLocation(finding: DiffScanFinding): string {
     return finding.line === undefined ? finding.file : `${finding.file}:${finding.line}`;
+  }
+
+  protected getVtReportLink(report: { type: string; value: string }): string {
+    return report.type === 'url'
+      ? `https://www.virustotal.com/gui/url/${report.value}`
+      : `https://www.virustotal.com/gui/file/${report.value}`;
   }
 }

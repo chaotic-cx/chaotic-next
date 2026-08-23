@@ -120,7 +120,8 @@ const PKG_TYPE_OPTIONS = [
             <th style="min-width: 6rem">Type</th>
             <th style="min-width: 12rem">Package</th>
             <th style="min-width: 10rem">Version</th>
-            <th style="min-width: 7rem">Compiled</th>
+            <th style="min-width: 7rem">Has ELF</th>
+            <th style="min-width: 7rem">Source compiled</th>
             <th style="min-width: 6rem">Broken</th>
             <th style="min-width: 12rem">Broken reasons</th>
             <th style="min-width: 9rem">Scanned</th>
@@ -148,6 +149,13 @@ const PKG_TYPE_OPTIONS = [
             <td>{{ row.version }}</td>
             <td>
               @if (row.hasCompiledCode) {
+                <p-tag value="Yes" severity="success" />
+              } @else {
+                <p-tag value="No" severity="secondary" />
+              }
+            </td>
+            <td>
+              @if (row.isSourceCompiled) {
                 <p-tag value="Yes" severity="success" />
               } @else {
                 <p-tag value="No" severity="secondary" />
