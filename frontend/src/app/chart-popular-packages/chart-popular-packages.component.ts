@@ -5,7 +5,7 @@ import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaAxisChartOptions } from '../chart-config';
-import { parseCount, resourceValue } from '../functions';
+import { isMobileSignal, parseCount, resourceValue, truncateLabel } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
@@ -22,6 +22,7 @@ export class ChartPopularPackagesComponent {
   readonly amount = signal(20);
 
   protected readonly Math = Math;
+  protected readonly isMobile = isMobileSignal();
 
   private readonly resource = httpResource<{ pkgbase_pkgname: string; count: string }[]>(() => {
     const val = Math.max(1, this.amount() || 1);
@@ -37,7 +38,7 @@ export class ChartPopularPackagesComponent {
     const labels: string[] = [];
     const values: number[] = [];
     for (const item of data) {
-      labels.push(item.pkgbase_pkgname);
+      labels.push(this.isMobile() ? truncateLabel(item.pkgbase_pkgname) : item.pkgbase_pkgname);
       values.push(parseCount(item.count));
     }
 
@@ -52,7 +53,7 @@ export class ChartPopularPackagesComponent {
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>('y'),
+      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
     };
   });
 }
