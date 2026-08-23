@@ -1,99 +1,280 @@
 import { describe, expect, it } from 'vitest';
-import { isBinaryPackage } from './pkgbuild-classifier';
+import { isSourceCompiledPackage } from './pkgbuild-classifier';
 
-describe('isBinaryPackage', () => {
-  it('identifies packages with binary suffixes', () => {
-    expect(isBinaryPackage('eclipse-java-bin')).toBe(true);
-    expect(isBinaryPackage('fiji-bin')).toBe(true);
-    expect(isBinaryPackage('insync-appimage')).toBe(true);
-    expect(isBinaryPackage('spotify-snap')).toBe(true);
-    expect(isBinaryPackage('discord-flatpak')).toBe(true);
-    expect(isBinaryPackage('google-cloud-cli-bundled-python3-unix')).toBe(true);
+describe('isSourceCompiledPackage', () => {
+  describe('Electron/Node.js packages', () => {
+    it('teams-for-linux: Electron wrapper with npm in makedepends', () => {
+      const pkgbuild = [
+        'pkgname=teams-for-linux',
+        'pkgver=2.14.1',
+        'pkgrel=1',
+        'arch=("x86_64")',
+        'depends=("gtk3" "libxss" "nss")',
+        'makedepends=("nodejs>=18" "node-gyp" "npm")',
+        'source=("teams-for-linux-2.14.1.tar.gz")',
+        '',
+        'build() {',
+        '  cd "teams-for-linux-2.14.1"',
+        '  npm install',
+        '  npx electron-builder build --x64 --linux dir',
+        '}',
+        '',
+        'package() {',
+        '  cd "teams-for-linux-2.14.1"',
+        '  cp -r "dist/linux-unpacked" "/opt/teams-for-linux"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
+
+    it('kando-git: Electron with npm run in build body', () => {
+      const pkgbuild = [
+        'pkgname=kando-git',
+        'pkgver=2.0.0',
+        'pkgrel=1',
+        'arch=("any")',
+        'depends=("electron")',
+        'makedepends=("nodejs" "git")',
+        'source=("git+https://github.com/kando-menu/kando.git")',
+        '',
+        'build() {',
+        '  cd "kando-2.0.0"',
+        '  npm install',
+        '  npm run package',
+        '}',
+        '',
+        'package() {',
+        '  install -Dm755 "kando-2.0.0.AppImage" "/opt/kando/kando.AppImage"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
   });
 
-  it('identifies real-world live AUR PKGBUILDs as binary packages', () => {
-    const liveAndroidStudio = `
-pkgname=android-studio
-pkgver=2026.1.3.8
-_vername="quail3-patch1"
-pkgrel=1
-pkgdesc="The official Android IDE (Stable branch)"
-arch=('i686' 'x86_64')
-options=('!strip')
-source=("https://dl.google.com/dl/android/studio/ide-zips/$pkgver/android-studio-$_vername-linux.tar.gz"
-        "$pkgname.desktop"
-        "license.html")
-package() {
-  cd $srcdir/$pkgname
-  install -d $pkgdir/{opt/$pkgname,usr/bin}
-  cp -a bin lib jbr plugins license LICENSE.txt build.txt product-info.json $pkgdir/opt/$pkgname
-}
-`;
-    expect(isBinaryPackage('android-studio', liveAndroidStudio)).toBe(true);
+  describe('Binary packages', () => {
+    it('simplenote-electron-bin: -bin suffix, no build function', () => {
+      const pkgbuild = [
+        'pkgname=simplenote-electron-bin',
+        'pkgver=2.27.1',
+        'pkgrel=1',
+        'arch=("x86_64")',
+        'depends=("nss" "gtk3" "libxss")',
+        'source_x86_64=("https://example.com/Simplenote-linux-2.27.1-amd64.deb")',
+        '',
+        'package() {',
+        '  bsdtar -xv -C "${pkgdir}" -f "${srcdir}/data.tar.gz"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
 
-    const liveInsync = `
-pkgname=insync
-pkgver=3.9.11.60043
-pkgrel=1
-_dist=noble
-arch=('x86_64')
-options=(!strip)
-source=("http://cdn.insynchq.com/builds/linux/\${pkgver}/\${pkgname}_\${pkgver}-\${_dist}_amd64.deb")
-package() {
-   tar xf data.tar.gz
-   cp -rp usr \${pkgdir}/
-}
-`;
-    expect(isBinaryPackage('insync', liveInsync)).toBe(true);
-
-    const liveEclipseMat = `
-pkgname=eclipse-mat
-_pgname=MemoryAnalyzer
-pkgver=1.16.1
-arch=('x86_64' 'aarch64')
-source_x86_64=("\${pkgname}-\${pkgver}-x86_64.zip::https://www.eclipse.org/downloads/download.php?file=/mat/\${_pkgver}/rcp/\${_pgname}-\${pkgver}.\${_releasedate}-linux.gtk.x86_64.zip&r=1")
-build() {
-    cat >"\${srcdir}"/\${pkgname}.desktop <<EOF
-[Desktop Entry]
-EOF
-}
-package() {
-    install -dm755 "\${pkgdir}"/opt/\${pkgname}
-    cp -a "\${srcdir}"/mat/* "\${pkgdir}"/opt/\${pkgname}
-}
-`;
-    expect(isBinaryPackage('eclipse-mat', liveEclipseMat)).toBe(true);
-
-    const liveCassandra = `
-pkgname=cassandra
-pkgver=5.0.3
-arch=('any')
-source=(https://archive.apache.org/dist/cassandra/5.0.3/apache-cassandra-5.0.3-bin.tar.gz)
-build() {
-    cd "$srcdir/apache-cassandra-5.0.3"
-}
-package() {
-    cp -a pylib tools "$pkgdir/usr/share/cassandra/"
-}
-`;
-    expect(isBinaryPackage('cassandra', liveCassandra)).toBe(true);
+    it('nvidia-340xx-lts: !strip with make in build', () => {
+      const pkgbuild = [
+        'pkgname=nvidia-340xx-lts',
+        'pkgver=340.108',
+        'pkgrel=10',
+        'arch=("x86_64")',
+        'makedepends=("nvidia-340xx-utils=340.108" "linux-lts>=6.1.14")',
+        'options=(!strip)',
+        'source=("NVIDIA-Linux-x86_64-340.108-no-compat32.run")',
+        '',
+        'build() {',
+        '  cd "NVIDIA-Linux-x86_64-340.108-no-compat32/kernel"',
+        '  make SYSSRC="/usr/src/linux-lts" module',
+        '}',
+        '',
+        'package() {',
+        '  install -Dt "${pkgdir}/extramodules" -m644 "kernel/nvidia.ko"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
   });
 
-  it('correctly keeps source-built packages as non-binary', () => {
-    const liveKwinEffects = `
-pkgname=kwin-effects-better-blur-dx
-pkgver=2.5.1
-arch=('x86_64')
-makedepends=(cmake extra-cmake-modules qt6-tools kwin)
-source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-build() {
-  cmake -B build -S "$pkgname-$pkgver"
-  cmake --build build
-}
-package() {
-  DESTDIR="\${pkgdir}" cmake --install build
-}
-`;
-    expect(isBinaryPackage('kwin-effects-better-blur-dx', liveKwinEffects)).toBe(false);
+  describe('Packages with no build() or no compiler', () => {
+    it('package() only: no build function', () => {
+      const pkgbuild = [
+        'pkgname=extract-only',
+        'pkgver=1.0.0',
+        'pkgrel=1',
+        'arch=("x86_64")',
+        'depends=("glibc")',
+        'makedepends=("gcc")',
+        'source=("https://example.com/extract-only-1.0.0.tar.gz")',
+        '',
+        'package() {',
+        '  cd "extract-only-1.0.0"',
+        '  install -Dm755 app "${pkgdir}/usr/bin/app"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
+
+    it('build() with no compiler tools', () => {
+      const pkgbuild = [
+        'pkgname=gnome-shell-extension-tiling-assistant',
+        'pkgver=54',
+        'pkgrel=1',
+        'arch=("any")',
+        'depends=("gnome-shell")',
+        'makedepends=("git")',
+        'source=("git+https://github.com/Leleat/Tiling-Assistant.git#tag=v54")',
+        '',
+        'build() {',
+        '  cd Tiling-Assistant',
+        '  gnome-extensions pack "tiling-assistant@leleat-on-github" --force',
+        '}',
+        '',
+        'package() {',
+        '  cd Tiling-Assistant',
+        '  install -d "$pkgdir/usr/share/gnome-shell/extensions/tiling-assistant@leleat-on-github"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
+  });
+
+  describe('Source compiled: Cargo/Rust', () => {
+    it('coolercontrold: cargo in makedepends, npm in comments', () => {
+      const pkgbuild = [
+        'pkgname=coolercontrold',
+        'pkgver=4.3.1',
+        'pkgrel=2',
+        'arch=("x86_64")',
+        'depends=("libdrm" "gcc-libs" "glibc")',
+        'makedepends=("rust" "cargo" "protobuf")',
+        'options=(!lto)',
+        'source=("coolercontrol-4.3.1.tar.gz")',
+        '',
+        'build() {',
+        '  # npm ci',
+        '  # npm run build',
+        '  cd "coolercontrold-4.3.1/coolercontrold"',
+        '  export RUSTUP_TOOLCHAIN=stable',
+        '  cargo build --release --locked',
+        '}',
+        '',
+        'package() {',
+        '  cd "coolercontrold-4.3.1/coolercontrold"',
+        '  install -Dm755 "target/release/coolercontrold" -t "$pkgdir/usr/bin"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+
+    it('alvr: cargo in makedepends', () => {
+      const pkgbuild = [
+        'pkgname=alvr',
+        'pkgver=20.14.1',
+        'pkgrel=4',
+        'arch=("x86_64")',
+        'makedepends=("git" "cargo" "clang" "vulkan-headers")',
+        'options=(!lto)',
+        'source=("alvr::git+https://github.com/alvr-org/ALVR.git#tag=v20.14.1")',
+        '',
+        'build() {',
+        '  cd "alvr"',
+        '  cargo build --frozen --release -p alvr_server_openvr',
+        '}',
+        '',
+        'package() {',
+        '  cd "alvr"',
+        '  install -Dm755 target/release/alvr_dashboard -t "$pkgdir/usr/bin/"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+  });
+
+  describe('Source compiled: Meson', () => {
+    it('waybar-git: meson build', () => {
+      const pkgbuild = [
+        'pkgname=waybar-git',
+        'pkgver=0.15.0.r822.g4e76d73',
+        'pkgrel=1',
+        'arch=("x86_64")',
+        'depends=("fmt" "gtk-layer-shell" "gtkmm3")',
+        'makedepends=("cmake" "git" "meson" "python-setuptools" "wayland-protocols")',
+        'source=("waybar::git+https://github.com/Alexays/Waybar.git")',
+        '',
+        'build() {',
+        '  arch-meson "waybar" build',
+        '  meson compile -C build',
+        '}',
+        '',
+        'package() {',
+        '  meson install -C build --destdir "$pkgdir"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+  });
+
+  describe('Source compiled: Qt/QMake', () => {
+    it('ffaudioconverter: qmake6 build', () => {
+      const pkgbuild = [
+        'pkgname=ffaudioconverter',
+        'pkgver=0.32.0',
+        'pkgrel=2',
+        'arch=("x86_64")',
+        'depends=("qt6-base" "qt6-tools" "ffmpeg")',
+        'source=("FFaudioConverter-0.32.0-src.tar.xz")',
+        '',
+        'build() {',
+        '  qmake6 PREFIX="${pkgdir}/usr" FFaudioConverter.pro -spec linux-g++ CONFIG+=release',
+        '  make',
+        '}',
+        '',
+        'package() {',
+        '  make DESTDIR="$pkgdir/usr" install',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+  });
+
+  describe('Source compiled: Autotools', () => {
+    it('logstalgia: autoreconf + configure + make', () => {
+      const pkgbuild = [
+        'pkgname=logstalgia',
+        'pkgver=1.1.5',
+        'pkgrel=1',
+        'arch=("x86_64")',
+        'makedeps=("boost-libs")',
+        'depends=("glibc" "sdl2-compat" "sdl2_image" "ftgl" "glew")',
+        'source=("logstalgia-1.1.5.tar.gz")',
+        '',
+        'prepare() {',
+        '  cd logstalgia-1.1.5',
+        '  autoreconf -fiv',
+        '}',
+        '',
+        'build() {',
+        '  cd logstalgia-1.1.5',
+        '  ./configure --prefix=/usr',
+        '  make',
+        '}',
+        '',
+        'package() {',
+        '  cd logstalgia-1.1.5',
+        '  make DESTDIR="$pkgdir/" install',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+  });
+
+  describe('Boundary conditions', () => {
+    it('null', () => {
+      expect(isSourceCompiledPackage(null)).toBe(false);
+    });
+
+    it('undefined', () => {
+      expect(isSourceCompiledPackage(undefined)).toBe(false);
+    });
+
+    it('empty string', () => {
+      expect(isSourceCompiledPackage('')).toBe(false);
+    });
   });
 });

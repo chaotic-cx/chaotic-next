@@ -36,7 +36,7 @@ import { paginate, resolvePagination } from '../utils/pagination';
 import { ArchMirrorService } from './arch-mirror.service';
 import { BumpService, parseCiConfig } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
-import { isBinaryPackage } from './pkgbuild-classifier';
+
 import { RepoManager } from './repo-manager';
 import { BumpPackagesResultDto } from './repo-manager.dto';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from './repo-manager.entity';
@@ -207,7 +207,7 @@ export class RepoManagerService implements OnModuleInit {
           skipSignalScan: pkg?.skipSignalScan ?? false,
         };
       })
-      .filter((report) => !report.skipSignalScan && !isBinaryPackage(report.pkgname));
+      .filter((report) => !report.skipSignalScan);
 
     const total = allBrokenReports.length;
     allBrokenReports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));

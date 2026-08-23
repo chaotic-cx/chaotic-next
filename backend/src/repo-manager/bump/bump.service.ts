@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Package, getOrCreatePackage, Repo } from '../../builder/builder.entity';
+import { getOrCreatePackage, Package, Repo } from '../../builder/builder.entity';
 import {
   BumpType,
   type PackageBumpEntry,
@@ -9,10 +9,11 @@ import {
   type RepoUpdateRunParams,
 } from '../../interfaces/repo-manager';
 import { errorMessage } from '../../utils/functions';
-import { PackageBump } from '../repo-manager.entity';
+import { isSourceCompiledPackage } from '../pkgbuild-classifier';
+import { PackageBump, type PackageElfPkgType } from '../repo-manager.entity';
 import { type BumpCommitAction, REPO_WRITER, type RepoReader, type RepoWriter } from '../repo-rw';
+import { CHAOTIC_PKG_TYPE } from '../signal/plugin';
 import { applyPackageBump, parseCiConfig } from './bump-config';
-import { isBinaryPackage } from '../pkgbuild-classifier';
 
 /** CI config flag keys (read from .CI/config); a flag is on when set to "1". */
 const CI_FLAG_SIGNAL_SCAN_IGNORE = 'CI_SIGNAL_SCAN_IGNORE';
@@ -162,18 +163,29 @@ export class BumpService {
       this.savePackageInBackground(pkg);
     }
 
-    // Binary-only packages (vendor installers that are never rebuilt from
-    // source) opt out of ELF signal scanning entirely. Auto-detect from PKGBUILD
-    // or package name, or check explicit CI flag.
     const pkgbuildText = await reader.readFile(`${pkgbaseDir}/PKGBUILD`).catch(() => '');
-    const isBinary = isBinaryPackage(pkgbaseDir, pkgbuildText);
-    const skipSignalScan = isCiFlagEnabled(configs, CI_FLAG_SIGNAL_SCAN_IGNORE) || isBinary;
+    const skipSignalScan = isCiFlagEnabled(configs, CI_FLAG_SIGNAL_SCAN_IGNORE);
     if (pkg.skipSignalScan !== skipSignalScan) {
       pkg.skipSignalScan = skipSignalScan;
       this.savePackageInBackground(pkg);
     }
 
+    const isSourceCompiled = isSourceCompiledPackage(pkgbuildText);
+    await this.updateSourceCompiledFlag(pkg, isSourceCompiled);
+
     return { configs, pkgInDb: pkg };
+  }
+
+  private async updateSourceCompiledFlag(pkg: Package, isSourceCompiled: boolean): Promise<void> {
+    try {
+      const analysisRepository = this.packagesRepository.manager.getRepository('PackageElfAnalysis');
+      await analysisRepository.update(
+        { pkgType: CHAOTIC_PKG_TYPE as unknown as PackageElfPkgType, pkgId: pkg.id },
+        { isSourceCompiled },
+      );
+    } catch (err) {
+      this.logger.debug(`Failed to update isSourceCompiled for ${pkg.pkgname}: ${errorMessage(err)}`, 'RepoManager');
+    }
   }
 
   private savePackageInBackground(pkg: Package): void {

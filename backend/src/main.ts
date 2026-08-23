@@ -32,7 +32,7 @@ async function bootstrap(): Promise<void> {
   // (@nestjs/platform-fastify pins an older one than @fastify/helmet expects),
   // so the plugin is narrowed to exactly what the adapter's register() takes.
   type AdapterPlugin = Parameters<FastifyAdapter['register']>[0];
-  fastifyAdapter.register(helmet as unknown as AdapterPlugin);
+  fastifyAdapter.register(helmet as unknown as AdapterPlugin, { contentSecurityPolicy: false });
 
   const corsOptions = {
     origin: CAUR_ALLOWED_CORS,

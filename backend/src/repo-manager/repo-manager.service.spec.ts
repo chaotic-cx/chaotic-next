@@ -159,7 +159,7 @@ describe('RepoManagerService.getBrokenPackages', () => {
     expect(result.total).toBe(3);
   });
 
-  it('filters out binary packages from the broken list', async () => {
+  it('filters out skipSignalScan packages from the broken list', async () => {
     const packageRepository = createMockRepository<Package>({ keyOf: (p) => String(p.id) });
     const archlinuxPackageRepository = createMockRepository<ArchlinuxPackage>({ keyOf: (p) => String(p.id) });
     const elfAnalysisRepository = createMockRepository<PackageElfAnalysis>({
@@ -201,9 +201,9 @@ describe('RepoManagerService.getBrokenPackages', () => {
     const service = buildService(packageRepository, archlinuxPackageRepository, elfAnalysisRepository);
     const result = await service.getBrokenPackages();
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].pkgname).toBe('real-broken-pkg');
-    expect(result.total).toBe(1);
+    expect(result.items).toHaveLength(2);
+    expect(result.items.map((i) => i.pkgname)).toEqual(['eclipse-java-bin', 'real-broken-pkg']);
+    expect(result.total).toBe(2);
   });
 });
 
