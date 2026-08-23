@@ -110,7 +110,7 @@ export const appConfig: ApplicationConfig = {
     }),
     provideZonelessChangeDetection(),
     { provide: APP_CONFIG, useValue: environment },
-    { provide: LOCALE_ID, useValue: 'en-GB' },
+    { provide: LOCALE_ID, useValue: navigator.language },
     { provide: HTTP_INTERCEPTORS, useClass: HttpRequestInterceptor, multi: true },
   ],
 };

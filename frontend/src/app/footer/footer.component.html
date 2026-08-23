@@ -9,6 +9,15 @@
       <a class="text-ctp-mauve" href="https://github.com/chaotic-cx/code-of-conduct" rel="noopener" target="_blank"
         >Code of Conduct</a
       >
+      @if (version()) {
+        <a
+          class="text-ctp-overlay1"
+          [href]="`https://github.com/chaotic-cx/chaotic-next/releases/tag/${version()}`"
+          rel="noopener"
+          target="_blank"
+          >{{ version() }}</a
+        >
+      }
     </nav>
   </p-card>
 </footer>

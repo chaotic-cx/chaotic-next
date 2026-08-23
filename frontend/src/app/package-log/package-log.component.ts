@@ -89,7 +89,7 @@ export class PackageLogComponent implements OnDestroy {
 
   protected readonly formattedTimestamp = computed(() => {
     const ms = Number(this.timestamp());
-    return Number.isFinite(ms) && ms > 0 ? new Date(ms).toLocaleString('en-GB') : (this.timestamp() ?? '');
+    return Number.isFinite(ms) && ms > 0 ? new Date(ms).toLocaleString() : (this.timestamp() ?? '');
   });
 
   private readonly terminalRef = viewChild<XtermLogComponent>('term');

@@ -9,3 +9,7 @@
   -webkit-backdrop-filter: blur(2px);
   border-radius: 0;
 }
+
+.chaotic-footer ::ng-deep .p-card-body {
+  padding: var(--spacing) calc(var(--spacing) * 2) !important;
+}

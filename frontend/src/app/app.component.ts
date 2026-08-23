@@ -1,5 +1,4 @@
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
-import localeEnGb from '@angular/common/locales/en-GB';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
@@ -17,8 +16,6 @@ import { ConfirmationService, MenuItem } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { ConfirmDialog } from '@openng/optimus-ui/confirmdialog';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
-import TimeAgo from 'javascript-time-ago';
-import en from 'javascript-time-ago/locale/en.json';
 import { AppService } from './app.service';
 import { AuthButtonComponent } from './auth/auth-button.component';
 import { FooterComponent } from './footer/footer.component';
@@ -140,8 +137,7 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
-    TimeAgo.addDefaultLocale(en);
-    registerLocaleData(localeEnGb);
+    void this.loadLocale();
 
     this.updateMetaTags();
 
@@ -165,5 +161,16 @@ export class AppComponent implements OnInit {
     this.meta.addTag({ property: 'og:image', content: '/assets/logo.png' });
     this.meta.addTag({ property: 'og:site_name', content: 'Chaotic-AUR' });
     this.meta.addTag({ property: 'og:url', content: 'https://aur.chaotic.cx' });
+  }
+
+  private async loadLocale(): Promise<void> {
+    const lang = navigator.language.split('-')[0];
+
+    try {
+      const localeModule = await import(`@angular/common/locales/${lang}.mjs`);
+      registerLocaleData(localeModule.default, lang);
+    } catch {
+      // Fallback: Angular will use its built-in en-US locale
+    }
   }
 }
