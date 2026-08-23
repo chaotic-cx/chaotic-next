@@ -6,7 +6,7 @@ import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { ALL_TIME_DAYS, AppService } from '../app.service';
 import { type ChartConfig, mochaAxisChartOptions } from '../chart-config';
 import { RESOURCE_METRICS, type ResourceMetricKey } from '../chart-resource-metrics';
-import { parseCount, resourceValue } from '../functions';
+import { isMobileSignal, parseCount, resourceValue, truncateLabel } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
@@ -23,6 +23,8 @@ export class ChartHeavyPackagesResourceComponent {
   readonly metric = input.required<ResourceMetricKey>();
 
   readonly amount = signal(20);
+
+  protected readonly isMobile = isMobileSignal();
 
   protected readonly metricDef = computed(() => RESOURCE_METRICS[this.metric()]);
 
@@ -47,7 +49,7 @@ export class ChartHeavyPackagesResourceComponent {
     const metric = this.metricDef();
     return {
       data: {
-        labels: data.map((d) => d.pkgname),
+        labels: data.map((d) => (this.isMobile() ? truncateLabel(d.pkgname) : d.pkgname)),
         datasets: [
           {
             label: `${metric.label} per build (${metric.unit})`,
@@ -56,7 +58,7 @@ export class ChartHeavyPackagesResourceComponent {
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>('y'),
+      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
     };
   });
 

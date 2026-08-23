@@ -1,5 +1,6 @@
-import { computed, type Signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import type { ParamMap } from '@angular/router';
 import type { ChaoticEvent, GitlabLogChunk } from '@chaotic-next/shared-lib';
@@ -153,4 +154,22 @@ export function updateSeoTags(meta: Meta, seo: SeoTags): void {
   meta.updateTag({ property: 'og:description', content: seo.description });
   meta.updateTag({ property: 'og:url', content: seo.url });
   if (seo.image) meta.updateTag({ property: 'og:image', content: seo.image });
+}
+
+const MOBILE_BREAKPOINT = '(max-width: 768px)';
+const MAX_LABEL_LENGTH = 15;
+
+export function isMobileSignal(): Signal<boolean> {
+  const observer = inject(BreakpointObserver);
+  const destroyRef = inject(DestroyRef);
+  const result = signal(false);
+  observer
+    .observe(MOBILE_BREAKPOINT)
+    .pipe(takeUntilDestroyed(destroyRef))
+    .subscribe((state) => result.set(state.matches));
+  return result.asReadonly();
+}
+
+export function truncateLabel(label: string, maxLength: number = MAX_LABEL_LENGTH): string {
+  return label.length > maxLength ? `${label.substring(0, maxLength)}…` : label;
 }

@@ -4,7 +4,7 @@ import { flavors } from '@catppuccin/palette';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../app.service';
 import { type ChartConfig, mochaAxisChartOptions } from '../chart-config';
-import { parseCount, resourceValue } from '../functions';
+import { isMobileSignal, parseCount, resourceValue, truncateLabel } from '../functions';
 
 const TOP_PACKAGES = 12;
 
@@ -23,10 +23,11 @@ export class ChartFailedHotspotsComponent {
 
   readonly loading = this.resource.isLoading;
   readonly hasData = computed(() => this.resource.hasValue());
+  protected readonly isMobile = isMobileSignal();
 
   readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
     const rows = resourceValue(this.resource) ?? [];
-    const labels = rows.map((r) => r.pkgname);
+    const labels = rows.map((r) => (this.isMobile() ? truncateLabel(r.pkgname) : r.pkgname));
     const data = rows.map((r) => parseCount(r.count));
     return {
       data: {
@@ -39,7 +40,7 @@ export class ChartFailedHotspotsComponent {
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>('y'),
+      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
     };
   });
 }

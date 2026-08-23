@@ -28,7 +28,15 @@ export function mochaScales(): { x: AxisStyling; y: AxisStyling } {
   return { x: axis, y: axis };
 }
 
-export function mochaAxisChartOptions<TType extends ChartType>(indexAxis: 'x' | 'y' = 'x'): ChartOptions<TType> {
+interface MochaAxisChartOptions {
+  indexAxis?: 'x' | 'y';
+}
+
+export function mochaAxisChartOptions<TType extends ChartType>(
+  config: MochaAxisChartOptions = {},
+): ChartOptions<TType> {
+  const { indexAxis = 'x' } = config;
+
   const options = {
     maintainAspectRatio: false,
     aspectRatio: 0.4,

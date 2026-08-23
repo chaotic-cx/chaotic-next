@@ -167,6 +167,7 @@ export class AppComponent implements OnInit {
     const lang = navigator.language.split('-')[0];
 
     try {
+      /* @vite-ignore */
       const localeModule = await import(`@angular/common/locales/${lang}.mjs`);
       registerLocaleData(localeModule.default, lang);
     } catch {

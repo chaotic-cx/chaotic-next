@@ -57,7 +57,7 @@ export class ChartReviewOverTimeComponent {
         datasets,
       },
       options: {
-        ...mochaAxisChartOptions<'line'>('x'),
+        ...mochaAxisChartOptions<'line'>({ indexAxis: 'x' }),
         aspectRatio: 2,
       },
     };

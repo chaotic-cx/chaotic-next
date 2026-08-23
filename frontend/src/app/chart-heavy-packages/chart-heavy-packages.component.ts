@@ -5,7 +5,7 @@ import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { ALL_TIME_DAYS, AppService } from '../app.service';
 import { type ChartConfig, mochaAxisChartOptions } from '../chart-config';
-import { resourceValue } from '../functions';
+import { isMobileSignal, resourceValue, truncateLabel } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
@@ -22,6 +22,7 @@ export class ChartHeavyPackagesComponent {
   readonly amount = signal(20);
 
   protected readonly Math = Math;
+  protected readonly isMobile = isMobileSignal();
 
   private readonly resource = httpResource<{ pkgname: string; average: string }[]>(() => {
     const val = Math.max(1, this.amount() || 1);
@@ -35,7 +36,7 @@ export class ChartHeavyPackagesComponent {
     const data = resourceValue(this.resource) ?? [];
     return {
       data: {
-        labels: data.map((d) => d.pkgname),
+        labels: data.map((d) => (this.isMobile() ? truncateLabel(d.pkgname) : d.pkgname)),
         datasets: [
           {
             label: 'Average Build Time (minutes)',
@@ -44,7 +45,7 @@ export class ChartHeavyPackagesComponent {
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>('y'),
+      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
     };
   });
 }
