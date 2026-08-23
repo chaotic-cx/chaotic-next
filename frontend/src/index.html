@@ -18,6 +18,89 @@
     <meta content="yes" name="apple-mobile-web-app-capable" />
     <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style" />
     <meta content="Chaotic-AUR" name="apple-mobile-web-app-title" />
+    <script>
+      (() => {
+        const MAX_ENTRIES = 5;
+        const seen = new Set();
+        const booted = () => window.chaoticAppBooted === true;
+        const trimStack = (stack) => stack?.split('\n').slice(0, 6).join('\n');
+
+        const detailsText = (kind, message, source, stack) =>
+          [kind, message, source ?? '', stack ?? '', navigator.userAgent, new Date().toISOString()]
+            .filter((part) => part !== '')
+            .join('\n');
+
+        const render = (kind, message, source, stack) => {
+          if (booted()) return;
+          const key = `${kind}|${message}|${source ?? ''}`;
+          if (seen.has(key) || seen.size >= MAX_ENTRIES) return;
+          seen.add(key);
+
+          let host = document.getElementById('chaotic-boot-error');
+          if (!host) {
+            host = document.createElement('div');
+            host.id = 'chaotic-boot-error';
+            host.setAttribute(
+              'style',
+              'position:fixed;inset:auto 12px 12px 12px;z-index:2147483647;max-width:720px;margin:0 auto;' +
+                'background:#1e1e2e;color:#cdd6f4;border:1px solid #f38ba8;border-radius:8px;padding:12px 16px;' +
+                'font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;box-shadow:0 4px 16px rgba(0,0,0,.5);',
+            );
+            document.body.appendChild(host);
+          }
+
+          const details = detailsText(kind, message, source, stack);
+          const entry = document.createElement('div');
+          const heading = document.createElement('div');
+          heading.textContent = `⚠️ ${kind}: ${message}${source ? ` @ ${source}` : ''}`;
+          const pre = document.createElement('pre');
+          pre.textContent = trimStack(stack) ?? '';
+          pre.setAttribute('style', 'white-space:pre-wrap;word-break:break-word;margin:6px 0 0;opacity:.85;');
+          const meta = document.createElement('div');
+          meta.textContent = navigator.userAgent;
+          meta.setAttribute('style', 'margin-top:6px;opacity:.6;font-size:11px;');
+          const copy = document.createElement('button');
+          copy.type = 'button';
+          copy.textContent = 'Copy details';
+          copy.setAttribute(
+            'style',
+            'margin-top:8px;background:#45475a;color:#cdd6f4;border:0;border-radius:4px;padding:4px 10px;cursor:pointer;',
+          );
+          copy.addEventListener('click', () => {
+            void navigator.clipboard?.writeText(details).catch(() => undefined);
+          });
+          entry.append(heading);
+          if (stack) entry.append(pre);
+          entry.append(meta, copy);
+          host.append(entry);
+        };
+
+        window.addEventListener(
+          'error',
+          (event) => {
+            if (booted()) return;
+            const target = event.target;
+            if (target instanceof HTMLElement && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+              render('Resource failed to load', (target.src ?? target.href ?? '').slice(0, 300));
+              return;
+            }
+            render(
+              'Error',
+              event.message ?? String(event.error),
+              event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : undefined,
+              event.error?.stack,
+            );
+          },
+          true,
+        );
+
+        window.addEventListener('unhandledrejection', (event) => {
+          if (booted()) return;
+          const reason = event.reason;
+          render('Unhandled rejection', reason?.message ?? String(reason), undefined, reason?.stack);
+        });
+      })();
+    </script>
   </head>
   <body>
     <chaotic-root></chaotic-root>
