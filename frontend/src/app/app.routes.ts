@@ -14,6 +14,16 @@ export const routes: Routes = [
     loadComponent: () => import('./docs/docs.component').then((c) => c.DocsComponent),
   },
   {
+    title: 'Privacy Policy',
+    path: 'privacy',
+    loadComponent: () => import('./privacy-policy/privacy-policy.component').then((c) => c.PrivacyPolicyComponent),
+  },
+  {
+    title: 'Code of Conduct',
+    path: 'code-of-conduct',
+    loadComponent: () => import('./code-of-conduct/code-of-conduct.component').then((c) => c.CodeOfConductComponent),
+  },
+  {
     title: 'Build status',
     path: 'status',
     canActivate: [backendGuard],
@@ -183,11 +193,6 @@ export const routes: Routes = [
           import('./admin/pages/admin-package-elf-analysis-page.component').then(
             (c) => c.AdminPackageElfAnalysisPageComponent,
           ),
-      },
-      {
-        path: 'aur-scan',
-        loadComponent: () =>
-          import('./admin/pages/admin-aur-scan-page.component').then((c) => c.AdminAurScanPageComponent),
       },
       {
         path: 'repo-operations',
