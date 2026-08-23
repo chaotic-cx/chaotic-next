@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PackageBump } from '@chaotic-next/shared-lib';
@@ -48,7 +48,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 
 @Component({
   selector: 'chaotic-admin-package-bumps-page',
-  imports: [DatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule, RouterLink],
+  imports: [LocaleDatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule, RouterLink],
   template: `
     <div class="table-container">
       <p-table
@@ -146,7 +146,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               <p-tag [value]="sourceLabel(bump.triggerFrom)" [severity]="sourceSeverity(bump.triggerFrom)" />
             </td>
             <td class="text-ctp-subtext">{{ detailsText(bump) }}</td>
-            <td>{{ bump.timestamp | date: 'short' }}</td>
+            <td>{{ bump.timestamp | localeDate }}</td>
           </tr>
         </ng-template>
       </p-table>

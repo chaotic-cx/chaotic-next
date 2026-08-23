@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Skeleton } from '@openng/optimus-ui/skeleton';
@@ -19,7 +19,7 @@ const FALLBACK_DOT_CLASS = 'bg-ctp-subtext0';
 
 @Component({
   selector: 'chaotic-pipeline-list',
-  imports: [RouterLink, Skeleton, Tooltip, RelativeTimePipe, DatePipe],
+  imports: [RouterLink, Skeleton, Tooltip, RelativeTimePipe, LocaleDatePipe],
   templateUrl: './pipeline-list.component.html',
 })
 export class PipelineListComponent {

@@ -18,7 +18,7 @@
           <div class="flex shrink-0 items-center gap-3">
             <span
               class="whitespace-nowrap text-xs text-ctp-subtext1"
-              [pTooltip]="(deployment.timestamp | date: 'short') ?? undefined"
+              [pTooltip]="(deployment.timestamp | localeDate) ?? undefined"
               tooltipPosition="top"
               >{{ deployment.timestamp | relativeTime }}</span
             >

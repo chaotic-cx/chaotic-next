@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form } from '@angular/forms/signals';
@@ -37,7 +37,7 @@ import { PackageListService } from './package-list.service';
     MultiSelectModule,
     Select,
     TagModule,
-    DatePipe,
+    LocaleDatePipe,
     Button,
     FormField,
     StripPrefixPipe,

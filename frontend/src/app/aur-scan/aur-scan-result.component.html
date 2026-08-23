@@ -26,9 +26,6 @@
     @if (hasNoviceMaintainer()) {
       <p-tag severity="warn" value="New maintainer" />
     }
-    @if (scan()?.packageMeta?.orphaned) {
-      <p-tag severity="danger" value="Orphaned" />
-    }
     @if (scan()?.maintainerChange; as change) {
       <p-tag
         [pTooltip]="presenter.maintainerChangeSummary(change)"
@@ -141,7 +138,9 @@
               </div>
             }
             @if (current.packageMeta.orphaned) {
-              <span class="text-ctp-subtext text-sm">No maintainer — this package is orphaned in the AUR.</span>
+              <span class="mt-1.5 block text-ctp-red text-sm"
+                >No maintainer — this package is orphaned in the AUR.</span
+              >
             }
           </div>
         </div>
@@ -190,8 +189,8 @@
                 >
                   <i
                     class="pi text-ctp-subtext"
-                    [class.pi-chevron-right]="!isOpen(file.name)"
-                    [class.pi-chevron-down]="isOpen(file.name)"
+                    [class.pi-angle-right]="!isOpen(file.name)"
+                    [class.pi-angle-down]="isOpen(file.name)"
                   ></i>
                   <code class="text-ctp-sky">{{ file.name }}</code>
                 </button>

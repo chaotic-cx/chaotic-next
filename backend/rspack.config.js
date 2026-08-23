@@ -69,16 +69,19 @@ class RspackPlugin {
   }
 }
 
+function resolveAppVersion() {
+  if (process.env.APP_VERSION) return process.env.APP_VERSION;
+  try {
+    return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8', timeout: 2000 }).trim();
+  } catch {
+    return 'dev';
+  }
+}
+
 module.exports = (options = {}) => {
   const isProduction = options.mode === 'production' || process.env.NODE_ENV === 'production';
   const mode = isProduction ? 'production' : 'development';
-
-  let version = 'dev';
-  try {
-    version = execSync('git describe --tags --abbrev=0', { encoding: 'utf-8', timeout: 2000 }).trim();
-  } catch {
-    // fallback to 'dev' if git is unavailable (e.g. in CI or container builds)
-  }
+  const version = resolveAppVersion();
 
   return {
     mode,

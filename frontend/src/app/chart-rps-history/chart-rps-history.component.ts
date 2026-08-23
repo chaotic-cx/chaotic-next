@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import type { RpsHistorySample } from '@chaotic-next/shared-lib';
@@ -8,16 +7,16 @@ import { type ChartConfig, mochaAxisChartOptions } from '../chart-config';
 import { resourceValue } from '../functions';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
 
+const TIME_FORMATTER = new Intl.DateTimeFormat(navigator.language, { timeStyle: 'short' });
+
 @Component({
   selector: 'chaotic-chart-rps-history',
   imports: [UIChart],
   templateUrl: './chart-rps-history.component.html',
   styleUrl: './chart-rps-history.component.css',
-  providers: [DatePipe],
 })
 export class ChartRpsHistoryComponent {
   private readonly appService = inject(AppService);
-  private readonly datePipe = inject(DatePipe);
 
   private readonly resource = httpResource<RpsHistorySample[]>(() => this.appService.getRpsHistoryResourceRequest());
 
@@ -29,7 +28,7 @@ export class ChartRpsHistoryComponent {
     const samples = [...(resourceValue(this.resource) ?? [])].sort((a, b) => a.timestamp - b.timestamp);
     return {
       data: {
-        labels: samples.map((sample) => this.datePipe.transform(sample.timestamp, 'shortTime') || ''),
+        labels: samples.map((sample) => TIME_FORMATTER.format(new Date(sample.timestamp))),
         datasets: [
           {
             label: 'Requests per second',

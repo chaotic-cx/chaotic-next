@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Skeleton } from '@openng/optimus-ui/skeleton';
@@ -14,7 +14,15 @@ const DEPLOYMENTS_PAGE_SIZE = 5;
 
 @Component({
   selector: 'chaotic-build-status-deployments',
-  imports: [RouterLink, Skeleton, Tooltip, RelativeTimePipe, BuildStatusSectionComponent, DatePipe, BuildStatusPager],
+  imports: [
+    RouterLink,
+    Skeleton,
+    Tooltip,
+    RelativeTimePipe,
+    BuildStatusSectionComponent,
+    LocaleDatePipe,
+    BuildStatusPager,
+  ],
   templateUrl: './build-status-deployments.component.html',
 })
 export class BuildStatusDeploymentsComponent {

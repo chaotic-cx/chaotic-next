@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -27,7 +27,18 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
 
 @Component({
   selector: 'chaotic-admin-pipeline-triggers-page',
-  imports: [Button, DatePipe, Dialog, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule],
+  imports: [
+    Button,
+    LocaleDatePipe,
+    Dialog,
+    FormsModule,
+    IconField,
+    InputIcon,
+    InputText,
+    Select,
+    TableModule,
+    TagModule,
+  ],
   template: `
     <div class="table-container">
       <p-table
@@ -136,7 +147,7 @@ const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: opera
             <td>
               <span class="font-medium">{{ trigger.userName }}</span>
             </td>
-            <td>{{ trigger.createdAt | date: 'short' }}</td>
+            <td>{{ trigger.createdAt | localeDate }}</td>
           </tr>
         </ng-template>
       </p-table>
