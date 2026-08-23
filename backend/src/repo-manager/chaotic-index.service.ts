@@ -69,7 +69,7 @@ export class ChaoticIndexService {
         chaoticPkg.pkgrel = pkg.pkgrel;
         chaoticPkg.bump = pkg.bump;
         chaoticPkg.metadata = pkg.metaData;
-        chaoticPkg.isActive = true;
+        markActive(chaoticPkg);
         chaoticPkg.repo = repo;
         toUpdate.push(chaoticPkg);
 

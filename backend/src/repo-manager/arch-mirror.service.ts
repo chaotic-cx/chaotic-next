@@ -2,8 +2,6 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { AxiosResponse } from 'axios';
-import { ARCH } from '../utils/constants';
-import { errorCode, errorMessage } from '../utils/functions';
 import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,6 +14,8 @@ import {
   RepoWorkDir,
   TriggerType,
 } from '../interfaces/repo-manager';
+import { ARCH } from '../utils/constants';
+import { errorCode, errorMessage } from '../utils/functions';
 import { extractPacmanDatabase, listPackageDirs, parsePackageDesc, parsePackageFiles } from './offline/pacman-parse';
 import { ArchlinuxPackage, bulkGetOrCreateArch, PackageElfAnalysis } from './repo-manager.entity';
 import { saveInBatches } from './save';
@@ -23,8 +23,8 @@ import { type ScanJob, SignalScanService } from './scan';
 import { pkgTypeOf } from './signal';
 
 const ARCH_REPOS = ['core', 'extra'] as const;
-const ARCH_REPO_URL = (name: string) => `https://arch.mirror.constant.com/${name}/os/x86_64/${name}.files`;
 const DEFAULT_MIRROR_URL = 'https://arch.mirror.constant.com';
+const ARCH_DATABASE_URL = (mirrorUrl: string, repo: string): string => `${mirrorUrl}/${repo}/os/x86_64/${repo}.files`;
 
 /**
  * Arch mirror interaction: pull/parse the core+extra pacman databases, diff
@@ -49,14 +49,14 @@ export class ArchMirrorService {
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
     this.logger.log('Started pulling Archlinux databases...');
     this.logger.debug(`Created temporary directory ${tempDir}`);
+    const mirrorUrl = settings.mirrorUrl ?? DEFAULT_MIRROR_URL;
 
     const downloads: PromiseSettledResult<RepoWorkDir | null>[] = await Promise.allSettled(
       ARCH_REPOS.map(async (repo) => {
-        const repoUrl = ARCH_REPO_URL(repo);
         const repoDir = join(tempDir, repo);
         this.logger.debug(`Pulling database for ${repo}...`);
         try {
-          return await this.pullDatabases(repoUrl, repoDir, repo);
+          return await this.pullDatabases(ARCH_DATABASE_URL(mirrorUrl, repo), repoDir, repo);
         } catch (err: unknown) {
           this.logger.error(errorMessage(err));
           return null;
@@ -91,8 +91,9 @@ export class ArchMirrorService {
     try {
       for (const pkg of changed) {
         const filename = pkg.metadata?.filename;
-        if (!filename) {
-          this.logger.warn(`No filename for ${pkg.pkgname}, skipping scan`);
+        const version = pkg.version;
+        if (!filename || !version) {
+          this.logger.warn(`No filename or version for ${pkg.pkgname}, skipping scan`);
           continue;
         }
         this.logger.debug(`Scanning changed Arch package ${pkg.pkgname} (${pkg.version})`);
@@ -125,7 +126,7 @@ export class ArchMirrorService {
             method: 'GET',
             responseType: 'arraybuffer',
           });
-          await writeFile(downloadPath, Buffer.from(response.data, 'binary'));
+          await writeFile(downloadPath, Buffer.from(response.data));
         } catch (err: unknown) {
           this.logger.warn(`Failed to download ${filename}: ${errorMessage(err)}`);
           continue;
@@ -135,7 +136,7 @@ export class ArchMirrorService {
           file: downloadPath,
           pkgType: TriggerType.ARCH,
           pkgId: pkg.id,
-          version: pkg.version,
+          version,
         });
       }
 
@@ -153,10 +154,11 @@ export class ArchMirrorService {
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-index-'));
     this.logger.log('Started indexing the full Arch mirror...');
     try {
+      const mirrorUrl = settings.mirrorUrl ?? DEFAULT_MIRROR_URL;
       const downloads: PromiseSettledResult<RepoWorkDir | null>[] = await Promise.allSettled(
         ARCH_REPOS.map(async (repo) => {
           const repoDir = join(tempDir, repo);
-          return this.pullDatabases(ARCH_REPO_URL(repo), repoDir, repo);
+          return this.pullDatabases(ARCH_DATABASE_URL(mirrorUrl, repo), repoDir, repo);
         }),
       );
 
@@ -173,7 +175,6 @@ export class ArchMirrorService {
       // Ensure every package has an archlinux_package row so analyses get a
       // stable pkgId, and gather the download candidates.
       const candidates: IndexCandidate[] = [];
-      const mirrorUrl = settings.mirrorUrl ?? DEFAULT_MIRROR_URL;
       const archPkgNames = parsed
         .filter((pkg) => pkg.name && pkg.metaData?.filename)
         .map((pkg) => pkg.name) as string[];
@@ -245,7 +246,7 @@ export class ArchMirrorService {
             method: 'GET',
             responseType: 'arraybuffer',
           });
-          await writeFile(downloadPath, Buffer.from(response.data, 'binary'));
+          await writeFile(downloadPath, Buffer.from(response.data));
         } catch (err: unknown) {
           this.logger.warn(`Failed to download ${candidate.filename}: ${errorMessage(err)}`);
           result.failed++;

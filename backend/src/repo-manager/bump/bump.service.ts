@@ -10,13 +10,16 @@ import {
 } from '../../interfaces/repo-manager';
 import { errorMessage } from '../../utils/functions';
 import { isSourceCompiledPackage } from '../pkgbuild-classifier';
-import { PackageBump, type PackageElfPkgType } from '../repo-manager.entity';
+import { PackageBump, PackageElfAnalysis } from '../repo-manager.entity';
 import { type BumpCommitAction, REPO_WRITER, type RepoReader, type RepoWriter } from '../repo-rw';
 import { CHAOTIC_PKG_TYPE } from '../signal/plugin';
 import { applyPackageBump, parseCiConfig } from './bump-config';
 
 /** CI config flag keys (read from .CI/config); a flag is on when set to "1". */
 const CI_FLAG_SIGNAL_SCAN_IGNORE = 'CI_SIGNAL_SCAN_IGNORE';
+
+/** Pkgname fragments marking prebuilt binaries; rebuilding those from source makes no sense. */
+const NON_SOURCE_PKGNAME_FRAGMENTS = ['-bin', '-appimage', '-snap', '-support', '-meta'] as const;
 
 export function isCiFlagEnabled(configs: Record<string, string | undefined>, key: string): boolean {
   return configs[key] === '1';
@@ -34,22 +37,24 @@ export class BumpService {
   constructor(
     @InjectRepository(Package)
     private readonly packagesRepository: Repository<Package>,
+    @InjectRepository(PackageElfAnalysis)
+    private readonly elfAnalysisRepository: Repository<PackageElfAnalysis>,
     @Inject(REPO_WRITER)
     private readonly repoWriter: RepoWriter,
   ) {}
+
+  async bumpAndPush(needsRebuild: RepoUpdateRunParams[], reader: RepoReader, repo: Repo): Promise<PackageBumpEntry[]> {
+    const bumpedEntries = await this.bumpPackages(needsRebuild, reader);
+    const needsPush = needsRebuild.filter((entry) => entry.gotBumped === true);
+    await this.pushChanges(needsPush, repo);
+    return bumpedEntries;
+  }
 
   async bumpPackages(needsRebuild: RepoUpdateRunParams[], reader: RepoReader): Promise<PackageBumpEntry[]> {
     const bumpedEntries: PackageBumpEntry[] = [];
 
     for (const param of needsRebuild) {
-      if (
-        param.pkg.pkgname.includes('-bin') ||
-        param.pkg.pkgname.includes('-appimage') ||
-        param.pkg.pkgname.includes('-snap') ||
-        param.pkg.pkgname.includes('-support') ||
-        param.pkg.pkgname.includes('-meta')
-      )
-        continue;
+      if (NON_SOURCE_PKGNAME_FRAGMENTS.some((fragment) => param.pkg.pkgname.includes(fragment))) continue;
 
       const existingEntry: PackageBumpEntry | undefined = bumpedEntries.find(
         (entry) => entry.pkg.pkgname === param.pkg.pkgname,
@@ -66,45 +71,20 @@ export class BumpService {
           ? `Rebuilding ${param.pkg.pkgname} manually`
           : `Rebuilding ${param.pkg.pkgname} because of changed ${param.archPkg.pkgname}`,
       );
-      bumpedEntries.push({
-        pkg: param.pkg,
-        bumpType: param.bumpType,
-        trigger: param.archPkg.id,
-        triggerFrom: param.triggerFrom,
-        // A manual bump has no triggering package, so omit the self-referential name.
-        triggerName: param.bumpType === BumpType.MANUAL ? undefined : param.archPkg.pkgname,
-        details: param.details,
-      });
 
-      // Record the Arch package that caused the rebuild. Manual bumps have no
-      // real trigger, so they must not add themselves to their own bumpTriggers.
-      if (param.bumpType !== BumpType.MANUAL) {
-        if (!param.pkg.bumpTriggers) {
-          param.pkg.bumpTriggers = [{ pkgname: param.archPkg.pkgname, archVersion: param.archPkg.version }];
-        } else {
-          if (!param.pkg.bumpTriggers.find((trigger) => trigger.pkgname === param.archPkg.pkgname)) {
-            param.pkg.bumpTriggers.push({
-              pkgname: param.archPkg.pkgname,
-              archVersion: param.archPkg.version,
-            });
-          } else {
-            param.pkg.bumpTriggers = param.pkg.bumpTriggers.map((trigger) => {
-              if (trigger.pkgname === param.archPkg.pkgname) {
-                trigger.archVersion = param.archPkg.version;
-              }
-              return trigger;
-            });
-          }
-        }
-      }
-
+      // A manual bump has no triggering package, so omit the self-referential name.
+      const triggerName = param.bumpType === BumpType.MANUAL ? undefined : param.archPkg.pkgname;
       const bumpEntry: PackageBumpEntry = {
         pkg: param.pkg,
         bumpType: param.bumpType,
         trigger: param.archPkg.id,
         triggerFrom: param.triggerFrom,
+        triggerName,
         details: param.details,
       };
+      bumpedEntries.push(bumpEntry);
+
+      this.recordBumpTrigger(param);
 
       // Persist package + bump atomically.
       await this.packagesRepository.manager.transaction(async (manager) => {
@@ -116,6 +96,18 @@ export class BumpService {
     }
 
     return bumpedEntries;
+  }
+
+  private recordBumpTrigger(param: RepoUpdateRunParams): void {
+    if (param.bumpType === BumpType.MANUAL) return;
+    const triggers = param.pkg.bumpTriggers ?? [];
+    const existing = triggers.find((trigger) => trigger.pkgname === param.archPkg.pkgname);
+    if (existing) {
+      existing.archVersion = param.archPkg.version ?? '';
+    } else {
+      triggers.push({ pkgname: param.archPkg.pkgname, archVersion: param.archPkg.version ?? '' });
+    }
+    param.pkg.bumpTriggers = triggers;
   }
 
   /** Forwards bumpPackages' rewritten `.CI/config`s to the writer as one atomic commit per repo. */
@@ -178,19 +170,15 @@ export class BumpService {
 
   private async updateSourceCompiledFlag(pkg: Package, isSourceCompiled: boolean): Promise<void> {
     try {
-      const analysisRepository = this.packagesRepository.manager.getRepository('PackageElfAnalysis');
-      await analysisRepository.update(
-        { pkgType: CHAOTIC_PKG_TYPE as unknown as PackageElfPkgType, pkgId: pkg.id },
-        { isSourceCompiled },
-      );
-    } catch (err) {
-      this.logger.debug(`Failed to update isSourceCompiled for ${pkg.pkgname}: ${errorMessage(err)}`, 'RepoManager');
+      await this.elfAnalysisRepository.update({ pkgType: CHAOTIC_PKG_TYPE, pkgId: pkg.id }, { isSourceCompiled });
+    } catch (err: unknown) {
+      this.logger.debug(`Failed to update isSourceCompiled for ${pkg.pkgname}: ${errorMessage(err)}`);
     }
   }
 
   private savePackageInBackground(pkg: Package): void {
     this.packagesRepository.save(pkg).catch((err: unknown) => {
-      this.logger.warn(`Failed to persist ${pkg.pkgname}: ${errorMessage(err)}`, 'RepoManager');
+      this.logger.warn(`Failed to persist ${pkg.pkgname}: ${errorMessage(err)}`);
     });
   }
 

@@ -121,14 +121,6 @@ export class RepoManagerController {
     return this.repoManager.importSignalsSeed(seed);
   }
 
-  @Post('signals/import-file')
-  @HttpCode(HttpStatus.ACCEPTED)
-  @ApiOperation({ summary: 'Stream-import a newline-delimited JSON seed file of ELF analyses from disk.' })
-  @ApiAcceptedResponse({ description: 'ELF analyses imported.' })
-  importSignalsSeedFile(@Body('path') path: string): Promise<void> {
-    return this.repoManager.importSignalsSeedFile(path);
-  }
-
   @Get('update-db')
   @ApiOperation({ summary: 'Update Chaotic-AUR database versions.' })
   @ApiOkResponse({ description: 'Chaotic-AUR database update triggered.' })

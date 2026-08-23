@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { BumpService, isCiFlagEnabled } from '../bump';
-import type { RepoReader } from '../repo-rw';
 import { In, Repository } from 'typeorm';
 import { Package, Repo } from '../../builder/builder.entity';
 import {
@@ -15,8 +13,9 @@ import {
   RepoUpdateRunParams,
   TriggerType,
 } from '../../interfaces/repo-manager';
+import { BumpService, isCiFlagEnabled } from '../bump';
 import { ArchlinuxPackage, PackageElfAnalysis } from '../repo-manager.entity';
-import { loadRuntimeVersions } from './runtime-versions';
+import type { RepoReader } from '../repo-rw';
 import {
   type BrokenDependency,
   compareArchVersions,
@@ -31,6 +30,7 @@ import {
   sameLibraryFamily,
 } from '../signal';
 import { latestAnalysesByPackage } from './latest-analyses';
+import { loadRuntimeVersions } from './runtime-versions';
 
 /** CI config flag keys (read from .CI/config); a flag is on when set to "1". */
 export const CI_FLAG_REBUILD_IGNORE_ABI = 'CI_REBUILD_IGNORE_ABI';
@@ -161,8 +161,7 @@ export class RebuildTriggerService {
           : null;
         if (broken) {
           const { deps, archPkg } = broken;
-          this.recordRebuildTrigger({
-            needsRebuild,
+          const entry = this.buildRebuildEntry({
             pkgConfig,
             archPkg,
             bumpType: BumpType.BROKEN_DEPS,
@@ -172,6 +171,7 @@ export class RebuildTriggerService {
             settings,
             triggerFrom: TriggerType.ARCH,
           });
+          if (entry) needsRebuild.push(entry);
           foundTrigger = true;
         }
       }
@@ -190,8 +190,7 @@ export class RebuildTriggerService {
           : [];
         const trigger = triggers[0];
         if (trigger) {
-          this.recordRebuildTrigger({
-            needsRebuild,
+          const entry = this.buildRebuildEntry({
             pkgConfig,
             archPkg: changed.find((pkg) => pkg.id === trigger.pkgId),
             bumpType: BumpType.PLUGIN,
@@ -201,6 +200,7 @@ export class RebuildTriggerService {
             settings,
             triggerFrom: TriggerType.ARCH,
           });
+          if (entry) needsRebuild.push(entry);
         }
       }
     }
@@ -210,13 +210,12 @@ export class RebuildTriggerService {
   }
 
   /**
-   * Record a detected rebuild trigger: log it in dry-run mode, otherwise push a
-   * rebuild entry for the package. The reason/detail strings are summarized for
-   * the log line and commit message so symbol-loss breaks don't list hundreds of
-   * entries.
+   * Build a rebuild entry for a detected trigger, or null in dry-run mode
+   * (logged only) or when no triggering package could be blamed. The
+   * reason/detail strings are summarized for the log line and commit message
+   * so symbol-loss breaks don't list hundreds of entries.
    */
-  recordRebuildTrigger(params: {
-    needsRebuild: RepoUpdateRunParams[];
+  buildRebuildEntry(params: {
     pkgConfig: PackageConfig;
     archPkg?: ArchlinuxPackage | Package;
     bumpType: BumpType;
@@ -225,24 +224,25 @@ export class RebuildTriggerService {
     pkgbaseDir: string;
     settings: RepoSettings;
     triggerFrom: TriggerType;
-  }): void {
+  }): RepoUpdateRunParams | null {
     const logDetails = summarizeDetails(params.details);
     if (params.settings.abiDryRun) {
       this.logger.log(
         `[DRY-RUN] Would rebuild ${params.pkgbaseDir} because of ${params.reason} (${logDetails.join(', ')})`,
       );
-      return;
+      return null;
     }
-    if (!params.archPkg) return;
-    params.needsRebuild.push({
+    if (!params.archPkg) return null;
+    this.logger.debug(`Rebuilding ${params.pkgbaseDir} because of ${params.reason} (${logDetails.join(', ')})`);
+
+    return {
       archPkg: params.archPkg,
       configs: params.pkgConfig.configs,
       pkg: params.pkgConfig.pkgInDb,
       bumpType: params.bumpType,
       triggerFrom: params.triggerFrom,
       details: logDetails,
-    });
-    this.logger.debug(`Rebuilding ${params.pkgbaseDir} because of ${params.reason} (${logDetails.join(', ')})`);
+    };
   }
 
   /**
@@ -417,8 +417,12 @@ export class RebuildTriggerService {
     const [{ providedByPkgname, archProvidedSonames }, runtimes, previousRows, currentRows] = await Promise.all([
       this.loadSonameProviders(),
       loadRuntimeVersions(this.archlinuxPackageRepository),
-      this.loadChangedArchAnalyses(changed, 'previousVersion'),
-      this.loadChangedArchAnalyses(changed, 'version'),
+      this.loadProvidedSonameAnalyses(
+        changed.flatMap((pkg) => (pkg.previousVersion ? [{ pkgId: pkg.id, version: pkg.previousVersion }] : [])),
+      ),
+      this.loadProvidedSonameAnalyses(
+        changed.flatMap((pkg) => (pkg.version ? [{ pkgId: pkg.id, version: pkg.version }] : [])),
+      ),
     ]);
     // Provided-soname/runtimes context is logged by SignalScanService; only the
     // run-specific part is logged here.
@@ -506,24 +510,19 @@ export class RebuildTriggerService {
     return satisfied;
   }
 
-  private async loadChangedArchAnalyses(
-    changed: ArchlinuxPackage[],
-    versionField: 'previousVersion' | 'version',
-  ): Promise<(PackageElfAnalysis & { pkgId: number })[]> {
-    const ids: number[] = [];
-    const versions: string[] = [];
-    for (const pkg of changed) {
-      const version = versionField === 'previousVersion' ? pkg.previousVersion : pkg.version;
-      if (version) {
-        ids.push(pkg.id);
-        versions.push(version);
-      }
-    }
-    if (ids.length === 0) return [];
+  /** Provided sonames of specific Arch package versions (previous + current of the changed set). */
+  private async loadProvidedSonameAnalyses(
+    entries: { pkgId: number; version: string }[],
+  ): Promise<Pick<PackageElfAnalysis, 'pkgId' | 'providedSonames'>[]> {
+    if (entries.length === 0) return [];
     return this.elfAnalysisRepository.find({
-      where: { pkgType: pkgTypeOf(TriggerType.ARCH), pkgId: In(ids), version: In(versions) },
+      where: entries.map((entry) => ({
+        pkgType: pkgTypeOf(TriggerType.ARCH),
+        pkgId: entry.pkgId,
+        version: entry.version,
+      })),
       select: { pkgId: true, providedSonames: true },
-    }) as Promise<(PackageElfAnalysis & { pkgId: number })[]>;
+    });
   }
 
   private brokenDepsForConsumer(
@@ -577,6 +576,6 @@ function toOwnerDescriptor(pkg: ArchlinuxPackage): OwnerDescriptor {
     pkgId: pkg.id,
     pkgname: pkg.pkgname,
     previousVersion: pkg.previousVersion ?? undefined,
-    currentVersion: pkg.version,
+    currentVersion: pkg.version ?? '',
   };
 }
