@@ -3,10 +3,12 @@ import { AddHasCompiledCode1787402061455 } from '../migrations/1787402061455-Add
 import { AddBuildResourceStats1787428076689 } from '../migrations/1787428076689-AddBuildResourceStats';
 import { AddIsSourceCompiled1787477203212 } from '../migrations/1787477203212-AddIsSourceCompiled';
 import { AddAurMaintainerInfo1787477206135 } from '../migrations/1787477206135-AddAurMaintainerInfo';
+import { DiffScanRuleData1787511302520 } from '../migrations/1787511302520-DiffScanRuleData';
 import { type DataSourceOptions } from 'typeorm';
 import { Build, Builder, Repo, UpdateLastBuilderActive } from '../builder/builder.entity';
 import { AurMaintainerInfoEntity } from '../diff-scan/aur-maintainer-info.entity';
 import { AurMaintainerSnapshot } from '../diff-scan/aur-maintainer-snapshot.entity';
+import { DiffScanRuleData } from '../diff-scan/rule-data.entity';
 import { VirusTotalVerdict } from '../diff-scan/virus-total-verdict.entity';
 import { MrAction } from '../gitlab/mr-action.entity';
 import { PipelineTrigger } from '../gitlab/pipeline-trigger.entity';
@@ -50,6 +52,7 @@ export const dataSourceOptions: DataSourceOptions = {
     VirusTotalVerdict,
     AurMaintainerSnapshot,
     AurMaintainerInfoEntity,
+    DiffScanRuleData,
   ],
   subscribers: [UpdateLastBuilderActive],
   migrations: [
@@ -72,6 +75,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AddBuildResourceStats1787428076689,
     AddIsSourceCompiled1787477203212,
     AddAurMaintainerInfo1787477206135,
+    DiffScanRuleData1787511302520,
   ],
   migrationsRun: true,
   cache: true,

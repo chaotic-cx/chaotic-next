@@ -83,4 +83,30 @@ describe('provenance rules', () => {
     );
     expect(PROVENANCE_RULES.flatMap((rule) => rule.check(change) ?? [])).toHaveLength(0);
   });
+
+  it('flags sources whose host stays hidden behind unresolvable variables', () => {
+    const change = makeChange(
+      [
+        '@@ -1,4 +1,5 @@',
+        '+url="https://example.org/project/"',
+        '+source=("https://mirror.example/${_tag}/pkg.tar.gz" "$_patch_url")',
+        '+_tag=$(git describe --tags)',
+      ].join('\n'),
+    );
+    const hit = ruleById(PROVENANCE_RULES, 'CAUR-UNRESOLVED-SOURCE').check(change);
+    expect(hit).not.toBeNull();
+    expect(hit?.note).toContain('unresolved');
+  });
+
+  it('does not flag sources whose variables resolve', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+_gentoo=firefox-154-patches-01.tar.xz',
+        '+url="https://gitlab.com/upstream/pkg"',
+        '+source=("https://dev.gentoo.org/~someone/mozilla/patchsets/$_gentoo")',
+      ].join('\n'),
+    );
+    expect(ruleById(PROVENANCE_RULES, 'CAUR-UNRESOLVED-SOURCE').check(change)).toBeNull();
+  });
 });

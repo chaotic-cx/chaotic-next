@@ -16,6 +16,8 @@ const MR_DIFF_ONLY = ['mr-diff'] as const;
 
 const RESTART_ALWAYS_PATTERN = /Restart\s*=\s*always/;
 const RESTART_DELAY_PATTERN = /RestartSec\s*=\s*(?:[3-9]\d|\d{3,})/;
+/** Keywords that only ever appear inside a [Timer] section of a systemd unit file. */
+const TIMER_KEYWORD_PATTERN = /\[Timer]|OnBootSec|OnCalendar|OnUnitActiveSec|AccuracySec/;
 
 const REAL_SYSTEMD_DAEMONS = [
   'homed',
@@ -105,19 +107,72 @@ export const PERSISTENCE_RULES: Rule[] = [
   },
   regexRule({
     id: 'PERSIST-001',
-    name: 'Systemctl service manipulation',
+    name: 'Systemctl service activation',
     severity: 'critical',
-    description: 'Enables or starts systemd services from a script, a common persistence mechanism.',
-    pattern: /\bsystemctl\b[^\n]*\b(?:enable|start|daemon-reload)\b/,
+    description:
+      'Enables or starts systemd services from a script, a common persistence mechanism; a mere daemon-reload is reported separately as info.',
+    pattern: /\bsystemctl\b[^\n]*\b(?:enable|start)\b/,
+    scopes: ['code'],
+    skipQuoted: true,
+  }),
+  regexRule({
+    id: 'CAUR-DAEMON-RELOAD',
+    name: 'systemctl daemon-reload',
+    severity: 'info',
+    description:
+      'Runs systemctl daemon-reload. Legacy scriptlet idiom that pacman hooks have made unnecessary, but harmless on its own.',
+    pattern: /\bsystemctl\b[^\n]*\bdaemon-reload\b/,
     scopes: ['code'],
     skipQuoted: true,
   }),
   regexRule({
     id: 'PERSIST-002',
-    name: 'Systemd timer scheduling',
+    name: 'Systemd timer scheduling from a scriptlet',
     severity: 'critical',
-    description: 'Schedules systemd timers, which grant recurring execution on user machines.',
-    pattern: /\[Timer]|OnBootSec|OnCalendar|OnUnitActiveSec|AccuracySec/,
+    description:
+      'Creates or schedules systemd timers from an install scriptlet, granting recurring execution on user machines. Timer units shipped as files are reported separately as info.',
+    pattern: TIMER_KEYWORD_PATTERN,
+    scopes: ['install'],
+  }),
+  {
+    id: 'CAUR-TIMER-UNIT',
+    name: 'Systemd timer unit shipped',
+    severity: 'info',
+    description:
+      'Ships a systemd timer unit file. Timers grant recurring execution on user machines; check what the paired service runs.',
+    check(change) {
+      if (!SYSTEMD_UNIT_PATTERN.test(change.new_path)) return null;
+      const hit = addedLines(change).find((line) => TIMER_KEYWORD_PATTERN.test(line.text));
+      return hit ? { line: hit.line, match: hit.text.trim() } : null;
+    },
+  },
+  regexRule({
+    id: 'CAUR-CRON-MODIFY',
+    name: 'Crontab manipulation',
+    severity: 'critical',
+    description: 'Installs, edits or removes crontab entries, granting recurring execution outside package management.',
+    // Listing (crontab -l) is reconnaissance at most and stays unflagged.
+    pattern: /\bcrontab\b(?![^|;&\n]*\s-l\b)/,
+    scopes: ['code'],
+    skipQuoted: true,
+  }),
+  regexRule({
+    id: 'CAUR-CRON-FILE',
+    name: 'Cron directory write',
+    severity: 'warning',
+    description:
+      'References live cron spool directories outside $pkgdir; packages must ship cron entries inside the package payload instead.',
+    pattern: /(?<!pkgdir[^\n]*)\/etc\/cron\.(?:d|daily|hourly|weekly|monthly)\b\/?|(?<!pkgdir[^\n]*)\/var\/spool\/cron/,
+    scopes: ['code'],
+    skipQuoted: true,
+  }),
+  regexRule({
+    id: 'CAUR-LDSO-PRELOAD',
+    name: 'ld.so.preload modification',
+    severity: 'critical',
+    description:
+      'Writes to /etc/ld.so.preload, force-loading a shared object into every newly started process — rootkit-grade persistence.',
+    pattern: /\/etc\/ld\.so\.preload\b/,
     scopes: ['code'],
   }),
   {

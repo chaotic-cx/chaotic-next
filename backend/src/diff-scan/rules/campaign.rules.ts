@@ -62,6 +62,31 @@ export const CAMPAIGN_RULES: Rule[] = [
     pattern: /\b(?:atomic-lockfile|lockfile-js|js-digest)\b/,
   }),
   regexRule({
+    id: 'CAUR-NODE-EVAL',
+    name: 'Inline Node.js evaluation',
+    severity: 'critical',
+    description:
+      'Executes inline JavaScript during build or installation — the delivery vehicle of npm supply-chain payloads, since the executed code never appears as a reviewable file.',
+    pattern: /\bnode\s+(?:--(?:eval|print)|-[ep]\b|-pe\b)/,
+    scopes: ['pkgbuild', 'install'],
+  }),
+  regexRule({
+    id: 'CAUR-NODE-CHILD-PROCESS',
+    name: 'Node child_process usage',
+    severity: 'critical',
+    description: 'Inline JavaScript spawning processes during build or installation.',
+    pattern: /\bchild_process\b|\bexecSync\(|\bspawnSync\(/,
+    scopes: ['pkgbuild', 'install'],
+  }),
+  regexRule({
+    id: 'CAUR-DENO-FETCH',
+    name: 'Deno script execution',
+    severity: 'critical',
+    description: 'Fetches and runs Deno code at build or install time.',
+    pattern: /\bdeno\s+(?:install|run|eval)\b/,
+    scopes: ['pkgbuild', 'install'],
+  }),
+  regexRule({
     id: 'CAUR-NPM-CACHE',
     name: 'User cache directory access',
     severity: 'info',

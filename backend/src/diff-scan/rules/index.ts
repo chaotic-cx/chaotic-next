@@ -1,4 +1,5 @@
 import { CAMPAIGN_RULES } from './campaign.rules';
+import { CONTAINER_CLOUD_RULES } from './container.cloud.rules';
 import { CREDENTIAL_RULES } from './credentials.rules';
 import { DESTRUCTIVE_RULES } from './destructive.rules';
 import { DOWNLOAD_EXECUTE_RULES } from './download-execute.rules';
@@ -8,6 +9,7 @@ import { PERSISTENCE_RULES } from './persistence.rules';
 import { PRIVILEGE_RULES } from './privilege.rules';
 import { PROVENANCE_RULES } from './provenance.rules';
 import { REVERSE_SHELL_RULES } from './reverse-shell.rules';
+import { SRCINFO_CONSISTENCY_RULES } from './srcinfo-consistency.rules';
 import type { Rule } from './rule';
 
 /**
@@ -23,6 +25,7 @@ import type { Rule } from './rule';
  */
 export const RULES: Rule<unknown>[] = [
   ...CAMPAIGN_RULES,
+  ...CONTAINER_CLOUD_RULES,
   ...CREDENTIAL_RULES,
   ...DESTRUCTIVE_RULES,
   ...DOWNLOAD_EXECUTE_RULES,
@@ -32,4 +35,5 @@ export const RULES: Rule<unknown>[] = [
   ...PRIVILEGE_RULES,
   ...PROVENANCE_RULES,
   ...REVERSE_SHELL_RULES,
+  ...SRCINFO_CONSISTENCY_RULES,
 ];

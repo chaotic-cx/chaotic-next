@@ -92,4 +92,16 @@ export const PROVENANCE_RULES: Rule[] = [
         : null;
     },
   },
+  {
+    id: 'CAUR-UNRESOLVED-SOURCE',
+    name: 'Unresolvable source location',
+    severity: 'warning',
+    description:
+      'A source entry still contains unresolved variables after PKGBUILD parsing, so its final download host can be neither determined nor reviewed. Verify where the download actually comes from.',
+    check(change) {
+      const parsed = parsePkgbuild(change);
+      const entry = parsed?.entries.find((candidate) => candidate.raw.includes('$'));
+      return entry ? { line: entry.line, match: entry.raw, note: 'Source contains unresolved variables' } : null;
+    },
+  },
 ];

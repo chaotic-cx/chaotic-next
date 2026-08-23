@@ -8,7 +8,6 @@ import { addedLines, isCommentLine, visibleFileLines } from './rules/diff-utils'
 const SRCINFO_DEP_PATTERN = /^\s*(depends|makedepends|checkdepends)\s*=\s*(.+)$/i;
 const SRCINFO_PACKAGE_DECLARATION_PATTERN = /^\s*(?:pkgname|provides)\s*=\s*(.+)$/i;
 const DEP_NAME_PATTERN = /^[a-z0-9@._+-]+$/i;
-const VCS_SUFFIXES = ['-git', '-svn', '-hg', '-bzr', '-cvs', '-darcs'] as const;
 
 export interface SrcinfoDepMatch {
   type: 'depends' | 'makedepends' | 'checkdepends';
@@ -26,13 +25,6 @@ export function cleanDepName(raw: string): string {
   return withoutVersion.trim();
 }
 
-export function stripVcsSuffix(pkgName: string): string {
-  for (const suffix of VCS_SUFFIXES) {
-    if (pkgName.endsWith(suffix)) return pkgName.slice(0, -suffix.length);
-  }
-  return pkgName;
-}
-
 export function parseSrcinfoDepLine(text: string): SrcinfoDepMatch | null {
   if (isCommentLine(text)) return null;
   const match = text.match(SRCINFO_DEP_PATTERN);
@@ -47,6 +39,21 @@ export function parseSrcinfoDepLine(text: string): SrcinfoDepMatch | null {
   }
 
   return { type, rawValue, depName };
+}
+
+/**
+ * Repo databases record provides with versions ("libcurl.so=8-64"), so an
+ * exact-match query misses every soname. Compare on the version-less part.
+ */
+export function providesSatisfied(alias: string): string {
+  return `
+    jsonb_typeof(${alias}.metadata -> 'provides') = 'array'
+    AND EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements_text(${alias}.metadata -> 'provides') AS provided
+      WHERE split_part(provided, '=', 1) = :dep
+    )
+  `;
 }
 
 export async function isDependencyPresent(
@@ -75,7 +82,8 @@ export async function isDependencyPresent(
     try {
       const archProvides = await archPkgRepo
         .createQueryBuilder('arch')
-        .where(`arch.metadata->'provides' ? :dep`, { dep: depName })
+        .where(providesSatisfied('arch'))
+        .setParameter('dep', depName)
         .select('arch.id')
         .getOne();
       if (archProvides) return true;
@@ -92,7 +100,8 @@ export async function isDependencyPresent(
       const chaoticProvides = await packageRepo
         .createQueryBuilder('pkg')
         .where('pkg.isActive = true')
-        .andWhere(`pkg.metadata->'provides' ? :dep`, { dep: depName })
+        .andWhere(providesSatisfied('pkg'))
+        .setParameter('dep', depName)
         .select('pkg.id')
         .getOne();
       if (chaoticProvides) return true;
@@ -108,10 +117,10 @@ export async function isDependencyPresent(
 }
 
 /**
- * Package names the scanned source itself provides: every pkgname/provides entry
- * visible in the diff, plus their VCS-suffix-stripped variants. Split packages
- * (e.g. a "-git" PKGBUILD producing unsuffixed siblings) depend on each other,
- * which repo lookups cannot resolve before the build lands.
+ * Package names the scanned source itself provides: every pkgname and provides
+ * entry visible in the diff. Split packages depend on their siblings, which repo
+ * lookups cannot resolve before the build lands. Names must match exactly — a
+ * "-git" sibling does not satisfy an unsuffixed dependency unless it declares it.
  */
 export function selfProvidedDepNames(change: Pick<MergeRequestDiffSchema, 'diff'>): Set<string> {
   const names = new Set<string>();
@@ -120,10 +129,7 @@ export function selfProvidedDepNames(change: Pick<MergeRequestDiffSchema, 'diff'
     const match = text.match(SRCINFO_PACKAGE_DECLARATION_PATTERN);
     if (!match) continue;
     const name = cleanDepName(match[1]);
-    if (!name || !DEP_NAME_PATTERN.test(name)) continue;
-    names.add(name);
-    const unsuffixed = stripVcsSuffix(name);
-    if (unsuffixed !== name) names.add(unsuffixed);
+    if (name && DEP_NAME_PATTERN.test(name)) names.add(name);
   }
   return names;
 }

@@ -7,7 +7,7 @@ import { Package } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { errorMessage } from '../utils/functions';
 import { RULES } from './rules';
-import type { RuleHit, RuleSurface } from './rules/rule';
+import type { GroupRuleHit, RuleHit, RuleSurface } from './rules/rule';
 import { ruleRunsOn } from './rules/rule';
 import { isDependencyPresent, isSrcinfoFile, scanSrcinfoDependencies } from './srcinfo-dependency';
 
@@ -49,8 +49,9 @@ export class DiffScanService {
     for (const rule of RULES) {
       if (!rule.load) continue;
       try {
-        const { downloaded } = await rule.load();
+        const { downloaded, stale } = await rule.load();
         if (downloaded) this.logger.log(`Rule ${rule.id} data loaded`);
+        else if (stale) this.logger.warn(`Rule ${rule.id} feed unavailable, matching against persisted data`);
       } catch (err) {
         this.logger.warn(`Rule ${rule.id} data load failed: ${errorMessage(err)}`);
       }
@@ -75,15 +76,7 @@ export class DiffScanService {
           continue;
         }
         if (!hit) continue;
-        findings.push({
-          ruleId: rule.id,
-          ruleName: rule.name,
-          severity: hit.severity ?? rule.severity,
-          description: [rule.description, hit.note].filter(Boolean).join(' '),
-          file: change.new_path,
-          line: hit.line,
-          match: hit.match.slice(0, MAX_MATCH_LENGTH),
-        });
+        findings.push(toScanFinding(rule, { ...hit, file: change.new_path }));
         if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
       }
 
@@ -99,6 +92,19 @@ export class DiffScanService {
         }
       }
     }
+
+    for (const rule of RULES) {
+      if (!rule.checkGroup || !ruleRunsOn(rule, surface)) continue;
+      let hits: GroupRuleHit[];
+      try {
+        hits = rule.checkGroup(diffs);
+      } catch (err) {
+        this.logger.warn(`Rule ${rule.id} failed on multi-file scan: ${errorMessage(err)}`);
+        continue;
+      }
+      for (const hit of hits) findings.push(toScanFinding(rule, hit));
+      if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
+    }
     return sortFindings(findings);
   }
 
@@ -109,6 +115,21 @@ export class DiffScanService {
     if (score >= SUSPICIOUS_SCORE_THRESHOLD) return { label: 'suspicious', score, findings };
     return null;
   }
+}
+
+function toScanFinding(
+  rule: { id: string; name: string; severity: DiffScanSeverity; description: string },
+  hit: RuleHit & { file: string },
+) {
+  return {
+    ruleId: rule.id,
+    ruleName: rule.name,
+    severity: hit.severity ?? rule.severity,
+    description: [rule.description, hit.note].filter(Boolean).join(' '),
+    file: hit.file,
+    line: hit.line,
+    match: hit.match.slice(0, MAX_MATCH_LENGTH),
+  };
 }
 
 function sortFindings(findings: DiffScanFinding[]): DiffScanFinding[] {

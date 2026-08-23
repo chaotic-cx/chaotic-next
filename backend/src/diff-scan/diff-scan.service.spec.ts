@@ -110,6 +110,20 @@ describe('DiffScanService', () => {
     );
   });
 
+  it('compares PKGBUILD against .SRCINFO only on full-file scans', async () => {
+    const pkgChange = makeChange(addedOnlyDiff(['pkgver=2.0.0']), { new_path: 'foo/PKGBUILD', new_file: true });
+    const srcChange = makeChange(addedOnlyDiff(['pkgbase = foo', 'pkgver = 1.0.0']), {
+      new_path: 'foo/.SRCINFO',
+      new_file: true,
+    });
+
+    const fullFile = await service.scanDiffs([pkgChange, srcChange], undefined, 'full-file');
+    expect(fullFile.find((f) => f.ruleId === 'CAUR-SRCINFO-MISMATCH')?.file).toBe('foo/.SRCINFO');
+
+    const mrDiff = await service.scanDiffs([pkgChange, srcChange]);
+    expect(mrDiff.find((f) => f.ruleId === 'CAUR-SRCINFO-MISMATCH')).toBeUndefined();
+  });
+
   describe('autoFlagVerdict', () => {
     it('returns null without findings or for minor findings only', () => {
       expect(service.autoFlagVerdict(undefined)).toBeNull();

