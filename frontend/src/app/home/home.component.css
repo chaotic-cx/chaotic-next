@@ -23,8 +23,21 @@
   }
 }
 
+.hero-logo {
+  transition: transform 300ms ease-out;
+}
+
+.hero-logo:hover,
+.hero-logo:focus-visible {
+  transform: scale(1.05);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-scroll-hint {
     animation: none;
+  }
+
+  .hero-logo {
+    transition: none;
   }
 }

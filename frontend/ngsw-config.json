@@ -31,5 +31,5 @@
       }
     }
   ],
-  "navigationUrls": ["/**", "!/backend/**", "!/**/__*", "!/**/sse"]
+  "navigationUrls": ["/**", "!/backend/**", "!/**/__*", "!/**/sse", "!/aizawa/**", "!/memorials/**"]
 }
