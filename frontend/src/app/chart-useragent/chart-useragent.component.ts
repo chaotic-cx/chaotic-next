@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../app.service';
-import { type ChartConfig, mochaLegendLabels } from '../chart-config';
+import { type ChartConfig, mochaPieChartOptions } from '../chart-config';
 import { resourceValue, shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
@@ -59,11 +59,7 @@ export class ChartUseragentComponent {
           },
         ],
       },
-      options: {
-        plugins: {
-          legend: { labels: mochaLegendLabels(), position: 'top' },
-        },
-      },
+      options: mochaPieChartOptions(),
     };
   });
 

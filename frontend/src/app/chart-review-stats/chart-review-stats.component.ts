@@ -2,7 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../app.service';
-import { type ChartConfig, mochaLegendLabels } from '../chart-config';
+import { type ChartConfig, mochaPieChartOptions } from '../chart-config';
 import { resourceValue, shuffleArray } from '../functions';
 import { StatsService } from '../stats/stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../theme';
@@ -49,11 +49,7 @@ export class ChartReviewStatsComponent {
           },
         ],
       },
-      options: {
-        plugins: {
-          legend: { labels: mochaLegendLabels(), position: 'top' },
-        },
-      },
+      options: mochaPieChartOptions(),
     };
   });
 }

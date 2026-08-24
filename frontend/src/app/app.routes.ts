@@ -1,6 +1,7 @@
 import { type Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
 import { backendChildGuard, backendGuard } from './backend-status/backend-required.guard';
+import { AUTH_PRELOAD_DATA, SKIP_PRELOAD_DATA } from './preload.strategy';
 
 export const routes: Routes = [
   {
@@ -128,6 +129,7 @@ export const routes: Routes = [
   {
     title: 'Memorial 2024',
     path: 'memorial-v2',
+    data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./memorial-v2/memorial-v2.component').then((c) => c.MemorialV2Component),
   },
   {
@@ -138,15 +140,18 @@ export const routes: Routes = [
   {
     title: 'Memorial 2021',
     path: 'memorial',
+    data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./memorial/memorial.component').then((c) => c.MemorialComponent),
   },
   {
     title: 'Sign in',
     path: 'login',
+    data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./login/login.component').then((c) => c.LoginComponent),
   },
   {
     path: 'auth/callback',
+    data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./auth/auth-callback.component').then((c) => c.AuthCallbackComponent),
   },
   {
@@ -154,35 +159,42 @@ export const routes: Routes = [
     path: 'admin',
     canActivate: [authGuard],
     canActivateChild: [backendChildGuard],
+    data: AUTH_PRELOAD_DATA,
     loadComponent: () => import('./admin/admin.component').then((c) => c.AdminComponent),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'packages' },
       {
         path: 'packages',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-packages-page.component').then((c) => c.AdminPackagesPageComponent),
       },
       {
         path: 'arch',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-arch-packages-page.component').then((c) => c.AdminArchPackagesPageComponent),
       },
       {
         path: 'repos',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () => import('./admin/pages/admin-repos-page.component').then((c) => c.AdminReposPageComponent),
       },
       {
         path: 'builders',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-builders-page.component').then((c) => c.AdminBuildersPageComponent),
       },
       {
         path: 'mr-actions',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-mr-actions-page.component').then((c) => c.AdminMrActionsPageComponent),
       },
       {
         path: 'pipeline-triggers',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-pipeline-triggers-page.component').then(
             (c) => c.AdminPipelineTriggersPageComponent,
@@ -190,11 +202,13 @@ export const routes: Routes = [
       },
       {
         path: 'package-bumps',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-package-bumps-page.component').then((c) => c.AdminPackageBumpsPageComponent),
       },
       {
         path: 'package-elf-analysis',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-package-elf-analysis-page.component').then(
             (c) => c.AdminPackageElfAnalysisPageComponent,
@@ -202,11 +216,13 @@ export const routes: Routes = [
       },
       {
         path: 'repo-operations',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-repo-operations-page.component').then((c) => c.AdminRepoOperationsPageComponent),
       },
       {
         path: 'manager-logs',
+        data: AUTH_PRELOAD_DATA,
         loadComponent: () =>
           import('./admin/pages/admin-manager-logs-page.component').then((c) => c.AdminManagerLogsPageComponent),
       },
@@ -215,11 +231,13 @@ export const routes: Routes = [
   {
     title: 'Backend unavailable',
     path: 'backend-down',
+    data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./backend-down/backend-down.component').then((c) => c.BackendDownComponent),
   },
   {
     title: 'Not found',
     path: 'not-found',
+    data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./not-found/not-found.component').then((c) => c.NotFoundComponent),
   },
   {

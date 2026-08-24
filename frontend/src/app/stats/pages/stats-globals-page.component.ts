@@ -10,13 +10,25 @@ import { ChartUseragentComponent } from '../../chart-useragent/chart-useragent.c
   template: `
     <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
       <p-card [style]="{ overflow: 'hidden' }" header="Country list">
-        <chaotic-chart-countries />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-countries />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="User agents">
-        <chaotic-chart-useragent />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-useragent />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card class="xl:col-span-2" [style]="{ overflow: 'hidden' }" header="RPS over last hour">
-        <chaotic-chart-rps-history />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-rps-history />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
     </div>
   `,
