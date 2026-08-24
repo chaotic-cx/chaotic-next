@@ -72,7 +72,8 @@ class RspackPlugin {
 function resolveAppVersion() {
   if (process.env.APP_VERSION) return process.env.APP_VERSION;
   try {
-    return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8', timeout: 2000 }).trim();
+    const git = (command) => execSync(command, { encoding: 'utf-8', timeout: 2000 }).trim();
+    return `${git('git describe --tags --abbrev=0')}-${git('git rev-parse --short HEAD')}`;
   } catch {
     return 'dev';
   }

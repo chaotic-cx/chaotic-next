@@ -692,7 +692,7 @@ describe('GitlabService.approveMergeRequest', () => {
         await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
         expect(mrRebase).not.toHaveBeenCalled();
         expect(mrAccept).toHaveBeenCalledTimes(1);
-        expect(mrActionInsert).not.toHaveBeenCalled();
+        expect(mrActionInsert).toHaveBeenCalled();
       } finally {
         vi.useRealTimers();
       }
@@ -735,7 +735,7 @@ describe('GitlabService.approveMergeRequest', () => {
     }
   });
 
-  it('does not label, comment, or record an approval when the merge fails outright', async () => {
+  it('labels, comments, and records the approval right away even when the merge fails', async () => {
     const { service } = createService();
     const show = vi
       .fn()
@@ -763,10 +763,14 @@ describe('GitlabService.approveMergeRequest', () => {
 
     try {
       await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
-      expect(approvalsApprove).toHaveBeenCalledTimes(1);
-      expect(mrEdit).not.toHaveBeenCalled();
-      expect(noteCreate).not.toHaveBeenCalled();
-      expect(mrActionInsert).not.toHaveBeenCalled();
+      expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved' });
+      expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, '**✅ Approved by** Test User.');
+      expect(mrActionInsert).toHaveBeenCalledWith({
+        mergeRequestIid: 1,
+        action: 'approve',
+        commitSha: 'abc123',
+        ...ACTOR,
+      });
     } finally {
       vi.useRealTimers();
     }

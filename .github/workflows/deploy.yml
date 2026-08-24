@@ -72,7 +72,7 @@ jobs:
           if [ "${{ github.ref_type }}" = "tag" ]; then
             echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           else
-            echo "version=$(git describe --tags --abbrev=0 || echo dev)" >> "$GITHUB_OUTPUT"
+            echo "version=$(git tag --sort=-v:refname | head -n1 || echo dev)" >> "$GITHUB_OUTPUT"
           fi
       - name: Compute image tags
         id: tags

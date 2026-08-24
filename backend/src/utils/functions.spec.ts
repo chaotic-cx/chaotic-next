@@ -100,16 +100,16 @@ describe('generateNodeId', () => {
 
   it('includes the HOSTNAME when set', () => {
     process.env.HOSTNAME = 'test-node';
-    expect(generateNodeId()).toMatch(/^test-node-[a-z0-9]+$/);
+    expect(generateNodeId()).toMatch(/^test-node-\d+$/);
   });
 
   it('falls back to the backend prefix when HOSTNAME is unset', () => {
     delete process.env.HOSTNAME;
-    expect(generateNodeId()).toMatch(/^backend-[a-z0-9]+$/);
+    expect(generateNodeId()).toMatch(/^backend-\d+$/);
   });
 
-  it('produces a different id on each call', () => {
-    expect(generateNodeId()).not.toBe(generateNodeId());
+  it('stays stable for the lifetime of the process', () => {
+    expect(generateNodeId()).toBe(generateNodeId());
   });
 });
 
