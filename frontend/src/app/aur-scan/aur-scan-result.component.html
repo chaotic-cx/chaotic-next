@@ -161,7 +161,7 @@
                 <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
                 <a
                   class="min-w-0 break-all text-xs font-semibold text-ctp-mauve hover:text-ctp-pink transition-colors cursor-pointer"
-                  [href]="getVtReportLink(report)"
+                  [href]="vtLink(report)"
                   target="_blank"
                   rel="noopener noreferrer"
                   >{{ report.value }}</a

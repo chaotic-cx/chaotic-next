@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, signal } from '@angular/cor
 import { type DiffScanFinding } from '@chaotic-next/shared-lib';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { vtIndicatorLink } from '../functions';
 import { AurScanService } from './aur-scan.service';
 import { presenter } from './scan-presenter';
 import { SourceViewerComponent } from '../source-viewer/source-viewer.component';
@@ -78,9 +79,5 @@ export class AurScanResultComponent {
     return finding.line === undefined ? finding.file : `${finding.file}:${finding.line}`;
   }
 
-  protected getVtReportLink(report: { type: string; value: string }): string {
-    return report.type === 'url'
-      ? `https://www.virustotal.com/gui/url/${report.value}`
-      : `https://www.virustotal.com/gui/file/${report.value}`;
-  }
+  protected readonly vtLink = vtIndicatorLink;
 }

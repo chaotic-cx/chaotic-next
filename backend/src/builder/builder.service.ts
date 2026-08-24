@@ -1,3 +1,4 @@
+import { buildClassSortKey } from '@chaotic-next/shared-lib';
 import type { Package as PackageDto, PackageResourceDayRow, Paginated } from '@chaotic-next/shared-lib';
 import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +13,7 @@ import { BuildStatus } from '../types/types';
 import { CACHE_TTL_MS, MAX_AMOUNT, MAX_DAYS_PER_DAY_CHART, MAX_DAYS_WINDOW, MAX_OFFSET } from '../utils/constants';
 import { clampInt, errorMessage, generateNodeId, nDaysInPast, whitelistSort } from '../utils/functions';
 import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
+import { BuildClassSyncService } from './build-class-sync.service';
 import { BuilderDatabaseService } from './builder-database.service';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { brokerConfig } from './moleculer.config';
@@ -42,6 +44,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     private eventService: EventService,
     private repoManagerService: RepoManagerService,
     private gitlabService: GitlabService,
+    private buildClassSyncService: BuildClassSyncService,
   ) {
     const redisPassword: string | undefined = this.configService.get<string | undefined>('redis.password');
     const redisHost: string = this.configService.getOrThrow<string>('redis.host');
@@ -99,6 +102,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
           repoManagerService: this.repoManagerService,
           sseSubject: this.eventService.sseEvents$,
           gitlabService: this.gitlabService,
+          buildClassSync: this.buildClassSyncService,
         }),
       );
       await this.broker.start();
@@ -179,6 +183,8 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       metadata: pkg.metadata,
       pkgrel: pkg.pkgrel,
       bump: pkg.bump,
+      buildClass: pkg.buildClass,
+      pkgbaseName: pkg.pkgbaseName,
       repo: pkg.repo?.id,
       reponame: pkg.repo?.name,
     }));
@@ -193,6 +199,8 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       createdAt: 'package.createdAt',
       version: 'package.version',
       pkgrel: 'package.pkgrel',
+      buildClass: 'package.buildClass',
+      pkgbaseName: 'package.pkgbaseName',
       repo: 'repo.name',
     });
   }
@@ -554,6 +562,40 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .limit(amount)
       .cache(`heavy-packages-${amount}-${days}`, CACHE_TTL_MS)
       .getRawMany();
+  }
+
+  async getPackagesPerBuildClass(options: { days: number }): Promise<{ build_class: string; count: string }[]> {
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+    const rows = await this.buildRepository
+      .createQueryBuilder('build')
+      .select('build."buildClass" AS build_class')
+      .addSelect('COUNT(DISTINCT pkg.id) AS count')
+      .innerJoin('build.pkgbase', 'pkg')
+      .where('build.status = :status', { status: BuildStatus.SUCCESS })
+      .andWhere('build.timestamp > :date', { date: nDaysInPast(days) })
+      .andWhere('build."buildClass" IS NOT NULL')
+      .groupBy('build."buildClass"')
+      .cache(`packages-per-build-class-${days}`, CACHE_TTL_MS)
+      .getRawMany<{ build_class: string; count: string }>();
+    return rows.sort((a, b) => buildClassSortKey(a.build_class) - buildClassSortKey(b.build_class));
+  }
+
+  async getSingleVsSplitPackages(): Promise<{ type: string; count: string }[]> {
+    const row = await this.packageRepository
+      .createQueryBuilder('package')
+      .select(
+        `COUNT(*) FILTER (WHERE package."pkgbaseName" IS NULL OR package."pkgbaseName" = package."pkgname") AS single`,
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE package."pkgbaseName" IS NOT NULL AND package."pkgbaseName" <> package."pkgname") AS split`,
+      )
+      .where('package.isActive = :isActive', { isActive: true })
+      .cache('single-vs-split-packages', CACHE_TTL_MS)
+      .getRawOne<{ single: string; split: string }>();
+    return [
+      { type: 'single', count: row?.single ?? '0' },
+      { type: 'split', count: row?.split ?? '0' },
+    ];
   }
 
   async getPackageResourceStatsPerDay(options: { pkgname: string; days: number }): Promise<PackageResourceDayRow[]> {

@@ -151,6 +151,8 @@ const NO_REPO = '0';
             <th style="min-width: 12rem">Name</th>
             <th style="min-width: 10rem">Version</th>
             <th style="min-width: 8rem">Repo</th>
+            <th style="min-width: 10rem">Pkgbase</th>
+            <th style="min-width: 6rem">Class</th>
             <th style="min-width: 10rem">Suggested class</th>
             <th style="min-width: 6rem">Active</th>
             <th class="cell-actions" style="min-width: 8rem">Actions</th>
@@ -166,6 +168,25 @@ const NO_REPO = '0';
                 <button class="cursor-pointer text-ctp-mauve hover:underline" (click)="goToRepos()" type="button">
                   {{ pkg.reponame }}
                 </button>
+              }
+            </td>
+            <td>
+              @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
+                {{ pkg.pkgbaseName }}
+              } @else {
+                <span class="text-ctp-subtext0">-</span>
+              }
+            </td>
+            <td>
+              @if (pkg.buildClass !== null && pkg.buildClass !== undefined) {
+                <span
+                  [pTooltip]="buildClassMismatchTooltip(pkg)"
+                  [class.text-ctp-red]="hasBuildClassMismatch(pkg)"
+                  tooltipPosition="left"
+                  >{{ pkg.buildClass | buildClass }}</span
+                >
+              } @else {
+                <span class="text-ctp-subtext0">unset</span>
               }
             </td>
             <td>
@@ -462,6 +483,22 @@ export class AdminPackagesPageComponent {
       averages.avgDurationSeconds != null ? `took ${formatDuration(averages.avgDurationSeconds)}` : null,
     ].filter((part) => part !== null);
     return [`${samples} ${samples === 1 ? 'build' : 'builds'}`, ...metrics].join(' · ');
+  }
+
+  protected hasBuildClassMismatch(pkg: PackageDto): boolean {
+    const suggested = pkg.buildClassSuggestion?.suggestedBuildClass;
+    if (suggested === null || suggested === undefined) return false;
+    return pkg.buildClass !== suggested;
+  }
+
+  protected buildClassMismatchTooltip(pkg: PackageDto): string {
+    if (!this.hasBuildClassMismatch(pkg)) {
+      return 'Matches the class suggested by resource usage';
+    }
+    const suggested = pkg.buildClassSuggestion?.suggestedBuildClass;
+    return suggested !== undefined && suggested !== null
+      ? `Resource usage suggests class ${suggested}`
+      : 'No resource usage samples yet';
   }
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });

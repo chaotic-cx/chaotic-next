@@ -8,6 +8,7 @@ import { Build, Builder, Package, Repo } from './builder.entity';
 import { PackageLogsController } from './package-logs.controller';
 import { BuilderService } from './builder.service';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
+import { BuildClassSyncService } from './build-class-sync.service';
 import { DatabaseCleanupService } from './database-cleanup.service';
 import { PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { HttpModule } from '@nestjs/axios';
@@ -17,7 +18,7 @@ import { EventModule } from '../events/event.module';
 
 @Module({
   controllers: [BuildApiController, BuilderController, PackageLogsController],
-  exports: [TypeOrmModule, BuilderService, BuildClassSuggesterService],
+  exports: [TypeOrmModule, BuilderService, BuildClassSuggesterService, BuildClassSyncService],
   imports: [
     ConfigModule.forFeature(builderConfig),
     EventModule,
@@ -26,6 +27,6 @@ import { EventModule } from '../events/event.module';
     forwardRef(() => RepoManagerModule),
     TypeOrmModule.forFeature([Builder, Build, Repo, Package, PackageElfAnalysis]),
   ],
-  providers: [BuilderService, BuildClassSuggesterService, DatabaseCleanupService],
+  providers: [BuilderService, BuildClassSuggesterService, BuildClassSyncService, DatabaseCleanupService],
 })
 export class BuilderModule {}

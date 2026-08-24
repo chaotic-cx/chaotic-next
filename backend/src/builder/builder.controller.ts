@@ -20,6 +20,8 @@ import {
   GetPackagesQueryDto,
   HeavyPackageDto,
   PackageResourceDayDto,
+  PackagesPerBuildClassDto,
+  PkgbaseCompositionDto,
   PkgCountDto,
   PopularPackageDto,
   ThroughputDayDto,
@@ -286,6 +288,25 @@ export class BuilderController {
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ pkgname: string; average: string }[]> {
     return await this.builderService.getHeavyPackages({ amount, days });
+  }
+
+  @Get('stats/packages-per-build-class/:days')
+  @ApiOperation({ summary: 'Get the number of distinct packages built per build class.' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({
+    description: 'Distinct packages per build class',
+    type: PackagesPerBuildClassDto,
+    isArray: true,
+  })
+  async getPackagesPerBuildClass(@Param('days', ParseIntPipe) days: number): Promise<PackagesPerBuildClassDto[]> {
+    return await this.builderService.getPackagesPerBuildClass({ days });
+  }
+
+  @Get('stats/pkgbase-composition')
+  @ApiOperation({ summary: 'Get active packages grouped into single pkgbases and split package members.' })
+  @ApiOkResponse({ description: 'Active packages by pkgbase relation', type: PkgbaseCompositionDto, isArray: true })
+  async getSingleVsSplitPackages(): Promise<PkgbaseCompositionDto[]> {
+    return await this.builderService.getSingleVsSplitPackages();
   }
 
   @Get('stats/resource/package/:pkgname/:days')

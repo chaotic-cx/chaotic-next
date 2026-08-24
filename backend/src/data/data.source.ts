@@ -4,6 +4,8 @@ import { AddBuildResourceStats1787428076689 } from '../migrations/1787428076689-
 import { AddIsSourceCompiled1787477203212 } from '../migrations/1787477203212-AddIsSourceCompiled';
 import { AddAurMaintainerInfo1787477206135 } from '../migrations/1787477206135-AddAurMaintainerInfo';
 import { DiffScanRuleData1787511302520 } from '../migrations/1787511302520-DiffScanRuleData';
+import { AddPackageBuildClass1787594553238 } from '../migrations/1787594553238-AddPackageBuildClass';
+import { AddPackagePkgbaseName1787600183572 } from '../migrations/1787600183572-AddPackagePkgbaseName';
 import { type DataSourceOptions } from 'typeorm';
 import { Build, Builder, Repo, UpdateLastBuilderActive } from '../builder/builder.entity';
 import { AurMaintainerInfoEntity } from '../diff-scan/aur-maintainer-info.entity';
@@ -76,6 +78,8 @@ export const dataSourceOptions: DataSourceOptions = {
     AddIsSourceCompiled1787477203212,
     AddAurMaintainerInfo1787477206135,
     DiffScanRuleData1787511302520,
+    AddPackageBuildClass1787594553238,
+    AddPackagePkgbaseName1787600183572,
   ],
   migrationsRun: true,
   cache: true,

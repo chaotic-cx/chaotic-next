@@ -4,6 +4,7 @@ import { Subject } from 'rxjs';
 import { GitlabService } from '../gitlab/gitlab.service';
 import { GitlabStatusEvent } from '../gitlab/interfaces';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
+import { BuildClassSyncService } from './build-class-sync.service';
 import {
   BuilderDbConnections,
   BuildStatus,
@@ -28,6 +29,7 @@ export interface BuilderDatabaseServiceOptions {
   repoManagerService: RepoManagerService;
   sseSubject: Subject<Partial<MessageEvent<ChaoticEvent>>>;
   gitlabService: GitlabService;
+  buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
 }
 
 const BUILD_OUTCOME_EVENTS = new Set(['builds.success', 'builds.failed', 'builds.cancelled', 'builds.canceling']);
@@ -74,6 +76,7 @@ export class BuilderDatabaseService extends Service {
 
   private readonly sseSubject$: Subject<Partial<MessageEvent<ChaoticEvent>>>;
   private readonly gitlabService: GitlabService;
+  private readonly buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
 
   /**
    * Builds that succeeded while the repository databases did not yet carry
@@ -85,11 +88,19 @@ export class BuilderDatabaseService extends Service {
   private busyUpdating = false;
   private scheduledUpdate = false;
 
-  constructor({ broker, dbConnections, repoManagerService, sseSubject, gitlabService }: BuilderDatabaseServiceOptions) {
+  constructor({
+    broker,
+    dbConnections,
+    repoManagerService,
+    sseSubject,
+    gitlabService,
+    buildClassSync,
+  }: BuilderDatabaseServiceOptions) {
     super(broker);
 
     this.sseSubject$ = sseSubject;
     this.gitlabService = gitlabService;
+    this.buildClassSync = buildClassSync;
 
     this.parseServiceSchema({
       name: 'builderDatabaseService',
@@ -234,6 +245,13 @@ export class BuilderDatabaseService extends Service {
       this.scheduledUpdate = true;
     } else {
       await this.refreshChaoticVersions();
+    }
+
+    if (deployedBuilds.length > 0) {
+      const deployedPkgbases = [
+        ...new Set([event.pkgbase, ...deployedBuilds.map((build) => build.pkgbase?.pkgname ?? '')]),
+      ];
+      await this.buildClassSync.syncFromDeployment(event.target_repo, deployedPkgbases);
     }
   }
 

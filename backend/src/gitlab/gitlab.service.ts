@@ -89,6 +89,11 @@ const BLOCKING_MERGE_LABELS = ['malware', 'dangerous', 'hold'] as const;
 
 type DetailedMergeStatus = MergeRequestSchema['detailed_merge_status'] | 'commits_status';
 
+export async function gitlabRawFileToString(raw: string | Blob): Promise<string> {
+  if (typeof raw === 'string') return raw;
+  return await raw.text();
+}
+
 const MERGE_BLOCKER_DESCRIPTIONS: Record<Exclude<DetailedMergeStatus, 'mergeable'>, string> = {
   blocked_status: 'the merge request is blocked',
   broken_status: 'the merge request is in a broken state',
@@ -1141,9 +1146,9 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   }
 
   /**
-   * Merges an MR, and reacts to GitLab's `detailed_merge_status` instead of blindly
-   * retrying. It approves again when a push reset the approval. The server-side merge
-   * method does the rebasing.
+   * Merges an MR. This method reacts to GitLab's `detailed_merge_status` instead of
+   * blind retries, approves again when a push reset the approval, and leaves rebasing
+   * to the server-side merge method.
    */
   private async mergeWithRetry(iid: number, sha: string): Promise<void> {
     try {
@@ -1536,6 +1541,26 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     return repo.gitlabProjectId;
   }
 
+  async fetchCiConfig(repoName: string, pkgbase: string): Promise<string | null> {
+    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
+    if (!repo?.gitlabProjectId || !this.api) {
+      this.logger.warn(`Cannot fetch .CI/config of ${pkgbase}: repo '${repoName}' or GitLab client unavailable`);
+      return null;
+    }
+
+    try {
+      const raw = await this.api.RepositoryFiles.showRaw(
+        repo.gitlabProjectId,
+        `${pkgbase}/.CI/config`,
+        repo.gitRef || 'main',
+      );
+      return await gitlabRawFileToString(raw);
+    } catch {
+      this.logger.debug(`No .CI/config found for ${pkgbase} in '${repoName}'`);
+      return null;
+    }
+  }
+
   async bumpPackages(
     packages: string[],
     repoName: string,
@@ -1553,13 +1578,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
 
       try {
         const raw = await this.api.RepositoryFiles.showRaw(gitlabProjectId, configPath, ref);
-        if (typeof raw === 'string') {
-          existingConfig = raw;
-        } else if (raw && typeof (raw as { text?: () => Promise<string> }).text === 'function') {
-          existingConfig = await (raw as { text: () => Promise<string> }).text();
-        } else if (raw) {
-          existingConfig = String(raw);
-        }
+        existingConfig = await gitlabRawFileToString(raw);
       } catch {
         // File may not exist yet
       }

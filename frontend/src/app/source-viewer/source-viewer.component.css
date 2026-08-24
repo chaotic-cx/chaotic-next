@@ -27,7 +27,7 @@ code {
 }
 
 .line-number {
-  @apply w-8 shrink-0 text-right select-none;
+  @apply w-5 shrink-0 text-right select-none;
   color: var(--ctp-mocha-overlay0);
 }
 

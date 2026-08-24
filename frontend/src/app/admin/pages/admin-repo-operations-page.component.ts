@@ -65,14 +65,24 @@ import { createAdminPagination } from '../admin-url-sync';
               pTooltip="Index the full Chaotic-AUR repo (CDN mirror) into the ELF signal index"
               tooltipPosition="bottom"
             />
+            <p-button
+              (onClick)="confirmRescanBuildClasses()"
+              label="Rescan build classes"
+              icon="pi pi-refresh"
+              severity="secondary"
+              size="small"
+              styleClass="w-full sm:w-auto"
+              pTooltip="Re-read the build class of every active package from its .CI/config; runs in the background"
+              tooltipPosition="bottom"
+            />
           </div>
         </div>
       </p-panel>
 
       <div class="min-w-0">
-        <div class="mb-2 flex items-center justify-between gap-3 px-4">
+        <div class="mb-2 flex flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <span class="p-panel-title block text-ctp-text">Broken packages</span>
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             <p-button
               [disabled]="service.brokenSelection().length === 0"
               [badge]="service.brokenSelection().length.toString()"
@@ -81,6 +91,7 @@ import { createAdminPagination } from '../admin-url-sync';
               icon="pi pi-microchip"
               size="small"
               severity="secondary"
+              styleClass="w-full sm:w-auto"
               pTooltip="Re-run the ELF signal analysis for the selected broken packages; may take a while"
               tooltipPosition="left"
             />
@@ -92,6 +103,7 @@ import { createAdminPagination } from '../admin-url-sync';
               icon="pi pi-arrow-up"
               size="small"
               severity="danger"
+              styleClass="w-full sm:w-auto"
               pTooltip="Rebuild the selected broken packages and commit the changes"
               tooltipPosition="left"
             />
@@ -179,6 +191,16 @@ export class AdminRepoOperationsPageComponent {
       acceptLabel: 'Rescan',
       rejectLabel: 'Cancel',
       accept: () => void this.service.rescanBrokenPackages(),
+    });
+  }
+
+  confirmRescanBuildClasses(): void {
+    this.confirmationService.confirm({
+      message: 'Re-read the build class of every active package from its .CI/config? The job runs in the background.',
+      header: 'Rescan build classes',
+      acceptLabel: 'Rescan',
+      rejectLabel: 'Cancel',
+      accept: () => void this.service.rescanBuildClasses(),
     });
   }
 

@@ -226,6 +226,26 @@ export class HeavyPackageDto {
   average!: string;
 }
 
+export class PackagesPerBuildClassDto {
+  @ApiProperty({ description: 'Build class' })
+  @IsString()
+  build_class!: string;
+
+  @ApiProperty({ description: 'Number of distinct packages built in this class' })
+  @IsString()
+  count!: string;
+}
+
+export class PkgbaseCompositionDto {
+  @ApiProperty({ description: "Either 'single' or 'split'" })
+  @IsString()
+  type!: string;
+
+  @ApiProperty({ description: 'Number of active packages in this group' })
+  @IsString()
+  count!: string;
+}
+
 export class PackageResourceDayDto {
   @ApiProperty({ description: 'Day (YYYY-MM-DD)' })
   @IsString()

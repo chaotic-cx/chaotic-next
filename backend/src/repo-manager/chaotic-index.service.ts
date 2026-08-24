@@ -69,6 +69,7 @@ export class ChaoticIndexService {
         chaoticPkg.pkgrel = pkg.pkgrel;
         chaoticPkg.bump = pkg.bump;
         chaoticPkg.metadata = pkg.metaData;
+        chaoticPkg.pkgbaseName = pkg.base;
         markActive(chaoticPkg);
         chaoticPkg.repo = repo;
         toUpdate.push(chaoticPkg);
@@ -154,6 +155,7 @@ export class ChaoticIndexService {
         chaoticPkg.version = pkg.version;
         markActive(chaoticPkg);
         chaoticPkg.metadata = pkg.metaData;
+        chaoticPkg.pkgbaseName = pkg.base;
         chaoticPkg.repo = repo;
         toUpdate.push(chaoticPkg);
       }

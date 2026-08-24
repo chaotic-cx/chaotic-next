@@ -82,6 +82,9 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
     eventuallyBumpAffected: ReturnType<typeof vi.fn>;
     updateChaoticVersions: ReturnType<typeof vi.fn>;
   };
+  let buildClassSyncStub: {
+    syncFromDeployment: ReturnType<typeof vi.fn<(repoName: string, pkgnames: string[]) => Promise<void>>>;
+  };
   let gitlabStub: { handleExternalStatus: ReturnType<typeof vi.fn> };
 
   beforeAll(async () => {
@@ -115,6 +118,9 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       eventuallyBumpAffected: vi.fn().mockResolvedValue(undefined),
       updateChaoticVersions: vi.fn().mockResolvedValue(undefined),
     };
+    buildClassSyncStub = {
+      syncFromDeployment: vi.fn<(repoName: string, pkgnames: string[]) => Promise<void>>().mockResolvedValue(undefined),
+    };
     gitlabStub = {
       handleExternalStatus: vi.fn().mockResolvedValue(undefined),
     };
@@ -130,6 +136,7 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       repoManagerService: repoManagerStub as never,
       sseSubject,
       gitlabService: gitlabStub as never,
+      buildClassSync: buildClassSyncStub,
     };
 
     service = new BuilderDatabaseService(options);
@@ -381,6 +388,23 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
 
       expect(repoManagerStub.updateChaoticVersions).toHaveBeenCalledTimes(1);
       expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
+      expect(buildClassSyncStub.syncFromDeployment).not.toHaveBeenCalled();
+    });
+
+    it('triggers a build class sync for the deployed pkgbases', async () => {
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({ status: 0 as BuildStatus, pkgname: 'paru', target_repo: 'garuda' }),
+        ),
+      );
+
+      await service.runDeferredDeploymentChecks(
+        packageAddedPayload({ pkgbase: 'paru', packages: ['paru'], target_repo: 'garuda' }),
+      );
+
+      expect(buildClassSyncStub.syncFromDeployment).toHaveBeenCalledTimes(1);
+      expect(buildClassSyncStub.syncFromDeployment).toHaveBeenCalledWith('garuda', ['paru']);
     });
 
     it('drops pending builds once the announcement timeout expires', async () => {

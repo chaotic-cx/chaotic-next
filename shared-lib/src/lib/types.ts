@@ -79,6 +79,10 @@ export interface Package {
   metadata?: ParsedPackageMetadata;
   pkgrel?: number;
   bump?: number;
+  /** Build class configured in the package's .CI/config, null while unknown. */
+  buildClass?: number | null;
+  /** PKGBUILD pkgbase this package belongs to; differs from pkgname for split packages. */
+  pkgbaseName?: string | null;
   repo?: number;
   /** Repository name, resolved server-side when the repo relation is joined. */
   reponame?: string;
@@ -99,7 +103,17 @@ export interface Paginated<T> {
 
 export type SortOrder = 'ASC' | 'DESC';
 
-export const PACKAGE_SORT_FIELDS = ['id', 'pkgname', 'lastUpdated', 'createdAt', 'version', 'pkgrel', 'repo'] as const;
+export const PACKAGE_SORT_FIELDS = [
+  'id',
+  'pkgname',
+  'lastUpdated',
+  'createdAt',
+  'version',
+  'pkgrel',
+  'buildClass',
+  'pkgbaseName',
+  'repo',
+] as const;
 export type PackageSortField = (typeof PACKAGE_SORT_FIELDS)[number];
 
 export const BUILD_RESOURCE_SORT_FIELDS = ['peakMemory', 'cpuTime', 'diskIo', 'networkIo'] as const;
@@ -476,6 +490,25 @@ const BUILD_CLASS_TIER_UPPER_BOUNDS = [1, 4, 6, 8, BUILD_CLASS_MAX];
 export function buildClassTierName(buildClass: number): string {
   const tierIndex = BUILD_CLASS_TIER_UPPER_BOUNDS.findIndex((upperBound) => buildClass <= upperBound);
   return BUILD_CLASS_TIER_NAMES[tierIndex === -1 ? BUILD_CLASS_TIER_NAMES.length - 1 : tierIndex];
+}
+
+/** Returns the numeric value of a build class, or null for non-numeric (custom) classes. */
+export function parseBuildClass(value: BuildClass): number | null {
+  if (typeof value === 'number') return Number.isNaN(value) ? null : value;
+  const trimmed = value.trim();
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : null;
+}
+
+/** Sort key for build classes; custom classes sort after all numeric classes. */
+export function buildClassSortKey(value: BuildClass): number {
+  const parsed = parseBuildClass(value);
+  return parsed === null ? BUILD_CLASS_MAX + 1 : parsed;
+}
+
+/** Human-readable label, e.g. "9 (Very Heavy)"; custom classes stay as-is. */
+export function buildClassLabel(value: BuildClass): string {
+  const parsed = parseBuildClass(value);
+  return parsed === null ? String(value) : `${parsed} (${buildClassTierName(parsed)})`;
 }
 
 export interface BuildResourceAverages {
