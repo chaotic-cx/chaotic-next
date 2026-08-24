@@ -169,6 +169,14 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/stats/heavy-packages/${amount}/${days}` };
   }
 
+  getPackagesPerBuildClassRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/stats/packages-per-build-class/${days}` };
+  }
+
+  getPkgbaseCompositionRequest(): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/stats/pkgbase-composition` };
+  }
+
   getHeavyPackagesByResourceRequest(metric: ResourceMetricKey, amount: number, days: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/stats/heavy-packages/resource/${metric}/${amount}/${days}` };
   }

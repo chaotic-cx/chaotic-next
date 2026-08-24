@@ -87,6 +87,22 @@
             </div>
           </th>
         }
+        @if (columnVisibility.isVisible('package-list-table', 'buildClass')) {
+          <th pSortableColumn="buildClass" style="min-width: 8rem">
+            <div class="flex items-center">
+              Build class&nbsp;
+              <p-sortIcon field="buildClass" />
+            </div>
+          </th>
+        }
+        @if (columnVisibility.isVisible('package-list-table', 'pkgbaseName')) {
+          <th pSortableColumn="pkgbaseName" style="min-width: 10rem">
+            <div class="flex items-center">
+              Pkgbase&nbsp;
+              <p-sortIcon field="pkgbaseName" />
+            </div>
+          </th>
+        }
         @if (columnVisibility.isVisible('package-list-table', 'description')) {
           <th style="min-width: 10rem">
             <div class="flex items-center">Description</div>
@@ -135,6 +151,30 @@
                 tooltipPosition="top"
                 >{{ pkg.lastUpdated | relativeTime }}</span
               >
+            </td>
+          }
+          @if (columnVisibility.isVisible('package-list-table', 'buildClass')) {
+            <td>
+              @if (pkg.buildClass !== null && pkg.buildClass !== undefined) {
+                <span
+                  class="ml-1 align-middle"
+                  pTooltip="How resource-hungry the package build is"
+                  tooltipPosition="top"
+                >
+                  {{ pkg.buildClass | buildClass }}
+                </span>
+              } @else {
+                <span class="ml-1 align-middle">-</span>
+              }
+            </td>
+          }
+          @if (columnVisibility.isVisible('package-list-table', 'pkgbaseName')) {
+            <td>
+              @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
+                <span class="ml-1 align-middle">{{ pkg.pkgbaseName }}</span>
+              } @else {
+                <span class="ml-1 align-middle">-</span>
+              }
             </td>
           }
           @if (columnVisibility.isVisible('package-list-table', 'description')) {
@@ -192,7 +232,7 @@
     </ng-template>
     <ng-template #emptymessage>
       <tr>
-        <td colspan="7">No packages found.</td>
+        <td colspan="9">No packages found.</td>
       </tr>
     </ng-template>
   </p-table>

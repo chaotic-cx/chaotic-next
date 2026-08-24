@@ -22,6 +22,7 @@ import { type Subscriber } from 'rxjs';
 import { DataSource } from 'typeorm';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TABLES_TO_RESET } from '../test/e2e-app';
 
 const WEBHOOK_TOKEN = 'test-webhook-token';
 
@@ -91,7 +92,14 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
 
     const dataSource = moduleRef.get<DataSource>(DataSource);
     if (!dataSource.isInitialized) await dataSource.initialize();
-    await dataSource.getRepository(Repo).save({
+    const repoRepository = dataSource.getRepository(Repo);
+
+    // Earlier spec files leave leftover rows; initApiClient must resolve exactly
+    // this fully-configured chaotic-aur row, so start from a clean slate.
+    for (const table of TABLES_TO_RESET) {
+      await dataSource.query(`TRUNCATE TABLE "${table}" RESTART IDENTITY CASCADE`);
+    }
+    await repoRepository.save({
       name: 'chaotic-aur',
       gitlabProjectId: 'test-project-id',
       apiToken: encryptAes('test-gitlab-token', process.env.CAUR_DB_KEY ?? ''),

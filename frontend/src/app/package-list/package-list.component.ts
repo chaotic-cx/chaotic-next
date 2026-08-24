@@ -19,6 +19,7 @@ import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
 import { castTo } from '../functions';
+import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
@@ -42,6 +43,7 @@ import { PackageListService } from './package-list.service';
     FormField,
     StripPrefixPipe,
     RelativeTimePipe,
+    BuildClassPipe,
     TitleComponent,
     Tooltip,
     ColumnVisibilityComponent,
@@ -72,6 +74,8 @@ export class PackageListComponent {
     { key: 'name', label: 'Name' },
     { key: 'version', label: 'Version' },
     { key: 'lastUpdated', label: 'Last updated' },
+    { key: 'buildClass', label: 'Build class', defaultVisible: false },
+    { key: 'pkgbaseName', label: 'Pkgbase', defaultVisible: false },
     { key: 'description', label: 'Description' },
     { key: 'homepage', label: 'Homepage' },
     { key: 'repo', label: 'Repository' },
@@ -88,6 +92,8 @@ export class PackageListComponent {
       'name',
       'version',
       'lastUpdated',
+      'buildClass',
+      'pkgbaseName',
       'description',
       'homepage',
       'repo',

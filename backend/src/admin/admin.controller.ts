@@ -15,6 +15,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -23,6 +24,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import { BuildClassSyncService } from '../builder/build-class-sync.service';
 import { Builder, Package, Repo } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import {
@@ -51,7 +53,18 @@ import { AdminService } from './admin.service';
 @UseGuards(AuthGuard)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly buildClassSync: BuildClassSyncService,
+  ) {}
+
+  @Post('rescan-build-classes')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Re-read the build class of every active package from its .CI/config.' })
+  @ApiAcceptedResponse({ description: 'Build class rescan triggered; runs in the background.' })
+  rescanBuildClasses(): void {
+    void this.buildClassSync.rescanAllPackages();
+  }
 
   @Get('packages')
   @ApiOperation({ summary: 'List packages (admin)' })

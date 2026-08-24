@@ -485,6 +485,14 @@ export class AdminService {
     );
   }
 
+  async rescanBuildClasses(): Promise<void> {
+    await this.runMutation(
+      () => this.http.post(`${this.backendUrl}/admin/rescan-build-classes`, {}),
+      'Build class rescan started. It runs in the background.',
+      'Could not trigger the build class rescan.',
+    );
+  }
+
   async rescanPackage(pkgname: string, pkgType: PkgType): Promise<void> {
     try {
       const jobId = await this.startRescan([{ pkgname, pkgType }]);

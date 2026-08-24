@@ -210,7 +210,7 @@ export class LogViewerComponent implements OnDestroy {
 /**
  * Best job to open first: a running job. Once the pipeline finished, the on-commit
  * job, else any job whose name or stage mentions commit or schedule. Status does not
- * matter; canceled jobs still carry their partial logs.
+ * matter. Canceled jobs still carry their partial logs.
  */
 export function pickInitialJob(jobs: GitlabJob[]): GitlabJob | undefined {
   const running = jobs.find((job) => job.status === 'running');

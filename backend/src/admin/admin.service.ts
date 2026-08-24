@@ -166,6 +166,8 @@ export class AdminService {
       bumpCount: pkg.bumpCount,
       pkgrel: pkg.pkgrel,
       bump: pkg.bump,
+      buildClass: pkg.buildClass,
+      pkgbaseName: pkg.pkgbaseName,
       repo: pkg.repo?.id,
       reponame: pkg.repo?.name,
       buildClassSuggestion: suggestions.get(pkg.pkgname) ?? null,

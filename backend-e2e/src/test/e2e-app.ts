@@ -41,18 +41,22 @@ export type RepoSeed = Partial<
 >;
 
 export type PackageSeed = Partial<
-  Pick<Package, 'pkgname' | 'version' | 'isActive' | 'pkgrel' | 'bumpCount' | 'metadata'> & {
+  Pick<
+    Package,
+    'pkgname' | 'version' | 'isActive' | 'pkgrel' | 'bumpCount' | 'buildClass' | 'pkgbaseName' | 'metadata'
+  > & {
     repo: Repo;
   }
 >;
 
 export type BuildSeed = Partial<
-  Pick<Build, 'buildClass' | 'status' | 'arch' | 'logUrl' | 'commit' | 'timeToEnd' | 'replaced'> & {
+  Pick<Build, 'status' | 'arch' | 'logUrl' | 'commit' | 'timeToEnd' | 'replaced'> & {
     pkgbase: Package;
     builder: Builder;
     repo: Repo;
   }
 > & {
+  buildClass?: string | null;
   resourceStats?: Partial<BuildResourceUsage>;
 };
 
@@ -217,7 +221,7 @@ export async function createE2eApp(): Promise<E2eApp> {
   };
 }
 
-const TABLES_TO_RESET = [
+export const TABLES_TO_RESET = [
   'router-hits',
   'router_hits_daily',
   'router_hits_daily_agents',
@@ -347,6 +351,8 @@ async function seedPackage(
     isActive: overrides?.isActive ?? true,
     pkgrel: overrides?.pkgrel ?? real.pkgrel,
     bumpCount: overrides?.bumpCount ?? 0,
+    buildClass: overrides?.buildClass,
+    pkgbaseName: overrides?.pkgbaseName,
     metadata: overrides?.metadata ?? real.metadata,
     lastUpdated: new Date().toISOString(),
     repo: linkedRepo,
@@ -367,7 +373,7 @@ async function seedBuild(dataSource: DataSource, overrides: BuildSeed | undefine
     pkgbase,
     builder,
     repo: linkedRepo,
-    buildClass: overrides?.buildClass ?? '5',
+    ...(overrides?.buildClass === undefined ? {} : { buildClass: overrides.buildClass }),
     status: overrides?.status ?? BuildStatus.SUCCESS,
     arch: overrides?.arch ?? 'x86_64',
     logUrl:

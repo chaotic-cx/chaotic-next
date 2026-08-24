@@ -122,17 +122,21 @@ const REPO_OPTIONS = [
           <tr>
             <td>{{ trigger.id }}</td>
             <td>
-              @if (trigger.webUrl) {
-                <a
-                  class="cursor-pointer text-ctp-mauve hover:underline"
-                  [href]="trigger.webUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+              @if (trigger.pipelineId) {
+                @if (trigger.webUrl) {
+                  <a
+                    class="cursor-pointer text-ctp-mauve hover:underline"
+                    [href]="trigger.webUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    #{{ trigger.pipelineId }}
+                  </a>
+                } @else {
                   #{{ trigger.pipelineId }}
-                </a>
+                }
               } @else {
-                <span class="text-ctp-subtext0">none</span>
+                <span class="text-ctp-subtext0">—</span>
               }
             </td>
             <td>

@@ -48,6 +48,14 @@ export function mochaAxisChartOptions<TType extends ChartType>(
   return (indexAxis === 'y' ? { ...options, indexAxis: 'y' } : options) as unknown as ChartOptions<TType>;
 }
 
+export function mochaPieChartOptions<TType extends ChartType>(): ChartOptions<TType> {
+  return {
+    plugins: {
+      legend: { labels: mochaLegendLabels(), position: 'top' },
+    },
+  } as unknown as ChartOptions<TType>;
+}
+
 export interface GroupOverTimeRow {
   day: string;
   group: string;

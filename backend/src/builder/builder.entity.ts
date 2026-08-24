@@ -147,6 +147,14 @@ export class Package {
   @Column({ type: 'int', default: 0 })
   bump!: number;
 
+  @ApiProperty({ description: 'Build class configured in the .CI/config of the package' })
+  @Column({ type: 'int', nullable: true })
+  buildClass!: number | null;
+
+  @ApiProperty({ description: 'PKGBUILD pkgbase this package belongs to; differs from pkgname for split packages' })
+  @Column({ type: 'varchar', nullable: true })
+  pkgbaseName!: string | null;
+
   @ApiProperty({ description: 'Owning repo', type: () => Repo })
   @ManyToOne(() => Repo, (repo) => repo.id, { cascade: true, nullable: true })
   repo!: Repo;
@@ -211,7 +219,7 @@ export class Build {
 
   @ApiProperty({ description: 'Build class' })
   @Column({ type: 'varchar', nullable: true })
-  buildClass!: string;
+  buildClass!: string | null;
 
   @ApiProperty({ description: 'Builder that ran the build', type: () => Builder })
   @ManyToOne(() => Builder, (builder) => builder.id, { cascade: true, nullable: true })

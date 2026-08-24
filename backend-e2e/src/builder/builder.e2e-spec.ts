@@ -86,6 +86,37 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       expect(body.total).toBe(2);
     });
 
+    it('exposes the persisted build class and pkgbase', async () => {
+      const repo = await e2e.seedRepo({ name: CHAOTIC_AUR_REPO.name });
+      await e2e.seedPackage({ pkgname: 'firedragon', version: '2:13.1.1', repo, buildClass: 9, pkgbaseName: null });
+      await e2e.seedPackage({
+        pkgname: 'wps-office-mime-cn',
+        version: '12.1-1',
+        repo,
+        buildClass: 5,
+        pkgbaseName: 'wps-office-cn',
+      });
+
+      const res = await e2e.inject<
+        Paginated<{ pkgname: string; buildClass: number | null; pkgbaseName: string | null }>
+      >({
+        method: 'GET',
+        url: '/builder/packages',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      const byName = new Map(
+        body.items.map((p: { pkgname: string; buildClass: number | null; pkgbaseName: string | null }) => [
+          p.pkgname,
+          p,
+        ]),
+      );
+      expect(byName.get('firedragon')?.buildClass).toBe(9);
+      expect(byName.get('firedragon')?.pkgbaseName).toBeNull();
+      expect(byName.get('wps-office-mime-cn')?.pkgbaseName).toBe('wps-office-cn');
+    });
+
     it('filters by search query q', async () => {
       const repo = await e2e.seedRepo({ name: CHAOTIC_AUR_REPO.name });
       await e2e.seedPackage({ pkgname: 'firedragon', version: '2:13.1.1', repo });
@@ -725,6 +756,75 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
 
       expect(res.statusCode).toBe(200);
       expect(await res.json()).toEqual([]);
+    });
+  });
+
+  describe('GET /builder/stats/packages-per-build-class/:days', () => {
+    it('counts distinct packages per build class, sorted numerically', async () => {
+      const classFive = await e2e.seedPackage({ pkgname: 'firedragon' });
+      const alsoClassFive = await e2e.seedPackage({ pkgname: 'google-chrome' });
+      const classNine = await e2e.seedPackage({ pkgname: 'linux-tkg' });
+      const noClass = await e2e.seedPackage({ pkgname: 'paru' });
+
+      await e2e.seedBuild({ pkgbase: classFive, buildClass: '5' });
+      await e2e.seedBuild({ pkgbase: alsoClassFive, buildClass: '5' });
+      await e2e.seedBuild({ pkgbase: classNine, buildClass: '9' });
+      await e2e.seedBuild({ pkgbase: noClass, status: BuildStatus.SUCCESS });
+
+      const res = await e2e.inject<{ build_class: string; count: string }[]>({
+        method: 'GET',
+        url: '/builder/stats/packages-per-build-class/30',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([
+        { build_class: '5', count: '2' },
+        { build_class: '9', count: '1' },
+      ]);
+    });
+
+    it('ignores failed builds', async () => {
+      const pkg = await e2e.seedPackage({ pkgname: 'firedragon' });
+      await e2e.seedBuild({ pkgbase: pkg, buildClass: '5', status: BuildStatus.FAILED });
+
+      const res = await e2e.inject<unknown[]>({
+        method: 'GET',
+        url: '/builder/stats/packages-per-build-class/7',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([]);
+    });
+  });
+
+  describe('GET /builder/stats/pkgbase-composition', () => {
+    it('counts active single pkgbases and split members', async () => {
+      const repo = await e2e.seedRepo({ name: CHAOTIC_AUR_REPO.name });
+      await e2e.seedPackage({ pkgname: 'paru', repo, isActive: true });
+      await e2e.seedPackage({ pkgname: 'wps-office-cn', repo, isActive: true, pkgbaseName: 'wps-office-cn' });
+      await e2e.seedPackage({
+        pkgname: 'wps-office-mime-cn',
+        repo,
+        isActive: true,
+        pkgbaseName: 'wps-office-cn',
+      });
+      await e2e.seedPackage({
+        pkgname: 'wps-office-mui-zh-cn',
+        repo,
+        isActive: false,
+        pkgbaseName: 'wps-office-cn',
+      });
+
+      const res = await e2e.inject<{ type: string; count: string }[]>({
+        method: 'GET',
+        url: '/builder/stats/pkgbase-composition',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([
+        { type: 'single', count: '2' },
+        { type: 'split', count: '1' },
+      ]);
     });
   });
 
