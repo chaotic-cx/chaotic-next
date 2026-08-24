@@ -234,22 +234,27 @@
       </ng-template>
       <div class="chaotic-panel text-md">
         <p>
-          When an AUR package gets updated and the update is anything else but a minor version change, our build system
-          prepares the update by opening a merge request on GitLab against the
+          When an AUR package gets updated and the update is anything else but a minor version change (this is
+          <strong>everything</strong> besides valid <code>pkgver</code>, <code>pkgrel</code>, <code>checksums</code>),
+          our build system prepares the update by opening a merge request on GitLab against the
           <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds" rel="noopener" target="_blank"
             >pkgbuilds</a
           >
-          repository.
+          repository. Packages building from a git branch generally build automatically when the only thing changing is
+          their upstream commit (tracked through the
+          <a href="https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/state" rel="noopener" target="_blank">state</a>
+          branch). Except from this are AUR updates that change the PKGBUILD.
         </p>
         <p-divider />
         <p>
-          Each MR then goes through a human review: maintainers inspect the diff and verify it contains no malicious
-          changes before approving it. Only after a human approves the MR is it merged and deployed to the repository.
+          Besides being automatically flagged in case of suspicious changes, each MR then goes through a human review:
+          maintainers inspect the diff and verify it contains no malicious changes before approving it. Only after a
+          human approves the MR is it merged and deployed to the repository.
         </p>
         <p-divider />
         <p>
           You can follow these pending updates on the
-          <a class="text-ctp-mauve" routerLink="/update-review">Update review</a> page.
+          <a class="text-ctp-mauve" routerLink="/update-review">Review Queue</a> page.
         </p>
       </div>
     </p-panel>
@@ -270,7 +275,7 @@
         <p>
           It also surfaces maintainer insights like novice maintainers and orphaned packages to help you judge how
           trustworthy a package is. Of course, it is still recommended to inspect the package's source code and PKGBUILD
-          before installing it. Therefore, the content is also displayed along the findings.
+          before installing it: therefore, the content is also displayed along the findings.
         </p>
       </div>
     </p-panel>

@@ -14,6 +14,7 @@ import { XtermLogComponent } from '../xterm-log/xterm-log.component';
 import { LogViewerService } from './log-viewer.service';
 
 const RUNNING_STATUSES = new Set(['created', 'waiting_for_resource', 'preparing', 'pending', 'running']);
+const RELEVANT_LOG_JOB_PATTERN = /commit|schedule/;
 
 @Component({
   selector: 'chaotic-log-viewer',
@@ -206,7 +207,19 @@ export class LogViewerComponent implements OnDestroy {
   }
 }
 
-/** Best job to open first: the running stage, else a failed one, else any. */
-function pickInitialJob(jobs: GitlabJob[]): GitlabJob | undefined {
-  return jobs.find((job) => job.status === 'running') ?? jobs.find((job) => job.status === 'failed') ?? jobs[0];
+/**
+ * Best job to open first: a running job. Once the pipeline finished, the on-commit
+ * job, else any job whose name or stage mentions commit or schedule. Status does not
+ * matter; canceled jobs still carry their partial logs.
+ */
+export function pickInitialJob(jobs: GitlabJob[]): GitlabJob | undefined {
+  const running = jobs.find((job) => job.status === 'running');
+  if (running) return running;
+  const relevant = jobs.filter((job) => RELEVANT_LOG_JOB_PATTERN.test(`${job.name} ${job.stage}`));
+  return (
+    relevant.find((job) => /commit/.test(`${job.name} ${job.stage}`)) ??
+    relevant[0] ??
+    jobs.find((job) => job.status === 'failed') ??
+    jobs[0]
+  );
 }
