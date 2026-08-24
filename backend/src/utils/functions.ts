@@ -132,7 +132,6 @@ export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-/** The rejection reasons of settled promises, for reporting partial batch failures. */
 export function rejectedReasons(results: PromiseSettledResult<unknown>[]): unknown[] {
   return results.filter((result) => result.status === 'rejected').map((result) => result.reason);
 }

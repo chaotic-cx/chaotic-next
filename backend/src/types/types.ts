@@ -26,6 +26,19 @@ export interface QueuePromotedEvent {
   timestamp: number;
 }
 
+export interface DatabasePackageAddedEvent {
+  arch: string;
+  commit?: string;
+  logUrl?: string;
+  node: string;
+  pkgbase: string;
+  packages: string[];
+  source_repo: string;
+  source_repo_url: string;
+  target_repo: string;
+  timestamp: number;
+}
+
 export interface BuilderDbConnections {
   build: Repository<Build>;
   builder: Repository<Builder>;
