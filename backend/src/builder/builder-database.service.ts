@@ -4,7 +4,13 @@ import { Subject } from 'rxjs';
 import { GitlabService } from '../gitlab/gitlab.service';
 import { GitlabStatusEvent } from '../gitlab/interfaces';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
-import { BuilderDbConnections, BuildStatus, MoleculerBuildObject, QueuePromotedEvent } from '../types/types';
+import {
+  BuilderDbConnections,
+  BuildStatus,
+  DatabasePackageAddedEvent,
+  MoleculerBuildObject,
+  QueuePromotedEvent,
+} from '../types/types';
 import { errorMessage } from '../utils/functions';
 import {
   Build,
@@ -25,6 +31,16 @@ export interface BuilderDatabaseServiceOptions {
 }
 
 const BUILD_OUTCOME_EVENTS = new Set(['builds.success', 'builds.failed', 'builds.cancelled', 'builds.canceling']);
+
+export const PENDING_DEPLOYMENT_TIMEOUT_MINUTES = 5;
+export const PENDING_DEPLOYMENT_TIMEOUT_MS = PENDING_DEPLOYMENT_TIMEOUT_MINUTES * 60 * 1000;
+
+interface PendingDeploymentCheck {
+  build: Partial<Build>;
+  pkgname: string;
+  queuedAt: number;
+  targetRepo: string;
+}
 
 function finiteOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -59,8 +75,15 @@ export class BuilderDatabaseService extends Service {
   private readonly sseSubject$: Subject<Partial<MessageEvent<ChaoticEvent>>>;
   private readonly gitlabService: GitlabService;
 
-  busyUpdating = false;
-  scheduledUpdate = false;
+  /**
+   * Builds that succeeded while the repository databases did not yet carry
+   * their packages; drained once database.packageAdded signals the deployment.
+   */
+  private pendingDeploymentChecks: PendingDeploymentCheck[] = [];
+  private bumpChain: Promise<void> = Promise.resolve();
+
+  private busyUpdating = false;
+  private scheduledUpdate = false;
 
   constructor({ broker, dbConnections, repoManagerService, sseSubject, gitlabService }: BuilderDatabaseServiceOptions) {
     super(broker);
@@ -84,6 +107,12 @@ export class BuilderDatabaseService extends Service {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'database.removalCompleted'(ctx: Context<string[]>) {
           this.removeEntries(ctx);
+        },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'database.packageAdded'(ctx: Context<DatabasePackageAddedEvent>) {
+          void this.runDeferredDeploymentChecks(ctx.params).catch((err: unknown) => {
+            this.logger.error(`Failed to handle database.packageAdded event: ${errorMessage(err)}`);
+          });
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'metrics.currentQueue'(ctx: Context<MoleculerCurrentQueueObject>) {
@@ -156,33 +185,15 @@ export class BuilderDatabaseService extends Service {
       build.resourceStats = resourceUsageFromStats(params.resourceStats);
     }
 
-    // Update the chaotic versions as they changed with new successful builds
+    // A finished build does not imply the repository databases already carry
+    // its packages, so database-dependent work waits for database.packageAdded.
     if (params.status === BuildStatus.SUCCESS) {
-      try {
-        const promises: Promise<void>[] = [this.repoManagerService.eventuallyBumpAffected(build)];
-
-        if (this.busyUpdating === false) {
-          this.busyUpdating = true;
-          promises.push(
-            (async () => {
-              await this.repoManagerService.updateChaoticVersions();
-              if (this.scheduledUpdate) {
-                this.scheduledUpdate = false;
-                await this.repoManagerService.updateChaoticVersions();
-              } else {
-                this.scheduledUpdate = false;
-              }
-            })(),
-          );
-        } else {
-          this.logger.warn('Scheduling Chaotic version update, another update is in progress');
-          this.scheduledUpdate = true;
-        }
-
-        await Promise.allSettled(promises);
-      } catch (err: unknown) {
-        this.logger.error(err);
-      }
+      this.pendingDeploymentChecks.push({
+        build,
+        pkgname: params.pkgname,
+        queuedAt: Date.now(),
+        targetRepo: params.target_repo,
+      });
     }
 
     try {
@@ -202,6 +213,73 @@ export class BuilderDatabaseService extends Service {
       });
     } catch (err: unknown) {
       this.logger.error(err);
+    }
+  }
+
+  /**
+   * Runs the work deferred by successful builds: the repository databases now
+   * carry the newly deployed packages, so rebuild triggers can be checked and
+   * the cached Chaotic versions refreshed. Bump checks run one after another,
+   * because concurrent checks would skip each other in RepoManager.
+   */
+  async runDeferredDeploymentChecks(event: DatabasePackageAddedEvent): Promise<void> {
+    const deployedBuilds = this.takeDeployedBuilds(event);
+
+    for (const build of deployedBuilds) {
+      this.bumpChain = this.bumpChain.then(() => this.runBumpCheck(build));
+    }
+
+    if (this.busyUpdating) {
+      this.logger.warn('Scheduling Chaotic version update, another update is in progress');
+      this.scheduledUpdate = true;
+    } else {
+      await this.refreshChaoticVersions();
+    }
+  }
+
+  private takeDeployedBuilds(event: DatabasePackageAddedEvent): Partial<Build>[] {
+    const deployedPkgnames = new Set([event.pkgbase, ...event.packages]);
+    const remaining: PendingDeploymentCheck[] = [];
+    const taken: Partial<Build>[] = [];
+    const now = Date.now();
+
+    for (const pending of this.pendingDeploymentChecks) {
+      if (now - pending.queuedAt >= PENDING_DEPLOYMENT_TIMEOUT_MS) {
+        this.logger.warn(
+          `No deployment announcement for ${pending.pkgname} within ${PENDING_DEPLOYMENT_TIMEOUT_MINUTES} minutes, dropping the deferred check`,
+        );
+        continue;
+      }
+      if (pending.targetRepo === event.target_repo && deployedPkgnames.has(pending.pkgname)) {
+        taken.push(pending.build);
+      } else {
+        remaining.push(pending);
+      }
+    }
+
+    this.pendingDeploymentChecks = remaining;
+    return taken;
+  }
+
+  private async runBumpCheck(build: Partial<Build>): Promise<void> {
+    try {
+      await this.repoManagerService.eventuallyBumpAffected(build);
+    } catch (err: unknown) {
+      this.logger.error(`Deferred bump check failed for ${build.pkgbase?.pkgname}: ${errorMessage(err)}`);
+    }
+  }
+
+  private async refreshChaoticVersions(): Promise<void> {
+    this.busyUpdating = true;
+    try {
+      await this.repoManagerService.updateChaoticVersions();
+      if (!this.scheduledUpdate) {
+        return;
+      }
+      this.scheduledUpdate = false;
+      await this.repoManagerService.updateChaoticVersions();
+    } finally {
+      this.busyUpdating = false;
     }
   }
 

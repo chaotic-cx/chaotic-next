@@ -3,9 +3,10 @@ import { AppModule } from '@chaotic-next/backend/app.module';
 import {
   BuilderDatabaseService,
   type BuilderDatabaseServiceOptions,
+  PENDING_DEPLOYMENT_TIMEOUT_MS,
 } from '@chaotic-next/backend/builder/builder-database.service';
 import { Build, Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
-import type { BuildStatus, MoleculerBuildObject } from '@chaotic-next/backend/types/types';
+import type { BuildStatus, DatabasePackageAddedEvent, MoleculerBuildObject } from '@chaotic-next/backend/types/types';
 import type { BuildResourceStats, ChaoticEvent } from '@chaotic-next/shared-lib';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
@@ -13,7 +14,7 @@ import { type Context, ServiceBroker } from 'moleculer';
 import { Subject, type Subscriber } from 'rxjs';
 import { DataSource } from 'typeorm';
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { truncateTables } from '../test/e2e-app';
 
 function buildEventPayload(overrides: Partial<MoleculerBuildObject>): MoleculerBuildObject {
@@ -45,6 +46,22 @@ function buildResourceStats(overrides: Partial<BuildResourceStats> = {}): BuildR
     peak_memory_bytes: 6_000_000_000,
     peak_pids: 400,
     sample_count: 60,
+    ...overrides,
+  };
+}
+
+function packageAddedPayload(overrides: Partial<DatabasePackageAddedEvent>): DatabasePackageAddedEvent {
+  return {
+    arch: 'x86_64',
+    commit: '4a70b438f76d5c8f6f739ea110f8c071efe8067f',
+    logUrl: 'https://builds.garudalinux.org/logs/firedragon.html',
+    node: 'immortalis-1',
+    pkgbase: 'firedragon',
+    packages: ['firedragon'],
+    source_repo: 'chaotic-aur',
+    source_repo_url: 'https://gitlab.com/chaotic-aur/pkgbuilds',
+    target_repo: 'garuda',
+    timestamp: Date.now(),
     ...overrides,
   };
 }
@@ -191,18 +208,14 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       expect(pkgs[0].c).toBe(2);
     });
 
-    it('fires eventuallyBumpAffected and updateChaoticVersions only on SUCCESS', async () => {
+    it('does not run repo-manager work on successful builds alone', async () => {
       await service.logBuild(makeCtx('builds.failed', buildEventPayload({ status: 3 as BuildStatus })));
-
-      expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
-      expect(repoManagerStub.updateChaoticVersions).not.toHaveBeenCalled();
-
       await service.logBuild(
         makeCtx('builds.success', buildEventPayload({ status: 0 as BuildStatus, pkgname: 'paru' })),
       );
 
-      expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1);
-      expect(repoManagerStub.updateChaoticVersions).toHaveBeenCalledTimes(1);
+      expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
+      expect(repoManagerStub.updateChaoticVersions).not.toHaveBeenCalled();
     });
 
     it('emits SSE for non-SUCCESS statuses too', async () => {
@@ -305,6 +318,128 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
 
       const [row] = await dataSource.query(`SELECT "resourceStatsSampleCount" AS sample_count FROM build`);
       expect(row.sample_count).toBeNull();
+    });
+  });
+
+  describe('database.packageAdded event → runDeferredDeploymentChecks', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('runs the deferred bump and version work once the deployment is announced', async () => {
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({ status: 0 as BuildStatus, pkgname: 'paru', target_repo: 'garuda' }),
+        ),
+      );
+
+      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'garuda' }));
+
+      expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1);
+      expect(repoManagerStub.updateChaoticVersions).toHaveBeenCalledTimes(1);
+    });
+
+    it('matches pending builds via the deployed package list', async () => {
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({ status: 0 as BuildStatus, pkgname: 'google-chrome', target_repo: 'chaotic-aur' }),
+        ),
+      );
+
+      await service.runDeferredDeploymentChecks(
+        packageAddedPayload({
+          pkgbase: 'google-chrome',
+          packages: ['google-chrome', 'google-chrome-beta'],
+          source_repo: 'aur',
+          target_repo: 'chaotic-aur',
+        }),
+      );
+
+      expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves pending builds untouched for unrelated deployments', async () => {
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({ status: 0 as BuildStatus, pkgname: 'paru', target_repo: 'garuda' }),
+        ),
+      );
+
+      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'chaotic-aur' }));
+
+      expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
+
+      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'garuda' }));
+      expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshes versions even without a pending build, without bumping', async () => {
+      await service.runDeferredDeploymentChecks(packageAddedPayload({}));
+
+      expect(repoManagerStub.updateChaoticVersions).toHaveBeenCalledTimes(1);
+      expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
+    });
+
+    it('drops pending builds once the announcement timeout expires', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({ status: 0 as BuildStatus, pkgname: 'paru', target_repo: 'garuda' }),
+        ),
+      );
+
+      vi.setSystemTime(Date.now() + PENDING_DEPLOYMENT_TIMEOUT_MS + 1);
+      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'garuda' }));
+
+      expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
+
+      vi.setSystemTime(Date.now());
+      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'garuda' }));
+      expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
+    });
+
+    it('runs bump checks one after another for overlapping announcements', async () => {
+      const releaseCheck: (() => void)[] = [];
+      repoManagerStub.eventuallyBumpAffected.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseCheck.push(resolve);
+          }),
+      );
+
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({ status: 0 as BuildStatus, pkgname: 'paru', target_repo: 'garuda' }),
+        ),
+      );
+      await service.logBuild(
+        makeCtx(
+          'builds.success',
+          buildEventPayload({ status: 0 as BuildStatus, pkgname: 'yay', target_repo: 'garuda' }),
+        ),
+      );
+
+      await service.runDeferredDeploymentChecks(
+        packageAddedPayload({ pkgbase: 'paru', packages: ['paru'], target_repo: 'garuda' }),
+      );
+      await service.runDeferredDeploymentChecks(
+        packageAddedPayload({ pkgbase: 'yay', packages: ['yay'], target_repo: 'garuda' }),
+      );
+
+      await vi.waitFor(() => expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1));
+      releaseCheck[0]();
+      await vi.waitFor(() => expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(2));
+
+      expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ arch: 'x86_64' }),
+      );
+      releaseCheck[1]();
     });
   });
 

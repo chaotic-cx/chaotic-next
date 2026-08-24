@@ -126,3 +126,11 @@ TypeScript change, check:
   empty inputs, and always-true/false conditions.
 - **Prefer maps/lookups over long switch/if-else chains** where the branches
   are just data (e.g. status-name mappings, pipes).
+
+## Technical text
+
+- **ASD-STE100 style** — Max 20 words per sentence in instructions, 25 in descriptions.
+  Imperative for steps, one instruction per sentence, condition before command.
+  Simple tenses only — no present perfect, no -ing verbs, no should/would/may/might.
+  Active voice. One word per meaning — no synonym rotation. No contractions, keep articles and "that".
+  Delete filler: simply, robust, seamlessly, leverage. Code and identifiers stay exact.
