@@ -66,6 +66,9 @@ describe('persistence rules', () => {
     ['CAUR-CRON-FILE', 'cp backdoor /var/spool/cron/root'],
     ['CAUR-LDSO-PRELOAD', 'echo "/tmp/rootkit.so" > /etc/ld.so.preload'],
     ['PERSIST-004', 'echo x > /etc/rc.local'],
+    ['PERSIST-005', 'cat <<EOF >/etc/systemd/system/SystemManager.service'],
+    ['PERSIST-005', 'install -Dm755 backdoor /etc/systemd/system/backdoored.socket'],
+    ['CAUR-AUR-REPLICATE', 'git clone "ssh://aur@aur.archlinux.org/xsnow.git" "$tmp"'],
     ['PERSIST-006', 'ExecStart=/usr/bin/systemd-cacheupd'],
     ['PERSIST-006', 'systemctl start systemd-updated'],
   ])('flags %s for %j', (id, line) => {
@@ -148,5 +151,12 @@ describe('persistence rules', () => {
       addedOnlyDiff(['install -Dm755 "$srcdir/$pkgname.sh" "$pkgdir/etc/profile.d/$pkgname.sh"']),
     );
     expect(ruleById(PERSISTENCE_RULES, 'PERSIST-004').check(change)).toBeNull();
+  });
+
+  it('does not flag systemd units shipped under $pkgdir', () => {
+    const change = makeChange(
+      addedOnlyDiff(['install -Dm644 foo.service "$pkgdir/usr/lib/systemd/system/foo.service"']),
+    );
+    expect(ruleById(PERSISTENCE_RULES, 'PERSIST-005').check(change)).toBeNull();
   });
 });

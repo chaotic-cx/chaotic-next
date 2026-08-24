@@ -198,6 +198,27 @@ export const PERSISTENCE_RULES: Rule[] = [
     skipQuoted: true,
   }),
   regexRule({
+    id: 'PERSIST-005',
+    name: 'Systemd unit dropped outside the package payload',
+    severity: 'critical',
+    description:
+      'Writes a systemd unit into the live /etc/systemd/system directory instead of shipping it under $pkgdir. Units installed this way bypass pacman and survive package removal — persistence by construction.',
+    // Redirects like "cat <<EOF >/etc/systemd/system/x.service" land on the same line.
+    pattern: /(?<!pkgdir[^\n]*)\/etc\/systemd\/system\/\S*\.(?:service|timer|path|socket|target)\b/,
+    scopes: ['code'],
+    skipQuoted: true,
+  }),
+  regexRule({
+    id: 'CAUR-AUR-REPLICATE',
+    name: 'AUR repository manipulation',
+    severity: 'critical',
+    description:
+      'Clones or queries AUR package repositories via the maintainer SSH endpoint. Package builds never talk to the AUR; the xsnow install-scriptlet worm replicated itself this way.',
+    pattern: /ssh:\/\/aur@(?:aur\.)?archlinux\.org/,
+    // No skipQuoted: the worm passes the URL as a quoted git argument.
+    scopes: ['code'],
+  }),
+  regexRule({
     id: 'PERSIST-006',
     name: 'Systemd daemon masquerading',
     severity: 'critical',
