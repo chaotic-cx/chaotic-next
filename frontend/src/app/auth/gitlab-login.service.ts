@@ -1,10 +1,10 @@
 import { inject, Service } from '@angular/core';
 import { Router } from '@angular/router';
-import { APP_CONFIG } from '../../environments/app-config.token';
-import { NotificationService } from '../notification/notification.service';
 import { AuthService } from 'ngx-better-auth';
 import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, filter, finalize, first, map, switchMap, timeout } from 'rxjs/operators';
+import { APP_CONFIG } from '../../environments/app-config.token';
+import { NotificationService } from '../notification/notification.service';
 
 const AUTH_CALLBACK_PATH = '/auth/callback';
 const AUTH_REDIRECT_KEY = 'auth-redirect';
@@ -40,6 +40,9 @@ export class GitlabLoginService {
   private readonly authBaseURL = this.config.authBaseUrl;
 
   login(returnPath: string): Observable<void> {
+    // "Notification permission may only be requested from inside a short running user-generated event handler"
+    void this.notificationService.requestPermissionAndSubscribe();
+
     sessionStorage.setItem(AUTH_REDIRECT_KEY, returnPath);
     localStorage.removeItem(AUTH_RESULT_KEY);
     const popup = window.open('', POPUP_WINDOW_NAME, POPUP_FEATURES);
@@ -142,7 +145,6 @@ export class GitlabLoginService {
       )
       .subscribe(() => {
         void this.router.navigateByUrl(destination);
-        void this.notificationService.promptIfNeeded();
       });
   }
 }
