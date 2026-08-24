@@ -29,6 +29,15 @@
         "timeout": "0s",
         "strategy": "freshness"
       }
+    },
+    {
+      "name": "avatars",
+      "urls": ["https://gitlab.com/uploads/-/system/user/avatar/**", "https://avatars.githubusercontent.com/**"],
+      "cacheConfig": {
+        "maxSize": 100,
+        "maxAge": "30d",
+        "strategy": "performance"
+      }
     }
   ],
   "navigationUrls": ["/**", "!/backend/**", "!/**/__*", "!/**/sse", "!/aizawa/**", "!/memorials/**"]

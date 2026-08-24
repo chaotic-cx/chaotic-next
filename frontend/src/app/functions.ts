@@ -8,6 +8,13 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 
 const CHAOTIC_EVENT_TYPES = new Set(['build', 'pipeline', 'merge_request', 'queue', 'queue_promoted']);
 
+export function vtIndicatorLink(indicator: { type: string; value: string }): string {
+  if (indicator.type !== 'url') {
+    return `https://www.virustotal.com/gui/file/${indicator.value}`;
+  }
+  return `https://www.virustotal.com/gui/search?query=${encodeURIComponent(indicator.value)}`;
+}
+
 export function parseLogChunk(data: string): GitlabLogChunk | undefined {
   try {
     const value: unknown = JSON.parse(data);
