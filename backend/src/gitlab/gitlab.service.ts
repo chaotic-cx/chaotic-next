@@ -36,7 +36,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Observable } from 'rxjs';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, MoreThan, Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
 import { Package, Repo } from '../builder/builder.entity';
 import { AurScanService } from '../diff-scan/aur-scan.service';
@@ -55,6 +55,7 @@ import {
   isOnSchedulePipelineRunning,
   mapWithConcurrency,
   nDaysInPast,
+  sleep,
 } from '../utils/functions';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
@@ -80,6 +81,37 @@ const PIPELINE_SCHEDULES_CACHE_TTL_MS = 5 * 60_000;
 const MAX_CACHED_PIPELINES = 40;
 const GITLAB_API_TIMEOUT_MS = 10_000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const DEFERRED_MERGE_MAX_AGE_DAYS = 1;
+const MAX_DEFERRED_MERGE_ATTEMPTS = 5;
+const MERGE_STATUS_SETTLE_TIMEOUT_MS = 30_000;
+const MERGE_STATUS_SETTLE_POLL_MS = 3_000;
+const BLOCKING_MERGE_LABELS = ['malware', 'dangerous', 'hold'] as const;
+
+type DetailedMergeStatus = MergeRequestSchema['detailed_merge_status'] | 'commits_status';
+
+const MERGE_BLOCKER_DESCRIPTIONS: Record<Exclude<DetailedMergeStatus, 'mergeable'>, string> = {
+  blocked_status: 'the merge request is blocked',
+  broken_status: 'the merge request is in a broken state',
+  checking: 'GitLab is still checking mergeability',
+  ci_must_pass: 'the CI pipeline must pass before merging',
+  ci_still_running: 'the CI pipeline is still running',
+  commits_status: 'no pipeline result exists for the head commit yet',
+  discussions_not_resolved: 'unresolved discussions block the merge',
+  draft_status: 'the merge request is still a draft',
+  external_status_checks: 'external status checks block the merge',
+  jira_association_missing: 'a Jira association is required',
+  not_approved: 'the approval was lost (reset by a push)',
+  not_open: 'the merge request is no longer open',
+  policies_denied: 'merge policies deny this merge request',
+  unchecked: 'GitLab has not yet checked mergeability',
+};
+
+function describeMergeBlocker(status?: string): string {
+  if (!status) return 'unknown reason';
+  return status in MERGE_BLOCKER_DESCRIPTIONS
+    ? MERGE_BLOCKER_DESCRIPTIONS[status as keyof typeof MERGE_BLOCKER_DESCRIPTIONS]
+    : status;
+}
 
 interface CachedMrData {
   updatedAt: string;
@@ -191,6 +223,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
   private readonly pipelineMap = new Map<number, PipelineSchema>();
   private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
   private readonly unlinkedCommitShas = new Set<string>();
+  private readonly deferredMergeFailures = new Map<number, number>();
   private statusIdCounter = 0;
 
   constructor(
@@ -286,7 +319,8 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
 
   /**
    * Processes deferred MR merges right after the scheduled pipeline window (HH:30 - HH:40) ends.
-   * Runs at minutes 41, 43, and 45 every 3 hours UTC.
+   * Runs at minutes 41, 43, and 45 every 3 hours UTC. Stops retrying an MR after
+   * repeated failures.
    */
   @Cron('41,43,45 */3 * * *')
   async processDeferredMerges(): Promise<void> {
@@ -294,7 +328,7 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
 
     try {
       const recentApprovedActions = await this.mrActionRepository.find({
-        where: { action: 'approve' },
+        where: { action: 'approve', createdAt: MoreThan(nDaysInPast(DEFERRED_MERGE_MAX_AGE_DAYS)) },
         order: { createdAt: 'DESC' },
         take: 50,
       });
@@ -302,19 +336,43 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       if (recentApprovedActions.length === 0) return;
 
       const openMrs = await this.api.MergeRequests.all({ state: 'opened', projectId: this.chaoticId });
-      const openIidMap = new Map(openMrs.map((mr) => [mr.iid, mr.sha]));
+      const openMrsByIid = new Map(openMrs.map((mr) => [mr.iid, mr]));
 
       let mergedCount = 0;
+      const processedIids = new Set<number>();
       for (const action of recentApprovedActions) {
-        if (!openIidMap.has(action.mergeRequestIid)) continue;
-        const sha = openIidMap.get(action.mergeRequestIid) ?? action.commitSha;
-        if (!sha) continue;
+        if (processedIids.has(action.mergeRequestIid)) continue;
+        processedIids.add(action.mergeRequestIid);
+
+        const openMr = openMrsByIid.get(action.mergeRequestIid);
+        if (!openMr) {
+          this.deferredMergeFailures.delete(action.mergeRequestIid);
+          continue;
+        }
+
+        const failedAttempts = this.deferredMergeFailures.get(action.mergeRequestIid) ?? 0;
+        if (failedAttempts >= MAX_DEFERRED_MERGE_ATTEMPTS) {
+          this.deferredMergeFailures.delete(action.mergeRequestIid);
+          await this.abandonDeferredMerge(action.mergeRequestIid);
+          continue;
+        }
+
+        const labels = toLabelStrings(openMr.labels);
+        const blockingLabel = labels.find((label) => BLOCKING_MERGE_LABELS.includes(label as never));
+        if (blockingLabel !== undefined) {
+          this.logger.warn(
+            `The service skips the deferred merge of MR !${action.mergeRequestIid}. It has the label "${blockingLabel}".`,
+          );
+          continue;
+        }
 
         this.logger.log(`Processing deferred merge for MR !${action.mergeRequestIid} after scheduled pipeline run`);
         try {
-          await this.mergeWithRetry(action.mergeRequestIid, sha);
+          await this.mergeWithRetry(action.mergeRequestIid, openMr.sha ?? action.commitSha ?? '');
           mergedCount++;
+          this.deferredMergeFailures.delete(action.mergeRequestIid);
         } catch (err) {
+          this.deferredMergeFailures.set(action.mergeRequestIid, failedAttempts + 1);
           this.logger.error(`Failed to execute deferred merge for MR !${action.mergeRequestIid}: ${errorMessage(err)}`);
         }
       }
@@ -325,6 +383,21 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
       }
     } catch (err) {
       this.logger.debug(`Could not query database for deferred MR merges: ${errorMessage(err)}`);
+    }
+  }
+
+  private async abandonDeferredMerge(iid: number): Promise<void> {
+    this.logger.error(
+      `The deferred merge of MR !${iid} failed ${MAX_DEFERRED_MERGE_ATTEMPTS} times. The service stops retrying it.`,
+    );
+    try {
+      await this.api.MergeRequestNotes.create(
+        this.chaoticId,
+        iid,
+        `⚠️ The automatic merge failed ${MAX_DEFERRED_MERGE_ATTEMPTS} times. A maintainer must merge this merge request manually.`,
+      );
+    } catch (err) {
+      this.logger.warn(`Could not mark MR !${iid} as abandoned: ${errorMessage(err)}`);
     }
   }
 
@@ -1067,20 +1140,95 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     return { deferred };
   }
 
+  /**
+   * Merges an MR, and reacts to GitLab's `detailed_merge_status` instead of blindly
+   * retrying. It approves again when a push reset the approval. The server-side merge
+   * method does the rebasing.
+   */
   private async mergeWithRetry(iid: number, sha: string): Promise<void> {
     try {
-      await this.api.MergeRequests.accept(this.chaoticId, iid, { sha });
-    } catch (error) {
-      this.logger.warn(`Initial merge failed for MR !${iid}: ${errorMessage(error)}. Retrying with rebase...`);
       try {
-        await this.api.MergeRequests.rebase(this.chaoticId, iid);
-        const updatedMr = await this.api.MergeRequests.show(this.chaoticId, iid);
-        await this.api.MergeRequests.accept(this.chaoticId, iid, { sha: updatedMr.sha ?? sha });
-      } catch (retryError) {
-        this.logger.error(`Merge after rebase failed for MR !${iid}: ${errorMessage(retryError)}`);
-        throw new BadRequestException(`Failed to merge MR !${iid}: ${errorMessage(retryError)}`);
+        await this.api.MergeRequests.accept(this.chaoticId, iid, { sha });
+        return;
+      } catch (error) {
+        this.logger.warn(`Initial merge failed for MR !${iid}: ${errorMessage(error)}`);
       }
+
+      const mr = await this.waitForSettledMergeStatus(iid);
+      const headSha = mr.sha ?? sha;
+
+      if (await this.hasNoChanges(iid)) {
+        await this.closeEmptyMergeRequest(iid);
+        return;
+      }
+
+      if (mr.detailed_merge_status === 'mergeable') {
+        await this.api.MergeRequests.accept(this.chaoticId, iid, { sha: headSha });
+        return;
+      }
+
+      if (mr.detailed_merge_status === 'not_approved') {
+        await this.reApproveAndMerge(iid, headSha);
+        return;
+      }
+
+      throw new BadRequestException(`Cannot merge MR !${iid}: ${describeMergeBlocker(mr.detailed_merge_status)}`);
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      throw new BadRequestException(`Could not merge MR !${iid}: ${errorMessage(err)}`);
     }
+  }
+
+  private async reApproveAndMerge(iid: number, headSha: string): Promise<void> {
+    this.logger.warn(`The approval of MR !${iid} was lost, for example after a push. The service approves it again.`);
+    await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: headSha });
+    await this.api.MergeRequests.accept(this.chaoticId, iid, { sha: headSha });
+  }
+
+  private async hasNoChanges(iid: number): Promise<boolean> {
+    try {
+      const diffs = await this.api.MergeRequests.allDiffs(this.chaoticId, iid);
+      return diffs.length === 0;
+    } catch (err) {
+      this.logger.warn(`Could not fetch diffs of MR !${iid}: ${errorMessage(err)}`);
+      return false;
+    }
+  }
+
+  private async closeEmptyMergeRequest(iid: number): Promise<void> {
+    this.logger.log(`MR !${iid} contains no changes against its target branch. The service closes it.`);
+    try {
+      await this.api.MergeRequests.edit(this.chaoticId, iid, { stateEvent: 'close' });
+      await this.api.MergeRequestNotes.create(
+        this.chaoticId,
+        iid,
+        '🔒 Closed automatically: the target branch already contains this change.',
+      );
+    } catch (err) {
+      throw new BadRequestException(`Could not close empty MR !${iid}: ${errorMessage(err)}`);
+    }
+    throw new BadRequestException(`MR !${iid} contains no changes against its target branch. The service closed it.`);
+  }
+
+  private async waitForSettledMergeStatus(iid: number): Promise<MergeRequestSchema> {
+    return this.pollMrUntil(iid, MERGE_STATUS_SETTLE_TIMEOUT_MS, (mr) => {
+      const status = mr.detailed_merge_status;
+      return status !== 'checking' && status !== 'unchecked';
+    });
+  }
+
+  private async pollMrUntil(
+    iid: number,
+    timeoutMs: number,
+    settled: (mr: MergeRequestSchema) => boolean,
+  ): Promise<MergeRequestSchema> {
+    const deadline = Date.now() + timeoutMs;
+    let mr = await this.api.MergeRequests.show(this.chaoticId, iid);
+    while (!settled(mr) && Date.now() < deadline) {
+      await sleep(MERGE_STATUS_SETTLE_POLL_MS);
+      mr = await this.api.MergeRequests.show(this.chaoticId, iid);
+    }
+    return mr;
   }
 
   async flagMergeRequest(iid: number, label: MrActionType, actor: MrActor): Promise<void> {

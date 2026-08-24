@@ -1,13 +1,13 @@
 import { type MergeRequestWithDiffs, PipelineOperation } from '@chaotic-next/shared-lib';
-import { sendNotification } from 'web-push';
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
-import { NotificationSubscription } from '../notifications/notification-subscription.entity';
-
-vi.mock('web-push', () => ({ PushSubscription: {}, sendNotification: vi.fn() }));
+import { sendNotification } from 'web-push';
 import { DiffScanService } from '../diff-scan/diff-scan.service';
+import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { GitlabService } from './gitlab.service';
 import { PipelineTrigger } from './pipeline-trigger.entity';
+
+vi.mock('web-push', () => ({ PushSubscription: {}, sendNotification: vi.fn() }));
 
 const ACTOR = { userId: 'test-user', userName: 'Test User' };
 
@@ -622,20 +622,26 @@ describe('GitlabService.approveMergeRequest', () => {
     }
   });
 
-  it('rebases and retries merge if initial accept fails', async () => {
+  it('never rebases and reports a descriptive error for unmergeable MRs', async () => {
     const { service } = createService();
     const show = vi
       .fn()
       .mockResolvedValueOnce({ iid: 1, sha: 'abc123', labels: ['human-review'] })
-      .mockResolvedValueOnce({ iid: 1, sha: 'def456', labels: ['human-review', 'approved'] });
+      .mockResolvedValueOnce({
+        iid: 1,
+        sha: 'abc123',
+        merge_status: 'cannot_be_merged',
+        detailed_merge_status: 'broken_status',
+      });
     const mrEdit = vi.fn().mockResolvedValue({});
-    const mrAccept = vi.fn().mockRejectedValueOnce(new Error('Branch cannot be merged')).mockResolvedValueOnce({});
+    const mrAccept = vi.fn().mockRejectedValueOnce(new Error('Branch cannot be merged')).mockResolvedValue({});
     const mrRebase = vi.fn().mockResolvedValue({});
     const approvalsApprove = vi.fn().mockResolvedValue({});
     const noteCreate = vi.fn().mockResolvedValue({});
+    const allDiffs = vi.fn().mockResolvedValue([{ new_path: 'moon/PKGBUILD' }]);
     const mrActionInsert = vi.fn();
     (service as unknown as { api: unknown }).api = {
-      MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: mrRebase },
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: mrRebase, allDiffs },
       MergeRequestApprovals: { approve: approvalsApprove },
       MergeRequestNotes: { create: noteCreate },
     };
@@ -645,11 +651,187 @@ describe('GitlabService.approveMergeRequest', () => {
     // 03:00 UTC - outside scheduled pipeline window
     vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
     try {
-      await service.approveMergeRequest(1, 'abc123', ACTOR);
+      await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
+      expect(mrRebase).not.toHaveBeenCalled();
+      expect(mrAccept).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
-      expect(mrRebase).toHaveBeenCalledWith('test-project-id', 1);
-      expect(mrAccept).toHaveBeenNthCalledWith(1, 'test-project-id', 1, { sha: 'abc123' });
-      expect(mrAccept).toHaveBeenNthCalledWith(2, 'test-project-id', 1, { sha: 'def456' });
+  it.each(['ci_still_running', 'ci_must_pass', 'commits_status'])(
+    'reports a terminal blocker for %s because MRs in this project have no pipelines',
+    async (detailedMergeStatus) => {
+      const { service } = createService();
+      const show = vi
+        .fn()
+        .mockResolvedValueOnce({ iid: 1, sha: 'abc123', labels: ['human-review'] })
+        .mockResolvedValueOnce({
+          iid: 1,
+          sha: 'abc123',
+          merge_status: 'can_be_merged',
+          detailed_merge_status: detailedMergeStatus,
+        });
+      const mrEdit = vi.fn().mockResolvedValue({});
+      const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
+      const mrRebase = vi.fn().mockResolvedValue({});
+      const approvalsApprove = vi.fn().mockResolvedValue({});
+      const noteCreate = vi.fn().mockResolvedValue({});
+      const allDiffs = vi.fn().mockResolvedValue([{ new_path: 'moon/PKGBUILD' }]);
+      const mrActionInsert = vi.fn();
+      (service as unknown as { api: unknown }).api = {
+        MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: mrRebase, allDiffs },
+        MergeRequestApprovals: { approve: approvalsApprove },
+        MergeRequestNotes: { create: noteCreate },
+      };
+      (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+      try {
+        await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
+        expect(mrRebase).not.toHaveBeenCalled();
+        expect(mrAccept).toHaveBeenCalledTimes(1);
+        expect(mrActionInsert).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it('closes an MR that no longer contains changes against its target branch', async () => {
+    const { service } = createService();
+    const show = vi
+      .fn()
+      .mockResolvedValueOnce({ iid: 1, sha: 'fc7085b2', labels: ['human-review', 'approved'] })
+      .mockResolvedValue({
+        iid: 1,
+        sha: 'fc7085b2',
+        merge_status: 'can_be_merged',
+        detailed_merge_status: 'mergeable',
+      });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
+    const approvalsApprove = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const allDiffs = vi.fn().mockResolvedValue([]);
+    (service as unknown as { api: unknown }).api = {
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: vi.fn(), allDiffs },
+      MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestNotes: { create: noteCreate },
+    };
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+
+    try {
+      await expect(service.approveMergeRequest(1, 'fc7085b2', ACTOR)).rejects.toThrow('contains no changes');
+      expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { stateEvent: 'close' });
+      expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, expect.stringContaining('Closed automatically'));
+      expect(allDiffs).toHaveBeenCalledWith('test-project-id', 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not label, comment, or record an approval when the merge fails outright', async () => {
+    const { service } = createService();
+    const show = vi
+      .fn()
+      .mockResolvedValueOnce({ iid: 1, sha: 'abc123', labels: ['human-review'] })
+      .mockResolvedValue({
+        iid: 1,
+        sha: 'abc123',
+        merge_status: 'can_be_merged',
+        detailed_merge_status: 'blocked_status',
+      });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
+    const approvalsApprove = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const mrActionInsert = vi.fn();
+    (service as unknown as { api: unknown }).api = {
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept },
+      MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestNotes: { create: noteCreate },
+    };
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+
+    try {
+      await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
+      expect(approvalsApprove).toHaveBeenCalledTimes(1);
+      expect(mrEdit).not.toHaveBeenCalled();
+      expect(noteCreate).not.toHaveBeenCalled();
+      expect(mrActionInsert).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('GitlabService.processDeferredMerges', () => {
+  function deferredSetup() {
+    const { service } = createService();
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const show = vi.fn().mockResolvedValue({
+      iid: 7,
+      sha: 'sha7',
+      merge_status: 'can_be_merged',
+      detailed_merge_status: 'blocked_status',
+    });
+    const mrAll = vi.fn().mockResolvedValue([{ iid: 7, sha: 'sha7', labels: [] }]);
+    (service as unknown as { api: unknown }).api = {
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: vi.fn(), all: mrAll },
+      MergeRequestNotes: { create: noteCreate },
+    };
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = {
+      find: vi.fn().mockResolvedValue([{ mergeRequestIid: 7, commitSha: 'sha7', createdAt: new Date() }]),
+    };
+    return { service, mrEdit, mrAccept, noteCreate };
+  }
+
+  it('stops retrying a deferred merge after repeated failures and leaves a warning note', async () => {
+    const { service, mrAccept, noteCreate } = deferredSetup();
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+    try {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        await service.processDeferredMerges();
+      }
+      expect(mrAccept).toHaveBeenCalledTimes(5);
+
+      await service.processDeferredMerges();
+
+      expect(mrAccept).toHaveBeenCalledTimes(5);
+      expect(noteCreate).toHaveBeenCalledWith(
+        'test-project-id',
+        7,
+        expect.stringContaining('must merge this merge request manually'),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('skips deferred merges for MRs labeled malware', async () => {
+    const { service, mrAccept } = deferredSetup();
+    const mrAll = vi.fn().mockResolvedValue([{ iid: 7, sha: 'sha7', labels: ['human-review', 'malware'] }]);
+    const api = (service as unknown as { api: unknown }).api as { MergeRequests: { all: unknown } };
+    api.MergeRequests.all = mrAll;
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+
+    try {
+      await service.processDeferredMerges();
+      expect(mrAccept).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
