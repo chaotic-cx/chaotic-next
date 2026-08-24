@@ -35,10 +35,8 @@ interface ElfAnalysisFormModel {
   brokenReasons: string;
 }
 
-const PKG_TYPE_OPTIONS = [
-  { label: 'Arch (0)', value: '0' },
-  { label: 'Chaotic (1)', value: '1' },
-];
+const PKG_TYPE_LABELS = { '0': 'Arch', '1': 'Chaotic' } as const;
+const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) => ({ label, value }));
 
 @Component({
   selector: 'chaotic-admin-package-elf-analysis-page',
@@ -131,7 +129,7 @@ const PKG_TYPE_OPTIONS = [
         <ng-template pTemplate="body" let-row>
           <tr>
             <td>{{ row.id }}</td>
-            <td>{{ row.pkgType }}</td>
+            <td>{{ pkgTypeLabel(row.pkgType) }}</td>
             <td>
               @if (row.pkgname) {
                 <a
@@ -313,6 +311,11 @@ export class AdminPackageElfAnalysisPageComponent {
     { label: 'Broken', value: true },
     { label: 'OK', value: false },
   ];
+
+  /** Human-readable package type for table cells. Unknown values pass through. */
+  protected pkgTypeLabel(type: string): string {
+    return PKG_TYPE_LABELS[type as keyof typeof PKG_TYPE_LABELS] ?? type;
+  }
 
   private readonly syncSearch = createDebounced(400, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.elfAnalysisQuery()) }),
