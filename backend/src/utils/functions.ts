@@ -6,11 +6,10 @@ import { BumpType } from '../interfaces/repo-manager';
 import { requiredEnvVarsDev, requiredEnvVarsProd } from './constants';
 
 export function generateNodeId(): string {
-  // This prevents broker shutdowns due to double ids in case we have overlapping nodeIds.
-  const randomString = Math.random().toString(36).substring(2, 7);
-
-  if (process.env.HOSTNAME) return `${process.env.HOSTNAME}-${randomString}`;
-  return `backend-${randomString}`;
+  // HOSTNAME separates hosts. PIDs are unique among all simultaneously running
+  // processes of one host, so two live brokers never share a nodeID.
+  if (process.env.HOSTNAME) return `${process.env.HOSTNAME}-${process.pid}`;
+  return `backend-${process.pid}`;
 }
 
 export function checkEnvironment(configService: ConfigService): void {
