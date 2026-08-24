@@ -5,9 +5,9 @@ import { addedOnlyDiff, makeChange } from './test-support';
 /**
  * Sanitized reproduction of the xsnow install-scriptlet worm (structure only, inert
  * payload host), as published in manticore-projects/aurscan testdata on 2026-08-24.
- * Structure: clean-looking PKGBUILD whose entire payload lives in a dot-prefixed
- * install= scriptlet: Tor drop -> systemd persistence -> SSH key theft ->
- * self-replication via AUR push.
+ * The PKGBUILD looks clean. Its entire payload lives in a dot-prefixed install=
+ * scriptlet. The payload structure follows the xsnow worm: a Tor download, then a
+ * systemd unit, then SSH key access, then replication through AUR pushes.
  */
 const WORM_PKGBUILD = [
   '# SANITIZED reproduction of the install-scriptlet worm STRUCTURE.',

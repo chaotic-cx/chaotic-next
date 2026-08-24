@@ -45,8 +45,7 @@ export class AuthButtonComponent {
   protected readonly avatarUrl = computed(() => {
     const user = this.user();
     if (!user?.image || this.avatarFailed()) return undefined;
-    const version = user.updatedAt ?? user.id;
-    return version ? `${user.image}?v=${encodeURIComponent(String(version))}` : user.image;
+    return user.image;
   });
 
   protected readonly avatarLabel = computed(() => initialsOf(this.user()?.name));
