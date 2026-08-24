@@ -3,3 +3,7 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
+
+.chaotic-chart-placeholder {
+  min-height: 10rem;
+}

@@ -8,7 +8,11 @@ import { ChartAdditionsComponent } from '../../chart-additions/chart-additions.c
   template: `
     <div class="flex h-full flex-col gap-8">
       <p-card [style]="{ overflow: 'hidden' }" header="Packages added over time">
-        <chaotic-chart-additions />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-additions />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
     </div>
   `,

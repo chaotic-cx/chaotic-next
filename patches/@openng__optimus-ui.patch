@@ -11,3 +11,44 @@ index 321d167657f064502c110d51abd1a094c500e83b..00fe369ee7b7bba4cafae0ebad84dd9c
              this.host.nativeElement.removeAttribute('autofocus');
          }
          else {
+diff --git a/fesm2022/openng-optimus-ui-chart.mjs b/fesm2022/openng-optimus-ui-chart.mjs
+index e03ea6d4a5c9b8f8f3e3e0e0e1a2b3c4d5e6f708..a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 100644
+--- a/fesm2022/openng-optimus-ui-chart.mjs
++++ b/fesm2022/openng-optimus-ui-chart.mjs
+@@ -1,4 +1,35 @@
+ import { isPlatformBrowser, CommonModule } from '@angular/common';
+ import * as i0 from '@angular/core';
+ import { Injectable, InjectionToken, inject, EventEmitter, booleanAttribute, Output, Input, ViewEncapsulation, ChangeDetectionStrategy, Component, NgModule } from '@angular/core';
+-import Chart from 'chart.js/auto';
++// Registers only the Chart.js pieces used by this application (line, bar and pie
++// charts) so unused controllers, scales and plugins get removed by tree-shaking.
++import {
++    ArcElement,
++    BarController,
++    BarElement,
++    CategoryScale,
++    Chart,
++    Filler,
++    Legend,
++    LinearScale,
++    LineController,
++    LineElement,
++    PieController,
++    PointElement,
++    Tooltip,
++} from 'chart.js';
++
++Chart.register(
++    ArcElement,
++    BarController,
++    BarElement,
++    CategoryScale,
++    Filler,
++    Legend,
++    LinearScale,
++    LineController,
++    LineElement,
++    PieController,
++    PointElement,
++    Tooltip,
++);

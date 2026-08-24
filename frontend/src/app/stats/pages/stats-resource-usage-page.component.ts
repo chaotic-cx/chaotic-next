@@ -8,16 +8,32 @@ import { ChartHeavyPackagesResourceComponent } from '../../chart-heavy-packages-
   template: `
     <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
       <p-card [style]="{ overflow: 'hidden' }" header="Memory">
-        <chaotic-chart-heavy-packages-resource metric="memory" />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-heavy-packages-resource metric="memory" />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="CPU Time">
-        <chaotic-chart-heavy-packages-resource metric="cpu" />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-heavy-packages-resource metric="cpu" />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Disk I/O">
-        <chaotic-chart-heavy-packages-resource metric="disk" />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-heavy-packages-resource metric="disk" />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Network I/O">
-        <chaotic-chart-heavy-packages-resource metric="network" />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-heavy-packages-resource metric="network" />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
     </div>
   `,

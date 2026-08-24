@@ -12,6 +12,7 @@ import {
   Router,
   withComponentInputBinding,
   withInMemoryScrolling,
+  withPreloading,
   withViewTransitions,
 } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -25,6 +26,7 @@ import { routes } from './app.routes';
 import { provideAuthInitializer } from './auth/auth-initializer';
 import { provideBackendStatusInitializer } from './backend-status/backend-status-initializer';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
+import { SelectivePreloadStrategy } from './preload.strategy';
 
 /** True when the app runs as an installed PWA (standalone window), not a regular browser tab. */
 function isPwaInstalled(): boolean {
@@ -69,6 +71,7 @@ export const appConfig: ApplicationConfig = {
         scrollPositionRestoration: 'top',
         anchorScrolling: 'enabled',
       }),
+      withPreloading(SelectivePreloadStrategy),
       withViewTransitions({
         skipInitialTransition: true,
         onViewTransitionCreated: ({ transition, from, to }) => {

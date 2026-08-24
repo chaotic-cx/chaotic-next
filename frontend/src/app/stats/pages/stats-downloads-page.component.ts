@@ -12,15 +12,27 @@ import { StatsService } from '../stats.service';
   template: `
     <div class="flex flex-col gap-8">
       <p-card [style]="{ overflow: 'hidden' }" header="Downloads by Package">
-        <chaotic-chart-downloads [(range)]="statsService.globalPackageMetricRange" />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-downloads [(range)]="statsService.globalPackageMetricRange" />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
 
       <p-card [style]="{ overflow: 'hidden' }" header="Mirror Popularity Over Time">
-        <chaotic-chart-mirror-over-time />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-mirror-over-time />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
 
       <p-card [style]="{ overflow: 'hidden' }" header="Top Countries Over Time">
-        <chaotic-chart-country-over-time />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-country-over-time />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
     </div>
   `,

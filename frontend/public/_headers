@@ -1,5 +1,7 @@
 /*
-  Content-Security-Policy: connect-src 'self' https://aur.chaotic.cx https://chaotic-backend.garudalinux.org https://gitlab.com https://cdn.jsdelivr.net https://rsms.me https://status.chaotic.cx https://builds.garudalinux.org https://raw.githubusercontent.com https://github.com https://demotiles.maplibre.org
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://aur.chaotic.cx https://builds.garudalinux.org https://status.chaotic.cx https://chaotic-backend.garudalinux.org https://gitlab.com https://github.com https://raw.githubusercontent.com https://demotiles.maplibre.org; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
 
 /index.html
   Cache-Control: no-cache, must-revalidate, max-age=300

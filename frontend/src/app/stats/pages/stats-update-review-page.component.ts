@@ -10,11 +10,19 @@ import { ChartReviewStatsComponent } from '../../chart-review-stats/chart-review
   template: `
     <div class="flex flex-col gap-4">
       <p-card [style]="{ overflow: 'hidden' }" header="Total Update Reviews">
-        <chaotic-chart-review-stats />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-review-stats />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
 
       <p-card [style]="{ overflow: 'hidden' }" header="Update Reviews Over Time">
-        <chaotic-chart-review-over-time />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-review-over-time />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
     </div>
   `,

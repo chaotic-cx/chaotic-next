@@ -170,6 +170,7 @@ export class LogViewerComponent implements OnDestroy {
         if (!chunk) return;
         if (chunk.complete) {
           this.isCompleted = true;
+          this.loading.set(false);
           this.streaming.set(false);
           this.closeStream();
           return;

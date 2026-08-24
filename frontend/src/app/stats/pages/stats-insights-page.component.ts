@@ -19,19 +19,39 @@ import { ChartThroughputComponent } from '../../chart-throughput/chart-throughpu
   template: `
     <div class="grid h-full grid-cols-1 gap-8 lg:grid-cols-2">
       <p-card [style]="{ overflow: 'hidden' }" header="Average build time (minutes)">
-        <chaotic-chart-average-build-time-trend />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-average-build-time-trend />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Queue throughput">
-        <chaotic-chart-throughput />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-throughput />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Top downloaders">
-        <chaotic-chart-downloaders-trend />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-downloaders-trend />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Failed build hotspots">
-        <chaotic-chart-failed-hotspots />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-failed-hotspots />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
       <p-card [style]="{ overflow: 'hidden' }" header="Build failures over time" styleClass="lg:col-span-2">
-        <chaotic-chart-build-failures-over-time />
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-build-failures-over-time />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
       </p-card>
     </div>
   `,
