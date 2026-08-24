@@ -1,7 +1,9 @@
 <div class="background flex min-h-svh flex-col">
   <garuda-shell class="flex-1 p-2" [menuItems]="items()">
     <div class="flex items-center gap-2" garudaShellBarStart>
-      <img ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="logo" />
+      <a class="flex items-center" routerLink="/" aria-label="Go to the home page">
+        <img ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="logo" />
+      </a>
       <p-button
         class="mobile-nav-trigger"
         [icon]="mobileNavOpen() ? 'pi pi-times' : 'pi pi-bars'"
