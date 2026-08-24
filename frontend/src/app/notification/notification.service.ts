@@ -7,28 +7,41 @@ import { APP_CONFIG } from '../../environments/app-config.token';
 
 const NOTIFICATIONS_SUBSCRIBED_KEY = 'notifications-subscribed';
 
+export function areNotificationsSupported(): boolean {
+  return typeof window !== 'undefined' && 'Notification' in window && 'PushManager' in window;
+}
+
 @Service()
 export class NotificationService {
   private readonly appConfig = inject(APP_CONFIG);
   private readonly swPush = inject(SwPush);
   private readonly http = inject(HttpClient);
 
+  readonly isSupported = areNotificationsSupported();
   readonly notificationsEnabled = signal(false);
 
   constructor() {
     const stored = localStorage.getItem(NOTIFICATIONS_SUBSCRIBED_KEY) === 'true';
-    this.notificationsEnabled.set(Notification.permission === 'granted' && stored);
+    this.notificationsEnabled.set(this.isSupported && Notification.permission === 'granted' && stored);
 
     this.swPush.notificationClicks.pipe(takeUntilDestroyed()).subscribe(({ notification }) => {
       if (notification.data?.url) window.open(notification.data.url);
     });
   }
 
-  async promptIfNeeded(): Promise<void> {
-    if (this.notificationsEnabled()) return;
-    const granted = await Notification.requestPermission();
-    if (granted !== 'granted') return;
+  async requestPermissionAndSubscribe(): Promise<void> {
+    if (!this.isSupported || this.notificationsEnabled()) return;
+    if (!(await this.requestPermission())) return;
     await this.subscribe();
+  }
+
+  private async requestPermission(): Promise<boolean> {
+    try {
+      if (Notification.permission === 'denied') return false;
+      return (await Notification.requestPermission()) === 'granted';
+    } catch {
+      return false;
+    }
   }
 
   private async subscribe(): Promise<void> {
