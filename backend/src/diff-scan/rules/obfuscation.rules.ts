@@ -20,7 +20,9 @@ export const OBFUSCATION_RULES: Rule[] = [
     name: 'Eval of dynamic strings',
     severity: 'warning',
     description: 'Evaluates dynamically built strings, allowing payload construction that static review cannot follow.',
-    pattern: /\beval\b/,
+    // `eval "depends+=(…)"` is a packaging idiom for option-dependent arrays and
+    // `--eval` flags belong to interpreters, so neither counts as dynamic eval.
+    pattern: /(?<![-\w])eval\b(?!\s*"?\s*(?:make|check|opt)?depends\+?=)/,
   }),
   regexRule({
     id: 'OBF-003',

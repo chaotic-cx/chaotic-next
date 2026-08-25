@@ -13,6 +13,7 @@ import { Repository } from 'typeorm';
 import { errorMessage, mapWithConcurrency } from '../utils/functions';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
+import { commentThreatFinding, evaluateCommentThreats, parseAurComments } from './aur-comments';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
 import { AurResponseCache } from './aur-response-cache';
 import { DiffScanService } from './diff-scan.service';
@@ -23,6 +24,7 @@ import { VirustotalService } from './virustotal.service';
 
 const AUR_INFO_URL = 'https://aur.archlinux.org/rpc/v5/info';
 const AUR_SEARCH_URL = 'https://aur.archlinux.org/rpc/v5/search';
+const AUR_PACKAGE_URL = 'https://aur.archlinux.org/packages';
 const AUR_FILE_URL = 'https://aur.archlinux.org/cgit/aur.git/plain';
 const AUR_CGIT_TREE_URL = 'https://aur.archlinux.org/cgit/aur.git/tree';
 const REPO_TREE_MAX_DEPTH = 3;
@@ -36,6 +38,7 @@ const MAINTAINER_PROFILE_TTL_MS = 60 * 60 * 1000;
 const MAINTAINER_LOOKUP_CONCURRENCY = 3;
 const MAX_RECENT_SCANS = 10;
 const SECONDS_TO_MS = 1000;
+const HTTP_SERVER_ERROR_MIN = 500;
 
 export interface AurScanOptions {
   /**
@@ -163,6 +166,7 @@ export class AurScanService {
       }
       scan.scannedFiles = changes.map((change) => change.new_path);
       scan.findings = await this.diffScanService.scanDiffs(changes, undefined, 'full-file');
+      await this.appendCommentThreat(scan);
 
       const indicators = extractIndicators(changes);
       scan.vtPending = indicators.length;
@@ -196,6 +200,23 @@ export class AurScanService {
       scan.vtPending = 0;
       scan.status = 'done';
       this.scanUpdates.next({ ...scan });
+    }
+  }
+
+  /** Best-effort community signal. An unavailable comment section never fails the scan. */
+  private async appendCommentThreat(scan: AurPackageScan): Promise<void> {
+    if (!scan.packageBase) return;
+    try {
+      const page = await this.fetchAur(`${AUR_PACKAGE_URL}/${encodeURIComponent(scan.packageBase)}`);
+      if (!page.ok) {
+        this.logger.warn(`Comment page for ${scan.packageBase} returned ${page.status}`);
+        return;
+      }
+      const verdict = evaluateCommentThreats(parseAurComments(await page.text()), scan.packageMeta);
+      if (!verdict) return;
+      scan.findings.push(commentThreatFinding(verdict, scan.packageBase));
+    } catch (err) {
+      this.logger.debug(`Comment check for ${scan.packageBase} unavailable: ${errorMessage(err)}`);
     }
   }
 
@@ -292,6 +313,11 @@ export class AurScanService {
     try {
       const query = batch.map((entry) => `arg[]=${encodeURIComponent(entry.name)}`).join('&');
       const response = await this.fetchAur(`${AUR_INFO_URL}?${query}`);
+      if (!response.ok) {
+        // An AUR outage must not masquerade as "packages do not exist".
+        this.logger.warn(`AUR multiinfo request for ${batch.length} package(s) returned ${response.status}`);
+      }
+
       const results = response.ok ? (((await response.json()) as AurInfoResponse).results ?? []) : [];
       const byName = new Map(results.map((info) => [info.Name, info]));
       for (const entry of batch) entry.resolve(byName.get(entry.name));
@@ -308,6 +334,10 @@ export class AurScanService {
     if (!info?.PackageBase) throw new NotFoundException(`No AUR package named "${packageName}"`);
 
     const pkgbuild = await this.fetchAur(`${AUR_FILE_URL}/PKGBUILD?h=${encodeURIComponent(info.PackageBase)}`);
+    if (pkgbuild.status >= HTTP_SERVER_ERROR_MIN) {
+      throw new Error(`AUR web interface returned ${pkgbuild.status} for the PKGBUILD of ${packageName}`);
+    }
+
     if (!pkgbuild.ok) throw new NotFoundException(`No PKGBUILD found for ${packageName}`);
     return { info, packageBase: info.PackageBase, text: await pkgbuild.text() };
   }
@@ -332,6 +362,10 @@ export class AurScanService {
   private async fetchMaintainerProfile(username: string, fallbackDate: Date): Promise<AurMaintainerInfo> {
     try {
       const response = await this.fetchAur(`${AUR_SEARCH_URL}?by=maintainer&arg=${encodeURIComponent(username)}`);
+      if (!response.ok) {
+        this.logger.warn(`Maintainer search for "${username}" returned ${response.status}`);
+      }
+
       const results = response.ok ? (((await response.json()) as AurSearchResponse).results ?? []) : [];
 
       // Real account age comes from the scraped AUR profile; until it is
@@ -417,8 +451,10 @@ export class AurScanService {
       if (!next) break;
       const { depth, path } = next;
       let response: Response;
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+
       try {
-        response = await this.fetchAur(`${AUR_CGIT_TREE_URL}/${path}?h=${encodeURIComponent(packageBase)}`);
+        response = await this.fetchAur(`${AUR_CGIT_TREE_URL}/${encodedPath}?h=${encodeURIComponent(packageBase)}`);
       } catch (err) {
         this.logger.debug(`Repo tree listing for "${path}" unavailable: ${errorMessage(err)}`);
         continue;
@@ -458,6 +494,11 @@ export class AurScanService {
 
     try {
       const response = await this.fetchAur(`${AUR_SEARCH_URL}?arg=${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        this.logger.warn(`AUR search for "${query}" returned ${response.status}`);
+        return [];
+      }
+
       const data = (await response.json()) as AurSearchResponse;
       return data.results?.map((pkg) => pkg.Name ?? '') ?? [];
     } catch (err) {

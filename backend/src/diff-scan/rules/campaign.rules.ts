@@ -2,7 +2,7 @@ import { addedLines, isInScope, removedLineTexts } from './diff-utils';
 import type { Rule } from './rule';
 import { regexRule } from './rule';
 
-/** Flags between the subcommand and the package name, e.g. "npm install -g pkg". */
+/** Flags between the subcommand and the package name, for example "npm install -g pkg". */
 const PACKAGE_FLAGS = '(?:-{1,2}[\\w-]+\\s+)*';
 const NPM_INSTALL_WITH_PACKAGE = new RegExp(
   `\\b(?:npm|bun|pnpm|yarn)\\s+(?:install|i|add)\\s+${PACKAGE_FLAGS}[^\\s\\\\-]` +
@@ -45,6 +45,11 @@ function identitiesByPerson(lines: string[]): Map<string, Set<string>> {
   return identities;
 }
 
+/** Lockfile-pinned or offline invocations fetch nothing the reviewer cannot see. */
+const PINNED_INVOCATION = /--frozen-lockfile|--offline|\bnpm\s+ci\b|file:\/\//;
+/** Staging installs target the build sandbox or package dir, not the user system. */
+const STAGING_TARGET = /\$?\{?(?:pkgdir|srcdir)\}?|(?:-C|--dir)\s+\.{1,2}\//;
+
 export const CAMPAIGN_RULES: Rule[] = [
   regexRule({
     id: 'NPM-001',
@@ -53,6 +58,14 @@ export const CAMPAIGN_RULES: Rule[] = [
     description: 'Installs or executes a named npm/bun/pnpm/yarn package during build or installation.',
     pattern: NPM_INSTALL_WITH_PACKAGE,
     scopes: ['pkgbuild', 'install'],
+    classify(line) {
+      // Direct global/named fetches stay critical. Pinned or staging-only
+      // invocations fetch nothing unpinned at user expense.
+      if (PINNED_INVOCATION.test(line) || STAGING_TARGET.test(line)) {
+        return { severity: 'warning', note: 'Lockfile-pinned or build-staging invocation' };
+      }
+      return undefined;
+    },
   }),
   regexRule({
     id: 'NPM-002',

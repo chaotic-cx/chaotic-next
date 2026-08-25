@@ -1,0 +1,184 @@
+<!-- Trimmed from https://aur.archlinux.org/packages/google-chrome on 2026-08-25 -->
+<div>
+  <h4 class="comment-header" id="comment-910450">
+    gromit commented on <a class="date" href="#comment-910450">2023-04-15 08:22 (UTC)</a>
+    <span class="edited"> (edited on 2023-05-08 21:42 (UTC) by <a href="/account/gromit">gromit</a>) </span>
+  </h4>
+  <div class="article-content" id="comment-910450-content">
+    <div>
+      <p>
+        When reporting this package as outdated make sure there is indeed a new version for Linux Desktop. You can have
+        a look at the
+        <a href="https://chromereleases.googleblog.com/search/label/Stable%20updates"
+          >"Stable updates" tag in Release blog</a
+        >
+        for this.
+      </p>
+      <p>You can also run this command to obtain the version string for the latest chrome version:</p>
+      <pre><code>$ curl -sSf https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages | \
+     grep -A1 &quot;Package: google-chrome-stable&quot; | \
+     awk '/Version/{print $2}' | \
+     cut -d '-' -f1
+</code></pre>
+      <p>
+        Do <strong>not</strong> report updates for ChromeOS, Android or other platforms stable versions as updates here.
+      </p>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1082801">
+    idanka commented on <a class="date" href="#comment-1082801">2026-08-23 12:02 (UTC)</a>
+    <span class="edited"> (edited on 2026-08-23 12:03 (UTC) by <a href="/account/idanka">idanka</a>) </span>
+  </h4>
+  <div class="article-content" id="comment-1082801-content">
+    <div>
+      <p>
+        Works Netflix - KDE + Wayland<br />
+        /usr/bin/google-chrome --ozone-platform=wayland --use-gl=desktop %U
+      </p>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1082793">
+    spicysill commented on <a class="date" href="#comment-1082793">2026-08-23 09:37 (UTC)</a>
+  </h4>
+  <div class="article-content" id="comment-1082793-content">
+    <div>
+      <p>
+        The netflix black screen is tracked here
+        <a href="https://issues.chromium.org/issues/548711898">https://issues.chromium.org/issues/548711898</a>
+      </p>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1082520">
+    idanka commented on <a class="date" href="#comment-1082520">2026-08-20 11:55 (UTC)</a>
+  </h4>
+  <div class="article-content" id="comment-1082520-content">
+    <div>
+      <p>Netflix no work, no image (black screen), only sound and subtitle!</p>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1081267">
+    schiele commented on <a class="date" href="#comment-1081267">2026-08-09 15:18 (UTC)</a>
+  </h4>
+  <div class="article-content" id="comment-1081267-content">
+    <div>
+      <p>
+        Guys, note that the maintainer cannot do the upgrade at the moment since AUR is still closed for submissions.
+      </p>
+      <p>You could easily do this by yourself, like this:</p>
+      <pre><code>diff --git a/PKGBUILD b/PKGBUILD
+index 86f9cf9..7c5cfa4 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -7,7 +7,7 @@
+ # or use: $ curl -sSf https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages | grep -A1 &quot;Package: google-chrome-stable&quot; | awk '/Version/{print $2}' | cut -d '-' -f1
+
+ pkgname=google-chrome
+-pkgver=151.0.7922.71
++pkgver=151.0.7922.108
+ pkgrel=1
+ pkgdesc=&quot;The popular web browser by Google (Stable Channel)&quot;
+ arch=(
+@@ -39,8 +39,8 @@ source=('eula_text.html'
+         &quot;google-chrome-$_channel.sh&quot;)
+ sha512sums=('a225555c06b7c32f9f2657004558e3f996c981481dbb0d3cd79b1d59fa3f05d591af88399422d3ab29d9446c103e98d567aeafe061d9550817ab6e7eb0498396'
+             'de02b498a4b5b93e21622c8dba57befe795d733a04656be911cc38e28bfef0e20470450f44be523bbde8d4de28f79c10434846ca01fc2a2f4e67707b79332f94')
+-sha512sums_x86_64=('b657e18aef41d0316a7edf4367673282dfe4f142fc1e106eff304ee0dfdbac9319dbbe4468ecbfd461ef074e00c2a35168694b5eafe6971c8b606b39dada6e52')
+-sha512sums_aarch64=('8309784220b30f0a8c1970f9acc4b18cff592c33fe8d17a97118fad157644394e4b6007960da7236a73d88d2e273aee0d6504e1a3323466a4c7eefb130fc40d8')
++sha512sums_x86_64=('4d6430a203bd6ce38eb6431dac70be9354ab9c59d8c74a6de8a1085d7e53a9e4bc8707097e64f08b52d7e6b329c6d955fa0854cf479beaa8ba9a5c97ddf75351')
++sha512sums_aarch64=('53cd86827a5ab2310e3fde62c8fb8430c79f87b468a8233bee2e3abe762defe54da363b559785c7e0c120b87212c600b489b7b86e4a49edce46eb39e5bc42e60')
+
+ source_x86_64=(&quot;https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-${_channel}/google-chrome-${_channel}_${pkgver}-1_amd64.deb&quot;)
+ source_aarch64=(&quot;https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-${_channel}/google-chrome-${_channel}_${pkgver}-1_arm64.deb&quot;)
+</code></pre>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1081210">
+    uwechris commented on <a class="date" href="#comment-1081210">2026-08-09 05:37 (UTC)</a>
+  </h4>
+  <div class="article-content" id="comment-1081210-content">
+    <div>
+      <p>
+        The current version is no longer 151.0.7922.75 as @mike.cloaked marked, but already 151.0.7922.108 - I probably
+        installed it via Flatpak because of the over 40 security patches.
+      </p>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1080435">
+    bglogic commented on <a class="date" href="#comment-1080435">2026-07-31 14:10 (UTC)</a>
+    <span class="edited"> (edited on 2026-07-31 14:12 (UTC) by <a href="/account/bglogic">bglogic</a>) </span>
+  </h4>
+  <div class="article-content" id="comment-1080435-content">
+    <div>
+      <p>
+        After the latest update (151.0.7922.71-1) Netflix videos are black with just audio and subtitles working. Prime
+        Video, YouTube, etc. are all working fine though.
+      </p>
+      <p>
+        As a temporary fix in Chrome go to Settings-&gt;System, disable the "Use graphics acceleration when available"
+        option, and restart the browser.
+      </p>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1080004">
+    clover commented on <a class="date" href="#comment-1080004">2026-07-27 20:37 (UTC)</a>
+  </h4>
+  <div class="article-content" id="comment-1080004-content">
+    <div>
+      <p>
+        Requesting aarch64 support now that official binaries for Chrome are available. Here's a patch:
+        <a href="https://gitlab.archlinux.org/-/snippets/3796">https://gitlab.archlinux.org/-/snippets/3796</a>
+      </p>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1066483">
+    yochananmarqos commented on <a class="date" href="#comment-1066483">2026-04-08 20:02 (UTC)</a>
+  </h4>
+  <div class="article-content" id="comment-1066483-content">
+    <div>
+      <p>@unklem: Add that to your <code>~/.config/chrome-flags.conf</code>, that's what it's for:</p>
+      <pre><code>--disable-features=ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled
+</code></pre>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1066473">
+    unklem commented on <a class="date" href="#comment-1066473">2026-04-08 18:43 (UTC)</a>
+  </h4>
+  <div class="article-content" id="comment-1066473-content">
+    <div>
+      <p>Confirmed that MV2 extensions (e.g. uBlock Origin) still work in Chrome 147.0.7727.55</p>
+      <p>
+        Add the following flags to your Exec line in ~/.local/share/applications/google-chrome.desktop or
+        /usr/share/applications/google-chrome.desktop:
+      </p>
+      <pre><code>Exec=/usr/bin/google-chrome-stable %U --disable-features=ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled
+</code></pre>
+    </div>
+  </div>
+  <h4 class="comment-header" id="comment-1066432">
+    koshikas commented on <a class="date" href="#comment-1066432">2026-04-08 14:38 (UTC)</a>
+    <span class="edited"> (edited on 2026-04-08 14:43 (UTC) by <a href="/account/koshikas">koshikas</a>) </span>
+  </h4>
+  <div class="article-content" id="comment-1066432-content">
+    <div>
+      <p>
+        @mike.cloaked the pinned curl command to-date lists the latest GA (generally available) "google-chrome-stable"
+        build correctly. it always has and still does.
+      </p>
+      <p>
+        what some confuses is what google releases as "Early Stable Release" which for the latest 147 was released on
+        Wed, Mar 25, 2026. in googles words, "An Early Stable release is a version of Google Chrome released to a small
+        percentage of users roughly one week before the general public release. It acts as a final testing phase to
+        identify bugs or show-stopper issues before full deployment". you cans see when the timeline/roadmap for all
+        chrome(ium) builds:
+        <a href="https://chromiumdash.appspot.com/schedule">https://chromiumdash.appspot.com/schedule</a>
+      </p>
+      <p>
+        or-else there's is a remote chance you get cached curl responses. though very unlikely, it is still possible.
+        check
+        <a href="https://serverfault.com/questions/698077/does-curl-cache-requests"
+          >https://serverfault.com/questions/698077/does-curl-cache-requests</a
+        >
+      </p>
+    </div>
+  </div>
+</div>

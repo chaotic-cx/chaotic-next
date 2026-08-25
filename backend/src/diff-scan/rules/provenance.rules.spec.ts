@@ -53,6 +53,20 @@ describe('provenance rules', () => {
     expect(hit?.line).toBe(14);
   });
 
+  it('accepts distro, registry and vendor mirror hosts unrelated to the url= upstream', () => {
+    const change = makeChange(
+      [
+        '@@ -12,6 +12,8 @@',
+        ' url="https://example.org/myfont/"',
+        ' source=(',
+        '+  "$pkgname.tar.gz::https://web.archive.org/web/2024/pkg.tar.gz"',
+        '+  "git+https://git.code.sf.net/p/$pkgname/code"',
+        ' )',
+      ].join('\n'),
+    );
+    expect(ruleById(PROVENANCE_RULES, 'SRC-003').check(change)).toBeNull();
+  });
+
   it('reports the line of a variable-resolved source entry', () => {
     const change = makeChange(
       [
@@ -108,5 +122,78 @@ describe('provenance rules', () => {
       ].join('\n'),
     );
     expect(ruleById(PROVENANCE_RULES, 'CAUR-UNRESOLVED-SOURCE').check(change)).toBeNull();
+  });
+});
+
+describe('SRC-004 checksum rule', () => {
+  const checksumRule = () => ruleById(PROVENANCE_RULES, 'SRC-004');
+
+  it('flags sources without any checksum array', () => {
+    const change = makeChange(
+      ['@@ -0,0 +1,3 @@', '+url="https://example.org/project/"', '+source=("https://example.org/release.tar.gz")'].join(
+        '\n',
+      ),
+    );
+    expect(checksumRule().check(change)?.note).toContain('no checksum array');
+  });
+
+  it('flags sources verified only by a weak checksum', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+url="https://example.org/project/"',
+        '+source=("https://example.org/release.tar.gz")',
+        "+md5sums=('d41d8cd98f00b204e9800998ecf8427e')",
+      ].join('\n'),
+    );
+    expect(checksumRule().check(change)?.note).toContain('weak checksums');
+  });
+
+  it('flags SKIP checksums on downloadable sources', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+url="https://example.org/project/"',
+        '+source=("https://example.org/release.tar.gz")',
+        "+sha256sums=('SKIP')",
+      ].join('\n'),
+    );
+    expect(checksumRule().check(change)?.note).toContain('is SKIP');
+  });
+
+  it('accepts SKIP checksums that only cover VCS sources', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+url="https://github.com/upstream/project"',
+        '+source=("git+https://github.com/upstream/project.git" "https://example.org/release.tar.gz")',
+        "+sha256sums=('SKIP' 'd41d8cd98f00b204e9800998ecf8427ed41d8cd98f00b204e9800998ecf8427e')",
+      ].join('\n'),
+    );
+    expect(checksumRule().check(change)).toBeNull();
+  });
+
+  it('accepts SKIP checksums on commit-pinned archive sources', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+url="https://github.com/upstream/project"',
+        '+source=("pkg.tar.gz::https://github.com/upstream/project/archive/fee63112daf6ca7130c71997ce56fe381cdffcca.tar.gz")',
+        "+sha256sums=('SKIP')",
+      ].join('\n'),
+    );
+    expect(checksumRule().check(change)).toBeNull();
+  });
+
+  it('accepts fully verified sources', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+url="https://example.org/project/"',
+        '+source=("https://example.org/release.tar.gz")',
+        "+sha256sums=('d41d8cd98f00b204e9800998ecf8427ed41d8cd98f00b204e9800998ecf8427e')",
+      ].join('\n'),
+    );
+    expect(checksumRule().check(change)).toBeNull();
   });
 });
