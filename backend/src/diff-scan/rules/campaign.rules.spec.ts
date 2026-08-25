@@ -47,6 +47,33 @@ describe('campaign rules', () => {
     expect(ruleById(CAMPAIGN_RULES, 'NPM-001').check(change)).toBeNull();
   });
 
+  it('keeps direct global or unpinned fetches critical', () => {
+    expect(
+      ruleById(CAMPAIGN_RULES, 'NPM-001').check(makeChange(addedOnlyDiff(['npm install -g evilpkg']))),
+    ).not.toBeNull();
+    const unpinned = ruleById(CAMPAIGN_RULES, 'NPM-001').check(
+      makeChange(addedOnlyDiff(['npm install --no-package-lock --prefix . etcher-sdk ws lodash'])),
+    );
+    expect(unpinned?.severity).toBeUndefined();
+  });
+
+  it('downgrades lockfile-pinned and build-staging invocations to warnings', () => {
+    const frozen = ruleById(CAMPAIGN_RULES, 'NPM-001').check(
+      makeChange(addedOnlyDiff(['yarn install --frozen-lockfile --network-timeout 120000'])),
+    );
+    expect(frozen?.severity).toBe('warning');
+
+    const staging = ruleById(CAMPAIGN_RULES, 'NPM-001').check(
+      makeChange(addedOnlyDiff(['npm install -g --prefix "$pkgdir/usr" $_npmname@$pkgver'])),
+    );
+    expect(staging?.severity).toBe('warning');
+
+    const srcdir = ruleById(CAMPAIGN_RULES, 'NPM-001').check(
+      makeChange(addedOnlyDiff(['npm install --cache "${srcdir}/npm-cache" --include dev'])),
+    );
+    expect(srcdir?.severity).toBe('warning');
+  });
+
   it('flags swapped maintainer emails but not legitimate promotions', () => {
     const swap = makeChange(
       [

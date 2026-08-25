@@ -67,6 +67,28 @@ describe('privilege rules', () => {
     expect(ruleById(PRIVILEGE_RULES, id).check(makeChange(addedOnlyDiff([line])))).toBeNull();
   });
 
+  it('downgrades known browser helpers and setgid-only modes to warnings', () => {
+    const sandbox = ruleById(PRIVILEGE_RULES, 'CAUR-SETUID').check(
+      makeChange(addedOnlyDiff(['chmod 4755 "$pkgdir/opt/brave-bin/chrome-sandbox"'])),
+    );
+    expect(sandbox?.severity).toBe('warning');
+    expect(sandbox?.note).toContain('upstream design');
+
+    const setgid = ruleById(PRIVILEGE_RULES, 'CAUR-SETUID').check(
+      makeChange(addedOnlyDiff(['chmod 2750 "$pkgdir"/etc/elasticsearch'])),
+    );
+    expect(setgid?.severity).toBe('warning');
+    expect(setgid?.note).toContain('Setgid');
+  });
+
+  it('keeps unknown setuid binaries critical', () => {
+    const hit = ruleById(PRIVILEGE_RULES, 'CAUR-SETUID').check(
+      makeChange(addedOnlyDiff(['chmod 4755 /usr/local/bin/payload'])),
+    );
+    expect(hit).not.toBeNull();
+    expect(hit?.note).toBeUndefined();
+  });
+
   it('does not flag sudo inside quoted upgrade messages', () => {
     const change = makeChange(
       addedOnlyDiff([

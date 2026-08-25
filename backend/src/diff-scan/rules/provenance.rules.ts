@@ -1,5 +1,5 @@
 import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { isReputable, parsePkgbuild, type SourceEntry } from '../pkgbuild';
+import { extractArray, isReputable, type ParsedPkgbuild, parsePkgbuild, type SourceEntry, unquote } from '../pkgbuild';
 import type { Rule, RuleHit } from './rule';
 
 const GENERIC_FILE_HOST_SUFFIXES = [
@@ -50,6 +50,92 @@ function firstEntry(change: MergeRequestDiffSchema, predicate: (entry: SourceEnt
   return entry ? { line: entry.line, match: entry.raw, note: `Host: ${entry.host}` } : null;
 }
 
+/** Ordered strongest-first, so the first array present decides the verdict. */
+const STRONG_CHECKSUM_ARRAYS = ['b2sums', 'sha512sums', 'sha384sums', 'sha256sums', 'sha224sums'];
+const WEAK_CHECKSUM_ARRAYS = ['cksums', 'md5sums'];
+const CHECKSUM_ARRAYS = [...STRONG_CHECKSUM_ARRAYS, ...WEAK_CHECKSUM_ARRAYS];
+const SKIP_CHECKSUM = 'SKIP';
+
+/** A full git SHA embedded in the URL pins the content, making SKIP checksums safe. */
+const COMMIT_SHA_IN_URL = /(?:^|[^0-9a-f])[0-9a-f]{40}(?:[^0-9a-f]|$)/i;
+/** Detached signatures are verified via GPG, not source checksums. */
+const SIGNATURE_FILE = /\.(?:asc|sig)$/i;
+
+const CHECKSUM_RULE: Rule = {
+  id: 'SRC-004',
+  name: 'Weak or skipped source checksums',
+  severity: 'info',
+  description:
+    'Downloaded sources are not fully verified by a strong checksum. Unverified sources let upstream changes or hijacked downloads reach the build silently.',
+  runsOn: ['full-file'],
+  check(change) {
+    const parsed = parsePkgbuild(change);
+    if (!parsed) return null;
+    const note = checksumNote(parsed);
+    if (note === null) return null;
+    const entry = verifiableEntries(parsed.entries)[0];
+    return entry ? { line: entry.line, match: entry.raw, note } : { match: 'source=()', note };
+  },
+};
+
+function isVerifiable(entry: SourceEntry): boolean {
+  return !entry.isVcs && !COMMIT_SHA_IN_URL.test(entry.url) && !SIGNATURE_FILE.test(entry.url);
+}
+
+function verifiableEntries(entries: SourceEntry[]): SourceEntry[] {
+  return entries.filter(isVerifiable);
+}
+
+function checksumNote(parsed: ParsedPkgbuild): string | null {
+  if (verifiableEntries(parsed.entries).length === 0) return null;
+
+  for (const name of CHECKSUM_ARRAYS) {
+    const sums = extractArray(parsed.text, name);
+    if (sums === null || sums.length === 0) continue;
+    if (!STRONG_CHECKSUM_ARRAYS.includes(name)) {
+      return `sources are only covered by weak checksums (${name})`;
+    }
+    return skippedChecksumNote(parsed.entries, sums);
+  }
+  return 'no checksum array covers the downloaded sources';
+}
+
+function skippedChecksumNote(entries: SourceEntry[], sums: string[]): string | null {
+  if (sums.length !== entries.length) return null;
+  const index = entries.findIndex(
+    (entry, position) => isVerifiable(entry) && unquote(sums[position] ?? '').toUpperCase() === SKIP_CHECKSUM,
+  );
+  if (index === -1) return null;
+  return `checksum for "${sourceFileName(entries[index])}" is SKIP`;
+}
+
+function sourceFileName(entry: SourceEntry): string {
+  return entry.fileName ?? entry.url.split(/[?#]/)[0].split('/').filter(Boolean).pop() ?? entry.raw;
+}
+
+/**
+ * Hosts that legitimately differ from url=: distro and language-registry
+ * infrastructure plus official vendor mirrors. Deliberately excludes
+ * attacker-choosable object storage (buckets stay in SRC-002).
+ */
+const TRUSTED_MIRROR_SUFFIXES = [
+  'apt.insync.io',
+  'bcr.bazel.build',
+  'code.sf.net',
+  'dl.google.com',
+  'downloads.slack-edge.com',
+  'lkml.org',
+  'packages.linuxmint.com',
+  'pypi.io',
+  'src.fedoraproject.org',
+  'web.archive.org',
+  'wrapdb.mesonbuild.com',
+];
+
+function isTrustedMirror(host: string): boolean {
+  return TRUSTED_MIRROR_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
 export const PROVENANCE_RULES: Rule[] = [
   {
     id: 'SRC-001',
@@ -85,6 +171,7 @@ export const PROVENANCE_RULES: Rule[] = [
         (candidate) =>
           candidate.host !== null &&
           !isReputable(candidate.host) &&
+          !isTrustedMirror(candidate.host) &&
           registrableDomain(candidate.host) !== upstreamDomain,
       );
       return entry
@@ -104,4 +191,5 @@ export const PROVENANCE_RULES: Rule[] = [
       return entry ? { line: entry.line, match: entry.raw, note: 'Source contains unresolved variables' } : null;
     },
   },
+  CHECKSUM_RULE,
 ];

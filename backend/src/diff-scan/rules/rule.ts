@@ -131,10 +131,12 @@ export interface RegexRuleOptions<T = void> {
   pattern: RegExp;
   scopes?: RuleScope[];
   scanComments?: boolean;
-  /** Skip matches inside quoted strings (e.g. install scriptlet "sudo …" messages). Only raw matches are affected. */
+  /** Skip matches inside quoted strings (for example, install scriptlet messages such as "sudo ..."). Only raw matches are affected. */
   skipQuoted?: boolean;
   /** Match the raw line only, for rules that detect the obfuscation itself. */
   rawOnly?: boolean;
+  /** Adjusts the emitted hit (severity/note) based on the matched line. Use it to downgrade known-benign forms. */
+  classify?: (lineText: string) => Pick<RuleHit, 'severity' | 'note'> | undefined;
   /** Lazily loads a remote data source and rebuilds `pattern` from it. */
   data?: RegexRuleDataOptions<T>;
 }
@@ -156,7 +158,7 @@ export function regexRule<T>(options: RegexRuleOptions<T>): Rule<T> {
         const deobfuscatedHit =
           !rawHit && !options.rawOnly && !options.skipQuoted && matchesDeobfuscated(line.text, pattern);
         if (rawHit || deobfuscatedHit) {
-          return { line: line.line, match: line.text.trim() };
+          return { line: line.line, match: line.text.trim(), ...options.classify?.(line.text) };
         }
       }
       return null;
@@ -193,7 +195,7 @@ export interface ListRuleOptions {
   list: string[];
   scopes?: RuleScope[];
   scanComments?: boolean;
-  /** Skip matches inside quoted strings (e.g. install scriptlet "sudo …" messages). Only raw matches are affected. */
+  /** Skip matches inside quoted strings (for example, install scriptlet messages such as "sudo ..."). Only raw matches are affected. */
   skipQuoted?: boolean;
   /** Match the raw line only, for rules that detect the obfuscation itself. */
   rawOnly?: boolean;

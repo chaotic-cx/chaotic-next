@@ -18,6 +18,14 @@ describe('destructive rules', () => {
     expect(rule().check(makeChange(addedOnlyDiff([line])))).not.toBeNull();
   });
 
+  it('does not flag packages that only ship a mkfs binary', () => {
+    expect(
+      rule().check(
+        makeChange(addedOnlyDiff(['install -m 755 "newfs_hfs.tproj/newfs_hfs" "${pkgdir}/usr/bin/mkfs.hfsplus"'])),
+      ),
+    ).toBeNull();
+  });
+
   it('flags any recursive rm inside install scriptlets, which run as root', () => {
     const change = makeChange(addedOnlyDiff(['pre_upgrade() {', '  rm -r /tmp/cache', '}']), {
       new_path: 'foo/foo.install',

@@ -64,6 +64,13 @@ describe('obfuscation rules', () => {
       expect(docRule.check(makeChange(addedOnlyDiff([line]), { new_path: newPath }))).not.toBeNull();
     });
 
+    it('does not flag the eval packaging idiom or interpreter --eval flags', () => {
+      const rule = ruleById(OBFUSCATION_RULES, 'OBF-002');
+      expect(rule.check(makeChange(addedOnlyDiff(['eval "depends+=(libfoo)"'])))).toBeNull();
+      const interpreterFlag = makeChange(addedOnlyDiff(["--eval '(require :asdf)' \\"]), { new_path: 'foo/build.sh' });
+      expect(rule.check(interpreterFlag)).toBeNull();
+    });
+
     it.each([
       // English "source", not a shell command.
       ['open source license.txt', 'vmware-workstation/PKGBUILD'],

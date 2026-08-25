@@ -29,7 +29,7 @@ const REPUTABLE_HOSTS = [
   'sourceforge.net',
 ];
 
-const VCS_SOURCE = /(?:^|\s)(?:git|svn|hg|bzr)\+https?:\/\//;
+const VCS_SOURCE = /(?:^|\s|::)(?:git|svn|hg|bzr)\+[A-Za-z]/;
 const GIT_URL = /\.git(?:[?#].*)?$/i;
 
 const SCALAR_ASSIGNMENT = /^\s*([A-Za-z_][A-Za-z0-9_]*)=(["']?)([^"'()\s]+)\2/;

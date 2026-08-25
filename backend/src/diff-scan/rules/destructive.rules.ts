@@ -5,7 +5,14 @@ const RM_RECURSIVE = /\brm\s[^;&|]*?(?:-[a-z]*r[a-z]*\b|--recursive\b)/i;
 const RM_FORCED = /(?:^|\s)(?:-[a-z]*f[a-z]*\b|--force\b)/i;
 const SENSITIVE_TARGET =
   /\s["']?(?:\/\*?|~|\$HOME|\$\{HOME\})["']?(?:\/|\s|$)|\s\/(?:home|etc|usr|var|boot|opt|srv|root|lib|bin|sbin)(?:\/|\s|$)/;
-const DISK_WIPE = /\bmkfs(?:\.\w+)?\b|\bwipefs\b|\bdd\b[^;&|]*\bof=\/dev\//i;
+/** Disk tools count only when invoked against a device, not when a package merely ships them. */
+const COMMAND_POSITION = '(?:^|[;&|]\\s*|\\b(?:sudo|doas)\\s+)';
+const DISK_WIPE = new RegExp(
+  `${COMMAND_POSITION}\\bmkfs(?:\\.\\w+)?\\s[^;&|]*\\/dev\\/` +
+    `|${COMMAND_POSITION}\\bwipefs\\b` +
+    '|\\bdd\\b[^;&|]*\\bof=\\/dev\\/',
+  'i',
+);
 
 export const DESTRUCTIVE_RULES: Rule[] = [
   {

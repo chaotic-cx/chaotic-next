@@ -10,6 +10,7 @@ import { RULES } from './rules';
 import type { GroupRuleHit, RuleHit, RuleSurface } from './rules/rule';
 import { ruleRunsOn } from './rules/rule';
 import { isDependencyPresent, isSrcinfoFile, scanSrcinfoDependencies } from './srcinfo-dependency';
+import { findTyposquatFinding } from './typosquat';
 
 const MAX_FINDINGS_PER_MR = 100;
 const MAX_MATCH_LENGTH = 300;
@@ -90,6 +91,15 @@ export class DiffScanService {
         } catch (err) {
           this.logger.warn(`SRCINFO dependency scan failed on ${change.new_path}: ${errorMessage(err)}`);
         }
+      }
+
+      try {
+        const typoFinding = await findTyposquatFinding(change, this.archPkgRepository);
+        if (!typoFinding) continue;
+        findings.push(typoFinding);
+        if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
+      } catch (err) {
+        this.logger.warn(`Typosquat check failed on ${change.new_path}: ${errorMessage(err)}`);
       }
     }
 
