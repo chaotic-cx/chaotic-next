@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, OnInit, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
@@ -44,28 +44,31 @@ export class AurScanPageComponent implements OnInit {
   protected readonly suggestions = signal<string[]>([]);
   private suggestionGeneration = 0;
 
-  private lastHandledDeepLink = '';
+  /** Last ?search= value seen by the route effect; guards against re-applying stale URLs. */
+  private lastSeenRoutePackage = '';
 
   constructor() {
     effect(() => {
-      const linked = this.search()?.trim() ?? '';
-      if (
-        linked &&
-        this.searchForm.query().valid() &&
-        linked !== this.currentPackageName() &&
-        linked !== this.lastHandledDeepLink
-      ) {
-        if (this.searchModel().query !== linked) this.searchModel.update((model) => ({ ...model, query: linked }));
-        this.selectPackage(linked);
-        this.lastHandledDeepLink = linked;
-      }
+      const linked = (this.search() ?? '').trim();
+      if (!linked || linked === this.lastSeenRoutePackage) return;
+
+      // Consume every route value exactly once, then decide outside the
+      // reactive context: currentPackageName and the model change below would
+      // otherwise re-run this effect while the URL still holds the old value,
+      // making the stale value win over fresher user input.
+      this.lastSeenRoutePackage = linked;
+      untracked(() => {
+        if (this.currentPackageName() === linked) return;
+        if (!this.searchForm.query().valid()) return;
+        this.searchModel.update((model) => ({ ...model, query: linked }));
+        this.currentPackageName.set(linked);
+        void this.syncQueryParam(linked);
+      });
     });
 
     effect(() => {
-      const query = this.searchModel().query.trim();
-      if (!query) {
-        this.clearSearch();
-      }
+      const query = (this.searchModel().query ?? '').trim();
+      if (!query) this.clearResults();
     });
   }
 
@@ -95,37 +98,37 @@ export class AurScanPageComponent implements OnInit {
     }
   }
 
-  protected selectSuggestion(name: string): void {
-    this.searchModel.update((model) => ({ ...model, query: name }));
-    this.currentPackageName.set(name);
-    this.syncSearchParam(name);
+  protected selectPackage(name: string): void {
+    const pkg = name.trim();
+    if (!pkg || !this.searchForm.query().valid()) return;
+
+    // Mark the route value as handled before navigating so the returning
+    // parameter update cannot be mistaken for a new deep link.
+    this.lastSeenRoutePackage = pkg;
+    this.searchModel.update((model) => ({ ...model, query: pkg }));
+    this.currentPackageName.set(pkg);
+    void this.syncQueryParam(pkg);
   }
 
-  private selectPackage(name: string): void {
-    if (!name || this.currentPackageName() === name) return;
-    this.currentPackageName.set(name);
+  protected onKeyUp(event: KeyboardEvent): void {
+    if (event.key !== 'Enter') return;
+    const query = this.searchModel().query.trim();
+    if (query.length >= 3 && this.searchForm.query().valid()) this.selectPackage(query);
+  }
+
+  private syncQueryParam(pkg: string): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { search: name },
+      queryParams: { search: pkg },
       queryParamsHandling: 'merge',
       replaceUrl: true,
       info: { disableViewTransition: true },
     });
   }
 
-  private syncSearchParam(name: string): void {
-    if (!name) return;
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { search: name },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-      info: { disableViewTransition: true },
-    });
-  }
-
-  private clearSearch(): void {
-    if (this.currentPackageName() !== '') this.currentPackageName.set('');
+  private clearResults(): void {
+    this.lastSeenRoutePackage = '';
+    this.currentPackageName.set('');
     if (this.route.snapshot.queryParamMap.has('search')) {
       void this.router.navigate([], {
         relativeTo: this.route,

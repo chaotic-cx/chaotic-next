@@ -23,9 +23,6 @@
         <i class="pi pi-spinner pi-spin text-ctp-subtext text-xs"></i>
       }
     }
-    @if (hasNoviceMaintainer()) {
-      <p-tag severity="warn" value="New maintainer" />
-    }
     @if (scan()?.maintainerChange; as change) {
       <p-tag
         [pTooltip]="presenter.maintainerChangeSummary(change)"
@@ -67,78 +64,94 @@
       } @else if (current.status === 'done') {
         <span class="block w-full text-left text-sm text-ctp-subtext sm:text-center">No findings</span>
       }
-      @for (finding of current.findings; track finding) {
-        <div class="text-left">
-          <span
-            class="wrap-break-word font-semibold text-sm"
-            [class.text-ctp-red]="finding.severity === 'critical'"
-            [class.text-ctp-peach]="finding.severity === 'warning'"
-            [class.text-ctp-subtext0]="finding.severity === 'info'"
-            [pTooltip]="finding.description"
-            tooltipPosition="top"
-          >
-            {{ finding.ruleName }}
-          </span>
-          <span class="text-ctp-subtext0"> · </span>
-          <code class="whitespace-nowrap text-ctp-sky text-xs">{{ fileLocation(finding) }}</code>
-          <span class="text-ctp-subtext0"> · </span>
+      @for (finding of current.findings; track finding; let index = $index) {
+        <div
+          class="flex basis-full cursor-pointer flex-col gap-1.5 rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 text-left backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
+          [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
+          (click)="scrollToFinding(finding)"
+          (keydown.enter)="scrollToFinding(finding)"
+          animate.enter="finding-item-enter"
+          role="button"
+          tabindex="0"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <span
+              class="min-w-0 wrap-break-word font-semibold text-sm"
+              [class.text-ctp-red]="finding.severity === 'critical'"
+              [class.text-ctp-peach]="finding.severity === 'warning'"
+              [class.text-ctp-subtext0]="finding.severity === 'info'"
+              [pTooltip]="finding.description"
+              tooltipPosition="top"
+            >
+              {{ finding.ruleName }}
+            </span>
+            <code class="shrink-0 whitespace-nowrap text-ctp-sky text-xs">{{ fileLocation(finding) }}</code>
+          </div>
           <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
         </div>
       }
 
       @if (current.maintainers.length > 0 || current.packageMeta.orphaned || current.maintainerChange) {
         <div class="border-t border-ctp-surface0 py-5">
-          <div class="mx-auto w-fit max-w-full">
+          <div class="mb-3 text-center">
             <span class="text-sm font-semibold">Maintainers</span>
-            @if (current.maintainers.length > 0) {
-              <table class="mt-1.5 text-xs tabular-nums">
-                <thead>
-                  <tr class="text-ctp-subtext0 uppercase tracking-wider">
-                    <th class="py-1 pr-4 text-left font-semibold">Maintainer</th>
-                    <th class="py-2 pr-4 text-right font-semibold">Packages</th>
-                    <th class="py-2 pr-4 text-right font-semibold">Since</th>
-                    <th class="py-2 text-right font-semibold">Votes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (maintainer of current.maintainers; track maintainer.username) {
-                    <tr class="border-t border-ctp-surface0/60">
-                      <td class="flex items-center gap-2 py-2 pr-4 text-left">
-                        @if (maintainer.novice) {
-                          <p-tag severity="warn" value="New" />
-                        }
-                        <a
-                          class="font-semibold text-ctp-mauve transition-colors hover:text-ctp-pink"
-                          [href]="`https://aur.archlinux.org/account/${maintainer.username}`"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          >{{ maintainer.username }}</a
-                        >
-                      </td>
-                      <td class="py-2 pr-4 text-right">{{ maintainer.packagesMaintained }}</td>
-                      <td class="py-2 pr-4 text-right">{{ presenter.maintainerSince(maintainer) }}</td>
-                      <td class="py-2 text-right">{{ maintainer.totalVotes }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            }
-            @if (current.maintainerChange; as change) {
-              <div class="flex flex-wrap items-center justify-center gap-2 text-center">
-                @if (presenter.tookOverByNovice(change, current.maintainers)) {
-                  <p-tag severity="danger" value="New maintainer took over" />
-                } @else {
-                  <p-tag severity="warn" value="Maintainer changed" />
-                }
-                <span class="text-ctp-subtext text-xs">{{ presenter.maintainerChangeSummary(change) }}</span>
-              </div>
-            }
-            @if (current.packageMeta.orphaned) {
-              <span class="mt-1.5 block text-ctp-red text-sm"
-                >No maintainer — this package is orphaned in the AUR.</span
-              >
-            }
           </div>
+          @if (current.maintainers.length > 0) {
+            <div class="flex flex-wrap justify-center gap-3">
+              @for (maintainer of current.maintainers; track maintainer.username; let index = $index) {
+                <div
+                  class="flex basis-full flex-col gap-3 rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md sm:basis-[calc(50%-0.375rem)] lg:basis-[calc(33.333%-0.5rem)]"
+                  [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
+                  animate.enter="finding-item-enter"
+                >
+                  <div class="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <span class="justify-self-start">
+                      @if (maintainer.novice) {
+                        <p-tag severity="warn" value="New" />
+                      }
+                    </span>
+                    <a
+                      class="truncate font-semibold text-ctp-mauve transition-colors hover:text-ctp-pink"
+                      [href]="`https://aur.archlinux.org/account/${maintainer.username}`"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >{{ maintainer.username }}</a
+                    >
+                    <i class="pi pi-user justify-self-end text-ctp-mauve text-xs"></i>
+                  </div>
+                  <dl class="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <dt class="text-ctp-subtext0 text-[0.65rem] uppercase tracking-wider">Packages</dt>
+                      <dd class="font-semibold tabular-nums">{{ maintainer.packagesMaintained }}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-ctp-subtext0 text-[0.65rem] uppercase tracking-wider">Since</dt>
+                      <dd class="font-semibold tabular-nums">{{ presenter.maintainerSince(maintainer) }}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-ctp-subtext0 text-[0.65rem] uppercase tracking-wider">Votes</dt>
+                      <dd class="font-semibold tabular-nums">{{ maintainer.totalVotes }}</dd>
+                    </div>
+                  </dl>
+                </div>
+              }
+            </div>
+          }
+          @if (current.maintainerChange; as change) {
+            <div class="mt-3 flex flex-wrap items-center justify-center gap-2 text-center">
+              @if (presenter.tookOverByNovice(change, current.maintainers)) {
+                <p-tag severity="danger" value="New maintainer took over" />
+              } @else {
+                <p-tag severity="warn" value="Maintainer changed" />
+              }
+              <span class="text-ctp-subtext text-xs">{{ presenter.maintainerChangeSummary(change) }}</span>
+            </div>
+          }
+          @if (current.packageMeta.orphaned) {
+            <span class="mt-1.5 block text-center text-ctp-red text-sm"
+              >No maintainer — this package is orphaned in the AUR.</span
+            >
+          }
         </div>
       }
 
@@ -151,8 +164,12 @@
       } @else if (current.vtReports.length > 0) {
         <div class="flex flex-col gap-1.5 border-t border-ctp-surface0 pt-2">
           <span class="text-sm font-semibold">VirusTotal indicators</span>
-          @for (report of current.vtReports; track report) {
-            <div class="flex flex-col gap-y-1 text-left sm:text-center">
+          @for (report of current.vtReports; track report; let index = $index) {
+            <div
+              class="flex flex-col gap-y-1 text-left sm:text-center"
+              [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
+              animate.enter="finding-item-enter"
+            >
               <div class="flex min-w-0 items-center gap-2">
                 <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
                 <a
@@ -195,6 +212,8 @@
                     class="mt-1 block"
                     [code]="file.content"
                     [findingsByLine]="findingsByLine(file.name)"
+                    [scrollToLine]="targetLineFor(file.name)"
+                    (scrolled)="clearScrollTarget()"
                   />
                 }
               </div>

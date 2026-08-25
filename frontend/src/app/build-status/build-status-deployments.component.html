@@ -6,9 +6,9 @@
     iconClass="text-ctp-green"
   />
   @if (!buildStatusService.loadingDeployments()) {
-    <ul class="flex-1 divide-y divide-white/5">
+    <ul class="flex-1 divide-y divide-white/5" animate.enter="content-fade" chaoticFlipList>
       @for (deployment of paginatedDeployments(); track deployment.id) {
-        <li class="flex items-center justify-between gap-3 py-2.5">
+        <li class="flex items-center justify-between gap-3 py-2.5" animate.enter="queue-item-enter">
           <div class="min-w-0 flex-1">
             <span class="block break-words font-medium">{{ deployment.pkgbase.pkgname }}</span>
             @if (deployment.repo?.name; as repoName) {

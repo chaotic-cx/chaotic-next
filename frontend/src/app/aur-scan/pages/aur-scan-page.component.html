@@ -21,9 +21,10 @@
             [suggestions]="suggestions()"
             [delay]="300"
             [minQueryLength]="3"
-            (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event }))"
+            (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
             (completeMethod)="searchSuggestions($event)"
-            (onSelect)="selectSuggestion($event.value)"
+            (onSelect)="selectPackage($event.value)"
+            (onKeyUp)="onKeyUp($event)"
             placeholder="AUR package name, e.g. firedragon"
             appendTo="body"
           />

@@ -3,9 +3,9 @@ import { type DiffScanFinding } from '@chaotic-next/shared-lib';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { vtIndicatorLink } from '../functions';
+import { SourceViewerComponent } from '../source-viewer/source-viewer.component';
 import { AurScanService } from './aur-scan.service';
 import { presenter } from './scan-presenter';
-import { SourceViewerComponent } from '../source-viewer/source-viewer.component';
 
 const POPULARITY_DECIMALS = 2;
 
@@ -17,6 +17,8 @@ const POPULARITY_DECIMALS = 2;
 export class AurScanResultComponent {
   private readonly scanService = inject(AurScanService);
 
+  readonly STAGGER_CAP = 8;
+
   readonly packageName = input.required<string>();
   readonly showTitle = input(true);
 
@@ -24,11 +26,33 @@ export class AurScanResultComponent {
   protected readonly presenter = presenter;
   protected readonly collapsedFiles = signal<ReadonlySet<string>>(new Set<string>());
 
+  /** Finding row the source viewer should reveal, if any. */
+  protected readonly scrollTarget = signal<{ file: string; line: number } | null>(null);
+
   constructor() {
     effect(() => {
       const name = this.packageName();
       if (name) void this.scanService.startScan(name);
     });
+  }
+
+  protected scrollToFinding(finding: DiffScanFinding): void {
+    this.collapsedFiles.update((collapsed) => {
+      const next = new Set(collapsed);
+      next.delete(finding.file);
+      return next;
+    });
+    if (finding.line === undefined) return;
+    this.scrollTarget.set({ file: finding.file, line: finding.line });
+  }
+
+  protected targetLineFor(fileName: string): number | null {
+    const target = this.scrollTarget();
+    return target?.file === fileName ? target.line : null;
+  }
+
+  protected clearScrollTarget(): void {
+    this.scrollTarget.set(null);
   }
 
   protected isOpen(fileName: string): boolean {
@@ -58,10 +82,6 @@ export class AurScanResultComponent {
     return (this.scan()?.vtReports ?? []).filter(
       (report) => report.verdict === 'malicious' || report.verdict === 'suspicious',
     ).length;
-  }
-
-  protected hasNoviceMaintainer(): boolean {
-    return (this.scan()?.maintainers ?? []).some((maintainer) => maintainer.novice);
   }
 
   protected scanDetails(): string {

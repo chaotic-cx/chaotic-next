@@ -588,15 +588,47 @@ body.is-transitioning .router-container {
   animation: queue-item-enter 0.25s ease-out;
 }
 
-@keyframes queue-item-leave {
+@keyframes pipeline-item-enter {
   from {
-    opacity: 1;
+    opacity: 0;
+    transform: translateX(-8px);
   }
   to {
-    opacity: 0;
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
-.queue-item-leave {
-  animation: queue-item-leave 0.18s ease-in;
+.pipeline-item-enter {
+  animation: pipeline-item-enter 0.25s ease-out both;
+  animation-delay: calc(min(var(--stagger, 0), 8) * 35ms);
+}
+
+@keyframes content-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.content-fade {
+  animation: content-fade 0.3s ease-out;
+}
+
+@keyframes finding-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.finding-item-enter {
+  animation: finding-item-enter 0.25s ease-out both;
+  animation-delay: calc(min(var(--stagger, 0), 8) * 35ms);
 }

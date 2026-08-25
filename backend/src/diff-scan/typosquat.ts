@@ -108,7 +108,7 @@ export function normalizePackageName(name: string): string {
   return normalized;
 }
 
-/** Levenshtein distance, or null when it abandons rows beyond `maxDistance`. */
+/** Levenshtein distance, or null for identical strings and distances beyond `maxDistance`. */
 function boundedEditDistance(left: string, right: string, maxDistance: number): number | null {
   if (left === right) return null;
   if (Math.abs(left.length - right.length) > maxDistance) return null;

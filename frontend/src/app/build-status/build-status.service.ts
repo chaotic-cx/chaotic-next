@@ -1,5 +1,4 @@
-import { HttpClient } from '@angular/common/http';
-import { httpResource } from '@angular/common/http';
+import { HttpClient, httpResource } from '@angular/common/http';
 import { computed, DestroyRef, effect, inject, Service, signal, untracked } from '@angular/core';
 import {
   type Build,

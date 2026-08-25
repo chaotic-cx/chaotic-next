@@ -4,6 +4,7 @@
       @if (findingsFor(line.number); as findings) {
         <div
           class="line flagged"
+          [attr.data-line]="line.number"
           [class.expanded]="expandedLine() === line.number"
           role="button"
           tabindex="0"
@@ -23,7 +24,7 @@
           </div>
         }
       } @else {
-        <div class="line">
+        <div class="line" [attr.data-line]="line.number">
           <span class="line-number">{{ line.number }}</span><span class="line-content" [innerHTML]="line.html"></span>
         </div>
       }

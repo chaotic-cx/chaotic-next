@@ -106,14 +106,18 @@ export function newMrChipDecision(
 })
 export class MrOverviewComponent implements OnInit {
   private readonly appService = inject(AppService);
+  private readonly authService = inject(AuthService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly hostElement = inject(ElementRef).nativeElement as HTMLElement;
-
   protected readonly mrOverviewService = inject(MrOverviewService);
 
-  private readonly authService = inject(AuthService);
+  /** Stagger caps the entry delay so long finding lists do not feel sluggish. */
+  protected readonly findingStaggerCap = 8;
+
+  /** Finding row a diff renderer should reveal, if any. */
+  private readonly diffScrollTarget = signal<{ iid: number; path: string; line: number } | null>(null);
 
   readonly isLoggedIn = this.authService.isLoggedIn;
 
@@ -409,6 +413,30 @@ export class MrOverviewComponent implements OnInit {
     const next = new Map(this.findingsOpen());
     next.set(mr.iid, !this.isFindingsOpen(mr));
     this.findingsOpen.set(next);
+  }
+
+  protected scrollToFinding(mr: MergeRequestWithDiffs, finding: DiffScanFinding): void {
+    // The finding cards live above the diffs; jump to the file section first
+    // so the deferred diff renderer mounts, then it reveals the exact line.
+    this.diffScrollTarget.set({ iid: mr.iid, path: finding.file, line: finding.line ?? -1 });
+    const sectionId = this.diffSectionId(mr.iid, finding.file);
+    this.hostElement.querySelector(`[data-diff-section="${sectionId}"]`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }
+
+  protected targetLineFor(mr: MergeRequestWithDiffs, path: string): number | null {
+    const target = this.diffScrollTarget();
+    return target && target.iid === mr.iid && target.path === path ? target.line : null;
+  }
+
+  protected clearDiffScroll(): void {
+    this.diffScrollTarget.set(null);
+  }
+
+  protected diffSectionId(iid: number, path: string): string {
+    return `${iid}|${path}`;
   }
 
   protected findingsByLine(mr: MergeRequestWithDiffs, path: string): Map<number, DiffScanFinding[]> {
