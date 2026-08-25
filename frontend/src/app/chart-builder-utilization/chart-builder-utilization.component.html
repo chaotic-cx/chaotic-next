@@ -1,0 +1,41 @@
+<div class="card flex h-[20rem] flex-col">
+  @if (hasData()) {
+    <div class="min-h-0 flex-1 overflow-x-auto pb-1">
+      <div
+        class="grid h-full min-w-[44rem] gap-[3px]"
+        [style.grid-template-columns]="'7rem repeat(24, minmax(0, 1fr))'"
+        [attr.aria-label]="`Builder utilization heatmap over the last ${days} days`"
+        role="img"
+      >
+        <span class="self-center text-xs text-ctp-subtext0" aria-hidden="true">UTC hour</span>
+        @for (label of hourLabels(); track $index) {
+          <span class="text-center text-[10px] text-ctp-subtext0">{{ label }}</span>
+        }
+        @for (row of grid().rows; track row.builder) {
+          <span class="min-w-0 truncate self-center text-right text-xs text-ctp-subtext0" [title]="row.builder">
+            {{ row.builder }}
+          </span>
+          @for (cell of row.cells; track cell.hour) {
+            <div
+              class="h-full min-h-6 rounded-sm"
+              [style.background]="cellBackground(cell.count)"
+              [title]="cellTitle(row, cell)"
+            ></div>
+          }
+        }
+      </div>
+    </div>
+    <p class="pt-2 text-xs text-ctp-subtext0">
+      Average builds per day and UTC hour over {{ rangeLabel() }}. Peak day: {{ grid().max }} build{{
+        grid().max === 1 ? '' : 's'
+      }}
+      in one hour.
+    </p>
+  } @else if (loading()) {
+    <div class="flex flex-1 items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
+  } @else {
+    <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">No builder activity recorded.</p>
+  }
+</div>

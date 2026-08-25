@@ -32,8 +32,6 @@ export function parseLogChunk(data: string): GitlabLogChunk | undefined {
   }
 }
 
-export const PACKAGE_NAME_PATTERN = /^[a-zA-Z0-9@.+_-]+$/;
-
 export function isChaoticEvent(value: unknown): value is ChaoticEvent {
   if (typeof value !== 'object' || value === null) return false;
   const type = (value as { type: unknown }).type;

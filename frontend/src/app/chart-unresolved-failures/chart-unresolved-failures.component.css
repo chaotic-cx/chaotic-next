@@ -1,0 +1,25 @@
+ul {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ctp-mocha-surface1) transparent;
+}
+
+ul::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+ul::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+ul::-webkit-scrollbar-thumb {
+  background: var(--ctp-mocha-surface1);
+  border-radius: 9999px;
+}
+
+ul::-webkit-scrollbar-thumb:hover {
+  background: var(--ctp-mocha-surface2);
+}
+
+button {
+  font-size: 0.9rem;
+}

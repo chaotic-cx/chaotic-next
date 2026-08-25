@@ -1,6 +1,6 @@
 import { type BuildClass, type BuildResourceStats, BuildStatus } from '@chaotic-next/shared-lib';
 import type { Repository } from 'typeorm';
-import type { Build, Builder, Package, Repo } from '../builder/builder.entity';
+import type { Build, Builder, Package, Repo, SilencedBuildFailure } from '../builder/builder.entity';
 
 export { BuildStatus };
 
@@ -44,4 +44,5 @@ export interface BuilderDbConnections {
   builder: Repository<Builder>;
   package: Repository<Package>;
   repo: Repository<Repo>;
+  silencedFailure: Repository<SilencedBuildFailure>;
 }

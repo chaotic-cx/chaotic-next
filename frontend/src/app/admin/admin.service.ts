@@ -35,6 +35,7 @@ export interface PackageFormData {
   pkgrel?: number;
   bump?: number;
   repoId?: number;
+  failureSilenced?: boolean;
 }
 
 export interface ArchPackageFormData {

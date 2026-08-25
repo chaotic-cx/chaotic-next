@@ -5,7 +5,7 @@ import {
   type BuilderDatabaseServiceOptions,
   PENDING_DEPLOYMENT_TIMEOUT_MS,
 } from '@chaotic-next/backend/builder/builder-database.service';
-import { Build, Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
+import { Build, Builder, Package, Repo, SilencedBuildFailure } from '@chaotic-next/backend/builder/builder.entity';
 import type { BuildStatus, DatabasePackageAddedEvent, MoleculerBuildObject } from '@chaotic-next/backend/types/types';
 import type { BuildResourceStats, ChaoticEvent } from '@chaotic-next/shared-lib';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -132,6 +132,7 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
         builder: dataSource.getRepository(Builder),
         package: dataSource.getRepository(Package),
         repo: dataSource.getRepository(Repo),
+        silencedFailure: dataSource.getRepository(SilencedBuildFailure),
       },
       repoManagerService: repoManagerStub as never,
       sseSubject,
@@ -230,6 +231,24 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
 
       expect(sseEvents).toHaveLength(1);
       expect(sseEvents[0].data).toMatchObject({ type: 'build', package: 'yay', status: 3 });
+    });
+
+    it('clears a failure silence when the package fails again', async () => {
+      await dataSource.query(`INSERT INTO silenced_build_failure (pkgname, "silencedAt") VALUES ('firedragon', now())`);
+
+      await service.logBuild(makeCtx('builds.failed', buildEventPayload({ status: 3 as BuildStatus })));
+
+      const silences = await dataSource.query(`SELECT COUNT(*)::int AS c FROM silenced_build_failure`);
+      expect(silences[0].c).toBe(0);
+    });
+
+    it('keeps the silence while the package does not fail', async () => {
+      await dataSource.query(`INSERT INTO silenced_build_failure (pkgname, "silencedAt") VALUES ('firedragon', now())`);
+
+      await service.logBuild(makeCtx('builds.success', buildEventPayload({ status: 0 as BuildStatus })));
+
+      const silences = await dataSource.query(`SELECT COUNT(*)::int AS c FROM silenced_build_failure`);
+      expect(silences[0].c).toBe(1);
     });
 
     it('drops Histogram events', async () => {

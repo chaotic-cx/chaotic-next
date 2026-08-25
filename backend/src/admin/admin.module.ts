@@ -1,7 +1,7 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Builder, Package, Repo } from '../builder/builder.entity';
+import { Builder, Package, Repo, SilencedBuildFailure } from '../builder/builder.entity';
 import { MrAction } from '../gitlab/mr-action.entity';
 import { PipelineTrigger } from '../gitlab/pipeline-trigger.entity';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
@@ -25,6 +25,7 @@ import { AdminService } from './admin.service';
       PipelineTrigger,
       PackageBump,
       PackageElfAnalysis,
+      SilencedBuildFailure,
     ]),
   ],
   providers: [AdminService],

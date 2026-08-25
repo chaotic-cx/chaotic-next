@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -43,6 +43,8 @@ const NO_FOCUSED_PANEL = -1;
 const FIRST_PANEL_INDEX = 0;
 const AUR_UPDATES_TAB = '0';
 const PACKAGE_UPDATES_TAB = '1';
+const HIGHLIGHT_RENDER_DELAY_MS = 100;
+const FLASH_DURATION_MS = 1800;
 
 const TAB_QUERY_PARAMS: Record<'0' | '1', string> = {
   [AUR_UPDATES_TAB]: 'aur',
@@ -59,6 +61,22 @@ function parseNewMrIids(raw: string | null): number[] {
     .split(',')
     .map(Number)
     .filter((iid) => Number.isInteger(iid) && iid > 0);
+}
+
+/**
+ * One step of the notification deep-link flow: judge one batch of linked MRs
+ * against freshly loaded backend data. The dot only turns on when a linked MR
+ * actually exists in the open list; missing ones never produce it. A failed
+ * load decides nothing (`dot: null`) so stale data cannot flip the dot.
+ */
+export function newMrChipDecision(
+  batchIids: number[],
+  loadSucceeded: boolean,
+  renderedIids: ReadonlySet<number>,
+): { dot: boolean | null; highlightIid: number | null } {
+  if (!loadSucceeded || batchIids.length === 0) return { dot: null, highlightIid: null };
+  const present = batchIids.filter((iid) => renderedIids.has(iid));
+  return { dot: present.length > 0, highlightIid: present[0] ?? null };
 }
 
 @Component({
@@ -107,7 +125,8 @@ export class MrOverviewComponent implements OnInit {
 
   protected readonly hasNewMr = signal(false);
   protected readonly presenter = presenter;
-  private readonly newMrIidsToCheck = signal<number[]>([]);
+  private readonly pendingNewMrIids = signal<number[]>([]);
+  private evaluatingNewMrs = false;
 
   protected readonly nvcheckerMrs = computed(() =>
     this.mrOverviewService.mergeRequests().filter((mr) => mr.labels.includes('nvchecker')),
@@ -145,22 +164,57 @@ export class MrOverviewComponent implements OnInit {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const iids = parseNewMrIids(params.get('newMr'));
       if (iids.length === 0) return;
-      this.newMrIidsToCheck.set(iids);
-      void this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { newMr: null },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
+      this.pendingNewMrIids.update((pending) => [...new Set([...pending, ...iids])]);
+      void this.router
+        .navigate([], {
+          relativeTo: this.route,
+          queryParams: { newMr: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        })
+        .then(() => this.evaluatePendingNewMrs());
     });
+  }
 
-    effect(() => {
-      const iids = this.newMrIidsToCheck();
-      if (iids.length === 0) return;
-      const visibleIids = new Set(this.mrOverviewService.mergeRequests().map((mr) => mr.iid));
-      if (iids.some((iid) => !visibleIids.has(iid))) this.hasNewMr.set(true);
-      this.newMrIidsToCheck.set([]);
-    });
+  /**
+   * Decides the new-MR dot from freshly loaded backend data only: the dot
+   * appears when a linked MR is part of the open list, and stays off when the
+   * MR no longer exists. Failed loads keep the pending iids for the next try.
+   */
+  private async evaluatePendingNewMrs(): Promise<void> {
+    if (this.evaluatingNewMrs) return;
+    this.evaluatingNewMrs = true;
+    try {
+      while (untracked(this.pendingNewMrIids).length > 0) {
+        const iids = untracked(this.pendingNewMrIids);
+        const loaded = await this.mrOverviewService.loadOpenMrs();
+        const rendered = new Set(untracked(this.mrOverviewService.mergeRequests).map((mr) => mr.iid));
+        const decision = newMrChipDecision(iids, loaded, rendered);
+        if (decision.dot !== null) this.hasNewMr.set(decision.dot);
+        if (decision.highlightIid !== null) this.highlightLinkedMr(decision.highlightIid);
+        if (!loaded) return;
+        this.pendingNewMrIids.update((pending) => pending.filter((iid) => !iids.includes(iid)));
+      }
+    } finally {
+      this.evaluatingNewMrs = false;
+    }
+  }
+
+  private highlightLinkedMr(iid: number): void {
+    const mr = untracked(this.mrOverviewService.mergeRequests).find((candidate) => candidate.iid === iid);
+    if (!mr) return;
+    this.activeTabValue.set(mr.labels.includes('nvchecker') ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB);
+
+    // Let Angular render the freshly loaded list before touching the DOM.
+    window.setTimeout(() => this.flashMrPanel(iid), HIGHLIGHT_RENDER_DELAY_MS);
+  }
+
+  private flashMrPanel(iid: number): void {
+    const panel = this.hostElement.querySelector<HTMLElement>(`[data-mr-panel][data-mr-iid="${iid}"]`);
+    if (!panel) return;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    panel.classList.add('new-mr-flash');
+    window.setTimeout(() => panel.classList.remove('new-mr-flash'), FLASH_DURATION_MS);
   }
 
   private readonly focusedMrs = computed<MergeRequestWithDiffs[]>(() =>
@@ -202,8 +256,15 @@ export class MrOverviewComponent implements OnInit {
     panel?.focus();
   }
 
-  protected refreshMrs(): void {
-    void this.mrOverviewService.loadOpenMrs();
+  protected async refreshMrs(): Promise<void> {
+    if (untracked(this.pendingNewMrIids).length > 0) {
+      await this.evaluatePendingNewMrs();
+      return;
+    }
+
+    // Everything the backend offers is now rendered, so an arrival hint is obsolete.
+    await this.mrOverviewService.loadOpenMrs();
+    this.hasNewMr.set(false);
   }
 
   protected onTabChange(value: string | number | undefined): void {

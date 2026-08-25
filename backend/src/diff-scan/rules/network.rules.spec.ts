@@ -79,6 +79,18 @@ describe('network rules', () => {
     expect(ruleById(NETWORK_RULES, 'NET-001').check(change)).toBeNull();
   });
 
+  it('does not flag a plain-http url= homepage for NET-001', () => {
+    const change = makeChange(
+      addedOnlyDiff(["url='http://www.example.com/'", 'source=("https://files.example/pkg-$pkgver.tar.gz")']),
+    );
+    expect(ruleById(NETWORK_RULES, 'NET-001').check(change)).toBeNull();
+  });
+
+  it('does not flag http mentions outside source entries for NET-001', () => {
+    const change = makeChange(addedOnlyDiff(['# See http://example.org/changelog', 'makedepends=("http-parser")']));
+    expect(ruleById(NETWORK_RULES, 'NET-001').check(change)).toBeNull();
+  });
+
   it('does not flag loopback IP URLs for URL-001', () => {
     const change = makeChange(addedOnlyDiff(['curl http://127.0.0.1:8080/health']));
     expect(ruleById(NETWORK_RULES, 'URL-001').check(change)).toBeNull();

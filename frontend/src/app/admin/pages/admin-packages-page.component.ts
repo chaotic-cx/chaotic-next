@@ -52,6 +52,7 @@ interface PackageFormModel {
   pkgname: string;
   isActive: boolean;
   skipSignalScan: boolean;
+  failureSilenced: boolean;
   version: string;
   pkgrel: string;
   bump: string;
@@ -204,6 +205,14 @@ const NO_REPO = '0';
               } @else {
                 <p-tag value="Inactive" severity="secondary" />
               }
+              @if (pkg.failureSilenced) {
+                <p-tag
+                  value="Silenced"
+                  severity="warn"
+                  pTooltip="Failure silenced until the next failing build"
+                  tooltipPosition="left"
+                />
+              }
             </td>
             <td class="cell-actions">
               <div class="flex flex-nowrap items-center gap-1 sm:gap-2">
@@ -318,6 +327,23 @@ const NO_REPO = '0';
           <div class="flex items-center gap-2">
             <p-checkbox [formField]="packageForm.skipSignalScan" [binary]="true" inputId="pkgSkipScan" />
             <label class="text-ctp-text text-sm" for="pkgSkipScan">Skip signal scan</label>
+          </div>
+          <div class="flex items-center gap-2">
+            <p-checkbox
+              [formField]="packageForm.failureSilenced"
+              [binary]="true"
+              inputId="pkgFailureSilenced"
+              pTooltip="Hides the package from 'Failed builds with no more recent success' until it fails again"
+              tooltipPosition="top"
+            />
+            <label
+              class="text-ctp-text text-sm cursor-help"
+              for="pkgFailureSilenced"
+              pTooltip="Hides the package from 'Failed builds with no more recent success' until it fails again"
+              tooltipPosition="top"
+            >
+              Silence failed build
+            </label>
           </div>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -651,6 +677,7 @@ export class AdminPackagesPageComponent {
       pkgname: pkg.pkgname,
       isActive: pkg.isActive,
       skipSignalScan: pkg.skipSignalScan ?? false,
+      failureSilenced: pkg.failureSilenced ?? false,
       version: pkg.version ?? '',
       pkgrel: pkg.pkgrel === undefined ? '' : String(pkg.pkgrel),
       bump: pkg.bump === undefined ? '' : String(pkg.bump),
@@ -756,6 +783,7 @@ export class AdminPackagesPageComponent {
       pkgname: model.pkgname,
       isActive: model.isActive,
       skipSignalScan: model.skipSignalScan,
+      failureSilenced: model.failureSilenced,
       version: model.version === '' ? undefined : model.version,
       pkgrel: model.pkgrel === '' ? undefined : Number(model.pkgrel),
       bump: model.bump === '' ? undefined : Number(model.bump),
@@ -765,5 +793,14 @@ export class AdminPackagesPageComponent {
 }
 
 function emptyModel(): PackageFormModel {
-  return { pkgname: '', isActive: true, skipSignalScan: false, version: '', pkgrel: '', bump: '', repoId: NO_REPO };
+  return {
+    pkgname: '',
+    isActive: true,
+    skipSignalScan: false,
+    failureSilenced: false,
+    version: '',
+    pkgrel: '',
+    bump: '',
+    repoId: NO_REPO,
+  };
 }

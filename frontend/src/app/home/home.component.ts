@@ -6,7 +6,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Package, Paginated } from '@chaotic-next/shared-lib';
+import { Package, Paginated, PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { AnimateOnScrollModule } from '@openng/optimus-ui/animateonscroll';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
@@ -14,7 +14,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { firstValueFrom, map } from 'rxjs';
 import { AppService } from '../app.service';
 import { BuildStatusService } from '../build-status/build-status.service';
-import { PACKAGE_NAME_PATTERN, parseFocusQuery } from '../functions';
+import { parseFocusQuery } from '../functions';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { MirrorsService } from '../mirrors/mirrors.service';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
@@ -59,7 +59,7 @@ export class HomeComponent {
   protected readonly searchModel = signal({ query: '' });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {
     debounce(schemaPath.query, 300);
-    pattern(schemaPath.query, PACKAGE_NAME_PATTERN, { message: 'Invalid package name' });
+    pattern(schemaPath.query, PKGNAME_PATTERN, { message: 'Invalid package name' });
   });
 
   protected readonly suggestions = signal<string[]>([]);

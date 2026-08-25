@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RouterHit } from '../router/router-hit.entity';
 import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { SignalScanService } from '../repo-manager/scan';
-import { Package } from './builder.entity';
+import { Package, SilencedBuildFailure } from './builder.entity';
 import { DatabaseCleanupService } from './database-cleanup.service';
 
 function mockUpdateQueryBuilder({ affected }: { affected: number }) {
@@ -297,5 +297,48 @@ describe('DatabaseCleanupService', () => {
     const service = new DatabaseCleanupService(packageRepository, analysisRepository, dataSource, signalScanService);
 
     await expect(service.purgeOldRouterHits()).resolves.toBeUndefined();
+  });
+
+  describe('purgeOrphanedFailureSilences', () => {
+    it('deletes silences whose package is not active anymore', async () => {
+      const silencedRepo = {
+        createQueryBuilder: vi.fn(() => mockDeleteQueryBuilder(3)),
+      };
+      const dataSource = {
+        getRepository: vi.fn((entity) => (entity === SilencedBuildFailure ? silencedRepo : {})),
+      } as unknown as DataSource;
+      const service = new DatabaseCleanupService(
+        {} as unknown as Repository<Package>,
+        {} as unknown as Repository<PackageElfAnalysis>,
+        dataSource,
+        createSignalScanStub(),
+      );
+
+      await service.purgeOrphanedFailureSilences();
+
+      expect(dataSource.getRepository).toHaveBeenCalledWith(SilencedBuildFailure);
+      const qb = silencedRepo.createQueryBuilder.mock.results[0]?.value;
+      expect(qb.where).toHaveBeenCalledWith(expect.stringContaining('p.pkgname = "silenced_build_failure"."pkgname"'));
+      expect(qb.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs and swallows purge errors', async () => {
+      const silencedRepo = {
+        createQueryBuilder: vi.fn(() => {
+          throw new Error('db down');
+        }),
+      };
+      const dataSource = {
+        getRepository: vi.fn(() => silencedRepo),
+      } as unknown as DataSource;
+      const service = new DatabaseCleanupService(
+        {} as unknown as Repository<Package>,
+        {} as unknown as Repository<PackageElfAnalysis>,
+        dataSource,
+        createSignalScanStub(),
+      );
+
+      await expect(service.purgeOrphanedFailureSilences()).resolves.toBeUndefined();
+    });
   });
 });
