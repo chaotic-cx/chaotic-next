@@ -47,7 +47,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { SkipThrottle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { AuthGuard, OptionalAuth, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
 import { auth } from '../auth/auth';
@@ -55,6 +55,13 @@ import { GITLAB_GROUP_CHAOTIC_AUR } from '../auth/gitlab-groups';
 import { RequireGroups, RequireRepoGroup } from '../decorators/require-groups.decorator';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { RequireGroupGuard } from '../guards/require-group.guard';
+import {
+  AUR_SCAN_THROTTLE_LIMIT,
+  AUR_SCAN_THROTTLE_TTL_MS,
+  AUR_SEARCH_THROTTLE_LIMIT,
+  EXTERNAL_PROXY_THROTTLE_TTL_MS,
+  PIPELINE_JOBS_THROTTLE_LIMIT,
+} from '../utils/constants';
 import { type SseMessage } from '../utils/sse';
 import {
   AurPackageScanDto,
@@ -125,6 +132,7 @@ export class GitlabController {
 
   @Post('aur-scan')
   @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { ttl: AUR_SCAN_THROTTLE_TTL_MS, limit: AUR_SCAN_THROTTLE_LIMIT } })
   @UseGuards(AuthGuard)
   @OptionalAuth()
   @ApiCookieAuth('better-auth.session_token')
@@ -163,6 +171,7 @@ export class GitlabController {
   }
 
   @Get('aur-search')
+  @Throttle({ default: { ttl: EXTERNAL_PROXY_THROTTLE_TTL_MS, limit: AUR_SEARCH_THROTTLE_LIMIT } })
   @ApiOperation({ summary: 'Search AUR for packages matching a query.' })
   @ApiOkResponse({
     description: 'Array of AUR package names matching the search query.',
@@ -181,6 +190,7 @@ export class GitlabController {
   }
 
   @Get('pipelines/:pipelineId/jobs')
+  @Throttle({ default: { ttl: EXTERNAL_PROXY_THROTTLE_TTL_MS, limit: PIPELINE_JOBS_THROTTLE_LIMIT } })
   @ApiOperation({ summary: 'Get the jobs of a GitLab pipeline.' })
   @ApiOkResponse({ description: 'List of jobs', type: GitlabJobDto, isArray: true })
   async getPipelineJobs(@Param('pipelineId', ParseIntPipe) pipelineId: number): Promise<GitlabJob[]> {
