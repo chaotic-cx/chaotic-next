@@ -11,10 +11,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { filter, Observable, Subject } from 'rxjs';
 import { Repository } from 'typeorm';
 import { errorMessage, mapWithConcurrency } from '../utils/functions';
-import { withSseKeepalive, type SseMessage } from '../utils/sse';
+import { type SseMessage, withSseKeepalive } from '../utils/sse';
+import { AurAuthService } from './aur-auth.service';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
 import { AurResponseCache } from './aur-response-cache';
-import { AurAuthService } from './aur-auth.service';
 import { DiffScanService } from './diff-scan.service';
 import type { ScanIndicator } from './indicators';
 import { extractIndicators } from './indicators';
@@ -370,30 +370,40 @@ export class AurScanService {
     files: { name: string; content: string }[];
     skippedBinaryFiles: string[];
   }> {
+    const paths = (await this.listRepoPaths(packageBase)).slice(0, MAX_SCANNED_FILES);
+    const fetched = await Promise.all(paths.map((path) => this.fetchRepoFile(path, packageBase)));
+
     const files: { name: string; content: string }[] = [];
     const skippedBinaryFiles: string[] = [];
-    const paths = await this.listRepoPaths(packageBase);
-
-    for (const path of paths) {
-      if (files.length >= MAX_SCANNED_FILES) break;
-
-      const url = `${AUR_FILE_URL}/${path.split('/').map(encodeURIComponent).join('/')}?h=${encodeURIComponent(packageBase)}`;
-      try {
-        const response = await this.fetchAur(url);
-        if (!response.ok) continue;
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        if (!looksTextual(bytes) || bytes.length > MAX_FILE_BYTES) {
-          skippedBinaryFiles.push(path);
-          continue;
-        }
-        const content = new TextDecoder().decode(bytes);
-        files.push({ name: path, content });
-        this.logger.debug(`Fetched ${url} for scanning (${bytes.length} bytes)`);
-      } catch (err) {
-        this.logger.debug(`Skipping repo file ${path}: ${errorMessage(err)}`);
+    for (const [index, file] of fetched.entries()) {
+      const path = paths[index];
+      if (file === undefined) continue;
+      if ('binary' in file) {
+        skippedBinaryFiles.push(path);
+        continue;
       }
+      files.push({ name: path, content: file.content });
     }
     return { files, skippedBinaryFiles };
+  }
+
+  private async fetchRepoFile(
+    path: string,
+    packageBase: string,
+  ): Promise<{ content: string } | { binary: true } | undefined> {
+    const url = `${AUR_FILE_URL}/${path.split('/').map(encodeURIComponent).join('/')}?h=${encodeURIComponent(packageBase)}`;
+    try {
+      const response = await this.fetchAur(url);
+      if (!response.ok) return undefined;
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (!looksTextual(bytes) || bytes.length > MAX_FILE_BYTES) return { binary: true };
+      const content = new TextDecoder().decode(bytes);
+      this.logger.debug(`Fetched ${url} for scanning (${bytes.length} bytes)`);
+      return { content };
+    } catch (err) {
+      this.logger.debug(`Skipping repo file ${path}: ${errorMessage(err)}`);
+      return undefined;
+    }
   }
 
   /** Walks the cgit tree listing, recursing into subdirectories up to a small depth. */

@@ -1,10 +1,14 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
 import type { AurPackageScan, AurScanStreamChunk } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { ResilientSseStream } from '../sse-stream';
+
+const HTTP_TOO_MANY_REQUESTS = 429;
+const GENERIC_SCAN_ERROR_MESSAGE = 'Could not scan the AUR package. Does it exist?';
+const RATE_LIMITED_SCAN_ERROR_MESSAGE = 'Too many scans have been started. Please wait a minute and try again.';
 
 export function isScanSettled(scan: AurPackageScan | undefined): boolean {
   return scan?.status === 'done' || scan?.status === 'failed';
@@ -34,9 +38,15 @@ export class AurScanService {
       this.store(scan);
       if (!isScanSettled(scan)) this.openStream(scan.packageName);
     } catch (error) {
-      this.messageToastService.error('Scan failed', 'Could not scan the AUR package. Does it exist?');
+      this.messageToastService.error('Scan failed', this.errorMessageFor(error));
       console.error('AUR scan failed:', error);
     }
+  }
+
+  private errorMessageFor(error: unknown): string {
+    return error instanceof HttpErrorResponse && error.status === HTTP_TOO_MANY_REQUESTS
+      ? RATE_LIMITED_SCAN_ERROR_MESSAGE
+      : GENERIC_SCAN_ERROR_MESSAGE;
   }
 
   private openStream(packageName: string): void {

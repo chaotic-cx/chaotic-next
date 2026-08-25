@@ -1,5 +1,5 @@
 import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { isInScope, visibleFileLines, type RuleScope } from './rules/diff-utils';
+import { isInScope, type RuleScope, visibleFileLines } from './rules/diff-utils';
 
 const PKGBUILD_SCOPE: RuleScope[] = ['pkgbuild'];
 const REPUTABLE_HOSTS = [
@@ -282,9 +282,9 @@ function applyParameterOperation(match: string, operation: string, value: string
     const body = operation.slice(isAll ? 2 : 1);
     const separator = body.indexOf('/');
     const pattern = separator === -1 ? body : body.slice(0, separator);
-    const with_ = separator === -1 ? '' : body.slice(separator + 1);
+    const replacementText = separator === -1 ? '' : body.slice(separator + 1);
     if (!isLiteralPattern(pattern)) return `\u0000${match}`;
-    return isAll ? value.split(pattern).join(with_) : value.replace(pattern, with_);
+    return isAll ? value.split(pattern).join(replacementText) : value.replace(pattern, replacementText);
   }
 
   return `\u0000${match}`;

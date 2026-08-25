@@ -30,6 +30,15 @@ export const METRICS_CACHE_TTL_MS = 21_600_000;
 export const THROTTLE_TTL_MS = 60_000;
 export const THROTTLE_LIMIT = 100;
 
+/** AUR scan throttling: each scan fans out to multiple aur.archlinux.org requests. */
+export const AUR_SCAN_THROTTLE_TTL_MS = 60_000;
+export const AUR_SCAN_THROTTLE_LIMIT = 5;
+
+/** Throttling for endpoints that proxy to external services. */
+export const EXTERNAL_PROXY_THROTTLE_TTL_MS = 60_000;
+export const AUR_SEARCH_THROTTLE_LIMIT = 20;
+export const PIPELINE_JOBS_THROTTLE_LIMIT = 30;
+
 /** Bounds for user-supplied query windows and pagination. */
 export const MAX_DAYS_WINDOW = 3650;
 /** Bit sample size (log2 registers) for per-day distinct-user HyperLogLog sketches. */
