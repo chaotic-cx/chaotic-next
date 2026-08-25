@@ -58,6 +58,7 @@ export type BuildSeed = Partial<
 > & {
   buildClass?: string | null;
   resourceStats?: Partial<BuildResourceUsage>;
+  timestamp?: string;
 };
 
 export type ArchPackageSeed = Partial<
@@ -232,6 +233,7 @@ export const TABLES_TO_RESET = [
   'package_bump',
   'package_elf_analysis',
   'build',
+  'silenced_build_failure',
   'package',
   'archlinux_package',
   'builder',
@@ -382,6 +384,7 @@ async function seedBuild(dataSource: DataSource, overrides: BuildSeed | undefine
     commit: overrides?.commit ?? '4a70b438f76d5c8f6f739ea110f8c071efe8067f',
     timeToEnd: overrides?.timeToEnd ?? 1.5,
     replaced: overrides?.replaced ?? false,
+    ...(overrides?.timestamp === undefined ? {} : { timestamp: overrides.timestamp }),
     resourceStats: overrides?.resourceStats
       ? Object.assign(new BuildResourceUsage(), overrides.resourceStats)
       : undefined,

@@ -86,6 +86,8 @@ export interface Package {
   repo?: number;
   /** Repository name, resolved server-side when the repo relation is joined. */
   reponame?: string;
+  /** Whether the package's unresolved build failure is silenced; resolved server-side for admin views. */
+  failureSilenced?: boolean;
   /**
    * Build class derived from the package's averaged build resource usage,
    * resolved server-side for admin views; null when nothing was ever sampled.
@@ -561,6 +563,39 @@ export const STATUS_DISPLAY_NAMES: Record<BuildStatus, string> = {
   [BuildStatus.CANCELED_REQUEUE]: 'Canceled Requeue',
   [BuildStatus.SOFTWARE_FAILURE]: 'Software Failure',
 };
+
+export const BUILD_FAILURE_STATUSES: readonly BuildStatus[] = [
+  BuildStatus.FAILED,
+  BuildStatus.TIMED_OUT,
+  BuildStatus.SOFTWARE_FAILURE,
+];
+
+export const BUILD_SUCCESS_STATUSES: readonly BuildStatus[] = [
+  BuildStatus.SUCCESS,
+  BuildStatus.ALREADY_BUILT,
+  BuildStatus.SKIPPED,
+];
+
+export const BUILD_VERDICT_STATUSES: readonly BuildStatus[] = [...BUILD_SUCCESS_STATUSES, ...BUILD_FAILURE_STATUSES];
+
+export interface UnresolvedFailedBuild {
+  pkgname: string;
+  status: BuildStatus;
+  statusText: string;
+  timestamp: string;
+  streakStartedAt: string;
+  logUrl: string | null;
+  consecutiveFailures: number;
+  silenced: boolean;
+}
+
+export interface ShouldBuildDecision {
+  shouldBuild: boolean;
+  consecutiveFailures: number;
+}
+
+export const BUILD_RATE_LIMIT_FAILURE_STREAK = 5;
+export const BUILD_RATE_LIMIT_RETRY_HOURS = 24;
 
 export enum RepoStatus {
   ACTIVE = 0,

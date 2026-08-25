@@ -7,8 +7,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Card } from '@openng/optimus-ui/card';
 import { firstValueFrom } from 'rxjs';
+import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { AppService } from '../../app.service';
-import { PACKAGE_NAME_PATTERN } from '../../functions';
 import { TitleComponent } from '../../title/title.component';
 import { AurScanResultComponent } from '../aur-scan-result.component';
 import { AurScanService } from '../aur-scan.service';
@@ -38,7 +38,7 @@ export class AurScanPageComponent implements OnInit {
   protected readonly searchModel = signal({ query: '' });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {
     debounce(schemaPath.query, 300);
-    pattern(schemaPath.query, PACKAGE_NAME_PATTERN, { message: 'Invalid package name' });
+    pattern(schemaPath.query, PKGNAME_PATTERN, { message: 'Invalid package name' });
   });
 
   protected readonly suggestions = signal<string[]>([]);

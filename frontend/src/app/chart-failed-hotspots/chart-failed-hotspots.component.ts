@@ -2,9 +2,10 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import { UIChart } from '@openng/optimus-ui/chart';
-import { AppService } from '../app.service';
+import { AppService, ALL_TIME_DAYS } from '../app.service';
 import { type ChartConfig, mochaAxisChartOptions } from '../chart-config';
 import { isMobileSignal, parseCount, resourceValue, truncateLabel } from '../functions';
+import { StatsService } from '../stats/stats.service';
 
 const TOP_PACKAGES = 12;
 
@@ -16,9 +17,10 @@ const TOP_PACKAGES = 12;
 })
 export class ChartFailedHotspotsComponent {
   private readonly appService = inject(AppService);
+  private readonly statsService = inject(StatsService);
 
   private readonly resource = httpResource<{ pkgname: string; count: string }[]>(() =>
-    this.appService.getTopFailedBuildsResourceRequest(TOP_PACKAGES),
+    this.appService.getTopFailedBuildsResourceRequest(TOP_PACKAGES, this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
   );
 
   readonly loading = this.resource.isLoading;

@@ -266,6 +266,21 @@ export class Build {
   resourceStats!: BuildResourceUsage;
 }
 
+@Entity('silenced_build_failure')
+@Index('IDX_silenced_build_failure_pkgname', ['pkgname'], { unique: true })
+export class SilencedBuildFailure {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @ApiProperty({ description: 'Package whose failing state is silenced' })
+  @Column('varchar')
+  pkgname!: string;
+
+  @ApiProperty({ description: 'When the failure was silenced (ISO 8601)' })
+  @CreateDateColumn()
+  silencedAt!: string;
+}
+
 /**
  * Keeps `Builder.lastActive` current: every inserted build touches its builder.
  * Registered explicitly via the `subscribers` array in the DataSource options.

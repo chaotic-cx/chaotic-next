@@ -48,4 +48,127 @@ describe('parsePkgbuild', () => {
     expect(entry?.url).toBe('https://download.example.org/releases/downloads/demo.tar.xz');
     expect(entry?.host).toBe('download.example.org');
   });
+
+  it('expands bash substring operations like ${commit::7} in source entries', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+_commit=fee63112daf6ca7130c71997ce56fe381cdffcca',
+        '+_ext=tar.gz',
+        '+source=("runtime-${_commit::7}.$_ext"::"https://github.com/org/repo/archive/$_commit.$_ext")',
+      ].join('\n'),
+    );
+
+    const entry = parsePkgbuild(change)?.entries[0];
+    expect(entry?.fileName).toBe('runtime-fee6311.tar.gz');
+    expect(entry?.raw).toBe(
+      'runtime-fee6311.tar.gz::https://github.com/org/repo/archive/fee63112daf6ca7130c71997ce56fe381cdffcca.tar.gz',
+    );
+    expect(entry?.host).toBe('github.com');
+  });
+
+  it('resolves option variables declared with the ": ${var:=default}" idiom', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,3 @@',
+        `+: "\${_branch:=daily-1039}"`,
+        '+source=("https://example.org/snapshots/${_branch}.tar.zst")',
+      ].join('\n'),
+    );
+
+    expect(parsePkgbuild(change)?.entries[0]?.raw).toBe('https://example.org/snapshots/daily-1039.tar.zst');
+  });
+
+  it('uses the first element of pkgname arrays for ${pkgname}, as bash does', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,3 @@',
+        "+pkgname=('shelly' 'shelly-flatpak-backend')",
+        '+pkgver=3.1.0',
+        '+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/org/repo/archive/v${pkgver}.tar.gz")',
+      ].join('\n'),
+    );
+
+    const entry = parsePkgbuild(change)?.entries[0];
+    expect(entry?.fileName).toBe('shelly-3.1.0.tar.gz');
+    expect(entry?.url).toBe('https://github.com/org/repo/archive/v3.1.0.tar.gz');
+  });
+
+  it('resolves variables through other variables (pkgname=$_pkgname)', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+_pkgname=demo',
+        '+pkgname="$_pkgname"',
+        '+pkgver=2.0',
+        '+source=("https://files.example/$pkgname-$pkgver.zip")',
+      ].join('\n'),
+    );
+
+    expect(parsePkgbuild(change)?.entries[0]?.raw).toBe('https://files.example/demo-2.0.zip');
+  });
+
+  it("does not split filename::url at the '::' inside an unresolved ${var::n}", () => {
+    const change = makeChange(
+      ['@@ -0,0 +1,2 @@', '+_commit=$(git rev-parse HEAD)', '+source=("${_commit::7}.tar.gz"::"https://f.org/x")'].join(
+        '\n',
+      ),
+    );
+
+    const entry = parsePkgbuild(change)?.entries[0];
+    expect(entry?.fileName).toBe('${_commit::7}.tar.gz');
+    expect(entry?.url).toBe('https://f.org/x');
+  });
+
+  it('expands pattern replacement like ${pkgver//./-} in source entries (freeipa)', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,3 @@',
+        '+pkgbase=freeipa',
+        '+pkgver=4.13.3',
+        '+source=("https://codeberg.org/${pkgbase}/${pkgbase}/releases/download/release-${pkgver//./-}/${pkgbase}-${pkgver}.tar.gz"{,.asc})',
+      ].join('\n'),
+    );
+
+    expect(parsePkgbuild(change)?.entries[0]?.raw).toBe(
+      'https://codeberg.org/freeipa/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz{,.asc}',
+    );
+  });
+
+  it('handles single-occurrence replacement and anchored trims', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,2 @@',
+        '+_name=pkg-tool',
+        '+source=("https://files.example/${_name/pkg-tool/pkg}" "${_name#pkg-}.tar.gz" "archive/${_name%-tool}.zip")',
+      ].join('\n'),
+    );
+    const entries = parsePkgbuild(change)?.entries.map((entry) => entry.raw) ?? [];
+
+    expect(entries).toEqual(['https://files.example/pkg', 'tool.tar.gz', 'archive/pkg.zip']);
+  });
+
+  it('keeps glob patterns unresolvable instead of guessing', () => {
+    const change = makeChange(
+      ['@@ -0,0 +1,2 @@', '+_tag=v1', '+source=("https://files.example/${_tag//*/x}.tar.gz")'].join('\n'),
+    );
+
+    expect(parsePkgbuild(change)?.entries[0]?.raw).toBe('https://files.example/${_tag//*/x}.tar.gz');
+  });
+
+  it('ignores variables assigned inside function bodies', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,5 @@',
+        '+pkgver() {',
+        '+  pkgver=9.9.9',
+        '+}',
+        '+source=("https://files.example/$pkgname-$pkgver.zip")',
+      ].join('\n'),
+    );
+    const parsed = parsePkgbuild(change);
+
+    expect(parsed?.vars.get('pkgver')).toBeUndefined();
+    expect(parsed?.entries[0]?.raw).toContain('$pkgver');
+  });
 });

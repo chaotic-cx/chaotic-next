@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 import { BuildStatus } from '@chaotic-next/shared-lib';
 
 export class GetPackagesQueryDto {
@@ -214,6 +214,79 @@ export class FailedBuildOverTimeDto {
   @ApiProperty({ description: 'Number of failed builds' })
   @IsString()
   count!: string;
+}
+
+export class ShouldBuildDto {
+  @ApiProperty({ description: 'Whether dispatching a build is likely to succeed' })
+  @IsBoolean()
+  shouldBuild!: boolean;
+
+  @ApiProperty({ description: 'Consecutive failures behind the decision' })
+  @IsInt()
+  consecutiveFailures!: number;
+}
+
+export class FlakyPackageDto {
+  @ApiProperty({ description: 'Package name' })
+  @IsString()
+  pkgname!: string;
+
+  @ApiProperty({ description: 'Genuine build attempts inside the window' })
+  @IsInt()
+  attempts!: number;
+
+  @ApiProperty({ description: 'Failed builds inside the window' })
+  @IsInt()
+  failures!: number;
+
+  @ApiProperty({ description: 'Failure rate from 0 to 1' })
+  @IsNumber()
+  flakiness!: number;
+}
+
+export class BuilderUtilizationDto {
+  @ApiProperty({ description: 'Builder name' })
+  @IsString()
+  builder!: string;
+
+  @ApiProperty({ description: 'UTC hour of day (0-23)' })
+  @IsInt()
+  hour!: number;
+
+  @ApiProperty({ description: 'Builds inside the window for this builder and hour bucket' })
+  @IsInt()
+  count!: number;
+}
+
+export class UnresolvedFailedBuildDto {
+  @ApiProperty({ description: 'Package name' })
+  @IsString()
+  pkgname!: string;
+
+  @ApiProperty({ description: 'Numeric build status of the latest failing build' })
+  @IsInt()
+  status!: number;
+
+  @ApiProperty({ description: 'Human-readable status label' })
+  @IsString()
+  statusText!: string;
+
+  @ApiProperty({ description: 'When the latest failing build happened (ISO 8601)' })
+  @IsString()
+  timestamp!: string;
+
+  @ApiProperty({ description: 'Build log URL, when present', nullable: true })
+  @IsOptional()
+  @IsString()
+  logUrl!: string | null;
+
+  @ApiProperty({ description: 'Failing builds since the last resolving one' })
+  @IsInt()
+  consecutiveFailures!: number;
+
+  @ApiProperty({ description: 'Whether the failure is silenced until its next failure' })
+  @IsBoolean()
+  silenced!: boolean;
 }
 
 export class HeavyPackageDto {

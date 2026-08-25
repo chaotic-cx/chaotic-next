@@ -8,7 +8,7 @@ import {
   type PackageSortField,
   type SortOrder,
 } from '@chaotic-next/shared-lib';
-import { Subject } from 'rxjs';
+import { lastValueFrom, Subject } from 'rxjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
 import { type ResourceMetricKey } from './chart-resource-metrics';
@@ -157,16 +157,48 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/average/per-day/${days}` };
   }
 
-  getTopFailedBuildsResourceRequest(amount: number): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/builder/builds/failed/top/${amount}` };
+  getTopFailedBuildsResourceRequest(amount: number, days?: number): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.backendUrl}/builder/builds/failed/top/${amount}`,
+      params: this.daysParams(days),
+    };
   }
 
   getFailedBuildsOverTimeResourceRequest(amount: number, days: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/builds/failed/over-time/${amount}/${days}` };
   }
 
+  getUnresolvedFailedBuildsResourceRequest(days?: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/builds/failed/unresolved`, params: this.daysParams(days) };
+  }
+
+  async silenceUnresolvedFailedBuild(pkgname: string): Promise<void> {
+    await lastValueFrom(
+      this.http.post(
+        `${this.appConfig.backendUrl}/builder/builds/failed/unresolved/${encodeURIComponent(pkgname)}/silence`,
+        {},
+      ),
+    );
+  }
+
+  async unsilenceUnresolvedFailedBuild(pkgname: string): Promise<void> {
+    await lastValueFrom(
+      this.http.delete(
+        `${this.appConfig.backendUrl}/builder/builds/failed/unresolved/${encodeURIComponent(pkgname)}/silence`,
+      ),
+    );
+  }
+
   getHeavyPackagesResourceRequest(amount: number, days: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/stats/heavy-packages/${amount}/${days}` };
+  }
+
+  getFlakiestPackagesResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/stats/flaky-packages/${days}` };
+  }
+
+  getBuilderUtilizationResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/stats/builder-utilization/${days}` };
   }
 
   getPackagesPerBuildClassRequest(days: number): HttpResourceRequest {

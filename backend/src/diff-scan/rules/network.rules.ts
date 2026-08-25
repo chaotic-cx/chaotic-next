@@ -1,4 +1,5 @@
 import { addedLines, isCommentLine, isInScope } from './diff-utils';
+import { parsePkgbuild } from '../pkgbuild';
 import { listRule, regexRule, type Rule } from './rule';
 
 const SHORTENER_HOSTS = ['bit.ly', 'cutt.ly', 'goo.gl', 'is.gd', 'rb.gy', 't.co', 'tinyurl.com'];
@@ -203,12 +204,17 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     scopes: ['install'],
     skipQuoted: true,
   }),
-  regexRule({
+  {
     id: 'NET-001',
     name: 'Unencrypted HTTP URL',
     severity: 'info',
-    description: 'Uses plain HTTP, which allows interception of downloads; prefer HTTPS sources.',
-    pattern: /\bhttp:\/\//,
-    scopes: ['pkgbuild'],
-  }),
+    description:
+      'Downloads a package source over plain HTTP, which allows interception of the artifact; prefer HTTPS sources.',
+    // Only the source= entries are judged; a plain-http url= homepage says
+    // nothing about how the build artifacts are fetched.
+    check(change) {
+      const entry = parsePkgbuild(change)?.entries.find((candidate) => candidate.url.startsWith('http://'));
+      return entry ? { line: entry.line, match: entry.raw } : null;
+    },
+  },
 ];

@@ -1,0 +1,91 @@
+<div class="card flex h-[20rem] flex-col">
+  @if (hasData()) {
+    <div class="flex items-center justify-between px-1 pb-2">
+      <span class="text-sm text-ctp-subtext0">
+        {{ activeCount() }} package{{ activeCount() === 1 ? '' : 's' }} failing
+      </span>
+      @if (isLoggedIn() && silencedCount() > 0) {
+        <button
+          class="cursor-pointer text-xs text-ctp-overlay1 hover:text-ctp-text"
+          (click)="showSilenced.set(!showSilenced())"
+          type="button"
+        >
+          @if (showSilenced()) {
+            Hide silenced
+          } @else {
+            Show silenced ({{ silencedCount() }})
+          }
+        </button>
+      }
+    </div>
+    <ul class="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1" aria-live="polite">
+      @for (row of visibleRows(); track row.pkgname) {
+        <li
+          class="flex items-center gap-2 rounded-lg bg-ctp-surface0/60 px-2.5 py-1.5 text-sm"
+          [class.opacity-50]="row.silenced"
+        >
+          <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="statusColor(row.status)"></span>
+          <span class="min-w-0 truncate font-medium text-ctp-text" [title]="row.pkgname">{{ row.pkgname }}</span>
+          @if (isRateLimited(row)) {
+            <i
+              class="pi pi-bolt shrink-0 text-ctp-yellow"
+              pTooltip="Rate limited: skipped by the build dispatcher until its next retry"
+              tooltipPosition="top"
+            ></i>
+          }
+          @if (row.consecutiveFailures >= 2) {
+            <span
+              class="shrink-0 rounded-md bg-ctp-surface1 px-1.5 py-0.5 text-xs text-ctp-red"
+              [pTooltip]="streakTooltip(row)"
+              tooltipPosition="top"
+            >
+              ×{{ row.consecutiveFailures }} · {{ streakDurationLabel(row.streakStartedAt) }}
+            </span>
+          }
+          <span class="ml-auto shrink-0 pl-2 text-xs whitespace-nowrap text-ctp-subtext0">
+            {{ formatRelativeTime(row.timestamp) }}
+          </span>
+          @if (row.logUrl; as logUrl) {
+            <a
+              class="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-ctp-mauve hover:text-ctp-text"
+              [routerLink]="packageLogRouteFromUrl(logUrl)"
+              [attr.aria-label]="`Open build log for ${row.pkgname}`"
+              pTooltip="Open build log"
+              tooltipPosition="left"
+            >
+              <i class="pi pi-bars"></i>
+            </a>
+          }
+          @if (isLoggedIn()) {
+            <button
+              class="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-ctp-overlay1 hover:text-ctp-text disabled:cursor-not-allowed disabled:opacity-50"
+              [disabled]="busyPkgname() !== null"
+              [attr.aria-label]="
+                row.silenced ? `Unsilence ${row.pkgname}` : `Silence ${row.pkgname} until next failure`
+              "
+              [pTooltip]="row.silenced ? 'Unsilence' : 'Silence until next failure'"
+              (click)="toggleSilence(row)"
+              type="button"
+              tooltipPosition="left"
+            >
+              @if (isBusy(row)) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else if (row.silenced) {
+                <i class="pi pi-eye"></i>
+              } @else {
+                <i class="pi pi-eye-slash"></i>
+              }
+            </button>
+          }
+        </li>
+      }
+    </ul>
+    @if (visibleRows().length === 0) {
+      <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">Nothing failing right now.</p>
+    }
+  } @else if (loading()) {
+    <div class="flex flex-1 items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
+  }
+</div>

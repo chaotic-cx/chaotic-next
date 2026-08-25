@@ -22,6 +22,7 @@ import {
   Package,
 } from './builder.entity';
 import { moleculerConfigCommonService } from './moleculer.config';
+import { isFailingStatus } from './unresolved-failures';
 
 export interface BuilderDatabaseServiceOptions {
   broker: ServiceBroker;
@@ -209,6 +210,10 @@ export class BuilderDatabaseService extends Service {
 
     try {
       this.logger.debug(await this.dbConnections.build.save(build));
+
+      if (isFailingStatus(params.status)) {
+        await this.dbConnections.silencedFailure.delete({ pkgname: params.pkgname });
+      }
 
       this.sseSubject$.next({
         data: {

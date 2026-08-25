@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { formatPkgrel, Package, Paginated, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
+import { formatPkgrel, Package, Paginated, PKGNAME_PATTERN, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { firstValueFrom } from 'rxjs';
@@ -24,7 +24,7 @@ import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
 import { ChartPackageResourceStatsComponent } from '../chart-package-resource-stats/chart-package-resource-stats.component';
-import { PACKAGE_NAME_PATTERN, resourceValue } from '../functions';
+import { resourceValue } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { LocaleDatePipe } from '../pipes/locale-date.pipe';
@@ -67,7 +67,7 @@ export class SearchPackageComponent implements OnInit {
   protected readonly searchModel = signal({ query: '' });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {
     debounce(schemaPath.query, 300);
-    pattern(schemaPath.query, PACKAGE_NAME_PATTERN, { message: 'Invalid package name' });
+    pattern(schemaPath.query, PKGNAME_PATTERN, { message: 'Invalid package name' });
   });
 
   protected readonly suggestions = signal<string[]>([]);

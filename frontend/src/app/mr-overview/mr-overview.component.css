@@ -17,6 +17,22 @@
   outline-offset: 2px;
 }
 
+@keyframes chaotic-new-mr-flash {
+  0%,
+  55% {
+    box-shadow: 0 0 0 2px var(--ctp-mocha-yellow);
+  }
+
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+.new-mr-flash {
+  animation: chaotic-new-mr-flash 1.8s ease-out;
+  border-radius: 0.75rem;
+}
+
 ::ng-deep .mr-chips .p-tag {
   max-width: 100%;
 }

@@ -65,6 +65,7 @@
       [class.mt-5]="i > 0"
       [class.mr-focused]="focusedIndex() === i"
       [attr.data-mr-panel]="''"
+      [attr.data-mr-iid]="mr.iid"
       [attr.tabindex]="focusedIndex() === i ? 0 : -1"
       animate.enter="ctp-item-enter"
       animate.leave="ctp-item-leave"

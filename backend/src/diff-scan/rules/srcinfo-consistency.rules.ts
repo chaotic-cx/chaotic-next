@@ -1,5 +1,14 @@
 import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { substituteVars } from '../pkgbuild';
+import {
+  DEFAULT_VALUE_ASSIGNMENT,
+  FUNCTION_BODY_END,
+  FUNCTION_DEFINITION,
+  SHELL_BLOCK_END,
+  SHELL_BLOCK_START,
+  stripInlineComment,
+  substituteVars,
+  unquote,
+} from '../pkgbuild';
 import { addedLines, basename, dirname } from './diff-utils';
 import type { GroupRuleHit, Rule } from './rule';
 
@@ -18,14 +27,22 @@ const LIST_VARS = [
   'replaces',
 ] as const;
 
-const TOP_LEVEL_ASSIGNMENT = /^([A-Za-z_][A-Za-z0-9_]*)(\+?)=\s*(.*)$/;
-const FUNCTION_DEFINITION = /^\w[\w.+-]*\s*\(\)/;
+/**
+ * List variables whose order is meaningful, so they are compared as sequences
+ * after resolving variables and expanding brace alternations. `source` leads
+ * here because a stale .SRCINFO hides changed download locations from pacman.
+ */
+const SEQUENCE_VARS = ['source'] as const;
+
+const TOP_LEVEL_ASSIGNMENT = /^\s*([A-Za-z_][A-Za-z0-9_]*)(\+?)=\s*(.*)$/;
 // .SRCINFO indents every key below its section header with a tab.
 const SRCINFO_KEY_VALUE = /^\s*([A-Za-z0-9_.]+)\s*=\s*(.*)$/;
 
 interface PkgbuildContent {
   scalars: Map<string, string>;
   lists: Map<string, string[]>;
+  /** Variables that receive assignments inside if/for/case blocks; their final value is not statically known. */
+  conditionalNames: Set<string>;
 }
 
 interface SrcinfoEntry {
@@ -85,19 +102,48 @@ function changeNamed(
 function parsePkgbuildContent(lines: string[]): PkgbuildContent {
   const scalars = new Map<string, string>();
   const lists = new Map<string, string[]>();
+  const conditionalNames = new Set<string>();
   let openArray: { name: string; appended: boolean } | null = null;
   let buffer: string[] = [];
+  let blockDepth = 0;
+  let insideFunction = false;
 
-  for (const text of lines) {
+  for (const rawLine of lines) {
+    if (insideFunction) {
+      if (FUNCTION_BODY_END.test(rawLine)) insideFunction = false;
+      continue;
+    }
+    const text = stripInlineComment(rawLine);
+
+    if (FUNCTION_DEFINITION.test(text)) {
+      insideFunction = true;
+      continue;
+    }
+
     if (openArray !== null) {
       buffer.push(...splitArrayValues(text));
       if (!text.includes(')')) continue;
       assignList(lists, openArray.name, buffer, openArray.appended);
+      markConditional(conditionalNames, blockDepth > 0, openArray.name);
       openArray = null;
       buffer = [];
       continue;
     }
-    if (FUNCTION_DEFINITION.test(text)) break;
+
+    if (SHELL_BLOCK_START.test(text)) {
+      blockDepth++;
+      continue;
+    }
+    if (SHELL_BLOCK_END.test(text)) {
+      blockDepth = Math.max(blockDepth - 1, 0);
+      continue;
+    }
+
+    const defaulted = text.match(DEFAULT_VALUE_ASSIGNMENT);
+    if (defaulted?.[1] !== undefined && defaulted[2] !== undefined) {
+      scalars.set(defaulted[1], unquote(defaulted[2].trim()));
+      continue;
+    }
 
     const assignment = text.match(TOP_LEVEL_ASSIGNMENT);
     if (!assignment) continue;
@@ -112,12 +158,18 @@ function parsePkgbuildContent(lines: string[]): PkgbuildContent {
         buffer = splitArrayValues(inside);
       } else {
         assignList(lists, name, splitArrayValues(inside.slice(0, closing)), append === '+');
+        markConditional(conditionalNames, blockDepth > 0, name);
       }
     } else if (value !== '') {
       scalars.set(name, unquote(value));
+      markConditional(conditionalNames, blockDepth > 0, name);
     }
   }
-  return { scalars, lists };
+  return { scalars, lists, conditionalNames };
+}
+
+function markConditional(conditionalNames: Set<string>, conditional: boolean, name: string): void {
+  if (conditional) conditionalNames.add(name);
 }
 
 function assignList(lists: Map<string, string[]>, name: string, values: string[], appended: boolean): void {
@@ -131,11 +183,6 @@ function splitArrayValues(text: string): string[] {
     .split(/\s+/)
     .filter((entry) => entry.length > 0)
     .map(unquote);
-}
-
-function unquote(value: string): string {
-  const quote = value[0];
-  return (quote === '"' || quote === "'") && value.endsWith(quote) ? value.slice(1, -1) : value;
 }
 
 function parseSrcinfoBaseSection(lines: string[]): Map<string, SrcinfoEntry> {
@@ -162,13 +209,23 @@ function compareWithSrcinfo(
   const hits: GroupRuleHit[] = [];
 
   for (const name of SCALAR_VARS) {
-    const declared = content.scalars.get(name);
+    if (content.conditionalNames.has(name)) continue;
+    const declaredRaw = content.scalars.get(name);
     const generated = srcinfo.get(name)?.values[0];
-    if ((declared ?? '') === (generated ?? '')) continue;
+    if (declaredRaw === undefined) {
+      if (generated === undefined) continue;
+      hits.push(mismatchHit(srcPath, srcinfo.get(name), name, undefined, generated));
+      continue;
+    }
+    const declared = substituteVars(declaredRaw, content.scalars);
+    // Unresolvable references cannot be judged statically; stay silent.
+    if (declared === null) continue;
+    if (declared === (generated ?? '')) continue;
     hits.push(mismatchHit(srcPath, srcinfo.get(name), name, declared, generated));
   }
 
   for (const name of LIST_VARS) {
+    if (content.conditionalNames.has(name)) continue;
     const rawList = content.lists.get(name);
     if (rawList === undefined) continue;
     const declared = resolveList(rawList, content.scalars);
@@ -178,7 +235,48 @@ function compareWithSrcinfo(
     if (sameSet(declared, generated)) continue;
     hits.push(mismatchHit(srcPath, srcinfo.get(name), name, declared, generated));
   }
+
+  for (const name of SEQUENCE_VARS) {
+    if (content.conditionalNames.has(name)) continue;
+    const rawList = content.lists.get(name);
+    if (rawList === undefined) continue;
+    const resolved = resolveList(rawList, content.scalars);
+
+    // Unresolvable references cannot be judged statically; stay silent.
+    if (resolved === null) continue;
+
+    const declared = resolved.flatMap(expandBraces).map(normalizeSourceValue);
+    const generated = (srcinfo.get(name)?.values ?? []).map(normalizeSourceValue);
+    if (sameSequence(declared, generated)) continue;
+    hits.push(mismatchHit(srcPath, srcinfo.get(name), name, declared, generated));
+  }
   return hits;
+}
+
+/**
+ * Expands single-level brace alternations like `tarball{,.asc}` the way bash
+ * does before makepkg sees the array. Nested or range braces stay literal.
+ */
+function expandBraces(value: string): string[] {
+  const open = value.indexOf('{');
+  if (open === -1) return [value];
+  const close = value.indexOf('}', open);
+  if (close === -1) return [value];
+  const prefix = value.slice(0, open);
+  const suffix = value.slice(close + 1);
+  return value
+    .slice(open + 1, close)
+    .split(',')
+    .flatMap((option) => expandBraces(prefix + option + suffix));
+}
+
+/** Source entries may carry interior quoting around renames ("file"::"url"); .SRCINFO never does. */
+function normalizeSourceValue(value: string): string {
+  return value.replace(/["']/g, '').trim();
+}
+
+function sameSequence(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function resolveList(values: string[], scalars: ReadonlyMap<string, string>): string[] | null {

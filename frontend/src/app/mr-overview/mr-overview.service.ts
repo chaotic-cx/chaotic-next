@@ -30,7 +30,7 @@ export class MrOverviewService {
   readonly isLoading = signal<boolean>(true);
   readonly loadingMap = signal<Map<string, boolean>>(new Map());
 
-  async loadOpenMrs() {
+  async loadOpenMrs(): Promise<boolean> {
     try {
       const mergeRequests: MergeRequestWithDiffs[] = await lastValueFrom(
         this.http.get<MergeRequestWithDiffs[]>(`${this.backendUrl}/gitlab/merge-requests`),
@@ -53,6 +53,7 @@ export class MrOverviewService {
           ),
       );
       this.isLoading.set(false);
+      return true;
     } catch (error) {
       this.isLoading.set(false);
       this.messageToastService.error(
@@ -60,6 +61,7 @@ export class MrOverviewService {
         'An error occurred while fetching merge requests. Please try again.',
       );
       console.error('Error extracting merge requests:', error);
+      return false;
     }
   }
 

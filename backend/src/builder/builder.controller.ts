@@ -1,6 +1,28 @@
-import { BadRequestException, Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
-import type { BuildClassSuggestion, Package as PackageDto, Paginated } from '@chaotic-next/shared-lib';
+import {
+  BadRequestException,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import type {
+  BuildClassSuggestion,
+  Package as PackageDto,
+  Paginated,
+  ShouldBuildDecision,
+  UnresolvedFailedBuild,
+} from '@chaotic-next/shared-lib';
+import { isValidPkgname } from '@chaotic-next/shared-lib';
+import { GITLAB_GROUP_CHAOTIC_AUR } from '../auth/gitlab-groups';
+import { RequireGroupGuard } from '../guards/require-group.guard';
+import { RequireGroups } from '../decorators/require-groups.decorator';
 import { Build, Builder, Package, Repo } from './builder.entity';
 import { BuilderService } from './builder.service';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
@@ -15,6 +37,8 @@ import {
   DayStatusAverageDto,
   FailedBuildHotspotDto,
   FailedBuildOverTimeDto,
+  BuilderUtilizationDto,
+  FlakyPackageDto,
   GetBuildsQueryDto,
   GetLatestBuildsQueryDto,
   GetPackagesQueryDto,
@@ -24,9 +48,12 @@ import {
   PkgbaseCompositionDto,
   PkgCountDto,
   PopularPackageDto,
+  ShouldBuildDto,
   ThroughputDayDto,
+  UnresolvedFailedBuildDto,
 } from './builder.dto';
 import { isBuildResourceMetricKey, RESOURCE_METRIC_KEYS } from './resource-stats';
+import type { BuilderUtilizationRow, FlakyPackageRow } from './builder.service';
 
 @ApiTags('builder')
 @Controller('builder')
@@ -261,11 +288,13 @@ export class BuilderController {
   @Get('builds/failed/top/:amount')
   @ApiOperation({ summary: 'Get the packages with the highest amount of failed builds.' })
   @ApiParam({ name: 'amount', description: 'Number of packages' })
+  @ApiQuery({ name: 'days', required: false, description: 'Limit to the last N days', type: Number })
   @ApiOkResponse({ description: 'Top packages by failed build count', type: FailedBuildHotspotDto, isArray: true })
   async getFailedBuildHotspots(
     @Param('amount', ParseIntPipe) amount: number,
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
   ): Promise<{ pkgname: string; count: string }[]> {
-    return await this.builderService.getFailedBuildHotspots({ amount: amount });
+    return await this.builderService.getFailedBuildHotspots({ amount, days });
   }
 
   @Get('builds/failed/over-time/:amount/:days')
@@ -278,6 +307,89 @@ export class BuilderController {
     @Param('days', ParseIntPipe) days: number,
   ): Promise<{ day: string; pkgname: string; count: string }[]> {
     return await this.builderService.getFailedBuildsOverTime({ amount, days });
+  }
+
+  @Get('should-build/:pkgbase')
+  @ApiOperation({
+    summary:
+      'Whether a build for the pkgbase is likely to succeed. Failure loops return false, but become true again after a cooldown without newer builds, so packages keep getting retried.',
+  })
+  @ApiParam({ name: 'pkgbase', description: 'Package name or pkgbase of split packages' })
+  @ApiOkResponse({ description: 'Build recommendation', type: ShouldBuildDto })
+  async shouldBuild(@Param('pkgbase') pkgbase: string): Promise<ShouldBuildDecision> {
+    if (!isValidPkgname(pkgbase)) throw new BadRequestException(`Invalid package name: ${pkgbase}`);
+    return await this.builderService.getShouldBuild(pkgbase);
+  }
+
+  @Get('builds/failed/unresolved')
+  @ApiOperation({
+    summary:
+      'Active packages whose latest build verdict is a failure with no more recent success; timeouts count as failures.',
+  })
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    description: 'Verdict lookback window in days (default 90)',
+    type: Number,
+  })
+  @ApiOkResponse({
+    description: 'Unresolved failed builds, silenced ones included',
+    type: UnresolvedFailedBuildDto,
+    isArray: true,
+  })
+  async getUnresolvedFailedBuilds(
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
+  ): Promise<UnresolvedFailedBuild[]> {
+    return await this.builderService.getUnresolvedFailedBuilds({ days });
+  }
+
+  @Post('builds/failed/unresolved/:pkgname/silence')
+  @UseGuards(AuthGuard, RequireGroupGuard)
+  @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
+  @HttpCode(204)
+  @ApiOperation({ summary: "Silence a package's unresolved failure until its next failing build." })
+  @ApiParam({ name: 'pkgname', description: 'Package name' })
+  @ApiNoContentResponse({ description: 'Failure silenced' })
+  async silenceUnresolvedFailedBuild(@Param('pkgname') pkgname: string): Promise<void> {
+    if (!isValidPkgname(pkgname)) throw new BadRequestException(`Invalid package name: ${pkgname}`);
+    await this.builderService.silenceUnresolvedFailedBuild(pkgname);
+  }
+
+  @Delete('builds/failed/unresolved/:pkgname/silence')
+  @UseGuards(AuthGuard, RequireGroupGuard)
+  @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
+  @HttpCode(204)
+  @ApiOperation({ summary: "Removes the silence on a package's unresolved failure." })
+  @ApiParam({ name: 'pkgname', description: 'Package name' })
+  @ApiNoContentResponse({ description: 'Silence removed' })
+  async unsilenceUnresolvedFailedBuild(@Param('pkgname') pkgname: string): Promise<void> {
+    if (!isValidPkgname(pkgname)) throw new BadRequestException(`Invalid package name: ${pkgname}`);
+    await this.builderService.unsilenceUnresolvedFailedBuild(pkgname);
+  }
+
+  @Get('stats/flaky-packages/:days')
+  @ApiOperation({
+    summary:
+      'Intermittently failing packages: at least five genuine attempts in the window with both failures and successes.',
+  })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Flakiest packages by failure rate', type: FlakyPackageDto, isArray: true })
+  async getFlakiestPackages(@Param('days', ParseIntPipe) days: number): Promise<FlakyPackageRow[]> {
+    return await this.builderService.getFlakiestPackages({ days });
+  }
+
+  @Get('stats/builder-utilization/:days')
+  @ApiOperation({
+    summary: 'Builds per UTC hour-of-day per builder inside the window; only non-empty buckets are returned.',
+  })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({
+    description: 'Build counts per builder and hour bucket',
+    type: BuilderUtilizationDto,
+    isArray: true,
+  })
+  async getBuilderUtilization(@Param('days', ParseIntPipe) days: number): Promise<BuilderUtilizationRow[]> {
+    return await this.builderService.getBuilderUtilization({ days });
   }
 
   @Get('stats/heavy-packages/:amount/:days')

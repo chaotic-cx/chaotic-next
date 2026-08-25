@@ -80,6 +80,123 @@ describe('srcinfo-consistency rules', () => {
     expect(scan(templated, SRCINFO_LINES)).toHaveLength(0);
   });
 
+  it('ignores contributions from conditional if/else blocks', () => {
+    const conditional = [
+      ...PKGBUILD_LINES.slice(0, 7),
+      "depends=('dbus' 'gtk3')",
+      'if [[ "${_with_extras::1}" == "t" ]]; then',
+      '  depends+=(',
+      '    libextra.so # extras',
+      '  )',
+      'else',
+      '  depends+=(',
+      '    libother.so',
+      '  )',
+      'fi',
+    ];
+
+    // makepkg evaluated the default branch, so .SRCINFO carries the extras —
+    // the static parser cannot replay that choice and must stay silent.
+    const generated = [
+      ...SRCINFO_LINES.filter((line) => !line.startsWith('depends')),
+      'depends = dbus',
+      'depends = gtk3',
+      'depends = libextra.so',
+    ];
+    expect(scan(conditional, generated)).toHaveLength(0);
+  });
+
+  it('strips inline comments inside arrays instead of treating them as entries', () => {
+    const commented = [
+      ...PKGBUILD_LINES.slice(0, 7),
+      'depends=(',
+      '  glibc # runtime',
+      "  'curl>=8.0'",
+      ')',
+      "makedepends=('git')",
+    ];
+    expect(scan(commented, SRCINFO_LINES)).toHaveLength(0);
+  });
+
+  it('substitutes variables when comparing scalars', () => {
+    const templated = [...PKGBUILD_LINES, '_base_version=1.2.3'].map((line) =>
+      line === 'pkgver=1.2.3' ? 'pkgver=$_base_version' : line,
+    );
+    expect(scan(templated, SRCINFO_LINES)).toHaveLength(0);
+  });
+
+  it('recognizes ": ${var:=default}" declarations for comparisons', () => {
+    const defaulted = PKGBUILD_LINES.map((line) => (line === 'pkgrel=1' ? ': "${_rel:=1}"' : line));
+    defaulted.splice(defaulted.indexOf(': "${_rel:=1}"') + 1, 0, 'pkgrel=$_rel');
+    expect(scan(defaulted, SRCINFO_LINES)).toHaveLength(0);
+  });
+
+  describe('source sequence comparison', () => {
+    const pkgLines = [
+      'pkgbase=freeipa',
+      'pkgver=4.13.3',
+      "url='https://www.freeipa.org/'",
+      'license=(GPL-3.0-or-later)',
+      'source=("https://codeberg.org/${pkgbase}/releases/download/release-${pkgver//./-}/${pkgbase}-${pkgver}.tar.gz"{,.asc}',
+      '  nis-domainname.service)',
+    ];
+    const srcinfoLines = [
+      'pkgbase = freeipa',
+      'pkgver = 4.13.3',
+      'url = https://www.freeipa.org/',
+      'license = GPL-3.0-or-later',
+      'source = https://codeberg.org/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz',
+      'source = https://codeberg.org/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz.asc',
+      'source = nis-domainname.service',
+      '',
+      'pkgname = freeipa',
+    ];
+
+    it('accepts resolved, brace-expanded sources in order', () => {
+      expect(scan(pkgLines, srcinfoLines)).toHaveLength(0);
+    });
+
+    it('reports a stale source URL at its .SRCINFO line', () => {
+      const stale = srcinfoLines.map((line) =>
+        line.startsWith('source = https://codeberg')
+          ? line.replace('codeberg.org', 'pagure.org').replace('4-13-3', '4-13-1').replace('4.13.3', '4.13.1')
+          : line,
+      );
+      const hits = scan(pkgLines, stale);
+
+      expect(hits).toHaveLength(1);
+      expect(hits[0]?.note).toContain("'source'");
+      expect(hits[0]?.note).toContain('pagure.org');
+    });
+
+    it('treats a reordered source list as drift', () => {
+      const reordered = [...srcinfoLines];
+      const firstIndex = reordered.indexOf('source = nis-domainname.service');
+      reordered.splice(firstIndex, 1);
+      reordered.splice(
+        reordered.findIndex((line) => line.startsWith('source =')) ?? 0,
+        0,
+        'source = nis-domainname.service',
+      );
+      expect(scan(pkgLines, reordered)).toHaveLength(1);
+    });
+
+    it('stays silent when sources contain unresolvable variables', () => {
+      const templated = [...pkgLines, 'source=("https://mirror.example/${_secret_tag}/pkg.tar.gz")'];
+      expect(scan(templated, srcinfoLines)).toHaveLength(0);
+    });
+
+    it('ignores conditional source contributions instead of judging them', () => {
+      const conditional = [
+        ...pkgLines,
+        'if [[ "${_with_extra::1}" == "t" ]]; then',
+        '  source+=("https://files.example/extra.patch")',
+        'fi',
+      ];
+      expect(scan(conditional, srcinfoLines)).toHaveLength(0);
+    });
+  });
+
   it('parses multiline and appended arrays', () => {
     const multiline = [
       ...PKGBUILD_LINES.slice(0, 7),

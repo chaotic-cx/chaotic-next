@@ -2,12 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { SignalScanService } from '../repo-manager/scan';
 import { compareArchVersions } from '../repo-manager/signal';
 import { RouterHit } from '../router/router-hit.entity';
 import { errorMessage, nDaysInPast } from '../utils/functions';
-import { Build, Package } from './builder.entity';
+import { Build, Package, SilencedBuildFailure } from './builder.entity';
 
 /** Analyses kept per package: the latest plus the previous the ABI index compares. */
 const KEEP_ANALYSIS_VERSIONS = 2;
@@ -18,7 +19,6 @@ const KEEP_ANALYSIS_VERSIONS = 2;
  * historical builds are purged along with it.
  */
 const STALE_BUILD_GRACE_DAYS = 90;
-const VALID_PKGNAME_PATTERN = '^[a-zA-Z0-9][a-zA-Z0-9@._+-]*$';
 
 /**
  * How long raw router hits are kept before they are purged. The daily rollup
@@ -101,7 +101,7 @@ export class DatabaseCleanupService {
         .createQueryBuilder()
         .update(Package)
         .set({ isActive: false })
-        .where('"pkgname" !~ :validPattern', { validPattern: VALID_PKGNAME_PATTERN })
+        .where('"pkgname" !~ :validPattern', { validPattern: PKGNAME_PATTERN.source })
         .andWhere('"isActive" = true')
         .execute();
       const deactivatedCount = deactivated.affected ?? 0;
@@ -114,7 +114,7 @@ export class DatabaseCleanupService {
           .getRepository(Package)
           .createQueryBuilder('p')
           .select('p.id', 'id')
-          .where('p.pkgname !~ :validPattern', { validPattern: VALID_PKGNAME_PATTERN })
+          .where('p.pkgname !~ :validPattern', { validPattern: PKGNAME_PATTERN.source })
           .getRawMany<{ id: number }>();
 
         if (candidates.length === 0) return;
@@ -262,6 +262,33 @@ export class DatabaseCleanupService {
       }
     } catch (err: unknown) {
       this.logger.error(`Failed to purge old router hits: ${errorMessage(err)}`);
+    }
+  }
+
+  /**
+   * Purge failure silences whose package is gone or inactive: the insights
+   * list only shows active packages, so those rows could never surface again
+   * and would otherwise accumulate forever.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async purgeOrphanedFailureSilences(): Promise<void> {
+    try {
+      const { affected } = await this.dataSource
+        .getRepository(SilencedBuildFailure)
+        .createQueryBuilder()
+        .delete()
+        .where(
+          `NOT EXISTS (
+            SELECT 1 FROM "package" p
+            WHERE p.pkgname = "silenced_build_failure"."pkgname" AND p."isActive" = true
+          )`,
+        )
+        .execute();
+      if ((affected ?? 0) > 0) {
+        this.logger.log(`Purged ${affected} failure silences without an active package`);
+      }
+    } catch (err: unknown) {
+      this.logger.error(`Failed to purge orphaned failure silences: ${errorMessage(err)}`);
     }
   }
 }
