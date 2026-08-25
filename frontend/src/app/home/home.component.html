@@ -20,7 +20,7 @@
             [suggestions]="suggestions()"
             [delay]="300"
             [minQueryLength]="3"
-            (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event }))"
+            (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
             (completeMethod)="searchSuggestions($event)"
             (onSelect)="searchPackages($event.value)"
             (onKeyUp)="onKeyUp($event)"

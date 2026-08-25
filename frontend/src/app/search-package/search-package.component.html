@@ -17,11 +17,12 @@
         [suggestions]="suggestions()"
         [delay]="300"
         [minQueryLength]="3"
-        (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event }))"
+        (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
         (completeMethod)="searchSuggestions($event)"
         (onSelect)="selectPackage($event.value)"
         (onKeyUp)="onKeyUp($event)"
         (onBlur)="onInputBlur()"
+        appendTo="body"
         placeholder="Start searching"
       />
     </div>
@@ -37,9 +38,11 @@
     <div class="overflow-hidden">
       <div class="scroll-mt-24 mt-4 flex flex-col gap-4" #resultsSection>
         <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          @for (dataset of packageSearchData(); track dataset.key) {
+          @for (dataset of packageSearchData(); track dataset.key; let index = $index) {
             <div
               class="group flex flex-col justify-between rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
+              [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
+              animate.enter="finding-item-enter"
             >
               <div
                 class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-ctp-subtext0"

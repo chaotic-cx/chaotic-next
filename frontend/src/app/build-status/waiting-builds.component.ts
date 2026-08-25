@@ -7,12 +7,13 @@ import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
 import { sortByStartTime } from './queue-estimates';
+import { FlipListDirective } from '../animations/flip-list.directive';
 
 const WAITING_PAGE_SIZE = 6;
 
 @Component({
   selector: 'chaotic-build-status-waiting-builds',
-  imports: [BuildStatusSectionComponent, BuildStatusPager, BuildClassPipe, Tooltip],
+  imports: [BuildStatusSectionComponent, BuildStatusPager, BuildClassPipe, Tooltip, FlipListDirective],
   templateUrl: './waiting-builds.component.html',
   styleUrl: './waiting-builds.component.css',
 })

@@ -1,7 +1,11 @@
 @if (!loading()) {
-  <ul class="divide-y divide-white/5">
-    @for (pipeline of pipelines(); track pipeline.pipeline.id) {
-      <li class="flex items-center gap-3 py-2.5">
+  <ul class="divide-y divide-white/5" animate.enter="content-fade" chaoticFlipList>
+    @for (pipeline of pipelines(); track pipeline.pipeline.id; let index = $index) {
+      <li
+        class="flex items-center gap-3 py-2.5"
+        [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
+        animate.enter="pipeline-item-enter"
+      >
         <button
           class="group flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ctp-mauve"
           (click)="openPipeline.emit(pipeline.pipeline.id)"

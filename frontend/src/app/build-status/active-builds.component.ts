@@ -6,10 +6,11 @@ import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
 import { sortByStartTime } from './queue-estimates';
+import { FlipListDirective } from '../animations/flip-list.directive';
 
 @Component({
   selector: 'chaotic-build-status-active-builds',
-  imports: [BuildStatusSectionComponent, RouterLink, Tooltip, BuildClassPipe],
+  imports: [BuildStatusSectionComponent, RouterLink, Tooltip, BuildClassPipe, FlipListDirective],
   templateUrl: './active-builds.component.html',
 })
 export class ActiveBuildsComponent {

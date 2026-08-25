@@ -49,6 +49,9 @@ export class AppService {
   private readonly internalSseConnected = signal(false);
   readonly sseConnected = this.internalSseConnected.asReadonly();
 
+  private readonly internalSseSettled = signal(false);
+  readonly sseSettled = this.internalSseSettled.asReadonly();
+
   readonly backendVersion = signal<string | undefined>(undefined);
 
   private eventSource: EventSource | undefined;
@@ -81,7 +84,10 @@ export class AppService {
     const source = new EventSource(`${this.appConfig.backendUrl}/sse?ngsw-bypass`);
     this.eventSource = source;
 
-    source.onopen = () => this.internalSseConnected.set(true);
+    source.onopen = () => {
+      this.internalSseSettled.set(true);
+      this.internalSseConnected.set(true);
+    };
 
     source.onmessage = ({ data }) => {
       const event: unknown = JSON.parse(data);
@@ -89,6 +95,7 @@ export class AppService {
     };
 
     source.onerror = () => {
+      this.internalSseSettled.set(true);
       this.internalSseConnected.set(false);
       this.eventSource?.close();
       this.eventSource = undefined;

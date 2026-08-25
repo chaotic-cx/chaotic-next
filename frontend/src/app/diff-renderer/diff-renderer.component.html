@@ -5,6 +5,7 @@
         @if (flaggedLine(line); as findings) {
           <div
             [class]="lineClass(line)"
+            [attr.data-line]="line.lineNumber"
             role="button"
             tabindex="0"
             (click)="toggle(line)"

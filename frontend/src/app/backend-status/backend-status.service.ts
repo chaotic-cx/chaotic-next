@@ -16,6 +16,7 @@ export class BackendStatusService {
 
   constructor() {
     effect(() => {
+      if (!this.appService.sseSettled()) return;
       this.setStatus(this.appService.sseConnected() ? 'ok' : 'down');
     });
   }

@@ -26,8 +26,8 @@ import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/ch
 import { ChartPackageResourceStatsComponent } from '../chart-package-resource-stats/chart-package-resource-stats.component';
 import { resourceValue } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
-import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { LocaleDatePipe } from '../pipes/locale-date.pipe';
+import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StatsService } from '../stats/stats.service';
 
@@ -57,6 +57,8 @@ export class SearchPackageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly packageStatsService = inject(StatsService);
+
+  readonly STAGGER_CAP = 8;
 
   readonly search = input<string>();
 

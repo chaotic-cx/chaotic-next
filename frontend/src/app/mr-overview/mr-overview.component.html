@@ -159,12 +159,20 @@
               [class.grid-rows-[0fr]]="!isFindingsOpen(mr)"
             >
               <div class="overflow-hidden">
-                <div class="flex flex-col gap-1.5 px-3 py-2">
-                  @for (finding of scanFindings(mr); track $index) {
-                    <div class="flex flex-col gap-y-1 sm:flex-row sm:items-center sm:gap-x-2">
-                      <div class="flex min-w-0 items-center gap-2">
+                <div class="flex flex-col gap-2 px-3 py-2">
+                  @for (finding of scanFindings(mr); track $index; let index = $index) {
+                    <div
+                      class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 text-left backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
+                      [style.--stagger]="index > findingStaggerCap ? findingStaggerCap : index"
+                      (click)="scrollToFinding(mr, finding)"
+                      (keydown.enter)="scrollToFinding(mr, finding)"
+                      animate.enter="finding-item-enter"
+                      role="button"
+                      tabindex="0"
+                    >
+                      <div class="flex items-center justify-between gap-3">
                         <span
-                          class="min-w-0 break-words font-semibold"
+                          class="min-w-0 wrap-break-word font-semibold text-sm"
                           [class.text-ctp-red]="finding.severity === 'critical'"
                           [class.text-ctp-peach]="finding.severity === 'warning'"
                           [class.text-ctp-subtext0]="finding.severity === 'info'"
@@ -173,15 +181,11 @@
                         >
                           {{ finding.ruleName }}
                         </span>
-                      </div>
-                      <span class="hidden text-ctp-subtext0 sm:inline">·</span>
-                      <div class="flex items-center flex-wrap gap-x-2 sm:flex-nowrap">
-                        <code class="whitespace-nowrap text-ctp-sky text-xs">
+                        <code class="shrink-0 whitespace-nowrap text-ctp-sky text-xs">
                           {{ fileLocation(mr, finding) }}
                         </code>
-                        <span class="hidden text-ctp-subtext0 sm:inline">·</span>
-                        <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
                       </div>
+                      <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
                     </div>
                   }
 
@@ -239,6 +243,7 @@
           @for (change of mr.diffs; track change.new_path) {
             <section
               class="mb-5 overflow-x-auto rounded-lg border border-ctp-crust bg-ctp-mantle/40 chaotic-lazy-viewport"
+              [attr.data-diff-section]="diffSectionId(mr.iid, change.new_path)"
             >
               <header class="flex flex-wrap items-center gap-2 border-b border-ctp-crust px-3 py-2">
                 <code class="min-w-0 flex-1 break-all font-mono text-sm text-ctp-text">{{
@@ -246,7 +251,12 @@
                 }}</code>
               </header>
               @defer (on viewport; prefetch on idle) {
-                <chaotic-diff-renderer [diff]="change.diff" [findingsByLine]="findingsByLine(mr, change.new_path)" />
+                <chaotic-diff-renderer
+                  [diff]="change.diff"
+                  [findingsByLine]="findingsByLine(mr, change.new_path)"
+                  [scrollToLine]="targetLineFor(mr, change.new_path)"
+                  (scrolled)="clearDiffScroll()"
+                />
               } @placeholder {
                 <div class="chaotic-diff-placeholder" aria-hidden="true"></div>
               }

@@ -1,14 +1,14 @@
 @if (buildStatusService.waitingQueue().length > 0) {
-  <section class="flex h-full flex-col" animate.enter="queue-section-enter" animate.leave="queue-section-leave">
+  <section class="flex h-full flex-col" animate.enter="queue-section-enter">
     <chaotic-build-status-section
       title="Waiting builds"
       subtitle="These are currently queued builds"
       icon="pi-hourglass"
       iconClass="text-ctp-lavender"
     />
-    <ul class="queue-page-list flex-1 divide-y divide-white/5">
+    <ul class="queue-page-list max-h-[26rem] flex-1 divide-y divide-white/5 overflow-y-auto pr-1" chaoticFlipList>
       @for (pkg of paginatedQueue(); track pkg.name) {
-        <li class="flex items-center justify-between gap-3 py-2.5">
+        <li class="flex items-center justify-between gap-3 py-2.5" animate.enter="queue-item-enter">
           <div class="min-w-0 flex-1">
             <span class="block truncate font-semibold">{{ pkg.name }}</span>
             <span class="block text-sm text-ctp-subtext1"
@@ -53,7 +53,7 @@
     </div>
   </section>
 } @else {
-  <section class="flex h-full flex-col">
+  <section class="flex h-full flex-col" animate.enter="queue-section-enter">
     <chaotic-build-status-section
       title="Waiting builds"
       subtitle="These are currently queued builds"
