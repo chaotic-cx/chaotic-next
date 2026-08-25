@@ -42,7 +42,8 @@ export const PRIVILEGE_RULES: Rule[] = [
       const octalMode = line.match(/\b([246][0-7]{3})\b/);
       const leadingDigit = octalMode?.[1]?.[0];
       const setuid = leadingDigit ? leadingDigit !== SETGID_ONLY_PREFIX : /\bu\+s\b/.test(line);
-      if (!setuid) return { severity: 'warning', note: 'Setgid bit only. The bit gives group access, not user elevation' };
+      if (!setuid)
+        return { severity: 'warning', note: 'Setgid bit only. The bit gives group access, not user elevation' };
       if (UPSTREAM_SETUID_HELPERS.test(line)) {
         return {
           severity: 'warning',
