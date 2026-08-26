@@ -123,7 +123,7 @@ export class AboutComponent implements OnInit {
 
   ngOnInit() {
     updateSeoTags(this.meta, {
-      title: 'About us',
+      title: 'Chaotic-AUR - About us',
       description: 'Learn more about the Chaotic-AUR team and project',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',

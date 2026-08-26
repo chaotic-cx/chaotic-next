@@ -3,6 +3,10 @@ import { authGuard } from './auth/auth.guard';
 import { backendChildGuard, backendGuard } from './backend-status/backend-required.guard';
 import { AUTH_PRELOAD_DATA, SKIP_PRELOAD_DATA } from './preload.strategy';
 
+export const DISABLE_VIEW_TRANSITION_DATA: Readonly<Record<string, boolean>> = Object.freeze({
+  disableViewTransition: true,
+});
+
 export const routes: Routes = [
   {
     title: 'Chaotic-AUR',
@@ -10,46 +14,47 @@ export const routes: Routes = [
     loadComponent: () => import('./home/home.component').then((c) => c.HomeComponent),
   },
   {
-    title: 'Get started',
+    title: 'Chaotic-AUR - Get started',
     path: 'docs',
     loadComponent: () => import('./docs/docs.component').then((c) => c.DocsComponent),
   },
   {
-    title: 'Privacy Policy',
+    title: 'Chaotic-AUR - Privacy Policy',
     path: 'privacy',
     loadComponent: () => import('./privacy-policy/privacy-policy.component').then((c) => c.PrivacyPolicyComponent),
   },
   {
-    title: 'Code of Conduct',
+    title: 'Chaotic-AUR - Code of Conduct',
     path: 'code-of-conduct',
     loadComponent: () => import('./code-of-conduct/code-of-conduct.component').then((c) => c.CodeOfConductComponent),
   },
   {
-    title: 'Build status',
+    title: 'Chaotic-AUR - Build status',
     path: 'status',
+    data: DISABLE_VIEW_TRANSITION_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./build-status/build-status.component').then((c) => c.BuildStatusComponent),
   },
   {
-    title: 'Deployments',
+    title: 'Chaotic-AUR - Deployments',
     path: 'deployments',
     canActivate: [backendGuard],
     loadComponent: () => import('./deploy-log/deploy-log.component').then((c) => c.DeployLogComponent),
   },
   {
-    title: 'Packages',
+    title: 'Chaotic-AUR - Packages',
     path: 'packages',
     canActivate: [backendGuard],
     loadComponent: () => import('./package-list/package-list.component').then((c) => c.PackageListComponent),
   },
   {
-    title: 'AUR Scan',
+    title: 'Chaotic-AUR - AUR Scan',
     path: 'aur-scan',
     canActivate: [backendGuard],
     loadComponent: () => import('./aur-scan/pages/aur-scan-page.component').then((c) => c.AurScanPageComponent),
   },
   {
-    title: 'Statistics and data',
+    title: 'Chaotic-AUR - Statistics and data',
     path: 'stats',
     canActivate: [backendGuard],
     loadComponent: () => import('./stats/stats.component').then((c) => c.StatsComponent),
@@ -98,53 +103,54 @@ export const routes: Routes = [
     ],
   },
   {
-    title: 'Update review',
+    title: 'Chaotic-AUR - Update review',
     path: 'update-review',
     canActivate: [backendGuard],
     loadComponent: () => import('./mr-overview/mr-overview.component').then((c) => c.MrOverviewComponent),
   },
   {
-    title: 'Pipeline logs',
+    title: 'Chaotic-AUR - Pipeline logs',
     path: 'logs/:pipelineId',
     canActivate: [backendGuard],
     loadComponent: () => import('./log-viewer/log-viewer.component').then((c) => c.LogViewerComponent),
   },
   {
-    title: 'Package log',
+    title: 'Chaotic-AUR - Package log',
     path: 'logs/package/:pkgname/:timestamp',
     canActivate: [backendGuard],
     loadComponent: () => import('./package-log/package-log.component').then((c) => c.PackageLogComponent),
   },
   {
-    title: 'Mirrors',
+    title: 'Chaotic-AUR - Mirrors',
     path: 'mirrors',
     loadComponent: () => import('./mirrors/mirrors.component').then((c) => c.MirrorsComponent),
   },
   {
-    title: 'Mirror map',
+    title: 'Chaotic-AUR - Mirror map',
     path: 'map',
+    data: DISABLE_VIEW_TRANSITION_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./map/map.component').then((c) => c.MapComponent),
   },
   {
-    title: 'Memorial 2024',
+    title: 'Chaotic-AUR - Memorial 2024',
     path: 'memorial-v2',
     data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./memorial-v2/memorial-v2.component').then((c) => c.MemorialV2Component),
   },
   {
-    title: 'About us',
+    title: 'Chaotic-AUR - About us',
     path: 'about',
     loadComponent: () => import('./about/about.component').then((c) => c.AboutComponent),
   },
   {
-    title: 'Memorial 2021',
+    title: 'Chaotic-AUR - Memorial 2021',
     path: 'memorial',
     data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./memorial/memorial.component').then((c) => c.MemorialComponent),
   },
   {
-    title: 'Sign in',
+    title: 'Chaotic-AUR - Sign in',
     path: 'login',
     data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./login/login.component').then((c) => c.LoginComponent),
@@ -155,7 +161,7 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/auth-callback.component').then((c) => c.AuthCallbackComponent),
   },
   {
-    title: 'Admin',
+    title: 'Chaotic-AUR - Admin',
     path: 'admin',
     canActivate: [authGuard],
     canActivateChild: [backendChildGuard],
@@ -229,13 +235,13 @@ export const routes: Routes = [
     ],
   },
   {
-    title: 'Backend unavailable',
+    title: 'Chaotic-AUR - Backend unavailable',
     path: 'backend-down',
     data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./backend-down/backend-down.component').then((c) => c.BackendDownComponent),
   },
   {
-    title: 'Not found',
+    title: 'Chaotic-AUR - Not found',
     path: 'not-found',
     data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./not-found/not-found.component').then((c) => c.NotFoundComponent),

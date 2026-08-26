@@ -29,7 +29,7 @@ export class AdminComponent implements OnInit {
 
   ngOnInit(): void {
     this.appService.updateSeoTags(this.meta, {
-      title: 'Admin',
+      title: 'Chaotic-AUR - Admin',
       description: 'Administrative tools for the Chaotic-AUR backend',
       keywords: 'Chaotic-AUR, Admin, Repository, Packages, Builders, Archlinux',
       url: this.router.url,

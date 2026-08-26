@@ -48,7 +48,7 @@ export class DocsComponent implements OnInit {
 
   ngOnInit() {
     updateSeoTags(this.meta, {
-      title: 'Documentation',
+      title: 'Chaotic-AUR - Get started',
       description: 'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',

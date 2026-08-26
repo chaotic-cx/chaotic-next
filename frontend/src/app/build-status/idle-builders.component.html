@@ -1,14 +1,18 @@
 @if (buildStatusService.idleQueue().length > 0) {
-  <section class="flex h-full flex-col" animate.enter="queue-section-enter">
+  <section class="flex flex-col">
     <chaotic-build-status-section
       title="Idle builders"
       subtitle="Currently idle builders"
       icon="pi-list"
       iconClass="text-ctp-peach"
     />
-    <ul class="flex-1 max-h-[26rem] divide-y divide-white/5 overflow-y-auto pr-1" chaoticFlipList>
-      @for (pkg of buildStatusService.idleQueue(); track pkg.name) {
-        <li class="flex items-center justify-between gap-3 py-2.5" animate.enter="queue-item-enter">
+    <ul class="max-h-[32rem] divide-y divide-white/5 overflow-y-auto pr-1" animate.enter="content-fade" chaoticFlipList>
+      @for (pkg of buildStatusService.idleQueue(); track pkg.rawName; let index = $index) {
+        <li
+          class="flex items-center justify-between gap-3 py-2.5"
+          [style.--stagger]="index"
+          animate.enter="pipeline-item-enter"
+        >
           <span class="min-w-0 truncate font-medium">{{ pkg.name }}</span>
           <span class="shrink-0 text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
         </li>
@@ -16,7 +20,7 @@
     </ul>
   </section>
 } @else {
-  <section class="flex h-full flex-col">
+  <section class="flex flex-col">
     <chaotic-build-status-section
       title="Idle builders"
       subtitle="Currently idle builders"

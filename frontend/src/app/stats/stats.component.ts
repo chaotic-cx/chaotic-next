@@ -110,7 +110,7 @@ export class StatsComponent implements OnInit {
 
   ngOnInit(): void {
     this.appService.updateSeoTags(this.meta, {
-      title: 'Statistics and data',
+      title: 'Chaotic-AUR - Statistics and data',
       description: 'Package and repository statistics for Chaotic-AUR',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics',

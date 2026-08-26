@@ -303,7 +303,7 @@ export class MrOverviewComponent implements OnInit {
     }
 
     this.appService.updateSeoTags(this.meta, {
-      title: 'Update review',
+      title: 'Chaotic-AUR - Update review',
       description: 'Review and approve pending merge requests for Chaotic-AUR',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review',

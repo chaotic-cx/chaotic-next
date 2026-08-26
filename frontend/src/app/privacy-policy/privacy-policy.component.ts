@@ -22,7 +22,7 @@ export class PrivacyPolicyComponent implements OnInit {
 
   ngOnInit() {
     updateSeoTags(this.meta, {
-      title: 'Privacy Policy',
+      title: 'Chaotic-AUR - Privacy Policy',
       description: 'Privacy Policy for Chaotic-AUR, a repository of packages for Arch Linux',
       keywords: 'Chaotic-AUR, Privacy Policy, Data Protection, GDPR',
       url: this.router.url,

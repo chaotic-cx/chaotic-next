@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { Card } from '@openng/optimus-ui/card';
-import { Skeleton } from '@openng/optimus-ui/skeleton';
+import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from '../app.service';
 import { TitleComponent } from '../title/title.component';
 import { ActiveBuildsComponent } from './active-builds.component';
@@ -21,7 +21,7 @@ import { WaitingBuildsComponent } from './waiting-builds.component';
   imports: [
     CommonModule,
     Card,
-    Skeleton,
+    ProgressSpinner,
     TitleComponent,
     BuildStatusPipelinesComponent,
     BuildStatusDeploymentsComponent,
@@ -43,8 +43,16 @@ export class BuildStatusComponent implements OnInit {
 
   readonly dialogData = signal<PipelineView | null>(null);
   readonly dialogVisible = signal<boolean>(false);
+  readonly contentEl = viewChild<ElementRef<HTMLDivElement>>('statusContent');
 
   constructor() {
+    effect(() => {
+      if (this.buildStatusService.initialLoaded()) {
+        const el = this.contentEl()?.nativeElement;
+        if (el) this.buildStatusService.cardMinHeight.set(el.offsetHeight);
+      }
+    });
+
     this.appService.chaoticEvent.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event.type === 'build') {
         void this.buildStatusService.refreshPackageBuilds();
@@ -98,6 +106,7 @@ export class BuildStatusComponent implements OnInit {
       url: this.router.url,
     });
 
+    this.buildStatusService.beginNavigation();
     void this.updateAll();
   }
 

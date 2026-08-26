@@ -22,7 +22,7 @@ export class CodeOfConductComponent implements OnInit {
 
   ngOnInit() {
     updateSeoTags(this.meta, {
-      title: 'Code of Conduct',
+      title: 'Chaotic-AUR - Code of Conduct',
       description: 'Contributor Covenant Code of Conduct for Chaotic-AUR',
       keywords: 'Chaotic-AUR, Code of Conduct, Contributor Covenant',
       url: this.router.url,

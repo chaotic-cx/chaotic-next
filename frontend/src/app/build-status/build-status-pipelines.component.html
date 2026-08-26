@@ -1,21 +1,20 @@
 @if (buildStatusService.loadingPipelines() || paginatedPipelines().length > 0) {
-  <section class="flex h-full flex-col">
+  <section class="flex min-h-0 flex-1 flex-col">
     <chaotic-build-status-section
       title="Pipelines"
       subtitle="Recent GitLab pipelines"
       icon="pi-arrow-right-arrow-left"
       iconClass="text-ctp-mauve"
     />
-    <div class="flex-1">
+    <div class="min-h-0 flex-1">
       <chaotic-pipeline-list
         [pipelines]="paginatedPipelines()"
         [loading]="buildStatusService.loadingPipelines()"
-        [skeletonCount]="8"
         (openPipeline)="openPipeline.emit($event)"
       />
     </div>
     <chaotic-build-status-pager
-      class="mt-4"
+      class="mt-4 shrink-0"
       [page]="currentPage()"
       [pageCount]="pageCount()"
       (pageChange)="selectPage($event)"

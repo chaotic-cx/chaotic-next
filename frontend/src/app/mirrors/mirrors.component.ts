@@ -36,7 +36,7 @@ export class MirrorsComponent implements OnInit {
 
   ngOnInit() {
     this.appService.updateSeoTags(this.meta, {
-      title: 'Mirrors',
+      title: 'Chaotic-AUR - Mirrors',
       description: 'Chaotic-AUR mirrors, down for everyone or just me?',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR mirrors',

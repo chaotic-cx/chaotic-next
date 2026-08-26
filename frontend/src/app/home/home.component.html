@@ -99,8 +99,21 @@
             </span>
           </div>
         }
+        <div class="hero-enter mt-10 flex justify-center" style="--stagger: 7">
+          <a
+            class="inline-flex items-center gap-2 rounded-full bg-ctp-green/10 px-4 py-2 font-medium text-ctp-green transition-colors hover:bg-ctp-green/25"
+            href="https://t.me/chaotic_aur_sac"
+            target="_blank"
+            rel="noopener noreferrer"
+            pTooltip="Chat with us on Telegram — also bridged to Matrix"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-users text-sm"></i>
+            Join our community
+          </a>
+        </div>
         <span
-          class="hero-scroll-hint hero-enter mt-20 block font-bold text-primary pi pi-arrow-down cursor-pointer"
+          class="hero-scroll-hint hero-enter mt-10 block font-bold text-primary pi pi-arrow-down cursor-pointer"
           (click)="scrollToNews(newsSection)"
           (keydown.enter)="scrollToNews(newsSection)"
           style="--stagger: 7; font-size: 3rem"

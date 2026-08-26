@@ -105,7 +105,7 @@ export class MapComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.trafficService.connect();
     this.appService.updateSeoTags(this.meta, {
-      title: 'Mirror map',
+      title: 'Chaotic-AUR - Mirror map',
       description: 'Map of Chaotic-AUR mirrors and live traffic.',
       keywords: 'Chaotic-AUR, Mirrors, Map, Repository, Archlinux, AUR, Live Traffic',
       url: this.router.url,

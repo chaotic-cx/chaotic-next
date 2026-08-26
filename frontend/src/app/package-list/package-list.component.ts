@@ -91,7 +91,7 @@ export class PackageListComponent {
   constructor() {
     this.columnVisibility.register('package-list-table', this.packageColumns);
     this.appService.updateSeoTags(this.meta, {
-      title: 'Package list',
+      title: 'Chaotic-AUR - Package list',
       description: 'List of all packages available in the Chaotic-AUR repository',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list',

@@ -68,10 +68,21 @@ export class BuildStatusService {
   });
   private readonly queueLoaded = signal(false);
 
+  readonly initialLoaded = signal(false);
+  readonly cardMinHeight = signal<number | undefined>(undefined);
+
+  beginNavigation(): void {
+    this.queueLoaded.set(false);
+    this.initialLoaded.set(false);
+  }
+
   readonly loadingDeployments = this.packageBuildsResource.isLoading;
   readonly loadingPipelines = this.pipelinesResource.isLoading;
   readonly loadingQueue = computed(() => this.queueStatsResource.isLoading() && !this.queueLoaded());
-  readonly loading = computed(() => this.loadingDeployments() || this.loadingPipelines() || this.loadingQueue());
+  readonly loadingAverages = this.averagesResource.isLoading;
+  readonly loading = computed(
+    () => this.loadingDeployments() || this.loadingPipelines() || this.loadingQueue() || this.loadingAverages(),
+  );
 
   readonly latestDeployments = computed<Build[]>(() => resourceValue(this.packageBuildsResource)?.items ?? []);
 
@@ -162,7 +173,15 @@ export class BuildStatusService {
     effect(() => this.trackFirstSeenActive());
 
     effect(() => {
-      if (resourceValue(this.queueStatsResource)) this.queueLoaded.set(true);
+      if (!this.queueStatsResource.isLoading()) this.queueLoaded.set(true);
+    });
+
+    effect(() => {
+      if (this.queueLoaded()) void this.packageAverages();
+    });
+
+    effect(() => {
+      if (!this.loading()) this.initialLoaded.set(true);
     });
 
     const tick = window.setInterval(() => this.now.set(Date.now()), ESTIMATE_TICK_MS);
