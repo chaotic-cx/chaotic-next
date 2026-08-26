@@ -53,10 +53,6 @@ export function castTo<T>(value: unknown): T {
   return value as T;
 }
 
-export function range(count: number): number[] {
-  return Array.from({ length: count }, (ignored, index) => index + 1);
-}
-
 export function parseCount(value: string): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;

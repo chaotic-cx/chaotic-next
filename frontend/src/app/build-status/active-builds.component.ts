@@ -5,7 +5,6 @@ import { packageLogRouteFromUrl } from '../functions';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
-import { sortByStartTime } from './queue-estimates';
 import { FlipListDirective } from '../animations/flip-list.directive';
 
 @Component({
@@ -18,7 +17,5 @@ export class ActiveBuildsComponent {
   readonly estimateTooltip = BUILD_ESTIMATE_TOOLTIP;
   readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
 
-  readonly sortedQueue = computed(() =>
-    sortByStartTime(this.buildStatusService.activeQueue(), this.buildStatusService.activeStartedMs()),
-  );
+  readonly sortedQueue = computed(() => this.buildStatusService.activeQueue());
 }

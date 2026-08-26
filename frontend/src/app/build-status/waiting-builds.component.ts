@@ -2,12 +2,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
+import { FlipListDirective } from '../animations/flip-list.directive';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
-import { sortByStartTime } from './queue-estimates';
-import { FlipListDirective } from '../animations/flip-list.directive';
 
 const WAITING_PAGE_SIZE = 6;
 
@@ -35,12 +34,9 @@ export class WaitingBuildsComponent {
   readonly currentPage = computed(() => Math.min(this.page(), this.pageCount()));
 
   readonly paginatedQueue = computed(() => {
-    const sorted = sortByStartTime(
-      this.buildStatusService.waitingQueue(),
-      this.buildStatusService.estimates().waitingStart,
-    );
+    const queue = this.buildStatusService.waitingQueue();
     const start = (this.currentPage() - 1) * WAITING_PAGE_SIZE;
-    return sorted.slice(start, start + WAITING_PAGE_SIZE);
+    return queue.slice(start, start + WAITING_PAGE_SIZE);
   });
 
   selectPage(page: number): void {

@@ -76,7 +76,7 @@
         >
           <div class="flex items-center justify-between gap-3">
             <span
-              class="min-w-0 wrap-break-word font-semibold text-sm"
+              class="min-w-0 font-semibold text-sm line-clamp-1 sm:line-clamp-none sm:wrap-break-word"
               [class.text-ctp-red]="finding.severity === 'critical'"
               [class.text-ctp-peach]="finding.severity === 'warning'"
               [class.text-ctp-subtext0]="finding.severity === 'info'"

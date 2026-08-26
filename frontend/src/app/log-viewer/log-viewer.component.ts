@@ -122,7 +122,7 @@ export class LogViewerComponent implements OnDestroy {
     this.scrollToLine.set(undefined);
 
     this.appService.updateSeoTags(this.meta, {
-      title: `Pipeline #${pipelineId} logs`,
+      title: `Chaotic-AUR - Pipeline #${pipelineId} logs`,
       description: 'Live build logs of a Chaotic-AUR pipeline job',
       keywords: 'Chaotic-AUR, GitLab, pipeline, log, build',
       url: this.router.url,

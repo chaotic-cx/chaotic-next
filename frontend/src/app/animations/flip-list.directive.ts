@@ -1,6 +1,6 @@
 import { Directive, ElementRef, inject, OnDestroy } from '@angular/core';
 
-const FLIP_DURATION_MS = 220;
+const FLIP_DURATION_MS = 450;
 
 interface Position {
   top: number;

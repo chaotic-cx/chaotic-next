@@ -8,6 +8,7 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import {
+  ActivatedRouteSnapshot,
   provideRouter,
   Router,
   withComponentInputBinding,
@@ -27,6 +28,15 @@ import { provideAuthInitializer } from './auth/auth-initializer';
 import { provideBackendStatusInitializer } from './backend-status/backend-status-initializer';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
 import { SelectivePreloadStrategy } from './preload.strategy';
+
+/** Returns the data of the deepest matched route of a snapshot (root has empty data). */
+function deepestRouteData(snapshot: ActivatedRouteSnapshot): Record<string, unknown> {
+  let node = snapshot;
+  while (node.firstChild) {
+    node = node.firstChild;
+  }
+  return node.data;
+}
 
 /** True when the app runs as an installed PWA (standalone window), not a regular browser tab. */
 function isPwaInstalled(): boolean {
@@ -83,6 +93,10 @@ export const appConfig: ApplicationConfig = {
             const fromSegments = from.url.map((s) => s.path);
             const toSegments = to.url.map((s) => s.path);
             if (fromSegments.length > 1 && toSegments.length > 1 && fromSegments[0] === toSegments[0]) {
+              transition.skipTransition();
+            }
+
+            if (deepestRouteData(to)['disableViewTransition'] === true) {
               transition.skipTransition();
             }
 
