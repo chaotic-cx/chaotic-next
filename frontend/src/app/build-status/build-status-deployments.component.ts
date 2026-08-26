@@ -1,9 +1,10 @@
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Skeleton } from '@openng/optimus-ui/skeleton';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { FlipListDirective } from '../animations/flip-list.directive';
 import { packageLogRouteFromUrl, range } from '../functions';
+import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
@@ -22,6 +23,7 @@ const DEPLOYMENTS_PAGE_SIZE = 5;
     BuildStatusSectionComponent,
     LocaleDatePipe,
     BuildStatusPager,
+    FlipListDirective,
   ],
   templateUrl: './build-status-deployments.component.html',
 })

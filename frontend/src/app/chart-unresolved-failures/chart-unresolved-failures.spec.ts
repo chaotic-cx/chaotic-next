@@ -25,14 +25,11 @@ describe('visibleFailureRows', () => {
   ];
 
   it('hides silenced rows by default and ranks by streak', () => {
-    expect(visibleFailureRows(rows, false, 30).map((r) => r.pkgname)).toEqual([
-      'active-high-streak',
-      'low-streak-active',
-    ]);
+    expect(visibleFailureRows(rows, false).map((r) => r.pkgname)).toEqual(['active-high-streak', 'low-streak-active']);
   });
 
   it('keeps silenced rows visible at their ranked position when shown', () => {
-    expect(visibleFailureRows(rows, true, 30).map((r) => r.pkgname)).toEqual([
+    expect(visibleFailureRows(rows, true).map((r) => r.pkgname)).toEqual([
       'silenced-high-streak',
       'active-high-streak',
       'silenced-low-streak',
@@ -40,14 +37,17 @@ describe('visibleFailureRows', () => {
     ]);
   });
 
-  it('applies the cap after filtering, so a shown silenced row never falls behind active ones', () => {
+  it('never drops active rows, however many longer streaks exist above them', () => {
     const many = [
-      ...Array.from({ length: 30 }, (unused, index) => row({ pkgname: `active-${index}`, consecutiveFailures: 3 })),
+      ...Array.from({ length: 60 }, (unused, index) => row({ pkgname: `active-${index}`, consecutiveFailures: 3 })),
+      row({ pkgname: 'single-recent-failure' }),
       row({ pkgname: 'silenced-top', consecutiveFailures: 99, silenced: true }),
     ];
-    const visible = visibleFailureRows(many, true, 30);
-    expect(visible[0]?.pkgname).toBe('silenced-top');
-    expect(visible).toHaveLength(30);
+    const visible = visibleFailureRows(many, false);
+    expect(visible).toHaveLength(61);
+    expect(visible.every((r) => r.pkgname !== 'silenced-top')).toBe(true);
+    expect(visible.some((r) => r.pkgname === 'single-recent-failure')).toBe(true);
+    expect(visible.some((r) => r.pkgname === 'silenced-top')).toBe(false);
   });
 
   it('breaks streak ties with the newer failure first', () => {
@@ -55,7 +55,7 @@ describe('visibleFailureRows', () => {
       row({ pkgname: 'older', timestamp: '2026-08-20T00:00:00.000Z' }),
       row({ pkgname: 'newer', timestamp: '2026-08-24T00:00:00.000Z' }),
     ];
-    expect(visibleFailureRows(tied, false, 30).map((r) => r.pkgname)).toEqual(['newer', 'older']);
+    expect(visibleFailureRows(tied, false).map((r) => r.pkgname)).toEqual(['newer', 'older']);
   });
 });
 

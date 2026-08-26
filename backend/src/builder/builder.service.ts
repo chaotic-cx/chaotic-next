@@ -1,4 +1,9 @@
-import { buildClassSortKey } from '@chaotic-next/shared-lib';
+import {
+  BUILD_FAILURE_STATUSES,
+  BUILD_SUCCESS_STATUSES,
+  BUILD_VERDICT_STATUSES,
+  buildClassSortKey,
+} from '@chaotic-next/shared-lib';
 import type {
   Package as PackageDto,
   PackageResourceDayRow,
@@ -11,7 +16,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import IORedis from 'ioredis';
 import { ServiceBroker } from 'moleculer';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { EventService } from '../events/event.service';
 import { GitlabService } from '../gitlab/gitlab.service';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
@@ -31,14 +36,11 @@ import {
   isBuildResourceSortField,
 } from './resource-stats';
 import {
-  FAILURE_SQL_STATUSES,
-  FLAKY_ATTEMPT_SQL_STATUSES,
+  FLAKY_ATTEMPT_STATUSES,
   SHOULD_BUILD_MAX_RECENT_BUILDS,
   SHOULD_BUILD_TRAILING_DAYS,
-  SUCCESS_SQL_STATUSES,
   UNRESOLVED_FAILURE_LOOKBACK_DAYS,
   UNRESOLVED_FAILURE_LIMIT,
-  VERDICT_SQL_STATUSES,
   shouldBuildDecision,
   unresolvedFailedBuildFromRow,
   type UnresolvedFailureRow,
@@ -532,7 +534,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .select('pkg.pkgname AS pkgname')
       .addSelect('COUNT(*) AS count')
       .innerJoin('build.pkgbase', 'pkg')
-      .where('build.status::text IN (:...failures)', { failures: FAILURE_SQL_STATUSES });
+      .where('build.status IN (:...failures)', { failures: BUILD_FAILURE_STATUSES });
     if (options.days !== undefined) {
       query.andWhere('build.timestamp > :date', { date: nDaysInPast(clampInt(options.days, 1, MAX_DAYS_WINDOW)) });
     }
@@ -561,7 +563,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .createQueryBuilder('build')
       .select('pkg.pkgname AS pkgname')
       .innerJoin('build.pkgbase', 'pkg')
-      .where('build.status::text IN (:...failures)', { failures: FAILURE_SQL_STATUSES })
+      .where('build.status IN (:...failures)', { failures: BUILD_FAILURE_STATUSES })
       .andWhere('build.timestamp > :date', { date })
       .groupBy('pkg.pkgname')
       .orderBy('COUNT(*)', 'DESC')
@@ -576,7 +578,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .addSelect('pkg.pkgname AS pkgname')
       .addSelect('COUNT(*) AS count')
       .innerJoin('build.pkgbase', 'pkg')
-      .where('build.status::text IN (:...failures)', { failures: FAILURE_SQL_STATUSES })
+      .where('build.status IN (:...failures)', { failures: BUILD_FAILURE_STATUSES })
       .andWhere('build.timestamp > :date', { date })
       .andWhere('pkg.pkgname IN (:...pkgnames)', { pkgnames })
       .groupBy('day')
@@ -594,53 +596,55 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
   async getUnresolvedFailedBuilds(options?: { days?: number }): Promise<UnresolvedFailedBuild[]> {
     const since = nDaysInPast(clampInt(options?.days ?? UNRESOLVED_FAILURE_LOOKBACK_DAYS, 1, MAX_DAYS_WINDOW));
 
-    // Both streak aggregates count the same set: failures of this package newer
-    // than its last resolving build.
-    const streakScope = 'r."pkgbaseId" = l."pkgbaseId" AND r.status = ANY($4) AND r.id > COALESCE(v.resolve_id, 0)';
-    const rows = await this.buildRepository.query<UnresolvedFailureRow[]>(
-      `
-      WITH recent AS (
-        SELECT b.id, b."pkgbaseId", b.status::text AS status, b.timestamp, b."logUrl"
-        FROM build b
-        WHERE b.timestamp > $1 AND b.status::text = ANY($2)
-      ),
-      latest AS (
-        SELECT DISTINCT ON (r."pkgbaseId") r."pkgbaseId", r.status, r.timestamp, r."logUrl"
-        FROM recent r
-        ORDER BY r."pkgbaseId", r.id DESC
-      ),
-      resolved AS (
-        SELECT r."pkgbaseId", MAX(r.id) AS resolve_id
-        FROM recent r
-        WHERE r.status = ANY($3)
-        GROUP BY r."pkgbaseId"
+    // The streak aggregates count the same set: failures of this package newer
+    // than its last resolving build inside the window.
+    const failureStreakScope = (qb: SelectQueryBuilder<Build>): SelectQueryBuilder<Build> =>
+      qb
+        .from(Build, 'f')
+        .where('f."pkgbaseId" = l."pkgbaseId"')
+        .andWhere('f.timestamp > :since', { since })
+        .andWhere('f.status IN (:...failures)', { failures: BUILD_FAILURE_STATUSES })
+        .andWhere(
+          (sq: SelectQueryBuilder<Build>) =>
+            'f.id > (' +
+            sq
+              .subQuery()
+              .select('COALESCE(MAX(r.id), 0)')
+              .from(Build, 'r')
+              .where('r."pkgbaseId" = f."pkgbaseId"')
+              .andWhere('r.timestamp > :since', { since })
+              .andWhere('r.status IN (:...successes)', { successes: BUILD_SUCCESS_STATUSES })
+              .getQuery() +
+            ')',
+        );
+    const rows = await this.buildRepository
+      .createQueryBuilder('l')
+      .select('p.pkgname', 'pkgname')
+      .addSelect('l.status::text', 'status')
+      .addSelect('l.timestamp', 'timestamp')
+      .addSelect('l."logUrl"', 'logUrl')
+      .addSelect('(s.pkgname IS NOT NULL)', 'silenced')
+      .addSelect((qb) => failureStreakScope(qb.select('COUNT(*)::int')), 'consecutiveFailures')
+      .addSelect((qb) => failureStreakScope(qb.select('MIN(f.timestamp)')), 'streakStartedAt')
+      .innerJoin(Package, 'p', 'p.id = l."pkgbaseId" AND p."isActive" = true')
+      .leftJoin(SilencedBuildFailure, 's', 's.pkgname = p.pkgname')
+      .where(
+        (qb) =>
+          'l.id IN (' +
+          qb
+            .subQuery()
+            .select('MAX(b.id)')
+            .from(Build, 'b')
+            .where('b.timestamp > :since', { since })
+            .andWhere('b.status IN (:...verdicts)', { verdicts: BUILD_VERDICT_STATUSES })
+            .groupBy('b."pkgbaseId"')
+            .getQuery() +
+          ')',
       )
-      SELECT p.pkgname,
-             l.status,
-             l.timestamp,
-             l."logUrl",
-             (s.pkgname IS NOT NULL) AS silenced,
-             (SELECT COUNT(*)::int FROM recent r
-               WHERE ${streakScope}) AS "consecutiveFailures",
-             (SELECT MIN(r.timestamp) FROM recent r
-               WHERE ${streakScope}) AS "streakStartedAt"
-      FROM latest l
-      JOIN package p ON p.id = l."pkgbaseId" AND p."isActive" = true
-      LEFT JOIN resolved v ON v."pkgbaseId" = l."pkgbaseId"
-      LEFT JOIN silenced_build_failure s ON s.pkgname = p.pkgname
-      WHERE l.status = ANY($5)
-      ORDER BY l.timestamp DESC
-      LIMIT $6
-      `,
-      [
-        since,
-        VERDICT_SQL_STATUSES,
-        SUCCESS_SQL_STATUSES,
-        FAILURE_SQL_STATUSES,
-        FAILURE_SQL_STATUSES,
-        UNRESOLVED_FAILURE_LIMIT,
-      ],
-    );
+      .andWhere('l.status IN (:...failures)', { failures: BUILD_FAILURE_STATUSES })
+      .orderBy('l.timestamp', 'DESC')
+      .limit(UNRESOLVED_FAILURE_LIMIT)
+      .getRawMany<UnresolvedFailureRow>();
     return rows.map(unresolvedFailedBuildFromRow).filter((build): build is UnresolvedFailedBuild => build !== null);
   }
 
@@ -674,7 +678,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .innerJoin(Package, 'pkg', 'pkg.id = build."pkgbaseId"')
       .where('(pkg."pkgbaseName" = :pkgbase OR pkg.pkgname = :pkgbase)', { pkgbase })
       .andWhere('build.timestamp > :date', { date: since })
-      .andWhere('build.status::text IN (:...verdicts)', { verdicts: VERDICT_SQL_STATUSES })
+      .andWhere('build.status IN (:...verdicts)', { verdicts: BUILD_VERDICT_STATUSES })
       .orderBy('build.id', 'DESC')
       .limit(SHOULD_BUILD_MAX_RECENT_BUILDS)
       .cache(`should-build-${pkgbase}`, CACHE_TTL_MS)
@@ -684,7 +688,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     const newestBuildAgeMs =
       newestTimestamp === undefined || Number.isNaN(newestTimestamp) ? null : Date.now() - newestTimestamp;
     return shouldBuildDecision(
-      rows.map((row) => row.status),
+      rows.map((row) => Number(row.status)),
       newestBuildAgeMs,
     );
   }
@@ -696,8 +700,8 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
    */
   getFlakiestPackages(options: { days: number }): Promise<FlakyPackageRow[]> {
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
-    const failureFilter = `COUNT(*) FILTER (WHERE build.status::text IN ('${FAILURE_SQL_STATUSES.join("','")}'))`;
-    const successFilter = `COUNT(*) FILTER (WHERE build.status::text = '${BuildStatus.SUCCESS}')`;
+    const failureFilter = 'COUNT(*) FILTER (WHERE build.status IN (:...failureStatuses))';
+    const successFilter = 'COUNT(*) FILTER (WHERE build.status = :successStatus)';
     return this.buildRepository
       .createQueryBuilder('build')
       .select('pkg.pkgname AS pkgname')
@@ -707,11 +711,13 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .innerJoin('build.pkgbase', 'pkg')
       .where('pkg."isActive" = :isActive', { isActive: true })
       .andWhere('build.timestamp > :date', { date: nDaysInPast(days) })
-      .andWhere('build.status::text IN (:...attempts)', { attempts: FLAKY_ATTEMPT_SQL_STATUSES })
+      .andWhere('build.status IN (:...attempts)', { attempts: FLAKY_ATTEMPT_STATUSES })
       .groupBy('pkg.pkgname')
       .having(`COUNT(*) >= :minAttempts AND ${failureFilter} >= 1 AND ${successFilter} >= 1`, {
         minAttempts: MIN_FLAKINESS_ATTEMPTS,
       })
+      .setParameter('failureStatuses', BUILD_FAILURE_STATUSES)
+      .setParameter('successStatus', BuildStatus.SUCCESS)
       .orderBy('failures', 'DESC')
       .addOrderBy('attempts', 'DESC')
       .limit(MAX_AMOUNT)
@@ -854,13 +860,17 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     return this.buildRepository
       .createQueryBuilder('build')
       .select("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC') AS day")
-      .addSelect(`COUNT(*) FILTER (WHERE build.status::text = '${BuildStatus.SUCCESS}') AS success`)
-      .addSelect(`COUNT(*) FILTER (WHERE build.status::text = '${BuildStatus.ALREADY_BUILT}') AS alreadyBuilt`)
-      .addSelect(`COUNT(*) FILTER (WHERE build.status::text = '${BuildStatus.SKIPPED}') AS skipped`)
-      .addSelect(`COUNT(*) FILTER (WHERE build.status::text IN ('${FAILURE_SQL_STATUSES.join("','")}')) AS failed`)
+      .addSelect('COUNT(*) FILTER (WHERE build.status = :successStatus) AS success')
+      .addSelect('COUNT(*) FILTER (WHERE build.status = :alreadyBuiltStatus) AS alreadyBuilt')
+      .addSelect('COUNT(*) FILTER (WHERE build.status = :skippedStatus) AS skipped')
+      .addSelect('COUNT(*) FILTER (WHERE build.status IN (:...failureStatuses)) AS failed')
       .groupBy('day')
       .orderBy('day', 'DESC')
       .limit(days)
+      .setParameter('successStatus', BuildStatus.SUCCESS)
+      .setParameter('alreadyBuiltStatus', BuildStatus.ALREADY_BUILT)
+      .setParameter('skippedStatus', BuildStatus.SKIPPED)
+      .setParameter('failureStatuses', BUILD_FAILURE_STATUSES)
       .cache(`throughput-per-day-${days}`, CACHE_TTL_MS)
       .getRawMany();
   }
@@ -938,7 +948,8 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .addSelect('p."version"')
       .from(Build, 'b')
       .innerJoin('b.pkgbase', 'p')
-      .orderBy('p."lastUpdated"', 'DESC')
+      .orderBy('b.timestamp', 'DESC')
+      .addOrderBy('b.id', 'DESC')
       .limit(amount)
       .offset(offset)
       .cache(`latest-builds-${amount}-${offset}`, CACHE_TTL_MS)

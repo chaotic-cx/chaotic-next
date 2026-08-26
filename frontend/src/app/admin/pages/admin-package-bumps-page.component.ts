@@ -11,6 +11,7 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
 import {
   createAdminPagination,
+  type StatefulTableRef,
   createDebounced,
   patchQueryParams,
   queryFromRaw,
@@ -53,6 +54,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
   template: `
     <div class="table-container">
       <p-table
+        #bumpsTable
         [value]="service.packageBumps()?.items ?? []"
         [rows]="pagination.perPage()"
         [loading]="service.packageBumpsLoading()"
@@ -61,8 +63,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         [totalRecords]="service.packageBumpsTotal()"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[25, 50, 100]"
-        (onLazyLoad)="onLazyLoad($event)"
+        (onLazyLoad)="onLazyLoad(bumpsTable, $event)"
         dataKey="id"
+        stateStorage="local"
+        stateKey="admin-bumps-table"
         paginatorDropdownAppendTo="body"
       >
         <ng-template #caption>
@@ -220,8 +224,8 @@ export class AdminPackageBumpsPageComponent {
     patchQueryParams(this.router, this.route, { source: value === null || value === undefined ? null : String(value) });
   }
 
-  onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.pagination.handleLazyLoad(event);
+  onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
+    this.pagination.handleStatefulLazyLoad(table, event);
     this.service.packageBumpPage.set(this.pagination.page());
     this.service.packageBumpPerPage.set(event.rows ?? 25);
   }

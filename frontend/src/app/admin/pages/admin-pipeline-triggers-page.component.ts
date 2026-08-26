@@ -13,6 +13,7 @@ import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import {
   createAdminPagination,
+  type StatefulTableRef,
   createDebounced,
   patchQueryParams,
   queryFromRaw,
@@ -47,6 +48,7 @@ const REPO_OPTIONS = [
   template: `
     <div class="table-container">
       <p-table
+        #pipelineTriggersTable
         [value]="service.pipelineTriggers()?.items ?? []"
         [rows]="pagination.perPage()"
         [loading]="service.pipelineTriggersLoading()"
@@ -55,8 +57,10 @@ const REPO_OPTIONS = [
         [totalRecords]="service.pipelineTriggersTotal()"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[25, 50, 100]"
-        (onLazyLoad)="onLazyLoad($event)"
+        (onLazyLoad)="onLazyLoad(pipelineTriggersTable, $event)"
         dataKey="id"
+        stateStorage="local"
+        stateKey="admin-pipeline-triggers-table"
         paginatorDropdownAppendTo="body"
       >
         <ng-template #caption>
@@ -306,8 +310,8 @@ export class AdminPipelineTriggersPageComponent {
       .join(', ');
   }
 
-  onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.pagination.handleLazyLoad(event);
+  onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
+    this.pagination.handleStatefulLazyLoad(table, event);
     this.service.pipelineTriggerPage.set(this.pagination.page());
     this.service.pipelineTriggerPerPage.set(event.rows ?? 25);
   }

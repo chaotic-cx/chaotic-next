@@ -146,7 +146,7 @@ export class DeployLogComponent {
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
-    this.deployLogService.setPage(event.first ?? 0, event.rows ?? 25);
+    this.deployLogService.pagination.handleLazyLoad(event);
     this.deployLogService.setSort(
       typeof event.sortField === 'string' ? event.sortField : 'timestamp',
       event.sortOrder ?? -1,
@@ -196,6 +196,8 @@ export class DeployLogComponent {
   }
 
   private applySearch(query: string): void {
+    const table = this.deployTable();
+    if (table) table.first = 0;
     this.deployLogService.setSearch(query);
     void this.router.navigate([], {
       queryParams: { search: query || null },

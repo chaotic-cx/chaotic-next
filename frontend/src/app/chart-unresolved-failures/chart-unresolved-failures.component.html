@@ -20,64 +20,87 @@
     </div>
     <ul class="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1" aria-live="polite">
       @for (row of visibleRows(); track row.pkgname) {
-        <li
-          class="flex items-center gap-2 rounded-lg bg-ctp-surface0/60 px-2.5 py-1.5 text-sm"
-          [class.opacity-50]="row.silenced"
-        >
-          <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="statusColor(row.status)"></span>
-          <span class="min-w-0 truncate font-medium text-ctp-text" [title]="row.pkgname">{{ row.pkgname }}</span>
-          @if (isRateLimited(row)) {
-            <i
-              class="pi pi-bolt shrink-0 text-ctp-yellow"
-              pTooltip="Rate limited: skipped by the build dispatcher until its next retry"
-              tooltipPosition="top"
-            ></i>
-          }
-          @if (row.consecutiveFailures >= 2) {
-            <span
-              class="shrink-0 rounded-md bg-ctp-surface1 px-1.5 py-0.5 text-xs text-ctp-red"
-              [pTooltip]="streakTooltip(row)"
-              tooltipPosition="top"
-            >
-              ×{{ row.consecutiveFailures }} · {{ streakDurationLabel(row.streakStartedAt) }}
-            </span>
-          }
-          <span class="ml-auto shrink-0 pl-2 text-xs whitespace-nowrap text-ctp-subtext0">
-            {{ formatRelativeTime(row.timestamp) }}
-          </span>
-          @if (row.logUrl; as logUrl) {
-            <a
-              class="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-ctp-mauve hover:text-ctp-text"
-              [routerLink]="packageLogRouteFromUrl(logUrl)"
-              [attr.aria-label]="`Open build log for ${row.pkgname}`"
-              pTooltip="Open build log"
-              tooltipPosition="left"
-            >
-              <i class="pi pi-bars"></i>
-            </a>
-          }
-          @if (isLoggedIn()) {
-            <button
-              class="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-ctp-overlay1 hover:text-ctp-text disabled:cursor-not-allowed disabled:opacity-50"
-              [disabled]="busyPkgname() !== null"
-              [attr.aria-label]="
-                row.silenced ? `Unsilence ${row.pkgname}` : `Silence ${row.pkgname} until next failure`
-              "
-              [pTooltip]="row.silenced ? 'Unsilence' : 'Silence until next failure'"
-              (click)="toggleSilence(row)"
-              type="button"
-              tooltipPosition="left"
-            >
-              @if (isBusy(row)) {
-                <i class="pi pi-spin pi-spinner"></i>
-              } @else if (row.silenced) {
-                <i class="pi pi-eye"></i>
-              } @else {
-                <i class="pi pi-eye-slash"></i>
+        @defer (on viewport) {
+          <li
+            class="flex flex-col gap-1 rounded-lg bg-ctp-surface0/60 px-2.5 py-1.5 text-sm sm:flex-row sm:items-center sm:gap-2"
+            [class.opacity-50]="row.silenced"
+          >
+            <div class="flex min-w-0 items-center gap-2">
+              <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="statusColor(row.status)"></span>
+              <span class="min-w-0 truncate font-medium text-ctp-text" [title]="row.pkgname">{{ row.pkgname }}</span>
+              @if (isRateLimited(row)) {
+                <i
+                  class="pi pi-bolt shrink-0 text-ctp-yellow"
+                  pTooltip="Rate limited: skipped by the build dispatcher until its next retry"
+                  tooltipPosition="top"
+                ></i>
               }
-            </button>
-          }
-        </li>
+              @if (row.consecutiveFailures >= 2) {
+                <span
+                  class="shrink-0 rounded-md bg-ctp-surface1 px-1.5 py-0.5 text-xs text-ctp-red max-sm:ml-auto"
+                  [pTooltip]="streakTooltip(row)"
+                  tooltipPosition="top"
+                >
+                  ×{{ row.consecutiveFailures }} · {{ streakDurationLabel(row.streakStartedAt) }}
+                </span>
+              }
+            </div>
+            <div class="flex items-center gap-2 pl-4 max-sm:w-full sm:ml-auto sm:pl-0">
+              <span class="text-xs whitespace-nowrap text-ctp-subtext0">
+                {{ formatRelativeTime(row.timestamp) }}
+              </span>
+              <div class="ml-auto flex items-center gap-2">
+                @if (row.logUrl; as logUrl) {
+                  @if (isLogPurged(row.timestamp)) {
+                    <button
+                      class="inline-flex h-6 w-6 shrink-0 cursor-not-allowed items-center justify-center rounded-md text-ctp-overlay1 opacity-50"
+                      [attr.aria-label]="`Build log purged for ${row.pkgname}`"
+                      disabled
+                      type="button"
+                      pTooltip="Log purged"
+                      tooltipPosition="left"
+                    >
+                      <i class="pi pi-bars"></i>
+                    </button>
+                  } @else {
+                    <a
+                      class="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-ctp-mauve hover:text-ctp-text"
+                      [routerLink]="packageLogRouteFromUrl(logUrl)"
+                      [attr.aria-label]="`Open build log for ${row.pkgname}`"
+                      pTooltip="Open build log"
+                      tooltipPosition="left"
+                    >
+                      <i class="pi pi-bars"></i>
+                    </a>
+                  }
+                }
+                @if (isLoggedIn()) {
+                  <button
+                    class="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-ctp-overlay1 hover:text-ctp-text disabled:cursor-not-allowed disabled:opacity-50"
+                    [disabled]="busyPkgname() !== null"
+                    [attr.aria-label]="
+                      row.silenced ? `Unsilence ${row.pkgname}` : `Silence ${row.pkgname} until next failure`
+                    "
+                    [pTooltip]="row.silenced ? 'Unsilence' : 'Silence until next failure'"
+                    (click)="toggleSilence(row)"
+                    type="button"
+                    tooltipPosition="left"
+                  >
+                    @if (isBusy(row)) {
+                      <i class="pi pi-spin pi-spinner"></i>
+                    } @else if (row.silenced) {
+                      <i class="pi pi-eye"></i>
+                    } @else {
+                      <i class="pi pi-eye-slash"></i>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+          </li>
+        } @placeholder {
+          <li class="h-9 rounded-lg bg-ctp-surface0/60" aria-hidden="true"></li>
+        }
       }
     </ul>
     @if (visibleRows().length === 0) {

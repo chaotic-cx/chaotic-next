@@ -10,7 +10,7 @@
       @for (deployment of paginatedDeployments(); track deployment.id) {
         <li class="flex items-center justify-between gap-3 py-2.5" animate.enter="queue-item-enter">
           <div class="min-w-0 flex-1">
-            <span class="block break-words font-medium">{{ deployment.pkgbase.pkgname }}</span>
+            <span class="block wrap-break-word font-medium">{{ deployment.pkgbase.pkgname }}</span>
             @if (deployment.repo?.name; as repoName) {
               <span class="block text-sm text-ctp-subtext1">{{ repoName }}</span>
             }

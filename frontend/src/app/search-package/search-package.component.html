@@ -140,7 +140,7 @@
                     </div>
                   }
                 } @else if (isString(dataset.value) && dataset.value.trim()) {
-                  <span class="break-words">{{ dataset.value }}</span>
+                  <span class="wrap-break-word">{{ dataset.value }}</span>
                 } @else if (isNumber(dataset.value) || isBoolean(dataset.value)) {
                   <span class="font-mono">{{ dataset.value }}</span>
                 } @else {

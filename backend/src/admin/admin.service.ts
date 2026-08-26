@@ -144,13 +144,11 @@ export class AdminService {
       params.active = active;
     }
 
-    const query = this.packageRepository
-      .createQueryBuilder('package')
-      .leftJoinAndSelect('package.repo', 'repo')
-      .where(conditions.length ? conditions.join(' AND ') : '1=1', params)
-      .orderBy('package.pkgname', 'ASC')
-      .skip(skip)
-      .take(safePerPage);
+    const query = this.packageRepository.createQueryBuilder('package').leftJoinAndSelect('package.repo', 'repo');
+    if (conditions.length > 0) {
+      query.where(conditions.join(' AND '), params);
+    }
+    query.orderBy('package.pkgname', 'ASC').skip(skip).take(safePerPage);
 
     const [rows, total] = await query.getManyAndCount();
 

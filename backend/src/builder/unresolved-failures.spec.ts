@@ -3,13 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
 import { CACHE_TTL_MS } from '../utils/constants';
 import { BuildStatus } from '../types/types';
-import { isValidPkgname } from '@chaotic-next/shared-lib';
+import { BUILD_VERDICT_STATUSES, isValidPkgname } from '@chaotic-next/shared-lib';
 import { Build, Builder, Package, Repo, SilencedBuildFailure } from './builder.entity';
 import { BuilderService } from './builder.service';
 import {
-  FAILURE_SQL_STATUSES,
-  SUCCESS_SQL_STATUSES,
-  VERDICT_SQL_STATUSES,
   isFailingStatus,
   shouldBuildDecision,
   unresolvedFailedBuildFromRow,
@@ -29,12 +26,6 @@ describe('status classification', () => {
     expect(isFailingStatus(BuildStatus.SKIPPED)).toBe(false);
     expect(isFailingStatus(BuildStatus.CANCELED)).toBe(false);
     expect(isFailingStatus(BuildStatus.CANCELED_REQUEUE)).toBe(false);
-  });
-
-  it('maps the status sets to their SQL text codes', () => {
-    expect(SUCCESS_SQL_STATUSES).toEqual(['0', '1', '2']);
-    expect(FAILURE_SQL_STATUSES).toEqual(['3', '4', '7']);
-    expect(VERDICT_SQL_STATUSES).toEqual(['0', '1', '2', '3', '4', '7']);
   });
 });
 
@@ -111,12 +102,12 @@ describe('shouldBuildDecision', () => {
   });
 
   it('allows building below the failure limit', () => {
-    const statuses = Array.from({ length: 4 }, () => '3');
+    const statuses = Array.from({ length: 4 }, () => BuildStatus.FAILED);
     expect(shouldBuildDecision(statuses, 0)).toEqual({ shouldBuild: true, consecutiveFailures: 4 });
   });
 
   it('blocks fresh failure loops at the limit', () => {
-    const statuses = Array.from({ length: 5 }, () => String(BuildStatus.FAILED));
+    const statuses = Array.from({ length: 5 }, () => BuildStatus.FAILED);
     expect(shouldBuildDecision(statuses, 0)).toEqual({ shouldBuild: false, consecutiveFailures: 5 });
     expect(shouldBuildDecision([...statuses, ...statuses], 0)).toEqual({
       shouldBuild: false,
@@ -125,39 +116,41 @@ describe('shouldBuildDecision', () => {
   });
 
   it('unblocks a blocked package once its newest attempt is older than the cooldown', () => {
-    const statuses = Array.from({ length: 6 }, () => '3');
+    const statuses = Array.from({ length: 6 }, () => BuildStatus.FAILED);
     expect(shouldBuildDecision(statuses, 23 * HOUR_MS).shouldBuild).toBe(false);
     expect(shouldBuildDecision(statuses, 24 * HOUR_MS)).toEqual({ shouldBuild: true, consecutiveFailures: 6 });
   });
 
   it('counts every failure flavor in the streak', () => {
-    const statuses = [String(BuildStatus.TIMED_OUT), String(BuildStatus.SOFTWARE_FAILURE), '3'];
+    const statuses = [BuildStatus.TIMED_OUT, BuildStatus.SOFTWARE_FAILURE, BuildStatus.FAILED];
     expect(shouldBuildDecision(statuses, 0).consecutiveFailures).toBe(3);
   });
 
   it('stops the streak at a resolving build', () => {
-    const newestFirst = ['3', '3', '0', '3'];
+    const newestFirst = [BuildStatus.FAILED, BuildStatus.FAILED, BuildStatus.SUCCESS, BuildStatus.FAILED];
     expect(shouldBuildDecision(newestFirst, 0)).toEqual({ shouldBuild: true, consecutiveFailures: 2 });
   });
 
   it('stops the streak at an unknown status instead of counting it', () => {
-    expect(shouldBuildDecision(['3', '99'], 0)).toEqual({ shouldBuild: true, consecutiveFailures: 1 });
+    expect(shouldBuildDecision([BuildStatus.FAILED, 99], 0)).toEqual({ shouldBuild: true, consecutiveFailures: 1 });
   });
 });
 
 describe('BuilderService silence handling', () => {
   function createService(rows: UnresolvedFailureRow[]): {
     service: BuilderService;
-    shouldBuildQb: Record<string, ReturnType<typeof vi.fn>>;
+    buildsQb: Record<string, ReturnType<typeof vi.fn>>;
   } {
-    const shouldBuildQb: Record<string, ReturnType<typeof vi.fn>> = {};
-    for (const step of ['select', 'addSelect', 'innerJoin', 'where', 'andWhere', 'orderBy', 'limit', 'cache']) {
-      shouldBuildQb[step] = vi.fn(() => shouldBuildQb);
-    }
-    shouldBuildQb.getRawMany = vi.fn().mockResolvedValue([]);
+    const buildsQb: Record<string, ReturnType<typeof vi.fn>> = {};
+    const chainable = new Proxy(buildsQb, {
+      get(target, prop: string) {
+        if (!(prop in target)) target[prop] = vi.fn(() => chainable);
+        return target[prop];
+      },
+    });
+    buildsQb.getRawMany = vi.fn().mockResolvedValue(rows);
     const buildRepository = {
-      query: vi.fn().mockResolvedValue(rows),
-      createQueryBuilder: vi.fn(() => shouldBuildQb),
+      createQueryBuilder: vi.fn(() => chainable),
     } as unknown as Repository<Build>;
     const silencedFailureRepository = {
       createQueryBuilder: vi.fn(() => {
@@ -189,7 +182,7 @@ describe('BuilderService silence handling', () => {
       {} as never,
       {} as never,
     );
-    return { service, shouldBuildQb };
+    return { service, buildsQb };
   }
 
   it('returns the mapped unresolved failures', async () => {
@@ -238,26 +231,26 @@ describe('BuilderService silence handling', () => {
 
   it('decides should-build from the trailing verdict builds of the pkgbase', async () => {
     const rows = Array.from({ length: 5 }, () => ({ status: '3', timestamp: new Date() }));
-    const { service, shouldBuildQb } = createService([]);
-    shouldBuildQb.getRawMany.mockResolvedValue(rows);
+    const { service, buildsQb } = createService([]);
+    buildsQb.getRawMany.mockResolvedValue(rows);
 
     const decision = await service.getShouldBuild('firefox-nightly');
 
     expect(decision).toEqual({ shouldBuild: false, consecutiveFailures: 5 });
-    expect(shouldBuildQb.where).toHaveBeenCalledWith('(pkg."pkgbaseName" = :pkgbase OR pkg.pkgname = :pkgbase)', {
+    expect(buildsQb.where).toHaveBeenCalledWith('(pkg."pkgbaseName" = :pkgbase OR pkg.pkgname = :pkgbase)', {
       pkgbase: 'firefox-nightly',
     });
-    expect(shouldBuildQb.andWhere).toHaveBeenCalledWith('build.status::text IN (:...verdicts)', {
-      verdicts: VERDICT_SQL_STATUSES,
+    expect(buildsQb.andWhere).toHaveBeenCalledWith('build.status IN (:...verdicts)', {
+      verdicts: BUILD_VERDICT_STATUSES,
     });
-    expect(shouldBuildQb.cache).toHaveBeenCalledWith('should-build-firefox-nightly', CACHE_TTL_MS);
+    expect(buildsQb.cache).toHaveBeenCalledWith('should-build-firefox-nightly', CACHE_TTL_MS);
   });
 
   it('retries a blocked pkgbase once its newest failure went stale', async () => {
     const staleTimestamp = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const rows = Array.from({ length: 6 }, () => ({ status: '3', timestamp: staleTimestamp }));
-    const { service, shouldBuildQb } = createService([]);
-    shouldBuildQb.getRawMany.mockResolvedValue(rows);
+    const { service, buildsQb } = createService([]);
+    buildsQb.getRawMany.mockResolvedValue(rows);
 
     await expect(service.getShouldBuild('firefox-nightly')).resolves.toEqual({
       shouldBuild: true,

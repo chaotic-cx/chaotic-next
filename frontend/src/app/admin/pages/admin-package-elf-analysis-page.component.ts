@@ -20,6 +20,7 @@ import { PackageTriggerSourcesComponent } from '../../package-trigger-sources/pa
 import { AdminService, ElfAnalysisFormData } from '../admin.service';
 import {
   createAdminPagination,
+  type StatefulTableRef,
   createDebounced,
   patchQueryParams,
   queryFromRaw,
@@ -61,6 +62,7 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
   template: `
     <div class="table-container">
       <p-table
+        #elfAnalysisTable
         [value]="service.elfAnalysis()?.items ?? []"
         [rows]="pagination.perPage()"
         [loading]="service.elfAnalysisLoading()"
@@ -69,8 +71,10 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
         [totalRecords]="service.elfAnalysisTotal()"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[25, 50, 100]"
-        (onLazyLoad)="onLazyLoad($event)"
+        (onLazyLoad)="onLazyLoad(elfAnalysisTable, $event)"
         dataKey="id"
+        stateStorage="local"
+        stateKey="admin-elf-analysis-table"
         paginatorDropdownAppendTo="body"
       >
         <ng-template #caption>
@@ -402,8 +406,8 @@ export class AdminPackageElfAnalysisPageComponent {
     });
   }
 
-  onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.pagination.handleLazyLoad(event);
+  onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
+    this.pagination.handleStatefulLazyLoad(table, event);
     this.service.elfAnalysisPage.set(this.pagination.page());
     this.service.elfAnalysisPerPage.set(event.rows ?? 25);
   }

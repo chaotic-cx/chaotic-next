@@ -67,6 +67,7 @@ export class PackageListComponent {
   protected readonly formatPkgrel = formatPkgrel;
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  private readonly pkgTable = viewChild<Table>('pkgTable');
 
   readonly search = input<string>();
 
@@ -88,17 +89,7 @@ export class PackageListComponent {
   });
 
   constructor() {
-    this.columnVisibility.register('package-list-table', [
-      'name',
-      'version',
-      'lastUpdated',
-      'buildClass',
-      'pkgbaseName',
-      'description',
-      'homepage',
-      'repo',
-      'actions',
-    ]);
+    this.columnVisibility.register('package-list-table', this.packageColumns);
     this.appService.updateSeoTags(this.meta, {
       title: 'Package list',
       description: 'List of all packages available in the Chaotic-AUR repository',
@@ -118,7 +109,7 @@ export class PackageListComponent {
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
-    this.packageListService.setPage(event.first ?? 0, event.rows ?? 25);
+    this.packageListService.pagination.handleLazyLoad(event);
     this.packageListService.setSort(
       typeof event.sortField === 'string' ? event.sortField : 'pkgname',
       event.sortOrder ?? 1,
@@ -146,6 +137,8 @@ export class PackageListComponent {
   }
 
   private applySearch(query: string): void {
+    const table = this.pkgTable();
+    if (table) table.first = 0;
     this.packageListService.setSearch(query);
     void this.router.navigate([], {
       queryParams: { search: query || null },
@@ -156,6 +149,8 @@ export class PackageListComponent {
 
   onRepoFilter(repoId: number | null): void {
     const repoName = repoId === null ? null : this.repoNameById(repoId);
+    const table = this.pkgTable();
+    if (table) table.first = 0;
     this.packageListService.setRepoFilter(repoName);
     void this.router.navigate([], {
       queryParams: { repo: repoName },

@@ -6,7 +6,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
-import { createAdminPagination } from '../admin-url-sync';
+import { createAdminPagination, type StatefulTableRef } from '../admin-url-sync';
 
 @Component({
   selector: 'chaotic-admin-repo-operations-page',
@@ -111,6 +111,7 @@ import { createAdminPagination } from '../admin-url-sync';
         </div>
         <div class="overflow-x-auto">
           <p-table
+            #brokenTable
             [(selection)]="service.brokenSelection"
             [value]="service.brokenReports()"
             [rows]="pagination.perPage()"
@@ -123,8 +124,11 @@ import { createAdminPagination } from '../admin-url-sync';
             [rowsPerPageOptions]="[25, 50, 100]"
             [selectionMode]="'multiple'"
             [selectionPageOnly]="true"
-            (onLazyLoad)="onLazyLoad($event)"
+            (onLazyLoad)="onLazyLoad(brokenTable, $event)"
+            (onStateRestore)="clearRestoredSelection()"
             dataKey="pkgname"
+            stateStorage="local"
+            stateKey="admin-repo-operations-table"
             paginatorDropdownAppendTo="body"
           >
             <ng-template #header>
@@ -204,9 +208,17 @@ export class AdminRepoOperationsPageComponent {
     });
   }
 
-  onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.pagination.handleLazyLoad(event);
+  onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
+    this.pagination.handleStatefulLazyLoad(table, event);
     this.service.brokenPage.set(this.pagination.page());
     this.service.brokenPerPage.set(event.rows ?? 25);
+  }
+
+  /**
+   * Restored selections reference stale report objects. The table re-emits the
+   * restored selection in a microtask; clear it right after that settles.
+   */
+  protected clearRestoredSelection(): void {
+    queueMicrotask(() => this.service.brokenSelection.set([]));
   }
 }
