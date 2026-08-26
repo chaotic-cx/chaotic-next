@@ -2,34 +2,31 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { flavors } from '@catppuccin/palette';
-import { MessageToastService } from '@garudalinux/core';
 import type { UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
 import { BUILD_RATE_LIMIT_FAILURE_STREAK, BUILD_RATE_LIMIT_RETRY_HOURS, BuildStatus } from '@chaotic-next/shared-lib';
+import { MessageToastService } from '@garudalinux/core';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
-import { AppService, ALL_TIME_DAYS } from '../app.service';
 import { backendErrorMessage } from '../api-errors';
-import { packageLogRouteFromUrl, resourceValue } from '../functions';
+import { ALL_TIME_DAYS, AppService } from '../app.service';
+import { isLogPurged, packageLogRouteFromUrl, resourceValue } from '../functions';
 import { formatRelativeTime } from '../pipes/relative-time.pipe';
 import { StatsService } from '../stats/stats.service';
 
-const MAX_VISIBLE_ROWS = 30;
-
 /**
- * Ranks failures worst-streak first and applies the silenced filter before the
- * row cap, so silenced rows stay visible among the top entries when shown
- * instead of being cut by the cap behind all active rows.
+ * Ranks failures worst-streak first. Every unresolved failure stays visible
+ * (the list scrolls), so single-failure packages are never hidden behind
+ * longer streaks.
  */
-export function visibleFailureRows(
-  rows: UnresolvedFailedBuild[],
-  showSilenced: boolean,
-  max: number,
-): UnresolvedFailedBuild[] {
-  const ranked = rows.toSorted(
-    (left, right) =>
-      right.consecutiveFailures - left.consecutiveFailures || Date.parse(right.timestamp) - Date.parse(left.timestamp),
-  );
-  return (showSilenced ? ranked : ranked.filter((row) => !row.silenced)).slice(0, max);
+export function visibleFailureRows(rows: UnresolvedFailedBuild[], showSilenced: boolean): UnresolvedFailedBuild[] {
+  const candidates = showSilenced ? rows : rows.filter((row) => !row.silenced);
+  return candidates
+    .toReversed()
+    .toSorted(
+      (left, right) =>
+        right.consecutiveFailures - left.consecutiveFailures ||
+        Date.parse(right.timestamp) - Date.parse(left.timestamp),
+    );
 }
 
 const STATUS_COLORS: Partial<Record<BuildStatus, string>> = {
@@ -93,13 +90,14 @@ export class ChartUnresolvedFailuresComponent {
 
   readonly silencedCount = computed(() => this.failures().filter((row) => row.silenced).length);
 
-  readonly visibleRows = computed(() => visibleFailureRows(this.failures(), this.showSilenced(), MAX_VISIBLE_ROWS));
+  readonly visibleRows = computed(() => visibleFailureRows(this.failures(), this.showSilenced()));
 
   statusColor(status: BuildStatus): string {
     return STATUS_COLORS[status] ?? flavors.mocha.colors.overlay1.hex;
   }
 
   protected readonly isRateLimited = isRateLimited;
+  protected readonly isLogPurged = isLogPurged;
   protected readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
   protected readonly streakDurationLabel = streakDurationLabel;
 

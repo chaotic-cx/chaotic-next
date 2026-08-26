@@ -151,6 +151,9 @@ samp {
 
 .chaotic-panel {
   @apply text-ctp-text;
+  text-align: justify;
+  hyphens: auto;
+  text-wrap: pretty;
 }
 
 .chaotic-container-text {

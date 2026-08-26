@@ -12,13 +12,13 @@
       </div>
     } @else {
       <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        @for (pkg of packages(); track pkg.id) {
+        @for (pkg of packages(); track pkg.id; let index = $index) {
           <a
             class="recent-card flex flex-col gap-1 p-4"
             [routerLink]="['/stats/search']"
             [queryParams]="{ search: pkg.pkgname }"
-            animate.enter="ctp-item-enter"
-            animate.leave="ctp-item-leave"
+            [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
+            animate.enter="finding-item-enter"
           >
             <span class="truncate font-bold text-ctp-mauve">{{ pkg.pkgname }}</span>
             <span class="truncate text-sm text-ctp-subtext1">{{ versionLabel(pkg) }}</span>

@@ -3,6 +3,8 @@ import { Component, computed, signal } from '@angular/core';
 const MIN_THUMB_PX = 40;
 const HIDE_DELAY_MS = 1000;
 
+const FINE_POINTER_QUERY = '(hover: hover) and (pointer: fine)';
+
 @Component({
   selector: 'chaotic-overlay-scrollbar',
   templateUrl: './overlay-scrollbar.component.html',
@@ -15,6 +17,8 @@ const HIDE_DELAY_MS = 1000;
   },
 })
 export class OverlayScrollbarComponent {
+  private readonly hasFinePointer = window.matchMedia(FINE_POINTER_QUERY).matches;
+
   private readonly scrollTop = signal(0);
   private readonly scrollHeight = signal(0);
   private readonly viewportHeight = signal(0);
@@ -42,6 +46,7 @@ export class OverlayScrollbarComponent {
   });
 
   protected refresh(): void {
+    if (!this.hasFinePointer) return;
     this.scrollTop.set(window.scrollY);
     this.scrollHeight.set(document.documentElement.scrollHeight);
     this.viewportHeight.set(window.innerHeight);

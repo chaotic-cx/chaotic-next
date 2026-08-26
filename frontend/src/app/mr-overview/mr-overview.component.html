@@ -72,7 +72,7 @@
     >
       <ng-template #header>
         <div class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <a class="min-w-0 cursor-pointer break-words text-ctp-mauve" [href]="mr.web_url">{{
+          <a class="min-w-0 cursor-pointer wrap-break-word text-ctp-mauve" [href]="mr.web_url">{{
             mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
           }}</a>
           <div class="mr-chips flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">

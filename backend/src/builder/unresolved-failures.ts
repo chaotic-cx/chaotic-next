@@ -2,19 +2,13 @@ import {
   BUILD_FAILURE_STATUSES,
   BUILD_RATE_LIMIT_FAILURE_STREAK,
   BUILD_RATE_LIMIT_RETRY_HOURS,
-  BUILD_SUCCESS_STATUSES,
-  BUILD_VERDICT_STATUSES,
-  STATUS_LABELS,
   BuildStatus,
   isBuildStatus,
+  STATUS_LABELS,
   type UnresolvedFailedBuild,
 } from '@chaotic-next/shared-lib';
 
-export const FAILURE_SQL_STATUSES = BUILD_FAILURE_STATUSES.map(String);
-export const SUCCESS_SQL_STATUSES = BUILD_SUCCESS_STATUSES.map(String);
-export const VERDICT_SQL_STATUSES = BUILD_VERDICT_STATUSES.map(String);
-
-export const FLAKY_ATTEMPT_SQL_STATUSES = [String(BuildStatus.SUCCESS), ...FAILURE_SQL_STATUSES];
+export const FLAKY_ATTEMPT_STATUSES: readonly BuildStatus[] = [BuildStatus.SUCCESS, ...BUILD_FAILURE_STATUSES];
 
 export const UNRESOLVED_FAILURE_LOOKBACK_DAYS = 90;
 export const UNRESOLVED_FAILURE_LIMIT = 500;
@@ -67,12 +61,12 @@ export function isFailingStatus(status: BuildStatus): boolean {
  * than the retry cooldown, so failing packages still get retried regularly.
  */
 export function shouldBuildDecision(
-  statuses: string[],
+  statuses: readonly number[],
   newestBuildAgeMs: number | null,
 ): { shouldBuild: boolean; consecutiveFailures: number } {
   let consecutiveFailures = 0;
   for (const status of statuses) {
-    if (!FAILURE_SQL_STATUSES.includes(status)) break;
+    if (!BUILD_FAILURE_STATUSES.includes(status as BuildStatus)) break;
     consecutiveFailures++;
   }
   if (consecutiveFailures < BUILD_RATE_LIMIT_FAILURE_STREAK) {

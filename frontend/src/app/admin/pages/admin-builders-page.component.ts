@@ -17,6 +17,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService, BuilderFormData } from '../admin.service';
 import {
   createAdminPagination,
+  type StatefulTableRef,
   createDebounced,
   patchQueryParams,
   queryFromRaw,
@@ -51,6 +52,7 @@ interface BuilderFormModel {
   template: `
     <div class="table-container">
       <p-table
+        #buildersTable
         [value]="service.builders()?.items ?? []"
         [rows]="pagination.perPage()"
         [loading]="service.buildersLoading()"
@@ -59,8 +61,10 @@ interface BuilderFormModel {
         [totalRecords]="service.buildersTotal()"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[25, 50, 100]"
-        (onLazyLoad)="onLazyLoad($event)"
+        (onLazyLoad)="onLazyLoad(buildersTable, $event)"
         dataKey="id"
+        stateStorage="local"
+        stateKey="admin-builders-table"
         paginatorDropdownAppendTo="body"
       >
         <ng-template #caption>
@@ -252,8 +256,8 @@ export class AdminBuildersPageComponent {
     });
   }
 
-  onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.pagination.handleLazyLoad(event);
+  onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
+    this.pagination.handleStatefulLazyLoad(table, event);
     this.service.builderPage.set(this.pagination.page());
     this.service.builderPerPage.set(event.rows ?? 25);
   }

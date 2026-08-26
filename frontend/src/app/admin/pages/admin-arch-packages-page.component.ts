@@ -14,6 +14,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService, ArchPackageFormData } from '../admin.service';
 import {
   createAdminPagination,
+  type StatefulTableRef,
   createDebounced,
   patchQueryParams,
   queryFromRaw,
@@ -34,6 +35,7 @@ interface ArchPackageFormModel {
   template: `
     <div class="table-container">
       <p-table
+        #archPackagesTable
         [value]="service.archPackages()?.items ?? []"
         [rows]="pagination.perPage()"
         [loading]="service.archPackagesLoading()"
@@ -42,8 +44,10 @@ interface ArchPackageFormModel {
         [totalRecords]="service.archPackagesTotal()"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[25, 50, 100]"
-        (onLazyLoad)="onLazyLoad($event)"
+        (onLazyLoad)="onLazyLoad(archPackagesTable, $event)"
         dataKey="id"
+        stateStorage="local"
+        stateKey="admin-arch-packages-table"
         paginatorDropdownAppendTo="body"
       >
         <ng-template #caption>
@@ -235,8 +239,8 @@ export class AdminArchPackagesPageComponent {
     });
   }
 
-  onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.pagination.handleLazyLoad(event);
+  onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
+    this.pagination.handleStatefulLazyLoad(table, event);
     this.service.archPage.set(this.pagination.page());
     this.service.archPerPage.set(event.rows ?? 25);
   }

@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { isPackageSortField, Package, type PackageSortField, Paginated, Repo } from '@chaotic-next/shared-lib';
 import { AppService } from '../app.service';
 import { resourceSignal, resourceValue } from '../functions';
+import { createLazyTablePagination } from '../table-pagination';
 
 const DEFAULT_SORT_FIELD: PackageSortField = 'pkgname';
 
@@ -12,8 +13,7 @@ export class PackageListService {
   private readonly appService = inject(AppService);
   private readonly route = inject(ActivatedRoute);
 
-  readonly page = signal<number>(1);
-  readonly perPage = signal<number>(25);
+  readonly pagination = createLazyTablePagination();
   readonly sortField = signal<PackageSortField>(DEFAULT_SORT_FIELD);
   readonly sortOrder = signal<number>(1);
 
@@ -32,8 +32,8 @@ export class PackageListService {
   private readonly resource = httpResource<Paginated<Package>>(() => {
     if (this.repoName() && !this.repos()) return undefined;
     return this.appService.getPackagesResourceRequest({
-      page: this.page(),
-      perPage: this.perPage(),
+      page: this.pagination.page(),
+      perPage: this.pagination.perPage(),
       q: this.searchValue() || undefined,
       sort: this.sortField(),
       order: this.sortOrder() === 1 ? 'ASC' : 'DESC',
@@ -48,17 +48,15 @@ export class PackageListService {
   );
 
   setSearch(value: string): void {
+    // A new search invalidates the current offset; a stale persisted table
+    // position would otherwise request a page beyond the filtered results.
+    this.pagination.resetPage();
     this.searchValue.set(value);
   }
 
   setRepoFilter(repoName: string | null | undefined): void {
     this.repoName.set(repoName ?? undefined);
-    this.page.set(1);
-  }
-
-  setPage(first: number, rows: number): void {
-    this.page.set(Math.floor(first / rows) + 1);
-    this.perPage.set(rows);
+    this.pagination.resetPage();
   }
 
   setSort(field: string, order: number): void {

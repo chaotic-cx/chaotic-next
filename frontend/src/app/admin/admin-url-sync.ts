@@ -1,18 +1,17 @@
 import { ActivatedRoute, Router } from '@angular/router';
-import { signal, type WritableSignal } from '@angular/core';
+import { createLazyTablePagination, DEFAULT_PER_PAGE, type LazyTablePagination } from '../table-pagination';
 
 export type QueryParamSetter = (raw: string | null) => void;
 
 export type QueryParamPatch = Record<string, string | null | undefined>;
 
-const DEFAULT_PER_PAGE = 25;
+export interface StatefulTableRef {
+  first: number | null | undefined;
+}
 
-export interface AdminPagination {
-  page: WritableSignal<number>;
-  perPage: WritableSignal<number>;
-  handleLazyLoad(event: { first?: number; rows?: number | null }): void;
+export interface AdminPagination extends LazyTablePagination {
   restoreFromQuery(route: ActivatedRoute): void;
-  resetPage(): void;
+  handleStatefulLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void;
 }
 
 export function createAdminPagination(opts: {
@@ -21,28 +20,33 @@ export function createAdminPagination(opts: {
   defaultPerPage?: number;
 }): AdminPagination {
   const { router, route, defaultPerPage = DEFAULT_PER_PAGE } = opts;
-  const page = signal(1);
-  const perPage = signal(defaultPerPage);
+  const pagination = createLazyTablePagination(defaultPerPage);
+  let statePageReconciled = false;
 
   return {
-    page,
-    perPage,
+    page: pagination.page,
+    perPage: pagination.perPage,
     handleLazyLoad(event) {
-      const rows = event.rows ?? defaultPerPage;
-      page.set(Math.floor((event.first ?? 0) / rows) + 1);
-      perPage.set(rows);
+      pagination.handleLazyLoad(event);
       patchQueryParams(router, route, {
-        page: pageToQuery(page()),
-        perPage: perPageToQuery(perPage(), defaultPerPage),
+        page: pageToQuery(pagination.page()),
+        perPage: perPageToQuery(pagination.perPage(), defaultPerPage),
       });
+    },
+    handleStatefulLazyLoad(table, event) {
+      const expectedFirst = (pagination.page() - 1) * pagination.perPage();
+      const first = statePageReconciled ? (event.first ?? 0) : expectedFirst;
+      statePageReconciled = true;
+      table.first = first;
+      this.handleLazyLoad({ ...event, first });
     },
     restoreFromQuery(route) {
       const params = route.snapshot.queryParamMap;
-      page.set(pageFromQuery(params.get('page')));
-      perPage.set(perPageFromQuery(params.get('perPage'), defaultPerPage));
+      pagination.page.set(pageFromQuery(params.get('page')));
+      pagination.perPage.set(perPageFromQuery(params.get('perPage'), defaultPerPage));
     },
     resetPage() {
-      page.set(1);
+      pagination.resetPage();
     },
   };
 }

@@ -8,6 +8,7 @@ import { resourceValue } from '../functions';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 
 const RECENT_COUNT = 9;
+const STAGGER_CAP = 8;
 
 @Component({
   selector: 'chaotic-recently-added',
@@ -26,6 +27,8 @@ export class RecentlyAddedComponent {
   readonly loading = this.resource.isLoading;
 
   readonly placeholderCount = Array.from({ length: RECENT_COUNT });
+
+  protected readonly STAGGER_CAP = STAGGER_CAP;
 
   protected versionLabel(pkg: Package): string {
     const base = pkg.version ?? '';

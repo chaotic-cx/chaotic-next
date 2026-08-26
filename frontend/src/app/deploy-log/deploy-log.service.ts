@@ -1,21 +1,20 @@
+import { httpResource } from '@angular/common/http';
+import { computed, inject, Service, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import {
   Build,
   Builder,
+  type BuildSortField,
   BuildStatus,
   isBuildSortField,
   Paginated,
   STATUS_LABELS,
-  type BuildSortField,
 } from '@chaotic-next/shared-lib';
-import { httpResource } from '@angular/common/http';
-import { computed, inject, Service, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
 import { AppService } from '../app.service';
-import { resourceValue } from '../functions';
+import { isLogPurged, resourceValue } from '../functions';
+import { createLazyTablePagination } from '../table-pagination';
 
 export const REPO_OPTIONS = ['chaotic-aur', 'garuda'];
-
-const LOG_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const STATUS_OPTIONS: { label: string; value: BuildStatus; icon: string }[] = [
   { label: STATUS_LABELS[BuildStatus.SUCCESS], value: BuildStatus.SUCCESS, icon: 'pi-check-circle text-ctp-green' },
@@ -55,8 +54,7 @@ export class DeployLogService {
   private readonly appService = inject(AppService);
   private readonly route = inject(ActivatedRoute);
 
-  readonly page = signal<number>(1);
-  readonly perPage = signal<number>(25);
+  readonly pagination = createLazyTablePagination();
   readonly sortField = signal<BuildSortField>(DEFAULT_SORT_FIELD);
   readonly sortOrder = signal<number>(-1);
 
@@ -80,8 +78,8 @@ export class DeployLogService {
 
   private readonly resource = httpResource<Paginated<Build>>(() =>
     this.appService.getBuildsResourceRequest({
-      page: this.page(),
-      perPage: this.perPage(),
+      page: this.pagination.page(),
+      perPage: this.pagination.perPage(),
       q: this.searchValue() || undefined,
       builder: this.builderFilter(),
       repo: this.repoFilter(),
@@ -97,17 +95,15 @@ export class DeployLogService {
     (resourceValue(this.resource)?.items ?? []).map((build) => ({
       ...build,
       statusText: STATUS_LABELS[build.status],
-      logUrl: new Date(build.timestamp).getTime() + LOG_RETENTION_MS < Date.now() ? 'purged' : build.logUrl,
+      logUrl: isLogPurged(build.timestamp) ? 'purged' : build.logUrl,
     })),
   );
 
   setSearch(value: string): void {
+    // A new search invalidates the current offset; a stale persisted table
+    // position would otherwise request a page beyond the filtered results.
+    this.pagination.resetPage();
     this.searchValue.set(value);
-  }
-
-  setPage(first: number, rows: number): void {
-    this.page.set(Math.floor(first / rows) + 1);
-    this.perPage.set(rows);
   }
 
   setSort(field: string, order: number): void {
@@ -117,17 +113,17 @@ export class DeployLogService {
 
   setBuilderFilter(value: string | null | undefined): void {
     this.builderFilter.set(value ?? undefined);
-    this.page.set(1);
+    this.pagination.resetPage();
   }
 
   setRepoFilter(value: string | null | undefined): void {
     this.repoFilter.set(value ?? undefined);
-    this.page.set(1);
+    this.pagination.resetPage();
   }
 
   setStatusFilter(value: BuildStatus | null | undefined): void {
     this.statusFilter.set(value ?? undefined);
-    this.page.set(1);
+    this.pagination.resetPage();
   }
 
   statusByLabel(label: string | undefined): BuildStatus | undefined {

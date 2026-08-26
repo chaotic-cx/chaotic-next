@@ -29,6 +29,7 @@ import { BuildClassPipe } from '../../pipes/build-class.pipe';
 import { formatBytes, formatCpuTime, formatDuration } from '../../functions';
 import {
   createAdminPagination,
+  type StatefulTableRef,
   createDebounced,
   patchQueryParams,
   queryFromRaw,
@@ -83,6 +84,7 @@ const NO_REPO = '0';
   template: `
     <div class="table-container">
       <p-table
+        #packagesTable
         [value]="adminService.packages()?.items ?? []"
         [rows]="pagination.perPage()"
         [loading]="adminService.packagesLoading()"
@@ -91,8 +93,10 @@ const NO_REPO = '0';
         [totalRecords]="adminService.packagesTotal()"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[25, 50, 100]"
-        (onLazyLoad)="onLazyLoad($event)"
+        (onLazyLoad)="onLazyLoad(packagesTable, $event)"
         dataKey="id"
+        stateStorage="local"
+        stateKey="admin-packages-table"
         paginatorDropdownAppendTo="body"
       >
         <ng-template #caption>
@@ -745,8 +749,8 @@ export class AdminPackagesPageComponent {
     });
   }
 
-  onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.pagination.handleLazyLoad(event);
+  onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
+    this.pagination.handleStatefulLazyLoad(table, event);
     this.adminService.packagePage.set(this.pagination.page());
     this.adminService.packagePerPage.set(event.rows ?? 25);
   }

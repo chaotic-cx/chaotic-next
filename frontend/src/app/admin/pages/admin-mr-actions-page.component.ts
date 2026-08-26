@@ -12,6 +12,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
 import {
   createAdminPagination,
+  type StatefulTableRef,
   createDebounced,
   patchQueryParams,
   queryFromRaw,
@@ -41,6 +42,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
   template: `
     <div class="table-container">
       <p-table
+        #mrActionsTable
         [value]="service.mrActions()?.items ?? []"
         [rows]="pagination.perPage()"
         [loading]="service.mrActionsLoading()"
@@ -49,8 +51,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         [totalRecords]="service.mrActionsTotal()"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[25, 50, 100]"
-        (onLazyLoad)="onLazyLoad($event)"
+        (onLazyLoad)="onLazyLoad(mrActionsTable, $event)"
         dataKey="id"
+        stateStorage="local"
+        stateKey="admin-mr-actions-table"
         paginatorDropdownAppendTo="body"
       >
         <ng-template #caption>
@@ -174,8 +178,8 @@ export class AdminMrActionsPageComponent {
     return `${this.mrBaseUrl}/${iid}`;
   }
 
-  onLazyLoad(event: { first?: number; rows?: number | null }): void {
-    this.pagination.handleLazyLoad(event);
+  onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
+    this.pagination.handleStatefulLazyLoad(table, event);
     this.service.mrActionPage.set(this.pagination.page());
     this.service.mrActionPerPage.set(event.rows ?? 25);
   }

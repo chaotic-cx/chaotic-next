@@ -5,9 +5,9 @@ import { MessageToastService } from '@garudalinux/core';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Panel } from '@openng/optimus-ui/panel';
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
+import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { Message } from './interfaces';
 
 const INITIAL_VISIBLE_NEWS = 3;
@@ -41,6 +41,8 @@ export class NewsfeedComponent {
   readonly visibleNews = computed(() => this.newsList().slice(0, this.visibleCount()));
 
   readonly hasMore = computed(() => this.newsList().length > this.visibleCount());
+
+  protected readonly staggerStep = NEWS_INCREMENT;
 
   showMore() {
     this.visibleCount.update((count) => count + NEWS_INCREMENT);
