@@ -11,13 +11,11 @@ import { GitlabPipelineService } from './gitlab-pipeline.service';
 import { MrAction } from './mr-action.entity';
 import { PipelineTrigger } from './pipeline-trigger.entity';
 import { HttpModule } from '@nestjs/axios';
-import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
-    CacheModule.register(),
     DiffScanModule,
     EventModule,
     HttpModule,

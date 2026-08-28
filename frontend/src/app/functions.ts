@@ -120,7 +120,10 @@ export function packageLogRouteFromUrl(logUrl: string): string[] {
   return [];
 }
 
-/** Build logs are deleted this long after their build; mirrors the backend retention. */
+/**
+ * Build logs are deleted this long after their build; mirrors the backend retention.
+ * TODO: change to 1 months on 28.09.
+ */
 export const LOG_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function isLogPurged(timestamp: string | Date, nowMs: number = Date.now()): boolean {

@@ -11,14 +11,12 @@ import { DiffScanRuleData } from './rule-data.entity';
 import { RuleDataService } from './rule-data.service';
 import { VirusTotalVerdict } from './virus-total-verdict.entity';
 import { VirustotalService } from './virustotal.service';
-import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
-    CacheModule.register(),
     ConfigModule.forFeature(virustotalConfig),
     ConfigModule.forFeature(aurConfig),
     TypeOrmModule.forFeature([

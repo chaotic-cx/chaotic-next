@@ -16,7 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
-import { CacheModule } from '@nestjs/cache-manager';
+import { lruCacheModule } from './cache/lru-cache.module';
 import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
@@ -32,7 +32,7 @@ import { LoggerModule } from 'nestjs-pino';
     AurModule,
     AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
     BuilderModule,
-    CacheModule.register({ isGlobal: true }),
+    lruCacheModule(),
     ConfigModule.forRoot({
       envFilePath: '.env',
       isGlobal: true,

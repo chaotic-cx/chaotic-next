@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- test fixtures assert on freshly created entities */
 import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Package, Repo } from '../builder/builder.entity';
 import { TriggerType } from '../interfaces/repo-manager';
