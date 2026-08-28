@@ -12,6 +12,10 @@ export class Account {
   @Column('text', { name: 'providerId' })
   providerId!: string;
 
+  @Index('account_issuer_accountId_uq', { unique: true })
+  @Column('text', { name: 'issuer' })
+  issuer!: string;
+
   @Index('account_userId_idx')
   @Column('text', { name: 'userId' })
   userId!: string;
