@@ -1,6 +1,5 @@
 import { Package, Repo } from '../../builder/builder.entity';
 import { TriggerType } from '../../interfaces/repo-manager';
-import { errorMessage } from '../../utils/functions';
 import { scanArchive } from '../offline/scan-archive';
 import { ArchlinuxPackage, PackageElfAnalysis, type PackageElfPkgType } from '../repo-manager.entity';
 import { saveInBatches } from '../save';
@@ -21,8 +20,9 @@ import {
 } from '../signal';
 import { latestAnalysesByPackage } from './latest-analyses';
 import { loadRuntimeVersions } from './runtime-versions';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { In, Repository, type FindOptionsSelect } from 'typeorm';
 
 export interface ScanJob {
@@ -109,7 +109,6 @@ function applyOwnerDirs(
  */
 @Injectable()
 export class SignalScanService {
-  private readonly logger = new Logger(SignalScanService.name);
   private directoryCache: DirectoryCache | null = null;
 
   constructor(
@@ -121,6 +120,7 @@ export class SignalScanService {
     private readonly packageRepository: Repository<Package>,
     @InjectRepository(Repo)
     private readonly repoRepository: Repository<Repo>,
+    @InjectPinoLogger(SignalScanService.name) private readonly pino: PinoLogger,
   ) {}
 
   /**
@@ -208,11 +208,11 @@ export class SignalScanService {
       const result = await scanArchive(job.file);
       if (!result) return null;
       for (const warning of result.warnings) {
-        this.logger.warn(warning, 'SignalScanService');
+        this.pino.warn(warning);
       }
       return buildAnalysis({ version: job.version, ...result });
     } catch (err) {
-      this.logger.warn(`Failed to scan ${job.file}: ${errorMessage(err)}`, 'SignalScanService');
+      this.pino.warn({ err, file: job.file }, 'Failed to scan package');
       return null;
     }
   }
@@ -252,10 +252,7 @@ export class SignalScanService {
       this.getProvidedSonames(),
       loadRuntimeVersions(this.archlinuxPackageRepository),
     ]);
-    this.logger.debug(
-      `Broken-deps context: ${provided.size} provided sonames, runtimes ${JSON.stringify(runtimes)}`,
-      'SignalScanService',
-    );
+    this.pino.debug({ providedSonames: provided.size, runtimes }, 'Broken-deps context');
 
     let changed = 0;
     const checkSonames = provided.size >= MIN_PROVIDED_SONAMES;
@@ -283,16 +280,13 @@ export class SignalScanService {
         brokenReasons: reasons,
       });
       if ((i + 1) % step === 0) {
-        this.logger.debug(`Recomputed broken flags ${i + 1}/${total}`, 'SignalScanService');
+        this.pino.debug({ current: i + 1, total }, 'Recomputed broken flags');
       }
     }
 
     await saveInBatches(this.analysisRepository, updates);
     const skipped = latest.size - notSkipped.length;
-    this.logger.log(
-      `Recomputed broken flags for ${notSkipped.length} analyses (${changed} broken, ${skipped} skip-signal-scanned)`,
-      'SignalScanService',
-    );
+    this.pino.info({ total: notSkipped.length, broken: changed, skipped }, 'Recomputed broken flags for analyses');
   }
 
   private async loadSkipSignalScanIds(): Promise<Set<number>> {
@@ -533,11 +527,11 @@ export class SignalScanService {
       });
       toSave.push({ id: analysis.id, pkgType, pkgId, version, pluginOf });
       if (i % step === 0) {
-        this.logger.debug(`Derived pluginOf ${i}/${total}`, 'SignalScanService');
+        this.pino.debug({ current: i, total }, 'Derived pluginOf');
       }
     }
 
     await saveInBatches(this.analysisRepository, toSave, ANALYSIS_SAVE_BATCH);
-    this.logger.debug(`Derived pluginOf for ${toSave.length} analyses`, 'SignalScanService');
+    this.pino.debug({ count: toSave.length }, 'Derived pluginOf');
   }
 }

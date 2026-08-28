@@ -1,8 +1,16 @@
 import type { AurPackageScan, VtIndicatorReport } from '@chaotic-next/shared-lib';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { PinoLogger } from 'nestjs-pino';
 import { AurScanService } from './aur-scan.service';
 import { DiffScanService } from './diff-scan.service';
 import type { ScanIndicator } from './indicators';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 
 const PKGBUILD = [
   'pkgname=evilpkg',
@@ -105,7 +113,7 @@ function makeService(
 ) {
   const fetchMock = aurFetchMock();
   vi.stubGlobal('fetch', fetchMock);
-  const diffScanService = new DiffScanService();
+  const diffScanService = new DiffScanService(pinoStub);
   const virustotalService = {
     enabled,
     reportOn: reportOn ?? vi.fn(async () => [] as VtIndicatorReport[]),
@@ -117,6 +125,7 @@ function makeService(
     diffScanService,
     virustotalService as never,
     aurAuthService as never,
+    pinoStub,
     snapshotRepository as never | undefined,
   );
   return { service, virustotalService, fetchMock };
@@ -218,9 +227,10 @@ describe('AurScanService', () => {
       }),
     );
     const service = new AurScanService(
-      new DiffScanService(),
+      new DiffScanService(pinoStub),
       { enabled: false } as never,
       { getMaintainerRegistrationDate: vi.fn(async () => null) } as never,
+      pinoStub,
     );
 
     const scan = await service.startScan('metapkg');
@@ -240,9 +250,10 @@ describe('AurScanService', () => {
       ),
     );
     const service = new AurScanService(
-      new DiffScanService(),
+      new DiffScanService(pinoStub),
       { enabled: false } as never,
       { getMaintainerRegistrationDate: vi.fn(async () => null) } as never,
+      pinoStub,
     );
 
     const scan = await service.startScan('doesnotexist');
@@ -296,9 +307,10 @@ describe('AurScanService', () => {
       }),
     );
     const service = new AurScanService(
-      new DiffScanService(),
+      new DiffScanService(pinoStub),
       { enabled: false } as never,
       { getMaintainerRegistrationDate: vi.fn(async () => null) } as never,
+      pinoStub,
     );
 
     const scan = await service.startScan('orphanpkg');

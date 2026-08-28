@@ -19,6 +19,14 @@ import {
 import { ScanJob, SignalScanService } from './scan';
 import { ensureFixtures, FixtureSet } from './test/fixtures';
 import { createMockRepository, MockRepository } from './test/mock-repository';
+import { type PinoLogger } from 'nestjs-pino';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 
 let FIXTURES: FixtureSet;
 
@@ -99,7 +107,7 @@ function createService() {
     { id: 2013, pkgname: 'srb2', version: '2.2.15-1.3' } as Package,
   ]);
 
-  const service = new SignalScanService(analysisRepo, archPkgRepo, packageRepo, repoRepo);
+  const service = new SignalScanService(analysisRepo, archPkgRepo, packageRepo, repoRepo, pinoStub);
   return { service, analysisRepo, archPkgRepo, packageRepo, repoRepo };
 }
 

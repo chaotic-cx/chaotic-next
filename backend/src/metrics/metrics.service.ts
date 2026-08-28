@@ -2,7 +2,7 @@ import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
 import { RouterHitDaily } from '../router/router-hit-daily.entity';
 import { cachedResult } from '../utils/cache';
 import { CACHE_TTL_MS, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
-import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
+import { clampInt, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 import {
   LIVE_RPS_SSE_EVENT,
   type CountNameObject,
@@ -14,9 +14,10 @@ import {
 } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { type Cache } from 'cache-manager';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { createInterface } from 'node:readline';
 import { merge, Observable, share } from 'rxjs';
 import { DataSource } from 'typeorm';
@@ -85,14 +86,13 @@ function assertRankRange(range: string): number {
 
 @Injectable()
 export class MetricsService {
-  private readonly logger = new Logger(MetricsService.name);
-
   constructor(
     private dataSource: DataSource,
     @Inject(CACHE_MANAGER) private cache: Cache,
     private readonly httpService: HttpService,
+    @InjectPinoLogger(MetricsService.name) private readonly pino: PinoLogger,
   ) {
-    this.logger.log('MetricsService initialized');
+    this.pino.info('MetricsService initialized');
   }
 
   /** Precomputes the common windows so requests never hit a cold cache. */
@@ -113,12 +113,12 @@ export class MetricsService {
     ]);
     const failures = rejectedReasons(results);
     if (failures.length > 0) {
-      this.logger.error(
-        `Metrics cache warm-up failed for ${failures.length} of ${results.length} queries, ` +
-          `first failure: ${errorMessage(failures[0])}`,
+      this.pino.error(
+        { failedCount: failures.length, totalCount: results.length, err: failures[0] },
+        'Metrics cache warm-up failed for some queries',
       );
     }
-    this.logger.log(`Warmed metrics cache in ${Date.now() - startedAtMs}ms`);
+    this.pino.info({ durationMs: Date.now() - startedAtMs }, 'Warmed metrics cache');
   }
 
   /**

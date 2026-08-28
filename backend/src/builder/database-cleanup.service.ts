@@ -2,12 +2,13 @@ import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.en
 import { SignalScanService } from '../repo-manager/scan';
 import { compareArchVersions } from '../repo-manager/signal';
 import { RouterHit } from '../router/router-hit.entity';
-import { errorMessage, nDaysInPast } from '../utils/functions';
+import { nDaysInPast } from '../utils/functions';
 import { Build, Package, SilencedBuildFailure } from './builder.entity';
 import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 
 /** Analyses kept per package: the latest plus the previous the ABI index compares. */
@@ -35,8 +36,6 @@ const ROUTER_HITS_BATCH_SIZE = 10_000;
 
 @Injectable()
 export class DatabaseCleanupService {
-  private readonly logger = new Logger(DatabaseCleanupService.name);
-
   constructor(
     @InjectRepository(Package)
     private readonly packageRepository: Repository<Package>,
@@ -44,6 +43,7 @@ export class DatabaseCleanupService {
     private readonly analysisRepository: Repository<PackageElfAnalysis>,
     private readonly dataSource: DataSource,
     private readonly signalScanService: SignalScanService,
+    @InjectPinoLogger(DatabaseCleanupService.name) private readonly pino: PinoLogger,
   ) {}
 
   /**
@@ -65,7 +65,7 @@ export class DatabaseCleanupService {
         .execute();
       const deactivatedCount = deactivated.affected ?? 0;
       if (deactivatedCount > 0) {
-        this.logger.log(`Deactivated ${deactivatedCount} packages without a repo`);
+        this.pino.info({ count: deactivatedCount }, 'Deactivated packages without a repo');
       }
 
       await this.dataSource.transaction(async (manager) => {
@@ -83,10 +83,10 @@ export class DatabaseCleanupService {
           manager,
           candidates.map((row) => row.id),
         );
-        this.logger.log(`Purged ${candidates.length} orphaned packages without a repo`);
+        this.pino.info({ count: candidates.length }, 'Purged orphaned packages without a repo');
       });
     } catch (err: unknown) {
-      this.logger.error(`Failed to purge orphaned packages: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to purge orphaned packages');
     }
   }
 
@@ -106,7 +106,7 @@ export class DatabaseCleanupService {
         .execute();
       const deactivatedCount = deactivated.affected ?? 0;
       if (deactivatedCount > 0) {
-        this.logger.log(`Deactivated ${deactivatedCount} packages with an invalid name`);
+        this.pino.info({ count: deactivatedCount }, 'Deactivated packages with an invalid name');
       }
 
       await this.dataSource.transaction(async (manager) => {
@@ -122,10 +122,10 @@ export class DatabaseCleanupService {
           manager,
           candidates.map((row) => row.id),
         );
-        this.logger.log(`Purged ${candidates.length} packages with an invalid name`);
+        this.pino.info({ count: candidates.length }, 'Purged packages with an invalid name');
       });
     } catch (err: unknown) {
-      this.logger.error(`Failed to purge packages with invalid names: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to purge packages with invalid names');
     }
   }
 
@@ -154,7 +154,7 @@ export class DatabaseCleanupService {
         .execute();
       const deactivatedCount = deactivated.affected ?? 0;
       if (deactivatedCount > 0) {
-        this.logger.log(`Deactivated ${deactivatedCount} packages with only stale builds`);
+        this.pino.info({ count: deactivatedCount }, 'Deactivated packages with only stale builds');
       }
 
       await this.dataSource.transaction(async (manager) => {
@@ -177,10 +177,10 @@ export class DatabaseCleanupService {
           manager,
           candidates.map((row) => row.id),
         );
-        this.logger.log(`Purged ${candidates.length} packages with only stale builds`);
+        this.pino.info({ count: candidates.length }, 'Purged packages with only stale builds');
       });
     } catch (err: unknown) {
-      this.logger.error(`Failed to purge packages with only stale builds: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to purge packages with only stale builds');
     }
   }
 
@@ -224,9 +224,9 @@ export class DatabaseCleanupService {
       if (toDelete.length === 0) return;
       await this.analysisRepository.delete(toDelete);
       this.signalScanService.invalidateDirectoryIndex();
-      this.logger.log(`Purged ${toDelete.length} superseded analysis version(s), keeping latest + previous`);
+      this.pino.info({ count: toDelete.length }, 'Purged superseded analysis versions, keeping latest + previous');
     } catch (err: unknown) {
-      this.logger.error(`Failed to purge superseded analyses: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to purge superseded analyses');
     }
   }
 
@@ -258,10 +258,10 @@ export class DatabaseCleanupService {
         if (deleted < ROUTER_HITS_BATCH_SIZE) break;
       }
       if (purged > 0) {
-        this.logger.log(`Purged ${purged} old router hits (retention ${ROUTER_HITS_RETENTION_DAYS} days)`);
+        this.pino.info({ count: purged, retentionDays: ROUTER_HITS_RETENTION_DAYS }, 'Purged old router hits');
       }
     } catch (err: unknown) {
-      this.logger.error(`Failed to purge old router hits: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to purge old router hits');
     }
   }
 
@@ -285,10 +285,10 @@ export class DatabaseCleanupService {
         )
         .execute();
       if ((affected ?? 0) > 0) {
-        this.logger.log(`Purged ${affected} failure silences without an active package`);
+        this.pino.info({ count: affected }, 'Purged failure silences without an active package');
       }
     } catch (err: unknown) {
-      this.logger.error(`Failed to purge orphaned failure silences: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to purge orphaned failure silences');
     }
   }
 }

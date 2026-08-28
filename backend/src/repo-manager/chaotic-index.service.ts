@@ -1,28 +1,21 @@
-import { bulkGetOrCreatePackages, getOrCreateRepo, Package, Repo } from '../builder/builder.entity';
-import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } from '../interfaces/repo-manager';
-import { ArchMirrorService } from './arch-mirror.service';
-import { saveInBatches } from './save';
-import { SignalScanService } from './scan';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Repository } from 'typeorm';
+import { Package, Repo } from '../builder/builder.entity';
+import { EntityLookupService } from '../builder/entity-lookup.service';
+import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } from '../interfaces/repo-manager';
+import { ArchMirrorService } from './arch-mirror.service';
+import { saveInBatches } from './save';
+import { SignalScanService } from './scan';
 
-/**
- * Chaotic-AUR repo indexing: one-off bulk index of a repo mirror (used to
- * bootstrap the signal index) and the incremental database-version sync that
- * runs after successful builds.
- */
-
-/** CDN location of the Chaotic-AUR package database used for bulk indexing. */
 export const CHAOTIC_CDN_DATABASE_URL = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/chaotic-aur.db';
 
 @Injectable()
 export class ChaoticIndexService {
-  private readonly logger = new Logger(ChaoticIndexService.name);
-
   constructor(
     private readonly archMirror: ArchMirrorService,
     @InjectRepository(Package)
@@ -30,6 +23,8 @@ export class ChaoticIndexService {
     @InjectRepository(Repo)
     private readonly repoRepository: Repository<Repo>,
     private readonly signalScanService: SignalScanService,
+    private readonly lookup: EntityLookupService,
+    @InjectPinoLogger(ChaoticIndexService.name) private readonly pino: PinoLogger,
   ) {}
 
   /**
@@ -39,7 +34,7 @@ export class ChaoticIndexService {
    */
   async indexChaoticRepo(dbUrl: string = CHAOTIC_CDN_DATABASE_URL): Promise<IndexResult> {
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-index-'));
-    this.logger.log(`Started indexing Chaotic repo from ${dbUrl}...`);
+    this.pino.info({ dbUrl }, 'Started indexing Chaotic repo');
     try {
       const dbName =
         dbUrl
@@ -53,11 +48,11 @@ export class ChaoticIndexService {
       const baseUrl: string = dbUrl.replace(/\/[^/]+$/, '');
       // A single repo backs this whole database; resolve it once instead of per
       // package, then bulk-resolve every package row in one query + insert.
-      const repo: Repo = await getOrCreateRepo(dbName, this.repoRepository);
+      const repo: Repo = await this.lookup.getOrCreateRepo(dbName);
       const chaoticEntries = parsed.flatMap((pkg) =>
         pkg.name && pkg.metaData?.filename ? [{ pkgname: pkg.name, repo }] : [],
       );
-      const chaoticByKey = await bulkGetOrCreatePackages(chaoticEntries, this.packagesRepository);
+      const chaoticByKey = await this.lookup.bulkGetOrCreatePackages(chaoticEntries);
 
       const candidates: IndexCandidate[] = [];
       const toUpdate: Package[] = [];
@@ -75,7 +70,7 @@ export class ChaoticIndexService {
         toUpdate.push(chaoticPkg);
 
         if (chaoticPkg.skipSignalScan) {
-          this.logger.log(`Skipping ${pkg.name}: marked binary-only (skip signal scan)`);
+          this.pino.info({ pkgname: pkg.name }, 'Skipping: marked binary-only (skip signal scan)');
           continue;
         }
 
@@ -93,8 +88,9 @@ export class ChaoticIndexService {
       // Newly-indexed providers can resolve other packages' missing sonames, so
       // refresh every broken flag against the now-complete index.
       await this.signalScanService.recomputeBroken();
-      this.logger.log(
-        `Full Chaotic repo index done: ${result.scanned} scanned, ${result.skipped} skipped, ${result.failed} failed`,
+      this.pino.info(
+        { scanned: result.scanned, skipped: result.skipped, failed: result.failed },
+        'Full Chaotic repo index done',
       );
       return result;
     } finally {
@@ -105,7 +101,7 @@ export class ChaoticIndexService {
   async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
     const repoNames: string[] = repos.map((repo) => repo.name);
 
-    this.logger.log(`Updating database of ${repoNames.join(', ')}...`);
+    this.pino.info({ repoNames }, 'Updating database');
     const tempDirs: string[] = [];
 
     try {
@@ -113,12 +109,12 @@ export class ChaoticIndexService {
         repos.map(async (repo) => {
           const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
           tempDirs.push(tempDir);
-          this.logger.debug(`Created temporary directory ${tempDir}`);
+          this.pino.debug({ tempDir }, 'Created temporary directory');
           return await this.archMirror.pullDatabases(repo.dbPath, tempDir, repo.name);
         }),
       );
 
-      this.logger.debug('Done pulling all Chaotic-AUR databases');
+      this.pino.debug('Done pulling all Chaotic-AUR databases');
       const workDirs: RepoWorkDir[] = [];
       for (const download of downloads) {
         if (download.status === 'fulfilled' && download.value) {
@@ -127,7 +123,7 @@ export class ChaoticIndexService {
       }
       const currentChaoticVersions: ParsedPackage[] = await this.archMirror.parsePacmanDatabases(workDirs);
 
-      this.logger.debug('Updating Chaotic database versions...');
+      this.pino.debug('Updating Chaotic database versions');
       // Bulk-resolve every package row in one query + insert instead of one
       // serialized getOrCreatePackage() round-trip per package, and persist in batches
       // (awaited) instead of fire-and-forget saves that can be lost on crash.
@@ -139,7 +135,7 @@ export class ChaoticIndexService {
         if (!repo) continue;
         chaoticEntries.push({ pkgname: pkg.name, repo });
       }
-      const chaoticByKey = await bulkGetOrCreatePackages(chaoticEntries, this.packagesRepository);
+      const chaoticByKey = await this.lookup.bulkGetOrCreatePackages(chaoticEntries);
 
       const toUpdate: Package[] = [];
       for (const pkg of currentChaoticVersions) {
@@ -160,11 +156,11 @@ export class ChaoticIndexService {
         toUpdate.push(chaoticPkg);
       }
       await saveInBatches(this.packagesRepository, toUpdate);
-      this.logger.log('Finished updating Chaotic database versions');
+      this.pino.info('Finished updating Chaotic database versions');
 
       // Lastly, set any non-existing packages to inactive. The database can contain inactive
       // packages that are not in the Chaotic-AUR database anymore.
-      this.logger.debug('Setting non-existing packages to inactive...');
+      this.pino.debug('Setting non-existing packages to inactive');
       // O(1) membership via a Set instead of an O(N*M) scan over currentChaoticVersions.
       const currentKeys = new Set(currentChaoticVersions.map((p) => `${p.repoName}:${p.name}`));
       const allChaoticVersionsInDb: Package[] = await this.packagesRepository.find({
@@ -174,7 +170,7 @@ export class ChaoticIndexService {
       });
       const toDeactivate: Package[] = deactivateMissing(allChaoticVersionsInDb, currentKeys, () => new Date());
       for (const pkg of toDeactivate) {
-        this.logger.log(`Setting ${pkg.pkgname} in repo ${pkg.repo?.name ?? 'unknown'} to inactive`);
+        this.pino.info({ pkgname: pkg.pkgname, repo: pkg.repo?.name ?? 'unknown' }, 'Setting package to inactive');
       }
       await saveInBatches(this.packagesRepository, toDeactivate);
 
@@ -186,7 +182,7 @@ export class ChaoticIndexService {
       const duplicates = findDuplicateInactiveRows(allChaoticVersionsInDb);
       if (duplicates.length > 0) {
         const ids = duplicates.map((pkg) => pkg.id);
-        this.logger.log(`Removing ${duplicates.length} duplicate inactive package rows`);
+        this.pino.info({ count: duplicates.length }, 'Removing duplicate inactive package rows');
         // Only delete rows with no build history; builds FK-reference the package.
         await this.packagesRepository
           .createQueryBuilder()
@@ -196,7 +192,7 @@ export class ChaoticIndexService {
           .andWhere(`NOT EXISTS (SELECT 1 FROM "build" b WHERE b."pkgbaseId" = "package".id)`)
           .execute();
       }
-      this.logger.debug('Finished setting non-existing packages to inactive');
+      this.pino.debug('Finished setting non-existing packages to inactive');
     } finally {
       await this.archMirror.cleanUp(tempDirs);
     }

@@ -1,8 +1,16 @@
 import { ConfigService } from '@nestjs/config';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { PinoLogger } from 'nestjs-pino';
 import type { ScanIndicator } from './indicators';
 import { VirusTotalVerdict } from './virus-total-verdict.entity';
 import { VirustotalService } from './virustotal.service';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 
 const SHA256_LENGTH = 64;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -29,6 +37,7 @@ function makeService(config: { apiKey?: string }, repository?: object): Virustot
   return new VirustotalService(
     cache as never,
     new ConfigService({ vt: { requestSpacingMs: 0, pollIntervalMs: 0, ...config } }),
+    pinoStub,
     repository as never,
   );
 }

@@ -1,11 +1,12 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import { type FastifyReply, type FastifyRequest } from 'fastify';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
 const GITLAB_STATUS_REGEX = /^(\d{3})\s/;
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger(AllExceptionsFilter.name);
+  constructor(@InjectPinoLogger(AllExceptionsFilter.name) private readonly pino: PinoLogger) {}
 
   private static gitlabErrorStatus(exception: unknown): number | undefined {
     if (typeof exception !== 'object' || exception === null) return undefined;
@@ -33,22 +34,29 @@ export class AllExceptionsFilter implements ExceptionFilter {
             : 'Internal server error';
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-      this.logger.error(
-        `Unhandled Exception on ${request.method} ${request.url}: ${
-          exception instanceof Error ? exception.stack : String(exception)
-        }`,
+      this.pino.error(
+        { err: exception, requestMethod: request.method, requestUrl: request.url },
+        'Unhandled exception',
       );
     } else if (status === HttpStatus.NOT_FOUND) {
-      this.logger.debug(
-        `HttpException [${status}] on ${request.method} ${request.url}: ${
-          typeof message === 'object' ? JSON.stringify(message) : message
-        }`,
+      this.pino.debug(
+        {
+          status,
+          requestMethod: request.method,
+          requestUrl: request.url,
+          message: typeof message === 'object' ? JSON.stringify(message) : message,
+        },
+        'HTTP request not found',
       );
     } else {
-      this.logger.warn(
-        `HttpException [${status}] on ${request.method} ${request.url}: ${
-          typeof message === 'object' ? JSON.stringify(message) : message
-        }`,
+      this.pino.warn(
+        {
+          status,
+          requestMethod: request.method,
+          requestUrl: request.url,
+          message: typeof message === 'object' ? JSON.stringify(message) : message,
+        },
+        'HTTP request failed',
       );
     }
 

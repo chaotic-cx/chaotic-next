@@ -1,14 +1,14 @@
 import { Package } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
-import { errorMessage } from '../utils/functions';
 import { RULES } from './rules';
 import { ruleRunsOn, type GroupRuleHit, type RuleHit, type RuleSurface } from './rules/rule';
 import { isDependencyPresent, isSrcinfoFile, scanSrcinfoDependencies } from './srcinfo-dependency';
 import { findTyposquatFinding } from './typosquat';
 import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 
 const MAX_FINDINGS_PER_MR = 100;
@@ -30,9 +30,8 @@ const SUSPICIOUS_SCORE_THRESHOLD = 4;
 
 @Injectable()
 export class DiffScanService {
-  private readonly logger = new Logger(DiffScanService.name);
-
   constructor(
+    @InjectPinoLogger(DiffScanService.name) private readonly pino: PinoLogger,
     @Optional()
     @InjectRepository(ArchlinuxPackage)
     private readonly archPkgRepository?: Repository<ArchlinuxPackage>,
@@ -50,10 +49,10 @@ export class DiffScanService {
       if (!rule.load) continue;
       try {
         const { downloaded, stale } = await rule.load();
-        if (downloaded) this.logger.log(`Rule ${rule.id} data loaded`);
-        else if (stale) this.logger.warn(`Rule ${rule.id} feed unavailable, matching against persisted data`);
+        if (downloaded) this.pino.info({ rule: rule.id }, 'Rule data loaded');
+        else if (stale) this.pino.warn({ rule: rule.id }, 'Rule feed unavailable, matching against persisted data');
       } catch (err) {
-        this.logger.warn(`Rule ${rule.id} data load failed: ${errorMessage(err)}`);
+        this.pino.warn({ err, rule: rule.id }, 'Rule data load failed');
       }
     }
 
@@ -72,7 +71,7 @@ export class DiffScanService {
         try {
           hit = rule.check(change);
         } catch (err) {
-          this.logger.warn(`Rule ${rule.id} failed on ${change.new_path}: ${errorMessage(err)}`);
+          this.pino.warn({ err, rule: rule.id, file: change.new_path }, 'Rule check failed');
           continue;
         }
         if (!hit) continue;
@@ -88,7 +87,7 @@ export class DiffScanService {
             if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
           }
         } catch (err) {
-          this.logger.warn(`SRCINFO dependency scan failed on ${change.new_path}: ${errorMessage(err)}`);
+          this.pino.warn({ err, file: change.new_path }, 'SRCINFO dependency scan failed');
         }
       }
 
@@ -98,7 +97,7 @@ export class DiffScanService {
         findings.push(typoFinding);
         if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
       } catch (err) {
-        this.logger.warn(`Typosquat check failed on ${change.new_path}: ${errorMessage(err)}`);
+        this.pino.warn({ err, file: change.new_path }, 'Typosquat check failed');
       }
     }
 
@@ -108,7 +107,7 @@ export class DiffScanService {
       try {
         hits = rule.checkGroup(diffs);
       } catch (err) {
-        this.logger.warn(`Rule ${rule.id} failed on multi-file scan: ${errorMessage(err)}`);
+        this.pino.warn({ err, rule: rule.id }, 'Rule failed on multi-file scan');
         continue;
       }
       for (const hit of hits) findings.push(toScanFinding(rule, hit));

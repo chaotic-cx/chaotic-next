@@ -1,3 +1,11 @@
+import { type PinoLogger } from 'nestjs-pino';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 import { LiveTrafficHit } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
 import { BadRequestException } from '@nestjs/common';
@@ -50,7 +58,7 @@ function createService(qb: QbMock) {
     query: vi.fn(),
   } as unknown as DataSource;
   return {
-    service: new MetricsService(dataSource, makeCache() as never, makeHttpService()),
+    service: new MetricsService(dataSource, makeCache() as never, makeHttpService(), pinoStub),
     qb,
     repository,
     dataSource,
@@ -58,7 +66,7 @@ function createService(qb: QbMock) {
 }
 
 function createServiceWithQuery(dataSource: DataSource) {
-  return { service: new MetricsService(dataSource, makeCache() as never, makeHttpService()) };
+  return { service: new MetricsService(dataSource, makeCache() as never, makeHttpService(), pinoStub) };
 }
 
 describe('MetricsService', () => {
@@ -293,7 +301,7 @@ describe('MetricsService', () => {
       const mockHttp = { axiosRef } as unknown as HttpService;
       const dataSource = { getRepository: vi.fn(), query: vi.fn() } as unknown as DataSource;
       return {
-        service: new MetricsService(dataSource, makeCache() as never, mockHttp),
+        service: new MetricsService(dataSource, makeCache() as never, mockHttp, pinoStub),
         trafficStream,
         rpsStream,
         axiosRef,

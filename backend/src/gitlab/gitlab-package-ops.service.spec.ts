@@ -1,4 +1,5 @@
 import { PipelineOperation } from '@chaotic-next/shared-lib';
+import { type PinoLogger } from 'nestjs-pino';
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { AurScanService } from '../diff-scan/aur-scan.service';
@@ -23,6 +24,12 @@ function createService(
   const packages = packageRepository ?? { findOne: vi.fn().mockResolvedValue({ version: '1.0', pkgrel: 1 }) };
 
   const apiService = new GitlabApiService(
+    {
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      debug: () => undefined,
+    } as unknown as PinoLogger,
     { get: vi.fn(), getOrThrow: vi.fn().mockReturnValue(12345) } as never,
     { findOne: vi.fn().mockResolvedValue({ gitlabProjectId: 'test-project-id' }) } as unknown as Repository<never>,
   );
@@ -30,6 +37,12 @@ function createService(
   (apiService as unknown as { api: unknown }).api = apiObject;
 
   const service = new GitlabPackageOpsService(
+    {
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      debug: () => undefined,
+    } as unknown as PinoLogger,
     apiService,
     { registerCommitSha: vi.fn() } as unknown as GitlabPipelineService,
     { startScan: vi.fn().mockResolvedValue({ packageBase: 'paru' }) } as unknown as AurScanService,

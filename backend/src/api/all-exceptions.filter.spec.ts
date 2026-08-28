@@ -1,10 +1,18 @@
 import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import type { PinoLogger } from 'nestjs-pino';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { describe, expect, it, vi } from 'vitest';
 
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
+
 describe('AllExceptionsFilter', () => {
   it('catches HttpExceptions and formats structured response', () => {
-    const filter = new AllExceptionsFilter();
+    const filter = new AllExceptionsFilter(pinoStub);
     const send = vi.fn();
     const status = vi.fn(() => ({ send }));
 
@@ -28,7 +36,7 @@ describe('AllExceptionsFilter', () => {
   });
 
   it('catches generic unhandled errors as 500 Internal Server Error', () => {
-    const filter = new AllExceptionsFilter();
+    const filter = new AllExceptionsFilter(pinoStub);
     const send = vi.fn();
     const status = vi.fn(() => ({ send }));
 
@@ -52,7 +60,7 @@ describe('AllExceptionsFilter', () => {
   });
 
   it('passes through the GitLab status code for GitbeakerRequestError', () => {
-    const filter = new AllExceptionsFilter();
+    const filter = new AllExceptionsFilter(pinoStub);
     const send = vi.fn();
     const status = vi.fn(() => ({ send }));
 

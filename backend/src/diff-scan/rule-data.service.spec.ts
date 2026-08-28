@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PinoLogger } from 'nestjs-pino';
 import { provideRuleDataStore } from './rules/rule-data-store';
 import { RuleDataService } from './rule-data.service';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 
 function makeRepository() {
   const rows = new Map<string, { cacheKey: string; raw: string }>();
@@ -19,7 +27,7 @@ describe('RuleDataService', () => {
 
   beforeEach(() => {
     repository = makeRepository();
-    service = new RuleDataService(repository as never);
+    service = new RuleDataService(pinoStub, repository as never);
   });
 
   it('registers itself as the rule-data store when a repository is available', async () => {

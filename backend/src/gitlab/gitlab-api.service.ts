@@ -1,9 +1,10 @@
 import { Repo } from '../builder/builder.entity';
-import { decryptAes, errorMessage } from '../utils/functions';
+import { decryptAes } from '../utils/functions';
 import { Gitlab } from '@gitbeaker/rest';
-import { Injectable, Logger, NotFoundException, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 
 export async function gitlabRawFileToString(raw: string | Blob): Promise<string> {
@@ -13,11 +14,11 @@ export async function gitlabRawFileToString(raw: string | Blob): Promise<string>
 
 @Injectable()
 export class GitlabApiService implements OnModuleInit {
-  private readonly logger = new Logger(GitlabApiService.name);
   api!: Gitlab;
   chaoticId!: string;
 
   constructor(
+    @InjectPinoLogger(GitlabApiService.name) private readonly pino: PinoLogger,
     private readonly configService: ConfigService,
     @InjectRepository(Repo)
     private readonly repoRepository: Repository<Repo>,
@@ -25,13 +26,13 @@ export class GitlabApiService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.initApiClient().catch((err) =>
-      this.logger.error(`GitLab client init failed, review features unavailable: ${errorMessage(err)}`),
+      this.pino.error({ err }, 'GitLab client init failed, review features unavailable'),
     );
   }
 
   private async initApiClient(): Promise<void> {
     const repo = await this.repoRepository.findOne({ where: { name: 'chaotic-aur' } }).catch((err) => {
-      this.logger.warn(`Could not load chaotic-aur repo row: ${errorMessage(err)}`);
+      this.pino.warn({ err }, 'Could not load chaotic-aur repo row');
       return null;
     });
     if (!repo?.gitlabProjectId) {
@@ -44,7 +45,7 @@ export class GitlabApiService implements OnModuleInit {
       try {
         token = decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
       } catch (err) {
-        this.logger.warn(`Could not decrypt chaotic-aur apiToken: ${errorMessage(err)}`);
+        this.pino.warn({ err }, 'Could not decrypt chaotic-aur apiToken');
       }
     }
     if (!token) {

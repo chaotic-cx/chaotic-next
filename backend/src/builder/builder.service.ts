@@ -4,12 +4,13 @@ import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { BuildStatus } from '../types/types';
 import { CACHE_TTL_MS, MAX_AMOUNT, MAX_DAYS_PER_DAY_CHART, MAX_DAYS_WINDOW, MAX_OFFSET } from '../utils/constants';
-import { clampInt, errorMessage, generateNodeId, nDaysInPast, whitelistSort } from '../utils/functions';
+import { clampInt, generateNodeId, nDaysInPast, whitelistSort } from '../utils/functions';
 import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
 import { BuildClassSyncService } from './build-class-sync.service';
 import { BuilderDatabaseService } from './builder-database.service';
 import { Build, Builder, Package, Repo, SilencedBuildFailure } from './builder.entity';
 import { brokerConfig } from './moleculer.config';
+import { EntityLookupService } from './entity-lookup.service';
 import {
   BUILD_RESOURCE_COLUMNS,
   DAY_ROW_KEYS,
@@ -38,10 +39,11 @@ import {
   type ShouldBuildDecision,
   type UnresolvedFailedBuild,
 } from '@chaotic-next/shared-lib';
-import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ServiceBroker } from 'moleculer';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 
 /** Packages need this many genuine attempts inside the window before they can be called flaky. */
@@ -62,7 +64,6 @@ export interface BuilderUtilizationRow {
 
 @Injectable()
 export class BuilderService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(BuilderService.name);
   private broker?: ServiceBroker;
   private readonly connection?: IORedis;
 
@@ -82,6 +83,8 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     private repoManagerService: RepoManagerService,
     private gitlabPipelineService: GitlabPipelineService,
     private buildClassSyncService: BuildClassSyncService,
+    private readonly lookup: EntityLookupService,
+    @InjectPinoLogger(BuilderService.name) private readonly pino: PinoLogger,
   ) {
     const redisPassword: string | undefined = this.configService.get<string | undefined>('redis.password');
     const redisHost: string = this.configService.getOrThrow<string>('redis.host');
@@ -100,25 +103,25 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
         }
         if (!redisErrorLogged) {
           redisErrorLogged = true;
-          this.logger.error(`Redis connection error: ${err.message}`);
+          this.pino.error({ err }, 'Redis connection error');
         }
       });
       this.connection = connection;
     } catch (err: unknown) {
-      this.logger.error(err);
+      this.pino.error({ err }, 'Redis connection setup failed');
     }
   }
 
   onModuleInit() {
     // Fire-and-forget: don't block startup on broker connection/registration.
     void this.initBroker().catch((err: unknown) => {
-      this.logger.error(`Broker init failed: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Broker init failed');
     });
   }
 
   async initBroker() {
     if (!this.connection) {
-      this.logger.error('Broker init skipped: Redis connection could not be established');
+      this.pino.error('Broker init skipped: Redis connection could not be established');
       return;
     }
     const dbConnections = {
@@ -137,6 +140,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
         new BuilderDatabaseService({
           broker: this.broker,
           dbConnections,
+          lookup: this.lookup,
           repoManagerService: this.repoManagerService,
           sseSubject: this.eventService.sseEvents$,
           gitlabPipelineService: this.gitlabPipelineService,
@@ -144,9 +148,9 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
         }),
       );
       await this.broker.start();
-      this.logger.log('Moleculer broker started');
+      this.pino.info('Moleculer broker started');
     } catch (err: unknown) {
-      this.logger.error(err);
+      this.pino.error({ err }, 'Broker init failed');
     }
   }
 

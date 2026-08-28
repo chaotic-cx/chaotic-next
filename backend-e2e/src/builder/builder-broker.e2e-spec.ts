@@ -5,6 +5,10 @@ import {
   type BuilderDatabaseServiceOptions,
   PENDING_DEPLOYMENT_TIMEOUT_MS,
 } from '@chaotic-next/backend/builder/builder-database.service';
+import { EntityLookupService } from '@chaotic-next/backend/builder/entity-lookup.service';
+import { type PinoLogger } from 'nestjs-pino';
+
+const pinoStub = { info: () => undefined, debug: () => undefined } as unknown as PinoLogger;
 import { Build, Builder, Package, Repo, SilencedBuildFailure } from '@chaotic-next/backend/builder/builder.entity';
 import type { BuildStatus, DatabasePackageAddedEvent, MoleculerBuildObject } from '@chaotic-next/backend/types/types';
 import type { BuildResourceStats, ChaoticEvent } from '@chaotic-next/shared-lib';
@@ -134,6 +138,12 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
         repo: dataSource.getRepository(Repo),
         silencedFailure: dataSource.getRepository(SilencedBuildFailure),
       },
+      lookup: new EntityLookupService(
+        dataSource.getRepository(Package),
+        dataSource.getRepository(Builder),
+        dataSource.getRepository(Repo),
+        pinoStub,
+      ),
       repoManagerService: repoManagerStub as never,
       sseSubject,
       gitlabPipelineService: gitlabStub as never,

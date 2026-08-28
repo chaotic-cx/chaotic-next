@@ -1,15 +1,14 @@
-import { errorMessage } from '../utils/functions';
 import { DiffScanRuleData } from './rule-data.entity';
 import { provideRuleDataStore, type RuleDataStore } from './rules/rule-data-store';
-import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { Injectable, OnModuleInit, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 
 @Injectable()
 export class RuleDataService implements OnModuleInit, RuleDataStore {
-  private readonly logger = new Logger(RuleDataService.name);
-
   constructor(
+    @InjectPinoLogger(RuleDataService.name) private readonly pino: PinoLogger,
     @Optional()
     @InjectRepository(DiffScanRuleData)
     private readonly repository?: Repository<DiffScanRuleData>,
@@ -17,7 +16,7 @@ export class RuleDataService implements OnModuleInit, RuleDataStore {
 
   onModuleInit(): void {
     provideRuleDataStore(this.repository ? this : null);
-    this.logger.log(
+    this.pino.info(
       this.repository ? 'Rule data persistence enabled' : 'Rule data persistence unavailable, feeds load per scan',
     );
   }
@@ -28,7 +27,7 @@ export class RuleDataService implements OnModuleInit, RuleDataStore {
       const row = await this.repository.findOne({ where: { cacheKey } });
       return row?.raw ?? null;
     } catch (err) {
-      this.logger.warn(`Rule data read for "${cacheKey}" failed: ${errorMessage(err)}`);
+      this.pino.warn({ cacheKey, err }, 'Rule data read failed');
       return null;
     }
   }
@@ -38,7 +37,7 @@ export class RuleDataService implements OnModuleInit, RuleDataStore {
     try {
       await this.repository.upsert({ cacheKey, raw, fetchedAt: new Date() }, ['cacheKey']);
     } catch (err) {
-      this.logger.warn(`Rule data persist for "${cacheKey}" failed: ${errorMessage(err)}`);
+      this.pino.warn({ cacheKey, err }, 'Rule data persist failed');
     }
   }
 }

@@ -1,5 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { RepoStatus } from '@chaotic-next/shared-lib';
+import { type PinoLogger } from 'nestjs-pino';
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import type { Package, Repo } from '../builder/builder.entity';
@@ -10,6 +11,13 @@ import { ChaoticIndexService } from './chaotic-index.service';
 import { RepoManager } from './repo-manager';
 import type { RepoReader, RepoReaderFactory } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 
 const SETTINGS: RepoSettings = { regenDatabase: false, abiDryRun: true };
 
@@ -57,6 +65,7 @@ function buildRepoManager(stubs: Partial<StartRunStubs> = {}): {
     {} as ChaoticIndexService,
     stubs.triggers ?? triggers,
     stubs.bump ?? bump,
+    pinoStub,
   );
   return { repoManager, checkRebuildTriggers };
 }

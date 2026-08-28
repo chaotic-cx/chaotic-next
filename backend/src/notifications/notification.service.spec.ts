@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { type PinoLogger } from 'nestjs-pino';
 import { encryptAesRaw } from '../utils/functions';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -54,7 +55,16 @@ describe('NotificationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     repo = mockRepository();
-    service = new NotificationService(repo, mockConfigService() as never);
+    service = new NotificationService(
+      {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+        debug: () => undefined,
+      } as unknown as PinoLogger,
+      repo,
+      mockConfigService() as never,
+    );
   });
 
   afterEach(async () => {

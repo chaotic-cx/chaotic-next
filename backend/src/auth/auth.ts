@@ -83,8 +83,8 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
         scopes: ['read_user'],
         overrideUserInfo: true,
         mapProfileToUser: (profile) => ({
-          // The resolved GitLab groups ride on the profile from getUserInfo
-          // below; mapping them here persists them into the user.groups column.
+          // getUserInfo below resolves the GitLab groups. This mapping
+          // writes them to the user.groups column.
           groups: profile.groups as string[],
         }),
         getUserInfo: async (tokens) => {

@@ -1,18 +1,19 @@
-import { getOrCreatePackage, Package, Repo } from '../../builder/builder.entity';
+import { Package, Repo } from '../../builder/builder.entity';
+import { EntityLookupService } from '../../builder/entity-lookup.service';
 import {
   BumpType,
   type PackageBumpEntry,
   type PackageConfig,
   type RepoUpdateRunParams,
 } from '../../interfaces/repo-manager';
-import { errorMessage } from '../../utils/functions';
 import { isSourceCompiledPackage } from '../pkgbuild-classifier';
 import { PackageBump, PackageElfAnalysis } from '../repo-manager.entity';
 import { REPO_WRITER, type BumpCommitAction, type RepoReader, type RepoWriter } from '../repo-rw';
 import { CHAOTIC_PKG_TYPE } from '../signal/plugin';
 import { applyPackageBump, parseCiConfig } from './bump-config';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 
 /** CI config flag keys (read from .CI/config); a flag is on when set to "1". */
@@ -32,8 +33,6 @@ export function isCiFlagEnabled(configs: Record<string, string | undefined>, key
  */
 @Injectable()
 export class BumpService {
-  private readonly logger = new Logger(BumpService.name);
-
   constructor(
     @InjectRepository(Package)
     private readonly packagesRepository: Repository<Package>,
@@ -41,6 +40,8 @@ export class BumpService {
     private readonly elfAnalysisRepository: Repository<PackageElfAnalysis>,
     @Inject(REPO_WRITER)
     private readonly repoWriter: RepoWriter,
+    private readonly lookup: EntityLookupService,
+    @InjectPinoLogger(BumpService.name) private readonly pino: PinoLogger,
   ) {}
 
   async bumpAndPush(needsRebuild: RepoUpdateRunParams[], reader: RepoReader, repo: Repo): Promise<PackageBumpEntry[]> {
@@ -60,17 +61,20 @@ export class BumpService {
         (entry) => entry.pkg.pkgname === param.pkg.pkgname,
       );
       if (existingEntry) {
-        this.logger.warn(`Already bumped via ${existingEntry.triggerName}, skipping ${param.pkg.pkgname}`);
+        this.pino.warn({ trigger: existingEntry.triggerName, pkgname: param.pkg.pkgname }, 'Already bumped, skipping');
         continue;
       }
 
       param.bumpedConfigContent = await this.bumpSinglePackage(reader, param.pkg.pkgname, param.pkg.repo);
 
-      this.logger.log(
-        param.bumpType === BumpType.MANUAL
-          ? `Rebuilding ${param.pkg.pkgname} manually`
-          : `Rebuilding ${param.pkg.pkgname} because of changed ${param.archPkg.pkgname}`,
-      );
+      if (param.bumpType === BumpType.MANUAL) {
+        this.pino.info({ pkgname: param.pkg.pkgname }, 'Rebuilding manually');
+      } else {
+        this.pino.info(
+          { pkgname: param.pkg.pkgname, trigger: param.archPkg.pkgname },
+          'Rebuilding because of changed package',
+        );
+      }
 
       // A manual bump has no triggering package, so omit the self-referential name.
       const triggerName = param.bumpType === BumpType.MANUAL ? undefined : param.archPkg.pkgname;
@@ -126,7 +130,7 @@ export class BumpService {
     }
     if (actions.length === 0) return;
 
-    this.logger.log(`Committing ${actions.length} bump(s) to ${repo.name} via GitLab API`);
+    this.pino.info({ count: actions.length, repo: repo.name }, 'Committing bumps via GitLab API');
     await this.repoWriter.commitBumps(repo, actions);
   }
 
@@ -141,7 +145,7 @@ export class BumpService {
     let pkg = pkgInDb;
     if (!pkg) {
       if (!repo) throw new Error(`readPackageConfig for ${pkgbaseDir} needs either pkgInDb or repo`);
-      pkg = await getOrCreatePackage(pkgbaseDir, this.packagesRepository, repo);
+      pkg = await this.lookup.getOrCreatePackage(pkgbaseDir, repo);
     }
     const currentTriggersInDb: { pkgname: string; archVersion: string }[] = pkg.bumpTriggers ?? [];
 
@@ -150,7 +154,7 @@ export class BumpService {
     const configs = parseCiConfig(configText);
 
     if (!configs['CI_REBUILD_TRIGGERS'] && currentTriggersInDb.length > 0) {
-      this.logger.debug(`Removing rebuild triggers for ${pkgbaseDir} from database`);
+      this.pino.debug({ pkgbaseDir }, 'Removing rebuild triggers from database');
       pkg.bumpTriggers = null;
       this.savePackageInBackground(pkg);
     }
@@ -172,18 +176,18 @@ export class BumpService {
     try {
       await this.elfAnalysisRepository.update({ pkgType: CHAOTIC_PKG_TYPE, pkgId: pkg.id }, { isSourceCompiled });
     } catch (err: unknown) {
-      this.logger.debug(`Failed to update isSourceCompiled for ${pkg.pkgname}: ${errorMessage(err)}`);
+      this.pino.debug({ err, pkgname: pkg.pkgname }, 'Failed to update isSourceCompiled');
     }
   }
 
   private savePackageInBackground(pkg: Package): void {
     this.packagesRepository.save(pkg).catch((err: unknown) => {
-      this.logger.warn(`Failed to persist ${pkg.pkgname}: ${errorMessage(err)}`);
+      this.pino.warn({ err, pkgname: pkg.pkgname }, 'Failed to persist package');
     });
   }
 
   async bumpSinglePackage(reader: RepoReader, pkgname: string, repo: Repo): Promise<string> {
-    const pkg = await getOrCreatePackage(pkgname, this.packagesRepository, repo);
+    const pkg = await this.lookup.getOrCreatePackage(pkgname, repo);
     const configText = await reader.readFile(`${pkgname}/.CI/config`);
     return applyPackageBump(configText, pkg.version, pkg.pkgrel);
   }

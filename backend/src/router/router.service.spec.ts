@@ -1,4 +1,5 @@
 import { nDaysInPast, utcDayStart } from '../utils/functions';
+import { type PinoLogger } from 'nestjs-pino';
 import type { DataSource } from 'typeorm';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
@@ -40,7 +41,13 @@ function createService(rawMany: unknown[], rawOne: unknown = undefined) {
     get: vi.fn().mockResolvedValue(undefined),
     set: vi.fn().mockResolvedValue(undefined),
   };
-  return { service: new RouterService(dataSource, cache as never), qb, repository, cache };
+  const pino = {
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+    debug: () => undefined,
+  } as unknown as PinoLogger;
+  return { service: new RouterService(pino, dataSource, cache as never), qb, repository, cache };
 }
 
 describe('RouterService', () => {

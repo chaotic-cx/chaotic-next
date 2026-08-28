@@ -6,6 +6,7 @@ import { BuildStatus } from '../types/types';
 import { BUILD_VERDICT_STATUSES, isValidPkgname } from '@chaotic-next/shared-lib';
 import { Build, Builder, Package, Repo, SilencedBuildFailure } from './builder.entity';
 import { BuilderService } from './builder.service';
+import { type EntityLookupService } from './entity-lookup.service';
 import {
   isFailingStatus,
   shouldBuildDecision,
@@ -180,6 +181,8 @@ describe('BuilderService silence handling', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as EntityLookupService,
       {} as never,
     );
     return { service, buildsQb };
