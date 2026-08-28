@@ -930,6 +930,27 @@ describe('GitlabMergeRequestService.new-MR push notifications', () => {
     expect(payload.notification.body).toBe('Updates awaiting your review: pkg1 (1 finding), pkg2, pkg3 (3 findings)');
   });
 
+  it('sends no notification for MRs without a parseable package name', async () => {
+    const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const access = notificationAccess(service);
+
+    await access.notifySubscribers([
+      mrFixture(1, { title: 'chore(update): pkg1' }),
+      mrFixture(2, { title: 'WIP: random title without a version bump' }),
+    ]);
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string) as {
+      notification: { body: string };
+    };
+    expect(payload.notification.body).toBe('Updates awaiting your review: pkg1');
+    // Unparseable titles are skipped permanently, not parked for a retry.
+    expect(access.pendingNotificationIids.has(2)).toBe(false);
+
+    await access.notifySubscribers([mrFixture(3, { title: 'Draft: something' })]);
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+  });
+
   it('parks MRs whose diffs are unavailable instead of notifying', async () => {
     const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });

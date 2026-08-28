@@ -726,23 +726,32 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       }
       if (scannable.length === 0) return;
 
+      // MRs without a parseable "chore(update): <pkgname>" title stay silent:
+      // a notification without a package name is not actionable.
+      const notifyable = scannable.flatMap((mr) => {
+        const pkg = mrPkgname(mr.title);
+        return pkg === null ? [] : [{ mr, pkg }];
+      });
+      const skipped = scannable.length - notifyable.length;
+      if (skipped > 0) {
+        this.pino.warn({ count: skipped }, 'Skipped notifying about MRs without a parseable package name');
+      }
+      if (notifyable.length === 0) return;
+
       const subscriptions = await this.subscriptionRepository.find();
       if (subscriptions.length === 0) return;
 
-      const summaries = scannable
-        .map((mr) => {
-          const pkg = mr.title.match(/^chore\(update\): ([\w@.+-]+)$/)?.[1];
-          if (pkg === undefined) return null;
+      const summaries = notifyable
+        .map(({ mr, pkg }) => {
           const findings = mr.scanFindings?.length ?? 0;
           if (findings === 0) return pkg;
           const detail = findings === 1 ? '1 finding' : `${findings} findings`;
           return `${pkg} (${detail})`;
         })
-        .filter((summary): summary is string => summary !== undefined)
         .join(', ');
       this.pino.info({ summaries }, 'Notifying subscribers about new MRs');
 
-      const iids = scannable.map((mr) => mr.iid).join(',');
+      const iids = notifyable.map(({ mr }) => mr.iid).join(',');
       const targetUrl = `https://aur.chaotic.cx/update-review?newMr=${iids}`;
       const notificationPayload: NotificationPayload = {
         notification: {
