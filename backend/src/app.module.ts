@@ -1,11 +1,20 @@
+import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '@thallesp/nestjs-better-auth';
+import { LoggerModule } from 'nestjs-pino';
 import { AdminModule } from './admin/admin.module';
-import appConfig from './config/app.config';
 import { AllExceptionsFilter } from './api/all-exceptions.filter';
 import { ThrottlerBehindProxyGuard } from './api/throttler-behind-proxy.guard';
 import { validationExceptionFactory } from './api/validation-exception.factory';
 import { AurModule } from './aur/aur.module';
 import { auth } from './auth/auth';
 import { BuilderModule } from './builder/builder.module';
+import { lruCacheModule } from './cache/lru-cache.module';
+import appConfig from './config/app.config';
 import { envValidationSchema } from './config/env.validation';
 import { dataSourceOptions } from './data/data.source';
 import { MigrationLogger } from './data/migration-logger';
@@ -16,15 +25,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
-import { lruCacheModule } from './cache/lru-cache.module';
-import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
-import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from '@thallesp/nestjs-better-auth';
-import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
@@ -43,15 +43,19 @@ import { LoggerModule } from 'nestjs-pino';
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || 'info',
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'SYS:standard',
-            ignore: 'pid,hostname',
-            singleLine: true,
-          },
-        },
+        ...(process.env.NODE_ENV === 'production'
+          ? {}
+          : {
+              transport: {
+                target: 'pino-pretty',
+                options: {
+                  colorize: true,
+                  translateTime: 'SYS:standard',
+                  ignore: 'pid,hostname',
+                  singleLine: true,
+                },
+              },
+            }),
         redact: {
           paths: [
             'req.headers["x-gitlab-private-token"]',

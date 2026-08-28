@@ -11,7 +11,7 @@ export default [
     files: ['**/*.ts', '**/*.js'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
       '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/array-type': ['error', { default: 'array' }],
       '@nx/enforce-module-boundaries': [

@@ -25,6 +25,10 @@ export async function seedElfAnalyses(dataSource: DataSource, rawEntries: unknow
         row ??= await archRepo.save({ pkgname: entry.pkgname, version: 'unknown' });
         pkgId = row.id;
       } else {
+        if (!entry.pkgname || !entry.repo) {
+          throw new Error('Seed entry without numeric pkgId needs a pkgname and a repo');
+        }
+
         const repo = await getOrCreateRepo(entry.repo, repoRepo);
         const pkg = await getOrCreatePackage(entry.pkgname, packageRepo, repo);
         pkgId = pkg.id;
