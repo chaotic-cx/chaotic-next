@@ -4,8 +4,15 @@ import { DiffScanService } from './diff-scan.service';
 import { RULES } from './rules';
 import type { Rule } from './rules/rule';
 import { addedOnlyDiff, makeChange } from './rules/test-support';
+import type { PinoLogger } from 'nestjs-pino';
 
-const service = new DiffScanService();
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
+const service = new DiffScanService(pinoStub);
 
 describe('DiffScanService', () => {
   beforeEach(() => {

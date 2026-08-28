@@ -1,15 +1,13 @@
 import { Build, Package, Repo } from '../builder/builder.entity';
-import {
+import { BumpType, TriggerType } from '../interfaces/repo-manager';
+import type {
   BumpResult,
-  BumpType,
   IndexResult,
   PackageBumpEntry,
   PackageConfig,
   RepoSettings,
   RepoUpdateRunParams,
-  TriggerType,
 } from '../interfaces/repo-manager';
-import { errorMessage } from '../utils/functions';
 import { ArchMirrorService } from './arch-mirror.service';
 import { BumpService, isCiFlagEnabled } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
@@ -19,10 +17,10 @@ import { CI_FLAG_REBUILD_IGNORE_ABI, RebuildTriggerService, SignalScanService } 
 import { formatConsumerAbiBreak } from './signal';
 import { RepoStatus } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
-import { Logger } from '@nestjs/common';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 
 const MAX_DOWNLOAD_RETRIES = 5;
@@ -30,8 +28,6 @@ const BASE_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 30_000;
 
 export class RepoManager {
-  private readonly logger = new Logger(RepoManager.name);
-
   changedArchPackages: ArchlinuxPackage[] = [];
   status: RepoStatus = RepoStatus.INACTIVE;
   deployInProgress = false;
@@ -46,8 +42,9 @@ export class RepoManager {
     private readonly chaoticIndex: ChaoticIndexService,
     private readonly triggers: RebuildTriggerService,
     private readonly bump: BumpService,
+    @InjectPinoLogger(RepoManager.name) private readonly pino: PinoLogger,
   ) {
-    this.logger.log('RepoManager initialized');
+    this.pino.info('RepoManager initialized');
   }
 
   /**
@@ -56,10 +53,10 @@ export class RepoManager {
    * lock across all repos, so this method must not gate on `status` itself.
    */
   async startRun(repo: Repo): Promise<BumpResult> {
-    this.logger.log(`Checking repo ${repo.name} for rebuild triggers...`);
+    this.pino.info({ repo: repo.name }, 'Checking repo for rebuild triggers');
 
     if (!repo.gitlabProjectId) {
-      this.logger.warn(`Repo ${repo.name} has no gitlabProjectId, skipping rebuild check`);
+      this.pino.warn({ repo: repo.name }, 'Repo has no gitlabProjectId, skipping rebuild check');
       return { repo: repo.name, bumped: [], origin: TriggerType.ARCH };
     }
 
@@ -100,7 +97,7 @@ export class RepoManager {
 
   async indexArchMirror(): Promise<IndexResult> {
     if (this.status === RepoStatus.ACTIVE) {
-      this.logger.warn('RepoManager is already active, skipping full Arch mirror index');
+      this.pino.warn('RepoManager is already active, skipping full Arch mirror index');
       return { scanned: 0, skipped: 0, failed: 0 };
     }
     this.status = RepoStatus.ACTIVE;
@@ -113,7 +110,7 @@ export class RepoManager {
 
   async indexChaoticRepo(): Promise<IndexResult> {
     if (this.deployInProgress) {
-      this.logger.warn('Deployment is already in progress, skipping Chaotic repo index');
+      this.pino.warn('Deployment is already in progress, skipping Chaotic repo index');
       return { scanned: 0, skipped: 0, failed: 0 };
     }
     this.deployInProgress = true;
@@ -132,24 +129,24 @@ export class RepoManager {
     const pkg: Package | undefined = build.pkgbase;
     if (!pkg) return;
     if (pkg.skipSignalScan) {
-      this.logger.log(`Skipping scan of ${pkg.pkgname}: marked binary-only (skip signal scan)`);
+      this.pino.info({ pkgname: pkg.pkgname }, 'Skipping scan: marked binary-only (skip signal scan)');
       return;
     }
     const filename: string | undefined = pkg.metadata?.filename;
     if (!filename) {
-      this.logger.warn(`No filename for built package ${pkg.pkgname}, skipping scan`);
+      this.pino.warn({ pkgname: pkg.pkgname }, 'No filename for built package, skipping scan');
       return;
     }
 
     const repoName: string | undefined = build.repo?.name;
     if (!repoName) {
-      this.logger.warn(`No repo name for ${pkg.pkgname}, skipping scan`);
+      this.pino.warn({ pkgname: pkg.pkgname }, 'No repo name, skipping scan');
       return;
     }
 
     const secretMirrorUrl: string | undefined = this.settings.secretMirrorUrl;
     if (!secretMirrorUrl) {
-      this.logger.warn(`No secretMirrorUrl configured, skipping scan of ${pkg.pkgname}`);
+      this.pino.warn({ pkgname: pkg.pkgname }, 'No secretMirrorUrl configured, skipping scan');
       return;
     }
 
@@ -160,7 +157,7 @@ export class RepoManager {
     try {
       await this.downloadWithRetry(downloadUrl, downloadPath);
 
-      this.logger.log(`Scanning built package ${pkg.pkgname} (${pkg.version}) for ELF signals`);
+      this.pino.info({ pkgname: pkg.pkgname, version: pkg.version }, 'Scanning built package for ELF signals');
       await this.signalScanService.scanPackages([
         {
           file: downloadPath,
@@ -170,7 +167,7 @@ export class RepoManager {
         },
       ]);
     } catch (err: unknown) {
-      this.logger.warn(`Failed to download/scan ${filename}: ${errorMessage(err)}`);
+      this.pino.warn({ err, filename }, 'Failed to download or scan package');
     } finally {
       await this.archMirror.cleanUp([tempDir]);
     }
@@ -191,7 +188,7 @@ export class RepoManager {
         lastError = err;
         if (attempt < maxRetries) {
           const delay = Math.min(BASE_RETRY_DELAY_MS * 2 ** attempt, MAX_RETRY_DELAY_MS);
-          this.logger.warn(`Download attempt ${attempt + 1} failed for ${url}, retrying in ${delay}ms...`);
+          this.pino.warn({ attempt: attempt + 1, url, delayMs: delay }, 'Download attempt failed, retrying');
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
@@ -201,7 +198,7 @@ export class RepoManager {
 
   async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<BumpResult> {
     if (this.deployInProgress) {
-      this.logger.warn('Deployment is already in progress, skipping');
+      this.pino.warn('Deployment is already in progress, skipping');
       return { repo: build.repo?.name ?? '', bumped: [], origin: TriggerType.CHAOTIC };
     }
     this.deployInProgress = true;
@@ -218,7 +215,7 @@ export class RepoManager {
     if (!repo || !pkgbase) {
       return { repo: repo?.name ?? '', bumped: [], origin: TriggerType.CHAOTIC };
     }
-    this.logger.log(`Checking rebuild triggers after deployment of ${pkgbase.pkgname} in ${repo.name}`);
+    this.pino.info({ pkgname: pkgbase.pkgname, repo: repo.name }, 'Checking rebuild triggers after deployment');
 
     try {
       if (this.settings.signalScanEnabled) {
@@ -251,7 +248,7 @@ export class RepoManager {
         origin: TriggerType.CHAOTIC,
       };
     } catch (err: unknown) {
-      this.logger.error(`Rebuild-trigger check after deployment of ${pkgbase.pkgname} failed: ${errorMessage(err)}`);
+      this.pino.error({ err, pkgname: pkgbase.pkgname }, 'Rebuild-trigger check after deployment failed');
       return { repo: repo.name, bumped: [], origin: TriggerType.CHAOTIC };
     }
   }
@@ -287,7 +284,7 @@ export class RepoManager {
         bumpType: BumpType.EXPLICIT,
         triggerFrom: TriggerType.CHAOTIC,
       });
-      this.logger.debug(`Rebuilding ${pkg.pkgname} because of explicit trigger ${deployed.pkgname}`);
+      this.pino.debug({ pkgname: pkg.pkgname, trigger: deployed.pkgname }, 'Rebuilding because of explicit trigger');
     }
     return needsRebuild;
   }

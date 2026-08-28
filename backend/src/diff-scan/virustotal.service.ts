@@ -1,12 +1,13 @@
-import { errorMessage, mapWithConcurrency } from '../utils/functions';
+import { mapWithConcurrency } from '../utils/functions';
 import { type ScanIndicator } from './indicators';
 import { statsToColumns, VirusTotalVerdict } from './virus-total-verdict.entity';
 import { type VtEngineStats, type VtIndicatorReport, type VtVerdict } from '@chaotic-next/shared-lib';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { LessThan, Repository } from 'typeorm';
 
 const VT_API_BASE = 'https://www.virustotal.com/api/v3';
@@ -38,12 +39,12 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 @Injectable()
 export class VirustotalService {
-  private readonly logger = new Logger(VirustotalService.name);
   private lastRequestAt = 0;
 
   constructor(
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly configService: ConfigService,
+    @InjectPinoLogger(VirustotalService.name) private readonly pino: PinoLogger,
     @Optional() @InjectRepository(VirusTotalVerdict) private readonly verdictRepository?: Repository<VirusTotalVerdict>,
   ) {}
 
@@ -53,7 +54,7 @@ export class VirustotalService {
 
   async reportOn(indicators: ScanIndicator[]): Promise<VtIndicatorReport[]> {
     if (!this.enabled || indicators.length === 0) return [];
-    this.logger.debug(`Checking ${indicators.length} indicator(s) against VirusTotal`);
+    this.pino.debug({ count: indicators.length }, 'Checking indicators against VirusTotal');
     const reports = await mapWithConcurrency(
       indicators,
       (indicator) => this.reportOnIndicator(indicator),
@@ -66,7 +67,7 @@ export class VirustotalService {
     const cacheKey = `vt/${indicator.type}/${indicator.value}`;
     const cached = await this.cacheManager.get<VtIndicatorReport>(cacheKey);
     if (cached) {
-      this.logger.debug(`VirusTotal cache hit for ${indicator.type} ${indicator.value}`);
+      this.pino.debug({ type: indicator.type, value: indicator.value }, 'VirusTotal cache hit');
       return { ...cached, context: indicator.context };
     }
 
@@ -84,10 +85,10 @@ export class VirustotalService {
       verdict: verdictOf(stats),
       stats: stats === 'unknown' ? undefined : stats,
     };
-    this.logger.debug(`VirusTotal verdict for ${indicator.type} ${indicator.value}: ${report.verdict}`);
+    this.pino.debug({ type: indicator.type, value: indicator.value, verdict: report.verdict }, 'VirusTotal verdict');
     await this.cacheManager.set(cacheKey, report, VT_CACHE_TTL_MS);
     await this.recordVerdict(report).catch((err: unknown) =>
-      this.logger.warn(`Could not persist VirusTotal verdict: ${errorMessage(err)}`),
+      this.pino.warn({ err }, 'Could not persist VirusTotal verdict'),
     );
     return report;
   }
@@ -111,7 +112,7 @@ export class VirustotalService {
       verdict: row.verdict,
       stats,
     };
-    this.logger.debug(`VirusTotal verdict store hit for ${indicator.type} ${indicator.value}`);
+    this.pino.debug({ type: indicator.type, value: indicator.value }, 'VirusTotal verdict store hit');
     await this.cacheManager.set(cacheKey, report, VT_CACHE_TTL_MS).catch(() => undefined);
     return report;
   }
@@ -158,9 +159,9 @@ export class VirustotalService {
   async purgeExpiredVerdicts(): Promise<void> {
     try {
       const purged = await this.purgeOlderThan(VERDICT_RETENTION_MS);
-      if (purged > 0) this.logger.log(`Purged ${purged} expired VirusTotal verdict(s)`);
+      if (purged > 0) this.pino.info({ count: purged }, 'Purged expired VirusTotal verdicts');
     } catch (err: unknown) {
-      this.logger.error(`Failed to purge expired VirusTotal verdicts: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to purge expired VirusTotal verdicts');
     }
   }
 
@@ -174,12 +175,12 @@ export class VirustotalService {
       body: new URLSearchParams({ url }).toString(),
     });
     if (submit === null || !submit.ok) {
-      this.logger.warn(`VirusTotal URL submission failed (${submit?.status ?? 'network error'})`);
+      this.pino.warn({ url, status: submit?.status ?? 'network error' }, 'VirusTotal URL submission failed');
       return null;
     }
     const analysisId = ((await submit.json()) as VtSubmitResponse).data?.id;
     if (analysisId === undefined) return null;
-    this.logger.debug(`Submitted URL ${url} for scanning (analysis ${analysisId})`);
+    this.pino.debug({ url, analysisId }, 'Submitted URL for scanning');
 
     const pollIntervalMs = this.configService.get<number>('vt.pollIntervalMs') ?? DEFAULT_POLL_INTERVAL_MS;
     for (let attempt = 0; attempt < ANALYSIS_POLL_ATTEMPTS; attempt++) {
@@ -188,7 +189,7 @@ export class VirustotalService {
       if (analysis === null || !analysis.ok) continue;
       const attributes = ((await analysis.json()) as VtAnalysisResponse).data?.attributes;
       if (attributes?.status === 'completed') return normalizeStats(attributes.stats);
-      this.logger.debug(`Analysis ${analysisId} not finished yet: ${attributes?.status ?? 'unknown status'}`);
+      this.pino.debug({ analysisId, status: attributes?.status ?? 'unknown status' }, 'Analysis not finished yet');
     }
     return 'unknown';
   }
@@ -199,7 +200,7 @@ export class VirustotalService {
     const response = await this.vtFetch(`/urls/${id}`, { method: 'GET' });
     if (response === null || response.status === 404) return null;
     if (!response.ok) {
-      this.logger.warn(`VirusTotal URL report lookup failed (${response.status})`);
+      this.pino.warn({ status: response.status }, 'VirusTotal URL report lookup failed');
       return null;
     }
     const stats = ((await response.json()) as VtStatsResponse).data?.attributes?.last_analysis_stats;
@@ -210,11 +211,11 @@ export class VirustotalService {
     const response = await this.vtFetch(`/files/${hash}`, { method: 'GET' });
     if (response === null) return null;
     if (response.status === 404) {
-      this.logger.debug(`File ${hash} unknown to VirusTotal`);
+      this.pino.debug({ hash }, 'File unknown to VirusTotal');
       return 'unknown';
     }
     if (!response.ok) {
-      this.logger.warn(`VirusTotal file lookup failed (${response.status})`);
+      this.pino.warn({ hash, status: response.status }, 'VirusTotal file lookup failed');
       return null;
     }
     return normalizeStats(((await response.json()) as VtStatsResponse).data?.attributes?.last_analysis_stats);
@@ -224,7 +225,7 @@ export class VirustotalService {
     const spacingMs = this.configService.get<number>('vt.requestSpacingMs') ?? DEFAULT_REQUEST_SPACING_MS;
     const waitMs = this.lastRequestAt + spacingMs - Date.now();
     if (waitMs > 0) {
-      this.logger.debug(`Waiting ${waitMs}ms for VirusTotal rate limit`);
+      this.pino.debug({ waitMs }, 'Waiting for VirusTotal rate limit');
       await sleep(waitMs);
     }
     this.lastRequestAt = Date.now();
@@ -236,7 +237,7 @@ export class VirustotalService {
         signal: AbortSignal.timeout(VT_TIMEOUT_MS),
       });
     } catch (err) {
-      this.logger.warn(`VirusTotal request to ${path} failed: ${errorMessage(err)}`);
+      this.pino.warn({ err, path }, 'VirusTotal request failed');
       return null;
     }
   }

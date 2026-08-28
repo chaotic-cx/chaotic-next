@@ -12,8 +12,8 @@ import { Logger as PinoLogger } from 'nestjs-pino';
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
 async function bootstrap(): Promise<void> {
-  // Fastify only understands a boolean or an address/CIDR here, so the env
-  // strings "true"/"false" are mapped to booleans before being passed on.
+  // Fastify accepts a boolean or an address/CIDR here. This code maps the
+  // env strings "true"/"false" to booleans and passes other values through.
   const trustProxyEnv = process.env.CAUR_TRUST_PROXY;
   const trustProxy = trustProxyEnv === 'true' ? true : trustProxyEnv === 'false' ? false : trustProxyEnv;
 

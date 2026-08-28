@@ -7,6 +7,14 @@ import { SignalScanService } from './signal-scan.service';
 import { MIN_PROVIDED_SONAMES } from '../signal';
 import { createMockRepository } from '../test/mock-repository';
 import type { MockRepository } from '../test/mock-repository';
+import { type PinoLogger } from 'nestjs-pino';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 
 function stalePythonFiles(): string[] {
   // python is seeded at 3.13.* below, so a 3.12 dir is a stale runtime install.
@@ -53,7 +61,7 @@ function createService() {
   // python at 3.13 makes any shipped python3.12 dir a stale-runtime break.
   archPkgRepo.seed([{ id: 1, pkgname: 'python', version: '3.13.1' } as ArchlinuxPackage]);
 
-  const service = new SignalScanService(analysisRepo, archPkgRepo, packageRepo, repoRepo);
+  const service = new SignalScanService(analysisRepo, archPkgRepo, packageRepo, repoRepo, pinoStub);
   return { service, analysisRepo, archPkgRepo, packageRepo };
 }
 

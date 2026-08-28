@@ -1,4 +1,5 @@
 import { PipelineOperation } from '@chaotic-next/shared-lib';
+import { type PinoLogger } from 'nestjs-pino';
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { EventService } from '../events/event.service';
@@ -32,6 +33,12 @@ function createService(apiObject: Record<string, unknown> = {}): {
   const sseNext = vi.fn();
 
   const apiService = new GitlabApiService(
+    {
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      debug: () => undefined,
+    } as unknown as PinoLogger,
     { get: vi.fn(), getOrThrow: vi.fn().mockReturnValue(12345) } as never,
     { findOne: vi.fn().mockResolvedValue({ gitlabProjectId: 'test-project-id' }) } as unknown as Repository<never>,
   );
@@ -40,6 +47,12 @@ function createService(apiObject: Record<string, unknown> = {}): {
 
   const service = new GitlabPipelineService(
     { get: vi.fn(), set: vi.fn(), del: vi.fn() } as never,
+    {
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      debug: () => undefined,
+    } as unknown as PinoLogger,
     apiService,
     { sseEvents$: { next: sseNext } } as unknown as EventService,
     pipelineTriggerRepository as unknown as Repository<PipelineTrigger>,

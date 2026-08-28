@@ -7,10 +7,11 @@ import {
 } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { BadRequestException, Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mutex } from 'async-mutex';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -147,9 +148,8 @@ function mrPkgname(title: string): string | null {
 
 @Injectable()
 export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShutdown {
-  private readonly logger = new Logger(GitlabMergeRequestService.name);
   private readonly updateMutex = new Mutex();
-  private readonly mergeRequestsMutex = new Mutex();
+  private fetchInFlight?: Promise<MergeRequestWithDiffs[]>;
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_FILE_PATH = join(process.cwd(), IS_PRODUCTION ? 'backend-config' : 'tmp', 'mr_cache.json');
@@ -167,6 +167,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @InjectPinoLogger(GitlabMergeRequestService.name) private readonly pino: PinoLogger,
     private readonly gitlabApiService: GitlabApiService,
     private readonly diffScanService: DiffScanService,
     private readonly virustotalService: VirustotalService,
@@ -179,18 +180,14 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   ) {}
 
   async onModuleInit(): Promise<void> {
-    await this.restoreDiskCache().catch((err) =>
-      this.logger.warn(`Could not restore MR cache from disk: ${errorMessage(err)}`),
-    );
-    void this.handleAutoFlagRefresh().catch((err) =>
-      this.logger.error(`Initial MR review pre-fetch failed: ${errorMessage(err)}`),
-    );
+    await this.restoreDiskCache().catch((err) => this.pino.warn({ err }, 'Could not restore MR cache from disk'));
+    void this.handleAutoFlagRefresh().catch((err) => this.pino.error({ err }, 'Initial MR review pre-fetch failed'));
   }
 
   async onApplicationShutdown(signal?: string): Promise<void> {
-    this.logger.log(`Application shutdown signal received (${signal ?? 'unknown'}), saving MR cache to disk...`);
+    this.pino.info({ signal: signal ?? 'unknown' }, 'Application shutdown signal received, saving MR cache to disk');
     await this.saveDiskCache().catch((err) =>
-      this.logger.error(`Could not persist MR cache to disk on shutdown: ${errorMessage(err)}`),
+      this.pino.error({ err }, 'Could not persist MR cache to disk on shutdown'),
     );
   }
 
@@ -201,10 +198,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       const mrs = JSON.parse(raw) as MergeRequestWithDiffs[];
       if (Array.isArray(mrs) && mrs.length > 0) {
         await this.cacheManager.set(this.CACHE_KEY_MRS, mrs, CACHE_MRS_TTL);
-        this.logger.log(`Restored ${mrs.length} MR(s) from disk cache (${this.CACHE_FILE_PATH})`);
+        this.pino.info({ count: mrs.length, path: this.CACHE_FILE_PATH }, 'Restored MRs from disk cache');
       }
     } catch (err) {
-      this.logger.warn(`Failed to parse disk MR cache: ${errorMessage(err)}`);
+      this.pino.warn({ err }, 'Failed to parse disk MR cache');
     }
   }
 
@@ -213,9 +210,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     try {
       await mkdir(join(process.cwd(), 'tmp'), { recursive: true });
       await writeFile(this.CACHE_FILE_PATH, JSON.stringify(this.lastKnownMrs), 'utf-8');
-      this.logger.log(`Persisted ${this.lastKnownMrs.length} MR(s) to disk cache (${this.CACHE_FILE_PATH})`);
+      this.pino.info({ count: this.lastKnownMrs.length, path: this.CACHE_FILE_PATH }, 'Persisted MRs to disk cache');
     } catch (err) {
-      this.logger.error(`Failed to write disk MR cache: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to write disk MR cache');
     }
   }
 
@@ -262,20 +259,18 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         const labels = toLabelStrings(openMr.labels);
         const blockingLabel = labels.find((label) => BLOCKING_MERGE_LABELS.includes(label as never));
         if (blockingLabel !== undefined) {
-          this.logger.warn(
-            `The service skips the deferred merge of MR !${action.mergeRequestIid}. It has the label "${blockingLabel}".`,
-          );
+          this.pino.warn({ mrIid: action.mergeRequestIid, blockingLabel }, 'Skipping deferred merge of MR');
           continue;
         }
 
-        this.logger.log(`Processing deferred merge for MR !${action.mergeRequestIid} after scheduled pipeline run`);
+        this.pino.info({ mrIid: action.mergeRequestIid }, 'Processing deferred merge after scheduled pipeline run');
         try {
           await this.mergeWithRetry(action.mergeRequestIid, openMr.sha ?? action.commitSha ?? '');
           mergedCount++;
           this.deferredMergeFailures.delete(action.mergeRequestIid);
         } catch (err) {
           this.deferredMergeFailures.set(action.mergeRequestIid, failedAttempts + 1);
-          this.logger.error(`Failed to execute deferred merge for MR !${action.mergeRequestIid}: ${errorMessage(err)}`);
+          this.pino.error({ err, mrIid: action.mergeRequestIid }, 'Failed to execute deferred merge');
         }
       }
 
@@ -284,13 +279,14 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         void this.refreshOpenMergeRequests();
       }
     } catch (err) {
-      this.logger.debug(`Could not query database for deferred MR merges: ${errorMessage(err)}`);
+      this.pino.debug({ err }, 'Could not query database for deferred MR merges');
     }
   }
 
   private async abandonDeferredMerge(iid: number): Promise<void> {
-    this.logger.error(
-      `The deferred merge of MR !${iid} failed ${MAX_DEFERRED_MERGE_ATTEMPTS} times. The service stops retrying it.`,
+    this.pino.error(
+      { mrIid: iid, attempts: MAX_DEFERRED_MERGE_ATTEMPTS },
+      'Deferred merge failed repeatedly, the service stops retrying it',
     );
     try {
       await this.api.MergeRequestNotes.create(
@@ -299,125 +295,124 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         `⚠️ The automatic merge failed ${MAX_DEFERRED_MERGE_ATTEMPTS} times. A maintainer must merge this merge request manually.`,
       );
     } catch (err) {
-      this.logger.warn(`Could not mark MR !${iid} as abandoned: ${errorMessage(err)}`);
+      this.pino.warn({ err, mrIid: iid }, 'Could not mark MR as abandoned');
     }
   }
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleAutoFlagRefresh(): Promise<void> {
     if (this.isAutoFlaggingMrs) {
-      this.logger.debug('Auto-flag refresh already running, skipping');
+      this.pino.debug('Auto-flag refresh already running, skipping');
       return;
     }
     this.isAutoFlaggingMrs = true;
 
     try {
-      this.logger.debug('Starting auto-flag refresh');
+      this.pino.debug('Starting auto-flag refresh');
       const mrs = await this.getOpenMergeRequests(true);
       await this.autoFlagMergeRequests(mrs);
 
-      void this.enrichVirusTotalReports(mrs).catch((err) =>
-        this.logger.error(`VirusTotal enrichment failed: ${errorMessage(err)}`),
-      );
-      void this.enrichMaintainerInfo(mrs).catch((err) =>
-        this.logger.error(`Maintainer enrichment failed: ${errorMessage(err)}`),
-      );
-      void this.enrichPackageInfo(mrs).catch((err) =>
-        this.logger.error(`Package info enrichment failed: ${errorMessage(err)}`),
-      );
+      void this.enrichVirusTotalReports(mrs).catch((err) => this.pino.error({ err }, 'VirusTotal enrichment failed'));
+      void this.enrichMaintainerInfo(mrs).catch((err) => this.pino.error({ err }, 'Maintainer enrichment failed'));
+      void this.enrichPackageInfo(mrs).catch((err) => this.pino.error({ err }, 'Package info enrichment failed'));
 
       await this.flushDeferredNotifications();
     } catch (err) {
-      this.logger.error(`Auto-flag refresh failed: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Auto-flag refresh failed');
     } finally {
       this.isAutoFlaggingMrs = false;
     }
   }
 
   async getOpenMergeRequests(overwriteCache = false): Promise<MergeRequestWithDiffs[]> {
-    return this.mergeRequestsMutex.runExclusive(async () => {
-      if (!overwriteCache) {
-        const cached = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
-        if (cached) {
-          this.logger.debug('Serving open MRs from cache');
-          return cached;
-        }
+    if (!overwriteCache) {
+      const cached = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
+      if (cached) {
+        this.pino.debug('Serving open MRs from cache');
+        return cached;
       }
-      this.logger.debug(overwriteCache ? 'Forcing refresh of open MRs' : 'No cached MRs, fetching open MRs');
-
-      const openMrs: MergeRequestSchema[] = await this.api.MergeRequests.all({
-        state: 'opened',
-        perPage: 100,
-        projectId: this.chaoticId,
-      });
-      this.logger.log(`Fetched ${openMrs.length} open MRs`);
-
-      const openIids = new Set(openMrs.map((mr) => mr.iid));
-      for (const iid of this.mrDataCache.keys()) {
-        if (!openIids.has(iid)) this.mrDataCache.delete(iid);
-      }
-
-      const staleMrs = openMrs.filter((mr) => {
-        const cached = this.mrDataCache.get(mr.iid);
-        return cached === undefined || cached.updatedAt !== mr.updated_at;
-      });
-      this.logger.log(`Fetching diffs for ${staleMrs.length} of ${openMrs.length} open MRs`);
-
-      // One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
-      // the whole batch: its diffs just come back empty.
-      const diffsByIid = new Map<number, MergeRequestDiffSchema[]>();
-      await mapWithConcurrency(
-        staleMrs,
-        async (mr) => {
-          const diffs = await this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid).catch((err: unknown) => {
-            this.logger.warn(`Failed to fetch diffs for MR !${mr.iid}: ${errorMessage(err)}`);
-            return [];
-          });
-          diffsByIid.set(mr.iid, diffs);
-        },
-        DIFF_FETCH_CONCURRENCY,
-      );
-
-      // Enrichment (VirusTotal/maintainers) lives on the previous snapshot and must
-      // survive rebuilds, otherwise the enrichment crons would redo all lookups.
-      const previous = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
-      const previousById = new Map(previous?.map((mr) => [mr.id, mr]) ?? []);
-
-      const data = await Promise.all(
-        openMrs.map(async (mr) => {
-          const previousMr = previousById.get(mr.id);
-          const cached = this.mrDataCache.get(mr.iid);
-          if (cached !== undefined && cached.updatedAt === mr.updated_at) {
-            return toMergeRequestWithDiffs(mr, cached.diffs, cached.scanFindings, previousMr);
-          }
-          const diffs = diffsByIid.get(mr.iid) ?? [];
-          const scanFindings = await this.diffScanService.scanDiffs(diffs);
-          this.mrDataCache.set(mr.iid, { updatedAt: mr.updated_at, diffs, scanFindings });
-          const ruleIds = [...new Set(scanFindings.map((finding) => finding.ruleId))];
-          this.logger.debug(
-            `MR !${mr.iid}: ${diffs.length} changed file(s), ${scanFindings.length} finding(s)` +
-              (ruleIds.length > 0 ? ` [${ruleIds.join(', ')}]` : ''),
-          );
-          return toMergeRequestWithDiffs(mr, diffs, scanFindings, previousMr);
-        }),
-      );
-
-      this.lastKnownMrs = data;
-      await this.cacheManager.set(this.CACHE_KEY_MRS, data, CACHE_MRS_TTL);
-
-      void this.enrichPackageInfo(data).catch((err) =>
-        this.logger.error(`Package info enrichment failed: ${errorMessage(err)}`),
-      );
-
-      return data;
+    }
+    if (this.fetchInFlight) {
+      this.pino.debug('Joining in-flight open MR fetch');
+      return this.fetchInFlight;
+    }
+    this.fetchInFlight = this.fetchOpenMergeRequests().finally(() => {
+      this.fetchInFlight = undefined;
     });
+    return this.fetchInFlight;
+  }
+
+  private async fetchOpenMergeRequests(): Promise<MergeRequestWithDiffs[]> {
+    const openMrs: MergeRequestSchema[] = await this.api.MergeRequests.all({
+      state: 'opened',
+      perPage: 100,
+      projectId: this.chaoticId,
+    });
+    this.pino.info({ count: openMrs.length }, 'Fetched open MRs');
+
+    const openIids = new Set(openMrs.map((mr) => mr.iid));
+    for (const iid of this.mrDataCache.keys()) {
+      if (!openIids.has(iid)) this.mrDataCache.delete(iid);
+    }
+
+    const staleMrs = openMrs.filter((mr) => {
+      const cached = this.mrDataCache.get(mr.iid);
+      return cached === undefined || cached.updatedAt !== mr.updated_at;
+    });
+    this.pino.info({ staleCount: staleMrs.length, totalCount: openMrs.length }, 'Fetching diffs for stale MRs');
+
+    // One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
+    // the whole batch: its diffs just come back empty.
+    const diffsByIid = new Map<number, MergeRequestDiffSchema[]>();
+    await mapWithConcurrency(
+      staleMrs,
+      async (mr) => {
+        const diffs = await this.api.MergeRequests.allDiffs(this.chaoticId, mr.iid).catch((err: unknown) => {
+          this.pino.warn({ err, mrIid: mr.iid }, 'Failed to fetch diffs for MR');
+          return [];
+        });
+        diffsByIid.set(mr.iid, diffs);
+      },
+      DIFF_FETCH_CONCURRENCY,
+    );
+
+    // Enrichment (VirusTotal/maintainers) lives on the previous snapshot and must
+    // survive rebuilds, otherwise the enrichment crons would redo all lookups.
+    const previous = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
+    const previousById = new Map(previous?.map((mr) => [mr.id, mr]) ?? []);
+
+    const data = await Promise.all(
+      openMrs.map(async (mr) => {
+        const previousMr = previousById.get(mr.id);
+        const cached = this.mrDataCache.get(mr.iid);
+        if (cached !== undefined && cached.updatedAt === mr.updated_at) {
+          return toMergeRequestWithDiffs(mr, cached.diffs, cached.scanFindings, previousMr);
+        }
+        const diffs = diffsByIid.get(mr.iid) ?? [];
+        const scanFindings = await this.diffScanService.scanDiffs(diffs);
+        this.mrDataCache.set(mr.iid, { updatedAt: mr.updated_at, diffs, scanFindings });
+        const ruleIds = [...new Set(scanFindings.map((finding) => finding.ruleId))];
+        this.pino.debug(
+          { mrIid: mr.iid, changedFileCount: diffs.length, findingCount: scanFindings.length, ruleIds },
+          'Diff scan results',
+        );
+        return toMergeRequestWithDiffs(mr, diffs, scanFindings, previousMr);
+      }),
+    );
+
+    this.lastKnownMrs = data;
+    await this.cacheManager.set(this.CACHE_KEY_MRS, data, CACHE_MRS_TTL);
+
+    void this.enrichPackageInfo(data).catch((err) => this.pino.error({ err }, 'Package info enrichment failed'));
+
+    return data;
   }
 
   private async refreshOpenMergeRequests(): Promise<void> {
     try {
       await this.getOpenMergeRequests(true);
     } catch (err) {
-      this.logger.error(`Failed to refresh merge requests: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to refresh merge requests');
     }
   }
 
@@ -432,12 +427,12 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       const newIds = new Set(newData.map((mr) => mr.id));
       const hasNewMr = currentData !== undefined && [...newIds].some((id) => !currentIds.has(id));
 
-      this.logger.debug(`Current MR IDs: ${[...currentIds].join(', ')}`);
-      this.logger.debug(`New MR IDs: ${[...newIds].join(', ')}`);
-      this.logger.log(`Has new MR: ${hasNewMr}`);
+      this.pino.debug({ mrIds: [...currentIds] }, 'Current MR IDs');
+      this.pino.debug({ mrIds: [...newIds] }, 'New MR IDs');
+      this.pino.info({ hasNewMr }, 'Has new MR');
 
       await this.autoFlagMergeRequests(newData).catch((err) =>
-        this.logger.error(`Auto-flagging after MR webhook failed: ${errorMessage(err)}`),
+        this.pino.error({ err }, 'Auto-flagging after MR webhook failed'),
       );
 
       if (hasNewMr) {
@@ -462,17 +457,18 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       const verdict = this.diffScanService.autoFlagVerdict(mr.scanFindings);
       if (!verdict) {
         if (mr.scanFindings && mr.scanFindings.length > 0) {
-          this.logger.debug(`MR !${mr.iid}: scan score below label thresholds, leaving unlabelled`);
+          this.pino.debug({ mrIid: mr.iid }, 'Scan score below label thresholds, leaving MR unlabelled');
         }
         continue;
       }
       if (this.hasAutoFlagLabel(mr.labels, verdict.label)) {
-        this.logger.debug(
-          `MR !${mr.iid}: verdict ${verdict.label} (score ${verdict.score}), label already present, skipping`,
+        this.pino.debug(
+          { mrIid: mr.iid, label: verdict.label, score: verdict.score },
+          'Verdict label already present, skipping',
         );
         continue;
       }
-      this.logger.debug(`MR !${mr.iid}: applying verdict ${verdict.label} (scan score ${verdict.score})`);
+      this.pino.debug({ mrIid: mr.iid, label: verdict.label, score: verdict.score }, 'Applying auto-flag verdict');
 
       try {
         // addLabels only appends; sending the full list would race against label
@@ -483,10 +479,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         mr.labels.push(verdict.label);
         flaggedMrs.push(mr);
         changed = true;
-        this.logger.warn(`Auto-flagged MR !${mr.iid} as ${verdict.label} (scan score ${verdict.score})`);
+        this.pino.warn({ mrIid: mr.iid, label: verdict.label, score: verdict.score }, 'Auto-flagged MR');
         await this.postScanVerdictComments(mr, verdict);
       } catch (err) {
-        this.logger.warn(`Could not auto-flag MR !${mr.iid}: ${errorMessage(err)}`);
+        this.pino.warn({ err, mrIid: mr.iid }, 'Could not auto-flag MR');
       }
     }
 
@@ -535,7 +531,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       } catch (err) {
         // Findings that cannot be anchored inline still belong in the summary note.
         summary.push(finding);
-        this.logger.warn(`Could not anchor finding ${finding.ruleId} on MR !${mr.iid}: ${errorMessage(err)}`);
+        this.pino.warn({ err, mrIid: mr.iid, ruleId: finding.ruleId }, 'Could not anchor finding on MR');
       }
     }
 
@@ -564,11 +560,11 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
    */
   private async enrichVirusTotalReports(mrs: MergeRequestWithDiffs[]): Promise<void> {
     if (!this.virustotalService.enabled) {
-      this.logger.debug('VirusTotal disabled (no API key), skipping enrichment');
+      this.pino.debug('VirusTotal disabled (no API key), skipping enrichment');
       return;
     }
     if (this.isEnrichingVt) {
-      this.logger.debug('VirusTotal enrichment already running, skipping');
+      this.pino.debug('VirusTotal enrichment already running, skipping');
       return;
     }
     this.isEnrichingVt = true;
@@ -577,31 +573,32 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       for (const mr of mrs) {
         if (!mr.scanFindings || mr.scanFindings.length === 0) continue;
         if (mr.vtReports !== undefined) {
-          this.logger.debug(`MR !${mr.iid}: VirusTotal reports already present, skipping`);
+          this.pino.debug({ mrIid: mr.iid }, 'VirusTotal reports already present, skipping');
           continue;
         }
         const indicators = extractIndicators(mr.diffs);
         if (indicators.length === 0) {
-          this.logger.debug(`MR !${mr.iid}: no indicators worth checking on VirusTotal`);
+          this.pino.debug({ mrIid: mr.iid }, 'No indicators worth checking on VirusTotal');
           continue;
         }
 
-        this.logger.debug(`MR !${mr.iid}: checking ${indicators.length} indicator(s) on VirusTotal`);
+        this.pino.debug({ mrIid: mr.iid, count: indicators.length }, 'Checking indicators on VirusTotal');
         const reports = await this.virustotalService.reportOn(indicators);
         mr.vtReports = reports;
         if (reports.length === 0) {
-          this.logger.debug(`MR !${mr.iid}: no VirusTotal reports (lookups failed or nothing known)`);
+          this.pino.debug({ mrIid: mr.iid }, 'No VirusTotal reports (lookups failed or nothing known)');
           continue;
         }
-        this.logger.debug(
-          `MR !${mr.iid}: VirusTotal verdicts: ${reports.map((report) => `${report.type}=${report.verdict}`).join(', ')}`,
+        this.pino.debug(
+          { mrIid: mr.iid, verdicts: reports.map((report) => `${report.type}=${report.verdict}`) },
+          'VirusTotal verdicts',
         );
         await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
         this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: [mr], hasNewMr: false } });
 
         const notable = reports.filter((report) => report.verdict === 'malicious' || report.verdict === 'suspicious');
         if (notable.length > 0 && !this.vtNotedMrIids.has(mr.iid)) {
-          this.logger.debug(`MR !${mr.iid}: posting VirusTotal note for ${notable.length} notable report(s)`);
+          this.pino.debug({ mrIid: mr.iid, notableCount: notable.length }, 'Posting VirusTotal note');
           if (await this.postVirusTotalNote(mr.iid, notable)) {
             this.vtNotedMrIids.add(mr.iid);
           }
@@ -629,7 +626,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         const pkgname = mrPkgname(mr.title) as string;
         const status = statuses.get(pkgname);
         if (!status) {
-          this.logger.debug(`MR !${mr.iid}: "${pkgname}" not found in the AUR, skipping maintainer info`);
+          this.pino.debug({ mrIid: mr.iid, pkgname }, 'Package not found in the AUR, skipping maintainer info');
           continue;
         }
 
@@ -639,13 +636,19 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         changedMrs.push(mr);
         changed = true;
         if (status.change) {
-          this.logger.warn(
-            `MR !${mr.iid}: maintainer change on ${pkgname}: +${status.change.added.join(', ') || 'none'} / -${status.change.removed.join(', ') || 'none'}`,
+          this.pino.warn(
+            {
+              mrIid: mr.iid,
+              pkgname,
+              added: status.change.added,
+              removed: status.change.removed,
+            },
+            'Maintainer change detected',
           );
         }
       }
     } catch (err) {
-      this.logger.warn(`Maintainer lookup for ${pkgnames.length} package(s) failed: ${errorMessage(err)}`);
+      this.pino.warn({ err, count: pkgnames.length }, 'Maintainer lookup failed');
     }
 
     const openIids = new Set(mrs.map((mr) => mr.iid));
@@ -673,7 +676,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
     const changedMrs: MergeRequestWithDiffs[] = [];
     for (const [pkgname, mrsForPkg] of byPkgname) {
-      const info = await fetchPackageInfo(this.api, this.chaoticId, pkgname, this.logger);
+      const info = await fetchPackageInfo(this.api, this.chaoticId, pkgname, this.pino);
       if (!info) continue;
       for (const mr of mrsForPkg) {
         mr.packageInfo = info;
@@ -703,10 +706,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
           ...bullets,
         ].join('\n'),
       );
-      this.logger.debug(`Posted VirusTotal note on MR !${iid}`);
+      this.pino.debug({ mrIid: iid }, 'Posted VirusTotal note');
       return true;
     } catch (err) {
-      this.logger.warn(`Could not post VirusTotal note on MR !${iid}: ${errorMessage(err)}`);
+      this.pino.warn({ err, mrIid: iid }, 'Could not post VirusTotal note');
       return false;
     }
   }
@@ -719,7 +722,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       }
       const deferred = newMr.length - scannable.length;
       if (deferred > 0) {
-        this.logger.warn(`Deferred notifying about ${deferred} new MR(s): their diffs were unavailable`);
+        this.pino.warn({ count: deferred }, 'Deferred notifying about new MRs: their diffs were unavailable');
       }
       if (scannable.length === 0) return;
 
@@ -737,7 +740,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         })
         .filter((summary): summary is string => summary !== undefined)
         .join(', ');
-      this.logger.log(`Notifying subscribers about new MRs: ${summaries}`);
+      this.pino.info({ summaries }, 'Notifying subscribers about new MRs');
 
       const iids = scannable.map((mr) => mr.iid).join(',');
       const targetUrl = `https://aur.chaotic.cx/update-review?newMr=${iids}`;
@@ -761,14 +764,14 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         return sendNotification(pushSubscription, JSON.stringify(notificationPayload));
       });
 
-      this.logger.log(`Sent notifications to ${promises.length} subscribers`);
+      this.pino.info({ count: promises.length }, 'Sent notifications to subscribers');
       const results = await Promise.allSettled(promises);
       const failed = results.filter((result) => result.status === 'rejected').length;
       if (failed > 0) {
-        this.logger.warn(`${failed} of ${results.length} push notifications failed`);
+        this.pino.warn({ failed, total: results.length }, 'Push notifications failed');
       }
     } catch (error) {
-      this.logger.error(`Error notifying subscribers: ${errorMessage(error)}`);
+      this.pino.error({ err: error }, 'Error notifying subscribers');
     }
   }
 
@@ -786,7 +789,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     }
 
     if (ready.length === 0) return;
-    this.logger.log(`Flushing ${ready.length} deferred new-MR notification(s) whose diffs are available now`);
+    this.pino.info({ count: ready.length }, 'Flushing deferred new-MR notifications whose diffs are available now');
     await this.notifySubscribers(ready);
   }
 
@@ -868,8 +871,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     const deferred = isOnSchedulePipelineRunning();
     try {
       if (deferred) {
-        this.logger.log(
-          `MR !${iid} approved while scheduled pipeline is running. Merge will be executed once the scheduled pipeline completes.`,
+        this.pino.info(
+          { mrIid: iid },
+          'MR approved while scheduled pipeline is running, merge executes once it completes',
         );
       } else {
         await this.mergeWithRetry(iid, targetSha);
@@ -907,7 +911,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         await this.api.MergeRequests.accept(this.chaoticId, iid, { sha });
         return;
       } catch (error) {
-        this.logger.warn(`Initial merge failed for MR !${iid}: ${errorMessage(error)}`);
+        this.pino.warn({ err: error, mrIid: iid }, 'Initial merge failed');
       }
 
       const mr = await this.waitForSettledMergeStatus(iid);
@@ -940,7 +944,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   }
 
   private async reApproveAndMerge(iid: number, headSha: string): Promise<void> {
-    this.logger.warn(`The approval of MR !${iid} was lost, for example after a push. The service approves it again.`);
+    this.pino.warn({ mrIid: iid }, 'Approval of MR was lost, the service approves it again');
     await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: headSha });
     await this.api.MergeRequests.accept(this.chaoticId, iid, { sha: headSha });
   }
@@ -950,13 +954,13 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       const diffs = await this.api.MergeRequests.allDiffs(this.chaoticId, iid);
       return diffs.length === 0;
     } catch (err) {
-      this.logger.warn(`Could not fetch diffs of MR !${iid}: ${errorMessage(err)}`);
+      this.pino.warn({ err, mrIid: iid }, 'Could not fetch diffs of MR');
       return false;
     }
   }
 
   private async closeEmptyMergeRequest(iid: number): Promise<void> {
-    this.logger.log(`MR !${iid} contains no changes against its target branch. The service closes it.`);
+    this.pino.info({ mrIid: iid }, 'MR contains no changes against its target branch, the service closes it');
     try {
       await this.api.MergeRequests.edit(this.chaoticId, iid, { stateEvent: 'close' });
       await this.api.MergeRequestNotes.create(

@@ -1,4 +1,5 @@
 import { type MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
+import { type PinoLogger } from 'nestjs-pino';
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { sendNotification } from 'web-push';
@@ -14,6 +15,12 @@ const ACTOR = { userId: 'test-user', userName: 'Test User' };
 
 function createApiService(api: Record<string, unknown> = {}): GitlabApiService {
   const service = new GitlabApiService(
+    {
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      debug: () => undefined,
+    } as unknown as PinoLogger,
     { get: vi.fn(), getOrThrow: vi.fn().mockReturnValue(12345) } as never,
     { findOne: vi.fn().mockResolvedValue({ gitlabProjectId: 'test-project-id' }) } as unknown as Repository<never>,
   );
@@ -59,8 +66,19 @@ function createService(
 
   const service = new GitlabMergeRequestService(
     { get: cacheGet, set: cacheSet, del: vi.fn() } as never,
+    {
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      debug: () => undefined,
+    } as unknown as PinoLogger,
     apiService,
-    new DiffScanService(),
+    new DiffScanService({
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      debug: () => undefined,
+    } as unknown as PinoLogger),
     virustotal as never,
     aurScan as never,
     { sseEvents$: { next: sseNext } } as never,

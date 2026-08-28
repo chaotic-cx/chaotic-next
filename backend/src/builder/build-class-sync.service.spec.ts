@@ -1,4 +1,11 @@
-import { Logger } from '@nestjs/common';
+import { type PinoLogger } from 'nestjs-pino';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 import { describe, expect, it, vi } from 'vitest';
 import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
@@ -39,7 +46,7 @@ function makeService(options?: {
   const suggester = { suggestForPackages: suggestMock } as unknown as BuildClassSuggesterService;
 
   return {
-    service: new BuildClassSyncService(repository, gitlab, suggester),
+    service: new BuildClassSyncService(repository, gitlab, suggester, pinoStub),
     saveMock,
     suggestMock,
     fetchCiConfigMock,
@@ -71,7 +78,7 @@ describe('BuildClassSyncService', () => {
   });
 
   it('applies the default class when no BUILDER_CLASS is configured', async () => {
-    const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const logSpy = vi.spyOn(pinoStub, 'info').mockImplementation(() => undefined);
     const pkg = makePackage({});
     const { service, saveMock } = makeService({ packages: [pkg], configText: 'CI_PKGBUILD_SOURCE=aur\n' });
 
@@ -80,7 +87,10 @@ describe('BuildClassSyncService', () => {
 
       expect(pkg.buildClass).toBe(5);
       expect(saveMock).toHaveBeenCalledTimes(1);
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Updated stored build class of paru to 5'));
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ pkgname: 'paru', buildClass: 5 }),
+        expect.stringContaining('Updated stored build class'),
+      );
     } finally {
       logSpy.mockRestore();
     }
@@ -124,7 +134,7 @@ describe('BuildClassSyncService', () => {
   });
 
   it('warns instead of adjusting when resource usage suggests another class', async () => {
-    const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(pinoStub, 'warn').mockImplementation(() => undefined);
     const pkg = makePackage({});
     const { service, saveMock } = makeService({
       packages: [pkg],
@@ -137,7 +147,10 @@ describe('BuildClassSyncService', () => {
 
       expect(pkg.buildClass).toBe(1);
       expect(saveMock).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('resource usage suggests 8'));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ pkgname: 'paru', suggested: 8 }),
+        expect.stringContaining('Build class adjustment suggested'),
+      );
     } finally {
       warnSpy.mockRestore();
     }
@@ -159,7 +172,7 @@ describe('BuildClassSyncService', () => {
   });
 
   it('continues with other packages when one fails', async () => {
-    const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(pinoStub, 'warn').mockImplementation(() => undefined);
     const saveMock = vi.fn().mockResolvedValue(undefined);
     const findMock = vi
       .fn()
@@ -170,7 +183,7 @@ describe('BuildClassSyncService', () => {
 
     const gitlab = { fetchCiConfig: fetchCiConfigMock } as unknown as GitlabPipelineService;
     const suggester = { suggestForPackages: vi.fn().mockResolvedValue([]) } as unknown as BuildClassSuggesterService;
-    const service = new BuildClassSyncService({ find: findMock, save: saveMock } as never, gitlab, suggester);
+    const service = new BuildClassSyncService({ find: findMock, save: saveMock } as never, gitlab, suggester, pinoStub);
 
     try {
       await service.syncFromDeployment('chaotic-aur', ['broken-package', 'healthy-package']);

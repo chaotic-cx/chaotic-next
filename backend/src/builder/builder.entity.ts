@@ -1,28 +1,21 @@
 import { BuildStatus } from '../types/types';
 import { RepoStatus, type ParsedPackageMetadata } from '@chaotic-next/shared-lib';
-import { Logger } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
-import { Mutex } from 'async-mutex';
 import {
   Column,
   CreateDateColumn,
-  DeepPartial,
   Entity,
   EventSubscriber,
-  In,
   Index,
   ManyToOne,
   PrimaryGeneratedColumn,
   type EntitySubscriberInterface,
   type InsertEvent,
-  type Repository,
   type UpdateResult,
 } from 'typeorm';
 
-const moduleLogger = new Logger('BuilderEntity');
-
 @Entity()
-@Index('IDX_builder_name', ['name'])
+@Index('IDX_builder_name', ['name'], { unique: true })
 export class Builder {
   @ApiProperty({ description: 'Builder ID' })
   @PrimaryGeneratedColumn()
@@ -50,7 +43,7 @@ export class Builder {
 }
 
 @Entity()
-@Index('IDX_repo_name', ['name'])
+@Index('IDX_repo_name', ['name'], { unique: true })
 export class Repo {
   @ApiProperty({ description: 'Repo ID' })
   @PrimaryGeneratedColumn()
@@ -93,6 +86,7 @@ export class Repo {
 @Index('IDX_package_pkgname', ['pkgname'])
 @Index('IDX_package_active', ['isActive'], { where: '"isActive" = true' })
 @Index('IDX_package_repoId', ['repo'])
+@Index('UQ_package_repo_pkgname', ['repo', 'pkgname'], { unique: true })
 export class Package {
   @ApiProperty({ description: 'Package ID' })
   @PrimaryGeneratedColumn()
@@ -292,120 +286,4 @@ export class UpdateLastBuilderActive implements EntitySubscriberInterface<Build>
     if (!builderId) return;
     return event.manager.update(Builder, { id: builderId }, { lastActive: new Date() });
   }
-}
-
-// Mutexes to prevent double entries
-const pkgnameMutex = new Mutex();
-const builderMutex = new Mutex();
-const repoMutex = new Mutex();
-
-export async function getOrCreatePackage(
-  pkgname: string,
-  connection: Repository<Package>,
-  repo: Repo,
-): Promise<Package> {
-  return pkgnameMutex.runExclusive(async () => {
-    const packages: Package[] = await connection.find({
-      where: { pkgname },
-      relations: {
-        repo: true,
-      },
-    });
-    let packageExists: Package | undefined = packages.find((pkg) => {
-      return pkg.repo?.name === repo.name;
-    });
-
-    if (packageExists === undefined) {
-      moduleLogger.log(`Package ${pkgname} not found in database, creating new entry`);
-      moduleLogger.debug(`Associated repo: ${repo.name}`);
-      packageExists = await connection.save({
-        pkgname: pkgname,
-        repo: repo,
-        lastUpdated: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        isActive: true,
-      });
-    }
-
-    return packageExists;
-  });
-}
-
-export async function getOrCreateBuilder(name: string, connection: Repository<Builder>): Promise<Builder> {
-  return builderMutex.runExclusive(async () => {
-    const builders: Builder[] = await connection.find({ where: { name } });
-    let getOrCreateBuilder: Builder | undefined = builders.find((builder) => {
-      return name === builder.name;
-    });
-
-    if (getOrCreateBuilder === undefined) {
-      moduleLogger.log(`Builder ${name} not found in database, creating new entry`);
-      getOrCreateBuilder = await connection.save({
-        name: name,
-        isActive: false,
-        description: `Added on ${new Date().toISOString()}`,
-      });
-    }
-
-    return getOrCreateBuilder;
-  });
-}
-
-export async function getOrCreateRepo(name: string, connection: Repository<Repo>): Promise<Repo> {
-  return repoMutex.runExclusive(async () => {
-    const repos: Repo[] = await connection.find({ where: { name: name } });
-    let getOrCreateRepo: Repo | undefined = repos.find((repo) => {
-      return name === repo.name;
-    });
-
-    if (getOrCreateRepo === undefined) {
-      moduleLogger.log(`Repo ${name} not found in database, creating new entry`);
-      getOrCreateRepo = await connection.save({
-        name: name,
-      });
-    }
-
-    return getOrCreateRepo;
-  });
-}
-
-export async function bulkGetOrCreatePackages(
-  entries: { pkgname: string; repo: Repo }[],
-  connection: Repository<Package>,
-): Promise<Map<string, Package>> {
-  const byKey = new Map<string, Package>();
-  if (entries.length === 0) return byKey;
-
-  const names = [...new Set(entries.map((e) => e.pkgname))];
-  const existing = await connection.find({ where: { pkgname: In(names) }, relations: { repo: true } });
-  for (const pkg of existing) {
-    if (pkg.repo) byKey.set(`${pkg.repo.name}:${pkg.pkgname}`, pkg);
-  }
-
-  const toCreate: { pkgname: string; repo: Repo }[] = [];
-  const seen = new Set<string>();
-  for (const e of entries) {
-    const key = `${e.repo.name}:${e.pkgname}`;
-    if (byKey.has(key) || seen.has(key)) continue;
-    seen.add(key);
-    toCreate.push(e);
-  }
-  if (toCreate.length > 0) {
-    const created = await connection.save(
-      toCreate.map(
-        (e) =>
-          ({
-            pkgname: e.pkgname,
-            repo: e.repo,
-            lastUpdated: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            isActive: true,
-          }) as DeepPartial<Package>,
-      ),
-    );
-    for (const row of Array.isArray(created) ? created : [created]) {
-      if (row.repo) byKey.set(`${row.repo.name}:${row.pkgname}`, row);
-    }
-  }
-  return byKey;
 }

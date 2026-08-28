@@ -1,21 +1,20 @@
 import { Package } from '../builder/builder.entity';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { applyPackageBump } from '../repo-manager/bump/bump-config';
-import { errorMessage } from '../utils/functions';
 import { GitlabApiService, gitlabRawFileToString } from './gitlab-api.service';
 import { GitlabPipelineService } from './gitlab-pipeline.service';
 import { type MrActor } from './interfaces';
 import { PipelineTrigger } from './pipeline-trigger.entity';
 import { PKGBUILD_SOURCE_AUR, PipelineOperation, PipelineTriggerResult } from '@chaotic-next/shared-lib';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 
 @Injectable()
 export class GitlabPackageOpsService {
-  private readonly logger = new Logger(GitlabPackageOpsService.name);
-
   constructor(
+    @InjectPinoLogger(GitlabPackageOpsService.name) private readonly pino: PinoLogger,
     private readonly gitlabApiService: GitlabApiService,
     private readonly gitlabPipelineService: GitlabPipelineService,
     private readonly aurScanService: AurScanService,
@@ -102,7 +101,7 @@ export class GitlabPackageOpsService {
     customRequestReason?: string,
   ): Promise<PipelineTriggerResult> {
     const itemNames = items.map((i) => i.pkgname);
-    this.logger.debug(`Processing package addition for [${itemNames.join(', ')}] on ref ${ref} by ${actor.userName}`);
+    this.pino.debug({ pkgnames: itemNames, ref, userName: actor.userName }, 'Processing package addition');
     const commitActions: { action: 'create' | 'update'; filePath: string; content: string }[] = [];
     const gitlabProjectId = await this.gitlabApiService.getRepoGitlabProjectId(repoName);
 
@@ -110,7 +109,7 @@ export class GitlabPackageOpsService {
       const pkgname = item.pkgname.trim();
       if (!pkgname) continue;
       const source = item.source ?? PKGBUILD_SOURCE_AUR;
-      this.logger.debug(`Fetching AUR metadata and PKGBUILD for ${pkgname} (source: ${source})`);
+      this.pino.debug({ pkgname, source }, 'Fetching AUR metadata and PKGBUILD');
 
       const configLines = [`CI_PKGBUILD_SOURCE=${source}`];
       if (requestOrigin && requestOrigin.trim()) {
@@ -135,19 +134,19 @@ export class GitlabPackageOpsService {
         });
 
         if (pkgbuildText) {
-          this.logger.debug(`Successfully fetched PKGBUILD for ${pkgname} (${pkgbuildText.length} bytes)`);
+          this.pino.debug({ pkgname, bytes: pkgbuildText.length }, 'Successfully fetched PKGBUILD');
           commitActions.push({
             action: 'create',
             filePath: `${pkgname}/PKGBUILD`,
             content: pkgbuildText,
           });
         } else {
-          this.logger.debug(`No PKGBUILD content returned for ${pkgname}`);
+          this.pino.debug({ pkgname }, 'No PKGBUILD content returned');
         }
 
         for (const file of pkgbuildScan.sourceFiles ?? []) {
           if (file.name === 'PKGBUILD') continue;
-          this.logger.debug(`Adding auxiliary source file ${file.name} (${file.content.length} bytes) for ${pkgname}`);
+          this.pino.debug({ pkgname, fileName: file.name, bytes: file.content.length }, 'Adding auxiliary source file');
           commitActions.push({
             action: 'create',
             filePath: `${pkgname}/${file.name}`,
@@ -155,7 +154,7 @@ export class GitlabPackageOpsService {
           });
         }
       } catch (err) {
-        this.logger.warn(`Could not fetch AUR sources for ${pkgname}: ${errorMessage(err)}`);
+        this.pino.warn({ err, pkgname }, 'Could not fetch AUR sources');
         commitActions.push({
           action: 'create',
           filePath: `${pkgname}/.CI/config`,
@@ -168,11 +167,12 @@ export class GitlabPackageOpsService {
       itemNames.length > 3 ? `feat(add): packages (${itemNames.length})` : `feat(add): ${itemNames.join(', ')}`;
     const commitMessage = `${subject}\n\nAdded manually by ${actor.userName}`;
 
-    this.logger.debug(`Creating GitLab commit with ${commitActions.length} actions for [${itemNames.join(', ')}]`);
+    this.pino.debug({ pkgnames: itemNames, actionCount: commitActions.length }, 'Creating GitLab commit');
     const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
 
-    this.logger.log(
-      `Package(s) added successfully: [${itemNames.join(', ')}] by ${actor.userName} (commit: ${commit.id}, url: ${commit.web_url})`,
+    this.pino.info(
+      { pkgnames: itemNames, userName: actor.userName, commitId: commit.id, commitUrl: commit.web_url },
+      'Package(s) added successfully',
     );
 
     if (commit.id) {

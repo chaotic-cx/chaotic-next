@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import type { PinoLogger } from 'nestjs-pino';
 import { DiffScanService } from '../diff-scan.service';
 import { addedOnlyDiff, makeChange } from './test-support';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 
 /**
  * Sanitized reproduction of the xsnow install-scriptlet worm (structure only, inert
@@ -101,7 +109,7 @@ const WORM_INSTALL = [
   '}',
 ];
 
-const service = new DiffScanService();
+const service = new DiffScanService(pinoStub);
 
 describe('xsnow-worm regression fixture', () => {
   it('flags the whole kill chain of the install-scriptlet worm', async () => {

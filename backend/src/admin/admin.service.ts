@@ -27,9 +27,10 @@ import {
   type RescanJob,
 } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -102,9 +103,8 @@ const INTEGRITY_VIOLATION_CODES = new Set([FK_VIOLATION_CODE, RESTRICT_VIOLATION
 
 @Injectable()
 export class AdminService {
-  private readonly logger = new Logger(AdminService.name);
-
   constructor(
+    @InjectPinoLogger(AdminService.name) private readonly pino: PinoLogger,
     @InjectRepository(Package) private readonly packageRepository: Repository<Package>,
     @InjectRepository(ArchlinuxPackage) private readonly archPackageRepository: Repository<ArchlinuxPackage>,
     @InjectRepository(Repo) private readonly repoRepository: Repository<Repo>,
@@ -178,7 +178,7 @@ export class AdminService {
       const suggestions = await this.buildClassSuggester.suggestForPackages(pkgnames);
       return new Map(suggestions.map((suggestion) => [suggestion.pkgname, suggestion]));
     } catch (err) {
-      this.logger.warn(`Build class suggestions failed, rendering without them: ${errorMessage(err)}`);
+      this.pino.warn({ err }, 'Build class suggestions failed, rendering without them');
       return new Map<string, BuildClassSuggestion>();
     }
   }
@@ -543,10 +543,7 @@ export class AdminService {
       throw new ConflictException('A rescan is already in progress', { errorCode: 'RESCAN_IN_PROGRESS' });
     }
 
-    this.logger.log(
-      `Rescan started for ${packages.length} package(s): ` +
-        packages.map((entry) => `${entry.pkgname}${entry.repo ? ` (${entry.repo})` : ''}`).join(', '),
-    );
+    this.pino.info({ count: packages.length, packages: packages.map((entry) => entry.pkgname) }, 'Rescan started');
     const job: RescanJobRecord = {
       jobId: randomUUID(),
       startedAt: new Date().toISOString(),
@@ -560,7 +557,7 @@ export class AdminService {
     void this.runRescan(job, packages, secretMirrorUrl)
       .catch((err: unknown) => {
         job.failed.push(`rescan crashed: ${errorMessage(err)}`);
-        this.logger.error(`Background rescan crashed: ${errorMessage(err)}`);
+        this.pino.error({ err }, 'Background rescan crashed');
       })
       .finally(() => {
         job.finishedAt = new Date().toISOString();
@@ -615,7 +612,7 @@ export class AdminService {
           // are recorded on the job (and logged) for GET /admin/rescan/:jobId.
           const reason = `${entry.pkgname}: ${errorMessage(err)}`;
           job.failed.push(reason);
-          this.logger.warn(`Rescan failed for ${reason}`);
+          this.pino.warn({ err, pkgname: entry.pkgname, reason }, 'Rescan failed');
         }
       }
       await this.signalScanService.recomputeBroken();
@@ -624,7 +621,7 @@ export class AdminService {
       await rm(tempDir, { recursive: true, force: true });
     }
 
-    this.logger.log(`Rescan finished: ${job.rescanned}/${job.total} scanned, ${job.failed.length} failed`);
+    this.pino.info({ rescanned: job.rescanned, total: job.total, failedCount: job.failed.length }, 'Rescan finished');
   }
 
   private async rescanArchPackage(target: RescanPackageInput, secretMirrorUrl: string, tempDir: string): Promise<void> {

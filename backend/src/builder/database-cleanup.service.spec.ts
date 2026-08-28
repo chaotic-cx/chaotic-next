@@ -1,3 +1,11 @@
+import { type PinoLogger } from 'nestjs-pino';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 import { DataSource, Repository, UpdateResult } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { RouterHit } from '../router/router-hit.entity';
@@ -81,7 +89,7 @@ function createService(options: { affected?: number; candidates?: { id: number }
   } as unknown as Repository<PackageElfAnalysis>;
 
   return {
-    service: new DatabaseCleanupService(packageRepository, analysisRepository, dataSource, signalScanService),
+    service: new DatabaseCleanupService(packageRepository, analysisRepository, dataSource, signalScanService, pinoStub),
     qb: updateQb,
     selectQb,
     manager,
@@ -220,7 +228,13 @@ describe('DatabaseCleanupService', () => {
     const signalScanService = createSignalScanStub();
     const analysisRepository = {} as unknown as Repository<PackageElfAnalysis>;
 
-    const service = new DatabaseCleanupService(packageRepository, analysisRepository, dataSource, signalScanService);
+    const service = new DatabaseCleanupService(
+      packageRepository,
+      analysisRepository,
+      dataSource,
+      signalScanService,
+      pinoStub,
+    );
 
     await expect(service.purgeOrphanedPackages()).resolves.toBeUndefined();
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
@@ -294,7 +308,13 @@ describe('DatabaseCleanupService', () => {
     const analysisRepository = {} as unknown as Repository<PackageElfAnalysis>;
     const packageRepository = {} as unknown as Repository<Package>;
 
-    const service = new DatabaseCleanupService(packageRepository, analysisRepository, dataSource, signalScanService);
+    const service = new DatabaseCleanupService(
+      packageRepository,
+      analysisRepository,
+      dataSource,
+      signalScanService,
+      pinoStub,
+    );
 
     await expect(service.purgeOldRouterHits()).resolves.toBeUndefined();
   });
@@ -312,6 +332,7 @@ describe('DatabaseCleanupService', () => {
         {} as unknown as Repository<PackageElfAnalysis>,
         dataSource,
         createSignalScanStub(),
+        pinoStub,
       );
 
       await service.purgeOrphanedFailureSilences();
@@ -336,6 +357,7 @@ describe('DatabaseCleanupService', () => {
         {} as unknown as Repository<PackageElfAnalysis>,
         dataSource,
         createSignalScanStub(),
+        pinoStub,
       );
 
       await expect(service.purgeOrphanedFailureSilences()).resolves.toBeUndefined();

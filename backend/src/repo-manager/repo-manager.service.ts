@@ -12,7 +12,7 @@ import {
   SonameDependency,
   TriggerType,
 } from '../interfaces/repo-manager';
-import { bumpTypeToText, errorMessage } from '../utils/functions';
+import { bumpTypeToText } from '../utils/functions';
 import { paginate, resolvePagination } from '../utils/pagination';
 import { ArchMirrorService } from './arch-mirror.service';
 import { BumpService, parseCiConfig } from './bump';
@@ -42,14 +42,13 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
-  Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CronJob } from 'cron';
-import { PinoLogger } from 'nestjs-pino';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 import { In, IsNull, Not, Repository } from 'typeorm';
 
@@ -58,8 +57,6 @@ const CRON_TIME_ZONE = 'Europe/Berlin';
 
 @Injectable()
 export class RepoManagerService implements OnModuleInit {
-  private readonly logger = new Logger(RepoManagerService.name);
-
   private repoManager!: RepoManager;
   private repos!: Repo[];
   private tasks: CronJob[] = [];
@@ -68,7 +65,7 @@ export class RepoManagerService implements OnModuleInit {
   constructor(
     private configService: ConfigService,
     private httpService: HttpService,
-    private readonly pino: PinoLogger,
+    @InjectPinoLogger(RepoManagerService.name) private readonly pino: PinoLogger,
     @InjectRepository(ArchlinuxPackage)
     private archlinuxPackageRepository: Repository<ArchlinuxPackage>,
     @InjectRepository(Repo)
@@ -88,7 +85,7 @@ export class RepoManagerService implements OnModuleInit {
 
   onModuleInit(): void {
     void this.init().catch((err: unknown) => {
-      this.logger.error(`RepoManager init failed: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'RepoManager init failed');
     });
   }
 
@@ -120,7 +117,7 @@ export class RepoManagerService implements OnModuleInit {
     );
 
     this.repoManager = this.createRepoManager();
-    this.logger.log(`RepoManager service initialized with ${this.repos.length} repos`);
+    this.pino.info({ count: this.repos.length }, 'RepoManager service initialized');
   }
 
   async updateChaoticVersions(): Promise<void> {
@@ -134,7 +131,7 @@ export class RepoManagerService implements OnModuleInit {
 
   async pollMirrorLastUpdate(): Promise<void> {
     if (this.repoManager.status === RepoStatus.ACTIVE) {
-      this.logger.debug('RepoManager is active, skipping mirror poll run');
+      this.pino.debug('RepoManager is active, skipping mirror poll run');
       return;
     }
 
@@ -148,14 +145,14 @@ export class RepoManagerService implements OnModuleInit {
       const lastUpdate: string = String(response.data).trim();
 
       if (this.lastMirrorUpdate !== null && lastUpdate !== this.lastMirrorUpdate) {
-        this.logger.log(`Mirror re-synced (${this.lastMirrorUpdate} -> ${lastUpdate}), triggering run`);
+        this.pino.info({ previous: this.lastMirrorUpdate, current: lastUpdate }, 'Mirror re-synced, triggering run');
         await this.run();
       } else if (this.lastMirrorUpdate === null) {
-        this.logger.debug(`Initial mirror lastupdate recorded: ${lastUpdate}`);
+        this.pino.debug({ lastUpdate }, 'Initial mirror lastupdate recorded');
       }
       this.lastMirrorUpdate = lastUpdate;
     } catch (err: unknown) {
-      this.logger.warn(`Failed to poll mirror lastupdate: ${errorMessage(err)}`);
+      this.pino.warn({ err }, 'Failed to poll mirror lastupdate');
     }
   }
 
@@ -294,7 +291,7 @@ export class RepoManagerService implements OnModuleInit {
     }
 
     if (skipped.length > 0) {
-      this.logger.warn(`Skipped ${skipped.length} package(s) without a repo directory: ${skipped.join(', ')}`);
+      this.pino.warn({ count: skipped.length, pkgnames: skipped }, 'Skipped packages without a repo directory');
     }
     return { bumped };
   }
@@ -431,7 +428,7 @@ export class RepoManagerService implements OnModuleInit {
     try {
       reader = await this.readerFactory.open(pkg.repo);
     } catch (err: unknown) {
-      this.logger.warn(`Cannot open repo ${pkg.repo.name} for ${pkg.pkgname} rebuild triggers: ${errorMessage(err)}`);
+      this.pino.warn({ err, repo: pkg.repo.name, pkgname: pkg.pkgname }, 'Cannot open repo for rebuild triggers');
       return [];
     }
 
@@ -486,7 +483,7 @@ export class RepoManagerService implements OnModuleInit {
       const [type, idStr] = key.split(':');
       const id = Number(idStr);
       if (idStr === undefined || idStr === '' || !Number.isInteger(id)) {
-        this.logger.warn(`Skipping malformed analysis key: "${key}"`);
+        this.pino.warn({ key }, 'Skipping malformed analysis key');
         continue;
       }
       if (type === ARCH_PKG_TYPE) archIds.push(id);
@@ -590,30 +587,30 @@ export class RepoManagerService implements OnModuleInit {
       this.chaoticIndexService,
       this.rebuildTriggerService,
       this.bumpService,
+      this.pino,
     );
   }
 
   summarizeChanges(results: BumpResult[], repoManager: RepoManager): void {
     if (results.some((result) => result.origin === TriggerType.ARCH) && repoManager.changedArchPackages) {
-      this.logger.log(
-        `Run was triggered by Arch package updates, ${repoManager.changedArchPackages.length} Arch package(s) were changed`,
-        'RepoManager',
-      );
+      this.pino.info({ count: repoManager.changedArchPackages.length }, 'Run was triggered by Arch package updates');
     } else if (results.some((result) => result.origin === TriggerType.CHAOTIC)) {
-      this.logger.log('Run was triggered by a Chaotic-AUR package update');
+      this.pino.info('Run was triggered by a Chaotic-AUR package update');
     }
 
     for (const result of results) {
       if (!result.bumped || result.bumped.length === 0) {
-        this.logger.log(`No packages affected in ${result.repo}`);
+        this.pino.info({ repo: result.repo }, 'No packages affected');
         continue;
       }
       if (result.repo) {
-        this.logger.log(`Bumped package(s) in ${result.repo}:`);
+        this.pino.info({ repo: result.repo }, 'Bumped packages');
         for (const res of result.bumped) {
           const bumpType: string = bumpTypeToText(res.bumpType);
-          const bumpDetails: string = res.details?.length ? ` (${res.details.join(', ')})` : '';
-          this.logger.log(` - ${res.pkg.pkgname} bumped ${bumpType} (${res.triggerName})${bumpDetails}`);
+          this.pino.info(
+            { pkgname: res.pkg.pkgname, bumpType, trigger: res.triggerName, details: res.details },
+            'Package bumped',
+          );
         }
       }
     }

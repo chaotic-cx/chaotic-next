@@ -1,11 +1,12 @@
 import { cachedResult } from '../utils/cache';
 import { HLL_LOG2M, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
-import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
+import { clampInt, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 import { RouterHitDailyAgent } from './router-hit-daily-agent.entity';
 import { RouterHitDaily } from './router-hit-daily.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { type Cache } from 'cache-manager';
 import { DataSource } from 'typeorm';
 
@@ -16,19 +17,16 @@ import { DataSource } from 'typeorm';
  */
 @Injectable()
 export class RouterService implements OnModuleInit {
-  private readonly logger = new Logger(RouterService.name);
-
   constructor(
+    @InjectPinoLogger(RouterService.name) private readonly pino: PinoLogger,
     private dataSource: DataSource,
     @Inject(CACHE_MANAGER) private cache: Cache,
   ) {
-    this.logger.log('RouterService initialized');
+    this.pino.info('RouterService initialized');
   }
 
   async onModuleInit(): Promise<void> {
-    void this.refreshDailyRollup().catch((err) =>
-      this.logger.error(`Initial router rollup refresh failed: ${errorMessage(err)}`),
-    );
+    void this.refreshDailyRollup().catch((err) => this.pino.error({ err }, 'Initial router rollup refresh failed'));
   }
 
   /** Recomputes the rollup for the most recent day(s) so history persists when raw hits are purged. */
@@ -73,9 +71,9 @@ export class RouterService implements OnModuleInit {
         ON CONFLICT ("day") DO UPDATE SET "sketch" = EXCLUDED."sketch"
       `);
       await this.warmAggregationCache();
-      this.logger.log('Refreshed router hits daily rollup');
+      this.pino.info('Refreshed router hits daily rollup');
     } catch (err) {
-      this.logger.error(`Failed to refresh router hits daily rollup: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to refresh router hits daily rollup');
     }
   }
 
@@ -95,9 +93,9 @@ export class RouterService implements OnModuleInit {
     ]);
     const failures = rejectedReasons(results);
     if (failures.length > 0) {
-      this.logger.error(
-        `Router aggregation cache warm-up failed for ${failures.length} of ${results.length} queries, ` +
-          `first failure: ${errorMessage(failures[0])}`,
+      this.pino.error(
+        { failedCount: failures.length, totalCount: results.length, firstFailure: failures[0] },
+        'Router aggregation cache warm-up failed for some queries',
       );
     }
   }

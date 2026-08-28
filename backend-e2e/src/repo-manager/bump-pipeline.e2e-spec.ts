@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- test fixtures assert on freshly created entities */
+import { EntityLookupService } from '@chaotic-next/backend/builder/entity-lookup.service';
 import { BumpService } from '@chaotic-next/backend/repo-manager/bump';
 import { RepoReader, RepoWriter } from '@chaotic-next/backend/repo-manager/repo-rw';
 import { ArchMirrorService } from '@chaotic-next/backend/repo-manager/arch-mirror.service';
@@ -11,7 +12,7 @@ import {
 } from '@chaotic-next/backend/repo-manager/repo-manager.entity';
 import { RepoManager } from '@chaotic-next/backend/repo-manager/repo-manager';
 import { encodeOwnerKey } from '@chaotic-next/backend/repo-manager/signal';
-import { Package } from '@chaotic-next/backend/builder/builder.entity';
+import { Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
 import {
   BumpType,
   RepoSettings,
@@ -88,11 +89,24 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
       {} as ChaoticIndexService,
       triggers,
       bump,
+      pinoStub,
     );
   }
 
   function makeBumpService(writer: RepoWriter): BumpService {
-    return new BumpService(dataSource.getRepository(Package), dataSource.getRepository(PackageElfAnalysis), writer);
+    const pinoStub = { info: () => undefined, debug: () => undefined } as never;
+    return new BumpService(
+      dataSource.getRepository(Package),
+      dataSource.getRepository(PackageElfAnalysis),
+      writer,
+      new EntityLookupService(
+        dataSource.getRepository(Package),
+        dataSource.getRepository(Builder),
+        dataSource.getRepository(Repo),
+        pinoStub,
+      ),
+      pinoStub,
+    );
   }
 
   it('executes a BROKEN_DEPS verdict: persists the PackageBump row and commits a surgically-rewritten config', async () => {

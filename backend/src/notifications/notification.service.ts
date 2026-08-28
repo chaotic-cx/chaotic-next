@@ -1,13 +1,14 @@
-import { decryptAesRaw, errorMessage } from '../utils/functions';
+import { decryptAesRaw } from '../utils/functions';
 import { NotificationSubscription } from './notification-subscription.entity';
 import {
   NotificationPayload,
   pushSubscriptionBodySchema,
   type PushSubscriptionBodyDto,
 } from '@chaotic-next/shared-lib';
-import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { existsSync } from 'node:fs';
 import { readFile, unlink } from 'node:fs/promises';
 import { Repository } from 'typeorm';
@@ -40,10 +41,10 @@ function isAllowedPushEndpoint(sub: { endpoint: string }): boolean {
 
 @Injectable()
 export class NotificationService implements OnModuleInit {
-  private readonly logger = new Logger(NotificationService.name);
   private readonly legacySubscribersFilePath = 'config/notification-subscriber.json';
 
   constructor(
+    @InjectPinoLogger(NotificationService.name) private readonly pino: PinoLogger,
     @InjectRepository(NotificationSubscription)
     private readonly subscriptionRepository: Repository<NotificationSubscription>,
     private readonly configService: ConfigService,
@@ -99,9 +100,9 @@ export class NotificationService implements OnModuleInit {
       const statusCode = (error as { statusCode?: number }).statusCode;
       if (statusCode === 404 || statusCode === 410) {
         await this.subscriptionRepository.delete({ endpoint: body.endpoint });
-        this.logger.warn(`Removed stale push subscription (${statusCode}): ${body.endpoint}`);
+        this.pino.warn({ statusCode, endpoint: body.endpoint }, 'Removed stale push subscription');
       } else {
-        this.logger.warn(`Welcome push notification failed: ${errorMessage(error)}`);
+        this.pino.warn({ err: error }, 'Welcome push notification failed');
       }
     }
 
@@ -139,9 +140,9 @@ export class NotificationService implements OnModuleInit {
         imported += 1;
       }
       await unlink(this.legacySubscribersFilePath);
-      this.logger.log(`Imported ${imported} push subscribers from legacy file`);
+      this.pino.info({ count: imported }, 'Imported push subscribers from legacy file');
     } catch (err) {
-      this.logger.error(`Failed to import legacy push subscribers: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to import legacy push subscribers');
     }
   }
 }

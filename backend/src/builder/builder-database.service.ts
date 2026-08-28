@@ -10,14 +10,8 @@ import {
 } from '../types/types';
 import { errorMessage } from '../utils/functions';
 import { BuildClassSyncService } from './build-class-sync.service';
-import {
-  Build,
-  BuildResourceUsage,
-  getOrCreateBuilder,
-  getOrCreatePackage,
-  getOrCreateRepo,
-  Package,
-} from './builder.entity';
+import { Build, BuildResourceUsage, Package } from './builder.entity';
+import { EntityLookupService } from './entity-lookup.service';
 import { moleculerConfigCommonService } from './moleculer.config';
 import { isFailingStatus } from './unresolved-failures';
 import { ChaoticEvent, MoleculerCurrentQueueObject, type BuildResourceStats } from '@chaotic-next/shared-lib';
@@ -27,6 +21,7 @@ import { Subject } from 'rxjs';
 export interface BuilderDatabaseServiceOptions {
   broker: ServiceBroker;
   dbConnections: BuilderDbConnections;
+  lookup: EntityLookupService;
   repoManagerService: RepoManagerService;
   sseSubject: Subject<Partial<MessageEvent<ChaoticEvent>>>;
   gitlabPipelineService: GitlabPipelineService;
@@ -74,6 +69,7 @@ function resourceUsageFromStats(stats: BuildResourceStats): BuildResourceUsage |
 export class BuilderDatabaseService extends Service {
   private dbConnections: BuilderDbConnections;
   private repoManagerService: RepoManagerService;
+  private lookup: EntityLookupService;
 
   private readonly sseSubject$: Subject<Partial<MessageEvent<ChaoticEvent>>>;
   private readonly gitlabPipelineService: GitlabPipelineService;
@@ -92,6 +88,7 @@ export class BuilderDatabaseService extends Service {
   constructor({
     broker,
     dbConnections,
+    lookup,
     repoManagerService,
     sseSubject,
     gitlabPipelineService,
@@ -99,6 +96,7 @@ export class BuilderDatabaseService extends Service {
   }: BuilderDatabaseServiceOptions) {
     super(broker);
 
+    this.lookup = lookup;
     this.sseSubject$ = sseSubject;
     this.gitlabPipelineService = gitlabPipelineService;
     this.buildClassSync = buildClassSync;
@@ -173,10 +171,10 @@ export class BuilderDatabaseService extends Service {
     }
 
     const [builder, repo] = await Promise.all([
-      getOrCreateBuilder(params.builder_name, this.dbConnections.builder),
-      getOrCreateRepo(params.target_repo, this.dbConnections.repo),
+      this.lookup.getOrCreateBuilder(params.builder_name),
+      this.lookup.getOrCreateRepo(params.target_repo),
     ]);
-    const pkg: Package = await getOrCreatePackage(params.pkgname, this.dbConnections.package, repo);
+    const pkg: Package = await this.lookup.getOrCreatePackage(params.pkgname, repo);
 
     pkg.lastUpdated = new Date().toISOString();
 

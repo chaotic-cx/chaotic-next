@@ -1,4 +1,6 @@
-import { getOrCreatePackage, getOrCreateRepo, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
+import { Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
+import { EntityLookupService } from '@chaotic-next/backend/builder/entity-lookup.service';
+import { type PinoLogger } from 'nestjs-pino';
 import { ArchlinuxPackage, PackageElfAnalysis } from '@chaotic-next/backend/repo-manager/repo-manager.entity';
 import { ARCH_PKG_TYPE } from '@chaotic-next/backend/repo-manager/signal';
 import { type SeedEntry, seedEntrySchema } from '@chaotic-next/shared-lib';
@@ -15,6 +17,10 @@ export async function seedElfAnalyses(dataSource: DataSource, rawEntries: unknow
   const packageRepo = dataSource.getRepository(Package);
   const repoRepo = dataSource.getRepository(Repo);
   const analysisRepo = dataSource.getRepository(PackageElfAnalysis);
+  const lookup = new EntityLookupService(packageRepo, dataSource.getRepository(Builder), repoRepo, {
+    info: () => undefined,
+    debug: () => undefined,
+  } as unknown as PinoLogger);
 
   const resolved: PackageElfAnalysis[] = [];
   for (const entry of entries) {
@@ -29,8 +35,8 @@ export async function seedElfAnalyses(dataSource: DataSource, rawEntries: unknow
           throw new Error('Seed entry without numeric pkgId needs a pkgname and a repo');
         }
 
-        const repo = await getOrCreateRepo(entry.repo, repoRepo);
-        const pkg = await getOrCreatePackage(entry.pkgname, packageRepo, repo);
+        const repo = await lookup.getOrCreateRepo(entry.repo);
+        const pkg = await lookup.getOrCreatePackage(entry.pkgname, repo);
         pkgId = pkg.id;
       }
     }

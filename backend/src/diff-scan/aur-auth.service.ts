@@ -1,9 +1,9 @@
 import * as cheerio from 'cheerio';
-import { errorMessage } from '../utils/functions';
 import { AurMaintainerInfoEntity } from './aur-maintainer-info.entity';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 
 const AUR_LOGIN_URL = 'https://aur.archlinux.org/login?next=/';
@@ -18,7 +18,6 @@ const USER_AGENT =
 
 @Injectable()
 export class AurAuthService {
-  private readonly logger = new Logger(AurAuthService.name);
   private sessionCookie: string | null = null;
   private sessionExpiresAt = 0;
   private loginPromise: Promise<boolean> | null = null;
@@ -27,6 +26,7 @@ export class AurAuthService {
     private readonly configService: ConfigService,
     @InjectRepository(AurMaintainerInfoEntity)
     private readonly maintainerInfoRepository: Repository<AurMaintainerInfoEntity>,
+    @InjectPinoLogger(AurAuthService.name) private readonly pino: PinoLogger,
   ) {}
 
   async getMaintainerRegistrationDate(username: string): Promise<Date | null> {
@@ -50,13 +50,13 @@ export class AurAuthService {
         headers: { 'User-Agent': USER_AGENT, 'Cookie': this.sessionCookie ?? '' },
       });
       if (!response.ok) {
-        this.logger.warn(`Failed to fetch AUR profile for ${username}: ${response.status}`);
+        this.pino.warn({ username, status: response.status }, 'Failed to fetch AUR profile');
         return null;
       }
 
       return this.parseRegistrationDate(await response.text(), username);
     } catch (error) {
-      this.logger.error(`Error fetching AUR profile for ${username}: ${errorMessage(error)}`);
+      this.pino.error({ err: error, username }, 'Failed to fetch AUR profile');
       return null;
     }
   }
@@ -79,7 +79,7 @@ export class AurAuthService {
       break;
     }
 
-    this.logger.debug(`Could not extract registration date for ${username}`);
+    this.pino.debug({ username }, 'Could not extract registration date');
     return null;
   }
 
@@ -95,7 +95,7 @@ export class AurAuthService {
     const username = this.configService.get<string>('aur.username');
     const password = this.configService.get<string>('aur.password');
     if (!username || !password) {
-      this.logger.warn('AUR credentials not configured, cannot scrape registration dates');
+      this.pino.warn('AUR credentials not configured, cannot scrape registration dates');
       return false;
     }
 
@@ -122,14 +122,14 @@ export class AurAuthService {
       if ((response.status === 302 || response.status === 303) && session) {
         this.sessionCookie = session.split(';')[0];
         this.sessionExpiresAt = Date.now() + SESSION_TTL_MS;
-        this.logger.log('Authenticated with AUR');
+        this.pino.info('Authenticated with AUR');
         return true;
       }
 
-      this.logger.warn(`AUR login failed with status: ${response.status}`);
+      this.pino.warn({ status: response.status }, 'AUR login failed');
       return false;
     } catch (error) {
-      this.logger.error(`Error during AUR login: ${errorMessage(error)}`);
+      this.pino.error({ err: error }, 'AUR login failed');
       return false;
     }
   }

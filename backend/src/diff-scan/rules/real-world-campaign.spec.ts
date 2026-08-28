@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PinoLogger } from 'nestjs-pino';
 import { DiffScanService } from '../diff-scan.service';
 import { makeChange } from './test-support';
+
+const pinoStub = {
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  debug: () => undefined,
+} as unknown as PinoLogger;
 
 /**
  * Condensed fixtures of the two real malicious MRs merged against this repository
@@ -51,7 +59,7 @@ const AKIRA_INSTALL = [
   '+}}',
 ].join('\n');
 
-const service = new DiffScanService();
+const service = new DiffScanService(pinoStub);
 
 describe('real-world campaign MRs (regression)', () => {
   beforeEach(() => {

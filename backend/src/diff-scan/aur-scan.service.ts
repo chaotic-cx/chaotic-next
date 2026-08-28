@@ -1,4 +1,4 @@
-import { errorMessage, mapWithConcurrency } from '../utils/functions';
+import { mapWithConcurrency } from '../utils/functions';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
 import { commentThreatFinding, evaluateCommentThreats, parseAurComments } from './aur-comments';
@@ -16,8 +16,9 @@ import {
   type AurScanStreamChunk,
 } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
-import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { filter, Observable, Subject } from 'rxjs';
 import { Repository } from 'typeorm';
 
@@ -69,7 +70,6 @@ interface AurSearchResponse {
 
 @Injectable()
 export class AurScanService {
-  private readonly logger = new Logger(AurScanService.name);
   private readonly scans = new Map<string, AurPackageScan>();
   private readonly scanUpdates = new Subject<AurPackageScan>();
   private readonly maintainerProfiles = new Map<string, { profile: AurMaintainerInfo; fetchedAt: number }>();
@@ -81,6 +81,7 @@ export class AurScanService {
     private readonly diffScanService: DiffScanService,
     private readonly virustotalService: VirustotalService,
     private readonly aurAuthService: AurAuthService,
+    @InjectPinoLogger(AurScanService.name) private readonly pino: PinoLogger,
     @Optional()
     @InjectRepository(AurMaintainerSnapshot)
     private readonly snapshotRepository?: Repository<AurMaintainerSnapshot>,
@@ -134,7 +135,7 @@ export class AurScanService {
       startedAt: new Date().toISOString(),
     };
     this.rememberScan(scan);
-    this.logger.log(`AUR scan of ${packageName} started`);
+    this.pino.info({ packageName }, 'AUR scan started');
 
     try {
       const pkgbuildText = await this.fetchPkgbuild(packageName);
@@ -179,12 +180,16 @@ export class AurScanService {
       }
     } catch (err) {
       scan.status = 'failed';
-      scan.error = errorMessage(err);
-      this.logger.warn(`AUR scan of ${packageName} failed: ${scan.error}`);
+      scan.error = err instanceof Error ? err.message : String(err);
+      this.pino.warn({ err, packageName }, 'AUR scan failed');
     }
-    this.logger.log(
-      `AUR scan of ${packageName} finished after ${Date.now() - Date.parse(scan.startedAt)}ms with ` +
-        `${scan.findings.length} finding(s)`,
+    this.pino.info(
+      {
+        packageName,
+        durationMs: Date.now() - Date.parse(scan.startedAt),
+        findingCount: scan.findings.length,
+      },
+      'AUR scan finished',
     );
     this.scanUpdates.next({ ...scan });
     return { ...scan };
@@ -194,7 +199,7 @@ export class AurScanService {
     try {
       scan.vtReports = await this.virustotalService.reportOn(indicators);
     } catch (err) {
-      this.logger.warn(`VirusTotal enrichment for ${scan.packageName} failed: ${errorMessage(err)}`);
+      this.pino.warn({ err, packageName: scan.packageName }, 'VirusTotal enrichment failed');
     } finally {
       scan.vtPending = 0;
       scan.status = 'done';
@@ -208,14 +213,14 @@ export class AurScanService {
     try {
       const page = await this.fetchAur(`${AUR_PACKAGE_URL}/${encodeURIComponent(scan.packageBase)}`);
       if (!page.ok) {
-        this.logger.warn(`Comment page for ${scan.packageBase} returned ${page.status}`);
+        this.pino.warn({ packageBase: scan.packageBase, status: page.status }, 'Comment page request failed');
         return;
       }
       const verdict = evaluateCommentThreats(parseAurComments(await page.text()), scan.packageMeta);
       if (!verdict) return;
       scan.findings.push(commentThreatFinding(verdict, scan.packageBase));
     } catch (err) {
-      this.logger.debug(`Comment check for ${scan.packageBase} unavailable: ${errorMessage(err)}`);
+      this.pino.debug({ err, packageBase: scan.packageBase }, 'Comment check unavailable');
     }
   }
 
@@ -249,12 +254,12 @@ export class AurScanService {
       const query = packageNames.map((name) => `arg[]=${encodeURIComponent(name)}`).join('&');
       const response = await this.fetchAur(`${AUR_INFO_URL}?${query}`);
       if (!response.ok) {
-        this.logger.warn(`AUR multiinfo request for ${packageNames.length} package(s) returned ${response.status}`);
+        this.pino.warn({ count: packageNames.length, status: response.status }, 'AUR multiinfo request failed');
         return [];
       }
       return ((await response.json()) as AurInfoResponse).results ?? [];
     } catch (err) {
-      this.logger.warn(`AUR multiinfo request for ${packageNames.length} package(s) failed: ${errorMessage(err)}`);
+      this.pino.warn({ err, count: packageNames.length }, 'AUR multiinfo request failed');
       return [];
     }
   }
@@ -284,7 +289,7 @@ export class AurScanService {
       if (added.length === 0 && removed.length === 0) return null;
       return { previous, added, removed, detectedAt: new Date().toISOString() };
     } catch (err) {
-      this.logger.warn(`Maintainer snapshot for ${packageName} failed: ${errorMessage(err)}`);
+      this.pino.warn({ err, packageName }, 'Maintainer snapshot failed');
       return null;
     }
   }
@@ -314,14 +319,14 @@ export class AurScanService {
       const response = await this.fetchAur(`${AUR_INFO_URL}?${query}`);
       if (!response.ok) {
         // An AUR outage must not masquerade as "packages do not exist".
-        this.logger.warn(`AUR multiinfo request for ${batch.length} package(s) returned ${response.status}`);
+        this.pino.warn({ count: batch.length, status: response.status }, 'AUR multiinfo request failed');
       }
 
       const results = response.ok ? (((await response.json()) as AurInfoResponse).results ?? []) : [];
       const byName = new Map(results.map((info) => [info.Name, info]));
       for (const entry of batch) entry.resolve(byName.get(entry.name));
     } catch (err) {
-      this.logger.warn(`AUR multiinfo request for ${batch.length} package(s) failed: ${errorMessage(err)}`);
+      this.pino.warn({ err, count: batch.length }, 'AUR multiinfo request failed');
       for (const entry of batch) entry.resolve(undefined);
     }
   }
@@ -362,7 +367,7 @@ export class AurScanService {
     try {
       const response = await this.fetchAur(`${AUR_SEARCH_URL}?by=maintainer&arg=${encodeURIComponent(username)}`);
       if (!response.ok) {
-        this.logger.warn(`Maintainer search for "${username}" returned ${response.status}`);
+        this.pino.warn({ username, status: response.status }, 'Maintainer search failed');
       }
 
       const results = response.ok ? (((await response.json()) as AurSearchResponse).results ?? []) : [];
@@ -387,7 +392,7 @@ export class AurScanService {
         novice,
       };
     } catch (err) {
-      this.logger.debug(`Maintainer profile for ${username} unavailable: ${errorMessage(err)}`);
+      this.pino.debug({ err, username }, 'Maintainer profile unavailable');
       return {
         username,
         packagesMaintained: 0,
@@ -431,10 +436,10 @@ export class AurScanService {
       const bytes = new Uint8Array(await response.arrayBuffer());
       if (!looksTextual(bytes) || bytes.length > MAX_FILE_BYTES) return { binary: true };
       const content = new TextDecoder().decode(bytes);
-      this.logger.debug(`Fetched ${url} for scanning (${bytes.length} bytes)`);
+      this.pino.debug({ url, byteCount: bytes.length }, 'Fetched repo file for scanning');
       return { content };
     } catch (err) {
-      this.logger.debug(`Skipping repo file ${path}: ${errorMessage(err)}`);
+      this.pino.debug({ err, path }, 'Skipping repo file');
       return undefined;
     }
   }
@@ -455,7 +460,7 @@ export class AurScanService {
       try {
         response = await this.fetchAur(`${AUR_CGIT_TREE_URL}/${encodedPath}?h=${encodeURIComponent(packageBase)}`);
       } catch (err) {
-        this.logger.debug(`Repo tree listing for "${path}" unavailable: ${errorMessage(err)}`);
+        this.pino.debug({ err, path }, 'Repo tree listing unavailable');
         continue;
       }
       if (!response.ok) continue;
@@ -494,14 +499,14 @@ export class AurScanService {
     try {
       const response = await this.fetchAur(`${AUR_SEARCH_URL}?arg=${encodeURIComponent(query)}`);
       if (!response.ok) {
-        this.logger.warn(`AUR search for "${query}" returned ${response.status}`);
+        this.pino.warn({ query, status: response.status }, 'AUR search failed');
         return [];
       }
 
       const data = (await response.json()) as AurSearchResponse;
       return data.results?.map((pkg) => pkg.Name ?? '') ?? [];
     } catch (err) {
-      this.logger.warn(`AUR search for "${query}" failed: ${errorMessage(err)}`);
+      this.pino.warn({ err, query }, 'AUR search failed');
       return [];
     }
   }

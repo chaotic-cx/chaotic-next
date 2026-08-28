@@ -1,7 +1,6 @@
 import { Repo } from '../builder/builder.entity';
 import { EventService } from '../events/event.service';
 import { cachedResult } from '../utils/cache';
-import { errorMessage } from '../utils/functions';
 import { GitlabApiService, gitlabRawFileToString } from './gitlab-api.service';
 import { type GitlabStatusEvent, type MrActor } from './interfaces';
 import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
@@ -16,8 +15,9 @@ import {
 } from '@chaotic-next/shared-lib';
 import { PipelineSchema, type CommitStatusSchema } from '@gitbeaker/rest';
 import { CACHE_MANAGER, type Cache } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { IsNull, Repository } from 'typeorm';
 
 const SKIPPED_PIPELINE_STATUS = 'skipped';
@@ -27,8 +27,6 @@ const GITLAB_API_TIMEOUT_MS = 10_000;
 
 @Injectable()
 export class GitlabPipelineService implements OnModuleInit {
-  private readonly logger = new Logger(GitlabPipelineService.name);
-
   private readonly pipelineMap = new Map<number, PipelineSchema>();
   private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
   private readonly unlinkedCommitShas = new Set<string>();
@@ -36,6 +34,7 @@ export class GitlabPipelineService implements OnModuleInit {
 
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @InjectPinoLogger(GitlabPipelineService.name) private readonly pino: PinoLogger,
     private readonly gitlabApiService: GitlabApiService,
     private readonly eventService: EventService,
     @InjectRepository(PipelineTrigger)
@@ -45,15 +44,15 @@ export class GitlabPipelineService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    void this.seedPipelines().catch((err) => this.logger.error(`Initial pipeline seed failed: ${errorMessage(err)}`));
+    void this.seedPipelines().catch((err) => this.pino.error({ err }, 'Initial pipeline seed failed'));
   }
 
   async seedPipelines(): Promise<void> {
     try {
       await this.getPipelinesViaRest();
-      this.logger.log(`Seeded ${this.pipelineMap.size} pipelines`);
+      this.pino.info({ count: this.pipelineMap.size }, 'Seeded pipelines');
     } catch (err) {
-      this.logger.error(`Failed to seed pipelines: ${errorMessage(err)}`);
+      this.pino.error({ err }, 'Failed to seed pipelines');
     }
   }
 
@@ -74,7 +73,7 @@ export class GitlabPipelineService implements OnModuleInit {
       .filter((pipeline) => pipeline.status !== SKIPPED_PIPELINE_STATUS)
       .slice(0, MAX_CACHED_PIPELINES);
 
-    this.logger.log(`Fetched ${allPipelines.length} pipelines`);
+    this.pino.info({ count: allPipelines.length }, 'Fetched pipelines');
 
     const uniqueShas = [...new Set(allPipelines.map((pipeline) => pipeline.sha))];
     const statusesBySha = new Map<string, CommitStatusSchema[]>();
@@ -87,7 +86,7 @@ export class GitlabPipelineService implements OnModuleInit {
             statuses.filter((status) => this.isExternalStage(status.name)),
           );
         } catch (err) {
-          this.logger.warn(`Failed to fetch statuses for sha ${sha}: ${errorMessage(err)}`);
+          this.pino.warn({ err, sha }, 'Failed to fetch statuses for sha');
           statusesBySha.set(sha, []);
         }
       }),
@@ -253,7 +252,7 @@ export class GitlabPipelineService implements OnModuleInit {
     let lastPipeline: { id?: number; sha?: string } | undefined;
 
     if (scheduleId > 0) {
-      this.logger.debug(`Triggering pipeline schedule #${scheduleId} on ${repoName}...`);
+      this.pino.debug({ scheduleId, repoName }, 'Triggering pipeline schedule');
       const schedules = this.api.PipelineSchedules as unknown as Record<string, (...args: unknown[]) => unknown>;
       let result: unknown;
       if (typeof schedules.play === 'function') {
@@ -328,7 +327,7 @@ export class GitlabPipelineService implements OnModuleInit {
   async fetchCiConfig(repoName: string, pkgbase: string): Promise<string | null> {
     const repo = await this.repoRepository.findOne({ where: { name: repoName } });
     if (!repo?.gitlabProjectId || !this.api) {
-      this.logger.warn(`Cannot fetch .CI/config of ${pkgbase}: repo '${repoName}' or GitLab client unavailable`);
+      this.pino.warn({ pkgbase, repoName }, 'Cannot fetch .CI/config: repo or GitLab client unavailable');
       return null;
     }
 
@@ -340,7 +339,7 @@ export class GitlabPipelineService implements OnModuleInit {
       );
       return await gitlabRawFileToString(raw);
     } catch {
-      this.logger.debug(`No .CI/config found for ${pkgbase} in '${repoName}'`);
+      this.pino.debug({ pkgbase, repoName }, 'No .CI/config found');
       return null;
     }
   }

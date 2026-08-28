@@ -1,5 +1,4 @@
 import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
-import { errorMessage } from '../utils/functions';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
 import { parseManagerLogEvent } from './manager-log-parser';
@@ -17,7 +16,6 @@ import {
   Body,
   Controller,
   Headers,
-  Logger,
   NotFoundException,
   Post,
   Query,
@@ -29,6 +27,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiCookieAuth, ApiHeaders, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Observable } from 'rxjs';
 
 const PROXY_REQUEST_TIMEOUT_MS = 15_000;
@@ -45,12 +44,11 @@ interface ProxySseClient<T> {
 @UseGuards(AuthGuard)
 @Controller('api')
 export class BuildApiController {
-  private readonly logger = new Logger(BuildApiController.name);
-
   constructor(
     private readonly configService: ConfigService,
     private readonly gitlabPipelineService: GitlabPipelineService,
     private readonly buildClassSuggester: BuildClassSuggesterService,
+    @InjectPinoLogger(BuildApiController.name) private readonly pino: PinoLogger,
   ) {}
 
   private get buildServerUrl(): string {
@@ -90,8 +88,14 @@ export class BuildApiController {
       packages: await this.withSuggestedBuildClasses(body.packages),
     };
     const url = `${this.buildServerUrl}/queue/schedule`;
-    this.logger.log(
-      `Scheduling ${scheduleBody.packages.map((p) => p.pkgbase).join(', ')} → ${targetRepo} (source: ${sourceRepo}, commit: ${commit ?? 'N/A'})`,
+    this.pino.info(
+      {
+        packages: scheduleBody.packages.map((p) => p.pkgbase),
+        targetRepo,
+        sourceRepo,
+        commit: commit ?? 'N/A',
+      },
+      'Scheduling packages on build server',
     );
     return this.proxyPostJson(url, scheduleBody);
   }
@@ -100,7 +104,7 @@ export class BuildApiController {
     try {
       return await this.gitlabPipelineService.getHeadCommitForRepo(repoName);
     } catch {
-      this.logger.warn(`Could not fetch HEAD commit for ${repoName}, proceeding without it`);
+      this.pino.warn({ repo: repoName }, 'Could not fetch HEAD commit, proceeding without it');
       return undefined;
     }
   }
@@ -110,7 +114,7 @@ export class BuildApiController {
     try {
       suggestions = await this.buildClassSuggester.suggestForPackages(pkgbases);
     } catch (err) {
-      this.logger.warn(`Build class suggestion failed, scheduling without classes: ${errorMessage(err)}`);
+      this.pino.warn({ err }, 'Build class suggestion failed, scheduling without classes');
     }
     const classByPkgbase = new Map(
       suggestions.map((suggestion) => [suggestion.pkgname, suggestion.suggestedBuildClass]),
@@ -248,7 +252,7 @@ export class BuildApiController {
       return text ? (JSON.parse(text) as unknown) : {};
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ServiceUnavailableException) throw error;
-      this.logger.error(`Proxy POST JSON failed: ${url}`, error);
+      this.pino.error({ err: error, url }, 'Proxy POST JSON failed');
       throw new ServiceUnavailableException('Could not reach build server');
     } finally {
       clearTimeout(timeout);

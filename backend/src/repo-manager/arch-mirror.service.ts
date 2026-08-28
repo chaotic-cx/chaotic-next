@@ -7,19 +7,20 @@ import {
   TriggerType,
 } from '../interfaces/repo-manager';
 import { ARCH } from '../utils/constants';
-import { errorCode, errorMessage } from '../utils/functions';
+import { errorCode } from '../utils/functions';
 import { extractPacmanDatabase, listPackageDirs, parsePackageDesc, parsePackageFiles } from './offline/pacman-parse';
 import { ArchlinuxPackage, bulkGetOrCreateArch, PackageElfAnalysis } from './repo-manager.entity';
 import { saveInBatches } from './save';
 import { SignalScanService, type ScanJob } from './scan';
 import { pkgTypeOf } from './signal';
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { type AxiosResponse } from 'axios';
 import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 
 const ARCH_REPOS = ['core', 'extra'] as const;
@@ -33,8 +34,6 @@ const ARCH_DATABASE_URL = (mirrorUrl: string, repo: string): string => `${mirror
  */
 @Injectable()
 export class ArchMirrorService {
-  private readonly logger = new Logger(ArchMirrorService.name);
-
   constructor(
     @InjectRepository(ArchlinuxPackage)
     private readonly archPkgRepository: Repository<ArchlinuxPackage>,
@@ -42,29 +41,30 @@ export class ArchMirrorService {
     private readonly elfAnalysisRepository: Repository<PackageElfAnalysis>,
     private readonly httpService: HttpService,
     private readonly signalScanService: SignalScanService,
+    @InjectPinoLogger(ArchMirrorService.name) private readonly pino: PinoLogger,
   ) {}
 
   /** Pull the Arch databases and return the packages that changed versions. */
   async pullChangedArchPackages(settings: RepoSettings): Promise<ArchlinuxPackage[]> {
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
-    this.logger.log('Started pulling Archlinux databases...');
-    this.logger.debug(`Created temporary directory ${tempDir}`);
+    this.pino.info('Started pulling Archlinux databases');
+    this.pino.debug({ tempDir }, 'Created temporary directory');
     const mirrorUrl = settings.mirrorUrl ?? DEFAULT_MIRROR_URL;
 
     const downloads: PromiseSettledResult<RepoWorkDir | null>[] = await Promise.allSettled(
       ARCH_REPOS.map(async (repo) => {
         const repoDir = join(tempDir, repo);
-        this.logger.debug(`Pulling database for ${repo}...`);
+        this.pino.debug({ repo }, 'Pulling database');
         try {
           return await this.pullDatabases(ARCH_DATABASE_URL(mirrorUrl, repo), repoDir, repo);
         } catch (err: unknown) {
-          this.logger.error(errorMessage(err));
+          this.pino.error({ err }, 'Failed to pull database');
           return null;
         }
       }),
     );
 
-    this.logger.debug('Done pulling all databases');
+    this.pino.debug('Done pulling all databases');
 
     const pulled: (RepoWorkDir | null)[] = downloads.map((download) =>
       download.status === 'fulfilled' ? download.value : null,
@@ -83,7 +83,7 @@ export class ArchMirrorService {
   async scanChangedArchPackages(changed: ArchlinuxPackage[], settings: RepoSettings): Promise<void> {
     if (changed.length === 0) return;
 
-    this.logger.debug(`Scanning ${changed.length} changed Arch package(s) for ELF signals`);
+    this.pino.debug({ count: changed.length }, 'Scanning changed Arch packages for ELF signals');
     const mirrorUrl = settings.mirrorUrl ?? DEFAULT_MIRROR_URL;
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-signal-'));
     const jobs: ScanJob[] = [];
@@ -93,10 +93,10 @@ export class ArchMirrorService {
         const filename = pkg.metadata?.filename;
         const version = pkg.version;
         if (!filename || !version) {
-          this.logger.warn(`No filename or version for ${pkg.pkgname}, skipping scan`);
+          this.pino.warn({ pkgname: pkg.pkgname }, 'No filename or version, skipping scan');
           continue;
         }
-        this.logger.debug(`Scanning changed Arch package ${pkg.pkgname} (${pkg.version})`);
+        this.pino.debug({ pkgname: pkg.pkgname, version: pkg.version }, 'Scanning changed Arch package');
 
         // Determine which repo serves this package by probing the mirror.
         // Probe core/extra concurrently (instead of sequentially) and prefer the
@@ -115,7 +115,7 @@ export class ArchMirrorService {
         const probes = await Promise.all(ARCH_REPOS.map(probeRepo));
         const repo = probes.find((r): r is string => !!r);
         if (!repo) {
-          this.logger.warn(`Could not locate ${filename} on the mirror, skipping scan`);
+          this.pino.warn({ filename }, 'Could not locate package on the mirror, skipping scan');
           continue;
         }
 
@@ -128,7 +128,7 @@ export class ArchMirrorService {
           });
           await writeFile(downloadPath, Buffer.from(response.data));
         } catch (err: unknown) {
-          this.logger.warn(`Failed to download ${filename}: ${errorMessage(err)}`);
+          this.pino.warn({ err, filename }, 'Failed to download package');
           continue;
         }
 
@@ -140,7 +140,7 @@ export class ArchMirrorService {
         });
       }
 
-      this.logger.log(`Scanning ${jobs.length} changed Arch package(s) for ELF signals`);
+      this.pino.info({ count: jobs.length }, 'Scanning changed Arch packages for ELF signals');
       await this.signalScanService.scanPackages(jobs);
     } finally {
       await this.cleanUp([tempDir]);
@@ -152,7 +152,7 @@ export class ArchMirrorService {
    * already have an analysis for their current version. */
   async indexArchMirror(settings: RepoSettings): Promise<IndexResult> {
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-index-'));
-    this.logger.log('Started indexing the full Arch mirror...');
+    this.pino.info('Started indexing the full Arch mirror');
     try {
       const mirrorUrl = settings.mirrorUrl ?? DEFAULT_MIRROR_URL;
       const downloads: PromiseSettledResult<RepoWorkDir | null>[] = await Promise.allSettled(
@@ -167,7 +167,7 @@ export class ArchMirrorService {
         if (d.status === 'fulfilled') {
           if (d.value) workDirs.push(d.value);
         } else {
-          this.logger.error(`Mirror pull failed: ${d.reason instanceof Error ? d.reason.message : String(d.reason)}`);
+          this.pino.error({ reason: d.reason }, 'Mirror pull failed');
         }
       }
       const parsed: ParsedPackage[] = await this.parsePacmanDatabases(workDirs);
@@ -205,8 +205,9 @@ export class ArchMirrorService {
       // Newly-indexed providers can resolve other packages' missing sonames, so
       // refresh every broken flag against the now-complete index.
       await this.signalScanService.recomputeBroken();
-      this.logger.log(
-        `Full Arch mirror index done: ${result.scanned} scanned, ${result.skipped} skipped, ${result.failed} failed`,
+      this.pino.info(
+        { scanned: result.scanned, skipped: result.skipped, failed: result.failed },
+        'Full Arch mirror index done',
       );
       return result;
     } finally {
@@ -248,7 +249,7 @@ export class ArchMirrorService {
           });
           await writeFile(downloadPath, Buffer.from(response.data));
         } catch (err: unknown) {
-          this.logger.warn(`Failed to download ${candidate.filename}: ${errorMessage(err)}`);
+          this.pino.warn({ err, filename: candidate.filename }, 'Failed to download package');
           result.failed++;
           continue;
         }
@@ -282,46 +283,46 @@ export class ArchMirrorService {
 
     try {
       await writeFile(join(repoDir, `${repo}.files`), fileData);
-      this.logger.debug(`Done pulling database of ${repo}`);
+      this.pino.debug({ repo }, 'Done pulling database');
       return {
         path: join(repoDir, `${repo}.files`),
         name: repo,
         workDir: repoDir,
       };
     } catch (err: unknown) {
-      this.logger.error(errorMessage(err));
+      this.pino.error({ err }, 'Failed to write database file');
       return null;
     }
   }
 
   async parsePacmanDatabases(databases: (RepoWorkDir | null)[]): Promise<ParsedPackage[]> {
-    this.logger.debug('Started extracting databases...');
+    this.pino.debug('Started extracting databases');
     const workDirsPromises: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
       databases.map(async (repo): Promise<RepoWorkDir> => {
         try {
           if (!repo || !repo.path) throw new Error('Database entry has no path');
           const workDir = repo.path.replace(/\/[^/]+\.files$/, '');
 
-          this.logger.debug(`Unpacking database ${repo.path}`);
+          this.pino.debug({ path: repo.path }, 'Unpacking database');
           await extractPacmanDatabase(repo.path, workDir);
           return { path: workDir, name: repo.name, workDir };
         } catch (err: unknown) {
-          this.logger.error(errorMessage(err));
+          this.pino.error({ err }, 'Failed to extract database');
           throw err;
         }
       }),
     );
-    this.logger.debug('Done extracting databases');
+    this.pino.debug('Done extracting databases');
 
     const currentPackageVersions: ParsedPackage[] = [];
     const actualWorkDirs: (RepoWorkDir | null)[] = workDirsPromises.map((workDir) =>
       workDir.status === 'fulfilled' ? workDir.value : null,
     );
 
-    this.logger.debug('Started parsing databases...');
+    this.pino.debug('Started parsing databases');
     for (const dir of actualWorkDirs) {
       if (!dir || !dir.path) {
-        this.logger.warn('Skipping null or invalid work directory');
+        this.pino.warn('Skipping null or invalid work directory');
         continue;
       }
       const dirPath = dir.path;
@@ -329,7 +330,7 @@ export class ArchMirrorService {
       try {
         const currentPathRegex = `/${dir.path}/`;
         const allPkgDirs: string[] = await listPackageDirs(dir.path);
-        this.logger.debug(`Found ${allPkgDirs.length} package directories in ${dir.path}`);
+        this.pino.debug({ count: allPkgDirs.length, path: dir.path }, 'Found package directories');
 
         const relevantFiles = allPkgDirs.map((pkgDir) => {
           const pkg = pkgDir.replace(new RegExp(currentPathRegex), '');
@@ -364,7 +365,7 @@ export class ArchMirrorService {
                 currentPackageVersions.push(currentPackageVersion as ParsedPackage);
               }
             } catch (fileErr: unknown) {
-              this.logger.warn(`Error processing package files ${file.descFile}: ${errorMessage(fileErr)}`);
+              this.pino.warn({ err: fileErr, file: file.descFile }, 'Error processing package files');
             }
           }
 
@@ -373,12 +374,12 @@ export class ArchMirrorService {
           }
         }
       } catch (dirErr: unknown) {
-        this.logger.error(`Error processing directory ${dirPath}: ${errorMessage(dirErr)}`);
+        this.pino.error({ err: dirErr, dir: dirPath }, 'Error processing directory');
       }
     }
 
-    this.logger.debug('Done parsing databases');
-    this.logger.log(`Total packages processed: ${currentPackageVersions.length}`);
+    this.pino.debug('Done parsing databases');
+    this.pino.info({ count: currentPackageVersions.length }, 'Total packages processed');
 
     return currentPackageVersions;
   }
@@ -388,14 +389,14 @@ export class ArchMirrorService {
     settings: RepoSettings,
   ): Promise<ArchlinuxPackage[]> {
     if (currentArchVersions.length === 0) {
-      this.logger.error('No packages found in databases');
+      this.pino.error('No packages found in databases');
       return [];
     }
 
     const result: ArchlinuxPackage[] = [];
 
-    // Resolve every Arch package in one query + one bulk insert for the missing,
-    // instead of N serialized per-package round-trips through packageMutex.
+    // One query and one bulk insert resolve all missing Arch packages. A
+    // per-package loop would issue N serialized round-trips.
     const archByName = await bulkGetOrCreateArch(
       currentArchVersions.map((p) => p.name).filter((n): n is string => !!n),
       this.archPkgRepository,
@@ -412,7 +413,7 @@ export class ArchMirrorService {
       }
 
       if (!settings.regenDatabase) {
-        this.logger.log(`Package ${pkg.name} has changed, updating records`);
+        this.pino.info({ pkgname: pkg.name }, 'Package has changed, updating records');
         archPkg.previousVersion = archPkg.version;
         archPkg.lastUpdated = new Date();
       }
@@ -429,15 +430,15 @@ export class ArchMirrorService {
     // Persist updates in batches instead of one fire-and-forget save per package.
     await saveInBatches(this.archPkgRepository, changed);
 
-    this.logger.debug(`Done determining changed packages, in total ${result.length} package(s) changed`);
+    this.pino.debug({ count: result.length }, 'Done determining changed packages');
     return result;
   }
 
   async cleanUp(dirs: string[]): Promise<void> {
-    this.logger.log('Cleaning up...');
+    this.pino.info('Cleaning up');
     for (const dir of dirs) {
       if (!dir) {
-        this.logger.warn('Skipping null or empty directory in cleanup');
+        this.pino.warn('Skipping null or empty directory in cleanup');
         continue;
       }
 
@@ -445,15 +446,15 @@ export class ArchMirrorService {
         const dirStats = await stat(dir);
         if (dirStats.isDirectory()) {
           await rm(dir, { recursive: true, force: true });
-          this.logger.debug(`Cleaned up directory: ${dir}`);
+          this.pino.debug({ dir }, 'Cleaned up directory');
         } else {
-          this.logger.warn(`Path is not a directory, skipping: ${dir}`);
+          this.pino.warn({ dir }, 'Path is not a directory, skipping');
         }
       } catch (err: unknown) {
         if (errorCode(err) === 'ENOENT') {
-          this.logger.debug(`Directory already removed or doesn't exist: ${dir}`);
+          this.pino.debug({ dir }, 'Directory already removed or missing');
         } else {
-          this.logger.error(`Failed to cleanup directory ${dir}: ${errorMessage(err)}`);
+          this.pino.error({ err, dir }, 'Failed to cleanup directory');
         }
       }
     }

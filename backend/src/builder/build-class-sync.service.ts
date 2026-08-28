@@ -1,11 +1,11 @@
 import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { parseCiConfig } from '../repo-manager/bump';
-import { errorMessage } from '../utils/functions';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
 import { Package } from './builder.entity';
 import { BUILD_CLASS_MAX, BUILD_CLASS_MIN, type BuildClassSuggestion } from '@chaotic-next/shared-lib';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { type Repository } from 'typeorm';
 
 const CI_KEY_BUILDER_CLASS = 'BUILDER_CLASS';
@@ -29,13 +29,12 @@ export function parseConfiguredBuildClass(configText: string): number | null {
  */
 @Injectable()
 export class BuildClassSyncService {
-  private readonly logger = new Logger(BuildClassSyncService.name);
-
   constructor(
     @InjectRepository(Package)
     private readonly packageRepository: Repository<Package>,
     private readonly gitlabPipelineService: GitlabPipelineService,
     private readonly buildClassSuggester: BuildClassSuggesterService,
+    @InjectPinoLogger(BuildClassSyncService.name) private readonly pino: PinoLogger,
   ) {}
 
   async rescanAllPackages(): Promise<void> {
@@ -43,17 +42,17 @@ export class BuildClassSyncService {
       where: { isActive: true },
       relations: { repo: true },
     });
-    this.logger.log(`Full build class rescan started for ${packages.length} active packages`);
+    this.pino.info({ count: packages.length }, 'Full build class rescan started for active packages');
 
     let synced = 0;
     for (const pkg of packages) {
       const changed = await this.applyConfigToPackage(pkg).catch((err: unknown) => {
-        this.logger.warn(`Build class sync failed for ${pkg.pkgname}: ${errorMessage(err)}`);
+        this.pino.warn({ err, pkgname: pkg.pkgname }, 'Build class sync failed');
         return false;
       });
       if (changed) synced += 1;
     }
-    this.logger.log(`Full build class rescan finished: ${synced} of ${packages.length} packages updated`);
+    this.pino.info({ synced, total: packages.length }, 'Full build class rescan finished');
   }
 
   async syncFromDeployment(repoName: string, pkgbases: string[]): Promise<void> {
@@ -62,7 +61,7 @@ export class BuildClassSyncService {
 
     for (const pkgbase of uniqueNames) {
       await this.syncPkgbase(repoName, pkgbase).catch((err: unknown) => {
-        this.logger.warn(`Build class sync failed for ${pkgbase}: ${errorMessage(err)}`);
+        this.pino.warn({ err, pkgbase }, 'Build class sync failed');
       });
     }
   }
@@ -76,7 +75,7 @@ export class BuildClassSyncService {
       relations: { repo: true },
     });
     if (members.length === 0) {
-      this.logger.debug(`No packages found for deployment of ${pkgbase} in '${repoName}'`);
+      this.pino.debug({ pkgbase, repo: repoName }, 'No packages found for deployment');
       return;
     }
 
@@ -121,8 +120,9 @@ export class BuildClassSyncService {
 
     if (classChanged) {
       pkg.buildClass = effectiveClass;
-      this.logger.log(
-        `Updated stored build class of ${pkg.pkgname} to ${effectiveClass} (from ${pkgbasePath}/.CI/config)`,
+      this.pino.info(
+        { pkgname: pkg.pkgname, buildClass: effectiveClass, configSource: `${pkgbasePath}/.CI/config` },
+        'Updated stored build class',
       );
     }
     if (baseChanged) {
@@ -136,7 +136,7 @@ export class BuildClassSyncService {
     try {
       suggestions = await this.buildClassSuggester.suggestForPackages([pkg.pkgname]);
     } catch (err: unknown) {
-      this.logger.debug(`Could not derive a build class suggestion for ${pkg.pkgname}: ${errorMessage(err)}`);
+      this.pino.debug({ err, pkgname: pkg.pkgname }, 'Could not derive a build class suggestion');
       return;
     }
 
@@ -145,9 +145,14 @@ export class BuildClassSyncService {
       return;
     }
 
-    this.logger.warn(
-      `Build class adjustment suggested for ${pkg.pkgname}: configured ${currentClass}, ` +
-        `resource usage suggests ${suggestion.suggestedBuildClass} (${suggestion.samples} samples in window)`,
+    this.pino.warn(
+      {
+        pkgname: pkg.pkgname,
+        configured: currentClass,
+        suggested: suggestion.suggestedBuildClass,
+        samples: suggestion.samples,
+      },
+      'Build class adjustment suggested',
     );
   }
 }
