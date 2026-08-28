@@ -1,6 +1,7 @@
 import { inject, Service } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from 'ngx-better-auth';
+import { createAuthClient } from 'better-auth/client';
 import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, filter, finalize, first, map, switchMap, timeout } from 'rxjs/operators';
 import { APP_CONFIG } from '../../environments/app-config.token';
@@ -20,12 +21,6 @@ export const AUTH_RESULT_KEY = 'auth-result';
 // event from the popup triggers the opener's session refetch without a reload.
 export const AUTH_SESSION_SYNC_KEY = 'better-auth.message';
 
-interface SignInResponse {
-  url?: string;
-  redirect?: boolean;
-  error?: { code: string; message: string } | null;
-}
-
 function safeRedirectPath(returnPath: string | null): string {
   if (returnPath?.startsWith('/') && !returnPath.startsWith('//')) return returnPath;
   return '/';
@@ -33,11 +28,10 @@ function safeRedirectPath(returnPath: string | null): string {
 
 @Service()
 export class GitlabLoginService {
-  private readonly config = inject(APP_CONFIG);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly notificationService = inject(NotificationService);
-  private readonly authBaseURL = this.config.authBaseUrl;
+  private readonly authClient = createAuthClient({ baseURL: inject(APP_CONFIG).authBaseUrl });
 
   login(returnPath: string): Observable<void> {
     // "Notification permission may only be requested from inside a short running user-generated event handler"
@@ -54,24 +48,18 @@ export class GitlabLoginService {
     const callbackURL = window.location.origin + AUTH_CALLBACK_PATH;
 
     return from(
-      fetch(`${this.authBaseURL}/sign-in/oauth2`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          providerId: 'gitlab',
-          callbackURL,
-          errorCallbackURL: callbackURL,
-          newUserCallbackURL: callbackURL,
-          disableRedirect: true,
-        }),
+      this.authClient.signIn.social({
+        provider: 'gitlab',
+        callbackURL,
+        errorCallbackURL: callbackURL,
+        newUserCallbackURL: callbackURL,
+        disableRedirect: true,
       }),
     ).pipe(
-      switchMap((response) => response.json()),
-      map((response: SignInResponse) => {
-        if (response.error) throw new Error(response.error.message);
-        if (!response.url) throw new Error('Failed to initiate sign-in');
-        return response.url;
+      map((response) => {
+        if (response.error) throw new Error(response.error.message ?? 'Failed to initiate sign-in');
+        if (!response.data?.url) throw new Error('Failed to initiate sign-in');
+        return response.data.url;
       }),
       switchMap((url) => this.openPopupAndWait(popup, url)),
       timeout(OAUTH_TIMEOUT_MS),

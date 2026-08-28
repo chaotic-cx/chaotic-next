@@ -8,6 +8,7 @@ import { CreateSession1786779403609 } from './generated/migrations/1786779403609
 import { CreateUser1786779403609 } from './generated/migrations/1786779403609-create-user';
 import { CreateVerification1786779403609 } from './generated/migrations/1786779403609-create-verification';
 import { AddUserGroups1787411324082 } from './generated/migrations/1787411324082-add-user-groups';
+import { AddAccountIssuer1787942324294 } from './generated/migrations/1787942324294-add-account-issuer';
 import { GITLAB_LOGIN_GROUPS } from './gitlab-groups';
 import { typeormAdapter } from '@hedystia/better-auth-typeorm';
 import { betterAuth } from 'better-auth';
@@ -38,6 +39,7 @@ const authDataSource = new DataSource({
     CreateAccount1786779403609,
     CreateVerification1786779403609,
     AddUserGroups1787411324082,
+    AddAccountIssuer1787942324294,
   ],
   migrationsRun: true,
   migrationsTableName: 'auth_migrations',
@@ -65,7 +67,7 @@ export async function checkGitLabGroupMembership(
 }
 
 function gitlabOAuth(clientId: string, clientSecret: string) {
-  const defaultRedirectUri = `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'}/api/auth/oauth2/callback/gitlab`;
+  const defaultRedirectUri = `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'}/api/auth/callback/gitlab`;
   const allowedGroup = process.env.GITLAB_ALLOWED_GROUP ?? 'chaotic-aur';
 
   return genericOAuth({
@@ -80,6 +82,11 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
         redirectURI: process.env.GITLAB_REDIRECT_URI ?? defaultRedirectUri,
         scopes: ['read_user'],
         overrideUserInfo: true,
+        mapProfileToUser: (profile) => ({
+          // The resolved GitLab groups ride on the profile from getUserInfo
+          // below; mapping them here persists them into the user.groups column.
+          groups: profile.groups as string[],
+        }),
         getUserInfo: async (tokens) => {
           const response = await fetch('https://gitlab.com/api/v4/user', {
             headers: { Authorization: `Bearer ${tokens.accessToken}` },
