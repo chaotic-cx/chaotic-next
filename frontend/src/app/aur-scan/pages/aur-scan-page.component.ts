@@ -74,7 +74,7 @@ export class AurScanPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.appService.updateSeoTags(this.meta, {
-      title: 'Chaotic-AUR - AUR package scan',
+      title: 'AUR package scan · Chaotic-AUR',
       description: 'Scan AUR packages for malicious PKGBUILD content, suspicious URLs and risky maintainership changes',
       keywords: 'Chaotic-AUR, AUR, security, PKGBUILD, VirusTotal, scan',
       url: this.router.url,

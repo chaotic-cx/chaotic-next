@@ -1,5 +1,5 @@
 import { httpResource } from '@angular/common/http';
-import { ChangeDetectorRef, Component, effect, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
@@ -55,9 +55,9 @@ export class StatsComponent implements OnInit {
 
   private initRepoFromRoute(): void {
     const param = this.route.snapshot.queryParamMap.get('repo');
-    if (param !== null && this.statsService.repoOptions.includes(param)) {
-      this.statsService.packageSearchSelectedRepo.set(param);
-    }
+    if (param === null || !this.statsService.isValidRepo(param)) return;
+    this.statsService.selectedRepo.set(param);
+    this.statsService.packageSearchSelectedRepo.set(param);
   }
 
   private readonly usersResource = httpResource<number>(() =>
@@ -65,6 +65,11 @@ export class StatsComponent implements OnInit {
   );
 
   protected readonly activeTab = signal<StatsTab | null>(this.tabFromUrl(this.router.url));
+
+  protected readonly repoFilterVisible = computed(() => {
+    const tab = this.activeTab();
+    return tab === 'globals' || tab === 'downloads';
+  });
 
   private tabFromUrl(url: string): StatsTab | null {
     const path = url.split('?')[0].split('/').filter(Boolean).pop() ?? '';
@@ -110,7 +115,7 @@ export class StatsComponent implements OnInit {
 
   ngOnInit(): void {
     this.appService.updateSeoTags(this.meta, {
-      title: 'Chaotic-AUR - Statistics and data',
+      title: 'Statistics and data · Chaotic-AUR',
       description: 'Package and repository statistics for Chaotic-AUR',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics',

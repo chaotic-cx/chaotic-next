@@ -40,7 +40,13 @@ export class StatsService {
 
   readonly timeRangeOptions = TIME_RANGES;
 
-  readonly repoOptions = REPO_OPTIONS;
+  readonly selectedRepo = signal<string>('');
+
+  readonly repoOptions = [{ label: 'All', value: '' }, ...REPO_OPTIONS.map((repo) => ({ label: repo, value: repo }))];
+
+  isValidRepo(value: string): boolean {
+    return value === '' || REPO_OPTIONS.includes(value);
+  }
 
   readonly timeRangeDays = signal<number | null>(TIME_RANGES[1].days);
 

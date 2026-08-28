@@ -151,15 +151,13 @@ export class MrOverviewComponent implements OnInit {
         const updatedById = new Map(event.mr.map((mr) => [mr.id, mr]));
         const updatedMrs = currentMrs.map((currentMr) => {
           const updatedMr = updatedById.get(currentMr.id);
-          if (updatedMr) {
-            return {
-              ...currentMr,
-              ...updatedMr,
-              title: this.mrOverviewService.extractPkgName(updatedMr.title) || updatedMr.title,
-              diffs: this.mrOverviewService.sortDiff(updatedMr.diffs),
-            };
-          }
-          return currentMr;
+          if (updatedMr === undefined) return currentMr;
+          return {
+            ...currentMr,
+            ...updatedMr,
+            title: this.mrOverviewService.extractPkgName(updatedMr.title) || updatedMr.title,
+            diffs: updatedMr.diffs ? this.mrOverviewService.sortDiff(updatedMr.diffs) : currentMr.diffs,
+          };
         });
 
         this.mrOverviewService.mergeRequests.set(updatedMrs);
@@ -303,10 +301,10 @@ export class MrOverviewComponent implements OnInit {
     }
 
     this.appService.updateSeoTags(this.meta, {
-      title: 'Chaotic-AUR - Update review',
+      title: 'Review queue · Chaotic-AUR',
       description: 'Review and approve pending merge requests for Chaotic-AUR',
       keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review',
+        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review, Chaotic-AUR review queue',
       url: this.router.url,
     });
 

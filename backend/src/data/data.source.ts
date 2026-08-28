@@ -7,6 +7,7 @@ import { DiffScanRuleData1787511302520 } from '../migrations/1787511302520-DiffS
 import { AddPackageBuildClass1787594553238 } from '../migrations/1787594553238-AddPackageBuildClass';
 import { AddPackagePkgbaseName1787600183572 } from '../migrations/1787600183572-AddPackagePkgbaseName';
 import { AddSilencedBuildFailure1787692800000 } from '../migrations/1787692800000-AddSilencedBuildFailure';
+import { RouterHitsDailyRepo1787790000000 } from '../migrations/1787790000000-RouterHitsDailyRepo';
 import { type DataSourceOptions } from 'typeorm';
 import { Build, Builder, Repo, SilencedBuildFailure, UpdateLastBuilderActive } from '../builder/builder.entity';
 import { AurMaintainerInfoEntity } from '../diff-scan/aur-maintainer-info.entity';
@@ -83,6 +84,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AddPackageBuildClass1787594553238,
     AddPackagePkgbaseName1787600183572,
     AddSilencedBuildFailure1787692800000,
+    RouterHitsDailyRepo1787790000000,
   ],
   migrationsRun: true,
   cache: true,

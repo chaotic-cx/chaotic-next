@@ -148,19 +148,18 @@ export class MetricsService {
    * @param days The number of days to look back (defaults to 30)
    * @returns The user agent list with counts
    */
-  async uniqueUserAgents(days = 30): Promise<UserAgentList> {
+  async uniqueUserAgents(days = 30, repo = ''): Promise<UserAgentList> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `metrics:user-agents:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
-      this.dataSource
+    return cachedResult(this.cache, `metrics:user-agents:${clampedDays}:${repo}`, METRICS_CACHE_TTL_MS, () => {
+      const query = this.dataSource
         .getRepository(RouterHitDailyAgent)
         .createQueryBuilder('hit')
         .select('hit.userAgent', 'name')
         .addSelect('SUM(hit.count)::int', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
-        .groupBy('hit.userAgent')
-        .orderBy('count', 'DESC')
-        .getRawMany<UserAgentList[number]>(),
-    );
+        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) });
+      if (repo) query.andWhere('hit.repo = :repo', { repo });
+      return query.groupBy('hit.userAgent').orderBy('count', 'DESC').getRawMany<UserAgentList[number]>();
+    });
   }
 
   async packageMetrics(param: string, days = 30): Promise<SpecificPackageMetrics> {
@@ -199,37 +198,43 @@ export class MetricsService {
     };
   }
 
-  async rankCountries(range: string, days = 30): Promise<CountNameObject[]> {
+  async rankCountries(range: string, days = 30, repo = ''): Promise<CountNameObject[]> {
     const rankRange = assertRankRange(range);
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `metrics:rank-countries:${rankRange}:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
-      this.dataSource
-        .getRepository(RouterHitDaily)
-        .createQueryBuilder('hit')
-        .select('hit.country', 'name')
-        .addSelect('SUM(hit.count)::int', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
-        .groupBy('hit.country')
-        .orderBy('count', 'DESC')
-        .limit(rankRange)
-        .getRawMany<CountNameObject>(),
+    return cachedResult(
+      this.cache,
+      `metrics:rank-countries:${rankRange}:${clampedDays}:${repo}`,
+      METRICS_CACHE_TTL_MS,
+      () => {
+        const query = this.dataSource
+          .getRepository(RouterHitDaily)
+          .createQueryBuilder('hit')
+          .select('hit.country', 'name')
+          .addSelect('SUM(hit.count)::int', 'count')
+          .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) });
+        if (repo) query.andWhere('hit.repo = :repo', { repo });
+        return query.groupBy('hit.country').orderBy('count', 'DESC').limit(rankRange).getRawMany<CountNameObject>();
+      },
     );
   }
 
-  async rankPackages(range: string, days = 30): Promise<CountNameObject[]> {
+  async rankPackages(range: string, days = 30, repo = ''): Promise<CountNameObject[]> {
     const rankRange = assertRankRange(range);
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `metrics:rank-packages:${rankRange}:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
-      this.dataSource
-        .getRepository(RouterHitDaily)
-        .createQueryBuilder('hit')
-        .select('hit.package', 'name')
-        .addSelect('SUM(hit.count)::int', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
-        .groupBy('hit.package')
-        .orderBy('count', 'DESC')
-        .limit(rankRange)
-        .getRawMany<CountNameObject>(),
+    return cachedResult(
+      this.cache,
+      `metrics:rank-packages:${rankRange}:${clampedDays}:${repo}`,
+      METRICS_CACHE_TTL_MS,
+      () => {
+        const query = this.dataSource
+          .getRepository(RouterHitDaily)
+          .createQueryBuilder('hit')
+          .select('hit.package', 'name')
+          .addSelect('SUM(hit.count)::int', 'count')
+          .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) });
+        if (repo) query.andWhere('hit.repo = :repo', { repo });
+        return query.groupBy('hit.package').orderBy('count', 'DESC').limit(rankRange).getRawMany<CountNameObject>();
+      },
     );
   }
 

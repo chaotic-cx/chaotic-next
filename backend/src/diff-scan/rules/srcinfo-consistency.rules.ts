@@ -150,7 +150,7 @@ function parsePkgbuildContent(lines: string[]): PkgbuildContent {
     const [, name, append, rawValue] = assignment;
     const value = rawValue.trim();
 
-    if (value.includes('(')) {
+    if (value.startsWith('(')) {
       const inside = value.slice(value.indexOf('(') + 1);
       const closing = inside.lastIndexOf(')');
       if (closing === -1) {

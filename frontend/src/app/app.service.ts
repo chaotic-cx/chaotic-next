@@ -126,22 +126,36 @@ export class AppService {
     return new HttpParams().set('days', (days ?? ALL_TIME_DAYS).toString());
   }
 
+  private daysRepoParams(days?: number, repo?: string): HttpParams {
+    let params = this.daysParams(days);
+    if (repo) params = params.set('repo', repo);
+    return params;
+  }
+
+  private repoParams(repo?: string): HttpParams {
+    if (!repo) return new HttpParams();
+    return new HttpParams().set('repo', repo);
+  }
+
   getUsersResourceRequest(days?: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/metrics/users`, params: this.daysParams(days) };
   }
 
-  getUserAgentsResourceRequest(days?: number): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/metrics/user-agents`, params: this.daysParams(days) };
+  getUserAgentsResourceRequest(days?: number, repo?: string): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/metrics/user-agents`, params: this.daysRepoParams(days, repo) };
   }
 
-  getCountryRanksResourceRequest(days?: number): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/metrics/rank/30/countries`, params: this.daysParams(days) };
+  getCountryRanksResourceRequest(days?: number, repo?: string): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.backendUrl}/metrics/rank/30/countries`,
+      params: this.daysRepoParams(days, repo),
+    };
   }
 
-  getOverallPackageStatsResourceRequest(range: number, days?: number): HttpResourceRequest {
+  getOverallPackageStatsResourceRequest(range: number, days?: number, repo?: string): HttpResourceRequest {
     return {
       url: `${this.appConfig.backendUrl}/metrics/rank/${range}/packages`,
-      params: this.daysParams(days),
+      params: this.daysRepoParams(days, repo),
     };
   }
 
@@ -230,16 +244,25 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/throughput/per-day/${days}` };
   }
 
-  getUserAgentTrendResourceRequest(days: number): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/router/useragents/trend/${days}` };
+  getUserAgentTrendResourceRequest(days: number, repo?: string): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.backendUrl}/router/useragents/trend/${days}`,
+      params: this.repoParams(repo),
+    };
   }
 
-  getMirrorStatsOverTimeResourceRequest(days: number): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/router/stats/mirror-over-time/${days}` };
+  getMirrorStatsOverTimeResourceRequest(days: number, repo?: string): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.backendUrl}/router/stats/mirror-over-time/${days}`,
+      params: this.repoParams(repo),
+    };
   }
 
-  getCountryStatsOverTimeResourceRequest(days: number): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/router/stats/country-over-time/${days}` };
+  getCountryStatsOverTimeResourceRequest(days: number, repo?: string): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.backendUrl}/router/stats/country-over-time/${days}`,
+      params: this.repoParams(repo),
+    };
   }
 
   getBuildersAmountResourceRequest(days?: number): HttpResourceRequest {

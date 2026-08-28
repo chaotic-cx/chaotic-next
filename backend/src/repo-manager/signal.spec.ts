@@ -135,8 +135,9 @@ describe('derivePluginOf', () => {
         direct,
         ancestors: direct,
         keyToPkgname: names,
+        keyToFiles: new Map(),
       },
-      true,
+      { hasCompiledCode: true },
     );
     expect(plugins).toEqual([KWIN]);
   });
@@ -154,8 +155,9 @@ describe('derivePluginOf', () => {
         direct,
         ancestors,
         keyToPkgname: names,
+        keyToFiles: new Map(),
       },
-      true,
+      { hasCompiledCode: true },
     );
     expect(plugins).toEqual([KWIN]);
   });
@@ -173,8 +175,9 @@ describe('derivePluginOf', () => {
         direct,
         ancestors,
         keyToPkgname: names,
+        keyToFiles: new Map(),
       },
-      true,
+      { hasCompiledCode: true },
     );
     expect(plugins).toEqual([KWIN]);
   });
@@ -192,8 +195,9 @@ describe('derivePluginOf', () => {
         direct,
         ancestors,
         keyToPkgname: namesNoKwin,
+        keyToFiles: new Map(),
       },
-      true,
+      { hasCompiledCode: true },
     );
     expect(plugins).toEqual([]);
   });
@@ -210,15 +214,19 @@ describe('derivePluginOf', () => {
         'usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so',
         'usr/lib/qt6/plugins/kwin/effects/configs/kwin_better_blur_dx_config.so',
       ],
-      { direct, ancestors, keyToPkgname: names },
-      true,
+      { direct, ancestors, keyToPkgname: names, keyToFiles: new Map() },
+      { hasCompiledCode: true },
     );
     expect(plugins).toEqual([KWIN]);
   });
 
   it('ignores files not in any owned directory', () => {
     expect(
-      derivePluginOf(['usr/bin/foo'], { direct: new Map(), ancestors: new Map(), keyToPkgname: new Map() }, false),
+      derivePluginOf(
+        ['usr/bin/foo'],
+        { direct: new Map(), ancestors: new Map(), keyToPkgname: new Map(), keyToFiles: new Map() },
+        { hasCompiledCode: false },
+      ),
     ).toEqual([]);
   });
 
@@ -231,8 +239,9 @@ describe('derivePluginOf', () => {
         direct,
         ancestors,
         keyToPkgname: names,
+        keyToFiles: new Map(),
       },
-      true,
+      { hasCompiledCode: true },
     );
     expect(plugins).toEqual([]);
   });
@@ -256,8 +265,9 @@ describe('derivePluginOf', () => {
         direct,
         ancestors,
         keyToPkgname: names,
+        keyToFiles: new Map(),
       },
-      true,
+      { hasCompiledCode: true },
     );
     expect(plugins).toEqual([KWIN]);
   });
@@ -270,8 +280,9 @@ describe('derivePluginOf', () => {
         direct,
         ancestors: direct,
         keyToPkgname: names,
+        keyToFiles: new Map(),
       },
-      false,
+      { hasCompiledCode: false },
     );
     expect(plugins).toEqual([]);
   });
@@ -284,10 +295,108 @@ describe('derivePluginOf', () => {
         direct,
         ancestors: direct,
         keyToPkgname: names,
+        keyToFiles: new Map(),
       },
-      true,
+      { hasCompiledCode: true },
     );
     expect(plugins).toEqual([KWIN]);
+  });
+
+  it('does not flag a package sharing a widely-owned namespace dir (icon/apps false positive)', () => {
+    // fooyin owns usr/share/icons/hicolor/scalable/apps, but so do ~900 other
+    // apps. yacreader installing its icon there must NOT become a "plugin of"
+    // fooyin — that produced 700+ bogus plugin ABI breaks. A real plugin dir is
+    // owned by a handful of packages, far below this shared namespace.
+    const direct = mk({
+      'usr/share/icons/hicolor/scalable/apps': Array.from({ length: 900 }, (ignored, i) => `a${i}`),
+    });
+    const plugins = derivePluginOf(
+      ['usr/share/icons/hicolor/scalable/apps/yacreader.svg'],
+      { direct, ancestors: new Map(), keyToPkgname: new Map(), keyToFiles: new Map() },
+      { hasCompiledCode: true },
+    );
+    expect(plugins).toEqual([]);
+  });
+
+  it('still flags a real plugin dir owned by a handful of packages', () => {
+    const direct = mk({ 'usr/lib/fooyin/plugins': ['c1'] });
+    const plugins = derivePluginOf(
+      ['usr/lib/fooyin/plugins/foo.so'],
+      { direct, ancestors: new Map(), keyToPkgname: new Map([['c1', 'fooyin']]), keyToFiles: new Map() },
+      { hasCompiledCode: true },
+    );
+    expect(plugins).toEqual(['c1']);
+  });
+
+  it('does not treat a build variant as a plugin of the base package', () => {
+    // fooyin-git (Chaotic, built from master) installs into usr/lib/fooyin/
+    // plugins, which fooyin (Arch, stable) also owns. Same upstream package,
+    // so fooyin must NOT appear in fooyin-git's pluginOf — a stable-version
+    // vtable drift never requires rebuilding the -git build.
+    const direct = mk({
+      'usr/lib/fooyin/plugins': ['a16430', 'c9'],
+    });
+    const names = new Map<string, string>([
+      ['a16430', 'fooyin'],
+      ['c9', 'fooyin-git'],
+    ]);
+    const plugins = derivePluginOf(
+      ['usr/lib/fooyin/plugins/foo.so'],
+      { direct, ancestors: new Map(), keyToPkgname: names, keyToFiles: new Map() },
+      { consumerPkgname: 'fooyin-git', hasCompiledCode: true },
+    );
+    expect(plugins).toEqual([]);
+  });
+
+  it('keeps a genuinely external owner even when a same-family owner also matches', () => {
+    // fooyin-git installs a .so into both its own namespace and an external
+    // host's plugin dir. The same-family owner is dropped, the external host stays.
+    const direct = mk({
+      'usr/lib/fooyin/plugins': ['a16430', 'c9'],
+      'usr/lib/kwin/effects/plugins': ['a42'],
+    });
+    const names = new Map<string, string>([
+      ['a16430', 'fooyin'],
+      ['c9', 'fooyin-git'],
+      ['a42', 'kwin'],
+    ]);
+    const plugins = derivePluginOf(
+      ['usr/lib/fooyin/plugins/foo.so', 'usr/lib/kwin/effects/plugins/foo.so'],
+      { direct, ancestors: new Map(), keyToPkgname: names, keyToFiles: new Map() },
+      { consumerPkgname: 'fooyin-git', hasCompiledCode: true },
+    );
+    expect(plugins).toEqual(['a42']);
+  });
+
+  it('does not treat a fork that shadows the owner as a plugin', () => {
+    // ungoogled-chromium-bin installs into chromium's own namespace AND ships
+    // files at the same paths chromium ships (usr/lib/chromium/...). It shadows
+    // chromium, so it is a fork, not a plugin of it.
+    const direct = mk({ 'usr/lib/chromium': ['a1118'] });
+    const keyToFiles = new Map<string, Set<string>>([
+      ['a1118', new Set(['usr/lib/chromium/chrome', 'usr/lib/chromium/v8_context_snapshot.bin'])],
+    ]);
+    const plugins = derivePluginOf(
+      ['usr/lib/chromium/chrome', 'usr/lib/chromium/v8_context_snapshot.bin', 'usr/lib/chromium/locales/en.pak'],
+      { direct, ancestors: new Map(), keyToPkgname: new Map([['a1118', 'chromium']]), keyToFiles },
+      { consumerPkgname: 'ungoogled-chromium-bin', hasCompiledCode: true },
+    );
+    expect(plugins).toEqual([]);
+  });
+
+  it('keeps a plugin that only adds files to the host namespace', () => {
+    // A real kwin effect adds its own .so into kwin's dir; it shares no file
+    // with kwin, so the shadow rule must not remove it.
+    const direct = mk({ 'usr/lib/qt6/plugins/kwin/effects/configs': ['a42'] });
+    const keyToFiles = new Map<string, Set<string>>([
+      ['a42', new Set(['usr/lib/qt6/plugins/kwin/effects/configs/kwin_config.so'])],
+    ]);
+    const plugins = derivePluginOf(
+      ['usr/lib/qt6/plugins/kwin/effects/configs/kwin_better_blur_dx_config.so'],
+      { direct, ancestors: new Map(), keyToPkgname: new Map([['a42', 'kwin']]), keyToFiles },
+      { consumerPkgname: 'better-blur', hasCompiledCode: true },
+    );
+    expect(plugins).toEqual(['a42']);
   });
 
   it('applies threshold filtering for packages with high pluginOf but minimal file/directory ownership', () => {
@@ -307,8 +416,9 @@ describe('derivePluginOf', () => {
         direct,
         ancestors,
         keyToPkgname: names,
+        keyToFiles: new Map(),
       },
-      true,
+      { hasCompiledCode: true },
     );
 
     // Should apply threshold filtering since 150 owners > 100 threshold but only 3 files

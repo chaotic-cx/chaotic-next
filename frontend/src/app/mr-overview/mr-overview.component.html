@@ -3,7 +3,7 @@
   subtitleHtml="Package updates currently queued for human review with the option to approve the MR for auto-merge."
 />
 
-<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 !text-left sm:px-2.5">
+<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 text-left! sm:px-2.5">
   <p-tabs [value]="activeTabValue()" (valueChange)="onTabChange($event)">
     <p-tablist>
       <p-tab value="0">
@@ -64,6 +64,7 @@
       class="mr-overview-panel"
       [class.mt-5]="i > 0"
       [class.mr-focused]="focusedIndex() === i"
+      [class.mr-approved]="mr.labels.includes('approved')"
       [attr.data-mr-panel]="''"
       [attr.data-mr-iid]="mr.iid"
       [attr.tabindex]="focusedIndex() === i ? 0 : -1"

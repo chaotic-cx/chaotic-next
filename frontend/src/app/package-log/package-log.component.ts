@@ -146,7 +146,7 @@ export class PackageLogComponent implements OnDestroy {
     this.cumulativeOffset = 0;
 
     this.appService.updateSeoTags(this.meta, {
-      title: `Chaotic-AUR - ${pkgname} build log`,
+      title: `${pkgname} build log · Chaotic-AUR`,
       description: 'Build log of a Chaotic-AUR package',
       keywords: 'Chaotic-AUR, build, log, package',
       url: this.router.url,

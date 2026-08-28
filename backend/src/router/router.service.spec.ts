@@ -12,9 +12,11 @@ interface QueryBuilderMock {
   select: Mock<(alias: string, aliasName?: string) => QueryBuilderMock>;
   addSelect: Mock<(alias: string, aliasName?: string) => QueryBuilderMock>;
   where: Mock<(condition: string, parameters: { cutoff: Date }) => QueryBuilderMock>;
+  andWhere: Mock<(condition: string, parameters?: Record<string, unknown>) => QueryBuilderMock>;
   groupBy: Mock<(expression: string) => QueryBuilderMock>;
   addGroupBy: Mock<(expression: string) => QueryBuilderMock>;
   orderBy: Mock<(expression: string) => QueryBuilderMock>;
+  limit: Mock<(limit: number) => QueryBuilderMock>;
   getRawMany: Mock<() => Promise<unknown[]>>;
   getRawOne: Mock<() => Promise<unknown>>;
 }
@@ -24,9 +26,11 @@ function createService(rawMany: unknown[], rawOne: unknown = undefined) {
     select: vi.fn(() => qb),
     addSelect: vi.fn(() => qb),
     where: vi.fn(() => qb),
+    andWhere: vi.fn(() => qb),
     groupBy: vi.fn(() => qb),
     addGroupBy: vi.fn(() => qb),
     orderBy: vi.fn(() => qb),
+    limit: vi.fn(() => qb),
     getRawMany: vi.fn().mockResolvedValue(rawMany),
     getRawOne: vi.fn().mockResolvedValue(rawOne),
   };
@@ -85,6 +89,26 @@ describe('RouterService', () => {
     await expect(service.getCountryStatsOverTime(30)).resolves.toEqual(rows);
     expect(qb.select).toHaveBeenCalledWith(`TO_CHAR(hit.day, 'YYYY-MM-DD')`, 'day');
     expect(qb.addSelect).toHaveBeenCalledWith('hit.country', 'country');
+  });
+
+  it('filters mirror stats over time by repo', async () => {
+    const { service, qb } = createService([]);
+    await service.getMirrorStatsOverTime(30, 'garuda');
+    expect(qb.andWhere).toHaveBeenCalledWith('hit.repo = :repo', { repo: 'garuda' });
+  });
+
+  it('does not filter country stats over time when no repo is given', async () => {
+    const { service, qb } = createService([]);
+    await service.getCountryStatsOverTime(30);
+    expect(qb.andWhere).not.toHaveBeenCalled();
+  });
+
+  it('returns the user-agent trend and filters it by repo', async () => {
+    const rows = [{ day: '2026-08-01', userAgent: 'pacman/7.0.0', count: '5' }];
+    const { service, qb } = createService(rows);
+    await expect(service.getUserAgentTrend(30, 5, 'chaotic-aur')).resolves.toEqual(rows);
+    expect(qb.limit).toHaveBeenCalledWith(5);
+    expect(qb.andWhere).toHaveBeenCalledWith('hit.repo = :repo', { repo: 'chaotic-aur' });
   });
 
   it('clamps days below the minimum to the minimum', async () => {

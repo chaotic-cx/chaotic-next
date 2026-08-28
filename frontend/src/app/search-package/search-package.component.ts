@@ -209,7 +209,7 @@ export class SearchPackageComponent implements OnInit {
 
   ngOnInit() {
     this.appService.updateSeoTags(this.meta, {
-      title: 'Chaotic-AUR - Package search',
+      title: 'Package search · Chaotic-AUR',
       description: 'Search packages available in the Chaotic-AUR repository',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search',

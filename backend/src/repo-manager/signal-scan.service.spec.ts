@@ -70,9 +70,10 @@ describe('Compiled Code Detection Integration', () => {
       direct: new Map([['usr/share/bash-completion', ['a123']]]),
       ancestors: new Map([['usr/share/bash-completion', ['a123']]]),
       keyToPkgname: new Map([['a123', 'bash']]),
+      keyToFiles: new Map(),
     };
 
-    const plugins = derivePluginOf(files, index, false);
+    const plugins = derivePluginOf(files, index, { hasCompiledCode: false });
     expect(plugins).toEqual([]);
   });
 
@@ -82,9 +83,10 @@ describe('Compiled Code Detection Integration', () => {
       direct: new Map([['usr/lib/qt6/plugins/kwin/effects/plugins', ['a456']]]),
       ancestors: new Map([['usr/lib/qt6/plugins/kwin', ['a456']]]),
       keyToPkgname: new Map([['a456', 'kwin']]),
+      keyToFiles: new Map(),
     };
 
-    const plugins = derivePluginOf(files, index, true);
+    const plugins = derivePluginOf(files, index, { hasCompiledCode: true });
     expect(plugins).toEqual(['a456']);
   });
 

@@ -111,7 +111,7 @@ export class MemorialComponent implements OnInit {
 
   ngOnInit() {
     updateSeoTags(this.meta, {
-      title: 'Chaotic-AUR - Memorial 2021',
+      title: 'Memorial 2021 · Chaotic-AUR',
       description: 'Memorial of Chaotic-AUR, celebrating the third birthday of Chaotic-AUR',
       keywords:
         'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
