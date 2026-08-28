@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
-import { ChartAdditionsComponent } from '../../chart-additions/chart-additions.component';
+import { ChartAdditionsComponent } from '../charts/builds/chart-additions/chart-additions.component';
 
 @Component({
   selector: 'chaotic-stats-additions-page',

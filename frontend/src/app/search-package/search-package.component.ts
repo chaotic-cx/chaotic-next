@@ -21,9 +21,9 @@ import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/auto
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { AppService } from '../app.service';
-import { ChartPackageAverageBuildTimeComponent } from '../chart-package-average-build-time/chart-package-average-build-time.component';
-import { ChartPackageBuildStatsComponent } from '../chart-package-build-stats/chart-package-build-stats.component';
-import { ChartPackageResourceStatsComponent } from '../chart-package-resource-stats/chart-package-resource-stats.component';
+import { ChartPackageAverageBuildTimeComponent } from '../stats/charts/packages/chart-package-average-build-time/chart-package-average-build-time.component';
+import { ChartPackageBuildStatsComponent } from '../stats/charts/packages/chart-package-build-stats/chart-package-build-stats.component';
+import { ChartPackageResourceStatsComponent } from '../stats/charts/packages/chart-package-resource-stats/chart-package-resource-stats.component';
 import { resourceValue } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { LocaleDatePipe } from '../pipes/locale-date.pipe';

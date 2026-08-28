@@ -1,0 +1,59 @@
+import { httpResource } from '@angular/common/http';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { UIChart } from '@openng/optimus-ui/chart';
+import { InputNumber } from '@openng/optimus-ui/inputnumber';
+import { AppService } from '../../../../app.service';
+import { isMobileSignal, parseCount, resourceValue, truncateLabel } from '../../../../functions';
+import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { StatsService } from '../../../stats.service';
+import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+
+@Component({
+  selector: 'chaotic-chart-popular-packages',
+  imports: [UIChart, InputNumber, FormsModule],
+  templateUrl: './chart-popular-packages.component.html',
+  styleUrl: './chart-popular-packages.component.css',
+})
+export class ChartPopularPackagesComponent {
+  private readonly appService = inject(AppService);
+  private readonly statsService = inject(StatsService);
+
+  readonly amount = signal(20);
+
+  protected readonly Math = Math;
+  protected readonly isMobile = isMobileSignal();
+
+  private readonly resource = httpResource<{ pkgbase_pkgname: string; count: string }[]>(() => {
+    const val = Math.max(1, this.amount() || 1);
+    return this.appService.getPopularPackagesResourceRequest(val, this.statsService.timeRangeDays() ?? undefined);
+  });
+
+  readonly loading = this.resource.isLoading;
+
+  readonly hasData = computed(() => this.resource.hasValue());
+
+  readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
+    const data = resourceValue(this.resource) ?? [];
+    const labels: string[] = [];
+    const values: number[] = [];
+    for (const item of data) {
+      labels.push(this.isMobile() ? truncateLabel(item.pkgbase_pkgname) : item.pkgbase_pkgname);
+      values.push(parseCount(item.count));
+    }
+
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            data: values,
+            label: 'Build count',
+            backgroundColor: CATPPUCCIN_FLAVOURS,
+          },
+        ],
+      },
+      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
+    };
+  });
+}

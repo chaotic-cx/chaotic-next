@@ -1,9 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
-import { ChartDownloadsComponent } from '../../chart-downloads/chart-downloads.component';
-import { ChartDownloadersTrendComponent } from '../../chart-downloaders-trend/chart-downloaders-trend.component';
-import { ChartCountryOverTimeComponent } from '../../chart-country-over-time/chart-country-over-time.component';
-import { ChartMirrorOverTimeComponent } from '../../chart-mirror-over-time/chart-mirror-over-time.component';
+import { ChartDownloadsComponent } from '../charts/downloads/chart-downloads/chart-downloads.component';
+import { ChartDownloadersTrendComponent } from '../charts/downloads/chart-downloaders-trend/chart-downloaders-trend.component';
+import { ChartCountryOverTimeComponent } from '../charts/downloads/chart-country-over-time/chart-country-over-time.component';
+import { ChartMirrorOverTimeComponent } from '../charts/downloads/chart-mirror-over-time/chart-mirror-over-time.component';
 import { StatsService } from '../stats.service';
 
 @Component({

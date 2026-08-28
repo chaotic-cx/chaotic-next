@@ -9,7 +9,6 @@ import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from './repo-manage
 import { RepoManagerService } from './repo-manager.service';
 import { GitlabRepoReaderFactory, GitlabRepoWriter, REPO_READER_FACTORY, REPO_WRITER } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
-import { SeedTransferService } from './seed-transfer.service';
 import { HttpModule } from '@nestjs/axios';
 import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -17,7 +16,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   controllers: [RepoManagerController],
-  exports: [TypeOrmModule, RepoManagerService, SignalScanService, SeedTransferService],
+  exports: [TypeOrmModule, RepoManagerService, SignalScanService],
   imports: [
     forwardRef(() => BuilderModule),
     ConfigModule.forFeature(repoManagerConfig),
@@ -27,7 +26,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   providers: [
     RepoManagerService,
     SignalScanService,
-    SeedTransferService,
     ArchMirrorService,
     ChaoticIndexService,
     RebuildTriggerService,

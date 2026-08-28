@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
-import { ChartHeavyPackagesResourceComponent } from '../../chart-heavy-packages-resource/chart-heavy-packages-resource.component';
+import { ChartHeavyPackagesResourceComponent } from '../charts/builds/chart-heavy-packages-resource/chart-heavy-packages-resource.component';
 
 @Component({
   selector: 'chaotic-stats-resource-usage-page',

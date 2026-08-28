@@ -11,7 +11,6 @@ import { RepoManagerService } from './repo-manager.service';
 import { ArchlinuxPackage, PackageElfAnalysis } from './repo-manager.entity';
 import type { RepoReaderFactory, RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
-import { SeedTransferService } from './seed-transfer.service';
 import { createMockRepository, MockRepository } from './test/mock-repository';
 
 describe('RepoManagerService.getBrokenPackages', () => {
@@ -303,7 +302,6 @@ function buildService(
     packageRepository,
     elfAnalysisRepository,
     {} as SignalScanService,
-    {} as SeedTransferService,
     {} as ArchMirrorService,
     {} as ChaoticIndexService,
     {} as RebuildTriggerService,

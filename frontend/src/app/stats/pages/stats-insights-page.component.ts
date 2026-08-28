@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
-import { ChartAverageBuildTimeTrendComponent } from '../../chart-average-build-time-trend/chart-average-build-time-trend.component';
-import { ChartBuilderUtilizationComponent } from '../../chart-builder-utilization/chart-builder-utilization.component';
-import { ChartBuildFailuresOverTimeComponent } from '../../chart-build-failures-over-time/chart-build-failures-over-time.component';
-import { ChartFailedHotspotsComponent } from '../../chart-failed-hotspots/chart-failed-hotspots.component';
-import { ChartFlakyPackagesComponent } from '../../chart-flaky-packages/chart-flaky-packages.component';
-import { ChartThroughputComponent } from '../../chart-throughput/chart-throughput.component';
-import { ChartUnresolvedFailuresComponent } from '../../chart-unresolved-failures/chart-unresolved-failures.component';
+import { ChartAverageBuildTimeTrendComponent } from '../charts/builds/chart-average-build-time-trend/chart-average-build-time-trend.component';
+import { ChartBuilderUtilizationComponent } from '../charts/builds/chart-builder-utilization/chart-builder-utilization.component';
+import { ChartBuildFailuresOverTimeComponent } from '../charts/builds/chart-build-failures-over-time/chart-build-failures-over-time.component';
+import { ChartFailedHotspotsComponent } from '../charts/builds/chart-failed-hotspots/chart-failed-hotspots.component';
+import { ChartFlakyPackagesComponent } from '../charts/builds/chart-flaky-packages/chart-flaky-packages.component';
+import { ChartThroughputComponent } from '../charts/builds/chart-throughput/chart-throughput.component';
+import { ChartUnresolvedFailuresComponent } from '../charts/builds/chart-unresolved-failures/chart-unresolved-failures.component';
 
 @Component({
   selector: 'chaotic-stats-insights-page',

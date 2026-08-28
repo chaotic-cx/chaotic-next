@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
-import { ChartAverageBuildTimeComponent } from '../../chart-average-build-time/chart-average-build-time.component';
-import { ChartBuildersAmountComponent } from '../../chart-builders-amount/chart-builders-amount.component';
-import { ChartBuildsPerDayComponent } from '../../chart-builds-per-day/chart-builds-per-day.component';
-import { ChartHeavyPackagesComponent } from '../../chart-heavy-packages/chart-heavy-packages.component';
-import { ChartPackagesPerBuildClassComponent } from '../../chart-packages-per-build-class/chart-packages-per-build-class.component';
-import { ChartPkgbaseCompositionComponent } from '../../chart-pkgbase-composition/chart-pkgbase-composition.component';
-import { ChartPopularPackagesComponent } from '../../chart-popular-packages/chart-popular-packages.component';
+import { ChartAverageBuildTimeComponent } from '../charts/builds/chart-average-build-time/chart-average-build-time.component';
+import { ChartBuildersAmountComponent } from '../charts/builds/chart-builders-amount/chart-builders-amount.component';
+import { ChartBuildsPerDayComponent } from '../charts/builds/chart-builds-per-day/chart-builds-per-day.component';
+import { ChartHeavyPackagesComponent } from '../charts/builds/chart-heavy-packages/chart-heavy-packages.component';
+import { ChartPackagesPerBuildClassComponent } from '../charts/builds/chart-packages-per-build-class/chart-packages-per-build-class.component';
+import { ChartPkgbaseCompositionComponent } from '../charts/builds/chart-pkgbase-composition/chart-pkgbase-composition.component';
+import { ChartPopularPackagesComponent } from '../charts/builds/chart-popular-packages/chart-popular-packages.component';
 
 @Component({
   selector: 'chaotic-stats-builder-stats-page',

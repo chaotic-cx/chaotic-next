@@ -19,7 +19,7 @@ import {
 import { lastValueFrom, Subject } from 'rxjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
-import { type ResourceMetricKey } from './chart-resource-metrics';
+import { type ResourceMetricKey } from './stats/charts/chart-resource-metrics';
 import { isChaoticEvent, type SeoTags, updateSeoTags } from './functions';
 import { parseQueryParams } from './utils/api-params';
 
