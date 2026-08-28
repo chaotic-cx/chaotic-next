@@ -27,7 +27,11 @@ export class ChartDownloadsComponent {
 
   private readonly resource = httpResource<PackageRankList>(() => {
     const val = Math.max(1, this.range() || 1);
-    return this.appService.getOverallPackageStatsResourceRequest(val, this.statsService.timeRangeDays() ?? undefined);
+    return this.appService.getOverallPackageStatsResourceRequest(
+      val,
+      this.statsService.timeRangeDays() ?? undefined,
+      this.statsService.selectedRepo() || undefined,
+    );
   });
 
   readonly loading = this.resource.isLoading;

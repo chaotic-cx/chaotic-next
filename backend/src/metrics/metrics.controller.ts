@@ -34,7 +34,7 @@ export class MetricsController {
   @ApiOperation({ summary: 'Get user agent statistics for a given number of days.' })
   @ApiOkResponse({ description: 'User agent stats', type: UserAgentMetricDto, isArray: true })
   userAgents(@Query() query: MetricsQueryDto): Promise<UserAgentMetricDto[]> {
-    return this.metricsService.uniqueUserAgents(query.days);
+    return this.metricsService.uniqueUserAgents(query.days, query.repo);
   }
 
   @Get('package/:package')
@@ -50,7 +50,7 @@ export class MetricsController {
   @ApiParam({ name: 'range', description: 'Range (e.g. top 10)', required: true })
   @ApiOkResponse({ description: 'Country rank list', type: CountNameDto, isArray: true })
   rankCountries(@Param('range') range: string, @Query() query: MetricsQueryDto): Promise<CountNameDto[]> {
-    return this.metricsService.rankCountries(range, query.days);
+    return this.metricsService.rankCountries(range, query.days, query.repo);
   }
 
   @Get('rank/:range/packages')
@@ -58,7 +58,7 @@ export class MetricsController {
   @ApiParam({ name: 'range', description: 'Range (e.g. top 10)', required: true })
   @ApiOkResponse({ description: 'Package rank list', type: CountNameDto, isArray: true })
   rankPackages(@Param('range') range: string, @Query() query: MetricsQueryDto): Promise<CountNameDto[]> {
-    return this.metricsService.rankPackages(range, query.days);
+    return this.metricsService.rankPackages(range, query.days, query.repo);
   }
 
   @Get('rps/history')

@@ -26,7 +26,10 @@ export class ChartMirrorOverTimeComponent {
   private readonly statsService = inject(StatsService);
 
   private readonly resource = httpResource<MirrorRow[]>(() =>
-    this.appService.getMirrorStatsOverTimeResourceRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
+    this.appService.getMirrorStatsOverTimeResourceRequest(
+      this.statsService.timeRangeDays() ?? ALL_TIME_DAYS,
+      this.statsService.selectedRepo() || undefined,
+    ),
   );
 
   readonly loading = this.resource.isLoading;

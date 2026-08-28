@@ -118,6 +118,20 @@ describe('srcinfo-consistency rules', () => {
     expect(scan(commented, SRCINFO_LINES)).toHaveLength(0);
   });
 
+  it('keeps a quoted pkgdesc with parentheses a scalar, not an array', () => {
+    const withParens = [
+      ...PKGBUILD_LINES.slice(0, 3),
+      'pkgdesc="Multi-protocol client with AI and cloud storage (FTP, FTPS, SFTP, WebDAV, S3)"',
+      ...PKGBUILD_LINES.slice(4),
+    ];
+    const generated = SRCINFO_LINES.map((line) =>
+      line === 'pkgdesc = A test package'
+        ? 'pkgdesc = Multi-protocol client with AI and cloud storage (FTP, FTPS, SFTP, WebDAV, S3)'
+        : line,
+    );
+    expect(scan(withParens, generated)).toHaveLength(0);
+  });
+
   it('substitutes variables when comparing scalars', () => {
     const templated = [...PKGBUILD_LINES, '_base_version=1.2.3'].map((line) =>
       line === 'pkgver=1.2.3' ? 'pkgver=$_base_version' : line,

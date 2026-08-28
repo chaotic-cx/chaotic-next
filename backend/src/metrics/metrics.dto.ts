@@ -55,6 +55,11 @@ export class MetricsQueryDto {
   @Type(() => Number)
   @IsInt()
   days?: number;
+
+  @ApiPropertyOptional({ description: 'Optional repo to filter metrics for' })
+  @IsOptional()
+  @IsString()
+  repo?: string;
 }
 
 export class LiveTrafficHitDto {

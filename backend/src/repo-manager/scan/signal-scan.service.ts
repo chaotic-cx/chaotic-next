@@ -17,6 +17,7 @@ import {
   encodeOwnerKey,
   findBrokenDependencies,
   formatBrokenDependency,
+  isPackageMetadata,
   latestAnalysisByKey,
   MIN_PROVIDED_SONAMES,
   pkgTypeOf,
@@ -46,6 +47,7 @@ type PluginOfUpdate = Pick<PackageElfAnalysis, 'id' | 'pkgType' | 'pkgId' | 'ver
 interface OwnerDirs {
   direct: Set<string>;
   ancestors: Set<string>;
+  files: Set<string>;
 }
 
 interface DirectoryCache {
@@ -75,9 +77,13 @@ function removeOwner(map: Map<string, string[]>, dir: string, key: string): void
 function applyOwnerDirs(
   cache: DirectoryCache,
   key: string,
-  analysis: Pick<PackageElfAnalysis, 'directDirectories' | 'directoriesOwned'>,
+  analysis: Pick<PackageElfAnalysis, 'directDirectories' | 'directoriesOwned' | 'files'>,
 ): void {
-  const record = cache.dirs.get(key) ?? { direct: new Set<string>(), ancestors: new Set<string>() };
+  const record = cache.dirs.get(key) ?? {
+    direct: new Set<string>(),
+    ancestors: new Set<string>(),
+    files: new Set<string>(),
+  };
   for (const dir of analysis.directDirectories) {
     addOwner(cache.index.direct, dir, key);
     record.direct.add(dir);
@@ -86,6 +92,13 @@ function applyOwnerDirs(
     addOwner(cache.index.ancestors, dir, key);
     record.ancestors.add(dir);
   }
+  const ownerFiles = cache.index.keyToFiles.get(key) ?? new Set<string>();
+  for (const file of analysis.files) {
+    if (isPackageMetadata(file)) continue;
+    ownerFiles.add(file);
+    record.files.add(file);
+  }
+  cache.index.keyToFiles.set(key, ownerFiles);
   cache.dirs.set(key, record);
 }
 
@@ -165,8 +178,15 @@ export class SignalScanService {
     // scheduling under concurrency > 1.
     await this.updateDirectoryIndex(scanned.map(({ job }) => ({ pkgType: pkgTypeOf(job.pkgType), pkgId: job.pkgId })));
     const index = await this.getDirectoryIndex();
+    const pkgnameById = await this.loadPkgnameMap(
+      scanned.map(({ job }) => ({ pkgType: job.pkgType, pkgId: job.pkgId })),
+    );
     for (const { job, files, hasCompiledCode, isSourceCompiled } of scanned) {
-      const pluginOf = derivePluginOf(files, index, hasCompiledCode, isSourceCompiled);
+      const pluginOf = derivePluginOf(files, index, {
+        consumerPkgname: pkgnameById.get(job.pkgId) ?? null,
+        hasCompiledCode,
+        isSourceCompiled,
+      });
       await this.analysisRepository.update(
         { pkgType: pkgTypeOf(job.pkgType), pkgId: job.pkgId, version: job.version },
         { pluginOf },
@@ -325,10 +345,10 @@ export class SignalScanService {
   private async loadDirectoryCache(): Promise<DirectoryCache> {
     if (this.directoryCache) return this.directoryCache;
     const analyses = await this.analysisRepository.find({
-      select: { pkgId: true, pkgType: true, directDirectories: true, directoriesOwned: true },
+      select: { pkgId: true, pkgType: true, directDirectories: true, directoriesOwned: true, files: true },
     });
     const cache: DirectoryCache = {
-      index: { direct: new Map(), ancestors: new Map(), keyToPkgname: new Map() },
+      index: { direct: new Map(), ancestors: new Map(), keyToPkgname: new Map(), keyToFiles: new Map() },
       dirs: new Map(),
     };
     const archIds: number[] = [];
@@ -373,13 +393,16 @@ export class SignalScanService {
       if (record) {
         for (const dir of record.direct) removeOwner(cache.index.direct, dir, key);
         for (const dir of record.ancestors) removeOwner(cache.index.ancestors, dir, key);
+        const ownerFiles = cache.index.keyToFiles.get(key);
+        if (ownerFiles) for (const file of record.files) ownerFiles.delete(file);
+        if (ownerFiles?.size === 0) cache.index.keyToFiles.delete(key);
         cache.dirs.delete(key);
       }
     }
 
     const archIds = packages.filter((p) => p.pkgType === ARCH_PKG_TYPE).map((p) => p.pkgId);
     const chaoticIds = packages.filter((p) => p.pkgType === CHAOTIC_PKG_TYPE).map((p) => p.pkgId);
-    const select = { pkgId: true, directDirectories: true, directoriesOwned: true };
+    const select = { pkgId: true, directDirectories: true, directoriesOwned: true, files: true };
     const [archRows, chaoticRows] = await Promise.all([
       this.findAnalyses(ARCH_PKG_TYPE, archIds, select),
       this.findAnalyses(CHAOTIC_PKG_TYPE, chaoticIds, select),
@@ -404,6 +427,23 @@ export class SignalScanService {
   ): Promise<PackageElfAnalysis[]> {
     if (ids.length === 0) return Promise.resolve([]);
     return this.analysisRepository.find({ where: { pkgType, pkgId: In(ids) }, select });
+  }
+
+  private async loadPkgnameMap(entries: { pkgType: TriggerType; pkgId: number }[]): Promise<Map<number, string>> {
+    const map = new Map<number, string>();
+    const archIds = entries.filter((e) => e.pkgType === TriggerType.ARCH).map((e) => e.pkgId);
+    const chaoticIds = entries.filter((e) => e.pkgType === TriggerType.CHAOTIC).map((e) => e.pkgId);
+    const [archPkgs, chaoticPkgs] = await Promise.all([
+      archIds.length
+        ? this.archlinuxPackageRepository.find({ where: { id: In(archIds) }, select: { id: true, pkgname: true } })
+        : Promise.resolve([]),
+      chaoticIds.length
+        ? this.packageRepository.find({ where: { id: In(chaoticIds) }, select: { id: true, pkgname: true } })
+        : Promise.resolve([]),
+    ]);
+    for (const pkg of archPkgs) map.set(pkg.id, pkg.pkgname);
+    for (const pkg of chaoticPkgs) map.set(pkg.id, pkg.pkgname);
+    return map;
   }
 
   invalidateDirectoryIndex(): void {
@@ -442,6 +482,9 @@ export class SignalScanService {
   ): Promise<void> {
     if (analyses.length === 0) return;
     const index = await this.getDirectoryIndex();
+    const pkgnameById = await this.loadPkgnameMap(
+      analyses.map((a) => ({ pkgType: triggerTypeOf(a.pkgType), pkgId: a.pkgId })),
+    );
 
     const pkgIds = [...new Set(analyses.map((a) => a.pkgId))];
     // Only `files` is needed to derive pluginOf; the full rows carry heavy
@@ -474,7 +517,11 @@ export class SignalScanService {
       i++;
       if (!analysis) continue;
       const hasCompiledCode = analysis.providedSonames.length > 0 || analysis.neededSonames.length > 0;
-      const pluginOf = derivePluginOf(analysis.files, index, hasCompiledCode, analysis.isSourceCompiled);
+      const pluginOf = derivePluginOf(analysis.files, index, {
+        consumerPkgname: pkgnameById.get(pkgId) ?? null,
+        hasCompiledCode,
+        isSourceCompiled: analysis.isSourceCompiled,
+      });
       toSave.push({ id: analysis.id, pkgType, pkgId, version, pluginOf });
       if (i % step === 0) {
         this.logger.debug(`Derived pluginOf ${i}/${total}`, 'SignalScanService');

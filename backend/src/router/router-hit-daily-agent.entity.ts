@@ -12,6 +12,9 @@ export class RouterHitDailyAgent {
   @PrimaryColumn({ type: 'text', name: 'user_agent' })
   userAgent!: string;
 
+  @PrimaryColumn({ type: 'text' })
+  repo!: string;
+
   @Column({ type: 'bigint' })
   count!: string;
 }

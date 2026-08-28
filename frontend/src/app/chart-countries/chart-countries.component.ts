@@ -24,7 +24,10 @@ export class ChartCountriesComponent {
   protected readonly statsService = inject(StatsService);
 
   private readonly resource = httpResource<{ name: string; count: number }[]>(() =>
-    this.appService.getCountryRanksResourceRequest(this.statsService.timeRangeDays() ?? undefined),
+    this.appService.getCountryRanksResourceRequest(
+      this.statsService.timeRangeDays() ?? undefined,
+      this.statsService.selectedRepo() || undefined,
+    ),
   );
 
   readonly loading = this.resource.isLoading;

@@ -215,7 +215,9 @@ export class DeployLogComponent {
   }
 
   openDetail(build: Build) {
-    void this.router.navigate(['/stats'], { queryParams: { search: build.pkgbase.pkgname } });
+    void this.router.navigate(['/stats'], {
+      queryParams: { search: build.pkgbase.pkgname, repo: build.repo?.name },
+    });
   }
 
   private applyFilter<T>(setFilter: (value: T | null) => void, value: T | null): void {

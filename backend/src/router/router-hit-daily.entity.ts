@@ -15,6 +15,9 @@ export class RouterHitDaily {
   @PrimaryColumn({ type: 'text' })
   package!: string;
 
+  @PrimaryColumn({ type: 'text' })
+  repo!: string;
+
   @Column({ type: 'bigint' })
   count!: string;
 }

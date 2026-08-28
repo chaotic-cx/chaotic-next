@@ -104,6 +104,13 @@ describe('MetricsService', () => {
       const result = await service.uniqueUserAgents();
       expect(result).toEqual(rows);
     });
+
+    it('filters the user agent list by repo', async () => {
+      const qb = makeQb();
+      const { service, qb: mqb } = createService(qb);
+      await service.uniqueUserAgents(30, 'chaotic-aur');
+      expect(mqb.andWhere).toHaveBeenCalledWith('hit.repo = :repo', { repo: 'chaotic-aur' });
+    });
   });
 
   describe('packageMetrics', () => {
@@ -169,6 +176,13 @@ describe('MetricsService', () => {
       expect(mqb.limit).toHaveBeenCalledWith(10);
     });
 
+    it('filters the ranking by repo', async () => {
+      const qb = makeQb();
+      const { service, qb: mqb } = createService(qb);
+      await service.rankCountries('10', 30, 'garuda');
+      expect(mqb.andWhere).toHaveBeenCalledWith('hit.repo = :repo', { repo: 'garuda' });
+    });
+
     it('rejects a non-numeric range', async () => {
       const { service } = createService(makeQb());
       await expect(service.rankCountries('abc')).rejects.toBeInstanceOf(BadRequestException);
@@ -195,6 +209,13 @@ describe('MetricsService', () => {
       const { service } = createService(qb);
       const result = await service.rankPackages('5', 30);
       expect(result).toEqual(rows);
+    });
+
+    it('filters the ranking by repo without limiting when no repo is given', async () => {
+      const qb = makeQb();
+      const { service, qb: mqb } = createService(qb);
+      await service.rankPackages('5', 30);
+      expect(mqb.andWhere).not.toHaveBeenCalled();
     });
 
     it('rejects a non-numeric range', async () => {

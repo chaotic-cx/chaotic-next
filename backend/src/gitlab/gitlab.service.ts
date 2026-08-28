@@ -1131,17 +1131,37 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     await this.postActorComment(iid, '✅ Approved by', actor);
     await this.recordMrAction(iid, 'approve', targetSha, actor);
 
-    const deferred = isOnSchedulePipelineRunning();
-    if (deferred) {
-      this.logger.log(
-        `MR !${iid} approved while scheduled pipeline is running. Merge will be executed once the scheduled pipeline completes.`,
-      );
-    } else {
-      await this.mergeWithRetry(iid, targetSha);
-    }
-    await this.cacheManager.del(this.CACHE_KEY_MRS);
+    const cachedMrs = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
+    const previousMr = cachedMrs?.find((candidate) => candidate.id === mr.id);
 
-    void this.refreshOpenMergeRequests();
+    const deferred = isOnSchedulePipelineRunning();
+    try {
+      if (deferred) {
+        this.logger.log(
+          `MR !${iid} approved while scheduled pipeline is running. Merge will be executed once the scheduled pipeline completes.`,
+        );
+      } else {
+        await this.mergeWithRetry(iid, targetSha);
+      }
+    } finally {
+      await this.cacheManager.del(this.CACHE_KEY_MRS);
+      const approvedLabels = labels.includes('approved') ? labels : [...labels, 'approved'];
+      this.eventService.sseEvents$.next({
+        data: {
+          type: 'merge_request',
+          mr: [
+            toMergeRequestWithDiffs(
+              { ...mr, labels: approvedLabels },
+              previousMr?.diffs ?? [],
+              previousMr?.scanFindings ?? [],
+              previousMr,
+            ),
+          ],
+          hasNewMr: false,
+        },
+      });
+      void this.refreshOpenMergeRequests();
+    }
     return { deferred };
   }
 

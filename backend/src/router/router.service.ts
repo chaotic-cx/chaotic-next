@@ -36,29 +36,31 @@ export class RouterService implements OnModuleInit {
   async refreshDailyRollup(): Promise<void> {
     try {
       await this.dataSource.query(`
-        INSERT INTO "router_hits_daily" ("day", "country", "hostname", "package", "count")
+        INSERT INTO "router_hits_daily" ("day", "country", "hostname", "package", "repo", "count")
         SELECT
           DATE_TRUNC('day', "timestamp" AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',
           "country",
           "hostname",
           "package",
+          "repo",
           COUNT(*)::bigint
         FROM "router-hits"
         WHERE "timestamp" >= (SELECT COALESCE(MAX("day"), '-infinity'::timestamp) FROM "router_hits_daily")
-        GROUP BY 1, 2, 3, 4
-        ON CONFLICT ("day", "country", "hostname", "package") DO UPDATE SET "count" = EXCLUDED."count"
+        GROUP BY 1, 2, 3, 4, 5
+        ON CONFLICT ("day", "country", "hostname", "package", "repo") DO UPDATE SET "count" = EXCLUDED."count"
       `);
       await this.dataSource.query(`
-        INSERT INTO "router_hits_daily_agents" ("day", "package", "user_agent", "count")
+        INSERT INTO "router_hits_daily_agents" ("day", "package", "user_agent", "repo", "count")
         SELECT
           DATE_TRUNC('day', "timestamp" AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',
           "package",
           COALESCE("user-agent", ''),
+          "repo",
           COUNT(*)::bigint
         FROM "router-hits"
         WHERE "timestamp" >= (SELECT COALESCE(MAX("day"), '-infinity'::timestamp) FROM "router_hits_daily_agents")
-        GROUP BY 1, 2, 3
-        ON CONFLICT ("day", "package", "user_agent") DO UPDATE SET "count" = EXCLUDED."count"
+        GROUP BY 1, 2, 3, 4
+        ON CONFLICT ("day", "package", "user_agent", "repo") DO UPDATE SET "count" = EXCLUDED."count"
       `);
       await this.dataSource.query(`
         INSERT INTO "router_hits_daily_users" ("day", "sketch")
@@ -130,12 +132,12 @@ export class RouterService implements OnModuleInit {
     );
   }
 
-  async getMirrorStatsOverTime(days: number): Promise<{ day: string; mirror: string; count: string }[]> {
-    return this.getGroupedStatsOverTime(days, 'hit.hostname', 'mirror');
+  async getMirrorStatsOverTime(days: number, repo = ''): Promise<{ day: string; mirror: string; count: string }[]> {
+    return this.getGroupedStatsOverTime(days, 'hit.hostname', 'mirror', repo);
   }
 
-  async getCountryStatsOverTime(days: number): Promise<{ day: string; country: string; count: string }[]> {
-    return this.getGroupedStatsOverTime(days, 'hit.country', 'country');
+  async getCountryStatsOverTime(days: number, repo = ''): Promise<{ day: string; country: string; count: string }[]> {
+    return this.getGroupedStatsOverTime(days, 'hit.country', 'country', repo);
   }
 
   /** Groups rollup rows by UTC day and one dimension, returning the count per day. */
@@ -143,28 +145,27 @@ export class RouterService implements OnModuleInit {
     days: number,
     groupColumn: string,
     groupAlias: K,
+    repo = '',
   ): Promise<({ day: string; count: string } & Record<K, string>)[]> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    const key = `router:${groupAlias}-over-time:${clampedDays}`;
-    return cachedResult(
-      this.cache,
-      key,
-      METRICS_CACHE_TTL_MS,
-      () =>
-        this.dataSource
-          .getRepository(RouterHitDaily)
-          .createQueryBuilder('hit')
-          .select(`TO_CHAR(hit.day, 'YYYY-MM-DD')`, 'day')
-          .addSelect(groupColumn, groupAlias)
-          .addSelect('SUM(hit.count)::text', 'count')
-          .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
-          .groupBy('hit.day')
-          .addGroupBy(groupColumn)
-          .orderBy('day', 'ASC')
-          .getRawMany<{ day: string; count: string } & Record<K, string>>() as Promise<
-          ({ day: string; count: string } & Record<K, string>)[]
-        >,
-    );
+    const key = `router:${groupAlias}-over-time:${clampedDays}:${repo}`;
+    return cachedResult(this.cache, key, METRICS_CACHE_TTL_MS, () => {
+      const query = this.dataSource
+        .getRepository(RouterHitDaily)
+        .createQueryBuilder('hit')
+        .select(`TO_CHAR(hit.day, 'YYYY-MM-DD')`, 'day')
+        .addSelect(groupColumn, groupAlias)
+        .addSelect('SUM(hit.count)::text', 'count')
+        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) });
+      if (repo) query.andWhere('hit.repo = :repo', { repo });
+      return query
+        .groupBy('hit.day')
+        .addGroupBy(groupColumn)
+        .orderBy('day', 'ASC')
+        .getRawMany<{ day: string; count: string } & Record<K, string>>() as Promise<
+        ({ day: string; count: string } & Record<K, string>)[]
+      >;
+    });
   }
 
   async getPackageStats(days: number): Promise<{ pkgbase: string; count: string }[]> {
@@ -197,25 +198,32 @@ export class RouterService implements OnModuleInit {
     );
   }
 
-  async getUserAgentTrend(days: number, top = 5): Promise<{ day: string; userAgent: string; count: string }[]> {
+  async getUserAgentTrend(
+    days: number,
+    top = 5,
+    repo = '',
+  ): Promise<{ day: string; userAgent: string; count: string }[]> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `router:user-agents:${clampedDays}:${top}`, METRICS_CACHE_TTL_MS, () =>
-      this.queryUserAgentTrend(clampedDays, top),
+    return cachedResult(this.cache, `router:user-agents:${clampedDays}:${top}:${repo}`, METRICS_CACHE_TTL_MS, () =>
+      this.queryUserAgentTrend(clampedDays, top, repo),
     );
   }
 
   private async queryUserAgentTrend(
     clampedDays: number,
     top: number,
+    repo = '',
   ): Promise<{ day: string; userAgent: string; count: string }[]> {
-    const repo = this.dataSource.getRepository(RouterHitDailyAgent);
+    const agentRepository = this.dataSource.getRepository(RouterHitDailyAgent);
     const cutoff = utcDayStart(nDaysInPast(clampedDays));
 
-    const topAgents = await repo
+    const topQuery = agentRepository
       .createQueryBuilder('hit')
       .select('hit.userAgent', 'ua')
       .addSelect('SUM(hit.count)', 'count')
-      .where('hit.day >= :cutoff', { cutoff })
+      .where('hit.day >= :cutoff', { cutoff });
+    if (repo) topQuery.andWhere('hit.repo = :repo', { repo });
+    const topAgents = await topQuery
       .groupBy('hit.userAgent')
       .orderBy('count', 'DESC')
       .limit(top)
@@ -224,13 +232,15 @@ export class RouterService implements OnModuleInit {
     const agents = topAgents.map((row) => row.ua);
     if (agents.length === 0) return [];
 
-    return repo
+    const trendQuery = agentRepository
       .createQueryBuilder('hit')
       .select(`TO_CHAR(hit.day, 'YYYY-MM-DD')::text`, 'day')
       .addSelect('hit.userAgent', 'userAgent')
       .addSelect('SUM(hit.count)::text', 'count')
       .where('hit.day >= :cutoff', { cutoff })
-      .andWhere('hit.userAgent IN (:...agents)', { agents })
+      .andWhere('hit.userAgent IN (:...agents)', { agents });
+    if (repo) trendQuery.andWhere('hit.repo = :repo', { repo });
+    return trendQuery
       .groupBy('hit.day')
       .addGroupBy('hit.userAgent')
       .orderBy('day', 'ASC')

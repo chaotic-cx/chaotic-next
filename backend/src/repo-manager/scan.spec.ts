@@ -1106,8 +1106,8 @@ describeTools('SignalScanService end-to-end', () => {
       const archRowCount = archPkgRepo.store.size;
 
       await seedService.importSeed([
-        seedEntry('owner', 10, 'usr/lib/foo'),
-        seedEntry('plugin', 11, 'usr/lib/foo'),
+        seedEntry('owner', 10, 'usr/lib/owner'),
+        seedEntry('plugin', 11, 'usr/lib/owner'),
       ] as unknown[]);
 
       // Analyses are keyed by the resolved database ids, not the seed identity.
@@ -1175,7 +1175,7 @@ describeTools('SignalScanService end-to-end', () => {
             brokenReasons: [],
           });
 
-        await writeFile(path, `${line(10, 'owner', ['usr/lib/foo'])}\n${line(11, 'plugin', ['usr/lib/foo'])}\n`);
+        await writeFile(path, `${line(10, 'owner', ['usr/lib/owner'])}\n${line(11, 'plugin', ['usr/lib/owner'])}\n`);
         await seedService.importSeedFile(path);
 
         const owner = Array.from(analysisRepo.store.values()).find((a) => a.pkgId === 10)!;

@@ -573,6 +573,104 @@ describe('GitlabService.approveMergeRequest', () => {
     }
   });
 
+  it('broadcasts the approved MR over SSE when the merge is deferred', async () => {
+    const { service, cacheGet, sseNext } = createService();
+    cacheGet.mockResolvedValue([
+      {
+        id: 1,
+        iid: 1,
+        title: 'chore(update): moon',
+        labels: ['human-review'],
+        diffs: [],
+        scanFindings: [],
+      },
+    ]);
+    const show = vi.fn().mockResolvedValue({
+      id: 1,
+      iid: 1,
+      sha: 'abc123',
+      labels: ['human-review'],
+      title: 'chore(update): moon',
+    });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn();
+    const approvalsApprove = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const mrActionInsert = vi.fn();
+    (service as unknown as { api: unknown }).api = {
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept },
+      MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestNotes: { create: noteCreate },
+    };
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T03:35:00Z'));
+    try {
+      const result = await service.approveMergeRequest(1, 'abc123', ACTOR);
+      expect(result).toEqual({ deferred: true });
+
+      expect(sseNext).toHaveBeenCalledTimes(1);
+      const event = sseNext.mock.calls[0][0] as {
+        data: { type: string; mr: MergeRequestWithDiffs[]; hasNewMr: boolean };
+      };
+      expect(event.data.type).toBe('merge_request');
+      expect(event.data.hasNewMr).toBe(false);
+      expect(event.data.mr[0].labels).toEqual(['human-review', 'approved']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('broadcasts the already-merged MR over SSE', async () => {
+    const { service, cacheGet, sseNext } = createService();
+    cacheGet.mockResolvedValue([
+      {
+        id: 1,
+        iid: 1,
+        title: 'chore(update): moon',
+        labels: ['human-review'],
+        diffs: [],
+        scanFindings: [],
+      },
+    ]);
+    const show = vi.fn().mockResolvedValue({
+      id: 1,
+      iid: 1,
+      sha: 'abc123',
+      labels: ['human-review'],
+      title: 'chore(update): moon',
+    });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn().mockResolvedValue({});
+    const approvalsApprove = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const mrActionInsert = vi.fn();
+    (service as unknown as { api: unknown }).api = {
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept },
+      MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestNotes: { create: noteCreate },
+    };
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+    try {
+      await service.approveMergeRequest(1, 'abc123', ACTOR);
+      expect(mrAccept).toHaveBeenCalled();
+
+      expect(sseNext).toHaveBeenCalledTimes(1);
+      const event = sseNext.mock.calls[0][0] as {
+        data: { type: string; mr: MergeRequestWithDiffs[]; hasNewMr: boolean };
+      };
+      expect(event.data.type).toBe('merge_request');
+      expect(event.data.hasNewMr).toBe(false);
+      expect(event.data.mr[0].labels).toEqual(['human-review', 'approved']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('refuses to approve MRs the scan flagged as malware', async () => {
     const { service } = createService();
     const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review', 'malware'] });

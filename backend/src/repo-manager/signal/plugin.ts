@@ -21,6 +21,28 @@ export interface DirectoryIndex {
   direct: Map<string, string[]>;
   ancestors: Map<string, string[]>;
   keyToPkgname: Map<string, string>;
+  /** owner key -> the file paths it ships (used to detect shadowing forks). */
+  keyToFiles: Map<string, Set<string>>;
+}
+
+/**
+ * Metadata entries that exist in every archive. They sit at the archive root
+ * and never indicate a payload, so they must not count as files a consumer
+ * shadows (replaces).
+ */
+const PACKAGE_METADATA_FILES = new Set([
+  '.BUILDINFO',
+  '.MTREE',
+  '.PKGINFO',
+  '.INSTALL',
+  '.CHANGELOG',
+  '.AURINFO',
+  '.SRCINFO',
+  '.FILELIST',
+]);
+
+export function isPackageMetadata(file: string): boolean {
+  return !file.includes('/') && PACKAGE_METADATA_FILES.has(file);
 }
 
 /**
@@ -103,6 +125,47 @@ export function deriveDirectoriesOwned(files: string[]): string[] {
 }
 
 /**
+ * A directory owned by more than this many packages is a shared namespace, not
+ * a plugin dir. The namespace rule still admits some shared dirs that contain
+ * an owner name, so this guard drops those with many owners.
+ */
+const SHARED_DIRECTORY_MAX_OWNERS = 10;
+
+/**
+ * Suffixes that mark the same upstream package rebuilt from another channel.
+ * `fooyin` and `fooyin-git` are one program, not a plugin host and its plugin.
+ */
+const BUILD_VARIANT_SUFFIXES = [
+  '-git',
+  '-bin',
+  '-stable',
+  '-svn',
+  '-cvs',
+  '-hg',
+  '-bzr',
+  '-nightly',
+  '-latest',
+  '-master',
+  '-unstable',
+  '-testing',
+  '-rc',
+  '-dev',
+  '-preview',
+];
+
+export function packageFamilyName(name: string): string {
+  for (const suffix of BUILD_VARIANT_SUFFIXES) {
+    if (name.endsWith(suffix)) return name.slice(0, -suffix.length);
+  }
+  return name;
+}
+
+export function samePackageFamily(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  return packageFamilyName(a) === packageFamilyName(b);
+}
+
+/**
  * Suspicious-ownership heuristic: a tiny package (few files, few of its own
  * directories) claimed as plugin by more than SUSPICIOUS_PLUGIN_OWNERS owners
  * almost certainly dropped shared payloads into popular parent directories.
@@ -112,36 +175,66 @@ const SUSPICIOUS_PLUGIN_OWNERS = 100;
 const SUSPICION_MAX_OWNED_DIRS = 10;
 const SUSPICION_MAX_FILES = 50;
 
-export function derivePluginOf(
-  files: string[],
-  index: DirectoryIndex,
-  hasCompiledCode = false,
-  isSourceCompiled = false,
-): string[] {
-  if (!hasCompiledCode && !isSourceCompiled) return [];
+export interface DerivePluginOfOptions {
+  consumerPkgname?: string | null;
+  hasCompiledCode?: boolean;
+  isSourceCompiled?: boolean;
+}
 
+function addOwnersNamedInSegments(
+  plugins: Set<string>,
+  owners: string[],
+  dir: string,
+  keyToPkgname: Map<string, string>,
+): void {
+  const segments = dir.split('/');
+  for (const owner of owners) {
+    if (!owner) continue;
+    const name = keyToPkgname.get(owner);
+    if (name && segments.includes(name)) plugins.add(owner);
+  }
+}
+
+function collectPluginCandidates(files: string[], index: DirectoryIndex): Set<string> {
   const plugins = new Set<string>();
   for (const file of files) {
     const parent = parentDirectory(file);
-    if (parent) {
-      const direct = index.direct.get(parent);
-      if (direct && !GENERIC_DIRS.has(parent)) {
-        for (const owner of direct) if (owner) plugins.add(owner);
-      }
-      const ancestors = ancestorDirectories(parent);
-      for (const dir of [parent, ...ancestors]) {
-        if (GENERIC_DIRS.has(dir)) continue;
-        const owners = index.ancestors.get(dir);
-        if (!owners) continue;
-        const segments = dir.split('/');
-        for (const owner of owners) {
-          if (!owner) continue;
-          const name = index.keyToPkgname.get(owner);
-          if (name && segments.includes(name)) plugins.add(owner);
-        }
-      }
+    if (!parent) continue;
+    const direct = index.direct.get(parent);
+    if (direct && !GENERIC_DIRS.has(parent) && direct.length <= SHARED_DIRECTORY_MAX_OWNERS) {
+      addOwnersNamedInSegments(plugins, direct, parent, index.keyToPkgname);
+    }
+    const ancestors = ancestorDirectories(parent);
+    for (const dir of [parent, ...ancestors]) {
+      if (GENERIC_DIRS.has(dir)) continue;
+      const owners = index.ancestors.get(dir);
+      if (owners) addOwnersNamedInSegments(plugins, owners, dir, index.keyToPkgname);
     }
   }
+  return plugins;
+}
+
+export function derivePluginOf(files: string[], index: DirectoryIndex, options: DerivePluginOfOptions = {}): string[] {
+  const { consumerPkgname = null, hasCompiledCode = false, isSourceCompiled = false } = options;
+  if (!hasCompiledCode && !isSourceCompiled) return [];
+
+  const plugins = collectPluginCandidates(files, index);
+
+  // A build variant of the consumer (fooyin-git vs fooyin) installs into the
+  // same own-namespace dir, so it can look like a plugin of the base.
+  for (const owner of plugins) {
+    if (samePackageFamily(consumerPkgname, index.keyToPkgname.get(owner))) plugins.delete(owner);
+  }
+
+  // A consumer that ships a file the owner also ships shadows the owner (a fork
+  // like ungoogled-chromium-bin), so it is not a plugin of it. A plugin only
+  // adds its own files. It never replaces the host's files. Any shared file
+  // path means the consumer is the same software rebuilt, not an ABI consumer.
+  for (const owner of plugins) {
+    const ownerFiles = index.keyToFiles.get(owner);
+    if (ownerFiles && files.some((file) => ownerFiles.has(file))) plugins.delete(owner);
+  }
+
   const result = dedupe([...plugins]).sort();
 
   if (result.length === 0) return result;

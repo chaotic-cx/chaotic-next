@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import {
   CountryStatsDto,
@@ -38,8 +38,9 @@ export class RouterController {
   @ApiOkResponse({ description: 'Mirror downloads over time', type: MirrorOverTimeDto, isArray: true })
   async getRouterStatsMirrorOverTime(
     @Param('days', ParseIntPipe) days: number,
+    @Query('repo') repo?: string,
   ): Promise<{ day: string; mirror: string; count: string }[]> {
-    return this.routerService.getMirrorStatsOverTime(days);
+    return this.routerService.getMirrorStatsOverTime(days, repo);
   }
 
   @Get('stats/country-over-time/:days')
@@ -48,8 +49,9 @@ export class RouterController {
   @ApiOkResponse({ description: 'Country downloads over time', type: CountryOverTimeDto, isArray: true })
   async getRouterStatsCountryOverTime(
     @Param('days', ParseIntPipe) days: number,
+    @Query('repo') repo?: string,
   ): Promise<{ day: string; country: string; count: string }[]> {
-    return this.routerService.getCountryStatsOverTime(days);
+    return this.routerService.getCountryStatsOverTime(days, repo);
   }
 
   @Get('/package/:days')
@@ -74,7 +76,8 @@ export class RouterController {
   @ApiOkResponse({ description: 'User-agent download trend', type: UserAgentTrendDto, isArray: true })
   async getUserAgentTrend(
     @Param('days', ParseIntPipe) days: number,
+    @Query('repo') repo?: string,
   ): Promise<{ day: string; userAgent: string; count: string }[]> {
-    return this.routerService.getUserAgentTrend(days);
+    return this.routerService.getUserAgentTrend(days, undefined, repo);
   }
 }

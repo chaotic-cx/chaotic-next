@@ -39,13 +39,15 @@
             appendTo="body"
           />
         </div>
-        @if (activeTab() === 'search') {
+        @if (repoFilterVisible()) {
           <p-select
             class="col-span-2 w-full sm:col-span-1 sm:w-auto"
-            [(ngModel)]="statsService.packageSearchSelectedRepo"
+            [(ngModel)]="statsService.selectedRepo"
             [options]="statsService.repoOptions"
             (ngModelChange)="onRepoChange($event)"
             appendTo="body"
+            optionLabel="label"
+            optionValue="value"
             placeholder="Repo"
           />
         }
