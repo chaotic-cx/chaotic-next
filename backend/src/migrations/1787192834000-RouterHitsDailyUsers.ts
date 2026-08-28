@@ -1,5 +1,5 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
 import { HLL_LOG2M } from '../utils/constants';
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
  * One HyperLogLog sketch per UTC day of distinct client IPs. The raw log is

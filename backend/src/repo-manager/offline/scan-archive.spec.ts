@@ -8,7 +8,7 @@ import { scanArchive, isNonZeroExit, isHostElf } from './scan-archive';
 
 const execFileP = promisify(execFile);
 
-const FMT_PKG = join(__dirname, '..', '__fixtures__', 'fmt-12.0.0-1-x86_64.pkg.tar.zst');
+const FMT_PKG = join(import.meta.dirname, '..', '__fixtures__', 'fmt-12.0.0-1-x86_64.pkg.tar.zst');
 
 describe('isNonZeroExit', () => {
   it('detects numeric exit codes', () => {

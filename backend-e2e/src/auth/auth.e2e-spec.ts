@@ -1,5 +1,5 @@
 import { AppModule } from '@chaotic-next/backend/app.module';
-import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
+import { GitlabMergeRequestService } from '@chaotic-next/backend/gitlab/gitlab-merge-request.service';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -64,7 +64,7 @@ describe('Auth & Protected Endpoints (e2e)', () => {
     });
 
     it('GET /gitlab/merge-requests is accessible without authentication (200)', async () => {
-      vi.spyOn(realAuthApp.get(GitlabService), 'getOpenMergeRequests').mockResolvedValue([]);
+      vi.spyOn(realAuthApp.get(GitlabMergeRequestService), 'getOpenMergeRequests').mockResolvedValue([]);
       const res = await realAuthApp.inject({ method: 'GET', url: '/gitlab/merge-requests' });
       expect(res.statusCode).toBe(200);
     });

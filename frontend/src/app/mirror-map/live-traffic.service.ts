@@ -1,5 +1,10 @@
 import { computed, inject, Service, signal } from '@angular/core';
-import { LIVE_RPS_SSE_EVENT, type LiveRouterRps, type LiveTrafficHit } from '@chaotic-next/shared-lib';
+import {
+  LIVE_RPS_SSE_EVENT,
+  liveRouterRpsSchema,
+  liveTrafficHitSchema,
+  type LiveTrafficHit,
+} from '@chaotic-next/shared-lib';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import type { EnvironmentModel } from '../../environments/environment.model';
 import { ResilientSseStream } from '../sse-stream';
@@ -64,9 +69,9 @@ export class LiveTrafficService {
       url: () => url,
       onMessage: (data) => {
         try {
-          const hit: LiveTrafficHit = JSON.parse(data);
-          if (hit && hit.countryCode) {
-            this.handleHit(hit);
+          const parsed = liveTrafficHitSchema.safeParse(JSON.parse(data));
+          if (parsed.success) {
+            this.handleHit(parsed.data);
           }
         } catch (err) {
           console.warn('Failed to parse live traffic SSE message:', err);
@@ -76,9 +81,9 @@ export class LiveTrafficService {
       onNamedEvent: (eventType, data) => {
         if (eventType !== LIVE_RPS_SSE_EVENT) return;
         try {
-          const payload: LiveRouterRps = JSON.parse(data);
-          if (Number.isFinite(payload.rps)) {
-            this.currentReqPerSec.set(payload.rps);
+          const parsed = liveRouterRpsSchema.safeParse(JSON.parse(data));
+          if (parsed.success && Number.isFinite(parsed.data.rps)) {
+            this.currentReqPerSec.set(parsed.data.rps);
           }
         } catch (err) {
           console.warn('Failed to parse router RPS SSE message:', err);

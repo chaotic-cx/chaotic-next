@@ -1,12 +1,12 @@
-import { vi } from 'vitest';
-import type {
-  Repository,
-  FindOptionsWhere,
-  FindOptionsSelect,
-  FindManyOptions,
-  FindOneOptions,
-  DeepPartial,
+import {
+  type DeepPartial,
+  type FindManyOptions,
+  type FindOneOptions,
+  type FindOptionsSelect,
+  type FindOptionsWhere,
+  type Repository,
 } from 'typeorm';
+import { vi } from 'vitest';
 
 interface FindOperatorShape {
   _type: string;

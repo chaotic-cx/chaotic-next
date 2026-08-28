@@ -1,10 +1,10 @@
-import { BuilderService } from '@chaotic-next/backend/builder/builder.service';
 import { BuildStatus } from '@chaotic-next/backend/types/types';
 import type { UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createE2eApp, type E2eApp } from '../test/e2e-app';
 
 const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 const GROUPS_HEADER = 'x-test-user-groups';
 const CHAOTIC_AUR_GROUP = 'chaotic-aur';
 
@@ -214,12 +214,6 @@ describe('Build insights endpoints (e2e, real PostgreSQL)', () => {
     });
 
     it('returns an empty list without builds', async () => {
-      const svc = e2e.app.get(BuilderService);
-      try {
-        await svc.getFlakiestPackages({ days: 7 });
-      } catch (err) {
-        console.log('DEBUG-ERR:', JSON.stringify(err, Object.getOwnPropertyNames(err)), err);
-      }
       const res = await e2e.inject({ method: 'GET', url: '/builder/stats/flaky-packages/7' });
       expect(res.statusCode).toBe(200);
       expect(await res.json()).toEqual([]);
@@ -233,13 +227,16 @@ describe('Build insights endpoints (e2e, real PostgreSQL)', () => {
       const pkg = await e2e.seedPackage({ pkgname: 'utilized-pkg', version: '1.0', pkgrel: 1 });
 
       // Naive timestamp strings are stored verbatim, so the seeded hours stay
-      // deterministic no matter which timezone the test machine runs in.
+      // deterministic no matter which timezone the test machine runs in. The
+      // days are relative to now so the builds stay inside the lookback window.
+      const twoDaysAgo = new Date(Date.now() - 2 * DAY_MS).toISOString().slice(0, 10);
+      const oneDayAgo = new Date(Date.now() - 1 * DAY_MS).toISOString().slice(0, 10);
       for (let index = 0; index < 3; index++) {
         await e2e.seedBuild({
           pkgbase: pkg,
           builder: alpha,
           status: BuildStatus.SUCCESS,
-          timestamp: '2026-08-20T05:30:00',
+          timestamp: `${twoDaysAgo}T05:30:00`,
           commit: `alpha-commit-${index}`,
         });
       }
@@ -248,14 +245,14 @@ describe('Build insights endpoints (e2e, real PostgreSQL)', () => {
         pkgbase: pkg,
         builder: alpha,
         status: BuildStatus.ALREADY_BUILT,
-        timestamp: '2026-08-20T05:45:00',
+        timestamp: `${twoDaysAgo}T05:45:00`,
         commit: 'alpha-commit-0',
       });
       await e2e.seedBuild({
         pkgbase: pkg,
         builder: beta,
         status: BuildStatus.FAILED,
-        timestamp: '2026-08-21T09:15:00',
+        timestamp: `${oneDayAgo}T09:15:00`,
         commit: 'beta-commit-0',
       });
 
@@ -318,6 +315,104 @@ describe('Build insights endpoints (e2e, real PostgreSQL)', () => {
         headers: { [GROUPS_HEADER]: CHAOTIC_AUR_GROUP },
       });
       expect(res.statusCode).toBe(400);
+    });
+  });
+
+  describe('GET /builder/average/pkgname', () => {
+    it('returns average build time and samples for the requested packages', async () => {
+      const pkg = await e2e.seedPackage({ pkgname: 'avg-pkg', version: '1.0', pkgrel: 1 });
+      await e2e.seedBuild({ pkgbase: pkg, status: BuildStatus.SUCCESS, timeToEnd: 100 });
+      await e2e.seedBuild({ pkgbase: pkg, status: BuildStatus.FAILED, timeToEnd: 200 });
+
+      const res = await e2e.inject<{ pkgname: string; average_build_time: string; samples: string }[]>({
+        method: 'GET',
+        url: '/builder/average/pkgname?pkgname=avg-pkg&pkgname=other-pkg',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const rows = await res.json();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ pkgname: 'avg-pkg', samples: '2' });
+      expect(Number(rows[0].average_build_time)).toBe(150);
+    });
+
+    it('returns an empty list when no package matches', async () => {
+      const res = await e2e.inject({
+        method: 'GET',
+        url: '/builder/average/pkgname?pkgname=does-not-exist',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([]);
+    });
+  });
+
+  describe('GET /builder/average/per-day/package/:pkgname', () => {
+    it('returns per-day averages for one package', async () => {
+      const pkg = await e2e.seedPackage({ pkgname: 'daily-pkg', version: '1.0', pkgrel: 1 });
+      await e2e.seedBuild({ pkgbase: pkg, status: BuildStatus.SUCCESS, timeToEnd: 60 });
+      await e2e.seedBuild({
+        pkgbase: pkg,
+        status: BuildStatus.SUCCESS,
+        timeToEnd: 120,
+        timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
+      });
+
+      const res = await e2e.inject<{ day: string; average: string }[]>({
+        method: 'GET',
+        url: '/builder/average/per-day/package/daily-pkg',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const rows = await res.json();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(Number.isNaN(Date.parse(row.day))).toBe(false);
+        expect(Number(row.average)).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('GET /builder/class/suggestions', () => {
+    it('suggests a build class from averaged resource usage', async () => {
+      const pkg = await e2e.seedPackage({ pkgname: 'classy-pkg', version: '1.0', pkgrel: 1 });
+      for (let index = 0; index < 2; index++) {
+        await e2e.seedBuild({
+          pkgbase: pkg,
+          status: BuildStatus.SUCCESS,
+          timeToEnd: 300,
+          resourceStats: {
+            peakMemoryBytes: 4_000_000_000,
+            cpuTimeNs: 1_000_000_000_000,
+            diskReadBytes: 8_000_000_000,
+            diskWriteBytes: 2_000_000_000,
+            sampleCount: 1,
+          },
+        });
+      }
+
+      const res = await e2e.inject<{ pkgname: string; samples: number; averages: Record<string, number> }[]>({
+        method: 'GET',
+        url: '/builder/class/suggestions?pkgname=classy-pkg',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const rows = await res.json();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ pkgname: 'classy-pkg', samples: 2 });
+      expect(rows[0].averages.avgPeakMemoryBytes).toBe(4_000_000_000);
+    });
+
+    it('returns no suggestion for a package without resource stats', async () => {
+      await e2e.seedPackage({ pkgname: 'plain-pkg', version: '1.0', pkgrel: 1 });
+
+      const res = await e2e.inject({
+        method: 'GET',
+        url: '/builder/class/suggestions?pkgname=plain-pkg',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([]);
     });
   });
 });

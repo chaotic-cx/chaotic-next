@@ -1,5 +1,5 @@
-import { addedLines, isCommentLine, isInScope } from './diff-utils';
 import { parsePkgbuild } from '../pkgbuild';
+import { addedLines, isCommentLine, isInScope } from './diff-utils';
 import { listRule, regexRule, type Rule } from './rule';
 
 const SHORTENER_HOSTS = ['bit.ly', 'cutt.ly', 'goo.gl', 'is.gd', 'rb.gy', 't.co', 'tinyurl.com'];

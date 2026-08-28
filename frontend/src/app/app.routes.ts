@@ -3,10 +3,6 @@ import { authGuard } from './auth/auth.guard';
 import { backendChildGuard, backendGuard } from './backend-status/backend-required.guard';
 import { AUTH_PRELOAD_DATA, SKIP_PRELOAD_DATA } from './preload.strategy';
 
-export const DISABLE_VIEW_TRANSITION_DATA: Readonly<Record<string, boolean>> = Object.freeze({
-  disableViewTransition: true,
-});
-
 export const routes: Routes = [
   {
     title: 'Chaotic-AUR',
@@ -31,7 +27,6 @@ export const routes: Routes = [
   {
     title: 'Build status · Chaotic-AUR',
     path: 'status',
-    data: DISABLE_VIEW_TRANSITION_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./build-status/build-status.component').then((c) => c.BuildStatusComponent),
   },
@@ -132,7 +127,6 @@ export const routes: Routes = [
   {
     title: 'Mirror map · Chaotic-AUR',
     path: 'map',
-    data: DISABLE_VIEW_TRANSITION_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./map/map.component').then((c) => c.MapComponent),
   },

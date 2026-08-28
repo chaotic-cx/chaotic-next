@@ -1,6 +1,12 @@
-import { type BuildClass, type BuildResourceStats, BuildStatus } from '@chaotic-next/shared-lib';
-import type { Repository } from 'typeorm';
-import type { Build, Builder, Package, Repo, SilencedBuildFailure } from '../builder/builder.entity';
+import {
+  type Build,
+  type Builder,
+  type Package,
+  type Repo,
+  type SilencedBuildFailure,
+} from '../builder/builder.entity';
+import { BuildStatus, type BuildClass, type BuildResourceStats } from '@chaotic-next/shared-lib';
+import { type Repository } from 'typeorm';
 
 export { BuildStatus };
 

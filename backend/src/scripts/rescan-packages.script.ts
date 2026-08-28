@@ -1,14 +1,14 @@
+import { Package } from '../builder/builder.entity';
+import { TriggerType } from '../interfaces/repo-manager';
+import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import { SignalScanService, type ScanJob } from '../repo-manager/scan';
+import { bootstrapScript, runScript } from '../utils/script-utils';
 import { HttpService } from '@nestjs/axios';
 import { isAxiosError } from 'axios';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { DataSource, In } from 'typeorm';
-import { Package } from '../builder/builder.entity';
-import { TriggerType } from '../interfaces/repo-manager';
-import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
-import { type ScanJob, SignalScanService } from '../repo-manager/scan';
-import { bootstrapScript, runScript } from '../utils/script-utils';
 
 type RepoKind = 'arch' | 'chaotic';
 const REPO_KINDS: RepoKind[] = ['arch', 'chaotic'];

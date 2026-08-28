@@ -1,6 +1,3 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { getOrCreatePackage, Package, Repo } from '../../builder/builder.entity';
 import {
   BumpType,
@@ -11,9 +8,12 @@ import {
 import { errorMessage } from '../../utils/functions';
 import { isSourceCompiledPackage } from '../pkgbuild-classifier';
 import { PackageBump, PackageElfAnalysis } from '../repo-manager.entity';
-import { type BumpCommitAction, REPO_WRITER, type RepoReader, type RepoWriter } from '../repo-rw';
+import { REPO_WRITER, type BumpCommitAction, type RepoReader, type RepoWriter } from '../repo-rw';
 import { CHAOTIC_PKG_TYPE } from '../signal/plugin';
 import { applyPackageBump, parseCiConfig } from './bump-config';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 /** CI config flag keys (read from .CI/config); a flag is on when set to "1". */
 const CI_FLAG_SIGNAL_SCAN_IGNORE = 'CI_SIGNAL_SCAN_IGNORE';

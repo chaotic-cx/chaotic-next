@@ -1,24 +1,6 @@
-import {
-  BUILD_FAILURE_STATUSES,
-  BUILD_SUCCESS_STATUSES,
-  BUILD_VERDICT_STATUSES,
-  buildClassSortKey,
-} from '@chaotic-next/shared-lib';
-import type {
-  Package as PackageDto,
-  PackageResourceDayRow,
-  Paginated,
-  ShouldBuildDecision,
-  UnresolvedFailedBuild,
-} from '@chaotic-next/shared-lib';
-import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import IORedis from 'ioredis';
-import { ServiceBroker } from 'moleculer';
-import { Repository, SelectQueryBuilder } from 'typeorm';
 import { EventService } from '../events/event.service';
-import { GitlabService } from '../gitlab/gitlab.service';
+import IORedis from 'ioredis';
+import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { BuildStatus } from '../types/types';
 import { CACHE_TTL_MS, MAX_AMOUNT, MAX_DAYS_PER_DAY_CHART, MAX_DAYS_WINDOW, MAX_OFFSET } from '../utils/constants';
@@ -30,21 +12,37 @@ import { Build, Builder, Package, Repo, SilencedBuildFailure } from './builder.e
 import { brokerConfig } from './moleculer.config';
 import {
   BUILD_RESOURCE_COLUMNS,
-  type BuildResourceMetricKey,
   DAY_ROW_KEYS,
   HEAVY_RESOURCE_METRIC_EXPRESSIONS,
   isBuildResourceSortField,
+  type BuildResourceMetricKey,
 } from './resource-stats';
 import {
   FLAKY_ATTEMPT_STATUSES,
   SHOULD_BUILD_MAX_RECENT_BUILDS,
   SHOULD_BUILD_TRAILING_DAYS,
-  UNRESOLVED_FAILURE_LOOKBACK_DAYS,
-  UNRESOLVED_FAILURE_LIMIT,
   shouldBuildDecision,
-  unresolvedFailedBuildFromRow,
   type UnresolvedFailureRow,
+  UNRESOLVED_FAILURE_LIMIT,
+  UNRESOLVED_FAILURE_LOOKBACK_DAYS,
+  unresolvedFailedBuildFromRow,
 } from './unresolved-failures';
+import {
+  BUILD_FAILURE_STATUSES,
+  BUILD_SUCCESS_STATUSES,
+  BUILD_VERDICT_STATUSES,
+  buildClassSortKey,
+  type Package as PackageDto,
+  type PackageResourceDayRow,
+  type Paginated,
+  type ShouldBuildDecision,
+  type UnresolvedFailedBuild,
+} from '@chaotic-next/shared-lib';
+import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ServiceBroker } from 'moleculer';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 
 /** Packages need this many genuine attempts inside the window before they can be called flaky. */
 const MIN_FLAKINESS_ATTEMPTS = 5;
@@ -82,7 +80,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     private configService: ConfigService,
     private eventService: EventService,
     private repoManagerService: RepoManagerService,
-    private gitlabService: GitlabService,
+    private gitlabPipelineService: GitlabPipelineService,
     private buildClassSyncService: BuildClassSyncService,
   ) {
     const redisPassword: string | undefined = this.configService.get<string | undefined>('redis.password');
@@ -141,7 +139,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
           dbConnections,
           repoManagerService: this.repoManagerService,
           sseSubject: this.eventService.sseEvents$,
-          gitlabService: this.gitlabService,
+          gitlabPipelineService: this.gitlabPipelineService,
           buildClassSync: this.buildClassSyncService,
         }),
       );

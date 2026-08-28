@@ -1,4 +1,9 @@
-import type { PackageElfAnalysis as PackageElfAnalysisType, ParsedPackageMetadata } from '@chaotic-next/shared-lib';
+import { Package } from '../builder/builder.entity';
+import { BumpType, TriggerType } from '../interfaces/repo-manager';
+import {
+  type PackageElfAnalysis as PackageElfAnalysisType,
+  type ParsedPackageMetadata,
+} from '@chaotic-next/shared-lib';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
@@ -12,8 +17,6 @@ import {
   Repository,
   Unique,
 } from 'typeorm';
-import { Package } from '../builder/builder.entity';
-import { BumpType, TriggerType } from '../interfaces/repo-manager';
 
 @Entity()
 @Index('IDX_archlinux_package_pkgname', ['pkgname'])

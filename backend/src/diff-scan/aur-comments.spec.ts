@@ -3,7 +3,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { evaluateCommentThreats, parseAurComments, type AurComment } from './aur-comments';
 
-const FIXTURE = readFileSync(join(__dirname, '__fixtures__', 'aur', 'google-chrome', 'comments.html'), 'utf-8');
+const FIXTURE = readFileSync(
+  join(import.meta.dirname, '__fixtures__', 'aur', 'google-chrome', 'comments.html'),
+  'utf-8',
+);
 const NOW_MS = Date.parse('2026-08-25T12:00:00Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
 

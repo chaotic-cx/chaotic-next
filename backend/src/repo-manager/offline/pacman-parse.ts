@@ -1,9 +1,9 @@
+import { type ParsedPackage, type RepoWorkDir } from '../../interfaces/repo-manager';
+import { parsePkgrel } from '@chaotic-next/shared-lib';
 import { exec } from 'node:child_process';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { parsePkgrel } from '@chaotic-next/shared-lib';
-import type { ParsedPackage, RepoWorkDir } from '../../interfaces/repo-manager';
 
 const execP = promisify(exec);
 

@@ -21,5 +21,9 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - '@garudalinux/core@2.0.0'
   - '@garudalinux/themes@2.0.0'
+  - '@nestjs/swagger@12.0.0'
+  - '@nestjs/typeorm@12.0.1'
+  - '@nestjs/cli@12.0.0'
+  - '@nestjs/schematics@12.0.0'
 patchedDependencies:
   '@openng/optimus-ui': patches/@openng__optimus-ui.patch

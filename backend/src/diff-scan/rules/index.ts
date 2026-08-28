@@ -9,8 +9,8 @@ import { PERSISTENCE_RULES } from './persistence.rules';
 import { PRIVILEGE_RULES } from './privilege.rules';
 import { PROVENANCE_RULES } from './provenance.rules';
 import { REVERSE_SHELL_RULES } from './reverse-shell.rules';
+import { type Rule } from './rule';
 import { SRCINFO_CONSISTENCY_RULES } from './srcinfo-consistency.rules';
-import type { Rule } from './rule';
 
 /**
  * Rule ID sources:

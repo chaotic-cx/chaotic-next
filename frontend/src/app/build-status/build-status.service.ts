@@ -5,6 +5,7 @@ import {
   BuildStatus,
   type Paginated,
   type PipelineWithExternalStatus,
+  promoteBodySchema,
   type StatsObject,
 } from '@chaotic-next/shared-lib';
 import { lastValueFrom } from 'rxjs';
@@ -253,7 +254,10 @@ export class BuildStatusService {
 
   async promote(pkgbase: string, arch = 'x86_64', targetRepo = 'chaotic-aur'): Promise<void> {
     await lastValueFrom(
-      this.http.post(`${this.backendUrl}/api/queue/promote`, { pkgbase, arch, target_repo: targetRepo }),
+      this.http.post(
+        `${this.backendUrl}/api/queue/promote`,
+        promoteBodySchema.parse({ pkgbase, arch, target_repo: targetRepo }),
+      ),
     );
   }
 

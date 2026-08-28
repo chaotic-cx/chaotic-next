@@ -1,4 +1,4 @@
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 export type RuleScope = 'any' | 'pkgbuild' | 'install' | 'code';
 

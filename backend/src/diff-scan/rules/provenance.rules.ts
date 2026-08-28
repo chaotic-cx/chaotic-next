@@ -1,6 +1,6 @@
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { extractArray, isReputable, type ParsedPkgbuild, parsePkgbuild, type SourceEntry, unquote } from '../pkgbuild';
-import type { Rule, RuleHit } from './rule';
+import { extractArray, isReputable, parsePkgbuild, type ParsedPkgbuild, type SourceEntry, unquote } from '../pkgbuild';
+import { type Rule, type RuleHit } from './rule';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 const GENERIC_FILE_HOST_SUFFIXES = [
   'anonfiles.com',

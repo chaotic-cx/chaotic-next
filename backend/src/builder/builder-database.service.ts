@@ -1,10 +1,6 @@
-import { type BuildResourceStats, ChaoticEvent, MoleculerCurrentQueueObject } from '@chaotic-next/shared-lib';
-import { type Context, Service, type ServiceBroker } from 'moleculer';
-import { Subject } from 'rxjs';
-import { GitlabService } from '../gitlab/gitlab.service';
+import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { GitlabStatusEvent } from '../gitlab/interfaces';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
-import { BuildClassSyncService } from './build-class-sync.service';
 import {
   BuilderDbConnections,
   BuildStatus,
@@ -13,6 +9,7 @@ import {
   QueuePromotedEvent,
 } from '../types/types';
 import { errorMessage } from '../utils/functions';
+import { BuildClassSyncService } from './build-class-sync.service';
 import {
   Build,
   BuildResourceUsage,
@@ -23,13 +20,16 @@ import {
 } from './builder.entity';
 import { moleculerConfigCommonService } from './moleculer.config';
 import { isFailingStatus } from './unresolved-failures';
+import { ChaoticEvent, MoleculerCurrentQueueObject, type BuildResourceStats } from '@chaotic-next/shared-lib';
+import { Service, type Context, type ServiceBroker } from 'moleculer';
+import { Subject } from 'rxjs';
 
 export interface BuilderDatabaseServiceOptions {
   broker: ServiceBroker;
   dbConnections: BuilderDbConnections;
   repoManagerService: RepoManagerService;
   sseSubject: Subject<Partial<MessageEvent<ChaoticEvent>>>;
-  gitlabService: GitlabService;
+  gitlabPipelineService: GitlabPipelineService;
   buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
 }
 
@@ -76,7 +76,7 @@ export class BuilderDatabaseService extends Service {
   private repoManagerService: RepoManagerService;
 
   private readonly sseSubject$: Subject<Partial<MessageEvent<ChaoticEvent>>>;
-  private readonly gitlabService: GitlabService;
+  private readonly gitlabPipelineService: GitlabPipelineService;
   private readonly buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
 
   /**
@@ -94,13 +94,13 @@ export class BuilderDatabaseService extends Service {
     dbConnections,
     repoManagerService,
     sseSubject,
-    gitlabService,
+    gitlabPipelineService,
     buildClassSync,
   }: BuilderDatabaseServiceOptions) {
     super(broker);
 
     this.sseSubject$ = sseSubject;
-    this.gitlabService = gitlabService;
+    this.gitlabPipelineService = gitlabPipelineService;
     this.buildClassSync = buildClassSync;
 
     this.parseServiceSchema({
@@ -112,7 +112,7 @@ export class BuilderDatabaseService extends Service {
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'gitlab.status'(ctx: Context<GitlabStatusEvent>) {
-          void this.gitlabService.handleExternalStatus(ctx.params).catch((err: unknown) => {
+          void this.gitlabPipelineService.handleExternalStatus(ctx.params).catch((err: unknown) => {
             this.logger.error(`Failed to handle gitlab.status event: ${errorMessage(err)}`);
           });
         },

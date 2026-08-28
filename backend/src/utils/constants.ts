@@ -46,6 +46,3 @@ export const HLL_LOG2M = 12;
 export const MAX_DAYS_PER_DAY_CHART = 365;
 export const MAX_AMOUNT = 100;
 export const MAX_OFFSET = 10_000;
-
-export const MIN_QUERY_LENGTH = 2;
-export const MAX_QUERY_LENGTH = 100;

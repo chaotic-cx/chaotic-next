@@ -1,5 +1,5 @@
-import type { ConsumerAbiBreak, SymbolBreak, VtableBreak } from '../../interfaces/repo-manager';
-import type { NmSymbolWithSize, RelocationEntry } from './parse';
+import { type ConsumerAbiBreak, type SymbolBreak, type VtableBreak } from '../../interfaces/repo-manager';
+import { type NmSymbolWithSize, type RelocationEntry } from './parse';
 
 /**
  * The ordered list of virtual-slot targets of one vtable. The vtable symbol

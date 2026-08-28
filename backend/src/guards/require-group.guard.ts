@@ -1,7 +1,7 @@
-import { Injectable, type CanActivate, type ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { requiredGroupForRepo } from '../auth/gitlab-groups';
 import { REQUIRE_GROUPS_KEY, REQUIRE_REPO_GROUP_KEY } from '../decorators/require-groups.decorator';
+import { ForbiddenException, Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 
 interface RequestWithUser {
   user?: { groups?: string[] | null } | null;
@@ -23,6 +23,9 @@ export class RequireGroupGuard implements CanActivate {
     if (!requiredGroups.some((group) => groups.includes(group))) {
       throw new ForbiddenException(
         `This action requires GitLab group membership in '${requiredGroups.join("' or '")}'.`,
+        {
+          errorCode: 'MISSING_GROUP',
+        },
       );
     }
     return true;
@@ -48,11 +51,11 @@ export class RequireGroupGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const repoName = request.body?.['repo'] ?? request.params?.['repo'] ?? request.query?.['repo'];
     if (typeof repoName !== 'string' || repoName.length === 0) {
-      throw new ForbiddenException('No repository specified');
+      throw new ForbiddenException('No repository specified', { errorCode: 'REPO_NOT_SPECIFIED' });
     }
     const group = requiredGroupForRepo(repoName);
     if (group === undefined) {
-      throw new ForbiddenException(`Unknown repository '${repoName}'`);
+      throw new ForbiddenException(`Unknown repository '${repoName}'`, { errorCode: 'UNKNOWN_REPO' });
     }
     return [group];
   }

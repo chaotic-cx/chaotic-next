@@ -1,8 +1,8 @@
-import type { DiffScanFinding } from '@chaotic-next/shared-lib';
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import type { Repository } from 'typeorm';
-import type { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import { type ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { parsePkgbuild } from './pkgbuild';
+import { type DiffScanFinding } from '@chaotic-next/shared-lib';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
+import { type Repository } from 'typeorm';
 
 const NAMES_CACHE_TTL_MS = 30 * 60 * 1000;
 const SHORT_NAME_MAX_DISTANCE = 1;

@@ -1,4 +1,4 @@
-import 'reflect-metadata';
+import { ARCH_PACKAGES, BUILDERS, CHAOTIC_AUR_REPO, GARUDA_REPO } from './fixtures';
 import { AppModule } from '@chaotic-next/backend/app.module';
 import { Build, Builder, BuildResourceUsage, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { BuilderService } from '@chaotic-next/backend/builder/builder.service';
@@ -14,13 +14,12 @@ import { BuildStatus } from '@chaotic-next/backend/types/types';
 import { HLL_LOG2M } from '@chaotic-next/backend/utils/constants';
 import { utcDayStart } from '@chaotic-next/backend/utils/functions';
 import { RepoStatus } from '@chaotic-next/shared-lib';
-import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { CACHE_MANAGER, type Cache } from '@nestjs/cache-manager';
 import { ExecutionContext, Logger } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { DataSource } from 'typeorm';
-import { ARCH_PACKAGES, BUILDERS, CHAOTIC_AUR_REPO, GARUDA_REPO } from './fixtures';
 
 export interface RouterHitSeed {
   package: string;

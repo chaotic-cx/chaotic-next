@@ -1,6 +1,7 @@
 import type { BumpService } from '../bump';
 import type { Repository } from 'typeorm';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { PinoLogger } from 'nestjs-pino';
 import { Package } from '../../builder/builder.entity';
 import { type OwnerDescriptor, type PluginBreakIndexEntry, TriggerType } from '../../interfaces/repo-manager';
 import { RebuildTriggerService, summarizeDetails } from './rebuild-triggers.service';
@@ -62,7 +63,15 @@ function createService(): RebuildTriggerService {
   const stubArchRepo = {} as unknown as Repository<ArchlinuxPackage>;
   const stubPackageRepo = {} as unknown as Repository<Package>;
   const stubBump = {} as unknown as BumpService;
-  return new RebuildTriggerService(stubRepo, stubArchRepo, stubPackageRepo, stubBump);
+  const stubPino = {
+    trace: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+  } as unknown as PinoLogger;
+  return new RebuildTriggerService(stubRepo, stubArchRepo, stubPackageRepo, stubBump, stubPino);
 }
 
 function createMockService(): {
@@ -75,7 +84,15 @@ function createMockService(): {
   const stubArchRepo = {} as unknown as Repository<ArchlinuxPackage>;
   const stubPackageRepo = {} as unknown as Repository<Package>;
   const stubBump = {} as unknown as BumpService;
-  const service = new RebuildTriggerService(analysisRepo, stubArchRepo, stubPackageRepo, stubBump);
+  const stubPino = {
+    trace: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+  } as unknown as PinoLogger;
+  const service = new RebuildTriggerService(analysisRepo, stubArchRepo, stubPackageRepo, stubBump, stubPino);
   return { service, analysisRepo };
 }
 
@@ -226,6 +243,75 @@ describe('buildPluginBreakIndex', () => {
 
     // No symbol breaks and no vtable drift, so no index entry is created at all.
     expect(index.size).toBe(0);
+  });
+});
+
+describe('loadLatestChaoticAnalyses', () => {
+  function makeChaoticAnalysis(overrides: Partial<PackageElfAnalysis>): PackageElfAnalysis {
+    return {
+      id: 0,
+      pkgType: '1',
+      pkgId: 0,
+      version: '',
+      files: [],
+      neededSonames: [],
+      providedSonames: [],
+      importedSymbols: [],
+      exportedSymbols: {},
+      vtables: {},
+      directoriesOwned: [],
+      directDirectories: [],
+      pluginOf: [],
+      broken: false,
+      brokenReasons: [],
+      scannedAt: new Date(),
+      ...overrides,
+    } as PackageElfAnalysis;
+  }
+
+  it('keeps only the newest version per package by Arch version order', async () => {
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([
+      makeChaoticAnalysis({ pkgId: 7, version: '2:9', importedSymbols: ['old'] }),
+      makeChaoticAnalysis({ pkgId: 7, version: '2:13', importedSymbols: ['new'] }),
+      makeChaoticAnalysis({ pkgId: 7, version: '1.10', importedSymbols: ['older'] }),
+    ]);
+
+    const map = await service.loadLatestChaoticAnalyses([7]);
+
+    expect(map.size).toBe(1);
+    expect(map.get(7)?.importedSymbols).toEqual(['new']);
+  });
+
+  it('loads only the columns the trigger checks read', async () => {
+    // Full rows hydrate megabytes of exportedSymbols/vtables per package and
+    // exhausted the heap; the query must stay restricted to the narrow set.
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([makeChaoticAnalysis({ pkgId: 7, version: '1.0', importedSymbols: ['foo'], pluginOf: ['a1'] })]);
+
+    const map = await service.loadLatestChaoticAnalyses([7]);
+
+    const row = map.get(7) as unknown as Record<string, unknown>;
+    expect(Object.keys(row).sort()).toEqual([
+      'files',
+      'importedSymbols',
+      'neededSonames',
+      'pkgId',
+      'pluginOf',
+      'providedSonames',
+      'version',
+    ]);
+  });
+
+  it('queries in batches of 500 ids and still resolves every package', async () => {
+    const { service, analysisRepo } = createMockService();
+    const pkgIds = Array.from({ length: 1200 }, (unused, index) => index + 1);
+    analysisRepo.seed(pkgIds.map((pkgId) => makeChaoticAnalysis({ pkgId, version: '1.0' })));
+
+    const map = await service.loadLatestChaoticAnalyses(pkgIds);
+
+    expect(analysisRepo.find).toHaveBeenCalledTimes(3);
+    expect(map.size).toBe(1200);
   });
 });
 

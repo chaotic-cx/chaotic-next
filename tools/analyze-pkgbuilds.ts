@@ -1,8 +1,8 @@
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { isSourceCompiledPackage } from '../repo-manager/pkgbuild-classifier';
+import { isSourceCompiledPackage } from '../backend/src/repo-manager/pkgbuild-classifier';
 
-const PKGBUILDS_TEST_DIR = join(__dirname, '../../../pkgbuilds-test');
+const PKGBUILDS_TEST_DIR = join(import.meta.dirname, '../../../pkgbuilds-test');
 
 function getAllPkgbuildDirs(): string[] {
   try {

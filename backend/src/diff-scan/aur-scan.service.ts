@@ -1,15 +1,3 @@
-import type {
-  AurMaintainerChange,
-  AurMaintainerInfo,
-  AurPackageMeta,
-  AurPackageScan,
-  AurScanStreamChunk,
-} from '@chaotic-next/shared-lib';
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { filter, Observable, Subject } from 'rxjs';
-import { Repository } from 'typeorm';
 import { errorMessage, mapWithConcurrency } from '../utils/functions';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
@@ -17,10 +5,21 @@ import { commentThreatFinding, evaluateCommentThreats, parseAurComments } from '
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
 import { AurResponseCache } from './aur-response-cache';
 import { DiffScanService } from './diff-scan.service';
-import type { ScanIndicator } from './indicators';
-import { extractIndicators } from './indicators';
+import { extractIndicators, type ScanIndicator } from './indicators';
 import { parsePkgbuild } from './pkgbuild';
 import { VirustotalService } from './virustotal.service';
+import {
+  type AurMaintainerChange,
+  type AurMaintainerInfo,
+  type AurPackageMeta,
+  type AurPackageScan,
+  type AurScanStreamChunk,
+} from '@chaotic-next/shared-lib';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { filter, Observable, Subject } from 'rxjs';
+import { Repository } from 'typeorm';
 
 const AUR_INFO_URL = 'https://aur.archlinux.org/rpc/v5/info';
 const AUR_SEARCH_URL = 'https://aur.archlinux.org/rpc/v5/search';

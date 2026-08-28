@@ -1,14 +1,19 @@
-const { NxAppRspackPlugin } = require('@nx/rspack/app-plugin');
-const { DefinePlugin, SwcJsMinimizerRspackPlugin } = require('@rspack/core');
-const { join } = require('path');
-const { basename, resolve } = require('node:path');
-const { execSync } = require('node:child_process');
+import { NxAppRspackPlugin } from '@nx/rspack/app-plugin';
+import { BannerPlugin, DefinePlugin, SwcJsMinimizerRspackPlugin } from '@rspack/core';
+import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const configDirname = dirname(fileURLToPath(import.meta.url));
 
 class RspackPlugin {
   apply(compiler) {
     for (const rule of compiler.options.module?.rules ?? []) {
       if (rule && rule.loader === 'builtin:swc-loader' && rule.options?.jsc) {
         rule.options.jsc.target = 'esnext';
+        // swc's CommonJS output references `exports`, which does not exist in an ESM bundle.
+        rule.options.module = { ...(rule.options.module ?? {}), type: 'es6' };
       }
     }
 
@@ -16,7 +21,7 @@ class RspackPlugin {
     compiler.options.devtool = isProduction ? false : 'inline-source-map';
 
     const projectName = basename(compiler.options.context || process.cwd());
-    const workspaceRoot = resolve(__dirname, '../../');
+    const workspaceRoot = resolve(configDirname, '../../');
 
     compiler.options.experiments = {
       ...(compiler.options.experiments ?? {}),
@@ -66,6 +71,19 @@ class RspackPlugin {
           }),
         ]
       : [];
+
+    compiler.hooks.afterEmit.tap('EnsureEsmPackageJson', () => {
+      const packageJsonPath = join(compiler.options.output.path, 'package.json');
+      try {
+        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+        if (packageJson.type !== 'module') {
+          packageJson.type = 'module';
+          writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+        }
+      } catch {
+        // dist package.json only exists in production builds (generatePackageJson)
+      }
+    });
   }
 }
 
@@ -79,21 +97,23 @@ function resolveAppVersion() {
   }
 }
 
-module.exports = (options = {}) => {
+export default (options = {}) => {
   const isProduction = options.mode === 'production' || process.env.NODE_ENV === 'production';
   const mode = isProduction ? 'production' : 'development';
   const version = resolveAppVersion();
 
   return {
     mode,
-    context: __dirname,
+    context: configDirname,
     output: {
-      path: join(__dirname, '../dist/backend'),
+      path: join(configDirname, '../dist/backend'),
       clean: true,
+      module: true,
       devtoolModuleFilenameTemplate: '[absolute-resource-path]',
     },
     devtool: isProduction ? 'inline-source-map' : false,
     experiments: {
+      outputModule: true,
       cache: {
         type: 'persistent',
       },
@@ -109,8 +129,8 @@ module.exports = (options = {}) => {
       },
       storage: {
         type: 'filesystem',
-        directory: join(__dirname, 'node_modules/.rspack'),
-        location: join(__dirname, 'node_modules/.rspack/be'),
+        directory: join(configDirname, 'node_modules/.rspack'),
+        location: join(configDirname, 'node_modules/.rspack/be'),
       },
     },
     plugins: [
@@ -135,10 +155,20 @@ module.exports = (options = {}) => {
           },
           storage: {
             type: 'filesystem',
-            directory: join(__dirname, 'node_modules/.rspack'),
-            location: join(__dirname, 'node_modules/.rspack/be'),
+            directory: join(configDirname, 'node_modules/.rspack'),
+            location: join(configDirname, 'node_modules/.rspack/be'),
           },
         },
+      }),
+      // The Nx plugin externalizes node_modules with bare `require()` calls, which do not
+      // exist inside an ESM bundle. Provide one via createRequire for the emitted factories.
+      new BannerPlugin({
+        banner:
+          "import { createRequire as __bundleCreateRequire } from 'node:module';\n" +
+          'const require = __bundleCreateRequire(import.meta.url);\n' +
+          'const exports = {};',
+        raw: true,
+        test: /main\.js$/,
       }),
       new DefinePlugin({ __VERSION__: JSON.stringify(version) }),
       new RspackPlugin(),

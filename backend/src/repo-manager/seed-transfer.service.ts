@@ -1,109 +1,17 @@
+import { getOrCreatePackage, getOrCreateRepo, Package, Repo } from '../builder/builder.entity';
+import { ArchlinuxPackage, PackageElfAnalysis, type PackageElfPkgType } from './repo-manager.entity';
+import { analysisKey, SignalScanService, type ImportedAnalysis } from './scan';
+import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from './signal';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { type FindOptionsSelect, In, type Repository } from 'typeorm';
-import { getOrCreatePackage, getOrCreateRepo, Package, Repo } from '../builder/builder.entity';
-import { ArchlinuxPackage, PackageElfAnalysis, type PackageElfPkgType } from './repo-manager.entity';
-import { analysisKey, type ImportedAnalysis, SignalScanService } from './scan';
-import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from './signal';
+import { In, type FindOptionsSelect, type Repository } from 'typeorm';
 
 /** Entries processed per import chunk, to keep memory bounded on huge seeds. */
 const IMPORT_BATCH_SIZE = 500;
 
-/** One entry of an imported seed. Identity is a numeric pkgId (backend-exported
- * seeds) or a pkgname (+ repo for Chaotic) so offline-generated seeds can be
- * imported into a database whose auto-increment ids differ. */
-export interface SeedEntry {
-  pkgType: PackageElfPkgType;
-  version: string;
-  pkgId?: number;
-  pkgname?: string;
-  repo?: string;
-  files: string[];
-  neededSonames: string[];
-  providedSonames: string[];
-  importedSymbols: string[];
-  exportedSymbols: Record<string, string[]>;
-  vtables: Record<string, string[]>;
-  directoriesOwned: string[];
-  directDirectories: string[];
-  pluginOf: string[];
-  broken: boolean;
-  brokenReasons: string[];
-}
-
-function isSeedPkgType(value: string): value is PackageElfPkgType {
-  return value === ARCH_PKG_TYPE || value === CHAOTIC_PKG_TYPE;
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
-
-function requireStringArray(value: unknown, field: string): string[] {
-  if (!isStringArray(value)) {
-    throw new Error(`Invalid seed entry: ${field} must be a string[], got ${JSON.stringify(value)}`);
-  }
-  return value;
-}
-
-function requireStringArrayRecord(value: unknown, field: string): Record<string, string[]> {
-  if (typeof value !== 'object' || value === null) {
-    throw new Error(`Invalid seed entry: ${field} must be a Record<string, string[]>`);
-  }
-  const result: Record<string, string[]> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    result[key] = requireStringArray(entry, `${field}[${JSON.stringify(key)}]`);
-  }
-  return result;
-}
-
-function parseSeedEntry(entry: unknown): SeedEntry {
-  if (typeof entry !== 'object' || entry === null) {
-    throw new Error('Invalid seed entry: expected an object');
-  }
-  const e = entry as Record<string, unknown>;
-  const { pkgType, pkgId, version, pkgname, repo, broken } = e;
-  if (typeof pkgType !== 'string' || !isSeedPkgType(pkgType)) {
-    throw new Error(`Invalid seed entry: pkgType must be '0' or '1', got ${JSON.stringify(pkgType)}`);
-  }
-  if (typeof pkgId !== 'number' || !Number.isFinite(pkgId)) {
-    if (typeof pkgname !== 'string' || pkgname.length === 0) {
-      throw new Error(
-        `Invalid seed entry: need either a numeric pkgId or a pkgname, got pkgId=${JSON.stringify(pkgId)}`,
-      );
-    }
-  }
-  if (repo !== undefined && typeof repo !== 'string') {
-    throw new Error(`Invalid seed entry: repo must be a string, got ${JSON.stringify(repo)}`);
-  }
-  if (typeof version !== 'string' || version.length === 0) {
-    throw new Error(`Invalid seed entry: version must be a non-empty string, got ${JSON.stringify(version)}`);
-  }
-  if (broken !== undefined && typeof broken !== 'boolean') {
-    throw new Error(`Invalid seed entry: broken must be a boolean, got ${JSON.stringify(broken)}`);
-  }
-
-  return {
-    pkgType,
-    version,
-    pkgId: typeof pkgId === 'number' && Number.isFinite(pkgId) ? pkgId : undefined,
-    pkgname: typeof pkgname === 'string' ? pkgname : undefined,
-    repo: typeof repo === 'string' ? repo : undefined,
-    files: requireStringArray(e.files ?? [], 'files'),
-    neededSonames: requireStringArray(e.neededSonames ?? [], 'neededSonames'),
-    providedSonames: requireStringArray(e.providedSonames ?? [], 'providedSonames'),
-    importedSymbols: requireStringArray(e.importedSymbols ?? [], 'importedSymbols'),
-    exportedSymbols: requireStringArrayRecord(e.exportedSymbols ?? {}, 'exportedSymbols'),
-    vtables: requireStringArrayRecord(e.vtables ?? {}, 'vtables'),
-    directoriesOwned: requireStringArray(e.directoriesOwned ?? [], 'directoriesOwned'),
-    directDirectories: requireStringArray(e.directDirectories ?? [], 'directDirectories'),
-    pluginOf: requireStringArray(e.pluginOf ?? [], 'pluginOf'),
-    broken: broken ?? false,
-    brokenReasons: requireStringArray(e.brokenReasons ?? [], 'brokenReasons'),
-  };
-}
+import { seedEntrySchema, type SeedEntry } from '@chaotic-next/shared-lib';
 
 /**
  * Seed export/import of ELF analyses: dump the stored analyses as a JSON seed
@@ -173,7 +81,7 @@ export class SeedTransferService {
   }
 
   private async importEntries(raw: unknown[]): Promise<ImportedAnalysis[]> {
-    const entries = raw.map(parseSeedEntry);
+    const entries = raw.map((entry) => seedEntrySchema.parse(entry));
     const analyses = await this.resolveSeedIdentity(entries);
 
     const archIds = analyses.filter((a) => a.pkgType === ARCH_PKG_TYPE).map((a) => a.pkgId);

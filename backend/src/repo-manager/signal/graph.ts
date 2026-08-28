@@ -1,4 +1,4 @@
-import type { PackageElfPkgType } from '../repo-manager.entity';
+import { type PackageElfPkgType } from '../repo-manager.entity';
 import { RUNTIME_INTERPRETER_PREFIX, sonameBasename } from './parse';
 
 /**

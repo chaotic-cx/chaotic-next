@@ -1,12 +1,12 @@
-import { BUILD_CLASS_MAX, BUILD_CLASS_MIN, type BuildClassSuggestion } from '@chaotic-next/shared-lib';
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { type Repository } from 'typeorm';
-import { GitlabService } from '../gitlab/gitlab.service';
+import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { parseCiConfig } from '../repo-manager/bump';
 import { errorMessage } from '../utils/functions';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
 import { Package } from './builder.entity';
+import { BUILD_CLASS_MAX, BUILD_CLASS_MIN, type BuildClassSuggestion } from '@chaotic-next/shared-lib';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { type Repository } from 'typeorm';
 
 const CI_KEY_BUILDER_CLASS = 'BUILDER_CLASS';
 const DEFAULT_BUILD_CLASS = 5;
@@ -34,7 +34,7 @@ export class BuildClassSyncService {
   constructor(
     @InjectRepository(Package)
     private readonly packageRepository: Repository<Package>,
-    private readonly gitlabService: GitlabService,
+    private readonly gitlabPipelineService: GitlabPipelineService,
     private readonly buildClassSuggester: BuildClassSuggesterService,
   ) {}
 
@@ -80,7 +80,7 @@ export class BuildClassSyncService {
       return;
     }
 
-    const configText = await this.gitlabService.fetchCiConfig(repoName, pkgbase);
+    const configText = await this.gitlabPipelineService.fetchCiConfig(repoName, pkgbase);
     if (configText === null) return;
 
     const effectiveClass = this.effectiveClassOf(configText);
@@ -98,7 +98,7 @@ export class BuildClassSyncService {
 
   private async applyConfigToPackage(pkg: Package): Promise<boolean> {
     const configPathBase = pkg.pkgbaseName ?? pkg.pkgname;
-    const configText = await this.gitlabService.fetchCiConfig(pkg.repo?.name ?? '', configPathBase);
+    const configText = await this.gitlabPipelineService.fetchCiConfig(pkg.repo?.name ?? '', configPathBase);
     if (configText === null) return false;
 
     const effectiveClass = this.effectiveClassOf(configText);

@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { ParsedPackage } from '../../interfaces/repo-manager';
 import { loadCheckpoint, scanMirrorPackages, writeSeedNdjson } from './index';
 
-const FMT_PKG = join(__dirname, '..', '__fixtures__', 'fmt-12.0.0-1-x86_64.pkg.tar.zst');
+const FMT_PKG = join(import.meta.dirname, '..', '__fixtures__', 'fmt-12.0.0-1-x86_64.pkg.tar.zst');
 
 const fmtPkg: ParsedPackage = {
   name: 'fmt',

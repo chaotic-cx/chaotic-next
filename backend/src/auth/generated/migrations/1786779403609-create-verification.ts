@@ -1,4 +1,4 @@
-import { type MigrationInterface, type QueryRunner, Table, TableIndex } from 'typeorm';
+import { Table, TableIndex, type MigrationInterface, type QueryRunner } from 'typeorm';
 
 export class CreateVerification1786779403609 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {

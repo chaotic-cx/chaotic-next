@@ -1,9 +1,9 @@
+import { type Repo } from '../../builder/builder.entity';
+import { BumpType } from '../../interfaces/repo-manager';
+import { bumpTypeAdjectiveText, decryptAes } from '../../utils/functions';
 import { Gitlab } from '@gitbeaker/rest';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { bumpTypeAdjectiveText, decryptAes } from '../../utils/functions';
-import type { Repo } from '../../builder/builder.entity';
-import { BumpType } from '../../interfaces/repo-manager';
 
 export const REPO_WRITER = Symbol('REPO_WRITER');
 

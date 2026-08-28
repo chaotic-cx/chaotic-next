@@ -1,4 +1,4 @@
-import { type MigrationInterface, type QueryRunner, Table, TableForeignKey, TableIndex } from 'typeorm';
+import { Table, TableForeignKey, TableIndex, type MigrationInterface, type QueryRunner } from 'typeorm';
 
 export class CreateSession1786779403609 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {

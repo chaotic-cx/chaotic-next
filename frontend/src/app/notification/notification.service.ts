@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwPush } from '@angular/service-worker';
+import { pushSubscriptionBodySchema } from '@chaotic-next/shared-lib';
 import { AuthService } from 'ngx-better-auth';
 import { catchError, first, firstValueFrom, lastValueFrom, map, type Observable, of, timeout } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
@@ -79,10 +80,10 @@ export class NotificationService {
   }
 
   private async sendSubscriptionToServer(subscription: PushSubscription): Promise<boolean> {
+    const parsed = pushSubscriptionBodySchema.safeParse(subscription.toJSON());
+    if (!parsed.success) return false;
     try {
-      await lastValueFrom(
-        this.http.post(`${this.appConfig.backendUrl}/notifications/subscribe`, subscription.toJSON()),
-      );
+      await lastValueFrom(this.http.post(`${this.appConfig.backendUrl}/notifications/subscribe`, parsed.data));
       return true;
     } catch {
       return false;

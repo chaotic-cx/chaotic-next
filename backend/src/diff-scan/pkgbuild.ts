@@ -1,5 +1,5 @@
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { isInScope, type RuleScope, visibleFileLines } from './rules/diff-utils';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 const PKGBUILD_SCOPE: RuleScope[] = ['pkgbuild'];
 const REPUTABLE_HOSTS = [

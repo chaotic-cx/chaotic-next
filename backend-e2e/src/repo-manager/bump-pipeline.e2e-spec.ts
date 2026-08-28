@@ -19,6 +19,7 @@ import {
   TriggerType,
 } from '@chaotic-next/backend/interfaces/repo-manager';
 import { HttpService } from '@nestjs/axios';
+import { PinoLogger } from 'nestjs-pino';
 import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createE2eApp, type E2eApp } from '../test/e2e-app';
@@ -62,11 +63,20 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
       signalScanEnabled: opts.signalScanEnabled ?? false,
     } as unknown as RepoSettings;
     const bump = makeBumpService(opts.writer);
+    const pinoStub = {
+      trace: () => undefined,
+      debug: () => undefined,
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      fatal: () => undefined,
+    } as unknown as PinoLogger;
     const triggers = new RebuildTriggerService(
       dataSource.getRepository(PackageElfAnalysis),
       dataSource.getRepository(ArchlinuxPackage),
       dataSource.getRepository(Package),
       bump,
+      pinoStub,
     );
     return new RepoManager(
       repoSettings,

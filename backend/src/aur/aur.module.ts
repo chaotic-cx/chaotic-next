@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
 import { AurController } from './aur.controller';
 import { AurService } from './aur.service';
+import { Module } from '@nestjs/common';
 
 @Module({
   controllers: [AurController],

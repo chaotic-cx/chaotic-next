@@ -1,10 +1,3 @@
-import { RepoStatus } from '@chaotic-next/shared-lib';
-import { HttpService } from '@nestjs/axios';
-import { Logger } from '@nestjs/common';
-import { mkdtemp, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { Repository } from 'typeorm';
 import { Build, Package, Repo } from '../builder/builder.entity';
 import {
   BumpResult,
@@ -24,6 +17,13 @@ import { ArchlinuxPackage } from './repo-manager.entity';
 import { type RepoReader, type RepoReaderFactory } from './repo-rw';
 import { CI_FLAG_REBUILD_IGNORE_ABI, RebuildTriggerService, SignalScanService } from './scan';
 import { formatConsumerAbiBreak } from './signal';
+import { RepoStatus } from '@chaotic-next/shared-lib';
+import { HttpService } from '@nestjs/axios';
+import { Logger } from '@nestjs/common';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Repository } from 'typeorm';
 
 const MAX_DOWNLOAD_RETRIES = 5;
 const BASE_RETRY_DELAY_MS = 1000;

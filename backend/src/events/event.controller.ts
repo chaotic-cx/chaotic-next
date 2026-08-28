@@ -1,9 +1,9 @@
+import { EventService } from './event.service';
 import { ChaoticEvent } from '@chaotic-next/shared-lib';
 import { Controller, Sse } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { map, merge, Observable, timer } from 'rxjs';
-import { EventService } from './event.service';
 
 @ApiTags('event')
 @Controller()

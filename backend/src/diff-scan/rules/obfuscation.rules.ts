@@ -1,6 +1,5 @@
 import { addedLines, isInScope } from './diff-utils';
-import type { Rule } from './rule';
-import { regexRule } from './rule';
+import { regexRule, type Rule } from './rule';
 
 /** Length at which a base64-looking run of characters is considered a payload blob. */
 const BASE64_BLOB_LENGTH = 120;

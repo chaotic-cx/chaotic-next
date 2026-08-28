@@ -1,23 +1,5 @@
-import { Paginated, RepoStatus } from '@chaotic-next/shared-lib';
-import { HttpService } from '@nestjs/axios';
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-  OnModuleInit,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { CronJob } from 'cron';
-import { PinoLogger } from 'nestjs-pino';
-import { randomUUID } from 'node:crypto';
-import { In, IsNull, Not, Repository } from 'typeorm';
-import { Build, Package, Repo } from '../builder/builder.entity';
 import { requiredGroupForRepo } from '../auth/gitlab-groups';
+import { Build, Package, Repo } from '../builder/builder.entity';
 import {
   BrokenPackageReport,
   BumpResult,
@@ -35,11 +17,9 @@ import { paginate, resolvePagination } from '../utils/pagination';
 import { ArchMirrorService } from './arch-mirror.service';
 import { BumpService, parseCiConfig } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
-
 import { RepoManager } from './repo-manager';
-import { BumpPackagesResultDto } from './repo-manager.dto';
 import { ArchlinuxPackage, PackageElfAnalysis } from './repo-manager.entity';
-import { REPO_WRITER, REPO_READER_FACTORY, type RepoReader, type RepoReaderFactory, type RepoWriter } from './repo-rw';
+import { REPO_READER_FACTORY, REPO_WRITER, type RepoReader, type RepoReaderFactory, type RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
 import { latestAnalysesByPackage } from './scan/latest-analyses';
 import { SeedTransferService } from './seed-transfer.service';
@@ -50,11 +30,29 @@ import {
   CHAOTIC_PKG_TYPE,
   compareArchVersions,
   decodeOwnerKey,
-  type DependencyEdge,
-  type DependencyNode,
   latestAnalysisByKey,
   pkgTypeOf,
+  type DependencyEdge,
+  type DependencyNode,
 } from './signal';
+import { Paginated, RepoStatus, type BumpPackagesResult } from '@chaotic-next/shared-lib';
+import { HttpService } from '@nestjs/axios';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { CronJob } from 'cron';
+import { PinoLogger } from 'nestjs-pino';
+import { randomUUID } from 'node:crypto';
+import { In, IsNull, Not, Repository } from 'typeorm';
 
 /** The cron scheduler runs on German time so runs align with Arch mirror syncs. */
 const CRON_TIME_ZONE = 'Europe/Berlin';
@@ -223,10 +221,10 @@ export class RepoManagerService implements OnModuleInit {
    * GitLab commit. This is an explicit admin action, so it always bumps
    * regardless of the ABI dry-run setting.
    */
-  async bumpSelectedPackages(pkgnames: string[], actorGroups: string[]): Promise<BumpPackagesResultDto> {
+  async bumpSelectedPackages(pkgnames: string[], actorGroups: string[]): Promise<BumpPackagesResult> {
     const uniqueNames = [...new Set(pkgnames.map((name) => name.trim()).filter(Boolean))];
     if (uniqueNames.length === 0) {
-      throw new BadRequestException('No packages provided');
+      throw new BadRequestException('No packages provided', { errorCode: 'NO_PACKAGES' });
     }
 
     const pkgs = await this.packageRepository.find({
@@ -249,7 +247,9 @@ export class RepoManagerService implements OnModuleInit {
       if (!repoName) continue;
       const requiredGroup = requiredGroupForRepo(repoName);
       if (requiredGroup && !actorGroups.includes(requiredGroup)) {
-        throw new ForbiddenException(`Bumping '${repoName}' packages requires membership in '${requiredGroup}'`);
+        throw new ForbiddenException(`Bumping '${repoName}' packages requires membership in '${requiredGroup}'`, {
+          errorCode: 'MISSING_GROUP',
+        });
       }
     }
 
@@ -259,7 +259,9 @@ export class RepoManagerService implements OnModuleInit {
     const skipped: string[] = [];
 
     if (this.repoManager.status === RepoStatus.ACTIVE) {
-      throw new ConflictException('Repo manager is already running, try again later');
+      throw new ConflictException('Repo manager is already running, try again later', {
+        errorCode: 'RUN_IN_PROGRESS',
+      });
     }
 
     const bumped: string[] = [];

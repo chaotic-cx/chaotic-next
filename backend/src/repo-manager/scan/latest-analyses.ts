@@ -1,6 +1,6 @@
-import type { Repository } from 'typeorm';
-import type { PackageElfAnalysis } from '../repo-manager.entity';
+import { type PackageElfAnalysis } from '../repo-manager.entity';
 import { latestAnalysisByKey } from '../signal';
+import { type Repository } from 'typeorm';
 
 export async function latestAnalysesByPackage(
   repository: Repository<PackageElfAnalysis>,

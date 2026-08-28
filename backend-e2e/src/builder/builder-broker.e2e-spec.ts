@@ -136,7 +136,7 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       },
       repoManagerService: repoManagerStub as never,
       sseSubject,
-      gitlabService: gitlabStub as never,
+      gitlabPipelineService: gitlabStub as never,
       buildClassSync: buildClassSyncStub,
     };
 

@@ -1,8 +1,8 @@
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { Cache } from 'cache-manager';
 import { cachedResult } from '../utils/cache';
 import { errorMessage } from '../utils/functions';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { type Cache } from 'cache-manager';
 
 const AUR_SUGGEST_URL = 'https://aur.archlinux.org/rpc/v5/suggest';
 const AUR_TIMEOUT_MS = 5000;

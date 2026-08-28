@@ -1,10 +1,10 @@
+import { errorMessage } from '../../utils/functions';
+import { isElfSharedObject, isExecutableRegularFile, parseTarVerboseList } from '../signal';
 import { execFile, type ExecFileOptionsWithStringEncoding } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { errorMessage } from '../../utils/functions';
-import { isElfSharedObject, isExecutableRegularFile, parseTarVerboseList } from '../signal';
 
 const execFileP = promisify(execFile);
 

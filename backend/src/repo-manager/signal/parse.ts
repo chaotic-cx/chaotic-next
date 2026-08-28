@@ -2,7 +2,7 @@
  * Parsers for the raw output of binutils/libarchive utils (bsdtar, readelf, nm)
  * plus small path helpers. Everything here maps strings to plain data.
  */
-import type { RuntimeName } from './graph';
+import { type RuntimeName } from './graph';
 
 export function parseFileList(output: string): string[] {
   return output

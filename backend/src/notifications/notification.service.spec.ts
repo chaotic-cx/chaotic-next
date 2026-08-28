@@ -127,11 +127,6 @@ describe('NotificationService', () => {
       await expect(service.subscribeToPushEvents(http)).rejects.toThrow(BadRequestException);
     });
 
-    it('rejects an endpoint with missing keys', async () => {
-      const noKeys = { endpoint: validSubscription.endpoint } as PushSubscription;
-      await expect(service.subscribeToPushEvents(noKeys)).rejects.toThrow(BadRequestException);
-    });
-
     it('rejects when the subscriber limit is reached', async () => {
       vi.mocked(repo.count).mockResolvedValue(1000);
       await expect(service.subscribeToPushEvents(validSubscription)).rejects.toThrow('Too many subscribers');

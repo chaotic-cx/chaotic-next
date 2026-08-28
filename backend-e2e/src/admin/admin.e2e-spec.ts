@@ -473,4 +473,34 @@ describe('Admin Endpoints (e2e)', () => {
       expect(res.statusCode).toBe(404);
     });
   });
+
+  describe('POST /admin/rescan-build-classes', () => {
+    it('accepts the rescan trigger with an empty package table', async () => {
+      const res = await e2e.inject({ method: 'POST', url: '/admin/rescan-build-classes', payload: {} });
+
+      expect(res.statusCode).toBe(202);
+    });
+  });
+
+  describe('POST /repo/broken/bump (validation behavior)', () => {
+    it('rejects an empty selection with NO_PACKAGES', async () => {
+      const res = await e2e.inject({ method: 'POST', url: '/repo/broken/bump', payload: { pkgnames: [] } });
+
+      expect(res.statusCode).toBe(400);
+      // The shared schema rejects the empty list before the service is reached.
+      expect((await res.json()) as { errorCode?: string }).toMatchObject({ errorCode: 'VALIDATION_FAILED' });
+    });
+
+    it('rejects a selection that matches no active package (404)', async () => {
+      await e2e.seedRepo({ name: 'chaotic-aur' });
+      const res = await e2e.inject({
+        method: 'POST',
+        url: '/repo/broken/bump',
+        payload: { pkgnames: ['no-such-pkg'] },
+        headers: { 'x-test-user-groups': 'chaotic-aur' },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+  });
 });

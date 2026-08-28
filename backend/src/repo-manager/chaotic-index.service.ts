@@ -1,14 +1,14 @@
+import { bulkGetOrCreatePackages, getOrCreateRepo, Package, Repo } from '../builder/builder.entity';
+import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } from '../interfaces/repo-manager';
+import { ArchMirrorService } from './arch-mirror.service';
+import { saveInBatches } from './save';
+import { SignalScanService } from './scan';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Repository } from 'typeorm';
-import { bulkGetOrCreatePackages, getOrCreateRepo, Package, Repo } from '../builder/builder.entity';
-import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } from '../interfaces/repo-manager';
-import { ArchMirrorService } from './arch-mirror.service';
-import { saveInBatches } from './save';
-import { SignalScanService } from './scan';
 
 /**
  * Chaotic-AUR repo indexing: one-off bulk index of a repo mirror (used to

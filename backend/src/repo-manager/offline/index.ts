@@ -8,17 +8,17 @@
  * Arch mirrors keep packages under `os/x86_64`; Chaotic-AUR/Garuda put them
  * directly under `x86_64` — set `--arch-dir` to match.
  */
-import type { PackageElfAnalysis as AnalysisShape } from '@chaotic-next/shared-lib';
+import { type ParsedPackage } from '../../interfaces/repo-manager';
+import { errorMessage } from '../../utils/functions';
+import { buildAnalysis } from '../signal';
+import { extractPacmanDatabase, parsePacmanDatabases } from './pacman-parse';
+import { scanArchive } from './scan-archive';
+import { type PackageElfAnalysis as AnalysisShape } from '@chaotic-next/shared-lib';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { access, copyFile, mkdir, mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
-import type { ParsedPackage } from '../../interfaces/repo-manager';
-import { errorMessage } from '../../utils/functions';
-import { buildAnalysis } from '../signal';
-import { extractPacmanDatabase, parsePacmanDatabases } from './pacman-parse';
-import { scanArchive } from './scan-archive';
 
 interface CliOptions {
   mirror: string;

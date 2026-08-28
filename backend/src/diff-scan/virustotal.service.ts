@@ -1,3 +1,6 @@
+import { errorMessage, mapWithConcurrency } from '../utils/functions';
+import { type ScanIndicator } from './indicators';
+import { statsToColumns, VirusTotalVerdict } from './virus-total-verdict.entity';
 import { type VtEngineStats, type VtIndicatorReport, type VtVerdict } from '@chaotic-next/shared-lib';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
@@ -5,9 +8,6 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
-import { errorMessage, mapWithConcurrency } from '../utils/functions';
-import type { ScanIndicator } from './indicators';
-import { statsToColumns, VirusTotalVerdict } from './virus-total-verdict.entity';
 
 const VT_API_BASE = 'https://www.virustotal.com/api/v3';
 const VT_TIMEOUT_MS = 15_000;
