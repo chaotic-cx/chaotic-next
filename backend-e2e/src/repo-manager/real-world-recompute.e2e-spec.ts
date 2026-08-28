@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createE2eApp, type E2eApp } from '../test/e2e-app';
 import { SignalScanService } from '@chaotic-next/backend/repo-manager/scan';
+import { seedElfAnalyses } from '../test/elf-seeding';
 import {
   ARCH_PKG_TYPE,
   CHAOTIC_PKG_TYPE,
@@ -135,9 +136,8 @@ describe('Real-world broken recompute + dependency graph (e2e, real PostgreSQL)'
   let signalScan: SignalScanService;
 
   const importSeed = async (payload: SeedEntry[]): Promise<void> => {
-    const res = await e2e.inject({ method: 'POST', url: '/repo/signals/import', payload });
-    if (res.statusCode !== 202) console.log('IMPORT FAIL:', String(res.body).slice(0, 300));
-    expect(res.statusCode).toBe(202);
+    const analyses = await seedElfAnalyses(e2e.dataSource, payload);
+    await signalScan.refreshAfterImport(analyses);
   };
 
   const fetchBroken = async (): Promise<BrokenEntry[]> => {

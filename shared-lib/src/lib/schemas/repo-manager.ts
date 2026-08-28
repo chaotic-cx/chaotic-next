@@ -39,7 +39,3 @@ export const seedEntrySchema = z
   });
 
 export type SeedEntry = z.infer<typeof seedEntrySchema>;
-
-export const signalsSeedBodySchema = z.array(seedEntrySchema).describe('ELF analysis seed entries');
-
-export type SignalsSeedBodyDto = z.infer<typeof signalsSeedBodySchema>;

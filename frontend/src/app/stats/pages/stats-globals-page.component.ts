@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
-import { ChartCountriesComponent } from '../../chart-countries/chart-countries.component';
-import { ChartRpsHistoryComponent } from '../../chart-rps-history/chart-rps-history.component';
-import { ChartUseragentComponent } from '../../chart-useragent/chart-useragent.component';
+import { ChartCountriesComponent } from '../charts/downloads/chart-countries/chart-countries.component';
+import { ChartRpsHistoryComponent } from '../charts/system/chart-rps-history/chart-rps-history.component';
+import { ChartUseragentComponent } from '../charts/system/chart-useragent/chart-useragent.component';
 
 @Component({
   selector: 'chaotic-stats-globals-page',

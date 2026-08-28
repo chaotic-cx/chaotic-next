@@ -1,7 +1,6 @@
 import { schemaResponse, schemaResponseArray } from '../api/response-schema';
 import { auth } from '../auth/auth';
 import { userGroupsOf } from '../auth/gitlab-groups';
-import { PackageElfAnalysis } from './repo-manager.entity';
 import { RepoManagerService } from './repo-manager.service';
 import { type DependencyEdge } from './signal';
 import {
@@ -11,11 +10,9 @@ import {
   bumpPackagesBodySchema,
   bumpPackagesResultSchema,
   dependencyEdgeSchema,
-  packageElfAnalysisSchema,
   PackageRebuildTriggerSources,
   packageRebuildTriggerSourcesSchema,
   Paginated,
-  signalsSeedBodySchema,
   type BrokenPackagesQueryDto,
   type BumpPackagesBodyDto,
   type BumpPackagesResult,
@@ -116,24 +113,6 @@ export class RepoManagerController {
   })
   getRebuildTriggerSources(@Param('pkgname') pkgname: string): Promise<PackageRebuildTriggerSources> {
     return this.repoManager.getRebuildTriggerSources(pkgname);
-  }
-
-  @Get('signals/export')
-  @ApiOperation({ summary: 'Export all stored ELF analyses as a JSON seed.' })
-  @ApiOkResponse({
-    description: 'Exported ELF analyses.',
-    schema: schemaResponseArray(packageElfAnalysisSchema).schema,
-  })
-  exportSignalsSeed(): Promise<PackageElfAnalysis[]> {
-    return this.repoManager.exportSignalsSeed();
-  }
-
-  @Post('signals/import')
-  @HttpCode(HttpStatus.ACCEPTED)
-  @ApiOperation({ summary: 'Import a JSON seed of ELF analyses.' })
-  @ApiAcceptedResponse({ description: 'ELF analyses imported.' })
-  importSignalsSeed(@Body({ schema: signalsSeedBodySchema }) seed: unknown[]): Promise<void> {
-    return this.repoManager.importSignalsSeed(seed);
   }
 
   @Get('update-db')

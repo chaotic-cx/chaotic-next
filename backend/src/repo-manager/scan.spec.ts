@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- test fixtures assert on freshly created entities */
 import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Package, Repo } from '../builder/builder.entity';
@@ -20,7 +18,6 @@ import {
   latestAnalysisByKey,
 } from './signal';
 import { ScanJob, SignalScanService } from './scan';
-import { SeedTransferService } from './seed-transfer.service';
 import { ensureFixtures, FixtureSet } from './test/fixtures';
 import { createMockRepository, MockRepository } from './test/mock-repository';
 
@@ -104,8 +101,7 @@ function createService() {
   ]);
 
   const service = new SignalScanService(analysisRepo, archPkgRepo, packageRepo, repoRepo);
-  const seedService = new SeedTransferService(service, analysisRepo, archPkgRepo, packageRepo, repoRepo);
-  return { service, seedService, analysisRepo, archPkgRepo, packageRepo, repoRepo };
+  return { service, analysisRepo, archPkgRepo, packageRepo, repoRepo };
 }
 
 const describeTools = TOOLS_AVAILABLE ? describe : describe.skip;
@@ -1077,116 +1073,6 @@ describeTools('SignalScanService end-to-end', () => {
 
       const apollo = Array.from(analysisRepo.store.values()).find((a) => a.version.includes('0.4.8'))!;
       expect(apollo.providedSonames).toEqual([]);
-    });
-  });
-
-  describe('seed import', () => {
-    const seedEntry = (pkgname: string, id: number, dir: string): Record<string, unknown> => ({
-      pkgType: '0',
-      pkgname,
-      version: '1.0-1',
-      files: [`${dir}/lib${pkgname}.so`],
-      neededSonames: pkgname === 'plugin' ? ['libowner.so.1'] : [],
-      providedSonames: pkgname === 'owner' ? ['libowner.so.1'] : [],
-      importedSymbols: [],
-      exportedSymbols: {},
-      vtables: {},
-      directoriesOwned: [dir],
-      directDirectories: [dir],
-      pluginOf: [],
-      broken: false,
-      brokenReasons: [],
-    });
-
-    it('resolves pkgname entries to database pkgIds and derives pluginOf', async () => {
-      const { seedService, analysisRepo, archPkgRepo } = createService();
-      archPkgRepo.seed([
-        { id: 10, pkgname: 'owner', version: '1.0-1' } as ArchlinuxPackage,
-        { id: 11, pkgname: 'plugin', version: '1.0-1' } as ArchlinuxPackage,
-      ]);
-      const archRowCount = archPkgRepo.store.size;
-
-      await seedService.importSeed([
-        seedEntry('owner', 10, 'usr/lib/owner'),
-        seedEntry('plugin', 11, 'usr/lib/owner'),
-      ] as unknown[]);
-
-      // Analyses are keyed by the resolved database ids, not the seed identity.
-      const owner = Array.from(analysisRepo.store.values()).find((a) => a.pkgId === 10)!;
-      const plugin = Array.from(analysisRepo.store.values()).find((a) => a.pkgId === 11)!;
-      expect(owner).toBeDefined();
-      expect(plugin).toBeDefined();
-
-      // plugin writes into owner's directory -> its pluginOf carries the owner key.
-      expect(plugin.pluginOf).toContain('a10');
-      // No new arch rows were created (both already existed).
-      expect(archPkgRepo.store.size).toBe(archRowCount);
-    });
-
-    it('keeps numeric pkgId entries working (backend-exported seeds)', async () => {
-      const { seedService, analysisRepo } = createService();
-      await seedService.importSeed([
-        {
-          pkgType: '0',
-          pkgId: 99,
-          version: '3.2.1-1',
-          files: ['usr/lib/libx.so.1'],
-          neededSonames: [],
-          providedSonames: ['libx.so.1'],
-          importedSymbols: [],
-          exportedSymbols: {},
-          vtables: {},
-          directoriesOwned: ['usr/lib/libx.so.1'],
-          directDirectories: ['usr/lib'],
-          pluginOf: [],
-          broken: false,
-          brokenReasons: [],
-        },
-      ] as unknown[]);
-
-      const analysis = Array.from(analysisRepo.store.values()).find((a) => a.pkgId === 99)!;
-      expect(analysis.version).toBe('3.2.1-1');
-    });
-
-    it('imports a newline-delimited JSON seed file (offline indexer output)', async () => {
-      const dir = await mkdtemp(join(tmpdir(), 'seed-import-'));
-      const path = join(dir, 'seed.ndjson');
-      try {
-        const ownerRow: ArchlinuxPackage = { id: 10, pkgname: 'owner', version: '1.0-1' } as ArchlinuxPackage;
-        const pluginRow: ArchlinuxPackage = { id: 11, pkgname: 'plugin', version: '1.0-1' } as ArchlinuxPackage;
-        const { seedService, analysisRepo, archPkgRepo } = createService();
-        archPkgRepo.seed([ownerRow, pluginRow]);
-
-        const line = (id: number, name: string, dirs: string[]): string =>
-          JSON.stringify({
-            pkgType: '0',
-            pkgId: id,
-            pkgname: name,
-            version: '1.0-1',
-            files: dirs.map((d) => `${d}/lib${name}.so`),
-            neededSonames: name === 'plugin' ? ['libowner.so.1'] : [],
-            providedSonames: name === 'owner' ? ['libowner.so.1'] : [],
-            importedSymbols: [],
-            exportedSymbols: {},
-            vtables: {},
-            directoriesOwned: dirs,
-            directDirectories: dirs,
-            pluginOf: [],
-            broken: false,
-            brokenReasons: [],
-          });
-
-        await writeFile(path, `${line(10, 'owner', ['usr/lib/owner'])}\n${line(11, 'plugin', ['usr/lib/owner'])}\n`);
-        await seedService.importSeedFile(path);
-
-        const owner = Array.from(analysisRepo.store.values()).find((a) => a.pkgId === 10)!;
-        const plugin = Array.from(analysisRepo.store.values()).find((a) => a.pkgId === 11)!;
-        expect(owner).toBeDefined();
-        expect(plugin).toBeDefined();
-        expect(plugin.pluginOf).toContain('a10');
-      } finally {
-        await rm(dir, { recursive: true, force: true });
-      }
     });
   });
 });

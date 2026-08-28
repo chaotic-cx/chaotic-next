@@ -22,7 +22,6 @@ import { ArchlinuxPackage, PackageElfAnalysis } from './repo-manager.entity';
 import { REPO_READER_FACTORY, REPO_WRITER, type RepoReader, type RepoReaderFactory, type RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
 import { latestAnalysesByPackage } from './scan/latest-analyses';
-import { SeedTransferService } from './seed-transfer.service';
 import {
   ARCH_PKG_TYPE,
   BASE_SYSTEM_SONAMES,
@@ -79,7 +78,6 @@ export class RepoManagerService implements OnModuleInit {
     @InjectRepository(PackageElfAnalysis)
     private elfAnalysisRepository: Repository<PackageElfAnalysis>,
     private signalScanService: SignalScanService,
-    private seedTransferService: SeedTransferService,
     private archMirrorService: ArchMirrorService,
     private chaoticIndexService: ChaoticIndexService,
     private rebuildTriggerService: RebuildTriggerService,
@@ -164,10 +162,6 @@ export class RepoManagerService implements OnModuleInit {
   async triggerSignalScan(): Promise<void> {
     await this.repoManager.pullArchlinuxPackages();
     await this.repoManager.scanChangedArchPackages();
-  }
-
-  async exportSignalsSeed(): Promise<PackageElfAnalysis[]> {
-    return this.seedTransferService.exportSeed();
   }
 
   async indexArchMirror(): Promise<IndexResult> {
@@ -539,10 +533,6 @@ export class RepoManagerService implements OnModuleInit {
         .filter((pkg) => isDependency(pkg.pkgname))
         .map((pkg) => ({ pkgname: pkg.pkgname, pkgType: 'chaotic' as const })),
     ];
-  }
-
-  async importSignalsSeed(seed: unknown[]): Promise<void> {
-    await this.seedTransferService.importSeed(seed);
   }
 
   async run(): Promise<void> {

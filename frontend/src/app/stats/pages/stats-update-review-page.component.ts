@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
-import { ChartReviewOverTimeComponent } from '../../chart-review-over-time/chart-review-over-time.component';
-import { ChartReviewStatsComponent } from '../../chart-review-stats/chart-review-stats.component';
+import { ChartReviewOverTimeComponent } from '../charts/reviews/chart-review-over-time/chart-review-over-time.component';
+import { ChartReviewStatsComponent } from '../charts/reviews/chart-review-stats/chart-review-stats.component';
 
 @Component({
   selector: 'chaotic-stats-update-review-page',
