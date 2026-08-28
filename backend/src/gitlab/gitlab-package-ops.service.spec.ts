@@ -5,6 +5,7 @@ import { AurScanService } from '../diff-scan/aur-scan.service';
 import { Package } from '../builder/builder.entity';
 import { GitlabApiService } from './gitlab-api.service';
 import { GitlabPackageOpsService } from './gitlab-package-ops.service';
+import { GitlabPipelineService } from './gitlab-pipeline.service';
 import { PipelineTrigger } from './pipeline-trigger.entity';
 
 const ACTOR = { userId: 'test-user', userName: 'Test User' };
@@ -30,7 +31,7 @@ function createService(
 
   const service = new GitlabPackageOpsService(
     apiService,
-    { registerCommitSha: vi.fn() },
+    { registerCommitSha: vi.fn() } as unknown as GitlabPipelineService,
     { startScan: vi.fn().mockResolvedValue({ packageBase: 'paru' }) } as unknown as AurScanService,
     pipelineTriggerRepository as unknown as Repository<PipelineTrigger>,
     packages as unknown as Repository<Package>,
