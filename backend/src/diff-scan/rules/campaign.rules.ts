@@ -1,6 +1,5 @@
 import { addedLines, isInScope, removedLineTexts } from './diff-utils';
-import type { Rule } from './rule';
-import { regexRule } from './rule';
+import { regexRule, type Rule } from './rule';
 
 /** Flags between the subcommand and the package name, for example "npm install -g pkg". */
 const PACKAGE_FLAGS = '(?:-{1,2}[\\w-]+\\s+)*';

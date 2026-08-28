@@ -1,6 +1,6 @@
-import type { VtEngineStats, VtVerdict } from '@chaotic-next/shared-lib';
+import { type ScanIndicatorType } from './indicators';
+import { type VtEngineStats, type VtVerdict } from '@chaotic-next/shared-lib';
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
-import type { ScanIndicatorType } from './indicators';
 
 @Entity('virus_total_verdict')
 @Index('IDX_vt_verdict_indicator', ['type', 'value'], { unique: true })

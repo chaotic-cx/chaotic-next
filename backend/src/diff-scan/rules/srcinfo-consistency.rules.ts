@@ -1,4 +1,3 @@
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import {
   DEFAULT_VALUE_ASSIGNMENT,
   FUNCTION_BODY_END,
@@ -10,7 +9,8 @@ import {
   unquote,
 } from '../pkgbuild';
 import { addedLines, basename, dirname } from './diff-utils';
-import type { GroupRuleHit, Rule } from './rule';
+import { type GroupRuleHit, type Rule } from './rule';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 const PKGBUILD_FILE = 'PKGBUILD';
 const SRCINFO_FILE = '.SRCINFO';

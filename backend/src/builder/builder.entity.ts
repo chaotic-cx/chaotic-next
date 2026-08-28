@@ -1,5 +1,5 @@
-import type { ParsedPackageMetadata } from '@chaotic-next/shared-lib';
-import { RepoStatus } from '@chaotic-next/shared-lib';
+import { BuildStatus } from '../types/types';
+import { RepoStatus, type ParsedPackageMetadata } from '@chaotic-next/shared-lib';
 import { Logger } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import { Mutex } from 'async-mutex';
@@ -8,17 +8,16 @@ import {
   CreateDateColumn,
   DeepPartial,
   Entity,
-  type EntitySubscriberInterface,
   EventSubscriber,
   In,
   Index,
-  type InsertEvent,
   ManyToOne,
   PrimaryGeneratedColumn,
+  type EntitySubscriberInterface,
+  type InsertEvent,
   type Repository,
   type UpdateResult,
 } from 'typeorm';
-import { BuildStatus } from '../types/types';
 
 const moduleLogger = new Logger('BuilderEntity');
 

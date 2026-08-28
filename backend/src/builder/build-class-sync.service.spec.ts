@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
-import { GitlabService } from '../gitlab/gitlab.service';
+import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
 import { BuildClassSyncService, parseConfiguredBuildClass } from './build-class-sync.service';
 import type { Package } from './builder.entity';
@@ -35,7 +35,7 @@ function makeService(options?: {
   suggestMock.mockResolvedValue(options?.suggestions ?? []);
 
   const repository = { find: findMock, save: saveMock } as never;
-  const gitlab = { fetchCiConfig: fetchCiConfigMock } as unknown as GitlabService;
+  const gitlab = { fetchCiConfig: fetchCiConfigMock } as unknown as GitlabPipelineService;
   const suggester = { suggestForPackages: suggestMock } as unknown as BuildClassSuggesterService;
 
   return {
@@ -168,7 +168,7 @@ describe('BuildClassSyncService', () => {
     fetchCiConfigMock.mockRejectedValueOnce(new Error('gitlab down'));
     fetchCiConfigMock.mockResolvedValue('BUILDER_CLASS=3\n');
 
-    const gitlab = { fetchCiConfig: fetchCiConfigMock } as unknown as GitlabService;
+    const gitlab = { fetchCiConfig: fetchCiConfigMock } as unknown as GitlabPipelineService;
     const suggester = { suggestForPackages: vi.fn().mockResolvedValue([]) } as unknown as BuildClassSuggesterService;
     const service = new BuildClassSyncService({ find: findMock, save: saveMock } as never, gitlab, suggester);
 

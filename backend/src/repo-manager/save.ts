@@ -1,4 +1,4 @@
-import type { DeepPartial, ObjectLiteral, Repository } from 'typeorm';
+import { type DeepPartial, type ObjectLiteral, type Repository } from 'typeorm';
 
 const SAVE_BATCH_SIZE = 1000;
 

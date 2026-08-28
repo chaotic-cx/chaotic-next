@@ -1,4 +1,4 @@
-import { type Rule, regexRule } from './rule';
+import { regexRule, type Rule } from './rule';
 
 const PASTE_HOSTS = ['0x0.st', 'paste.ee', 'pastebin.com', 'ptpb.pw', 'temp.sh', 'transfer.sh'];
 // The lookbehind keeps hostnames like mypastebin.com out, mirroring the network

@@ -1,6 +1,6 @@
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { extractArray, hostOf, isReputable, isVcsSource, parsePkgbuild, substituteVars } from './pkgbuild';
 import { addedLines, isInScope } from './rules/diff-utils';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 export const MAX_INDICATORS_PER_MR = 20;
 

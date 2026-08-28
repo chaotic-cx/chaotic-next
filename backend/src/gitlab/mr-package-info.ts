@@ -1,6 +1,6 @@
 import { MrPackageInfo, PKGBUILD_SOURCE_AUR } from '@chaotic-next/shared-lib';
-import type { Gitlab } from '@gitbeaker/rest';
-import type { Logger } from '@nestjs/common';
+import { type Gitlab } from '@gitbeaker/rest';
+import { type Logger } from '@nestjs/common';
 
 const ALWAYS_PRESENT_CI_FILES = new Set(['config', 'info']);
 

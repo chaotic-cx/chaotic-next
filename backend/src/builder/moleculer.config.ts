@@ -1,5 +1,5 @@
 import type IORedis from 'ioredis';
-import type { BrokerOptions, LoggerConfig, ServiceSchema } from 'moleculer';
+import { type BrokerOptions, type LoggerConfig, type ServiceSchema } from 'moleculer';
 
 const moleculerConfigCommon: Partial<BrokerOptions> = {
   skipProcessEventRegistration: true,

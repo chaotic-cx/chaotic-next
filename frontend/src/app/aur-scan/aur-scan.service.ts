@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
-import type { AurPackageScan, AurScanStreamChunk } from '@chaotic-next/shared-lib';
+import { aurScanStreamChunkSchema, type AurPackageScan, type AurScanStreamChunk } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
@@ -82,8 +82,8 @@ export class AurScanService {
 
 function parseChunk(raw: string): AurScanStreamChunk | null {
   try {
-    const parsed = JSON.parse(raw) as AurScanStreamChunk;
-    return parsed?.scan ? parsed : null;
+    const result = aurScanStreamChunkSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : null;
   } catch {
     return null;
   }

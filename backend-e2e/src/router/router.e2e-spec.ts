@@ -157,16 +157,15 @@ describe('Router endpoints (e2e, real PostgreSQL)', () => {
       expect(res.statusCode).toBe(400);
     });
 
-    it('clamps an out-of-range days value and still returns 200', async () => {
-      const today = new Date();
-      await e2e.seedRouterHits([routerHit({ package: 'firedragon', timestamp: today })]);
+    it('rejects an out-of-range days value with a structured 400', async () => {
+      const res = await e2e.inject({ method: 'GET', url: '/router/per-day/99999' });
 
-      const res = await e2e.inject<CountRow<'day'>[]>({ method: 'GET', url: '/router/per-day/99999' });
+      expect(res.statusCode).toBe(400);
+      const body = (await res.json()) as { errorCode?: string; message?: string };
+      expect(body.errorCode).toBe('VALIDATION_FAILED');
 
-      expect(res.statusCode).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(1);
-      expect(body[0].count).toBe('1');
+      // Named param schemas validate a bare value, so the issue carries no path.
+      expect(body.message).toContain('3650');
     });
 
     it('excludes rows older than the days window', async () => {
@@ -181,6 +180,35 @@ describe('Router endpoints (e2e, real PostgreSQL)', () => {
 
       const body = await res.json();
       expect(body).toBeDefined();
+    });
+  });
+
+  describe('GET /router/useragents/trend/:days', () => {
+    it('returns per-day download counts for the top user agents', async () => {
+      await e2e.seedRouterHits([
+        routerHit({ ip: '203.0.113.10', userAgent: 'pacman/6.1' }),
+        routerHit({ ip: '203.0.113.10', userAgent: 'pacman/6.1' }),
+        routerHit({ ip: '203.0.113.11', userAgent: 'curl/8.10.1' }),
+      ]);
+
+      const res = await e2e.inject<{ day: string; userAgent: string; count: string }[]>({
+        method: 'GET',
+        url: '/router/useragents/trend/30',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const rows = await res.json();
+      const pacman = rows.find((row: { userAgent: string }) => row.userAgent === 'pacman/6.1');
+      expect(pacman).toBeDefined();
+      expect(Number(pacman?.count)).toBe(2);
+      expect(Number.isNaN(Date.parse(pacman?.day ?? ''))).toBe(false);
+    });
+
+    it('returns an empty list when no hits exist', async () => {
+      const res = await e2e.inject({ method: 'GET', url: '/router/useragents/trend/30' });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([]);
     });
   });
 });

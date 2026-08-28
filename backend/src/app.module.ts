@@ -1,21 +1,12 @@
-import { Module, ValidationPipe } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
-import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
-import { ScheduleModule } from '@nestjs/schedule';
-import { TerminusModule } from '@nestjs/terminus';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from '@thallesp/nestjs-better-auth';
-import { LoggerModule } from 'nestjs-pino';
-import 'pino-pretty';
 import { AdminModule } from './admin/admin.module';
+import appConfig from './config/app.config';
 import { AllExceptionsFilter } from './api/all-exceptions.filter';
 import { ThrottlerBehindProxyGuard } from './api/throttler-behind-proxy.guard';
+import { validationExceptionFactory } from './api/validation-exception.factory';
 import { AurModule } from './aur/aur.module';
 import { auth } from './auth/auth';
 import { BuilderModule } from './builder/builder.module';
-import appConfig from './config/app.config';
+import { envValidationSchema } from './config/env.validation';
 import { dataSourceOptions } from './data/data.source';
 import { MigrationLogger } from './data/migration-logger';
 import { GitlabModule } from './gitlab/gitlab.module';
@@ -25,6 +16,15 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
+import { CacheModule } from '@nestjs/cache-manager';
+import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '@thallesp/nestjs-better-auth';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
@@ -33,7 +33,12 @@ import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
     AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
     BuilderModule,
     CacheModule.register({ isGlobal: true }),
-    ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true, load: [appConfig] }),
+    ConfigModule.forRoot({
+      envFilePath: '.env',
+      isGlobal: true,
+      load: [appConfig],
+      validationSchema: envValidationSchema,
+    }),
     HealthModule,
     LoggerModule.forRoot({
       pinoHttp: {
@@ -64,7 +69,6 @@ import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
     RepoManagerModule,
     RouterModule,
     ScheduleModule.forRoot(),
-    TerminusModule,
     ThrottlerModule.forRoot([
       {
         ttl: THROTTLE_TTL_MS,
@@ -77,12 +81,7 @@ import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
   providers: [
     {
       provide: APP_PIPE,
-      useValue: new ValidationPipe({
-        whitelist: true,
-        transform: true,
-        forbidNonWhitelisted: true,
-        forbidUnknownValues: true,
-      }),
+      useValue: new StandardSchemaValidationPipe({ exceptionFactory: validationExceptionFactory }),
     },
     {
       provide: APP_GUARD,

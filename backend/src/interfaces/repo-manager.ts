@@ -1,6 +1,6 @@
-import type { ParsedPackageMetadata } from '@chaotic-next/shared-lib';
-import type { Package } from '../builder/builder.entity';
-import type { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import { type Package } from '../builder/builder.entity';
+import { type ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import { type ParsedPackageMetadata } from '@chaotic-next/shared-lib';
 
 export interface RepoWorkDir {
   name: string;

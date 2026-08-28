@@ -1,4 +1,17 @@
-import type { BuildClassSuggestion } from '@chaotic-next/shared-lib';
+import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
+import { errorMessage } from '../utils/functions';
+import { type SseMessage, withSseKeepalive } from '../utils/sse';
+import { BuildClassSuggesterService } from './build-class-suggester.service';
+import { parseManagerLogEvent } from './manager-log-parser';
+import {
+  promoteBodySchema,
+  scheduleBuildBodySchema,
+  type BuildClassSuggestion,
+  type PromoteDto,
+  type ScheduleBuildDto,
+  type ScheduleDto,
+  type SchedulePackageDto,
+} from '@chaotic-next/shared-lib';
 import {
   BadRequestException,
   Body,
@@ -13,16 +26,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBody, ApiCookieAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiHeaders, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
-import { GitlabService } from '../gitlab/gitlab.service';
-import { errorMessage } from '../utils/functions';
-import { type SseMessage, withSseKeepalive } from '../utils/sse';
-import { PromoteDto, ScheduleBuildDto, ScheduleDto, SchedulePackageDto } from './build-api.dto';
-import { BuildClassSuggesterService } from './build-class-suggester.service';
-import { parseManagerLogEvent } from './manager-log-parser';
 
 const PROXY_REQUEST_TIMEOUT_MS = 15_000;
 const MANAGER_LOG_BUFFER_FRAMES = 500;
@@ -42,7 +49,7 @@ export class BuildApiController {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly gitlabService: GitlabService,
+    private readonly gitlabPipelineService: GitlabPipelineService,
     private readonly buildClassSuggester: BuildClassSuggesterService,
   ) {}
 
@@ -65,14 +72,15 @@ export class BuildApiController {
 
   @Post('queue/schedule')
   @ApiOperation({ summary: 'Schedule a package build via the build server.' })
-  @ApiBody({ type: ScheduleBuildDto })
   @ApiOkResponse({ description: 'Schedule response' })
-  async schedulePackages(@Body() body: ScheduleBuildDto): Promise<unknown> {
+  async schedulePackages(@Body({ schema: scheduleBuildBodySchema }) body: ScheduleBuildDto): Promise<unknown> {
     const sourceRepo = body.source_repo ?? 'chaotic-aur';
     const targetRepo = body.target_repo ?? sourceRepo;
     const commit = await this.fetchHeadCommit(sourceRepo);
     if (!commit) {
-      throw new BadRequestException(`Could not determine HEAD commit for ${sourceRepo}`);
+      throw new BadRequestException(`Could not determine HEAD commit for ${sourceRepo}`, {
+        errorCode: 'HEAD_COMMIT_UNKNOWN',
+      });
     }
     const scheduleBody: ScheduleDto = {
       arch: 'x86_64',
@@ -90,7 +98,7 @@ export class BuildApiController {
 
   private async fetchHeadCommit(repoName: string): Promise<string | undefined> {
     try {
-      return await this.gitlabService.getHeadCommitForRepo(repoName);
+      return await this.gitlabPipelineService.getHeadCommitForRepo(repoName);
     } catch {
       this.logger.warn(`Could not fetch HEAD commit for ${repoName}, proceeding without it`);
       return undefined;
@@ -115,14 +123,16 @@ export class BuildApiController {
 
   @Post('queue/promote')
   @ApiOperation({ summary: 'Proxy a promote request to the build server.' })
-  @ApiBody({ type: PromoteDto })
   @ApiOkResponse({ description: 'Promote response' })
-  async promotePackage(@Body() body: PromoteDto): Promise<unknown> {
+  async promotePackage(@Body({ schema: promoteBodySchema }) body: PromoteDto): Promise<unknown> {
     const url = `${this.buildServerUrl}/queue/promote`;
     return this.proxyPostJson(url, body);
   }
 
   @Sse('manager/logs')
+  @ApiHeaders([
+    { name: 'last-event-id', required: false, description: 'Native EventSource reconnect: last received frame id' },
+  ])
   @SkipThrottle()
   @ApiOperation({ summary: 'Proxy manager log stream from the build server as server-sent events.' })
   @ApiOkResponse({ description: 'SSE stream of manager logs' })

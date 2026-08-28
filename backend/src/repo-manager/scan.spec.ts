@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- test fixtures assert on freshly created entities */
 import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -34,7 +35,7 @@ function toolsAvailable(): boolean {
     const path = `/usr/bin/${tool}`;
     if (!existsSync(path)) {
       try {
-        require('node:child_process').execFileSync('which', [tool], { stdio: 'ignore' });
+        execFileSync('which', [tool], { stdio: 'ignore' });
       } catch {
         return false;
       }

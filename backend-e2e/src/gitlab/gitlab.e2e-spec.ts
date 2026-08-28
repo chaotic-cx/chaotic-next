@@ -2,14 +2,17 @@ import 'reflect-metadata';
 import { AppModule } from '@chaotic-next/backend/app.module';
 import { Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { EventService } from '@chaotic-next/backend/events/event.service';
-import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
-import type { GitlabStatusEvent, PipelineWebhook } from '@chaotic-next/backend/gitlab/interfaces';
+import { GitlabApiService } from '@chaotic-next/backend/gitlab/gitlab-api.service';
+import { GitlabMergeRequestService } from '@chaotic-next/backend/gitlab/gitlab-merge-request.service';
+import { GitlabPipelineService } from '@chaotic-next/backend/gitlab/gitlab-pipeline.service';
+import type { GitlabStatusEvent } from '@chaotic-next/backend/gitlab/interfaces';
 import { MrAction } from '@chaotic-next/backend/gitlab/mr-action.entity';
 import { PipelineTrigger } from '@chaotic-next/backend/gitlab/pipeline-trigger.entity';
 import { encryptAes } from '@chaotic-next/backend/utils/functions';
 import {
   type ChaoticEvent,
   type MergeRequestWithDiffs,
+  type PipelineWebhookDto,
   PipelineOperation,
   type PipelineTriggerResult,
 } from '@chaotic-next/shared-lib';
@@ -35,7 +38,9 @@ class FakeAuthGuard implements CanActivate {
   }
 }
 
-function pipelineWebhook(overrides: Partial<PipelineWebhook['object_attributes']> & { id: number }): PipelineWebhook {
+function pipelineWebhook(
+  overrides: Partial<PipelineWebhookDto['object_attributes']> & { id: number },
+): PipelineWebhookDto {
   return {
     object_kind: 'pipeline',
     object_attributes: {
@@ -55,13 +60,10 @@ function pipelineWebhook(overrides: Partial<PipelineWebhook['object_attributes']
       variables: [],
       url: overrides.url ?? 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/1001',
     },
-    merge_request: undefined as never,
-    user: undefined as never,
-    project: undefined as never,
     commit: undefined as never,
     source_pipeline: undefined as never,
     builds: undefined as never,
-  } as PipelineWebhook;
+  } as PipelineWebhookDto;
 }
 
 function statusEvent(overrides: Partial<GitlabStatusEvent> & { pipeline_id: number }): GitlabStatusEvent {
@@ -79,7 +81,9 @@ function statusEvent(overrides: Partial<GitlabStatusEvent> & { pipeline_id: numb
 describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
   let app: NestFastifyApplication;
   let broker: ServiceBroker;
-  let gitlabService: GitlabService;
+  let gitlabApiService: GitlabApiService;
+  let gitlabMergeRequestService: GitlabMergeRequestService;
+  let gitlabPipelineService: GitlabPipelineService;
   let eventService: EventService;
   let sseSubscriber: Subscriber<Partial<MessageEvent<ChaoticEvent>>>;
   let sseEvents: Partial<MessageEvent<ChaoticEvent>>[];
@@ -109,7 +113,9 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     await app.init();
     await app.listen(0);
 
-    gitlabService = app.get<GitlabService>(GitlabService);
+    gitlabApiService = app.get<GitlabApiService>(GitlabApiService);
+    gitlabMergeRequestService = app.get<GitlabMergeRequestService>(GitlabMergeRequestService);
+    gitlabPipelineService = app.get<GitlabPipelineService>(GitlabPipelineService);
     eventService = app.get<EventService>(EventService);
 
     broker = new ServiceBroker({ logger: false, skipProcessEventRegistration: true });
@@ -129,12 +135,12 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
 
   beforeEach(async () => {
     sseEvents = [];
-    (gitlabService as unknown as { pipelineMap: Map<number, unknown> }).pipelineMap.clear();
-    (gitlabService as unknown as { statusMap: Map<number, unknown> }).statusMap.clear();
+    (gitlabPipelineService as unknown as { pipelineMap: Map<number, unknown> }).pipelineMap.clear();
+    (gitlabPipelineService as unknown as { statusMap: Map<number, unknown> }).statusMap.clear();
   });
 
   async function seedPipelineViaRest(pipelineId: number, sha: string, status = 'success') {
-    const api = gitlabService.api;
+    const api = gitlabApiService.api;
     vi.spyOn(api.Pipelines, 'all').mockResolvedValue([
       {
         id: pipelineId,
@@ -146,16 +152,16 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       },
     ] as never);
     vi.spyOn(api.Commits, 'allStatuses').mockResolvedValue([] as never);
-    await gitlabService.seedPipelines();
+    await gitlabPipelineService.seedPipelines();
   }
 
   describe('handleExternalStatus (broker gitlab.status event)', () => {
     it('appends a new status to the cache and emits a pipeline SSE event', async () => {
       await seedPipelineViaRest(1001, 'abc123def456');
 
-      await gitlabService.handleExternalStatus(statusEvent({ pipeline_id: 1001 }));
+      await gitlabPipelineService.handleExternalStatus(statusEvent({ pipeline_id: 1001 }));
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines).toHaveLength(1);
       expect(pipelines[0].pipeline.id).toBe(1001);
       expect(pipelines[0].commit).toHaveLength(1);
@@ -169,14 +175,14 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     it('updates an existing status in-place by name (no duplicate)', async () => {
       await seedPipelineViaRest(1001, 'abc123def456');
 
-      await gitlabService.handleExternalStatus(
+      await gitlabPipelineService.handleExternalStatus(
         statusEvent({ pipeline_id: 1001, name: 'chaotic-aur:firedragon', status: 'running' }),
       );
-      await gitlabService.handleExternalStatus(
+      await gitlabPipelineService.handleExternalStatus(
         statusEvent({ pipeline_id: 1001, name: 'chaotic-aur:firedragon', status: 'success' }),
       );
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines[0].commit).toHaveLength(1);
       expect(pipelines[0].commit[0].status).toBe('success');
     });
@@ -184,23 +190,25 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     it('preserves the id on update, assigns a synthetic id on first insert', async () => {
       await seedPipelineViaRest(1001, 'abc123def456');
 
-      await gitlabService.handleExternalStatus(statusEvent({ pipeline_id: 1001, name: 'chaotic-aur:firedragon' }));
-      const firstPipelines = await gitlabService.getLastPipelines();
+      await gitlabPipelineService.handleExternalStatus(
+        statusEvent({ pipeline_id: 1001, name: 'chaotic-aur:firedragon' }),
+      );
+      const firstPipelines = await gitlabPipelineService.getLastPipelines();
       const firstId = firstPipelines[0].commit[0].id;
 
-      await gitlabService.handleExternalStatus(
+      await gitlabPipelineService.handleExternalStatus(
         statusEvent({ pipeline_id: 1001, name: 'chaotic-aur:firedragon', status: 'failed' }),
       );
-      const updatedPipelines = await gitlabService.getLastPipelines();
+      const updatedPipelines = await gitlabPipelineService.getLastPipelines();
       expect(updatedPipelines[0].commit[0].id).toBe(firstId);
     });
 
     it('ignores events with undefined pipeline_id', async () => {
       await seedPipelineViaRest(1001, 'abc123def456');
 
-      await gitlabService.handleExternalStatus(statusEvent({ pipeline_id: undefined as unknown as number }));
+      await gitlabPipelineService.handleExternalStatus(statusEvent({ pipeline_id: undefined as unknown as number }));
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines[0].commit).toHaveLength(0);
       expect(sseEvents).toHaveLength(0);
     });
@@ -208,24 +216,28 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     it('handles multiple distinct status names for the same pipeline', async () => {
       await seedPipelineViaRest(1001, 'abc123def456');
 
-      await gitlabService.handleExternalStatus(statusEvent({ pipeline_id: 1001, name: 'chaotic-aur:firedragon' }));
-      await gitlabService.handleExternalStatus(statusEvent({ pipeline_id: 1001, name: 'garuda:linux-cachyos' }));
+      await gitlabPipelineService.handleExternalStatus(
+        statusEvent({ pipeline_id: 1001, name: 'chaotic-aur:firedragon' }),
+      );
+      await gitlabPipelineService.handleExternalStatus(
+        statusEvent({ pipeline_id: 1001, name: 'garuda:linux-cachyos' }),
+      );
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines[0].commit).toHaveLength(2);
     });
 
     it('status for an unseeded pipeline_id is stored but invisible in getLastPipelines', async () => {
-      await gitlabService.handleExternalStatus(statusEvent({ pipeline_id: 9999 }));
+      await gitlabPipelineService.handleExternalStatus(statusEvent({ pipeline_id: 9999 }));
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines).toHaveLength(0);
     });
 
     it('preserves existing started_at/finished_at when event has nulls', async () => {
       await seedPipelineViaRest(1001, 'abc123def456');
 
-      await gitlabService.handleExternalStatus(
+      await gitlabPipelineService.handleExternalStatus(
         statusEvent({
           pipeline_id: 1001,
           name: 'chaotic-aur:firedragon',
@@ -234,7 +246,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         }),
       );
 
-      await gitlabService.handleExternalStatus(
+      await gitlabPipelineService.handleExternalStatus(
         statusEvent({
           pipeline_id: 1001,
           name: 'chaotic-aur:firedragon',
@@ -243,7 +255,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         }),
       );
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines[0].commit[0].started_at).toBe('2025-12-01T10:00:00.000Z');
       expect(pipelines[0].commit[0].finished_at).toBe('2025-12-01T10:03:00.000Z');
     });
@@ -251,7 +263,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     it('sets started_at/finished_at to null on first insert when event has nulls', async () => {
       await seedPipelineViaRest(1001, 'abc123def456');
 
-      await gitlabService.handleExternalStatus(
+      await gitlabPipelineService.handleExternalStatus(
         statusEvent({
           pipeline_id: 1001,
           name: 'chaotic-aur:firedragon',
@@ -260,7 +272,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         }),
       );
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines[0].commit[0].started_at).toBeNull();
       expect(pipelines[0].commit[0].finished_at).toBeNull();
     });
@@ -275,9 +287,9 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         payload: pipelineWebhook({ id: 2001, status: 'success' }),
       });
 
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(204);
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines).toHaveLength(1);
       expect(pipelines[0].pipeline.id).toBe(2001);
       expect(pipelines[0].pipeline.status).toBe('success');
@@ -300,7 +312,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         payload: pipelineWebhook({ id: 2001, status: 'success' }),
       });
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines).toHaveLength(1);
       expect(pipelines[0].pipeline.status).toBe('success');
     });
@@ -327,7 +339,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         });
       }
 
-      let pipelines = await gitlabService.getLastPipelines();
+      let pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines).toHaveLength(40);
       expect(pipelines.map((p) => p.pipeline.id)).toContain(1);
 
@@ -345,7 +357,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         payload: pipelineWebhook({ id: 42, status: 'success' }),
       });
 
-      pipelines = await gitlabService.getLastPipelines();
+      pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines).toHaveLength(40);
       const ids = pipelines.map((p) => p.pipeline.id);
       expect(ids[0]).toBe(42);
@@ -357,7 +369,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
 
   describe('GET /gitlab/pipelines/:pipelineId/jobs', () => {
     it('maps GitLab jobs to the log-viewer shape', async () => {
-      vi.spyOn(gitlabService.api.Jobs, 'all').mockResolvedValue([
+      vi.spyOn(gitlabApiService.api.Jobs, 'all').mockResolvedValue([
         {
           id: 501,
           name: 'build:firedragon',
@@ -436,13 +448,13 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     it('maps a status event to its pipeline, records the commit, and emits a pipeline SSE event', async () => {
       await seedPipelineViaRest(5001, 'feedface');
 
-      const pipelinesBefore = await gitlabService.getLastPipelines();
+      const pipelinesBefore = await gitlabPipelineService.getLastPipelines();
       expect(pipelinesBefore).toHaveLength(1);
 
       const payload = statusEvent({ pipeline_id: 5001, name: 'chaotic-aur:google-chrome' });
-      await gitlabService.handleExternalStatus(payload);
+      await gitlabPipelineService.handleExternalStatus(payload);
 
-      const pipelines = await gitlabService.getLastPipelines();
+      const pipelines = await gitlabPipelineService.getLastPipelines();
       expect(pipelines[0].commit).toHaveLength(1);
       expect(pipelines[0].commit[0].name).toBe('chaotic-aur:google-chrome');
 
@@ -470,7 +482,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
           diffs: [],
         },
       ];
-      vi.spyOn(gitlabService, 'getOpenMergeRequests').mockResolvedValue(cachedMrs);
+      vi.spyOn(gitlabMergeRequestService, 'getOpenMergeRequests').mockResolvedValue(cachedMrs);
 
       const res = await app.inject({ method: 'GET', url: '/gitlab/merge-requests' });
 
@@ -481,7 +493,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
 
     it('returns an empty array when no MRs are cached', async () => {
-      vi.spyOn(gitlabService, 'getOpenMergeRequests').mockResolvedValue([]);
+      vi.spyOn(gitlabMergeRequestService, 'getOpenMergeRequests').mockResolvedValue([]);
 
       const res = await app.inject({ method: 'GET', url: '/gitlab/merge-requests' });
 
@@ -490,7 +502,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
 
     it('attaches security scan findings to MRs fetched from the GitLab API', async () => {
-      const api = gitlabService.api;
+      const api = gitlabApiService.api;
       vi.spyOn(api.MergeRequests, 'all').mockResolvedValue([
         {
           id: 2,
@@ -520,7 +532,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         },
       ] as never);
 
-      await gitlabService.getOpenMergeRequests(true);
+      await gitlabMergeRequestService.getOpenMergeRequests(true);
       const res = await app.inject({ method: 'GET', url: '/gitlab/merge-requests' });
 
       expect(res.statusCode).toBe(200);
@@ -534,7 +546,9 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
 
   describe('GET /gitlab/review-stats (cache-backed)', () => {
     it('returns cached review stats on cache hit', async () => {
-      vi.spyOn(gitlabService, 'getReviewStats').mockResolvedValue([{ username: 'dr460nf1r3', reviews: 42 }]);
+      vi.spyOn(gitlabMergeRequestService, 'getReviewStats').mockResolvedValue([
+        { username: 'dr460nf1r3', reviews: 42 },
+      ]);
 
       const res = await app.inject({ method: 'GET', url: '/gitlab/review-stats' });
 
@@ -566,7 +580,9 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
 
     it('approves the MR and busts the cache on valid input', async () => {
-      const approveSpy = vi.spyOn(gitlabService, 'approveMergeRequest').mockResolvedValue({ deferred: false });
+      const approveSpy = vi
+        .spyOn(gitlabMergeRequestService, 'approveMergeRequest')
+        .mockResolvedValue({ deferred: false });
 
       const res = await app.inject({
         method: 'POST',
@@ -590,7 +606,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
 
     it('flags the MR and busts the cache on valid input', async () => {
-      const flagSpy = vi.spyOn(gitlabService, 'flagMergeRequest').mockResolvedValue(undefined);
+      const flagSpy = vi.spyOn(gitlabMergeRequestService, 'flagMergeRequest').mockResolvedValue(undefined);
 
       const res = await app.inject({
         method: 'POST',
@@ -598,14 +614,14 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         payload: { iid: 42, label: 'dangerous' },
       });
 
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(204);
       expect(flagSpy).toHaveBeenCalledWith(42, 'dangerous', { userId: 'test-user', userName: 'Test User' });
     });
   });
 
   describe('GET /gitlab/schedules', () => {
     it('returns all pipeline schedules including inactive ones', async () => {
-      vi.spyOn(gitlabService.api.PipelineSchedules, 'all').mockResolvedValue([
+      vi.spyOn(gitlabApiService.api.PipelineSchedules, 'all').mockResolvedValue([
         { id: 13, description: 'Daily rebuilds', active: true },
         { id: 14, description: 'One-off cleanup', active: false },
         { id: 15, description: null, active: false },
@@ -620,7 +636,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         { id: 14, description: 'One-off cleanup', active: false },
         { id: 15, description: null, active: false },
       ]);
-      expect(vi.mocked(gitlabService.api.PipelineSchedules.all).mock.calls[0][1]).not.toHaveProperty('scope');
+      expect(vi.mocked(gitlabApiService.api.PipelineSchedules.all).mock.calls[0][1]).not.toHaveProperty('scope');
     });
   });
 
@@ -731,7 +747,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
 
     it('forwards validated inputs and the session user to the service (201)', async () => {
-      const triggerSpy = vi.spyOn(gitlabService, 'triggerPipelineRun').mockResolvedValue({
+      const triggerSpy = vi.spyOn(gitlabPipelineService, 'triggerPipelineRun').mockResolvedValue({
         pipelineId: 4711,
         webUrl: 'https://gitlab.com/pipelines/4711',
         status: 'created',
@@ -755,7 +771,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
 
   describe('POST /gitlab/trigger (real service, mocked GitLab API)', () => {
     it('creates the pipeline, records who triggered it, and persists an audit row', async () => {
-      const createSpy = vi.spyOn(gitlabService.api.Pipelines, 'create').mockResolvedValue({
+      const createSpy = vi.spyOn(gitlabApiService.api.Pipelines, 'create').mockResolvedValue({
         id: 4712,
         status: 'created',
         web_url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/4712',
@@ -768,7 +784,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       });
 
       expect(res.statusCode).toBe(201);
-      expect(createSpy).toHaveBeenCalledWith(gitlabService.chaoticId, 'main', {
+      expect(createSpy).toHaveBeenCalledWith(gitlabApiService.chaoticId, 'main', {
         inputs: { operation: 'Add Packages', add_packages: 'paru/aur', request_origin: 'github/5678' },
         variables: [
           {
@@ -809,7 +825,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         owner: { id: 1, username: 'admin', name: 'Admin', state: 'active', avatar_url: '', web_url: '' },
         last_pipeline: { id: 8888, sha: 'deadbeef1234', ref: 'main', status: 'created' },
       } as never);
-      (gitlabService.api.PipelineSchedules as unknown as Record<string, unknown>).play = playMock;
+      (gitlabApiService.api.PipelineSchedules as unknown as Record<string, unknown>).play = playMock;
 
       const res = await app.inject({
         method: 'POST',
@@ -839,7 +855,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     });
 
     it('records a trigger with null pipelineId when play response lacks last_pipeline', async () => {
-      (gitlabService.api.PipelineSchedules as unknown as Record<string, unknown>).play = vi.fn().mockResolvedValue({
+      (gitlabApiService.api.PipelineSchedules as unknown as Record<string, unknown>).play = vi.fn().mockResolvedValue({
         id: 15,
         description: 'Test schedule',
         ref: 'main',
@@ -892,7 +908,7 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
         payload: pipelineWebhook({ id: 9999, sha: 'backfilled123', source: 'schedule' }),
       });
 
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(204);
 
       const updated = (await triggerRepository.findOne({ where: { id: trigger.id } })) as PipelineTrigger;
       expect(updated).toBeDefined();

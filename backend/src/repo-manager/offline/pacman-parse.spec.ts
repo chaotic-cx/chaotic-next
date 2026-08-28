@@ -9,7 +9,7 @@ import { extractBaseAndVersion, parsePackageDesc, parsePackageFiles, parsePacman
 
 const execFileP = promisify(execFile);
 
-const FIXTURE_DB = join(__dirname, '..', '__fixtures__', 'pacman', 'testrepo.files.tar.zst');
+const FIXTURE_DB = join(import.meta.dirname, '..', '__fixtures__', 'pacman', 'testrepo.files.tar.zst');
 
 describe('extractBaseAndVersion (real fmt desc payload)', () => {
   let extractedDir: string;

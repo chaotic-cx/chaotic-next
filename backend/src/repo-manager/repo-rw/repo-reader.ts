@@ -1,14 +1,14 @@
+import { type Repo } from '../../builder/builder.entity';
+import { decryptAes } from '../../utils/functions';
+import { listPackageDirs } from '../offline/pacman-parse';
 import { Gitlab } from '@gitbeaker/rest';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { decryptAes } from '../../utils/functions';
 import { execFile } from 'node:child_process';
 import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import type { Repo } from '../../builder/builder.entity';
-import { listPackageDirs } from '../offline/pacman-parse';
 
 const execFileP = promisify(execFile);
 

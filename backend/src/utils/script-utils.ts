@@ -1,6 +1,6 @@
-import { type INestApplicationContext, Logger, type LogLevel } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
+import { Logger, type INestApplicationContext, type LogLevel } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 
 export async function bootstrapScript(logLevels: LogLevel[]): Promise<INestApplicationContext> {
   Logger.overrideLogger(logLevels);

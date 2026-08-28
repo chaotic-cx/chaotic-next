@@ -25,11 +25,13 @@ export interface ValidatedPipelineTrigger {
 
 function assertValidString(value: unknown, field: string, regex?: RegExp): string {
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new BadRequestException(`${field} is required and must be a non-empty string`);
+    throw new BadRequestException(`${field} is required and must be a non-empty string`, {
+      errorCode: 'INVALID_INPUT',
+    });
   }
   const trimmed = value.trim();
   if (regex && !regex.test(trimmed)) {
-    throw new BadRequestException(`${field} has an invalid format`);
+    throw new BadRequestException(`${field} has an invalid format`, { errorCode: 'INVALID_INPUT' });
   }
   return trimmed;
 }
@@ -47,13 +49,15 @@ function optionalString(body: Record<string, unknown>, field: string, regex?: Re
  */
 export function validatePipelineTriggerInputs(body: unknown): ValidatedPipelineTrigger {
   if (typeof body !== 'object' || body === null) {
-    throw new BadRequestException('Request body must be an object');
+    throw new BadRequestException('Request body must be an object', { errorCode: 'INVALID_BODY' });
   }
   const record = body as Record<string, unknown>;
 
   const operation = record.operation;
   if (typeof operation !== 'string' || !(PIPELINE_OPERATIONS as readonly string[]).includes(operation)) {
-    throw new BadRequestException(`operation must be one of: ${PIPELINE_OPERATIONS.join(', ')}`);
+    throw new BadRequestException(`operation must be one of: ${PIPELINE_OPERATIONS.join(', ')}`, {
+      errorCode: 'INVALID_OPERATION',
+    });
   }
 
   const ref =
@@ -78,7 +82,9 @@ export function validatePipelineTriggerInputs(body: unknown): ValidatedPipelineT
 
     const requestReason = optionalString(record, 'request_reason');
     if (requestReason !== undefined && !(PIPELINE_REQUEST_REASONS as readonly string[]).includes(requestReason)) {
-      throw new BadRequestException(`request_reason must be one of: ${PIPELINE_REQUEST_REASONS.join(', ')}`);
+      throw new BadRequestException(`request_reason must be one of: ${PIPELINE_REQUEST_REASONS.join(', ')}`, {
+        errorCode: 'INVALID_REQUEST_REASON',
+      });
     }
     if (requestReason !== undefined) inputs.request_reason = requestReason;
 

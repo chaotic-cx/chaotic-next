@@ -1,5 +1,5 @@
-import type { Paginated } from '@chaotic-next/shared-lib';
 import { clampInt } from './functions';
+import { type Paginated } from '@chaotic-next/shared-lib';
 
 export const MAX_PER_PAGE = 200;
 export const MAX_PAGE = 1_000_000;

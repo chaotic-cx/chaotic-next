@@ -1,6 +1,5 @@
-import type { PackageElfAnalysis } from '@chaotic-next/shared-lib';
 import { TriggerType } from '../../interfaces/repo-manager';
-import type { PackageElfPkgType } from '../repo-manager.entity';
+import { type PackageElfPkgType } from '../repo-manager.entity';
 import { extractVtableSlots } from './abi';
 import {
   ancestorDirectories,
@@ -15,6 +14,7 @@ import {
   parseUndefinedSymbols,
   sonameBasename,
 } from './parse';
+import { type PackageElfAnalysis } from '@chaotic-next/shared-lib';
 
 /** Directory-ownership index used for plugin detection. */
 export interface DirectoryIndex {

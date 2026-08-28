@@ -1,14 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
-import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { SignalScanService } from '../repo-manager/scan';
 import { compareArchVersions } from '../repo-manager/signal';
 import { RouterHit } from '../router/router-hit.entity';
 import { errorMessage, nDaysInPast } from '../utils/functions';
 import { Build, Package, SilencedBuildFailure } from './builder.entity';
+import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 
 /** Analyses kept per package: the latest plus the previous the ABI index compares. */
 const KEEP_ANALYSIS_VERSIONS = 2;

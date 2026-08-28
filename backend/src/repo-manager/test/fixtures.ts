@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const FIXTURES_DIR = join(__dirname, '..', '__fixtures__');
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '__fixtures__');
 
 interface FixturePackage {
   key: string;
@@ -20,7 +21,7 @@ interface Manifest {
 }
 
 function readManifest(): Manifest {
-  return require(join(FIXTURES_DIR, 'packages.json')) as Manifest;
+  return JSON.parse(readFileSync(join(FIXTURES_DIR, 'packages.json'), 'utf-8')) as Manifest;
 }
 
 async function sha256Of(path: string): Promise<string> {

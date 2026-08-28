@@ -1,11 +1,3 @@
-import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import type { AxiosResponse } from 'axios';
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { Repository } from 'typeorm';
 import {
   IndexCandidate,
   IndexResult,
@@ -19,8 +11,16 @@ import { errorCode, errorMessage } from '../utils/functions';
 import { extractPacmanDatabase, listPackageDirs, parsePackageDesc, parsePackageFiles } from './offline/pacman-parse';
 import { ArchlinuxPackage, bulkGetOrCreateArch, PackageElfAnalysis } from './repo-manager.entity';
 import { saveInBatches } from './save';
-import { type ScanJob, SignalScanService } from './scan';
+import { SignalScanService, type ScanJob } from './scan';
 import { pkgTypeOf } from './signal';
+import { HttpService } from '@nestjs/axios';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { type AxiosResponse } from 'axios';
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Repository } from 'typeorm';
 
 const ARCH_REPOS = ['core', 'extra'] as const;
 const DEFAULT_MIRROR_URL = 'https://arch.mirror.constant.com';

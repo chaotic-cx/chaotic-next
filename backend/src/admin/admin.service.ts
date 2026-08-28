@@ -1,27 +1,3 @@
-import {
-  AdminPackageElfAnalysis,
-  type BuildClassSuggestion,
-  MrAction,
-  Package as PackageDto,
-  PackageBump,
-  PackageKey,
-  packageKey,
-  Paginated,
-  PipelineTriggerAction,
-  PKG_TYPE_ARCH,
-  PKG_TYPE_CHAOTIC,
-  PkgType,
-  type RescanJob,
-} from '@chaotic-next/shared-lib';
-import { HttpService } from '@nestjs/axios';
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { randomUUID } from 'node:crypto';
-import { mkdtemp, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { ILike, In, Repository } from 'typeorm';
 import { BuildClassSuggesterService } from '../builder/build-class-suggester.service';
 import { Builder, Package, Repo } from '../builder/builder.entity';
 import { MrAction as MrActionEntity } from '../gitlab/mr-action.entity';
@@ -35,6 +11,30 @@ import {
 import { SignalScanService } from '../repo-manager/scan';
 import { encryptAes, errorMessage } from '../utils/functions';
 import { paginate, resolvePagination } from '../utils/pagination';
+import {
+  AdminPackageElfAnalysis,
+  MrAction,
+  Package as PackageDto,
+  PackageBump,
+  packageKey,
+  PackageKey,
+  Paginated,
+  PipelineTriggerAction,
+  PKG_TYPE_ARCH,
+  PKG_TYPE_CHAOTIC,
+  PkgType,
+  type BuildClassSuggestion,
+  type RescanJob,
+} from '@chaotic-next/shared-lib';
+import { HttpService } from '@nestjs/axios';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { ILike, In, Repository } from 'typeorm';
 
 export interface RescanPackageInput {
   pkgname: string;
@@ -534,10 +534,14 @@ export class AdminService {
   }
 
   startRescanPackages(packages: RescanPackageInput[]): { started: number; jobId: string } {
-    if (packages.length === 0) throw new BadRequestException('No packages provided');
+    if (packages.length === 0) throw new BadRequestException('No packages provided', { errorCode: 'NO_PACKAGES' });
     const secretMirrorUrl = this.configService.get<string>('app.secretMirrorUrl');
-    if (!secretMirrorUrl) throw new ConflictException('SECRET_MIRROR_URL is not configured');
-    if (this.activeRescanJobId) throw new ConflictException('A rescan is already in progress');
+    if (!secretMirrorUrl) {
+      throw new ConflictException('SECRET_MIRROR_URL is not configured', { errorCode: 'NOT_CONFIGURED' });
+    }
+    if (this.activeRescanJobId) {
+      throw new ConflictException('A rescan is already in progress', { errorCode: 'RESCAN_IN_PROGRESS' });
+    }
 
     this.logger.log(
       `Rescan started for ${packages.length} package(s): ` +

@@ -1,4 +1,4 @@
-import type { Cache } from 'cache-manager';
+import { type Cache } from 'cache-manager';
 
 /**
  * Returns a cached value, computing and storing it (with an explicit TTL) on a miss.

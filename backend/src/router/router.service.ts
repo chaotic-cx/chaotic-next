@@ -1,13 +1,13 @@
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import type { Cache } from 'cache-manager';
-import { DataSource } from 'typeorm';
-import { HLL_LOG2M, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
 import { cachedResult } from '../utils/cache';
+import { HLL_LOG2M, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
 import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 import { RouterHitDailyAgent } from './router-hit-daily-agent.entity';
 import { RouterHitDaily } from './router-hit-daily.entity';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { type Cache } from 'cache-manager';
+import { DataSource } from 'typeorm';
 
 /**
  * Router metrics are served from daily rollup tables rather than the raw hit

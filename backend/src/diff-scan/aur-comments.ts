@@ -1,5 +1,5 @@
-import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
 import * as cheerio from 'cheerio';
+import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
 
 /** Votes or popularity at which community warnings decay quickly, mirroring the traur model. */
 const POPULAR_VOTES = 3;

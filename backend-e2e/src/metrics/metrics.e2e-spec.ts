@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { HttpService } from '@nestjs/axios';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createE2eApp, type E2eApp } from '../test/e2e-app';
 import { routerHit, USER_AGENTS } from '../test/fixtures';
 
@@ -197,6 +198,21 @@ describe('Metrics endpoints (e2e, real PostgreSQL)', () => {
       expect(Number(first?.count)).toBe(2);
       expect(fourth).toBeDefined();
       expect(Number(fourth?.count)).toBe(1);
+    });
+  });
+
+  describe('GET /metrics/rps/history', () => {
+    it('returns the RPS history samples from the upstream metrics service', async () => {
+      const httpService = e2e.app.get(HttpService);
+      vi.spyOn(httpService.axiosRef, 'get').mockResolvedValue({
+        data: [{ rps: 42 }, { rps: 17 }],
+      } as never);
+
+      const res = await e2e.inject<{ rps: number }[]>({ method: 'GET', url: '/metrics/rps/history' });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([{ rps: 42 }, { rps: 17 }]);
+      expect(vi.mocked(httpService.axiosRef.get).mock.calls[0][0]).toContain('/rps/history');
     });
   });
 });

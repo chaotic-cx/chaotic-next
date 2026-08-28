@@ -85,7 +85,7 @@ function chaoticSeed(
   };
 }
 
-function realSeed(overrides?: { tclProvided?: string[] }): SeedEntry[] {
+export function realSeed(overrides?: { tclProvided?: string[] }): SeedEntry[] {
   return [
     ...REAL_ARCH_PROVIDERS.filter((p) => p.pkgname !== 'tcl').map((p) =>
       archSeed(p.pkgname, p.version, p.providedSonames, p.neededSonames),
@@ -136,6 +136,7 @@ describe('Real-world broken recompute + dependency graph (e2e, real PostgreSQL)'
 
   const importSeed = async (payload: SeedEntry[]): Promise<void> => {
     const res = await e2e.inject({ method: 'POST', url: '/repo/signals/import', payload });
+    if (res.statusCode !== 202) console.log('IMPORT FAIL:', String(res.body).slice(0, 300));
     expect(res.statusCode).toBe(202);
   };
 

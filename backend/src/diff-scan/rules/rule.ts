@@ -1,7 +1,7 @@
-import type { DiffScanSeverity } from '@chaotic-next/shared-lib';
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { addedLines, deobfuscateLine, isCommentLine, isInScope, type RuleScope } from './diff-utils';
 import { ruleDataStore } from './rule-data-store';
+import { type DiffScanSeverity } from '@chaotic-next/shared-lib';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 const RULE_DATA_TIMEOUT_MS = 15_000;
 

@@ -1,5 +1,5 @@
-import type { Rule } from './rule';
 import { addedLines, isCommentLine, isInScope } from './diff-utils';
+import { type Rule } from './rule';
 
 const RM_RECURSIVE = /\brm\s[^;&|]*?(?:-[a-z]*r[a-z]*\b|--recursive\b)/i;
 const RM_FORCED = /(?:^|\s)(?:-[a-z]*f[a-z]*\b|--force\b)/i;

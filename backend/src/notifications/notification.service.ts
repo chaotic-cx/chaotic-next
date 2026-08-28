@@ -1,13 +1,17 @@
-import { NotificationPayload } from '@chaotic-next/shared-lib';
+import { decryptAesRaw, errorMessage } from '../utils/functions';
+import { NotificationSubscription } from './notification-subscription.entity';
+import {
+  NotificationPayload,
+  pushSubscriptionBodySchema,
+  type PushSubscriptionBodyDto,
+} from '@chaotic-next/shared-lib';
 import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { existsSync } from 'node:fs';
 import { readFile, unlink } from 'node:fs/promises';
 import { Repository } from 'typeorm';
-import { PushSubscription, sendNotification, setVapidDetails } from 'web-push';
-import { decryptAesRaw, errorMessage } from '../utils/functions';
-import { NotificationSubscription } from './notification-subscription.entity';
+import { sendNotification, setVapidDetails } from 'web-push';
 
 const MAX_SUBSCRIBERS = 1000;
 
@@ -23,23 +27,15 @@ function isAllowedPushHost(hostname: string): boolean {
   return ALLOWED_PUSH_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`));
 }
 
-function isValidPushSubscription(sub: unknown): sub is PushSubscription {
-  if (typeof sub !== 'object' || sub === null) return false;
-  const { endpoint, keys } = sub as { endpoint?: unknown; keys?: unknown };
-  if (typeof endpoint !== 'string' || endpoint.length === 0 || endpoint.length > 500) return false;
-
+/** The endpoint is zod-validated for shape; this blocks non-HTTPS / non-allowlist hosts (SSRF). */
+function isAllowedPushEndpoint(sub: { endpoint: string }): boolean {
   let url: URL;
   try {
-    url = new URL(endpoint);
+    url = new URL(sub.endpoint);
   } catch {
     return false;
   }
-  if (url.protocol !== 'https:') return false;
-  if (!isAllowedPushHost(url.hostname)) return false;
-
-  if (typeof keys !== 'object' || keys === null) return false;
-  const { p256dh, auth } = keys as { p256dh?: unknown; auth?: unknown };
-  return typeof p256dh === 'string' && p256dh.length > 0 && typeof auth === 'string' && auth.length > 0;
+  return url.protocol === 'https:' && isAllowedPushHost(url.hostname);
 }
 
 @Injectable()
@@ -68,14 +64,16 @@ export class NotificationService implements OnModuleInit {
    * @param body Push subscription details
    * @returns Success message
    */
-  async subscribeToPushEvents(body: PushSubscription): Promise<{ message: string }> {
-    if (!isValidPushSubscription(body)) {
-      throw new BadRequestException('Invalid push subscription');
+  async subscribeToPushEvents(body: PushSubscriptionBodyDto): Promise<{ message: string }> {
+    if (!isAllowedPushEndpoint(body)) {
+      throw new BadRequestException('Push endpoint is not an allowed HTTPS push service', {
+        errorCode: 'INVALID_SUBSCRIPTION',
+      });
     }
 
     const existing = await this.subscriptionRepository.findOne({ where: { endpoint: body.endpoint } });
     if (!existing && (await this.subscriptionRepository.count()) >= MAX_SUBSCRIBERS) {
-      throw new BadRequestException('Too many subscribers');
+      throw new BadRequestException('Too many subscribers', { errorCode: 'TOO_MANY_SUBSCRIBERS' });
     }
     await this.upsertSubscription(body);
 
@@ -96,7 +94,7 @@ export class NotificationService implements OnModuleInit {
     };
 
     try {
-      await sendNotification(body, JSON.stringify(notification));
+      await sendNotification({ endpoint: body.endpoint, keys: body.keys }, JSON.stringify(notification));
     } catch (error) {
       const statusCode = (error as { statusCode?: number }).statusCode;
       if (statusCode === 404 || statusCode === 410) {
@@ -114,7 +112,7 @@ export class NotificationService implements OnModuleInit {
     return this.subscriptionRepository.find();
   }
 
-  private async upsertSubscription(sub: PushSubscription): Promise<void> {
+  private async upsertSubscription(sub: PushSubscriptionBodyDto): Promise<void> {
     await this.subscriptionRepository.upsert(
       {
         endpoint: sub.endpoint,
@@ -135,8 +133,9 @@ export class NotificationService implements OnModuleInit {
       const parsed = JSON.parse(decrypted) as unknown[];
       let imported = 0;
       for (const entry of parsed) {
-        if (!isValidPushSubscription(entry)) continue;
-        await this.upsertSubscription(entry);
+        const subscription = pushSubscriptionBodySchema.safeParse(entry);
+        if (!subscription.success) continue;
+        await this.upsertSubscription(subscription.data);
         imported += 1;
       }
       await unlink(this.legacySubscribersFilePath);

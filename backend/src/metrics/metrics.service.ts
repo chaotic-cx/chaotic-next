@@ -1,6 +1,11 @@
+import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
+import { RouterHitDaily } from '../router/router-hit-daily.entity';
+import { cachedResult } from '../utils/cache';
+import { CACHE_TTL_MS, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
+import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 import {
-  type CountNameObject,
   LIVE_RPS_SSE_EVENT,
+  type CountNameObject,
   type LiveRouterRps,
   type LiveTrafficHit,
   type RpsHistorySample,
@@ -11,15 +16,10 @@ import { HttpService } from '@nestjs/axios';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import type { Cache } from 'cache-manager';
+import { type Cache } from 'cache-manager';
 import { createInterface } from 'node:readline';
 import { merge, Observable, share } from 'rxjs';
 import { DataSource } from 'typeorm';
-import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
-import { RouterHitDaily } from '../router/router-hit-daily.entity';
-import { cachedResult } from '../utils/cache';
-import { CACHE_TTL_MS, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
-import { clampInt, errorMessage, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
 
 let hitCounter = 0;
 
@@ -67,18 +67,18 @@ export function parseRpsLine(line: string): LiveRouterRps | null {
 
 function assertPackageName(name: string): string {
   if (!PKGNAME_REGEX.test(name)) {
-    throw new BadRequestException(`Invalid package name: ${name}`);
+    throw new BadRequestException(`Invalid package name: ${name}`, { errorCode: 'INVALID_PKGNAME' });
   }
   return name;
 }
 
 function assertRankRange(range: string): number {
   if (!/^\d+$/.test(range)) {
-    throw new BadRequestException(`Invalid rank range: ${range}`);
+    throw new BadRequestException(`Invalid rank range: ${range}`, { errorCode: 'INVALID_RANK_RANGE' });
   }
   const parsed = Number.parseInt(range, 10);
   if (parsed < 1 || parsed > 200) {
-    throw new BadRequestException('Rank range must be between 1 and 200');
+    throw new BadRequestException('Rank range must be between 1 and 200', { errorCode: 'INVALID_RANK_RANGE' });
   }
   return parsed;
 }

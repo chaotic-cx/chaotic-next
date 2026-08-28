@@ -27,34 +27,34 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
   });
 
   describe('GET /repo/run', () => {
-    it('triggers repoManager.run() and returns 200', async () => {
+    it('triggers repoManager.run() and returns 204', async () => {
       const spy = vi.spyOn(repoManagerService, 'run').mockImplementation(vi.fn());
 
       const res = await app.inject({ method: 'GET', url: '/repo/run' });
 
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(204);
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('GET /repo/signal-scan', () => {
-    it('triggers repoManager.triggerSignalScan() and returns 200', async () => {
+    it('triggers repoManager.triggerSignalScan() and returns 204', async () => {
       const spy = vi.spyOn(repoManagerService, 'triggerSignalScan').mockImplementation(vi.fn());
 
       const res = await app.inject({ method: 'GET', url: '/repo/signal-scan' });
 
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(204);
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('GET /repo/update-db', () => {
-    it('triggers repoManager.updateChaoticVersions() and returns 200', async () => {
+    it('triggers repoManager.updateChaoticVersions() and returns 204', async () => {
       const spy = vi.spyOn(repoManagerService, 'updateChaoticVersions').mockResolvedValue(undefined);
 
       const res = await app.inject({ method: 'GET', url: '/repo/update-db' });
 
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(204);
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });

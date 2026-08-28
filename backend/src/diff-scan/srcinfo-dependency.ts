@@ -1,9 +1,9 @@
-import type { DiffScanFinding } from '@chaotic-next/shared-lib';
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import type { Repository } from 'typeorm';
-import type { Package } from '../builder/builder.entity';
-import type { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import { type Package } from '../builder/builder.entity';
+import { type ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { addedLines, isCommentLine, visibleFileLines } from './rules/diff-utils';
+import { type DiffScanFinding } from '@chaotic-next/shared-lib';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
+import { type Repository } from 'typeorm';
 
 const SRCINFO_DEP_PATTERN = /^\s*(depends|makedepends|checkdepends)\s*=\s*(.+)$/i;
 const SRCINFO_PACKAGE_DECLARATION_PATTERN = /^\s*(?:pkgname|provides)\s*=\s*(.+)$/i;

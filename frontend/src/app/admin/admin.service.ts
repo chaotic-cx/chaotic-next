@@ -15,12 +15,35 @@ import {
   PkgType,
   Repo,
   RescanJob,
+  addPackagesBodySchema,
+  aurSuggestionsQuerySchema,
+  bumpPackagesBodySchema,
+  brokenPackagesQuerySchema,
+  bumpPackagesGitlabBodySchema,
+  createBuilderBodySchema,
+  createElfAnalysisBodySchema,
+  createRepoBodySchema,
+  dropPackagesBodySchema,
+  listAdminPackagesQuerySchema,
+  listArchPackagesQuerySchema,
+  listBuildersQuerySchema,
+  listElfAnalysisQuerySchema,
+  listMrActionsQuerySchema,
+  listPackageBumpsQuerySchema,
+  listPipelineTriggersQuerySchema,
+  rescanPackagesBodySchema,
+  runScheduleBodySchema,
+  scheduleBuildBodySchema,
+  schedulesQuerySchema,
+  updateArchPackageBodySchema,
+  updatePackageBodySchema,
 } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { lastValueFrom, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { backendErrorMessage } from '../api-errors';
 import { debouncedSignal, resourceSignal, resourceValue } from '../functions';
+import { parseQueryParams } from '../utils/api-params';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -140,78 +163,76 @@ export class AdminService {
 
   private readonly packagesResource = httpResource<Paginated<PackageDto>>(() => ({
     url: `${this.backendUrl}/admin/packages`,
-    params: {
-      page: String(this.packagePage()),
-      perPage: String(this.packagePerPage()),
+    params: parseQueryParams(listAdminPackagesQuerySchema, {
+      page: this.packagePage(),
+      perPage: this.packagePerPage(),
       q: this.debouncedPackageQuery(),
-      ...(this.packageRepoFilter() === undefined ? {} : { repoId: String(this.packageRepoFilter()) }),
-      ...(this.packageActiveFilter() === undefined ? {} : { active: this.packageActiveFilter() }),
-    },
+      repoId: this.packageRepoFilter(),
+      active: this.packageActiveFilter(),
+    }),
   }));
 
   private readonly archPackagesResource = httpResource<Paginated<ArchPackage>>(() => ({
     url: `${this.backendUrl}/admin/arch-packages`,
-    params: {
-      page: String(this.archPage()),
-      perPage: String(this.archPerPage()),
+    params: parseQueryParams(listArchPackagesQuerySchema, {
+      page: this.archPage(),
+      perPage: this.archPerPage(),
       q: this.debouncedArchQuery(),
-    },
+    }),
   }));
 
   private readonly reposResource = httpResource<Repo[]>(() => `${this.backendUrl}/admin/repos`);
 
   private readonly buildersResource = httpResource<Paginated<Builder>>(() => ({
     url: `${this.backendUrl}/admin/builders`,
-    params: {
-      page: String(this.builderPage()),
-      perPage: String(this.builderPerPage()),
+    params: parseQueryParams(listBuildersQuerySchema, {
+      page: this.builderPage(),
+      perPage: this.builderPerPage(),
       q: this.debouncedBuilderQuery(),
-      ...(this.builderActiveFilter() === undefined ? {} : { active: this.builderActiveFilter() }),
-    },
+      active: this.builderActiveFilter(),
+    }),
   }));
 
   private readonly mrActionsResource = httpResource<Paginated<MrAction>>(() => ({
     url: `${this.backendUrl}/admin/mr-actions`,
-    params: {
-      page: String(this.mrActionPage()),
-      perPage: String(this.mrActionPerPage()),
+    params: parseQueryParams(listMrActionsQuerySchema, {
+      page: this.mrActionPage(),
+      perPage: this.mrActionPerPage(),
       q: this.debouncedMrActionQuery(),
-      ...(this.mrActionActionFilter() === undefined ? {} : { action: this.mrActionActionFilter() }),
-    },
+      action: this.mrActionActionFilter(),
+    }),
   }));
 
   private readonly pipelineTriggersResource = httpResource<Paginated<PipelineTriggerAction>>(() => ({
     url: `${this.backendUrl}/admin/pipeline-triggers`,
-    params: {
-      page: String(this.pipelineTriggerPage()),
-      perPage: String(this.pipelineTriggerPerPage()),
+    params: parseQueryParams(listPipelineTriggersQuerySchema, {
+      page: this.pipelineTriggerPage(),
+      perPage: this.pipelineTriggerPerPage(),
       q: this.debouncedPipelineTriggerQuery(),
-      ...(this.pipelineTriggerOperationFilter() === undefined
-        ? {}
-        : { operation: this.pipelineTriggerOperationFilter() }),
-    },
+      operation: this.pipelineTriggerOperationFilter(),
+    }),
   }));
 
   private readonly packageBumpsResource = httpResource<Paginated<PackageBump>>(() => ({
     url: `${this.backendUrl}/admin/package-bumps`,
-    params: {
-      page: String(this.packageBumpPage()),
-      perPage: String(this.packageBumpPerPage()),
+    params: parseQueryParams(listPackageBumpsQuerySchema, {
+      page: this.packageBumpPage(),
+      perPage: this.packageBumpPerPage(),
       q: this.debouncedPackageBumpQuery(),
-      ...(this.packageBumpTypeFilter() === undefined ? {} : { bumpType: String(this.packageBumpTypeFilter()) }),
-      ...(this.packageBumpSourceFilter() === undefined ? {} : { triggerFrom: String(this.packageBumpSourceFilter()) }),
-    },
+      bumpType: this.packageBumpTypeFilter(),
+      triggerFrom: this.packageBumpSourceFilter(),
+    }),
   }));
 
   private readonly elfAnalysisResource = httpResource<Paginated<AdminPackageElfAnalysis>>(() => ({
     url: `${this.backendUrl}/admin/package-elf-analysis`,
-    params: {
-      page: String(this.elfAnalysisPage()),
-      perPage: String(this.elfAnalysisPerPage()),
+    params: parseQueryParams(listElfAnalysisQuerySchema, {
+      page: this.elfAnalysisPage(),
+      perPage: this.elfAnalysisPerPage(),
       q: this.debouncedElfAnalysisQuery(),
-      ...(this.elfAnalysisPkgTypeFilter() === undefined ? {} : { pkgType: this.elfAnalysisPkgTypeFilter() }),
-      ...(this.elfAnalysisBrokenFilter() === undefined ? {} : { broken: String(this.elfAnalysisBrokenFilter()) }),
-    },
+      pkgType: this.elfAnalysisPkgTypeFilter(),
+      broken: this.elfAnalysisBrokenFilter() === undefined ? undefined : String(this.elfAnalysisBrokenFilter()),
+    }),
   }));
 
   readonly packages = resourceSignal(this.packagesResource);
@@ -274,7 +295,11 @@ export class AdminService {
 
   async bumpPackages(packages: string[], repo = 'chaotic-aur', ref = 'main'): Promise<void> {
     await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/gitlab/bump-packages`, { packages, repo, ref }),
+      () =>
+        this.http.post(
+          `${this.backendUrl}/gitlab/bump-packages`,
+          bumpPackagesGitlabBodySchema.parse({ packages, repo, ref }),
+        ),
       'Package bump triggered',
       'Could not trigger package bump.',
       () => this.packagesResource.reload(),
@@ -285,11 +310,14 @@ export class AdminService {
     const reponame = packages[0]?.reponame ?? 'chaotic-aur';
     await this.runMutation(
       () =>
-        this.http.post(`${this.backendUrl}/api/queue/schedule`, {
-          packages: packages.map((pkg) => pkg.pkgname),
-          source_repo: reponame,
-          target_repo: reponame,
-        }),
+        this.http.post(
+          `${this.backendUrl}/api/queue/schedule`,
+          scheduleBuildBodySchema.parse({
+            packages: packages.map((pkg) => pkg.pkgname),
+            source_repo: reponame,
+            target_repo: reponame,
+          }),
+        ),
       'Package build scheduled',
       'Could not schedule package build.',
       () => this.packagesResource.reload(),
@@ -298,7 +326,11 @@ export class AdminService {
 
   async dropPackages(packages: string[], repo = 'chaotic-aur', ref = 'main'): Promise<void> {
     await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/gitlab/drop-packages`, { packages, repo, ref }),
+      () =>
+        this.http.post(
+          `${this.backendUrl}/gitlab/drop-packages`,
+          dropPackagesBodySchema.parse({ packages, repo, ref }),
+        ),
       'Package drop triggered',
       'Could not trigger package drop.',
       () => this.packagesResource.reload(),
@@ -315,14 +347,17 @@ export class AdminService {
   ): Promise<void> {
     await this.runMutation(
       () =>
-        this.http.post(`${this.backendUrl}/gitlab/add-packages`, {
-          packages,
-          repo,
-          request_origin: requestOrigin,
-          request_reason: requestReason !== 'unset' ? requestReason : undefined,
-          custom_request_reason: customRequestReason?.trim() || undefined,
-          ref,
-        }),
+        this.http.post(
+          `${this.backendUrl}/gitlab/add-packages`,
+          addPackagesBodySchema.parse({
+            packages,
+            repo,
+            request_origin: requestOrigin,
+            request_reason: requestReason !== 'unset' ? requestReason : undefined,
+            custom_request_reason: customRequestReason?.trim() || undefined,
+            ref,
+          }),
+        ),
       'Package add triggered',
       'Could not trigger package add.',
       () => this.packagesResource.reload(),
@@ -331,7 +366,7 @@ export class AdminService {
 
   async runSchedule(scheduleId: number, repo: string): Promise<void> {
     await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/gitlab/run-schedule`, { scheduleId, repo }),
+      () => this.http.post(`${this.backendUrl}/gitlab/run-schedule`, runScheduleBodySchema.parse({ scheduleId, repo })),
       'Schedule execution triggered',
       'Could not trigger schedule execution.',
       () => this.pipelineTriggersResource.reload(),
@@ -339,8 +374,13 @@ export class AdminService {
   }
 
   async updatePackage(id: number, data: Partial<PackageFormData>): Promise<void> {
+    // failureSilenced is form-only display state; the update contract does not
+    // carry it (silencing happens through the failed-build silence endpoint).
+    const payload = { ...data };
+    delete payload.failureSilenced;
     await this.runMutation(
-      () => this.http.patch(`${this.backendUrl}/admin/packages/${id}`, data),
+      () =>
+        this.http.patch(`${this.backendUrl}/admin/packages/${id}`, updatePackageBodySchema.partial().parse(payload)),
       'Package updated',
       'Could not update the package.',
       () => this.packagesResource.reload(),
@@ -358,7 +398,11 @@ export class AdminService {
 
   async updateArchPackage(id: number, data: Partial<ArchPackageFormData>): Promise<void> {
     await this.runMutation(
-      () => this.http.patch(`${this.backendUrl}/admin/arch-packages/${id}`, data),
+      () =>
+        this.http.patch(
+          `${this.backendUrl}/admin/arch-packages/${id}`,
+          updateArchPackageBodySchema.partial().parse(data),
+        ),
       'Arch package updated',
       'Could not update the Arch package.',
       () => this.archPackagesResource.reload(),
@@ -376,7 +420,7 @@ export class AdminService {
 
   async createRepo(data: RepoFormData): Promise<void> {
     await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/admin/repos`, data),
+      () => this.http.post(`${this.backendUrl}/admin/repos`, createRepoBodySchema.parse(data)),
       'Repo created',
       'Could not create the repo.',
       () => this.reposResource.reload(),
@@ -385,7 +429,7 @@ export class AdminService {
 
   async updateRepo(id: number, data: Partial<RepoFormData>): Promise<void> {
     await this.runMutation(
-      () => this.http.patch(`${this.backendUrl}/admin/repos/${id}`, data),
+      () => this.http.patch(`${this.backendUrl}/admin/repos/${id}`, createRepoBodySchema.partial().parse(data)),
       'Repo updated',
       'Could not update the repo.',
       () => this.reposResource.reload(),
@@ -403,7 +447,7 @@ export class AdminService {
 
   async updateBuilder(id: number, data: Partial<BuilderFormData>): Promise<void> {
     await this.runMutation(
-      () => this.http.patch(`${this.backendUrl}/admin/builders/${id}`, data),
+      () => this.http.patch(`${this.backendUrl}/admin/builders/${id}`, createBuilderBodySchema.partial().parse(data)),
       'Builder updated',
       'Could not update the builder.',
       () => this.buildersResource.reload(),
@@ -421,7 +465,11 @@ export class AdminService {
 
   async updateElfAnalysis(id: number, data: Partial<ElfAnalysisFormData>): Promise<void> {
     await this.runMutation(
-      () => this.http.patch(`${this.backendUrl}/admin/package-elf-analysis/${id}`, data),
+      () =>
+        this.http.patch(
+          `${this.backendUrl}/admin/package-elf-analysis/${id}`,
+          createElfAnalysisBodySchema.partial().parse(data),
+        ),
       'ELF analysis updated',
       'Could not update the ELF analysis.',
       () => this.elfAnalysisResource.reload(),
@@ -439,7 +487,10 @@ export class AdminService {
 
   private readonly brokenReportsResource = httpResource<Paginated<BrokenPackageReport>>(() => ({
     url: `${this.backendUrl}/repo/broken`,
-    params: { page: String(this.brokenPage()), perPage: String(this.brokenPerPage()) },
+    params: parseQueryParams(brokenPackagesQuerySchema, {
+      page: this.brokenPage(),
+      perPage: this.brokenPerPage(),
+    }),
   }));
 
   readonly brokenReports = computed(() => resourceValue(this.brokenReportsResource)?.items ?? []);
@@ -530,7 +581,11 @@ export class AdminService {
   async bumpBrokenPackages(): Promise<void> {
     const pkgnames = this.brokenSelection().map((report) => report.pkgname);
     await this.runMutation(
-      () => this.http.post<{ bumped: string[] }>(`${this.backendUrl}/repo/broken/bump`, { pkgnames }),
+      () =>
+        this.http.post<{ bumped: string[] }>(
+          `${this.backendUrl}/repo/broken/bump`,
+          bumpPackagesBodySchema.parse({ pkgnames }),
+        ),
       `Bumped ${pkgnames.length} package(s) and committed the changes.`,
       'Could not bump the selected packages.',
       () => {
@@ -541,11 +596,11 @@ export class AdminService {
   }
 
   async getAurSuggestions(query: string): Promise<string[]> {
-    const trimmed = query.trim();
-    if (trimmed.length < 2) return [];
+    const parsed = aurSuggestionsQuerySchema.safeParse({ q: query.trim() });
+    if (!parsed.success) return [];
     try {
       return await lastValueFrom(
-        this.http.get<string[]>(`${this.backendUrl}/aur/suggestions`, { params: { q: trimmed } }),
+        this.http.get<string[]>(`${this.backendUrl}/aur/suggestions`, { params: parsed.data }),
       );
     } catch {
       return [];
@@ -564,9 +619,11 @@ export class AdminService {
   }
 
   async getSchedules(repo: string): Promise<PipelineScheduleOption[]> {
+    const parsed = schedulesQuerySchema.safeParse({ repo });
+    if (!parsed.success) return [];
     try {
       return await lastValueFrom(
-        this.http.get<PipelineScheduleOption[]>(`${this.backendUrl}/gitlab/schedules`, { params: { repo } }),
+        this.http.get<PipelineScheduleOption[]>(`${this.backendUrl}/gitlab/schedules`, { params: parsed.data }),
       );
     } catch {
       return [];
@@ -591,7 +648,10 @@ export class AdminService {
 
   private async startRescan(packages: { pkgname: string; pkgType: string; repo?: string }[]): Promise<string> {
     const { jobId } = await lastValueFrom(
-      this.http.post<{ started: number; jobId: string }>(`${this.backendUrl}/admin/rescan`, { packages }),
+      this.http.post<{ started: number; jobId: string }>(
+        `${this.backendUrl}/admin/rescan`,
+        rescanPackagesBodySchema.parse({ packages }),
+      ),
     );
     return jobId;
   }

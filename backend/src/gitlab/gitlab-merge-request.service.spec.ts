@@ -1,31 +1,38 @@
-import { type MergeRequestWithDiffs, PipelineOperation } from '@chaotic-next/shared-lib';
+import { type MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { sendNotification } from 'web-push';
 import { DiffScanService } from '../diff-scan/diff-scan.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
-import { GitlabService } from './gitlab.service';
-import { PipelineTrigger } from './pipeline-trigger.entity';
+import { GitlabApiService } from './gitlab-api.service';
+import { GitlabMergeRequestService } from './gitlab-merge-request.service';
+import { MrAction } from './mr-action.entity';
 
 vi.mock('web-push', () => ({ PushSubscription: {}, sendNotification: vi.fn() }));
 
 const ACTOR = { userId: 'test-user', userName: 'Test User' };
 
+function createApiService(api: Record<string, unknown> = {}): GitlabApiService {
+  const service = new GitlabApiService(
+    { get: vi.fn(), getOrThrow: vi.fn().mockReturnValue(12345) } as never,
+    { findOne: vi.fn().mockResolvedValue({ gitlabProjectId: 'test-project-id' }) } as unknown as Repository<never>,
+  );
+  (service as unknown as { chaoticId: string }).chaoticId = 'test-project-id';
+  (service as unknown as { api: unknown }).api = api;
+  return service;
+}
+
 function createService(
+  apiObject: Record<string, unknown> = {},
   virustotal: { enabled: boolean; reportOn: ReturnType<typeof vi.fn> } = { enabled: false, reportOn: vi.fn() },
   aurScan: { maintainerStatusFor: ReturnType<typeof vi.fn> } = {
     maintainerStatusFor: vi.fn(async () => new Map()),
   },
-  repoRepository?: Repository<never>,
   subscriptions: unknown[] = [],
 ): {
-  service: GitlabService;
-  pipelineTriggerRepository: {
-    insert: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    findOne: ReturnType<typeof vi.fn>;
-  };
-  pipelinesCreate: ReturnType<typeof vi.fn>;
+  service: GitlabMergeRequestService;
+  apiService: GitlabApiService;
+  mrActionRepository: { insert: ReturnType<typeof vi.fn>; find: ReturnType<typeof vi.fn> };
   mrEdit: ReturnType<typeof vi.fn>;
   noteCreate: ReturnType<typeof vi.fn>;
   discussionsCreate: ReturnType<typeof vi.fn>;
@@ -35,42 +42,35 @@ function createService(
   vtReportOn: ReturnType<typeof vi.fn>;
   maintainerStatusFor: ReturnType<typeof vi.fn>;
 } {
-  const pipelinesCreate = vi.fn();
-  const pipelineTriggerRepository = { insert: vi.fn(), update: vi.fn(), findOne: vi.fn() };
   const mrEdit = vi.fn().mockResolvedValue({});
   const noteCreate = vi.fn().mockResolvedValue({});
   const discussionsCreate = vi.fn().mockResolvedValue({});
   const cacheSet = vi.fn();
   const cacheGet = vi.fn();
   const sseNext = vi.fn();
+  const mrActionRepository = { insert: vi.fn(), find: vi.fn() };
 
-  const packageRepository = { findOne: vi.fn().mockResolvedValue({ version: '1.0', pkgrel: 1 }) };
-  const defaultRepoRepository = { findOne: vi.fn().mockResolvedValue({ gitlabProjectId: 'test-project-id' }) };
+  const apiService = createApiService({
+    MergeRequests: { edit: mrEdit },
+    MergeRequestNotes: { create: noteCreate },
+    MergeRequestDiscussions: { create: discussionsCreate },
+    ...apiObject,
+  });
 
-  const service = new GitlabService(
+  const service = new GitlabMergeRequestService(
     { get: cacheGet, set: cacheSet, del: vi.fn() } as never,
-    { get: vi.fn(), getOrThrow: vi.fn().mockReturnValue(12345) } as never,
+    apiService,
     new DiffScanService(),
     virustotal as never,
     aurScan as never,
     { sseEvents$: { next: sseNext } } as never,
     { find: vi.fn().mockResolvedValue(subscriptions) } as unknown as Repository<NotificationSubscription>,
-    {} as Repository<never>,
-    pipelineTriggerRepository as unknown as Repository<PipelineTrigger>,
-    repoRepository ?? (defaultRepoRepository as unknown as Repository<never>),
-    packageRepository as never,
+    mrActionRepository as unknown as Repository<MrAction>,
   );
-  (service as unknown as { chaoticId: string }).chaoticId = 'test-project-id';
-  (service as unknown as { api: unknown }).api = {
-    Pipelines: { create: pipelinesCreate },
-    MergeRequests: { edit: mrEdit },
-    MergeRequestNotes: { create: noteCreate },
-    MergeRequestDiscussions: { create: discussionsCreate },
-  };
   return {
     service,
-    pipelineTriggerRepository,
-    pipelinesCreate,
+    apiService,
+    mrActionRepository,
     mrEdit,
     noteCreate,
     discussionsCreate,
@@ -81,155 +81,6 @@ function createService(
     maintainerStatusFor: aurScan.maintainerStatusFor,
   };
 }
-
-describe('GitlabService.operations', () => {
-  it('creates bump commit via Commits.create for operation Bump Packages', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    const createCommit = vi.fn().mockResolvedValue({ id: 'bump123', web_url: 'https://gitlab.com/commit/bump123' });
-    const showRaw = vi.fn().mockResolvedValue('CI_PACKAGE_BUMP=1.0-1/1\n');
-    (service as unknown as { api: unknown }).api = {
-      Commits: { create: createCommit },
-      RepositoryFiles: { showRaw },
-    };
-
-    const result = await service.bumpPackages(['nodejs'], 'chaotic-aur', 'main', ACTOR);
-
-    expect(showRaw).toHaveBeenCalledWith('test-project-id', 'nodejs/.CI/config', 'main');
-    expect(createCommit).toHaveBeenCalledWith(
-      'test-project-id',
-      'main',
-      'chore(bump): nodejs\n\nBumped manually by Test User',
-      [
-        {
-          action: 'update',
-          filePath: 'nodejs/.CI/config',
-          content: 'CI_PACKAGE_BUMP=1.0-1/2\n',
-        },
-      ],
-    );
-    expect(result).toEqual({
-      pipelineId: 0,
-      webUrl: 'https://gitlab.com/commit/bump123',
-      status: 'committed',
-    });
-    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith({
-      ref: 'main',
-      commitSha: 'bump123',
-      operation: PipelineOperation.BUMP_PACKAGES,
-      inputs: { packages: 'nodejs' },
-      pipelineId: null,
-      webUrl: 'https://gitlab.com/commit/bump123',
-      ...ACTOR,
-    });
-  });
-
-  it('throws NotFoundException when bumping non-existent package', async () => {
-    const packageRepository = { findOne: vi.fn().mockResolvedValue(null) };
-    const repoRepository = { findOne: vi.fn().mockResolvedValue({ gitlabProjectId: 'test-project-id' }) };
-    const service = new GitlabService(
-      { get: vi.fn(), set: vi.fn(), del: vi.fn() } as never,
-      { get: vi.fn(), getOrThrow: vi.fn().mockReturnValue(12345) } as never,
-      new DiffScanService(),
-      { enabled: false, reportOn: vi.fn() } as never,
-      { maintainerStatusFor: vi.fn(async () => new Map()) } as never,
-      { sseEvents$: { next: vi.fn() } } as never,
-      {} as Repository<never>,
-      {} as Repository<never>,
-      { insert: vi.fn(), update: vi.fn(), findOne: vi.fn() } as unknown as Repository<PipelineTrigger>,
-      repoRepository as unknown as Repository<never>,
-      packageRepository as never,
-    );
-    (service as unknown as { chaoticId: string }).chaoticId = 'test-project-id';
-
-    await expect(service.bumpPackages(['nonexistent'], 'chaotic-aur', 'main', ACTOR)).rejects.toThrow(
-      "Package 'nonexistent' not found",
-    );
-  });
-
-  it('deletes package directories via Commits.create for operation Drop Packages', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    const createCommit = vi.fn().mockResolvedValue({ id: 'commit123', web_url: 'https://gitlab.com/commit/123' });
-    const allRepositoryTrees = vi.fn().mockImplementation((projectId, options: { path: string }) =>
-      Promise.resolve([
-        { type: 'blob', path: `${options.path}/.CI/config` },
-        { type: 'blob', path: `${options.path}/PKGBUILD` },
-      ]),
-    );
-    (service as unknown as { api: unknown }).api = {
-      Commits: { create: createCommit },
-      Repositories: { allRepositoryTrees },
-    };
-
-    const result = await service.dropPackages(['paru', 'zen-browser'], 'chaotic-aur', 'main', ACTOR);
-
-    expect(createCommit).toHaveBeenCalledWith(
-      'test-project-id',
-      'main',
-      'chore(drop): paru, zen-browser\n\nDropped manually by Test User',
-      [
-        { action: 'delete', filePath: 'paru/.CI/config' },
-        { action: 'delete', filePath: 'paru/PKGBUILD' },
-        { action: 'delete', filePath: 'zen-browser/.CI/config' },
-        { action: 'delete', filePath: 'zen-browser/PKGBUILD' },
-      ],
-    );
-    expect(result).toEqual({
-      pipelineId: 0,
-      webUrl: 'https://gitlab.com/commit/123',
-      status: 'committed',
-    });
-    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith({
-      ref: 'main',
-      commitSha: 'commit123',
-      operation: PipelineOperation.DROP_PACKAGES,
-      inputs: { packages: 'paru:zen-browser' },
-      pipelineId: null,
-      webUrl: 'https://gitlab.com/commit/123',
-      ...ACTOR,
-    });
-  });
-
-  it('adds new package files via Commits.create for operation Add Packages', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    const createCommit = vi.fn().mockResolvedValue({ id: 'commit456', web_url: 'https://gitlab.com/commit/456' });
-    (service as unknown as { api: unknown }).api = {
-      Commits: { create: createCommit },
-    };
-    (service as unknown as { aurScanService: unknown }).aurScanService = {
-      startScan: vi.fn().mockResolvedValue({ packageBase: 'paru' }),
-    };
-
-    const result = await service.addPackages(
-      [{ pkgname: 'paru', source: 'aur' }],
-      'chaotic-aur',
-      'github/5678',
-      'main',
-      ACTOR,
-    );
-
-    expect(createCommit).toHaveBeenCalled();
-    expect(result.status).toBe('committed');
-    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith({
-      ref: 'main',
-      commitSha: 'commit456',
-      operation: PipelineOperation.ADD_PACKAGES,
-      inputs: { add_packages: 'paru', request_origin: 'github/5678' },
-      pipelineId: null,
-      webUrl: 'https://gitlab.com/commit/456',
-      ...ACTOR,
-    });
-  });
-
-  it('does not record an audit row when the GitLab call fails', async () => {
-    const { service, pipelinesCreate, pipelineTriggerRepository } = createService();
-    pipelinesCreate.mockRejectedValue(new Error('GitLab unavailable'));
-
-    await expect(service.triggerPipelineRun({ operation: 'None' }, 'main', ACTOR)).rejects.toThrow(
-      'GitLab unavailable',
-    );
-    expect(pipelineTriggerRepository.insert).not.toHaveBeenCalled();
-  });
-});
 
 function mr(overrides: Partial<MergeRequestWithDiffs>): MergeRequestWithDiffs {
   return {
@@ -250,7 +101,7 @@ function mr(overrides: Partial<MergeRequestWithDiffs>): MergeRequestWithDiffs {
   };
 }
 
-describe('GitlabService.autoFlagMergeRequests', () => {
+describe('GitlabMergeRequestService.autoFlagMergeRequests', () => {
   const criticalFinding = {
     ruleId: 'NPM-001',
     ruleName: 'Package manager fetch at build/install time',
@@ -335,7 +186,7 @@ describe('GitlabService.autoFlagMergeRequests', () => {
   });
 });
 
-describe('GitlabService.enrichVirusTotalReports', () => {
+describe('GitlabMergeRequestService.enrichVirusTotalReports', () => {
   const criticalFinding = {
     ruleId: 'DLE-001',
     ruleName: 'Curl piped into a shell',
@@ -371,7 +222,7 @@ describe('GitlabService.enrichVirusTotalReports', () => {
     stats: { malicious: 5, suspicious: 1, undetected: 40, harmless: 20, timeout: 0 },
   } as const;
 
-  const enrich = (service: GitlabService, mrs: MergeRequestWithDiffs[]): Promise<void> =>
+  const enrich = (service: GitlabMergeRequestService, mrs: MergeRequestWithDiffs[]): Promise<void> =>
     (
       service as unknown as {
         enrichVirusTotalReports: (mrs: MergeRequestWithDiffs[]) => Promise<void>;
@@ -380,7 +231,7 @@ describe('GitlabService.enrichVirusTotalReports', () => {
 
   it('attaches reports, refreshes the cache and posts a note for notable verdicts', async () => {
     const reportOn = vi.fn().mockResolvedValue([maliciousReport]);
-    const { service, noteCreate, cacheSet, sseNext } = createService({ enabled: true, reportOn });
+    const { service, noteCreate, cacheSet, sseNext } = createService({}, { enabled: true, reportOn });
     const flagged = flaggedMr();
 
     await enrich(service, [flagged]);
@@ -397,7 +248,7 @@ describe('GitlabService.enrichVirusTotalReports', () => {
 
   it('posts only one note per MR across repeated cron cycles', async () => {
     const reportOn = vi.fn().mockResolvedValue([maliciousReport]);
-    const { service, noteCreate } = createService({ enabled: true, reportOn });
+    const { service, noteCreate } = createService({}, { enabled: true, reportOn });
     const flagged = flaggedMr();
 
     await enrich(service, [flagged]);
@@ -408,7 +259,7 @@ describe('GitlabService.enrichVirusTotalReports', () => {
   });
 
   it('skips MRs without scan findings and stays inert when no API key is configured', async () => {
-    const enabled = createService({ enabled: true, reportOn: vi.fn() });
+    const enabled = createService({}, { enabled: true, reportOn: vi.fn() });
     const disabled = createService();
 
     await enrich(enabled.service, [mr({ title: 'chore(update): cleanpkg' })]);
@@ -420,7 +271,7 @@ describe('GitlabService.enrichVirusTotalReports', () => {
   });
 });
 
-describe('GitlabService.getOpenMergeRequests', () => {
+describe('GitlabMergeRequestService.getOpenMergeRequests', () => {
   const mrSchema = (iid: number): Record<string, unknown> => ({
     id: iid,
     iid,
@@ -449,14 +300,14 @@ describe('GitlabService.getOpenMergeRequests', () => {
   };
 
   it('fetches diffs in bounded batches and keeps going when one MR diff fails', async () => {
-    const { service, cacheSet } = createService();
+    const { service, apiService, cacheSet } = createService();
     const all = vi.fn().mockResolvedValue([mrSchema(1), mrSchema(2)]);
     const allDiffs = vi
       .fn()
       .mockImplementation((projectId: string, iid: number) =>
         iid === 2 ? Promise.reject(new Error('500 Internal Server Error')) : Promise.resolve([diffEntry]),
       );
-    (service as unknown as { api: unknown }).api = { MergeRequests: { all, allDiffs } };
+    (apiService as unknown as { api: unknown }).api = { MergeRequests: { all, allDiffs } };
 
     const data = await service.getOpenMergeRequests(true);
 
@@ -469,7 +320,7 @@ describe('GitlabService.getOpenMergeRequests', () => {
   });
 
   it('serves cached MRs without touching the GitLab API', async () => {
-    const { service, cacheSet } = createService();
+    const { service, apiService, cacheSet } = createService();
     const cached: MergeRequestWithDiffs[] = [mr({ title: 'chore(update): cachedpkg' })];
     (service as unknown as { cacheManager: unknown }).cacheManager = {
       get: vi.fn().mockResolvedValue(cached),
@@ -477,7 +328,7 @@ describe('GitlabService.getOpenMergeRequests', () => {
       del: vi.fn(),
     };
     const all = vi.fn();
-    (service as unknown as { api: unknown }).api = { MergeRequests: { all } };
+    (apiService as unknown as { api: unknown }).api = { MergeRequests: { all } };
 
     const data = await service.getOpenMergeRequests(false);
 
@@ -487,7 +338,7 @@ describe('GitlabService.getOpenMergeRequests', () => {
   });
 
   it('reuses cached diffs and scan findings for MRs whose revision did not move', async () => {
-    const { service, cacheSet } = createService();
+    const { service, apiService, cacheSet } = createService();
     const firstMr = mrSchema(1);
     const secondMr = mrSchema(2);
     const all = vi
@@ -495,7 +346,7 @@ describe('GitlabService.getOpenMergeRequests', () => {
       .mockResolvedValueOnce([firstMr, secondMr])
       .mockResolvedValueOnce([firstMr, { ...secondMr, updated_at: '2026-01-02T00:00:00Z' }]);
     const allDiffs = vi.fn().mockResolvedValue([diffEntry]);
-    (service as unknown as { api: unknown }).api = { MergeRequests: { all, allDiffs } };
+    (apiService as unknown as { api: unknown }).api = { MergeRequests: { all, allDiffs } };
 
     const first = await service.getOpenMergeRequests(true);
     const second = await service.getOpenMergeRequests(true);
@@ -512,10 +363,10 @@ describe('GitlabService.getOpenMergeRequests', () => {
   });
 
   it('carries VirusTotal reports and maintainer info over to a rebuilt snapshot', async () => {
-    const { service, cacheSet } = createService();
+    const { service, apiService, cacheSet } = createService();
     const all = vi.fn().mockResolvedValue([mrSchema(1)]);
     const allDiffs = vi.fn().mockResolvedValue([diffEntry]);
-    (service as unknown as { api: unknown }).api = { MergeRequests: { all, allDiffs } };
+    (apiService as unknown as { api: unknown }).api = { MergeRequests: { all, allDiffs } };
     const previous: MergeRequestWithDiffs[] = [
       mr({
         vtReports: [
@@ -542,7 +393,7 @@ describe('GitlabService.getOpenMergeRequests', () => {
   });
 });
 
-describe('GitlabService.approveMergeRequest', () => {
+describe('GitlabMergeRequestService.approveMergeRequest', () => {
   it('approves MR on GitLab but defers merge execution while scheduled pipeline is running', async () => {
     const { service } = createService();
     const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review'] });
@@ -551,11 +402,11 @@ describe('GitlabService.approveMergeRequest', () => {
     const approvalsApprove = vi.fn().mockResolvedValue({});
     const noteCreate = vi.fn().mockResolvedValue({});
     const mrActionInsert = vi.fn();
-    (service as unknown as { api: unknown }).api = {
+    setApi(service, {
       MergeRequests: { show, edit: mrEdit, accept: mrAccept },
       MergeRequestApprovals: { approve: approvalsApprove },
       MergeRequestNotes: { create: noteCreate },
-    };
+    });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
     vi.useFakeTimers();
@@ -592,17 +443,12 @@ describe('GitlabService.approveMergeRequest', () => {
       labels: ['human-review'],
       title: 'chore(update): moon',
     });
-    const mrEdit = vi.fn().mockResolvedValue({});
-    const mrAccept = vi.fn();
-    const approvalsApprove = vi.fn().mockResolvedValue({});
-    const noteCreate = vi.fn().mockResolvedValue({});
-    const mrActionInsert = vi.fn();
-    (service as unknown as { api: unknown }).api = {
-      MergeRequests: { show, edit: mrEdit, accept: mrAccept },
-      MergeRequestApprovals: { approve: approvalsApprove },
-      MergeRequestNotes: { create: noteCreate },
-    };
-    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+    setApi(service, {
+      MergeRequests: { show, edit: vi.fn().mockResolvedValue({}), accept: vi.fn() },
+      MergeRequestApprovals: { approve: vi.fn().mockResolvedValue({}) },
+      MergeRequestNotes: { create: vi.fn().mockResolvedValue({}) },
+    });
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-21T03:35:00Z'));
@@ -641,17 +487,13 @@ describe('GitlabService.approveMergeRequest', () => {
       labels: ['human-review'],
       title: 'chore(update): moon',
     });
-    const mrEdit = vi.fn().mockResolvedValue({});
     const mrAccept = vi.fn().mockResolvedValue({});
-    const approvalsApprove = vi.fn().mockResolvedValue({});
-    const noteCreate = vi.fn().mockResolvedValue({});
-    const mrActionInsert = vi.fn();
-    (service as unknown as { api: unknown }).api = {
-      MergeRequests: { show, edit: mrEdit, accept: mrAccept },
-      MergeRequestApprovals: { approve: approvalsApprove },
-      MergeRequestNotes: { create: noteCreate },
-    };
-    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+    setApi(service, {
+      MergeRequests: { show, edit: vi.fn().mockResolvedValue({}), accept: mrAccept },
+      MergeRequestApprovals: { approve: vi.fn().mockResolvedValue({}) },
+      MergeRequestNotes: { create: vi.fn().mockResolvedValue({}) },
+    });
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
@@ -675,10 +517,10 @@ describe('GitlabService.approveMergeRequest', () => {
     const { service } = createService();
     const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review', 'malware'] });
     const approvalsApprove = vi.fn().mockResolvedValue({});
-    (service as unknown as { api: unknown }).api = {
+    setApi(service, {
       MergeRequests: { show, edit: vi.fn() },
       MergeRequestApprovals: { approve: approvalsApprove },
-    };
+    });
 
     await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('malware');
     expect(approvalsApprove).not.toHaveBeenCalled();
@@ -692,11 +534,11 @@ describe('GitlabService.approveMergeRequest', () => {
     const approvalsApprove = vi.fn().mockResolvedValue({});
     const noteCreate = vi.fn().mockResolvedValue({});
     const mrActionInsert = vi.fn();
-    (service as unknown as { api: unknown }).api = {
+    setApi(service, {
       MergeRequests: { show, edit: mrEdit, accept: mrAccept },
       MergeRequestApprovals: { approve: approvalsApprove },
       MergeRequestNotes: { create: noteCreate },
-    };
+    });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
     vi.useFakeTimers();
@@ -737,13 +579,12 @@ describe('GitlabService.approveMergeRequest', () => {
     const approvalsApprove = vi.fn().mockResolvedValue({});
     const noteCreate = vi.fn().mockResolvedValue({});
     const allDiffs = vi.fn().mockResolvedValue([{ new_path: 'moon/PKGBUILD' }]);
-    const mrActionInsert = vi.fn();
-    (service as unknown as { api: unknown }).api = {
+    setApi(service, {
       MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: mrRebase, allDiffs },
       MergeRequestApprovals: { approve: approvalsApprove },
       MergeRequestNotes: { create: noteCreate },
-    };
-    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+    });
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
     vi.useFakeTimers();
     // 03:00 UTC - outside scheduled pipeline window
@@ -770,19 +611,15 @@ describe('GitlabService.approveMergeRequest', () => {
           merge_status: 'can_be_merged',
           detailed_merge_status: detailedMergeStatus,
         });
-      const mrEdit = vi.fn().mockResolvedValue({});
       const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
       const mrRebase = vi.fn().mockResolvedValue({});
-      const approvalsApprove = vi.fn().mockResolvedValue({});
-      const noteCreate = vi.fn().mockResolvedValue({});
       const allDiffs = vi.fn().mockResolvedValue([{ new_path: 'moon/PKGBUILD' }]);
-      const mrActionInsert = vi.fn();
-      (service as unknown as { api: unknown }).api = {
-        MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: mrRebase, allDiffs },
-        MergeRequestApprovals: { approve: approvalsApprove },
-        MergeRequestNotes: { create: noteCreate },
-      };
-      (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+      setApi(service, {
+        MergeRequests: { show, edit: vi.fn().mockResolvedValue({}), accept: mrAccept, rebase: mrRebase, allDiffs },
+        MergeRequestApprovals: { approve: vi.fn().mockResolvedValue({}) },
+        MergeRequestNotes: { create: vi.fn().mockResolvedValue({}) },
+      });
+      (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
@@ -790,7 +627,6 @@ describe('GitlabService.approveMergeRequest', () => {
         await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
         expect(mrRebase).not.toHaveBeenCalled();
         expect(mrAccept).toHaveBeenCalledTimes(1);
-        expect(mrActionInsert).toHaveBeenCalled();
       } finally {
         vi.useRealTimers();
       }
@@ -810,14 +646,13 @@ describe('GitlabService.approveMergeRequest', () => {
       });
     const mrEdit = vi.fn().mockResolvedValue({});
     const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
-    const approvalsApprove = vi.fn().mockResolvedValue({});
     const noteCreate = vi.fn().mockResolvedValue({});
     const allDiffs = vi.fn().mockResolvedValue([]);
-    (service as unknown as { api: unknown }).api = {
+    setApi(service, {
       MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: vi.fn(), allDiffs },
-      MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestApprovals: { approve: vi.fn().mockResolvedValue({}) },
       MergeRequestNotes: { create: noteCreate },
-    };
+    });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
     vi.useFakeTimers();
@@ -846,14 +681,13 @@ describe('GitlabService.approveMergeRequest', () => {
       });
     const mrEdit = vi.fn().mockResolvedValue({});
     const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
-    const approvalsApprove = vi.fn().mockResolvedValue({});
     const noteCreate = vi.fn().mockResolvedValue({});
     const mrActionInsert = vi.fn();
-    (service as unknown as { api: unknown }).api = {
+    setApi(service, {
       MergeRequests: { show, edit: mrEdit, accept: mrAccept },
-      MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestApprovals: { approve: vi.fn().mockResolvedValue({}) },
       MergeRequestNotes: { create: noteCreate },
-    };
+    });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
     vi.useFakeTimers();
@@ -875,10 +709,14 @@ describe('GitlabService.approveMergeRequest', () => {
   });
 });
 
-describe('GitlabService.processDeferredMerges', () => {
+function setApi(service: GitlabMergeRequestService, api: Record<string, unknown>): void {
+  const apiService = (service as unknown as { gitlabApiService: { api: unknown } }).gitlabApiService;
+  apiService.api = api;
+}
+
+describe('GitlabMergeRequestService.processDeferredMerges', () => {
   function deferredSetup() {
     const { service } = createService();
-    const mrEdit = vi.fn().mockResolvedValue({});
     const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
     const noteCreate = vi.fn().mockResolvedValue({});
     const show = vi.fn().mockResolvedValue({
@@ -888,14 +726,14 @@ describe('GitlabService.processDeferredMerges', () => {
       detailed_merge_status: 'blocked_status',
     });
     const mrAll = vi.fn().mockResolvedValue([{ iid: 7, sha: 'sha7', labels: [] }]);
-    (service as unknown as { api: unknown }).api = {
-      MergeRequests: { show, edit: mrEdit, accept: mrAccept, rebase: vi.fn(), all: mrAll },
+    setApi(service, {
+      MergeRequests: { show, accept: mrAccept, rebase: vi.fn(), all: mrAll },
       MergeRequestNotes: { create: noteCreate },
-    };
+    });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = {
       find: vi.fn().mockResolvedValue([{ mergeRequestIid: 7, commitSha: 'sha7', createdAt: new Date() }]),
     };
-    return { service, mrEdit, mrAccept, noteCreate };
+    return { service, mrAccept, noteCreate };
   }
 
   it('stops retrying a deferred merge after repeated failures and leaves a warning note', async () => {
@@ -925,8 +763,7 @@ describe('GitlabService.processDeferredMerges', () => {
   it('skips deferred merges for MRs labeled malware', async () => {
     const { service, mrAccept } = deferredSetup();
     const mrAll = vi.fn().mockResolvedValue([{ iid: 7, sha: 'sha7', labels: ['human-review', 'malware'] }]);
-    const api = (service as unknown as { api: unknown }).api as { MergeRequests: { all: unknown } };
-    api.MergeRequests.all = mrAll;
+    setApi(service, { MergeRequests: { all: mrAll } });
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
@@ -940,7 +777,7 @@ describe('GitlabService.processDeferredMerges', () => {
   });
 });
 
-describe('GitlabService.enrichMaintainerInfo', () => {
+describe('GitlabMergeRequestService.enrichMaintainerInfo', () => {
   const strangerStatus = {
     maintainers: [
       {
@@ -960,14 +797,14 @@ describe('GitlabService.enrichMaintainerInfo', () => {
     },
   };
 
-  function enrich(service: GitlabService) {
+  function enrich(service: GitlabMergeRequestService) {
     return (service as unknown as { enrichMaintainerInfo(mrs: MergeRequestWithDiffs[]): Promise<void> })
       .enrichMaintainerInfo;
   }
 
   it('attaches maintainers and takeover changes to update MRs', async () => {
     const maintainerStatusFor = vi.fn(async () => new Map([['evilpkg', strangerStatus]]));
-    const { service, cacheSet, sseNext } = createService(undefined, { maintainerStatusFor });
+    const { service, cacheSet, sseNext } = createService({}, undefined, { maintainerStatusFor });
     const updateMr = mr({ title: 'chore(update): evilpkg' });
     const otherMr = mr({ title: 'chore: mass rebuild', iid: 2, id: 99 });
 
@@ -984,7 +821,7 @@ describe('GitlabService.enrichMaintainerInfo', () => {
 
   it('skips MRs whose updated_at has not changed since the last run', async () => {
     const maintainerStatusFor = vi.fn(async () => new Map([['evilpkg', strangerStatus]]));
-    const { service } = createService(undefined, { maintainerStatusFor });
+    const { service } = createService({}, undefined, { maintainerStatusFor });
     const updateMr = mr({ title: 'chore(update): evilpkg', updated_at: '2026-08-16T10:00:00Z' });
 
     await enrich(service).call(service, [updateMr]);
@@ -1000,215 +837,6 @@ describe('GitlabService.enrichMaintainerInfo', () => {
     await enrich(service).call(service, [pushedMr]);
     expect(maintainerStatusFor).toHaveBeenCalledTimes(2);
     expect(maintainerStatusFor).toHaveBeenLastCalledWith(['evilpkg']);
-  });
-});
-
-describe('handlePipelineWebhook', () => {
-  it('backfills pipeline ID matching commitSha when tracked in unlinkedCommitShas set', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    pipelineTriggerRepository.update.mockResolvedValue({ affected: 1 });
-    (service as unknown as { unlinkedCommitShas: Set<string> }).unlinkedCommitShas.add('abc123456');
-
-    const webhookPayload = {
-      object_kind: 'pipeline' as const,
-      object_attributes: {
-        id: 9999,
-        iid: 12,
-        ref: 'main',
-        status: 'running',
-        source: 'push',
-        sha: 'abc123456',
-        created_at: '2026-08-21T19:00:00Z',
-        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/9999',
-      },
-    } as unknown as import('./interfaces').PipelineWebhook;
-
-    await service.handlePipelineWebhook(webhookPayload);
-
-    expect(pipelineTriggerRepository.update).toHaveBeenCalledWith(
-      { commitSha: 'abc123456', pipelineId: expect.anything() },
-      { pipelineId: 9999 },
-    );
-    expect((service as unknown as { unlinkedCommitShas: Set<string> }).unlinkedCommitShas.has('abc123456')).toBe(false);
-  });
-
-  it('skips commitSha backfill when SHA is not in unlinkedCommitShas set', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    pipelineTriggerRepository.findOne.mockResolvedValue(null);
-
-    const webhookPayload = {
-      object_kind: 'pipeline' as const,
-      object_attributes: {
-        id: 8888,
-        iid: 14,
-        ref: 'main',
-        status: 'running',
-        source: 'push',
-        sha: 'untracked123',
-        created_at: '2026-08-21T19:00:00Z',
-        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/8888',
-      },
-    } as unknown as import('./interfaces').PipelineWebhook;
-
-    await service.handlePipelineWebhook(webhookPayload);
-
-    expect(pipelineTriggerRepository.update).not.toHaveBeenCalled();
-    expect(pipelineTriggerRepository.findOne).toHaveBeenCalledWith({
-      where: { pipelineId: 8888, commitSha: expect.anything() },
-    });
-  });
-
-  it('backfills commitSha on trigger with matching pipelineId via reverse webhook lookup', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    pipelineTriggerRepository.findOne.mockResolvedValue({ id: 42, pipelineId: 7777, commitSha: null });
-    pipelineTriggerRepository.update.mockResolvedValue({ affected: 1 });
-
-    const webhookPayload = {
-      object_kind: 'pipeline' as const,
-      object_attributes: {
-        id: 7777,
-        iid: 20,
-        ref: 'main',
-        status: 'running',
-        source: 'schedule',
-        sha: 'deadbeef123',
-        created_at: '2026-08-21T19:00:00Z',
-        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/7777',
-      },
-    } as unknown as import('./interfaces').PipelineWebhook;
-
-    await service.handlePipelineWebhook(webhookPayload);
-
-    expect(pipelineTriggerRepository.findOne).toHaveBeenCalledWith({
-      where: { pipelineId: 7777, commitSha: expect.anything() },
-    });
-    expect(pipelineTriggerRepository.update).toHaveBeenCalledWith(42, { commitSha: 'deadbeef123' });
-  });
-
-  it('does not backfill commitSha when trigger already has one', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    pipelineTriggerRepository.findOne.mockResolvedValue(null);
-
-    const webhookPayload = {
-      object_kind: 'pipeline' as const,
-      object_attributes: {
-        id: 7777,
-        iid: 20,
-        ref: 'main',
-        status: 'running',
-        source: 'schedule',
-        sha: 'deadbeef123',
-        created_at: '2026-08-21T19:00:00Z',
-        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/7777',
-      },
-    } as unknown as import('./interfaces').PipelineWebhook;
-
-    await service.handlePipelineWebhook(webhookPayload);
-
-    expect(pipelineTriggerRepository.findOne).toHaveBeenCalledWith({
-      where: { pipelineId: 7777, commitSha: expect.anything() },
-    });
-    expect(pipelineTriggerRepository.update).not.toHaveBeenCalled();
-  });
-
-  it('backfills schedule trigger with null pipelineId via source fallback', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    pipelineTriggerRepository.update.mockResolvedValue({ affected: 1 });
-    pipelineTriggerRepository.findOne
-      .mockResolvedValueOnce({ id: 55, pipelineId: null, commitSha: null }) // source fallback (line 469)
-      .mockResolvedValueOnce(null); // reverse match for commitSha (line 479)
-
-    const webhookPayload = {
-      object_kind: 'pipeline' as const,
-      object_attributes: {
-        id: 3333,
-        iid: 1,
-        ref: 'main',
-        status: 'created',
-        source: 'schedule',
-        sha: 'newschedule123',
-        created_at: '2026-08-21T19:00:00Z',
-        url: 'https://gitlab.com/chaotic-aur/pkgbuilds/-/pipelines/3333',
-      },
-    } as unknown as import('./interfaces').PipelineWebhook;
-
-    await service.handlePipelineWebhook(webhookPayload);
-
-    expect(pipelineTriggerRepository.findOne).toHaveBeenCalledWith({
-      where: { operation: 'run-schedule', pipelineId: expect.anything(), ref: 'main' },
-      order: { createdAt: 'DESC' },
-    });
-    expect(pipelineTriggerRepository.update).toHaveBeenCalledWith(55, {
-      pipelineId: 3333,
-      commitSha: 'newschedule123',
-    });
-  });
-});
-
-describe('GitlabService.runSchedule', () => {
-  it('captures pipeline ID and commit SHA from play API response', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    const playResult = {
-      data: {
-        last_pipeline: { id: 5555, sha: 'abc123sha', ref: 'main', status: 'created' },
-      },
-    };
-    const schedulesPlay = vi.fn().mockResolvedValue(playResult);
-    (service as unknown as { api: unknown }).api = {
-      PipelineSchedules: { play: schedulesPlay },
-    };
-
-    const result = await service.runSchedule(15, 'chaotic-aur', ACTOR);
-
-    expect(schedulesPlay).toHaveBeenCalledWith('test-project-id', 15);
-    expect(result.pipelineId).toBe(5555);
-    expect(result.status).toBe('scheduled');
-    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ref: 'main',
-        commitSha: 'abc123sha',
-        operation: PipelineOperation.RUN_SCHEDULE,
-        inputs: { scheduleId: '15', repo: 'chaotic-aur' },
-        pipelineId: 5555,
-      }),
-    );
-    expect((service as unknown as { unlinkedCommitShas: Set<string> }).unlinkedCommitShas.has('abc123sha')).toBe(true);
-  });
-
-  it('falls back to schedule endpoint URL when play response has no last_pipeline', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    const schedulesPlay = vi.fn().mockResolvedValue({ data: {} });
-    (service as unknown as { api: unknown }).api = {
-      PipelineSchedules: { play: schedulesPlay },
-    };
-
-    const result = await service.runSchedule(15, 'chaotic-aur', ACTOR);
-
-    expect(result.pipelineId).toBe(0);
-    expect(result.status).toBe('scheduled');
-    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        commitSha: null,
-        pipelineId: null,
-      }),
-    );
-  });
-
-  it('unwraps gitbeaker response envelope (data property)', async () => {
-    const { service, pipelineTriggerRepository } = createService();
-    const schedulesPlay = vi.fn().mockResolvedValue({
-      data: { last_pipeline: { id: 7777, sha: 'inner123', ref: 'main', status: 'created' } },
-    });
-    (service as unknown as { api: unknown }).api = {
-      PipelineSchedules: { play: schedulesPlay },
-    };
-
-    const result = await service.runSchedule(30, 'chaotic-aur', ACTOR);
-
-    expect(result.pipelineId).toBe(7777);
-    expect(pipelineTriggerRepository.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ commitSha: 'inner123', pipelineId: 7777 }),
-    );
   });
 });
 
@@ -1230,13 +858,13 @@ type NotifyAccess = {
   pendingNotificationIids: Set<number>;
 };
 
-function notificationAccess(service: GitlabService): NotifyAccess {
+function notificationAccess(service: GitlabMergeRequestService): NotifyAccess {
   return service as unknown as NotifyAccess;
 }
 
-describe('GitlabService.new-MR push notifications', () => {
+describe('GitlabMergeRequestService.new-MR push notifications', () => {
   it('notifies subscribers with per-package finding counts and a resumable URL', async () => {
-    const { service } = createService(undefined, undefined, undefined, [
+    const { service } = createService({}, undefined, undefined, [
       { endpoint: 'https://fcm.test/a' },
       { endpoint: 'https://fcm.test/b' },
     ]);
@@ -1255,7 +883,7 @@ describe('GitlabService.new-MR push notifications', () => {
   });
 
   it('omits finding counts when there are zero findings', async () => {
-    const { service } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
     const mrs = [mrFixture(1), mrFixture(2)];
 
@@ -1268,7 +896,7 @@ describe('GitlabService.new-MR push notifications', () => {
   });
 
   it('includes finding counts only when there are findings', async () => {
-    const { service } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
     const mrs = [
       mrFixture(1, { scanFindings: [{ ruleId: 'a' }] as never }),
@@ -1285,7 +913,7 @@ describe('GitlabService.new-MR push notifications', () => {
   });
 
   it('parks MRs whose diffs are unavailable instead of notifying', async () => {
-    const { service } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
     const access = notificationAccess(service);
 
@@ -1296,7 +924,7 @@ describe('GitlabService.new-MR push notifications', () => {
   });
 
   it('flushes parked MRs once their diffs become available and clears the park', async () => {
-    const { service, cacheGet } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    const { service, cacheGet } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
     const access = notificationAccess(service);
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never })]);
@@ -1312,7 +940,7 @@ describe('GitlabService.new-MR push notifications', () => {
   });
 
   it('flush keeps parking while the diffs remain unavailable', async () => {
-    const { service, cacheGet } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    const { service, cacheGet } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
     const access = notificationAccess(service);
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never }), mrFixture(9, { diffs: [] as never })]);
@@ -1325,7 +953,7 @@ describe('GitlabService.new-MR push notifications', () => {
   });
 
   it('flush notifies only the parked MRs whose diffs arrived, keeping the rest parked', async () => {
-    const { service, cacheGet } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    const { service, cacheGet } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
     const access = notificationAccess(service);
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never }), mrFixture(9, { diffs: [] as never })]);
@@ -1341,7 +969,7 @@ describe('GitlabService.new-MR push notifications', () => {
   });
 
   it('flush drops parked MRs that are no longer open', async () => {
-    const { service, cacheGet } = createService(undefined, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
+    const { service, cacheGet } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
     const access = notificationAccess(service);
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never })]);

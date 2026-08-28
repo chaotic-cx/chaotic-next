@@ -8,8 +8,7 @@ import {
   removedLineTexts,
   SYSTEMD_UNIT_PATTERN,
 } from './diff-utils';
-import type { Rule } from './rule';
-import { regexRule } from './rule';
+import { regexRule, type Rule } from './rule';
 
 /** Rules that reason about old-vs-new context, which full-file scans cannot provide. */
 const MR_DIFF_ONLY = ['mr-diff'] as const;

@@ -1,9 +1,9 @@
-import type { ConfigService } from '@nestjs/config';
+import { BumpType } from '../interfaces/repo-manager';
 import constants from 'node:constants';
+import { requiredEnvVarsDev, requiredEnvVarsProd } from './constants';
+import { type ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { access } from 'node:fs/promises';
-import { BumpType } from '../interfaces/repo-manager';
-import { requiredEnvVarsDev, requiredEnvVarsProd } from './constants';
 
 export function generateNodeId(): string {
   // HOSTNAME separates hosts. PIDs are unique among all simultaneously running

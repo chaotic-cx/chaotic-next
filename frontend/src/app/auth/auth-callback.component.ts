@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from 'ngx-better-auth';
 import { filter, take, timeout } from 'rxjs';
 import {
@@ -54,6 +55,8 @@ export class AuthCallbackComponent {
         filter((session) => session !== null),
         take(1),
         timeout(SESSION_TIMEOUT_MS),
+        // Bound by destruction too: without it the wait outlives a navigated-away page.
+        takeUntilDestroyed(),
       )
       .subscribe({
         next: () => this.finish(AUTH_CALLBACK_MESSAGE),

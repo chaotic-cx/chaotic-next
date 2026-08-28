@@ -5,6 +5,14 @@ import {
   type BuildSortField,
   type BuildStatus,
   type ChaoticEvent,
+  aurSearchQuerySchema,
+  daysQuerySchema,
+  daysRepoQuerySchema,
+  getBuildsQuerySchema,
+  getPackagesQuerySchema,
+  pkgnameListQuerySchema,
+  popularBuildsQuerySchema,
+  repoQuerySchema,
   type PackageSortField,
   type SortOrder,
 } from '@chaotic-next/shared-lib';
@@ -13,6 +21,7 @@ import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
 import { type ResourceMetricKey } from './chart-resource-metrics';
 import { isChaoticEvent, type SeoTags, updateSeoTags } from './functions';
+import { parseQueryParams } from './utils/api-params';
 
 export interface PackagesQueryParams {
   page: number;
@@ -123,18 +132,17 @@ export class AppService {
   }
 
   private daysParams(days?: number): HttpParams {
-    return new HttpParams().set('days', (days ?? ALL_TIME_DAYS).toString());
+    return new HttpParams({ fromObject: parseQueryParams(daysQuerySchema, { days: days ?? ALL_TIME_DAYS }) });
   }
 
   private daysRepoParams(days?: number, repo?: string): HttpParams {
-    let params = this.daysParams(days);
-    if (repo) params = params.set('repo', repo);
-    return params;
+    return new HttpParams({
+      fromObject: parseQueryParams(daysRepoQuerySchema, { days: days ?? ALL_TIME_DAYS, repo }),
+    });
   }
 
   private repoParams(repo?: string): HttpParams {
-    if (!repo) return new HttpParams();
-    return new HttpParams().set('repo', repo);
+    return new HttpParams({ fromObject: parseQueryParams(repoQuerySchema, { repo }) });
   }
 
   getUsersResourceRequest(days?: number): HttpResourceRequest {
@@ -274,17 +282,21 @@ export class AppService {
   }
 
   getPackageAverageBuildTimesResourceRequest(pkgnames: string[], days?: number): HttpResourceRequest {
-    let params = this.daysParams(days);
-    for (const pkgname of pkgnames) params = params.append('pkgname', pkgname);
-    return { url: `${this.appConfig.backendUrl}/builder/average/pkgname`, params };
+    return {
+      url: `${this.appConfig.backendUrl}/builder/average/pkgname`,
+      params: new HttpParams({
+        fromObject: parseQueryParams(pkgnameListQuerySchema, { pkgname: pkgnames, days }),
+      }),
+    };
   }
 
   getPopularPackagesResourceRequest(amount: number, days?: number, status?: BuildStatus): HttpResourceRequest {
-    let params = this.daysParams(days);
-    if (status !== undefined) {
-      params = params.set('status', status.toString());
-    }
-    return { url: `${this.appConfig.backendUrl}/builder/popular/${amount}`, params };
+    return {
+      url: `${this.appConfig.backendUrl}/builder/popular/${amount}`,
+      params: new HttpParams({
+        fromObject: parseQueryParams(popularBuildsQuerySchema, { days, status }),
+      }),
+    };
   }
 
   getBuildsCountByPkgnamePerDayResourceRequest(pkgname: string, days: number): HttpResourceRequest {
@@ -303,26 +315,19 @@ export class AppService {
   }
 
   getPackagesResourceRequest(params: PackagesQueryParams): HttpResourceRequest {
-    let queryParams = new HttpParams()
-      .set('repo', 'true')
-      .set('page', params.page.toString())
-      .set('perPage', params.perPage.toString());
-    if (params.q) queryParams = queryParams.set('q', params.q);
-    if (params.sort) queryParams = queryParams.set('sort', params.sort);
-    if (params.order) queryParams = queryParams.set('order', params.order);
-    if (params.repoId !== undefined) queryParams = queryParams.set('repoId', params.repoId.toString());
-    return { url: `${this.appConfig.backendUrl}/builder/packages`, params: queryParams };
+    return {
+      url: `${this.appConfig.backendUrl}/builder/packages`,
+      params: new HttpParams({
+        fromObject: parseQueryParams(getPackagesQuerySchema, { ...params, repo: 'true' }),
+      }),
+    };
   }
 
   getBuildsResourceRequest(params: BuildsQueryParams): HttpResourceRequest {
-    let queryParams = new HttpParams().set('page', params.page.toString()).set('perPage', params.perPage.toString());
-    if (params.q) queryParams = queryParams.set('q', params.q);
-    if (params.builder) queryParams = queryParams.set('builder', params.builder);
-    if (params.repo) queryParams = queryParams.set('repo', params.repo);
-    if (params.status !== undefined) queryParams = queryParams.set('status', params.status.toString());
-    if (params.sort) queryParams = queryParams.set('sort', params.sort);
-    if (params.order) queryParams = queryParams.set('order', params.order);
-    return { url: `${this.appConfig.backendUrl}/builder/builds`, params: queryParams };
+    return {
+      url: `${this.appConfig.backendUrl}/builder/builds`,
+      params: new HttpParams({ fromObject: parseQueryParams(getBuildsQuerySchema, params) }),
+    };
   }
 
   getPackageResourceRequest(name: string, repo: string): HttpResourceRequest {
@@ -342,9 +347,10 @@ export class AppService {
   }
 
   getPackageBuildsResourceRequest(perPage = 20, status?: BuildStatus): HttpResourceRequest {
-    let params: HttpParams = new HttpParams().set('perPage', perPage.toString());
-    if (status !== undefined) params = params.set('status', status.toString());
-    return { url: `${this.appConfig.backendUrl}/builder/builds`, params };
+    return {
+      url: `${this.appConfig.backendUrl}/builder/builds`,
+      params: new HttpParams({ fromObject: parseQueryParams(getBuildsQuerySchema, { perPage, status }) }),
+    };
   }
 
   updateSeoTags(meta: Meta, seo: SeoTags): void {
@@ -360,22 +366,23 @@ export class AppService {
   }
 
   getUpdateReviewStatsResourceRequest(timeRangeDays?: number): HttpResourceRequest {
-    const url = new URL(`${this.appConfig.backendUrl}/gitlab/review-stats`);
-    if (timeRangeDays !== undefined) {
-      url.searchParams.set('days', timeRangeDays.toString());
-    }
-    return { url: url.toString() };
+    return {
+      url: `${this.appConfig.backendUrl}/gitlab/review-stats`,
+      params: new HttpParams({ fromObject: parseQueryParams(daysQuerySchema, { days: timeRangeDays }) }),
+    };
   }
 
   getUpdateReviewStatsOverTimeResourceRequest(timeRangeDays?: number): HttpResourceRequest {
-    const url = new URL(`${this.appConfig.backendUrl}/gitlab/review-stats/over-time`);
-    if (timeRangeDays !== undefined) {
-      url.searchParams.set('days', timeRangeDays.toString());
-    }
-    return { url: url.toString() };
+    return {
+      url: `${this.appConfig.backendUrl}/gitlab/review-stats/over-time`,
+      params: new HttpParams({ fromObject: parseQueryParams(daysQuerySchema, { days: timeRangeDays }) }),
+    };
   }
 
   getAurSuggestions(query: string): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/gitlab/aur-search`, params: new HttpParams().set('arg', query) };
+    return {
+      url: `${this.appConfig.backendUrl}/gitlab/aur-search`,
+      params: new HttpParams({ fromObject: parseQueryParams(aurSearchQuerySchema, { arg: query }) }),
+    };
   }
 }

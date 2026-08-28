@@ -1,13 +1,13 @@
-import { type BuildClassSuggestion } from '@chaotic-next/shared-lib';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { BuildStatus } from '../types/types';
 import { CACHE_TTL_MS, MAX_DAYS_WINDOW } from '../utils/constants';
 import { clampInt, nDaysInPast } from '../utils/functions';
 import { suggestBuildClass } from './build-class-suggester';
 import { Build } from './builder.entity';
 import { BUILD_RESOURCE_COLUMNS } from './resource-stats';
+import { type BuildClassSuggestion } from '@chaotic-next/shared-lib';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 /** `Build.timeToEnd` is persisted in minutes; the suggester and API work in seconds. */
 const SECONDS_PER_MINUTE = 60;

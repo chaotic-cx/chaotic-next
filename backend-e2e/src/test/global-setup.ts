@@ -12,7 +12,7 @@ export async function setup(): Promise<void> {
   }
 
   const image = 'chaotic-postgres-hll:latest';
-  await PostgreSqlContainer.fromDockerfile(resolve(__dirname, '../../../docker/postgres-hll')).build(image);
+  await PostgreSqlContainer.fromDockerfile(resolve(import.meta.dirname, '../../../docker/postgres-hll')).build(image);
 
   container = await new PostgreSqlContainer(image)
     .withDatabase('chaotic')

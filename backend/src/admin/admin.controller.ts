@@ -1,5 +1,53 @@
-import type { Package as PackageDto, Paginated, PipelineTriggerAction, RescanJob } from '@chaotic-next/shared-lib';
-import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
+import { schemaResponse, schemaResponseArray } from '../api/response-schema';
+import { BuildClassSyncService } from '../builder/build-class-sync.service';
+import { Builder, Package, Repo } from '../builder/builder.entity';
+import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import { AdminService, type CreateArchPackageBody, type CreatePackageBody, type CreateRepoBody } from './admin.service';
+import {
+  adminPackageElfAnalysisSchema,
+  archPackageSchema,
+  builderSchema,
+  createBuilderBodySchema,
+  createElfAnalysisBodySchema,
+  createRepoBodySchema,
+  idParamSchema,
+  listAdminPackagesQuerySchema,
+  listArchPackagesQuerySchema,
+  listBuildersQuerySchema,
+  listElfAnalysisQuerySchema,
+  listMrActionsQuerySchema,
+  listPackageBumpsQuerySchema,
+  listPipelineTriggersQuerySchema,
+  mrActionSchema,
+  packageBumpSchema,
+  packageSchema,
+  pipelineTriggerActionSchema,
+  PKG_TYPE_ARCH,
+  PKG_TYPE_CHAOTIC,
+  repoSchema,
+  rescanJobSchema,
+  rescanPackagesBodySchema,
+  rescanStartedSchema,
+  type AdminPackageElfAnalysis,
+  type CreateBuilderBodyDto,
+  type CreateElfAnalysisBodyDto,
+  type ListAdminPackagesQueryDto,
+  type ListArchPackagesQueryDto,
+  type ListBuildersQueryDto,
+  type ListElfAnalysisQueryDto,
+  type ListMrActionsQueryDto,
+  type ListPackageBumpsQueryDto,
+  type ListPipelineTriggersQueryDto,
+  type MrAction,
+  type Package as PackageDto,
+  type PackageBump,
+  type Paginated,
+  type PipelineTriggerAction,
+  type RescanJob,
+  type RescanPackagesDto,
+  updateArchPackageBodySchema,
+  updatePackageBodySchema,
+} from '@chaotic-next/shared-lib';
 import {
   Body,
   Controller,
@@ -8,7 +56,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -20,33 +67,11 @@ import {
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
+  ApiParam,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
-import { BuildClassSyncService } from '../builder/build-class-sync.service';
-import { Builder, Package, Repo } from '../builder/builder.entity';
-import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
-import {
-  AdminPackageElfAnalysisDto,
-  CreateBuilderBodyDto,
-  CreateElfAnalysisBodyDto,
-  ListAdminPackagesQueryDto,
-  ListArchPackagesQueryDto,
-  ListBuildersQueryDto,
-  ListElfAnalysisQueryDto,
-  ListMrActionsQueryDto,
-  ListPackageBumpsQueryDto,
-  ListPipelineTriggersQueryDto,
-  MrActionDto,
-  PackageBumpDto,
-  PipelineTriggerDto,
-  RescanPackagesDto,
-  RescanJobDto,
-  RescanStartedDto,
-} from './admin.dto';
-import type { CreateArchPackageBody, CreatePackageBody, CreateRepoBody } from './admin.service';
-import { AdminService } from './admin.service';
 
 @ApiTags('admin')
 @ApiCookieAuth('better-auth.session_token')
@@ -68,8 +93,10 @@ export class AdminController {
 
   @Get('packages')
   @ApiOperation({ summary: 'List packages (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of packages', type: Package })
-  async listPackages(@Query() query: ListAdminPackagesQueryDto): Promise<Paginated<PackageDto>> {
+  @ApiOkResponse({ description: 'Paginated list of packages', schema: schemaResponse(packageSchema).schema })
+  async listPackages(
+    @Query({ schema: listAdminPackagesQuerySchema }) query: ListAdminPackagesQueryDto,
+  ): Promise<Paginated<PackageDto>> {
     return this.adminService.listPackages(
       query.page,
       query.perPage,
@@ -81,8 +108,11 @@ export class AdminController {
 
   @Patch('packages/:id')
   @ApiOperation({ summary: 'Update a package' })
-  @ApiOkResponse({ description: 'The updated package', type: Package })
-  updatePackage(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<CreatePackageBody>): Promise<Package> {
+  @ApiOkResponse({ description: 'The updated package', schema: schemaResponse(packageSchema).schema })
+  updatePackage(
+    @Param('id', { schema: idParamSchema }) id: number,
+    @Body({ schema: updatePackageBodySchema.partial() }) body: Partial<CreatePackageBody>,
+  ): Promise<Package> {
     return this.adminService.updatePackage(id, body);
   }
 
@@ -90,23 +120,25 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a package' })
   @ApiNoContentResponse({ description: 'Package deleted' })
-  deletePackage(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  deletePackage(@Param('id', { schema: idParamSchema }) id: number): Promise<void> {
     return this.adminService.deletePackage(id);
   }
 
   @Get('arch-packages')
   @ApiOperation({ summary: 'List Arch packages (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of Arch packages', type: ArchlinuxPackage })
-  async listArchPackages(@Query() query: ListArchPackagesQueryDto): Promise<Paginated<ArchlinuxPackage>> {
+  @ApiOkResponse({ description: 'Paginated list of Arch packages', schema: schemaResponse(archPackageSchema).schema })
+  async listArchPackages(
+    @Query({ schema: listArchPackagesQuerySchema }) query: ListArchPackagesQueryDto,
+  ): Promise<Paginated<ArchlinuxPackage>> {
     return this.adminService.listArchPackages(query.page, query.perPage, query.q);
   }
 
   @Patch('arch-packages/:id')
   @ApiOperation({ summary: 'Update an Arch package' })
-  @ApiOkResponse({ description: 'The updated Arch package', type: ArchlinuxPackage })
+  @ApiOkResponse({ description: 'The updated Arch package', schema: schemaResponse(archPackageSchema).schema })
   updateArchPackage(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: Partial<CreateArchPackageBody>,
+    @Param('id', { schema: idParamSchema }) id: number,
+    @Body({ schema: updateArchPackageBodySchema.partial() }) body: Partial<CreateArchPackageBody>,
   ): Promise<ArchlinuxPackage> {
     return this.adminService.updateArchPackage(id, body);
   }
@@ -115,13 +147,13 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an Arch package' })
   @ApiNoContentResponse({ description: 'Arch package deleted' })
-  deleteArchPackage(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  deleteArchPackage(@Param('id', { schema: idParamSchema }) id: number): Promise<void> {
     return this.adminService.deleteArchPackage(id);
   }
 
   @Get('repos')
   @ApiOperation({ summary: 'List repos (admin)' })
-  @ApiOkResponse({ description: 'List of repos', type: Repo, isArray: true })
+  @ApiOkResponse({ description: 'List of repos', schema: schemaResponseArray(repoSchema).schema })
   async listRepos(): Promise<Repo[]> {
     return this.adminService.listRepos();
   }
@@ -129,15 +161,18 @@ export class AdminController {
   @Post('repos')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a repo' })
-  @ApiCreatedResponse({ description: 'The created repo', type: Repo })
-  createRepo(@Body() body: CreateRepoBody): Promise<Repo> {
+  @ApiCreatedResponse({ description: 'The created repo', schema: schemaResponse(repoSchema).schema })
+  createRepo(@Body({ schema: createRepoBodySchema }) body: CreateRepoBody): Promise<Repo> {
     return this.adminService.createRepo(body);
   }
 
   @Patch('repos/:id')
   @ApiOperation({ summary: 'Update a repo' })
-  @ApiOkResponse({ description: 'The updated repo', type: Repo })
-  updateRepo(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<CreateRepoBody>): Promise<Repo> {
+  @ApiOkResponse({ description: 'The updated repo', schema: schemaResponse(repoSchema).schema })
+  updateRepo(
+    @Param('id', { schema: idParamSchema }) id: number,
+    @Body({ schema: createRepoBodySchema.partial() }) body: Partial<CreateRepoBody>,
+  ): Promise<Repo> {
     return this.adminService.updateRepo(id, body);
   }
 
@@ -145,14 +180,16 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a repo' })
   @ApiNoContentResponse({ description: 'Repo deleted' })
-  deleteRepo(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  deleteRepo(@Param('id', { schema: idParamSchema }) id: number): Promise<void> {
     return this.adminService.deleteRepo(id);
   }
 
   @Get('builders')
   @ApiOperation({ summary: 'List builders (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of builders', type: Builder })
-  async listBuilders(@Query() query: ListBuildersQueryDto): Promise<Paginated<Builder>> {
+  @ApiOkResponse({ description: 'Paginated list of builders', schema: schemaResponse(builderSchema).schema })
+  async listBuilders(
+    @Query({ schema: listBuildersQuerySchema }) query: ListBuildersQueryDto,
+  ): Promise<Paginated<Builder>> {
     return this.adminService.listBuilders(
       query.page,
       query.perPage,
@@ -164,15 +201,18 @@ export class AdminController {
   @Post('builders')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a builder' })
-  @ApiCreatedResponse({ description: 'The created builder', type: Builder })
-  createBuilder(@Body() body: CreateBuilderBodyDto): Promise<Builder> {
+  @ApiCreatedResponse({ description: 'The created builder', schema: schemaResponse(builderSchema).schema })
+  createBuilder(@Body({ schema: createBuilderBodySchema }) body: CreateBuilderBodyDto): Promise<Builder> {
     return this.adminService.createBuilder(body);
   }
 
   @Patch('builders/:id')
   @ApiOperation({ summary: 'Update a builder' })
-  @ApiOkResponse({ description: 'The updated builder', type: Builder })
-  updateBuilder(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<CreateBuilderBodyDto>): Promise<Builder> {
+  @ApiOkResponse({ description: 'The updated builder', schema: schemaResponse(builderSchema).schema })
+  updateBuilder(
+    @Param('id', { schema: idParamSchema }) id: number,
+    @Body({ schema: createBuilderBodySchema.partial() }) body: Partial<CreateBuilderBodyDto>,
+  ): Promise<Builder> {
     return this.adminService.updateBuilder(id, body);
   }
 
@@ -180,28 +220,40 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a builder' })
   @ApiNoContentResponse({ description: 'Builder deleted' })
-  deleteBuilder(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  deleteBuilder(@Param('id', { schema: idParamSchema }) id: number): Promise<void> {
     return this.adminService.deleteBuilder(id);
   }
 
   @Get('mr-actions')
   @ApiOperation({ summary: 'List merge-request actions (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of MR actions', type: MrActionDto, isArray: true })
-  async listMrActions(@Query() query: ListMrActionsQueryDto): Promise<Paginated<MrActionDto>> {
+  @ApiOkResponse({ description: 'Paginated list of MR actions', schema: schemaResponseArray(mrActionSchema).schema })
+  async listMrActions(
+    @Query({ schema: listMrActionsQuerySchema }) query: ListMrActionsQueryDto,
+  ): Promise<Paginated<MrAction>> {
     return this.adminService.listMrActions(query.page, query.perPage, query.q, query.action);
   }
 
   @Get('pipeline-triggers')
   @ApiOperation({ summary: 'List triggered pipelines (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of triggered pipelines', type: PipelineTriggerDto, isArray: true })
-  async listPipelineTriggers(@Query() query: ListPipelineTriggersQueryDto): Promise<Paginated<PipelineTriggerAction>> {
+  @ApiOkResponse({
+    description: 'Paginated list of triggered pipelines',
+    schema: schemaResponseArray(pipelineTriggerActionSchema).schema,
+  })
+  async listPipelineTriggers(
+    @Query({ schema: listPipelineTriggersQuerySchema }) query: ListPipelineTriggersQueryDto,
+  ): Promise<Paginated<PipelineTriggerAction>> {
     return this.adminService.listPipelineTriggers(query.page, query.perPage, query.q, query.operation);
   }
 
   @Get('package-bumps')
   @ApiOperation({ summary: 'List package bumps (admin)' })
-  @ApiOkResponse({ description: 'Paginated list of package bumps', type: PackageBumpDto, isArray: true })
-  async listPackageBumps(@Query() query: ListPackageBumpsQueryDto): Promise<Paginated<PackageBumpDto>> {
+  @ApiOkResponse({
+    description: 'Paginated list of package bumps',
+    schema: schemaResponseArray(packageBumpSchema).schema,
+  })
+  async listPackageBumps(
+    @Query({ schema: listPackageBumpsQuerySchema }) query: ListPackageBumpsQueryDto,
+  ): Promise<Paginated<PackageBump>> {
     return this.adminService.listPackageBumps(query.page, query.perPage, query.q, query.bumpType, query.triggerFrom);
   }
 
@@ -209,10 +261,11 @@ export class AdminController {
   @ApiOperation({ summary: 'List package ELF analysis rows (admin)' })
   @ApiOkResponse({
     description: 'Paginated list of package ELF analysis rows',
-    type: AdminPackageElfAnalysisDto,
-    isArray: true,
+    schema: schemaResponseArray(adminPackageElfAnalysisSchema).schema,
   })
-  async listElfAnalysis(@Query() query: ListElfAnalysisQueryDto): Promise<Paginated<AdminPackageElfAnalysisDto>> {
+  async listElfAnalysis(
+    @Query({ schema: listElfAnalysisQuerySchema }) query: ListElfAnalysisQueryDto,
+  ): Promise<Paginated<AdminPackageElfAnalysis>> {
     return this.adminService.listElfAnalysis(
       query.page,
       query.perPage,
@@ -226,18 +279,24 @@ export class AdminController {
 
   @Get('package-elf-analysis/:id/bumps')
   @ApiOperation({ summary: 'List rebuild-trigger bumps for an ELF analysis row' })
-  @ApiOkResponse({ description: 'Rebuild-trigger bumps for the ELF analysis row', type: PackageBumpDto, isArray: true })
-  listElfAnalysisBumps(@Param('id', ParseIntPipe) id: number): Promise<PackageBumpDto[]> {
+  @ApiOkResponse({
+    description: 'Rebuild-trigger bumps for the ELF analysis row',
+    schema: schemaResponseArray(packageBumpSchema).schema,
+  })
+  listElfAnalysisBumps(@Param('id', { schema: idParamSchema }) id: number): Promise<PackageBump[]> {
     return this.adminService.listElfAnalysisBumps(id);
   }
 
   @Patch('package-elf-analysis/:id')
   @ApiOperation({ summary: 'Update a package ELF analysis row' })
-  @ApiOkResponse({ description: 'The updated package ELF analysis row', type: AdminPackageElfAnalysisDto })
+  @ApiOkResponse({
+    description: 'The updated package ELF analysis row',
+    schema: schemaResponse(adminPackageElfAnalysisSchema).schema,
+  })
   updateElfAnalysis(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: Partial<CreateElfAnalysisBodyDto>,
-  ): Promise<AdminPackageElfAnalysisDto> {
+    @Param('id', { schema: idParamSchema }) id: number,
+    @Body({ schema: createElfAnalysisBodySchema.partial() }) body: Partial<CreateElfAnalysisBodyDto>,
+  ): Promise<AdminPackageElfAnalysis> {
     return this.adminService.updateElfAnalysis(id, body);
   }
 
@@ -245,20 +304,24 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a package ELF analysis row' })
   @ApiNoContentResponse({ description: 'Package ELF analysis row deleted' })
-  deleteElfAnalysis(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  deleteElfAnalysis(@Param('id', { schema: idParamSchema }) id: number): Promise<void> {
     return this.adminService.deleteElfAnalysis(id);
   }
 
   @Post('rescan')
   @ApiOperation({ summary: 'Start a background ELF signal rescan for packages by name.' })
-  @ApiOkResponse({ description: 'Rescan accepted for background processing', type: RescanStartedDto })
-  startRescan(@Body() body: RescanPackagesDto): { started: number; jobId: string } {
+  @ApiOkResponse({
+    description: 'Rescan accepted for background processing',
+    schema: schemaResponse(rescanStartedSchema).schema,
+  })
+  startRescan(@Body({ schema: rescanPackagesBodySchema }) body: RescanPackagesDto): { started: number; jobId: string } {
     return this.adminService.startRescanPackages(body.packages);
   }
 
   @Get('rescan/:jobId')
+  @ApiParam({ name: 'jobId', description: 'Rescan job id returned by POST /admin/rescan' })
   @ApiOperation({ summary: 'Status and outcome of a background ELF signal rescan job.' })
-  @ApiOkResponse({ description: 'The rescan job state', type: RescanJobDto })
+  @ApiOkResponse({ description: 'The rescan job state', schema: schemaResponse(rescanJobSchema).schema })
   getRescanStatus(@Param('jobId') jobId: string): RescanJob {
     return this.adminService.getRescanJob(jobId);
   }

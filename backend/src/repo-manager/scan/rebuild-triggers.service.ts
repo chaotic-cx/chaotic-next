@@ -1,23 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
 import { Package, Repo } from '../../builder/builder.entity';
 import {
   BumpType,
   ConsumerAbiBreak,
   OwnerDescriptor,
-  type PackageConfig,
   PluginBreakEntry,
   PluginBreakIndexEntry,
   RepoSettings,
   RepoUpdateRunParams,
   TriggerType,
+  type PackageConfig,
 } from '../../interfaces/repo-manager';
 import { BumpService, isCiFlagEnabled } from '../bump';
 import { ArchlinuxPackage, PackageElfAnalysis } from '../repo-manager.entity';
-import type { RepoReader } from '../repo-rw';
+import { type RepoReader } from '../repo-rw';
 import {
-  type BrokenDependency,
   compareArchVersions,
   encodeOwnerKey,
   findBrokenDependencies,
@@ -26,11 +22,16 @@ import {
   formatConsumerAbiBreak,
   latestAnalysisByKey,
   pkgTypeOf,
-  type RuntimeName,
   sameLibraryFamily,
+  type BrokenDependency,
+  type RuntimeName,
 } from '../signal';
 import { latestAnalysesByPackage } from './latest-analyses';
 import { loadRuntimeVersions } from './runtime-versions';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PinoLogger } from 'nestjs-pino';
+import { In, Repository } from 'typeorm';
 
 /** CI config flag keys (read from .CI/config); a flag is on when set to "1". */
 export const CI_FLAG_REBUILD_IGNORE_ABI = 'CI_REBUILD_IGNORE_ABI';
@@ -66,6 +67,9 @@ const UNIVERSAL_VTABLE_SLOTS = new Set([
 /** How many detail entries a rebuild's log line / commit message keeps before "…". */
 const ABI_BREAK_DETAILS_LIMIT = 1;
 
+/** How many pkgIds one `IN (...)` analysis query may contain, to bound result-set size. */
+const ANALYSIS_QUERY_BATCH_SIZE = 500;
+
 export function summarizeDetails(details: string[]): string[] {
   if (details.length <= ABI_BREAK_DETAILS_LIMIT) return details;
   const kept = details.slice(0, ABI_BREAK_DETAILS_LIMIT);
@@ -98,8 +102,6 @@ interface BrokenDepsContext {
  */
 @Injectable()
 export class RebuildTriggerService {
-  private readonly logger = new Logger(RebuildTriggerService.name);
-
   constructor(
     @InjectRepository(PackageElfAnalysis)
     private readonly elfAnalysisRepository: Repository<PackageElfAnalysis>,
@@ -108,6 +110,7 @@ export class RebuildTriggerService {
     @InjectRepository(Package)
     private readonly packagesRepository: Repository<Package>,
     private readonly bumpService: BumpService,
+    private readonly pino: PinoLogger,
   ) {}
 
   async checkRebuildTriggers(
@@ -205,7 +208,7 @@ export class RebuildTriggerService {
       }
     }
 
-    this.logger.debug(`Found ${needsRebuild.length} packages to rebuild in ${repo.name}`);
+    this.pino.info({ count: needsRebuild.length, repo: repo.name }, 'Found packages to rebuild');
     return needsRebuild;
   }
 
@@ -227,13 +230,17 @@ export class RebuildTriggerService {
   }): RepoUpdateRunParams | null {
     const logDetails = summarizeDetails(params.details);
     if (params.settings.abiDryRun) {
-      this.logger.log(
-        `[DRY-RUN] Would rebuild ${params.pkgbaseDir} because of ${params.reason} (${logDetails.join(', ')})`,
+      this.pino.info(
+        { pkgbaseDir: params.pkgbaseDir, reason: params.reason, details: logDetails },
+        'Dry-run: would rebuild',
       );
       return null;
     }
     if (!params.archPkg) return null;
-    this.logger.debug(`Rebuilding ${params.pkgbaseDir} because of ${params.reason} (${logDetails.join(', ')})`);
+    this.pino.debug(
+      { pkgbaseDir: params.pkgbaseDir, reason: params.reason, details: logDetails },
+      'Rebuilding package',
+    );
 
     return {
       archPkg: params.archPkg,
@@ -254,7 +261,7 @@ export class RebuildTriggerService {
     const index: Map<string, PluginBreakIndexEntry> = new Map();
     const withPrevious = changed.filter((owner) => owner.previousVersion);
     if (withPrevious.length === 0) return index;
-    this.logger.debug(`Building plugin-break index for ${withPrevious.length} changed owner(s)`);
+    this.pino.debug({ owners: withPrevious.length }, 'Building plugin-break index');
 
     const byType = new Map<'0' | '1', OwnerDescriptor[]>();
     for (const owner of withPrevious) {
@@ -294,8 +301,13 @@ export class RebuildTriggerService {
       const previous = map?.get(`${owner.pkgId}|${owner.previousVersion}`);
       const current = map?.get(`${owner.pkgId}|${owner.currentVersion}`);
       if (!previous || !current) {
-        this.logger.debug(
-          `${owner.pkgname}: missing ELF analysis pair (previous=${owner.previousVersion}, current=${owner.currentVersion}), skipping symbol scan`,
+        this.pino.debug(
+          {
+            pkgname: owner.pkgname,
+            previousVersion: owner.previousVersion,
+            currentVersion: owner.currentVersion,
+          },
+          'Missing ELF analysis pair, skipping symbol scan',
         );
         continue;
       }
@@ -353,15 +365,31 @@ export class RebuildTriggerService {
 
   /**
    * Latest-version Chaotic analyses for the given package ids, keyed by pkgId.
-   * One query replaces one findOne per consumer in the trigger loops.
+   * Loads only the columns the trigger checks read — full rows would hydrate
+   * megabytes of exportedSymbols/vtables/files per package and exhaust the heap.
    */
   async loadLatestChaoticAnalyses(pkgIds: number[]): Promise<Map<number, PackageElfAnalysis>> {
     const map = new Map<number, PackageElfAnalysis>();
     if (pkgIds.length === 0) return map;
-    const rows = await this.elfAnalysisRepository.find({
-      where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: In(pkgIds) },
-    });
-    this.logger.debug(`Loaded ${rows.length} latest Chaotic analyses for ${pkgIds.length} active package(s)`);
+    const rows: PackageElfAnalysis[] = [];
+    for (let offset = 0; offset < pkgIds.length; offset += ANALYSIS_QUERY_BATCH_SIZE) {
+      const batch = pkgIds.slice(offset, offset + ANALYSIS_QUERY_BATCH_SIZE);
+      rows.push(
+        ...(await this.elfAnalysisRepository.find({
+          where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: In(batch) },
+          select: {
+            pkgId: true,
+            version: true,
+            files: true,
+            neededSonames: true,
+            providedSonames: true,
+            importedSymbols: true,
+            pluginOf: true,
+          },
+        })),
+      );
+    }
+    this.pino.debug({ analyses: rows.length, packages: pkgIds.length }, 'Loaded latest Chaotic analyses');
     // Keep the newest version per package by Arch version order, not DB string
     // order (which misorders e.g. 2:13 vs 2:9 or 1.10 vs 1.9).
     const latest = latestAnalysisByKey(rows, (row) => String(row.pkgId));
@@ -426,9 +454,7 @@ export class RebuildTriggerService {
     ]);
     // Provided-soname/runtimes context is logged by SignalScanService; only the
     // run-specific part is logged here.
-    this.logger.debug(
-      `Broken-deps context: ${changed.length} changed Arch package(s), ${previousRows.length} previous analyses`,
-    );
+    this.pino.debug({ changed: changed.length, previousAnalyses: previousRows.length }, 'Broken-deps context loaded');
     const previousProvidedByPkg = new Map<number, Set<string>>();
     for (const row of previousRows) previousProvidedByPkg.set(row.pkgId, new Set(row.providedSonames));
     const currentProvidedByPkg = new Map<number, Set<string>>();

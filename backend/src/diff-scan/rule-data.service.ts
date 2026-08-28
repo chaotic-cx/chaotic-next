@@ -1,9 +1,9 @@
-import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { errorMessage } from '../utils/functions';
 import { DiffScanRuleData } from './rule-data.entity';
 import { provideRuleDataStore, type RuleDataStore } from './rules/rule-data-store';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class RuleDataService implements OnModuleInit, RuleDataStore {

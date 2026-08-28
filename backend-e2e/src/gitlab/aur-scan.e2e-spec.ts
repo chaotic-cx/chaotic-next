@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { AurMaintainerSnapshot } from '@chaotic-next/backend/diff-scan/aur-maintainer-snapshot.entity';
 import { AurScanService } from '@chaotic-next/backend/diff-scan/aur-scan.service';
 import { VirusTotalVerdict } from '@chaotic-next/backend/diff-scan/virus-total-verdict.entity';
-import { GitlabService } from '@chaotic-next/backend/gitlab/gitlab.service';
+import { GitlabMergeRequestService } from '@chaotic-next/backend/gitlab/gitlab-merge-request.service';
 
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
@@ -240,8 +240,8 @@ describe('AUR package scan (e2e, real PostgreSQL, mocked AUR and VirusTotal upst
   });
 
   it('triggers the MR scan via POST /gitlab/mr-scan', async () => {
-    const gitlabService = e2e.app.get(GitlabService);
-    const refreshSpy = vi.spyOn(gitlabService, 'handleAutoFlagRefresh').mockResolvedValue(undefined);
+    const gitlabMergeRequestService = e2e.app.get(GitlabMergeRequestService);
+    const refreshSpy = vi.spyOn(gitlabMergeRequestService, 'handleAutoFlagRefresh').mockResolvedValue(undefined);
 
     const res = await e2e.inject({
       method: 'POST',
@@ -252,5 +252,34 @@ describe('AUR package scan (e2e, real PostgreSQL, mocked AUR and VirusTotal upst
 
     expect(res.statusCode).toBe(201);
     expect(refreshSpy).toHaveBeenCalledTimes(1);
+  });
+
+  describe('GET /gitlab/aur-search', () => {
+    it('returns AUR package names matching the query', async () => {
+      const realFetch = globalThis.fetch;
+      vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('rpc/v5/search')) {
+          return jsonResponse({ results: [{ Name: 'paru' }, { Name: 'paru-git' }] });
+        }
+        return realFetch(input, init);
+      });
+
+      try {
+        const res = await e2e.inject<string[]>({ method: 'GET', url: '/gitlab/aur-search?arg=paru' });
+
+        expect(res.statusCode).toBe(200);
+        expect(await res.json()).toEqual(['paru', 'paru-git']);
+      } finally {
+        vi.stubGlobal('fetch', realFetch);
+      }
+    });
+
+    it('returns an empty list for queries shorter than three characters', async () => {
+      const res = await e2e.inject<string[]>({ method: 'GET', url: '/gitlab/aur-search?arg=ab' });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([]);
+    });
   });
 });

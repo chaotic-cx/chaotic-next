@@ -1,7 +1,3 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import type { FindOptionsSelect } from 'typeorm';
-import { In, Repository } from 'typeorm';
 import { Package, Repo } from '../../builder/builder.entity';
 import { TriggerType } from '../../interfaces/repo-manager';
 import { errorMessage } from '../../utils/functions';
@@ -25,6 +21,9 @@ import {
 } from '../signal';
 import { latestAnalysesByPackage } from './latest-analyses';
 import { loadRuntimeVersions } from './runtime-versions';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository, type FindOptionsSelect } from 'typeorm';
 
 export interface ScanJob {
   file: string;
@@ -456,8 +455,18 @@ export class SignalScanService {
    * the imported Chaotic packages.
    */
   async refreshAfterImport(analyses: ImportedAnalysis[]): Promise<void> {
+    // Rebuild the directory index from the DB: it incrementally accumulates
+    // owner contributions, and rows the importer replaced or removed would
+    // otherwise linger as stale owners on shared directories forever.
+    this.directoryCache = null;
     await this.updateDirectoryIndex(analyses);
-    await this.recomputePluginOf(analyses);
+    // pluginOf depends on the directory index of OTHER packages: an import that
+    // extends one owner (kwin gaining plugin directories) must re-derive every
+    // stored consumer of the touched namespaces, not only the changed rows.
+    const touched = [...new Set(analyses.map((a) => a.pkgType))];
+    for (const pkgType of touched) {
+      await this.recomputePluginOfPkgType(pkgType);
+    }
     await this.recomputeBroken(
       analyses
         .filter((a) => a.pkgType === CHAOTIC_PKG_TYPE)

@@ -1,4 +1,4 @@
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 /** Builds a diff change with only the fields the scanner reads, filled with defaults. */
 export function makeChange(

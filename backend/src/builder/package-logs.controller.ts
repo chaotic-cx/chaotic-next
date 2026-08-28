@@ -1,15 +1,7 @@
-import { GitlabLogChunk } from '@chaotic-next/shared-lib';
-import {
-  Controller,
-  NotFoundException,
-  Param,
-  ParseIntPipe,
-  Query,
-  ServiceUnavailableException,
-  Sse,
-} from '@nestjs/common';
+import { GitlabLogChunk, offsetQuerySchema } from '@chaotic-next/shared-lib';
+import { Controller, NotFoundException, Param, Query, ServiceUnavailableException, Sse } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiParam, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Observable } from 'rxjs';
 
@@ -38,6 +30,8 @@ export class PackageLogsController {
   constructor(private readonly configService: ConfigService) {}
 
   @Sse(':pkgname/:timestamp')
+  @ApiParam({ name: 'pkgname', description: 'Package name' })
+  @ApiParam({ name: 'timestamp', description: 'Build timestamp' })
   @SkipThrottle()
   @ApiOperation({ summary: 'Stream a package build log from the build server.' })
   @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
@@ -45,7 +39,7 @@ export class PackageLogsController {
   getPackageLog(
     @Param('pkgname') pkgname: string,
     @Param('timestamp') timestamp: string,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset = DEFAULT_RESUME_OFFSET,
+    @Query('offset', { schema: offsetQuerySchema.default(DEFAULT_RESUME_OFFSET) }) offset: number,
   ): Observable<Partial<MessageEvent<GitlabLogChunk>>> {
     const base = this.configService.getOrThrow<string>('app.garudaLogsUrl');
     const url = `${base}/${encodeURIComponent(pkgname)}/${encodeURIComponent(timestamp)}`;

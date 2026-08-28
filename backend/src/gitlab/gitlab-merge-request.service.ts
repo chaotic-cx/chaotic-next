@@ -1,85 +1,46 @@
 import {
   type DiffScanFinding,
-  type ExternalCommitStatus,
-  GitlabJob,
-  GitlabLogChunk,
   type MergeRequestWithDiffs,
   NotificationPayload,
-  PipelineOperation,
-  PipelineScheduleOption,
-  PipelineTriggerResult,
-  PipelineWithExternalStatus,
-  PKGBUILD_SOURCE_AUR,
   totalEngines,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { MergeRequestSchema } from '@gitbeaker/core';
-import type { CommitStatusSchema } from '@gitbeaker/rest';
-import { Gitlab, PipelineSchema } from '@gitbeaker/rest';
+import { type MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-  OnApplicationShutdown,
-  OnModuleInit,
-  ServiceUnavailableException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { BadRequestException, Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mutex } from 'async-mutex';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Observable } from 'rxjs';
-import { IsNull, MoreThan, Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { PushSubscription, sendNotification } from 'web-push';
-import { Package, Repo } from '../builder/builder.entity';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { DiffScanService, type DiffScanVerdict, type MrAutoFlagLabel } from '../diff-scan/diff-scan.service';
 import { extractIndicators } from '../diff-scan/indicators';
 import { VirustotalService } from '../diff-scan/virustotal.service';
 import { EventService } from '../events/event.service';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
-import { applyPackageBump } from '../repo-manager/bump/bump-config';
 import { cachedResult } from '../utils/cache';
 import { MAX_DAYS_WINDOW } from '../utils/constants';
 import {
   clampInt,
-  decryptAes,
   errorMessage,
   isOnSchedulePipelineRunning,
   mapWithConcurrency,
   nDaysInPast,
   sleep,
 } from '../utils/functions';
-import { type SseMessage, withSseKeepalive } from '../utils/sse';
-import { GitlabStatusEvent, PipelineWebhook } from './interfaces';
+import { GitlabApiService } from './gitlab-api.service';
+import { type MrActor } from './interfaces';
 import { MrAction, MrActionType } from './mr-action.entity';
 import { fetchPackageInfo } from './mr-package-info';
-import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
-import { PipelineTrigger } from './pipeline-trigger.entity';
 
-export interface MrActor {
-  userId: string;
-  userName: string;
-}
-
-const TERMINAL_JOB_STATUSES = ['success', 'failed', 'canceled', 'skipped', 'manual', 'waiting_for_resource'];
-const SKIPPED_PIPELINE_STATUS = 'skipped';
-const JOB_TRACE_POLL_MS = 2000;
 const MAX_VERDICT_NOTE_FINDINGS = 5;
 const DIFF_FETCH_CONCURRENCY = 5;
 const CACHE_MRS_TTL = 30 * 60 * 1000;
 const REVIEW_STATS_CACHE_TTL_MS = 60_000;
-const PIPELINE_JOBS_CACHE_TTL_MS = 30_000;
-const PIPELINE_SCHEDULES_CACHE_TTL_MS = 5 * 60_000;
-const MAX_CACHED_PIPELINES = 40;
-const GITLAB_API_TIMEOUT_MS = 10_000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const DEFERRED_MERGE_MAX_AGE_DAYS = 1;
 const MAX_DEFERRED_MERGE_ATTEMPTS = 5;
@@ -88,11 +49,6 @@ const MERGE_STATUS_SETTLE_POLL_MS = 3_000;
 const BLOCKING_MERGE_LABELS = ['malware', 'dangerous', 'hold'] as const;
 
 type DetailedMergeStatus = MergeRequestSchema['detailed_merge_status'] | 'commits_status';
-
-export async function gitlabRawFileToString(raw: string | Blob): Promise<string> {
-  if (typeof raw === 'string') return raw;
-  return await raw.text();
-}
 
 const MERGE_BLOCKER_DESCRIPTIONS: Record<Exclude<DetailedMergeStatus, 'mergeable'>, string> = {
   blocked_status: 'the merge request is blocked',
@@ -122,20 +78,6 @@ interface CachedMrData {
   updatedAt: string;
   diffs: MergeRequestDiffSchema[];
   scanFindings: DiffScanFinding[];
-}
-
-interface JobTraceClient {
-  lastOffset: number;
-  next: (message: SseMessage<GitlabLogChunk>) => void;
-  complete: () => void;
-  error: (err: unknown) => void;
-}
-
-interface JobTraceEntry {
-  clients: Set<JobTraceClient>;
-  timer?: ReturnType<typeof setInterval>;
-  trace: string;
-  status?: string;
 }
 
 function toLabelStrings(labels: MergeRequestSchema['labels']): string[] {
@@ -204,36 +146,28 @@ function mrPkgname(title: string): string | null {
 }
 
 @Injectable()
-export class GitlabService implements OnModuleInit, OnApplicationShutdown {
-  private readonly logger = new Logger(GitlabService.name);
-  api!: Gitlab;
-  chaoticId!: string;
-  updateMutex = new Mutex();
-  mergeRequestsMutex = new Mutex();
+export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShutdown {
+  private readonly logger = new Logger(GitlabMergeRequestService.name);
+  private readonly updateMutex = new Mutex();
+  private readonly mergeRequestsMutex = new Mutex();
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
   private readonly CACHE_FILE_PATH = join(process.cwd(), IS_PRODUCTION ? 'backend-config' : 'tmp', 'mr_cache.json');
 
-  private isSeedingPipelines = false;
   private isAutoFlaggingMrs = false;
   private isEnrichingVt = false;
 
   private readonly vtNotedMrIids = new Set<number>();
   private readonly pendingNotificationIids = new Set<number>();
+  private readonly deferredMergeFailures = new Map<number, number>();
 
   private readonly mrDataCache = new Map<number, CachedMrData>();
   private readonly maintainerCheckedAt = new Map<number, string>();
   private lastKnownMrs: MergeRequestWithDiffs[] = [];
 
-  private readonly pipelineMap = new Map<number, PipelineSchema>();
-  private readonly statusMap = new Map<number, ExternalCommitStatus[]>();
-  private readonly unlinkedCommitShas = new Set<string>();
-  private readonly deferredMergeFailures = new Map<number, number>();
-  private statusIdCounter = 0;
-
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    private readonly configService: ConfigService,
+    private readonly gitlabApiService: GitlabApiService,
     private readonly diffScanService: DiffScanService,
     private readonly virustotalService: VirustotalService,
     private readonly aurScanService: AurScanService,
@@ -242,24 +176,12 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     private readonly subscriptionRepository: Repository<NotificationSubscription>,
     @InjectRepository(MrAction)
     private readonly mrActionRepository: Repository<MrAction>,
-    @InjectRepository(PipelineTrigger)
-    private readonly pipelineTriggerRepository: Repository<PipelineTrigger>,
-    @InjectRepository(Repo)
-    private readonly repoRepository: Repository<Repo>,
-    @InjectRepository(Package)
-    private readonly packageRepository: Repository<Package>,
   ) {}
-
-  private readonly jobTraces = new Map<string, JobTraceEntry>();
 
   async onModuleInit(): Promise<void> {
     await this.restoreDiskCache().catch((err) =>
       this.logger.warn(`Could not restore MR cache from disk: ${errorMessage(err)}`),
     );
-    await this.initApiClient().catch((err) =>
-      this.logger.error(`GitLab client init failed, review features unavailable: ${errorMessage(err)}`),
-    );
-    void this.seedPipelines().catch((err) => this.logger.error(`Initial pipeline seed failed: ${errorMessage(err)}`));
     void this.handleAutoFlagRefresh().catch((err) =>
       this.logger.error(`Initial MR review pre-fetch failed: ${errorMessage(err)}`),
     );
@@ -295,31 +217,6 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     } catch (err) {
       this.logger.error(`Failed to write disk MR cache: ${errorMessage(err)}`);
     }
-  }
-
-  private async initApiClient(): Promise<void> {
-    const repo = await this.repoRepository.findOne({ where: { name: 'chaotic-aur' } }).catch((err) => {
-      this.logger.warn(`Could not load chaotic-aur repo row: ${errorMessage(err)}`);
-      return null;
-    });
-    if (!repo?.gitlabProjectId) {
-      throw new Error('No chaotic-aur repo row with gitlabProjectId found; cannot initialise GitLab client');
-    }
-    this.chaoticId = repo?.gitlabProjectId;
-
-    let token: string | undefined;
-    if (repo?.apiToken) {
-      try {
-        token = decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
-      } catch (err) {
-        this.logger.warn(`Could not decrypt chaotic-aur apiToken: ${errorMessage(err)}`);
-      }
-    }
-    if (!token) {
-      throw new Error('No chaotic-aur apiToken configured');
-    }
-
-    this.api = new Gitlab({ token });
   }
 
   /**
@@ -435,161 +332,6 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     } finally {
       this.isAutoFlaggingMrs = false;
     }
-  }
-
-  async seedPipelines(): Promise<void> {
-    try {
-      await this.getPipelinesViaRest();
-      this.logger.log(`Seeded ${this.pipelineMap.size} pipelines`);
-    } catch (err) {
-      this.logger.error(`Failed to seed pipelines: ${errorMessage(err)}`);
-    }
-  }
-
-  async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
-    return [...this.pipelineMap.entries()]
-      .filter(([, pipeline]) => pipeline.status !== SKIPPED_PIPELINE_STATUS)
-      .map(([id, pipeline]) => ({ pipeline, commit: this.statusMap.get(id) ?? [] }))
-      .sort((a, b) => b.pipeline.id - a.pipeline.id)
-      .slice(0, MAX_CACHED_PIPELINES);
-  }
-
-  private async getPipelinesViaRest(): Promise<void> {
-    let allPipelines: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
-      maxPages: 2,
-      perPage: 100,
-    });
-    allPipelines = allPipelines
-      .filter((pipeline) => pipeline.status !== SKIPPED_PIPELINE_STATUS)
-      .slice(0, MAX_CACHED_PIPELINES);
-
-    this.logger.log(`Fetched ${allPipelines.length} pipelines`);
-
-    const uniqueShas = [...new Set(allPipelines.map((pipeline) => pipeline.sha))];
-    const statusesBySha = new Map<string, CommitStatusSchema[]>();
-    await Promise.all(
-      uniqueShas.map(async (sha) => {
-        try {
-          const statuses: CommitStatusSchema[] = await this.api.Commits.allStatuses(this.chaoticId, sha);
-          statusesBySha.set(
-            sha,
-            statuses.filter((status) => this.isExternalStage(status.name)),
-          );
-        } catch (err) {
-          this.logger.warn(`Failed to fetch statuses for sha ${sha}: ${errorMessage(err)}`);
-          statusesBySha.set(sha, []);
-        }
-      }),
-    );
-
-    this.pipelineMap.clear();
-    this.statusMap.clear();
-    for (const pipeline of allPipelines) {
-      const statuses = statusesBySha.get(pipeline.sha) ?? [];
-      this.pipelineMap.set(pipeline.id, pipeline);
-      this.statusMap.set(
-        pipeline.id,
-        statuses
-          .filter((status) => status.pipeline_id === pipeline.id)
-          .map((status) => this.toExternalStatus(pipeline.id, status)),
-      );
-    }
-  }
-
-  private toExternalStatus(pipelineId: number, status: CommitStatusSchema): ExternalCommitStatus {
-    return {
-      id: status.id,
-      name: status.name,
-      status: status.status,
-      description: status.description ?? null,
-      target_url: status.target_url,
-      started_at: status.started_at ?? null,
-      finished_at: status.finished_at ?? null,
-      pipeline_id: pipelineId,
-    };
-  }
-
-  async handlePipelineWebhook(body: PipelineWebhook): Promise<boolean> {
-    const attrs = body.object_attributes;
-    const existing = this.pipelineMap.get(attrs.id);
-    this.pipelineMap.set(attrs.id, {
-      ...existing,
-      id: attrs.id,
-      iid: attrs.iid,
-      project_id: existing?.project_id ?? body.project?.id ?? 0,
-      ref: attrs.ref,
-      status: attrs.status,
-      source: attrs.source,
-      sha: attrs.sha,
-      created_at: attrs.created_at,
-      // Webhooks omit updated_at — fall back to created_at to keep the column populated.
-      updated_at: existing?.updated_at ?? attrs.created_at,
-      web_url: attrs.url,
-    });
-
-    if (this.pipelineMap.size > MAX_CACHED_PIPELINES) {
-      const sortedIds = [...this.pipelineMap.keys()].sort((a, b) => b - a);
-      for (const oldId of sortedIds.slice(MAX_CACHED_PIPELINES)) {
-        this.pipelineMap.delete(oldId);
-        this.statusMap.delete(oldId);
-      }
-    }
-
-    if (attrs.sha && this.unlinkedCommitShas.has(attrs.sha)) {
-      await this.pipelineTriggerRepository.update(
-        { commitSha: attrs.sha, pipelineId: IsNull() },
-        { pipelineId: attrs.id },
-      );
-      this.unlinkedCommitShas.delete(attrs.sha);
-    } else if (attrs.source === 'schedule') {
-      // Fallback: link to the most recent unlinked RUN_SCHEDULE trigger when the API didn't return pipeline info
-      const unlinked = await this.pipelineTriggerRepository.findOne({
-        where: { operation: PipelineOperation.RUN_SCHEDULE, pipelineId: IsNull(), ref: attrs.ref },
-        order: { createdAt: 'DESC' },
-      });
-      if (unlinked) {
-        await this.pipelineTriggerRepository.update(unlinked.id, { pipelineId: attrs.id, commitSha: attrs.sha });
-      }
-    }
-
-    if (attrs.sha) {
-      const trigger = await this.pipelineTriggerRepository.findOne({
-        where: { pipelineId: attrs.id, commitSha: IsNull() },
-      });
-      if (trigger) {
-        await this.pipelineTriggerRepository.update(trigger.id, { commitSha: attrs.sha });
-      }
-    }
-
-    const pipelines = await this.getLastPipelines();
-    this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
-    return true;
-  }
-
-  async handleExternalStatus(event: GitlabStatusEvent): Promise<void> {
-    if (event.pipeline_id === undefined) return;
-
-    const list = this.statusMap.get(event.pipeline_id) ?? [];
-    const existingIndex = list.findIndex((status) => status.name === event.name);
-    const existing = existingIndex >= 0 ? list[existingIndex] : undefined;
-
-    const entry: ExternalCommitStatus = {
-      id: existing?.id ?? this.statusIdCounter++,
-      name: event.name,
-      status: event.status,
-      description: event.description ?? null,
-      target_url: event.target_url,
-      started_at: event.started_at ?? existing?.started_at ?? null,
-      finished_at: event.finished_at ?? existing?.finished_at ?? null,
-      pipeline_id: event.pipeline_id,
-    };
-
-    if (existingIndex >= 0) list.splice(existingIndex, 1);
-    list.push(entry);
-    this.statusMap.set(event.pipeline_id, list);
-
-    const pipelines = await this.getLastPipelines();
-    this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
   }
 
   async getOpenMergeRequests(overwriteCache = false): Promise<MergeRequestWithDiffs[]> {
@@ -969,10 +711,6 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
-  private isExternalStage(name: string): boolean {
-    return name.startsWith('chaotic-aur:') || name.startsWith('garuda:');
-  }
-
   private async notifySubscribers(newMr: MergeRequestWithDiffs[]) {
     try {
       const scannable = newMr.filter((mr) => mr.diffs.length > 0);
@@ -1103,20 +841,13 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     return query;
   }
 
-  private assertApiReady(): void {
-    if (!this.api) {
-      throw new ServiceUnavailableException(
-        'GitLab client is not initialised; GitLab integration features are unavailable.',
-      );
-    }
-  }
-
   async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<{ deferred: boolean }> {
     const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
     if (labels.includes('malware')) {
       throw new BadRequestException(
         'This merge request is flagged as malware by the automated security scan and requires manual review.',
+        { errorCode: 'MR_FLAGGED_MALWARE' },
       );
     }
     const targetSha = mr.sha ?? sha;
@@ -1197,10 +928,14 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
         return;
       }
 
-      throw new BadRequestException(`Cannot merge MR !${iid}: ${describeMergeBlocker(mr.detailed_merge_status)}`);
+      throw new BadRequestException(`Cannot merge MR !${iid}: ${describeMergeBlocker(mr.detailed_merge_status)}`, {
+        errorCode: 'MERGE_BLOCKED',
+      });
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
-      throw new BadRequestException(`Could not merge MR !${iid}: ${errorMessage(err)}`);
+      throw new BadRequestException(`Could not merge MR !${iid}: ${errorMessage(err)}`, {
+        errorCode: 'MERGE_FAILED',
+      });
     }
   }
 
@@ -1230,9 +965,13 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
         '🔒 Closed automatically: the target branch already contains this change.',
       );
     } catch (err) {
-      throw new BadRequestException(`Could not close empty MR !${iid}: ${errorMessage(err)}`);
+      throw new BadRequestException(`Could not close empty MR !${iid}: ${errorMessage(err)}`, {
+        errorCode: 'CLOSE_FAILED',
+      });
     }
-    throw new BadRequestException(`MR !${iid} contains no changes against its target branch. The service closed it.`);
+    throw new BadRequestException(`MR !${iid} contains no changes against its target branch. The service closed it.`, {
+      errorCode: 'EMPTY_MR_CLOSED',
+    });
   }
 
   private async waitForSettledMergeStatus(iid: number): Promise<MergeRequestSchema> {
@@ -1287,512 +1026,11 @@ export class GitlabService implements OnModuleInit, OnApplicationShutdown {
     await this.mrActionRepository.insert({ mergeRequestIid: iid, action, commitSha, ...actor });
   }
 
-  async listPipelineSchedules(repoName: string): Promise<PipelineScheduleOption[]> {
-    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
-    return cachedResult(
-      this.cacheManager,
-      `gitlab:schedules:${repoName}`,
-      PIPELINE_SCHEDULES_CACHE_TTL_MS,
-      async () => {
-        const schedules = await this.api.PipelineSchedules.all(gitlabProjectId, { perPage: 100 });
-        return schedules.map((schedule) => ({
-          id: schedule.id,
-          description: schedule.description ?? null,
-          active: schedule.active,
-        }));
-      },
-    );
+  private get api() {
+    return this.gitlabApiService.api;
   }
 
-  async getDecryptedToken(repoName: string): Promise<string> {
-    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
-    if (!repo?.apiToken) {
-      throw new ServiceUnavailableException(`Repo ${repoName} has no apiToken`);
-    }
-    return decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
-  }
-
-  async getHeadCommitForRepo(repoName: string, ref = 'main'): Promise<string> {
-    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
-    if (!repo?.gitlabProjectId) {
-      throw new ServiceUnavailableException(`Repo ${repoName} has no gitlabProjectId`);
-    }
-    const token = await this.getDecryptedToken(repoName);
-    return this.fetchHeadCommitFromApi(repo.gitlabProjectId, ref, token);
-  }
-
-  private async fetchHeadCommitFromApi(projectId: string, ref: string, token?: string): Promise<string> {
-    const url = `https://gitlab.com/api/v4/projects/${encodeURIComponent(projectId)}/repository/commits?ref_name=${encodeURIComponent(ref)}&per_page=1`;
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['PRIVATE-TOKEN'] = token;
-    }
-    const response = await fetch(url, { signal: AbortSignal.timeout(GITLAB_API_TIMEOUT_MS), headers });
-    if (!response.ok) {
-      throw new ServiceUnavailableException(`GitLab API returned ${response.status} for project ${projectId}`);
-    }
-    const commits = (await response.json()) as { id: string }[];
-    const head = commits[0];
-    if (!head?.id) {
-      throw new ServiceUnavailableException('Could not fetch HEAD commit from GitLab');
-    }
-    return head.id;
-  }
-
-  async runSchedule(scheduleId: number, repoName: string, actor: MrActor): Promise<PipelineTriggerResult> {
-    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
-    let lastPipeline: { id?: number; sha?: string } | undefined;
-
-    if (scheduleId > 0) {
-      this.logger.debug(`Triggering pipeline schedule #${scheduleId} on ${repoName}...`);
-      const schedules = this.api.PipelineSchedules as unknown as Record<string, (...args: unknown[]) => unknown>;
-      let result: unknown;
-      if (typeof schedules.play === 'function') {
-        result = await schedules.play(gitlabProjectId, scheduleId);
-      } else if (typeof schedules.take === 'function') {
-        result = await schedules.take(gitlabProjectId, scheduleId);
-      } else {
-        result = await (this.api as unknown as { requester: { post: (...args: unknown[]) => unknown } }).requester.post(
-          `projects/${encodeURIComponent(gitlabProjectId)}/pipeline_schedules/${scheduleId}/play`,
-        );
-      }
-
-      const body = result as {
-        data?: { last_pipeline?: { id?: number; sha?: string } };
-        last_pipeline?: { id?: number; sha?: string };
-      };
-      lastPipeline = body?.data?.last_pipeline ?? body?.last_pipeline;
-    }
-
-    const pipelineId = lastPipeline?.id ?? null;
-    const commitSha = lastPipeline?.sha ?? null;
-    const webUrl = pipelineId
-      ? `${gitlabProjectId}/-/pipelines/${pipelineId}`
-      : `${gitlabProjectId}/pipeline_schedules`;
-
-    if (commitSha) {
-      this.unlinkedCommitShas.add(commitSha);
-    }
-
-    await this.pipelineTriggerRepository.insert({
-      ref: 'main',
-      commitSha,
-      operation: PipelineOperation.RUN_SCHEDULE,
-      inputs: { scheduleId: String(scheduleId), repo: repoName },
-      pipelineId,
-      webUrl,
-      ...actor,
-    });
-
-    return { pipelineId: pipelineId ?? 0, webUrl, status: 'scheduled' };
-  }
-
-  async dropPackages(
-    packages: string[],
-    repoName: string,
-    ref: string,
-    actor: MrActor,
-  ): Promise<PipelineTriggerResult> {
-    const commitActions: { action: 'delete'; filePath: string }[] = [];
-    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
-
-    for (const rawPkg of packages) {
-      const pkgname = rawPkg.trim();
-      if (!pkgname) continue;
-      try {
-        const treeItems = await this.api.Repositories.allRepositoryTrees(gitlabProjectId, {
-          path: pkgname,
-          ref,
-          recursive: true,
-          pagination: 'keyset',
-          orderBy: 'name',
-          sort: 'asc',
-        });
-
-        // Deleting all files inside a directory automatically removes the directory in Git.
-        const filesToDelete = treeItems.filter((item: { type: string; path: string }) => item.type === 'blob');
-        if (filesToDelete.length > 0) {
-          for (const file of filesToDelete) {
-            commitActions.push({
-              action: 'delete',
-              filePath: (file as { path: string }).path,
-            });
-          }
-        } else {
-          commitActions.push({
-            action: 'delete',
-            filePath: `${pkgname}/.CI/config`,
-          });
-        }
-      } catch {
-        commitActions.push({
-          action: 'delete',
-          filePath: `${pkgname}/.CI/config`,
-        });
-      }
-    }
-
-    const subject =
-      packages.length > 3 ? `chore(drop): packages (${packages.length})` : `chore(drop): ${packages.join(', ')}`;
-    const commitMessage = `${subject}\n\nDropped manually by ${actor.userName}`;
-
-    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
-
-    if (commit.id) {
-      this.unlinkedCommitShas.add(commit.id);
-    }
-    await this.pipelineTriggerRepository.insert({
-      ref,
-      commitSha: commit.id,
-      operation: PipelineOperation.DROP_PACKAGES,
-      inputs: { packages: packages.join(':') },
-      pipelineId: null,
-      webUrl: commit.web_url ?? '',
-      ...actor,
-    });
-
-    return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
-  }
-
-  async addPackages(
-    items: { pkgname: string; source?: string }[],
-    repoName: string,
-    requestOrigin: string,
-    ref: string,
-    actor: MrActor,
-    requestReason?: string,
-    customRequestReason?: string,
-  ): Promise<PipelineTriggerResult> {
-    const itemNames = items.map((i) => i.pkgname);
-    this.logger.debug(`Processing package addition for [${itemNames.join(', ')}] on ref ${ref} by ${actor.userName}`);
-    const commitActions: { action: 'create' | 'update'; filePath: string; content: string }[] = [];
-    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
-
-    for (const item of items) {
-      const pkgname = item.pkgname.trim();
-      if (!pkgname) continue;
-      const source = item.source ?? PKGBUILD_SOURCE_AUR;
-      this.logger.debug(`Fetching AUR metadata and PKGBUILD for ${pkgname} (source: ${source})`);
-
-      const configLines = [`CI_PKGBUILD_SOURCE=${source}`];
-      if (requestOrigin && requestOrigin.trim()) {
-        configLines.push(`CI_REQUEST_ORIGIN=${requestOrigin.trim()}`);
-      }
-      if (requestReason && requestReason !== 'unset') {
-        configLines.push(`CI_REQUEST_REASON=${requestReason.trim()}`);
-      }
-      if (customRequestReason && customRequestReason.trim()) {
-        configLines.push(`CI_CUSTOM_REQUEST_REASON=${customRequestReason.trim()}`);
-      }
-      const ciConfigContent = `${configLines.join('\n')}\n`;
-
-      try {
-        const pkgbuildScan = await this.aurScanService.startScan(pkgname);
-        const pkgbuildText = await this.fetchAurPkgbuildText(pkgbuildScan.packageBase || pkgname);
-
-        commitActions.push({
-          action: 'create',
-          filePath: `${pkgname}/.CI/config`,
-          content: ciConfigContent,
-        });
-
-        if (pkgbuildText) {
-          this.logger.debug(`Successfully fetched PKGBUILD for ${pkgname} (${pkgbuildText.length} bytes)`);
-          commitActions.push({
-            action: 'create',
-            filePath: `${pkgname}/PKGBUILD`,
-            content: pkgbuildText,
-          });
-        } else {
-          this.logger.debug(`No PKGBUILD content returned for ${pkgname}`);
-        }
-
-        for (const file of pkgbuildScan.sourceFiles ?? []) {
-          if (file.name === 'PKGBUILD') continue;
-          this.logger.debug(`Adding auxiliary source file ${file.name} (${file.content.length} bytes) for ${pkgname}`);
-          commitActions.push({
-            action: 'create',
-            filePath: `${pkgname}/${file.name}`,
-            content: file.content,
-          });
-        }
-      } catch (err) {
-        this.logger.warn(`Could not fetch AUR sources for ${pkgname}: ${errorMessage(err)}`);
-        commitActions.push({
-          action: 'create',
-          filePath: `${pkgname}/.CI/config`,
-          content: ciConfigContent,
-        });
-      }
-    }
-
-    const subject =
-      itemNames.length > 3 ? `feat(add): packages (${itemNames.length})` : `feat(add): ${itemNames.join(', ')}`;
-    const commitMessage = `${subject}\n\nAdded manually by ${actor.userName}`;
-
-    this.logger.debug(`Creating GitLab commit with ${commitActions.length} actions for [${itemNames.join(', ')}]`);
-    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
-
-    this.logger.log(
-      `Package(s) added successfully: [${itemNames.join(', ')}] by ${actor.userName} (commit: ${commit.id}, url: ${commit.web_url})`,
-    );
-
-    if (commit.id) {
-      this.unlinkedCommitShas.add(commit.id);
-    }
-    await this.pipelineTriggerRepository.insert({
-      ref,
-      commitSha: commit.id,
-      operation: PipelineOperation.ADD_PACKAGES,
-      inputs: { add_packages: itemNames.join(' '), request_origin: requestOrigin },
-      pipelineId: null,
-      webUrl: commit.web_url ?? '',
-      ...actor,
-    });
-
-    return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
-  }
-
-  private async getRepoGitlabProjectId(repoName: string): Promise<string> {
-    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
-    if (!repo?.gitlabProjectId) {
-      throw new NotFoundException(`Repository '${repoName}' not found or has no GitLab project ID`);
-    }
-    return repo.gitlabProjectId;
-  }
-
-  async fetchCiConfig(repoName: string, pkgbase: string): Promise<string | null> {
-    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
-    if (!repo?.gitlabProjectId || !this.api) {
-      this.logger.warn(`Cannot fetch .CI/config of ${pkgbase}: repo '${repoName}' or GitLab client unavailable`);
-      return null;
-    }
-
-    try {
-      const raw = await this.api.RepositoryFiles.showRaw(
-        repo.gitlabProjectId,
-        `${pkgbase}/.CI/config`,
-        repo.gitRef || 'main',
-      );
-      return await gitlabRawFileToString(raw);
-    } catch {
-      this.logger.debug(`No .CI/config found for ${pkgbase} in '${repoName}'`);
-      return null;
-    }
-  }
-
-  async bumpPackages(
-    packages: string[],
-    repoName: string,
-    ref: string,
-    actor: MrActor,
-  ): Promise<PipelineTriggerResult> {
-    const commitActions: { action: 'update' | 'create'; filePath: string; content: string }[] = [];
-    const gitlabProjectId = await this.getRepoGitlabProjectId(repoName);
-
-    for (const pkg of packages) {
-      const pkgname = pkg.trim();
-      if (!pkgname) continue;
-      const configPath = `${pkgname}/.CI/config`;
-      let existingConfig = '';
-
-      try {
-        const raw = await this.api.RepositoryFiles.showRaw(gitlabProjectId, configPath, ref);
-        existingConfig = await gitlabRawFileToString(raw);
-      } catch {
-        // File may not exist yet
-      }
-
-      const dbPkg = await this.packageRepository.findOne({ where: { pkgname } });
-      if (!dbPkg) {
-        throw new NotFoundException(`Package '${pkgname}' not found`);
-      }
-
-      const version = dbPkg.version;
-      const pkgrel = dbPkg.pkgrel;
-
-      const updatedConfig = applyPackageBump(existingConfig, version, pkgrel);
-      commitActions.push({
-        action: existingConfig ? 'update' : 'create',
-        filePath: configPath,
-        content: updatedConfig,
-      });
-    }
-
-    const subject =
-      packages.length > 3 ? `chore(bump): packages (${packages.length})` : `chore(bump): ${packages.join(', ')}`;
-    const commitMessage = `${subject}\n\nBumped manually by ${actor.userName}`;
-
-    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
-
-    if (commit.id) {
-      this.unlinkedCommitShas.add(commit.id);
-    }
-    await this.pipelineTriggerRepository.insert({
-      ref,
-      commitSha: commit.id,
-      operation: PipelineOperation.BUMP_PACKAGES,
-      inputs: { packages: packages.join(':') },
-      pipelineId: null,
-      webUrl: commit.web_url ?? '',
-      ...actor,
-    });
-
-    return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
-  }
-
-  async triggerPipelineRun(
-    inputs: Record<string, string>,
-    ref: string,
-    actor: MrActor,
-  ): Promise<PipelineTriggerResult> {
-    const pipeline = await this.api.Pipelines.create(this.chaoticId, ref, {
-      inputs,
-      variables: [
-        {
-          key: PIPELINE_TRIGGERED_BY_VARIABLE,
-          value: `${actor.userName} (${actor.userId})`,
-          variable_type: 'env_var',
-        },
-      ],
-    });
-
-    await this.pipelineTriggerRepository.insert({
-      ref,
-      commitSha: pipeline.sha ?? null,
-      operation: inputs.operation,
-      inputs,
-      pipelineId: pipeline.id,
-      webUrl: pipeline.web_url,
-      ...actor,
-    });
-
-    return { pipelineId: pipeline.id, webUrl: pipeline.web_url, status: pipeline.status };
-  }
-
-  private async fetchAurPkgbuildText(packageBase: string): Promise<string | null> {
-    try {
-      const response = await fetch(
-        `https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=${encodeURIComponent(packageBase)}`,
-      );
-      if (response.ok) return await response.text();
-    } catch {
-      // Fallback null
-    }
-    return null;
-  }
-
-  async listPipelineJobs(pipelineId: number): Promise<GitlabJob[]> {
-    return cachedResult(
-      this.cacheManager,
-      `gitlab:pipeline-jobs:${pipelineId}`,
-      PIPELINE_JOBS_CACHE_TTL_MS,
-      async () => {
-        const jobs = await this.api.Jobs.all(this.chaoticId, { pipelineId });
-        return jobs.map((job) => ({
-          id: job.id,
-          name: job.name,
-          stage: job.stage,
-          status: job.status,
-          ref: job.ref,
-          webUrl: job.web_url,
-          startedAt: job.started_at,
-          finishedAt: job.finished_at,
-          duration: job.duration,
-        }));
-      },
-    );
-  }
-
-  /**
-   * Streams a job's trace over SSE. One shared polling loop feeds every viewer
-   * of the same job: GitLab's trace is fetched as a whole, so the poller keeps
-   * the latest trace and forwards each client only the bytes appended after its
-   * own offset, ending with a `complete` message once the job reaches a terminal
-   * status. The polling stops when the job finishes or the last client leaves.
-   */
-  getJobTraceStream(pipelineId: number, jobId: number, resumeAt = 0): Observable<SseMessage<GitlabLogChunk>> {
-    const key = `${pipelineId}:${jobId}`;
-    return withSseKeepalive(
-      new Observable<SseMessage<GitlabLogChunk>>((subscriber) => {
-        const client: JobTraceClient = {
-          // Seeds from the resume point so a reconnecting client only receives
-          // bytes appended after its last received chunk.
-          lastOffset: Math.max(resumeAt, 0),
-          next: (message) => subscriber.next(message),
-          complete: () => subscriber.complete(),
-          error: (err) => subscriber.error(err),
-        };
-        this.attachJobTraceClient(key, jobId, client);
-        return () => this.detachJobTraceClient(key, client);
-      }),
-    );
-  }
-
-  private attachJobTraceClient(key: string, jobId: number, client: JobTraceClient): void {
-    let entry = this.jobTraces.get(key);
-    if (!entry) {
-      entry = { clients: new Set(), trace: '', status: undefined };
-      this.jobTraces.set(key, entry);
-      entry.timer = setInterval(() => void this.pollJobTrace(key, jobId), JOB_TRACE_POLL_MS);
-      void this.pollJobTrace(key, jobId);
-    } else {
-      // Catch a mid-stream joiner up from the buffered trace immediately.
-      this.sendJobTraceChunk(entry, client);
-    }
-    entry.clients.add(client);
-  }
-
-  private detachJobTraceClient(key: string, client: JobTraceClient): void {
-    const entry = this.jobTraces.get(key);
-    if (!entry) return;
-    entry.clients.delete(client);
-    if (entry.clients.size === 0) this.disposeJobTrace(key);
-  }
-
-  private sendJobTraceChunk(entry: JobTraceEntry, client: JobTraceClient): void {
-    if (entry.trace.length <= client.lastOffset) return;
-    const offset = entry.trace.length;
-    // The id carries the offset so the browser's native EventSource reconnect
-    // resumes via Last-Event-ID without manual bookkeeping.
-    client.next({
-      id: String(offset),
-      data: { offset, text: entry.trace.slice(client.lastOffset), complete: false, status: entry.status ?? '' },
-    });
-    client.lastOffset = offset;
-  }
-
-  private async pollJobTrace(key: string, jobId: number): Promise<void> {
-    const entry = this.jobTraces.get(key);
-    if (!entry) return;
-
-    try {
-      this.assertApiReady();
-      const { api, chaoticId } = this;
-      const job = await api.Jobs.show(chaoticId, jobId);
-      entry.status = job.status;
-      entry.trace = await api.Jobs.showLog(chaoticId, jobId);
-
-      for (const client of [...entry.clients]) {
-        this.sendJobTraceChunk(entry, client);
-        if (TERMINAL_JOB_STATUSES.includes(entry.status)) {
-          client.next({
-            data: { offset: client.lastOffset, text: '', complete: true, status: entry.status ?? '' },
-          });
-          client.complete();
-        }
-      }
-      if (TERMINAL_JOB_STATUSES.includes(entry.status)) this.disposeJobTrace(key);
-    } catch (error) {
-      for (const client of [...entry.clients]) client.error(error);
-      this.disposeJobTrace(key);
-    }
-  }
-
-  private disposeJobTrace(key: string): void {
-    const entry = this.jobTraces.get(key);
-    if (!entry) return;
-    if (entry.timer !== undefined) clearInterval(entry.timer);
-    this.jobTraces.delete(key);
+  private get chaoticId(): string {
+    return this.gitlabApiService.chaoticId;
   }
 }

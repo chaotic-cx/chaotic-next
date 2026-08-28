@@ -1,14 +1,12 @@
+import { errorMessage } from '../utils/functions';
+import IORedis from 'ioredis';
+import { HealthCheckError, type HealthIndicatorResult } from './health.types';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HealthCheckError, HealthIndicator, HealthIndicatorResult } from '@nestjs/terminus';
-import IORedis from 'ioredis';
-import { errorMessage } from '../utils/functions';
 
 @Injectable()
-export class RedisHealthIndicator extends HealthIndicator {
-  constructor(private readonly configService: ConfigService) {
-    super();
-  }
+export class RedisHealthIndicator {
+  constructor(private readonly configService: ConfigService) {}
 
   async pingCheck(key: string, timeout = 1000): Promise<HealthIndicatorResult> {
     const redis = new IORedis(
@@ -23,9 +21,11 @@ export class RedisHealthIndicator extends HealthIndicator {
     try {
       await redis.connect();
       await redis.ping();
-      return this.getStatus(key, true);
+      return { [key]: { status: 'up' } };
     } catch (err) {
-      throw new HealthCheckError('Redis check failed', this.getStatus(key, false, { message: errorMessage(err) }));
+      throw new HealthCheckError('Redis check failed', {
+        [key]: { status: 'down', message: errorMessage(err) },
+      });
     } finally {
       redis.disconnect();
     }

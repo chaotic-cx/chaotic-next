@@ -1,16 +1,15 @@
-import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
-import { Injectable, Logger, Optional } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Package } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { errorMessage } from '../utils/functions';
 import { RULES } from './rules';
-import type { GroupRuleHit, RuleHit, RuleSurface } from './rules/rule';
-import { ruleRunsOn } from './rules/rule';
+import { ruleRunsOn, type GroupRuleHit, type RuleHit, type RuleSurface } from './rules/rule';
 import { isDependencyPresent, isSrcinfoFile, scanSrcinfoDependencies } from './srcinfo-dependency';
 import { findTyposquatFinding } from './typosquat';
+import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 const MAX_FINDINGS_PER_MR = 100;
 const MAX_MATCH_LENGTH = 300;

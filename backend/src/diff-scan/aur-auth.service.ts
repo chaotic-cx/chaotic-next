@@ -1,10 +1,10 @@
+import * as cheerio from 'cheerio';
+import { errorMessage } from '../utils/functions';
+import { AurMaintainerInfoEntity } from './aur-maintainer-info.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as cheerio from 'cheerio';
 import { Repository } from 'typeorm';
-import { errorMessage } from '../utils/functions';
-import { AurMaintainerInfoEntity } from './aur-maintainer-info.entity';
 
 const AUR_LOGIN_URL = 'https://aur.archlinux.org/login?next=/';
 const AUR_PROFILE_URL = 'https://aur.archlinux.org/account';

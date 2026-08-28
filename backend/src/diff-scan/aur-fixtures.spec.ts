@@ -15,7 +15,7 @@ import { srcinfoConsistencyHits } from './rules/srcinfo-consistency.rules';
  * shelly, linux-cachyos). Refresh them by re-downloading the files when a
  * package moves on.
  */
-const FIXTURE_ROOT = join(__dirname, '__fixtures__', 'aur');
+const FIXTURE_ROOT = join(import.meta.dirname, '__fixtures__', 'aur');
 
 function loadFixture(pkg: string, file: string): string {
   return readFileSync(join(FIXTURE_ROOT, pkg, file), 'utf-8');

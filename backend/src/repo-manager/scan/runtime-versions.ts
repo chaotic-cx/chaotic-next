@@ -1,6 +1,6 @@
-import { In, type Repository } from 'typeorm';
 import { ArchlinuxPackage } from '../repo-manager.entity';
-import type { RuntimeName } from '../signal';
+import { type RuntimeName } from '../signal';
+import { In, type Repository } from 'typeorm';
 
 const RUNTIME_NAMES = ['python', 'perl', 'ruby', 'ghc'] as const satisfies RuntimeName[];
 

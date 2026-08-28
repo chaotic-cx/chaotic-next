@@ -1,5 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import { type FastifyReply, type FastifyRequest } from 'fastify';
 
 const GITLAB_STATUS_REGEX = /^(\d{3})\s/;
 
@@ -52,11 +52,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    const errorResponseBody = {
+    const errorCode = exception instanceof HttpException ? exception.errorCode : undefined;
+    const errorBody =
+      exception instanceof HttpException && typeof exception.getResponse() === 'object'
+        ? (exception.getResponse() as Record<string, unknown>)
+        : undefined;
+    const errors = Array.isArray(errorBody?.['errors']) ? (errorBody?.['errors'] as unknown[]) : undefined;
+    const errorResponseBody: {
+      statusCode: number;
+      timestamp: string;
+      path: string;
+      message: unknown;
+      errorCode?: string;
+      errors?: unknown[];
+    } = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       message: typeof message === 'object' ? ((message as Record<string, unknown>).message ?? message) : message,
+      ...(errorCode !== undefined ? { errorCode } : {}),
+      ...(errors !== undefined ? { errors } : {}),
     };
 
     void response.status(status).send(errorResponseBody);
