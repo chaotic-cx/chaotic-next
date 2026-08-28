@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createE2eApp, type E2eApp } from '../test/e2e-app';
-import { ELF_ANALYSES, BROKEN_ELF_ANALYSIS } from '../test/fixtures';
+import { BROKEN_ELF_ANALYSIS } from '../test/fixtures';
 import { TriggerType } from '@chaotic-next/backend/interfaces/repo-manager';
 import { pkgTypeOf } from '@chaotic-next/backend/repo-manager/signal';
 
