@@ -1,4 +1,12 @@
-import { extractArray, isReputable, parsePkgbuild, type ParsedPkgbuild, type SourceEntry, unquote } from '../pkgbuild';
+import {
+  extractArray,
+  isReputable,
+  parsePkgbuild,
+  type ParsedPkgbuild,
+  type SourceEntry,
+  unquote,
+  VARIABLE_REFERENCE,
+} from '../pkgbuild';
 import { type Rule, type RuleHit } from './rule';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
@@ -48,6 +56,27 @@ function registrableDomain(host: string): string {
 function firstEntry(change: MergeRequestDiffSchema, predicate: (entry: SourceEntry) => boolean): RuleHit | null {
   const entry = parsePkgbuild(change)?.entries.find(predicate);
   return entry ? { line: entry.line, match: entry.raw, note: `Host: ${entry.host}` } : null;
+}
+
+/**
+ * Reserved top-level metadata that makepkg resolves from the package's own
+ * declarations before expanding `source=`. When one stays unresolved after
+ * scanning, the defining line merely fell outside the diff context window;
+ * makepkg still resolves it, so the download location is not unknown. The
+ * scanner normally folds in the sibling `.SRCINFO` scalars to resolve these;
+ * the membership set is the fallback for when no `.SRCINFO` is in the diff.
+ */
+const MAKEPKG_METADATA_VARS = new Set(['pkgname', 'pkgbase', 'pkgver', 'pkgrel', 'epoch', 'pkgdesc', 'arch', 'url']);
+
+/** True when every unresolved `$` in a source entry references a reserved metadata variable. */
+function onlyReservedMetadataRemain(raw: string): boolean {
+  return (
+    raw
+      .replace(VARIABLE_REFERENCE, (whole, bracedName: string, _, bareName: string) =>
+        MAKEPKG_METADATA_VARS.has(bracedName ?? bareName) ? '' : whole,
+      )
+      .includes('$') === false
+  );
 }
 
 /** Ordered strongest-first, so the first array present decides the verdict. */
@@ -187,7 +216,9 @@ export const PROVENANCE_RULES: Rule[] = [
       'A source entry still contains unresolved variables after PKGBUILD parsing, so its final download host can be neither determined nor reviewed. Verify where the download actually comes from.',
     check(change) {
       const parsed = parsePkgbuild(change);
-      const entry = parsed?.entries.find((candidate) => candidate.raw.includes('$'));
+      const entry = parsed?.entries.find(
+        (candidate) => candidate.raw.includes('$') && !onlyReservedMetadataRemain(candidate.raw),
+      );
       return entry ? { line: entry.line, match: entry.raw, note: 'Source contains unresolved variables' } : null;
     },
   },

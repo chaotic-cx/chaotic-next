@@ -387,7 +387,12 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
           return toMergeRequestWithDiffs(mr, cached.diffs, cached.scanFindings, previousMr);
         }
         const diffs = diffsByIid.get(mr.iid) ?? [];
-        const scanFindings = await this.diffScanService.scanDiffs(diffs);
+        const scanFindings = await this.diffScanService.scanDiffs(
+          diffs,
+          undefined,
+          'mr-diff',
+          this.aurScanService.packageDependencies.bind(this.aurScanService),
+        );
         this.mrDataCache.set(mr.iid, { updatedAt: mr.updated_at, diffs, scanFindings });
         const ruleIds = [...new Set(scanFindings.map((finding) => finding.ruleId))];
         this.pino.debug(

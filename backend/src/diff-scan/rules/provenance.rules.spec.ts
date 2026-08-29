@@ -123,6 +123,41 @@ describe('provenance rules', () => {
     );
     expect(ruleById(PROVENANCE_RULES, 'CAUR-UNRESOLVED-SOURCE').check(change)).toBeNull();
   });
+
+  it('does not flag a release tarball whose url= declaration sits outside the diff window', () => {
+    const change = makeChange(
+      [
+        '@@ -1,6 +1,6 @@',
+        ' # Maintainer: dev <dev at example dot org>',
+        '',
+        ' pkgname=example-pkg',
+        '-pkgver=1.2.41',
+        '+pkgver=1.2.43',
+        ' pkgrel=1',
+        " pkgdesc='An example package'",
+        " arch=('x86_64')",
+        '@@ -47,7 +47,7 @@ makedepends=(',
+        " conflicts=('other')",
+        " provides=('example')",
+        ' source=("$pkgname-$pkgver.tar.gz"::"${url}/archive/v${pkgver}.tar.gz")',
+        "+sha256sums=('3017cc606b3a3a086fd8719508d9bd9a5339eb4046d4cd7093494f39410f7e4d')",
+      ].join('\n'),
+    );
+    expect(ruleById(PROVENANCE_RULES, 'CAUR-UNRESOLVED-SOURCE').check(change)).toBeNull();
+  });
+
+  it('still flags sources with an unknown local variable', () => {
+    const change = makeChange(
+      [
+        '@@ -1,3 +1,4 @@',
+        '+url="https://example.org/project/"',
+        '+source=("https://mirror.example/${_tag}/pkg.tar.gz")',
+        '+_tag=$(git describe --tags)',
+      ].join('\n'),
+    );
+    const hit = ruleById(PROVENANCE_RULES, 'CAUR-UNRESOLVED-SOURCE').check(change);
+    expect(hit?.note).toContain('unresolved');
+  });
 });
 
 describe('SRC-004 checksum rule', () => {
