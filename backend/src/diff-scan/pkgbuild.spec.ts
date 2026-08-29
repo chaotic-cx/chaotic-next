@@ -23,6 +23,37 @@ describe('parsePkgbuild', () => {
     expect(parsePkgbuild(change)?.entries[0]?.raw).toBe('$_undefined_var/file.tar.xz');
   });
 
+  it('resolves glob suffix strips like ${pkgver%.*} in source entries', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+pkgver=7.2.2.arch1',
+        '+_srctag=v${pkgver%.*}-${pkgver##*.}',
+        '+url="https://github.com/archlinux/linux"',
+        '+source=("$url/releases/download/$_srctag/linux-$_srctag.patch.zst")',
+      ].join('\n'),
+    );
+
+    expect(parsePkgbuild(change)?.entries[0]?.url).toBe(
+      'https://github.com/archlinux/linux/releases/download/v7.2.2-arch1/linux-v7.2.2-arch1.patch.zst',
+    );
+  });
+
+  it('resolves glob prefix and longest-suffix strips in source entries', () => {
+    const change = makeChange(
+      [
+        '@@ -0,0 +1,4 @@',
+        '+_rel=-arch1',
+        '+_base=7.2.2$_rel',
+        '+_short=v${_base%%-*}',
+        '+_suffix=${_base##*-}',
+        '+source=("https://example.org/$_short+$_suffix.tar.xz")',
+      ].join('\n'),
+    );
+
+    expect(parsePkgbuild(change)?.entries[0]?.url).toBe('https://example.org/v7.2.2+arch1.tar.xz');
+  });
+
   it('derives hosts from resolved sources so rules can see them', () => {
     const change = makeChange(
       ['@@ -0,0 +1,4 @@', '+pkgname=demo', '+url="https://kde.org/"', '+source=("$url/app.tar.xz")'].join('\n'),

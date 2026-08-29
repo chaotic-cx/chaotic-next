@@ -232,8 +232,9 @@ const MAKEPKG_DEFAULTS: ReadonlyMap<string, string> = new Map([['CARCH', 'x86_64
  * Expands POSIX-style parameter references with the known variables. Supported
  * forms beyond plain `$VAR` / `${VAR}` are default values (`${VAR:-x}`,
  * `${VAR:=x}`, `${VAR-x}`), substring expansion (`${VAR::3}`, `${VAR:2}`,
- * `${VAR:2:3}`) and literal-pattern edits (`${VAR//./-}`, `${VAR/a/b}`,
- * `${VAR#prefix}`, `${VAR%.suffix}`). Patterns with glob characters stay
+ * `${VAR:2:3}`), prefix/suffix strips with glob patterns (`${VAR#prefix}`,
+ * `${pkgver%.*}`, `${pkgver##*-}`) and literal-pattern replacements
+ * (`${VAR//./-}`, `${VAR/a/b}`). Glob patterns in replacements stay
  * unresolvable, so unusual expansions keep their conservative treatment.
  */
 export function substituteVars(template: string, vars: ReadonlyMap<string, string>): string | null {
@@ -272,17 +273,11 @@ function applyParameterOperation(match: string, operation: string, value: string
   }
 
   // `${var#pat}` / `${var##pat}` strip a prefix, `${var%pat}` / `${var%%pat}` a suffix.
+  // Patterns may contain bash globs (`${pkgver%.*}`), matched like filename expansion.
   const anchored = operation.match(/^(#{1,2}|%{1,2})(.+)$/);
   if (anchored !== null) {
-    const pattern = anchored[2];
-    if (!isLiteralPattern(pattern)) return `\u0000${match}`;
-    return anchored[1].startsWith('#')
-      ? value.startsWith(pattern)
-        ? value.slice(pattern.length)
-        : value
-      : value.endsWith(pattern)
-        ? value.slice(0, -pattern.length)
-        : value;
+    const stripped = stripByGlob(value, anchored[2], anchored[1].startsWith('#'), anchored[1].length === 2);
+    return stripped ?? `\u0000${match}`;
   }
 
   // `${var/pat/repl}` replaces the first literal occurrence, `${var//pat/repl}` all of them.
@@ -293,16 +288,41 @@ function applyParameterOperation(match: string, operation: string, value: string
     const separator = body.indexOf('/');
     const pattern = separator === -1 ? body : body.slice(0, separator);
     const replacementText = separator === -1 ? '' : body.slice(separator + 1);
-    if (!isLiteralPattern(pattern)) return `\u0000${match}`;
+    // Glob patterns in replacements would need real bash matching; they stay unresolvable.
+    if (pattern === '' || /[*?[\]]/.test(pattern)) return `\u0000${match}`;
     return isAll ? value.split(pattern).join(replacementText) : value.replace(pattern, replacementText);
   }
 
   return `\u0000${match}`;
 }
 
-/** Glob metacharacters would need real bash matching; such patterns stay unresolvable. */
-function isLiteralPattern(pattern: string): boolean {
-  return pattern !== '' && !/[*?[\]]/.test(pattern);
+/**
+ * Applies bash `#`/`%` pattern stripping: character classes stay unsupported
+ * (a literal `[` never matches, keeping the reference conservatively
+ * unresolvable), while `*` and `?` behave like filename expansion.
+ */
+function stripByGlob(value: string, pattern: string, isPrefix: boolean, longest: boolean): string | null {
+  let source = '';
+  for (const char of pattern) {
+    if (char === '*') source += '[\\s\\S]*';
+    else if (char === '?') source += '[\\s\\S]';
+    else source += char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  const matches = new RegExp(`^[\\s\\S]*${source}[\\s\\S]*$`).test(value);
+  // Try the shortest removed span first; longest flips the order. The removed
+  // span for prefix strips grows from the left, for suffix strips from the right.
+  const lengths: number[] = [];
+  for (let length = 0; length <= value.length; length++) lengths.push(length);
+  if (longest) lengths.reverse();
+  if (matches) {
+    for (const length of lengths) {
+      const candidate = isPrefix ? value.slice(0, length) : value.slice(value.length - length);
+      if (new RegExp(`^${source}$`).test(candidate)) {
+        return isPrefix ? value.slice(length) : value.slice(0, value.length - length);
+      }
+    }
+  }
+  return null;
 }
 
 function bashPrefix(value: string, keep: number): string {
