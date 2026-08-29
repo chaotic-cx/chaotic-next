@@ -229,5 +229,174 @@ describe('srcinfo-dependency scanner', () => {
       const findings = await scanSrcinfoDependencies(change, isDepPresent);
       expect(findings).toHaveLength(0);
     });
+
+    it('walks the AUR dependency tree of a missing dep when a fetcher is provided', async () => {
+      const diff = ['@@ -0,0 +1,3 @@', '+pkgbase = spotdl', '+depends = python-datastar-py'].join('\n');
+
+      const change = makeChange(diff, { new_path: 'spotdl/.SRCINFO' });
+      const present = new Set(['python']);
+      const isDepPresent = async (dep: string) => present.has(dep);
+      const aurDeps: Record<string, string[]> = {
+        'python-datastar-py': ['python-spotapi', 'python>=3.11'],
+        'python-spotapi': ['python-tls-client', 'python-readerwriterlock'],
+        'python-tls-client': ['python'],
+        'python-readerwriterlock': ['python'],
+      };
+      const fetchAurDependencies = async (name: string): Promise<string[] | null> => aurDeps[name] ?? null;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent, fetchAurDependencies);
+
+      expect(findings).toHaveLength(4);
+      expect(findings[0]?.match).toBe('depends = python-datastar-py');
+      const matches = findings.map((finding) => finding.match);
+      expect(matches).toEqual(
+        expect.arrayContaining(['python-spotapi', 'python-tls-client', 'python-readerwriterlock']),
+      );
+    });
+
+    it('reports every transitive missing dep with its origin chain', async () => {
+      const diff = ['@@ -0,0 +1,3 @@', '+pkgbase = spotdl', '+depends = python-datastar-py'].join('\n');
+
+      const change = makeChange(diff, { new_path: 'spotdl/.SRCINFO' });
+      const isDepPresent = async () => false;
+      const aurDeps: Record<string, string[]> = {
+        'python-datastar-py': ['python-spotapi', 'python-spotipyfree'],
+        'python-spotapi': ['python-tls-client'],
+        'python-tls-client': ['lib-tls-client'],
+        'python-spotipyfree': ['python-readerwriterlock'],
+      };
+      const fetchAurDependencies = async (name: string): Promise<string[] | null> => aurDeps[name] ?? null;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent, fetchAurDependencies);
+
+      const matches = findings.map((finding) => finding.match);
+      expect(matches).toEqual(
+        expect.arrayContaining([
+          'python-spotapi',
+          'python-spotipyfree',
+          'python-tls-client',
+          'lib-tls-client',
+          'python-readerwriterlock',
+        ]),
+      );
+
+      const spotapi = findings.find((finding) => finding.match === 'python-spotapi');
+      expect(spotapi?.description).toContain('via python-datastar-py');
+    });
+
+    it('stops walking when it reaches a dependency present locally', async () => {
+      const diff = ['@@ -0,0 +1,3 @@', '+pkgbase = spotdl', '+depends = python-datastar-py'].join('\n');
+
+      const change = makeChange(diff, { new_path: 'spotdl/.SRCINFO' });
+      const present = new Set(['python-spotapi', 'python-tls-client']);
+      const isDepPresent = async (dep: string) => present.has(dep);
+      const aurDeps: Record<string, string[]> = {
+        'python-datastar-py': ['python-spotapi', 'python-spotipyfree'],
+        'python-spotipyfree': ['python-readerwriterlock'],
+        'python-readerwriterlock': ['python-spotapi'],
+      };
+      const fetchAurDependencies = async (name: string): Promise<string[] | null> => aurDeps[name] ?? null;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent, fetchAurDependencies);
+
+      const matches = findings.map((finding) => finding.match);
+      expect(matches).toEqual(expect.arrayContaining(['python-spotipyfree', 'python-readerwriterlock']));
+      expect(matches).not.toContain('python-spotapi');
+      expect(matches).not.toContain('python-tls-client');
+    });
+
+    it('handles dependency cycles without infinite recursion', async () => {
+      const diff = ['@@ -0,0 +1,3 @@', '+pkgbase = spotdl', '+depends = python-datastar-py'].join('\n');
+
+      const change = makeChange(diff, { new_path: 'spotdl/.SRCINFO' });
+      const isDepPresent = async () => false;
+      const aurDeps: Record<string, string[]> = {
+        'python-datastar-py': ['python-spotapi'],
+        'python-spotapi': ['python-datastar-py'],
+      };
+      const fetchAurDependencies = async (name: string): Promise<string[] | null> => aurDeps[name] ?? null;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent, fetchAurDependencies);
+
+      const matches = findings.map((finding) => finding.match);
+      expect(matches).toEqual(expect.arrayContaining(['python-spotapi']));
+    });
+
+    it('ignores a fetcher returning no deps', async () => {
+      const diff = ['@@ -0,0 +1,3 @@', '+pkgbase = spotdl', '+depends = missing-aur-dep'].join('\n');
+
+      const change = makeChange(diff, { new_path: 'spotdl/.SRCINFO' });
+      const isDepPresent = async () => false;
+      const fetchAurDependencies = async (): Promise<string[] | null> => null;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent, fetchAurDependencies);
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.match).toBe('depends = missing-aur-dep');
+    });
+
+    it('shares expanded subtrees across sibling missing deps', async () => {
+      const diff = [
+        '@@ -0,0 +1,4 @@',
+        '+pkgbase = spotdl',
+        '+depends = python-datastar-py',
+        '+depends = python-spotahy',
+      ].join('\n');
+
+      const change = makeChange(diff, { new_path: 'spotdl/.SRCINFO' });
+      const isDepPresent = async () => false;
+      const aurDeps: Record<string, string[]> = {
+        'python-datastar-py': ['python-shared'],
+        'python-spotahy': ['python-shared'],
+        'python-shared': ['python-leaf'],
+        'python-leaf': [],
+      };
+      const fetchAurDependencies = async (name: string): Promise<string[] | null> => aurDeps[name] ?? null;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent, fetchAurDependencies);
+
+      const matches = findings.map((finding) => finding.match);
+      expect(matches).toEqual(expect.arrayContaining(['python-shared', 'python-leaf']));
+      expect(matches).toContain('depends = python-datastar-py');
+      expect(matches).toContain('depends = python-spotahy');
+    });
+
+    it('surfaces the real spotdl transitive missing deps (python-tls-client, lib-tls-client)', async () => {
+      const diff = [
+        '@@ -0,0 +1,3 @@',
+        '+pkgbase = spotdl',
+        '+depends = python-datastar-py',
+        '+depends = python-spotipyfree',
+      ].join('\n');
+
+      const change = makeChange(diff, { new_path: 'spotdl/.SRCINFO' });
+
+      // Officially available: Arch python and the AUR packages we already package.
+      const available = new Set(['python', 'python-pymongo', 'python-readerwriterlock']);
+      const isDepPresent = async (dep: string) => available.has(dep);
+
+      // Real AUR /info Depends graph (trimmed to the relevant subtree).
+      const aurDeps: Record<string, string[]> = {
+        'python-datastar-py': ['python'],
+        'python-spotipyfree': ['python', 'python-pymongo', 'python-spotapi'],
+        'python-spotapi': ['python', 'python-pymongo', 'python-readerwriterlock', 'python-tls-client'],
+        'python-tls-client': ['lib-tls-client'],
+        'lib-tls-client': ['python'],
+      };
+      const fetchAurDependencies = async (name: string): Promise<string[] | null> => aurDeps[name] ?? null;
+
+      const findings = await scanSrcinfoDependencies(change, isDepPresent, fetchAurDependencies);
+
+      const matches = findings.map((finding) => finding.match);
+      expect(matches).toEqual(expect.arrayContaining(['python-spotapi', 'python-tls-client', 'lib-tls-client']));
+      expect(matches).not.toContain('python-readerwriterlock');
+
+      const tlsClient = findings.find((finding) => finding.match === 'python-tls-client');
+      expect(tlsClient?.description).toContain('via python-spotipyfree -> python-spotapi');
+      expect(tlsClient?.description).toContain("AUR dependency tree of 'python-spotipyfree'");
+      expect(tlsClient?.ruleName).toBe('Transitive AUR dependency in .SRCINFO');
+      const libTlsClient = findings.find((finding) => finding.match === 'lib-tls-client');
+      expect(libTlsClient?.description).toContain('via python-spotipyfree -> python-spotapi -> python-tls-client');
+    });
   });
 });
