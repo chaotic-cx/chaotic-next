@@ -108,6 +108,11 @@
             <div class="flex items-center">Outcome</div>
           </th>
         }
+        @if (columnVisibility.isVisible('deploy-log-table', 'failureTags')) {
+          <th>
+            <div class="flex items-center">Failure tags</div>
+          </th>
+        }
         @if (columnVisibility.isVisible('deploy-log-table', 'logUrl')) {
           <th>
             <div class="flex items-center">Log URL</div>
@@ -176,6 +181,21 @@
                 ></i>
                 <span>{{ build.statusText }}</span>
               </span>
+            </td>
+          }
+          @if (columnVisibility.isVisible('deploy-log-table', 'failureTags')) {
+            <td>
+              @if (build.failureTags?.length) {
+                <span class="flex flex-wrap items-center gap-1">
+                  @for (tag of build.failureTags; track tag) {
+                    <span class="rounded-full bg-ctp-red/15 px-2 py-0.5 text-xs font-medium text-ctp-red">{{
+                      tag
+                    }}</span>
+                  }
+                </span>
+              } @else {
+                <span class="ml-1 align-middle text-ctp-subtext0">n/a</span>
+              }
             </td>
           }
           @if (columnVisibility.isVisible('deploy-log-table', 'logUrl')) {

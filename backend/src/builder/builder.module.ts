@@ -1,11 +1,13 @@
 import { EventModule } from '../events/event.module';
 import builderConfig from '../config/builder.config';
 import { GitlabModule } from '../gitlab/gitlab.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { RepoManagerModule } from '../repo-manager/repo-manager.module';
 import { BuildApiController } from './build-api.controller';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
 import { BuildClassSyncService } from './build-class-sync.service';
+import { BuildFailureNotifierService } from './build-failure-notifier.service';
 import { BuilderController } from './builder.controller';
 import { Build, Builder, Package, Repo, SilencedBuildFailure } from './builder.entity';
 import { BuilderService } from './builder.service';
@@ -25,6 +27,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     EventModule,
     HttpModule,
     GitlabModule,
+    NotificationsModule,
     forwardRef(() => RepoManagerModule),
     TypeOrmModule.forFeature([Builder, Build, Repo, Package, PackageElfAnalysis, SilencedBuildFailure]),
   ],
@@ -32,6 +35,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     BuilderService,
     BuildClassSuggesterService,
     BuildClassSyncService,
+    BuildFailureNotifierService,
     DatabaseCleanupService,
     EntityLookupService,
   ],

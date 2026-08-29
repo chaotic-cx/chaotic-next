@@ -78,6 +78,7 @@ export class DeployLogComponent {
     { key: 'builder', label: 'Builder' },
     { key: 'repo', label: 'Repository' },
     { key: 'outcome', label: 'Outcome' },
+    { key: 'failureTags', label: 'Failure tags', defaultVisible: true },
     { key: 'logUrl', label: 'Log URL' },
     { key: 'duration', label: 'Duration' },
     // Resource usage columns stay hidden unless explicitly enabled; most

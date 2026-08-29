@@ -30,6 +30,7 @@ import { AddPackagePkgbaseName1787600183572 } from '../migrations/1787600183572-
 import { AddSilencedBuildFailure1787692800000 } from '../migrations/1787692800000-AddSilencedBuildFailure';
 import { RouterHitsDailyRepo1787790000000 } from '../migrations/1787790000000-RouterHitsDailyRepo';
 import { UniqueEntityNames1787949377345 } from '../migrations/1787949377345-UniqueEntityNames';
+import { AddBuildFailureTags1787988202747 } from '../migrations/1787988202747-AddBuildFailureTags';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
@@ -87,6 +88,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AddSilencedBuildFailure1787692800000,
     RouterHitsDailyRepo1787790000000,
     UniqueEntityNames1787949377345,
+    AddBuildFailureTags1787988202747,
   ],
   migrationsRun: true,
   cache: true,

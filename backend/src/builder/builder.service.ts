@@ -7,6 +7,7 @@ import { CACHE_TTL_MS, MAX_AMOUNT, MAX_DAYS_PER_DAY_CHART, MAX_DAYS_WINDOW, MAX_
 import { clampInt, generateNodeId, nDaysInPast, whitelistSort } from '../utils/functions';
 import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
 import { BuildClassSyncService } from './build-class-sync.service';
+import { BuildFailureNotifierService } from './build-failure-notifier.service';
 import { BuilderDatabaseService } from './builder-database.service';
 import { Build, Builder, Package, Repo, SilencedBuildFailure } from './builder.entity';
 import { brokerConfig } from './moleculer.config';
@@ -83,6 +84,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     private repoManagerService: RepoManagerService,
     private gitlabPipelineService: GitlabPipelineService,
     private buildClassSyncService: BuildClassSyncService,
+    private buildFailureNotifierService: BuildFailureNotifierService,
     private readonly lookup: EntityLookupService,
     @InjectPinoLogger(BuilderService.name) private readonly pino: PinoLogger,
   ) {
@@ -145,6 +147,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
           sseSubject: this.eventService.sseEvents$,
           gitlabPipelineService: this.gitlabPipelineService,
           buildClassSync: this.buildClassSyncService,
+          buildFailureNotifier: this.buildFailureNotifierService,
         }),
       );
       await this.broker.start();

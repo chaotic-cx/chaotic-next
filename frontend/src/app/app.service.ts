@@ -16,7 +16,7 @@ import {
   type PackageSortField,
   type SortOrder,
 } from '@chaotic-next/shared-lib';
-import { lastValueFrom, Subject } from 'rxjs';
+import { firstValueFrom, lastValueFrom, Subject } from 'rxjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
 import { type ResourceMetricKey } from './stats/charts/chart-resource-metrics';
@@ -46,6 +46,12 @@ export interface BuildsQueryParams {
 export const ALL_TIME_DAYS = 3650;
 
 const SSE_RECONNECT_DELAY_MS = 1000;
+/** The backend emits a heartbeat every 15s; three missed ones mean a dead link. */
+const SSE_HEARTBEAT_MS = 15_000;
+const SSE_STALE_AFTER_MS = 3 * SSE_HEARTBEAT_MS;
+const WATCHDOG_TICK_MS = 5_000;
+/** Minimum gap between health probes; errors reconnect about once per second. */
+const HEALTH_PROBE_MIN_GAP_MS = 5_000;
 
 @Service()
 export class AppService {
@@ -65,6 +71,9 @@ export class AppService {
 
   private eventSource: EventSource | undefined;
   private reconnectTimer: number | undefined;
+  private lastSseFrameAt = 0;
+  private lastHealthProbeAt = 0;
+  private readonly watchdogTimer = setInterval(() => this.watchdogTick(), WATCHDOG_TICK_MS);
   private readonly onVisibilityChange = (): void => {
     if (
       document.visibilityState === 'visible' &&
@@ -83,6 +92,39 @@ export class AppService {
     this.fetchVersion();
   }
 
+  /**
+   * Detects half-open streams: the backend heartbeats every 15s, so an open
+   * connection without frames for three intervals is dead without an error.
+   * Force a reconnect (which either recovers or raises onerror) and judge the
+   * backend by its health endpoint.
+   */
+  private watchdogTick(): void {
+    const source = this.eventSource;
+    if (!source || source.readyState === EventSource.CLOSED) return;
+    if (Date.now() - this.lastSseFrameAt <= SSE_STALE_AFTER_MS) return;
+    void this.probeHealth();
+    this.reconnect();
+  }
+
+  /**
+   * The health endpoint decides backend liveness; a failed probe flags the
+   * backend down for the guard, a successful one keeps or restores the ok
+   * state even while SSE is still reconnecting. A connected stream that still
+   * delivers frames is its own liveness proof — probing while healthy would
+   * only add request noise, so probes run only while down or stale.
+   */
+  private async probeHealth(): Promise<void> {
+    if (this.internalSseConnected() && Date.now() - this.lastSseFrameAt <= SSE_STALE_AFTER_MS) return;
+    if (Date.now() - this.lastHealthProbeAt < HEALTH_PROBE_MIN_GAP_MS) return;
+    this.lastHealthProbeAt = Date.now();
+    try {
+      await firstValueFrom(this.http.get(`${this.appConfig.backendUrl}/health`));
+      this.internalSseConnected.set(true);
+    } catch {
+      this.internalSseConnected.set(false);
+    }
+  }
+
   private reconnect(): void {
     if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
     this.reconnectTimer = undefined;
@@ -92,6 +134,7 @@ export class AppService {
 
     const source = new EventSource(`${this.appConfig.backendUrl}/sse?ngsw-bypass`);
     this.eventSource = source;
+    this.lastSseFrameAt = Date.now();
 
     source.onopen = () => {
       this.internalSseSettled.set(true);
@@ -99,16 +142,24 @@ export class AppService {
     };
 
     source.onmessage = ({ data }) => {
+      this.lastSseFrameAt = Date.now();
       const event: unknown = JSON.parse(data);
       if (isChaoticEvent(event)) this.chaoticSse$.next(event);
     };
 
+    // The backend heartbeat is a named event, so it never reaches onmessage;
+    // it is still proof of a live connection.
+    source.addEventListener('ping', () => {
+      this.lastSseFrameAt = Date.now();
+      this.internalSseConnected.set(true);
+    });
+
     source.onerror = () => {
       this.internalSseSettled.set(true);
-      this.internalSseConnected.set(false);
       this.eventSource?.close();
       this.eventSource = undefined;
       this.scheduleReconnect();
+      void this.probeHealth();
     };
   }
 

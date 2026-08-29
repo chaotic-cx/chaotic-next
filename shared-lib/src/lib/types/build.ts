@@ -131,6 +131,10 @@ export const buildSchema = z.object({
   commit: z.string().optional().describe('Commit hash built'),
   timeToEnd: z.number().optional().describe('Build duration'),
   replaced: z.boolean().optional().describe('Whether a newer build replaced this one'),
+  failureTags: z
+    .array(z.string())
+    .optional()
+    .describe('Failure cause tags detected in the build log; absent when none were recognized'),
   resourceStats: buildResourceMetricsSchema.nullable().optional().describe('Sampled container resource usage'),
 });
 export type Build = z.infer<typeof buildSchema>;
