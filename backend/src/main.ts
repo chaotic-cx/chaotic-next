@@ -1,6 +1,6 @@
 import { CAUR_ALLOWED_CORS } from '@chaotic-next/shared-lib';
 import helmet from '@fastify/helmet';
-import { type INestApplication, Logger } from '@nestjs/common';
+import { type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -58,8 +58,7 @@ async function bootstrap(): Promise<void> {
 
   provideSwagger(app);
   await app.listen(configService.getOrThrow<number>('app.port'), configService.getOrThrow<string>('app.host'));
+  app.get(PinoLogger).info('🚀 Application has started up');
 }
 
-bootstrap().then(() => {
-  Logger.log('🚀 Application has started up', 'Bootstrap');
-});
+void bootstrap();

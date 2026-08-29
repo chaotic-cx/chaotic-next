@@ -28,7 +28,7 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
 
   describe('GET /repo/run', () => {
     it('triggers repoManager.run() and returns 204', async () => {
-      const spy = vi.spyOn(repoManagerService, 'run').mockImplementation(vi.fn());
+      const spy = vi.spyOn(repoManagerService, 'run').mockResolvedValue(undefined);
 
       const res = await app.inject({ method: 'GET', url: '/repo/run' });
 
@@ -39,7 +39,7 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
 
   describe('GET /repo/signal-scan', () => {
     it('triggers repoManager.triggerSignalScan() and returns 204', async () => {
-      const spy = vi.spyOn(repoManagerService, 'triggerSignalScan').mockImplementation(vi.fn());
+      const spy = vi.spyOn(repoManagerService, 'triggerSignalScan').mockResolvedValue(undefined);
 
       const res = await app.inject({ method: 'GET', url: '/repo/signal-scan' });
 
