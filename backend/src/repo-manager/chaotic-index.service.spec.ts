@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
+import { PinoLogger } from 'nestjs-pino';
+import { Repository } from 'typeorm';
 import { Package, Repo } from '../builder/builder.entity';
-import { deactivateMissing, findDuplicateInactiveRows, markActive } from './chaotic-index.service';
+import { EntityLookupService } from '../builder/entity-lookup.service';
+import { ArchMirrorService } from './arch-mirror.service';
+import { ChaoticIndexService, deactivateMissing, findDuplicateInactiveRows, markActive } from './chaotic-index.service';
+import { SignalScanService } from './scan';
 
 function repo(name: string): Repo {
   return { name } as Repo;
@@ -78,6 +83,41 @@ describe('markActive', () => {
 
     expect(p.isActive).toBe(true);
     expect(p.lastUpdated).toBe('2026-07-15T00:00:00.000Z');
+  });
+});
+
+describe('updateChaoticDatabaseVersions', () => {
+  function buildService(pullImpl: () => Promise<unknown>): { service: ChaoticIndexService; save: Mock; find: Mock } {
+    const packagesRepository = { find: vi.fn(), save: vi.fn() };
+    const archMirror = { pullDatabases: vi.fn().mockImplementation(pullImpl), cleanUp: vi.fn() };
+    const service = new ChaoticIndexService(
+      archMirror as unknown as ArchMirrorService,
+      packagesRepository as unknown as Repository<Package>,
+      { find: vi.fn() } as unknown as Repository<Repo>,
+      {} as SignalScanService,
+      {} as EntityLookupService,
+      { info: vi.fn(), debug: vi.fn(), error: vi.fn() } as unknown as PinoLogger,
+    );
+    return { service, save: packagesRepository.save, find: packagesRepository.find };
+  }
+
+  it('aborts without deactivating anything when a database pull fails', async () => {
+    const { service, save, find } = buildService(() => Promise.resolve(null));
+    const repo = { name: 'chaotic-aur', dbPath: 'chaotic-aur.files' } as Repo;
+
+    await expect(service.updateChaoticDatabaseVersions([repo])).rejects.toThrow();
+
+    expect(save).not.toHaveBeenCalled();
+    expect(find).not.toHaveBeenCalled();
+  });
+
+  it('aborts when a database pull rejects', async () => {
+    const { service, save } = buildService(() => Promise.reject(new Error('download failed')));
+    const repo = { name: 'chaotic-aur', dbPath: 'chaotic-aur.files' } as Repo;
+
+    await expect(service.updateChaoticDatabaseVersions([repo])).rejects.toThrow('download failed');
+
+    expect(save).not.toHaveBeenCalled();
   });
 });
 
