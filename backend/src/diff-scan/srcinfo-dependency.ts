@@ -1,9 +1,9 @@
-import { type Package } from '../builder/builder.entity';
-import { type ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
-import { addedLines, isCommentLine, visibleFileLines } from './rules/diff-utils';
 import { type DiffScanFinding } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 import { type Repository } from 'typeorm';
+import { type Package } from '../builder/builder.entity';
+import { type ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import { addedLines, isCommentLine, visibleFileLines } from './rules/diff-utils';
 
 const SRCINFO_DEP_PATTERN = /^\s*(depends|makedepends|checkdepends)\s*=\s*(.+)$/i;
 const SRCINFO_PACKAGE_DECLARATION_PATTERN = /^\s*(?:pkgname|provides)\s*=\s*(.+)$/i;
@@ -14,6 +14,13 @@ export interface SrcinfoDepMatch {
   rawValue: string;
   depName: string;
 }
+
+/**
+ * Fetches the runtime Depends of an AUR package by name, or null when the
+ * package does not exist on the AUR. Lets the MR diff scan walk the dependency
+ * tree of missing local packages to surface transitive missing deps.
+ */
+export type AurDependencyFetcher = (packageName: string) => Promise<string[] | null>;
 
 export function isSrcinfoFile(path: string): boolean {
   return path === '.SRCINFO' || path.endsWith('/.SRCINFO');
@@ -137,6 +144,7 @@ export function selfProvidedDepNames(change: Pick<MergeRequestDiffSchema, 'diff'
 export async function scanSrcinfoDependencies(
   change: MergeRequestDiffSchema,
   isDepPresent: (depName: string) => Promise<boolean>,
+  fetchAurDependencies?: AurDependencyFetcher,
 ): Promise<DiffScanFinding[]> {
   if (!isSrcinfoFile(change.new_path) || change.deleted_file) {
     return [];
@@ -167,8 +175,65 @@ export async function scanSrcinfoDependencies(
         line: line.line,
         match: line.text.trim(),
       });
+
+      if (fetchAurDependencies) {
+        const transitive = await findTransitiveMissingDeps(depName, isDepPresent, fetchAurDependencies, checkedDeps);
+        for (const missing of transitive) {
+          findings.push({
+            ruleId: 'CAUR-UNRESOLVED-DEPENDENCY',
+            ruleName: 'Transitive AUR dependency in .SRCINFO',
+            severity: 'warning',
+            description: `Transitive AUR dependency '${missing.dep}' (via ${missing.chain.join(' -> ')}) is not present in official Arch Linux repositories or Chaotic-AUR. It was found by walking the AUR dependency tree of '${depName}'. Ensure it is packaged and available before building.`,
+            file: change.new_path,
+            line: line.line,
+            match: missing.dep,
+          });
+        }
+      }
     }
   }
 
   return findings;
+}
+
+/**
+ * Depth-first walk of an AUR package's runtime dependency tree, returning every
+ * dependency that is not present locally. `checkedDeps` accumulates every
+ * resolved name (present or not) across direct and transitive scans, so shared
+ * subtrees and cycles are expanded once.
+ */
+async function findTransitiveMissingDeps(
+  packageName: string,
+  isDepPresent: (depName: string) => Promise<boolean>,
+  fetchAurDependencies: AurDependencyFetcher,
+  checkedDeps: Set<string>,
+): Promise<{ dep: string; chain: string[] }[]> {
+  const missing: { dep: string; chain: string[] }[] = [];
+  checkedDeps.delete(packageName);
+
+  const walk = async (name: string, chain: string[]): Promise<void> => {
+    if (checkedDeps.has(name)) return;
+    checkedDeps.add(name);
+
+    const deps = await fetchAurDependencies(name);
+    if (!deps) return;
+
+    for (const rawDep of deps) {
+      const dep = cleanDepName(rawDep);
+      if (!dep || !DEP_NAME_PATTERN.test(dep)) continue;
+      if (checkedDeps.has(dep)) continue;
+
+      const present = await isDepPresent(dep);
+      if (present) {
+        checkedDeps.add(dep);
+        continue;
+      }
+
+      missing.push({ dep, chain: [...chain, name] });
+      await walk(dep, [...chain, name]);
+    }
+  };
+
+  await walk(packageName, []);
+  return missing;
 }

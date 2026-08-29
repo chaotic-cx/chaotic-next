@@ -39,6 +39,49 @@ export type VtIndicatorReport = z.infer<typeof vtIndicatorReportSchema>;
 
 export type AurScanStatus = 'scanning' | 'awaiting-vt' | 'done' | 'failed';
 
+export const aurRpcPackageSchema = z.object({
+  CoMaintainers: z.array(z.string()).nullish().describe('Secondary maintainer account names'),
+  Conflicts: z.array(z.string()).nullish().describe('Packages this package conflicts with'),
+  Description: z.string().nullish().describe('Human-readable package description'),
+  Depends: z.array(z.string()).nullish().describe('Runtime dependency package names (possibly versioned)'),
+  FirstSubmitted: z.number().nullish().describe('Unix timestamp of the first submission'),
+  ID: z.number().nullish().describe('AUR package ID'),
+  Keywords: z.array(z.string()).nullish().describe('Search keywords'),
+  LastModified: z.number().nullish().describe('Unix timestamp of the last modification'),
+  License: z.array(z.string()).nullish().describe('SPDX license identifiers'),
+  Maintainer: z.string().nullish().describe('Primary maintainer account name, or null when orphaned'),
+  MakeDepends: z.array(z.string()).nullish().describe('Build-time dependency package names'),
+  Name: z.string().nullish().describe('Package name'),
+  NumVotes: z.number().nullish().describe('Number of AUR votes'),
+  OutOfDate: z.number().nullish().describe('Unix timestamp when flagged out-of-date, or null'),
+  PackageBase: z.string().nullish().describe('Package base name (differs from Name for split packages)'),
+  PackageBaseID: z.number().nullish().describe('AUR package base ID'),
+  Popularity: z.number().nullish().describe('AUR popularity score'),
+  Provides: z.array(z.string()).nullish().describe('Virtual packages this package provides'),
+  Replaces: z.array(z.string()).nullish().describe('Packages this package replaces'),
+  Submitter: z.string().nullish().describe('Account name of the original submitter'),
+  URL: z.string().nullish().describe('Project homepage URL'),
+  URLPath: z.string().nullish().describe('Path to the cgit snapshot tarball'),
+  Version: z.string().nullish().describe('Package version'),
+});
+export type AurRpcPackage = z.infer<typeof aurRpcPackageSchema>;
+
+export const aurRpcInfoResponseSchema = z.object({
+  resultcount: z.number().describe('Number of results'),
+  results: z.array(aurRpcPackageSchema).describe('Matching AUR packages'),
+  type: z.string().describe('RPC response type (always "multiinfo" for info)'),
+  version: z.number().describe('RPC version'),
+});
+export type AurRpcInfoResponse = z.infer<typeof aurRpcInfoResponseSchema>;
+
+export const aurRpcSearchResponseSchema = z.object({
+  resultcount: z.number().describe('Number of results'),
+  results: z.array(aurRpcPackageSchema).describe('Matching AUR packages'),
+  type: z.string().describe('RPC response type'),
+  version: z.number().describe('RPC version'),
+});
+export type AurRpcSearchResponse = z.infer<typeof aurRpcSearchResponseSchema>;
+
 export const aurMaintainerInfoSchema = z.object({
   username: z.string().describe('AUR username'),
   packagesMaintained: z.number().describe('Number of packages maintained by this user'),

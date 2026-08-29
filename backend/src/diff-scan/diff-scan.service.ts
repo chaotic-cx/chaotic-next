@@ -2,7 +2,12 @@ import { Package } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { RULES } from './rules';
 import { ruleRunsOn, type GroupRuleHit, type RuleHit, type RuleSurface } from './rules/rule';
-import { isDependencyPresent, isSrcinfoFile, scanSrcinfoDependencies } from './srcinfo-dependency';
+import {
+  isDependencyPresent,
+  isSrcinfoFile,
+  scanSrcinfoDependencies,
+  type AurDependencyFetcher,
+} from './srcinfo-dependency';
 import { findTyposquatFinding } from './typosquat';
 import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
@@ -44,6 +49,7 @@ export class DiffScanService {
     diffs: MergeRequestDiffSchema[],
     isDepPresentOverride?: (depName: string) => Promise<boolean>,
     surface: RuleSurface = 'mr-diff',
+    fetchAurDependencies?: AurDependencyFetcher,
   ): Promise<DiffScanFinding[]> {
     for (const rule of RULES) {
       if (!rule.load) continue;
@@ -81,7 +87,7 @@ export class DiffScanService {
 
       if (isSrcinfoFile(change.new_path)) {
         try {
-          const depFindings = await scanSrcinfoDependencies(change, isDepPresent);
+          const depFindings = await scanSrcinfoDependencies(change, isDepPresent, fetchAurDependencies);
           for (const depFinding of depFindings) {
             findings.push(depFinding);
             if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);

@@ -1,3 +1,19 @@
+import {
+  type AurMaintainerChange,
+  type AurMaintainerInfo,
+  type AurPackageMeta,
+  type AurPackageScan,
+  type AurRpcInfoResponse,
+  type AurRpcPackage,
+  type AurRpcSearchResponse,
+  type AurScanStreamChunk,
+} from '@chaotic-next/shared-lib';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { filter, Observable, Subject } from 'rxjs';
+import { Repository } from 'typeorm';
 import { mapWithConcurrency } from '../utils/functions';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
@@ -8,19 +24,6 @@ import { DiffScanService } from './diff-scan.service';
 import { extractIndicators, type ScanIndicator } from './indicators';
 import { parsePkgbuild } from './pkgbuild';
 import { VirustotalService } from './virustotal.service';
-import {
-  type AurMaintainerChange,
-  type AurMaintainerInfo,
-  type AurPackageMeta,
-  type AurPackageScan,
-  type AurScanStreamChunk,
-} from '@chaotic-next/shared-lib';
-import { type MergeRequestDiffSchema } from '@gitbeaker/core';
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { filter, Observable, Subject } from 'rxjs';
-import { Repository } from 'typeorm';
 
 const AUR_INFO_URL = 'https://aur.archlinux.org/rpc/v5/info';
 const AUR_SEARCH_URL = 'https://aur.archlinux.org/rpc/v5/search';
@@ -49,32 +52,13 @@ export interface AurScanOptions {
   withVirusTotal?: boolean;
 }
 
-interface AurPackageInfo {
-  Name?: string;
-  PackageBase?: string;
-  Maintainer?: string | null;
-  CoMaintainers?: string[] | null;
-  NumVotes?: number;
-  Popularity?: number;
-  OutOfDate?: number | null;
-  FirstSubmitted?: number;
-}
-
-interface AurInfoResponse {
-  results?: AurPackageInfo[];
-}
-
-interface AurSearchResponse {
-  results?: AurPackageInfo[];
-}
-
 @Injectable()
 export class AurScanService {
   private readonly scans = new Map<string, AurPackageScan>();
   private readonly scanUpdates = new Subject<AurPackageScan>();
   private readonly maintainerProfiles = new Map<string, { profile: AurMaintainerInfo; fetchedAt: number }>();
   private readonly aurResponses = new AurResponseCache();
-  private infoBatch: { name: string; resolve: (info: AurPackageInfo | undefined) => void }[] = [];
+  private infoBatch: { name: string; resolve: (info: AurRpcPackage | undefined) => void }[] = [];
   private infoBatchTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -165,7 +149,12 @@ export class AurScanService {
         changes.push(fullFileDiff(file.name, file.content));
       }
       scan.scannedFiles = changes.map((change) => change.new_path);
-      scan.findings = await this.diffScanService.scanDiffs(changes, undefined, 'full-file');
+      scan.findings = await this.diffScanService.scanDiffs(
+        changes,
+        undefined,
+        'full-file',
+        this.packageDependencies.bind(this),
+      );
       await this.appendCommentThreat(scan);
 
       const indicators = extractIndicators(changes);
@@ -248,7 +237,13 @@ export class AurScanService {
     return new Map(entries);
   }
 
-  private async fetchInfos(packageNames: string[]): Promise<AurPackageInfo[]> {
+  async packageDependencies(packageName: string): Promise<string[] | null> {
+    const info = await this.fetchInfo(packageName);
+    if (!info?.PackageBase) return null;
+    return info.Depends ?? [];
+  }
+
+  private async fetchInfos(packageNames: string[]): Promise<AurRpcPackage[]> {
     if (packageNames.length === 0) return [];
     try {
       const query = packageNames.map((name) => `arg[]=${encodeURIComponent(name)}`).join('&');
@@ -257,14 +252,14 @@ export class AurScanService {
         this.pino.warn({ count: packageNames.length, status: response.status }, 'AUR multiinfo request failed');
         return [];
       }
-      return ((await response.json()) as AurInfoResponse).results ?? [];
+      return ((await response.json()) as AurRpcInfoResponse).results ?? [];
     } catch (err) {
       this.pino.warn({ err, count: packageNames.length }, 'AUR multiinfo request failed');
       return [];
     }
   }
 
-  private async maintainerStatus(info: AurPackageInfo): Promise<{
+  private async maintainerStatus(info: AurRpcPackage): Promise<{
     maintainers: AurMaintainerInfo[];
     meta: AurPackageMeta;
     change: AurMaintainerChange | null;
@@ -294,7 +289,7 @@ export class AurScanService {
     }
   }
 
-  private fetchInfo(packageName: string): Promise<AurPackageInfo | undefined> {
+  private fetchInfo(packageName: string): Promise<AurRpcPackage | undefined> {
     return new Promise((resolve) => {
       this.infoBatch.push({ name: packageName, resolve });
       if (this.infoBatch.length >= INFO_BATCH_SIZE) {
@@ -322,7 +317,7 @@ export class AurScanService {
         this.pino.warn({ count: batch.length, status: response.status }, 'AUR multiinfo request failed');
       }
 
-      const results = response.ok ? (((await response.json()) as AurInfoResponse).results ?? []) : [];
+      const results = response.ok ? (((await response.json()) as AurRpcInfoResponse).results ?? []) : [];
       const byName = new Map(results.map((info) => [info.Name, info]));
       for (const entry of batch) entry.resolve(byName.get(entry.name));
     } catch (err) {
@@ -333,7 +328,7 @@ export class AurScanService {
 
   private async fetchPkgbuild(
     packageName: string,
-  ): Promise<{ info: AurPackageInfo; packageBase: string; text: string }> {
+  ): Promise<{ info: AurRpcPackage; packageBase: string; text: string }> {
     const info = await this.fetchInfo(packageName);
     if (!info?.PackageBase) throw new NotFoundException(`No AUR package named "${packageName}"`);
 
@@ -346,7 +341,7 @@ export class AurScanService {
     return { info, packageBase: info.PackageBase, text: await pkgbuild.text() };
   }
 
-  private async collectMaintainers(info: AurPackageInfo): Promise<AurMaintainerInfo[]> {
+  private async collectMaintainers(info: AurRpcPackage): Promise<AurMaintainerInfo[]> {
     const usernames = [...new Set([info.Maintainer ?? '', ...(info.CoMaintainers ?? [])])].filter(
       (username) => username !== '',
     );
@@ -370,7 +365,7 @@ export class AurScanService {
         this.pino.warn({ username, status: response.status }, 'Maintainer search failed');
       }
 
-      const results = response.ok ? (((await response.json()) as AurSearchResponse).results ?? []) : [];
+      const results = response.ok ? (((await response.json()) as AurRpcSearchResponse).results ?? []) : [];
 
       // Real account age comes from the scraped AUR profile; until it is
       // available, the maintainer's oldest package submission approximates it.
@@ -503,7 +498,7 @@ export class AurScanService {
         return [];
       }
 
-      const data = (await response.json()) as AurSearchResponse;
+      const data = (await response.json()) as AurRpcSearchResponse;
       return data.results?.map((pkg) => pkg.Name ?? '') ?? [];
     } catch (err) {
       this.pino.warn({ err, query }, 'AUR search failed');
@@ -560,7 +555,7 @@ function extractTreeEntries(html: string): TreeEntry[] {
   return entries;
 }
 
-function packageMetaOf(info: AurPackageInfo): AurPackageMeta {
+function packageMetaOf(info: AurRpcPackage): AurPackageMeta {
   return {
     votes: info.NumVotes ?? 0,
     popularity: info.Popularity ?? 0,
