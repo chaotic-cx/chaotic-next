@@ -1,4 +1,4 @@
-import { applyPackageBump, parseCiConfig } from './bump-config';
+import { applyBuilderClass, applyPackageBump, parseCiConfig } from './bump-config';
 import { describe, expect, it } from 'vitest';
 
 describe('parseCiConfig', () => {
@@ -15,6 +15,25 @@ describe('parseCiConfig', () => {
 
   it('maps an empty value to the empty string', () => {
     expect(parseCiConfig('CI_REBUILD_TRIGGERS=\n')['CI_REBUILD_TRIGGERS']).toBe('');
+  });
+});
+
+describe('applyBuilderClass', () => {
+  it('rewrites an existing BUILDER_CLASS line in place', () => {
+    const config = 'CI_PKGBUILD_SOURCE=aur\nBUILDER_CLASS=4\nCI_PACKAGE_BUMP=1.0-1/1\n';
+    expect(applyBuilderClass(config, 6)).toBe('CI_PKGBUILD_SOURCE=aur\nBUILDER_CLASS=6\nCI_PACKAGE_BUMP=1.0-1/1\n');
+  });
+
+  it('appends at the end when the key is absent, matching repo convention', () => {
+    const config = 'CI_PACKAGE_BUMP=1.0-1/1\nCI_REBUILD_TRIGGERS=libxml2\nCI_PKGBUILD_SOURCE=aur\n';
+    expect(applyBuilderClass(config, 8)).toBe(
+      'CI_PACKAGE_BUMP=1.0-1/1\nCI_REBUILD_TRIGGERS=libxml2\nCI_PKGBUILD_SOURCE=aur\nBUILDER_CLASS=8\n',
+    );
+  });
+
+  it('appends when the config has none of the convention keys', () => {
+    expect(applyBuilderClass('CI_ON_TRIGGER=daily\n', 2)).toBe('CI_ON_TRIGGER=daily\nBUILDER_CLASS=2\n');
+    expect(applyBuilderClass('', 2)).toBe('BUILDER_CLASS=2\n');
   });
 });
 

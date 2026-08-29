@@ -248,6 +248,15 @@ const NO_REPO = '0';
                   tooltipPosition="left"
                 />
                 <p-button
+                  (onClick)="adjustBuildClass(pkg)"
+                  icon="pi pi-sliders-h"
+                  severity="help"
+                  text
+                  rounded
+                  pTooltip="Adjust build class"
+                  tooltipPosition="left"
+                />
+                <p-button
                   (onClick)="dropPackage(pkg)"
                   icon="pi pi-minus-circle"
                   severity="danger"
@@ -736,6 +745,19 @@ export class AdminPackagesPageComponent {
       acceptLabel: 'Rescan',
       rejectLabel: 'Cancel',
       accept: () => void this.adminService.rescanPackage(pkg.pkgname, PKG_TYPE_CHAOTIC),
+    });
+  }
+
+  adjustBuildClass(pkg: PackageDto): void {
+    const pkgbase = pkg.pkgbaseName ?? pkg.pkgname;
+    const suggested = pkg.buildClassSuggestion?.suggestedBuildClass;
+    const suggestionText = suggested !== null && suggested !== undefined ? String(suggested) : 'none';
+    this.confirmationService.confirm({
+      message: `Adjust the build class of <code>${pkg.pkgname}</code>? The suggestion is <code>${suggestionText}</code>. An even class is committed to <code>${pkgbase}/.CI/config</code>; an odd class is manual and stays untouched.`,
+      header: 'Adjust build class',
+      acceptLabel: 'Adjust',
+      rejectLabel: 'Cancel',
+      accept: () => void this.adminService.adjustBuildClass(pkg),
     });
   }
 

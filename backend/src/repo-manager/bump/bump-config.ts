@@ -17,6 +17,22 @@ export function parseCiConfig(configText: string): Record<string, string | undef
   return configs;
 }
 
+const BUILDER_CLASS_KEY = 'BUILDER_CLASS';
+
+/** Rewrites the `BUILDER_CLASS` line of a `.CI/config`, appending one at the end when absent */
+export function applyBuilderClass(configText: string, buildClass: number): string {
+  const lines = configText.split('\n');
+  const classLine = `${BUILDER_CLASS_KEY}=${buildClass}`;
+  const idx = lines.findIndex((line) => line.startsWith(`${BUILDER_CLASS_KEY}=`));
+  if (idx >= 0) {
+    lines[idx] = classLine;
+    return lines.join('\n');
+  }
+
+  const prefix = configText === '' || configText.endsWith('\n') ? configText : `${configText}\n`;
+  return `${prefix}${classLine}\n`;
+}
+
 export function applyPackageBump(
   configText: string,
   version: string | null | undefined,

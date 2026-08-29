@@ -30,7 +30,7 @@ describe('suggestBuildClass', () => {
       avgDiskIoBytes: 8.7 * BYTES_PER_GIB,
       avgDurationSeconds: 1676,
     };
-    expect(suggestBuildClass(ayugramDesktopGit)).toBeGreaterThanOrEqual(BUILD_CLASS_MAX - 1);
+    expect(suggestBuildClass(ayugramDesktopGit)).toBeGreaterThanOrEqual(BUILD_CLASS_MAX - 2);
   });
 
   it('places a mid-size package in the medium range', () => {
@@ -90,8 +90,11 @@ describe('suggestBuildClass', () => {
     ];
     for (const profile of extremes) {
       const suggested = suggestBuildClass(profile);
+      expect(suggested).not.toBeNull();
+      if (suggested === null) continue;
       expect(suggested).toBeGreaterThanOrEqual(BUILD_CLASS_MIN);
       expect(suggested).toBeLessThanOrEqual(BUILD_CLASS_MAX);
+      expect(suggested % 2).toBe(0);
     }
   });
 });
