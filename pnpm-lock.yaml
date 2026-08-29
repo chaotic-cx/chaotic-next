@@ -55,10 +55,10 @@ importers:
         version: 5.3.0
       '@garudalinux/core':
         specifier: 2.0.0
-        version: 2.0.0(ce0c676c0c5dad9aaad11cad4c940d85)
+        version: 2.0.0(84c61b07ec94f221d223a34559b1a0d5)
       '@garudalinux/themes':
         specifier: 2.0.0
-        version: 2.0.0(8c208658735e346af80807312a625049)
+        version: 2.0.0(2b208ad185d1fb2e58bc4f5762b8f077)
       '@gitbeaker/core':
         specifier: 44.0.0-pre.0
         version: 44.0.0-pre.0
@@ -106,13 +106,13 @@ importers:
         version: 1.0.0
       '@openng/optimus-ui':
         specifier: ^2.0.0
-        version: 2.0.1(patch_hash=f9980d01918ec5c7f5dc13878e74bcba6d9f9c17cb34a260a486bb10e3dec60c)(2aadf28f7f34ac9156297cb6f8e24884)
+        version: 2.0.2(patch_hash=f9980d01918ec5c7f5dc13878e74bcba6d9f9c17cb34a260a486bb10e3dec60c)(2aadf28f7f34ac9156297cb6f8e24884)
       '@openng/optimus-ui-tailwindcss':
         specifier: ^2.0.0
-        version: 2.0.1(tailwindcss@4.3.3)
+        version: 2.0.2(tailwindcss@4.3.3)
       '@openng/optimus-ui-themes':
         specifier: ^2.0.0
-        version: 2.0.1
+        version: 2.0.2
       '@scalar/nestjs-api-reference':
         specifier: ^1.2.14
         version: 1.2.16
@@ -3565,38 +3565,38 @@ packages:
   '@openng/icons@1.0.0':
     resolution: {integrity: sha512-BdTSHu74S3WRfbmfoT2WfmvaM3Ei32K3WiZBJTw7nVTlCvQbpCNsBqzrD5rAe4nb5IoTPjeuRb5WTG2gzrTQtw==}
 
-  '@openng/optimus-ui-motion@2.0.1':
-    resolution: {integrity: sha512-Yz8ja1v2+zu82dzVpRYYazCWy+Lrqhx7L14R02Puney+RCNYmiSQllMXEvMIS83/6JhGsQZZZBvxvamKUDZNSg==}
+  '@openng/optimus-ui-motion@2.0.2':
+    resolution: {integrity: sha512-sh3I8xYK1A+BZEqpPgPl6MaRVPJrHNbiC6hzkUXsaNhk4Uu6dEj7KEsGh89vYtFmYN6PUeR9+XnYau/k5/q45g==}
     engines: {node: '>=12.11.0'}
 
-  '@openng/optimus-ui-styled@2.0.1':
-    resolution: {integrity: sha512-g33Ld01n0sHuW9cOiE25+vKUx1WFN+xJGeDO/Mjh+7sm0l1KyUUJkfqgVgvM+ILAQ1IB6pexFvYZCnknWi60vQ==}
+  '@openng/optimus-ui-styled@2.0.2':
+    resolution: {integrity: sha512-bCojQR6xzEoLUm2C+WfeG+MPu6XjLkLPmjU5s5DTuXcCA5W97SA0L0XdYtr/XF8G35JNBaEyyis8Fv/PdXELyA==}
     engines: {node: '>=12.11.0'}
 
-  '@openng/optimus-ui-styles@2.0.1':
-    resolution: {integrity: sha512-z8Ad2dBRoBOYmipsSrwM3cQ3z+4DgNvL3S7uGIi9o0+YFa+Q7g29b3k1Sa03oUkI+WYiNr8nvNGjVocmDcTByg==}
+  '@openng/optimus-ui-styles@2.0.2':
+    resolution: {integrity: sha512-2tOozv8KcBRynUeZ1LvEiqO3YrK4mARszXXJh6LhUujSVq7QGVtNiNu2dktW4t4EpNTXWQNILpqLL+CyA/QLVg==}
 
-  '@openng/optimus-ui-tailwindcss@2.0.1':
-    resolution: {integrity: sha512-nLZ0ekTiGtTnJ+aDrHCaW1bCYlJ7ruk5djGy676TO9nBfZDkJEqIbrDWe0nAyAgtWsLc3EPQyZsWzRXudnMWjQ==}
+  '@openng/optimus-ui-tailwindcss@2.0.2':
+    resolution: {integrity: sha512-JxUZ5unbEhj0meCza+jNdK/2AcI2j8iApwJsEeR1IRvmjKvphfhiD6TPj0y2EKJ7XOBXJP4T7hEcOpvxqLVTOg==}
     peerDependencies:
       tailwindcss: '>=3.1.0'
 
-  '@openng/optimus-ui-themes@2.0.1':
-    resolution: {integrity: sha512-eewulqxWAxc7s8K/BAiUCpXnQszaZWIeu5ys/hjmXryN2e2kiYs8W8cLfd6p8IK2A0McylMAwglVA7mU77pnVg==}
+  '@openng/optimus-ui-themes@2.0.2':
+    resolution: {integrity: sha512-nEQb83g8pssx5dJM+31sUEKwPjDX9OGZMyRoln2cvPQl7eHbFkafjgDNBL5oMHdnFVRQofmoJXgdC7sWn6XxbA==}
 
-  '@openng/optimus-ui-utils@2.0.1':
-    resolution: {integrity: sha512-s4Kt6T6mZv6JJPDQTAj6qtt1+y8fD0uTxU05tanydoGPwvV8aBh/ysCnVGDTUeJCgrSpp1eEHjIfqrhGWyqasQ==}
+  '@openng/optimus-ui-utils@2.0.2':
+    resolution: {integrity: sha512-RgkiY91+X8h0rHI8UIKT1Pdvr352J/fSvFJ2wETYUGphCBw7j1lubhySn8yFfT6Ng+CVEZnviekvZSaBcUk2JA==}
     engines: {node: '>=12.11.0'}
 
-  '@openng/optimus-ui@2.0.1':
-    resolution: {integrity: sha512-nY+RaW9njtYoA9mpUwUtGFGXVuhiDxoi1WjRu6qd1zvfZpYd4srLQebPgNSclybeUoDhSsq4iL4ZKa2mx0CBFQ==}
+  '@openng/optimus-ui@2.0.2':
+    resolution: {integrity: sha512-1tzUZjFaUYoC1uAk5oOGqdwCmyCroiWaCtIDuCG3XNy8sALXQjnyMwoGHHt1nUg64nkxoj4gYlwQbsX4GcQmKA==}
     peerDependencies:
-      '@angular/cdk': ^22.1.2
-      '@angular/common': ^22.1.2
-      '@angular/core': ^22.1.2
-      '@angular/forms': ^22.1.2
-      '@angular/platform-browser': ^22.1.2
-      '@angular/router': ^22.1.2
+      '@angular/cdk': ^22.1.4
+      '@angular/common': ^22.1.4
+      '@angular/core': ^22.1.4
+      '@angular/forms': ^22.1.4
+      '@angular/platform-browser': ^22.1.4
+      '@angular/router': ^22.1.4
       rxjs: ^6.0.0 || ^7.8.1
 
   '@opentelemetry/semantic-conventions@1.43.0':
@@ -12751,7 +12751,7 @@ snapshots:
 
   '@fontsource-variable/jetbrains-mono@5.3.0': {}
 
-  '@garudalinux/core@2.0.0(ce0c676c0c5dad9aaad11cad4c940d85)':
+  '@garudalinux/core@2.0.0(84c61b07ec94f221d223a34559b1a0d5)':
     dependencies:
       '@analogjs/vite-plugin-angular': 2.7.1(@angular/build@22.1.6(@angular/compiler-cli@22.1.4(@angular/compiler@22.1.4)(typescript@6.0.3))(@angular/compiler@22.1.4)(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)))(@angular/service-worker@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@types/node@26.4.0)(chokidar@5.0.0)(istanbul-lib-instrument@6.0.3(supports-color@7.2.0))(jiti@2.7.0)(less@4.8.1(supports-color@7.2.0))(postcss@8.5.26)(sass-embedded@1.103.1)(supports-color@7.2.0)(tailwindcss@4.3.3)(terser@5.51.1)(tslib@2.8.1)(tsx@4.23.12)(typescript@6.0.3)(vitest@4.1.11)(yaml@2.9.0))(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(less@4.8.1(supports-color@7.2.0))(sass-embedded@1.103.1)(sass@1.101.0)(terser@5.51.1)(tsx@4.23.12)(yaml@2.9.0))
       '@analogjs/vitest-angular': 2.7.1(d5fee8fcf22b81ec230d93a6aee66be2)
@@ -12762,18 +12762,18 @@ snapshots:
       '@angular/platform-browser': 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))
       '@angular/router': 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)))(rxjs@7.8.2)
       '@nx/vite': 23.1.2(@babel/traverse@7.29.8(supports-color@7.2.0))(@nx/eslint@23.1.2(7f13d38c55cfdb1c4a75e203d1dc0616))(@swc-node/register@1.12.1(@swc/core@1.16.1(@swc/helpers@0.5.23))(@swc/types@0.1.28)(supports-color@7.2.0)(typescript@6.0.3))(@swc/core@1.16.1(@swc/helpers@0.5.23))(nx@23.1.2(@swc-node/register@1.12.1(@swc/core@1.16.1(@swc/helpers@0.5.23))(@swc/types@0.1.28)(supports-color@7.2.0)(typescript@6.0.3))(@swc/core@1.16.1(@swc/helpers@0.5.23)))(supports-color@7.2.0)(typescript@6.0.3)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(less@4.8.1(supports-color@7.2.0))(sass-embedded@1.103.1)(sass@1.101.0)(terser@5.51.1)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
-      '@openng/optimus-ui': 2.0.1(patch_hash=f9980d01918ec5c7f5dc13878e74bcba6d9f9c17cb34a260a486bb10e3dec60c)(2aadf28f7f34ac9156297cb6f8e24884)
+      '@openng/optimus-ui': 2.0.2(patch_hash=f9980d01918ec5c7f5dc13878e74bcba6d9f9c17cb34a260a486bb10e3dec60c)(2aadf28f7f34ac9156297cb6f8e24884)
       tslib: 2.8.1
       vite: 8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(less@4.8.1(supports-color@7.2.0))(sass-embedded@1.103.1)(sass@1.101.0)(terser@5.51.1)(tsx@4.23.12)(yaml@2.9.0)
 
-  '@garudalinux/themes@2.0.0(8c208658735e346af80807312a625049)':
+  '@garudalinux/themes@2.0.0(2b208ad185d1fb2e58bc4f5762b8f077)':
     dependencies:
       '@analogjs/vite-plugin-angular': 2.7.1(@angular/build@22.1.6(@angular/compiler-cli@22.1.4(@angular/compiler@22.1.4)(typescript@6.0.3))(@angular/compiler@22.1.4)(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)))(@angular/service-worker@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@types/node@26.4.0)(chokidar@5.0.0)(istanbul-lib-instrument@6.0.3(supports-color@7.2.0))(jiti@2.7.0)(less@4.8.1(supports-color@7.2.0))(postcss@8.5.26)(sass-embedded@1.103.1)(supports-color@7.2.0)(tailwindcss@4.3.3)(terser@5.51.1)(tslib@2.8.1)(tsx@4.23.12)(typescript@6.0.3)(vitest@4.1.11)(yaml@2.9.0))(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(less@4.8.1(supports-color@7.2.0))(sass-embedded@1.103.1)(sass@1.101.0)(terser@5.51.1)(tsx@4.23.12)(yaml@2.9.0))
       '@analogjs/vitest-angular': 2.7.1(d5fee8fcf22b81ec230d93a6aee66be2)
       '@angular/compiler': 22.1.4
       '@catppuccin/palette': 2.0.0-beta.1
       '@nx/vite': 23.1.2(@babel/traverse@7.29.8(supports-color@7.2.0))(@nx/eslint@23.1.2(7f13d38c55cfdb1c4a75e203d1dc0616))(@swc-node/register@1.12.1(@swc/core@1.16.1(@swc/helpers@0.5.23))(@swc/types@0.1.28)(supports-color@7.2.0)(typescript@6.0.3))(@swc/core@1.16.1(@swc/helpers@0.5.23))(nx@23.1.2(@swc-node/register@1.12.1(@swc/core@1.16.1(@swc/helpers@0.5.23))(@swc/types@0.1.28)(supports-color@7.2.0)(typescript@6.0.3))(@swc/core@1.16.1(@swc/helpers@0.5.23)))(supports-color@7.2.0)(typescript@6.0.3)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(less@4.8.1(supports-color@7.2.0))(sass-embedded@1.103.1)(sass@1.101.0)(terser@5.51.1)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
-      '@openng/optimus-ui-themes': 2.0.1
+      '@openng/optimus-ui-themes': 2.0.2
       tslib: 2.8.1
       vite: 8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(less@4.8.1(supports-color@7.2.0))(sass-embedded@1.103.1)(sass@1.101.0)(terser@5.51.1)(tsx@4.23.12)(yaml@2.9.0)
 
@@ -14482,29 +14482,29 @@ snapshots:
 
   '@openng/icons@1.0.0': {}
 
-  '@openng/optimus-ui-motion@2.0.1':
+  '@openng/optimus-ui-motion@2.0.2':
     dependencies:
-      '@openng/optimus-ui-utils': 2.0.1
+      '@openng/optimus-ui-utils': 2.0.2
 
-  '@openng/optimus-ui-styled@2.0.1':
+  '@openng/optimus-ui-styled@2.0.2':
     dependencies:
-      '@openng/optimus-ui-utils': 2.0.1
+      '@openng/optimus-ui-utils': 2.0.2
 
-  '@openng/optimus-ui-styles@2.0.1':
+  '@openng/optimus-ui-styles@2.0.2':
     dependencies:
-      '@openng/optimus-ui-styled': 2.0.1
+      '@openng/optimus-ui-styled': 2.0.2
 
-  '@openng/optimus-ui-tailwindcss@2.0.1(tailwindcss@4.3.3)':
+  '@openng/optimus-ui-tailwindcss@2.0.2(tailwindcss@4.3.3)':
     dependencies:
       tailwindcss: 4.3.3
 
-  '@openng/optimus-ui-themes@2.0.1':
+  '@openng/optimus-ui-themes@2.0.2':
     dependencies:
-      '@openng/optimus-ui-styled': 2.0.1
+      '@openng/optimus-ui-styled': 2.0.2
 
-  '@openng/optimus-ui-utils@2.0.1': {}
+  '@openng/optimus-ui-utils@2.0.2': {}
 
-  '@openng/optimus-ui@2.0.1(patch_hash=f9980d01918ec5c7f5dc13878e74bcba6d9f9c17cb34a260a486bb10e3dec60c)(2aadf28f7f34ac9156297cb6f8e24884)':
+  '@openng/optimus-ui@2.0.2(patch_hash=f9980d01918ec5c7f5dc13878e74bcba6d9f9c17cb34a260a486bb10e3dec60c)(2aadf28f7f34ac9156297cb6f8e24884)':
     dependencies:
       '@angular/cdk': 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)))(rxjs@7.8.2)
       '@angular/common': 22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2)
@@ -14512,10 +14512,10 @@ snapshots:
       '@angular/forms': 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)))(rxjs@7.8.2)
       '@angular/platform-browser': 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))
       '@angular/router': 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)))(rxjs@7.8.2)
-      '@openng/optimus-ui-motion': 2.0.1
-      '@openng/optimus-ui-styled': 2.0.1
-      '@openng/optimus-ui-styles': 2.0.1
-      '@openng/optimus-ui-utils': 2.0.1
+      '@openng/optimus-ui-motion': 2.0.2
+      '@openng/optimus-ui-styled': 2.0.2
+      '@openng/optimus-ui-styles': 2.0.2
+      '@openng/optimus-ui-utils': 2.0.2
       rxjs: 7.8.2
       tslib: 2.8.1
 
