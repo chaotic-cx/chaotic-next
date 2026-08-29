@@ -1,18 +1,11 @@
-import { decryptAesRaw } from '../utils/functions';
-import { NotificationSubscription } from './notification-subscription.entity';
-import {
-  NotificationPayload,
-  pushSubscriptionBodySchema,
-  type PushSubscriptionBodyDto,
-} from '@chaotic-next/shared-lib';
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
+import { NotificationPayload, type PushSubscriptionBodyDto } from '@chaotic-next/shared-lib';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { existsSync } from 'node:fs';
-import { readFile, unlink } from 'node:fs/promises';
 import { Repository } from 'typeorm';
-import { sendNotification, setVapidDetails } from 'web-push';
+import { type PushSubscription, sendNotification, setVapidDetails } from 'web-push';
+import { NotificationSubscription } from './notification-subscription.entity';
 
 const MAX_SUBSCRIBERS = 1000;
 
@@ -40,7 +33,7 @@ function isAllowedPushEndpoint(sub: { endpoint: string }): boolean {
 }
 
 @Injectable()
-export class NotificationService implements OnModuleInit {
+export class NotificationService {
   private readonly legacySubscribersFilePath = 'config/notification-subscriber.json';
 
   constructor(
@@ -54,10 +47,6 @@ export class NotificationService implements OnModuleInit {
       this.configService.getOrThrow<string>('CAUR_VAPID_PUBLIC'),
       this.configService.getOrThrow<string>('CAUR_VAPID_PRIVATE'),
     );
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.importSubscribersFromLegacyFile();
   }
 
   /**
@@ -113,6 +102,49 @@ export class NotificationService implements OnModuleInit {
     return this.subscriptionRepository.find();
   }
 
+  /**
+   * Sends a notification to every stored subscription.
+   * @param notification Payload sent to every subscriber
+   * @returns Number of subscriptions the notification was attempted for
+   */
+  async broadcast(notification: NotificationPayload): Promise<number> {
+    const subscriptions = await this.subscriptionRepository.find();
+    if (subscriptions.length === 0) return 0;
+
+    const promises = subscriptions.map((sub) => {
+      const pushSubscription: PushSubscription = {
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh,
+          auth: sub.auth,
+        },
+      };
+      return sendNotification(pushSubscription, JSON.stringify(notification));
+    });
+
+    const results = await Promise.allSettled(promises);
+    let failed = 0;
+    let stale = 0;
+    for (let index = 0; index < results.length; index += 1) {
+      const result = results[index];
+      if (result.status === 'fulfilled') continue;
+      const statusCode = (result.reason as { statusCode?: number }).statusCode;
+      if (statusCode === 404 || statusCode === 410) {
+        await this.subscriptionRepository.delete({ endpoint: subscriptions[index].endpoint });
+        stale += 1;
+      } else {
+        failed += 1;
+        this.pino.warn({ err: result.reason }, 'Push notification broadcast failed');
+      }
+    }
+
+    this.pino.info(
+      { delivered: results.length - failed - stale, total: results.length, stale },
+      'Push notification broadcast complete',
+    );
+    return results.length;
+  }
+
   private async upsertSubscription(sub: PushSubscriptionBodyDto): Promise<void> {
     await this.subscriptionRepository.upsert(
       {
@@ -123,26 +155,5 @@ export class NotificationService implements OnModuleInit {
       },
       ['endpoint'],
     );
-  }
-
-  private async importSubscribersFromLegacyFile(): Promise<void> {
-    if (!existsSync(this.legacySubscribersFilePath)) return;
-
-    try {
-      const encrypted = await readFile(this.legacySubscribersFilePath, 'utf-8');
-      const decrypted = decryptAesRaw(encrypted, this.configService.getOrThrow<string>('CAUR_DB_KEY'));
-      const parsed = JSON.parse(decrypted) as unknown[];
-      let imported = 0;
-      for (const entry of parsed) {
-        const subscription = pushSubscriptionBodySchema.safeParse(entry);
-        if (!subscription.success) continue;
-        await this.upsertSubscription(subscription.data);
-        imported += 1;
-      }
-      await unlink(this.legacySubscribersFilePath);
-      this.pino.info({ count: imported }, 'Imported push subscribers from legacy file');
-    } catch (err) {
-      this.pino.error({ err }, 'Failed to import legacy push subscribers');
-    }
   }
 }

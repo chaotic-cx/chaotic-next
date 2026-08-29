@@ -1,8 +1,7 @@
+import { type NotificationPayload } from '@chaotic-next/shared-lib';
 import { BadRequestException } from '@nestjs/common';
 import { type PinoLogger } from 'nestjs-pino';
-import { encryptAesRaw } from '../utils/functions';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { rm } from 'node:fs/promises';
 import { Repository } from 'typeorm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PushSubscription, sendNotification, setVapidDetails } from 'web-push';
@@ -152,35 +151,44 @@ describe('NotificationService', () => {
     });
   });
 
-  describe('legacy file import', () => {
-    it('imports encrypted subscribers from the legacy file and deletes it', async () => {
-      const legacy = [
-        validSubscription,
-        { ...validSubscription, endpoint: 'https://push.services.mozilla.com/wpush/v2/test' },
-      ];
-      await mkdir(dirname(LEGACY_FILE), { recursive: true });
-      await writeFile(LEGACY_FILE, encryptAesRaw(JSON.stringify(legacy), DB_KEY));
+  describe('broadcast', () => {
+    const notification: NotificationPayload = {
+      notification: {
+        title: 'Build failed: spotdl',
+        icon: '/android-chrome-512x512.png',
+        body: 'Missing dependency',
+        data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: 'https://chaotic.cx' } } },
+      },
+    };
 
-      await service.onModuleInit();
-
-      expect(repo.upsert).toHaveBeenCalledTimes(2);
-      expect(repo.upsert).toHaveBeenCalledWith(expect.objectContaining({ endpoint: legacy[0].endpoint }), ['endpoint']);
-      await expect(readFile(LEGACY_FILE, 'utf-8')).rejects.toThrow();
+    it('does nothing when there are no subscribers', async () => {
+      await expect(service.broadcast(notification)).resolves.toBe(0);
+      expect(sendNotification).not.toHaveBeenCalled();
     });
 
-    it('skips invalid entries during import', async () => {
-      const legacy = [validSubscription, { endpoint: 'not-a-valid-push-endpoint', keys: {} }];
-      await mkdir(dirname(LEGACY_FILE), { recursive: true });
-      await writeFile(LEGACY_FILE, encryptAesRaw(JSON.stringify(legacy), DB_KEY));
+    it('sends the notification to every subscriber', async () => {
+      vi.mocked(repo.find).mockResolvedValue([{ id: 1, endpoint: '#1' } as NotificationSubscription]);
+      vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
 
-      await service.onModuleInit();
-
-      expect(repo.upsert).toHaveBeenCalledTimes(1);
+      await expect(service.broadcast(notification)).resolves.toBe(1);
+      expect(sendNotification).toHaveBeenCalledTimes(1);
+      expect(sendNotification).toHaveBeenCalledWith(
+        expect.objectContaining({ endpoint: '#1' }),
+        JSON.stringify(notification),
+      );
     });
 
-    it('does nothing when the legacy file is absent', async () => {
-      await service.onModuleInit();
-      expect(repo.upsert).not.toHaveBeenCalled();
+    it('removes stale subscriptions rejected with 410', async () => {
+      vi.mocked(repo.find).mockResolvedValue([
+        { id: 1, endpoint: '#stale' } as NotificationSubscription,
+        { id: 2, endpoint: '#live' } as NotificationSubscription,
+      ]);
+      vi.mocked(sendNotification)
+        .mockRejectedValueOnce({ statusCode: 410 })
+        .mockResolvedValueOnce({ statusCode: 200, body: '', headers: {} });
+
+      await expect(service.broadcast(notification)).resolves.toBe(2);
+      expect(repo.delete).toHaveBeenCalledWith({ endpoint: '#stale' });
     });
   });
 });
