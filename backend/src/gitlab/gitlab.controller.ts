@@ -32,10 +32,10 @@ import {
   dropPackagesBodySchema,
   flagMrBodySchema,
   GitlabJob,
+  gitlabIdParamSchema,
   gitlabJobSchema,
   GitlabLogChunk,
   gitlabWebhookBodySchema,
-  idParamSchema,
   MergeRequestWithDiffs,
   mergeRequestWithDiffsSchema,
   offsetQuerySchema,
@@ -214,7 +214,9 @@ export class GitlabController {
   @Throttle({ default: { ttl: EXTERNAL_PROXY_THROTTLE_TTL_MS, limit: PIPELINE_JOBS_THROTTLE_LIMIT } })
   @ApiOperation({ summary: 'Get the jobs of a GitLab pipeline.' })
   @ApiOkResponse({ description: 'List of jobs', schema: schemaResponseArray(gitlabJobSchema).schema })
-  async getPipelineJobs(@Param('pipelineId', { schema: idParamSchema }) pipelineId: number): Promise<GitlabJob[]> {
+  async getPipelineJobs(
+    @Param('pipelineId', { schema: gitlabIdParamSchema }) pipelineId: number,
+  ): Promise<GitlabJob[]> {
     return await this.gitlabJobTraceService.listPipelineJobs(pipelineId);
   }
 
@@ -227,8 +229,8 @@ export class GitlabController {
     { name: 'last-event-id', required: false, description: 'Native EventSource reconnect: last received frame id' },
   ])
   async streamJobTrace(
-    @Param('pipelineId', { schema: idParamSchema }) pipelineId: number,
-    @Param('jobId', { schema: idParamSchema }) jobId: number,
+    @Param('pipelineId', { schema: gitlabIdParamSchema }) pipelineId: number,
+    @Param('jobId', { schema: gitlabIdParamSchema }) jobId: number,
     @Query('offset', { schema: offsetQuerySchema.default(0) }) offset: number,
     // Native EventSource reconnects replay the last received frame id here.
     @Headers('last-event-id') lastEventId?: string,
