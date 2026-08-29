@@ -11,3 +11,18 @@ export const pushSubscriptionBodySchema = z.strictObject({
 });
 
 export type PushSubscriptionBodyDto = z.infer<typeof pushSubscriptionBodySchema>;
+
+export const NOTIFICATION_TYPES = ['build-failure', 'mr-review'] as const;
+
+export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export const notificationPreferenceSchema = z.strictObject({
+  type: notificationTypeSchema.describe('Notification category the preference applies to'),
+  enabled: z.boolean().describe('Whether pushes of this type are delivered'),
+});
+
+export const notificationPreferencesSchema = z.array(notificationPreferenceSchema);
+
+export type NotificationPreferenceDto = z.infer<typeof notificationPreferenceSchema>;

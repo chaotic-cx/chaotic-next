@@ -53,6 +53,7 @@ describe('Notifications endpoint (e2e, real PostgreSQL)', () => {
       const repo = e2e.dataSource.getRepository(NotificationSubscription);
       const row = await repo.findOneBy({ endpoint });
       expect(row).not.toBeNull();
+      expect(row?.userId).toBe('e2e-user');
       expect(row?.p256dh).toBe(validSubscription(endpoint).keys.p256dh);
     });
 
@@ -119,6 +120,43 @@ describe('Notifications endpoint (e2e, real PostgreSQL)', () => {
       const row = await repo.findOneBy({ endpoint });
       expect(row).not.toBeNull();
       expect(row?.expirationTime).toEqual(new Date('2026-12-31T23:59:59.000Z'));
+    });
+  });
+
+  describe('GET/PUT /notifications/preferences', () => {
+    it('defaults every type to enabled for a user without rows', async () => {
+      const res = await e2e.inject<unknown>({ method: 'GET', url: '/notifications/preferences' });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual([
+        { type: 'build-failure', enabled: true },
+        { type: 'mr-review', enabled: true },
+      ]);
+    });
+
+    it('stores preferences and reflects them on read', async () => {
+      const put = await e2e.inject({
+        method: 'PUT',
+        url: '/notifications/preferences',
+        payload: [{ type: 'build-failure', enabled: false }],
+      });
+      expect(put.statusCode).toBe(200);
+
+      const get = await e2e.inject<unknown>({ method: 'GET', url: '/notifications/preferences' });
+      expect(await get.json()).toEqual([
+        { type: 'build-failure', enabled: false },
+        { type: 'mr-review', enabled: true },
+      ]);
+    });
+
+    it('rejects an unknown notification type (400)', async () => {
+      const res = await e2e.inject({
+        method: 'PUT',
+        url: '/notifications/preferences',
+        payload: [{ type: 'nonexistent-type', enabled: true }],
+      });
+
+      expect(res.statusCode).toBe(400);
     });
   });
 });

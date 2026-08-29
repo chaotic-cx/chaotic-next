@@ -2,14 +2,11 @@ import { type MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { type PinoLogger } from 'nestjs-pino';
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
-import { sendNotification } from 'web-push';
 import { DiffScanService } from '../diff-scan/diff-scan.service';
-import { NotificationSubscription } from '../notifications/notification-subscription.entity';
+import { NotificationService } from '../notifications/notification.service';
 import { GitlabApiService } from './gitlab-api.service';
 import { GitlabMergeRequestService } from './gitlab-merge-request.service';
 import { MrAction } from './mr-action.entity';
-
-vi.mock('web-push', () => ({ PushSubscription: {}, sendNotification: vi.fn() }));
 
 const ACTOR = { userId: 'test-user', userName: 'Test User' };
 
@@ -35,11 +32,11 @@ function createService(
   aurScan: { maintainerStatusFor: ReturnType<typeof vi.fn> } = {
     maintainerStatusFor: vi.fn(async () => new Map()),
   },
-  subscriptions: unknown[] = [],
 ): {
   service: GitlabMergeRequestService;
   apiService: GitlabApiService;
   mrActionRepository: { insert: ReturnType<typeof vi.fn>; find: ReturnType<typeof vi.fn> };
+  broadcast: ReturnType<typeof vi.fn>;
   mrEdit: ReturnType<typeof vi.fn>;
   noteCreate: ReturnType<typeof vi.fn>;
   discussionsCreate: ReturnType<typeof vi.fn>;
@@ -56,6 +53,7 @@ function createService(
   const cacheGet = vi.fn();
   const sseNext = vi.fn();
   const mrActionRepository = { insert: vi.fn(), find: vi.fn() };
+  const broadcast = vi.fn().mockResolvedValue(1);
 
   const apiService = createApiService({
     MergeRequests: { edit: mrEdit },
@@ -82,13 +80,14 @@ function createService(
     virustotal as never,
     aurScan as never,
     { sseEvents$: { next: sseNext } } as never,
-    { find: vi.fn().mockResolvedValue(subscriptions) } as unknown as Repository<NotificationSubscription>,
+    { broadcast } as unknown as NotificationService,
     mrActionRepository as unknown as Repository<MrAction>,
   );
   return {
     service,
     apiService,
     mrActionRepository,
+    broadcast,
     mrEdit,
     noteCreate,
     discussionsCreate,
@@ -881,18 +880,15 @@ function notificationAccess(service: GitlabMergeRequestService): NotifyAccess {
 }
 
 describe('GitlabMergeRequestService.new-MR push notifications', () => {
-  it('notifies subscribers with per-package finding counts and a resumable URL', async () => {
-    const { service } = createService({}, undefined, undefined, [
-      { endpoint: 'https://fcm.test/a' },
-      { endpoint: 'https://fcm.test/b' },
-    ]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+  it('broadcasts with per-package finding counts and a resumable URL', async () => {
+    const { service, broadcast } = createService();
     const mrs = [mrFixture(1, { scanFindings: [{ ruleId: 'a' }, { ruleId: 'b' }] as never }), mrFixture(2)];
 
     await notificationAccess(service).notifySubscribers(mrs);
 
-    expect(sendNotification).toHaveBeenCalledTimes(2);
-    const payload = JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string) as {
+    expect(broadcast).toHaveBeenCalledTimes(1);
+    expect(broadcast.mock.calls[0][1]).toBe('mr-review');
+    const payload = broadcast.mock.calls[0][0] as {
       notification: { body: string; data: { onActionClick: { default: { operation: string; url: string } } } };
     };
     expect(payload.notification.body).toBe('Updates awaiting your review: pkg1 (2 findings), pkg2');
@@ -901,21 +897,17 @@ describe('GitlabMergeRequestService.new-MR push notifications', () => {
   });
 
   it('omits finding counts when there are zero findings', async () => {
-    const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const { service, broadcast } = createService();
     const mrs = [mrFixture(1), mrFixture(2)];
 
     await notificationAccess(service).notifySubscribers(mrs);
 
-    const payload = JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string) as {
-      notification: { body: string };
-    };
+    const payload = broadcast.mock.calls[0][0] as { notification: { body: string } };
     expect(payload.notification.body).toBe('Updates awaiting your review: pkg1, pkg2');
   });
 
   it('includes finding counts only when there are findings', async () => {
-    const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const { service, broadcast } = createService();
     const mrs = [
       mrFixture(1, { scanFindings: [{ ruleId: 'a' }] as never }),
       mrFixture(2),
@@ -924,99 +916,89 @@ describe('GitlabMergeRequestService.new-MR push notifications', () => {
 
     await notificationAccess(service).notifySubscribers(mrs);
 
-    const payload = JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string) as {
-      notification: { body: string };
-    };
+    const payload = broadcast.mock.calls[0][0] as { notification: { body: string } };
     expect(payload.notification.body).toBe('Updates awaiting your review: pkg1 (1 finding), pkg2, pkg3 (3 findings)');
   });
 
   it('sends no notification for MRs without a parseable package name', async () => {
-    const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const { service, broadcast } = createService();
     const access = notificationAccess(service);
 
     await access.notifySubscribers([
       mrFixture(1, { title: 'chore(update): pkg1' }),
       mrFixture(2, { title: 'WIP: random title without a version bump' }),
     ]);
-    expect(sendNotification).toHaveBeenCalledTimes(1);
-    const payload = JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string) as {
-      notification: { body: string };
-    };
+    expect(broadcast).toHaveBeenCalledTimes(1);
+    const payload = broadcast.mock.calls[0][0] as { notification: { body: string } };
     expect(payload.notification.body).toBe('Updates awaiting your review: pkg1');
     // Unparseable titles are skipped permanently, not parked for a retry.
     expect(access.pendingNotificationIids.has(2)).toBe(false);
 
     await access.notifySubscribers([mrFixture(3, { title: 'Draft: something' })]);
-    expect(sendNotification).toHaveBeenCalledTimes(1);
+    expect(broadcast).toHaveBeenCalledTimes(1);
   });
 
   it('parks MRs whose diffs are unavailable instead of notifying', async () => {
-    const { service } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const { service, broadcast } = createService();
     const access = notificationAccess(service);
 
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never })]);
 
-    expect(sendNotification).not.toHaveBeenCalled();
+    expect(broadcast).not.toHaveBeenCalled();
     expect(access.pendingNotificationIids.has(7)).toBe(true);
   });
 
   it('flushes parked MRs once their diffs become available and clears the park', async () => {
-    const { service, cacheGet } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const { service, cacheGet, broadcast } = createService();
     const access = notificationAccess(service);
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never })]);
     vi.mocked(cacheGet).mockResolvedValue([mrFixture(7)]);
 
     await access.flushDeferredNotifications();
 
-    expect(sendNotification).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string)).toMatchObject({
+    expect(broadcast).toHaveBeenCalledTimes(1);
+    expect(broadcast.mock.calls[0][0]).toMatchObject({
       notification: { body: 'Updates awaiting your review: pkg7' },
     });
     expect(access.pendingNotificationIids.size).toBe(0);
   });
 
   it('flush keeps parking while the diffs remain unavailable', async () => {
-    const { service, cacheGet } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const { service, cacheGet, broadcast } = createService();
     const access = notificationAccess(service);
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never }), mrFixture(9, { diffs: [] as never })]);
     vi.mocked(cacheGet).mockResolvedValue([mrFixture(7, { diffs: [] as never }), mrFixture(9, { diffs: [] as never })]);
 
     await access.flushDeferredNotifications();
 
-    expect(sendNotification).not.toHaveBeenCalled();
+    expect(broadcast).not.toHaveBeenCalled();
     expect([...access.pendingNotificationIids]).toEqual([7, 9]);
   });
 
   it('flush notifies only the parked MRs whose diffs arrived, keeping the rest parked', async () => {
-    const { service, cacheGet } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const { service, cacheGet, broadcast } = createService();
     const access = notificationAccess(service);
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never }), mrFixture(9, { diffs: [] as never })]);
     vi.mocked(cacheGet).mockResolvedValue([mrFixture(7, { diffs: [] as never }), mrFixture(9)]);
 
     await access.flushDeferredNotifications();
 
-    expect(sendNotification).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(vi.mocked(sendNotification).mock.calls[0][1] as string)).toMatchObject({
+    expect(broadcast).toHaveBeenCalledTimes(1);
+    expect(broadcast.mock.calls[0][0]).toMatchObject({
       notification: { body: 'Updates awaiting your review: pkg9' },
     });
     expect([...access.pendingNotificationIids]).toEqual([7]);
   });
 
   it('flush drops parked MRs that are no longer open', async () => {
-    const { service, cacheGet } = createService({}, undefined, undefined, [{ endpoint: 'https://fcm.test/a' }]);
-    vi.mocked(sendNotification).mockResolvedValue({ statusCode: 200, body: '', headers: {} });
+    const { service, cacheGet, broadcast } = createService();
     const access = notificationAccess(service);
     await access.notifySubscribers([mrFixture(7, { diffs: [] as never })]);
     vi.mocked(cacheGet).mockResolvedValue([]);
 
     await access.flushDeferredNotifications();
 
-    expect(sendNotification).not.toHaveBeenCalled();
+    expect(broadcast).not.toHaveBeenCalled();
     expect(access.pendingNotificationIids.size).toBe(0);
   });
 });

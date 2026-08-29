@@ -25,20 +25,13 @@
     <span class="auth-avatar">
       @if (user(); as user) {
         @if (user.image) {
-          <a
-            class="inline-flex items-center"
-            [href]="gitlabProfileUrl()"
-            target="_blank"
-            rel="noopener noreferrer"
-            pTooltip="View GitLab profile"
-            tooltipPosition="left"
-          >
+          <a class="inline-flex items-center" routerLink="/settings" pTooltip="Open settings" tooltipPosition="left">
             <p-avatar
               [image]="avatarUrl()"
               [label]="avatarUrl() ? undefined : avatarLabel()"
               (onImageError)="onAvatarError()"
               shape="circle"
-              pTooltip="View GitLab profile"
+              pTooltip="Open settings"
               tooltipPosition="left"
             />
           </a>

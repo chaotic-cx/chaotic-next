@@ -114,24 +114,6 @@ describe('BuildFailureNotifierService', () => {
     expect(broadcast).not.toHaveBeenCalled();
   });
 
-  it('persists tags but does not notify when notifications are disabled', async () => {
-    vi.mocked(scanBuildLogForCause).mockReturnValue({
-      id: 'linker-error',
-      label: 'Linker error',
-      tags: ['link', 'compile'],
-      snippet: 'collect2: error: ld returned 1 exit status',
-    });
-    vi.mocked(configService.get).mockReturnValue(false);
-
-    await service.handleFailedBuild(failedBuild());
-
-    expect(buildRepository.update).toHaveBeenCalledWith(
-      { logUrl: 'https://builds.garudalinux.org/logs/logs.html?timestamp=1724300000000&id=spotdl' },
-      { failureTags: ['link', 'compile'] },
-    );
-    expect(broadcast).not.toHaveBeenCalled();
-  });
-
   it('leaves the tags empty when no known cause matches', async () => {
     vi.mocked(scanBuildLogForCause).mockReturnValue(null);
 
