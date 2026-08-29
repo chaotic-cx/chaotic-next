@@ -1,13 +1,13 @@
-import helmet from '@fastify/helmet';
-import { provideSwagger } from './api/setup-swagger';
-import { AppModule } from './app.module';
-import { checkEnvironment } from './utils/functions';
 import { CAUR_ALLOWED_CORS } from '@chaotic-next/shared-lib';
-import { Logger, type INestApplication } from '@nestjs/common';
+import helmet from '@fastify/helmet';
+import { type INestApplication, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Logger as PinoLogger } from 'nestjs-pino';
+import { provideSwagger } from './api/setup-swagger';
+import { AppModule, ObserveInstrument } from './app.module';
+import { checkEnvironment } from './utils/functions';
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -20,6 +20,7 @@ async function bootstrap(): Promise<void> {
   const fastifyAdapter = new FastifyAdapter(trustProxy === undefined ? undefined : { trustProxy });
   const app: INestApplication = await NestFactory.create<NestFastifyApplication>(AppModule, fastifyAdapter, {
     bufferLogs: true,
+    instrument: ObserveInstrument,
   });
   app.useLogger(app.get(PinoLogger));
   app.enableShutdownHooks();
