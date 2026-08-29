@@ -1,14 +1,14 @@
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 import {
   extractArray,
   isReputable,
-  parsePkgbuild,
   type ParsedPkgbuild,
+  parsePkgbuild,
   type SourceEntry,
   unquote,
   VARIABLE_REFERENCE,
 } from '../pkgbuild';
 import { type Rule, type RuleHit } from './rule';
-import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 const GENERIC_FILE_HOST_SUFFIXES = [
   'anonfiles.com',
@@ -70,13 +70,11 @@ const MAKEPKG_METADATA_VARS = new Set(['pkgname', 'pkgbase', 'pkgver', 'pkgrel',
 
 /** True when every unresolved `$` in a source entry references a reserved metadata variable. */
 function onlyReservedMetadataRemain(raw: string): boolean {
-  return (
-    raw
-      .replace(VARIABLE_REFERENCE, (whole, bracedName: string, _, bareName: string) =>
-        MAKEPKG_METADATA_VARS.has(bracedName ?? bareName) ? '' : whole,
-      )
-      .includes('$') === false
-  );
+  return !raw
+    .replace(VARIABLE_REFERENCE, (whole, bracedName: string, unused, bareName: string) =>
+      MAKEPKG_METADATA_VARS.has(bracedName ?? bareName) ? '' : whole,
+    )
+    .includes('$');
 }
 
 /** Ordered strongest-first, so the first array present decides the verdict. */

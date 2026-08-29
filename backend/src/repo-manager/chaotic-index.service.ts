@@ -12,7 +12,7 @@ import { ArchMirrorService } from './arch-mirror.service';
 import { saveInBatches } from './save';
 import { SignalScanService } from './scan';
 
-export const CHAOTIC_CDN_DATABASE_URL = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/chaotic-aur.db';
+export const CHAOTIC_DATABASE_URL = 'https://builds.garudalinux.org/repos/chaotic-aur/x86_64/chaotic-aur.db';
 
 @Injectable()
 export class ChaoticIndexService {
@@ -32,7 +32,7 @@ export class ChaoticIndexService {
    * database file (e.g. `<repo>.files`); archives are fetched from the same
    * directory. Skips packages already analyzed for their current version.
    */
-  async indexChaoticRepo(dbUrl: string = CHAOTIC_CDN_DATABASE_URL): Promise<IndexResult> {
+  async indexChaoticRepo(dbUrl: string = CHAOTIC_DATABASE_URL): Promise<IndexResult> {
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-index-'));
     this.pino.info({ dbUrl }, 'Started indexing Chaotic repo');
     try {
@@ -117,9 +117,15 @@ export class ChaoticIndexService {
       this.pino.debug('Done pulling all Chaotic-AUR databases');
       const workDirs: RepoWorkDir[] = [];
       for (const download of downloads) {
-        if (download.status === 'fulfilled' && download.value) {
-          workDirs.push(download.value);
+        if (download.status === 'rejected') {
+          throw download.reason;
         }
+        // A missing database would make the inactive pass below deactivate the
+        // whole repo, so an incomplete pull must abort the update.
+        if (!download.value) {
+          throw new Error(`Failed to pull database for one of: ${repoNames.join(', ')}`);
+        }
+        workDirs.push(download.value);
       }
       const currentChaoticVersions: ParsedPackage[] = await this.archMirror.parsePacmanDatabases(workDirs);
 

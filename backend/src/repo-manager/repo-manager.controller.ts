@@ -1,21 +1,16 @@
-import { schemaResponse, schemaResponseArray } from '../api/response-schema';
-import { auth } from '../auth/auth';
-import { userGroupsOf } from '../auth/gitlab-groups';
-import { RepoManagerService } from './repo-manager.service';
-import { type DependencyEdge } from './signal';
 import {
   BrokenPackageReport,
   brokenPackageReportSchema,
+  type BrokenPackagesQueryDto,
   brokenPackagesQuerySchema,
+  type BumpPackagesBodyDto,
   bumpPackagesBodySchema,
+  type BumpPackagesResult,
   bumpPackagesResultSchema,
   dependencyEdgeSchema,
   PackageRebuildTriggerSources,
   packageRebuildTriggerSourcesSchema,
   Paginated,
-  type BrokenPackagesQueryDto,
-  type BumpPackagesBodyDto,
-  type BumpPackagesResult,
 } from '@chaotic-next/shared-lib';
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
@@ -24,25 +19,38 @@ import {
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
-  ApiParam,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { schemaResponse, schemaResponseArray } from '../api/response-schema';
+import { auth } from '../auth/auth';
+import { userGroupsOf } from '../auth/gitlab-groups';
+import { RepoManagerService } from './repo-manager.service';
+import { type DependencyEdge } from './signal';
 
 @ApiTags('repo')
 @ApiCookieAuth('better-auth.session_token')
 @UseGuards(AuthGuard)
 @Controller('repo')
 export class RepoManagerController {
-  constructor(private repoManager: RepoManagerService) {}
+  constructor(
+    private repoManager: RepoManagerService,
+    @InjectPinoLogger(RepoManagerController.name) private readonly pino: PinoLogger,
+  ) {}
+
+  private runInBackground(action: string, job: Promise<unknown>): void {
+    void job.catch((err: unknown) => this.pino.error({ err }, `Background ${action} failed`));
+  }
 
   @Get('run')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Trigger a repo manager run.' })
   @ApiNoContentResponse({ description: 'Repo manager run triggered.' })
   run(): void {
-    void this.repoManager.run();
+    this.runInBackground('repo run', this.repoManager.run());
   }
 
   @Get('signal-scan')
@@ -50,7 +58,7 @@ export class RepoManagerController {
   @ApiOperation({ summary: 'Trigger a signal scan of the changed Arch packages.' })
   @ApiNoContentResponse({ description: 'Signal scan triggered.' })
   triggerSignalScan(): void {
-    void this.repoManager.triggerSignalScan();
+    this.runInBackground('signal scan', this.repoManager.triggerSignalScan());
   }
 
   @Get('broken')
@@ -83,7 +91,7 @@ export class RepoManagerController {
   @ApiOperation({ summary: 'Index the full Arch mirror into the ELF signal index.' })
   @ApiAcceptedResponse({ description: 'Full Arch mirror index triggered.' })
   indexArchMirror(): void {
-    void this.repoManager.indexArchMirror();
+    this.runInBackground('Arch mirror index', this.repoManager.indexArchMirror());
   }
 
   @Post('index/chaotic')
@@ -91,7 +99,7 @@ export class RepoManagerController {
   @ApiOperation({ summary: 'Index the full Chaotic-AUR repo (CDN mirror) into the ELF signal index.' })
   @ApiAcceptedResponse({ description: 'Full Chaotic repo index triggered.' })
   indexChaoticRepo(): void {
-    void this.repoManager.indexChaoticRepo();
+    this.runInBackground('Chaotic repo index', this.repoManager.indexChaoticRepo());
   }
 
   @Get('dependencies')
@@ -120,6 +128,6 @@ export class RepoManagerController {
   @ApiOperation({ summary: 'Update Chaotic-AUR database versions.' })
   @ApiNoContentResponse({ description: 'Chaotic-AUR database update triggered.' })
   updateChaoticVersions(): void {
-    void this.repoManager.updateChaoticVersions();
+    this.runInBackground('version update', this.repoManager.updateChaoticVersions());
   }
 }
