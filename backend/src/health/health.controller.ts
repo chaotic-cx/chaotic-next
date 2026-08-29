@@ -5,9 +5,10 @@ import { RedisHealthIndicator } from './redis.health';
 import { healthCheckResultSchema } from '@chaotic-next/shared-lib';
 import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { getHeapStatistics } from 'node:v8';
 
-/** Liveness fails when RSS exceeds this. */
-const MEMORY_RSS_LIMIT_BYTES = 1024 * 2 ** 20; /* 1024 MB */
+/** Liveness fails when used heap exceeds this share of the configured heap limit. */
+const HEAP_PRESSURE_LIMIT_RATIO = 0.9;
 
 class VersionDto {
   @ApiProperty({ description: 'Application version' }) version!: string;
@@ -15,10 +16,10 @@ class VersionDto {
 
 type HealthCheck = { key: string; run: () => Promise<HealthIndicatorResult> };
 
-function checkRss(key: string): HealthIndicatorResult {
-  const rss = process.memoryUsage().rss;
-  if (rss > MEMORY_RSS_LIMIT_BYTES) {
-    throw new Error(`RSS memory usage exceeds the limit (${rss} > ${MEMORY_RSS_LIMIT_BYTES} bytes)`);
+function checkHeap(key: string): HealthIndicatorResult {
+  const { heap_size_limit: limit, used_heap_size: used } = getHeapStatistics();
+  if (used > limit * HEAP_PRESSURE_LIMIT_RATIO) {
+    throw new Error(`Heap usage exceeds ${HEAP_PRESSURE_LIMIT_RATIO * 100}% of the limit (${used} > ${limit} bytes)`);
   }
   return { [key]: { status: 'up' } };
 }
@@ -65,12 +66,12 @@ export class HealthController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Liveness: process up, DB reachable, memory sane.' })
+  @ApiOperation({ summary: 'Liveness: process up, DB reachable, heap pressure sane.' })
   @ApiOkResponse({ description: 'Health check result', schema: schemaResponse(healthCheckResultSchema).schema })
   async check(): Promise<HealthCheckResult> {
     const result = await this.runChecks([
       { key: 'db', run: () => this.db.pingCheck('db') },
-      { key: 'mem_rss', run: async () => checkRss('mem_rss') },
+      { key: 'heap', run: async () => checkHeap('heap') },
     ]);
     if (result.status === 'error') {
       throw new HttpException(result, HttpStatus.SERVICE_UNAVAILABLE);
