@@ -3,7 +3,7 @@ import IORedis from 'ioredis';
 import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import { BuildStatus } from '../types/types';
-import { CACHE_TTL_MS, MAX_AMOUNT, MAX_DAYS_PER_DAY_CHART, MAX_DAYS_WINDOW, MAX_OFFSET } from '../utils/constants';
+import { CACHE_TTL_MS, MAX_AMOUNT, MAX_DAYS_WINDOW, MAX_OFFSET } from '../utils/constants';
 import { clampInt, generateNodeId, nDaysInPast, whitelistSort } from '../utils/functions';
 import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
 import { BuildClassSyncService } from './build-class-sync.service';
@@ -386,7 +386,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('Package not found');
     }
 
-    const amount = clampInt(options.amount, 1, MAX_DAYS_PER_DAY_CHART);
+    const amount = clampInt(options.amount, 1, MAX_DAYS_WINDOW);
     const offset = clampInt(options.offset, 0, MAX_OFFSET);
 
     return this.buildRepository

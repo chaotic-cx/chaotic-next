@@ -4,7 +4,7 @@ import { type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-import { Logger as PinoLogger } from 'nestjs-pino';
+import { Logger, PinoLogger } from 'nestjs-pino';
 import { provideSwagger } from './api/setup-swagger';
 import { AppModule, ObserveInstrument } from './app.module';
 import { checkEnvironment } from './utils/functions';
@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
     bufferLogs: true,
     instrument: ObserveInstrument,
   });
-  app.useLogger(app.get(PinoLogger));
+  app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
 
   const configService: ConfigService = app.get<ConfigService>(ConfigService);

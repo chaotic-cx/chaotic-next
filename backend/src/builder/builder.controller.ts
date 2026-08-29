@@ -230,7 +230,7 @@ export class BuilderController {
   @Get('count/:pkgname/:amount')
   @ApiOperation({ summary: 'Get build count for a package per day.' })
   @ApiParam({ name: 'pkgname', description: 'Package name' })
-  @ApiParam({ name: 'amount', description: 'Amount' })
+  @ApiParam({ name: 'amount', description: 'Lookback window in days' })
   @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
   @ApiOkResponse({
     description: 'Build count for package per day',
@@ -238,7 +238,7 @@ export class BuilderController {
   })
   async getBuildsCountByPkgnamePerDay(
     @Param('pkgname') pkgname: string,
-    @Param('amount', { schema: amountParamSchema.default(50) }) amount: number,
+    @Param('amount', { schema: daysParamSchema.default(50) }) amount: number,
     @Query('offset', { schema: offsetQuerySchema.default(0) }) offset: number,
   ): Promise<DayRepoCount[]> {
     return await this.builderService.getBuildsCountByPkgnamePerDay({ pkgname, amount, offset });
