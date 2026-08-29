@@ -1,3 +1,7 @@
+import { typeormAdapter } from '@hedystia/better-auth-typeorm';
+import { betterAuth } from 'better-auth';
+import { genericOAuth } from 'better-auth/plugins/generic-oauth';
+import { DataSource, type DataSourceOptions } from 'typeorm';
 import { pgConnectionOptions } from '../data/pg-options';
 import { Account } from './generated/entities/Account';
 import { Session } from './generated/entities/Session';
@@ -10,10 +14,6 @@ import { CreateVerification1786779403609 } from './generated/migrations/17867794
 import { AddUserGroups1787411324082 } from './generated/migrations/1787411324082-add-user-groups';
 import { AddAccountIssuer1787942324294 } from './generated/migrations/1787942324294-add-account-issuer';
 import { GITLAB_LOGIN_GROUPS } from './gitlab-groups';
-import { typeormAdapter } from '@hedystia/better-auth-typeorm';
-import { betterAuth } from 'better-auth';
-import { genericOAuth } from 'better-auth/plugins/generic-oauth';
-import { DataSource, type DataSourceOptions } from 'typeorm';
 
 interface GitLabProfile {
   id: number;
@@ -195,3 +195,9 @@ export const auth = betterAuth({
   },
   plugins,
 });
+
+export async function initializeAuthDataSource(): Promise<void> {
+  if (!authDataSource.isInitialized) {
+    await authDataSource.initialize();
+  }
+}
