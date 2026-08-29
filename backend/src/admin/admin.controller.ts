@@ -91,6 +91,16 @@ export class AdminController {
     void this.buildClassSync.rescanAllPackages();
   }
 
+  @Post('recompute-signal-derivations')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({
+    summary: 'Rebuild the signal directory index, every pluginOf derivation, and the broken flags.',
+  })
+  @ApiAcceptedResponse({ description: 'Signal derivation recompute triggered; runs in the background.' })
+  recomputeSignalDerivations(): void {
+    this.adminService.startSignalDerivationRecompute();
+  }
+
   @Get('packages')
   @ApiOperation({ summary: 'List packages (admin)' })
   @ApiOkResponse({ description: 'Paginated list of packages', schema: schemaResponse(packageSchema).schema })

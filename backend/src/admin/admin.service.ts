@@ -9,6 +9,7 @@ import {
   PackageElfAnalysis,
 } from '../repo-manager/repo-manager.entity';
 import { SignalScanService } from '../repo-manager/scan';
+import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from '../repo-manager/signal';
 import { encryptAes, errorMessage } from '../utils/functions';
 import { paginate, resolvePagination } from '../utils/pagination';
 import {
@@ -579,6 +580,36 @@ export class AdminService {
       failed: [...job.failed],
     };
   }
+
+  /**
+   * Rebuild all signal state that is derived from stored analyses: directory
+   * index, pluginOf (both namespaces), and broken flags.
+   */
+  startSignalDerivationRecompute(): void {
+    if (this.signalRecomputeRunning) {
+      throw new ConflictException('A signal derivation recompute is already running', {
+        errorCode: 'RECOMPUTE_IN_PROGRESS',
+      });
+    }
+    this.signalRecomputeRunning = true;
+    void this.runSignalDerivationRecompute();
+  }
+
+  private async runSignalDerivationRecompute(): Promise<void> {
+    try {
+      this.signalScanService.invalidateDirectoryIndex();
+      await this.signalScanService.recomputePluginOfPkgType(ARCH_PKG_TYPE);
+      await this.signalScanService.recomputePluginOfPkgType(CHAOTIC_PKG_TYPE);
+      await this.signalScanService.recomputeBroken();
+      this.pino.info('Signal derivations recomputed');
+    } catch (err: unknown) {
+      this.pino.error({ err }, 'Signal derivation recompute failed');
+    } finally {
+      this.signalRecomputeRunning = false;
+    }
+  }
+
+  private signalRecomputeRunning = false;
 
   private rescanJobs = new Map<string, RescanJobRecord>();
   private activeRescanJobId: string | null = null;

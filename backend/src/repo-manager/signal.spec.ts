@@ -399,32 +399,77 @@ describe('derivePluginOf', () => {
     expect(plugins).toEqual(['a42']);
   });
 
-  it('applies threshold filtering for packages with high pluginOf but minimal file/directory ownership', () => {
-    const owners = Array.from({ length: 150 }, (ignored, index) => `a${index}`);
-    const names = new Map(owners.map((owner) => [owner, `owner-${owner.slice(1)}`]));
-
-    // Create a scenario where many packages own the same directory, triggering high pluginOf count
-    const direct = mk({ 'usr/lib/plugins': owners });
-    const ancestors = mk({});
-
-    // But the files don't actually use those directories, and the package owns few directories
-    const files = ['usr/lib/plugin.so', 'usr/bin/exec', 'etc/config.conf'];
-
+  it('derives no plugin owners for the real wxmaxima package (2026-08-29 bump-storm regression)', () => {
+    // The real wxmaxima file list from prod. Its pre-fix pluginOf held 5,186
+    // owners (kicad, deepin-file-manager, ...) from a corrupted directory
+    // index, which mass-triggered false PLUGIN bumps on 2026-08-29. Against a
+    // healthy index, none of these paths name another package's namespace.
+    const files = [
+      'usr/bin/wxmaxima',
+      'usr/bin/wxmxdiff',
+      'usr/share/applications/io.github.wxmaxima_developers.wxMaxima.desktop',
+      'usr/share/bash-completion/completions/wxmaxima',
+      'usr/share/doc/wxmaxima/README.md',
+      'usr/share/doc/wxmaxima/wxmaxima.html',
+      'usr/share/icons/hicolor/scalable/apps/io.github.wxmaxima_developers.wxMaxima.svg',
+      'usr/share/locale/de/LC_MESSAGES/wxMaxima.mo',
+      'usr/share/man/man1/wxmaxima.1.gz',
+      'usr/share/metainfo/io.github.wxmaxima_developers.wxMaxima.appdata.xml',
+      'usr/share/mime/packages/x-wxmathml.xml',
+      'usr/share/pixmaps/wxmaxima-32.xpm',
+      'usr/share/wxMaxima/io.github.wxmaxima_developers.wxMaxima.svg',
+    ];
+    const kicad = 'a5041';
+    const deepin = 'a1490';
+    const direct = mk({ 'usr/share/kicad': [kicad], 'usr/share/deepin-file-manager/tools': [deepin] });
+    const ancestors = mk({
+      'usr/share/kicad': [kicad],
+      'usr/share/deepin-file-manager/tools': [deepin],
+      'usr/share/deepin-file-manager': [deepin],
+    });
     const plugins = derivePluginOf(
       files,
       {
         direct,
         ancestors,
-        keyToPkgname: names,
+        keyToPkgname: new Map([
+          [kicad, 'kicad'],
+          [deepin, 'deepin-file-manager'],
+        ]),
         keyToFiles: new Map(),
       },
-      { hasCompiledCode: true },
+      { consumerPkgname: 'wxmaxima', hasCompiledCode: true },
     );
+    expect(plugins).toEqual([]);
+  });
 
-    // Should apply threshold filtering since 150 owners > 100 threshold but only 3 files
-    expect(plugins.length).toBe(0);
-    // The threshold filtering should completely filter out all pluginOf entries because
-    // the files don't match the owner directories
+  it('keeps the real kwin owner for better-blur when polluted owners push the set past the cap', () => {
+    // Real better-blur files and real kwin ownership. A corrupted index adds
+    // 150 stale duplicate kwin owners on kwin's real ancestor directory, the
+    // shape that mass-produced phantom pluginOf entries before the fix. The
+    // cap must reduce the set to the one directly-evidenced owner.
+    const files = [
+      'usr/lib/qt6/plugins/kwin/effects/configs/kwin_better_blur_dx_config.so',
+      'usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so',
+    ];
+    const stale = Array.from({ length: 150 }, (ignored, index) => `stale${index}`);
+    const direct = mk({ 'usr/lib/qt6/plugins/kwin/effects/configs': [KWIN] });
+    const ancestors = mk({
+      'usr/lib/qt6/plugins/kwin/effects/configs': [KWIN, ...stale],
+      'usr/lib/qt6/plugins/kwin/effects': [KWIN, ...stale],
+      'usr/lib/qt6/plugins/kwin': [KWIN],
+    });
+    const names = new Map<string, string>([[KWIN, 'kwin']]);
+    for (const owner of stale) names.set(owner, 'kwin');
+    const plugins = derivePluginOf(
+      files,
+      { direct, ancestors, keyToPkgname: names, keyToFiles: new Map() },
+      {
+        consumerPkgname: 'better-blur',
+        hasCompiledCode: true,
+      },
+    );
+    expect(plugins).toEqual([KWIN]);
   });
 });
 

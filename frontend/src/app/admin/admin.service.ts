@@ -545,6 +545,14 @@ export class AdminService {
     );
   }
 
+  async recomputeSignalDerivations(): Promise<void> {
+    await this.runMutation(
+      () => this.http.post(`${this.backendUrl}/admin/recompute-signal-derivations`, {}),
+      'Signal derivation recompute started. It runs in the background and can take a while.',
+      'Could not trigger the signal derivation recompute.',
+    );
+  }
+
   async rescanPackage(pkgname: string, pkgType: PkgType): Promise<void> {
     try {
       const jobId = await this.startRescan([{ pkgname, pkgType }]);

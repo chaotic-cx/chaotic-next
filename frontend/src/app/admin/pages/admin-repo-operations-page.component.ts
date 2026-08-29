@@ -75,6 +75,16 @@ import { createAdminPagination, type StatefulTableRef } from '../admin-url-sync'
               pTooltip="Re-read the build class of every active package from its .CI/config; runs in the background"
               tooltipPosition="bottom"
             />
+            <p-button
+              (onClick)="confirmRecomputeSignalDerivations()"
+              label="Recompute signal derivations"
+              icon="pi pi-replay"
+              severity="secondary"
+              size="small"
+              styleClass="w-full sm:w-auto"
+              pTooltip="Rebuild the signal directory index, every pluginOf derivation, and the broken flags from stored analyses; runs in the background, no re-scanning"
+              tooltipPosition="bottom"
+            />
           </div>
         </div>
       </p-panel>
@@ -205,6 +215,18 @@ export class AdminRepoOperationsPageComponent {
       acceptLabel: 'Rescan',
       rejectLabel: 'Cancel',
       accept: () => void this.service.rescanBuildClasses(),
+    });
+  }
+
+  confirmRecomputeSignalDerivations(): void {
+    this.confirmationService.confirm({
+      message:
+        'Rebuild the signal directory index, every pluginOf derivation, and the broken flags from the stored analyses? ' +
+        'No archives are re-scanned. The job runs in the background.',
+      header: 'Recompute signal derivations',
+      acceptLabel: 'Recompute',
+      rejectLabel: 'Cancel',
+      accept: () => void this.service.recomputeSignalDerivations(),
     });
   }
 
