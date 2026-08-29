@@ -41,8 +41,6 @@ function isAllowedPushEndpoint(sub: { endpoint: string }): boolean {
 
 @Injectable()
 export class NotificationService {
-  private readonly legacySubscribersFilePath = 'config/notification-subscriber.json';
-
   constructor(
     @InjectPinoLogger(NotificationService.name) private readonly pino: PinoLogger,
     @InjectRepository(NotificationSubscription)
@@ -109,6 +107,10 @@ export class NotificationService {
 
   async getSubscriptions(): Promise<NotificationSubscription[]> {
     return this.subscriptionRepository.find();
+  }
+
+  async hasSubscription(userId: string): Promise<boolean> {
+    return (await this.subscriptionRepository.count({ where: { userId } })) > 0;
   }
 
   private async upsertSubscription(sub: PushSubscriptionBodyDto, userId: string): Promise<void> {

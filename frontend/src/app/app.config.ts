@@ -4,6 +4,7 @@ import {
   inject,
   isDevMode,
   LOCALE_ID,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
@@ -27,6 +28,7 @@ import { routes } from './app.routes';
 import { provideAuthInitializer } from './auth/auth-initializer';
 import { provideBackendStatusInitializer } from './backend-status/backend-status-initializer';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
+import { NotificationService } from './notification/notification.service';
 import { SelectivePreloadStrategy } from './preload.strategy';
 
 /** Returns the data of the deepest matched route of a snapshot (root has empty data). */
@@ -127,6 +129,9 @@ export const appConfig: ApplicationConfig = {
       registrationStrategy: 'registerWhenStable:30000',
     }),
     provideZonelessChangeDetection(),
+    provideAppInitializer(() => {
+      inject(NotificationService);
+    }),
     { provide: APP_CONFIG, useValue: environment },
     { provide: LOCALE_ID, useValue: navigator.language },
     { provide: HTTP_INTERCEPTORS, useClass: HttpRequestInterceptor, multi: true },

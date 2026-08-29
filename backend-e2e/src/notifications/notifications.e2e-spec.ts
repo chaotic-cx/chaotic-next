@@ -123,6 +123,28 @@ describe('Notifications endpoint (e2e, real PostgreSQL)', () => {
     });
   });
 
+  describe('GET /notifications/subscriptions/me', () => {
+    it('reports no subscription for a user without rows', async () => {
+      const res = await e2e.inject<unknown>({ method: 'GET', url: '/notifications/subscriptions/me' });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual({ subscribed: false });
+    });
+
+    it('reports a subscription for the session user', async () => {
+      await e2e.seedNotificationSubscription({
+        endpoint: 'https://fcm.googleapis.com/fcm/send/test-status',
+        p256dh: 'key',
+        auth: 'auth',
+      });
+
+      const res = await e2e.inject<unknown>({ method: 'GET', url: '/notifications/subscriptions/me' });
+
+      expect(res.statusCode).toBe(200);
+      expect(await res.json()).toEqual({ subscribed: true });
+    });
+  });
+
   describe('GET/PUT /notifications/preferences', () => {
     it('defaults every type to enabled for a user without rows', async () => {
       const res = await e2e.inject<unknown>({ method: 'GET', url: '/notifications/preferences' });
