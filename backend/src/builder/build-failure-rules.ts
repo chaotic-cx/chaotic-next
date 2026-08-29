@@ -5,8 +5,8 @@
  * tail that almost every failed log ends with.
  *
  * A rule that carries the `silent` tag must not trigger a notification:
- * those failures resolve themselves (for example a newly introduced dependency
- * that the repository has not packaged yet).
+ * those failures resolve themselves (for example a newly introduced checksum
+ * problem that a maintainer fixes on the package source).
  * A rule that carries the `transient` tag must not trigger a notification
  * either: those failures usually pass on the next retry.
  */
@@ -48,7 +48,7 @@ export const BUILD_FAILURE_RULES: readonly BuildFailureRule[] = [
     id: 'missing-dependency',
     label: 'Missing dependency',
     regex: /error: target not found: (.+)/,
-    tags: ['dependency', 'silent'],
+    tags: ['dependency'],
   },
   {
     id: 'missing-python-module',
@@ -220,6 +220,8 @@ export interface BuildFailureScan {
   label: string;
   tags: readonly BuildFailureTag[];
   snippet: string;
+  /** Short detail from the first capture group of the rule, when it has one. */
+  detail?: string;
 }
 
 export function isNotifiable(scan: BuildFailureScan): boolean {
@@ -228,6 +230,7 @@ export function isNotifiable(scan: BuildFailureScan): boolean {
 }
 
 const MAX_SNIPPET_LENGTH = 200;
+const MAX_DETAIL_LENGTH = 120;
 
 // ANSI color codes plus the OSC sequences (e.g. `\x1B]3008;...\x07`) that
 // hyperlinks render as in the raw log.
@@ -253,6 +256,16 @@ function snippetFor(cleanLog: string, rule: BuildFailureRule, match: RegExpMatch
   return snippet.length > MAX_SNIPPET_LENGTH ? `${snippet.slice(0, MAX_SNIPPET_LENGTH - 1)}…` : snippet;
 }
 
+/** Rules with alternations capture in different groups; use the first group that matched. */
+function detailFor(match: RegExpMatchArray): string | undefined {
+  const captured = match
+    .slice(1)
+    .find((group) => group !== undefined)
+    ?.trim();
+  if (!captured) return undefined;
+  return captured.length > MAX_DETAIL_LENGTH ? `${captured.slice(0, MAX_DETAIL_LENGTH - 1)}…` : captured;
+}
+
 /**
  * Scans a raw build log for a known failure cause. Returns the first (most
  * specific) matching rule, or null when the log does not match any pattern.
@@ -267,6 +280,7 @@ export function scanBuildLogForCause(logText: string): BuildFailureScan | null {
         label: rule.label,
         tags: rule.tags,
         snippet: snippetFor(cleanLog, rule, match),
+        detail: detailFor(match),
       };
     }
   }

@@ -45,10 +45,7 @@ export async function findTyposquatFinding(
     ruleId: 'CAUR-TYPOSQUAT-NAME',
     ruleName: 'Possible impersonation of an official package',
     severity: 'warning',
-    description:
-      `Package name "${pkgName}" closely resembles official package "${match.knownName}" ` +
-      `(edit distance ${match.distance}). Impersonating well-known packages is a common ` +
-      'malware delivery trick. Make sure that the name difference is intentional.',
+    description: `Package name "${pkgName}" closely resembles official package "${match.knownName}" (edit distance ${match.distance}), a common malware impersonation trick.`,
     file: change.new_path,
     match: `pkgname=${pkgName}`,
   };

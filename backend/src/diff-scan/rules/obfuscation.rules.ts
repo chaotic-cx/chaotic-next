@@ -11,14 +11,14 @@ export const OBFUSCATION_RULES: Rule[] = [
     id: 'OBF-001',
     name: 'Base64 decoding',
     severity: 'warning',
-    description: 'Decodes base64 at runtime, which can hide what is actually being executed or written.',
+    description: 'Decodes base64 at runtime, which can hide what is actually executed.',
     pattern: /\bbase64\b[^\n]*\s(?:-d\b|--decode\b)|\bopenssl\b[^\n]*\b(?:enc|base64)\b[^\n]*\s-d\b/,
   }),
   regexRule({
     id: 'OBF-002',
     name: 'Eval of dynamic strings',
     severity: 'warning',
-    description: 'Evaluates dynamically built strings, allowing payload construction that static review cannot follow.',
+    description: 'Evaluates dynamically built strings, which static review cannot follow.',
     // `eval "depends+=(…)"` is a packaging idiom for option-dependent arrays and
     // `--eval` flags belong to interpreters, so neither counts as dynamic eval.
     pattern: /(?<![-\w])eval\b(?!\s*"?\s*(?:make|check|opt)?depends\+?=)/,
@@ -27,7 +27,7 @@ export const OBFUSCATION_RULES: Rule[] = [
     id: 'OBF-003',
     name: 'Hex-encoded payload',
     severity: 'warning',
-    description: 'Contains a long run of hex escapes, a common way to embed encoded payloads.',
+    description: 'Contains a long run of hex escapes, a common way to embed a payload.',
     pattern: /(?:\\x[0-9a-fA-F]{2}){4,}/,
   }),
   regexRule({
@@ -68,7 +68,7 @@ export const OBFUSCATION_RULES: Rule[] = [
     id: 'CAUR-BASE64-BLOB',
     name: 'Embedded base64 blob',
     severity: 'critical',
-    description: `Contains an inline base64 blob of at least ${BASE64_BLOB_LENGTH} characters, typically an embedded binary payload. Checksum updates are excluded.`,
+    description: `Contains an inline base64 blob of at least ${BASE64_BLOB_LENGTH} characters, typically an embedded binary payload.`,
     check(change) {
       if (!isInScope(change, ['code'])) return null;
       const hit = addedLines(change).find((line) => {

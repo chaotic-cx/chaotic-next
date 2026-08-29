@@ -5,8 +5,7 @@ export const CONTAINER_CLOUD_RULES: Rule[] = [
     id: 'CAUR-CLOUD-METADATA',
     name: 'Cloud metadata endpoint access',
     severity: 'critical',
-    description:
-      'Contacts the link-local instance metadata service, the standard way to steal cloud IAM credentials from a compromised host.',
+    description: 'Contacts the link-local instance metadata service to steal cloud IAM credentials.',
     pattern: /\b169\.254\.169\.254\b|\bmetadata\.google\.internal\b/,
     scopes: ['code'],
   }),
@@ -14,7 +13,7 @@ export const CONTAINER_CLOUD_RULES: Rule[] = [
     id: 'CAUR-K8S-TOKEN',
     name: 'Kubernetes service-account token access',
     severity: 'critical',
-    description: 'Reads the mounted service-account token, handing the pod RBAC identity to whoever exfiltrates it.',
+    description: 'Reads the mounted service-account token.',
     pattern: /\/var\/run\/secrets\/kubernetes\.io\/serviceaccount\b/,
     scopes: ['code'],
   }),
@@ -22,8 +21,7 @@ export const CONTAINER_CLOUD_RULES: Rule[] = [
     id: 'CAUR-CONTAINER-SOCKET',
     name: 'Container runtime socket reference',
     severity: 'warning',
-    description:
-      'References the Docker/containerd/Podman control socket; talking to it yields host-level container control. Unit definitions referencing their own socket are expected.',
+    description: 'References the Docker/containerd/Podman control socket, which yields host-level container control.',
     pattern: /\/var\/run\/docker\.sock\b|\/run\/containerd\/containerd\.sock\b|\/run\/podman\/podman\.sock\b/,
     scopes: ['code'],
   }),
@@ -31,8 +29,7 @@ export const CONTAINER_CLOUD_RULES: Rule[] = [
     id: 'CAUR-HOST-NSENTER',
     name: 'Host namespace entry via nsenter',
     severity: 'critical',
-    description:
-      'Uses nsenter against PID 1 or host /proc entries to break out into the host namespaces — a standard container-escape primitive.',
+    description: 'Uses nsenter against PID 1 or host /proc entries to escape into the host namespaces.',
     pattern: /\bnsenter\b[^#\n]*(?:\s-t\s*=?\s*1\b|\/proc\/1\/)/,
     scopes: ['code'],
   }),
@@ -40,8 +37,7 @@ export const CONTAINER_CLOUD_RULES: Rule[] = [
     id: 'CAUR-CGROUP-RELEASE',
     name: 'Cgroup release_agent escape',
     severity: 'critical',
-    description:
-      'Manipulates cgroup release_agent, the known cgroup-v1 escape that executes attacker commands on the host kernel side.',
+    description: 'Manipulates cgroup release_agent to execute commands on the host.',
     pattern: /\brelease_agent\b/,
     scopes: ['code'],
   }),

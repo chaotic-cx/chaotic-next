@@ -20,7 +20,7 @@ export const DESTRUCTIVE_RULES: Rule[] = [
     name: 'Destructive filesystem command',
     severity: 'critical',
     description:
-      'Runs a destructive command: rm with recursive force against system or home paths, recursive rm inside an install scriptlet (which runs as root on user machines), or a disk-wiping tool.',
+      'Runs a destructive command: recursive-force rm against system or home paths, recursive rm inside an install scriptlet, or a disk-wiping tool.',
     check(change) {
       if (!isInScope(change, ['code'])) return null;
       const installScript = isInScope(change, ['install']);

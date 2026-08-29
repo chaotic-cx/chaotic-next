@@ -13,15 +13,15 @@ import { isFailingStatus } from './unresolved-failures';
 const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const LOG_FETCH_TIMEOUT_MS = 20 * 1000;
 const LOG_FETCH_MAX_BYTES = 512 * 1024;
-const MAX_BODY_LENGTH = 220;
+const MAX_BODY_LENGTH = 140;
 
 interface LogRef {
   pkgname: string;
   timestamp: string;
 }
 
-function compactBody(label: string, snippet: string): string {
-  const body = `${label}: ${snippet}`;
+function toBody(scan: BuildFailureScan): string {
+  const body = scan.detail ? `${scan.label}: ${scan.detail}` : scan.label;
   return body.length > MAX_BODY_LENGTH ? `${body.slice(0, MAX_BODY_LENGTH - 1)}…` : body;
 }
 
@@ -134,7 +134,7 @@ export class BuildFailureNotifierService {
       notification: {
         title: `Build failed: ${pkgname}`,
         icon: '/android-chrome-512x512.png',
-        body: compactBody(scan.label, scan.snippet),
+        body: toBody(scan),
         data: {
           onActionClick: {
             default: {

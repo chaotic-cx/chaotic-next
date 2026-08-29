@@ -90,17 +90,62 @@ describe('BuildFailureNotifierService', () => {
     const payload = broadcast.mock.calls[0]?.[0] as NotificationPayload;
     expect(broadcast.mock.calls[0]?.[1]).toBe('build-failure');
     expect(payload.notification.title).toBe('Build failed: spotdl');
-    expect(payload.notification.body).toBe('Linker error: collect2: error: ld returned 1 exit status');
+    expect(payload.notification.body).toBe('Linker error');
     expect(payload.notification.data.onActionClick.default).toEqual({
       operation: 'navigateLastFocusedOrOpen',
       url: 'https://aur.chaotic.cx/logs/package/spotdl/1724300000000',
     });
   });
 
-  it('persists the tags of silent causes without notifying', async () => {
+  it('keeps dependency popup bodies short with the captured name', async () => {
+    vi.mocked(scanBuildLogForCause).mockReturnValue({
+      id: 'missing-python-module',
+      label: 'Missing Python module',
+      tags: ['dependency'],
+      snippet: "ModuleNotFoundError: No module named 'jinja2'",
+      detail: 'jinja2',
+    });
+
+    await service.handleFailedBuild(failedBuild());
+
+    const payload = broadcast.mock.calls[0]?.[0] as NotificationPayload;
+    expect(payload.notification.body).toBe('Missing Python module: jinja2');
+  });
+
+  it('keeps missing-dependency popup bodies short with the captured name', async () => {
     vi.mocked(scanBuildLogForCause).mockReturnValue({
       id: 'missing-dependency',
       label: 'Missing dependency',
+      tags: ['dependency'],
+      snippet: 'error: target not found: python-spotipyfree',
+      detail: 'python-spotipyfree',
+    });
+
+    await service.handleFailedBuild(failedBuild());
+
+    const payload = broadcast.mock.calls[0]?.[0] as NotificationPayload;
+    expect(payload.notification.body).toBe('Missing dependency: python-spotipyfree');
+  });
+
+  it('truncates an overlong captured detail', async () => {
+    vi.mocked(scanBuildLogForCause).mockReturnValue({
+      id: 'compiler-fatal-error',
+      label: 'Compiler error',
+      tags: ['compile'],
+      snippet: 'x'.repeat(500),
+      detail: 'x'.repeat(500),
+    });
+
+    await service.handleFailedBuild(failedBuild());
+
+    const payload = broadcast.mock.calls[0]?.[0] as NotificationPayload;
+    expect(payload.notification.body.length).toBeLessThanOrEqual(140);
+  });
+
+  it('persists the tags of silent causes without notifying', async () => {
+    vi.mocked(scanBuildLogForCause).mockReturnValue({
+      id: 'missing-dependency',
+      label: 'Unresolved AUR dependency in .SRCINFO',
       tags: ['dependency', 'silent'],
       snippet: 'error: target not found: python-spotipyfree',
     });
@@ -181,20 +226,6 @@ describe('BuildFailureNotifierService', () => {
     await service.handleFailedBuild(failedBuild());
 
     expect(broadcast).not.toHaveBeenCalled();
-  });
-
-  it('truncates an overlong notification body', async () => {
-    vi.mocked(scanBuildLogForCause).mockReturnValue({
-      id: 'compiler-fatal-error',
-      label: 'Compiler error',
-      tags: ['compile'],
-      snippet: 'x'.repeat(500),
-    });
-
-    await service.handleFailedBuild(failedBuild());
-
-    const payload = broadcast.mock.calls[0]?.[0] as NotificationPayload;
-    expect(payload.notification.body.length).toBeLessThanOrEqual(220);
   });
 });
 
