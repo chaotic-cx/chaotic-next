@@ -281,7 +281,7 @@ describe('srcinfo-dependency scanner', () => {
       );
 
       const spotapi = findings.find((finding) => finding.match === 'python-spotapi');
-      expect(spotapi?.description).toContain('via python-datastar-py');
+      expect(spotapi?.description).toBe('python-spotapi is a missing transitive dependency from python-datastar-py.');
     });
 
     it('stops walking when it reaches a dependency present locally', async () => {
@@ -392,11 +392,14 @@ describe('srcinfo-dependency scanner', () => {
       expect(matches).not.toContain('python-readerwriterlock');
 
       const tlsClient = findings.find((finding) => finding.match === 'python-tls-client');
-      expect(tlsClient?.description).toContain('via python-spotipyfree -> python-spotapi');
-      expect(tlsClient?.description).toContain("AUR dependency tree of 'python-spotipyfree'");
+      expect(tlsClient?.description).toBe(
+        'python-tls-client is a missing transitive dependency from python-spotipyfree -> python-spotapi.',
+      );
       expect(tlsClient?.ruleName).toBe('Transitive AUR dependency in .SRCINFO');
       const libTlsClient = findings.find((finding) => finding.match === 'lib-tls-client');
-      expect(libTlsClient?.description).toContain('via python-spotipyfree -> python-spotapi -> python-tls-client');
+      expect(libTlsClient?.description).toBe(
+        'lib-tls-client is a missing transitive dependency from python-spotipyfree -> python-spotapi -> python-tls-client.',
+      );
     });
   });
 });

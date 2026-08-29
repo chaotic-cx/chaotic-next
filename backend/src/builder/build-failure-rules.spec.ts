@@ -23,11 +23,37 @@ describe('stripAnsi', () => {
 });
 
 describe('scanBuildLogForCause', () => {
-  it('detects a missing pacman dependency and marks it silent', () => {
+  it('detects a missing pacman dependency and captures its name', () => {
     const scan = scanBuildLogForCause(failedBuildLog('')) as BuildFailureScan;
     expect(scan.id).toBe('missing-dependency');
-    expect(scan.tags).toContain('silent');
+    expect(scan.detail).toBe('python-spotipyfree');
     expect(scan.snippet).toContain('python-spotipyfree');
+  });
+
+  it('extracts the status code from a download HTTP error', () => {
+    const scan = scanBuildLogForCause('curl: (22) The requested URL returned error: 404') as BuildFailureScan;
+    expect(scan.id).toBe('download-http-error');
+    expect(scan.detail).toBe('404');
+  });
+
+  it('extracts the file path from both packaging failure variants', () => {
+    const install = scanBuildLogForCause(
+      "/usr/bin/install: cannot stat '/build/foo.conf': No such file or directory",
+    ) as BuildFailureScan;
+    expect(install.id).toBe('package-file-missing');
+    expect(install.detail).toBe('/build/foo.conf');
+
+    const cd = scanBuildLogForCause('cd: /build/missing-dir: No such file or directory') as BuildFailureScan;
+    expect(cd.id).toBe('package-file-missing');
+    expect(cd.detail).toBe('/build/missing-dir');
+  });
+
+  it('gives rules without a capture group no detail', () => {
+    const scan = scanBuildLogForCause(
+      '==> ERROR: One or more files did not pass the validity check!',
+    ) as BuildFailureScan;
+    expect(scan.id).toBe('checksum-mismatch');
+    expect(scan.detail).toBeUndefined();
   });
 
   it('detects a missing python module used by a script', () => {

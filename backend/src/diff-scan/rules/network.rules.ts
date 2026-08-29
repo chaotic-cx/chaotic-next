@@ -61,8 +61,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'URL-001',
     name: 'Raw IP address URL',
     severity: 'warning',
-    description:
-      'Downloads from a bare IP address (dotted, hex, integer or IPv6 literal), which bypasses domain-based reputation and review.',
+    description: 'Downloads from a bare IP address (dotted, hex, integer or IPv6 literal).',
     // Loopback is excluded: http://127.0.0.1 is a local service, not a remote download source.
     pattern:
       /https?:\/\/(?:(?!127\.)(?:\d{1,3}\.){3}\d{1,3}(?=[:/\s"')]|$)|\[(?!::1])[0-9a-f:]+]|0x[0-9a-f]{6,8}\b|\d{8,10}(?=[:/\s"')]|$))/i,
@@ -83,8 +82,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'URL-003',
     name: 'Dynamic-DNS host',
     severity: 'warning',
-    description:
-      'References a dynamic-DNS hostname, which lets an attacker rotate the backing IP behind a stable name.',
+    description: 'References a dynamic-DNS hostname, which lets an attacker rotate the backing IP.',
     list: hostsFromList(DDNS_HOSTS),
     data: {
       url: DDNS_BLOCKLIST_URL,
@@ -117,16 +115,14 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'CAUR-ONION-URL',
     name: 'Tor onion service URL',
     severity: 'critical',
-    description:
-      'Contacts a Tor hidden service; the 2026 AUR malware campaign used onion services for command and control.',
+    description: 'Contacts a Tor hidden service, used for command and control in the 2026 AUR malware campaign.',
     pattern: /\b[a-z2-7]{16,56}\.onion\b/i,
   }),
   regexRule({
     id: 'EXFIL-003',
     name: 'Chat webhook exfiltration',
     severity: 'critical',
-    description:
-      'Contains a Discord, Telegram or Slack webhook URL, a common channel for data exfiltration and command delivery.',
+    description: 'Contains a Discord, Telegram or Slack webhook URL, a common exfiltration channel.',
     pattern: /discord(?:app)?\.com\/api\/(?:v\d+\/)?webhooks|api\.telegram\.org\/bot|hooks\.slack\.com\/services/i,
   }),
   {
@@ -134,7 +130,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     name: 'Archive-and-upload exfiltration',
     severity: 'critical',
     description:
-      'Streams an archive of local files into a network tool or uploads home-directory material, e.g. tar czf - ~ | curl --data-binary @-, direct bulk data theft.',
+      'Streams local files or home-directory material into a network tool, e.g. tar czf - ~ | curl --data-binary @-.',
     check(change) {
       if (!isInScope(change, ['code'])) return null;
       for (const line of addedLines(change)) {
@@ -160,8 +156,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'CRYPTO-002',
     name: 'Cryptominer binary reference',
     severity: 'warning',
-    description:
-      'References a known cryptominer executable. Miner packages legitimately install their own binaries, so this alone is a warning; mining activity is confirmed by a pool URL or wallet address.',
+    description: 'References a known cryptominer executable; a pool URL or wallet address confirms mining.',
     pattern: /\b(?:xmrig|minerd|cpuminer|ethminer|xmr-stak|nbminer|srbminer|teamredminer|t-rex|wildrig)\b/i,
   }),
   regexRule({
@@ -183,8 +178,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'ENV-002',
     name: 'PATH overwrite',
     severity: 'warning',
-    description:
-      'Overwrites PATH, which can shadow system binaries like sudo with malicious copies; build-time adjustments pointing at $pkgdir are expected packaging practice.',
+    description: 'Overwrites PATH, which can shadow system binaries like sudo with malicious copies.',
     pattern: /^\s*(?:export\s+)?PATH=(?!.*\$\{?pkgdir}?)/,
   }),
   regexRule({
@@ -192,7 +186,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     name: 'Execution from world-writable directory',
     severity: 'warning',
     description:
-      'Writes or executes scripts in world-writable /tmp, /var/tmp or /dev/shm or hidden staging paths, where the 2026 campaign staged its payload.',
+      'Writes or executes scripts in world-writable /tmp, /var/tmp or /dev/shm, where the 2026 campaign staged its payload.',
     pattern: /\/(?:tmp|var\/tmp|dev\/shm)\/[^\s"']*\.(?:sh|py|pl|bin)\b|\/(?:tmp|var\/tmp|dev\/shm)\/\.[^\s"']+/,
   }),
   regexRule({
@@ -208,8 +202,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'NET-001',
     name: 'Unencrypted HTTP URL',
     severity: 'info',
-    description:
-      'Downloads a package source over plain HTTP, which allows interception of the artifact; prefer HTTPS sources.',
+    description: 'Downloads a package source over plain HTTP, which allows interception of the artifact.',
     // Only the source= entries are judged; a plain-http url= homepage says
     // nothing about how the build artifacts are fetched.
     check(change) {

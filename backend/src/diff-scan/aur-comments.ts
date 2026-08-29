@@ -118,7 +118,7 @@ export function commentThreatFinding(verdict: AurCommentThreatVerdict, packageBa
     ruleId: 'CAUR-COMMENT-THREAT',
     ruleName: 'Community malware warning',
     severity: verdict.severity,
-    description: `AUR comments flag this package (${context}). Examine the comments before you trust the package.`,
+    description: `AUR comments flag this package (${context}).`,
     file: `${packageBase}/#comments`,
     match: verdict.comment.body.slice(0, 160),
   };

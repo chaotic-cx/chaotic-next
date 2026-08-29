@@ -77,8 +77,7 @@ export const CAMPAIGN_RULES: Rule[] = [
     id: 'CAUR-NODE-EVAL',
     name: 'Inline Node.js evaluation',
     severity: 'critical',
-    description:
-      'Executes inline JavaScript during build or installation — the delivery vehicle of npm supply-chain payloads, since the executed code never appears as a reviewable file.',
+    description: 'Executes inline JavaScript during build or installation.',
     pattern: /\bnode\s+(?:--(?:eval|print)|-[ep]\b|-pe\b)/,
     scopes: ['pkgbuild', 'install'],
   }),
@@ -102,7 +101,7 @@ export const CAMPAIGN_RULES: Rule[] = [
     id: 'CAUR-NPM-CACHE',
     name: 'User cache directory access',
     severity: 'info',
-    description: 'Touches npm/bun user cache directories, build tools should keep caches inside the build environment.',
+    description: 'Touches npm/bun user cache directories.',
     pattern: /\.npm\/_cacache|\.bun\/install\/cache|~\/\.npm\b|~\/\.bun\b/,
   }),
   {
@@ -110,8 +109,7 @@ export const CAMPAIGN_RULES: Rule[] = [
     name: 'Maintainer email swapped',
     severity: 'warning',
     runsOn: ['mr-diff'],
-    description:
-      'Replaces the email address of an existing maintainer or contributor while keeping their name. Update MRs rarely change packager identities.',
+    description: 'Replaces the email address of an existing maintainer or contributor while keeping their name.',
     check(change) {
       if (!isInScope(change, ['pkgbuild'])) return null;
       const previous = identitiesByPerson(removedLineTexts(change));
@@ -132,8 +130,7 @@ export const CAMPAIGN_RULES: Rule[] = [
     id: 'CAUR-CAMPAIGN-ACCOUNT',
     name: 'Known campaign account',
     severity: 'critical',
-    description:
-      'References an account or email observed in previous malware campaigns, which impersonated existing maintainers to take over packages.',
+    description: 'References an account or email observed in previous malware campaigns.',
     check(change) {
       if (!isInScope(change, ['pkgbuild', 'install'])) return null;
       const hit = addedLines(change).find((line) => CAMPAIGN_EMAIL.test(line.text));
