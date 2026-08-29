@@ -1,31 +1,31 @@
-import { Logger as NestLogger } from '@nestjs/common';
+import { pino } from 'pino';
 import { type Logger as TypeOrmLogger } from 'typeorm';
 
 export class MigrationLogger implements TypeOrmLogger {
-  private readonly logger = new NestLogger('Migrations');
+  private readonly logger = pino({ name: 'Migrations' });
 
   log(level: 'log' | 'info' | 'warn', message: unknown): void {
     if (level === 'warn') {
-      this.logger.warn(message);
+      this.logWarn(message);
     } else {
-      this.logger.log(message);
+      this.logInfo(message);
     }
   }
 
   logMigration(message: string): void {
-    this.logger.log(message);
+    this.logInfo(message);
   }
 
   logSchemaBuild(message: string): void {
-    this.logger.log(message);
+    this.logInfo(message);
   }
 
-  logWarn(message: string): void {
-    this.logger.warn(message);
+  logWarn(message: unknown): void {
+    this.logger.warn(this.asMessage(message));
   }
 
-  logInfo(message: string): void {
-    this.logger.log(message);
+  logInfo(message: unknown): void {
+    this.logger.info(this.asMessage(message));
   }
 
   logQuery(): void {
@@ -38,5 +38,9 @@ export class MigrationLogger implements TypeOrmLogger {
 
   logQuerySlow(): void {
     void 0;
+  }
+
+  private asMessage(message: unknown): string {
+    return typeof message === 'string' ? message : JSON.stringify(message);
   }
 }
