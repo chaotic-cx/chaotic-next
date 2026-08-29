@@ -7,6 +7,7 @@ import { MessageToastService } from '@garudalinux/core';
 import { Card } from '@openng/optimus-ui/card';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from '../app.service';
+import { isMobileSignal } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { ActiveBuildsComponent } from './active-builds.component';
 import { BuildStatusDeploymentsComponent } from './build-status-deployments.component';
@@ -44,6 +45,7 @@ export class BuildStatusComponent implements OnInit {
   readonly dialogData = signal<PipelineView | null>(null);
   readonly dialogVisible = signal<boolean>(false);
   readonly contentEl = viewChild<ElementRef<HTMLDivElement>>('statusContent');
+  readonly isMobile = isMobileSignal();
 
   constructor() {
     effect(() => {

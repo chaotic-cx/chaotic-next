@@ -166,14 +166,12 @@ export function samePackageFamily(a: string | null | undefined, b: string | null
 }
 
 /**
- * Suspicious-ownership heuristic: a tiny package (few files, few of its own
- * directories) claimed as plugin by more than SUSPICIOUS_PLUGIN_OWNERS owners
- * almost certainly dropped shared payloads into popular parent directories.
- * Such results are re-verified against directory-name matches before use.
+ * Ownership-credibility cap: no real package is a plugin of more than this
+ * many owners. A result above this count means the directory index produced
+ * garbage (e.g. stale owners on shared directories); such results are
+ * re-verified against directory-name matches and discarded when none remain.
  */
-const SUSPICIOUS_PLUGIN_OWNERS = 100;
-const SUSPICION_MAX_OWNED_DIRS = 10;
-const SUSPICION_MAX_FILES = 50;
+const MAX_CREDIBLE_PLUGIN_OWNERS = 100;
 
 export interface DerivePluginOfOptions {
   consumerPkgname?: string | null;
@@ -236,39 +234,29 @@ export function derivePluginOf(files: string[], index: DirectoryIndex, options: 
   }
 
   const result = dedupe([...plugins]).sort();
-
   if (result.length === 0) return result;
+  if (result.length <= MAX_CREDIBLE_PLUGIN_OWNERS) return result;
 
-  const ownedDirs = deriveDirectoriesOwned(files);
+  const filteredByDir = result.filter((ownerKey) => {
+    const ownerName = index.keyToPkgname.get(ownerKey);
+    if (!ownerName) return false;
 
-  if (
-    result.length > SUSPICIOUS_PLUGIN_OWNERS &&
-    ownedDirs.length < SUSPICION_MAX_OWNED_DIRS &&
-    files.length < SUSPICION_MAX_FILES
-  ) {
-    const filteredByDir = result.filter((ownerKey) => {
-      const ownerName = index.keyToPkgname.get(ownerKey);
-      if (!ownerName) return false;
+    return files.some((file) => {
+      const parent = parentDirectory(file);
+      if (!parent) return false;
 
-      return files.some((file) => {
-        const parent = parentDirectory(file);
-        if (!parent) return false;
+      const directOwners = index.direct.get(parent);
+      if (directOwners?.includes(ownerKey)) {
+        return !GENERIC_DIRS.has(parent) && parent.includes(ownerName);
+      }
 
-        const directOwners = index.direct.get(parent);
-        if (directOwners?.includes(ownerKey)) {
-          return !GENERIC_DIRS.has(parent) && parent.includes(ownerName);
-        }
-
-        return false;
-      });
+      return false;
     });
+  });
 
-    if (filteredByDir.length > 0 && filteredByDir.length < result.length) {
-      return filteredByDir;
-    }
-  }
-
-  return result;
+  // A huge candidate set that no direct directory-name evidence supports is
+  // index garbage, not a plugin relationship.
+  return filteredByDir.length > 0 ? filteredByDir : [];
 }
 
 export function buildAnalysis(opts: {

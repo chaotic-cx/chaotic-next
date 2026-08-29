@@ -2,7 +2,7 @@
 
 <div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
   <p-card>
-    @if (!buildStatusService.initialLoaded()) {
+    @if (!buildStatusService.initialLoaded() && !isMobile()) {
       <div class="flex items-center justify-center" [style.min-height.px]="buildStatusService.cardMinHeight() ?? 980">
         <p-progress-spinner
           [style]="{ width: '3rem', height: '3rem' }"
