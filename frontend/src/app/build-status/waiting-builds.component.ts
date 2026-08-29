@@ -7,6 +7,7 @@ import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
+import { paginateByStartTime } from './queue-estimates';
 
 const WAITING_PAGE_SIZE = 6;
 
@@ -33,11 +34,14 @@ export class WaitingBuildsComponent {
 
   readonly currentPage = computed(() => Math.min(this.page(), this.pageCount()));
 
-  readonly paginatedQueue = computed(() => {
-    const queue = this.buildStatusService.waitingQueue();
-    const start = (this.currentPage() - 1) * WAITING_PAGE_SIZE;
-    return queue.slice(start, start + WAITING_PAGE_SIZE);
-  });
+  readonly paginatedQueue = computed(() =>
+    paginateByStartTime(
+      this.buildStatusService.waitingQueue(),
+      this.buildStatusService.estimates().waitingStart,
+      this.currentPage(),
+      WAITING_PAGE_SIZE,
+    ),
+  );
 
   selectPage(page: number): void {
     this.page.set(Math.min(Math.max(1, page), this.pageCount()));

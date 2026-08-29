@@ -3,6 +3,7 @@ import {
   computeQueueEstimates,
   formatEta,
   overallAverageMinutes,
+  paginateByStartTime,
   type PackageBuildAverage,
   sortByStartTime,
 } from './queue-estimates';
@@ -280,6 +281,28 @@ describe('sortByStartTime', () => {
     const before = [...entries];
     sortByStartTime(entries, starts);
     expect(entries).toEqual(before);
+  });
+});
+
+describe('paginateByStartTime', () => {
+  const starts = new Map([
+    ['a', 3],
+    ['b', 1],
+    ['c', 2],
+    ['d', 0],
+  ]);
+  const entries = [{ rawName: 'a' }, { rawName: 'b' }, { rawName: 'c' }, { rawName: 'd' }];
+
+  it('returns the first page sorted by start time', () => {
+    expect(paginateByStartTime(entries, starts, 1, 2).map((entry) => entry.rawName)).toEqual(['d', 'b']);
+  });
+
+  it('returns the requested later page', () => {
+    expect(paginateByStartTime(entries, starts, 2, 2).map((entry) => entry.rawName)).toEqual(['c', 'a']);
+  });
+
+  it('returns an empty page past the end', () => {
+    expect(paginateByStartTime(entries, starts, 3, 2)).toEqual([]);
   });
 });
 

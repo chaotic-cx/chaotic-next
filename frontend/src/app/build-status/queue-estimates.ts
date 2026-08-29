@@ -39,6 +39,19 @@ export function sortByStartTime<T extends { rawName: string }>(
   });
 }
 
+/** Sorts entries by start time then returns the `size`-sized page at `page`
+ * (1-based). Entries without a start time land last. */
+export function paginateByStartTime<T extends { rawName: string }>(
+  entries: readonly T[],
+  startTime: ReadonlyMap<string, number>,
+  page: number,
+  size: number,
+): T[] {
+  const sorted = sortByStartTime(entries, startTime);
+  const start = (page - 1) * size;
+  return sorted.slice(start, start + size);
+}
+
 export interface ActiveBuildInput {
   rawName: string;
   /** When the build was first seen running; wall-clock ms. */
