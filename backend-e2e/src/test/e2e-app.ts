@@ -1,4 +1,6 @@
+import { createHmac, randomUUID } from 'node:crypto';
 import { ARCH_PACKAGES, BUILDERS, CHAOTIC_AUR_REPO, GARUDA_REPO } from './fixtures';
+import { initializeAuthDataSource } from '@chaotic-next/backend/auth/auth';
 import { AppModule } from '@chaotic-next/backend/app.module';
 import { Build, Builder, BuildResourceUsage, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { BuilderService } from '@chaotic-next/backend/builder/builder.service';
@@ -19,7 +21,7 @@ import { ExecutionContext, Logger } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
-import { DataSource } from 'typeorm';
+import { DataSource, type Repository } from 'typeorm';
 
 export interface RouterHitSeed {
   package: string;
@@ -112,6 +114,23 @@ export type PackageBumpSeed = Partial<
   Pick<PackageBumpEntity, 'bumpType' | 'trigger' | 'triggerFrom' | 'details' | 'timestamp'> & { pkg: Package }
 >;
 
+export interface AuthUserSeed {
+  /** Group memberships stored on the user, e.g. `['chaotic-aur']` for org members. */
+  groups?: string[];
+}
+
+export interface SeededAuthUser {
+  userId: string;
+  token: string;
+  /** Ready-to-send Cookie header value carrying a valid session. */
+  cookie: string;
+}
+
+export interface CreateE2eAppOptions {
+  /** Keeps the real better-auth AuthGuard so specs can test genuine session validation. */
+  realAuth?: boolean;
+}
+
 export interface E2eApp {
   readonly app: NestFastifyApplication;
   readonly dataSource: DataSource;
@@ -132,18 +151,19 @@ export interface E2eApp {
   seedMrAction(overrides?: MrActionSeed): Promise<MrActionEntity>;
   seedPipelineTrigger(overrides?: PipelineTriggerSeed): Promise<PipelineTriggerEntity>;
   seedPackageBump(overrides?: PackageBumpSeed): Promise<PackageBumpEntity>;
+  seedAuthUser(overrides?: AuthUserSeed): Promise<SeededAuthUser>;
   resetTables(): Promise<void>;
   close(): Promise<void>;
 }
 
-export async function createE2eApp(): Promise<E2eApp> {
+export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<E2eApp> {
   // `logger: false` below only silences the app's own logger; services log
   // through their own `new Logger()` instances, which route through the static
   // console logger unless it is overridden with no enabled levels.
   Logger.overrideLogger([]);
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideGuard(AuthGuard)
-    .useValue({
+  const testingModule = Test.createTestingModule({ imports: [AppModule] });
+  if (!options.realAuth) {
+    testingModule.overrideGuard(AuthGuard).useValue({
       canActivate: (context: ExecutionContext) => {
         const request = context.switchToHttp().getRequest<{
           headers: Record<string, string | string[] | undefined>;
@@ -167,8 +187,9 @@ export async function createE2eApp(): Promise<E2eApp> {
         request.session = { user: request.user };
         return true;
       },
-    })
-    .compile();
+    });
+  }
+  const moduleRef = await testingModule.compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
     logger: false,
@@ -178,6 +199,32 @@ export async function createE2eApp(): Promise<E2eApp> {
 
   const dataSource = app.get<DataSource>(DataSource);
   const cache = app.get<Cache>(CACHE_MANAGER);
+
+  if (options.realAuth) {
+    // Parallel spec workers must not race on the auth table setup.
+    await dataSource.query(`SELECT pg_advisory_lock(727447001)`);
+    try {
+      // The main InitialSchema leaves a legacy serial-id "user" table that no
+      // entity uses; drop it so the auth migrations can create the text-id
+      // better-auth tables in its place. Only the legacy variant carries the
+      // "status" column.
+      await dataSource.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'user' AND column_name = 'status'
+          ) THEN
+            DROP TABLE "user";
+          END IF;
+        END
+        $$;
+      `);
+      await initializeAuthDataSource();
+    } finally {
+      await dataSource.query(`SELECT pg_advisory_unlock(727447001)`);
+    }
+  }
 
   let builderCounter = 0;
   let repoCounter = 0;
@@ -204,6 +251,7 @@ export async function createE2eApp(): Promise<E2eApp> {
     seedMrAction: (overrides) => seedMrAction(dataSource, overrides),
     seedPipelineTrigger: (overrides) => seedPipelineTrigger(dataSource, overrides),
     seedPackageBump: (overrides) => seedPackageBump(dataSource, overrides),
+    seedAuthUser: (overrides) => seedAuthUser(dataSource, overrides),
     resetTables: async () => {
       await truncateTables(dataSource);
       await cache.clear();
@@ -246,6 +294,27 @@ export async function truncateTables(dataSource: DataSource): Promise<void> {
   }
 }
 
+/**
+ * Saves an entity with a unique column, retrying once when a concurrent
+ * writer (an async straggler from a previous test) claimed the name between
+ * our existence check and insert.
+ */
+async function saveUnique<T extends { id: number }>(
+  repo: Repository<T>,
+  resolve: () => Promise<T | null>,
+  save: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await save();
+  } catch (err) {
+    if ((err as { code?: string }).code === '23505') {
+      const existing = await resolve();
+      if (existing) return existing;
+    }
+    throw err;
+  }
+}
+
 async function seedBuilder(
   dataSource: DataSource,
   overrides: BuilderSeed | undefined,
@@ -253,27 +322,52 @@ async function seedBuilder(
 ): Promise<Builder> {
   const repo = dataSource.getRepository(Builder);
   const real = BUILDERS[counter() % BUILDERS.length];
-  return repo.save({
-    name: overrides?.name ?? real.name,
-    description: overrides?.description ?? real.description,
-    builderClass: overrides?.builderClass ?? real.builderClass,
-    isActive: overrides?.isActive ?? true,
-  });
+  const name = overrides?.name ?? real.name;
+  // The fixture list cycles, so an auto-seeded name can repeat within a test.
+  // Reuse the existing row instead of tripping the unique index on `name`.
+  if (overrides?.name === undefined) {
+    const existing = await repo.findOneBy({ name });
+    if (existing) return existing;
+  }
+  return saveUnique(
+    repo,
+    () => repo.findOneBy({ name }),
+    () =>
+      repo.save({
+        name,
+        description: overrides?.description ?? real.description,
+        builderClass: overrides?.builderClass ?? real.builderClass,
+        isActive: overrides?.isActive ?? true,
+      }),
+  );
 }
 
 async function seedRepo(dataSource: DataSource, overrides: RepoSeed | undefined, counter: () => number): Promise<Repo> {
   const repo = dataSource.getRepository(Repo);
   const real = counter() % 2 === 0 ? CHAOTIC_AUR_REPO : GARUDA_REPO;
-  return repo.save({
-    name: overrides?.name ?? real.name,
-    repoUrl: overrides?.repoUrl ?? real.repoUrl,
-    isActive: overrides?.isActive ?? true,
-    status: overrides?.status ?? RepoStatus.ACTIVE,
-    gitRef: overrides?.gitRef ?? real.gitRef,
-    dbPath: overrides?.dbPath ?? real.dbPath,
-    apiToken: overrides?.apiToken ?? null,
-    gitlabProjectId: overrides?.gitlabProjectId ?? ('gitlabProjectId' in real ? real.gitlabProjectId : null),
-  });
+  const name = overrides?.name ?? real.name;
+  // Same as `seedBuilder`: the two fixture repos alternate, so re-seeding the
+  // same name within one test must reuse the row instead of failing on
+  // `IDX_repo_name`.
+  if (overrides?.name === undefined) {
+    const existing = await repo.findOneBy({ name });
+    if (existing) return existing;
+  }
+  return saveUnique(
+    repo,
+    () => repo.findOneBy({ name }),
+    () =>
+      repo.save({
+        name,
+        repoUrl: overrides?.repoUrl ?? real.repoUrl,
+        isActive: overrides?.isActive ?? true,
+        status: overrides?.status ?? RepoStatus.ACTIVE,
+        gitRef: overrides?.gitRef ?? real.gitRef,
+        dbPath: overrides?.dbPath ?? real.dbPath,
+        apiToken: overrides?.apiToken ?? null,
+        gitlabProjectId: overrides?.gitlabProjectId ?? ('gitlabProjectId' in real ? real.gitlabProjectId : null),
+      }),
+  );
 }
 
 const REAL_PACKAGES = [
@@ -346,8 +440,15 @@ async function seedPackage(
   const repo = dataSource.getRepository(Package);
   const real = REAL_PACKAGES[counter() % REAL_PACKAGES.length];
   const linkedRepo = overrides?.repo ?? (await seedRepo(dataSource, undefined, () => repoCounterInternal++));
+  const pkgname = overrides?.pkgname ?? real.pkgname;
+  // The fixture list cycles, so an auto-seeded package plus repo pair can
+  // repeat within a test; reuse it instead of violating `UQ_package_repo_pkgname`.
+  if (overrides?.pkgname === undefined) {
+    const existing = await repo.findOne({ where: { pkgname, repo: { id: linkedRepo.id } } });
+    if (existing) return existing;
+  }
   return repo.save({
-    pkgname: overrides?.pkgname ?? real.pkgname,
+    pkgname,
     version: overrides?.version ?? real.version,
     isActive: overrides?.isActive ?? true,
     pkgrel: overrides?.pkgrel ?? real.pkgrel,
@@ -421,6 +522,32 @@ async function seedNotificationSubscription(
     auth: overrides?.auth ?? 'epJJES7PtVQ19YkI67dn6Ndf23U',
     expirationTime: overrides?.expirationTime ?? null,
   });
+}
+
+/**
+ * Inserts a better-auth user with a valid session directly into the auth
+ * tables (same database, owned by the auth DataSource inside `auth.ts`).
+ * Covers both user kinds: GitLab org members carry their group in `groups`,
+ * future regular users simply have an empty list.
+ */
+async function seedAuthUser(dataSource: DataSource, overrides: AuthUserSeed | undefined): Promise<SeededAuthUser> {
+  const userId = randomUUID();
+  const token = randomUUID().replace(/-/g, '');
+  await dataSource.query(
+    `INSERT INTO "user" ("id", "name", "email", "emailVerified", "image", "groups")
+     VALUES ($1, $2, $3, true, null, $4::jsonb)`,
+    [userId, 'E2E Auth User', `e2e-auth-${userId}@example.com`, JSON.stringify(overrides?.groups ?? [])],
+  );
+  await dataSource.query(
+    `INSERT INTO "session" ("id", "expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId")
+     VALUES ($1, now() + interval '1 hour', $2, now(), now(), null, null, $3)`,
+    [randomUUID(), token, userId],
+  );
+  // better-auth stores the cookie value signed: `token.HMAC-SHA256(secret, token)`.
+  const signature = createHmac('sha256', process.env.BETTER_AUTH_SECRET ?? '')
+    .update(token)
+    .digest('base64');
+  return { userId, token, cookie: `better-auth.session_token=${token}.${signature}` };
 }
 
 async function seedElfAnalysis(
