@@ -64,6 +64,7 @@ export class BuildStatusService {
   private readonly queueStatsResource = httpResource<StatsObject>(() => this.appService.getQueueStatsResourceRequest());
   private readonly averagesResource = httpResource<PackageAverageRow[]>(() => {
     const names = [...this.activeQueue().map((pkg) => pkg.name), ...this.waitingQueue().map((pkg) => pkg.name)];
+    if (names.length === 0) return undefined;
     return this.appService.getPackageAverageBuildTimesResourceRequest(names);
   });
   private readonly queueLoaded = signal(false);

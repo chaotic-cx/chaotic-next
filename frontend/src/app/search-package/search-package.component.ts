@@ -13,13 +13,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { debounce, form, pattern } from '@angular/forms/signals';
+import { form, pattern } from '@angular/forms/signals';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { formatPkgrel, Package, Paginated, PKGNAME_PATTERN, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
+import { formatPkgrel, Package, PKGNAME_PATTERN, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { firstValueFrom } from 'rxjs';
 import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../stats/charts/packages/chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../stats/charts/packages/chart-package-build-stats/chart-package-build-stats.component';
@@ -68,7 +67,6 @@ export class SearchPackageComponent implements OnInit {
 
   protected readonly searchModel = signal({ query: '' });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {
-    debounce(schemaPath.query, 300);
     pattern(schemaPath.query, PKGNAME_PATTERN, { message: 'Invalid package name' });
   });
 
@@ -187,17 +185,8 @@ export class SearchPackageComponent implements OnInit {
   constructor() {
     effect(() => {
       const q = this.search();
-      if (q) this.searchModel.update((model) => ({ ...model, query: q }));
-    });
-
-    effect(() => {
-      const q = this.searchModel().query.trim();
-      if (!q) {
-        if (this.currentPackageName() !== '') this.currentPackageName.set('');
-        this.clearSearchParam();
-        return;
-      }
-      if (!this.searchForm.query().valid()) return;
+      if (!q) return;
+      this.searchModel.update((model) => ({ ...model, query: q }));
       this.currentPackageName.set(q);
     });
 
@@ -225,16 +214,9 @@ export class SearchPackageComponent implements OnInit {
     }
     const generation = ++this.suggestionGeneration;
     try {
-      const request = this.appService.getPackagesResourceRequest({ page: 1, perPage: 200, q: query });
-      const result = await firstValueFrom(this.http.get<Paginated<Package>>(request.url, { params: request.params }));
+      const names = await this.appService.fetchPkgnameSuggestions(query, this.repo());
       if (generation !== this.suggestionGeneration) return;
-      this.suggestions.set([
-        ...new Set(
-          (result.items ?? [])
-            .filter((pkg) => pkg.reponame === this.packageStatsService.packageSearchSelectedRepo())
-            .map((pkg) => pkg.pkgname),
-        ),
-      ]);
+      this.suggestions.set(names);
     } catch {
       if (generation === this.suggestionGeneration) this.suggestions.set([]);
     }
@@ -248,22 +230,40 @@ export class SearchPackageComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  onEnter(): void {
+  async onEnter(): Promise<void> {
+    const typed = this.searchModel().query.trim();
+    if (!typed || !this.searchForm.query().valid()) return;
+    this.selectPackage(typed);
+    await this.commitPackage(typed);
+  }
+
+  async onInputBlur(): Promise<void> {
+    const typed = this.searchModel().query.trim();
+    if (!typed) {
+      this.currentPackageName.set('');
+      this.clearSearchParam();
+      return;
+    }
     if (!this.searchForm.query().valid()) return;
-    this.selectPackage(this.searchModel().query);
+    await this.commitPackage(typed);
+  }
+
+  private repo(): string {
+    return this.packageStatsService.packageSearchSelectedRepo();
+  }
+
+  private async commitPackage(pkgname: string): Promise<void> {
+    const names = await this.appService.fetchPkgnameSuggestions(pkgname, this.repo());
+    if (!names.includes(pkgname)) {
+      this.currentPackageName.set('');
+      return;
+    }
+    this.currentPackageName.set(pkgname);
+    this.syncSearchParam(pkgname);
   }
 
   onKeyUp(event: KeyboardEvent): void {
     if (event.key === 'Enter') this.onEnter();
-  }
-
-  onInputBlur(): void {
-    if (!this.searchForm.query().valid()) return;
-    const typed = this.searchModel().query.trim();
-    if (typed) {
-      this.currentPackageName.set(typed);
-      this.syncSearchParam(typed);
-    }
   }
 
   private syncSearchParam(query: string): void {

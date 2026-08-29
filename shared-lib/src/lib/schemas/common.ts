@@ -4,6 +4,8 @@ import { z } from 'zod';
 export const MAX_AMOUNT = 100;
 /** Mirrors the backend clamp so the schema documents and enforces the real bounds. */
 export const MAX_DAYS_WINDOW = 3650;
+/** Largest page size that list endpoints accept. */
+export const MAX_PER_PAGE = 100;
 
 /** Postgres int4 ceiling; keeps generated schemas free of float-precision noise. */
 export const INT4_MAX = 2_147_483_647;
@@ -35,7 +37,12 @@ export const statusQuerySchema = z.coerce.number().int().min(0).max(INT4_MAX).de
 
 export const pageQuerySchema = z.coerce.number().int().min(1).max(INT4_MAX).describe('1-based page number');
 
-export const perPageQuerySchema = z.coerce.number().int().min(1).max(100).describe('Entries per page');
+export const perPageQuerySchema = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(MAX_PER_PAGE)
+  .describe('Entries per page');
 
 export const daysQuerySchema = z.strictObject({
   days: daysParamSchema.optional().describe('Lookback window in days; all time when omitted'),

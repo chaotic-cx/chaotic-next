@@ -1,6 +1,6 @@
 import { type INestApplication } from '@nestjs/common';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
-import { DocumentBuilder, SwaggerModule, type OpenAPIObject, type SwaggerDocumentOptions } from '@nestjs/swagger';
+import { DocumentBuilder, type OpenAPIObject, type SwaggerDocumentOptions, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { type FastifyReply, type FastifyRequest } from 'fastify';
 import { createSchema } from 'zod-openapi';
@@ -60,7 +60,7 @@ export function provideSwagger(app: INestApplication): void {
     fastify.get('/api/docs/json', sendSpec);
     fastify.get('/api/openapi.json', sendSpec);
     const reference = apiReference({
-      url: '/api/docs/json',
+      url: 'docs/json',
       withFastify: true,
       layout: 'modern',
       theme: 'purple',
