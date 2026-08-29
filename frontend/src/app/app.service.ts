@@ -381,11 +381,7 @@ export class AppService {
   async fetchPkgnameSuggestions(query: string, repo: string): Promise<string[]> {
     const request = this.getPackagesResourceRequest({ page: 1, perPage: MAX_PER_PAGE, q: query });
     const result = await firstValueFrom(this.http.get<Paginated<Package>>(request.url, { params: request.params }));
-    return [
-      ...new Set(
-        (result.items ?? []).filter((pkg) => pkg.reponame === repo).map((pkg) => pkg.pkgname),
-      ),
-    ];
+    return [...new Set((result.items ?? []).filter((pkg) => pkg.reponame === repo).map((pkg) => pkg.pkgname))];
   }
 
   getBuildsResourceRequest(params: BuildsQueryParams): HttpResourceRequest {
