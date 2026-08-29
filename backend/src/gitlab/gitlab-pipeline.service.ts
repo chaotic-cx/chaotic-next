@@ -344,7 +344,14 @@ export class GitlabPipelineService implements OnModuleInit {
     }
   }
 
-  async commitCiConfig(repoName: string, pkgbase: string, configText: string, commitMessage: string): Promise<boolean> {
+  async commitCiConfig(
+    repoName: string,
+    pkgbase: string,
+    configText: string,
+    commitMessage: string,
+    options: { action?: 'update' | 'create' } = {},
+  ): Promise<boolean> {
+    const action = options.action ?? 'update';
     const repo = await this.repoRepository.findOne({ where: { name: repoName } });
     if (!repo?.gitlabProjectId || !this.api) {
       this.pino.warn({ pkgbase, repoName }, 'Cannot commit .CI/config: repo or GitLab client unavailable');
@@ -353,7 +360,7 @@ export class GitlabPipelineService implements OnModuleInit {
 
     try {
       const commit = await this.api.Commits.create(repo.gitlabProjectId, repo.gitRef || 'main', commitMessage, [
-        { action: 'update' as const, filePath: `${pkgbase}/.CI/config`, content: configText },
+        { action, filePath: `${pkgbase}/.CI/config`, content: configText },
       ]);
       if (commit.id) {
         this.registerCommitSha(commit.id);

@@ -229,7 +229,7 @@ describe('BuildClassSyncService', () => {
     await expect(service.adjustPackageBuildClass('ghost')).rejects.toThrow('Package not found: ghost');
   });
 
-  it('skips work without package names or without a CI config file', async () => {
+  it('skips work without package names and creates a missing CI config file', async () => {
     const emptyRun = makeService();
     await emptyRun.service.syncFromDeployment('chaotic-aur', []);
     expect(emptyRun.saveMock).not.toHaveBeenCalled();
@@ -240,7 +240,23 @@ describe('BuildClassSyncService', () => {
       suggestions: [{ pkgname: 'paru', suggestedBuildClass: 8, samples: 12, averages: {} as never }],
     });
     await noFileRun.service.syncFromDeployment('chaotic-aur', ['paru']);
-    expect(noFileRun.suggestMock).not.toHaveBeenCalled();
+    expect(noFileRun.commitCiConfigMock).toHaveBeenCalledWith(
+      'chaotic-aur',
+      'paru',
+      'BUILDER_CLASS=8\n',
+      expect.any(String),
+      { action: 'create' },
+    );
+    expect(noFileRun.saveMock).toHaveBeenCalled();
+  });
+
+  it('skips work when creating a missing CI config file fails', async () => {
+    const noFileRun = makeService({
+      packages: [makePackage({})],
+      configText: null,
+      commitCiConfig: vi.fn().mockResolvedValue(false),
+    });
+    await noFileRun.service.syncFromDeployment('chaotic-aur', ['paru']);
     expect(noFileRun.saveMock).not.toHaveBeenCalled();
   });
 

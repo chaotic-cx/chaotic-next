@@ -308,18 +308,16 @@ function stripByGlob(value: string, pattern: string, isPrefix: boolean, longest:
     else if (char === '?') source += '[\\s\\S]';
     else source += char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
-  const matches = new RegExp(`^[\\s\\S]*${source}[\\s\\S]*$`).test(value);
   // Try the shortest removed span first; longest flips the order. The removed
   // span for prefix strips grows from the left, for suffix strips from the right.
+  // A non-matching pattern falls through the loop to null.
   const lengths: number[] = [];
   for (let length = 0; length <= value.length; length++) lengths.push(length);
   if (longest) lengths.reverse();
-  if (matches) {
-    for (const length of lengths) {
-      const candidate = isPrefix ? value.slice(0, length) : value.slice(value.length - length);
-      if (new RegExp(`^${source}$`).test(candidate)) {
-        return isPrefix ? value.slice(length) : value.slice(0, value.length - length);
-      }
+  for (const length of lengths) {
+    const candidate = isPrefix ? value.slice(0, length) : value.slice(value.length - length);
+    if (new RegExp(`^${source}$`).test(candidate)) {
+      return isPrefix ? value.slice(length) : value.slice(0, value.length - length);
     }
   }
   return null;
