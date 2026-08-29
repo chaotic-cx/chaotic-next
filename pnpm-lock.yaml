@@ -223,10 +223,10 @@ importers:
         version: 3.6.7(supports-color@7.2.0)
       zod:
         specifier: ^4.4.3
-        version: 4.4.3
+        version: 4.5.2
       zod-openapi:
         specifier: ^6.0.1
-        version: 6.0.1(zod@4.4.3)
+        version: 6.0.1(zod@4.5.2)
     devDependencies:
       '@analogjs/vite-plugin-angular':
         specifier: ~2.7.1
@@ -10988,6 +10988,9 @@ packages:
 
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
+  zod@4.5.2:
+    resolution: {integrity: sha512-XkYXCol10+ba/6F/cueWV+TezUeOqXW0hdeJt5CdXjTYeAgAQg5N03RQdJ80mhfFE72+pblvYMW4wy2Qp4Qbrg==}
 
 snapshots:
 
@@ -22687,12 +22690,14 @@ snapshots:
       compress-commons: 6.0.2
       readable-stream: 4.7.0
 
-  zod-openapi@6.0.1(zod@4.4.3):
+  zod-openapi@6.0.1(zod@4.5.2):
     dependencies:
-      zod: 4.4.3
+      zod: 4.5.2
 
   zod-to-json-schema@3.25.2(zod@4.4.3):
     dependencies:
       zod: 4.4.3
 
   zod@4.4.3: {}
+
+  zod@4.5.2: {}
