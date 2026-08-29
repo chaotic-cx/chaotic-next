@@ -26,6 +26,7 @@ const GUARDED_ROUTES: { method: E2eMethod; url: string }[] = [
   { method: 'POST', url: '/gitlab/trigger' },
   { method: 'GET', url: '/aur/suggestions?q=abc' },
   { method: 'POST', url: '/notifications/subscribe' },
+  { method: 'GET', url: '/notifications/subscriptions/me' },
   { method: 'GET', url: '/notifications/preferences' },
   { method: 'PUT', url: '/notifications/preferences' },
   { method: 'POST', url: '/admin/rescan-build-classes' },

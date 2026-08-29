@@ -25,4 +25,10 @@ export const notificationPreferenceSchema = z.strictObject({
 
 export const notificationPreferencesSchema = z.array(notificationPreferenceSchema);
 
+export const subscriptionStatusSchema = z.strictObject({
+  subscribed: z.boolean().describe('Whether the session user has a live push subscription on the server'),
+});
+
+export type SubscriptionStatusDto = z.infer<typeof subscriptionStatusSchema>;
+
 export type NotificationPreferenceDto = z.infer<typeof notificationPreferenceSchema>;

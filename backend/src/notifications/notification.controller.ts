@@ -5,8 +5,10 @@ import {
   notificationPreferenceSchema,
   notificationPreferencesSchema,
   pushSubscriptionBodySchema,
+  subscriptionStatusSchema,
   type NotificationPreferenceDto,
   type PushSubscriptionBodyDto,
+  type SubscriptionStatusDto,
 } from '@chaotic-next/shared-lib';
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -32,6 +34,16 @@ export class NotificationController {
     @Body({ schema: pushSubscriptionBodySchema }) body: PushSubscriptionBodyDto,
   ): Promise<{ message: string }> {
     return this.notificationService.subscribeToPushEvents(body, session.user.id);
+  }
+
+  @Get('subscriptions/me')
+  @ApiOperation({ summary: 'Whether the session user has a live push subscription' })
+  @ApiOkResponse({
+    description: 'True when at least one subscription row exists for the session user.',
+    schema: schemaResponse(subscriptionStatusSchema).schema,
+  })
+  getSubscriptionStatus(@Session() session: UserSession<typeof auth>): Promise<SubscriptionStatusDto> {
+    return this.notificationService.hasSubscription(session.user.id).then((subscribed) => ({ subscribed }));
   }
 
   @Get('preferences')

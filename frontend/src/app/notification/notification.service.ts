@@ -1,23 +1,31 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { SwPush } from '@angular/service-worker';
-import { pushSubscriptionBodySchema } from '@chaotic-next/shared-lib';
+import { pushSubscriptionBodySchema, type SubscriptionStatusDto } from '@chaotic-next/shared-lib';
 import { AuthService } from 'ngx-better-auth';
 import { catchError, first, firstValueFrom, lastValueFrom, map, type Observable, of, timeout } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 
 const NOTIFICATIONS_SUBSCRIBED_KEY = 'notifications-subscribed';
 const SESSION_WAIT_TIMEOUT_MS = 60_000;
+const PUSH_WORKER_URL = '/push/push-worker.js';
+const PUSH_WORKER_SCOPE = '/push/';
 
 export function areNotificationsSupported(): boolean {
-  return typeof window !== 'undefined' && 'Notification' in window && 'PushManager' in window;
+  return (
+    typeof window !== 'undefined' && 'Notification' in window && 'PushManager' in window && 'serviceWorker' in navigator
+  );
+}
+
+function applicationServerKeyFrom(vapidPublicKey: string): Uint8Array<ArrayBuffer> {
+  const raw = atob(vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/'));
+  const key = new Uint8Array(raw.length);
+  for (let index = 0; index < raw.length; index += 1) key[index] = raw.charCodeAt(index);
+  return key;
 }
 
 @Service()
 export class NotificationService {
   private readonly appConfig = inject(APP_CONFIG);
-  private readonly swPush = inject(SwPush);
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
 
@@ -28,9 +36,7 @@ export class NotificationService {
     const stored = localStorage.getItem(NOTIFICATIONS_SUBSCRIBED_KEY) === 'true';
     this.notificationsEnabled.set(this.isSupported && Notification.permission === 'granted' && stored);
 
-    this.swPush.notificationClicks.pipe(takeUntilDestroyed()).subscribe(({ notification }) => {
-      if (notification.data?.url) window.open(notification.data.url);
-    });
+    void this.reconcileSubscription();
   }
 
   async requestPermissionAndSubscribe(): Promise<void> {
@@ -48,10 +54,46 @@ export class NotificationService {
     }
   }
 
+  /**
+   * The server row is the source of truth for "subscribed". Granted permission
+   * is treated as prior opt-in (it can only be granted through our prompt), so
+   * the stored flag never blocks a re-subscribe: a wiped table, endpoint
+   * rotation, or expiry all surface as a missing row and get healed. An
+   * unauthenticated visit is a no-op.
+   */
+  private async reconcileSubscription(): Promise<void> {
+    if (!this.isSupported || Notification.permission !== 'granted') return;
+    let subscribed: boolean;
+    try {
+      const status = await lastValueFrom(
+        this.http.get<SubscriptionStatusDto>(`${this.appConfig.backendUrl}/notifications/subscriptions/me`),
+      );
+      subscribed = status.subscribed;
+    } catch (err) {
+      console.warn('Push subscription state check failed', err);
+      return;
+    }
+    if (subscribed) {
+      localStorage.setItem(NOTIFICATIONS_SUBSCRIBED_KEY, 'true');
+      this.notificationsEnabled.set(true);
+      return;
+    }
+    this.notificationsEnabled.set(false);
+    await this.subscribe();
+  }
+
+  /**
+   * Subscriptions live on the dedicated /push/ worker, not on ngsw. This works
+   * in regular browser tabs and installed PWAs alike.
+   */
   private async subscribe(): Promise<void> {
     try {
-      const subscription = await this.swPush.requestSubscription({
-        serverPublicKey: this.appConfig.vapidPublicKey,
+      const registration =
+        (await navigator.serviceWorker.getRegistration(PUSH_WORKER_SCOPE)) ??
+        (await navigator.serviceWorker.register(PUSH_WORKER_URL, { scope: PUSH_WORKER_SCOPE }));
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKeyFrom(this.appConfig.vapidPublicKey),
       });
 
       // The backend only accepts subscriptions from authenticated sessions.
@@ -59,13 +101,17 @@ export class NotificationService {
       // exists, so wait for the cookie instead of posting right away.
       const authenticated = await firstValueFrom(this.waitForSession());
       if (!authenticated) {
+        console.warn('Push subscription skipped: no authenticated session appeared within the timeout');
         this.notificationsEnabled.set(false);
         return;
       }
       const ok = await this.sendSubscriptionToServer(subscription);
       localStorage.setItem(NOTIFICATIONS_SUBSCRIBED_KEY, String(ok));
       this.notificationsEnabled.set(ok);
-    } catch {
+    } catch (err) {
+      // A swallowed error here looks identical to "user declined" and is near
+      // impossible to diagnose; surface it instead.
+      console.warn('Push subscription failed', err);
       this.notificationsEnabled.set(false);
     }
   }
