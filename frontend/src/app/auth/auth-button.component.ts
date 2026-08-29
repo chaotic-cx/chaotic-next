@@ -32,13 +32,6 @@ export class AuthButtonComponent {
   readonly isLoginLoading = signal(false);
   readonly isLogoutLoading = signal(false);
   readonly user = computed(() => this.authService.session()?.user ?? null);
-  readonly gitlabProfileUrl = computed(() => {
-    const user = this.user();
-    if (!user) return 'https://gitlab.com';
-    const rawUser = user as { webUrl?: string; name?: string };
-    if (rawUser.webUrl) return rawUser.webUrl;
-    return `https://gitlab.com/${user.name}`;
-  });
 
   protected readonly avatarFailed = signal(false);
 

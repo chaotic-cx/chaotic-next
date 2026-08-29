@@ -137,6 +137,12 @@ export const routes: Routes = [
     loadComponent: () => import('./memorial-v2/memorial-v2.component').then((c) => c.MemorialV2Component),
   },
   {
+    title: 'Settings · Chaotic-AUR',
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () => import('./settings/settings.component').then((c) => c.SettingsComponent),
+  },
+  {
     title: 'About us · Chaotic-AUR',
     path: 'about',
     loadComponent: () => import('./about/about.component').then((c) => c.AboutComponent),

@@ -91,11 +91,6 @@ export class BuildFailureNotifierService {
 
     await this.persistFailureTags(params.logUrl, scan);
 
-    if (this.configService.get<boolean>('app.notifyBuildFailures') !== true) {
-      this.pino.debug({ pkgname: logRef.pkgname, cause: scan.id }, 'Build failure notifications are disabled');
-      return;
-    }
-
     if (!isNotifiable(scan)) {
       this.pino.info(
         { pkgname: logRef.pkgname, cause: scan.id, tags: scan.tags },

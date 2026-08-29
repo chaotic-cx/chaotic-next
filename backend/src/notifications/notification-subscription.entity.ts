@@ -5,6 +5,9 @@ export class NotificationSubscription {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  @Column({ type: 'varchar' })
+  userId!: string;
+
   @Column({ type: 'varchar', unique: true })
   endpoint!: string;
 

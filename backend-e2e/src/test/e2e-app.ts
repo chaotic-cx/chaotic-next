@@ -65,7 +65,7 @@ export type ArchPackageSeed = Partial<
 >;
 
 export type SubscriptionSeed = Partial<
-  Pick<NotificationSubscription, 'endpoint' | 'p256dh' | 'auth' | 'expirationTime'>
+  Pick<NotificationSubscription, 'userId' | 'endpoint' | 'p256dh' | 'auth' | 'expirationTime'>
 >;
 
 export type ElfAnalysisSeed = Partial<
@@ -414,6 +414,7 @@ async function seedNotificationSubscription(
   const repo = dataSource.getRepository(NotificationSubscription);
   const n = await repo.count();
   return repo.save({
+    userId: overrides?.userId ?? 'e2e-user',
     endpoint: overrides?.endpoint ?? `https://fcm.googleapis.com/fcm/send/chaotic-test-${n}-${Date.now()}`,
     p256dh:
       overrides?.p256dh ?? 'BPWNRtrPfUjhwu8ST1Se2jfU0P_u5YJ0uo3xCovSkNEor1XY4ZX_HVriwh0T1_a3rvoD2oFymAxvNyUe4PthHXQ',

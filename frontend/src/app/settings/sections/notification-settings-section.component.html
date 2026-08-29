@@ -1,0 +1,29 @@
+<p-panel id="notifications">
+  <ng-template pTemplate="header">
+    <span class="font-bold">Notifications</span>
+  </ng-template>
+  <div class="chaotic-panel text-md">
+    @if (preferencesResource.isLoading()) {
+      <p class="text-ctp-subtext0">Loading your preferences…</p>
+    } @else if (preferencesResource.error()) {
+      <p class="text-ctp-red">Your preferences could not be loaded. Please try again later.</p>
+    } @else {
+      <div class="flex flex-col gap-3">
+        @for (pref of preferencesResource.value(); track pref.type) {
+          <div class="flex items-center justify-between gap-6">
+            <span>{{ typeLabels[pref.type] }}</span>
+            <p-toggle-switch
+              [inputId]="pref.type"
+              [ngModel]="pref.enabled"
+              [disabled]="saving()"
+              (ngModelChange)="setEnabled(pref.type, $event)"
+            />
+          </div>
+        }
+      </div>
+      @if (saveFailed()) {
+        <p class="mt-3 text-sm text-ctp-red">Saving failed. Your settings were restored.</p>
+      }
+    }
+  </div>
+</p-panel>

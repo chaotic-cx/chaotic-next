@@ -16,13 +16,12 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MoreThan, Repository } from 'typeorm';
-import { PushSubscription, sendNotification } from 'web-push';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { DiffScanService, type DiffScanVerdict, type MrAutoFlagLabel } from '../diff-scan/diff-scan.service';
 import { extractIndicators } from '../diff-scan/indicators';
 import { VirustotalService } from '../diff-scan/virustotal.service';
 import { EventService } from '../events/event.service';
-import { NotificationSubscription } from '../notifications/notification-subscription.entity';
+import { NotificationService } from '../notifications/notification.service';
 import { cachedResult } from '../utils/cache';
 import { MAX_DAYS_WINDOW } from '../utils/constants';
 import {
@@ -173,8 +172,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     private readonly virustotalService: VirustotalService,
     private readonly aurScanService: AurScanService,
     private readonly eventService: EventService,
-    @InjectRepository(NotificationSubscription)
-    private readonly subscriptionRepository: Repository<NotificationSubscription>,
+    private readonly notificationService: NotificationService,
     @InjectRepository(MrAction)
     private readonly mrActionRepository: Repository<MrAction>,
   ) {}
@@ -738,9 +736,6 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       }
       if (notifyable.length === 0) return;
 
-      const subscriptions = await this.subscriptionRepository.find();
-      if (subscriptions.length === 0) return;
-
       const summaries = notifyable
         .map(({ mr, pkg }) => {
           const findings = mr.scanFindings?.length ?? 0;
@@ -762,23 +757,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         },
       };
 
-      const promises = subscriptions.map((sub) => {
-        const pushSubscription: PushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        };
-        return sendNotification(pushSubscription, JSON.stringify(notificationPayload));
-      });
-
-      this.pino.info({ count: promises.length }, 'Sent notifications to subscribers');
-      const results = await Promise.allSettled(promises);
-      const failed = results.filter((result) => result.status === 'rejected').length;
-      if (failed > 0) {
-        this.pino.warn({ failed, total: results.length }, 'Push notifications failed');
-      }
+      const attempted = await this.notificationService.broadcast(notificationPayload, 'mr-review');
+      if (attempted === 0) return;
+      this.pino.info({ count: attempted }, 'Sent notifications to subscribers');
     } catch (error) {
       this.pino.error({ err: error }, 'Error notifying subscribers');
     }
