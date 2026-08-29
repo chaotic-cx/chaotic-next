@@ -10,9 +10,12 @@ import {
   daysRepoQuerySchema,
   getBuildsQuerySchema,
   getPackagesQuerySchema,
+  MAX_PER_PAGE,
   pkgnameListQuerySchema,
   popularBuildsQuerySchema,
   repoQuerySchema,
+  type Paginated,
+  type Package,
   type PackageSortField,
   type SortOrder,
 } from '@chaotic-next/shared-lib';
@@ -372,6 +375,17 @@ export class AppService {
         fromObject: parseQueryParams(getPackagesQuerySchema, { ...params, repo: 'true' }),
       }),
     };
+  }
+
+  /** Returns unique package names in `repo` that match `query`. */
+  async fetchPkgnameSuggestions(query: string, repo: string): Promise<string[]> {
+    const request = this.getPackagesResourceRequest({ page: 1, perPage: MAX_PER_PAGE, q: query });
+    const result = await firstValueFrom(this.http.get<Paginated<Package>>(request.url, { params: request.params }));
+    return [
+      ...new Set(
+        (result.items ?? []).filter((pkg) => pkg.reponame === repo).map((pkg) => pkg.pkgname),
+      ),
+    ];
   }
 
   getBuildsResourceRequest(params: BuildsQueryParams): HttpResourceRequest {

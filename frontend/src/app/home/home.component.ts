@@ -1,17 +1,16 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Package, Paginated, PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
+import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { AnimateOnScrollModule } from '@openng/optimus-ui/animateonscroll';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { firstValueFrom, map } from 'rxjs';
+import { map } from 'rxjs';
 import { AppService } from '../app.service';
 import { BuildStatusService } from '../build-status/build-status.service';
 import { parseFocusQuery } from '../functions';
@@ -40,7 +39,6 @@ import { RecentlyAddedComponent } from '../recently-added/recently-added.compone
   styleUrl: './home.component.css',
 })
 export class HomeComponent {
-  private readonly http = inject(HttpClient);
   observer = inject(BreakpointObserver);
 
   private readonly appService = inject(AppService);
@@ -83,12 +81,9 @@ export class HomeComponent {
     }
     const generation = ++this.suggestionGeneration;
     try {
-      const request = this.appService.getPackagesResourceRequest({ page: 1, perPage: 200, q: query });
-      const result = await firstValueFrom(this.http.get<Paginated<Package>>(request.url, { params: request.params }));
+      const names = await this.appService.fetchPkgnameSuggestions(query, 'chaotic-aur');
       if (generation !== this.suggestionGeneration) return;
-      this.suggestions.set([
-        ...new Set((result.items ?? []).filter((pkg) => pkg.reponame === 'chaotic-aur').map((pkg) => pkg.pkgname)),
-      ]);
+      this.suggestions.set(names);
     } catch {
       if (generation === this.suggestionGeneration) this.suggestions.set([]);
     }
