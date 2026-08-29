@@ -11,6 +11,7 @@ import {
 import { errorMessage } from '../utils/functions';
 import { BuildClassSyncService } from './build-class-sync.service';
 import { Build, BuildResourceUsage, Package } from './builder.entity';
+import { BuildFailureNotifierService } from './build-failure-notifier.service';
 import { EntityLookupService } from './entity-lookup.service';
 import { moleculerConfigCommonService } from './moleculer.config';
 import { isFailingStatus } from './unresolved-failures';
@@ -26,6 +27,7 @@ export interface BuilderDatabaseServiceOptions {
   sseSubject: Subject<Partial<MessageEvent<ChaoticEvent>>>;
   gitlabPipelineService: GitlabPipelineService;
   buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
+  buildFailureNotifier?: Pick<BuildFailureNotifierService, 'handleFailedBuild'>;
 }
 
 const BUILD_OUTCOME_EVENTS = new Set(['builds.success', 'builds.failed', 'builds.cancelled', 'builds.canceling']);
@@ -74,6 +76,7 @@ export class BuilderDatabaseService extends Service {
   private readonly sseSubject$: Subject<Partial<MessageEvent<ChaoticEvent>>>;
   private readonly gitlabPipelineService: GitlabPipelineService;
   private readonly buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
+  private readonly buildFailureNotifier?: Pick<BuildFailureNotifierService, 'handleFailedBuild'>;
 
   /**
    * Builds that succeeded while the repository databases did not yet carry
@@ -93,6 +96,7 @@ export class BuilderDatabaseService extends Service {
     sseSubject,
     gitlabPipelineService,
     buildClassSync,
+    buildFailureNotifier,
   }: BuilderDatabaseServiceOptions) {
     super(broker);
 
@@ -100,6 +104,7 @@ export class BuilderDatabaseService extends Service {
     this.sseSubject$ = sseSubject;
     this.gitlabPipelineService = gitlabPipelineService;
     this.buildClassSync = buildClassSync;
+    this.buildFailureNotifier = buildFailureNotifier;
 
     this.parseServiceSchema({
       name: 'builderDatabaseService',
@@ -211,6 +216,7 @@ export class BuilderDatabaseService extends Service {
 
       if (isFailingStatus(params.status)) {
         await this.dbConnections.silencedFailure.delete({ pkgname: params.pkgname });
+        this.scanBuildFailureAndNotify(params);
       }
 
       this.sseSubject$.next({
@@ -228,6 +234,13 @@ export class BuilderDatabaseService extends Service {
     } catch (err: unknown) {
       this.logger.error(err);
     }
+  }
+
+  private scanBuildFailureAndNotify(params: MoleculerBuildObject): void {
+    if (!this.buildFailureNotifier) return;
+    void this.buildFailureNotifier.handleFailedBuild(params).catch((err: unknown) => {
+      this.logger.error(`Failed to scan build failure for ${params.pkgname}: ${errorMessage(err)}`);
+    });
   }
 
   /**

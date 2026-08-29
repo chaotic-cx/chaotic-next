@@ -182,6 +182,7 @@ describe('BuilderService silence handling', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
       {} as EntityLookupService,
       {} as never,
     );

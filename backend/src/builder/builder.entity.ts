@@ -251,6 +251,14 @@ export class Build {
   replaced!: boolean;
 
   @ApiProperty({
+    description: 'Failure cause tags detected in the build log; null when no cause was recognized',
+    type: [String],
+    nullable: true,
+  })
+  @Column({ type: 'jsonb', nullable: true })
+  failureTags!: string[] | null;
+
+  @ApiProperty({
     description: 'Aggregated container resource usage of the build, all fields null when it was never sampled',
     type: BuildResourceUsage,
     nullable: true,

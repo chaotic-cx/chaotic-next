@@ -11,6 +11,23 @@ import { BuildStatusService } from './build-status.service';
 
 const DEPLOYMENTS_PAGE_SIZE = 5;
 
+const FAILURE_TAG_DESCRIPTIONS: Record<string, string> = {
+  dependency: 'Missing dependency',
+  compile: 'Compile error',
+  link: 'Link error',
+  package: 'Packaging error',
+  check: 'Check failed',
+  prepare: 'Prepare failed',
+  toolchain: 'Toolchain issue',
+  download: 'Download failed',
+  network: 'Network error',
+  checksum: 'Checksum mismatch',
+  metadata: 'Metadata or pkgver issue',
+  interfere: 'Interfere prepare failed (our tooling)',
+  silent: 'Silent: resolves itself',
+  transient: 'Transient: usually passes on retry',
+};
+
 @Component({
   selector: 'chaotic-build-status-deployments',
   imports: [
@@ -44,5 +61,9 @@ export class BuildStatusDeploymentsComponent {
 
   selectPage(page: number): void {
     this.page.set(Math.min(Math.max(1, page), this.pageCount()));
+  }
+
+  tagDescription(tag: string): string {
+    return FAILURE_TAG_DESCRIPTIONS[tag] ?? tag;
   }
 }

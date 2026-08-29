@@ -18,7 +18,21 @@
           animate.enter="pipeline-item-enter"
         >
           <div class="min-w-0 flex-1">
-            <span class="block wrap-break-word font-medium">{{ deployment.pkgbase.pkgname }}</span>
+            <span class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span class="wrap-break-word font-medium">{{ deployment.pkgbase.pkgname }}</span>
+              @if (deployment.failureTags?.length) {
+                <span class="inline-flex flex-wrap items-center gap-1">
+                  @for (tag of deployment.failureTags; track tag) {
+                    <span
+                      class="rounded-full bg-ctp-red/15 px-1.5 py-0.5 text-[11px] font-medium text-ctp-red"
+                      [pTooltip]="tagDescription(tag)"
+                      tooltipPosition="top"
+                      >{{ tag }}</span
+                    >
+                  }
+                </span>
+              }
+            </span>
             @if (deployment.repo?.name; as repoName) {
               <span class="block text-sm text-ctp-subtext1">{{ repoName }}</span>
             }
