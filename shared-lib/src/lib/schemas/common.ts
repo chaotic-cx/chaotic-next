@@ -12,6 +12,14 @@ export const INT4_MAX = 2_147_483_647;
 
 export const idParamSchema = z.coerce.number().int().positive().max(INT4_MAX).describe('Numeric database id');
 
+/** GitLab-side ids are independent sequences and already exceed the int4 range. */
+export const gitlabIdParamSchema = z.coerce
+  .number()
+  .int()
+  .positive()
+  .max(Number.MAX_SAFE_INTEGER)
+  .describe('Numeric GitLab id');
+
 export const amountParamSchema = z.coerce
   .number()
   .int()
