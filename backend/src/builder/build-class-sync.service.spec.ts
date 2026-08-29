@@ -27,11 +27,13 @@ function makeService(options?: {
   packages?: Package[];
   configText?: string | null;
   suggestions?: Awaited<ReturnType<BuildClassSuggesterService['suggestForPackages']>>;
+  commitCiConfig?: ReturnType<typeof vi.fn>;
 }): {
   service: BuildClassSyncService;
   saveMock: ReturnType<typeof vi.fn>;
   suggestMock: ReturnType<typeof vi.fn>;
   fetchCiConfigMock: ReturnType<typeof vi.fn>;
+  commitCiConfigMock: ReturnType<typeof vi.fn>;
 } {
   const packages = options?.packages ?? [];
   const findMock = vi.fn().mockResolvedValue(packages);
@@ -40,9 +42,17 @@ function makeService(options?: {
   fetchCiConfigMock.mockResolvedValue(options?.configText === undefined ? '' : options.configText);
   const suggestMock = vi.fn();
   suggestMock.mockResolvedValue(options?.suggestions ?? []);
+  const commitCiConfigMock = options?.commitCiConfig ?? vi.fn().mockResolvedValue(true);
 
-  const repository = { find: findMock, save: saveMock } as never;
-  const gitlab = { fetchCiConfig: fetchCiConfigMock } as unknown as GitlabPipelineService;
+  const repository = {
+    find: findMock,
+    findOne: vi.fn().mockResolvedValue(packages[0] ?? null),
+    save: saveMock,
+  } as never;
+  const gitlab = {
+    fetchCiConfig: fetchCiConfigMock,
+    commitCiConfig: commitCiConfigMock,
+  } as unknown as GitlabPipelineService;
   const suggester = { suggestForPackages: suggestMock } as unknown as BuildClassSuggesterService;
 
   return {
@@ -50,6 +60,7 @@ function makeService(options?: {
     saveMock,
     suggestMock,
     fetchCiConfigMock,
+    commitCiConfigMock,
   };
 }
 
@@ -133,27 +144,89 @@ describe('BuildClassSyncService', () => {
     expect(member.buildClass).toBe(2);
   });
 
-  it('warns instead of adjusting when resource usage suggests another class', async () => {
-    const warnSpy = vi.spyOn(pinoStub, 'warn').mockImplementation(() => undefined);
-    const pkg = makePackage({});
-    const { service, saveMock } = makeService({
+  it('commits an even class when resource usage suggests a different class', async () => {
+    const pkg = makePackage({ buildClass: 8 });
+    const { service, commitCiConfigMock, saveMock } = makeService({
       packages: [pkg],
-      configText: 'BUILDER_CLASS=1\n',
-      suggestions: [{ pkgname: 'paru', suggestedBuildClass: 8, samples: 12, averages: {} as never }],
+      configText: 'CI_PKGBUILD_SOURCE=aur\nBUILDER_CLASS=8\n',
+      suggestions: [{ pkgname: 'paru', suggestedBuildClass: 4, samples: 12, averages: {} as never }],
     });
 
-    try {
-      await service.syncFromDeployment('chaotic-aur', ['paru']);
+    await service.syncFromDeployment('chaotic-aur', ['paru']);
 
-      expect(pkg.buildClass).toBe(1);
-      expect(saveMock).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ pkgname: 'paru', suggested: 8 }),
-        expect.stringContaining('Build class adjustment suggested'),
-      );
-    } finally {
-      warnSpy.mockRestore();
-    }
+    expect(commitCiConfigMock).toHaveBeenCalledWith(
+      'chaotic-aur',
+      'paru',
+      'CI_PKGBUILD_SOURCE=aur\nBUILDER_CLASS=4\n',
+      expect.stringContaining('Automatic adjustment from 8 to 4'),
+    );
+    expect(pkg.buildClass).toBe(4);
+    expect(saveMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('snaps an odd suggestion down to the nearest even class', async () => {
+    const pkg = makePackage({ buildClass: 2 });
+    const { service, commitCiConfigMock } = makeService({
+      packages: [pkg],
+      configText: 'BUILDER_CLASS=2\n',
+      suggestions: [{ pkgname: 'paru', suggestedBuildClass: 9, samples: 5, averages: {} as never }],
+    });
+
+    await service.syncFromDeployment('chaotic-aur', ['paru']);
+
+    expect(commitCiConfigMock).toHaveBeenCalledWith('chaotic-aur', 'paru', 'BUILDER_CLASS=8\n', expect.any(String));
+    expect(pkg.buildClass).toBe(8);
+  });
+
+  it('leaves an odd manual class untouched', async () => {
+    const pkg = makePackage({ buildClass: 9, pkgbaseName: 'paru' });
+    const { service, commitCiConfigMock, saveMock } = makeService({
+      packages: [pkg],
+      configText: 'BUILDER_CLASS=9\n',
+      suggestions: [{ pkgname: 'paru', suggestedBuildClass: 4, samples: 12, averages: {} as never }],
+    });
+
+    await service.syncFromDeployment('chaotic-aur', ['paru']);
+
+    expect(commitCiConfigMock).not.toHaveBeenCalled();
+    expect(pkg.buildClass).toBe(9);
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the stored value when the commit fails', async () => {
+    const pkg = makePackage({ buildClass: 8, pkgbaseName: 'paru' });
+    const { service, saveMock } = makeService({
+      packages: [pkg],
+      configText: 'BUILDER_CLASS=8\n',
+      suggestions: [{ pkgname: 'paru', suggestedBuildClass: 4, samples: 12, averages: {} as never }],
+      commitCiConfig: vi.fn().mockResolvedValue(false),
+    });
+
+    await service.syncFromDeployment('chaotic-aur', ['paru']);
+
+    expect(pkg.buildClass).toBe(8);
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('adjusts one package and reports the outcome', async () => {
+    const pkg = makePackage({ buildClass: 8, pkgbaseName: 'paru' });
+    const { service, commitCiConfigMock } = makeService({
+      packages: [pkg],
+      configText: 'BUILDER_CLASS=8\n',
+      suggestions: [{ pkgname: 'paru', suggestedBuildClass: 5, samples: 3, averages: {} as never }],
+    });
+
+    const result = await service.adjustPackageBuildClass('paru');
+
+    expect(result).toEqual({ pkgname: 'paru', pkgbase: 'paru', buildClass: 4, adjusted: true });
+    expect(commitCiConfigMock).toHaveBeenCalledWith('chaotic-aur', 'paru', 'BUILDER_CLASS=4\n', expect.any(String));
+    expect(pkg.buildClass).toBe(4);
+  });
+
+  it('throws when the adjusted package does not exist', async () => {
+    const { service } = makeService();
+
+    await expect(service.adjustPackageBuildClass('ghost')).rejects.toThrow('Package not found: ghost');
   });
 
   it('skips work without package names or without a CI config file', async () => {

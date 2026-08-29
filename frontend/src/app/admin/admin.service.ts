@@ -2,6 +2,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import {
   AdminPackageElfAnalysis,
+  AdjustBuildClassResponse,
   ArchPackage,
   BrokenPackageReport,
   Builder,
@@ -304,6 +305,26 @@ export class AdminService {
       'Could not trigger package bump.',
       () => this.packagesResource.reload(),
     );
+  }
+
+  async adjustBuildClass(pkg: PackageDto): Promise<void> {
+    try {
+      const result = await lastValueFrom(
+        this.http.post<AdjustBuildClassResponse>(
+          `${this.backendUrl}/admin/packages/${encodeURIComponent(pkg.pkgname)}/adjust-build-class`,
+          {},
+        ),
+      );
+      const detail = result.adjusted
+        ? `Adjusted build class of ${result.pkgbase} to ${result.buildClass}.`
+        : `${result.pkgbase} already matches its suggested class (${result.buildClass}).`;
+      this.messageToastService.success('Success', detail);
+      this.packagesResource.reload();
+    } catch (error) {
+      const detail = `Could not adjust the build class of ${pkg.pkgname}.`;
+      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
+      console.error(detail, error);
+    }
   }
 
   async schedulePackages(packages: PackageDto[]): Promise<void> {

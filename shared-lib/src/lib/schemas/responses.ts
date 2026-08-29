@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BUILD_CLASS_MAX, BUILD_CLASS_MIN } from '../types/core';
 import { externalCommitStatusSchema as externalCommitStatusLink } from '../types/gitlab';
 import {
   diffScanFindingSchema as diffScanFindingLink,
@@ -158,6 +159,19 @@ export function paginatedSchema(item: z.ZodObject): z.ZodObject {
 }
 
 // ---- Admin / repo-manager ----
+
+export const adjustBuildClassResponseSchema = z.object({
+  pkgname: z.string().describe('Name of the adjusted package'),
+  pkgbase: z.string().describe('Pkgbase whose .CI/config was inspected'),
+  buildClass: z
+    .number()
+    .int()
+    .min(BUILD_CLASS_MIN)
+    .max(BUILD_CLASS_MAX)
+    .describe('Effective build class after the adjustment'),
+  adjusted: z.boolean().describe('True when the .CI/config was changed'),
+});
+export type AdjustBuildClassResponse = z.infer<typeof adjustBuildClassResponseSchema>;
 
 export const rescanStartedSchema = z.object({
   started: z.number().describe('Number of packages queued for background rescanning'),

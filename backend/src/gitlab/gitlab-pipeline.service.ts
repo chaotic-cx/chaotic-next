@@ -1,3 +1,17 @@
+import {
+  type ExternalCommitStatus,
+  PipelineOperation,
+  PipelineScheduleOption,
+  PipelineTriggerResult,
+  type PipelineWebhookDto,
+  PipelineWithExternalStatus,
+} from '@chaotic-next/shared-lib';
+import { type CommitStatusSchema, PipelineSchema } from '@gitbeaker/rest';
+import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { IsNull, Repository } from 'typeorm';
 import { Repo } from '../builder/builder.entity';
 import { EventService } from '../events/event.service';
 import { cachedResult } from '../utils/cache';
@@ -5,20 +19,6 @@ import { GitlabApiService, gitlabRawFileToString } from './gitlab-api.service';
 import { type GitlabStatusEvent, type MrActor } from './interfaces';
 import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
 import { PipelineTrigger } from './pipeline-trigger.entity';
-import {
-  PipelineOperation,
-  PipelineScheduleOption,
-  PipelineTriggerResult,
-  PipelineWithExternalStatus,
-  type ExternalCommitStatus,
-  type PipelineWebhookDto,
-} from '@chaotic-next/shared-lib';
-import { PipelineSchema, type CommitStatusSchema } from '@gitbeaker/rest';
-import { CACHE_MANAGER, type Cache } from '@nestjs/cache-manager';
-import { Inject, Injectable, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { IsNull, Repository } from 'typeorm';
 
 const SKIPPED_PIPELINE_STATUS = 'skipped';
 const PIPELINE_SCHEDULES_CACHE_TTL_MS = 5 * 60_000;
@@ -341,6 +341,27 @@ export class GitlabPipelineService implements OnModuleInit {
     } catch {
       this.pino.debug({ pkgbase, repoName }, 'No .CI/config found');
       return null;
+    }
+  }
+
+  async commitCiConfig(repoName: string, pkgbase: string, configText: string, commitMessage: string): Promise<boolean> {
+    const repo = await this.repoRepository.findOne({ where: { name: repoName } });
+    if (!repo?.gitlabProjectId || !this.api) {
+      this.pino.warn({ pkgbase, repoName }, 'Cannot commit .CI/config: repo or GitLab client unavailable');
+      return false;
+    }
+
+    try {
+      const commit = await this.api.Commits.create(repo.gitlabProjectId, repo.gitRef || 'main', commitMessage, [
+        { action: 'update' as const, filePath: `${pkgbase}/.CI/config`, content: configText },
+      ]);
+      if (commit.id) {
+        this.registerCommitSha(commit.id);
+      }
+      return true;
+    } catch (err) {
+      this.pino.warn({ err, pkgbase, repoName }, 'Committing .CI/config failed');
+      return false;
     }
   }
 

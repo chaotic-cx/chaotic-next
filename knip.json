@@ -4,6 +4,7 @@
     "backend/src/data/migration-cli.ts",
     "backend/src/main.ts",
     "backend/src/scripts/*.ts",
+    "backend-e2e/src/test/*.ts",
     "frontend/src/environments/environment.prod.ts",
     "frontend/src/main.ts",
     "shared-lib/src/index.ts"

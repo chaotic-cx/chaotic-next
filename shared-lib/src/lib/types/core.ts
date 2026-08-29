@@ -44,6 +44,12 @@ export function buildClassTierName(buildClass: number): string {
   return BUILD_CLASS_TIER_NAMES[tierIndex === -1 ? BUILD_CLASS_TIER_NAMES.length - 1 : tierIndex];
 }
 
+/** Automatic adjustments write even classes only; odd classes are always manual. */
+export function snapBuildClassToEven(value: number): number {
+  const clamped = Math.min(Math.max(Math.round(value), BUILD_CLASS_MIN), BUILD_CLASS_MAX);
+  return clamped % 2 === 0 ? clamped : clamped - 1;
+}
+
 /** Returns the numeric value of a build class, or null for non-numeric (custom) classes. */
 export function parseBuildClass(value: BuildClass): number | null {
   if (typeof value === 'number') return Number.isNaN(value) ? null : value;

@@ -4,6 +4,7 @@ import { Builder, Package, Repo } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { AdminService, type CreateArchPackageBody, type CreatePackageBody, type CreateRepoBody } from './admin.service';
 import {
+  adjustBuildClassResponseSchema,
   adminPackageElfAnalysisSchema,
   archPackageSchema,
   builderSchema,
@@ -29,6 +30,7 @@ import {
   rescanPackagesBodySchema,
   rescanStartedSchema,
   type AdminPackageElfAnalysis,
+  type AdjustBuildClassResponse,
   type CreateBuilderBodyDto,
   type CreateElfAnalysisBodyDto,
   type ListAdminPackagesQueryDto,
@@ -89,6 +91,15 @@ export class AdminController {
   @ApiAcceptedResponse({ description: 'Build class rescan triggered; runs in the background.' })
   rescanBuildClasses(): void {
     void this.buildClassSync.rescanAllPackages();
+  }
+
+  @Post('packages/:pkgname/adjust-build-class')
+  @ApiOperation({
+    summary: 'Compare the build class of one package with its suggestion and adjust the .CI/config.',
+  })
+  @ApiOkResponse({ description: 'Adjustment outcome', schema: schemaResponse(adjustBuildClassResponseSchema).schema })
+  async adjustBuildClass(@Param('pkgname') pkgname: string): Promise<AdjustBuildClassResponse> {
+    return this.buildClassSync.adjustPackageBuildClass(pkgname);
   }
 
   @Post('recompute-signal-derivations')

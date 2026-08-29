@@ -1,4 +1,9 @@
-import { BUILD_CLASS_MAX, BUILD_CLASS_MIN, type BuildResourceAverages } from '@chaotic-next/shared-lib';
+import {
+  BUILD_CLASS_MAX,
+  BUILD_CLASS_MIN,
+  snapBuildClassToEven,
+  type BuildResourceAverages,
+} from '@chaotic-next/shared-lib';
 
 const BYTES_PER_MIB = 1024 ** 2;
 const BYTES_PER_GIB = 1024 ** 3;
@@ -41,15 +46,12 @@ function logScaleScore(value: number, scale: MetricScale): number {
   return progress * BUILD_CLASS_MAX;
 }
 
-function clampToClassRange(score: number): number {
-  return Math.min(BUILD_CLASS_MAX, Math.max(BUILD_CLASS_MIN, score));
-}
-
 /**
- * Maps averaged resource usage of a package to a suggested numeric build class
- * (BUILD_CLASS_MIN..BUILD_CLASS_MAX). Each metric is scored independently on a
- * log scale and combined by weighted average; metrics without data are skipped
- * and their weight redistributed. Returns null when nothing was sampled.
+ * Maps averaged resource usage of a package to a suggested numeric build class.
+ * Each metric is scored independently on a log scale and combined by weighted
+ * average; metrics without data are skipped and their weight redistributed.
+ * Returns null when nothing was sampled. Suggestions are even-only; odd
+ * classes are reserved for manual configuration.
  */
 export function suggestBuildClass(averages: BuildResourceAverages): number | null {
   let weightedScore = 0;
@@ -61,5 +63,5 @@ export function suggestBuildClass(averages: BuildResourceAverages): number | nul
     totalWeight += scale.weight;
   }
   if (totalWeight === 0) return null;
-  return clampToClassRange(Math.round(weightedScore / totalWeight));
+  return snapBuildClassToEven(weightedScore / totalWeight);
 }
