@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePkgbuild } from './pkgbuild';
+import { parsePkgbuild, parseSrcinfoVariables, registerSrcinfoVariables } from './pkgbuild';
 import { makeChange } from './rules/test-support';
 
 describe('parsePkgbuild', () => {
@@ -170,5 +170,74 @@ describe('parsePkgbuild', () => {
 
     expect(parsed?.vars.get('pkgver')).toBeUndefined();
     expect(parsed?.entries[0]?.raw).toContain('$pkgver');
+  });
+});
+
+describe('SRCINFO variable resolution', () => {
+  it('extracts scalar assignments from tab-indented .SRCINFO lines', () => {
+    const change = makeChange(
+      [
+        '@@ -1,4 +1,4 @@',
+        'pkgbase = demo',
+        '\tpkgdesc = A demo',
+        '\tpkgver = 1.0',
+        '\turl = https://github.com/example/demo',
+      ].join('\n'),
+      { new_path: 'demo/.SRCINFO', old_path: 'demo/.SRCINFO' },
+    );
+    const vars = parseSrcinfoVariables(change);
+
+    expect(vars.get('pkgver')).toBe('1.0');
+    expect(vars.get('url')).toBe('https://github.com/example/demo');
+  });
+
+  it('folds sibling .SRCINFO vars in so a clipped url= still resolves the host', () => {
+    const pkgbuild = makeChange(
+      [
+        '@@ -1,4 +1,4 @@',
+        '# Maintainer: dev',
+        '',
+        ' pkgname=demo',
+        '+pkgver=1.0',
+        ' pkgrel=1',
+        " arch=('x86_64')",
+        '@@ -20,3 +20,3 @@',
+        ' source=("$pkgname-$pkgver.tar.gz"::"${url}/archive/v${pkgver}.tar.gz")',
+      ].join('\n'),
+      { new_path: 'demo/PKGBUILD', old_path: 'demo/PKGBUILD' },
+    );
+    const srcinfo = makeChange(
+      [
+        '@@ -1,4 +1,4 @@',
+        'pkgbase = demo',
+        '\tpkgrel = 1',
+        '\turl = https://github.com/example/demo',
+        '\tpkgver = 1.0',
+      ].join('\n'),
+      { new_path: 'demo/.SRCINFO', old_path: 'demo/.SRCINFO' },
+    );
+
+    expect(parsePkgbuild(pkgbuild)?.entries[0]?.host).toBeNull();
+
+    registerSrcinfoVariables(pkgbuild, parseSrcinfoVariables(srcinfo));
+    const parsed = parsePkgbuild(pkgbuild);
+    expect(parsed?.entries[0]?.host).toBe('github.com');
+    expect(parsed?.urlHost).toBe('github.com');
+  });
+
+  it('keeps the PKGBUILD declaration when it and the .SRCINFO conflict', () => {
+    const pkgbuild = makeChange(
+      ['@@ -0,0 +1,3 @@', '+pkgname=demo', '+pkgver=2.0', '+url="https://own.example.org/"'].join('\n'),
+      { new_path: 'demo/PKGBUILD', old_path: 'demo/PKGBUILD' },
+    );
+    const srcinfo = makeChange(
+      ['@@ -1,2 +1,2 @@', 'pkgbase = demo', '\turl = https://srcinfo.example.org/'].join('\n'),
+      { new_path: 'demo/.SRCINFO', old_path: 'demo/.SRCINFO' },
+    );
+
+    registerSrcinfoVariables(pkgbuild, parseSrcinfoVariables(srcinfo));
+    const parsed = parsePkgbuild(pkgbuild);
+    expect(parsed?.vars.get('url')).toBe('https://own.example.org/');
+    expect(parsed?.urlHost).toBe('own.example.org');
   });
 });

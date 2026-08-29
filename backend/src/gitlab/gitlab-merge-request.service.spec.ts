@@ -29,8 +29,9 @@ function createApiService(api: Record<string, unknown> = {}): GitlabApiService {
 function createService(
   apiObject: Record<string, unknown> = {},
   virustotal: { enabled: boolean; reportOn: ReturnType<typeof vi.fn> } = { enabled: false, reportOn: vi.fn() },
-  aurScan: { maintainerStatusFor: ReturnType<typeof vi.fn> } = {
+  aurScan: { maintainerStatusFor: ReturnType<typeof vi.fn>; packageDependencies: ReturnType<typeof vi.fn> } = {
     maintainerStatusFor: vi.fn(async () => new Map()),
+    packageDependencies: vi.fn(async () => null),
   },
 ): {
   service: GitlabMergeRequestService;
@@ -821,7 +822,10 @@ describe('GitlabMergeRequestService.enrichMaintainerInfo', () => {
 
   it('attaches maintainers and takeover changes to update MRs', async () => {
     const maintainerStatusFor = vi.fn(async () => new Map([['evilpkg', strangerStatus]]));
-    const { service, cacheSet, sseNext } = createService({}, undefined, { maintainerStatusFor });
+    const { service, cacheSet, sseNext } = createService({}, undefined, {
+      maintainerStatusFor,
+      packageDependencies: vi.fn(async () => null),
+    });
     const updateMr = mr({ title: 'chore(update): evilpkg' });
     const otherMr = mr({ title: 'chore: mass rebuild', iid: 2, id: 99 });
 
@@ -838,7 +842,10 @@ describe('GitlabMergeRequestService.enrichMaintainerInfo', () => {
 
   it('skips MRs whose updated_at has not changed since the last run', async () => {
     const maintainerStatusFor = vi.fn(async () => new Map([['evilpkg', strangerStatus]]));
-    const { service } = createService({}, undefined, { maintainerStatusFor });
+    const { service } = createService({}, undefined, {
+      maintainerStatusFor,
+      packageDependencies: vi.fn(async () => null),
+    });
     const updateMr = mr({ title: 'chore(update): evilpkg', updated_at: '2026-08-16T10:00:00Z' });
 
     await enrich(service).call(service, [updateMr]);

@@ -1,4 +1,4 @@
-import { isInScope, type RuleScope, visibleFileLines } from './rules/diff-utils';
+import { isCommentLine, isInScope, type RuleScope, visibleFileLines } from './rules/diff-utils';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 const PKGBUILD_SCOPE: RuleScope[] = ['pkgbuild'];
@@ -31,6 +31,16 @@ const REPUTABLE_HOSTS = [
 
 const VCS_SOURCE = /(?:^|\s|::)(?:git|svn|hg|bzr)\+[A-Za-z]/;
 const GIT_URL = /\.git(?:[?#].*)?$/i;
+
+/**
+ * A POSIX variable reference: `$name` or `${name}` with an optional
+ * `${name...}` operation body. Shared by `substituteVars` and the provenance
+ * rule that tells resolvable metadata references apart from local variables.
+ */
+export const VARIABLE_REFERENCE = /\$\{([A-Za-z_][A-Za-z0-9_]*)([^}]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g;
+
+/** Matches a `.SRCINFO` scalar assignment such as `url = https://example.org`. */
+const SRCINFO_KEY_VALUE = /^\s*([A-Za-z0-9_]+)\s*=\s*(.+)$/;
 
 const SCALAR_ASSIGNMENT = /^\s*([A-Za-z_][A-Za-z0-9_]*)=(["']?)([^"'()\s]+)\2/;
 /** The `: ${NAME:=default}` idiom packages use for user-overridable build options. */
@@ -228,7 +238,7 @@ const MAKEPKG_DEFAULTS: ReadonlyMap<string, string> = new Map([['CARCH', 'x86_64
  */
 export function substituteVars(template: string, vars: ReadonlyMap<string, string>): string | null {
   const expanded = template.replace(
-    /\$\{([A-Za-z_][A-Za-z0-9_]*)([^}]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
+    VARIABLE_REFERENCE,
     (match, bracedName: string | undefined, operation: string | undefined, bareName: string | undefined) => {
       const name = bareName ?? bracedName;
       if (name === undefined) return match;
@@ -311,11 +321,45 @@ function bashRange(value: string, offset: number, lengthRaw: string | undefined)
   return value.slice(start, end);
 }
 
+/** Per-change `.SRCINFO` scalars folded into `parsePkgbuild`'s variable resolution. */
+const SRCINFO_VARIABLES = new WeakMap<MergeRequestDiffSchema, ReadonlyMap<string, string>>();
+
+/** Registers the literal scalars of a package's `.SRCINFO` for a PKGBUILD change. */
+export function registerSrcinfoVariables(change: MergeRequestDiffSchema, variables: ReadonlyMap<string, string>): void {
+  SRCINFO_VARIABLES.set(change, variables);
+}
+
+/**
+ * Extracts the scalar assignments of a `.SRCINFO` change (e.g. `url = https://…`)
+ * from its visible diff lines. The first value for a key wins, mirroring how
+ * makepkg reads the top-level block before the per-package tables.
+ */
+export function parseSrcinfoVariables(change: MergeRequestDiffSchema): ReadonlyMap<string, string> {
+  const variables = new Map<string, string>();
+  for (const text of visibleFileLines(change).values()) {
+    if (isCommentLine(text)) continue;
+    const match = text.match(SRCINFO_KEY_VALUE);
+    if (!match) continue;
+    const name = match[1];
+    if (!variables.has(name)) variables.set(name, unquote(match[2].trim()));
+  }
+  return variables;
+}
+
 export function parsePkgbuild(change: MergeRequestDiffSchema): ParsedPkgbuild | null {
   if (!isInScope(change, PKGBUILD_SCOPE)) return null;
   const numberedLines = [...visibleFileLines(change).entries()];
   const text = numberedLines.map(([, line]) => line).join('\n');
   const vars = extractScalarVars(text);
+
+  // A package's `.SRCINFO` always carries its literal url/pkgver, but GitLab
+  // only sends the changed hunks, so the PKGBUILD's own `url=` line may sit
+  // outside them. Fold the sibling `.SRCINFO` scalars in as a fallback so
+  // host resolution still happens for untouched declarations (see
+  // registerSrcinfoVariables). PKGBUILD assignments win on conflict.
+  for (const [name, value] of SRCINFO_VARIABLES.get(change) ?? []) {
+    if (!vars.has(name)) vars.set(name, value);
+  }
 
   // Resolve variables up front so host detection works for "$url/..." style
   // sources and findings display the actual URL instead of the template.
@@ -328,7 +372,7 @@ export function parsePkgbuild(change: MergeRequestDiffSchema): ParsedPkgbuild | 
   return {
     text,
     entries,
-    urlHost: extractUrlHost(text),
+    urlHost: extractUrlHost(text) ?? hostOf(vars.get('url') ?? ''),
     vars,
   };
 }
