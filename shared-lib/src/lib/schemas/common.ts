@@ -37,12 +37,7 @@ export const statusQuerySchema = z.coerce.number().int().min(0).max(INT4_MAX).de
 
 export const pageQuerySchema = z.coerce.number().int().min(1).max(INT4_MAX).describe('1-based page number');
 
-export const perPageQuerySchema = z.coerce
-  .number()
-  .int()
-  .min(1)
-  .max(MAX_PER_PAGE)
-  .describe('Entries per page');
+export const perPageQuerySchema = z.coerce.number().int().min(1).max(MAX_PER_PAGE).describe('Entries per page');
 
 export const daysQuerySchema = z.strictObject({
   days: daysParamSchema.optional().describe('Lookback window in days; all time when omitted'),
