@@ -1,57 +1,35 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
+const LABELS: Record<string, string> = {
+  'lastUpdated': 'Last update',
+  'id': 'ID',
+  'pkgname': 'Package name',
+  'createdAt': 'Added at',
+  'version': 'Version',
+  'deps': 'Dependencies',
+  'desc': 'Description',
+  'filename': 'Filename',
+  'license': 'License',
+  'packager': 'Packager',
+  'url': 'URL',
+  'buildDate': 'Build date',
+  'checkDepends': 'Check dependencies',
+  'conflicts': 'Conflicts',
+  'makeDeps': 'Make dependencies',
+  'optDeps': 'Optional dependencies',
+  'provides': 'Provides',
+  'replaces': 'Replaces',
+  'soNameList': 'SO name list',
+  'pkgrel': 'Pkgrel',
+  'downloads': 'Downloads',
+  'user-agents': 'User agents',
+};
+
 @Pipe({
   name: 'packageDetailKey',
 })
 export class PackageDetailKeyPipe implements PipeTransform {
   transform(value: string): string {
-    switch (value) {
-      case 'lastUpdated':
-        return 'Last update';
-      case 'id':
-        return 'ID';
-      case 'pkgname':
-        return 'Package name';
-      case 'createdAt':
-        return 'Added at';
-      case 'version':
-        return 'Version';
-      case 'deps':
-        return 'Dependencies';
-      case 'desc':
-        return 'Description';
-      case 'filename':
-        return 'Filename';
-      case 'license':
-        return 'License';
-      case 'packager':
-        return 'Packager';
-      case 'url':
-        return 'URL';
-      case 'buildDate':
-        return 'Build date';
-      case 'checkDepends':
-        return 'Check dependencies';
-      case 'conflicts':
-        return 'Conflicts';
-      case 'makeDeps':
-        return 'Make dependencies';
-      case 'optDeps':
-        return 'Optional dependencies';
-      case 'provides':
-        return 'Provides';
-      case 'replaces':
-        return 'Replaces';
-      case 'soNameList':
-        return 'SO name list';
-      case 'pkgrel':
-        return 'Pkgrel';
-      case 'downloads':
-        return 'Downloads';
-      case 'user-agents':
-        return 'User agents';
-      default:
-        return value;
-    }
+    return LABELS[value] ?? value;
   }
 }

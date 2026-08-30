@@ -1,11 +1,28 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { Meta } from '@angular/platform-browser';
-import { Router, RouterLink } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Card } from '@openng/optimus-ui/card';
 import { Image } from '@openng/optimus-ui/image';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
-import { updateSeoTags } from '../functions';
+import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
+import { type MemorialConfig } from './memorial.configs';
+
+interface MemorialImage {
+  author: string;
+  full: string;
+  preview: string;
+}
+
+function buildLinks(filenames: string[], specialTreatment: string[], folder: string, year: number): MemorialImage[] {
+  const links: MemorialImage[] = [];
+  for (const filename of filenames) {
+    if (specialTreatment.includes(filename)) continue;
+    const author = filename.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+    const url = `/memorials/${year}/${folder}/${filename}.webp`;
+    links.push({ author, full: url, preview: url });
+  }
+  return links;
+}
 
 @Component({
   selector: 'chaotic-memorial',
@@ -13,109 +30,19 @@ import { TitleComponent } from '../title/title.component';
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
 })
-export class MemorialComponent implements OnInit {
-  private readonly meta = inject(Meta);
-  private readonly router = inject(Router);
+export class MemorialComponent {
+  private readonly route = inject(ActivatedRoute);
 
-  desktops: string[] = [
-    'PROxZIMA.png',
-    'alexjp.jpg',
-    'aryan.png',
-    'ash-2.png',
-    'ash.png',
-    'austin.png',
-    'bernard-wayfire.png',
-    'bernard.png',
-    'dr460nf1r3.png',
-    'ernesto.png',
-    'fcinq.jpg',
-    'filo.jpg',
-    'fra.png',
-    'iDigitalFlame.png',
-    'icarns.png',
-    'jeafran.png',
-    'kevin.png',
-    'kevin_nadar.png',
-    'lesnake.jpg',
-    'memorial.png',
-    'odiousimp.png',
-    'osvarcha.png',
-    'pedrohlc.png',
-    'redgloboli.png',
-    'sgs_1.jpg',
-    'sgs_2.jpg',
-    'smoky.png',
-    'sonya.png',
-    'sugaya.png',
-    'virusz4274.png',
-    'vnepogodin.png',
-    'zany130.png',
-  ];
-  terms: string[] = [
-    'AvinashReddy3108.png',
-    'ahmubashshir.png',
-    'arch04.png',
-    'b.jpg',
-    'dr460nf1r3.png',
-    'dr460nf1r3_vps.png',
-    'fcinq.png',
-    'freebird.png',
-    'garuda_builder.png',
-    'hisham.png',
-    'jorge.png',
-    'kenny.jpg',
-    'librewish.png',
-    'ninioArtillero.png',
-    'pedrohlc.png',
-    'rohit-arm.jpg',
-    'sgs.png',
-    'snowdan.jpg',
-    'squirrellyDave.png',
-    'swappy.png',
-    'thotypous.jpg',
-    'tne.png',
-    'virusz4274.png',
-    'vnepogodin.png',
-    'x11guy.png',
-    'zoe.png',
-  ];
+  protected readonly config = this.route.snapshot.data['memorial'] as MemorialConfig;
 
-  desktopLinks: { author: string; full: string; preview: string }[] = [];
-  termLinks: { author: string; full: string; preview: string }[] = [];
+  readonly heading = `Memorial — ${this.config.year} Edition`;
 
-  specialTreatmentDesktops: string[] = ['alexjp.jpg', 'fcinq.jpg', 'filo.jpg', 'virusz4274.png'];
-  specialTreatmentTerms: string[] = ['kenny.jpg', 'rohit-arm.jpg', 'snowdan.jpg'];
+  readonly desktopLinks = buildLinks(this.config.desktops, this.config.specialDesktops, 'desktops', this.config.year);
+
+  readonly termLinks = buildLinks(this.config.terms, this.config.specialTerms, 'terminals', this.config.year);
 
   constructor() {
-    for (const filename of this.desktops) {
-      if (!this.specialTreatmentDesktops.includes(filename)) {
-        const author = filename.replace(/\.(png|jpg|jpeg|webp)$/i, '');
-        this.desktopLinks.push({
-          author,
-          full: `/memorials/2021/desktops/${filename}.webp`,
-          preview: `/memorials/2021/desktops/${filename}.webp`,
-        });
-      }
-    }
-    for (const filename of this.terms) {
-      if (!this.specialTreatmentTerms.includes(filename)) {
-        const author = filename.replace(/\.(png|jpg|jpeg|webp)$/i, '');
-        this.termLinks.push({
-          author,
-          full: `/memorials/2021/terminals/${filename}.webp`,
-          preview: `/memorials/2021/terminals/${filename}.webp`,
-        });
-      }
-    }
-  }
-
-  ngOnInit() {
-    updateSeoTags(this.meta, {
-      title: 'Memorial 2021 · Chaotic-AUR',
-      description: 'Memorial of Chaotic-AUR, celebrating the third birthday of Chaotic-AUR',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
-      url: this.router.url,
-    });
+    const config = this.config;
+    setPageSeo(this.route.snapshot.title ?? '', config.description, config.keywords);
   }
 }

@@ -1,4 +1,4 @@
-import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '../types';
+import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '../types/core';
 import { pageQuerySchema, perPageQuerySchema } from './common';
 import { z } from 'zod';
 

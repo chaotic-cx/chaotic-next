@@ -1,0 +1,9 @@
+<div [class]="containerClass()" [style.height.px]="height()">
+  @if (hasData()) {
+    <p-chart [class]="chartClass()" [data]="data()" [options]="options()" [responsive]="true" [type]="type()" />
+  } @else if (loading()) {
+    <div class="absolute inset-0 flex items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
+  }
+</div>

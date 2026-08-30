@@ -1,23 +1,13 @@
-@if (chartConfig().data.labels?.length || loading()) {
-  <div
-    class="card relative flex justify-center min-h-[10rem]"
-    [style.height.px]="(amount() || 1) * (isMobile() ? 22 : 28) + 48"
-  >
-    @if (hasData()) {
-      <p-chart
-        class="w-full h-full"
-        [data]="chartConfig().data"
-        [options]="chartConfig().options"
-        [responsive]="true"
-        type="bar"
-      />
-    }
-    @if (loading()) {
-      <div class="absolute inset-0 flex items-center justify-center">
-        <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
-      </div>
-    }
-  </div>
+@if (chartConfig().data.labels?.length || chart.loading()) {
+  <chaotic-chart-card
+    [data]="chartConfig().data"
+    [options]="chartConfig().options"
+    [hasData]="hasData()"
+    [loading]="chart.loading()"
+    [height]="chartRowHeight(amount(), isMobile())"
+    type="bar"
+    containerClass="card relative flex justify-center min-h-[10rem]"
+  />
 }
 <p-input-number
   class="mt-4"

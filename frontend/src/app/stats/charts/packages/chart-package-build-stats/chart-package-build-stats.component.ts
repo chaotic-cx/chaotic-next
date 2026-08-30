@@ -1,28 +1,24 @@
-import { DatePipe } from '@angular/common';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { parseCount, resourceValue } from '../../../../functions';
+import { parseCount } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions, mochaScales } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, mochaScales } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-package-build-stats',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-package-build-stats.component.html',
   styleUrl: './chart-package-build-stats.component.css',
-  providers: [DatePipe],
 })
 export class ChartPackageBuildStatsComponent {
   private readonly appService = inject(AppService);
-  private readonly datePipe = inject(DatePipe);
   private readonly statsService = inject(StatsService);
 
   readonly packageName = input.required<string>();
 
-  private readonly resource = httpResource<{ day: string; repo: string; count: string }[]>(() => {
+  readonly chart = chartResource<{ day: string; repo: string; count: string }[]>(() => {
     const name = this.packageName();
     if (!name) return undefined;
     return this.appService.getBuildsCountByPkgnamePerDayResourceRequest(
@@ -31,11 +27,9 @@ export class ChartPackageBuildStatsComponent {
     );
   });
 
-  readonly loading = this.resource.isLoading;
-
   readonly chartConfig = computed<ChartConfig<'line'> | null>(() => {
-    const data = resourceValue(this.resource);
-    if (!data || data.length === 0) return null;
+    const data = this.chart.data();
+    if (data.length === 0) return null;
     return this.buildChartConfig(data);
   });
 
@@ -55,7 +49,7 @@ export class ChartPackageBuildStatsComponent {
 
     return {
       data: {
-        labels: sortedDays.map((day) => this.datePipe.transform(new Date(day), 'shortDate') || day),
+        labels: sortedDays.map((day) => formatDay(day)),
         datasets: Object.keys(repoData).map((repo, index) => ({
           label: `Builds for ${this.packageName()} in ${repo}`,
           data: sortedDays.map((day) => repoData[repo][day] || 0),

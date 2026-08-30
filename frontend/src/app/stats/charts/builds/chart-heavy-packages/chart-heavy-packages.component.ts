@@ -1,17 +1,22 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
-import { isMobileSignal, resourceValue, truncateLabel } from '../../../../functions';
-import { StatsService } from '../../../stats.service';
+import { isMobileSignal, truncateLabel } from '../../../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { StatsService } from '../../../stats.service';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import {
+  chartResource,
+  chartRowHeight,
+  clampAmount,
+  type ChartConfig,
+  mochaAxisChartOptions,
+} from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-heavy-packages',
-  imports: [UIChart, InputNumber, FormsModule],
+  imports: [ChartCardComponent, InputNumber, FormsModule],
   templateUrl: './chart-heavy-packages.component.html',
   styleUrl: './chart-heavy-packages.component.css',
 })
@@ -21,19 +26,22 @@ export class ChartHeavyPackagesComponent {
 
   readonly amount = signal(20);
 
-  protected readonly Math = Math;
   protected readonly isMobile = isMobileSignal();
+  protected readonly chartRowHeight = chartRowHeight;
 
-  private readonly resource = httpResource<{ pkgname: string; average: string }[]>(() => {
-    const val = Math.max(1, this.amount() || 1);
-    return this.appService.getHeavyPackagesResourceRequest(val, this.statsService.timeRangeDays() ?? ALL_TIME_DAYS);
-  });
+  protected setAmount(value: number): void {
+    this.amount.set(clampAmount(value));
+  }
 
-  readonly loading = this.resource.isLoading;
-  readonly hasData = computed(() => this.resource.hasValue());
+  readonly chart = chartResource<{ pkgname: string; average: string }[]>(() =>
+    this.appService.getHeavyPackagesResourceRequest(
+      clampAmount(this.amount()),
+      this.statsService.timeRangeDays() ?? ALL_TIME_DAYS,
+    ),
+  );
 
   readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
-    const data = resourceValue(this.resource) ?? [];
+    const data = this.chart.data();
     return {
       data: {
         labels: data.map((d) => (this.isMobile() ? truncateLabel(d.pkgname) : d.pkgname)),

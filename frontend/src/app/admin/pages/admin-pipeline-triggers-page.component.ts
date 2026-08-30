@@ -1,4 +1,4 @@
-import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
+import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -33,18 +33,7 @@ const REPO_OPTIONS = [
 
 @Component({
   selector: 'chaotic-admin-pipeline-triggers-page',
-  imports: [
-    Button,
-    LocaleDatePipe,
-    Dialog,
-    FormsModule,
-    IconField,
-    InputIcon,
-    InputText,
-    Select,
-    TableModule,
-    TagModule,
-  ],
+  imports: [DatePipe, Button, Dialog, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule],
   template: `
     <div class="table-container">
       <p-table
@@ -160,7 +149,7 @@ const REPO_OPTIONS = [
             <td>
               <span class="font-medium">{{ trigger.userName }}</span>
             </td>
-            <td>{{ trigger.createdAt | localeDate }}</td>
+            <td>{{ trigger.createdAt | date: 'short' }}</td>
           </tr>
         </ng-template>
       </p-table>

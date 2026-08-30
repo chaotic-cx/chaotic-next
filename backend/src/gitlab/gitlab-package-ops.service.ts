@@ -1,10 +1,12 @@
 import { Package } from '../builder/builder.entity';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { applyPackageBump } from '../repo-manager/bump/bump-config';
+import { MAX_LISTED_PACKAGES } from '../repo-manager/repo-rw/repo-writer';
 import { GitlabApiService, gitlabRawFileToString } from './gitlab-api.service';
 import { GitlabPipelineService } from './gitlab-pipeline.service';
 import { type MrActor } from './interfaces';
 import { PipelineTrigger } from './pipeline-trigger.entity';
+import { type CommitAction } from '@gitbeaker/core';
 import { PKGBUILD_SOURCE_AUR, PipelineOperation, PipelineTriggerResult } from '@chaotic-next/shared-lib';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -69,26 +71,17 @@ export class GitlabPackageOpsService {
       }
     }
 
-    const subject =
-      packages.length > 3 ? `chore(drop): packages (${packages.length})` : `chore(drop): ${packages.join(', ')}`;
-    const commitMessage = `${subject}\n\nDropped manually by ${actor.userName}`;
-
-    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
-
-    if (commit.id) {
-      this.gitlabPipelineService.registerCommitSha(commit.id);
-    }
-    await this.pipelineTriggerRepository.insert({
+    return this.commitAndRecord({
+      gitlabProjectId,
       ref,
-      commitSha: commit.id,
+      subjectPrefix: 'chore(drop)',
+      verb: 'Dropped',
+      packageNames: packages,
+      commitActions,
       operation: PipelineOperation.DROP_PACKAGES,
       inputs: { packages: packages.join(':') },
-      pipelineId: null,
-      webUrl: commit.web_url ?? '',
-      ...actor,
+      actor,
     });
-
-    return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
   }
 
   async addPackages(
@@ -163,32 +156,23 @@ export class GitlabPackageOpsService {
       }
     }
 
-    const subject =
-      itemNames.length > 3 ? `feat(add): packages (${itemNames.length})` : `feat(add): ${itemNames.join(', ')}`;
-    const commitMessage = `${subject}\n\nAdded manually by ${actor.userName}`;
-
     this.pino.debug({ pkgnames: itemNames, actionCount: commitActions.length }, 'Creating GitLab commit');
-    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
-
-    this.pino.info(
-      { pkgnames: itemNames, userName: actor.userName, commitId: commit.id, commitUrl: commit.web_url },
-      'Package(s) added successfully',
-    );
-
-    if (commit.id) {
-      this.gitlabPipelineService.registerCommitSha(commit.id);
-    }
-    await this.pipelineTriggerRepository.insert({
+    const result = await this.commitAndRecord({
+      gitlabProjectId,
       ref,
-      commitSha: commit.id,
+      subjectPrefix: 'feat(add)',
+      verb: 'Added',
+      packageNames: itemNames,
+      commitActions,
       operation: PipelineOperation.ADD_PACKAGES,
       inputs: { add_packages: itemNames.join(' '), request_origin: requestOrigin },
-      pipelineId: null,
-      webUrl: commit.web_url ?? '',
-      ...actor,
+      actor,
     });
-
-    return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };
+    this.pino.info(
+      { pkgnames: itemNames, userName: actor.userName, commitUrl: result.webUrl },
+      'Package(s) added successfully',
+    );
+    return result;
   }
 
   async bumpPackages(
@@ -229,23 +213,55 @@ export class GitlabPackageOpsService {
       });
     }
 
-    const subject =
-      packages.length > 3 ? `chore(bump): packages (${packages.length})` : `chore(bump): ${packages.join(', ')}`;
-    const commitMessage = `${subject}\n\nBumped manually by ${actor.userName}`;
+    return this.commitAndRecord({
+      gitlabProjectId,
+      ref,
+      subjectPrefix: 'chore(bump)',
+      verb: 'Bumped',
+      packageNames: packages,
+      commitActions,
+      operation: PipelineOperation.BUMP_PACKAGES,
+      inputs: { packages: packages.join(':') },
+      actor,
+    });
+  }
 
-    const commit = await this.api.Commits.create(gitlabProjectId, ref, commitMessage, commitActions);
+  /** Creates one GitLab commit, records its SHA and the pipeline-trigger audit row. */
+  private async commitAndRecord(params: {
+    gitlabProjectId: string;
+    ref: string;
+    subjectPrefix: string;
+    verb: string;
+    packageNames: string[];
+    commitActions: CommitAction[];
+    operation: PipelineOperation;
+    inputs: Record<string, string>;
+    actor: MrActor;
+  }): Promise<PipelineTriggerResult> {
+    const subject =
+      params.packageNames.length > MAX_LISTED_PACKAGES
+        ? `${params.subjectPrefix}: packages (${params.packageNames.length})`
+        : `${params.subjectPrefix}: ${params.packageNames.join(', ')}`;
+    const commitMessage = `${subject}\n\n${params.verb} manually by ${params.actor.userName}`;
+
+    const commit = await this.api.Commits.create(
+      params.gitlabProjectId,
+      params.ref,
+      commitMessage,
+      params.commitActions,
+    );
 
     if (commit.id) {
       this.gitlabPipelineService.registerCommitSha(commit.id);
     }
     await this.pipelineTriggerRepository.insert({
-      ref,
+      ref: params.ref,
       commitSha: commit.id,
-      operation: PipelineOperation.BUMP_PACKAGES,
-      inputs: { packages: packages.join(':') },
+      operation: params.operation,
+      inputs: params.inputs,
       pipelineId: null,
       webUrl: commit.web_url ?? '',
-      ...actor,
+      ...params.actor,
     });
 
     return { pipelineId: 0, webUrl: commit.web_url ?? '', status: 'committed' };

@@ -37,8 +37,6 @@ export const vtIndicatorReportSchema = z.object({
 });
 export type VtIndicatorReport = z.infer<typeof vtIndicatorReportSchema>;
 
-export type AurScanStatus = 'scanning' | 'awaiting-vt' | 'done' | 'failed';
-
 export const aurRpcPackageSchema = z.object({
   CoMaintainers: z.array(z.string()).nullish().describe('Secondary maintainer account names'),
   Conflicts: z.array(z.string()).nullish().describe('Packages this package conflicts with'),

@@ -17,22 +17,17 @@
     "@angular-eslint/*",
     "@catppuccin/*",
     "@eslint/*",
-    "@fastify/cors",
     "@fontsource-variable/*",
-    "@nestjs/cli",
-    "@nestjs/schematics",
     "@nx/*",
     "@openng/icons",
     "@openng/optimus-ui-tailwindcss",
     "@typescript-eslint/*",
     "angular-eslint",
     "eslint-plugin-*",
-    "globals",
     "postcss",
     "pino-pretty",
     "testcontainers",
     "typescript-eslint",
-    "unplugin-swc",
-    "wrangler"
+    "unplugin-swc"
   ]
 }

@@ -9,7 +9,7 @@ import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
 import { BuildClassSyncService } from './build-class-sync.service';
 import { BuildFailureNotifierService } from './build-failure-notifier.service';
 import { BuilderDatabaseService } from './builder-database.service';
-import { Build, Builder, Package, Repo, SilencedBuildFailure } from './builder.entity';
+import { Build, Builder, Package, Repo, SilencedBuildFailure, toPackageDto } from './builder.entity';
 import { brokerConfig } from './moleculer.config';
 import { EntityLookupService } from './entity-lookup.service';
 import {
@@ -216,23 +216,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
 
     // The frontend consumes `repo` as the numeric id (RepoNamePipe) plus a
     // resolved `reponame`. Never leak the repo's apiToken, so only select the name.
-    const mapped: PackageDto[] = items.map((pkg) => ({
-      id: pkg.id,
-      pkgname: pkg.pkgname,
-      lastUpdated: pkg.lastUpdated,
-      createdAt: pkg.createdAt,
-      isActive: pkg.isActive,
-      version: pkg.version,
-      bumpCount: pkg.bumpCount,
-      bumpTriggers: pkg.bumpTriggers ?? undefined,
-      metadata: pkg.metadata,
-      pkgrel: pkg.pkgrel,
-      bump: pkg.bump,
-      buildClass: pkg.buildClass,
-      pkgbaseName: pkg.pkgbaseName,
-      repo: pkg.repo?.id,
-      reponame: pkg.repo?.name,
-    }));
+    const mapped: PackageDto[] = items.map((pkg) => toPackageDto(pkg));
     return paginate(mapped, total, page, perPage);
   }
 

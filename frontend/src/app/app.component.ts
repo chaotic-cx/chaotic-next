@@ -21,7 +21,6 @@ import { AuthButtonComponent } from './auth/auth-button.component';
 import { FooterComponent } from './footer/footer.component';
 import { LoadingService } from './loading/loading.service';
 import { MobileNavComponent } from './mobile-nav/mobile-nav.component';
-import { OverlayScrollbarComponent } from './overlay-scrollbar/overlay-scrollbar.component';
 import { UpdateService } from './update/update.service';
 
 @Component({
@@ -32,7 +31,6 @@ import { UpdateService } from './update/update.service';
     Button,
     NgOptimizedImage,
     FooterComponent,
-    OverlayScrollbarComponent,
     ProgressSpinner,
     AuthButtonComponent,
     MobileNavComponent,

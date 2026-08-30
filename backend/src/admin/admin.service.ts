@@ -1,5 +1,5 @@
 import { BuildClassSuggesterService } from '../builder/build-class-suggester.service';
-import { Builder, Package, Repo } from '../builder/builder.entity';
+import { Builder, Package, Repo, toPackageDto } from '../builder/builder.entity';
 import { MrAction as MrActionEntity } from '../gitlab/mr-action.entity';
 import { PipelineTrigger as PipelineTriggerEntity } from '../gitlab/pipeline-trigger.entity';
 import { TriggerType } from '../interfaces/repo-manager';
@@ -11,6 +11,7 @@ import {
 import { SignalScanService } from '../repo-manager/scan';
 import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from '../repo-manager/signal';
 import { encryptAes, errorMessage } from '../utils/functions';
+import { downloadFile } from '../utils/download';
 import { paginate, resolvePagination } from '../utils/pagination';
 import {
   AdminPackageElfAnalysis,
@@ -33,7 +34,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ILike, In, Repository } from 'typeorm';
@@ -154,23 +155,7 @@ export class AdminService {
     const [rows, total] = await query.getManyAndCount();
 
     const suggestions = await this.resolveBuildClassSuggestions(rows.map((pkg) => pkg.pkgname));
-    const items = rows.map((pkg) => ({
-      id: pkg.id,
-      pkgname: pkg.pkgname,
-      lastUpdated: pkg.lastUpdated,
-      createdAt: pkg.createdAt,
-      isActive: pkg.isActive,
-      skipSignalScan: pkg.skipSignalScan,
-      version: pkg.version,
-      bumpCount: pkg.bumpCount,
-      pkgrel: pkg.pkgrel,
-      bump: pkg.bump,
-      buildClass: pkg.buildClass,
-      pkgbaseName: pkg.pkgbaseName,
-      repo: pkg.repo?.id,
-      reponame: pkg.repo?.name,
-      buildClassSuggestion: suggestions.get(pkg.pkgname) ?? null,
-    }));
+    const items = rows.map((pkg) => toPackageDto(pkg, suggestions.get(pkg.pkgname) ?? null));
     return paginate(items, total, safePage, safePerPage);
   }
 
@@ -322,22 +307,34 @@ export class AdminService {
     await this.deleteEntity(() => this.builderRepository.delete(id), `Builder ${id}`);
   }
 
-  async listMrActions(page?: number, perPage?: number, q?: string, action?: string): Promise<Paginated<MrAction>> {
-    const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
+  /**
+   * Builds the OR-conditions for the audit list search: numeric queries match
+   * the numeric field too, and `extraFilter` is AND-ed with every OR-branch.
+   */
+  private buildAuditWhere(
+    q: string | undefined,
+    extraFilter: Record<string, unknown> | undefined,
+    numericField: 'mergeRequestIid' | 'pipelineId',
+  ): Record<string, unknown>[] {
     let conditions: Record<string, unknown>[] = [];
     if (q) {
       const isNumeric = /^\d+$/.test(q);
       conditions = [
-        ...(isNumeric ? [{ mergeRequestIid: Number(q) }] : []),
+        ...(isNumeric ? [{ [numericField]: Number(q) }] : []),
         { commitSha: ILike(`%${q}%`) },
         { userId: ILike(`%${q}%`) },
         { userName: ILike(`%${q}%`) },
       ];
     }
-    if (action !== undefined) {
-      // AND the action filter with every OR-branch above (or start fresh if no q).
-      conditions = (conditions.length ? conditions : [{}]).map((condition) => ({ ...condition, action }));
+    if (extraFilter !== undefined) {
+      conditions = (conditions.length ? conditions : [{}]).map((condition) => ({ ...condition, ...extraFilter }));
     }
+    return conditions;
+  }
+
+  async listMrActions(page?: number, perPage?: number, q?: string, action?: string): Promise<Paginated<MrAction>> {
+    const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
+    const conditions = this.buildAuditWhere(q, action !== undefined ? { action } : undefined, 'mergeRequestIid');
     const [rows, total] = await this.mrActionRepository.findAndCount({
       where: conditions.length ? conditions : {},
       order: { createdAt: 'DESC' },
@@ -363,20 +360,7 @@ export class AdminService {
     operation?: string,
   ): Promise<Paginated<PipelineTriggerAction>> {
     const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
-    let conditions: Record<string, unknown>[] = [];
-    if (q) {
-      const isNumeric = /^\d+$/.test(q);
-      conditions = [
-        ...(isNumeric ? [{ pipelineId: Number(q) }] : []),
-        { commitSha: ILike(`%${q}%`) },
-        { userId: ILike(`%${q}%`) },
-        { userName: ILike(`%${q}%`) },
-      ];
-    }
-    if (operation !== undefined) {
-      // AND the operation filter with every OR-branch above (or start fresh if no q).
-      conditions = (conditions.length ? conditions : [{}]).map((condition) => ({ ...condition, operation }));
-    }
+    const conditions = this.buildAuditWhere(q, operation !== undefined ? { operation } : undefined, 'pipelineId');
     const [rows, total] = await this.pipelineTriggerRepository.findAndCount({
       where: conditions.length ? conditions : {},
       order: { createdAt: 'DESC' },
@@ -693,8 +677,7 @@ export class AdminService {
 
   private async downloadPackage(mirrorUrl: string, repoName: string, filename: string, dest: string): Promise<void> {
     const url = `${mirrorUrl}/${repoName}/x86_64/${filename}`;
-    const { data } = await this.httpService.axiosRef({ url, method: 'GET', responseType: 'arraybuffer' });
-    await writeFile(dest, Buffer.from(data));
+    await downloadFile(this.httpService.axiosRef, url, dest);
   }
 
   /**
@@ -790,7 +773,6 @@ export class AdminService {
   private async deleteEntity(deleteRow: () => Promise<unknown>, label: string): Promise<void> {
     try {
       const result = await deleteRow();
-      if (Array.isArray(result)) throw new NotFoundException(`${label} not found`);
       const affected = (result as { affected?: number }).affected;
       if (affected === undefined || affected === 0) throw new NotFoundException(`${label} not found`);
     } catch (error) {

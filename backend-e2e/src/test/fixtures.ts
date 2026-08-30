@@ -146,41 +146,6 @@ export const ARCH_PACKAGES = [
   { pkgname: 'aalib', version: '1.4rc5-16', arch: 'x86_64' },
 ] as const;
 
-export const ELF_ANALYSES = [
-  {
-    pkgname: 'acl',
-    pkgType: '0' as const,
-    version: '2.4.0',
-    neededSonames: ['libacl.so.1', 'libc.so.6'],
-    providedSonames: ['libacl.so.1'],
-    directoriesOwned: ['usr/bin', 'usr/include/acl', 'usr/lib', 'usr/share/doc/acl'],
-  },
-  {
-    pkgname: 'attr',
-    pkgType: '0' as const,
-    version: '2.6.0',
-    neededSonames: ['libattr.so.1', 'libc.so.6'],
-    providedSonames: ['libattr.so.1'],
-    directoriesOwned: ['usr/bin', 'usr/include/attr', 'usr/lib'],
-  },
-  {
-    pkgname: 'a52dec',
-    pkgType: '0' as const,
-    version: '0.8.0',
-    neededSonames: ['libc.so.6', 'libm.so.6'],
-    providedSonames: ['liba52.so.0'],
-    directoriesOwned: ['usr/bin', 'usr/include/a52dec', 'usr/lib'],
-  },
-  {
-    pkgname: 'aalib',
-    pkgType: '0' as const,
-    version: '1.4rc5',
-    neededSonames: ['libX11.so.6', 'libaa.so.1', 'libc.so.6', 'libgpm.so.2', 'libm.so.6'],
-    providedSonames: ['libaa.so.1'],
-    directoriesOwned: ['usr/bin', 'usr/include/aalib', 'usr/lib'],
-  },
-] as const;
-
 export const BROKEN_ELF_ANALYSIS = {
   pkgname: '0ad',
   pkgType: '0' as const,
@@ -191,14 +156,6 @@ export const BROKEN_ELF_ANALYSIS = {
   broken: true,
   brokenReasons: ['missing soname: libmock-broken-soname.so.99'],
 } as const;
-
-export const MIRRORS = [
-  'cdn-mirror.chaotic.cx',
-  'de-mirror.chaotic.cx',
-  'us-mirror.chaotic.cx',
-  'br-1-mirror.chaotic.cx',
-  'au-mirror.chaotic.cx',
-] as const;
 
 export const USER_AGENTS = [
   'pacman/6.1',

@@ -1,5 +1,9 @@
+import { DatePipe } from '@angular/common';
+import { httpResource, type HttpResourceRequest } from '@angular/common/http';
+import { computed } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
+import { resourceValue } from '../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../theme';
 
 export interface ChartConfig<TType extends ChartType = ChartType> {
@@ -109,4 +113,37 @@ export function groupOverTimeChart(rows: GroupOverTimeRow[], formatDay: (day: st
   });
 
   return { labels, datasets };
+}
+
+export function chartResource<T>(request: () => HttpResourceRequest | undefined) {
+  const resource = httpResource<T>(request);
+  return {
+    resource,
+    loading: resource.isLoading,
+    hasData: computed(() => resource.hasValue()),
+    data: computed(() => (resourceValue(resource) ?? []) as T),
+  };
+}
+
+let dayPipe: DatePipe | undefined;
+
+export function formatDay(day: string): string {
+  dayPipe ??= new DatePipe(navigator.language);
+  return dayPipe.transform(day, 'shortDate') ?? day;
+}
+
+export function roundToTenth(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+const ROW_HEIGHT_MOBILE_PX = 22;
+const ROW_HEIGHT_DESKTOP_PX = 28;
+const ROW_HEIGHT_CHROME_PX = 48;
+
+export function chartRowHeight(rows: number, isMobile: boolean): number {
+  return (rows || 1) * (isMobile ? ROW_HEIGHT_MOBILE_PX : ROW_HEIGHT_DESKTOP_PX) + ROW_HEIGHT_CHROME_PX;
+}
+
+export function clampAmount(value: number | null | undefined): number {
+  return Math.max(1, value ?? 1);
 }

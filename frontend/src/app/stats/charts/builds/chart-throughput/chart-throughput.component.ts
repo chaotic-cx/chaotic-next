@@ -1,12 +1,10 @@
-import { DatePipe } from '@angular/common';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { parseCount, resourceValue } from '../../../../functions';
+import { parseCount } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions } from '../../chart-config';
 
 interface ThroughputRow {
   day: string;
@@ -29,36 +27,29 @@ const SERIES: {
 
 @Component({
   selector: 'chaotic-chart-throughput',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-throughput.component.html',
   styleUrl: './chart-throughput.component.css',
-  providers: [DatePipe],
 })
 export class ChartThroughputComponent {
   private readonly appService = inject(AppService);
-  private readonly datePipe = inject(DatePipe);
   private readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<ThroughputRow[]>(() =>
+  readonly chart = chartResource<ThroughputRow[]>(() =>
     this.appService.getThroughputResourceRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
   );
 
-  readonly loading = this.resource.isLoading;
-  readonly hasData = computed(() => this.resource.hasValue());
-
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
-    const rows = resourceValue(this.resource) ?? [];
+    const rows = this.chart.data();
     const daySet = new Set<string>();
     for (const row of rows) {
-      const day = this.datePipe.transform(row.day, 'shortDate') || row.day;
-      daySet.add(day);
+      daySet.add(formatDay(row.day));
     }
     const labels = [...daySet].reverse();
 
     const byDay = new Map<string, ThroughputRow>();
     for (const row of rows) {
-      const day = this.datePipe.transform(row.day, 'shortDate') || row.day;
-      byDay.set(day, row);
+      byDay.set(formatDay(row.day), row);
     }
 
     return {

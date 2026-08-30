@@ -1,9 +1,10 @@
 import { createHmac, randomUUID } from 'node:crypto';
-import { ARCH_PACKAGES, BUILDERS, CHAOTIC_AUR_REPO, GARUDA_REPO } from './fixtures';
+import { ARCH_PACKAGES, BUILDERS, CHAOTIC_AUR_REPO, GARUDA_REPO, PACKAGES } from './fixtures';
 import { initializeAuthDataSource } from '@chaotic-next/backend/auth/auth';
 import { AppModule } from '@chaotic-next/backend/app.module';
 import { Build, Builder, BuildResourceUsage, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { BuilderService } from '@chaotic-next/backend/builder/builder.service';
+import { GitlabApiService } from '@chaotic-next/backend/gitlab/gitlab-api.service';
 import { MrAction as MrActionEntity } from '@chaotic-next/backend/gitlab/mr-action.entity';
 import { PipelineTrigger as PipelineTriggerEntity } from '@chaotic-next/backend/gitlab/pipeline-trigger.entity';
 import { NotificationSubscription } from '@chaotic-next/backend/notifications/notification-subscription.entity';
@@ -156,6 +157,45 @@ export interface E2eApp {
   close(): Promise<void>;
 }
 
+export function stubGitlabApi(app: NestFastifyApplication): void {
+  // Every GitLab endpoint group/method resolves to a throwing stub so no e2e
+  // test can ever reach the real GitLab API — not even via background jobs.
+  // Specs install per-test spies on the stub groups they need.
+  const notMocked = (group: string | symbol, method: string | symbol) => () => {
+    throw new Error(`GitLab API call not mocked in e2e: ${String(group)}.${String(method)}`);
+  };
+  const ensureEndpoint = (
+    target: Record<string | symbol, unknown>,
+    group: string | symbol,
+    method: string | symbol,
+  ) => {
+    if (!(method in target)) target[method] = notMocked(group, method);
+  };
+  const groups = {} as Record<string | symbol, Record<string | symbol, unknown>>;
+  const stub = new Proxy(groups, {
+    get: (target, group) => {
+      let endpoints = target[group];
+      if (!endpoints) {
+        endpoints = new Proxy({} as Record<string | symbol, unknown>, {
+          get: (endpointTarget, method) => {
+            ensureEndpoint(endpointTarget, group, method);
+            return endpointTarget[method];
+          },
+          // vitest's spyOn resolves the descriptor directly, bypassing `get`.
+          getOwnPropertyDescriptor: (endpointTarget, method) => {
+            ensureEndpoint(endpointTarget, group, method);
+            return Reflect.getOwnPropertyDescriptor(endpointTarget, method);
+          },
+        });
+        target[group] = endpoints;
+      }
+      return endpoints;
+    },
+  });
+  const gitlabApiService = app.get<GitlabApiService>(GitlabApiService);
+  gitlabApiService.api = stub as unknown as GitlabApiService['api'];
+}
+
 export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<E2eApp> {
   // `logger: false` below only silences the app's own logger; services log
   // through their own `new Logger()` instances, which route through the static
@@ -195,6 +235,7 @@ export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<E
     logger: false,
   });
   await app.init();
+  stubGitlabApi(app);
   await app.listen(0);
 
   const dataSource = app.get<DataSource>(DataSource);
@@ -370,66 +411,6 @@ async function seedRepo(dataSource: DataSource, overrides: RepoSeed | undefined,
   );
 }
 
-const REAL_PACKAGES = [
-  {
-    pkgname: 'firedragon',
-    version: '2:13.1.1',
-    pkgrel: 1,
-    metadata: { desc: 'FireDragon browser', buildDate: '2025-01-15T00:00:00Z' },
-  },
-  {
-    pkgname: 'google-chrome',
-    version: '151.0.7922.71',
-    pkgrel: 1,
-    metadata: { desc: 'The popular web browser by Google', buildDate: '2025-12-01T00:00:00Z' },
-  },
-  {
-    pkgname: 'spotify',
-    version: '1:1.2.92.147',
-    pkgrel: 1,
-    metadata: { desc: 'A proprietary music streaming service', buildDate: '2025-11-15T00:00:00Z' },
-  },
-  {
-    pkgname: 'paru',
-    version: '2.1.0',
-    pkgrel: 2,
-    metadata: { desc: 'Feature packed AUR helper', buildDate: '2025-10-01T00:00:00Z' },
-  },
-  {
-    pkgname: 'yay',
-    version: '13.0.1',
-    pkgrel: 1,
-    metadata: {
-      desc: 'Yet another yogurt. Pacman wrapper and AUR helper written in go.',
-      buildDate: '2025-09-15T00:00:00Z',
-    },
-  },
-  {
-    pkgname: 'gitkraken',
-    version: '12.3.1',
-    pkgrel: 1,
-    metadata: {
-      desc: 'The intuitive, fast, and beautiful cross-platform Git client.',
-      buildDate: '2025-11-20T00:00:00Z',
-    },
-  },
-  {
-    pkgname: 'ayugram-desktop-git',
-    version: '6.7.8.r12.gba8c1a6',
-    pkgrel: 2,
-    metadata: {
-      desc: 'Desktop Telegram client with good customization and Ghost mode',
-      buildDate: '2025-06-20T00:00:00Z',
-    },
-  },
-  {
-    pkgname: 'visual-studio-code-bin',
-    version: '1.131.0',
-    pkgrel: 1,
-    metadata: { desc: 'Visual Studio Code (vscode) official binary version', buildDate: '2025-12-05T00:00:00Z' },
-  },
-] as const;
-
 let repoCounterInternal = 1000;
 
 async function seedPackage(
@@ -438,7 +419,7 @@ async function seedPackage(
   counter: () => number,
 ): Promise<Package> {
   const repo = dataSource.getRepository(Package);
-  const real = REAL_PACKAGES[counter() % REAL_PACKAGES.length];
+  const real = PACKAGES[counter() % PACKAGES.length];
   const linkedRepo = overrides?.repo ?? (await seedRepo(dataSource, undefined, () => repoCounterInternal++));
   const pkgname = overrides?.pkgname ?? real.pkgname;
   // The fixture list cycles, so an auto-seeded package plus repo pair can

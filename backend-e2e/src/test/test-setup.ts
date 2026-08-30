@@ -1,10 +1,7 @@
-import { Logger } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
+import { silenceNestLogger } from './silence-nest-logger';
 
-Logger.overrideLogger(false);
-for (const level of ['log', 'warn', 'error', 'debug', 'verbose', 'fatal'] as const) {
-  Logger.prototype[level] = () => undefined;
-}
+silenceNestLogger();
 
 // PinoLogger routes every level through call(); stubbing it silences the
 // @InjectPinoLogger loggers that bypass the NestJS Logger entirely.

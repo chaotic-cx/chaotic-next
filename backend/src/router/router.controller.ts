@@ -95,6 +95,6 @@ export class RouterController {
     @Param('days', { schema: daysParamSchema }) days: number,
     @Query({ schema: repoQuerySchema }) query: RepoQueryDto,
   ): Promise<UserAgentTrend[]> {
-    return this.routerService.getUserAgentTrend(days, undefined, query.repo);
+    return this.routerService.getUserAgentTrend(days, query.repo);
   }
 }

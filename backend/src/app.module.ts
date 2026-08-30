@@ -11,6 +11,7 @@ import { AdminModule } from './admin/admin.module';
 import { AllExceptionsFilter } from './api/all-exceptions.filter';
 import { ThrottlerBehindProxyGuard } from './api/throttler-behind-proxy.guard';
 import { validationExceptionFactory } from './api/validation-exception.factory';
+import { AppController } from './app.controller';
 import { AurModule } from './aur/aur.module';
 import { auth } from './auth/auth';
 import { BuilderModule } from './builder/builder.module';
@@ -98,6 +99,7 @@ const observe = observeConfig();
     TypeOrmModule.forRoot({ ...dataSourceOptions, autoLoadEntities: true, logger: new MigrationLogger() }),
     GitlabModule,
   ],
+  controllers: [AppController],
   providers: [
     {
       provide: APP_PIPE,

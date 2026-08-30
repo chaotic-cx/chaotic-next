@@ -23,7 +23,7 @@ import { VirustotalService } from '../diff-scan/virustotal.service';
 import { EventService } from '../events/event.service';
 import { NotificationService } from '../notifications/notification.service';
 import { cachedResult } from '../utils/cache';
-import { MAX_DAYS_WINDOW } from '../utils/constants';
+import { CACHE_TTL_MS, MAX_DAYS_WINDOW } from '../utils/constants';
 import {
   clampInt,
   errorMessage,
@@ -44,7 +44,7 @@ const REVIEW_STATS_CACHE_TTL_MS = 60_000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const DEFERRED_MERGE_MAX_AGE_DAYS = 1;
 const MAX_DEFERRED_MERGE_ATTEMPTS = 5;
-const MERGE_STATUS_SETTLE_TIMEOUT_MS = 30_000;
+const MERGE_STATUS_SETTLE_TIMEOUT_MS = CACHE_TTL_MS;
 const MERGE_STATUS_SETTLE_POLL_MS = 3_000;
 const BLOCKING_MERGE_LABELS = ['malware', 'dangerous', 'hold'] as const;
 

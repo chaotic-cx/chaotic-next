@@ -1,13 +1,13 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, effect, inject, input, OnInit, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Card } from '@openng/optimus-ui/card';
 import { firstValueFrom } from 'rxjs';
 import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
+import { setPageSeo } from '../../functions';
 import { AppService } from '../../app.service';
 import { TitleComponent } from '../../title/title.component';
 import { AurScanResultComponent } from '../aur-scan-result.component';
@@ -19,10 +19,9 @@ import { AurScanService } from '../aur-scan.service';
   styleUrl: './aur-scan-page.css',
   templateUrl: './aur-scan-page.component.html',
 })
-export class AurScanPageComponent implements OnInit {
+export class AurScanPageComponent {
   private readonly http = inject(HttpClient);
   private readonly appService = inject(AppService);
-  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly aurScanService = inject(AurScanService);
@@ -48,6 +47,11 @@ export class AurScanPageComponent implements OnInit {
   private lastSeenRoutePackage = '';
 
   constructor() {
+    setPageSeo(
+      'AUR package scan · Chaotic-AUR',
+      'Scan AUR packages for malicious PKGBUILD content, suspicious URLs and risky maintainership changes',
+      'Chaotic-AUR, AUR, security, PKGBUILD, VirusTotal, scan',
+    );
     effect(() => {
       const linked = (this.search() ?? '').trim();
       if (!linked || linked === this.lastSeenRoutePackage) return;
@@ -69,15 +73,6 @@ export class AurScanPageComponent implements OnInit {
     effect(() => {
       const query = (this.searchModel().query ?? '').trim();
       if (!query) this.clearResults();
-    });
-  }
-
-  ngOnInit(): void {
-    this.appService.updateSeoTags(this.meta, {
-      title: 'AUR package scan · Chaotic-AUR',
-      description: 'Scan AUR packages for malicious PKGBUILD content, suspicious URLs and risky maintainership changes',
-      keywords: 'Chaotic-AUR, AUR, security, PKGBUILD, VirusTotal, scan',
-      url: this.router.url,
     });
   }
 

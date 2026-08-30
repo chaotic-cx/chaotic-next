@@ -6,8 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { GitlabJob } from '@chaotic-next/shared-lib';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { Select } from '@openng/optimus-ui/select';
-import { AppService } from '../app.service';
-import { copyLineLink, errorMessage, parseLogChunk } from '../functions';
+import { copyLineLink, errorMessage, parseLogChunk, updateSeoTags } from '../functions';
 import { ResilientSseStream } from '../sse-stream';
 import { TitleComponent } from '../title/title.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
@@ -23,7 +22,6 @@ const RELEVANT_LOG_JOB_PATTERN = /commit|schedule/;
   styleUrl: './log-viewer.component.css',
 })
 export class LogViewerComponent implements OnDestroy {
-  private readonly appService = inject(AppService);
   private readonly logService = inject(LogViewerService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
@@ -121,7 +119,7 @@ export class LogViewerComponent implements OnDestroy {
     this.cumulativeOffset = 0;
     this.scrollToLine.set(undefined);
 
-    this.appService.updateSeoTags(this.meta, {
+    updateSeoTags(this.meta, {
       title: `Pipeline #${pipelineId} logs · Chaotic-AUR`,
       description: 'Live build logs of a Chaotic-AUR pipeline job',
       keywords: 'Chaotic-AUR, GitLab, pipeline, log, build',

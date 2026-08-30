@@ -11,7 +11,6 @@ import {
   encryptAesRaw,
   generateNodeId,
   nDaysInPast,
-  pathExists,
 } from './functions';
 
 /**
@@ -223,15 +222,5 @@ describe('bumpTypeAdjectiveText', () => {
 
   it('returns Unknown for an out-of-range value', () => {
     expect(bumpTypeAdjectiveText(999 as BumpType)).toBe('Unknown');
-  });
-});
-
-describe('pathExists', () => {
-  it('returns true for an existing file', async () => {
-    expect(await pathExists(__filename)).toBe(true);
-  });
-
-  it('returns false for a missing file', async () => {
-    expect(await pathExists('/nonexistent/definitely/not/here')).toBe(false);
   });
 });

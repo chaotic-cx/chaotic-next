@@ -2,7 +2,7 @@ import { Package } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { RULES } from './rules';
 import { ruleRunsOn, type GroupRuleHit, type RuleHit, type RuleSurface } from './rules/rule';
-import { dirname } from './rules/diff-utils';
+import { posix } from 'node:path';
 import {
   isDependencyPresent,
   isSrcinfoFile,
@@ -75,13 +75,13 @@ export class DiffScanService {
     const srcinfoVarsByDir = new Map<string, ReadonlyMap<string, string>>();
     for (const change of diffs) {
       if (isSrcinfoFile(change.new_path) && !change.deleted_file) {
-        srcinfoVarsByDir.set(dirname(change.new_path), parseSrcinfoVariables(change));
+        srcinfoVarsByDir.set(posix.dirname(change.new_path), parseSrcinfoVariables(change));
       }
     }
 
     for (const change of diffs) {
       if (change.deleted_file) continue;
-      const vars = srcinfoVarsByDir.get(dirname(change.new_path));
+      const vars = srcinfoVarsByDir.get(posix.dirname(change.new_path));
       if (vars) registerSrcinfoVariables(change, vars);
 
       for (const rule of RULES) {

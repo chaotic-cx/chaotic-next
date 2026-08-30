@@ -107,12 +107,12 @@
                     class="cursor-help font-mono text-xs text-ctp-subtext1 hover:text-ctp-text transition-colors"
                     [pTooltip]="(asDate(dataset.value) | relativeTime) ?? undefined"
                     tooltipPosition="top"
-                    >{{ asDate(dataset.value) | localeDate: 'medium' }}</span
+                    >{{ asDate(dataset.value) | date: 'medium' }}</span
                   >
                 } @else if (dataset.key === 'buildDate') {
                   <span
                     class="cursor-help font-mono text-xs text-ctp-subtext1 hover:text-ctp-text transition-colors"
-                    [pTooltip]="(asNumber(dataset.value) * 1000 | localeDate) ?? undefined"
+                    [pTooltip]="(asNumber(dataset.value) * 1000 | date: 'short') ?? undefined"
                     tooltipPosition="top"
                     >{{ asNumber(dataset.value) * 1000 | relativeTime }}</span
                   >

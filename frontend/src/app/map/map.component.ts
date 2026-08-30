@@ -1,10 +1,8 @@
-import { Component, effect, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, effect, inject, OnDestroy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
-import { AppService } from '../app.service';
-import { parseFocusQuery } from '../functions';
+import { parseFocusQuery, setPageSeo } from '../functions';
 import { LiveTrafficService } from '../mirror-map/live-traffic.service';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { MirrorsService } from '../mirrors/mirrors.service';
@@ -50,9 +48,7 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
     `,
   ],
 })
-export class MapComponent implements OnInit, OnDestroy {
-  private readonly appService = inject(AppService);
-  private readonly meta = inject(Meta);
+export class MapComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -64,6 +60,12 @@ export class MapComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
+    setPageSeo(
+      'Mirror map · Chaotic-AUR',
+      'Map of Chaotic-AUR mirrors and live traffic.',
+      'Chaotic-AUR, Mirrors, Map, Repository, Archlinux, AUR, Live Traffic',
+    );
+    this.trafficService.connect();
     const params = this.route.snapshot.queryParamMap;
     if (params.has('hits')) {
       this.trafficService.showHits.set(params.get('hits') !== 'false');
@@ -99,16 +101,6 @@ export class MapComponent implements OnInit, OnDestroy {
         queryParamsHandling: 'merge',
         replaceUrl: true,
       });
-    });
-  }
-
-  ngOnInit() {
-    this.trafficService.connect();
-    this.appService.updateSeoTags(this.meta, {
-      title: 'Mirror map · Chaotic-AUR',
-      description: 'Map of Chaotic-AUR mirrors and live traffic.',
-      keywords: 'Chaotic-AUR, Mirrors, Map, Repository, Archlinux, AUR, Live Traffic',
-      url: this.router.url,
     });
   }
 

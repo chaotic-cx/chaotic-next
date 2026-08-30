@@ -1,4 +1,3 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { flavors } from '@catppuccin/palette';
@@ -9,9 +8,10 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { backendErrorMessage } from '../../../../api-errors';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { isLogPurged, packageLogRouteFromUrl, resourceValue } from '../../../../functions';
+import { isLogPurged, packageLogRouteFromUrl } from '../../../../functions';
 import { formatRelativeTime } from '../../../../pipes/relative-time.pipe';
 import { StatsService } from '../../../stats.service';
+import { chartResource } from '../../chart-config';
 
 /**
  * Ranks failures worst-streak first. Every unresolved failure stays visible
@@ -72,19 +72,17 @@ export class ChartUnresolvedFailuresComponent {
   private readonly authService = inject(AuthService);
   private readonly messageToastService = inject(MessageToastService);
 
-  private readonly resource = httpResource<UnresolvedFailedBuild[]>(() =>
+  readonly chart = chartResource<UnresolvedFailedBuild[]>(() =>
     this.appService.getUnresolvedFailedBuildsResourceRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
   );
 
-  readonly loading = this.resource.isLoading;
-  readonly hasData = computed(() => this.resource.hasValue());
   readonly isLoggedIn = this.authService.isLoggedIn;
   readonly showSilenced = signal(false);
 
   protected readonly formatRelativeTime = formatRelativeTime;
   protected readonly busyPkgname = signal<string | null>(null);
 
-  private readonly failures = computed(() => resourceValue(this.resource) ?? []);
+  private readonly failures = computed(() => this.chart.data());
 
   readonly activeCount = computed(() => this.failures().filter((row) => !row.silenced).length);
 
@@ -112,7 +110,7 @@ export class ChartUnresolvedFailuresComponent {
   async toggleSilence(row: UnresolvedFailedBuild): Promise<void> {
     this.busyPkgname.set(row.pkgname);
     const silencing = !row.silenced;
-    this.resource.update((rows) =>
+    this.chart.resource.update((rows) =>
       rows?.map((candidate) => (candidate.pkgname === row.pkgname ? { ...candidate, silenced: silencing } : candidate)),
     );
     try {
@@ -127,7 +125,7 @@ export class ChartUnresolvedFailuresComponent {
         'Operation failed',
         backendErrorMessage(error, `Could not update ${row.pkgname}.`),
       );
-      this.resource.reload();
+      this.chart.resource.reload();
     } finally {
       this.busyPkgname.set(null);
     }

@@ -19,7 +19,6 @@ import { castTo, packageLogRouteFromUrl } from '../functions';
 import { BytesPipe } from '../pipes/bytes.pipe';
 import { CpuTimePipe } from '../pipes/cpu-time.pipe';
 import { DurationPipe } from '../pipes/duration.pipe';
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
 import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
@@ -40,7 +39,6 @@ import { DeployLogService } from './deploy-log.service';
     BytesPipe,
     CpuTimePipe,
     RelativeTimePipe,
-    LocaleDatePipe,
     TitleComponent,
     FormsModule,
     FormField,

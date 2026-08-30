@@ -5,9 +5,7 @@ import { MessageToastService } from '@garudalinux/core';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Panel } from '@openng/optimus-ui/panel';
-import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { Message } from './interfaces';
 
 const INITIAL_VISIBLE_NEWS = 3;
@@ -15,16 +13,15 @@ const NEWS_INCREMENT = 3;
 
 @Component({
   selector: 'chaotic-newsfeed',
-  imports: [CommonModule, Panel, Button, PrimeTemplate, LocaleDatePipe],
+  imports: [CommonModule, Panel, Button, PrimeTemplate],
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],
 })
 export class NewsfeedComponent {
-  private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
 
-  private readonly newsResource = httpResource<Message[]>(() => this.appService.getNewsResourceRequest());
+  private readonly newsResource = httpResource<Message[]>(() => ({ url: '/news.json' }));
 
   readonly newsList = computed<{ data: Message; html: string }[]>(() => {
     const news = resourceValue(this.newsResource);

@@ -8,9 +8,10 @@ import {
   substituteVars,
   unquote,
 } from '../pkgbuild';
-import { addedLines, basename, dirname } from './diff-utils';
+import { addedLines } from './diff-utils';
 import { type GroupRuleHit, type Rule } from './rule';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
+import { posix } from 'node:path';
 
 const PKGBUILD_FILE = 'PKGBUILD';
 const SRCINFO_FILE = '.SRCINFO';
@@ -72,7 +73,7 @@ export const SRCINFO_CONSISTENCY_RULES: Rule[] = [
 
 export function srcinfoConsistencyHits(changes: MergeRequestDiffSchema[]): GroupRuleHit[] {
   const live = changes.filter((change) => !change.deleted_file);
-  const directories = new Set(live.map((change) => dirname(change.new_path)));
+  const directories = new Set(live.map((change) => posix.dirname(change.new_path)));
   const hits: GroupRuleHit[] = [];
 
   for (const directory of directories) {
@@ -96,7 +97,9 @@ function changeNamed(
   directory: string,
   fileName: string,
 ): MergeRequestDiffSchema | undefined {
-  return changes.find((change) => dirname(change.new_path) === directory && basename(change.new_path) === fileName);
+  return changes.find(
+    (change) => posix.dirname(change.new_path) === directory && posix.basename(change.new_path) === fileName,
+  );
 }
 
 function parsePkgbuildContent(lines: string[]): PkgbuildContent {

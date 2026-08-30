@@ -1,12 +1,10 @@
-import { DatePipe } from '@angular/common';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { parseCount, resourceValue } from '../../../../functions';
+import { parseCount } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions } from '../../chart-config';
 
 const UA_COLORS = [
   flavors.mocha.colors.mauve.hex,
@@ -18,34 +16,29 @@ const UA_COLORS = [
 
 @Component({
   selector: 'chaotic-chart-downloaders-trend',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-downloaders-trend.component.html',
   styleUrl: './chart-downloaders-trend.component.css',
-  providers: [DatePipe],
 })
 export class ChartDownloadersTrendComponent {
   private readonly appService = inject(AppService);
-  private readonly datePipe = inject(DatePipe);
   private readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<{ day: string; userAgent: string; count: string }[]>(() =>
+  readonly chart = chartResource<{ day: string; userAgent: string; count: string }[]>(() =>
     this.appService.getUserAgentTrendResourceRequest(
       this.statsService.timeRangeDays() ?? ALL_TIME_DAYS,
       this.statsService.selectedRepo() || undefined,
     ),
   );
 
-  readonly loading = this.resource.isLoading;
-  readonly hasData = computed(() => this.resource.hasValue());
-
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
-    const rows = resourceValue(this.resource) ?? [];
+    const rows = this.chart.data();
     const agents = [...new Set(rows.map((r) => r.userAgent))];
     const labels: string[] = [];
     const series = new Map(agents.map((a) => [a, [] as number[]]));
     for (const row of rows) {
-      const formattedDate = this.datePipe.transform(row.day, 'shortDate');
-      if (!labels.includes(formattedDate || row.day)) labels.push(formattedDate || row.day);
+      const day = formatDay(row.day);
+      if (!labels.includes(day)) labels.push(day);
       series.get(row.userAgent)?.push(parseCount(row.count));
     }
     return {

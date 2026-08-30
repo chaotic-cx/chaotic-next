@@ -1,20 +1,19 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { FluidModule } from '@openng/optimus-ui/fluid';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../../../../app.service';
-import { resourceValue, shuffleArray } from '../../../../functions';
+import { shuffleArray } from '../../../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaPieChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-countries',
-  imports: [UIChart, FormsModule, InputNumber, FluidModule],
+  imports: [ChartCardComponent, FormsModule, InputNumber, FluidModule],
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
 })
@@ -23,19 +22,15 @@ export class ChartCountriesComponent {
   private readonly observer = inject(BreakpointObserver);
   protected readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<{ name: string; count: number }[]>(() =>
+  readonly chart = chartResource<{ name: string; count: number }[]>(() =>
     this.appService.getCountryRanksResourceRequest(
       this.statsService.timeRangeDays() ?? undefined,
       this.statsService.selectedRepo() || undefined,
     ),
   );
 
-  readonly loading = this.resource.isLoading;
-
-  readonly hasData = computed(() => this.resource.hasValue());
-
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
-    const all = resourceValue(this.resource) ?? [];
+    const all = this.chart.data();
     const relevantData = all.slice(0, this.statsService.countryRanksRange());
     const labels: string[] = [];
     const data: number[] = [];

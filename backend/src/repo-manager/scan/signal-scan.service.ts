@@ -24,6 +24,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { In, Repository, type FindOptionsSelect } from 'typeorm';
+import { mapWithConcurrency } from '../../utils/functions';
 
 export interface ScanJob {
   file: string;
@@ -33,10 +34,17 @@ export interface ScanJob {
   isSourceCompiled?: boolean;
 }
 
+interface ScannedEntry {
+  job: ScanJob;
+  files: string[];
+  hasCompiledCode: boolean;
+  isSourceCompiled: boolean;
+}
+
 const ANALYSIS_SAVE_BATCH = 500;
 const PROGRESS_STEPS = 10;
 
-export const analysisKey = (analysis: { pkgType: string; pkgId: number; version: string }): string =>
+const analysisKey = (analysis: { pkgType: string; pkgId: number; version: string }): string =>
   `${analysis.pkgType}|${analysis.pkgId}|${analysis.version}`;
 
 export type ImportedAnalysis = Pick<PackageElfAnalysis, 'pkgType' | 'pkgId' | 'version'> & Partial<PackageElfAnalysis>;
@@ -137,39 +145,38 @@ export class SignalScanService {
     // Pass 1: scan and persist analyses (pluginOf is left empty; it depends on
     // the directory index reflecting the whole batch). The directory index is
     // rebuilt per package so it is current before pass 2.
-    const scanned: { job: ScanJob; files: string[]; hasCompiledCode: boolean; isSourceCompiled: boolean }[] = [];
-    let cursor = 0;
-    const worker = async (): Promise<void> => {
-      while (cursor < jobs.length) {
-        const job = jobs[cursor++];
-        const analysis = await this.scanOne(job);
-        if (!analysis) continue;
-        const hasCompiledCode = analysis.providedSonames.length > 0 || analysis.neededSonames.length > 0;
-        scanned.push({ job, files: analysis.files, hasCompiledCode, isSourceCompiled: job.isSourceCompiled ?? false });
-
-        await this.analysisRepository.upsert(
-          {
-            pkgType: pkgTypeOf(job.pkgType),
-            pkgId: job.pkgId,
-            version: job.version,
-            files: analysis.files,
-            neededSonames: analysis.neededSonames,
-            providedSonames: analysis.providedSonames,
-            importedSymbols: analysis.importedSymbols,
-            exportedSymbols: analysis.exportedSymbols,
-            vtables: analysis.vtables,
-            directoriesOwned: analysis.directoriesOwned,
-            directDirectories: analysis.directDirectories,
-            pluginOf: [],
-            hasCompiledCode: analysis.hasCompiledCode,
-            isSourceCompiled: job.isSourceCompiled ?? false,
-          },
-          ['pkgType', 'pkgId', 'version'],
-        );
-      }
-    };
-
-    await Promise.all(Array.from({ length: workers }, () => worker()));
+    const scanned = (
+      await mapWithConcurrency(
+        jobs,
+        async (job): Promise<ScannedEntry | null> => {
+          const analysis = await this.scanOne(job);
+          if (!analysis) return null;
+          const hasCompiledCode = analysis.providedSonames.length > 0 || analysis.neededSonames.length > 0;
+          const isSourceCompiled = job.isSourceCompiled ?? false;
+          await this.analysisRepository.upsert(
+            {
+              pkgType: pkgTypeOf(job.pkgType),
+              pkgId: job.pkgId,
+              version: job.version,
+              files: analysis.files,
+              neededSonames: analysis.neededSonames,
+              providedSonames: analysis.providedSonames,
+              importedSymbols: analysis.importedSymbols,
+              exportedSymbols: analysis.exportedSymbols,
+              vtables: analysis.vtables,
+              directoriesOwned: analysis.directoriesOwned,
+              directDirectories: analysis.directDirectories,
+              pluginOf: [],
+              hasCompiledCode: analysis.hasCompiledCode,
+              isSourceCompiled,
+            },
+            ['pkgType', 'pkgId', 'version'],
+          );
+          return { job, files: analysis.files, hasCompiledCode, isSourceCompiled };
+        },
+        workers,
+      )
+    ).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
     // Pass 2: bring the cached directory index up to date with this batch
     // (incremental, not a full-table rebuild) and derive pluginOf
@@ -358,7 +365,11 @@ export class SignalScanService {
     return cache;
   }
 
-  private async buildKeyToPkgname(archIds: number[], chaoticIds: number[]): Promise<Map<string, string>> {
+  /** Names of the given packages, fetched per namespace in parallel. */
+  private async findPkgnameRows(
+    archIds: number[],
+    chaoticIds: number[],
+  ): Promise<{ archPkgs: { id: number; pkgname: string }[]; chaoticPkgs: { id: number; pkgname: string }[] }> {
     const [archPkgs, chaoticPkgs] = await Promise.all([
       archIds.length
         ? this.archlinuxPackageRepository.find({ where: { id: In(archIds) }, select: { id: true, pkgname: true } })
@@ -367,6 +378,11 @@ export class SignalScanService {
         ? this.packageRepository.find({ where: { id: In(chaoticIds) }, select: { id: true, pkgname: true } })
         : Promise.resolve([]),
     ]);
+    return { archPkgs, chaoticPkgs };
+  }
+
+  private async buildKeyToPkgname(archIds: number[], chaoticIds: number[]): Promise<Map<string, string>> {
+    const { archPkgs, chaoticPkgs } = await this.findPkgnameRows(archIds, chaoticIds);
     const map = new Map<string, string>();
     for (const pkg of archPkgs) map.set(encodeOwnerKey(TriggerType.ARCH, pkg.id), pkg.pkgname);
     for (const pkg of chaoticPkgs) map.set(encodeOwnerKey(TriggerType.CHAOTIC, pkg.id), pkg.pkgname);
@@ -423,19 +439,12 @@ export class SignalScanService {
   }
 
   private async loadPkgnameMap(entries: { pkgType: TriggerType; pkgId: number }[]): Promise<Map<number, string>> {
+    const { archPkgs, chaoticPkgs } = await this.findPkgnameRows(
+      entries.filter((e) => e.pkgType === TriggerType.ARCH).map((e) => e.pkgId),
+      entries.filter((e) => e.pkgType === TriggerType.CHAOTIC).map((e) => e.pkgId),
+    );
     const map = new Map<number, string>();
-    const archIds = entries.filter((e) => e.pkgType === TriggerType.ARCH).map((e) => e.pkgId);
-    const chaoticIds = entries.filter((e) => e.pkgType === TriggerType.CHAOTIC).map((e) => e.pkgId);
-    const [archPkgs, chaoticPkgs] = await Promise.all([
-      archIds.length
-        ? this.archlinuxPackageRepository.find({ where: { id: In(archIds) }, select: { id: true, pkgname: true } })
-        : Promise.resolve([]),
-      chaoticIds.length
-        ? this.packageRepository.find({ where: { id: In(chaoticIds) }, select: { id: true, pkgname: true } })
-        : Promise.resolve([]),
-    ]);
-    for (const pkg of archPkgs) map.set(pkg.id, pkg.pkgname);
-    for (const pkg of chaoticPkgs) map.set(pkg.id, pkg.pkgname);
+    for (const pkg of [...archPkgs, ...chaoticPkgs]) map.set(pkg.id, pkg.pkgname);
     return map;
   }
 

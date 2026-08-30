@@ -1,10 +1,10 @@
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
+import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { LiveTrafficService } from '../mirror-map/live-traffic.service';
 
 @Component({
   selector: 'chaotic-live-traffic-feed',
-  imports: [LocaleDatePipe],
+  imports: [DatePipe],
   template: `
     <div class="live-feed-card mt-4 rounded-xl border border-ctp-surface0 p-4 backdrop-blur-xs">
       <div
@@ -125,7 +125,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
                 class="traffic-row flex items-center gap-3 rounded bg-ctp-surface0/50 px-2.5 py-1.5 transition-all hover:bg-ctp-surface0"
               >
                 <span class="text-[11px] text-ctp-overlay1 font-medium">
-                  {{ hit.timestamp | localeDate: 'time' }}
+                  {{ hit.timestamp | date: 'mediumTime' }}
                 </span>
                 <span class="rounded bg-ctp-crust px-2 py-0.5 text-center font-bold text-ctp-peach tracking-wide">
                   {{ hit.countryCode }}

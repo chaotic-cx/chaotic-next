@@ -1,4 +1,5 @@
 import { cachedResult } from '../utils/cache';
+import { CACHE_TTL_MS } from '../utils/constants';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { GitlabApiService } from './gitlab-api.service';
 import { GitlabJob, GitlabLogChunk } from '@chaotic-next/shared-lib';
@@ -8,7 +9,7 @@ import { Observable } from 'rxjs';
 
 const TERMINAL_JOB_STATUSES = ['success', 'failed', 'canceled', 'skipped', 'manual', 'waiting_for_resource'];
 const JOB_TRACE_POLL_MS = 2000;
-const PIPELINE_JOBS_CACHE_TTL_MS = 30_000;
+const PIPELINE_JOBS_CACHE_TTL_MS = CACHE_TTL_MS;
 
 interface JobTraceClient {
   lastOffset: number;

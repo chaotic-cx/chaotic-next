@@ -1,12 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject, OnInit } from '@angular/core';
-import { Meta } from '@angular/platform-browser';
-import { Router, RouterLink } from '@angular/router';
+import { Component, effect, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { Panel } from '@openng/optimus-ui/panel';
 import { Skeleton } from '@openng/optimus-ui/skeleton';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { AppService } from '../app.service';
+import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { MirrorCardComponent } from './mirror-card.component';
 import { MirrorsService } from './mirrors.service';
@@ -18,29 +17,21 @@ import { MirrorsService } from './mirrors.service';
   styleUrl: './mirrors.component.css',
   providers: [MessageToastService],
 })
-export class MirrorsComponent implements OnInit {
-  private readonly appService = inject(AppService);
+export class MirrorsComponent {
   private readonly messageToastService = inject(MessageToastService);
-  private readonly meta = inject(Meta);
-  private readonly router = inject(Router);
 
   protected readonly mirrorsService = inject(MirrorsService);
 
   constructor() {
+    setPageSeo(
+      'Mirrors · Chaotic-AUR',
+      'Chaotic-AUR mirrors, down for everyone or just me?',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR mirrors',
+    );
     effect(() => {
       if (this.mirrorsService.error()) {
         this.messageToastService.error('Error', 'Failed to fetch mirror list, the router may be down');
       }
-    });
-  }
-
-  ngOnInit() {
-    this.appService.updateSeoTags(this.meta, {
-      title: 'Mirrors · Chaotic-AUR',
-      description: 'Chaotic-AUR mirrors, down for everyone or just me?',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR mirrors',
-      url: this.router.url,
     });
   }
 }

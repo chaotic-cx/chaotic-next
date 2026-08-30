@@ -8,8 +8,8 @@ import {
 const BYTES_PER_MIB = 1024 ** 2;
 const BYTES_PER_GIB = 1024 ** 3;
 const NS_PER_SECOND = 1e9;
-const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
+export const SECONDS_PER_MINUTE = 60;
 
 interface MetricScale {
   /** Usage at or below this level scores 0. */

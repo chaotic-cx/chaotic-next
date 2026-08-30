@@ -3,9 +3,10 @@ import { TriggerType } from '../interfaces/repo-manager';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { SignalScanService, type ScanJob } from '../repo-manager/scan';
 import { bootstrapScript, runScript } from '../utils/script-utils';
+import { downloadFile } from '../utils/download';
 import { HttpService } from '@nestjs/axios';
 import { isAxiosError } from 'axios';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { DataSource, In } from 'typeorm';
@@ -42,8 +43,7 @@ async function isUrlServed(http: HttpService, url: string): Promise<boolean> {
 }
 
 async function downloadToFile(http: HttpService, url: string, file: string): Promise<void> {
-  const { data } = await http.axiosRef({ url, method: 'GET', responseType: 'arraybuffer' });
-  await writeFile(file, Buffer.from(data));
+  await downloadFile(http.axiosRef, url, file);
 }
 
 async function buildArchJob(ctx: RescanContext, pkg: ArchlinuxPackage): Promise<ScanJob | null> {

@@ -1,17 +1,16 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { isMobileSignal, parseCount, resourceValue, truncateLabel } from '../../../../functions';
+import { isMobileSignal, parseCount, truncateLabel } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
 
 const TOP_PACKAGES = 12;
 
 @Component({
   selector: 'chaotic-chart-failed-hotspots',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-failed-hotspots.component.html',
   styleUrl: './chart-failed-hotspots.component.css',
 })
@@ -19,16 +18,14 @@ export class ChartFailedHotspotsComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<{ pkgname: string; count: string }[]>(() =>
+  readonly chart = chartResource<{ pkgname: string; count: string }[]>(() =>
     this.appService.getTopFailedBuildsResourceRequest(TOP_PACKAGES, this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
   );
 
-  readonly loading = this.resource.isLoading;
-  readonly hasData = computed(() => this.resource.hasValue());
   protected readonly isMobile = isMobileSignal();
 
   readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
-    const rows = resourceValue(this.resource) ?? [];
+    const rows = this.chart.data();
     const labels = rows.map((r) => (this.isMobile() ? truncateLabel(r.pkgname) : r.pkgname));
     const data = rows.map((r) => parseCount(r.count));
     return {

@@ -2,7 +2,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import type { ParamMap } from '@angular/router';
+import { type ParamMap, Router } from '@angular/router';
 import type { ChaoticEvent, GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
@@ -166,6 +166,11 @@ export function updateSeoTags(meta: Meta, seo: SeoTags): void {
   meta.updateTag({ property: 'og:description', content: seo.description });
   meta.updateTag({ property: 'og:url', content: seo.url });
   if (seo.image) meta.updateTag({ property: 'og:image', content: seo.image });
+}
+
+/** Must run in an injection context (component constructor or field initializer). */
+export function setPageSeo(title: string, description: string, keywords = ''): void {
+  updateSeoTags(inject(Meta), { title, description, keywords, url: inject(Router).url });
 }
 
 const MOBILE_BREAKPOINT = '(max-width: 768px)';

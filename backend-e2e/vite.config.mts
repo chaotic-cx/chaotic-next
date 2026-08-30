@@ -1,11 +1,16 @@
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import { swcPlugin } from '../tools/vitest/swc-plugin.mts';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
 
 export default defineConfig({
   root: repoRoot,
+  define: { __VERSION__: JSON.stringify(appVersion.version) },
   plugins: [swcPlugin()],
   resolve: {
     alias: {

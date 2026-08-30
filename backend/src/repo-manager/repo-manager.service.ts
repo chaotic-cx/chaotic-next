@@ -48,6 +48,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CronJob } from 'cron';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 import { In, IsNull, Not, Repository } from 'typeorm';
@@ -59,7 +60,6 @@ const CRON_TIME_ZONE = 'Europe/Berlin';
 export class RepoManagerService implements OnModuleInit {
   private repoManager!: RepoManager;
   private repos!: Repo[];
-  private tasks: CronJob[] = [];
   private workDirs: { dir: string; busy: boolean }[] = [];
 
   constructor(
@@ -79,6 +79,7 @@ export class RepoManagerService implements OnModuleInit {
     private chaoticIndexService: ChaoticIndexService,
     private rebuildTriggerService: RebuildTriggerService,
     private bumpService: BumpService,
+    private schedulerRegistry: SchedulerRegistry,
     @Inject(REPO_WRITER) private repoWriter: RepoWriter,
     @Inject(REPO_READER_FACTORY) private readerFactory: RepoReaderFactory,
   ) {}
@@ -95,7 +96,8 @@ export class RepoManagerService implements OnModuleInit {
     });
 
     const runWithThis = this.run.bind(this);
-    this.tasks.push(
+    this.schedulerRegistry.addCronJob(
+      'repo-manager-sync',
       CronJob.from({
         cronTime: this.configService.getOrThrow<string>('repoMan.schedulerInterval'),
         onTick: runWithThis,
@@ -107,7 +109,8 @@ export class RepoManagerService implements OnModuleInit {
     // The Arch mirror also serves as the build mirror. Poll its `lastupdate`
     // file so we notice repo re-syncs near-instantly (default every minute).
     const pollWithThis = this.pollMirrorLastUpdate.bind(this);
-    this.tasks.push(
+    this.schedulerRegistry.addCronJob(
+      'mirror-lastupdate-poll',
       CronJob.from({
         cronTime: this.configService.getOrThrow<string>('repoMan.mirrorPollInterval'),
         onTick: pollWithThis,

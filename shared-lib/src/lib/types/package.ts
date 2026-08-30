@@ -199,12 +199,11 @@ export const packageRebuildTriggerSourcesSchema = z.object({
 });
 export type PackageRebuildTriggerSources = z.infer<typeof packageRebuildTriggerSourcesSchema>;
 
-export const indexResultSchema = z.object({
-  scanned: z.number(),
-  skipped: z.number(),
-  failed: z.number(),
-});
-export type IndexResult = z.infer<typeof indexResultSchema>;
+export interface IndexResult {
+  scanned: number;
+  skipped: number;
+  failed: number;
+}
 
 export const archPackageSchema = z.object({
   id: z.number(),

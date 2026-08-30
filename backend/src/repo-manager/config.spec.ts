@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { parseCiConfig } from './bump/bump-config';
+import { parseRebuildTriggers } from '../gitlab/mr-package-info';
 import vendoredConfigsRaw from './__fixtures__/pkgbuilds-configs.json';
 
 interface VendoredConfig {
@@ -8,28 +10,10 @@ interface VendoredConfig {
 
 const vendoredConfigs: Record<string, VendoredConfig> = vendoredConfigsRaw;
 
-export function parseCiConfig(configText: string): Record<string, string> {
-  const configs: Record<string, string> = {};
-  for (const line of configText.split('\n')) {
-    if (!line || !line.includes('=')) continue;
-    const idx = line.indexOf('=');
-    const key = line.slice(0, idx).trim();
-    const value = line.slice(idx + 1).trim();
-    if (key) configs[key] = value;
-  }
-  return configs;
-}
-
-export function parseRebuildTriggers(configs: Record<string, string>): string[] {
-  const raw = configs['CI_REBUILD_TRIGGERS'];
-  if (!raw) return [];
-  return raw.split(':').filter(Boolean);
-}
-
-async function readPkgConfig(pkgname: string): Promise<Record<string, string>> {
+async function readConfigText(pkgname: string): Promise<string> {
   const item = vendoredConfigs[pkgname];
   if (!item) throw new Error(`Missing vendored config for ${pkgname}`);
-  return parseCiConfig(item.config);
+  return item.config;
 }
 
 async function readPkgbuild(pkgname: string): Promise<string> {
@@ -52,16 +36,15 @@ CI_PKGBUILD_SOURCE=aur
     const parsed = parseCiConfig(configText);
     expect(parsed['CI_REBUILD_TRIGGERS']).toBe('kwin:boost');
     expect(parsed['CI_PKGBUILD_SOURCE']).toBe('aur');
-    expect(parseRebuildTriggers(parsed)).toEqual(['kwin', 'boost']);
+    expect(parseRebuildTriggers(configText)).toEqual(['kwin', 'boost']);
   });
 
   it('handles missing CI_REBUILD_TRIGGERS key', () => {
-    const parsed = parseCiConfig('SOME_KEY=value');
-    expect(parseRebuildTriggers(parsed)).toEqual([]);
+    expect(parseRebuildTriggers('SOME_KEY=value')).toEqual([]);
   });
 
   it('parses multi-trigger string correctly', () => {
-    const triggers = parseRebuildTriggers({ CI_REBUILD_TRIGGERS: 'boost:icu:libxml2' });
+    const triggers = parseRebuildTriggers('CI_REBUILD_TRIGGERS=boost:icu:libxml2');
     expect(triggers).toEqual(['boost', 'icu', 'libxml2']);
   });
 });
@@ -69,36 +52,36 @@ CI_PKGBUILD_SOURCE=aur
 describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
   describe('single-trigger packages', () => {
     it('parses kwin-effects-better-blur-dx → [kwin]', async () => {
-      const configs = await readPkgConfig('kwin-effects-better-blur-dx');
+      const configs = await readConfigText('kwin-effects-better-blur-dx');
       expect(parseRebuildTriggers(configs)).toEqual(['kwin']);
     });
 
     it('parses annotator-git → [libxml2]', async () => {
-      const configs = await readPkgConfig('annotator-git');
+      const configs = await readConfigText('annotator-git');
       expect(parseRebuildTriggers(configs)).toEqual(['libxml2']);
     });
 
     it('parses chatterino2-git → [boost]', async () => {
-      const configs = await readPkgConfig('chatterino2-git');
+      const configs = await readConfigText('chatterino2-git');
       expect(parseRebuildTriggers(configs)).toEqual(['boost']);
     });
   });
 
   describe('multi-trigger packages', () => {
     it('parses apollo-git → [boost, icu]', async () => {
-      const configs = await readPkgConfig('apollo-git');
+      const configs = await readConfigText('apollo-git');
       expect(parseRebuildTriggers(configs)).toEqual(['boost', 'icu']);
     });
 
     it('parses aquamarine-git → [hyprutils-git, libdisplay-info]', async () => {
-      const configs = await readPkgConfig('aquamarine-git');
+      const configs = await readConfigText('aquamarine-git');
       expect(parseRebuildTriggers(configs)).toEqual(['hyprutils-git', 'libdisplay-info']);
     });
   });
 
   describe('trigger matching', () => {
     it('matches a changed Arch package against single-trigger configs', async () => {
-      const configs = await readPkgConfig('kwin-effects-better-blur-dx');
+      const configs = await readConfigText('kwin-effects-better-blur-dx');
       const triggers = parseRebuildTriggers(configs);
 
       const changedArch = 'kwin';
@@ -109,7 +92,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
     });
 
     it('matches any of multiple triggers', async () => {
-      const configs = await readPkgConfig('apollo-git');
+      const configs = await readConfigText('apollo-git');
       const triggers = parseRebuildTriggers(configs);
 
       expect(triggers.includes('boost')).toBe(true);
@@ -123,7 +106,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
       const kwinConsumers: string[] = [];
       for (const dir of packageDirs) {
         try {
-          const triggers = parseRebuildTriggers(await readPkgConfig(dir));
+          const triggers = parseRebuildTriggers(await readConfigText(dir));
           if (triggers.includes('kwin')) kwinConsumers.push(dir);
         } catch {
           // ignore missing
@@ -143,7 +126,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
       const boostConsumers: string[] = [];
       for (const dir of packageDirs) {
         try {
-          const triggers = parseRebuildTriggers(await readPkgConfig(dir));
+          const triggers = parseRebuildTriggers(await readConfigText(dir));
           if (triggers.includes('boost')) boostConsumers.push(dir);
         } catch {
           // ignore missing
@@ -172,7 +155,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
       const result: string[] = [];
       for (const name of packageDirs) {
         try {
-          const triggers = parseRebuildTriggers(await readPkgConfig(name));
+          const triggers = parseRebuildTriggers(await readConfigText(name));
           if (triggers.includes(trigger)) result.push(name);
         } catch {
           // ignore missing
@@ -207,7 +190,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
     });
 
     it('borked3ds-git has 6 triggers', async () => {
-      const configs = await readPkgConfig('borked3ds-git');
+      const configs = await readConfigText('borked3ds-git');
       const triggers = parseRebuildTriggers(configs);
       expect(triggers).toEqual(['libinih', 'libusb', 'openssl', 'zstd', 'openal', 'zydis']);
       // Each trigger independently causes a rebuild.
@@ -217,12 +200,12 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
     });
 
     it('scribus-svn has 5 correctly-separated triggers', async () => {
-      const configs = await readPkgConfig('scribus-svn');
+      const configs = await readConfigText('scribus-svn');
       expect(parseRebuildTriggers(configs)).toEqual(['boost', 'icu', 'libxml2', 'poppler', 'qt6-base']);
     });
 
     it('scribus-unstable has a typo: libxml2poppler is one token, not two', async () => {
-      const configs = await readPkgConfig('scribus-unstable');
+      const configs = await readConfigText('scribus-unstable');
       const triggers = parseRebuildTriggers(configs);
       // Missing colon between libxml2 and poppler merges them into one token.
       // The parser faithfully reproduces this — it matches neither libxml2 nor poppler.
@@ -234,7 +217,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
     });
 
     it('bluespec-git triggers on haskell runtime packages', async () => {
-      const configs = await readPkgConfig('bluespec-git');
+      const configs = await readConfigText('bluespec-git');
       const triggers = parseRebuildTriggers(configs);
       expect(triggers).toEqual(['haskell-old-time', 'haskell-syb', 'haskell-regex-compat', 'haskell-split']);
     });
@@ -255,35 +238,35 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
         .filter(Boolean);
       expect(depends).toContain('haskell-strict-concurrency');
 
-      const triggers = parseRebuildTriggers(await readPkgConfig('bluespec-git'));
+      const triggers = parseRebuildTriggers(await readConfigText('bluespec-git'));
       expect(triggers).not.toContain('haskell-strict-concurrency');
       // And the ELF truth: the shipped binary links strict-concurrency's soname.
       expect(triggers.filter((t) => depends.includes(t)).length).toBeLessThan(depends.length);
     });
 
     it('kicad-git triggers on three vendor libs', async () => {
-      const configs = await readPkgConfig('kicad-git');
+      const configs = await readConfigText('kicad-git');
       expect(parseRebuildTriggers(configs)).toEqual(['boost', 'poppler', 'protobuf']);
     });
 
     it('waydroid-git triggers on the python runtime (interpreter bump)', async () => {
-      const configs = await readPkgConfig('waydroid-git');
+      const configs = await readConfigText('waydroid-git');
       expect(parseRebuildTriggers(configs)).toEqual(['python']);
     });
 
     it('srb2 triggers on data-only deps (no ELF to diff)', async () => {
-      const configs = await readPkgConfig('srb2');
+      const configs = await readConfigText('srb2');
       expect(parseRebuildTriggers(configs)).toEqual(['srb2-data', 'miniupnpc']);
     });
 
     it('dahdi-linux-git triggers on the kernel (DKMS/kernel-module rebuild)', async () => {
-      const configs = await readPkgConfig('dahdi-linux-git');
+      const configs = await readConfigText('dahdi-linux-git');
       expect(parseRebuildTriggers(configs)).toEqual(['linux']);
     });
 
     it('D-language consumers trigger on liblphobos (compiler ABI)', async () => {
       for (const pkg of ['gtkd', 'btdu']) {
-        const configs = await readPkgConfig(pkg);
+        const configs = await readConfigText(pkg);
         expect(parseRebuildTriggers(configs)).toEqual(['liblphobos']);
       }
     });
@@ -293,7 +276,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
       // chain is complete: gtkd's CI_REBUILD_TRIGGERS=liblphobos matches its
       // real link to libphobos2-ldc-shared.so. The ELF channel agrees with the
       // manual one here — a confirmation case.
-      const configs = await readPkgConfig('gtkd');
+      const configs = await readConfigText('gtkd');
       expect(parseRebuildTriggers(configs)).toContain('liblphobos');
       // liblphobos ships the ldc-versioned runtime soname gtkd links.
       const lphobosPkgbuild = await readPkgbuild('gtkd');
@@ -301,12 +284,12 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
     });
 
     it('gr-limesdr-git triggers on the gnuradio toolchain chain', async () => {
-      const configs = await readPkgConfig('gr-limesdr-git');
+      const configs = await readConfigText('gr-limesdr-git');
       expect(parseRebuildTriggers(configs)).toEqual(['gnuradio', 'limesuite', 'spdlog']);
     });
 
     it('hypr git-chain agreement: hyprlang-git triggers on hyprutils-git', async () => {
-      const configs = await readPkgConfig('hyprlang-git');
+      const configs = await readConfigText('hyprlang-git');
       const triggers = parseRebuildTriggers(configs);
       expect(triggers).toContain('hyprutils-git');
       // The full hypr consumer set (mirrors the ELF half of the same break).
@@ -317,7 +300,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
     });
 
     it('ffmpeg fan-out: aegisub triggers on boost:ffmpeg:icu', async () => {
-      const configs = await readPkgConfig('aegisub-arch1t3cht-git');
+      const configs = await readConfigText('aegisub-arch1t3cht-git');
       expect(parseRebuildTriggers(configs)).toEqual(['boost', 'ffmpeg', 'icu']);
       // And the media-stack consumers are a broad manual-trigger set.
       const ffmpegConsumers = await consumersOf('ffmpeg');
@@ -327,7 +310,7 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
     });
 
     it('srb2 mixed trigger: content (srb2-data) + ELF-detectable (miniupnpc)', async () => {
-      const configs = await readPkgConfig('srb2');
+      const configs = await readConfigText('srb2');
       expect(parseRebuildTriggers(configs)).toEqual(['srb2-data', 'miniupnpc']);
       // srb2-data is content-only; the manual trigger is mandatory because the
       // ELF channel cannot see data swaps.
@@ -335,9 +318,9 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
     });
 
     it('DKMS chain: wanpipe triggers on dahdi-linux-git triggers on linux (kernel ABI)', async () => {
-      const dahdi = await readPkgConfig('dahdi-linux-git');
+      const dahdi = await readConfigText('dahdi-linux-git');
       expect(parseRebuildTriggers(dahdi)).toEqual(['linux']);
-      const wanpipe = await readPkgConfig('wanpipe');
+      const wanpipe = await readConfigText('wanpipe');
       expect(parseRebuildTriggers(wanpipe)).toEqual(['dahdi-linux-git']);
       // Kernel modules (.ko) have no DT_NEEDED; only the manual chain can
       // express a kernel-ABI rebuild. No ELF fixture exists for this on purpose.
@@ -361,17 +344,20 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
   describe('edge cases', () => {
     it('handles config with no CI_REBUILD_TRIGGERS', () => {
       const configs = parseCiConfig('CI_PACKAGE_BUMP=1.0-1\nCI_PKGBUILD_SOURCE=aur\n');
-      expect(parseRebuildTriggers(configs)).toEqual([]);
+      expect(configs['CI_PKGBUILD_SOURCE']).toBe('aur');
+      expect(parseRebuildTriggers('CI_PACKAGE_BUMP=1.0-1\nCI_PKGBUILD_SOURCE=aur\n')).toEqual([]);
     });
 
     it('handles empty config', () => {
-      expect(parseRebuildTriggers(parseCiConfig(''))).toEqual([]);
+      expect(parseRebuildTriggers('')).toEqual([]);
     });
 
     it('handles malformed lines gracefully', () => {
       const configs = parseCiConfig('CI_REBUILD_TRIGGERS=boost\nMALFORMED_LINE\n=missing_key\nkey=\n');
       expect(configs['CI_REBUILD_TRIGGERS']).toBe('boost');
-      expect(parseRebuildTriggers(configs)).toEqual(['boost']);
+      expect(parseRebuildTriggers('CI_REBUILD_TRIGGERS=boost\nMALFORMED_LINE\n=missing_key\nkey=\n')).toEqual([
+        'boost',
+      ]);
     });
   });
 });

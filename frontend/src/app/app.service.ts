@@ -1,6 +1,5 @@
 import { HttpClient, HttpParams, type HttpResourceRequest } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
-import { Meta } from '@angular/platform-browser';
 import {
   type BuildSortField,
   type BuildStatus,
@@ -23,7 +22,8 @@ import { firstValueFrom, lastValueFrom, Subject } from 'rxjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
 import { type ResourceMetricKey } from './stats/charts/chart-resource-metrics';
-import { isChaoticEvent, type SeoTags, updateSeoTags } from './functions';
+import { isChaoticEvent } from './functions';
+import { ResilientSseStream, SSE_RECONNECT_DELAY_MS } from './sse-stream';
 import { parseQueryParams } from './utils/api-params';
 
 export interface PackagesQueryParams {
@@ -48,7 +48,6 @@ export interface BuildsQueryParams {
 
 export const ALL_TIME_DAYS = 3650;
 
-const SSE_RECONNECT_DELAY_MS = 1000;
 /** The backend emits a heartbeat every 15s; three missed ones mean a dead link. */
 const SSE_HEARTBEAT_MS = 15_000;
 const SSE_STALE_AFTER_MS = 3 * SSE_HEARTBEAT_MS;
@@ -72,26 +71,33 @@ export class AppService {
 
   readonly backendVersion = signal<string | undefined>(undefined);
 
-  private eventSource: EventSource | undefined;
-  private reconnectTimer: number | undefined;
   private lastSseFrameAt = 0;
   private lastHealthProbeAt = 0;
   private readonly watchdogTimer = setInterval(() => this.watchdogTick(), WATCHDOG_TICK_MS);
-  private readonly onVisibilityChange = (): void => {
-    if (
-      document.visibilityState === 'visible' &&
-      (!this.eventSource || this.eventSource.readyState === EventSource.CLOSED)
-    ) {
-      this.reconnect();
-    }
-  };
+  private readonly stream = new ResilientSseStream({
+    url: () => `${this.appConfig.backendUrl}/sse?ngsw-bypass`,
+    onMessage: (data) => this.handleFrame(data),
+    namedEvents: ['ping'],
+    onNamedEvent: () => {
+      // The backend heartbeat is a named event, so it never reaches onmessage;
+      // it is still proof of a live connection.
+      this.lastSseFrameAt = Date.now();
+      this.internalSseConnected.set(true);
+    },
+    onOpen: () => {
+      this.internalSseSettled.set(true);
+      this.internalSseConnected.set(true);
+    },
+    onError: () => {
+      this.internalSseSettled.set(true);
+      void this.probeHealth();
+    },
+    maxAttempts: Number.MAX_SAFE_INTEGER,
+    delayMs: SSE_RECONNECT_DELAY_MS,
+  });
 
   constructor() {
-    // Closing on error would permanently stop live updates: EventSource does not
-    // auto-reconnect after an explicit close, and backgrounded tabs drop the
-    // connection. Instead, re-establish the stream on error and on tab focus.
-    document.addEventListener('visibilitychange', this.onVisibilityChange);
-    this.reconnect();
+    this.stream.open();
     this.fetchVersion();
   }
 
@@ -102,11 +108,10 @@ export class AppService {
    * backend by its health endpoint.
    */
   private watchdogTick(): void {
-    const source = this.eventSource;
-    if (!source || source.readyState === EventSource.CLOSED) return;
+    if (!this.stream.isOpen) return;
     if (Date.now() - this.lastSseFrameAt <= SSE_STALE_AFTER_MS) return;
     void this.probeHealth();
-    this.reconnect();
+    this.stream.open();
   }
 
   /**
@@ -128,50 +133,10 @@ export class AppService {
     }
   }
 
-  private reconnect(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = undefined;
-    if (this.eventSource && this.eventSource.readyState !== EventSource.CLOSED) {
-      this.eventSource.close();
-    }
-
-    const source = new EventSource(`${this.appConfig.backendUrl}/sse?ngsw-bypass`);
-    this.eventSource = source;
+  private handleFrame(data: string): void {
     this.lastSseFrameAt = Date.now();
-
-    source.onopen = () => {
-      this.internalSseSettled.set(true);
-      this.internalSseConnected.set(true);
-    };
-
-    source.onmessage = ({ data }) => {
-      this.lastSseFrameAt = Date.now();
-      const event: unknown = JSON.parse(data);
-      if (isChaoticEvent(event)) this.chaoticSse$.next(event);
-    };
-
-    // The backend heartbeat is a named event, so it never reaches onmessage;
-    // it is still proof of a live connection.
-    source.addEventListener('ping', () => {
-      this.lastSseFrameAt = Date.now();
-      this.internalSseConnected.set(true);
-    });
-
-    source.onerror = () => {
-      this.internalSseSettled.set(true);
-      this.eventSource?.close();
-      this.eventSource = undefined;
-      this.scheduleReconnect();
-      void this.probeHealth();
-    };
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectTimer !== undefined) return;
-    this.reconnectTimer = window.setTimeout(() => {
-      this.reconnectTimer = undefined;
-      this.reconnect();
-    }, SSE_RECONNECT_DELAY_MS);
+    const event: unknown = JSON.parse(data);
+    if (isChaoticEvent(event)) this.chaoticSse$.next(event);
   }
 
   private fetchVersion(): void {
@@ -179,10 +144,6 @@ export class AppService {
       next: (res) => this.backendVersion.set(res.version),
       error: () => this.backendVersion.set('unknown'),
     });
-  }
-
-  getNewsResourceRequest(): HttpResourceRequest {
-    return { url: '/news.json' };
   }
 
   private daysParams(days?: number): HttpParams {
@@ -364,10 +325,6 @@ export class AppService {
     };
   }
 
-  getBackendUrl(): string {
-    return this.appConfig.backendUrl;
-  }
-
   getPackagesResourceRequest(params: PackagesQueryParams): HttpResourceRequest {
     return {
       url: `${this.appConfig.backendUrl}/builder/packages`,
@@ -412,10 +369,6 @@ export class AppService {
       url: `${this.appConfig.backendUrl}/builder/builds`,
       params: new HttpParams({ fromObject: parseQueryParams(getBuildsQuerySchema, { perPage, status }) }),
     };
-  }
-
-  updateSeoTags(meta: Meta, seo: SeoTags): void {
-    updateSeoTags(meta, seo);
   }
 
   getMirrorsStatsResourceRequest(): HttpResourceRequest {

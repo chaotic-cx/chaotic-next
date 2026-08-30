@@ -1,6 +1,5 @@
 import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
@@ -10,7 +9,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { Highlight } from 'ngx-highlightjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
-import { updateSeoTags } from '../functions';
+import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
@@ -22,7 +21,6 @@ import { TitleComponent } from '../title/title.component';
 export class DocsComponent implements OnInit {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly messageToastService = inject(MessageToastService);
-  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -41,20 +39,17 @@ export class DocsComponent implements OnInit {
   readonly apiDocsUrl = `${this.appConfig.backendUrl}/api/docs`;
 
   constructor() {
+    setPageSeo(
+      'Get started · Chaotic-AUR',
+      'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
+    );
     this.receiveKeys =
       `$ sudo pacman-key --recv-key ${this.appConfig.primaryKey} --keyserver keyserver.ubuntu.com\n` +
       `$ sudo pacman-key --lsign-key ${this.appConfig.primaryKey}`;
   }
 
   ngOnInit() {
-    updateSeoTags(this.meta, {
-      title: 'Get started · Chaotic-AUR',
-      description: 'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
-      url: this.router.url,
-    });
-
     this.route.fragment
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((fragment) => this.scrollToFragment(fragment));

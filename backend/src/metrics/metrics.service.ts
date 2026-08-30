@@ -2,7 +2,7 @@ import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
 import { RouterHitDaily } from '../router/router-hit-daily.entity';
 import { cachedResult } from '../utils/cache';
 import { CACHE_TTL_MS, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
-import { clampInt, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
+import { clampInt, rejectedReasons, utcCutoffDaysAgo } from '../utils/functions';
 import {
   LIVE_RPS_SSE_EVENT,
   type CountNameObject,
@@ -20,7 +20,7 @@ import { type Cache } from 'cache-manager';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { createInterface } from 'node:readline';
 import { merge, Observable, share } from 'rxjs';
-import { DataSource } from 'typeorm';
+import { DataSource, type EntityTarget } from 'typeorm';
 
 let hitCounter = 0;
 
@@ -138,7 +138,7 @@ export class MetricsService {
           `SELECT ROUND(hll_cardinality(hll_union_agg(sketch)))::int AS count
          FROM "router_hits_daily_users"
          WHERE "day" >= $1`,
-          [utcDayStart(nDaysInPast(clampedDays))],
+          [utcCutoffDaysAgo(clampedDays)],
         ) as Promise<{ count: number }[]>,
     ).then((rows) => rows[0]?.count ?? 0);
   }
@@ -148,18 +148,41 @@ export class MetricsService {
    * @param days The number of days to look back (defaults to 30)
    * @returns The user agent list with counts
    */
+  /**
+   * Sums the daily hit counts of one rollup table grouped by a dimension
+   * (user agent, country or package), with optional repo/package filters.
+   */
+  private sumByDimension<T>(params: {
+    entity: EntityTarget<RouterHitDaily | RouterHitDailyAgent>;
+    dimension: 'userAgent' | 'country' | 'package';
+    cutoff: Date;
+    repo?: string;
+    pkgname?: string;
+    limit?: number;
+  }): Promise<T[]> {
+    const dimension = `hit.${params.dimension}`;
+    const query = this.dataSource
+      .getRepository(params.entity)
+      .createQueryBuilder('hit')
+      .select(dimension, 'name')
+      .addSelect('SUM(hit.count)::int', 'count')
+      .where('hit.day >= :cutoff', { cutoff: params.cutoff });
+    if (params.repo) query.andWhere('hit.repo = :repo', { repo: params.repo });
+    if (params.pkgname) query.andWhere('hit.package = :pkg', { pkg: params.pkgname });
+    if (params.limit !== undefined) query.limit(params.limit);
+    return query.groupBy(dimension).orderBy('count', 'DESC').getRawMany<T>();
+  }
+
   async uniqueUserAgents(days = 30, repo = ''): Promise<UserAgentList> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `metrics:user-agents:${clampedDays}:${repo}`, METRICS_CACHE_TTL_MS, () => {
-      const query = this.dataSource
-        .getRepository(RouterHitDailyAgent)
-        .createQueryBuilder('hit')
-        .select('hit.userAgent', 'name')
-        .addSelect('SUM(hit.count)::int', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) });
-      if (repo) query.andWhere('hit.repo = :repo', { repo });
-      return query.groupBy('hit.userAgent').orderBy('count', 'DESC').getRawMany<UserAgentList[number]>();
-    });
+    return cachedResult(this.cache, `metrics:user-agents:${clampedDays}:${repo}`, METRICS_CACHE_TTL_MS, () =>
+      this.sumByDimension<UserAgentList[number]>({
+        entity: RouterHitDailyAgent,
+        dimension: 'userAgent',
+        cutoff: utcCutoffDaysAgo(clampedDays),
+        repo,
+      }),
+    );
   }
 
   async packageMetrics(param: string, days = 30): Promise<SpecificPackageMetrics> {
@@ -171,7 +194,7 @@ export class MetricsService {
   }
 
   private async queryPackageMetrics(pkgname: string, clampedDays: number): Promise<SpecificPackageMetrics> {
-    const cutoff = utcDayStart(nDaysInPast(clampedDays));
+    const cutoff = utcCutoffDaysAgo(clampedDays);
 
     const downloadRow = await this.dataSource
       .getRepository(RouterHitDaily)
@@ -180,16 +203,12 @@ export class MetricsService {
       .where('hit.day >= :cutoff', { cutoff })
       .andWhere('hit.package = :pkg', { pkg: pkgname })
       .getRawOne<{ count: number }>();
-    const userAgentRows = await this.dataSource
-      .getRepository(RouterHitDailyAgent)
-      .createQueryBuilder('hit')
-      .select('hit.userAgent', 'name')
-      .addSelect('SUM(hit.count)::int', 'count')
-      .where('hit.day >= :cutoff', { cutoff })
-      .andWhere('hit.package = :pkg', { pkg: pkgname })
-      .groupBy('hit.userAgent')
-      .orderBy('count', 'DESC')
-      .getRawMany<UserAgentList[number]>();
+    const userAgentRows = await this.sumByDimension<UserAgentList[number]>({
+      entity: RouterHitDailyAgent,
+      dimension: 'userAgent',
+      cutoff,
+      pkgname,
+    });
 
     return {
       name: pkgname,
@@ -205,16 +224,14 @@ export class MetricsService {
       this.cache,
       `metrics:rank-countries:${rankRange}:${clampedDays}:${repo}`,
       METRICS_CACHE_TTL_MS,
-      () => {
-        const query = this.dataSource
-          .getRepository(RouterHitDaily)
-          .createQueryBuilder('hit')
-          .select('hit.country', 'name')
-          .addSelect('SUM(hit.count)::int', 'count')
-          .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) });
-        if (repo) query.andWhere('hit.repo = :repo', { repo });
-        return query.groupBy('hit.country').orderBy('count', 'DESC').limit(rankRange).getRawMany<CountNameObject>();
-      },
+      () =>
+        this.sumByDimension<CountNameObject>({
+          entity: RouterHitDaily,
+          dimension: 'country',
+          cutoff: utcCutoffDaysAgo(clampedDays),
+          repo,
+          limit: rankRange,
+        }),
     );
   }
 
@@ -225,16 +242,14 @@ export class MetricsService {
       this.cache,
       `metrics:rank-packages:${rankRange}:${clampedDays}:${repo}`,
       METRICS_CACHE_TTL_MS,
-      () => {
-        const query = this.dataSource
-          .getRepository(RouterHitDaily)
-          .createQueryBuilder('hit')
-          .select('hit.package', 'name')
-          .addSelect('SUM(hit.count)::int', 'count')
-          .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) });
-        if (repo) query.andWhere('hit.repo = :repo', { repo });
-        return query.groupBy('hit.package').orderBy('count', 'DESC').limit(rankRange).getRawMany<CountNameObject>();
-      },
+      () =>
+        this.sumByDimension<CountNameObject>({
+          entity: RouterHitDaily,
+          dimension: 'package',
+          cutoff: utcCutoffDaysAgo(clampedDays),
+          repo,
+          limit: rankRange,
+        }),
     );
   }
 

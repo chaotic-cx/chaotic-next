@@ -1,8 +1,8 @@
+import { DatePipe } from '@angular/common';
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { FlipListDirective } from '../animations/flip-list.directive';
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import type { PipelineView } from './build-status.service';
 
@@ -18,7 +18,7 @@ const FALLBACK_DOT_CLASS = 'bg-ctp-subtext0';
 
 @Component({
   selector: 'chaotic-pipeline-list',
-  imports: [RouterLink, Tooltip, RelativeTimePipe, LocaleDatePipe, FlipListDirective],
+  imports: [DatePipe, RouterLink, Tooltip, RelativeTimePipe, FlipListDirective],
   templateUrl: './pipeline-list.component.html',
 })
 export class PipelineListComponent {

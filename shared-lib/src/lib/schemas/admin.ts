@@ -1,6 +1,6 @@
-import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '../types';
-import { INT4_MAX, pageQuerySchema, perPageQuerySchema } from './common';
 import { z } from 'zod';
+import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '../types/core';
+import { INT4_MAX, pageQuerySchema, perPageQuerySchema } from './common';
 
 export const createBuilderBodySchema = z.strictObject({
   name: z.string().describe('Builder name'),
@@ -31,16 +31,12 @@ export const updatePackageBodySchema = z.strictObject({
   repoId: z.number().int().describe('Repository id'),
 });
 
-export type UpdatePackageBodyDto = z.infer<typeof updatePackageBodySchema>;
-
 export const updateArchPackageBodySchema = z.strictObject({
   pkgname: z.string().min(1).describe('Package name'),
   version: z.string().describe('Package version'),
   pkgrel: z.number().int().describe('Package release number'),
   arch: z.string().describe('Target architecture'),
 });
-
-export type UpdateArchPackageBodyDto = z.infer<typeof updateArchPackageBodySchema>;
 
 export const createRepoBodySchema = z.strictObject({
   name: z.string().min(1).describe('Repository name'),
@@ -52,8 +48,6 @@ export const createRepoBodySchema = z.strictObject({
   gitlabProjectId: z.string().optional().describe('GitLab project ID'),
   apiToken: z.string().optional().describe('Encrypted GitLab API token'),
 });
-
-export type CreateRepoBodyDto = z.infer<typeof createRepoBodySchema>;
 
 export const listAdminPackagesQuerySchema = z.strictObject({
   page: pageQuerySchema.optional(),
@@ -131,8 +125,6 @@ export const rescanPackageItemSchema = z.strictObject({
   pkgType: z.string().describe('Package type (0 for Arch, 1 for Chaotic)'),
   repo: z.string().optional().describe('Repository name'),
 });
-
-export type RescanPackageItemDto = z.infer<typeof rescanPackageItemSchema>;
 
 export const rescanPackagesBodySchema = z.strictObject({
   packages: z.array(rescanPackageItemSchema).min(1).describe('Packages to rescan'),

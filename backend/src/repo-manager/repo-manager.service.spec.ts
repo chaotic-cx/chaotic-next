@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { PinoLogger } from 'nestjs-pino';
 import type { Repository } from 'typeorm';
 import { describe, expect, it } from 'vitest';
@@ -306,6 +307,7 @@ function buildService(
     {} as ChaoticIndexService,
     {} as RebuildTriggerService,
     {} as BumpService,
+    {} as SchedulerRegistry,
     {} as RepoWriter,
     {} as RepoReaderFactory,
   );

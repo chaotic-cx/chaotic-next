@@ -1,11 +1,9 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../../../../app.service';
-import { resourceValue } from '../../../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
 
 const BOT_USERNAME = 'temeraire-cx';
 const SERVICE_ACCOUNT_PREFIXES = ['gitlab_', 'project_'];
@@ -16,7 +14,7 @@ function isVisibleReviewer(username: string): boolean {
 
 @Component({
   selector: 'chaotic-chart-review-over-time',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-review-over-time.component.html',
   styleUrl: './chart-review-over-time.component.css',
 })
@@ -24,16 +22,12 @@ export class ChartReviewOverTimeComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<{ date: string; username: string; reviews: number }[]>(() =>
+  readonly chart = chartResource<{ date: string; username: string; reviews: number }[]>(() =>
     this.appService.getUpdateReviewStatsOverTimeResourceRequest(this.statsService.timeRangeDays() ?? undefined),
   );
 
-  readonly loading = this.resource.isLoading;
-
-  readonly hasData = computed(() => this.resource.hasValue());
-
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
-    const data = (resourceValue(this.resource) ?? []).filter((row) => isVisibleReviewer(row.username));
+    const data = this.chart.data().filter((row) => isVisibleReviewer(row.username));
     const dates = Array.from(new Set(data.map((row) => row.date))).sort();
     const usernames = Array.from(new Set(data.map((row) => row.username)));
 

@@ -1,4 +1,5 @@
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
+import { posix } from 'node:path';
 
 export type RuleScope = 'any' | 'pkgbuild' | 'install' | 'code';
 
@@ -73,15 +74,6 @@ function decodeBase64Run(blob: string): string | null {
   }
 }
 
-export function basename(path: string): string {
-  return path.slice(path.lastIndexOf('/') + 1);
-}
-
-export function dirname(path: string): string {
-  const separator = path.lastIndexOf('/');
-  return separator === -1 ? '' : path.slice(0, separator);
-}
-
 export function isInScope(change: Pick<MergeRequestDiffSchema, 'new_path'>, scopes: RuleScope[]): boolean {
   return scopes.some((scope) => SCOPE_PREDICATES[scope](change.new_path));
 }
@@ -90,7 +82,7 @@ const DOCUMENTATION_PATTERN = /\.(md|markdown|rst|txt|html|adoc|changelog)$/i;
 
 const SCOPE_PREDICATES: Record<RuleScope, (newPath: string) => boolean> = {
   any: () => true,
-  pkgbuild: (newPath) => basename(newPath) === 'PKGBUILD',
+  pkgbuild: (newPath) => posix.basename(newPath) === 'PKGBUILD',
   install: (newPath) => INSTALL_SCRIPT_PATTERN.test(newPath),
   // Any executable-ish file, excluding documentation that merely shows commands.
   code: (newPath) => !DOCUMENTATION_PATTERN.test(newPath),
@@ -170,7 +162,7 @@ export function hasBinaryContent(change: Pick<MergeRequestDiffSchema, 'diff'>): 
 }
 
 export function fileExtension(path: string): string {
-  return path.slice(path.lastIndexOf('.') + 1).toLowerCase();
+  return posix.extname(path).slice(1).toLowerCase();
 }
 
 export function hasBinaryExtension(newPath: string): boolean {

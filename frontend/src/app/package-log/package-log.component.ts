@@ -15,9 +15,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
-import { AppService } from '../app.service';
 import { BuildStatusService } from '../build-status/build-status.service';
-import { copyLineLink, formatDuration, parseLogChunk } from '../functions';
+import { copyLineLink, formatDuration, parseLogChunk, updateSeoTags } from '../functions';
 import { ResilientSseStream } from '../sse-stream';
 import { TitleComponent } from '../title/title.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
@@ -40,7 +39,6 @@ import { PackageLogService } from './package-log.service';
   },
 })
 export class PackageLogComponent implements OnDestroy {
-  private readonly appService = inject(AppService);
   private readonly buildStatusService = inject(BuildStatusService);
   private readonly logService = inject(PackageLogService);
   private readonly meta = inject(Meta);
@@ -145,7 +143,7 @@ export class PackageLogComponent implements OnDestroy {
     this.scrollToLine.set(this.requestedLine());
     this.cumulativeOffset = 0;
 
-    this.appService.updateSeoTags(this.meta, {
+    updateSeoTags(this.meta, {
       title: `${pkgname} build log · Chaotic-AUR`,
       description: 'Build log of a Chaotic-AUR package',
       keywords: 'Chaotic-AUR, build, log, package',

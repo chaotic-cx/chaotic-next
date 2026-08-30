@@ -1,6 +1,7 @@
 import { type Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
 import { backendChildGuard, backendGuard } from './backend-status/backend-required.guard';
+import { MEMORIAL_2021, MEMORIAL_2024 } from './memorial/memorial.configs';
 import { AUTH_PRELOAD_DATA, SKIP_PRELOAD_DATA } from './preload.strategy';
 
 export const routes: Routes = [
@@ -133,8 +134,8 @@ export const routes: Routes = [
   {
     title: 'Memorial 2024 · Chaotic-AUR',
     path: 'memorial-v2',
-    data: SKIP_PRELOAD_DATA,
-    loadComponent: () => import('./memorial-v2/memorial-v2.component').then((c) => c.MemorialV2Component),
+    data: { ...SKIP_PRELOAD_DATA, memorial: MEMORIAL_2024 },
+    loadComponent: () => import('./memorial/memorial.component').then((c) => c.MemorialComponent),
   },
   {
     title: 'Settings · Chaotic-AUR',
@@ -150,7 +151,7 @@ export const routes: Routes = [
   {
     title: 'Memorial 2021 · Chaotic-AUR',
     path: 'memorial',
-    data: SKIP_PRELOAD_DATA,
+    data: { ...SKIP_PRELOAD_DATA, memorial: MEMORIAL_2021 },
     loadComponent: () => import('./memorial/memorial.component').then((c) => c.MemorialComponent),
   },
   {
