@@ -1,23 +1,24 @@
+import { type BuildResourceStats, ChaoticEvent, MoleculerCurrentQueueObject } from '@chaotic-next/shared-lib';
+import { type Context, Service, type ServiceBroker } from 'moleculer';
+import { PinoLogger } from 'nestjs-pino';
+import { Subject } from 'rxjs';
 import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
 import { GitlabStatusEvent } from '../gitlab/interfaces';
 import { RepoManagerService } from '../repo-manager/repo-manager.service';
 import {
   BuilderDbConnections,
   BuildStatus,
-  DatabasePackageAddedEvent,
+  DatabaseSuccessEvent,
   MoleculerBuildObject,
   QueuePromotedEvent,
 } from '../types/types';
 import { errorMessage } from '../utils/functions';
 import { BuildClassSyncService } from './build-class-sync.service';
-import { Build, BuildResourceUsage, Package } from './builder.entity';
 import { BuildFailureNotifierService } from './build-failure-notifier.service';
+import { Build, BuildResourceUsage, Package } from './builder.entity';
 import { EntityLookupService } from './entity-lookup.service';
 import { moleculerConfigCommonService } from './moleculer.config';
 import { isFailingStatus } from './unresolved-failures';
-import { ChaoticEvent, MoleculerCurrentQueueObject, type BuildResourceStats } from '@chaotic-next/shared-lib';
-import { Service, type Context, type ServiceBroker } from 'moleculer';
-import { Subject } from 'rxjs';
 
 export interface BuilderDatabaseServiceOptions {
   broker: ServiceBroker;
@@ -28,15 +29,27 @@ export interface BuilderDatabaseServiceOptions {
   gitlabPipelineService: GitlabPipelineService;
   buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
   buildFailureNotifier?: Pick<BuildFailureNotifierService, 'handleFailedBuild'>;
+  logger: PinoLogger;
 }
 
-const BUILD_OUTCOME_EVENTS = new Set(['builds.success', 'builds.failed', 'builds.cancelled', 'builds.canceling']);
+const BUILD_OUTCOME_EVENTS = new Set([
+  'builds.success',
+  'builds.failed',
+  'builds.alreadyBuilt',
+  'builds.skipped',
+  'builds.timeout',
+  'builds.replaced',
+  'builds.canceled',
+  'builds.canceled-requeue',
+  'builds.softwareFailure',
+]);
 
 export const PENDING_DEPLOYMENT_TIMEOUT_MINUTES = 5;
 export const PENDING_DEPLOYMENT_TIMEOUT_MS = PENDING_DEPLOYMENT_TIMEOUT_MINUTES * 60 * 1000;
 
 interface PendingDeploymentCheck {
   build: Partial<Build>;
+  pkgbase: string;
   pkgname: string;
   queuedAt: number;
   targetRepo: string;
@@ -77,10 +90,11 @@ export class BuilderDatabaseService extends Service {
   private readonly gitlabPipelineService: GitlabPipelineService;
   private readonly buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
   private readonly buildFailureNotifier?: Pick<BuildFailureNotifierService, 'handleFailedBuild'>;
+  private readonly pino: PinoLogger;
 
   /**
    * Builds that succeeded while the repository databases did not yet carry
-   * their packages; drained once database.packageAdded signals the deployment.
+   * their packages; drained once database.success signals the deployment.
    */
   private pendingDeploymentChecks: PendingDeploymentCheck[] = [];
   private bumpChain: Promise<void> = Promise.resolve();
@@ -97,6 +111,7 @@ export class BuilderDatabaseService extends Service {
     gitlabPipelineService,
     buildClassSync,
     buildFailureNotifier,
+    logger,
   }: BuilderDatabaseServiceOptions) {
     super(broker);
 
@@ -105,28 +120,44 @@ export class BuilderDatabaseService extends Service {
     this.gitlabPipelineService = gitlabPipelineService;
     this.buildClassSync = buildClassSync;
     this.buildFailureNotifier = buildFailureNotifier;
+    this.pino = logger;
 
     this.parseServiceSchema({
       name: 'builderDatabaseService',
       events: {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'builds.*'(ctx: Context<MoleculerBuildObject>) {
+          this.pino.debug({ event: ctx.eventName, ...ctx.params }, 'Received build event');
           this.logBuild(ctx);
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
         'gitlab.status'(ctx: Context<GitlabStatusEvent>) {
+          this.pino.debug({ event: ctx.eventName }, 'Received gitlab.status event');
           void this.gitlabPipelineService.handleExternalStatus(ctx.params).catch((err: unknown) => {
-            this.logger.error(`Failed to handle gitlab.status event: ${errorMessage(err)}`);
+            this.pino.error(`Failed to handle gitlab.status event: ${errorMessage(err)}`);
           });
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        'database.removalCompleted'(ctx: Context<string[]>) {
-          this.removeEntries(ctx);
+        'database.removalComplete'(ctx: Context<string[]>) {
+          this.pino.debug({ event: ctx.eventName, pkgbaseCount: ctx.params.length }, 'Received removalComplete event');
+          // Upstream broadcasts its keep list here, not the removed packages.
+          void this.requestChaoticVersionsUpdate().catch((err: unknown) => {
+            this.pino.error(`Failed to handle database.removalComplete event: ${errorMessage(err)}`);
+          });
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        'database.packageAdded'(ctx: Context<DatabasePackageAddedEvent>) {
+        'database.success'(ctx: Context<DatabaseSuccessEvent>) {
+          this.pino.debug(
+            {
+              event: ctx.eventName,
+              arch: ctx.params.arch,
+              pkgname: ctx.params.pkgname,
+              target_repo: ctx.params.target_repo,
+            },
+            'Received database.success event',
+          );
           void this.runDeferredDeploymentChecks(ctx.params).catch((err: unknown) => {
-            this.logger.error(`Failed to handle database.packageAdded event: ${errorMessage(err)}`);
+            this.pino.error(`Failed to handle database.success event: ${errorMessage(err)}`);
           });
         },
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -154,7 +185,7 @@ export class BuilderDatabaseService extends Service {
     this.repoManagerService = repoManagerService;
     this.dbConnections = dbConnections;
 
-    this.logger.info('BuilderDatabaseService created');
+    this.pino.debug('BuilderDatabaseService created');
   }
 
   async logBuild(ctx: Context<MoleculerBuildObject>): Promise<void> {
@@ -171,7 +202,7 @@ export class BuilderDatabaseService extends Service {
       params.duration === undefined ||
       params.status === undefined
     ) {
-      this.logger.warn(`Malformed build event '${ctx.eventName}': missing required fields, dropping entry`);
+      this.pino.warn(`Malformed build event '${ctx.eventName}': missing required fields, dropping entry`);
       return;
     }
 
@@ -200,11 +231,28 @@ export class BuilderDatabaseService extends Service {
       build.resourceStats = resourceUsageFromStats(params.resourceStats);
     }
 
-    // A finished build does not imply the repository databases already carry
-    // its packages, so database-dependent work waits for database.packageAdded.
     if (params.status === BuildStatus.SUCCESS) {
+      const pkgbase = pkg.pkgbaseName ?? pkg.pkgname;
+      this.pino.debug({ pkgbase, target_repo: params.target_repo }, 'Syncing build classes for successful build');
+      void this.buildClassSync.syncFromDeployment(repo.name, [pkgbase]).catch((err: unknown) => {
+        this.pino.error(`Build class sync failed for ${pkgbase}: ${errorMessage(err)}`);
+      });
+    }
+
+    // A finished build does not imply the repository databases already carry
+    // its packages, so update-triggering work waits for database.success.
+    if (params.status === BuildStatus.SUCCESS) {
+      this.pino.debug(
+        {
+          pkgname: params.pkgname,
+          target_repo: params.target_repo,
+          pendingChecks: this.pendingDeploymentChecks.length + 1,
+        },
+        'Queued build for deployment checks',
+      );
       this.pendingDeploymentChecks.push({
         build,
+        pkgbase: pkg.pkgbaseName ?? pkg.pkgname,
         pkgname: params.pkgname,
         queuedAt: Date.now(),
         targetRepo: params.target_repo,
@@ -212,7 +260,7 @@ export class BuilderDatabaseService extends Service {
     }
 
     try {
-      this.logger.debug(await this.dbConnections.build.save(build));
+      this.pino.debug(await this.dbConnections.build.save(build));
 
       if (isFailingStatus(params.status)) {
         await this.dbConnections.silencedFailure.delete({ pkgname: params.pkgname });
@@ -232,14 +280,14 @@ export class BuilderDatabaseService extends Service {
         },
       });
     } catch (err: unknown) {
-      this.logger.error(err);
+      this.pino.error(err);
     }
   }
 
   private scanBuildFailureAndNotify(params: MoleculerBuildObject): void {
     if (!this.buildFailureNotifier) return;
     void this.buildFailureNotifier.handleFailedBuild(params).catch((err: unknown) => {
-      this.logger.error(`Failed to scan build failure for ${params.pkgname}: ${errorMessage(err)}`);
+      this.pino.error(`Failed to scan build failure for ${params.pkgname}: ${errorMessage(err)}`);
     });
   }
 
@@ -249,42 +297,46 @@ export class BuilderDatabaseService extends Service {
    * the cached Chaotic versions refreshed. Bump checks run one after another,
    * because concurrent checks would skip each other in RepoManager.
    */
-  async runDeferredDeploymentChecks(event: DatabasePackageAddedEvent): Promise<void> {
+  async runDeferredDeploymentChecks(event: DatabaseSuccessEvent): Promise<void> {
     const deployedBuilds = this.takeDeployedBuilds(event);
+    this.pino.debug(
+      {
+        deployedBuilds: deployedBuilds.length,
+        pendingChecks: this.pendingDeploymentChecks.length,
+        pkgbase: event.pkgname,
+      },
+      'Running deferred deployment checks',
+    );
 
     for (const build of deployedBuilds) {
       this.bumpChain = this.bumpChain.then(() => this.runBumpCheck(build));
     }
 
-    if (this.busyUpdating) {
-      this.logger.warn('Scheduling Chaotic version update, another update is in progress');
-      this.scheduledUpdate = true;
-    } else {
-      await this.refreshChaoticVersions();
-    }
-
-    if (deployedBuilds.length > 0) {
-      const deployedPkgbases = [
-        ...new Set([event.pkgbase, ...deployedBuilds.map((build) => build.pkgbase?.pkgname ?? '')]),
-      ];
-      await this.buildClassSync.syncFromDeployment(event.target_repo, deployedPkgbases);
-    }
+    await this.requestChaoticVersionsUpdate();
   }
 
-  private takeDeployedBuilds(event: DatabasePackageAddedEvent): Partial<Build>[] {
-    const deployedPkgnames = new Set([event.pkgbase, ...event.packages]);
+  async requestChaoticVersionsUpdate(): Promise<void> {
+    if (this.busyUpdating) {
+      this.pino.warn('Scheduling Chaotic version update, another update is in progress');
+      this.scheduledUpdate = true;
+      return;
+    }
+    await this.refreshChaoticVersions();
+  }
+
+  private takeDeployedBuilds(event: DatabaseSuccessEvent): Partial<Build>[] {
     const remaining: PendingDeploymentCheck[] = [];
     const taken: Partial<Build>[] = [];
     const now = Date.now();
 
     for (const pending of this.pendingDeploymentChecks) {
       if (now - pending.queuedAt >= PENDING_DEPLOYMENT_TIMEOUT_MS) {
-        this.logger.warn(
+        this.pino.warn(
           `No deployment announcement for ${pending.pkgname} within ${PENDING_DEPLOYMENT_TIMEOUT_MINUTES} minutes, dropping the deferred check`,
         );
         continue;
       }
-      if (pending.targetRepo === event.target_repo && deployedPkgnames.has(pending.pkgname)) {
+      if (pending.targetRepo === event.target_repo && pending.pkgbase === event.pkgname) {
         taken.push(pending.build);
       } else {
         remaining.push(pending);
@@ -299,7 +351,7 @@ export class BuilderDatabaseService extends Service {
     try {
       await this.repoManagerService.eventuallyBumpAffected(build);
     } catch (err: unknown) {
-      this.logger.error(`Deferred bump check failed for ${build.pkgbase?.pkgname}: ${errorMessage(err)}`);
+      this.pino.error(`Deferred bump check failed for ${build.pkgbase?.pkgname}: ${errorMessage(err)}`);
     }
   }
 
@@ -314,25 +366,6 @@ export class BuilderDatabaseService extends Service {
       await this.repoManagerService.updateChaoticVersions();
     } finally {
       this.busyUpdating = false;
-    }
-  }
-
-  async removeEntries(ctx: Context<string[]>): Promise<void> {
-    const pkgbases = ctx.params as string[];
-
-    try {
-      for (const pkgbase of pkgbases) {
-        const pkg = await this.dbConnections.package.findOne({ where: { pkgname: pkgbase } });
-        if (pkg) {
-          await this.dbConnections.package.update(pkg.id, {
-            isActive: false,
-            lastUpdated: new Date().toISOString(),
-          });
-        }
-        this.logger.info(`Removed ${pkgbase} from the database active records`);
-      }
-    } catch (err: unknown) {
-      this.logger.error(err);
     }
   }
 }

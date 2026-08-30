@@ -69,7 +69,7 @@ function main() {
 
   echo "Starting app..."
   exec node --max-old-space-size=8192 --optimize-for-size --expose-gc /app/main.js "$@" \
-    > >(exec pino-pretty --colorize --single-line --translate-time SYS:standard --ignore pid,hostname) 2>&1 &
+    > >(exec pino-pretty --colorize --singleLine --errorLikeObjectKeys none --translate-time SYS:standard --ignore pid,hostname) 2>&1 &
   NODE_PID=$!
   wait "$NODE_PID"
 }

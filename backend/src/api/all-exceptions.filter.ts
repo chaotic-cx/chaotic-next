@@ -38,26 +38,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
         { err: exception, requestMethod: request.method, requestUrl: request.url },
         'Unhandled exception',
       );
-    } else if (status === HttpStatus.NOT_FOUND) {
-      this.pino.debug(
-        {
-          status,
-          requestMethod: request.method,
-          requestUrl: request.url,
-          message: typeof message === 'object' ? JSON.stringify(message) : message,
-        },
-        'HTTP request not found',
-      );
-    } else {
-      this.pino.warn(
-        {
-          status,
-          requestMethod: request.method,
-          requestUrl: request.url,
-          message: typeof message === 'object' ? JSON.stringify(message) : message,
-        },
-        'HTTP request failed',
-      );
     }
 
     const errorCode = exception instanceof HttpException ? exception.errorCode : undefined;

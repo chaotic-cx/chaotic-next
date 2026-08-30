@@ -1,3 +1,5 @@
+import { type BuildClass, type BuildResourceStats, BuildStatus } from '@chaotic-next/shared-lib';
+import { type Repository } from 'typeorm';
 import {
   type Build,
   type Builder,
@@ -5,8 +7,6 @@ import {
   type Repo,
   type SilencedBuildFailure,
 } from '../builder/builder.entity';
-import { BuildStatus, type BuildClass, type BuildResourceStats } from '@chaotic-next/shared-lib';
-import { type Repository } from 'typeorm';
 
 export { BuildStatus };
 
@@ -32,17 +32,10 @@ export interface QueuePromotedEvent {
   timestamp: number;
 }
 
-export interface DatabasePackageAddedEvent {
+export interface DatabaseSuccessEvent {
   arch: string;
-  commit?: string;
-  logUrl?: string;
-  node: string;
-  pkgbase: string;
-  packages: string[];
-  source_repo: string;
-  source_repo_url: string;
+  pkgname: string;
   target_repo: string;
-  timestamp: number;
 }
 
 export interface BuilderDbConnections {
