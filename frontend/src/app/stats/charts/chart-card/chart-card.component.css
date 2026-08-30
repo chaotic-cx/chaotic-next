@@ -1,3 +1,7 @@
+:host {
+  animation: ctp-item-enter 0.25s ease-out;
+}
+
 p-chart,
 p-chart canvas {
   display: block;

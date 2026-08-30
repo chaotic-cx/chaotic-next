@@ -107,7 +107,6 @@ export class StatsComponent implements OnInit {
           relativeTo: this.route,
           replaceUrl: true,
           queryParamsHandling: 'merge',
-          info: { disableViewTransition: true },
         });
         this.cdr.markForCheck();
       }
@@ -124,7 +123,6 @@ export class StatsComponent implements OnInit {
       void this.router.navigate([fragment], {
         relativeTo: this.route,
         replaceUrl: true,
-        info: { disableViewTransition: true },
       });
     }
   }
@@ -133,7 +131,6 @@ export class StatsComponent implements OnInit {
     if (typeof value === 'string' && isStatsTab(value)) {
       void this.router.navigate([value], {
         relativeTo: this.route,
-        info: { disableViewTransition: true },
       });
     }
   }
@@ -143,7 +140,6 @@ export class StatsComponent implements OnInit {
       relativeTo: this.route,
       queryParams: { range: timeRangeToParam(days ?? null) },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 
@@ -152,7 +148,6 @@ export class StatsComponent implements OnInit {
       relativeTo: this.route,
       queryParams: { repo: repo || null },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 }

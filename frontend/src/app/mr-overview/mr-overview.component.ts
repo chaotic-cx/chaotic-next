@@ -282,7 +282,6 @@ export class MrOverviewComponent implements OnInit {
       relativeTo: this.route,
       queryParams: { tab: TAB_QUERY_PARAMS[tab] },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 

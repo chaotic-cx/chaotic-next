@@ -2,14 +2,7 @@ import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import {
-  NavigationCancel,
-  NavigationEnd,
-  NavigationError,
-  NavigationStart,
-  Router,
-  RouterModule,
-} from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { BuildStatus, formatPkgrel } from '@chaotic-next/shared-lib';
 import { MessageToastService, ShellComponent } from '@garudalinux/core';
 import { ConfirmationService, MenuItem } from '@openng/optimus-ui/api';
@@ -114,25 +107,6 @@ export class AppComponent implements OnInit {
       tooltip: 'Learn about the Chaotic-AUR project',
     },
   ]);
-
-  constructor() {
-    let firstNavigationComplete = false;
-    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
-      if (event instanceof NavigationStart) {
-        if (firstNavigationComplete) {
-          const info = this.router.getCurrentNavigation()?.extras?.info as Record<string, unknown> | undefined;
-          if (!info?.['disableViewTransition']) {
-            document.body.classList.add('is-transitioning');
-          }
-        }
-      } else if (event instanceof NavigationCancel || event instanceof NavigationError) {
-        document.body.classList.remove('is-transitioning');
-      } else if (event instanceof NavigationEnd) {
-        firstNavigationComplete = true;
-        document.body.classList.remove('is-transitioning');
-      }
-    });
-  }
 
   ngOnInit() {
     void this.loadLocale();

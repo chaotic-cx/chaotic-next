@@ -41,7 +41,6 @@ export class CodeOfConductComponent implements OnInit {
     void this.router.navigate([], {
       relativeTo: this.route,
       fragment: id,
-      info: { disableViewTransition: true },
     });
   }
 }

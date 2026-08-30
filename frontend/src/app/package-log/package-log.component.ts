@@ -284,7 +284,6 @@ export class PackageLogComponent implements OnDestroy {
       relativeTo: this.route,
       queryParams: { line },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 }

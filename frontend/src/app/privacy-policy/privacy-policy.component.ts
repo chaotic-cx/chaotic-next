@@ -41,7 +41,6 @@ export class PrivacyPolicyComponent implements OnInit {
     void this.router.navigate([], {
       relativeTo: this.route,
       fragment: id,
-      info: { disableViewTransition: true },
     });
   }
 }
