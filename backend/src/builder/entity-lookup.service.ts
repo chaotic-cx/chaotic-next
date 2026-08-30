@@ -3,16 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DeepPartial, In, type Repository } from 'typeorm';
 import { Builder, Package, Repo } from './builder.entity';
+import { sleep } from '../utils/functions';
 
 const CONFLICT_RETRIES = 3;
 const RETRY_DELAY_MS = 50;
 
 function isUniqueViolation(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === '23505';
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 @Injectable()

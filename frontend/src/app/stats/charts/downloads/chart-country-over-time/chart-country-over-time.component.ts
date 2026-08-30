@@ -1,11 +1,14 @@
-import { DatePipe } from '@angular/common';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { resourceValue } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, groupOverTimeChart, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import {
+  chartResource,
+  type ChartConfig,
+  formatDay,
+  groupOverTimeChart,
+  mochaAxisChartOptions,
+} from '../../chart-config';
 
 interface CountryRow {
   day: string;
@@ -15,33 +18,28 @@ interface CountryRow {
 
 @Component({
   selector: 'chaotic-chart-country-over-time',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-country-over-time.component.html',
   styleUrl: './chart-country-over-time.component.css',
-  providers: [DatePipe],
 })
 export class ChartCountryOverTimeComponent {
   private readonly appService = inject(AppService);
-  private readonly datePipe = inject(DatePipe);
   private readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<CountryRow[]>(() =>
+  readonly chart = chartResource<CountryRow[]>(() =>
     this.appService.getCountryStatsOverTimeResourceRequest(
       this.statsService.timeRangeDays() ?? ALL_TIME_DAYS,
       this.statsService.selectedRepo() || undefined,
     ),
   );
 
-  readonly loading = this.resource.isLoading;
-  readonly hasData = computed(() => this.resource.hasValue());
-
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
-    const rows = (resourceValue(this.resource) ?? []).map((row) => ({
+    const rows = this.chart.data().map((row) => ({
       day: row.day,
       group: row.country,
       count: row.count,
     }));
-    const { labels, datasets } = groupOverTimeChart(rows, (day) => this.datePipe.transform(day, 'shortDate') || day);
+    const { labels, datasets } = groupOverTimeChart(rows, formatDay);
     return {
       data: { labels, datasets },
       options: { ...mochaAxisChartOptions<'line'>(), aspectRatio: 2 },

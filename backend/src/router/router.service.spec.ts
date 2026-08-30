@@ -113,7 +113,7 @@ describe('RouterService', () => {
   it('returns the user-agent trend and filters it by repo', async () => {
     const rows = [{ day: '2026-08-01', userAgent: 'pacman/7.0.0', count: '5' }];
     const { service, qb } = createService(rows);
-    await expect(service.getUserAgentTrend(30, 5, 'chaotic-aur')).resolves.toEqual(rows);
+    await expect(service.getUserAgentTrend(30, 'chaotic-aur')).resolves.toEqual(rows);
     expect(qb.limit).toHaveBeenCalledWith(5);
     expect(qb.andWhere).toHaveBeenCalledWith('hit.repo = :repo', { repo: 'chaotic-aur' });
   });

@@ -1,11 +1,10 @@
 import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Divider } from '@openng/optimus-ui/divider';
 import { Panel } from '@openng/optimus-ui/panel';
-import { updateSeoTags } from '../functions';
+import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
@@ -15,19 +14,19 @@ import { TitleComponent } from '../title/title.component';
   imports: [Panel, Divider, TitleComponent, PrimeTemplate],
 })
 export class CodeOfConductComponent implements OnInit {
-  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  ngOnInit() {
-    updateSeoTags(this.meta, {
-      title: 'Code of Conduct · Chaotic-AUR',
-      description: 'Contributor Covenant Code of Conduct for Chaotic-AUR',
-      keywords: 'Chaotic-AUR, Code of Conduct, Contributor Covenant',
-      url: this.router.url,
-    });
+  constructor() {
+    setPageSeo(
+      'Code of Conduct · Chaotic-AUR',
+      'Contributor Covenant Code of Conduct for Chaotic-AUR',
+      'Chaotic-AUR, Code of Conduct, Contributor Covenant',
+    );
+  }
 
+  ngOnInit() {
     this.route.fragment
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((fragment) => this.scrollToFragment(fragment));

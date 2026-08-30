@@ -2,14 +2,13 @@ import { httpResource } from '@angular/common/http';
 import { ChangeDetectorRef, Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { Select } from '@openng/optimus-ui/select';
 import { Tab, TabList, Tabs } from '@openng/optimus-ui/tabs';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
-import { resourceValue } from '../functions';
+import { resourceValue, setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { isStatsTab, StatsService, type StatsTab } from './stats.service';
 
@@ -34,7 +33,6 @@ function paramToTimeRange(value: string): number | null | undefined {
 export class StatsComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -77,6 +75,11 @@ export class StatsComponent implements OnInit {
   }
 
   constructor() {
+    setPageSeo(
+      'Statistics and data · Chaotic-AUR',
+      'Package and repository statistics for Chaotic-AUR',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics',
+    );
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationStart || event instanceof NavigationEnd),
@@ -114,14 +117,6 @@ export class StatsComponent implements OnInit {
   readonly subtitle = 'Area for package statistics and other fun stuff.';
 
   ngOnInit(): void {
-    this.appService.updateSeoTags(this.meta, {
-      title: 'Statistics and data · Chaotic-AUR',
-      description: 'Package and repository statistics for Chaotic-AUR',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics',
-      url: this.router.url,
-    });
-
     // Legacy deep links used fragments (#builder-stats); forward them to the
     // corresponding child route once.
     const fragment = this.route.snapshot.fragment;

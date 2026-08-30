@@ -1,6 +1,6 @@
 import { cachedResult } from '../utils/cache';
 import { HLL_LOG2M, MAX_DAYS_WINDOW, METRICS_CACHE_TTL_MS } from '../utils/constants';
-import { clampInt, nDaysInPast, rejectedReasons, utcDayStart } from '../utils/functions';
+import { clampInt, rejectedReasons, utcCutoffDaysAgo } from '../utils/functions';
 import { RouterHitDailyAgent } from './router-hit-daily-agent.entity';
 import { RouterHitDaily } from './router-hit-daily.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -9,6 +9,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { type Cache } from 'cache-manager';
 import { DataSource } from 'typeorm';
+
+const TOP_USER_AGENTS = 5;
 
 /**
  * Router metrics are served from daily rollup tables rather than the raw hit
@@ -100,34 +102,32 @@ export class RouterService implements OnModuleInit {
     }
   }
 
-  async getCountryStats(days: number): Promise<{ country: string; count: string }[]> {
+  /** Sums daily rollup hits grouped by one dimension (country, mirror or package). */
+  private getGroupedStats<K extends string>(
+    days: number,
+    groupColumn: string,
+    groupAlias: K,
+  ): Promise<({ count: string } & Record<K, string>)[]> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `router:country:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
+    return cachedResult(this.cache, `router:${groupAlias}:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
       this.dataSource
         .getRepository(RouterHitDaily)
         .createQueryBuilder('hit')
-        .select('hit.country', 'country')
+        .select(groupColumn, groupAlias)
         .addSelect('SUM(hit.count)::text', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
-        .groupBy('hit.country')
+        .where('hit.day >= :cutoff', { cutoff: utcCutoffDaysAgo(clampedDays) })
+        .groupBy(groupColumn)
         .orderBy('count', 'DESC')
-        .getRawMany<{ country: string; count: string }>(),
+        .getRawMany<{ count: string } & Record<K, string>>(),
     );
   }
 
+  async getCountryStats(days: number): Promise<{ country: string; count: string }[]> {
+    return this.getGroupedStats(days, 'hit.country', 'country');
+  }
+
   async getMirrorStats(days: number): Promise<{ mirror: string; count: string }[]> {
-    const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `router:mirror:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
-      this.dataSource
-        .getRepository(RouterHitDaily)
-        .createQueryBuilder('hit')
-        .select('hit.hostname', 'mirror')
-        .addSelect('SUM(hit.count)::text', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
-        .groupBy('hit.hostname')
-        .orderBy('count', 'DESC')
-        .getRawMany<{ mirror: string; count: string }>(),
-    );
+    return this.getGroupedStats(days, 'hit.hostname', 'mirror');
   }
 
   async getMirrorStatsOverTime(days: number, repo = ''): Promise<{ day: string; mirror: string; count: string }[]> {
@@ -154,7 +154,7 @@ export class RouterService implements OnModuleInit {
         .select(`TO_CHAR(hit.day, 'YYYY-MM-DD')`, 'day')
         .addSelect(groupColumn, groupAlias)
         .addSelect('SUM(hit.count)::text', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) });
+        .where('hit.day >= :cutoff', { cutoff: utcCutoffDaysAgo(clampedDays) });
       if (repo) query.andWhere('hit.repo = :repo', { repo });
       return query
         .groupBy('hit.day')
@@ -167,18 +167,7 @@ export class RouterService implements OnModuleInit {
   }
 
   async getPackageStats(days: number): Promise<{ pkgbase: string; count: string }[]> {
-    const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `router:package:${clampedDays}`, METRICS_CACHE_TTL_MS, () =>
-      this.dataSource
-        .getRepository(RouterHitDaily)
-        .createQueryBuilder('hit')
-        .select('hit.package', 'pkgbase')
-        .addSelect('SUM(hit.count)::text', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
-        .groupBy('hit.package')
-        .orderBy('count', 'DESC')
-        .getRawMany<{ pkgbase: string; count: string }>(),
-    );
+    return this.getGroupedStats(days, 'hit.package', 'pkgbase');
   }
 
   async getPerDayStats(days: number): Promise<{ day: string; count: string }[]> {
@@ -189,31 +178,26 @@ export class RouterService implements OnModuleInit {
         .createQueryBuilder('hit')
         .select(`TO_CHAR(hit.day, 'YYYY-MM-DD')::text`, 'day')
         .addSelect('SUM(hit.count)::text', 'count')
-        .where('hit.day >= :cutoff', { cutoff: utcDayStart(nDaysInPast(clampedDays)) })
+        .where('hit.day >= :cutoff', { cutoff: utcCutoffDaysAgo(clampedDays) })
         .groupBy('hit.day')
         .orderBy('count', 'DESC')
         .getRawMany<{ day: string; count: string }>(),
     );
   }
 
-  async getUserAgentTrend(
-    days: number,
-    top = 5,
-    repo = '',
-  ): Promise<{ day: string; userAgent: string; count: string }[]> {
+  async getUserAgentTrend(days: number, repo = ''): Promise<{ day: string; userAgent: string; count: string }[]> {
     const clampedDays = clampInt(days, 1, MAX_DAYS_WINDOW);
-    return cachedResult(this.cache, `router:user-agents:${clampedDays}:${top}:${repo}`, METRICS_CACHE_TTL_MS, () =>
-      this.queryUserAgentTrend(clampedDays, top, repo),
+    return cachedResult(this.cache, `router:user-agents:${clampedDays}:${repo}`, METRICS_CACHE_TTL_MS, () =>
+      this.queryUserAgentTrend(clampedDays, repo),
     );
   }
 
   private async queryUserAgentTrend(
     clampedDays: number,
-    top: number,
     repo = '',
   ): Promise<{ day: string; userAgent: string; count: string }[]> {
     const agentRepository = this.dataSource.getRepository(RouterHitDailyAgent);
-    const cutoff = utcDayStart(nDaysInPast(clampedDays));
+    const cutoff = utcCutoffDaysAgo(clampedDays);
 
     const topQuery = agentRepository
       .createQueryBuilder('hit')
@@ -224,7 +208,7 @@ export class RouterService implements OnModuleInit {
     const topAgents = await topQuery
       .groupBy('hit.userAgent')
       .orderBy('count', 'DESC')
-      .limit(top)
+      .limit(TOP_USER_AGENTS)
       .getRawMany<{ ua: string }>();
 
     const agents = topAgents.map((row) => row.ua);

@@ -1,8 +1,5 @@
 <div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
-  <chaotic-title
-    title="Memorial — 2021 Edition"
-    subtitle="These screenshots have been collected by the community as celebration of the 3rd birthday of Chaotic-AUR."
-  />
+  <chaotic-title [subtitle]="config.subtitle" [subtitleHtml]="config.subtitleHtml" [title]="heading" />
 
   <p-card class="bg-transparent!">
     <div class="space-y-12">
@@ -104,6 +101,6 @@
     </div>
   </p-card>
   <div class="mt-4 text-center">
-    <a class="text-ctp-mauve" routerLink="/memorial-v2">View Memorial — 2024 Edition</a>
+    <a class="text-ctp-mauve" [routerLink]="config.crossLink">{{ config.crossLinkLabel }}</a>
   </div>
 </div>

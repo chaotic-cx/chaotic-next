@@ -25,7 +25,7 @@ import { type Subscriber } from 'rxjs';
 import { DataSource } from 'typeorm';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TABLES_TO_RESET } from '../test/e2e-app';
+import { TABLES_TO_RESET, stubGitlabApi } from '../test/e2e-app';
 
 const WEBHOOK_TOKEN = 'test-webhook-token';
 
@@ -117,6 +117,11 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
     gitlabMergeRequestService = app.get<GitlabMergeRequestService>(GitlabMergeRequestService);
     gitlabPipelineService = app.get<GitlabPipelineService>(GitlabPipelineService);
     eventService = app.get<EventService>(EventService);
+    stubGitlabApi(app);
+    gitlabApiService.chaoticId = 'test-project-id';
+    // onModuleInit's auto-flag pre-fetch may still target the real client;
+    // drop it so tests start with a clean, stubbed fetch state.
+    (gitlabMergeRequestService as unknown as { fetchInFlight: Promise<unknown> | undefined }).fetchInFlight = undefined;
 
     broker = new ServiceBroker({ logger: false, skipProcessEventRegistration: true });
     await broker.start();

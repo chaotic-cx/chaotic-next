@@ -12,8 +12,9 @@ const NINJA_REGEX = /\bninja\b/i;
 const BUILD_FUNCTION_REGEX = /(?:^|\n)\s*build\s*\(\s*\)/m;
 const STRIP_COMMENT_LINES_REGEX = /^[ \t]*#.*/gm;
 
-export function extractArray(pkgbuildText: string, name: string): string[] | null {
-  const match = pkgbuildText.match(new RegExp(`(?:^|\\s)${name}=\\(([\\s\\S]*?)\\)`, 'm'));
+export function extractArray(pkgbuildText: string, name: string, multiline = false): string[] | null {
+  const inner = multiline ? '[\\s\\S]*?' : '[^)]*';
+  const match = pkgbuildText.match(new RegExp(`(?:^|\\s)${name}=\\((${inner})\\)`, 'm'));
   return match ? match[1].split(/\s+/).filter((entry) => entry.length > 0) : null;
 }
 
@@ -47,10 +48,10 @@ function hasCompilerInList(deps: string[]): boolean {
 }
 
 function collectAllDepends(pkgbuildText: string): { depends: string[]; makedepends: string[]; allDepends: string[] } {
-  const makedepends = extractArray(pkgbuildText, 'makedepends') ?? [];
-  const depends = extractArray(pkgbuildText, 'depends') ?? [];
-  const dependsX8664 = extractArray(pkgbuildText, 'depends_x86_64') ?? [];
-  const dependsI686 = extractArray(pkgbuildText, 'depends_i686') ?? [];
+  const makedepends = extractArray(pkgbuildText, 'makedepends', true) ?? [];
+  const depends = extractArray(pkgbuildText, 'depends', true) ?? [];
+  const dependsX8664 = extractArray(pkgbuildText, 'depends_x86_64', true) ?? [];
+  const dependsI686 = extractArray(pkgbuildText, 'depends_i686', true) ?? [];
   return { depends, makedepends, allDepends: [...depends, ...dependsX8664, ...dependsI686] };
 }
 

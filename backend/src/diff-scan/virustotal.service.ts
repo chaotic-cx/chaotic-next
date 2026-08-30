@@ -1,4 +1,4 @@
-import { mapWithConcurrency } from '../utils/functions';
+import { mapWithConcurrency, sleep } from '../utils/functions';
 import { type ScanIndicator } from './indicators';
 import { statsToColumns, VirusTotalVerdict } from './virus-total-verdict.entity';
 import { type VtEngineStats, type VtIndicatorReport, type VtVerdict } from '@chaotic-next/shared-lib';
@@ -34,8 +34,6 @@ interface VtAnalysisResponse {
 interface VtStatsResponse {
   data?: { attributes?: { last_analysis_stats?: Partial<VtEngineStats> } };
 }
-
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 @Injectable()
 export class VirustotalService {

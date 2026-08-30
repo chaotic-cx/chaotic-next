@@ -25,41 +25,43 @@ jobs:
     outputs:
       tags: ${{ steps.tags.outputs.tags }}
     steps:
-      #      - name: Wait for CI to pass (tags)
-      #        if: github.event_name == 'push' && github.ref_type == 'tag'
-      #        uses: actions/github-script@v7
-      #        with:
-      #          script: |
-      #            const { owner, repo } = context.repo;
-      #            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      #            const tagName = context.ref.replace('refs/tags/', '');
-      #
-      #            const ref = await github.rest.git.getRef({ owner, repo, ref: `tags/${tagName}` });
-      #            let commitSha = ref.data.object.sha;
-      #            if (ref.data.object.type === 'tag') {
-      #              const tag = await github.rest.git.getTag({ owner, repo, tag_sha: commitSha });
-      #              commitSha = tag.data.object.sha;
-      #            }
-      #
-      #            for (let i = 0; i < 90; i++) {
-      #              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
-      #                owner,
-      #                repo,
-      #                head_sha: commitSha,
-      #                per_page: 50,
-      #              });
-      #              const ci = data.workflow_runs.filter((r) => r.name === 'CI');
-      #              if (ci.some((r) => r.conclusion === 'success')) {
-      #                console.log('CI passed for this commit.');
-      #                return;
-      #              }
-      #              if (ci.some((r) => ['failure', 'cancelled'].includes(r.conclusion))) {
-      #                core.setFailed('CI failed for this commit.');
-      #                return;
-      #              }
-      #              await sleep(10000);
-      #            }
-      #            core.setFailed('Timed out waiting for CI to pass.');
+      # Pre-release tags deploy without gating; final tags wait for CI on the
+      # tagged commit to pass first.
+      - name: Wait for CI to pass (final tags only)
+        if: github.event_name == 'push' && github.ref_type == 'tag' && !contains(github.ref_name, '-pre')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const tagName = context.ref.replace('refs/tags/', '');
+
+            const ref = await github.rest.git.getRef({ owner, repo, ref: `tags/${tagName}` });
+            let commitSha = ref.data.object.sha;
+            if (ref.data.object.type === 'tag') {
+              const tag = await github.rest.git.getTag({ owner, repo, tag_sha: commitSha });
+              commitSha = tag.data.object.sha;
+            }
+
+            for (let i = 0; i < 90; i++) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                head_sha: commitSha,
+                per_page: 50,
+              });
+              const ci = data.workflow_runs.filter((r) => r.name === 'CI');
+              if (ci.some((r) => r.conclusion === 'success')) {
+                console.log('CI passed for this commit.');
+                return;
+              }
+              if (ci.some((r) => ['failure', 'cancelled'].includes(r.conclusion))) {
+                core.setFailed('CI failed for this commit.');
+                return;
+              }
+              await sleep(10000);
+            }
+            core.setFailed('Timed out waiting for CI to pass.');
       - name: Checkout repository
         uses: actions/checkout@v7
         with:

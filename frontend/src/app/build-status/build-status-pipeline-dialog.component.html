@@ -19,7 +19,7 @@
         <span class="text-ctp-subtext0">Created</span>
         <span
           class="text-ctp-text"
-          [pTooltip]="(dialog.pipeline.created_at | localeDate) ?? undefined"
+          [pTooltip]="(dialog.pipeline.created_at | date: 'short') ?? undefined"
           tooltipPosition="top"
           >{{ dialog.pipeline.created_at | relativeTime }}</span
         >
@@ -72,9 +72,9 @@
               }
               <div class="mt-1.5 text-xs text-ctp-subtext0">
                 @if (job.started_at) {
-                  <span>{{ job.started_at | localeDate }}</span>
+                  <span>{{ job.started_at | date: 'short' }}</span>
                   @if (job.finished_at) {
-                    <span> &rarr; {{ job.finished_at | localeDate }}</span>
+                    <span> &rarr; {{ job.finished_at | date: 'short' }}</span>
                   }
                 } @else {
                   <span>Not started</span>

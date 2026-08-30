@@ -1,18 +1,23 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PackageRankList } from '@chaotic-next/shared-lib';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../../../../app.service';
-import { isMobileSignal, resourceValue, truncateLabel } from '../../../../functions';
+import { isMobileSignal, truncateLabel } from '../../../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import {
+  chartResource,
+  chartRowHeight,
+  clampAmount,
+  type ChartConfig,
+  mochaAxisChartOptions,
+} from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-downloads',
-  imports: [UIChart, InputNumber, FormsModule],
+  imports: [ChartCardComponent, InputNumber, FormsModule],
   templateUrl: './chart-downloads.component.html',
   styleUrl: './chart-downloads.component.css',
 })
@@ -22,11 +27,15 @@ export class ChartDownloadsComponent {
 
   readonly range = model(20);
 
-  protected readonly Math = Math;
   protected readonly isMobile = isMobileSignal();
+  protected readonly chartRowHeight = chartRowHeight;
 
-  private readonly resource = httpResource<PackageRankList>(() => {
-    const val = Math.max(1, this.range() || 1);
+  protected setRange(value: number): void {
+    this.range.set(clampAmount(value));
+  }
+
+  readonly chart = chartResource<PackageRankList>(() => {
+    const val = clampAmount(this.range());
     return this.appService.getOverallPackageStatsResourceRequest(
       val,
       this.statsService.timeRangeDays() ?? undefined,
@@ -34,15 +43,10 @@ export class ChartDownloadsComponent {
     );
   });
 
-  readonly loading = this.resource.isLoading;
-
-  readonly hasData = computed(() => this.resource.hasValue());
-
   readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
-    const metrics = resourceValue(this.resource) ?? [];
     const labels: string[] = [];
     const data: number[] = [];
-    for (const pkg of metrics) {
+    for (const pkg of this.chart.data()) {
       labels.push(this.isMobile() ? truncateLabel(pkg.name) : pkg.name);
       data.push(pkg.count);
     }

@@ -1,10 +1,9 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
-import { Meta } from '@angular/platform-browser';
+import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Tab, TabList, Tabs } from '@openng/optimus-ui/tabs';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { AppService } from '../app.service';
+import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { isAdminTab } from './admin-tabs';
 
@@ -14,9 +13,7 @@ import { isAdminTab } from './admin-tabs';
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css',
 })
-export class AdminComponent implements OnInit {
-  private readonly appService = inject(AppService);
-  private readonly meta = inject(Meta);
+export class AdminComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -27,13 +24,12 @@ export class AdminComponent implements OnInit {
     return this.route.firstChild?.snapshot?.url?.[0]?.path ?? 'packages';
   });
 
-  ngOnInit(): void {
-    this.appService.updateSeoTags(this.meta, {
-      title: 'Admin · Chaotic-AUR',
-      description: 'Administrative tools for the Chaotic-AUR backend',
-      keywords: 'Chaotic-AUR, Admin, Repository, Packages, Builders, Archlinux',
-      url: this.router.url,
-    });
+  constructor() {
+    setPageSeo(
+      'Admin · Chaotic-AUR',
+      'Administrative tools for the Chaotic-AUR backend',
+      'Chaotic-AUR, Admin, Repository, Packages, Builders, Archlinux',
+    );
   }
 
   protected navigate(value: string | number | undefined): void {

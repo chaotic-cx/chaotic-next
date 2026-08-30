@@ -1,4 +1,6 @@
+import { extractArray } from '../repo-manager/pkgbuild-classifier';
 import { isCommentLine, isInScope, type RuleScope, visibleFileLines } from './rules/diff-utils';
+export { extractArray };
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 const PKGBUILD_SCOPE: RuleScope[] = ['pkgbuild'];
@@ -81,11 +83,6 @@ export interface ParsedPkgbuild {
   entries: SourceEntry[];
   urlHost: string | null;
   vars: ReadonlyMap<string, string>;
-}
-
-export function extractArray(pkbuildText: string, name: string): string[] | null {
-  const match = pkbuildText.match(new RegExp(`(?:^|\\s)${name}=\\(([^)]*)\\)`, 'm'));
-  return match ? match[1].split(/\s+/).filter((entry) => entry.length > 0) : null;
 }
 
 export function parseSourceEntry(resolved: string): SourceEntry {

@@ -1,8 +1,7 @@
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
+import { DatePipe } from '@angular/common';
 import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form } from '@angular/forms/signals';
-import { Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { Package, formatPkgrel } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
@@ -17,8 +16,7 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
-import { AppService } from '../app.service';
-import { castTo } from '../functions';
+import { castTo, setPageSeo } from '../functions';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
@@ -30,6 +28,7 @@ import { PackageListService } from './package-list.service';
 @Component({
   selector: 'chaotic-package-list',
   imports: [
+    DatePipe,
     TableModule,
     IconFieldModule,
     InputIconModule,
@@ -38,7 +37,6 @@ import { PackageListService } from './package-list.service';
     MultiSelectModule,
     Select,
     TagModule,
-    LocaleDatePipe,
     Button,
     FormField,
     StripPrefixPipe,
@@ -57,9 +55,7 @@ import { PackageListService } from './package-list.service';
 })
 export class PackageListComponent {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
-  private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly meta = inject(Meta);
   private readonly router = inject(Router);
   protected readonly packageListService = inject(PackageListService);
   protected readonly columnVisibility = inject(ColumnVisibilityService);
@@ -89,14 +85,12 @@ export class PackageListComponent {
   });
 
   constructor() {
+    setPageSeo(
+      'Package list · Chaotic-AUR',
+      'List of all packages available in the Chaotic-AUR repository',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list',
+    );
     this.columnVisibility.register('package-list-table', this.packageColumns);
-    this.appService.updateSeoTags(this.meta, {
-      title: 'Package list · Chaotic-AUR',
-      description: 'List of all packages available in the Chaotic-AUR repository',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list',
-      url: this.router.url,
-    });
 
     effect(() => {
       const q = this.search();

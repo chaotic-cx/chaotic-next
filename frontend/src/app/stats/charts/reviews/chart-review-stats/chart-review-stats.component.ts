@@ -1,15 +1,14 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../../../../app.service';
-import { type ChartConfig, mochaPieChartOptions } from '../../chart-config';
-import { resourceValue, shuffleArray } from '../../../../functions';
+import { shuffleArray } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-review-stats',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-review-stats.component.html',
   styleUrl: './chart-review-stats.component.css',
 })
@@ -17,16 +16,13 @@ export class ChartReviewStatsComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<{ username: string; reviews: number }[]>(() =>
+  readonly chart = chartResource<{ username: string; reviews: number }[]>(() =>
     this.appService.getUpdateReviewStatsResourceRequest(this.statsService.timeRangeDays() ?? undefined),
   );
 
-  readonly loading = this.resource.isLoading;
-
-  readonly hasData = computed(() => this.resource.hasValue());
-
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
-    const reviewStats = (resourceValue(this.resource) ?? [])
+    const reviewStats = this.chart
+      .data()
       .sort((a, b) => b.reviews - a.reviews)
       .filter((entry) => !entry.username.startsWith('gitlab_') && !entry.username.startsWith('project_'))
       .filter((e) => e.reviews > 0 && e.username !== 'temeraire-cx');

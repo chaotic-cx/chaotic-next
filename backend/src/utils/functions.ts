@@ -1,9 +1,7 @@
 import { BumpType } from '../interfaces/repo-manager';
-import constants from 'node:constants';
 import { requiredEnvVarsDev, requiredEnvVarsProd } from './constants';
 import { type ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { access } from 'node:fs/promises';
 
 export function generateNodeId(): string {
   // HOSTNAME separates hosts. PIDs are unique among all simultaneously running
@@ -30,50 +28,41 @@ export function utcDayStart(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
+/** UTC midnight of the day `days` ago — the common cutoff for daily-rollup queries. */
+export function utcCutoffDaysAgo(days: number): Date {
+  return utcDayStart(nDaysInPast(days));
+}
+
 export function clampInt(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+const BUMP_TYPE_TEXT: Record<BumpType, string> = {
+  [BumpType.EXPLICIT]: 'explicitly',
+  [BumpType.GLOBAL]: 'globally',
+  [BumpType.FROM_DEPS]: 'via Arch dependencies',
+  [BumpType.FROM_DEPS_CHAOTIC]: 'via Chaotic dependencies',
+  [BumpType.PLUGIN]: 'via a plugin ABI break',
+  [BumpType.BROKEN_DEPS]: 'via a broken dependency',
+  [BumpType.MANUAL]: 'manually',
+};
+
 export function bumpTypeToText(type: BumpType): string {
-  switch (type) {
-    case BumpType.EXPLICIT:
-      return 'explicitly';
-    case BumpType.GLOBAL:
-      return 'globally';
-    case BumpType.FROM_DEPS:
-      return 'via Arch dependencies';
-    case BumpType.FROM_DEPS_CHAOTIC:
-      return 'via Chaotic dependencies';
-    case BumpType.PLUGIN:
-      return 'via a plugin ABI break';
-    case BumpType.BROKEN_DEPS:
-      return 'via a broken dependency';
-    case BumpType.MANUAL:
-      return 'manually';
-    default:
-      return 'Unknown';
-  }
+  return BUMP_TYPE_TEXT[type] ?? 'Unknown';
 }
 
+const BUMP_TYPE_ADJECTIVE_TEXT: Record<BumpType, string> = {
+  [BumpType.EXPLICIT]: 'explicit',
+  [BumpType.GLOBAL]: 'global',
+  [BumpType.FROM_DEPS]: 'Arch dependency',
+  [BumpType.FROM_DEPS_CHAOTIC]: 'Chaotic dependency',
+  [BumpType.PLUGIN]: 'plugin ABI break',
+  [BumpType.BROKEN_DEPS]: 'broken dependency',
+  [BumpType.MANUAL]: 'manual',
+};
+
 export function bumpTypeAdjectiveText(type: BumpType): string {
-  switch (type) {
-    case BumpType.EXPLICIT:
-      return 'explicit';
-    case BumpType.GLOBAL:
-      return 'global';
-    case BumpType.FROM_DEPS:
-      return 'Arch dependency';
-    case BumpType.FROM_DEPS_CHAOTIC:
-      return 'Chaotic dependency';
-    case BumpType.PLUGIN:
-      return 'plugin ABI break';
-    case BumpType.BROKEN_DEPS:
-      return 'broken dependency';
-    case BumpType.MANUAL:
-      return 'manual';
-    default:
-      return 'Unknown';
-  }
+  return BUMP_TYPE_ADJECTIVE_TEXT[type] ?? 'Unknown';
 }
 
 const SALTED_PREFIX = Buffer.from('Salted__', 'utf8');
@@ -116,15 +105,6 @@ export function encryptAes(value: string, key: string) {
 
 export function decryptAes(value: string, key: string): string {
   return JSON.parse(decryptAesRaw(Buffer.from(value, 'base64').toString('utf8'), key)) as string;
-}
-
-export async function pathExists(path: string): Promise<boolean> {
-  try {
-    await access(path, constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export function sleep(ms: number): Promise<void> {

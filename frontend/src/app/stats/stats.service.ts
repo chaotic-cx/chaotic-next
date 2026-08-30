@@ -34,7 +34,6 @@ const TIME_RANGES: TimeRange[] = [
 
 @Service()
 export class StatsService {
-  readonly currentTab = signal<StatsTab>('search');
   readonly totalUsers = signal<number | null>(null);
   readonly usersLoading = signal<boolean>(true);
 

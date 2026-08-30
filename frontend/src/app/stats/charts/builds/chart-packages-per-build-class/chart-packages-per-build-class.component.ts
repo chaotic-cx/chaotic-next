@@ -1,16 +1,15 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { buildClassLabel, buildClassSortKey } from '@chaotic-next/shared-lib';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { parseCount, resourceValue } from '../../../../functions';
+import { parseCount } from '../../../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
-import { type ChartConfig, mochaPieChartOptions } from '../../chart-config';
 import { StatsService } from '../../../stats.service';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-packages-per-build-class',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-packages-per-build-class.component.html',
   styleUrl: './chart-packages-per-build-class.component.css',
 })
@@ -18,15 +17,12 @@ export class ChartPackagesPerBuildClassComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<{ build_class: string; count: string }[]>(() =>
+  readonly chart = chartResource<{ build_class: string; count: string }[]>(() =>
     this.appService.getPackagesPerBuildClassRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
   );
 
-  readonly loading = this.resource.isLoading;
-  readonly hasData = computed(() => this.resource.hasValue());
-
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
-    const data = [...(resourceValue(this.resource) ?? [])].sort(
+    const data = [...this.chart.data()].sort(
       (a, b) => buildClassSortKey(a.build_class) - buildClassSortKey(b.build_class),
     );
     return {

@@ -1,7 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   type AurMaintainerChange,
@@ -23,6 +22,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
+import { setPageSeo } from '../functions';
 import { presenter } from '../aur-scan/scan-presenter';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
 import { TitleComponent } from '../title/title.component';
@@ -107,7 +107,6 @@ export function newMrChipDecision(
 export class MrOverviewComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly authService = inject(AuthService);
-  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly hostElement = inject(ElementRef).nativeElement as HTMLElement;
@@ -140,6 +139,11 @@ export class MrOverviewComponent implements OnInit {
   );
 
   constructor() {
+    setPageSeo(
+      'Review queue · Chaotic-AUR',
+      'Review and approve pending merge requests for Chaotic-AUR',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review, Chaotic-AUR review queue',
+    );
     this.appService.chaoticEvent
       .pipe(
         filter((event) => event.type === 'merge_request'),
@@ -299,14 +303,6 @@ export class MrOverviewComponent implements OnInit {
     if (tabParam !== null) {
       this.activeTabValue.set(tabFromQueryParam(tabParam));
     }
-
-    this.appService.updateSeoTags(this.meta, {
-      title: 'Review queue · Chaotic-AUR',
-      description: 'Review and approve pending merge requests for Chaotic-AUR',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review, Chaotic-AUR review queue',
-      url: this.router.url,
-    });
 
     void this.mrOverviewService.loadOpenMrs();
   }

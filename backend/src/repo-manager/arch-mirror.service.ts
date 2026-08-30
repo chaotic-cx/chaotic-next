@@ -7,8 +7,9 @@ import {
   TriggerType,
 } from '../interfaces/repo-manager';
 import { ARCH } from '../utils/constants';
+import { downloadFile } from '../utils/download';
 import { errorCode } from '../utils/functions';
-import { extractPacmanDatabase, listPackageDirs, parsePackageDesc, parsePackageFiles } from './offline/pacman-parse';
+import { extractPacmanDatabase, parsePacmanDatabases } from './offline/pacman-parse';
 import { ArchlinuxPackage, bulkGetOrCreateArch, PackageElfAnalysis } from './repo-manager.entity';
 import { saveInBatches } from './save';
 import { SignalScanService, type ScanJob } from './scan';
@@ -121,12 +122,7 @@ export class ArchMirrorService {
 
         const downloadPath = join(tempDir, filename);
         try {
-          const response = await this.httpService.axiosRef({
-            url: `${mirrorUrl}/${repo}/os/x86_64/${filename}`,
-            method: 'GET',
-            responseType: 'arraybuffer',
-          });
-          await writeFile(downloadPath, Buffer.from(response.data));
+          await downloadFile(this.httpService.axiosRef, `${mirrorUrl}/${repo}/os/x86_64/${filename}`, downloadPath);
         } catch (err: unknown) {
           this.pino.warn({ err, filename }, 'Failed to download package');
           continue;
@@ -242,12 +238,7 @@ export class ArchMirrorService {
 
         const downloadPath = join(tempDir, candidate.filename);
         try {
-          const response = await this.httpService.axiosRef({
-            url: candidate.downloadUrl,
-            method: 'GET',
-            responseType: 'arraybuffer',
-          });
-          await writeFile(downloadPath, Buffer.from(response.data));
+          await downloadFile(this.httpService.axiosRef, candidate.downloadUrl, downloadPath);
         } catch (err: unknown) {
           this.pino.warn({ err, filename: candidate.filename }, 'Failed to download package');
           result.failed++;
@@ -314,74 +305,12 @@ export class ArchMirrorService {
     );
     this.pino.debug('Done extracting databases');
 
-    const currentPackageVersions: ParsedPackage[] = [];
-    const actualWorkDirs: (RepoWorkDir | null)[] = workDirsPromises.map((workDir) =>
-      workDir.status === 'fulfilled' ? workDir.value : null,
+    const parsed = await parsePacmanDatabases(
+      workDirsPromises.map((workDir) => (workDir.status === 'fulfilled' ? workDir.value : null)),
     );
+    this.pino.info({ count: parsed.length }, 'Total packages processed');
 
-    this.pino.debug('Started parsing databases');
-    for (const dir of actualWorkDirs) {
-      if (!dir || !dir.path) {
-        this.pino.warn('Skipping null or invalid work directory');
-        continue;
-      }
-      const dirPath = dir.path;
-
-      try {
-        const currentPathRegex = `/${dir.path}/`;
-        const allPkgDirs: string[] = await listPackageDirs(dir.path);
-        this.pino.debug({ count: allPkgDirs.length, path: dir.path }, 'Found package directories');
-
-        const relevantFiles = allPkgDirs.map((pkgDir) => {
-          const pkg = pkgDir.replace(new RegExp(currentPathRegex), '');
-          return {
-            descFile: join(dir.path, pkg, 'desc'),
-            filesFile: join(dir.path, pkg, 'files'),
-            repo: dir.name,
-          };
-        });
-
-        // Process files in batches, yielding to the event loop periodically so
-        // the API stays responsive during a full mirror parse.
-        const batchSize = 100;
-        const yieldEveryBatches = 5;
-        for (let i = 0; i < relevantFiles.length; i += batchSize) {
-          const batch = relevantFiles.slice(i, i + batchSize);
-
-          for (const file of batch) {
-            try {
-              const currentPackageVersion: Partial<ParsedPackage> = await parsePackageDesc(file.descFile);
-
-              // Only process packages that have valid metadata
-              if (currentPackageVersion && Object.keys(currentPackageVersion).length > 0) {
-                if (!currentPackageVersion.metaData) {
-                  currentPackageVersion.metaData = {
-                    buildDate: '',
-                    filename: '',
-                  };
-                }
-                currentPackageVersion.metaData.soNameList = await parsePackageFiles(file.filesFile);
-                currentPackageVersion.repoName = file.repo;
-                currentPackageVersions.push(currentPackageVersion as ParsedPackage);
-              }
-            } catch (fileErr: unknown) {
-              this.pino.warn({ err: fileErr, file: file.descFile }, 'Error processing package files');
-            }
-          }
-
-          if (i % (batchSize * yieldEveryBatches) === 0) {
-            await new Promise((resolve) => setImmediate(resolve));
-          }
-        }
-      } catch (dirErr: unknown) {
-        this.pino.error({ err: dirErr, dir: dirPath }, 'Error processing directory');
-      }
-    }
-
-    this.pino.debug('Done parsing databases');
-    this.pino.info({ count: currentPackageVersions.length }, 'Total packages processed');
-
-    return currentPackageVersions;
+    return parsed;
   }
 
   private async determineChangedPackages(

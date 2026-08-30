@@ -8,13 +8,11 @@ import {
   ElementRef,
   inject,
   input,
-  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { form, pattern } from '@angular/forms/signals';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { formatPkgrel, Package, PKGNAME_PATTERN, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
@@ -23,9 +21,8 @@ import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../stats/charts/packages/chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../stats/charts/packages/chart-package-build-stats/chart-package-build-stats.component';
 import { ChartPackageResourceStatsComponent } from '../stats/charts/packages/chart-package-resource-stats/chart-package-resource-stats.component';
-import { resourceValue } from '../functions';
+import { resourceValue, setPageSeo } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StatsService } from '../stats/stats.service';
@@ -38,7 +35,6 @@ import { StatsService } from '../stats/stats.service';
     FormsModule,
     PackageDetailKeyPipe,
     RelativeTimePipe,
-    LocaleDatePipe,
     Tooltip,
     ChartPackageBuildStatsComponent,
     ChartPackageAverageBuildTimeComponent,
@@ -48,11 +44,10 @@ import { StatsService } from '../stats/stats.service';
   templateUrl: './search-package.component.html',
   styleUrl: './search-package.component.css',
 })
-export class SearchPackageComponent implements OnInit {
+export class SearchPackageComponent {
   private readonly http = inject(HttpClient);
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly packageStatsService = inject(StatsService);
@@ -183,6 +178,11 @@ export class SearchPackageComponent implements OnInit {
   });
 
   constructor() {
+    setPageSeo(
+      'Package search · Chaotic-AUR',
+      'Search packages available in the Chaotic-AUR repository',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search',
+    );
     effect(() => {
       const q = this.search();
       if (!q) return;
@@ -193,16 +193,6 @@ export class SearchPackageComponent implements OnInit {
     effect(() => {
       if (!this.scrollToResults || !this.hasSearchData()) return;
       this.resultsSection()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-
-  ngOnInit() {
-    this.appService.updateSeoTags(this.meta, {
-      title: 'Package search · Chaotic-AUR',
-      description: 'Search packages available in the Chaotic-AUR repository',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search',
-      url: this.router.url,
     });
   }
 

@@ -1,13 +1,10 @@
-import { toSignal } from '@angular/core/rxjs-interop';
-import { BehaviorSubject } from 'rxjs';
-import { Service } from '@angular/core';
+import { Service, signal } from '@angular/core';
 
 @Service()
 export class LoadingService {
-  private readonly loading$ = new BehaviorSubject<boolean>(false);
   private readonly pendingRequests = new Set<string>();
 
-  readonly isLoading = toSignal(this.loading$);
+  readonly isLoading = signal(false);
 
   setLoading(loading: boolean, requestId: string): void {
     if (loading) {
@@ -15,6 +12,6 @@ export class LoadingService {
     } else {
       this.pendingRequests.delete(requestId);
     }
-    this.loading$.next(this.pendingRequests.size > 0);
+    this.isLoading.set(this.pendingRequests.size > 0);
   }
 }

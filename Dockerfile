@@ -9,7 +9,6 @@ WORKDIR /build
 RUN apk add --no-cache --virtual builds-deps build-base pnpm git
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
-COPY patches ./patches
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     --mount=type=cache,target=/root/.cache/pnpm \
@@ -22,8 +21,7 @@ ENV APP_VERSION=${APP_VERSION}
 
 RUN --mount=type=cache,target=/root/.nx \
     pnpm exec nx run backend:build:production && \
-    cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml && \
-    cp -r patches dist/backend/patches
+    cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml
 
 WORKDIR /build/dist/backend
 
@@ -39,6 +37,10 @@ WORKDIR /app
 
 # hadolint ignore=DL3018
 RUN apk add --no-cache autossh curl zstd bash tar binutils libarchive-tools file
+
+# The entry point pipes console output through pino-pretty, since we don't have anything to consume raw JSON logs.
+RUN npm install -g pino-pretty@13.1.3
+
 COPY entry_point.sh /entry_point.sh
 RUN chmod +x /entry_point.sh
 COPY --from=builder /build/dist/backend /app

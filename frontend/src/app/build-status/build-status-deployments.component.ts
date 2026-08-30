@@ -1,9 +1,9 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { FlipListDirective } from '../animations/flip-list.directive';
 import { packageLogRouteFromUrl } from '../functions';
-import { LocaleDatePipe } from '../pipes/locale-date.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
@@ -31,11 +31,11 @@ const FAILURE_TAG_DESCRIPTIONS: Record<string, string> = {
 @Component({
   selector: 'chaotic-build-status-deployments',
   imports: [
+    DatePipe,
     RouterLink,
     Tooltip,
     RelativeTimePipe,
     BuildStatusSectionComponent,
-    LocaleDatePipe,
     BuildStatusPager,
     FlipListDirective,
   ],

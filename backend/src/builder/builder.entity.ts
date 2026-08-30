@@ -1,5 +1,10 @@
 import { BuildStatus } from '../types/types';
-import { RepoStatus, type ParsedPackageMetadata } from '@chaotic-next/shared-lib';
+import {
+  RepoStatus,
+  type BuildClassSuggestion,
+  type Package as PackageDto,
+  type ParsedPackageMetadata,
+} from '@chaotic-next/shared-lib';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
@@ -151,6 +156,32 @@ export class Package {
   @ApiProperty({ description: 'Owning repo', type: () => Repo })
   @ManyToOne(() => Repo, (repo) => repo.id, { cascade: true, nullable: true })
   repo!: Repo;
+}
+
+/**
+ * Maps a Package row to the wire DTO. Only ever reads `repo.id`/`repo.name`,
+ * so partial repo relations are fine and the repo's apiToken never leaks.
+ */
+export function toPackageDto(pkg: Package, buildClassSuggestion: BuildClassSuggestion | null = null): PackageDto {
+  return {
+    id: pkg.id,
+    pkgname: pkg.pkgname,
+    lastUpdated: pkg.lastUpdated,
+    createdAt: pkg.createdAt,
+    isActive: pkg.isActive,
+    skipSignalScan: pkg.skipSignalScan,
+    version: pkg.version,
+    bumpCount: pkg.bumpCount,
+    bumpTriggers: pkg.bumpTriggers ?? undefined,
+    metadata: pkg.metadata,
+    pkgrel: pkg.pkgrel,
+    bump: pkg.bump,
+    buildClass: pkg.buildClass,
+    pkgbaseName: pkg.pkgbaseName,
+    repo: pkg.repo?.id,
+    reponame: pkg.repo?.name,
+    buildClassSuggestion,
+  };
 }
 
 export class BuildResourceUsage {

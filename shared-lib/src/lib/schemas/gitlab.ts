@@ -36,8 +36,6 @@ export const addPackageItemSchema = z.strictObject({
   source: z.string().optional(),
 });
 
-export type AddPackageItemDto = z.infer<typeof addPackageItemSchema>;
-
 export const addPackagesBodySchema = z.strictObject({
   packages: z.array(addPackageItemSchema).min(1),
   repo: z.string(),
@@ -77,253 +75,222 @@ export const triggerPipelineBodySchema = z.strictObject({
 
 export type TriggerPipelineDto = z.infer<typeof triggerPipelineBodySchema>;
 
-const gitlabWebhookUserSchema = z.looseObject({
-  id: z.number().int().min(1),
-  name: z.string(),
-  username: z.string(),
-  avatar_url: z.string(),
-  email: z.string(),
-});
+interface GitlabWebhookUser {
+  id: number;
+  name: string;
+  username: string;
+  avatar_url: string;
+  email: string;
+}
 
-const gitlabWebhookLabelSchema = z.looseObject({
-  id: z.number().int().min(1),
-  title: z.string(),
-  color: z.string(),
-  project_id: z.number().int().min(1).nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  template: z.boolean(),
-  description: z.string().nullable(),
-  type: z.string(),
-  group_id: z.number().int().min(1).nullable(),
-});
+interface GitlabWebhookLabel {
+  id: number;
+  title: string;
+  color: string;
+  project_id: number | null;
+  created_at: string;
+  updated_at: string;
+  template: boolean;
+  description: string | null;
+  type: string;
+  group_id: number | null;
+}
 
-const gitlabWebhookCommitSchema = z.looseObject({
-  id: z.string(),
-  message: z.string(),
-  title: z.string().optional(),
-  timestamp: z.string(),
-  url: z.string(),
-  author: z.looseObject({ name: z.string(), email: z.string() }),
-});
+interface GitlabWebhookCommit {
+  id: string;
+  message: string;
+  title?: string;
+  timestamp: string;
+  url: string;
+  author: { name: string; email: string };
+}
 
-const gitlabWebhookProjectSchema = z.looseObject({
-  id: z.number().int().min(1),
-  name: z.string(),
-  description: z.string().nullable().optional(),
-  web_url: z.string(),
-  avatar_url: z.string().nullable(),
-  git_ssh_url: z.string(),
-  git_http_url: z.string(),
-  namespace: z.string(),
-  visibility_level: z.number().int(),
-  path_with_namespace: z.string(),
-  default_branch: z.string(),
-  ci_config_path: z.string().nullable().optional(),
-});
+interface GitlabWebhookProject {
+  id: number;
+  name: string;
+  description?: string | null;
+  web_url: string;
+  avatar_url: string | null;
+  git_ssh_url: string;
+  git_http_url: string;
+  namespace: string;
+  visibility_level: number;
+  path_with_namespace: string;
+  default_branch: string;
+  ci_config_path?: string | null;
+}
 
-const pipelineWebhookAttributesSchema = z.looseObject({
-  id: z.number().int().min(1),
-  iid: z.number().int().min(1),
-  name: z.string().optional(),
-  ref: z.string(),
-  tag: z.boolean(),
-  sha: z.string(),
-  before_sha: z.string(),
-  source: z.string(),
-  status: z.string(),
-  detailed_status: z.string().optional(),
-  stages: z.array(z.string()).nullable().optional(),
-  created_at: z.string(),
-  finished_at: z.string().nullable().optional(),
-  duration: z.number().nullable().optional(),
-  queued_duration: z.number().nullable().optional(),
-  protected_ref: z.boolean().optional(),
-  default_branch: z.boolean().optional(),
-  variables: z
-    .array(z.looseObject({ key: z.string(), value: z.string() }))
-    .nullable()
-    .optional(),
-  url: z.string(),
-});
+export interface PipelineWebhookDto {
+  object_kind: 'pipeline';
+  object_attributes: {
+    id: number;
+    iid: number;
+    name?: string;
+    ref: string;
+    tag: boolean;
+    sha: string;
+    before_sha: string;
+    source: string;
+    status: string;
+    detailed_status?: string;
+    stages?: string[] | null;
+    created_at: string;
+    finished_at?: string | null;
+    duration?: number | null;
+    queued_duration?: number | null;
+    protected_ref?: boolean;
+    default_branch?: boolean;
+    variables?: { key: string; value: string }[] | null;
+    url: string;
+  };
+  merge_request?: {
+    id: number;
+    iid: number;
+    title: string;
+    source_branch: string;
+    source_project_id: number;
+    target_branch: string;
+    target_project_id: number;
+    state: string;
+    merge_status: string;
+    detailed_merge_status: string;
+    url: string;
+  } | null;
+  user?: GitlabWebhookUser;
+  project?: { id: number };
+  commit?: GitlabWebhookCommit;
+  source_pipeline?: {
+    project: { id: number; web_url: string; path_with_namespace: string };
+    pipeline_id: number;
+    job_id: number;
+  };
+  builds?:
+    | {
+        id: number;
+        stage: string;
+        name: string;
+        status: string;
+        created_at: string;
+        started_at?: string | null;
+        finished_at?: string | null;
+        duration?: number | null;
+        queued_duration?: number | null;
+        failure_reason?: string | null;
+        when: string;
+        manual: boolean;
+        allow_failure: boolean;
+        user?: GitlabWebhookUser;
+        runner?: {
+          id: number;
+          description: string;
+          active: boolean;
+          runner_type: string;
+          is_shared?: boolean;
+          tags?: string[] | null;
+        } | null;
+        artifacts_file?: { filename: string | null; size: number | null };
+        environment?: { name: string; action: string; deployment_tier: string } | null;
+      }[]
+    | null;
+}
 
-export const pipelineWebhookEventSchema = z.looseObject({
-  object_kind: z.literal('pipeline'),
-  object_attributes: pipelineWebhookAttributesSchema,
-  merge_request: z
-    .looseObject({
-      id: z.number().int().min(1),
-      iid: z.number().int().min(1),
-      title: z.string(),
-      source_branch: z.string(),
-      source_project_id: z.number().int().min(1),
-      target_branch: z.string(),
-      target_project_id: z.number().int().min(1),
-      state: z.string(),
-      merge_status: z.string(),
-      detailed_merge_status: z.string(),
-      url: z.string(),
-    })
-    .nullable()
-    .optional(),
-  user: gitlabWebhookUserSchema.optional(),
-  project: gitlabWebhookProjectSchema.pick({ id: true }).optional(),
-  commit: gitlabWebhookCommitSchema.optional(),
-  source_pipeline: z
-    .looseObject({
-      project: z.looseObject({ id: z.number().int().min(1), web_url: z.string(), path_with_namespace: z.string() }),
-      pipeline_id: z.number().int().min(1),
-      job_id: z.number().int().min(1),
-    })
-    .optional(),
-  builds: z
-    .array(
-      z.looseObject({
-        id: z.number().int().min(1),
-        stage: z.string(),
-        name: z.string(),
-        status: z.string(),
-        created_at: z.string(),
-        started_at: z.string().nullable().optional(),
-        finished_at: z.string().nullable().optional(),
-        duration: z.number().nullable().optional(),
-        queued_duration: z.number().nullable().optional(),
-        failure_reason: z.string().nullable().optional(),
-        when: z.string(),
-        manual: z.boolean(),
-        allow_failure: z.boolean(),
-        user: gitlabWebhookUserSchema.optional(),
-        runner: z
-          .looseObject({
-            id: z.number().int().min(1),
-            description: z.string(),
-            active: z.boolean(),
-            runner_type: z.string(),
-            is_shared: z.boolean().optional(),
-            tags: z.array(z.string()).nullable().optional(),
-          })
-          .nullable()
-          .optional(),
-        artifacts_file: z.looseObject({ filename: z.string().nullable(), size: z.number().nullable() }).optional(),
-        environment: z
-          .looseObject({ name: z.string(), action: z.string(), deployment_tier: z.string() })
-          .nullable()
-          .optional(),
-      }),
-    )
-    .nullable()
-    .optional(),
-});
+interface MergeRequestWebhookReviewer {
+  id: number;
+  name: string;
+  username: string;
+  avatar_url: string;
+  email?: string;
+  state?: string;
+  re_requested?: boolean;
+}
 
-export type PipelineWebhookDto = z.infer<typeof pipelineWebhookEventSchema>;
+interface MergeRequestWebhookAttributes {
+  action?: 'open' | 'close' | 'reopen' | 'update' | 'approval' | 'approved' | 'unapproval' | 'unapproved' | 'merge';
+  actioned_at?: string;
+  approval_rules?: {
+    id: number;
+    approvals_required: number;
+    name: string;
+    rule_type: string;
+    report_type?: string | null;
+    merge_request_id?: number;
+    section?: string | null;
+    modified_from_project_rule?: boolean;
+    orchestration_policy_idx?: number | null;
+    vulnerabilities_allowed?: number;
+    scanners?: string[];
+    severity_levels?: string[];
+    vulnerability_states?: string[];
+    security_orchestration_policy_configuration_id?: number | null;
+    scan_result_policy_id?: number | null;
+    applicable_post_merge?: boolean | null;
+    project_id: number;
+    approval_policy_rule_id?: number | null;
+    updated_at: string;
+    created_at: string;
+  }[];
+  assignee_id?: number;
+  assignee_ids?: number[];
+  author_id?: number;
+  blocking_discussions_resolved?: boolean;
+  created_at?: string;
+  description?: string | null;
+  detailed_merge_status?: string;
+  draft?: boolean;
+  first_contribution?: boolean;
+  head_pipeline_id?: number | null;
+  human_time_change?: string | null;
+  human_time_estimate?: string | null;
+  human_total_time_spent?: string | null;
+  id: number;
+  iid: number;
+  labels?: GitlabWebhookLabel[];
+  last_commit?: GitlabWebhookCommit;
+  last_edited_at?: string | null;
+  last_edited_by_id?: number | null;
+  merge_commit_sha?: string | null;
+  merged_at?: string | null;
+  merge_error?: string | null;
+  merge_params?: { force_remove_source_branch: unknown };
+  merge_status?: string;
+  merge_user_id?: number | null;
+  merge_when_pipeline_succeeds?: boolean;
+  milestone_id?: number | null;
+  oldrev?: string;
+  prepared_at?: string | null;
+  reviewer_ids?: number[];
+  source_branch: string;
+  source_project_id: number;
+  squash_commit_sha?: string | null;
+  state: string;
+  state_id?: number;
+  system?: boolean;
+  system_action?: string;
+  target_branch: string;
+  target_branch_protected?: boolean;
+  target_project_id: number;
+  time_change?: number;
+  time_estimate?: number;
+  title: string;
+  total_time_spent?: number;
+  updated_at?: string;
+  updated_by_id?: number | null;
+  url?: string;
+  work_in_progress?: boolean;
+}
 
-const mergeRequestWebhookReviewerSchema = z.looseObject({
-  id: z.number().int().min(1),
-  name: z.string(),
-  username: z.string(),
-  avatar_url: z.string(),
-  email: z.string().optional(),
-  state: z.string().optional(),
-  re_requested: z.boolean().optional(),
-});
-
-const mergeRequestWebhookAttributesSchema = z.looseObject({
-  action: z
-    .enum(['open', 'close', 'reopen', 'update', 'approval', 'approved', 'unapproval', 'unapproved', 'merge'])
-    .optional(),
-  actioned_at: z.string().optional(),
-  approval_rules: z
-    .array(
-      z.looseObject({
-        id: z.number().int().min(1),
-        approvals_required: z.number().int(),
-        name: z.string(),
-        rule_type: z.string(),
-        report_type: z.string().nullable().optional(),
-        merge_request_id: z.number().int().min(1).optional(),
-        section: z.string().nullable().optional(),
-        modified_from_project_rule: z.boolean().optional(),
-        orchestration_policy_idx: z.number().int().nullable().optional(),
-        vulnerabilities_allowed: z.number().int().optional(),
-        scanners: z.array(z.string()).optional(),
-        severity_levels: z.array(z.string()).optional(),
-        vulnerability_states: z.array(z.string()).optional(),
-        security_orchestration_policy_configuration_id: z.number().int().nullable().optional(),
-        scan_result_policy_id: z.number().int().nullable().optional(),
-        applicable_post_merge: z.boolean().nullable().optional(),
-        project_id: z.number().int().min(1),
-        approval_policy_rule_id: z.number().int().nullable().optional(),
-        updated_at: z.string(),
-        created_at: z.string(),
-      }),
-    )
-    .optional(),
-  assignee_id: z.number().int().min(1).optional(),
-  assignee_ids: z.array(z.number().int().min(1)).optional(),
-  author_id: z.number().int().min(1).optional(),
-  blocking_discussions_resolved: z.boolean().optional(),
-  created_at: z.string().optional(),
-  description: z.string().nullable().optional(),
-  detailed_merge_status: z.string().optional(),
-  draft: z.boolean().optional(),
-  first_contribution: z.boolean().optional(),
-  head_pipeline_id: z.number().int().min(1).nullable().optional(),
-  human_time_change: z.string().nullable().optional(),
-  human_time_estimate: z.string().nullable().optional(),
-  human_total_time_spent: z.string().nullable().optional(),
-  id: z.number().int().min(1),
-  iid: z.number().int().min(1),
-  labels: z.array(gitlabWebhookLabelSchema).optional(),
-  last_commit: gitlabWebhookCommitSchema.optional(),
-  last_edited_at: z.string().nullable().optional(),
-  last_edited_by_id: z.number().int().min(1).nullable().optional(),
-  merge_commit_sha: z.string().nullable().optional(),
-  merged_at: z.string().nullable().optional(),
-  merge_error: z.string().nullable().optional(),
-  merge_params: z.looseObject({ force_remove_source_branch: z.unknown() }).optional(),
-  merge_status: z.string().optional(),
-  merge_user_id: z.number().int().min(1).nullable().optional(),
-  merge_when_pipeline_succeeds: z.boolean().optional(),
-  milestone_id: z.number().int().min(1).nullable().optional(),
-  oldrev: z.string().optional(),
-  prepared_at: z.string().nullable().optional(),
-  reviewer_ids: z.array(z.number().int().min(1)).optional(),
-  source_branch: z.string(),
-  source_project_id: z.number().int().min(1),
-  squash_commit_sha: z.string().nullable().optional(),
-  state: z.string(),
-  state_id: z.number().int().min(1).optional(),
-  system: z.boolean().optional(),
-  system_action: z.string().optional(),
-  target_branch: z.string(),
-  target_branch_protected: z.boolean().optional(),
-  target_project_id: z.number().int().min(1),
-  time_change: z.number().int().optional(),
-  time_estimate: z.number().int().optional(),
-  title: z.string(),
-  total_time_spent: z.number().int().optional(),
-  updated_at: z.string().optional(),
-  updated_by_id: z.number().int().min(1).nullable().optional(),
-  url: z.string().optional(),
-  work_in_progress: z.boolean().optional(),
-});
-
-export const mergeRequestWebhookEventSchema = z.looseObject({
-  object_kind: z.literal('merge_request'),
-  event_type: z.string().optional(),
-  user: gitlabWebhookUserSchema.optional(),
-  project: gitlabWebhookProjectSchema.optional(),
-  object_attributes: mergeRequestWebhookAttributesSchema,
-  changes: z.record(z.string(), z.unknown()).optional(),
-  labels: z.array(gitlabWebhookLabelSchema).optional(),
-  assignees: z.array(gitlabWebhookUserSchema).optional(),
-  reviewers: z.array(mergeRequestWebhookReviewerSchema).optional(),
-  repository: z
-    .looseObject({ name: z.string(), url: z.string(), description: z.string(), homepage: z.string() })
-    .optional(),
-});
-
-export type MergeRequestWebhookBodyDto = z.infer<typeof mergeRequestWebhookEventSchema>;
+export interface MergeRequestWebhookBodyDto {
+  object_kind: 'merge_request';
+  event_type?: string;
+  user?: GitlabWebhookUser;
+  project?: GitlabWebhookProject;
+  object_attributes: MergeRequestWebhookAttributes;
+  changes?: Record<string, unknown>;
+  labels?: GitlabWebhookLabel[];
+  assignees?: GitlabWebhookUser[];
+  reviewers?: MergeRequestWebhookReviewer[];
+  repository?: { name: string; url: string; description: string; homepage: string };
+}
 
 // Only object_kind is validated. GitLab owns this payload shape; a schema drift
 // here must never make the endpoint drop a live webhook with a 400.

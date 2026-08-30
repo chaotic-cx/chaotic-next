@@ -10,6 +10,8 @@ import {
   Paginated,
   STATUS_LABELS,
 } from '@chaotic-next/shared-lib';
+import { APP_CONFIG } from '../../environments/app-config.token';
+import { type EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
 import { isLogPurged, resourceValue } from '../functions';
 import { createLazyTablePagination } from '../table-pagination';
@@ -51,6 +53,7 @@ const STATUS_BY_LABEL = new Map(
 
 @Service()
 export class DeployLogService {
+  private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly route = inject(ActivatedRoute);
 
@@ -70,7 +73,7 @@ export class DeployLogService {
   readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
 
   private readonly buildersResource = httpResource<Builder[]>(() =>
-    this.appService.getBackendUrl() ? `${this.appService.getBackendUrl()}/builder/builders` : undefined,
+    this.appConfig.backendUrl ? `${this.appConfig.backendUrl}/builder/builders` : undefined,
   );
   readonly builderOptions = computed<string[]>(() =>
     (resourceValue(this.buildersResource) ?? []).map((builder) => builder.name),

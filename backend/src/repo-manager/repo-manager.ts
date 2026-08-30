@@ -16,16 +16,13 @@ import { type RepoReader, type RepoReaderFactory } from './repo-rw';
 import { CI_FLAG_REBUILD_IGNORE_ABI, RebuildTriggerService, SignalScanService } from './scan';
 import { formatConsumerAbiBreak } from './signal';
 import { RepoStatus } from '@chaotic-next/shared-lib';
+import { downloadWithRetry } from '../utils/download';
 import { HttpService } from '@nestjs/axios';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
-
-const MAX_DOWNLOAD_RETRIES = 5;
-const BASE_RETRY_DELAY_MS = 1000;
-const MAX_RETRY_DELAY_MS = 30_000;
 
 export class RepoManager {
   changedArchPackages: ArchlinuxPackage[] = [];
@@ -155,7 +152,7 @@ export class RepoManager {
     const downloadPath: string = join(tempDir, filename);
 
     try {
-      await this.downloadWithRetry(downloadUrl, downloadPath);
+      await downloadWithRetry(this.httpService.axiosRef, downloadUrl, downloadPath);
 
       this.pino.info({ pkgname: pkg.pkgname, version: pkg.version }, 'Scanning built package for ELF signals');
       await this.signalScanService.scanPackages([
@@ -171,29 +168,6 @@ export class RepoManager {
     } finally {
       await this.archMirror.cleanUp([tempDir]);
     }
-  }
-
-  private async downloadWithRetry(url: string, dest: string, maxRetries = MAX_DOWNLOAD_RETRIES): Promise<void> {
-    let lastError: unknown;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        const response = await this.httpService.axiosRef({
-          url,
-          method: 'GET',
-          responseType: 'arraybuffer',
-        });
-        await writeFile(dest, Buffer.from(response.data));
-        return;
-      } catch (err: unknown) {
-        lastError = err;
-        if (attempt < maxRetries) {
-          const delay = Math.min(BASE_RETRY_DELAY_MS * 2 ** attempt, MAX_RETRY_DELAY_MS);
-          this.pino.warn({ attempt: attempt + 1, url, delayMs: delay }, 'Download attempt failed, retrying');
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
-    }
-    throw lastError;
   }
 
   async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<BumpResult> {

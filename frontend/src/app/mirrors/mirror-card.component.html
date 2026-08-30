@@ -50,7 +50,7 @@
     @if (status() === 'offline') {
       <span>Totally unavailable</span>
     } @else {
-      <span [pTooltip]="(mirror().last_update | localeDate) ?? undefined" tooltipPosition="top">
+      <span [pTooltip]="(mirror().last_update | date: 'short') ?? undefined" tooltipPosition="top">
         Last update {{ mirror().last_update | relativeTime }}
       </span>
     }

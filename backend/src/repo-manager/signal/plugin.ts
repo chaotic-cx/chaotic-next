@@ -14,7 +14,7 @@ import {
   parseUndefinedSymbols,
   sonameBasename,
 } from './parse';
-import { type PackageElfAnalysis } from '@chaotic-next/shared-lib';
+import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC, type PackageElfAnalysis } from '@chaotic-next/shared-lib';
 
 /** Directory-ownership index used for plugin detection. */
 export interface DirectoryIndex {
@@ -333,8 +333,8 @@ export function buildAnalysis(opts: {
 }
 
 /** The signal pkgType discriminator values (see PackageElfPkgType). */
-export const ARCH_PKG_TYPE: PackageElfPkgType = '0';
-export const CHAOTIC_PKG_TYPE: PackageElfPkgType = '1';
+export const ARCH_PKG_TYPE: PackageElfPkgType = PKG_TYPE_ARCH;
+export const CHAOTIC_PKG_TYPE: PackageElfPkgType = PKG_TYPE_CHAOTIC;
 
 export function pkgTypeOf(triggerFrom: TriggerType): PackageElfPkgType {
   return triggerFrom === TriggerType.ARCH ? ARCH_PKG_TYPE : CHAOTIC_PKG_TYPE;

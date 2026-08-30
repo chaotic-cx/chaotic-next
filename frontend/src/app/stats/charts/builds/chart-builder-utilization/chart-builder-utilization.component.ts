@@ -1,8 +1,7 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { AppService, ALL_TIME_DAYS } from '../../../../app.service';
-import { resourceValue } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
+import { chartResource } from '../../chart-config';
 
 export interface BuilderUtilizationRowDto {
   builder: string;
@@ -71,14 +70,11 @@ export class ChartBuilderUtilizationComponent {
 
   readonly days = computed(() => this.statsService.timeRangeDays() ?? ALL_TIME_DAYS);
 
-  private readonly resource = httpResource<BuilderUtilizationRowDto[]>(() =>
+  readonly chart = chartResource<BuilderUtilizationRowDto[]>(() =>
     this.appService.getBuilderUtilizationResourceRequest(this.days()),
   );
 
-  readonly loading = this.resource.isLoading;
-  readonly hasData = computed(() => this.resource.hasValue());
-
-  readonly grid = computed(() => buildUtilizationGrid(resourceValue(this.resource) ?? []));
+  readonly grid = computed(() => buildUtilizationGrid(this.chart.data()));
 
   readonly hourLabels = computed(() =>
     Array.from({ length: HOURS_PER_DAY }, (unused, hour) => (hour % 3 === 0 ? String(hour) : '')),

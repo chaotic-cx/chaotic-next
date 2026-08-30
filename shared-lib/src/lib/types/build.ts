@@ -56,7 +56,6 @@ export const BUILD_RATE_LIMIT_FAILURE_STREAK = 5;
 export const BUILD_RATE_LIMIT_RETRY_HOURS = 24;
 
 export const BUILD_RESOURCE_SORT_FIELDS = ['peakMemory', 'cpuTime', 'diskIo', 'networkIo'] as const;
-export type BuildResourceSortField = (typeof BUILD_RESOURCE_SORT_FIELDS)[number];
 
 export const BUILD_SORT_FIELDS = [
   'id',
@@ -86,7 +85,6 @@ export const buildResourceMetricsSchema = z.object({
   peakPids: z.number().nullable().optional(),
   sampleCount: z.number().nullable().optional(),
 });
-export type BuildResourceMetrics = z.infer<typeof buildResourceMetricsSchema>;
 
 export const builderSchema = z.object({
   id: z.number().describe('Record ID'),
@@ -144,29 +142,28 @@ export type Build = z.infer<typeof buildSchema>;
  * time values are totals consumed over the whole container runtime, memory is aggregated across
  * samples since usage fluctuates constantly.
  */
-export const buildResourceStatsSchema = z.object({
+export interface BuildResourceStats {
   /** Mean of all sampled memory usage values in bytes. */
-  avg_memory_bytes: z.number(),
+  avg_memory_bytes: number;
   /** Total CPU time consumed by the container in nanoseconds. */
-  cpu_time_ns: z.number(),
+  cpu_time_ns: number;
   /** Total bytes read from block devices by the container. Zero if the engine reports no blkio data. */
-  disk_read_bytes: z.number(),
+  disk_read_bytes: number;
   /** Total bytes written to block devices by the container. Zero if the engine reports no blkio data. */
-  disk_write_bytes: z.number(),
+  disk_write_bytes: number;
   /** How long the build container was running. */
-  duration_ms: z.number(),
+  duration_ms: number;
   /** Total bytes received over all network interfaces during the build. */
-  network_rx_bytes: z.number(),
+  network_rx_bytes: number;
   /** Total bytes sent over all network interfaces during the build. */
-  network_tx_bytes: z.number(),
+  network_tx_bytes: number;
   /** Highest observed memory usage in bytes. */
-  peak_memory_bytes: z.number(),
+  peak_memory_bytes: number;
   /** Highest number of processes observed inside the container. */
-  peak_pids: z.number(),
+  peak_pids: number;
   /** How many samples the aggregation is based on; short builds may yield very few. */
-  sample_count: z.number(),
-});
-export type BuildResourceStats = z.infer<typeof buildResourceStatsSchema>;
+  sample_count: number;
+}
 
 export const packageResourceDayRowSchema = z.object({
   day: z.string().describe('Day (YYYY-MM-DD)'),

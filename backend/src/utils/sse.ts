@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs';
 
 /** Interval between SSE keepalive frames; short enough to survive proxy idle timeouts. */
-export const SSE_KEEPALIVE_MS = 20_000;
+const SSE_KEEPALIVE_MS = 20_000;
 
 /**
  * Server-sent event frame as emitted through Nest's @Sse(). Unlike the DOM

@@ -613,7 +613,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
     });
   });
 
-  describe('GET /builder/per-day/pkgname/:pkgname/:days', () => {
+  describe('GET /builder/count/:pkgname/:amount', () => {
     it('returns build counts per day for a specific package', async () => {
       const repo = await e2e.seedRepo({ name: 'garuda' });
       const pkg = await e2e.seedPackage({ pkgname: 'firedragon', version: '2:13.1.1', repo });
@@ -622,7 +622,7 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
 
       const res = await e2e.inject<{ day: string; repo: string; count: string }[]>({
         method: 'GET',
-        url: '/builder/per-day/pkgname/firedragon/30?offset=0',
+        url: '/builder/count/firedragon/30?offset=0',
       });
 
       expect(res.statusCode).toBe(200);

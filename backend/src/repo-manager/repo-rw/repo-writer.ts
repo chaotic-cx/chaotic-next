@@ -19,7 +19,7 @@ export interface RepoWriter {
   commitBumps(repo: Repo, actions: BumpCommitAction[]): Promise<void>;
 }
 
-const MAX_LISTED_PACKAGES = 3;
+export const MAX_LISTED_PACKAGES = 3;
 
 function buildCommitMessage(actions: BumpCommitAction[]): string {
   const subject =

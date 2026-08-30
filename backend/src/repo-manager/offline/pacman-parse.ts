@@ -132,28 +132,39 @@ export async function extractPacmanDatabase(filesPath: string, workDir: string):
   if (stderr) throw new Error(stderr);
 }
 
-export async function parsePacmanDatabases(workDirs: RepoWorkDir[]): Promise<ParsedPackage[]> {
+export async function parsePacmanDatabases(workDirs: (RepoWorkDir | null)[]): Promise<ParsedPackage[]> {
   const parsed: ParsedPackage[] = [];
+  const batchSize = 100;
+  const yieldEveryBatches = 5;
   for (const dir of workDirs) {
     if (!dir || !dir.path) continue;
-    const allPkgDirs: string[] = await listPackageDirs(dir.path);
-    const currentPathRegex = new RegExp(`/${dir.path}/`);
-    for (const pkgDir of allPkgDirs) {
-      const pkg = pkgDir.replace(currentPathRegex, '');
-      const descFile = join(dir.path, pkg, 'desc');
-      const filesFile = join(dir.path, pkg, 'files');
-      try {
-        const currentPackageVersion: Partial<ParsedPackage> = await parsePackageDesc(descFile);
-        if (!currentPackageVersion || Object.keys(currentPackageVersion).length === 0) continue;
-        if (!currentPackageVersion.metaData) {
-          currentPackageVersion.metaData = { buildDate: '', filename: '' };
+    try {
+      const allPkgDirs: string[] = await listPackageDirs(dir.path);
+      const currentPathRegex = new RegExp(`/${dir.path}/`);
+      for (let i = 0; i < allPkgDirs.length; i += batchSize) {
+        for (const pkgDir of allPkgDirs.slice(i, i + batchSize)) {
+          const pkg = pkgDir.replace(currentPathRegex, '');
+          const descFile = join(dir.path, pkg, 'desc');
+          const filesFile = join(dir.path, pkg, 'files');
+          try {
+            const currentPackageVersion: Partial<ParsedPackage> = await parsePackageDesc(descFile);
+            if (!currentPackageVersion || Object.keys(currentPackageVersion).length === 0) continue;
+            if (!currentPackageVersion.metaData) {
+              currentPackageVersion.metaData = { buildDate: '', filename: '' };
+            }
+            currentPackageVersion.metaData.soNameList = await parsePackageFiles(filesFile);
+            currentPackageVersion.repoName = dir.name;
+            parsed.push(currentPackageVersion as ParsedPackage);
+          } catch {
+            // skip unreadable package payloads
+          }
         }
-        currentPackageVersion.metaData.soNameList = await parsePackageFiles(filesFile);
-        currentPackageVersion.repoName = dir.name;
-        parsed.push(currentPackageVersion as ParsedPackage);
-      } catch {
-        // skip unreadable package payloads
+        if (i % (batchSize * yieldEveryBatches) === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
       }
+    } catch {
+      // skip unreadable package directories
     }
   }
   return parsed;

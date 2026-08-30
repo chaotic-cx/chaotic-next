@@ -1,11 +1,5 @@
-import { MrPackageInfo, PKGBUILD_SOURCE_AUR } from '@chaotic-next/shared-lib';
+import { MrPackageInfo } from '@chaotic-next/shared-lib';
 import { type Gitlab } from '@gitbeaker/rest';
-
-const ALWAYS_PRESENT_CI_FILES = new Set(['config', 'info']);
-
-export function ciOverrideFiles(ciFiles: string[]): string[] {
-  return ciFiles.filter((file) => !ALWAYS_PRESENT_CI_FILES.has(file));
-}
 
 export function parsePkgbuildSource(configText: string): string {
   const match = configText.match(/^CI_PKGBUILD_SOURCE=(.*)$/m);
@@ -27,26 +21,6 @@ export function parseRebuildTriggers(configText: string): string[] {
     .split(':')
     .map((trigger) => trigger.trim())
     .filter((trigger) => trigger !== '');
-}
-
-export function packageLink(info: MrPackageInfo): { label: string; url: string; tooltip: string } {
-  const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== PKGBUILD_SOURCE_AUR;
-  if (isCustom) {
-    return {
-      label: 'Custom',
-      url: `https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/${info.pkgname}`,
-      tooltip: `PKGBUILD is maintained in the pkgbuilds repo (${info.pkgbuildSource})`,
-    };
-  }
-  return {
-    label: 'AUR',
-    url: `https://aur.archlinux.org/packages/${info.pkgname}`,
-    tooltip: `Open the AUR page for ${info.pkgname}`,
-  };
-}
-
-export function ciFolderUrl(info: MrPackageInfo): string {
-  return `https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/${info.pkgname}/.CI`;
 }
 
 /**

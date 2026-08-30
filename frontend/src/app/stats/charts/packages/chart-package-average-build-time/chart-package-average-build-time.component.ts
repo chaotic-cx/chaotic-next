@@ -1,27 +1,22 @@
-import { DatePipe } from '@angular/common';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input } from '@angular/core';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { resourceValue } from '../../../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roundToTenth } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-package-average-build-time',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-package-average-build-time.component.html',
-  providers: [DatePipe],
 })
 export class ChartPackageAverageBuildTimeComponent {
   private readonly appService = inject(AppService);
-  private readonly datePipe = inject(DatePipe);
   private readonly statsService = inject(StatsService);
 
   readonly packageName = input.required<string>();
 
-  private readonly resource = httpResource<{ day: string; average: string }[]>(() => {
+  readonly chart = chartResource<{ day: string; average: string }[]>(() => {
     const name = this.packageName();
     if (!name) return undefined;
     return this.appService.getAverageBuildTimePerDayForPackageResourceRequest(
@@ -30,24 +25,19 @@ export class ChartPackageAverageBuildTimeComponent {
     );
   });
 
-  readonly loading = this.resource.isLoading;
-
   readonly chartConfig = computed<ChartConfig<'line'> | null>(() => {
-    const rows = resourceValue(this.resource);
-    if (!rows || rows.length === 0) return null;
+    const rows = this.chart.data();
+    if (rows.length === 0) return null;
 
     const daySet = new Set<string>();
     for (const row of rows) {
-      const day = this.datePipe.transform(row.day, 'shortDate') || row.day;
-      daySet.add(day);
+      daySet.add(formatDay(row.day));
     }
     const labels = [...daySet].reverse();
 
     const dataMap = new Map<string, number>();
     for (const row of rows) {
-      const day = this.datePipe.transform(row.day, 'shortDate') || row.day;
-      const mins = Number(row.average);
-      dataMap.set(day, Math.round(mins * 10) / 10);
+      dataMap.set(formatDay(row.day), roundToTenth(Number(row.average)));
     }
 
     return {

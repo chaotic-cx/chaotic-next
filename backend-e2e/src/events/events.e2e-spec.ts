@@ -1,26 +1,22 @@
 import 'reflect-metadata';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-import { Test } from '@nestjs/testing';
 import { firstValueFrom } from 'rxjs';
-import { AppModule } from '@chaotic-next/backend/app.module';
 import { EventService } from '@chaotic-next/backend/events/event.service';
 import type { ChaoticEvent } from '@chaotic-next/shared-lib';
+import { createE2eApp, type E2eApp } from '../test/e2e-app';
 
 describe('EventService SSE wiring (e2e, real PostgreSQL)', () => {
-  let app: NestFastifyApplication;
+  let e2e: E2eApp;
   let eventService: EventService;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
-    await app.init();
-    eventService = app.get<EventService>(EventService);
+    e2e = await createE2eApp();
+    eventService = e2e.app.get<EventService>(EventService);
   });
 
   afterAll(async () => {
-    await app.close();
+    await e2e?.close();
   });
 
   it('exposes an RxJS Subject that delivers events to subscribers', async () => {

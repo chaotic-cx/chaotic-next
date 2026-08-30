@@ -1,15 +1,11 @@
-import { Logger } from '@nestjs/common';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { resolve } from 'node:path';
+import { silenceNestLogger } from './silence-nest-logger';
 
 let container: StartedPostgreSqlContainer | undefined;
 
 export async function setup(): Promise<void> {
-  Logger.overrideLogger(false);
-  const loggerMethods = ['log', 'error', 'warn', 'debug', 'verbose', 'fatal'] as const;
-  for (const method of loggerMethods) {
-    Logger.prototype[method] = () => undefined;
-  }
+  silenceNestLogger();
 
   const image = 'chaotic-postgres-hll:latest';
   await PostgreSqlContainer.fromDockerfile(resolve(import.meta.dirname, '../../../docker/postgres-hll')).build(image);

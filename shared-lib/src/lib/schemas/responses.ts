@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { BUILD_CLASS_MAX, BUILD_CLASS_MIN } from '../types/core';
-import { externalCommitStatusSchema as externalCommitStatusLink } from '../types/gitlab';
 import {
+  aurMaintainerChangeSchema as aurMaintainerChangeLink,
+  aurMaintainerInfoSchema as aurMaintainerInfoLink,
   diffScanFindingSchema as diffScanFindingLink,
   vtIndicatorReportSchema as vtIndicatorReportLink,
-  aurMaintainerInfoSchema as aurMaintainerInfoLink,
-  aurMaintainerChangeSchema as aurMaintainerChangeLink,
 } from '../types/aur';
+import { BUILD_CLASS_MAX, BUILD_CLASS_MIN } from '../types/core';
+import { externalCommitStatusSchema as externalCommitStatusLink } from '../types/gitlab';
 
 /**
  * One-field building blocks shared by the aggregate row schemas below. They
@@ -177,7 +177,6 @@ export const rescanStartedSchema = z.object({
   started: z.number().describe('Number of packages queued for background rescanning'),
   jobId: z.string().describe('Poll GET /admin/rescan/{jobId} for the job outcome'),
 });
-export type RescanStarted = z.infer<typeof rescanStartedSchema>;
 
 export const bumpPackagesResultSchema = z.object({
   bumped: z.array(z.string()).describe('Package names that were actually bumped and committed'),
@@ -192,14 +191,12 @@ export const flakyPackageSchema = z.object({
   failures: z.number().describe('Failed builds inside the window'),
   flakiness: z.number().describe('Failure rate from 0 to 1'),
 });
-export type FlakyPackage = z.infer<typeof flakyPackageSchema>;
 
 export const builderUtilizationSchema = z.object({
   builder: builderName,
   hour: z.number().describe('UTC hour of day (0-23)'),
   count: z.number().describe('Builds inside the window for this builder and hour bucket'),
 });
-export type BuilderUtilization = z.infer<typeof builderUtilizationSchema>;
 
 // ---- GitLab ----
 
@@ -238,7 +235,6 @@ export const mergeRequestDiffSchema = z.object({
   deleted_file: z.boolean().describe('Whether the file was deleted'),
   diff: z.string().describe('Unified diff content'),
 });
-export type MergeRequestDiff = z.infer<typeof mergeRequestDiffSchema>;
 
 export const simpleUserSchema = z.object({
   id: z.number().describe('GitLab user ID'),
@@ -248,7 +244,6 @@ export const simpleUserSchema = z.object({
   web_url: z.string().describe('Profile page URL'),
   state: z.string().describe('Account state (active, blocked, etc.)'),
 });
-export type SimpleUser = z.infer<typeof simpleUserSchema>;
 
 export const mergeRequestWithDiffsSchema = z.object({
   id: z.number().describe('GitLab merge request ID'),
@@ -275,21 +270,17 @@ export const mergeRequestWithDiffsSchema = z.object({
     .optional()
     .describe('Diff reference SHAs for base, head, and start'),
 });
-/** Zod view of the merge-request payload; the canonical TS type stays in types/gitlab.ts. */
-export type MergeRequestWithDiffsApi = z.infer<typeof mergeRequestWithDiffsSchema>;
 
 export const reviewStatsSchema = z.object({
   username: z.string().describe('GitLab username'),
   reviews: z.number().describe('Number of merge request reviews'),
 });
-export type ReviewStats = z.infer<typeof reviewStatsSchema>;
 
 export const reviewStatsOverTimeSchema = z.object({
   date: z.string().describe('Date (YYYY-MM-DD)'),
   username: z.string().describe('GitLab username'),
   reviews: z.number().describe('Number of reviews on this date'),
 });
-export type ReviewStatsOverTime = z.infer<typeof reviewStatsOverTimeSchema>;
 
 export const dependencyNodeSchema = z.object({
   pkgType: z.enum(['0', '1']).describe('Package type'),

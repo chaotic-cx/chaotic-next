@@ -291,20 +291,6 @@ export class BuilderController {
     return await this.builderService.getBuildsPerBuilder(days);
   }
 
-  @Get('per-day/pkgname/:pkgname/:days')
-  @ApiOperation({ summary: 'Get builds per day for a package.' })
-  @ApiParam({ name: 'pkgname', description: 'Package name' })
-  @ApiParam({ name: 'days', description: 'Number of days' })
-  @ApiQuery({ name: 'offset', required: false, description: 'Offset for pagination', type: Number })
-  @ApiOkResponse({ description: 'Builds per day for package', schema: schemaResponseArray(dayRepoCountSchema).schema })
-  async getBuildsPerDayDefault(
-    @Param('pkgname') pkgname: string,
-    @Param('days', { schema: daysParamSchema }) days: number,
-    @Query('offset', { schema: offsetQuerySchema.default(0) }) offset: number,
-  ): Promise<DayRepoCount[]> {
-    return await this.builderService.getBuildsCountByPkgnamePerDay({ offset, pkgname, amount: days });
-  }
-
   @Get('per-day/:days')
   @ApiOperation({ summary: 'Get builds per day for all packages.' })
   @ApiParam({ name: 'days', description: 'Number of days' })

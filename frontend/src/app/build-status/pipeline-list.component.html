@@ -21,7 +21,7 @@
         </button>
         <span
           class="shrink-0 text-xs text-ctp-subtext1"
-          [pTooltip]="(pipeline.pipeline.created_at | localeDate) ?? undefined"
+          [pTooltip]="(pipeline.pipeline.created_at | date: 'short') ?? undefined"
           tooltipPosition="top"
           >{{ pipeline.pipeline.created_at | relativeTime }}</span
         >

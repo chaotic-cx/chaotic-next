@@ -1,13 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, effect, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { Card } from '@openng/optimus-ui/card';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from '../app.service';
-import { isMobileSignal } from '../functions';
+import { isMobileSignal, setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 import { ActiveBuildsComponent } from './active-builds.component';
 import { BuildStatusDeploymentsComponent } from './build-status-deployments.component';
@@ -38,7 +37,6 @@ export class BuildStatusComponent implements OnInit {
   appService = inject(AppService);
   buildStatusService = inject(BuildStatusService);
   messageToastService = inject(MessageToastService);
-  meta = inject(Meta);
   router = inject(Router);
   route = inject(ActivatedRoute);
 
@@ -100,14 +98,11 @@ export class BuildStatusComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.appService.updateSeoTags(this.meta, {
-      title: 'Build status',
-      description: 'Current build status and queue information for Chaotic-AUR',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
-      url: this.router.url,
-    });
-
+    setPageSeo(
+      'Build status',
+      'Current build status and queue information for Chaotic-AUR',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
+    );
     this.buildStatusService.beginNavigation();
     void this.updateAll();
   }

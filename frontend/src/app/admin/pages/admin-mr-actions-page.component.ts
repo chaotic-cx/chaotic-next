@@ -1,5 +1,5 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { MrAction } from '@chaotic-next/shared-lib';
 import { IconField } from '@openng/optimus-ui/iconfield';
@@ -38,7 +38,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 
 @Component({
   selector: 'chaotic-admin-mr-actions-page',
-  imports: [LocaleDatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule],
+  imports: [DatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule],
   template: `
     <div class="table-container">
       <p-table
@@ -129,7 +129,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <td>
               <span class="font-medium">{{ action.userName }}</span>
             </td>
-            <td>{{ action.createdAt | localeDate }}</td>
+            <td>{{ action.createdAt | date: 'short' }}</td>
           </tr>
         </ng-template>
       </p-table>

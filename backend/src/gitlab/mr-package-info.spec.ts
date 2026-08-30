@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { MrPackageInfo } from '@chaotic-next/shared-lib';
 import {
-  ciFolderUrl,
-  ciOverrideFiles,
   fetchPackageInfo,
-  packageLink,
   parseManageAur,
   parseNvchecker,
   parsePkgbuildSource,
@@ -53,56 +49,6 @@ describe('mr-package-info', () => {
     it('returns an empty list when absent or empty', () => {
       expect(parseRebuildTriggers('CI_PACKAGE_BUMP=1.0-1/1\n')).toEqual([]);
       expect(parseRebuildTriggers('CI_REBUILD_TRIGGERS=\n')).toEqual([]);
-    });
-  });
-
-  describe('ciOverrideFiles', () => {
-    it('filters out the always-present config and info files', () => {
-      expect(ciOverrideFiles(['config', 'info', 'PKGBUILD.append', 'prepare'])).toEqual(['PKGBUILD.append', 'prepare']);
-      expect(ciOverrideFiles(['config', 'info'])).toEqual([]);
-    });
-  });
-
-  describe('packageLink', () => {
-    const info: MrPackageInfo = {
-      pkgname: 'foo',
-      ciFiles: [],
-      pkgbuildSource: 'aur',
-      manageAur: false,
-      rebuildTriggers: [],
-      nvchecker: false,
-    };
-
-    it('links to the AUR page for aur-sourced packages', () => {
-      expect(packageLink(info)).toEqual({
-        label: 'AUR',
-        url: 'https://aur.archlinux.org/packages/foo',
-        tooltip: 'Open the AUR page for foo',
-      });
-    });
-
-    it('links to the gitlab folder for custom or git-URL sources', () => {
-      const custom = { ...info, pkgbuildSource: 'custom' };
-      const gitUrl = { ...info, pkgbuildSource: 'https://github.com/x/y.git' };
-      expect(packageLink(custom).label).toBe('Custom');
-      expect(packageLink(custom).url).toContain('chaotic-aur/pkgbuilds/-/tree/main/foo');
-      expect(packageLink(gitUrl).label).toBe('Custom');
-      expect(packageLink(gitUrl).tooltip).toContain('https://github.com/x/y.git');
-    });
-  });
-
-  describe('ciFolderUrl', () => {
-    it('builds a link to the package .CI folder', () => {
-      expect(
-        ciFolderUrl({
-          pkgname: 'foo',
-          ciFiles: [],
-          pkgbuildSource: 'aur',
-          manageAur: false,
-          rebuildTriggers: [],
-          nvchecker: false,
-        }),
-      ).toBe('https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/foo/.CI');
     });
   });
 

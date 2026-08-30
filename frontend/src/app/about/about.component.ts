@@ -2,7 +2,6 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { TeamList } from '@chaotic-next/shared-lib';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from '@openng/optimus-ui/accordion';
@@ -10,7 +9,7 @@ import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Card } from '@openng/optimus-ui/card';
 import { Panel } from '@openng/optimus-ui/panel';
 import { Ripple } from '@openng/optimus-ui/ripple';
-import { updateSeoTags } from '../functions';
+import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
@@ -32,7 +31,6 @@ import { TitleComponent } from '../title/title.component';
   styleUrl: './about.component.css',
 })
 export class AboutComponent implements OnInit {
-  private readonly meta = inject(Meta);
   private readonly observer = inject(BreakpointObserver);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -113,6 +111,12 @@ export class AboutComponent implements OnInit {
       member.avatarUrl = `/assets/avatars/${member.github}.webp`;
     }
 
+    setPageSeo(
+      'About us · Chaotic-AUR',
+      'Learn more about the Chaotic-AUR team and project',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
+    );
+
     this.observer
       .observe(['(min-width: 768px)'])
       .pipe(takeUntilDestroyed())
@@ -122,14 +126,6 @@ export class AboutComponent implements OnInit {
   }
 
   ngOnInit() {
-    updateSeoTags(this.meta, {
-      title: 'About us · Chaotic-AUR',
-      description: 'Learn more about the Chaotic-AUR team and project',
-      keywords:
-        'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
-      url: this.router.url,
-    });
-
     this.route.fragment
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((fragment) => this.scrollToFragment(fragment));

@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -8,7 +9,6 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
-import { LocaleDatePipe } from '../../pipes/locale-date.pipe';
 import {
   createAdminPagination,
   type StatefulTableRef,
@@ -50,7 +50,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 
 @Component({
   selector: 'chaotic-admin-package-bumps-page',
-  imports: [LocaleDatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule, RouterLink],
+  imports: [DatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule, RouterLink],
   template: `
     <div class="table-container">
       <p-table
@@ -155,7 +155,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               }
             </td>
             <td class="text-ctp-subtext">{{ detailsText(bump) }}</td>
-            <td>{{ bump.timestamp | localeDate }}</td>
+            <td>{{ bump.timestamp | date: 'short' }}</td>
           </tr>
         </ng-template>
       </p-table>

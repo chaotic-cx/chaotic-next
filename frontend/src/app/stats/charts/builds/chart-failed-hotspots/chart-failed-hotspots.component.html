@@ -1,15 +1,6 @@
-<div class="card relative flex h-[20rem] sm:h-[18rem] justify-center">
-  @if (hasData()) {
-    <p-chart
-      class="w-full h-full"
-      [data]="chartConfig()!.data"
-      [options]="chartConfig()!.options"
-      [responsive]="true"
-      type="line"
-    />
-  } @else if (loading()) {
-    <div class="absolute inset-0 flex items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
-    </div>
-  }
-</div>
+<chaotic-chart-card
+  [data]="chartConfig()!.data"
+  [options]="chartConfig()!.options"
+  [hasData]="chart.hasData()"
+  [loading]="chart.loading()"
+/>

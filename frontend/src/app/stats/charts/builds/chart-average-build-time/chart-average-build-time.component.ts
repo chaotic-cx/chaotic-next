@@ -1,12 +1,11 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { BuildStatus, isBuildStatus, STATUS_DISPLAY_NAMES } from '@chaotic-next/shared-lib';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { AppService } from '../../../../app.service';
-import { resourceValue, shuffleArray } from '../../../../functions';
+import { shuffleArray } from '../../../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
 
 interface AverageBuildTimeRow {
   status: BuildStatus;
@@ -15,7 +14,7 @@ interface AverageBuildTimeRow {
 
 @Component({
   selector: 'chaotic-chart-average-build-time',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-average-build-time.component.html',
   styleUrl: './chart-average-build-time.component.css',
 })
@@ -23,16 +22,13 @@ export class ChartAverageBuildTimeComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
 
-  private readonly resource = httpResource<{ average_build_time: string; status: string }[]>(() =>
+  readonly chart = chartResource<{ average_build_time: string; status: string }[]>(() =>
     this.appService.getAverageBuildTimeResourceRequest(this.statsService.timeRangeDays() ?? undefined),
   );
 
-  readonly loading = this.resource.isLoading;
-
-  readonly hasData = computed(() => this.resource.hasValue());
-
   private readonly rows = computed<AverageBuildTimeRow[]>(() =>
-    (resourceValue(this.resource) ?? [])
+    this.chart
+      .data()
       .map((item): AverageBuildTimeRow | null => {
         const status = Number(item.status);
         const averageBuildTime = Number(item.average_build_time);

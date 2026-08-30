@@ -1,13 +1,11 @@
-import { DatePipe } from '@angular/common';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import type { PackageResourceDayRow } from '@chaotic-next/shared-lib';
-import { UIChart } from '@openng/optimus-ui/chart';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { parseCount, resourceValue } from '../../../../functions';
+import { parseCount } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
-import { type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { ChartCardComponent } from '../../chart-card/chart-card.component';
+import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roundToTenth } from '../../chart-config';
 import { RESOURCE_METRIC_ORDER, RESOURCE_METRICS, type ResourceMetricKey } from '../../chart-resource-metrics';
 
 type ResourceDayValueKey = Exclude<keyof PackageResourceDayRow, 'day' | 'samples'>;
@@ -35,19 +33,17 @@ export interface PackageResourceChart {
 
 @Component({
   selector: 'chaotic-chart-package-resource-stats',
-  imports: [UIChart],
+  imports: [ChartCardComponent],
   templateUrl: './chart-package-resource-stats.component.html',
   styleUrl: './chart-package-resource-stats.component.css',
-  providers: [DatePipe],
 })
 export class ChartPackageResourceStatsComponent {
   private readonly appService = inject(AppService);
-  private readonly datePipe = inject(DatePipe);
   private readonly statsService = inject(StatsService);
 
   readonly packageName = input.required<string>();
 
-  private readonly resource = httpResource<PackageResourceDayRow[]>(() => {
+  readonly chart = chartResource<PackageResourceDayRow[]>(() => {
     const name = this.packageName();
     if (!name) return undefined;
     return this.appService.getPackageResourceStatsResourceRequest(
@@ -56,13 +52,11 @@ export class ChartPackageResourceStatsComponent {
     );
   });
 
-  readonly loading = this.resource.isLoading;
-
   /** One chart per metric; empty until the package has sampled builds, so
    * nothing renders without data. */
   protected readonly charts = computed<PackageResourceChart[]>(() => {
-    const rows = resourceValue(this.resource);
-    if (!rows || rows.length === 0) return [];
+    const rows = this.chart.data();
+    if (rows.length === 0) return [];
     return RESOURCE_METRIC_ORDER.map((key) => ({
       key,
       config: this.buildChartConfig(key, rows),
@@ -71,7 +65,7 @@ export class ChartPackageResourceStatsComponent {
 
   private buildChartConfig(metricKey: ResourceMetricKey, rows: PackageResourceDayRow[]): ChartConfig<'line'> {
     const sorted = [...rows].sort((a, b) => a.day.localeCompare(b.day));
-    const labels = sorted.map((row) => this.datePipe.transform(row.day, 'shortDate') || row.day);
+    const labels = sorted.map((row) => formatDay(row.day));
     const metric = RESOURCE_METRICS[metricKey];
 
     return {
@@ -88,8 +82,4 @@ export class ChartPackageResourceStatsComponent {
       options: mochaAxisChartOptions<'line'>(),
     };
   }
-}
-
-function roundToTenth(value: number): number {
-  return Math.round(value * 10) / 10;
 }

@@ -15,6 +15,8 @@ export interface ResilientSseOptions {
   namedEvents?: readonly string[];
   onNamedEvent?: (eventType: string, data: string) => void;
   onOpen?: () => void;
+  /** Fired on every error dispatch, before reconnect/park handling. */
+  onError?: () => void;
   /** Fired when reconnect attempts are exhausted while the tab is visible. */
   onErrorExhausted?: () => void;
   maxAttempts?: number;
@@ -47,6 +49,11 @@ export class ResilientSseStream {
     document.addEventListener('visibilitychange', this.onVisibilityChange);
   }
 
+  /** True while an EventSource exists (open or reconnecting), false when parked or closed. */
+  get isOpen(): boolean {
+    return this.source !== undefined;
+  }
+
   open(): void {
     if (this.closed) return;
     this.disconnect();
@@ -72,6 +79,7 @@ export class ResilientSseStream {
     }
 
     source.onerror = () => {
+      this.options.onError?.();
       // Backgrounded tabs get their connections dropped by the browser; park
       // the stream so the visibility handler re-opens it once focused again.
       if (document.visibilityState !== 'visible') {

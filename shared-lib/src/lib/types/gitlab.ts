@@ -21,13 +21,12 @@ export const gitlabJobSchema = z.object({
 });
 export type GitlabJob = z.infer<typeof gitlabJobSchema>;
 
-export const gitlabLogChunkSchema = z.object({
-  offset: z.number(),
-  text: z.string(),
-  complete: z.boolean(),
-  status: z.string(),
-});
-export type GitlabLogChunk = z.infer<typeof gitlabLogChunkSchema>;
+export interface GitlabLogChunk {
+  offset: number;
+  text: string;
+  complete: boolean;
+  status: string;
+}
 
 export const mrActionSchema = z.object({
   id: z.number().describe('Record ID'),
@@ -91,18 +90,6 @@ export const PIPELINE_PKG_BASE_REGEX = /^[\w@.+-]+$/;
  * Inputs of the chaotic-aur pipeline, mirroring its `spec:inputs` section.
  * Which inputs are required depends on the chosen operation.
  */
-export const pipelineTriggerInputsSchema = z.object({
-  operation: z.enum(PipelineOperation),
-  ref: z.string().optional(),
-  packages: z.string().optional(),
-  trigger: z.string().optional(),
-  add_packages: z.string().optional(),
-  request_origin: z.string().optional(),
-  request_reason: z.string().optional(),
-  custom_request_reason: z.string().optional(),
-});
-export type PipelineTriggerInputs = z.infer<typeof pipelineTriggerInputsSchema>;
-
 export const pipelineTriggerResultSchema = z.object({
   pipelineId: z.number().describe('GitLab pipeline ID'),
   webUrl: z.string().describe('URL to the pipeline page in GitLab'),

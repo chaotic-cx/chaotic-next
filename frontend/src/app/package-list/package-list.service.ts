@@ -2,6 +2,8 @@ import { httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { isPackageSortField, Package, type PackageSortField, Paginated, Repo } from '@chaotic-next/shared-lib';
+import { APP_CONFIG } from '../../environments/app-config.token';
+import { type EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
 import { resourceSignal, resourceValue } from '../functions';
 import { createLazyTablePagination } from '../table-pagination';
@@ -10,6 +12,7 @@ const DEFAULT_SORT_FIELD: PackageSortField = 'pkgname';
 
 @Service()
 export class PackageListService {
+  private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly appService = inject(AppService);
   private readonly route = inject(ActivatedRoute);
 
@@ -25,7 +28,7 @@ export class PackageListService {
   readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
 
   private readonly reposResource = httpResource<Repo[]>(() =>
-    this.appService.getBackendUrl() ? `${this.appService.getBackendUrl()}/builder/repos` : undefined,
+    this.appConfig.backendUrl ? `${this.appConfig.backendUrl}/builder/repos` : undefined,
   );
   readonly repos = resourceSignal(this.reposResource);
 
