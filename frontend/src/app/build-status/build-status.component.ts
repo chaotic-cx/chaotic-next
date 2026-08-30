@@ -46,6 +46,11 @@ export class BuildStatusComponent implements OnInit {
   readonly isMobile = isMobileSignal();
 
   constructor() {
+    setPageSeo(
+      'Build status',
+      'Current build status and queue information for Chaotic-AUR',
+      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
+    );
     effect(() => {
       if (this.buildStatusService.initialLoaded()) {
         const el = this.contentEl()?.nativeElement;
@@ -98,11 +103,6 @@ export class BuildStatusComponent implements OnInit {
   }
 
   ngOnInit() {
-    setPageSeo(
-      'Build status',
-      'Current build status and queue information for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
-    );
     this.buildStatusService.beginNavigation();
     void this.updateAll();
   }

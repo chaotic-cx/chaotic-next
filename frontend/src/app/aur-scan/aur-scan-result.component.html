@@ -70,7 +70,7 @@
           [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
           (click)="scrollToFinding(finding)"
           (keydown.enter)="scrollToFinding(finding)"
-          animate.enter="finding-item-enter"
+          animate.enter="ctp-fade-enter"
           role="button"
           tabindex="0"
         >
@@ -102,7 +102,7 @@
                 <div
                   class="flex basis-full flex-col gap-3 rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md sm:basis-[calc(50%-0.375rem)] lg:basis-[calc(33.333%-0.5rem)]"
                   [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
-                  animate.enter="finding-item-enter"
+                  animate.enter="ctp-fade-enter"
                 >
                   <div class="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2">
                     <span class="justify-self-start">
@@ -168,7 +168,7 @@
             <div
               class="flex flex-col gap-y-1 text-left sm:text-center"
               [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
-              animate.enter="finding-item-enter"
+              animate.enter="ctp-fade-enter"
             >
               <div class="flex min-w-0 items-center gap-2">
                 <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />

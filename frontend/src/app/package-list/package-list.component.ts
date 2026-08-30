@@ -125,7 +125,6 @@ export class PackageListComponent {
     void this.router.navigate([], {
       queryParams: { search: null, repo: null },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
     this.cdr.markForCheck();
   }
@@ -137,7 +136,6 @@ export class PackageListComponent {
     void this.router.navigate([], {
       queryParams: { search: query || null },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 
@@ -149,7 +147,6 @@ export class PackageListComponent {
     void this.router.navigate([], {
       queryParams: { repo: repoName },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 

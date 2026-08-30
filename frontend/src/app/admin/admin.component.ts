@@ -36,7 +36,6 @@ export class AdminComponent {
     if (typeof value === 'string' && isAdminTab(value)) {
       void this.router.navigate([value], {
         relativeTo: this.route,
-        info: { disableViewTransition: true },
       });
     }
   }

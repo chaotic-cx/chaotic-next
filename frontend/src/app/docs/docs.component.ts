@@ -64,7 +64,6 @@ export class DocsComponent implements OnInit {
     void this.router.navigate([], {
       relativeTo: this.route,
       fragment: id,
-      info: { disableViewTransition: true },
     });
   }
 

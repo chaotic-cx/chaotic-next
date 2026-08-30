@@ -7,7 +7,7 @@ import { SearchPackageComponent } from '../../search-package/search-package.comp
   imports: [Card, SearchPackageComponent],
   styleUrl: './stats-chart-page.css',
   template: `
-    <p-card [style]="{ overflow: 'hidden', height: 'auto' }">
+    <p-card [style]="{ overflow: 'hidden', height: 'auto' }" animate.enter="ctp-scale-enter">
       <chaotic-search-package [search]="search()" />
     </p-card>
   `,

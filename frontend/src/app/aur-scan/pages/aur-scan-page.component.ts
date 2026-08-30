@@ -117,7 +117,6 @@ export class AurScanPageComponent {
       queryParams: { search: pkg },
       queryParamsHandling: 'merge',
       replaceUrl: true,
-      info: { disableViewTransition: true },
     });
   }
 
@@ -130,7 +129,6 @@ export class AurScanPageComponent {
         queryParams: { search: null },
         queryParamsHandling: 'merge',
         replaceUrl: true,
-        info: { disableViewTransition: true },
       });
     }
   }

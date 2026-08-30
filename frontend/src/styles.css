@@ -386,6 +386,20 @@ body > app-root > chaotic-footer > div > p-card > div {
 .p-tab {
   margin-left: auto !important;
   margin-right: auto !important;
+  /* Fallback while theme tokens load, so an unmounted-style button does not
+     flash white text (color-scheme: dark unstyled button renders white). */
+  color: var(--ctp-subtext1);
+  background: transparent;
+  /* Take the label color immediately instead of animating from an initial
+     light value on remount (kills the white dip in the tab titles). */
+  transition: none !important;
+}
+
+.p-select {
+  /* Same white-dip fix as .p-tab above: take the themed background and
+     label color immediately instead of animating from a light value on
+     page enter (white box flash on the select). */
+  transition: none !important;
 }
 
 .p-tablist,
@@ -474,40 +488,6 @@ body > app-root > chaotic-footer > div > p-card > div {
 
 .p-autocomplete-option {
   background: var(--ctp-mocha-base);
-}
-
-body.is-transitioning .router-container {
-  view-transition-name: main-content;
-}
-
-@supports (view-transition-name: main-content) {
-  ::view-transition-old(main-content) {
-    animation: 150ms cubic-bezier(0.4, 0, 1, 1) both fade-out;
-  }
-
-  ::view-transition-new(main-content) {
-    animation: 250ms cubic-bezier(0, 0, 0.2, 1) both fade-in;
-  }
-
-  @keyframes fade-out {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 }
 
 .chaotic-lazy-viewport:not(:has(*)) {
@@ -609,17 +589,32 @@ body.is-transitioning .router-container {
   animation-delay: calc(min(var(--stagger, 0), 8) * 80ms);
 }
 
-@keyframes content-fade {
+@keyframes ctp-scale-enter {
   from {
     opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ctp-scale-enter {
+  animation: ctp-scale-enter 0.3s ease-out;
+}
+
+@keyframes ctp-fade-enter {
+  from {
+    opacity: 0.3;
   }
   to {
     opacity: 1;
   }
 }
 
-.content-fade {
-  animation: content-fade 0.6s ease-out;
+.ctp-fade-enter {
+  animation: ctp-fade-enter 0.15s ease-out;
 }
 
 @keyframes finding-item-enter {

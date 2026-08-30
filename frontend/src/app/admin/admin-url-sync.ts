@@ -72,7 +72,6 @@ export function patchQueryParams(router: Router, route: ActivatedRoute, patch: Q
     relativeTo: route,
     queryParams: patch,
     queryParamsHandling: 'merge',
-    info: { disableViewTransition: true },
   });
 }
 

@@ -162,7 +162,6 @@ export class DeployLogComponent {
     void this.router.navigate([], {
       queryParams: { search: null, repo: null, builder: null, status: null },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
     this.cdr.markForCheck();
   }
@@ -172,7 +171,6 @@ export class DeployLogComponent {
     void this.router.navigate([], {
       queryParams: { builder: value ?? null },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 
@@ -181,7 +179,6 @@ export class DeployLogComponent {
     void this.router.navigate([], {
       queryParams: { repo: value ?? null },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 
@@ -190,7 +187,6 @@ export class DeployLogComponent {
     void this.router.navigate([], {
       queryParams: { status: value === null ? null : STATUS_LABELS[value] },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 
@@ -201,7 +197,6 @@ export class DeployLogComponent {
     void this.router.navigate([], {
       queryParams: { search: query || null },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
     this.cdr.markForCheck();
   }

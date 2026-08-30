@@ -263,7 +263,6 @@ export class SearchPackageComponent {
       queryParams: { search: query },
       queryParamsHandling: 'merge',
       replaceUrl: true,
-      info: { disableViewTransition: true },
     });
   }
 
@@ -274,7 +273,6 @@ export class SearchPackageComponent {
       queryParams: { search: null },
       queryParamsHandling: 'merge',
       replaceUrl: true,
-      info: { disableViewTransition: true },
     });
   }
 

@@ -89,14 +89,12 @@ export class LogViewerComponent implements OnDestroy {
         relativeTo: this.route,
         queryParams: { line: null },
         queryParamsHandling: 'merge',
-        info: { disableViewTransition: true },
       });
     }
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { job: job.id },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
     this.openStream(job.id);
   }
@@ -201,7 +199,6 @@ export class LogViewerComponent implements OnDestroy {
       relativeTo: this.route,
       queryParams: { line },
       queryParamsHandling: 'merge',
-      info: { disableViewTransition: true },
     });
   }
 }

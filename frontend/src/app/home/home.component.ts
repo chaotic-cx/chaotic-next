@@ -92,7 +92,6 @@ export class HomeComponent {
   searchPackages(query: string): void {
     void this.router.navigate(['/stats/search'], {
       queryParams: { search: query || null },
-      info: { disableViewTransition: true },
     });
   }
 
