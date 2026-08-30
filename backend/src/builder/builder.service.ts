@@ -148,6 +148,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
           gitlabPipelineService: this.gitlabPipelineService,
           buildClassSync: this.buildClassSyncService,
           buildFailureNotifier: this.buildFailureNotifierService,
+          logger: this.pino,
         }),
       );
       await this.broker.start();

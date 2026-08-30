@@ -60,6 +60,7 @@ const observe = observeConfig();
                   translateTime: 'SYS:standard',
                   ignore: 'pid,hostname',
                   singleLine: true,
+                  errorLikeObjectKeys: [],
                 },
               },
             }),

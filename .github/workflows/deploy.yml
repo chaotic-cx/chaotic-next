@@ -32,6 +32,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const POLL_INTERVAL_MS = 10000;
+            const MAX_POLLS = 90;
+            const GRACE_POLLS_WITHOUT_CI = 18;
             const { owner, repo } = context.repo;
             const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
             const tagName = context.ref.replace('refs/tags/', '');
@@ -43,7 +46,7 @@ jobs:
               commitSha = tag.data.object.sha;
             }
 
-            for (let i = 0; i < 90; i++) {
+            for (let i = 0; i < MAX_POLLS; i++) {
               const { data } = await github.rest.actions.listWorkflowRunsForRepo({
                 owner,
                 repo,
@@ -55,11 +58,18 @@ jobs:
                 console.log('CI passed for this commit.');
                 return;
               }
-              if (ci.some((r) => ['failure', 'cancelled'].includes(r.conclusion))) {
+              if (ci.some((r) => r.conclusion === 'failure')) {
                 core.setFailed('CI failed for this commit.');
                 return;
               }
-              await sleep(10000);
+              if (ci.length === 0 && i >= GRACE_POLLS_WITHOUT_CI) {
+                core.setFailed(
+                  'No CI run exists for this commit. Tag a commit that CI covers ' +
+                    '(pushes to main or PRs); the tagged commit was likely rebased when merged.',
+                );
+                return;
+              }
+              await sleep(POLL_INTERVAL_MS);
             }
             core.setFailed('Timed out waiting for CI to pass.');
       - name: Checkout repository
