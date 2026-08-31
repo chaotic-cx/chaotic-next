@@ -42,7 +42,7 @@ async function bootstrap(): Promise<void> {
         styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
         imgSrc: ["'self'", 'data:'],
         fontSrc: ["'self'", 'https://fonts.scalar.com'],
-        connectSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+        connectSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://backend.chaotic.cx'],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
@@ -53,7 +53,8 @@ async function bootstrap(): Promise<void> {
 
   const corsOptions = {
     origin: CAUR_ALLOWED_CORS,
-    methods: 'GET,POST,PATCH,DELETE',
+    methods: 'GET,POST,PATCH,DELETE,OPTIONS',
+    credentials: true,
   };
   app.enableCors(corsOptions);
 
