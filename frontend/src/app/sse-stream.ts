@@ -57,7 +57,7 @@ export class ResilientSseStream {
   open(): void {
     if (this.closed) return;
     this.disconnect();
-    const source = new EventSource(this.options.url());
+    const source = new EventSource(this.options.url(), { withCredentials: true });
     this.source = source;
 
     source.onopen = () => {

@@ -40,5 +40,5 @@
       }
     }
   ],
-  "navigationUrls": ["/**", "!/backend/**", "!/**/__*", "!/**/sse", "!/aizawa/**", "!/memorials/**"]
+  "navigationUrls": ["/**", "!/**/__*", "!/**/sse", "!/aizawa/**", "!/memorials/**"]
 }

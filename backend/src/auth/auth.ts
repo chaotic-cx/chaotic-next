@@ -187,7 +187,11 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: process.env.NODE_ENV === 'production',
     defaultCookieAttributes: {
-      sameSite: 'lax',
+      sameSite: 'none',
+    },
+    crossSubDomainCookies: {
+      enabled: process.env.NODE_ENV === 'production',
+      domain: process.env.AUTH_COOKIE_DOMAIN ?? '.chaotic.cx',
     },
     ipAddress: {
       ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for', 'x-real-ip'],
