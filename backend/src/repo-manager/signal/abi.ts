@@ -54,28 +54,6 @@ export function findVtableDrifts(
   return drifts;
 }
 
-export function findSymbolBreaks(
-  consumerImports: string[],
-  oldExports: Record<string, string[]>,
-  newExports: Record<string, string[]>,
-): { symbol: string; soname: string }[] {
-  const breaks: { symbol: string; soname: string }[] = [];
-  const consumerImportSet = new Set(consumerImports);
-
-  for (const [soname, oldSymbols] of Object.entries(oldExports)) {
-    // The library the consumer imports from must still exist (else the ABI
-    // soname channel handles it). Only the exported set may have changed.
-    if (!(soname in newExports)) continue;
-    const newSet = new Set(newExports[soname]);
-    for (const symbol of oldSymbols) {
-      if (consumerImportSet.has(symbol) && !newSet.has(symbol)) {
-        breaks.push({ symbol, soname });
-      }
-    }
-  }
-  return breaks;
-}
-
 export function formatSymbolBreak(breakEntry: SymbolBreak): string {
   return `${breakEntry.pkgname}: ${breakEntry.soname}: symbol ${breakEntry.symbol} missing`;
 }

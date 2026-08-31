@@ -66,7 +66,7 @@ export const PERSISTENCE_RULES: Rule[] = [
     severity: 'info',
     runsOn: MR_DIFF_ONLY,
     description:
-      'Modifies an existing .install or .hook file. These scriptlets run as root on user machines and should be reviewed line by line.',
+      'Modifies an existing .install or .hook file. These scriptlets run as root on user machines. Examine each line.',
     check(change) {
       if (change.new_file || change.deleted_file || !INSTALL_SCRIPT_PATTERN.test(change.new_path)) return null;
       const firstAdded = addedLines(change)[0];
@@ -79,7 +79,7 @@ export const PERSISTENCE_RULES: Rule[] = [
     severity: 'critical',
     runsOn: MR_DIFF_ONLY,
     description:
-      'Adds a binary blob to the repository. Binaries cannot be reviewed as text and can hide arbitrary payloads; packages should build from source or download sources via source=() checksums. Committed archives and images are reported as a warning.',
+      'Adds a binary blob to the repository. Binaries cannot be reviewed as text and can hide arbitrary payloads. Build packages from source, or download sources with source=() and checksums. Committed archives and images are reported as a warning.',
     check(change) {
       if (change.deleted_file) return null;
       const binary = hasBinaryContent(change) || (change.new_file && hasBinaryExtension(change.new_path));
@@ -109,7 +109,7 @@ export const PERSISTENCE_RULES: Rule[] = [
     name: 'Systemctl service activation',
     severity: 'critical',
     description:
-      'Enables or starts systemd services from a script, a common persistence mechanism; a mere daemon-reload is reported separately as info.',
+      'Enables or starts systemd services from a script. Attackers use services for persistence. A daemon-reload alone is reported separately as info.',
     pattern: /\bsystemctl\b[^\n]*\b(?:enable|start)\b/,
     scopes: ['code'],
     skipQuoted: true,
@@ -149,7 +149,8 @@ export const PERSISTENCE_RULES: Rule[] = [
     id: 'CAUR-CRON-MODIFY',
     name: 'Crontab manipulation',
     severity: 'critical',
-    description: 'Installs, edits or removes crontab entries, granting recurring execution outside package management.',
+    description:
+      'Installs, edits or removes crontab entries. Crontab entries run commands again and again without the package manager.',
     // Listing (crontab -l) is reconnaissance at most and stays unflagged.
     pattern: /\bcrontab\b(?![^|;&\n]*\s-l\b)/,
     scopes: ['code'],

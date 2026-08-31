@@ -19,7 +19,6 @@ import { EnvironmentModel } from '../../environments/environment.model';
 import { castTo, setPageSeo } from '../functions';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
-import { StripPrefixPipe } from '../pipes/strip-prefix.pipe';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
 import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
 import { TitleComponent } from '../title/title.component';
@@ -39,7 +38,6 @@ import { PackageListService } from './package-list.service';
     TagModule,
     Button,
     FormField,
-    StripPrefixPipe,
     RelativeTimePipe,
     BuildClassPipe,
     TitleComponent,
@@ -61,6 +59,11 @@ export class PackageListComponent {
   protected readonly columnVisibility = inject(ColumnVisibilityService);
 
   protected readonly formatPkgrel = formatPkgrel;
+
+  protected stripPrefix(value?: string): string {
+    if (!value) return '';
+    return value.replace(/(^.*:\/\/|\/$)/g, '');
+  }
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
   private readonly pkgTable = viewChild<Table>('pkgTable');

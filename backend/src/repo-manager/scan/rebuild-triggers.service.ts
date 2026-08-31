@@ -28,6 +28,7 @@ import {
 } from '../signal';
 import { latestAnalysesByPackage } from './latest-analyses';
 import { loadRuntimeVersions } from './runtime-versions';
+import { yieldToEventLoop } from '../../utils/functions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PinoLogger } from 'nestjs-pino';
@@ -69,6 +70,9 @@ const ABI_BREAK_DETAILS_LIMIT = 1;
 
 /** How many pkgIds one `IN (...)` analysis query may contain, to bound result-set size. */
 const ANALYSIS_QUERY_BATCH_SIZE = 500;
+
+/** Yield to the event loop every N consumer packages; each ABI check is pure CPU. */
+const YIELD_EVERY = 10;
 
 export function summarizeDetails(details: string[]): string[] {
   if (details.length <= ABI_BREAK_DETAILS_LIMIT) return details;
@@ -139,7 +143,8 @@ export class RebuildTriggerService {
       ? await this.loadLatestChaoticAnalyses(activePkgIds)
       : new Map<number, PackageElfAnalysis>();
 
-    for (const pkgbaseDir of pkgbaseDirs) {
+    for (const [dirIndex, pkgbaseDir] of pkgbaseDirs.entries()) {
+      if (dirIndex % YIELD_EVERY === 0) await yieldToEventLoop();
       const pkgConfig: PackageConfig = await this.bumpService.readPackageConfig(reader, { pkgbaseDir, repo });
       let foundTrigger = false;
 

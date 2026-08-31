@@ -166,19 +166,7 @@
           @if (columnVisibility.isVisible('deploy-log-table', 'outcome')) {
             <td>
               <span class="inline-flex items-center gap-1">
-                <i
-                  class="pi"
-                  [ngClass]="{
-                    'pi-check-circle text-ctp-green': build.statusText === 'success',
-                    'pi-check text-ctp-sapphire': build.statusText === 'already-built',
-                    'pi-angle-double-right text-ctp-text': build.statusText === 'skipped',
-                    'pi-exclamation-circle text-ctp-red': build.statusText === 'failure',
-                    'pi-hourglass text-ctp-maroon': build.statusText === 'timeout',
-                    'pi-ban text-ctp-peach': build.statusText === 'canceled',
-                    'pi-replay text-ctp-yellow': build.statusText === 'canceled-requeue',
-                    'pi-exclamation-triangle text-ctp-blue': build.statusText === 'software-failure',
-                  }"
-                ></i>
+                <i [class]="`pi ${statusIconClass(build.status)}`"></i>
                 <span>{{ build.statusText }}</span>
               </span>
             </td>
@@ -217,7 +205,7 @@
           }
           @if (columnVisibility.isVisible('deploy-log-table', 'duration')) {
             <td>
-              <span class="ml-1 align-middle">{{ build.timeToEnd | duration }}</span>
+              <span class="ml-1 align-middle">{{ buildDuration(build.timeToEnd) }}</span>
             </td>
           }
           @if (columnVisibility.isVisible('deploy-log-table', 'peakMemory')) {
@@ -227,7 +215,7 @@
           }
           @if (columnVisibility.isVisible('deploy-log-table', 'cpuTime')) {
             <td>
-              <span class="ml-1 align-middle">{{ build.resourceStats?.cpuTimeNs | cpuTime }}</span>
+              <span class="ml-1 align-middle">{{ buildCpuTime(build.resourceStats?.cpuTimeNs) }}</span>
             </td>
           }
           @if (columnVisibility.isVisible('deploy-log-table', 'diskIo')) {

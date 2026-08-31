@@ -85,7 +85,7 @@ export const CAMPAIGN_RULES: Rule[] = [
     id: 'CAUR-NODE-CHILD-PROCESS',
     name: 'Node child_process usage',
     severity: 'critical',
-    description: 'Inline JavaScript spawning processes during build or installation.',
+    description: 'Inline JavaScript starts processes during build or installation.',
     pattern: /\bchild_process\b|\bexecSync\(|\bspawnSync\(/,
     scopes: ['pkgbuild', 'install'],
   }),

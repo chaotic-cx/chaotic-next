@@ -13,37 +13,18 @@ import {
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { type EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
+import { BUILD_STATUS_ICONS } from '../status-icons';
 import { isLogPurged, resourceValue } from '../functions';
 import { createLazyTablePagination } from '../table-pagination';
 
 export const REPO_OPTIONS = ['chaotic-aur', 'garuda'];
 
-const STATUS_OPTIONS: { label: string; value: BuildStatus; icon: string }[] = [
-  { label: STATUS_LABELS[BuildStatus.SUCCESS], value: BuildStatus.SUCCESS, icon: 'pi-check-circle text-ctp-green' },
-  {
-    label: STATUS_LABELS[BuildStatus.ALREADY_BUILT],
-    value: BuildStatus.ALREADY_BUILT,
-    icon: 'pi-check text-ctp-sapphire',
+const STATUS_OPTIONS: { label: string; value: BuildStatus; icon: string }[] = Object.entries(BUILD_STATUS_ICONS).map(
+  ([key, icon]) => {
+    const value = Number(key) as BuildStatus;
+    return { label: STATUS_LABELS[value], value, icon };
   },
-  {
-    label: STATUS_LABELS[BuildStatus.SKIPPED],
-    value: BuildStatus.SKIPPED,
-    icon: 'pi-angle-double-right text-ctp-text',
-  },
-  { label: STATUS_LABELS[BuildStatus.FAILED], value: BuildStatus.FAILED, icon: 'pi-exclamation-circle text-ctp-red' },
-  { label: STATUS_LABELS[BuildStatus.TIMED_OUT], value: BuildStatus.TIMED_OUT, icon: 'pi-hourglass text-ctp-maroon' },
-  { label: STATUS_LABELS[BuildStatus.CANCELED], value: BuildStatus.CANCELED, icon: 'pi-ban text-ctp-peach' },
-  {
-    label: STATUS_LABELS[BuildStatus.CANCELED_REQUEUE],
-    value: BuildStatus.CANCELED_REQUEUE,
-    icon: 'pi-replay text-ctp-yellow',
-  },
-  {
-    label: STATUS_LABELS[BuildStatus.SOFTWARE_FAILURE],
-    value: BuildStatus.SOFTWARE_FAILURE,
-    icon: 'pi-exclamation-triangle text-ctp-blue',
-  },
-];
+);
 
 const DEFAULT_SORT_FIELD: BuildSortField = 'timestamp';
 

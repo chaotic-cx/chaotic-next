@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { FlipListDirective } from '../animations/flip-list.directive';
 import { packageLogRouteFromUrl } from '../functions';
+import { statusIconClass } from '../status-icons';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
@@ -44,6 +45,7 @@ const FAILURE_TAG_DESCRIPTIONS: Record<string, string> = {
 export class BuildStatusDeploymentsComponent {
   readonly buildStatusService = inject(BuildStatusService);
   readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
+  readonly statusIconClass = statusIconClass;
 
   private readonly page = signal(1);
 

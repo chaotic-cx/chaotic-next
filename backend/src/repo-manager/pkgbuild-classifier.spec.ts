@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSourceCompiledPackage } from './pkgbuild-classifier';
+import { classifyPkgbuild, isSourceCompiledPackage } from './pkgbuild-classifier';
 
 describe('isSourceCompiledPackage', () => {
   describe('Electron/Node.js packages', () => {
@@ -276,5 +276,97 @@ describe('isSourceCompiledPackage', () => {
     it('empty string', () => {
       expect(isSourceCompiledPackage('')).toBe(false);
     });
+  });
+});
+
+describe('classifyPkgbuild', () => {
+  it('classifies an electron app via depends', () => {
+    const pkgbuild = [
+      "pkgname='some-app'",
+      "depends=('electron34' 'gtk3')",
+      "makedepends=('nodejs' 'npm')",
+      'build() {',
+      '  npm install',
+      '}',
+    ].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['electron', 'nodejs']);
+  });
+
+  it('classifies rust with version-constrained and quoted deps', () => {
+    const pkgbuild = [
+      "pkgname='cool-tool'",
+      'makedepends=(\'rust\' "cargo>=1.80")',
+      'build() {',
+      '  cargo build --release',
+      '}',
+    ].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toContain('rust');
+    expect(classifyPkgbuild(pkgbuild)).toContain('compiled');
+  });
+
+  it('does not classify font deps as go', () => {
+    const pkgbuild = ["pkgname='misc-bundle'", "depends=('go-fonts' 'bash')"].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['shell']);
+  });
+
+  it('does not classify a makedepends-only perl toolchain as perl', () => {
+    const pkgbuild = ["pkgname='intltool-user'", "makedepends=('perl-xml-parser')", 'build() {', '  make', '}'].join(
+      '\n',
+    );
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['compiled']);
+  });
+
+  it('classifies perl via runtime dependency', () => {
+    const pkgbuild = ["pkgname='aur-helper'", "depends=('perl' 'git')"].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['perl']);
+  });
+
+  it('classifies python via module deps and build commands', () => {
+    const pkgbuild = [
+      "pkgname='py-tool'",
+      "depends=('python' 'python-pyzmq')",
+      "makedepends=('python-build' 'python-installer' 'python-wheel')",
+      'build() {',
+      '  python -m build --wheel --no-isolation',
+      '}',
+    ].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['python', 'compiled']);
+  });
+
+  it('classifies name-based kinds including variable names', () => {
+    const pkgbuild = ['_pkgbase="something"', 'pkgname="${_pkgbase}"-bin', "depends=('glibc')"].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['prebuilt']);
+  });
+
+  it('classifies dkms packages as kernel modules', () => {
+    const pkgbuild = ["pkgname='akvcam-dkms'", "depends=('dkms')"].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['kernel-module']);
+  });
+
+  it('classifies extension packages by name', () => {
+    const pkgbuild = "pkgname='gnome-shell-extension-tiling-assistant'".split('\n');
+    expect(classifyPkgbuild(pkgbuild.join('\n'))).toEqual(['extension']);
+  });
+
+  it('classifies dependency-only packages without source as meta', () => {
+    const pkgbuild = ["pkgname='keyring-bundle'", "depends=('archlinux-keyring' 'chaotic-keyring')"].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['meta']);
+  });
+
+  it('classifies a pure bash script as shell', () => {
+    const pkgbuild = [
+      "pkgname='ani-cli'",
+      "depends=('bash' 'curl')",
+      'package() {',
+      '  install -Dm755 ani-cli "$pkgdir/usr/bin/ani-cli"',
+      '}',
+    ].join('\n');
+    expect(classifyPkgbuild(pkgbuild)).toEqual(['shell']);
+  });
+
+  it('returns empty for null, undefined and empty input', () => {
+    expect(classifyPkgbuild(null)).toEqual([]);
+    expect(classifyPkgbuild(undefined)).toEqual([]);
+    expect(classifyPkgbuild('')).toEqual([]);
   });
 });

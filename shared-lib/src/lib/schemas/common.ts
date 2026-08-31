@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 /** Mirrors the backend clamp so the schema documents and enforces the real bounds. */
-export const MAX_AMOUNT = 100;
+const MAX_AMOUNT = 100;
 /** Mirrors the backend clamp so the schema documents and enforces the real bounds. */
-export const MAX_DAYS_WINDOW = 3650;
+const MAX_DAYS_WINDOW = 3650;
 /** Largest page size that list endpoints accept. */
 export const MAX_PER_PAGE = 100;
 

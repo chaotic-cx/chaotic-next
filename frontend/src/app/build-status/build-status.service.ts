@@ -47,6 +47,7 @@ interface PackageAverageRow {
 
 const MAX_VISIBLE_PIPELINES = 40;
 const ESTIMATE_TICK_MS = 30_000;
+const BUILD_CLASS_UNKNOWN = 'unknown';
 
 @Service()
 export class BuildStatusService {
@@ -94,7 +95,7 @@ export class BuildStatusService {
       name: this.shortName(pkg.name),
       rawName: pkg.name,
       repo: this.extractRepo(pkg.name),
-      build_class: pkg.build_class ?? pkg.node,
+      build_class: this.buildClassOf(pkg.build_class, pkg.node),
       node: pkg.node,
       liveLogUrl: pkg.liveLog ?? '',
     })),
@@ -112,7 +113,7 @@ export class BuildStatusService {
       name: node.name,
       rawName: node.name,
       repo: this.extractRepo(node.name),
-      build_class: node.build_class ?? node.name,
+      build_class: this.buildClassOf(node.build_class, node.name),
     })),
   );
 
@@ -283,6 +284,10 @@ export class BuildStatusService {
   private shortName(name: string): string {
     const parts = name.split('/');
     return parts.length > 2 ? parts[2] : name;
+  }
+
+  private buildClassOf(value: number | string | null, nodeName: string): number | string {
+    return value === null || value === '' || value === BUILD_CLASS_UNKNOWN ? nodeName : value;
   }
 
   private extractRepo(name: string): string {

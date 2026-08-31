@@ -15,10 +15,9 @@ import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
-import { castTo, packageLogRouteFromUrl } from '../functions';
+import { castTo, formatCpuTime, formatDuration, packageLogRouteFromUrl } from '../functions';
+import { statusIconClass } from '../status-icons';
 import { BytesPipe } from '../pipes/bytes.pipe';
-import { CpuTimePipe } from '../pipes/cpu-time.pipe';
-import { DurationPipe } from '../pipes/duration.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
 import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
@@ -35,9 +34,7 @@ import { DeployLogService } from './deploy-log.service';
     IconField,
     InputText,
     Select,
-    DurationPipe,
     BytesPipe,
-    CpuTimePipe,
     RelativeTimePipe,
     TitleComponent,
     FormsModule,
@@ -64,6 +61,15 @@ export class DeployLogComponent {
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
+
+  protected buildDuration(minutes: number | undefined): string {
+    return minutes ? formatDuration(Math.round(minutes * 60)) : 'n/a';
+  }
+
+  protected buildCpuTime(nanoseconds: number | null | undefined): string {
+    if (nanoseconds === null || nanoseconds === undefined) return 'n/a';
+    return formatCpuTime(nanoseconds);
+  }
 
   readonly search = input<string>();
 
@@ -129,6 +135,7 @@ export class DeployLogComponent {
   }
 
   readonly typed = castTo<Build>;
+  readonly statusIconClass = statusIconClass;
 
   /** Combined disk I/O of a build; null when the build was never sampled. */
   protected diskIoOf(build: Build): number | null {

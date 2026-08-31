@@ -32,8 +32,11 @@ import { RouterHitsDailyRepo1787790000000 } from '../migrations/1787790000000-Ro
 import { UniqueEntityNames1787949377345 } from '../migrations/1787949377345-UniqueEntityNames';
 import { AddBuildFailureTags1787988202747 } from '../migrations/1787988202747-AddBuildFailureTags';
 import { AddNotificationUserAndPreferences1787992018243 } from '../migrations/1787992018243-AddNotificationUserAndPreferences';
+import { AddPortableBuild1788115334522 } from '../migrations/1788115334522-AddPortableBuild';
+import { AddPortableBuildScan1788121232938 } from '../migrations/1788121232938-AddPortableBuildScan';
 import { NotificationPreference } from '../notifications/notification-preference.entity';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
+import { PortableBuild } from '../portable-builder/portable-build.entity';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { RouterHitDailyAgent } from '../router/router-hit-daily-agent.entity';
 import { RouterHitDaily } from '../router/router-hit-daily.entity';
@@ -63,6 +66,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AurMaintainerSnapshot,
     AurMaintainerInfoEntity,
     DiffScanRuleData,
+    PortableBuild,
   ],
   subscribers: [UpdateLastBuilderActive],
   migrations: [
@@ -93,6 +97,8 @@ export const dataSourceOptions: DataSourceOptions = {
     UniqueEntityNames1787949377345,
     AddBuildFailureTags1787988202747,
     AddNotificationUserAndPreferences1787992018243,
+    AddPortableBuild1788115334522,
+    AddPortableBuildScan1788121232938,
   ],
   migrationsRun: true,
   cache: true,

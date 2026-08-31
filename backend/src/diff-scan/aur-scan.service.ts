@@ -7,6 +7,7 @@ import {
   type AurRpcPackage,
   type AurRpcSearchResponse,
   type AurScanStreamChunk,
+  type DiffScanFinding,
 } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
@@ -15,6 +16,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { filter, Observable, Subject } from 'rxjs';
 import { Repository } from 'typeorm';
 import { mapWithConcurrency } from '../utils/functions';
+import { classifyPkgbuild } from '../repo-manager/pkgbuild-classifier';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
 import { commentThreatFinding, evaluateCommentThreats, parseAurComments } from './aur-comments';
@@ -22,6 +24,7 @@ import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
 import { AurResponseCache } from './aur-response-cache';
 import { DiffScanService } from './diff-scan.service';
 import { extractIndicators, type ScanIndicator } from './indicators';
+import { maskEchoHeredocs } from './rules/diff-utils';
 import { parsePkgbuild } from './pkgbuild';
 import { VirustotalService } from './virustotal.service';
 
@@ -149,15 +152,15 @@ export class AurScanService {
         changes.push(fullFileDiff(file.name, file.content));
       }
       scan.scannedFiles = changes.map((change) => change.new_path);
-      scan.findings = await this.diffScanService.scanDiffs(
-        changes,
-        undefined,
-        'full-file',
-        this.packageDependencies.bind(this),
+      scan.findings = this.dedupeFindings(
+        await this.diffScanService.scanDiffs(changes, undefined, 'full-file', this.packageDependencies.bind(this)),
       );
+      scan.pkgTypes = classifyPkgbuild(pkgbuildText.text);
       await this.appendCommentThreat(scan);
 
-      const indicators = extractIndicators(changes);
+      const indicators = extractIndicators(
+        changes.map((change) => ({ ...change, diff: maskEchoHeredocs(change.diff) })),
+      );
       scan.vtPending = indicators.length;
       const withVirusTotal = options?.withVirusTotal ?? true;
       if (withVirusTotal && this.virustotalService.enabled && indicators.length > 0) {
@@ -211,14 +214,6 @@ export class AurScanService {
     } catch (err) {
       this.pino.debug({ err, packageBase: scan.packageBase }, 'Comment check unavailable');
     }
-  }
-
-  async maintainerStatusOf(
-    packageName: string,
-  ): Promise<{ maintainers: AurMaintainerInfo[]; meta: AurPackageMeta; change: AurMaintainerChange | null } | null> {
-    const info = await this.fetchInfo(packageName);
-    if (!info?.PackageBase) return null;
-    return await this.maintainerStatus(info);
   }
 
   /** Packages missing from the AUR response are absent so callers retry them. */
@@ -504,6 +499,17 @@ export class AurScanService {
       this.pino.warn({ err, query }, 'AUR search failed');
       return [];
     }
+  }
+
+  /** Keeps the first finding per rule and file, so repeated matches collapse to one. */
+  private dedupeFindings(findings: DiffScanFinding[]): DiffScanFinding[] {
+    const seen = new Set<string>();
+    return findings.filter((finding) => {
+      const key = `${finding.ruleId}:${finding.file}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   private rememberScan(scan: AurPackageScan): void {

@@ -28,7 +28,6 @@ import {
   buildDependencyGraph,
   CHAOTIC_PKG_TYPE,
   compareArchVersions,
-  decodeOwnerKey,
   latestAnalysisByKey,
   pkgTypeOf,
   type DependencyEdge,
@@ -513,8 +512,12 @@ export class RepoManagerService implements OnModuleInit {
     const archIds: number[] = [];
     const chaoticIds: number[] = [];
     for (const key of ownerKeys) {
-      const decoded = decodeOwnerKey(key);
-      if (!decoded) continue;
+      const match = /^([ac])(\d+)$/.exec(key);
+      if (!match) continue;
+      const decoded = {
+        pkgType: match[1] === 'a' ? TriggerType.ARCH : TriggerType.CHAOTIC,
+        pkgId: Number(match[2]),
+      };
       if (decoded.pkgType === TriggerType.CHAOTIC && decoded.pkgId === selfPkgId) continue;
       if (decoded.pkgType === TriggerType.ARCH) archIds.push(decoded.pkgId);
       else chaoticIds.push(decoded.pkgId);

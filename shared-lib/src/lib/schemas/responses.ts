@@ -143,7 +143,6 @@ export const healthCheckResultSchema = z.object({
     .record(z.string(), z.object({ status: z.enum(['up', 'down']), message: z.string().optional() }))
     .describe('Details from all health indicators'),
 });
-export type HealthCheckResult = z.infer<typeof healthCheckResultSchema>;
 
 // ---- Pagination ----
 
@@ -218,7 +217,6 @@ export const pipelineSchema = z.object({
   created_at: z.string().describe('ISO 8601 creation timestamp'),
   updated_at: z.string().describe('ISO 8601 last-updated timestamp'),
 });
-export type Pipeline = z.infer<typeof pipelineSchema>;
 
 export const pipelineWithExternalStatusSchema = z.object({
   commit: z.array(externalCommitStatusLink).describe('External commit status checks'),
@@ -282,21 +280,19 @@ export const reviewStatsOverTimeSchema = z.object({
   reviews: z.number().describe('Number of reviews on this date'),
 });
 
-export const dependencyNodeSchema = z.object({
+const dependencyNodeSchema = z.object({
   pkgType: z.enum(['0', '1']).describe('Package type'),
   pkgId: z.number().describe('Package ID'),
   pkgname: z.string().describe('Package name'),
   providedSonames: z.array(z.string()).describe('Sonames this package provides'),
   neededSonames: z.array(z.string()).describe('Sonames this package links against'),
 });
-export type DependencyNode = z.infer<typeof dependencyNodeSchema>;
 
 export const dependencyEdgeSchema = z.object({
   consumer: dependencyNodeSchema.describe('The consuming package (links the soname)'),
   provider: dependencyNodeSchema.describe('The providing package (ships the soname)'),
   soname: z.string().describe('Shared object name linking consumer to provider'),
 });
-export type DependencyEdge = z.infer<typeof dependencyEdgeSchema>;
 
 export const packagesPerBuildClassSchema = z.object({
   build_class: z.string().describe('Build class'),

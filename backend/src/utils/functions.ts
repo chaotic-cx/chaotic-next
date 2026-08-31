@@ -140,6 +140,11 @@ export async function mapWithConcurrency<T, R>(
   return results;
 }
 
+/** Let pending I/O run between CPU-heavy iterations so the event loop stays responsive. */
+export function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 export function errorCode(err: unknown): string | undefined {
   if (typeof err !== 'object' || err === null || !('code' in err)) return undefined;
   const code = (err as { code: unknown }).code;

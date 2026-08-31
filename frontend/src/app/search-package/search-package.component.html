@@ -47,7 +47,7 @@
               <div
                 class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-ctp-subtext0"
               >
-                <span>{{ dataset.key | packageDetailKey }}</span>
+                <span>{{ packageDetailLabel(dataset.key) }}</span>
                 @if (dataset.key === 'url') {
                   <i class="pi pi-external-link text-ctp-mauve text-xs"></i>
                 } @else if (dataset.key === 'downloads') {

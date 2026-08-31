@@ -23,8 +23,11 @@ import { dataSourceOptions } from './data/data.source';
 import { MigrationLogger } from './data/migration-logger';
 import { GitlabModule } from './gitlab/gitlab.module';
 import { HealthModule } from './health/health.module';
+import { IssueTrackerModule } from './issue-tracker/issue-tracker.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import portableBuilderConfig from './portable-builder/portable-builder.config';
+import { PortableBuilderModule } from './portable-builder/portable-builder.module';
 import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
@@ -37,16 +40,17 @@ const observe = observeConfig();
   imports: [
     AdminModule,
     AurModule,
-    AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
+    AuthModule.forRoot({ auth, disableGlobalAuthGuard: true, bodyParser: { rawBody: true } }),
     BuilderModule,
     lruCacheModule(),
     ConfigModule.forRoot({
       envFilePath: '.env',
       isGlobal: true,
-      load: [appConfig, observeConfig],
+      load: [appConfig, observeConfig, portableBuilderConfig],
       validationSchema: envValidationSchema,
     }),
     HealthModule,
+    IssueTrackerModule,
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || 'info',
@@ -78,6 +82,7 @@ const observe = observeConfig();
     }),
     MetricsModule,
     NotificationsModule,
+    PortableBuilderModule,
     ObserveModule.forRoot({
       appKey: observe.appKey,
       appSecret: observe.appSecret,

@@ -33,6 +33,11 @@ export class ChartPackageBuildStatsComponent {
     return this.buildChartConfig(data);
   });
 
+  readonly loadingChart: ChartConfig<'line'> = {
+    data: { labels: [], datasets: [] },
+    options: mochaAxisChartOptions<'line'>(),
+  };
+
   private buildChartConfig(data: { day: string; repo: string; count: string }[]): ChartConfig<'line'> {
     const repoData: { [repo: string]: { [day: string]: number } } = {};
     const allDays = new Set<string>();

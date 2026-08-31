@@ -33,6 +33,7 @@ export async function setup(): Promise<void> {
     'BPWNRtrPfUjhwu8ST1Se2jfU0P_u5YJ0uo3xCovSkNEor1XY4ZX_HVriwh0T1_a3rvoD2oFymAxvNyUe4PthHXQ';
   process.env.CAUR_VAPID_PRIVATE = 'epJJES7PtVQ19YkI67dn6Ndf23U-rVr4Gr8mrZQeoqw';
   process.env.CAUR_GITLAB_MERGE_BOT_USER_ID = '12345';
+  process.env.GITHUB_TOKEN ??= 'e2e-github-stub-token';
   process.env.GITLAB_CLIENT_ID = 'mock-gitlab-client-id';
   process.env.GITLAB_CLIENT_SECRET = 'mock-gitlab-client-secret';
   // Fake key: specs exercise the real VirusTotal mapping and DB writes against a stubbed upstream.

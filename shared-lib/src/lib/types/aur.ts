@@ -114,6 +114,10 @@ export const aurPackageScanSchema = z.object({
   sources: z.array(z.string()).describe('PKGBUILD source URLs'),
   scannedFiles: z.array(z.string()).describe('List of scanned file paths'),
   findings: z.array(diffScanFindingSchema).describe('Static analysis findings from diff-scan rules'),
+  pkgTypes: z
+    .array(z.string())
+    .optional()
+    .describe('Package kinds from PKGBUILD heuristics, e.g. electron, nodejs, rust, python, compiled'),
   vtReports: z.array(vtIndicatorReportSchema).describe('VirusTotal indicator reports'),
   vtPending: z.number().describe('Number of pending VirusTotal lookups'),
   maintainers: z.array(aurMaintainerInfoSchema).describe('AUR maintainer information'),

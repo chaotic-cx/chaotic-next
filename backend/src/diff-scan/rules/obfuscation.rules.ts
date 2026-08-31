@@ -11,14 +11,14 @@ export const OBFUSCATION_RULES: Rule[] = [
     id: 'OBF-001',
     name: 'Base64 decoding',
     severity: 'warning',
-    description: 'Decodes base64 at runtime, which can hide what is actually executed.',
+    description: 'Decodes base64 at runtime. The decoded text can hide the commands that run.',
     pattern: /\bbase64\b[^\n]*\s(?:-d\b|--decode\b)|\bopenssl\b[^\n]*\b(?:enc|base64)\b[^\n]*\s-d\b/,
   }),
   regexRule({
     id: 'OBF-002',
     name: 'Eval of dynamic strings',
     severity: 'warning',
-    description: 'Evaluates dynamically built strings, which static review cannot follow.',
+    description: 'Evaluates dynamically built strings. Static review cannot follow these strings.',
     // `eval "depends+=(…)"` is a packaging idiom for option-dependent arrays and
     // `--eval` flags belong to interpreters, so neither counts as dynamic eval.
     pattern: /(?<![-\w])eval\b(?!\s*"?\s*(?:make|check|opt)?depends\+?=)/,
