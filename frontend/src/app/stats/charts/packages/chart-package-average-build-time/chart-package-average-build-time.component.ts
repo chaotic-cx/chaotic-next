@@ -56,4 +56,9 @@ export class ChartPackageAverageBuildTimeComponent {
       options: mochaAxisChartOptions<'line'>(),
     };
   });
+
+  readonly loadingChart: ChartConfig<'line'> = {
+    data: { labels: [], datasets: [] },
+    options: mochaAxisChartOptions<'line'>(),
+  };
 }

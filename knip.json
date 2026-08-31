@@ -10,7 +10,14 @@
     "shared-lib/src/index.ts"
   ],
   "project": ["backend/src/**/*.ts", "frontend/src/**/*.{ts,css}", "shared-lib/src/**/*.ts"],
-  "ignore": ["backend/src/test/silence-nest-logger.ts", "frontend/src/**/*.css", "frontend/src/test-setup.ts"],
+  "ignore": [
+    "backend/src/test/silence-nest-logger.ts",
+    "frontend/src/**/*.css",
+    "frontend/src/test-setup.ts",
+    "backend/src/migrations/**/*.ts",
+    "backend/src/builder/builder.entity.ts",
+    "backend/src/portable-builder/portable-builder.dto.ts"
+  ],
   "ignoreUnresolved": ["src/test/silence-nest-logger.ts", "src/test-setup.ts"],
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": [
@@ -24,7 +31,6 @@
     "@typescript-eslint/*",
     "angular-eslint",
     "eslint-plugin-*",
-    "postcss",
     "pino-pretty",
     "testcontainers",
     "typescript-eslint",

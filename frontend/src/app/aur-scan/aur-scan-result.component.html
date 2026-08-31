@@ -47,26 +47,47 @@
       class="w-full flex flex-col gap-2 rounded-xl border border-ctp-surface1/60 p-5 text-left sm:text-center"
       style="background: var(--p-card-background)"
     >
+      @if (current.pkgTypes?.length) {
+        <div class="flex flex-col items-center gap-1 pt-1 pb-2 mt-0 mb-3">
+          <span class="text-sm font-semibold">Package types</span>
+          <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ctp-subtext">
+            @for (kind of current.pkgTypes; track kind; let last = $last) {
+              <span
+                class="underline decoration-dotted underline-offset-4"
+                [pTooltip]="presenter.pkgTypeExplanation(kind)"
+                tooltipPosition="top"
+                >{{ kind }}</span
+              >
+              @if (!last) {
+                <span class="text-ctp-overlay0">·</span>
+              }
+            }
+          </div>
+        </div>
+      }
       @if (current.findings.length > 0) {
-        <div class="flex w-full items-center justify-between text-left sm:text-center">
-          <span class="block text-sm font-semibold">Scan findings</span>
-          <p-tag
-            [severity]="
-              current.findings.some((f) => f.severity === 'critical')
-                ? 'danger'
-                : current.findings.some((f) => f.severity === 'warning')
-                  ? 'warn'
-                  : 'info'
-            "
-            [value]="`${current.findings.length} finding${current.findings.length !== 1 ? 's' : ''}`"
-          />
+        <div class="flex w-full items-center gap-2 py-2 mt-1 mb-3">
+          <span class="flex-1"></span>
+          <span class="flex-1 text-center text-sm font-semibold leading-none">Scan findings</span>
+          <span class="flex flex-1 justify-end">
+            <p-tag
+              [severity]="
+                current.findings.some((f) => f.severity === 'critical')
+                  ? 'danger'
+                  : current.findings.some((f) => f.severity === 'warning')
+                    ? 'warn'
+                    : 'info'
+              "
+              [value]="`${current.findings.length} finding${current.findings.length !== 1 ? 's' : ''}`"
+            />
+          </span>
         </div>
       } @else if (current.status === 'done') {
-        <span class="block w-full text-left text-sm text-ctp-subtext sm:text-center">No findings</span>
+        <span class="block w-full py-2 mt-1 mb-3 text-center text-sm text-ctp-subtext">No findings</span>
       }
       @for (finding of current.findings; track finding; let index = $index) {
         <div
-          class="flex basis-full cursor-pointer flex-col gap-1.5 rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 text-left backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
+          class="flex basis-full cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 text-center backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
           [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
           (click)="scrollToFinding(finding)"
           (keydown.enter)="scrollToFinding(finding)"
@@ -74,7 +95,7 @@
           role="button"
           tabindex="0"
         >
-          <div class="flex items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center justify-center gap-3 text-center">
             <span
               class="min-w-0 font-semibold text-sm line-clamp-1 sm:line-clamp-none sm:wrap-break-word"
               [class.text-ctp-red]="finding.severity === 'critical'"
@@ -87,7 +108,7 @@
             </span>
             <code class="shrink-0 whitespace-nowrap text-ctp-sky text-xs">{{ fileLocation(finding) }}</code>
           </div>
-          <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
+          <code class="break-all text-center text-ctp-subtext text-xs">{{ finding.match }}</code>
         </div>
       }
 

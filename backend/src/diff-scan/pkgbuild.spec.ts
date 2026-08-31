@@ -161,8 +161,12 @@ describe('parsePkgbuild', () => {
       ].join('\n'),
     );
 
-    expect(parsePkgbuild(change)?.entries[0]?.raw).toBe(
-      'https://codeberg.org/freeipa/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz{,.asc}',
+    const entries = parsePkgbuild(change)?.entries ?? [];
+    expect(entries[0]?.raw).toBe(
+      'https://codeberg.org/freeipa/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz',
+    );
+    expect(entries[1]?.raw).toBe(
+      'https://codeberg.org/freeipa/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz.asc',
     );
   });
 

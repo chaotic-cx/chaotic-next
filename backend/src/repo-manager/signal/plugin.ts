@@ -347,12 +347,3 @@ export function triggerTypeOf(pkgType: PackageElfPkgType): TriggerType {
 export function encodeOwnerKey(pkgType: TriggerType, pkgId: number): string {
   return `${pkgType === TriggerType.ARCH ? 'a' : 'c'}${pkgId}`;
 }
-
-export function decodeOwnerKey(key: string): { pkgType: TriggerType; pkgId: number } | null {
-  const match = /^([ac])(\d+)$/.exec(key);
-  if (!match) return null;
-  return {
-    pkgType: match[1] === 'a' ? TriggerType.ARCH : TriggerType.CHAOTIC,
-    pkgId: Number(match[2]),
-  };
-}

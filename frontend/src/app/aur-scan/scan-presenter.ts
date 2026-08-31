@@ -29,6 +29,34 @@ export function vtEngines(report: VtIndicatorReport): string {
   return `${flagged}/${totalEngines(report.stats)} engines flagged`;
 }
 
+/** One explanation per PKGBUILD kind the backend classifier can emit. */
+export const PKG_TYPE_EXPLANATIONS: Record<string, string> = {
+  'electron': 'The package wraps an Electron application.',
+  'nodejs': 'The package builds or runs with the Node.js runtime.',
+  'kernel-module': 'The package builds or installs a Linux kernel module.',
+  'python': 'The package depends on Python tooling.',
+  'ruby': 'The package depends on Ruby tooling.',
+  'perl': 'The package depends on Perl tooling.',
+  'php': 'The package depends on PHP tooling.',
+  'java': 'The package depends on Java tooling.',
+  'dotnet': 'The package depends on the .NET framework.',
+  'haskell': 'The package depends on the Haskell toolchain.',
+  'rust': 'The package builds with Cargo.',
+  'go': 'The package builds with the Go toolchain.',
+  'compiled': 'The package is built natively from source.',
+  'font': 'The package name matches a font profile.',
+  'theme': 'The package name matches a theme or icon profile.',
+  'extension': 'The package name matches an extension profile.',
+  'firmware': 'The package name matches a firmware profile.',
+  'prebuilt': 'The package ships prebuilt binaries. The PKGBUILD repackages them.',
+  'shell': 'The package depends on shell runtimes.',
+  'meta': 'The package has no source and no build function. It pulls dependencies only.',
+};
+
+export function pkgTypeExplanation(kind: string): string | undefined {
+  return PKG_TYPE_EXPLANATIONS[kind];
+}
+
 const YEAR_LENGTH = 4;
 
 /** The calendar year of an ISO date string. */
@@ -73,4 +101,5 @@ export const presenter = {
   maintainerSummary,
   maintainerChangeSummary,
   tookOverByNovice,
+  pkgTypeExplanation,
 };

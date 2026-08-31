@@ -186,7 +186,7 @@
             <td>
               @if (pkg.metadata?.url; as url) {
                 <a class="ml-1 align-middle text-ctp-mauve" [href]="url" target="_blank" rel="noopener noreferrer">{{
-                  url | stripPrefix
+                  stripPrefix(url)
                 }}</a>
               } @else {
                 <span class="ml-1 align-middle">n/a</span>

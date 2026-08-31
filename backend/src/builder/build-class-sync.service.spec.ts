@@ -193,6 +193,21 @@ describe('BuildClassSyncService', () => {
     expect(saveMock).not.toHaveBeenCalled();
   });
 
+  it('leaves a custom string class untouched (catbuilder stays catbuilder)', async () => {
+    const pkg = makePackage({ buildClass: 'catbuilder' as unknown as number, pkgbaseName: 'paru' });
+    const { service, commitCiConfigMock, saveMock } = makeService({
+      packages: [pkg],
+      configText: 'BUILDER_CLASS=catbuilder\n',
+      suggestions: [{ pkgname: 'paru', suggestedBuildClass: 4, samples: 12, averages: {} as never }],
+    });
+
+    await service.syncFromDeployment('chaotic-aur', ['paru']);
+
+    expect(commitCiConfigMock).not.toHaveBeenCalled();
+    expect(pkg.buildClass).toBe('catbuilder' as unknown as number);
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
   it('keeps the stored value when the commit fails', async () => {
     const pkg = makePackage({ buildClass: 8, pkgbaseName: 'paru' });
     const { service, saveMock } = makeService({

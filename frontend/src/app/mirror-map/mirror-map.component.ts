@@ -1,7 +1,7 @@
 import { Component, computed, effect, ElementRef, inject, input, OnDestroy, viewChild } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import type { Mirror, MirrorSelf } from '@chaotic-next/shared-lib';
-import * as turf from '@turf/turf';
+import type { Feature, FeatureCollection, Polygon } from 'geojson';
 import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
 import { Map as MaplibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl';
 import { getCountryCoordinates } from './country-coordinates';
@@ -181,6 +181,32 @@ function mirrorPopupHtml(mirror: Mirror, status: MirrorStatus): string {
     <br />
     <span style="opacity: 0.7">Last update: ${lastUpdate}</span>
   `;
+}
+
+function circleCoveragePolygon(position: [number, number], radiusKm: number, steps: number): Feature<Polygon> {
+  const lng1 = (position[0] * Math.PI) / 180;
+  const lat1 = (position[1] * Math.PI) / 180;
+  const angular = radiusKm / (6371008.8 / 1000);
+  const ring: [number, number][] = [];
+  for (let i = 0; i < steps; i++) {
+    const bearingRad = ((i * -360) / steps) * (Math.PI / 180);
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(angular) + Math.cos(lat1) * Math.sin(angular) * Math.cos(bearingRad),
+    );
+    const lng2 =
+      lng1 +
+      Math.atan2(
+        Math.sin(bearingRad) * Math.sin(angular) * Math.cos(lat1),
+        Math.cos(angular) - Math.sin(lat1) * Math.sin(lat2),
+      );
+    ring.push([(lng2 * 180) / Math.PI, (lat2 * 180) / Math.PI]);
+  }
+  ring.push([...ring[0]]);
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Polygon', coordinates: [ring] },
+  };
 }
 
 function markerPosition(mirror: Mirror, self: MirrorSelf | undefined): [number, number] | null {
@@ -532,7 +558,7 @@ export class MirrorMapComponent implements OnDestroy {
   private addCircleLayers(): void {
     if (!this.map || this.map.getSource(CIRCLE_SOURCE_ID)) return;
 
-    const emptyData: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+    const emptyData: FeatureCollection = { type: 'FeatureCollection', features: [] };
     this.map.addSource(CIRCLE_SOURCE_ID, { type: 'geojson', data: emptyData });
     this.map.addLayer({
       id: CIRCLE_FILL_LAYER_ID,
@@ -700,8 +726,8 @@ export class MirrorMapComponent implements OnDestroy {
     }
 
     const now = performance.now();
-    const meteorFeatures: GeoJSON.Feature[] = [];
-    const pingFeatures: GeoJSON.Feature[] = [];
+    const meteorFeatures: Feature[] = [];
+    const pingFeatures: Feature[] = [];
 
     this.activePings = this.activePings.filter((ping) => {
       const elapsed = now - ping.createdAt;
@@ -845,7 +871,7 @@ export class MirrorMapComponent implements OnDestroy {
     const pingSource = this.map.getSource(TRAFFIC_PINGS_SOURCE_ID) as GeoJSONSource | undefined;
     pingSource?.setData({ type: 'FeatureCollection', features: pingFeatures });
 
-    const arcFeatures: GeoJSON.Feature[] = [];
+    const arcFeatures: Feature[] = [];
     this.activeArcs = this.activeArcs.filter((arc) => {
       const elapsed = now - arc.createdAt;
       if (elapsed > ARC_DURATION_MS) return false;
@@ -893,7 +919,7 @@ export class MirrorMapComponent implements OnDestroy {
     const mirrors = this.mirrors();
     const self = this.self();
     const currentSubdomains = new Set<string>();
-    const circleFeatures: GeoJSON.Feature[] = [];
+    const circleFeatures: Feature[] = [];
 
     if (showMirrors) {
       for (const mirror of mirrors) {
@@ -915,7 +941,7 @@ export class MirrorMapComponent implements OnDestroy {
         }
 
         if (mirror.latlon && mirror.healthy) {
-          circleFeatures.push(turf.circle(position, CIRCLE_RADIUS_KM, { steps: CIRCLE_STEPS, units: 'kilometers' }));
+          circleFeatures.push(circleCoveragePolygon(position, CIRCLE_RADIUS_KM, CIRCLE_STEPS));
         }
       }
     }
@@ -939,7 +965,7 @@ export class MirrorMapComponent implements OnDestroy {
     this.markers.set(mirror.subdomain, marker);
   }
 
-  private updateCircleFeatures(features: GeoJSON.Feature[]): void {
+  private updateCircleFeatures(features: Feature[]): void {
     const source = this.map?.getSource(CIRCLE_SOURCE_ID) as GeoJSONSource | undefined;
     source?.setData({ type: 'FeatureCollection', features });
   }

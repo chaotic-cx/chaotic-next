@@ -1,9 +1,17 @@
-@if (chartConfig() || chart.loading()) {
+@if (chartConfig(); as config) {
   <chaotic-chart-card
-    [data]="chartConfig()!.data"
-    [options]="chartConfig()!.options"
-    [hasData]="!!chartConfig()"
+    [data]="config.data"
+    [options]="config.options"
+    [hasData]="true"
     [loading]="chart.loading()"
+    containerClass="card relative flex h-[16rem] sm:h-[12rem] justify-center"
+  />
+} @else if (chart.loading()) {
+  <chaotic-chart-card
+    [data]="loadingChart.data"
+    [options]="loadingChart.options"
+    [hasData]="false"
+    [loading]="true"
     containerClass="card relative flex h-[16rem] sm:h-[12rem] justify-center"
   />
 }

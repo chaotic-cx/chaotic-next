@@ -1,4 +1,5 @@
 export { totalEngines, aurPackageScanSchema, aurScanStreamChunkSchema } from './lib/types/aur';
+export { vtIndicatorLink } from './lib/virustotal';
 export type {
   DiffScanSeverity,
   DiffScanFinding,
@@ -30,6 +31,7 @@ export {
   RepoStatus,
   repoSchema,
   buildSchema,
+  buildResourceMetricsSchema,
   packageResourceDayRowSchema,
   unresolvedFailedBuildSchema,
   shouldBuildDecisionSchema,
@@ -195,8 +197,6 @@ export type {
   PkgnameListQueryDto,
 } from './lib/schemas/builder';
 export {
-  MAX_AMOUNT,
-  MAX_DAYS_WINDOW,
   MAX_PER_PAGE,
   idParamSchema,
   gitlabIdParamSchema,
@@ -286,7 +286,6 @@ export {
   mergeRequestWithDiffsSchema,
   reviewStatsSchema,
   reviewStatsOverTimeSchema,
-  dependencyNodeSchema,
   dependencyEdgeSchema,
   packagesPerBuildClassSchema,
   pkgbaseCompositionSchema,
@@ -313,13 +312,9 @@ export type {
   MirrorOverTime,
   CountryOverTime,
   UserAgentTrend,
-  HealthCheckResult,
   AdjustBuildClassResponse,
   BumpPackagesResult,
   ApproveMrResponse,
-  Pipeline,
-  DependencyNode,
-  DependencyEdge,
   PackagesPerBuildClass,
   PkgbaseComposition,
 } from './lib/schemas/responses';

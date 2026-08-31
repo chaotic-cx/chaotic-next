@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
@@ -13,7 +14,7 @@ const WAITING_PAGE_SIZE = 6;
 
 @Component({
   selector: 'chaotic-build-status-waiting-builds',
-  imports: [BuildStatusSectionComponent, BuildStatusPager, BuildClassPipe, Tooltip, FlipListDirective],
+  imports: [BuildStatusSectionComponent, BuildStatusPager, BuildClassPipe, Tooltip, FlipListDirective, RouterLink],
   templateUrl: './waiting-builds.component.html',
   styleUrl: './waiting-builds.component.css',
 })

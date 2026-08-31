@@ -10,7 +10,6 @@ import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Mutex } from 'async-mutex';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -147,7 +146,7 @@ function mrPkgname(title: string): string | null {
 
 @Injectable()
 export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShutdown {
-  private readonly updateMutex = new Mutex();
+  private chain: Promise<unknown> = Promise.resolve();
   private fetchInFlight?: Promise<MergeRequestWithDiffs[]>;
 
   private readonly CACHE_KEY_MRS = 'gitlab/merge_requests';
@@ -419,8 +418,14 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     }
   }
 
+  private serialize<T>(fn: () => Promise<T>): Promise<T> {
+    const result = this.chain.then(fn);
+    this.chain = result.catch(() => undefined);
+    return result;
+  }
+
   async handleMergeRequestWebhook() {
-    return await this.updateMutex.runExclusive(async () => {
+    return this.serialize(async () => {
       const currentData: MergeRequestWithDiffs[] | undefined = await this.cacheManager.get<MergeRequestWithDiffs[]>(
         this.CACHE_KEY_MRS,
       );

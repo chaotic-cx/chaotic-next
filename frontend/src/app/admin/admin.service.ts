@@ -439,15 +439,6 @@ export class AdminService {
     );
   }
 
-  async createRepo(data: RepoFormData): Promise<void> {
-    await this.runMutation(
-      () => this.http.post(`${this.backendUrl}/admin/repos`, createRepoBodySchema.parse(data)),
-      'Repo created',
-      'Could not create the repo.',
-      () => this.reposResource.reload(),
-    );
-  }
-
   async updateRepo(id: number, data: Partial<RepoFormData>): Promise<void> {
     await this.runMutation(
       () => this.http.patch(`${this.backendUrl}/admin/repos/${id}`, createRepoBodySchema.partial().parse(data)),

@@ -8,9 +8,14 @@ import {
 import { EntityLookupService } from '@chaotic-next/backend/builder/entity-lookup.service';
 import { type PinoLogger } from 'nestjs-pino';
 
-const pinoStub = { info: () => undefined, debug: () => undefined } as unknown as PinoLogger;
+const pinoStub = {
+  error: () => undefined,
+  info: () => undefined,
+  debug: () => undefined,
+  warn: () => undefined,
+} as unknown as PinoLogger;
 import { Build, Builder, Package, Repo, SilencedBuildFailure } from '@chaotic-next/backend/builder/builder.entity';
-import type { BuildStatus, DatabasePackageAddedEvent, MoleculerBuildObject } from '@chaotic-next/backend/types/types';
+import type { BuildStatus, DatabaseSuccessEvent, MoleculerBuildObject } from '@chaotic-next/backend/types/types';
 import type { BuildResourceStats, ChaoticEvent } from '@chaotic-next/shared-lib';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
@@ -54,18 +59,11 @@ function buildResourceStats(overrides: Partial<BuildResourceStats> = {}): BuildR
   };
 }
 
-function packageAddedPayload(overrides: Partial<DatabasePackageAddedEvent>): DatabasePackageAddedEvent {
+function databaseSuccessPayload(overrides: Partial<DatabaseSuccessEvent>): DatabaseSuccessEvent {
   return {
     arch: 'x86_64',
-    commit: '4a70b438f76d5c8f6f739ea110f8c071efe8067f',
-    logUrl: 'https://builds.garudalinux.org/logs/firedragon.html',
-    node: 'immortalis-1',
-    pkgbase: 'firedragon',
-    packages: ['firedragon'],
-    source_repo: 'chaotic-aur',
-    source_repo_url: 'https://gitlab.com/chaotic-aur/pkgbuilds',
+    pkgname: 'firedragon',
     target_repo: 'garuda',
-    timestamp: Date.now(),
     ...overrides,
   };
 }
@@ -148,6 +146,7 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       sseSubject,
       gitlabPipelineService: gitlabStub as never,
       buildClassSync: buildClassSyncStub,
+      logger: pinoStub,
     };
 
     service = new BuilderDatabaseService(options);
@@ -241,6 +240,30 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
 
       expect(sseEvents).toHaveLength(1);
       expect(sseEvents[0].data).toMatchObject({ type: 'build', package: 'yay', status: 3 });
+    });
+
+    it('persists every build outcome event the manager broadcasts, with the correct status enum', async () => {
+      const statusByEvent: Record<string, number> = {
+        'builds.success': 0,
+        'builds.failed': 3,
+        'builds.alreadyBuilt': 1,
+        'builds.skipped': 2,
+        'builds.timeout': 4,
+        'builds.replaced': 5,
+        'builds.canceled': 5,
+        'builds.canceled-requeue': 6,
+        'builds.softwareFailure': 7,
+      };
+
+      for (const [eventName, status] of Object.entries(statusByEvent)) {
+        await service.logBuild(makeCtx(eventName, buildEventPayload({ status: status as BuildStatus })));
+      }
+
+      const builds = await dataSource.query<{ status: string }[]>(`SELECT status FROM build`);
+      expect(builds).toHaveLength(Object.keys(statusByEvent).length);
+      for (const status of new Set(Object.values(statusByEvent))) {
+        expect(builds.map((b) => b.status)).toContain(String(status));
+      }
     });
 
     it('clears a failure silence when the package fails again', async () => {
@@ -357,7 +380,7 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
     });
   });
 
-  describe('database.packageAdded event → runDeferredDeploymentChecks', () => {
+  describe('database.success event → runDeferredDeploymentChecks', () => {
     afterEach(() => {
       vi.useRealTimers();
     });
@@ -370,13 +393,13 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
         ),
       );
 
-      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'garuda' }));
+      await service.runDeferredDeploymentChecks(databaseSuccessPayload({ pkgname: 'paru', target_repo: 'garuda' }));
 
       expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1);
       expect(repoManagerStub.updateChaoticVersions).toHaveBeenCalledTimes(1);
     });
 
-    it('matches pending builds via the deployed package list', async () => {
+    it('matches pending builds via the deployed pkgbase', async () => {
       await service.logBuild(
         makeCtx(
           'builds.success',
@@ -385,12 +408,7 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       );
 
       await service.runDeferredDeploymentChecks(
-        packageAddedPayload({
-          pkgbase: 'google-chrome',
-          packages: ['google-chrome', 'google-chrome-beta'],
-          source_repo: 'aur',
-          target_repo: 'chaotic-aur',
-        }),
+        databaseSuccessPayload({ pkgname: 'google-chrome', target_repo: 'chaotic-aur' }),
       );
 
       expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1);
@@ -404,16 +422,18 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
         ),
       );
 
-      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'chaotic-aur' }));
+      await service.runDeferredDeploymentChecks(
+        databaseSuccessPayload({ pkgname: 'paru', target_repo: 'chaotic-aur' }),
+      );
 
       expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
 
-      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'garuda' }));
+      await service.runDeferredDeploymentChecks(databaseSuccessPayload({ pkgname: 'paru', target_repo: 'garuda' }));
       expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes versions even without a pending build, without bumping', async () => {
-      await service.runDeferredDeploymentChecks(packageAddedPayload({}));
+      await service.runDeferredDeploymentChecks(databaseSuccessPayload({}));
 
       expect(repoManagerStub.updateChaoticVersions).toHaveBeenCalledTimes(1);
       expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
@@ -428,9 +448,7 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
         ),
       );
 
-      await service.runDeferredDeploymentChecks(
-        packageAddedPayload({ pkgbase: 'paru', packages: ['paru'], target_repo: 'garuda' }),
-      );
+      await service.runDeferredDeploymentChecks(databaseSuccessPayload({ pkgname: 'paru', target_repo: 'garuda' }));
 
       expect(buildClassSyncStub.syncFromDeployment).toHaveBeenCalledTimes(1);
       expect(buildClassSyncStub.syncFromDeployment).toHaveBeenCalledWith('garuda', ['paru']);
@@ -446,12 +464,12 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       );
 
       vi.setSystemTime(Date.now() + PENDING_DEPLOYMENT_TIMEOUT_MS + 1);
-      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'garuda' }));
+      await service.runDeferredDeploymentChecks(databaseSuccessPayload({ pkgname: 'paru', target_repo: 'garuda' }));
 
       expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
 
       vi.setSystemTime(Date.now());
-      await service.runDeferredDeploymentChecks(packageAddedPayload({ pkgbase: 'paru', target_repo: 'garuda' }));
+      await service.runDeferredDeploymentChecks(databaseSuccessPayload({ pkgname: 'paru', target_repo: 'garuda' }));
       expect(repoManagerStub.eventuallyBumpAffected).not.toHaveBeenCalled();
     });
 
@@ -477,12 +495,8 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
         ),
       );
 
-      await service.runDeferredDeploymentChecks(
-        packageAddedPayload({ pkgbase: 'paru', packages: ['paru'], target_repo: 'garuda' }),
-      );
-      await service.runDeferredDeploymentChecks(
-        packageAddedPayload({ pkgbase: 'yay', packages: ['yay'], target_repo: 'garuda' }),
-      );
+      await service.runDeferredDeploymentChecks(databaseSuccessPayload({ pkgname: 'paru', target_repo: 'garuda' }));
+      await service.runDeferredDeploymentChecks(databaseSuccessPayload({ pkgname: 'yay', target_repo: 'garuda' }));
 
       await vi.waitFor(() => expect(repoManagerStub.eventuallyBumpAffected).toHaveBeenCalledTimes(1));
       releaseCheck[0]();
@@ -496,29 +510,21 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
     });
   });
 
-  describe('database.removalCompleted event → removeEntries', () => {
-    it('deactivates packages by pkgname', async () => {
-      const pkgRepo = dataSource.getRepository(Package);
-      await pkgRepo.save({
-        pkgname: 'firedragon',
-        version: '2:13.1.1',
-        isActive: true,
-        lastUpdated: new Date().toISOString(),
-      });
-      await pkgRepo.save({
-        pkgname: 'google-chrome',
-        version: '151.0.7922.71',
-        isActive: true,
-        lastUpdated: new Date().toISOString(),
-      });
+  describe('database.removalComplete event → version refresh', () => {
+    it('schedules a refresh from the repo databases instead of trusting the event payload', async () => {
+      const exposedEvents = (
+        service as unknown as {
+          events: Record<string, (ctx: unknown) => Promise<void>>;
+        }
+      ).events;
+      await exposedEvents['database.removalComplete'](
+        makeCtx('database.removalComplete', ['firedragon', 'google-chrome']),
+      );
 
-      await service.removeEntries(makeCtx('database.removalCompleted', ['firedragon']));
+      await vi.waitFor(() => expect(repoManagerStub.updateChaoticVersions).toHaveBeenCalledTimes(1));
 
       const [firedragon] = await dataSource.query(`SELECT "isActive" FROM package WHERE pkgname = 'firedragon'`);
-      expect(firedragon.isActive).toBe(false);
-
-      const [chrome] = await dataSource.query(`SELECT "isActive" FROM package WHERE pkgname = 'google-chrome'`);
-      expect(chrome.isActive).toBe(true);
+      expect(firedragon).toBeUndefined();
     });
   });
 

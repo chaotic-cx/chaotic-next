@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   BuildLogMarkers,
   elapsedSecondsBetween,
-  elapsedSecondsFromMarkers,
   findBuildLogMarkers,
   parseLogTimestamp,
   SCAN_BUFFER_LENGTH,
@@ -151,26 +150,6 @@ describe('findBuildLogMarkers on failed builds', () => {
   });
 });
 
-describe('elapsedSecondsFromMarkers', () => {
-  it('returns elapsed when both start and end are known', () => {
-    const markers: BuildLogMarkers = {
-      buildStartMs: Date.UTC(2026, 7, 16, 7, 9, 58),
-      buildEndMs: Date.UTC(2026, 7, 16, 7, 10, 54),
-    };
-    expect(elapsedSecondsFromMarkers(markers)).toBe(56);
-  });
-
-  it('returns undefined when start is missing', () => {
-    const markers: BuildLogMarkers = { buildEndMs: Date.UTC(2026, 7, 16, 7, 10, 54) };
-    expect(elapsedSecondsFromMarkers(markers)).toBeUndefined();
-  });
-
-  it('returns undefined when end is missing', () => {
-    const markers: BuildLogMarkers = { buildStartMs: Date.UTC(2026, 7, 16, 7, 9, 58) };
-    expect(elapsedSecondsFromMarkers(markers)).toBeUndefined();
-  });
-});
-
 describe('streaming chunk accumulation', () => {
   /** Mirrors the component: append each chunk, scan before trimming the tail. */
   function streamChunks(chunks: string[]): BuildLogMarkers {
@@ -196,7 +175,7 @@ describe('streaming chunk accumulation', () => {
 
     expect(markers.buildStartMs).toBe(Date.UTC(2026, 7, 16, 7, 9, 58));
     expect(markers.buildEndMs).toBe(Date.UTC(2026, 7, 16, 7, 10, 54));
-    expect(elapsedSecondsFromMarkers(markers)).toBe(56);
+    expect(elapsedSecondsBetween(markers.buildStartMs ?? 0, markers.buildEndMs ?? 0)).toBe(56);
   });
 
   it('resolves a start marker split across a chunk boundary before trimming', () => {
@@ -215,6 +194,6 @@ describe('streaming chunk accumulation', () => {
       'Build job chaotic-aur/x86_64/firefox-nightly-bin finished at 16/08/2026, 07:10:54 UTC',
     ]);
 
-    expect(elapsedSecondsFromMarkers(markers)).toBe(56);
+    expect(elapsedSecondsBetween(markers.buildStartMs ?? 0, markers.buildEndMs ?? 0)).toBe(56);
   });
 });

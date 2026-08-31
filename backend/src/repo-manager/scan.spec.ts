@@ -10,7 +10,6 @@ import {
   DependencyEdge,
   DependencyNode,
   findBrokenDependencies,
-  findSymbolBreaks,
   findVtableBreaks,
   findVtableDrifts,
   formatBrokenDependency,
@@ -248,20 +247,6 @@ describeTools('SignalScanService end-to-end', () => {
       expect(effectBreaks.length).toBeGreaterThan(0);
       // The shifted slots it imports are real Effect methods it overrides.
       expect(effectBreaks.map((b) => b.slot)).toContain('_ZN4KWin6Effect14tabletToolAxisEPNS_19TabletToolAxisEventE');
-    });
-
-    it('findSymbolBreaks finds no false positives across the real diff', async () => {
-      const { service, analysisRepo } = createService();
-      await service.scanPackages([scanJob('kwin-old'), scanJob('kwin-new'), scanJob('better-blur')]);
-
-      const { old, current } = loadBoth(analysisRepo);
-      const blur = Array.from(analysisRepo.store.values()).find((a) => a.version === '2.5.1-1.5')!;
-
-      // better-blur does not import any of the 4 dropped symbols, so there must
-      // be no symbol-level break. This pins that findSymbolBreaks attributes
-      // imports to the right library and does not over-report.
-      const breaks = findSymbolBreaks(blur.importedSymbols, old.exportedSymbols, current.exportedSymbols);
-      expect(breaks).toEqual([]);
     });
   });
 

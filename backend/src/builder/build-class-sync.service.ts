@@ -1,11 +1,7 @@
-import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
-import { applyBuilderClass, parseCiConfig } from '../repo-manager/bump';
-import { BuildClassSuggesterService } from './build-class-suggester.service';
-import { Package } from './builder.entity';
 import {
+  type AdjustBuildClassResponse,
   BUILD_CLASS_MAX,
   BUILD_CLASS_MIN,
-  type AdjustBuildClassResponse,
   type BuildClassSuggestion,
   snapBuildClassToEven,
 } from '@chaotic-next/shared-lib';
@@ -13,6 +9,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { type Repository } from 'typeorm';
+import { GitlabPipelineService } from '../gitlab/gitlab-pipeline.service';
+import { applyBuilderClass, parseCiConfig } from '../repo-manager/bump';
+import { BuildClassSuggesterService } from './build-class-suggester.service';
+import { Package } from './builder.entity';
 
 const CI_KEY_BUILDER_CLASS = 'BUILDER_CLASS';
 const DEFAULT_BUILD_CLASS = 5;
@@ -187,6 +187,9 @@ export class BuildClassSyncService {
   }
 
   private alignRowWithConfig(pkg: Package, effectiveClass: number, pkgbasePath: string): boolean {
+    if (pkg.buildClass !== null && typeof pkg.buildClass !== 'number') {
+      return pkg.pkgbaseName !== pkgbasePath ? ((pkg.pkgbaseName = pkgbasePath), true) : false;
+    }
     const classChanged = pkg.buildClass !== effectiveClass;
     const baseChanged = pkg.pkgbaseName !== pkgbasePath;
 
@@ -213,6 +216,11 @@ export class BuildClassSyncService {
     configText: string,
     currentClass: number,
   ): Promise<number | null> {
+    const raw = parseCiConfig(configText)[CI_KEY_BUILDER_CLASS];
+    if (raw !== undefined && Number.isNaN(Number.parseInt(raw, 10))) {
+      this.pino.debug({ pkgbase, raw }, 'Custom build class left untouched');
+      return null;
+    }
     const suggestedEven = await this.suggestedEvenClass(pkgbase);
     if (suggestedEven === null) return null;
 

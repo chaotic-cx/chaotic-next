@@ -23,9 +23,33 @@ import { ChartPackageBuildStatsComponent } from '../stats/charts/packages/chart-
 import { ChartPackageResourceStatsComponent } from '../stats/charts/packages/chart-package-resource-stats/chart-package-resource-stats.component';
 import { resourceValue, setPageSeo } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
-import { PackageDetailKeyPipe } from '../pipes/package-detail-key.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StatsService } from '../stats/stats.service';
+
+const PACKAGE_DETAIL_LABELS: Record<string, string> = {
+  'lastUpdated': 'Last update',
+  'id': 'ID',
+  'pkgname': 'Package name',
+  'createdAt': 'Added at',
+  'version': 'Version',
+  'deps': 'Dependencies',
+  'desc': 'Description',
+  'filename': 'Filename',
+  'license': 'License',
+  'packager': 'Packager',
+  'url': 'URL',
+  'buildDate': 'Build date',
+  'checkDepends': 'Check dependencies',
+  'conflicts': 'Conflicts',
+  'makeDeps': 'Make dependencies',
+  'optDeps': 'Optional dependencies',
+  'provides': 'Provides',
+  'replaces': 'Replaces',
+  'soNameList': 'SO name list',
+  'pkgrel': 'Pkgrel',
+  'downloads': 'Downloads',
+  'user-agents': 'User agents',
+};
 
 @Component({
   selector: 'chaotic-search-package',
@@ -33,7 +57,6 @@ import { StatsService } from '../stats/stats.service';
     AutoComplete,
     CommonModule,
     FormsModule,
-    PackageDetailKeyPipe,
     RelativeTimePipe,
     Tooltip,
     ChartPackageBuildStatsComponent,
@@ -279,6 +302,10 @@ export class SearchPackageComponent {
   protected getMirrorDownloadUrl(filename: string): string {
     const repo = this.packageStatsService.packageSearchSelectedRepo() || 'chaotic-aur';
     return `https://cdn-mirror.chaotic.cx/${repo}/x86_64/${filename}`;
+  }
+
+  protected packageDetailLabel(key: string): string {
+    return PACKAGE_DETAIL_LABELS[key] ?? key;
   }
 
   protected isArray(value: unknown): value is unknown[] {

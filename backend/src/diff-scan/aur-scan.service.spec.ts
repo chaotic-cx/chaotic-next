@@ -95,17 +95,6 @@ function aurFetchMock(): ReturnType<typeof vi.fn> {
   });
 }
 
-function snapshotRepositoryMock() {
-  const rows = new Map<string, { packageName: string; maintainers: string[] }>();
-  return {
-    findOne: vi.fn(async ({ where }: { where: { packageName: string } }) => rows.get(where.packageName) ?? null),
-    upsert: vi.fn(async (entity: { packageName: string; maintainers: string[] }) => {
-      rows.set(entity.packageName, entity);
-    }),
-    rows,
-  };
-}
-
 function makeService(
   enabled = false,
   reportOn?: (indicators: ScanIndicator[]) => Promise<VtIndicatorReport[]>,
@@ -351,47 +340,6 @@ describe('AurScanService', () => {
 
     const searchCalls = fetchMock.mock.calls.filter(([url]) => url.includes('by=maintainer'));
     expect(searchCalls).toHaveLength(2);
-  });
-
-  it('detects a maintainer takeover against the stored snapshot', async () => {
-    const snapshots = snapshotRepositoryMock();
-    const { service } = makeService(false, undefined, snapshots);
-
-    const first = await service.maintainerStatusOf('evilpkg');
-    expect(first?.change).toBeNull();
-    expect(snapshots.rows.get('evilpkg')?.maintainers).toEqual(['newmaintainer', 'oldmaintainer']);
-
-    const takeoverFetch = vi.fn(async (url: string) => {
-      if (url.includes('rpc/v5/info')) {
-        return new Response(
-          JSON.stringify({
-            results: [
-              {
-                Name: 'evilpkg',
-                PackageBase: 'evilpkg',
-                Maintainer: 'stranger',
-                FirstSubmitted: NOW_SECONDS - 10 * DAY_SECONDS,
-              },
-            ],
-          }),
-          { headers: { 'content-type': 'application/json' } },
-        );
-      }
-      return new Response(JSON.stringify({ results: [] }), { headers: { 'content-type': 'application/json' } });
-    });
-    vi.stubGlobal('fetch', takeoverFetch);
-    service.clearAurCache();
-
-    const second = await service.maintainerStatusOf('evilpkg');
-    expect(second?.change?.added).toEqual(['stranger']);
-    expect(second?.change?.removed).toEqual(['newmaintainer', 'oldmaintainer']);
-    expect(second?.maintainers).toHaveLength(1);
-    expect(second?.maintainers[0]?.username).toBe('stranger');
-    expect(second?.maintainers[0]?.novice).toBe(true);
-
-    const third = await service.maintainerStatusOf('evilpkg');
-    expect(third?.change).toBeNull();
-    expect(snapshots.rows.get('evilpkg')?.maintainers).toEqual(['stranger']);
   });
 
   it('streams scan updates and completes on the terminal message', async () => {

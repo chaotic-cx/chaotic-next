@@ -109,7 +109,8 @@ describe('real-world AUR fixtures', () => {
       const parsed = parsePkgbuild(changes[0] as MergeRequestDiffSchema);
 
       expect(parsed?.entries.map((entry) => entry.raw)).toEqual([
-        'https://codeberg.org/freeipa/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz{,.asc}',
+        'https://codeberg.org/freeipa/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz',
+        'https://codeberg.org/freeipa/freeipa/releases/download/release-4-13-3/freeipa-4.13.3.tar.gz.asc',
         'nis-domainname.service',
         'ipaplatform.tar.gz',
       ]);
@@ -132,7 +133,8 @@ describe('real-world AUR fixtures', () => {
       const entries = parsed?.entries ?? [];
 
       expect(entries.map((entry) => entry.raw)).toEqual([
-        'https://github.com/CachyOS/linux/releases/download/cachyos-7.2.0-1/cachyos-7.2.0-1.tar.gz{,.asc}',
+        'https://github.com/CachyOS/linux/releases/download/cachyos-7.2.0-1/cachyos-7.2.0-1.tar.gz',
+        'https://github.com/CachyOS/linux/releases/download/cachyos-7.2.0-1/cachyos-7.2.0-1.tar.gz.asc',
         'config',
       ]);
       expect(entries[0]?.host).toBe('github.com');

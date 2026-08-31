@@ -82,7 +82,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'URL-003',
     name: 'Dynamic-DNS host',
     severity: 'warning',
-    description: 'References a dynamic-DNS hostname, which lets an attacker rotate the backing IP.',
+    description: 'References a dynamic-DNS hostname. An attacker can rotate the IP address behind it.',
     list: hostsFromList(DDNS_HOSTS),
     data: {
       url: DDNS_BLOCKLIST_URL,
@@ -163,7 +163,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'CAUR-MONERO-WALLET',
     name: 'Monero wallet address',
     severity: 'critical',
-    description: 'Contains a Monero payment address, indicating mining payouts or ransom demands.',
+    description: 'Contains a Monero payment address. Attackers use Monero for mining payouts or ransom demands.',
     // Base58 alphabet (no 0, O, I, l); standard addresses start with 4, subaddresses with 8.
     pattern: /\b[48][1-9A-HJ-NP-Za-km-z]{94}\b/,
   }),
@@ -202,7 +202,7 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     id: 'NET-001',
     name: 'Unencrypted HTTP URL',
     severity: 'info',
-    description: 'Downloads a package source over plain HTTP, which allows interception of the artifact.',
+    description: 'Downloads a package source over plain HTTP. An attacker can change the artifact on the way.',
     // Only the source= entries are judged; a plain-http url= homepage says
     // nothing about how the build artifacts are fetched.
     check(change) {

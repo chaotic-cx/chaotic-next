@@ -327,6 +327,7 @@ export const TABLES_TO_RESET = [
   'builder',
   'repo',
   'notification_subscription',
+  'portable_build',
 ] as const;
 
 export async function truncateTables(dataSource: DataSource): Promise<void> {

@@ -206,3 +206,34 @@ export const DATA_BINARY_EXTENSIONS = new Set([
   'xz',
   'zst',
 ]);
+
+const ECHO_HEREDOC_START = /^\s*cat\s*<<-?['"]?([A-Za-z_]\w*)['"]?\s*$/;
+
+/**
+ * Blanks the body of heredocs that only print text: `cat <<EOF` with no
+ * redirect, no pipe, and no command substitution. Rules match shell commands,
+ * and printed user instructions contain many path and command words. Heredocs
+ * that write to a file or feed a command keep every line: their content runs
+ * later and is scanned like any other script.
+ */
+export function maskEchoHeredocs(diff: string): string {
+  let terminator: string | null = null;
+  return diff
+    .split('\n')
+    .map((raw) => {
+      if (!raw.startsWith('+') || raw.startsWith('+++')) return raw;
+      const content = raw.slice(1);
+      if (terminator !== null) {
+        if (content.trim() === terminator) terminator = null;
+        else return '+';
+        return raw;
+      }
+      const opener = content.match(ECHO_HEREDOC_START);
+      if (opener) {
+        terminator = opener[1];
+        return raw;
+      }
+      return raw;
+    })
+    .join('\n');
+}

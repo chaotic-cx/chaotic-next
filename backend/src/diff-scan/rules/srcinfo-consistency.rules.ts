@@ -12,6 +12,7 @@ import { addedLines } from './diff-utils';
 import { type GroupRuleHit, type Rule } from './rule';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 import { posix } from 'node:path';
+import { expandBraceAlternation } from '../../repo-manager/pkgbuild-classifier';
 
 const PKGBUILD_FILE = 'PKGBUILD';
 const SRCINFO_FILE = '.SRCINFO';
@@ -184,7 +185,8 @@ function splitArrayValues(text: string): string[] {
   return text
     .replace(/\)\s*$/, '')
     .split(/\s+/)
-    .filter((entry) => entry.length > 0)
+    .filter((entry) => entry.length > 0 && entry !== '\\')
+    .flatMap(expandBraceAlternation)
     .map(unquote);
 }
 
@@ -311,7 +313,18 @@ function mismatchHit(
   };
 }
 
+const RENDER_ITEM_LIMIT = 100;
+const RENDER_ARRAY_ITEM_LIMIT = 3;
+
+function renderOne(value: string): string {
+  const text = `"${value}"`;
+  return text.length > RENDER_ITEM_LIMIT ? `${text.slice(0, RENDER_ITEM_LIMIT)}…` : text;
+}
+
 function render(value: string | string[] | undefined): string {
   if (value === undefined) return '(nothing)';
-  return typeof value === 'string' ? `"${value}"` : `[${value.join(', ')}]`;
+  if (typeof value === 'string') return renderOne(value);
+  const shown = value.slice(0, RENDER_ARRAY_ITEM_LIMIT).map(renderOne);
+  const rest = value.length - shown.length;
+  return `[${shown.join(', ')}${rest > 0 ? `, …+${rest} more` : ''}]`;
 }

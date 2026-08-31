@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { buildClassSchema } from './core';
 
 export const statsObjectSchema = z.object({
   active: z.object({
@@ -8,17 +9,17 @@ export const statsObjectSchema = z.object({
         liveLog: z.string().optional(),
         name: z.string(),
         node: z.string(),
-        build_class: z.number().nullable(),
+        build_class: buildClassSchema.nullable(),
       }),
     ),
   }),
   waiting: z.object({
     count: z.number(),
-    packages: z.array(z.object({ name: z.string(), build_class: z.number() })),
+    packages: z.array(z.object({ name: z.string(), build_class: buildClassSchema })),
   }),
   idle: z.object({
     count: z.number(),
-    nodes: z.array(z.object({ name: z.string(), build_class: z.number() })),
+    nodes: z.array(z.object({ name: z.string(), build_class: buildClassSchema })),
   }),
 });
 export type StatsObject = z.infer<typeof statsObjectSchema>;

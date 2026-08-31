@@ -75,8 +75,3 @@ export function findBuildLogMarkers(buffer: string, prior: BuildLogMarkers): Bui
 
   return markers;
 }
-
-export function elapsedSecondsFromMarkers(markers: BuildLogMarkers): number | undefined {
-  if (markers.buildStartMs === undefined || markers.buildEndMs === undefined) return undefined;
-  return elapsedSecondsBetween(markers.buildStartMs, markers.buildEndMs);
-}

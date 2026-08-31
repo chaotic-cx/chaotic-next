@@ -9,7 +9,6 @@ import {
   derivePluginOf,
   extractVtableSlots,
   findBrokenDependencies,
-  findSymbolBreaks,
   findVtableBreaks,
   findVtableDrifts,
   formatBrokenDependency,
@@ -535,57 +534,6 @@ describe('buildAnalysis', () => {
     expect(analysis.importedSymbols).toEqual([]);
     expect(analysis.exportedSymbols).toEqual({});
     expect(analysis.vtables).toEqual({});
-  });
-});
-
-describe('findSymbolBreaks', () => {
-  it('flags a symbol the consumer imports that the owner stopped exporting', () => {
-    const breaks = findSymbolBreaks(
-      ['_ZN4KWin10RenderView16staticMetaObjectE', 'epoxy_glBlendColor'],
-      {
-        'libkwin.so.6': ['_ZN4KWin10RenderView16staticMetaObjectE', 'somethingElse'],
-      },
-      {
-        'libkwin.so.6': ['somethingElse'], // the KWin symbol disappeared
-      },
-    );
-    expect(breaks).toEqual([{ symbol: '_ZN4KWin10RenderView16staticMetaObjectE', soname: 'libkwin.so.6' }]);
-  });
-
-  it('produces no break when all imported symbols survive', () => {
-    const exports = { 'libkwin.so.6': ['_ZN4KWin10RenderView16staticMetaObjectE'] };
-    expect(findSymbolBreaks(['_ZN4KWin10RenderView16staticMetaObjectE'], exports, exports)).toEqual([]);
-  });
-
-  it('ignores symbols from other libraries (no ldd attribution needed)', () => {
-    // epoxy symbols are not in kwin's exports, so they are never flagged.
-    const breaks = findSymbolBreaks(
-      ['epoxy_glBlendColor'],
-      { 'libkwin.so.6': ['somethingElse'] },
-      { 'libkwin.so.6': ['somethingElse'] },
-    );
-    expect(breaks).toEqual([]);
-  });
-
-  it('ignores a vanished library entirely (the soname ABI channel handles it)', () => {
-    const breaks = findSymbolBreaks(
-      ['_ZN4KWin10RenderView16staticMetaObjectE'],
-      { 'libkwin.so.6': ['_ZN4KWin10RenderView16staticMetaObjectE'] },
-      {}, // libkwin.so.6 removed entirely
-    );
-    expect(breaks).toEqual([]);
-  });
-
-  it('finds multiple broken symbols across libraries', () => {
-    const breaks = findSymbolBreaks(
-      ['a', 'b', 'c'],
-      { 'libfoo.so.1': ['a', 'b'], 'libbar.so.2': ['c'] },
-      { 'libfoo.so.1': ['a'], 'libbar.so.2': [] },
-    );
-    expect(breaks).toEqual([
-      { symbol: 'b', soname: 'libfoo.so.1' },
-      { symbol: 'c', soname: 'libbar.so.2' },
-    ]);
   });
 });
 

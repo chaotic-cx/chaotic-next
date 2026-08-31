@@ -1,6 +1,7 @@
 import { Package } from '../builder/builder.entity';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { RULES } from './rules';
+import { maskEchoHeredocs } from './rules/diff-utils';
 import { ruleRunsOn, type GroupRuleHit, type RuleHit, type RuleSurface } from './rules/rule';
 import { posix } from 'node:path';
 import {
@@ -9,7 +10,8 @@ import {
   scanSrcinfoDependencies,
   type AurDependencyFetcher,
 } from './srcinfo-dependency';
-import { parseSrcinfoVariables, registerSrcinfoVariables } from './pkgbuild';
+import { parsePkgbuild, parseSrcinfoVariables, registerSrcinfoVariables } from './pkgbuild';
+import { checkEolDependencies } from './eol-dependencies';
 import { findTyposquatFinding } from './typosquat';
 import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
@@ -48,11 +50,12 @@ export class DiffScanService {
   ) {}
 
   async scanDiffs(
-    diffs: MergeRequestDiffSchema[],
+    rawDiffs: MergeRequestDiffSchema[],
     isDepPresentOverride?: (depName: string) => Promise<boolean>,
     surface: RuleSurface = 'mr-diff',
     fetchAurDependencies?: AurDependencyFetcher,
   ): Promise<DiffScanFinding[]> {
+    const diffs = rawDiffs.map((change) => ({ ...change, diff: maskEchoHeredocs(change.diff) }));
     for (const rule of RULES) {
       if (!rule.load) continue;
       try {
@@ -132,7 +135,21 @@ export class DiffScanService {
       for (const hit of hits) findings.push(toScanFinding(rule, hit));
       if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
     }
+    findings.push(...(await this.checkEolDependencies(rawDiffs)));
     return sortFindings(findings);
+  }
+
+  /**
+   * Checks dependency arrays of the PKGBUILD in the given changes against the
+   * endoflife.date feeds. Reusable by every scan surface that carries a
+   * PKGBUILD.
+   */
+  async checkEolDependencies(rawDiffs: MergeRequestDiffSchema[]): Promise<DiffScanFinding[]> {
+    const pkgChange = rawDiffs.find((change) => !change.deleted_file && posix.basename(change.new_path) === 'PKGBUILD');
+    if (!pkgChange) return [];
+    const text = parsePkgbuild(pkgChange)?.text;
+    if (!text) return [];
+    return checkEolDependencies(text);
   }
 
   autoFlagVerdict(findings: DiffScanFinding[] | undefined): DiffScanVerdict | null {
