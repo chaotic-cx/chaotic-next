@@ -109,14 +109,12 @@ export class GithubIssuesService {
     }
   }
 
-  /** Comments on the issue, oldest first. */
   async listComments(issueNumber: number): Promise<IssueCommentRef[]> {
     return this.request<IssueCommentRef[]>(
       `/repos/${this.owner}/${this.repo}/issues/${issueNumber}/comments?per_page=${ISSUE_LIST_PER_PAGE}`,
     );
   }
 
-  /** Open issues whose title contains the pkgbase, for duplicate detection. */
   async findOpenRequestIssues(pkgbase: string): Promise<IssueRef[]> {
     return this.searchOpenIssues(
       `repo:${this.owner}/${this.repo} is:issue is:open in:title "${pkgbase}"`,
@@ -124,7 +122,6 @@ export class GithubIssuesService {
     );
   }
 
-  /** Open issues carrying the label, for the stale sweep. */
   async findOpenIssuesLabeled(label: string): Promise<IssueRef[]> {
     return this.searchOpenIssues(
       `repo:${this.owner}/${this.repo} is:issue is:open label:"${label}"`,

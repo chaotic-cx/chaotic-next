@@ -41,13 +41,15 @@ export async function ensureFixtures(): Promise<FixtureSet> {
   for (const pkg of manifest.packages) {
     const dest = join(FIXTURES_DIR, pkg.filename);
     if (!existsSync(dest)) {
-      throw new Error(`Missing vendored fixture ${pkg.filename}. It must be checked out via git-lfs (git lfs pull).`);
+      throw new Error(
+        `Missing fixture ${pkg.filename}. Run 'pnpm fixtures:fetch' (or: node tools/fetch-fixtures.mjs) to download it from ${process.env.FIXTURES_BASE_URL ?? 'https://builds.garudalinux.org/misc/fixtures'}.`,
+      );
     }
     const actual = await sha256Of(dest);
     if (actual !== pkg.sha256) {
       throw new Error(
         `Fixture ${pkg.filename} checksum mismatch (expected ${pkg.sha256}, got ${actual}). ` +
-          `Run 'git lfs pull' to restore the real package from LFS.`,
+          `Delete it and run 'pnpm fixtures:fetch' to re-download.`,
       );
     }
     paths.set(pkg.key, dest);

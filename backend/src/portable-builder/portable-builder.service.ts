@@ -1,22 +1,22 @@
 import { BadRequestException, ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import type { Container } from 'dockerode';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { Subject } from 'rxjs';
 import { createWriteStream, promises as fs, type WriteStream } from 'node:fs';
 import * as path from 'node:path';
-import { In, Repository, type ObjectLiteral } from 'typeorm';
-import type { Container } from 'dockerode';
+import { Subject } from 'rxjs';
+import { In, type ObjectLiteral, Repository } from 'typeorm';
+import { ArtifactScanService } from './artifact-scan.service';
 import { ContainerActivityWatchdog } from './container-activity-watchdog';
-import { ContainerStatsCollector, formatContainerUsage, type ContainerUsage } from './container-usage';
+import { ContainerStatsCollector, type ContainerUsage, formatContainerUsage } from './container-usage';
 import { DockerService } from './docker.service';
 import {
   PORTABLE_BUILD_ACTIVE_STATUSES,
-  PortableBuild,
   type PortableArtifactScan,
+  PortableBuild,
   type PortableBuildStatus,
 } from './portable-build.entity';
-import { ArtifactScanService } from './artifact-scan.service';
 import type { PortableBuilderConfig } from './portable-builder.config';
 
 const PKGBASE_PATTERN = /^[a-z0-9][a-z0-9._@+-]*$/;
@@ -88,7 +88,6 @@ export class PortableBuilderService implements OnModuleInit {
     this.config = configService.getOrThrow<PortableBuilderConfig>('portable-builder');
   }
 
-  /** Emits the final row of every finished build, whether it was queued via API or via GitHub. */
   readonly jobFinished$ = this.jobFinished.asObservable();
 
   async onModuleInit(): Promise<void> {
@@ -289,16 +288,19 @@ export class PortableBuilderService implements OnModuleInit {
       labels: this.containerLabels(),
       entrypoint: ['sh'],
     });
+
     const exitCode = await this.docker.startAndWait(container, appendToLog);
     if (exitCode !== 0) {
       throw new Error(`Cloning ${AUR_URL}/${pkgbase}.git failed with exit code ${exitCode}`);
     }
+
     // The AUR git backend hands out empty repositories for unknown names.
     const pkgbuildPath = path.join(pkgbuildsDir, pkgbase, 'PKGBUILD');
     const pkgbuildExists = await fs
       .stat(pkgbuildPath)
       .then((stat) => stat.isFile())
       .catch(() => false);
+
     if (!pkgbuildExists) {
       throw new Error(`${pkgbase} does not exist on the AUR: ${AUR_URL}/${pkgbase}.git has no PKGBUILD`);
     }
@@ -330,7 +332,6 @@ export class PortableBuilderService implements OnModuleInit {
     });
   }
 
-  /** Upstream watchdog algorithm: kill the build when the container shows no activity anymore. */
   private startWatchdog(
     container: Container,
     pkgbase: string,
@@ -376,11 +377,13 @@ export class PortableBuilderService implements OnModuleInit {
     resourceStats: Awaited<ReturnType<ContainerStatsCollector['getStats']>>,
   ): Promise<string[] | null> {
     await this.docker.chmodRecursive(artifactDir, this.config.image, this.containerLabels());
+
     const artifacts = (await fs.readdir(artifactDir)).filter((name) => name.endsWith(ARTIFACT_SUFFIX)).sort();
     if (artifacts.length === 0) {
       await this.finish(build, 'failed', logBuffer, resourceStats, 'No packages were built');
       return null;
     }
+
     return artifacts;
   }
 
