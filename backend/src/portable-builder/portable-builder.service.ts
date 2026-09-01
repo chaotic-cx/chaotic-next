@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Container } from 'dockerode';
@@ -71,12 +71,13 @@ function errorMessage(err: unknown): string {
  * resource-limited and watched for idleness with the upstream watchdog algorithm.
  */
 @Injectable()
-export class PortableBuilderService implements OnModuleInit {
+export class PortableBuilderService implements OnModuleInit, OnModuleDestroy {
   private readonly config: PortableBuilderConfig;
   private readonly jobFinished = new Subject<PortableBuild>();
   private drainPromise: Promise<void> | null = null;
   private watchdog: ContainerActivityWatchdog | null = null;
   private idleTerminated = false;
+  private destroyed = false;
 
   constructor(
     configService: ConfigService,
@@ -101,6 +102,10 @@ export class PortableBuilderService implements OnModuleInit {
       { status: 'failed', error: 'Interrupted by backend restart', finishedAt: new Date() },
     );
     void this.drain();
+  }
+
+  onModuleDestroy(): void {
+    this.destroyed = true;
   }
 
   async enqueue(pkgbase: string, issueNumber: number | null = null): Promise<PortableBuild> {
@@ -129,8 +134,15 @@ export class PortableBuilderService implements OnModuleInit {
 
   private async drainLoop(): Promise<void> {
     for (;;) {
-      const next = await this.builds.findOne({ where: { status: 'queued' }, order: { id: 'ASC' } });
-      if (!next) return;
+      if (this.destroyed) return;
+      let next: PortableBuild | null;
+      try {
+        next = await this.builds.findOne({ where: { status: 'queued' }, order: { id: 'ASC' } });
+      } catch (err) {
+        if (this.destroyed) return;
+        throw err;
+      }
+      if (!next || this.destroyed) return;
       await this.runJob(next);
     }
   }
