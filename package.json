@@ -90,7 +90,7 @@
     "keyv": "^5.6.0",
     "maplibre-gl": "^6.6.0",
     "moleculer": "^0.15.1",
-    "nestjs-pino": "^4.6.1",
+    "nestjs-pino": "^5.0.0",
     "ngx-better-auth": "^1.7.0",
     "ngx-highlightjs": "^14.0.1",
     "pg": "^8.23.0",
