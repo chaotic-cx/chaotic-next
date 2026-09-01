@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DeepPartial, In, type Repository } from 'typeorm';
-import { Builder, Package, Repo } from './builder.entity';
 import { sleep } from '../utils/functions';
+import { Builder, Package, Repo } from './builder.entity';
 
 const CONFLICT_RETRIES = 3;
 const RETRY_DELAY_MS = 50;
@@ -27,7 +27,15 @@ export class EntityLookupService {
 
   async getOrCreatePackage(pkgname: string, repo: Repo): Promise<Package> {
     const existing = await this.findPackage(pkgname, repo);
-    if (existing) return existing;
+    if (existing) {
+      if (!existing.isActive) {
+        existing.isActive = true;
+        existing.removedAt = null;
+        existing.lastUpdated = new Date().toISOString();
+        return this.packageRepository.save(existing);
+      }
+      return existing;
+    }
     try {
       return await this.packageRepository.save({
         pkgname: pkgname,
@@ -116,8 +124,17 @@ export class EntityLookupService {
   }
 
   private async findPackage(pkgname: string, repo: Repo): Promise<Package | undefined> {
-    const packages = await this.packageRepository.find({ where: { pkgname }, relations: { repo: true } });
-    return packages.find((pkg) => pkg.repo?.name === repo.name);
+    const packages = await this.packageRepository.find({
+      where: { pkgname },
+      relations: { repo: true },
+      order: { isActive: 'DESC' },
+    });
+    const candidates = packages.filter((pkg) => pkg.repo?.name === repo.name);
+    return (
+      candidates.find((pkg) => pkg.isActive && pkg.version !== null) ??
+      candidates.find((pkg) => pkg.isActive) ??
+      candidates[0]
+    );
   }
 
   private async retryFind<T>(find: () => Promise<T | null | undefined>, context: Record<string, unknown>): Promise<T> {

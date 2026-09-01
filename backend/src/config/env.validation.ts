@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const envValidationSchema = z.looseObject({
   AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
-  BETTER_AUTH_TRUSTED_ORIGINS: z.string().min(1).optional(),
+  BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
   BETTER_AUTH_URL: z.url().optional(),
   CAUR_BUILDER_CLAMAV_IMAGE: z.string().min(1).optional(),
   CAUR_BUILDER_CPU_LIMIT: z.string().regex(/^\d+$/).optional(),
