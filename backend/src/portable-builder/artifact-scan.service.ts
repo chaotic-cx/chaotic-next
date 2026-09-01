@@ -106,12 +106,15 @@ export class ArtifactScanService {
   private readonly config: PortableBuilderConfig;
 
   /** Extraction and hashing happen in a network-less container; rules and VirusTotal run in-process. */
-  async scanArtifacts(options: {
-    artifactDir: string;
-    image: string;
-    labels: Record<string, string>;
-    buildId: number;
-  }): Promise<PortableArtifactScan> {
+  async scanArtifacts(
+    options: {
+      artifactDir: string;
+      image: string;
+      labels: Record<string, string>;
+      buildId: number;
+    },
+    withVirusTotal = false,
+  ): Promise<PortableArtifactScan> {
     try {
       const dump = await this.dumpArtifactTree(options);
       const files = parseScanDump(dump);
@@ -119,10 +122,10 @@ export class ArtifactScanService {
         .filter((file) => file.text !== null)
         .map((file) => fullFileDiff(file.name, file.text as string));
       const findings = await this.diffScan.scanDiffs(changes as MergeRequestDiffSchema[], undefined, 'full-file');
-      const [virusTotal, clamavDetections] = await Promise.all([
-        this.virusTotalVerdicts(files, changes as MergeRequestDiffSchema[]),
-        this.scanWithClamav(options),
-      ]);
+      const clamavDetections = await this.scanWithClamav(options);
+      const virusTotal = withVirusTotal
+        ? await this.virusTotalVerdicts(files, changes as MergeRequestDiffSchema[])
+        : [];
       const infected = findings.length > 0 || (clamavDetections?.length ?? 0) > 0;
 
       return {
