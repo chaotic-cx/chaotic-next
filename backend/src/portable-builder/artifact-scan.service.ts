@@ -1,14 +1,14 @@
-import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import type { VtIndicatorReport } from '@chaotic-next/shared-lib';
-import { DiffScanService } from '../diff-scan/diff-scan.service';
-import { MAX_INDICATORS_PER_MR, extractIndicators, type ScanIndicator } from '../diff-scan/indicators';
-import { VirustotalService } from '../diff-scan/virustotal.service';
+import type { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { DockerService, type CreateBuildContainerOptions } from './docker.service';
+import type { PortableBuilderConfig } from '../config/portable-builder.config';
+import { DiffScanService } from '../diff-scan/diff-scan.service';
+import { extractIndicators, MAX_INDICATORS_PER_MR, type ScanIndicator } from '../diff-scan/indicators';
+import { VirustotalService } from '../diff-scan/virustotal.service';
+import { type CreateBuildContainerOptions, DockerService } from './docker.service';
 import type { PortableArtifactScan } from './portable-build.entity';
-import type { PortableBuilderConfig } from './portable-builder.config';
 
 const EXTRACT_SCRIPT = [
   'set -e',
@@ -74,11 +74,13 @@ export function parseScanDump(dump: string): ScannedArtifactFile[] {
       else files.set(name, { name, sha256, text: null });
       continue;
     }
+
     if (line.startsWith(TEXT_MARKER)) {
       flushText();
       textFile = line.slice(TEXT_MARKER.length);
       continue;
     }
+
     if (textFile !== null) {
       if (line.trimEnd() === END_MARKER) flushText();
       else textChunks.push(`${line}\n`);

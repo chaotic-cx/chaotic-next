@@ -1,16 +1,16 @@
 import { ConflictException } from '@nestjs/common';
+import type { PortableBuilderConfig } from '../config/portable-builder.config';
 import type { PinoLogger } from 'nestjs-pino';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { Repository } from 'typeorm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { parseClamavOutput, parseScanDump } from './artifact-scan.service';
 import type { ContainerUsage } from './container-usage';
 import type { CreateBuildContainerOptions } from './docker.service';
 import { PORTABLE_BUILD_ACTIVE_STATUSES, type PortableBuild } from './portable-build.entity';
-import type { PortableBuilderConfig } from './portable-builder.config';
 import { CappedLogBuffer, PortableBuilderService } from './portable-builder.service';
-import { parseClamavOutput, parseScanDump } from './artifact-scan.service';
 
 const PINO_STUB = {
   info: () => undefined,
@@ -211,7 +211,7 @@ describe('PortableBuilderService build flow', () => {
     expect(row.error).toBeNull();
     expect(row.artifacts).toEqual(['paru-2.0-1-x86_64.pkg.tar.zst']);
     expect(finished.map((entry) => entry.id)).toEqual([build.id]);
-    expect(fs.stat(path.join(workDir, 'jobs', String(build.id)))).rejects.toThrow();
+    await expect(fs.stat(path.join(workDir, 'jobs', String(build.id)))).rejects.toThrow();
 
     const clone = createdContainer(docker, 0);
     const buildContainer = createdContainer(docker, 1);
