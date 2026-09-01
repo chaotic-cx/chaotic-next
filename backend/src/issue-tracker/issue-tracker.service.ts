@@ -284,7 +284,6 @@ export class IssueTrackerService implements OnModuleInit {
     }
     await this.github.createComment(build.issueNumber, lines.join('\n'));
     await this.github.removeLabel(build.issueNumber, BUILD_TEST_LABEL).catch(() => undefined);
-    await this.github.removeLabel(build.issueNumber, NEEDS_TRIAGE_LABEL).catch(() => undefined);
   }
 
   private async sweepOne(issueNumber: number): Promise<void> {
