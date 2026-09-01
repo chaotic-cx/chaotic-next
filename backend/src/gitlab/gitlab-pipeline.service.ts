@@ -175,8 +175,12 @@ export class GitlabPipelineService implements OnModuleInit {
       }
     }
 
-    const pipelines = await this.getLastPipelines();
-    this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
+    const pipeline = this.pipelineMap.get(attrs.id);
+    if (pipeline) {
+      this.eventService.sseEvents$.next({
+        data: { type: 'pipeline', pipeline: [{ pipeline, commit: this.statusMap.get(attrs.id) ?? [] }] },
+      });
+    }
     return true;
   }
 
@@ -202,8 +206,12 @@ export class GitlabPipelineService implements OnModuleInit {
     list.push(entry);
     this.statusMap.set(event.pipeline_id, list);
 
-    const pipelines = await this.getLastPipelines();
-    this.eventService.sseEvents$.next({ data: { type: 'pipeline', pipeline: pipelines } });
+    const pipeline = this.pipelineMap.get(event.pipeline_id);
+    if (pipeline) {
+      this.eventService.sseEvents$.next({
+        data: { type: 'pipeline', pipeline: [{ pipeline, commit: list }] },
+      });
+    }
   }
 
   async listPipelineSchedules(repoName: string): Promise<PipelineScheduleOption[]> {

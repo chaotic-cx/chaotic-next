@@ -266,6 +266,19 @@ export class BuildStatusService {
     this.pipelineWithStatus.set(pipelines.slice(0, MAX_VISIBLE_PIPELINES).map((pipeline) => this.toView(pipeline)));
   }
 
+  applyPipelineDelta(delta: PipelineWithExternalStatus[]): void {
+    if (delta.length === 0) return;
+    if (delta.length >= MAX_VISIBLE_PIPELINES) {
+      this.transformPipelineData(delta);
+      return;
+    }
+    const current = this.pipelineWithStatus();
+    const byId = new Map(current.map((view) => [view.pipeline.id, view]));
+    for (const pipeline of delta) byId.set(pipeline.pipeline.id, this.toView(pipeline));
+    const merged = [...byId.values()].sort((a, b) => b.pipeline.id - a.pipeline.id).slice(0, MAX_VISIBLE_PIPELINES);
+    this.pipelineWithStatus.set(merged);
+  }
+
   private toView(pipeline: PipelineWithExternalStatus): PipelineView {
     const failedJobs = pipeline.commit.filter((job) => job.status === 'failed').length;
     let statusText = pipeline.pipeline.status;
