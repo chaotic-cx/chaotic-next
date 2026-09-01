@@ -115,6 +115,7 @@ export class AppComponent implements OnInit {
 
     this.appService.chaoticEvent.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
       if (event.type === 'build' && event.status === BuildStatus.SUCCESS) {
+        if (!event.version || event.version === 'unknown') return;
         const validRoutesRegex = /^\/(status|deployments|packages)(\?.*|#.*)?$/;
         if (!this.router.url || validRoutesRegex.test(this.router.url))
           this.messageToastService.success(

@@ -271,8 +271,8 @@ export class BuilderDatabaseService extends Service {
         data: {
           type: 'build',
           package: pkg.pkgname,
-          version: pkg.version,
-          pkgrel: pkg.pkgrel,
+          version: pkg.version ?? 'unknown',
+          pkgrel: pkg.pkgrel ?? 0,
           bump: pkg.bump ?? 0,
           duration: params.duration,
           repo: repo.name,
@@ -313,6 +313,35 @@ export class BuilderDatabaseService extends Service {
     }
 
     await this.requestChaoticVersionsUpdate();
+
+    // Re-emit build events with the now-correct version/pkgrel after the
+    // DB poll — the initial `builds.success` emission used a stale/NULL
+    // package row (race between build finish and repo DB pull). Frontend
+    // suppresses the `unknown` stub, so this is the real deployment toast.
+    for (const build of deployedBuilds) {
+      const pkgname = build.pkgbase?.pkgname;
+      const repo = build.repo;
+      if (!pkgname || !repo) continue;
+      try {
+        const pkg = await this.lookup.getOrCreatePackage(pkgname, repo);
+        if (!pkg.version || pkg.pkgrel == null) continue;
+        const duration = typeof build.timeToEnd === 'number' ? build.timeToEnd : 0;
+        this.sseSubject$.next({
+          data: {
+            type: 'build',
+            package: pkg.pkgname,
+            version: pkg.version,
+            pkgrel: pkg.pkgrel,
+            bump: pkg.bump ?? 0,
+            duration,
+            repo: repo.name,
+            status: build.status ?? BuildStatus.SUCCESS,
+          },
+        });
+      } catch (err: unknown) {
+        this.pino.error(`Failed to re-emit deployed build event for ${pkgname}: ${errorMessage(err)}`);
+      }
+    }
   }
 
   async requestChaoticVersionsUpdate(): Promise<void> {
