@@ -57,7 +57,6 @@ export class IssueTrackerService implements OnModuleInit {
     });
   }
 
-  /** Entry point for the GitHub issues webhook. The system logs failures. The sweep retries stale work. */
   async handleIssueEvent(payload: GithubIssueEventDto): Promise<void> {
     const issue = payload.issue;
     const waitsForIssuerFeedback = issue.labels.some(
@@ -69,10 +68,12 @@ export class IssueTrackerService implements OnModuleInit {
       }
       return;
     }
+
     if (payload.action === 'opened') {
       await this.triage(issue.number, issue.title, issue.body ?? '');
       return;
     }
+
     // If the requester comments on the issue, count it as an answer.
     if (payload.action === 'created' && payload.comment !== undefined && waitsForIssuerFeedback) {
       const requester = issue.user?.login;
@@ -81,6 +82,7 @@ export class IssueTrackerService implements OnModuleInit {
       }
       return;
     }
+
     if ((payload.action === 'edited' || payload.action === 'reopened') && waitsForIssuerFeedback) {
       await this.triage(issue.number, issue.title, issue.body ?? '');
     }
@@ -103,6 +105,7 @@ export class IssueTrackerService implements OnModuleInit {
       await this.github.closeIssue(issueNumber);
       return;
     }
+
     const parsed = parsePackageRequest(title, body);
     if (!parsed.ok) {
       await this.postNeedsInput(
@@ -194,7 +197,6 @@ export class IssueTrackerService implements OnModuleInit {
     }
   }
 
-  /** Queue a test build for the pkgbase. Post the result here. */
   private async queueTestBuild(issueNumber: number, title: string, body: string): Promise<void> {
     const parsed = parsePackageRequest(title, body);
     const pkgbase = parsed.ok ? parsed.request.pkgbases[0] : undefined;
@@ -345,10 +347,7 @@ export class IssueTrackerService implements OnModuleInit {
     return comments.some((comment) => comment.user?.login === requester && new Date(comment.created_at) > after);
   }
 
-  /**
-   * Closes open `[Request]` issues for a pkgbase once the package is available
-   * in the repository. Called from the Package insert subscriber.
-   */
+  // Called from the Package insert subscriber.
   async closeFulfilledNewRequest(pkgbase: string): Promise<void> {
     const open = await this.github.findOpenRequestIssues(pkgbase);
     for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Request]'))) {
@@ -360,10 +359,7 @@ export class IssueTrackerService implements OnModuleInit {
     }
   }
 
-  /**
-   * Closes open `[Rebuild]` issues for a pkgbase once a successful build
-   * flowed. Called from the Build insert subscriber.
-   */
+  // Called from the Build insert subscriber.
   async closeFulfilledRebuild(pkgbase: string): Promise<void> {
     const open = await this.github.findOpenRequestIssues(pkgbase);
     for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Rebuild]'))) {
@@ -380,7 +376,6 @@ export class IssueTrackerService implements OnModuleInit {
     await this.github.addLabels(issueNumber, [NEEDS_INPUT_LABEL]);
   }
 
-  /** Checks the "not available in chaotic-aur or the official repositories" claim of the template. */
   private async findAlreadyPackaged(bases: string[]): Promise<{ where: 'chaotic' | 'official'; url: string } | null> {
     const chaotic = await this.chaoticPackages.findOne({
       where: [{ pkgname: In(bases) }, { pkgbaseName: In(bases) }],

@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          lfs: true
       - name: Setup repository
         uses: ./.github/actions/setup
       - name: Check formatting
@@ -32,12 +30,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          lfs: true
       - name: Setup repository
         uses: ./.github/actions/setup
         with:
           install-system-deps: 'true'
+      - name: Cache fixtures
+        uses: actions/cache@v6
+        with:
+          path: backend/src/repo-manager/__fixtures__/*.pkg.tar.zst
+          key: fixtures-${{ hashFiles('backend/src/repo-manager/__fixtures__/packages.json') }}
+      - name: Fetch fixtures
+        run: node tools/fetch-fixtures.mjs
       - name: Unit tests with coverage
         run: pnpm exec nx run-many --target=test-ci --all --skip-nx-cache
       - name: Build
@@ -55,8 +58,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          lfs: true
       - name: Setup repository
         uses: ./.github/actions/setup
         with:

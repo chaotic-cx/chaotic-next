@@ -10,13 +10,15 @@
     "url": "git+https://github.com/chaotic-cx/chaotic-next.git"
   },
   "license": "LGPL-3.0-or-later",
-  "type": "module",
   "author": {
     "name": "dr460nf1r3",
     "email": "root@dr460nf1r3.org"
   },
+  "type": "module",
   "scripts": {
     "build": "nx run-many --target=build --all",
+    "coverage:merge": "node tools/merge-coverage.mjs coverage/combined/coverage-final.json coverage/backend/coverage-final.json coverage/backend-e2e/coverage-final.json",
+    "fixtures:fetch": "node tools/fetch-fixtures.mjs",
     "format": "prettier -w .",
     "format:check": "prettier --check .",
     "knip": "knip",
@@ -25,11 +27,10 @@
     "start:be": "nx run backend:serve",
     "start:fe": "nx run frontend:serve --proxy-config frontend/proxy.conf.json",
     "test": "nx run-many --target=test --all",
-    "test:full": "nx run backend:test:full",
     "test:coverage": "nx run-many --target=test-ci --all",
-    "coverage:merge": "node tools/merge-coverage.mjs coverage/combined/coverage-final.json coverage/backend/coverage-final.json coverage/backend-e2e/coverage-final.json",
     "test:coverage:combined": "pnpm test:coverage && pnpm coverage:merge",
     "test:e2e": "nx run backend-e2e:test",
+    "test:full": "nx run backend:test:full",
     "test:watch": "nx run-many --target=test --all --watch",
     "typecheck": "nx run-many --target=typecheck --all",
     "typeorm": "typeorm-ts-node-esm"
@@ -104,11 +105,11 @@
     "@analogjs/vitest-angular": "~2.7.1",
     "@angular-devkit/core": "22.1.6",
     "@angular-devkit/schematics": "22.1.6",
-    "@angular/build": "^22.1.6",
-    "@angular/compiler": "22.1.4",
     "@angular-eslint/eslint-plugin": "22.1.0",
     "@angular-eslint/eslint-plugin-template": "22.1.0",
     "@angular-eslint/template-parser": "22.1.0",
+    "@angular/build": "^22.1.6",
+    "@angular/compiler": "22.1.4",
     "@angular/compiler-cli": "22.1.4",
     "@catppuccin/highlightjs": "^1.0.1",
     "@catppuccin/palette": "2.0.0-beta.1",
@@ -165,7 +166,7 @@
     "vite": "^8.2.1",
     "vitest": "~4.1.0"
   },
-  "packageManager": "pnpm@12.0.0+sha512.9e2e3dc3911995868dc94b8175c217c27e95408fa03b4a22749778f2b34f773b77cdd3b39ede8171b22fcd53be6a35342e9fac9948a68ef58df6488ce89a7e67",
+  "packageManager": "pnpm@12.2.1+sha512.f55ca68aacb9eb5ab69c66f828a98af89a32286703aef1f8da131ca7eab4d677f34bfa85e186467a919c0799df8b6f4aa240f7dc2919b33b3273190104162616",
   "engines": {
     "npm": "^26",
     "pnpm": "^11.0.0"

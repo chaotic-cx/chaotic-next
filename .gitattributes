@@ -1,5 +1,0 @@
-# Vendored test fixtures (real Arch/Chaotic packages). Tracked via LFS:
-# the raw packages are large binaries and must not inflate the git history.
-backend/src/repo-manager/__fixtures__/*.pkg.tar.zst filter=lfs diff=lfs merge=lfs -text
-# Real pacman repo database (.db/.files) built from the packages above via repo-add.
-backend/src/repo-manager/__fixtures__/pacman/*.tar.zst filter=lfs diff=lfs merge=lfs -text
