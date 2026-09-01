@@ -64,7 +64,7 @@ export class BuildStatusComponent implements OnInit {
         void this.buildStatusService.refreshQueueStats();
       }
       if (event.type === 'pipeline') {
-        this.buildStatusService.transformPipelineData(event.pipeline);
+        this.buildStatusService.applyPipelineDelta(event.pipeline);
         if (this.dialogVisible()) {
           this.refreshDialogData();
         }
