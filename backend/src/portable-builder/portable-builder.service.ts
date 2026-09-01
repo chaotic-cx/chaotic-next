@@ -7,6 +7,7 @@ import { createWriteStream, promises as fs, type WriteStream } from 'node:fs';
 import * as path from 'node:path';
 import { Subject } from 'rxjs';
 import { In, type ObjectLiteral, Repository } from 'typeorm';
+import type { PortableBuilderConfig } from '../config/portable-builder.config';
 import { ArtifactScanService } from './artifact-scan.service';
 import { ContainerActivityWatchdog } from './container-activity-watchdog';
 import { ContainerStatsCollector, type ContainerUsage, formatContainerUsage } from './container-usage';
@@ -17,7 +18,6 @@ import {
   PortableBuild,
   type PortableBuildStatus,
 } from './portable-build.entity';
-import type { PortableBuilderConfig } from './portable-builder.config';
 
 const PKGBASE_PATTERN = /^[a-z0-9][a-z0-9._@+-]*$/;
 const AUR_URL = 'https://aur.archlinux.org';
