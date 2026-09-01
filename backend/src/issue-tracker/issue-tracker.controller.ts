@@ -14,7 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { ApiBody, ApiHeaders, ApiNoContentResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
-import { githubIssueEventSchema, type GithubIssueEventDto } from './issue-event.dto';
+import { githubIssueEventSchema } from './issue-event.dto';
 import { IssueTrackerService } from './issue-tracker.service';
 
 const SIGNATURE_PREFIX = 'sha256=';
@@ -53,15 +53,18 @@ export class IssueTrackerController {
     @Req() request: RawBodyRequest<FastifyRequest>,
     @Headers('x-github-event') event: string | undefined,
     @Headers('x-hub-signature-256') signature: string | undefined,
-    @Body({ schema: githubIssueEventSchema }) body: GithubIssueEventDto,
+    @Body() body: unknown,
   ): Promise<void> {
-    if (event !== 'issues' && event !== 'issue_comment') return;
     const rawBody = request.rawBody;
     if (rawBody === undefined) throw new UnauthorizedException('Missing raw body', { errorCode: 'INVALID_SIGNATURE' });
     const secret = this.configService.getOrThrow<string>('GITHUB_WEBHOOK_SECRET');
     if (!verifyWebhookSignature(rawBody, signature, secret)) {
       throw new UnauthorizedException('Invalid signature', { errorCode: 'INVALID_SIGNATURE' });
     }
-    this.runInBackground('issue triage', this.issueTracker.handleIssueEvent(body));
+    if (event === 'ping') return;
+    if (event !== 'issues' && event !== 'issue_comment') return;
+    const parsed = githubIssueEventSchema.safeParse(body);
+    if (!parsed.success) return;
+    this.runInBackground('issue triage', this.issueTracker.handleIssueEvent(parsed.data));
   }
 }
