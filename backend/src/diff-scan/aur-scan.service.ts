@@ -15,8 +15,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { filter, Observable, Subject } from 'rxjs';
 import { Repository } from 'typeorm';
-import { mapWithConcurrency } from '../utils/functions';
 import { classifyPkgbuild } from '../repo-manager/pkgbuild-classifier';
+import { mapWithConcurrency } from '../utils/functions';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
 import { commentThreatFinding, evaluateCommentThreats, parseAurComments } from './aur-comments';
@@ -24,8 +24,8 @@ import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
 import { AurResponseCache } from './aur-response-cache';
 import { DiffScanService } from './diff-scan.service';
 import { extractIndicators, type ScanIndicator } from './indicators';
-import { maskEchoHeredocs } from './rules/diff-utils';
 import { parsePkgbuild } from './pkgbuild';
+import { maskEchoHeredocs } from './rules/diff-utils';
 import { VirustotalService } from './virustotal.service';
 
 const AUR_INFO_URL = 'https://aur.archlinux.org/rpc/v5/info';
@@ -53,6 +53,7 @@ export interface AurScanOptions {
    * frontend scans get no VirusTotal lookups.
    */
   withVirusTotal?: boolean;
+  withLlm?: boolean;
 }
 
 @Injectable()
@@ -152,10 +153,19 @@ export class AurScanService {
         changes.push(fullFileDiff(file.name, file.content));
       }
       scan.scannedFiles = changes.map((change) => change.new_path);
+
+      const withLlm = options?.withLlm ?? options?.withVirusTotal ?? true;
       scan.findings = this.dedupeFindings(
-        await this.diffScanService.scanDiffs(changes, undefined, 'full-file', this.packageDependencies.bind(this)),
+        await this.diffScanService.scanDiffs(
+          changes,
+          undefined,
+          'full-file',
+          this.packageDependencies.bind(this),
+          withLlm,
+        ),
       );
       scan.pkgTypes = classifyPkgbuild(pkgbuildText.text);
+
       await this.appendCommentThreat(scan);
 
       const indicators = extractIndicators(

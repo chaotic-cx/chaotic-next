@@ -208,7 +208,8 @@ export class GitlabController {
   ): Promise<AurPackageScan> {
     if (!body) throw new BadRequestException('Missing request body');
     const withVirusTotal = session?.user !== undefined;
-    return this.aurScanService.startScan(body.package, { withVirusTotal });
+    const withLlm = session?.user !== undefined;
+    return this.aurScanService.startScan(body.package, { withVirusTotal, withLlm });
   }
 
   @Get('aur-scan/:packageName')

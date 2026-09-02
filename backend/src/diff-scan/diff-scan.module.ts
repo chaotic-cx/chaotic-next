@@ -7,6 +7,7 @@ import { AurMaintainerInfoEntity } from './aur-maintainer-info.entity';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
 import { AurScanService } from './aur-scan.service';
 import { DiffScanService } from './diff-scan.service';
+import { LlmScanService } from './llm-scan.service';
 import { DiffScanRuleData } from './rule-data.entity';
 import { RuleDataService } from './rule-data.service';
 import { VirusTotalVerdict } from './virus-total-verdict.entity';
@@ -28,7 +29,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       Package,
     ]),
   ],
-  providers: [AurScanService, DiffScanService, VirustotalService, AurAuthService, RuleDataService],
-  exports: [AurScanService, DiffScanService, VirustotalService, AurAuthService],
+  providers: [AurScanService, DiffScanService, VirustotalService, AurAuthService, RuleDataService, LlmScanService],
+  exports: [AurScanService, DiffScanService, VirustotalService, AurAuthService, LlmScanService],
 })
 export class DiffScanModule {}

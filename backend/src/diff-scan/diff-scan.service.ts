@@ -1,24 +1,25 @@
-import { Package } from '../builder/builder.entity';
-import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
-import { RULES } from './rules';
-import { maskEchoHeredocs } from './rules/diff-utils';
-import { ruleRunsOn, type GroupRuleHit, type RuleHit, type RuleSurface } from './rules/rule';
-import { posix } from 'node:path';
-import {
-  isDependencyPresent,
-  isSrcinfoFile,
-  scanSrcinfoDependencies,
-  type AurDependencyFetcher,
-} from './srcinfo-dependency';
-import { parsePkgbuild, parseSrcinfoVariables, registerSrcinfoVariables } from './pkgbuild';
-import { checkEolDependencies } from './eol-dependencies';
-import { findTyposquatFinding } from './typosquat';
 import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { posix } from 'node:path';
 import { Repository } from 'typeorm';
+import { Package } from '../builder/builder.entity';
+import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
+import { checkEolDependencies } from './eol-dependencies';
+import { LlmScanService } from './llm-scan.service';
+import { parsePkgbuild, parseSrcinfoVariables, registerSrcinfoVariables } from './pkgbuild';
+import { RULES } from './rules';
+import { maskEchoHeredocs } from './rules/diff-utils';
+import { type GroupRuleHit, type RuleHit, ruleRunsOn, type RuleSurface } from './rules/rule';
+import {
+  type AurDependencyFetcher,
+  isDependencyPresent,
+  isSrcinfoFile,
+  scanSrcinfoDependencies,
+} from './srcinfo-dependency';
+import { findTyposquatFinding } from './typosquat';
 
 const MAX_FINDINGS_PER_MR = 100;
 const MAX_MATCH_LENGTH = 300;
@@ -41,6 +42,7 @@ const SUSPICIOUS_SCORE_THRESHOLD = 4;
 export class DiffScanService {
   constructor(
     @InjectPinoLogger(DiffScanService.name) private readonly pino: PinoLogger,
+    private readonly llmScan: LlmScanService,
     @Optional()
     @InjectRepository(ArchlinuxPackage)
     private readonly archPkgRepository?: Repository<ArchlinuxPackage>,
@@ -54,6 +56,7 @@ export class DiffScanService {
     isDepPresentOverride?: (depName: string) => Promise<boolean>,
     surface: RuleSurface = 'mr-diff',
     fetchAurDependencies?: AurDependencyFetcher,
+    withLlm = true,
   ): Promise<DiffScanFinding[]> {
     const diffs = rawDiffs.map((change) => ({ ...change, diff: maskEchoHeredocs(change.diff) }));
     for (const rule of RULES) {
@@ -136,6 +139,16 @@ export class DiffScanService {
       if (findings.length >= MAX_FINDINGS_PER_MR) return sortFindings(findings);
     }
     findings.push(...(await this.checkEolDependencies(rawDiffs)));
+
+    if (withLlm) {
+      try {
+        const llmFindings = await this.llmScan.scan(diffs);
+        findings.push(...llmFindings);
+      } catch (err) {
+        this.pino.warn({ err }, 'LLM scan failed');
+      }
+    }
+
     return sortFindings(findings);
   }
 
