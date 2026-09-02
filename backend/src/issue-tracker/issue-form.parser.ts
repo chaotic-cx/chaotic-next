@@ -4,7 +4,7 @@
  * chaotic-aur/packages. Checkboxes render as GitHub task lists.
  */
 
-const REQUEST_TITLE_PATTERN = /^\[(Request|Rebuild)\]\s+(\S+)\s*$/;
+const REQUEST_TITLE_PATTERN = /^\[(Request|Rebuild|Issue)]\s+(\S+)\s*$/;
 
 // Requesters mix up both AUR URL shapes and often paste them without a
 // scheme; the name resolves through the AUR RPC either way.
@@ -47,6 +47,13 @@ export interface ParsedRebuildRequest {
   custom: boolean;
 }
 
+export interface ParsedPackageIssue {
+  pkgbases: string[];
+  issueType: string;
+  description: string;
+  logs: string;
+}
+
 /**
  * All validation failures short of an AUR lookup: unparseable title, missing
  * sections, unanswerable sections, or malformed AUR links. Each entry becomes
@@ -58,7 +65,11 @@ export interface ParseFailure {
 }
 
 export type ParseResult =
-  | { ok: true; kind: 'request' | 'rebuild'; request: ParsedPackageRequest | ParsedRebuildRequest }
+  | {
+      ok: true;
+      kind: 'request' | 'rebuild' | 'issue';
+      request: ParsedPackageRequest | ParsedRebuildRequest | ParsedPackageIssue;
+    }
   | { ok: false; failures: ParseFailure[] };
 
 function extractPkgbases(section: string): { names: string[]; failures: string[] } {
@@ -110,6 +121,13 @@ function addLicenseFailure(failures: ParseFailure[], answer: string): void {
 
 const UNCHECKED_TASK_REGEX = /^- \[ \]/m;
 const CUSTOM_PACKAGE_REGEX = /^- \[[xX]\][^\n]*custom package/im;
+const REBUILD_CONFIRM_REGEX = /^- \[[xX]\][^\n]*rebuild of the same pkgbase/im;
+const ISSUE_TYPE_VALUES = [
+  'Build failure',
+  'Wrong/missing dependency',
+  'Install/runtime issue',
+  'Other packaging issue',
+] as const;
 
 function addSubmissionChecklistFailures(failures: ParseFailure[], body: string): void {
   const checklist = splitFormSections(body).find((section) => section.label === 'Submission checklist');
@@ -126,15 +144,15 @@ export function parsePackageRequest(title: string, body: string): ParseResult {
       failures: [
         {
           section: 'Title',
-          problem: 'The title must be `[Request] package_name` or `[Rebuild] package_name`.',
+          problem: 'The title must be `[Request] package_name`, `[Rebuild] package_name` or `[Issue] package_name`.',
         },
       ],
     };
   }
-  const isRebuild = titleMatch[1] === 'Rebuild';
+  const kind = titleMatch[1] as 'Request' | 'Rebuild' | 'Issue';
   const sections = new Map(splitFormSections(body).map((section) => [section.label, section.body]));
 
-  if (!isRebuild) {
+  if (kind === 'Request') {
     const failures: ParseFailure[] = [];
     const packageSection = sections.get('Package') ?? '';
     const { names, failures: badLines } = extractPkgbases(packageSection);
@@ -156,14 +174,44 @@ export function parsePackageRequest(title: string, body: string): ParseResult {
     return { ok: true, kind: 'request', request: { pkgbases: names, purpose, license } };
   }
 
-  // Rebuilds target existing Chaotic packages: the title already names the
-  // pkgbase, source links do not have to point at the AUR, and a checked
-  // custom-package box marks packages that never existed on the AUR.
+  if (kind === 'Rebuild') {
+    const failures: ParseFailure[] = [];
+    const { names } = extractPkgbases(sections.get('Packages') ?? '');
+    const pkgbases = names.length > 0 ? names : [titleMatch[2]];
+    const description = sections.get('Description') ?? '';
+
+    addEmptySectionFailure(failures, 'Description', description);
+
+    const hasConfirmationSection = splitFormSections(body).some((s) => s.label === 'Confirmation');
+    if (hasConfirmationSection && !REBUILD_CONFIRM_REGEX.test(body)) {
+      failures.push({
+        section: 'Confirmation',
+        problem: 'Please confirm this is a rebuild of the same pkgbase, not a packaging change.',
+      });
+    }
+    if (failures.length > 0) return { ok: false, failures };
+
+    return { ok: true, kind: 'rebuild', request: { pkgbases, description, custom: CUSTOM_PACKAGE_REGEX.test(body) } };
+  }
+
   const failures: ParseFailure[] = [];
-  const { names } = extractPkgbases(sections.get('Packages') ?? '');
+  const { names } = extractPkgbases(sections.get('Package') ?? '');
   const pkgbases = names.length > 0 ? names : [titleMatch[2]];
-  const description = sections.get('Description') ?? '';
-  addEmptySectionFailure(failures, 'Description', description);
+  const issueType = sections.get('Issue type') ?? '';
+  if (!ISSUE_TYPE_VALUES.includes(issueType as (typeof ISSUE_TYPE_VALUES)[number])) {
+    failures.push({
+      section: 'Issue type',
+      problem: `Select an issue type: ${ISSUE_TYPE_VALUES.join(', ')}.`,
+    });
+  }
+
+  const description = sections.get('Issue description') ?? sections.get('Description') ?? '';
+  addEmptySectionFailure(failures, 'Issue description', description);
+  const logs = sections.get('Logs') ?? '';
+  if (issueType === 'Build failure' && (logs.length === 0 || logs === '_No response_')) {
+    failures.push({ section: 'Logs', problem: 'Build failure issues must include logs / error output.' });
+  }
   if (failures.length > 0) return { ok: false, failures };
-  return { ok: true, kind: 'rebuild', request: { pkgbases, description, custom: CUSTOM_PACKAGE_REGEX.test(body) } };
+
+  return { ok: true, kind: 'issue', request: { pkgbases, issueType, description, logs } };
 }

@@ -80,7 +80,7 @@ describe('parsePackageRequest', () => {
       failures: [
         {
           section: 'Title',
-          problem: 'The title must be `[Request] package_name` or `[Rebuild] package_name`.',
+          problem: 'The title must be `[Request] package_name`, `[Rebuild] package_name` or `[Issue] package_name`.',
         },
       ],
     });
@@ -181,5 +181,48 @@ describe('parsePackageRequest', () => {
       '### Packages\n\nhttps://aur.archlinux.org/pkgbase/mesa-tkg-git\n\n### Description\n\n_No response_\n',
     );
     expect(result).toMatchObject({ ok: false, failures: [{ section: 'Description' }] });
+  });
+
+  it('accepts a rebuild with confirmation checked', () => {
+    const body =
+      '### Packages\n\nhttps://aur.archlinux.org/pkgbase/foo-app\n\n### Description\n\nOutdated.\n\n### Confirmation\n\n- [x] I verified the AUR package itself is updated — this is a rebuild of the same pkgbase, not a packaging change.\n';
+    expect(parsePackageRequest('[Rebuild] foo-app', body)).toMatchObject({ ok: true, kind: 'rebuild' });
+  });
+
+  it('rejects a rebuild when confirmation is present but unchecked', () => {
+    const body =
+      '### Packages\n\nhttps://aur.archlinux.org/pkgbase/foo-app\n\n### Description\n\nOutdated.\n\n### Confirmation\n\n- [ ] I verified the AUR package itself is updated — this is a rebuild of the same pkgbase, not a packaging change.\n';
+    const result = parsePackageRequest('[Rebuild] foo-app', body);
+    expect(result).toMatchObject({ ok: false, failures: [{ section: 'Confirmation' }] });
+  });
+
+  it('parses a valid package issue with issue type and logs', () => {
+    const body =
+      '### Package\n\nfoo-app\n\n### Issue type\n\nBuild failure\n\n### Issue description\n\nFails to build\n\n### Logs\n\nerror: failed\n';
+    const result = parsePackageRequest('[Issue] foo-app', body);
+    expect(result).toEqual({
+      ok: true,
+      kind: 'issue',
+      request: {
+        pkgbases: ['foo-app'],
+        issueType: 'Build failure',
+        description: 'Fails to build',
+        logs: 'error: failed',
+      },
+    });
+  });
+
+  it('rejects a package issue without issue type', () => {
+    const body =
+      '### Package\n\nfoo-app\n\n### Issue type\n\n_No response_\n\n### Issue description\n\nSomething\n\n### Logs\n\nlog\n';
+    const result = parsePackageRequest('[Issue] foo-app', body);
+    expect(result).toMatchObject({ ok: false, failures: [{ section: 'Issue type' }] });
+  });
+
+  it('rejects a build failure issue without logs', () => {
+    const body =
+      '### Package\n\nfoo-app\n\n### Issue type\n\nBuild failure\n\n### Issue description\n\nFails\n\n### Logs\n\n_No response_\n';
+    const result = parsePackageRequest('[Issue] foo-app', body);
+    expect(result).toMatchObject({ ok: false, failures: [{ section: 'Logs' }] });
   });
 });

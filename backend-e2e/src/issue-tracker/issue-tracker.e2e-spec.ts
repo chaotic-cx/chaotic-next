@@ -252,4 +252,66 @@ describe('Issue tracker webhook (e2e)', () => {
     expect(res.statusCode).toBe(204);
     await vi.waitFor(() => expect(github.createComment).toHaveBeenCalled());
   });
+
+  it('triages a valid [Issue] package issue with issue type', async () => {
+    const github = e2e.app.get(GithubIssuesService);
+    const body = [
+      '### Package',
+      '',
+      'chaotic-mirrorlist',
+      '',
+      '### Issue type',
+      '',
+      'Build failure',
+      '',
+      '### Issue description',
+      '',
+      'Fails to build on python 3.15',
+      '',
+      '### Logs',
+      '',
+      'error: build failed',
+    ].join('\n');
+    const payload = {
+      action: 'opened',
+      issue: { number: 17, title: '[Issue] chaotic-mirrorlist', body, labels: [] },
+    };
+    const res = await post(payload);
+    expect(res.statusCode).toBe(204);
+    await vi.waitFor(() => expect(github.addLabels).toHaveBeenCalledWith(17, expect.arrayContaining(['needs-triage'])));
+  });
+
+  it('adds info:orphaned label when AUR package is orphaned', async () => {
+    const github = e2e.app.get(GithubIssuesService);
+    const aurScan = e2e.app.get(AurScanService);
+    vi.mocked(aurScan.getScan).mockReturnValue({
+      packageName: 'chaotic-mirrorlist',
+      packageBase: 'chaotic-mirrorlist',
+      status: 'done',
+      findings: [],
+      pkgTypes: [],
+      scannedFiles: ['PKGBUILD'],
+      sources: ['PKGBUILD'],
+      packageMeta: {
+        votes: 0,
+        popularity: 0,
+        firstSubmitted: new Date().toISOString(),
+        orphaned: true,
+        outOfDate: false,
+      },
+      vtReports: [],
+      vtPending: 0,
+      maintainers: [],
+      maintainerChange: null,
+    } as unknown as ReturnType<AurScanService['getScan']>);
+    const payload = {
+      action: 'opened',
+      issue: { number: 18, title: '[Request] chaotic-mirrorlist', body: validBody(), labels: [] },
+    };
+    const res = await post(payload);
+    expect(res.statusCode).toBe(204);
+    await vi.waitFor(() =>
+      expect(github.addLabels).toHaveBeenCalledWith(18, expect.arrayContaining(['info:orphaned'])),
+    );
+  });
 });

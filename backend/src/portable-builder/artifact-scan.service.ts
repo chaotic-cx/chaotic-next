@@ -121,7 +121,13 @@ export class ArtifactScanService {
       const changes = files
         .filter((file) => file.text !== null)
         .map((file) => fullFileDiff(file.name, file.text as string));
-      const findings = await this.diffScan.scanDiffs(changes as MergeRequestDiffSchema[], undefined, 'full-file');
+      const findings = await this.diffScan.scanDiffs(
+        changes as MergeRequestDiffSchema[],
+        undefined,
+        'full-file',
+        undefined,
+        false,
+      );
       const clamavDetections = await this.scanWithClamav(options);
       const virusTotal = withVirusTotal
         ? await this.virusTotalVerdicts(files, changes as MergeRequestDiffSchema[])
