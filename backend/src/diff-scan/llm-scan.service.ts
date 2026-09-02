@@ -1,8 +1,8 @@
+import { type DiffScanFinding } from '@chaotic-next/shared-lib';
+import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { type DiffScanFinding } from '@chaotic-next/shared-lib';
-import { type MergeRequestDiffSchema } from '@gitbeaker/core';
 
 const DEFAULT_LLM_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_LLM_MODELS = [
@@ -39,7 +39,12 @@ export class LlmScanService {
       process.env.OPENROUTER_API_KEY;
     this.apiUrl = configService.get<string>('LLM_API_URL') ?? process.env.LLM_API_URL ?? DEFAULT_LLM_API_URL;
     const modelsEnv = configService.get<string>('LLM_MODELS') ?? process.env.LLM_MODELS;
-    this.models = modelsEnv ? (modelsEnv.split(',').map((s) => s.trim()).filter(Boolean) as readonly string[]) : DEFAULT_LLM_MODELS;
+    this.models = modelsEnv
+      ? (modelsEnv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean) as readonly string[])
+      : DEFAULT_LLM_MODELS;
   }
 
   get enabled(): boolean {
@@ -49,9 +54,14 @@ export class LlmScanService {
   async scan(diffs: MergeRequestDiffSchema[]): Promise<DiffScanFinding[]> {
     if (!this.enabled || diffs.length === 0) return [];
     const prompt = this.buildPrompt(diffs);
-    const cacheKey = `${prompt.length}:${prompt.slice(0, 200)}`;
+    const cacheKey = `llm:${prompt.length}:${prompt.slice(0, 200)}`;
     const cached = this.cache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      this.pino.debug({ cacheKey, findingCount: cached.length }, 'LLM scan cache hit');
+      return cached;
+    }
+
+    this.pino.info({ diffCount: diffs.length, promptChars: prompt.length }, 'LLM scan started');
 
     const task = async (): Promise<DiffScanFinding[]> => {
       const waitMs = 6000 - (Date.now() - this.lastCallAt);
@@ -64,7 +74,7 @@ export class LlmScanService {
             method: 'POST',
             headers: {
               'content-type': 'application/json',
-              authorization: `Bearer ${this.apiKey}`,
+              'authorization': `Bearer ${this.apiKey}`,
               'HTTP-Referer': 'https://aur.chaotic.cx',
               'X-Title': 'Chaotic-AUR diff scan',
             },
@@ -79,6 +89,7 @@ export class LlmScanService {
             }),
             signal: AbortSignal.timeout(TIMEOUT_MS),
           });
+
           if (res.status === 429) {
             this.pino.debug({ status: res.status, model }, 'LLM rate limited, trying next model');
             continue;
@@ -87,9 +98,19 @@ export class LlmScanService {
             this.pino.warn({ status: res.status, model }, 'LLM scan failed');
             return [];
           }
+
           const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
           const text = data.choices?.[0]?.message?.content?.trim() ?? '[]';
-          return this.parseFindings(text, diffs);
+          const findings = this.parseFindings(text, diffs);
+          this.pino.info({ model, findingCount: findings.length, cached: false }, 'LLM scan completed');
+
+          if (this.cache.size >= 200) {
+            const oldest = this.cache.keys().next().value as string | undefined;
+            if (oldest !== undefined) this.cache.delete(oldest);
+          }
+          this.cache.set(cacheKey, findings);
+
+          return findings;
         }
         return [];
       } catch (err) {
@@ -99,22 +120,28 @@ export class LlmScanService {
       }
     };
     const queued = this.queue.then(task, task);
-    this.queue = queued.then(() => undefined, () => undefined);
+    this.queue = queued.then(
+      () => undefined,
+      () => undefined,
+    );
     return queued;
   }
 
   private parseFindings(text: string, diffs: MergeRequestDiffSchema[]): DiffScanFinding[] {
     const parsed = JSON.parse(text) as DiffScanFinding[];
     if (!Array.isArray(parsed)) return [];
-    return parsed.slice(0, 10).map((finding) => ({
-      ruleId: finding.ruleId ?? 'LLM-001',
-      ruleName: 'LLM scan',
-      severity: (finding.severity as DiffScanFinding['severity']) ?? 'warning',
-      description: 'AI-detected suspicious pattern',
-      file: finding.file ?? diffs[0]?.new_path ?? 'PKGBUILD',
-      line: finding.line,
-      match: (finding.match ?? '').slice(0, 200),
-    } as unknown as DiffScanFinding));
+    return parsed.slice(0, 10).map(
+      (finding) =>
+        ({
+          ruleId: finding.ruleId ?? 'LLM-001',
+          ruleName: 'LLM scan',
+          severity: (finding.severity as DiffScanFinding['severity']) ?? 'warning',
+          description: 'AI-detected suspicious pattern',
+          file: finding.file ?? diffs[0]?.new_path ?? 'PKGBUILD',
+          line: finding.line,
+          match: (finding.match ?? '').slice(0, 200),
+        }) as unknown as DiffScanFinding,
+    );
   }
 
   private buildPrompt(diffs: MergeRequestDiffSchema[]): string {
