@@ -71,7 +71,7 @@ export class AppService {
 
   readonly backendVersion = signal<string | undefined>(undefined);
 
-  private lastSseFrameAt = 0;
+  private lastSseFrameAt = Date.now();
   private lastHealthProbeAt = 0;
   private readonly watchdogTimer = setInterval(() => this.watchdogTick(), WATCHDOG_TICK_MS);
   private readonly stream = new ResilientSseStream({
@@ -85,6 +85,7 @@ export class AppService {
       this.internalSseConnected.set(true);
     },
     onOpen: () => {
+      this.lastSseFrameAt = Date.now();
       this.internalSseSettled.set(true);
       this.internalSseConnected.set(true);
     },
@@ -111,6 +112,7 @@ export class AppService {
     if (!this.stream.isOpen) return;
     if (Date.now() - this.lastSseFrameAt <= SSE_STALE_AFTER_MS) return;
     void this.probeHealth();
+    this.lastSseFrameAt = Date.now();
     this.stream.open();
   }
 
