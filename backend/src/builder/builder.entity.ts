@@ -14,6 +14,7 @@ import {
   Index,
   ManyToOne,
   PrimaryGeneratedColumn,
+  RelationId,
   type EntitySubscriberInterface,
   type InsertEvent,
   type UpdateResult,
@@ -240,6 +241,9 @@ export class Build {
   @ApiProperty({ description: 'Built package', type: () => Package })
   @ManyToOne(() => Package, (pkg) => pkg.id, { cascade: true })
   pkgbase!: Package;
+
+  @RelationId((build: Build) => build.pkgbase)
+  pkgbaseId!: number;
 
   @ApiProperty({ description: 'Build class' })
   @Column({ type: 'varchar', nullable: true })
