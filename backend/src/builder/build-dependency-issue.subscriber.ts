@@ -1,5 +1,5 @@
 import { BuildStatus } from '@chaotic-next/shared-lib';
-import { OnModuleInit } from '@nestjs/common';
+import { Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntitySubscriberInterface, EventSubscriber, InsertEvent, Repository } from 'typeorm';
@@ -8,6 +8,8 @@ import { isFailingStatus } from './unresolved-failures';
 
 @EventSubscriber()
 export class BuildDependencyIssueSubscriber implements EntitySubscriberInterface<Build>, OnModuleInit {
+  private readonly logger = new Logger(BuildDependencyIssueSubscriber.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(Build) private readonly builds: Repository<Build>,
@@ -22,17 +24,20 @@ export class BuildDependencyIssueSubscriber implements EntitySubscriberInterface
     return this.configService.get<string>('GITHUB_ISSUES_REPO_NAME') ?? 'packages';
   }
 
-  private get githubToken(): string {
-    return this.configService.getOrThrow<string>('GITHUB_TOKEN');
+  private get githubToken(): string | undefined {
+    return this.configService.get<string>('GITHUB_TOKEN');
   }
 
   private async githubRequest<T>(path: string, init?: { method?: string; body?: string }): Promise<T> {
+    const token = this.githubToken;
+    if (!token) throw new Error('GITHUB_TOKEN not configured');
+
     const res = await fetch(`https://api.github.com${path}`, {
       method: init?.method,
       body: init?.body,
       headers: {
         'accept': 'application/vnd.github+json',
-        'authorization': `Bearer ${this.githubToken}`,
+        'authorization': `Bearer ${token}`,
         'content-type': 'application/json',
       },
     });
@@ -93,55 +98,59 @@ export class BuildDependencyIssueSubscriber implements EntitySubscriberInterface
   }
 
   async afterInsert(event: InsertEvent<Build>): Promise<void> {
-    const build = event.entity as Build | undefined;
-    if (!build) return;
+    try {
+      const build = event.entity as Build | undefined;
+      if (!build) return;
 
-    const pkgbaseId = build.pkgbaseId;
-    if (!pkgbaseId) return;
-    const pkg = await this.builds.manager
-      .getRepository((await import('./builder.entity')).Package)
-      .findOne({ where: { id: pkgbaseId } });
-    const pkgbaseName = pkg?.pkgname ?? 'unknown';
+      const pkgbaseId = build.pkgbaseId;
+      if (!pkgbaseId) return;
+      const pkg = await this.builds.manager
+        .getRepository((await import('./builder.entity')).Package)
+        .findOne({ where: { id: pkgbaseId } });
+      const pkgbaseName = pkg?.pkgname ?? 'unknown';
 
-    if (build.status === BuildStatus.SUCCESS) {
-      const open = await this.findOpenRequestIssues(pkgbaseName);
-      const target = open.find((i: { title: string }) => i.title.trim() === `[Issue] ${pkgbaseName}`);
-      if (!target) return;
+      if (build.status === BuildStatus.SUCCESS) {
+        const open = await this.findOpenRequestIssues(pkgbaseName);
+        const target = open.find((i: { title: string }) => i.title.trim() === `[Issue] ${pkgbaseName}`);
+        if (!target) return;
+
+        const recent = await this.builds.find({
+          where: { pkgbase: { id: pkgbaseId } } as never,
+          order: { id: 'DESC' },
+          take: 3,
+        });
+        const hasPriorDependencyFailure = recent.some(
+          (b) => b.failureTags?.includes('dependency') && b.status !== BuildStatus.SUCCESS,
+        );
+        if (!hasPriorDependencyFailure) return;
+
+        await this.createComment(target.number, `Build ${build.id} succeeded — closing dependency issue.`);
+        await this.closeIssue(target.number);
+        await this.removeLabel(target.number, 'info:dependency').catch(() => undefined);
+        return;
+      }
+
+      if (!isFailingStatus(build.status as never) || !build.failureTags?.includes('dependency')) return;
 
       const recent = await this.builds.find({
         where: { pkgbase: { id: pkgbaseId } } as never,
         order: { id: 'DESC' },
-        take: 3,
+        take: 2,
       });
-      const hasPriorDependencyFailure = recent.some(
-        (b) => b.failureTags?.includes('dependency') && b.status !== BuildStatus.SUCCESS,
+      const [curr, prior] = recent;
+      if (!prior || curr.id === prior.id) return;
+      if (prior.status !== BuildStatus.SUCCESS) return;
+
+      const open = await this.findOpenRequestIssues(pkgbaseName);
+      if (open.some((i: { title: string }) => i.title.trim() === `[Issue] ${pkgbaseName}`)) return;
+
+      await this.createIssue(
+        `[Issue] ${pkgbaseName}`,
+        `### Package\n\n${pkgbaseName}\n\n### Issue type\n\nWrong/missing dependency\n\n### Issue description\n\nBuild ${build.id} failed due to dependency (first after success ${prior.id}).\nLog: ${build.logUrl ?? 'n/a'}\n\n### Logs\n\n\`\`\`\n\`\`\``,
+        ['request:package-issue', 'info:dependency'],
       );
-      if (!hasPriorDependencyFailure) return;
-
-      await this.createComment(target.number, `Build ${build.id} succeeded — closing dependency issue.`);
-      await this.closeIssue(target.number);
-      await this.removeLabel(target.number, 'info:dependency').catch(() => undefined);
-      return;
+    } catch (err) {
+      this.logger.warn(`BuildDependencyIssueSubscriber afterInsert skipped: ${(err as Error).message}`);
     }
-
-    if (!isFailingStatus(build.status as never) || !build.failureTags?.includes('dependency')) return;
-
-    const recent = await this.builds.find({
-      where: { pkgbase: { id: pkgbaseId } } as never,
-      order: { id: 'DESC' },
-      take: 2,
-    });
-    const [curr, prior] = recent;
-    if (!prior || curr.id === prior.id) return;
-    if (prior.status !== BuildStatus.SUCCESS) return;
-
-    const open = await this.findOpenRequestIssues(pkgbaseName);
-    if (open.some((i: { title: string }) => i.title.trim() === `[Issue] ${pkgbaseName}`)) return;
-
-    await this.createIssue(
-      `[Issue] ${pkgbaseName}`,
-      `### Package\n\n${pkgbaseName}\n\n### Issue type\n\nWrong/missing dependency\n\n### Issue description\n\nBuild ${build.id} failed due to dependency (first after success ${prior.id}).\nLog: ${build.logUrl ?? 'n/a'}\n\n### Logs\n\n\`\`\`\n\`\`\``,
-      ['request:package-issue', 'info:dependency'],
-    );
   }
 }

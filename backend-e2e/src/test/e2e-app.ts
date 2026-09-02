@@ -1,7 +1,6 @@
-import { createHmac, randomUUID } from 'node:crypto';
-import { ARCH_PACKAGES, BUILDERS, CHAOTIC_AUR_REPO, GARUDA_REPO, PACKAGES } from './fixtures';
-import { initializeAuthDataSource } from '@chaotic-next/backend/auth/auth';
 import { AppModule } from '@chaotic-next/backend/app.module';
+import { initializeAuthDataSource } from '@chaotic-next/backend/auth/auth';
+import { BuildDependencyIssueSubscriber } from '@chaotic-next/backend/builder/build-dependency-issue.subscriber';
 import { Build, Builder, BuildResourceUsage, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
 import { BuilderService } from '@chaotic-next/backend/builder/builder.service';
 import { GitlabApiService } from '@chaotic-next/backend/gitlab/gitlab-api.service';
@@ -17,12 +16,14 @@ import { BuildStatus } from '@chaotic-next/backend/types/types';
 import { HLL_LOG2M } from '@chaotic-next/backend/utils/constants';
 import { utcDayStart } from '@chaotic-next/backend/utils/functions';
 import { RepoStatus } from '@chaotic-next/shared-lib';
-import { CACHE_MANAGER, type Cache } from '@nestjs/cache-manager';
+import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ExecutionContext, Logger } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import { createHmac, randomUUID } from 'node:crypto';
 import { DataSource, type Repository } from 'typeorm';
+import { ARCH_PACKAGES, BUILDERS, CHAOTIC_AUR_REPO, GARUDA_REPO, PACKAGES } from './fixtures';
 
 export interface RouterHitSeed {
   package: string;
@@ -236,6 +237,15 @@ export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<E
   });
   await app.init();
   stubGitlabApi(app);
+
+  // BuildDependencyIssueSubscriber uses raw fetch to api.github.com
+  try {
+    const sub = app.get(BuildDependencyIssueSubscriber);
+    (sub as unknown as { afterInsert: () => Promise<void> }).afterInsert = async () => undefined;
+  } catch {
+    // provider not registered in this test context
+  }
+
   await app.listen(0);
 
   const dataSource = app.get<DataSource>(DataSource);
