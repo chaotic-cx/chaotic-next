@@ -31,6 +31,8 @@ function makeAnalysis(
     providedSonames: [],
     importedSymbols: [],
     exportedSymbols: {},
+    providedVersionNodes: {},
+    neededVersionNodes: {},
     vtables: {},
     directoriesOwned: [],
     directDirectories: [],

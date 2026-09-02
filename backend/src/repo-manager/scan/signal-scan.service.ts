@@ -164,6 +164,8 @@ export class SignalScanService {
               providedSonames: analysis.providedSonames,
               importedSymbols: analysis.importedSymbols,
               exportedSymbols: analysis.exportedSymbols,
+              providedVersionNodes: analysis.providedVersionNodes,
+              neededVersionNodes: analysis.neededVersionNodes,
               vtables: analysis.vtables,
               directoriesOwned: analysis.directoriesOwned,
               directDirectories: analysis.directDirectories,

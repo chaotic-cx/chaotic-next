@@ -27,6 +27,8 @@ export const seedEntrySchema = z
     providedSonames: z.array(z.string()).default([]),
     importedSymbols: z.array(z.string()).default([]),
     exportedSymbols: z.record(z.string(), z.array(z.string())).default({}),
+    providedVersionNodes: z.record(z.string(), z.array(z.string())).default({}),
+    neededVersionNodes: z.record(z.string(), z.array(z.string())).default({}),
     vtables: z.record(z.string(), z.array(z.string())).default({}),
     directoriesOwned: z.array(z.string()).default([]),
     directDirectories: z.array(z.string()).default([]),

@@ -121,6 +121,12 @@ export class PackageElfAnalysis {
   exportedSymbols!: Record<string, string[]>;
 
   @Column({ type: 'jsonb', default: () => "'{}'" })
+  providedVersionNodes!: Record<string, string[]>;
+
+  @Column({ type: 'jsonb', default: () => "'{}'" })
+  neededVersionNodes!: Record<string, string[]>;
+
+  @Column({ type: 'jsonb', default: () => "'{}'" })
   vtables!: Record<string, string[]>;
 
   @Column({ type: 'jsonb', default: () => "'[]'" })
@@ -155,6 +161,8 @@ export class PackageElfAnalysis {
       providedSonames: this.providedSonames,
       importedSymbols: this.importedSymbols,
       exportedSymbols: this.exportedSymbols,
+      providedVersionNodes: this.providedVersionNodes,
+      neededVersionNodes: this.neededVersionNodes,
       vtables: this.vtables,
       directoriesOwned: this.directoriesOwned,
       directDirectories: this.directDirectories,

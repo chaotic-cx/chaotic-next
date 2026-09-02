@@ -33,6 +33,7 @@ describe('Compiled Code Detection Integration', () => {
       ]),
       relocationsByFile: new Map(),
       nmSizesByFile: new Map(),
+      versionInfoByFile: new Map(),
     });
 
     expect(compiledAnalysis.providedSonames.length).toBeGreaterThan(0);
@@ -54,6 +55,7 @@ describe('Compiled Code Detection Integration', () => {
       exportsByFile: new Map(),
       relocationsByFile: new Map(),
       nmSizesByFile: new Map(),
+      versionInfoByFile: new Map(),
     });
 
     expect(nonCompiledAnalysis.providedSonames.length).toBe(0);
@@ -102,6 +104,7 @@ describe('Compiled Code Detection Integration', () => {
       exportsByFile: new Map(),
       relocationsByFile: new Map(),
       nmSizesByFile: new Map(),
+      versionInfoByFile: new Map(),
     });
 
     expect(gnomeShellAnalysis.providedSonames.length).toBe(0);
@@ -147,6 +150,7 @@ describe('Compiled Code Detection Integration', () => {
       ]),
       relocationsByFile: new Map(),
       nmSizesByFile: new Map(),
+      versionInfoByFile: new Map(),
     });
 
     expect(kwinPluginAnalysis.providedSonames.length).toBeGreaterThan(0);

@@ -90,6 +90,17 @@ export const packageElfAnalysisSchema = z.object({
    */
   exportedSymbols: z.record(z.string(), z.array(z.string())),
   /**
+   * ELF symbol version nodes each shipped .so defines, keyed by the .so's SONAME
+   * (from `readelf -VW` version-definition section). A consumer that links the
+   * soname and requires one of these nodes breaks when the node disappears.
+   */
+  providedVersionNodes: z.record(z.string(), z.array(z.string())),
+  /**
+   * ELF symbol version nodes this package requires from each linked soname,
+   * keyed by the soname (from `readelf -VW` version-needs section).
+   */
+  neededVersionNodes: z.record(z.string(), z.array(z.string())),
+  /**
    * Per-vtable layout of the exported virtual-slot lists, keyed by the mangled
    * vtable symbol (e.g. `_ZTVN4KWin6EffectE`) and valued by the ordered list of
    * slot-target symbols. Derived from `readelf -rW` + `nm -D -S --defined-only`.

@@ -1,3 +1,4 @@
+import { type PackageElfAnalysis, PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '@chaotic-next/shared-lib';
 import { TriggerType } from '../../interfaces/repo-manager';
 import { type PackageElfPkgType } from '../repo-manager.entity';
 import { extractVtableSlots } from './abi';
@@ -11,10 +12,10 @@ import {
   parseNmSymbolsWithSize,
   parseReadelfDynamic,
   parseReadelfRelocations,
+  parseReadelfVersionInfo,
   parseUndefinedSymbols,
   sonameBasename,
 } from './parse';
-import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC, type PackageElfAnalysis } from '@chaotic-next/shared-lib';
 
 /** Directory-ownership index used for plugin detection. */
 export interface DirectoryIndex {
@@ -267,6 +268,7 @@ export function buildAnalysis(opts: {
   exportsByFile: Map<string, string>;
   relocationsByFile: Map<string, string>;
   nmSizesByFile: Map<string, string>;
+  versionInfoByFile: Map<string, string>;
 }): PackageElfAnalysis {
   const files = parseFileList(opts.fileList);
 
@@ -279,6 +281,8 @@ export function buildAnalysis(opts: {
   const provided = new Set<string>();
   const imported = new Set<string>();
   const exported: Record<string, string[]> = {};
+  const providedVersionNodes: Record<string, string[]> = {};
+  const neededVersionNodes: Record<string, string[]> = {};
   const vtables: Record<string, string[]> = {};
 
   for (const file of elfFiles) {
@@ -294,6 +298,13 @@ export function buildAnalysis(opts: {
         provided.add(providedName);
         const defined = opts.exportsByFile.get(file);
         if (defined) exported[providedName] = dedupe(parseDefinedSymbols(defined)).sort();
+
+        const versionInfo = opts.versionInfoByFile.get(file);
+        if (versionInfo) {
+          const { defined: nodes } = parseReadelfVersionInfo(versionInfo);
+          if (nodes.length > 0) providedVersionNodes[providedName] = dedupe(nodes).sort();
+        }
+
         const relocations = opts.relocationsByFile.get(file);
         const nmSizes = opts.nmSizesByFile.get(file);
         if (relocations && nmSizes) {
@@ -302,9 +313,18 @@ export function buildAnalysis(opts: {
         }
       }
     }
+
     const imports = opts.importsByFile.get(file);
     if (imports) {
       for (const sym of parseUndefinedSymbols(imports)) imported.add(sym);
+    }
+
+    const versionInfo = opts.versionInfoByFile.get(file);
+    if (versionInfo) {
+      for (const [soname, nodes] of Object.entries(parseReadelfVersionInfo(versionInfo).needed)) {
+        if (nodes.length === 0) continue;
+        (neededVersionNodes[soname] ??= []).push(...nodes);
+      }
     }
   }
 
@@ -313,6 +333,10 @@ export function buildAnalysis(opts: {
 
   const hasCompiledCode = needed.size > 0 || provided.size > 0;
 
+  for (const soname of Object.keys(neededVersionNodes)) {
+    neededVersionNodes[soname] = dedupe(neededVersionNodes[soname]).sort();
+  }
+
   return {
     version: opts.version,
     files,
@@ -320,6 +344,8 @@ export function buildAnalysis(opts: {
     providedSonames: dedupe([...provided]).sort(),
     importedSymbols: dedupe([...imported]).sort(),
     exportedSymbols: exported,
+    providedVersionNodes,
+    neededVersionNodes,
     vtables,
     directoriesOwned,
     directDirectories,

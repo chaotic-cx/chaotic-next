@@ -165,6 +165,71 @@ describe('consumerSymbolBreaksFor', () => {
   });
 });
 
+describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () => {
+  function onnxContext(): {
+    changed: ArchlinuxPackage[];
+    providedByPkgname: Map<string, Set<string>>;
+    archProvidedSonames: Set<string>;
+    runtimes: Partial<Record<'python' | 'perl' | 'ruby' | 'ghc', string | null>>;
+    previousProvidedByPkg: Map<number, Set<string>>;
+    currentProvidedByPkg: Map<number, Set<string>>;
+    currentVersionNodesByPkg: Map<number, Record<string, string[]>>;
+  } {
+    const onnx = {
+      id: 222,
+      pkgname: 'onnxruntime',
+      previousVersion: '1.28.0-1',
+      version: '1.29.0-1',
+    } as ArchlinuxPackage;
+    const empty = new Map<string, Set<string>>();
+    return {
+      changed: [onnx],
+      providedByPkgname: empty,
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      currentProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      currentVersionNodesByPkg: new Map([[222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }]]),
+    };
+  }
+
+  it('flags a consumer needing a version node the updated provider dropped', () => {
+    const service = createService();
+    const consumer = makeConsumer({
+      neededSonames: ['libonnxruntime.so.1'],
+      neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.28.0'] },
+    });
+
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[],
+        ): { deps: { kind: 'version'; soname: string; versionNodes: string[] }[]; archPkg: ArchlinuxPackage } | null;
+      }
+    ).brokenDepsForConsumer(consumer, onnxContext(), []);
+
+    expect(result).not.toBeNull();
+    if (!result) return;
+    expect(result.archPkg.pkgname).toBe('onnxruntime');
+    expect(result.deps).toEqual([{ kind: 'version', soname: 'libonnxruntime.so.1', versionNodes: ['VERS_1.28.0'] }]);
+  });
+
+  it('does not flag when the needed node is still provided', () => {
+    const service = createService();
+    const consumer = makeConsumer({ neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.29.0'] } });
+
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, onnxContext(), []);
+
+    expect(result).toBeNull();
+  });
+});
+
 describe('summarizeDetails', () => {
   it('truncates a long list to the first entry plus a count suffix', () => {
     const details = ['libpython3.13.so.1.0: symbol PyArg_ParseTuple missing', 'two', 'three', 'four'];
@@ -296,6 +361,7 @@ describe('loadLatestChaoticAnalyses', () => {
       'files',
       'importedSymbols',
       'neededSonames',
+      'neededVersionNodes',
       'pkgId',
       'pluginOf',
       'providedSonames',

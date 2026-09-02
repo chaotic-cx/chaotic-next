@@ -93,9 +93,11 @@ export type RuntimeName = 'python' | 'perl' | 'ruby' | 'ghc';
 export const MIN_PROVIDED_SONAMES = 100;
 
 export interface BrokenDependency {
-  kind: 'soname' | 'runtime';
+  kind: 'soname' | 'runtime' | 'version';
   /** The needed soname nobody in the index provides (kind = soname). */
   soname?: string;
+  /** Version nodes the consumer needs that the provider no longer defines (kind = version). */
+  versionNodes?: string[];
   /** The runtime whose version dir no longer matches (kind = runtime). */
   runtime?: RuntimeName;
   /** Current repo version of the runtime, e.g. "3.13" for python. */
@@ -235,5 +237,25 @@ export function findBrokenDependencies(opts: {
 
 export function formatBrokenDependency(dep: BrokenDependency): string {
   if (dep.kind === 'soname') return `missing soname ${dep.soname}`;
+  if (dep.kind === 'version') return `missing version ${dep.versionNodes?.join(', ')} from ${dep.soname}`;
   return `${dep.runtime} ${dep.pathVersion} shipped but ${dep.runtime} is ${dep.currentVersion} (${dep.path})`;
+}
+
+/**
+ * Version nodes a consumer requires from a soname that the provider no longer
+ * defines. A soname can stay identical while its version nodes are re-versioned
+ * (onnxruntime `VERS_1.28.0` -> `VERS_1.29.0`); the consumer then fails to load
+ * even though the soname and its symbols are unchanged.
+ */
+export function findVersionNodeBreaks(opts: {
+  neededVersionNodes: Record<string, string[]>;
+  providerVersionNodes: Record<string, string[]>;
+}): { soname: string; versionNodes: string[] }[] {
+  const breaks: { soname: string; versionNodes: string[] }[] = [];
+  for (const [soname, needed] of Object.entries(opts.neededVersionNodes ?? {})) {
+    const provided = new Set(opts.providerVersionNodes?.[soname] ?? []);
+    const missing = [...new Set(needed)].filter((node) => !provided.has(node));
+    if (missing.length > 0) breaks.push({ soname, versionNodes: missing });
+  }
+  return breaks;
 }
