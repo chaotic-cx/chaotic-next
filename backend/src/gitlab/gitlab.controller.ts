@@ -164,7 +164,15 @@ export class GitlabController {
           errorCode: 'INVALID_SIGNATURE',
         });
       }
-      if (!verifyStandardWebhookSignature(this.WEBHOOK_SIGNING_TOKEN, webhookId, webhookTimestamp, rawBody, webhookSignature)) {
+      if (
+        !verifyStandardWebhookSignature(
+          this.WEBHOOK_SIGNING_TOKEN,
+          webhookId,
+          webhookTimestamp,
+          rawBody,
+          webhookSignature,
+        )
+      ) {
         throw new UnauthorizedException('Invalid Standard Webhooks signature', { errorCode: 'INVALID_SIGNATURE' });
       }
     } else if (legacyToken !== this.WEBHOOK_TOKEN) {

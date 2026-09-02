@@ -42,7 +42,7 @@ const SUSPICIOUS_SCORE_THRESHOLD = 4;
 export class DiffScanService {
   constructor(
     @InjectPinoLogger(DiffScanService.name) private readonly pino: PinoLogger,
-    private readonly llmScan: LlmScanService,
+    @Optional() private readonly llmScan?: LlmScanService,
     @Optional()
     @InjectRepository(ArchlinuxPackage)
     private readonly archPkgRepository?: Repository<ArchlinuxPackage>,
@@ -140,7 +140,7 @@ export class DiffScanService {
     }
     findings.push(...(await this.checkEolDependencies(rawDiffs)));
 
-    if (withLlm) {
+    if (withLlm && this.llmScan) {
       try {
         const llmFindings = await this.llmScan.scan(diffs);
         findings.push(...llmFindings);
