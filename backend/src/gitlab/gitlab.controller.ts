@@ -64,6 +64,7 @@ import {
   type SchedulesQueryDto,
   type TriggerPipelineDto,
 } from '@chaotic-next/shared-lib';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import {
   BadRequestException,
   Body,
@@ -76,11 +77,14 @@ import {
   Param,
   Post,
   Query,
+  RawBodyRequest,
+  Req,
   Sse,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { FastifyRequest } from 'fastify';
 import {
   ApiBody,
   ApiCookieAuth,
@@ -97,10 +101,29 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { AuthGuard, OptionalAuth, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { Observable } from 'rxjs';
 
+function verifyStandardWebhookSignature(
+  signingToken: string,
+  messageId: string,
+  timestamp: string,
+  body: string,
+  receivedSignatures: string,
+): boolean {
+  const rawKey = Buffer.from(signingToken.replace(/^whsec_/, ''), 'base64');
+  const message = `${messageId}.${timestamp}.${body}`;
+  const digest = createHmac('sha256', rawKey).update(message).digest();
+  const expected = `v1,${digest.toString('base64')}`;
+  return receivedSignatures.split(' ').some((sig) => {
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    return a.length === b.length && timingSafeEqual(a, b);
+  });
+}
+
 @ApiTags('gitlab')
 @Controller('gitlab')
 export class GitlabController {
   WEBHOOK_TOKEN: string;
+  WEBHOOK_SIGNING_TOKEN: string | undefined;
 
   constructor(
     private readonly configService: ConfigService,
@@ -112,19 +135,39 @@ export class GitlabController {
     private readonly aurScanService: AurScanService,
   ) {
     this.WEBHOOK_TOKEN = this.configService.getOrThrow<string>('CAUR_GITLAB_WEBHOOK_TOKEN');
+    this.WEBHOOK_SIGNING_TOKEN = this.configService.get<string>('CAUR_GITLAB_WEBHOOK_SIGNING_TOKEN');
   }
 
   @Post('update')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Update GitLab cache via webhook.' })
-  @ApiHeaders([{ name: 'X-Gitlab-Token', description: 'GitLab webhook token', required: true }])
+  @ApiHeaders([
+    { name: 'X-Gitlab-Token', description: 'GitLab webhook token (legacy)', required: false },
+    { name: 'webhook-id', description: 'Standard Webhooks message id', required: false },
+    { name: 'webhook-timestamp', description: 'Standard Webhooks timestamp', required: false },
+    { name: 'webhook-signature', description: 'Standard Webhooks HMAC signature', required: false },
+  ])
   @ApiBody({ type: Object, description: 'GitLab pipeline webhook payload' })
   @ApiNoContentResponse({ description: 'Cache update triggered.' })
   async updateCache(
-    @Headers('X-Gitlab-Token') token: string,
+    @Req() req: RawBodyRequest<FastifyRequest>,
+    @Headers('webhook-id') webhookId: string | undefined,
+    @Headers('webhook-timestamp') webhookTimestamp: string | undefined,
+    @Headers('webhook-signature') webhookSignature: string | undefined,
+    @Headers('X-Gitlab-Token') legacyToken: string | undefined,
     @Body({ schema: gitlabWebhookBodySchema }) body: GitlabWebhookBodyDto,
   ): Promise<void> {
-    if (token !== this.WEBHOOK_TOKEN) {
+    const rawBody = req.rawBody?.toString('utf-8') ?? JSON.stringify(body);
+    if (this.WEBHOOK_SIGNING_TOKEN) {
+      if (!webhookId || !webhookTimestamp || !webhookSignature) {
+        throw new UnauthorizedException('Missing Standard Webhooks signature headers', {
+          errorCode: 'INVALID_SIGNATURE',
+        });
+      }
+      if (!verifyStandardWebhookSignature(this.WEBHOOK_SIGNING_TOKEN, webhookId, webhookTimestamp, rawBody, webhookSignature)) {
+        throw new UnauthorizedException('Invalid Standard Webhooks signature', { errorCode: 'INVALID_SIGNATURE' });
+      }
+    } else if (legacyToken !== this.WEBHOOK_TOKEN) {
       throw new UnauthorizedException('Invalid token', { errorCode: 'INVALID_TOKEN' });
     }
 
