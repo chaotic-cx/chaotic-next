@@ -17,6 +17,7 @@ import {
   compareArchVersions,
   encodeOwnerKey,
   findBrokenDependencies,
+  findVersionNodeBreaks,
   findVtableDrifts,
   formatBrokenDependency,
   formatConsumerAbiBreak,
@@ -95,6 +96,8 @@ interface BrokenDepsContext {
   runtimes: Partial<Record<RuntimeName, string | null>>;
   previousProvidedByPkg: Map<number, Set<string>>;
   currentProvidedByPkg: Map<number, Set<string>>;
+  /** Current version nodes each changed pkg provides, per soname. */
+  currentVersionNodesByPkg: Map<number, Record<string, string[]>>;
 }
 
 /**
@@ -389,6 +392,7 @@ export class RebuildTriggerService {
             neededSonames: true,
             providedSonames: true,
             importedSymbols: true,
+            neededVersionNodes: true,
             pluginOf: true,
           },
         })),
@@ -464,6 +468,8 @@ export class RebuildTriggerService {
     for (const row of previousRows) previousProvidedByPkg.set(row.pkgId, new Set(row.providedSonames));
     const currentProvidedByPkg = new Map<number, Set<string>>();
     for (const row of currentRows) currentProvidedByPkg.set(row.pkgId, new Set(row.providedSonames));
+    const currentVersionNodesByPkg = new Map<number, Record<string, string[]>>();
+    for (const row of currentRows) currentVersionNodesByPkg.set(row.pkgId, row.providedVersionNodes ?? {});
     return {
       changed,
       providedByPkgname,
@@ -471,6 +477,7 @@ export class RebuildTriggerService {
       runtimes,
       previousProvidedByPkg,
       currentProvidedByPkg,
+      currentVersionNodesByPkg,
     };
   }
 
@@ -544,7 +551,7 @@ export class RebuildTriggerService {
   /** Provided sonames of specific Arch package versions (previous + current of the changed set). */
   private async loadProvidedSonameAnalyses(
     entries: { pkgId: number; version: string }[],
-  ): Promise<Pick<PackageElfAnalysis, 'pkgId' | 'providedSonames'>[]> {
+  ): Promise<Pick<PackageElfAnalysis, 'pkgId' | 'providedSonames' | 'providedVersionNodes'>[]> {
     if (entries.length === 0) return [];
     return this.elfAnalysisRepository.find({
       where: entries.map((entry) => ({
@@ -552,7 +559,7 @@ export class RebuildTriggerService {
         pkgId: entry.pkgId,
         version: entry.version,
       })),
-      select: { pkgId: true, providedSonames: true },
+      select: { pkgId: true, providedSonames: true, providedVersionNodes: true },
     });
   }
 
@@ -568,7 +575,6 @@ export class RebuildTriggerService {
       runtimes: ctx.runtimes,
       selfProvidedSonames: consumer.providedSonames,
     });
-    if (deps.length === 0) return null;
 
     const relevant: BrokenDependency[] = [];
     let cause: ArchlinuxPackage | undefined;
@@ -593,6 +599,29 @@ export class RebuildTriggerService {
           relevant.push(dep);
           cause = cause ?? runtimePkg;
         }
+      }
+    }
+
+    // A soname can stay identical while its version nodes are re-versioned
+    // (onnxruntime VERS_1.28.0 -> VERS_1.29.0). The consumer still links the
+    // soname, but the version node it needs no longer exists, so it cannot
+    // load. Blame the changed pkg that both provided the soname before and
+    // still provides it now but dropped a required node.
+    for (const [soname, requiredNodes] of Object.entries(consumer.neededVersionNodes ?? {})) {
+      if (requiredNodes.length === 0) continue;
+      const culprit = ctx.changed.find(
+        (pkg) =>
+          ctx.previousProvidedByPkg.get(pkg.id)?.has(soname) &&
+          (ctx.currentProvidedByPkg.get(pkg.id)?.has(soname) ?? false),
+      );
+      if (!culprit) continue;
+      const missing = findVersionNodeBreaks({
+        neededVersionNodes: { [soname]: requiredNodes },
+        providerVersionNodes: ctx.currentVersionNodesByPkg.get(culprit.id) ?? {},
+      });
+      if (missing.length > 0) {
+        relevant.push({ kind: 'version', soname, versionNodes: missing[0].versionNodes });
+        cause = cause ?? culprit;
       }
     }
 

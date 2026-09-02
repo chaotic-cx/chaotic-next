@@ -76,6 +76,53 @@ export function parseDefinedSymbols(output: string): string[] {
 }
 
 /**
+ * Symbol version info from `readelf -VW`. Two things are extracted:
+ * `defined` is the version-definition nodes a shared object ships (the
+ * provider side, e.g. `VERS_1.28.0`), and `needed` maps each linked soname
+ * (from the version-needs section) to the version nodes this object requires
+ * of it. A consumer that links `libonnxruntime.so.1` and needs `VERS_1.28.0`
+ * breaks when the provider stops defining that node.
+ */
+export function parseReadelfVersionInfo(output: string): {
+  defined: string[];
+  needed: Record<string, string[]>;
+} {
+  const defined: string[] = [];
+  const needed: Record<string, string[]> = {};
+  let inDef = false;
+  let inNeed = false;
+  let currentFile: string | null = null;
+  for (const line of output.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('Version definition section')) {
+      inDef = true;
+      inNeed = false;
+      continue;
+    }
+    if (trimmed.startsWith('Version needs section')) {
+      inDef = false;
+      inNeed = true;
+      continue;
+    }
+    if (inDef) {
+      // The BASE entry is named after the library itself, not a version node.
+      if (/Flags:\s*BASE/.test(trimmed)) continue;
+      const name = /Name:\s+(\S+)/.exec(trimmed);
+      if (name) defined.push(name[1]);
+    } else if (inNeed) {
+      const file = /File:\s+(\S+)/.exec(trimmed);
+      if (file) {
+        currentFile = file[1];
+        continue;
+      }
+      const name = /Name:\s+(\S+)/.exec(trimmed);
+      if (name && currentFile) (needed[currentFile] ??= []).push(name[1]);
+    }
+  }
+  return { defined, needed };
+}
+
+/**
  * A single relocation entry parsed from `readelf -rW`. Relocations are how the
  * dynamic linker fixes up pointers at load time. A C++ vtable is a block of
  * absolute relocations in `.data.rel.ro`, one per virtual slot, so the ordered

@@ -34,6 +34,7 @@ import { AddBuildFailureTags1787988202747 } from '../migrations/1787988202747-Ad
 import { AddNotificationUserAndPreferences1787992018243 } from '../migrations/1787992018243-AddNotificationUserAndPreferences';
 import { AddPortableBuild1788115334522 } from '../migrations/1788115334522-AddPortableBuild';
 import { AddPortableBuildScan1788121232938 } from '../migrations/1788121232938-AddPortableBuildScan';
+import { AddVersionNodes1788122000000 } from '../migrations/1788122000000-AddVersionNodes';
 import { NotificationPreference } from '../notifications/notification-preference.entity';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { PortableBuild } from '../portable-builder/portable-build.entity';
@@ -99,6 +100,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AddNotificationUserAndPreferences1787992018243,
     AddPortableBuild1788115334522,
     AddPortableBuildScan1788121232938,
+    AddVersionNodes1788122000000,
   ],
   migrationsRun: true,
   cache: true,

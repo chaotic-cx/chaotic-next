@@ -9,6 +9,7 @@ import {
   derivePluginOf,
   extractVtableSlots,
   findBrokenDependencies,
+  findVersionNodeBreaks,
   findVtableBreaks,
   findVtableDrifts,
   formatBrokenDependency,
@@ -24,6 +25,7 @@ import {
   parseNmSymbolsWithSize,
   parseReadelfDynamic,
   parseReadelfRelocations,
+  parseReadelfVersionInfo,
   parseTarVerboseList,
   parseUndefinedSymbols,
   parentDirectory,
@@ -482,6 +484,7 @@ describe('buildAnalysis', () => {
       exportsByFile: new Map([['usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so', NM_DEFINED]]),
       relocationsByFile: new Map(),
       nmSizesByFile: new Map(),
+      versionInfoByFile: new Map(),
     });
 
     expect(analysis.version).toBe('2.5.1-1.5');
@@ -515,6 +518,7 @@ describe('buildAnalysis', () => {
       exportsByFile: new Map(),
       relocationsByFile: new Map(),
       nmSizesByFile: new Map(),
+      versionInfoByFile: new Map(),
     });
     expect(analysis.providedSonames).toEqual(['libtcl8.6.so', 'libtk8.6.so']);
   });
@@ -528,12 +532,66 @@ describe('buildAnalysis', () => {
       exportsByFile: new Map(),
       relocationsByFile: new Map(),
       nmSizesByFile: new Map(),
+      versionInfoByFile: new Map(),
     });
     expect(analysis.neededSonames).toEqual([]);
     expect(analysis.providedSonames).toEqual([]);
     expect(analysis.importedSymbols).toEqual([]);
     expect(analysis.exportedSymbols).toEqual({});
     expect(analysis.vtables).toEqual({});
+  });
+
+  it('populates provided and needed version nodes from readelf -VW output', () => {
+    const so = 'usr/lib/libonnxruntime.so.1';
+    const analysis = buildAnalysis({
+      version: '1.29.0-1',
+      fileList: so,
+      readelfByFile: new Map([
+        ['usr/lib/libonnxruntime.so.1', '0x000000000000000e (SONAME) Library soname: [libonnxruntime.so.1]\n'],
+      ]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([
+        [
+          so,
+          `Version definition section '.gnu.version_d' contains 2 entries:
+  000000: Rev: 1  Flags: BASE  Index: 1  Cnt: 1  Name: libonnxruntime.so.1
+  0x001c: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: VERS_1.29.0
+Version needs section '.gnu.version_r' contains 1 entry:
+  000000: Version: 1  File: libc.so.6  Cnt: 1
+  0x0010:   Name: GLIBC_2.2.5  Flags: none  Version: 3
+`,
+        ],
+      ]),
+    });
+    expect(analysis.providedVersionNodes['libonnxruntime.so.1']).toEqual(['VERS_1.29.0']);
+  });
+
+  it('records the version nodes a plugin requires of its linked library', () => {
+    const plugin = 'usr/lib/obs-plugins/obs-backgroundremoval.so';
+    const analysis = buildAnalysis({
+      version: '0.4.0-1',
+      fileList: plugin,
+      readelfByFile: new Map([[plugin, '0x0000000000000001 (NEEDED) Shared library: [libonnxruntime.so.1]\n']]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([
+        [
+          plugin,
+          `Version needs section '.gnu.version_r' contains 2 entries:
+  000000: Version: 1  File: libonnxruntime.so.1  Cnt: 1
+  0x0010:   Name: VERS_1.28.0  Flags: none  Version: 3
+  0x0020: Version: 1  File: libc.so.6  Cnt: 1
+  0x0030:   Name: GLIBC_2.2.5  Flags: none  Version: 2
+`,
+        ],
+      ]),
+    });
+    expect(analysis.neededVersionNodes['libonnxruntime.so.1']).toEqual(['VERS_1.28.0']);
   });
 });
 
@@ -798,6 +856,67 @@ describe('formatBrokenDependency', () => {
       }),
     ).toBe('python 3.12 shipped but python is 3.13 (usr/lib/python3.12/site-packages/foo/__init__.py)');
   });
+
+  it('formats a missing version node', () => {
+    expect(
+      formatBrokenDependency({ kind: 'version', soname: 'libonnxruntime.so.1', versionNodes: ['VERS_1.28.0'] }),
+    ).toBe('missing version VERS_1.28.0 from libonnxruntime.so.1');
+  });
+});
+
+describe('parseReadelfVersionInfo', () => {
+  const PROVIDER = `
+Version definition section '.gnu.version_d' contains 2 entries:
+ Addr: 0x0000000000000438  Offset: 0x00000438  Link: 4 (.dynstr)
+  000000: Rev: 1  Flags: BASE  Index: 1  Cnt: 1  Name: libonnxruntime.so.1
+  0x001c: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: VERS_1.28.0
+Version needs section '.gnu.version_r' contains 1 entry:
+  000000: Version: 1  File: libc.so.6  Cnt: 1
+  0x0010:   Name: GLIBC_2.2.5  Flags: none  Version: 3
+`;
+
+  it('extracts the defined nodes, skipping the BASE entry named after the library', () => {
+    expect(parseReadelfVersionInfo(PROVIDER).defined).toEqual(['VERS_1.28.0']);
+  });
+
+  it('extracts needed nodes grouped by the linked soname', () => {
+    const consumer = `
+Version needs section '.gnu.version_r' contains 2 entries:
+  000000: Version: 1  File: libonnxruntime.so.1  Cnt: 1
+  0x0010:   Name: VERS_1.28.0  Flags: none  Version: 3
+  0x0020: Version: 1  File: libc.so.6  Cnt: 2
+  0x0030:   Name: GLIBC_2.2.5  Flags: none  Version: 4
+  0x0040:   Name: GLIBC_2.34  Flags: none  Version: 2
+`;
+    expect(parseReadelfVersionInfo(consumer).needed).toEqual({
+      'libonnxruntime.so.1': ['VERS_1.28.0'],
+      'libc.so.6': ['GLIBC_2.2.5', 'GLIBC_2.34'],
+    });
+  });
+});
+
+describe('findVersionNodeBreaks', () => {
+  it('flags a needed node the provider no longer defines', () => {
+    expect(
+      findVersionNodeBreaks({
+        neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.28.0', 'VERS_1.30.0'] },
+        providerVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.29.0', 'VERS_1.30.0'] },
+      }),
+    ).toEqual([{ soname: 'libonnxruntime.so.1', versionNodes: ['VERS_1.28.0'] }]);
+  });
+
+  it('returns nothing when every needed node is still defined', () => {
+    expect(
+      findVersionNodeBreaks({
+        neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.29.0'] },
+        providerVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.29.0', 'VERS_1.30.0'] },
+      }),
+    ).toEqual([]);
+  });
+
+  it('returns nothing when the consumer needs no version nodes', () => {
+    expect(findVersionNodeBreaks({ neededVersionNodes: {}, providerVersionNodes: {} })).toEqual([]);
+  });
 });
 
 describe('parseReadelfRelocations', () => {
@@ -1013,6 +1132,7 @@ describe('buildAnalysis vtables', () => {
       exportsByFile: new Map([['usr/lib/libkwin.so.6.7.4', '_ZTVN4KWin10ActivitiesE\n']]),
       relocationsByFile: new Map([['usr/lib/libkwin.so.6.7.4', readelfReloc]]),
       nmSizesByFile: new Map([['usr/lib/libkwin.so.6.7.4', nmSizes]]),
+      versionInfoByFile: new Map(),
     });
 
     // The typeinfo pointer (_ZTI) and the outside-range relocation are skipped;

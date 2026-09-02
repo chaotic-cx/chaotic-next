@@ -11,8 +11,9 @@ import {
   PackageElfAnalysis,
 } from '@chaotic-next/backend/repo-manager/repo-manager.entity';
 import { RepoManager } from '@chaotic-next/backend/repo-manager/repo-manager';
-import { encodeOwnerKey } from '@chaotic-next/backend/repo-manager/signal';
+import { encodeOwnerKey, ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from '@chaotic-next/backend/repo-manager/signal';
 import { Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
+import { seedElfAnalyses } from '../test/elf-seeding';
 import {
   BumpType,
   RepoSettings,
@@ -322,6 +323,90 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
     expect(bump).toBeDefined();
     expect(bump!.bumpType).toBe(BumpType.PLUGIN);
     expect(bump!.trigger).toBe(kwinId);
+    expect(bump!.triggerFrom).toBe(TriggerType.ARCH);
+  });
+
+  it('startRun bumps a consumer on a version-node break (onnxruntime VERS_1.28.0 -> VERS_1.29.0)', async () => {
+    const repo = await e2e.seedRepo({ name: 'chaotic-aur', gitlabProjectId: '42' });
+
+    // Seed through the shared fixture path (seedEntrySchema + seedElfAnalyses),
+    // carrying the version-node data alongside the soname/symbol fields.
+    await seedElfAnalyses(dataSource, [
+      // onnxruntime 1.28.0 defined VERS_1.28.0; 1.29.0 re-versioned to VERS_1.29.0.
+      {
+        pkgType: ARCH_PKG_TYPE,
+        pkgname: 'onnxruntime',
+        version: '1.28.0-1',
+        files: ['usr/lib/libonnxruntime.so.1'],
+        neededSonames: ['libc.so.6'],
+        providedSonames: ['libonnxruntime.so.1'],
+        providedVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.28.0'] },
+      },
+      {
+        pkgType: ARCH_PKG_TYPE,
+        pkgname: 'onnxruntime',
+        version: '1.29.0-1',
+        files: ['usr/lib/libonnxruntime.so.1'],
+        neededSonames: ['libc.so.6'],
+        providedSonames: ['libonnxruntime.so.1'],
+        providedVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.29.0'] },
+      },
+      // obs-backgroundremoval was built against 1.28.0 and needs VERS_1.28.0.
+      {
+        pkgType: CHAOTIC_PKG_TYPE,
+        pkgname: 'obs-backgroundremoval',
+        repo: 'chaotic-aur',
+        version: '0.4.0-1',
+        files: ['usr/lib/obs-plugins/obs-backgroundremoval.so'],
+        neededSonames: ['libonnxruntime.so.1', 'libc.so.6'],
+        neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.28.0'] },
+      },
+    ]);
+
+    // The trigger needs onnxruntime's version history, which the seed schema
+    // does not express; set it so the changed-set blames onnxruntime.
+    await dataSource.query(`UPDATE archlinux_package SET "version" = $1, "previousVersion" = $2 WHERE "pkgname" = $3`, [
+      '1.29.0-1',
+      '1.28.0-1',
+      'onnxruntime',
+    ]);
+    // getOrCreatePackage seeds no version/pkgrel; the bump needs them.
+    await dataSource.query(`UPDATE package SET "version" = $1, "pkgrel" = $2 WHERE "pkgname" = $3`, [
+      '0.4.0',
+      1,
+      'obs-backgroundremoval',
+    ]);
+
+    const onnx = (await dataSource.query(`SELECT id FROM archlinux_package WHERE "pkgname" = $1`, ['onnxruntime'])) as {
+      id: number;
+    }[];
+    const obs = (await dataSource.query(`SELECT id FROM package WHERE "pkgname" = $1`, ['obs-backgroundremoval'])) as {
+      id: number;
+    }[];
+    const onnxId = onnx[0].id;
+    const obsId = obs[0].id;
+
+    const reader = fakeReader({ 'obs-backgroundremoval/.CI/config': 'CI_REBUILD_TRIGGERS=obs-studio\n' });
+    const commitBumps = vi.fn().mockResolvedValue(undefined);
+    const repoManager = makeOrchestrator({ writer: { commitBumps }, reader, signalScanEnabled: true });
+    const changed = await dataSource.getRepository(ArchlinuxPackage).find();
+    repoManager.changedArchPackages = changed;
+
+    const result = await repoManager.startRun(repo);
+
+    expect(result.bumped.map((entry) => entry.pkg.pkgname)).toContain('obs-backgroundremoval');
+    expect(commitBumps).toHaveBeenCalledTimes(1);
+    const [repoArg, actions] = commitBumps.mock.calls[0];
+    expect(repoArg.gitlabProjectId).toBe('42');
+    expect(actions).toHaveLength(1);
+    expect(actions[0].pkgname).toBe('obs-backgroundremoval');
+    expect(actions[0].bumpType).toBe(BumpType.BROKEN_DEPS);
+
+    const bumps = await dataSource.getRepository(PackageBump).find({ relations: { pkg: true } });
+    const bump = bumps.find((b) => b.pkg?.id === obsId);
+    expect(bump).toBeDefined();
+    expect(bump!.bumpType).toBe(BumpType.BROKEN_DEPS);
+    expect(bump!.trigger).toBe(onnxId);
     expect(bump!.triggerFrom).toBe(TriggerType.ARCH);
   });
 });

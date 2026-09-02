@@ -45,6 +45,8 @@ export interface ScanArchiveResult {
   exportsByFile: Map<string, string>;
   relocationsByFile: Map<string, string>;
   nmSizesByFile: Map<string, string>;
+  /** Symbol-version info (`readelf -VW`) per candidate file. */
+  versionInfoByFile: Map<string, string>;
   /** Non-fatal tool failures (timeout, ENOMEM, maxBuffer) per candidate file. */
   warnings: string[];
 }
@@ -82,6 +84,7 @@ function emptyResult(fileList: string, warning: string): ScanArchiveResult {
     exportsByFile: new Map(),
     relocationsByFile: new Map(),
     nmSizesByFile: new Map(),
+    versionInfoByFile: new Map(),
     warnings: [warning],
   };
 }
@@ -125,6 +128,7 @@ async function extractCandidates(file: string, workDir: string, candidates: Set<
 interface CandidateOutputs {
   readelf: string;
   imports: string;
+  versionInfo: string;
   shared?: { exports: string; relocations: string; nmSizes: string };
 }
 
@@ -139,16 +143,18 @@ async function scanCandidate(candidate: string, workDir: string): Promise<Candid
   const tools: Promise<{ stdout: string }>[] = [
     execFileP('readelf', ['-dW', out], TOOL_OPTS),
     execFileP('nm', ['-D', '--undefined-only', out], TOOL_OPTS),
+    execFileP('readelf', ['-VW', out], TOOL_OPTS),
   ];
   if (isElfSharedObject(candidate)) {
     tools.push(execFileP('nm', ['-D', '--defined-only', out], TOOL_OPTS));
     tools.push(execFileP('readelf', ['-rW', out], RELOC_TOOL_OPTS));
     tools.push(execFileP('nm', ['-D', '-S', '--defined-only', out], RELOC_TOOL_OPTS));
   }
-  const [readelf, imports, exports, relocations, nmSizes] = await Promise.all(tools);
+  const [readelf, imports, versionInfo, exports, relocations, nmSizes] = await Promise.all(tools);
   return {
     readelf: readelf.stdout,
     imports: imports.stdout,
+    versionInfo: versionInfo.stdout,
     shared:
       exports && relocations && nmSizes
         ? { exports: exports.stdout, relocations: relocations.stdout, nmSizes: nmSizes.stdout }
@@ -177,6 +183,7 @@ export async function scanArchive(file: string, maxCandidates = MAX_ELF_CANDIDAT
       exportsByFile: new Map(),
       relocationsByFile: new Map(),
       nmSizesByFile: new Map(),
+      versionInfoByFile: new Map(),
       warnings: [],
     };
     for (const candidate of listing.candidates) {
@@ -185,6 +192,7 @@ export async function scanArchive(file: string, maxCandidates = MAX_ELF_CANDIDAT
         if (!outputs) continue;
         result.readelfByFile.set(candidate, outputs.readelf);
         result.importsByFile.set(candidate, outputs.imports);
+        result.versionInfoByFile.set(candidate, outputs.versionInfo);
         if (outputs.shared) {
           result.exportsByFile.set(candidate, outputs.shared.exports);
           result.relocationsByFile.set(candidate, outputs.shared.relocations);

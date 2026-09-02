@@ -915,6 +915,11 @@ describeTools('SignalScanService end-to-end', () => {
       const ffmpeg = Array.from(analysisRepo.store.values()).find((a) => a.version.includes('9.0'))!;
       expect(ffmpeg.providedSonames).toContain('libavcodec.so.63');
       expect(ffmpeg.providedSonames).toContain('libavutil.so.61');
+
+      // Real package with symbol versioning (FFmpeg version scripts): the
+      // scanner must capture the version nodes each shipped .so defines.
+      expect(ffmpeg.providedVersionNodes['libavcodec.so.63']).toContain('LIBAVCODEC_63');
+      expect(ffmpeg.providedVersionNodes['libavutil.so.61']).toContain('LIBAVUTIL_61');
     });
 
     it('aegisub IS broken when an older ffmpeg ABI is provided (libavcodec.so.62)', async () => {
