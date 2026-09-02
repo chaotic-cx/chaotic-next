@@ -298,6 +298,43 @@ describe('IssueTrackerService.triage', () => {
     expect(github.addLabels).not.toHaveBeenCalledWith(1, [DUPLICATE_LABEL]);
     expect(aurScan.startScan).toHaveBeenCalledWith('firedragon');
   });
+
+  it('does not scan rebuild requests — only package requests are scanned', async () => {
+    const rebuildBody = [
+      '### Packages',
+      '',
+      'https://aur.archlinux.org/pkgbase/foo-app',
+      '',
+      '### Description',
+      '',
+      'Outdated: 1.0 vs 2.0.',
+    ].join('\n');
+    await service.triage(1, '[Rebuild] foo-app', rebuildBody);
+    expect(aurScan.startScan).not.toHaveBeenCalled();
+    expect(github.createComment).not.toHaveBeenCalledWith(1, expect.stringContaining('Automated AUR scan results'));
+    await service.triage(
+      2,
+      '[Issue] foo-app',
+      [
+        '### Package',
+        '',
+        'foo-app',
+        '',
+        '### Issue type',
+        '',
+        'Build failure',
+        '',
+        '### Issue description',
+        '',
+        'Fails',
+        '',
+        '### Logs',
+        '',
+        'error',
+      ].join('\n'),
+    );
+    expect(aurScan.startScan).not.toHaveBeenCalled();
+  });
 });
 
 describe('IssueTrackerService.handleIssueEvent', () => {

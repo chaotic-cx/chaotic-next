@@ -22,6 +22,7 @@ import {
   NEEDS_INPUT_LABEL,
   NEEDS_TRIAGE_LABEL,
   OFFICIAL_REPO_LABEL,
+  ORPHANED_LABEL,
   TEMPLATE_VIOLATION_LABEL,
   type IssueCommentRef,
 } from './github-issues.service';
@@ -173,7 +174,7 @@ export class IssueTrackerService implements OnModuleInit {
       return;
     }
 
-    if (!isCustomRebuild) {
+    if (parsed.kind === 'request') {
       await this.attachScanFindings(issueNumber, scanTargets);
     }
     const stateLabels = [NEEDS_TRIAGE_LABEL, ...(isCustomRebuild ? [CUSTOM_PACKAGE_LABEL] : [])];
@@ -314,18 +315,21 @@ export class IssueTrackerService implements OnModuleInit {
     const summaries: string[] = [];
     const kinds = new Set<string>();
     let hasEolDependency = false;
+    let hasOrphaned = false;
     for (const pkgbase of pkgbases) {
       this.aurScan.startScan(pkgbase);
       const scan = await this.waitForTerminalScan(pkgbase);
       summaries.push(formatScanSummary(scan));
       for (const kind of scan?.pkgTypes ?? []) kinds.add(kind);
       if (scan?.findings.some((finding) => finding.ruleId === EOL_RULE_ID)) hasEolDependency = true;
+      if (scan?.packageMeta?.orphaned) hasOrphaned = true;
     }
     await this.github.createComment(issueNumber, `Automated AUR scan results:\n\n${summaries.join('\n\n')}`);
     // ponytail: relies on the issues API auto-creating unknown labels; verify
     // manually if labels seem to go missing.
     const labels = [...kinds].map(kindLabel);
     if (hasEolDependency) labels.push(LIBRARY_EOL_LABEL);
+    if (hasOrphaned) labels.push(ORPHANED_LABEL);
     if (labels.length > 0) {
       await this.github.addLabels(issueNumber, labels).catch(() => undefined);
     }
@@ -394,15 +398,15 @@ export class IssueTrackerService implements OnModuleInit {
   }
 
   /**
-   * Only issues of the same kind (Request vs Rebuild) count as duplicates;
+   * Only issues of the same kind (Request vs Rebuild vs Issue) count as duplicates;
    * `[Rebuild] foo` must never close `[Request] foo`.
    */
   private async findDuplicate(
     issueNumber: number,
-    kind: 'request' | 'rebuild',
+    kind: 'request' | 'rebuild' | 'issue',
     pkgbases: string[],
   ): Promise<number | null> {
-    const prefix = kind === 'request' ? '[Request]' : '[Rebuild]';
+    const prefix = kind === 'request' ? '[Request]' : kind === 'rebuild' ? '[Rebuild]' : '[Issue]';
     for (const pkgbase of pkgbases) {
       const open = await this.github.findOpenRequestIssues(pkgbase);
       const other = open.find((issue) => issue.number !== issueNumber && issue.title.trim().startsWith(prefix));

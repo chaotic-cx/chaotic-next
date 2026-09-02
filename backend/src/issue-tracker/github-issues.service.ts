@@ -1,8 +1,8 @@
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { type Cache } from 'cache-manager';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { cachedResult } from '../utils/cache';
 
 /**
@@ -16,6 +16,7 @@ export const DUPLICATE_LABEL = 'invalid:duplicate';
 export const OFFICIAL_REPO_LABEL = 'info:official-repo';
 export const LIBRARY_EOL_LABEL = 'info:library-eol';
 export const CUSTOM_PACKAGE_LABEL = 'info:custom';
+export const ORPHANED_LABEL = 'info:orphaned';
 export const TEMPLATE_VIOLATION_LABEL = 'invalid:violate-issue-template';
 export const NEEDS_TRIAGE_LABEL = 'needs-triage';
 /** Adding this label queues a live test build of the issue's pkgbase. */
