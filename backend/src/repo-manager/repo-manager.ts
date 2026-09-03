@@ -194,6 +194,7 @@ export class RepoManager {
     try {
       if (this.settings.signalScanEnabled) {
         await this.scanBuiltChaoticPackage(build);
+        await this.signalScanService.recomputeBroken();
       }
 
       const allPackages: Package[] = await this.packagesRepository.find({

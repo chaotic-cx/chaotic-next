@@ -168,7 +168,7 @@ export default (options = {}) => {
           'const require = __bundleCreateRequire(import.meta.url);\n' +
           'const exports = {};',
         raw: true,
-        test: /main\.js$/,
+        test: /\.js$/,
       }),
       new DefinePlugin({ __VERSION__: JSON.stringify(version) }),
       new RspackPlugin(),

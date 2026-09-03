@@ -1,11 +1,9 @@
 import { Package, Repo } from '../../builder/builder.entity';
 import { TriggerType } from '../../interfaces/repo-manager';
-import { scanArchive } from '../offline/scan-archive';
 import { ArchlinuxPackage, PackageElfAnalysis, type PackageElfPkgType } from '../repo-manager.entity';
 import { saveInBatches } from '../save';
 import {
   ARCH_PKG_TYPE,
-  buildAnalysis,
   CHAOTIC_PKG_TYPE,
   derivePluginOf,
   DirectoryIndex,
@@ -20,6 +18,7 @@ import {
 } from '../signal';
 import { latestAnalysesByPackage } from './latest-analyses';
 import { loadRuntimeVersions } from './runtime-versions';
+import { scanPackageInWorker, type ScanOutcome } from './scan-worker';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
@@ -213,14 +212,13 @@ export class SignalScanService {
     );
   }
 
-  private async scanOne(job: ScanJob): Promise<ReturnType<typeof buildAnalysis> | null> {
+  private async scanOne(job: ScanJob): Promise<ScanOutcome['result']> {
     try {
-      const result = await scanArchive(job.file);
-      if (!result) return null;
-      for (const warning of result.warnings) {
+      const { result, warnings } = await scanPackageInWorker({ file: job.file, version: job.version });
+      for (const warning of warnings) {
         this.pino.warn(warning);
       }
-      return buildAnalysis({ version: job.version, ...result });
+      return result;
     } catch (err) {
       this.pino.warn({ err, file: job.file }, 'Failed to scan package');
       return null;
