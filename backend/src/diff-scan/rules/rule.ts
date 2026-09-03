@@ -1,7 +1,7 @@
-import { addedLines, deobfuscateLine, isCommentLine, isInScope, type RuleScope } from './diff-utils';
-import { ruleDataStore } from './rule-data-store';
 import { type DiffScanSeverity } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema } from '@gitbeaker/core';
+import { addedLines, deobfuscateLine, isCommentLine, isInScope, type RuleScope } from './diff-utils';
+import { ruleDataStore } from './rule-data-store';
 
 const RULE_DATA_TIMEOUT_MS = 15_000;
 
@@ -99,6 +99,9 @@ export interface Rule<T = void> {
   name: string;
   severity: DiffScanSeverity;
   description: string;
+  /** When true findings from this rule are informational and do not count toward the malware score. */
+  informational?: boolean;
+  countsTowardMalwareScan?: boolean;
   /** Limits the rule to certain scan surfaces; defaults to running everywhere. */
   runsOn?: readonly RuleSurface[];
   load?: () => Promise<RuleLoadResult<T>>;

@@ -66,6 +66,8 @@ export const SRCINFO_CONSISTENCY_RULES: Rule[] = [
     severity: 'warning',
     description:
       'The committed .SRCINFO disagrees with the PKGBUILD it is generated from, so the metadata pacman and the AUR display is wrong. Regenerate it with makepkg --printsrcinfo > .SRCINFO.',
+    informational: true,
+    countsTowardMalwareScan: false,
     runsOn: ['full-file'],
     check: () => null,
     checkGroup: srcinfoConsistencyHits,

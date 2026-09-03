@@ -167,7 +167,11 @@ export class DiffScanService {
 
   autoFlagVerdict(findings: DiffScanFinding[] | undefined): DiffScanVerdict | null {
     if (!findings || findings.length === 0) return null;
-    const score = findings.reduce((sum, finding) => sum + SEVERITY_WEIGHTS[finding.severity], 0);
+
+    const scorable = findings.filter((finding) => !isInformationalFinding(finding));
+    if (scorable.length === 0) return null;
+
+    const score = scorable.reduce((sum, finding) => sum + SEVERITY_WEIGHTS[finding.severity], 0);
     if (score >= MALWARE_SCORE_THRESHOLD) return { label: 'malware', score, findings };
     if (score >= SUSPICIOUS_SCORE_THRESHOLD) return { label: 'suspicious', score, findings };
     return null;
@@ -175,9 +179,17 @@ export class DiffScanService {
 }
 
 function toScanFinding(
-  rule: { id: string; name: string; severity: DiffScanSeverity; description: string },
+  rule: {
+    id: string;
+    name: string;
+    severity: DiffScanSeverity;
+    description: string;
+    informational?: boolean;
+    countsTowardMalwareScan?: boolean;
+  },
   hit: RuleHit & { file: string },
 ) {
+  const informational = rule.informational ?? rule.countsTowardMalwareScan === false;
   return {
     ruleId: rule.id,
     ruleName: rule.name,
@@ -186,7 +198,14 @@ function toScanFinding(
     file: hit.file,
     line: hit.line,
     match: hit.match.slice(0, MAX_MATCH_LENGTH),
+    ...(informational ? { informational: true, countsTowardMalwareScan: false } : {}),
   };
+}
+
+function isInformationalFinding(finding: DiffScanFinding): boolean {
+  if ((finding as { informational?: boolean }).informational) return true;
+  if ((finding as { countsTowardMalwareScan?: boolean }).countsTowardMalwareScan === false) return true;
+  return false;
 }
 
 function sortFindings(findings: DiffScanFinding[]): DiffScanFinding[] {

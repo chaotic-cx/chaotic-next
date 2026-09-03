@@ -174,6 +174,8 @@ export async function scanSrcinfoDependencies(
         file: change.new_path,
         line: line.line,
         match: line.text.trim(),
+        informational: true,
+        countsTowardMalwareScan: false,
       });
 
       if (fetchAurDependencies) {
@@ -187,6 +189,8 @@ export async function scanSrcinfoDependencies(
             file: change.new_path,
             line: line.line,
             match: missing.dep,
+            informational: true,
+            countsTowardMalwareScan: false,
           });
         }
       }

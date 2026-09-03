@@ -10,6 +10,14 @@ export const diffScanFindingSchema = z.object({
   file: z.string().describe('Source file path where the finding was detected'),
   line: z.number().optional().describe('Line number in the source file'),
   match: z.string().describe('Matched content or pattern'),
+  informational: z
+    .boolean()
+    .optional()
+    .describe('When true the finding is informational and does not count toward the malware score'),
+  countsTowardMalwareScan: z
+    .boolean()
+    .optional()
+    .describe('When false the finding does not count toward the malware/malicious verdict'),
 });
 export type DiffScanFinding = z.infer<typeof diffScanFindingSchema>;
 

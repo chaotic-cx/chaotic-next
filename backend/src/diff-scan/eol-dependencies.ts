@@ -180,6 +180,8 @@ export async function checkEolDependencies(pkgbuildText: string): Promise<DiffSc
       description: `The dependency ${product} ${version} reached end of life on ${cycle.eol}. Update to a supported release.`,
       file: 'PKGBUILD',
       match: constraint.clean,
+      informational: true,
+      countsTowardMalwareScan: false,
     });
   }
   return findings;
