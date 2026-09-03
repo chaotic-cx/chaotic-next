@@ -17,6 +17,7 @@ export const githubIssueEventSchema = z.object({
     title: z.string(),
     body: z.string().nullable(),
     labels: z.array(z.object({ name: z.string() })),
+    created_at: z.string().optional(),
     user: z
       .object({
         login: z.string(),

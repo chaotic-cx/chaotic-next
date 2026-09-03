@@ -66,8 +66,13 @@ export class MrOverviewService {
   }
 
   extractPkgName(title: string): string | null {
-    const match = title.match(/^chore\(update\): ([\w@.+-]+)$/);
-    return match ? match[1] : null;
+    return this.extractPkgNames(title)[0] ?? null;
+  }
+
+  extractPkgNames(title: string): string[] {
+    const match = title.match(/^chore\(update\): ([\w@.+-]+(?:\s*[, ]\s*[\w@.+-]+)?)$/);
+    if (!match) return [];
+    return match[1].split(/\s*[, ]\s*/).filter(Boolean);
   }
 
   async approve(mr: MergeRequestWithDiffs) {

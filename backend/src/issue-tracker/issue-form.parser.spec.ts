@@ -225,4 +225,36 @@ describe('parsePackageRequest', () => {
     const result = parsePackageRequest('[Issue] foo-app', body);
     expect(result).toMatchObject({ ok: false, failures: [{ section: 'Logs' }] });
   });
+
+  it('accepts two pkgbases in Request title via comma', () => {
+    const result = parsePackageRequest('[Request] foo-app, bar-lib', REQUEST_BODY);
+    expect(result).toMatchObject({ ok: true, kind: 'request' });
+  });
+
+  it('accepts two pkgbases in Request title via space', () => {
+    const result = parsePackageRequest('[Request] foo-app bar-lib', REQUEST_BODY);
+    expect(result).toMatchObject({ ok: true, kind: 'request' });
+  });
+
+  it('uses both title pkgbases for Rebuild when Packages section is empty', () => {
+    const body = '### Packages\n\n_No response_\n\n### Description\n\nOutdated.\n';
+    const result = parsePackageRequest('[Rebuild] foo-app, bar-lib', body);
+    expect(result).toEqual({
+      ok: true,
+      kind: 'rebuild',
+      request: { pkgbases: ['foo-app', 'bar-lib'], description: 'Outdated.', custom: false },
+    });
+  });
+
+  it('uses both title pkgbases for Issue when Package section is empty', () => {
+    const body =
+      '### Package\n\n_No response_\n\n### Issue type\n\nBuild failure\n\n### Issue description\n\nFails\n\n### Logs\n\nerror: failed\n';
+    const result = parsePackageRequest('[Issue] foo-app, bar-lib', body);
+    expect(result).toMatchObject({ ok: true, kind: 'issue', request: { pkgbases: ['foo-app', 'bar-lib'] } });
+  });
+
+  it('accepts ttf-twemoji comma case from #885', () => {
+    const result = parsePackageRequest('[Request] ttf-twemoji, ttf-twemoji-git', REQUEST_BODY);
+    expect(result).toMatchObject({ ok: true, kind: 'request' });
+  });
 });

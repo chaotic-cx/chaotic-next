@@ -392,4 +392,36 @@ describe('AurScanService', () => {
 
     expect(() => service.streamScan('unknown')).toThrow('No scan recorded');
   });
+
+  it('filters prompting findings for packages before CUTOFF', async () => {
+    const beforeCutoff = Math.floor(Date.parse('2026-01-01T00:00:00.000Z') / 1000);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('rpc/v5/info')) {
+          return new Response(
+            JSON.stringify({
+              results: [{ Name: 'oldpkg', PackageBase: 'oldpkg', FirstSubmitted: beforeCutoff, Maintainer: 'someone' }],
+            }),
+            { headers: { 'content-type': 'application/json' } },
+          );
+        }
+        if (url.includes('by=maintainer'))
+          return new Response(JSON.stringify({ results: [] }), { headers: { 'content-type': 'application/json' } });
+        if (url.endsWith('/PKGBUILD?h=oldpkg')) return textResponse('pkgname=oldpkg\ndepends=(olddep)\n');
+        if (url.includes('/cgit/aur.git/tree/'))
+          return textResponse("<html><body><a href='/cgit/aur.git/tree/PKGBUILD?h=oldpkg'>PKGBUILD</a></body></html>");
+        return new Response('not found', { status: 404 });
+      }),
+    );
+    const service = new AurScanService(
+      new DiffScanService(pinoStub),
+      { enabled: false } as never,
+      { getMaintainerRegistrationDate: vi.fn(async () => null) } as never,
+      pinoStub,
+    );
+    const scan = await service.startScan('oldpkg');
+    expect(scan.packageMeta.firstSubmitted).toBe('2026-01-01T00:00:00.000Z');
+    expect(scan.findings.every((f) => f.informational !== true)).toBe(true);
+  });
 });

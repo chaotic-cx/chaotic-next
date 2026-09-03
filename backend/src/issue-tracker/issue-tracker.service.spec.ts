@@ -466,3 +466,80 @@ describe('IssueTrackerService.sweepStale', () => {
     expect(github.closeIssue).not.toHaveBeenCalled();
   });
 });
+
+describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
+  let github: GithubIssuesService;
+  let aurScan: AurScanService;
+  let service: IssueTrackerService;
+
+  beforeEach(() => {
+    github = makeGithub();
+    aurScan = makeAurScan();
+    service = makeService(github, aurScan);
+  });
+
+  it('suppresses needs-input for requests before CUTOFF', async () => {
+    const beforeCutoff = '2026-01-01T00:00:00.000Z';
+    await service.triage(
+      1,
+      'bad title',
+      '### Package\n\nfoo\n\n### Purpose\n\nx\n\n### License\n\nMIT\n',
+      beforeCutoff,
+    );
+    expect(github.addLabels).not.toHaveBeenCalledWith(1, expect.arrayContaining([NEEDS_INPUT_LABEL]));
+    expect(github.createComment).not.toHaveBeenCalledWith(1, expect.stringContaining('needs attention'));
+  });
+
+  it('still prompts for requests after CUTOFF', async () => {
+    const afterCutoff = '2026-07-01T00:00:00.000Z';
+    await service.triage(1, 'bad title', '### Package\n\nfoo\n\n### Purpose\n\nx\n\n### License\n\nMIT\n', afterCutoff);
+    expect(github.addLabels).toHaveBeenCalledWith(1, expect.arrayContaining([NEEDS_INPUT_LABEL]));
+  });
+
+  it('skips closing fulfilled request when title has 2 pkgbases', async () => {
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 99, title: '[Request] foo-app, bar-lib' }]);
+    await service.closeFulfilledNewRequest('foo-app');
+    expect(github.closeIssue).not.toHaveBeenCalled();
+    expect(github.createComment).not.toHaveBeenCalled();
+  });
+
+  it('closes fulfilled request with single pkgbase', async () => {
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 99, title: '[Request] foo-app' }]);
+    await service.closeFulfilledNewRequest('foo-app');
+    expect(github.closeIssue).toHaveBeenCalledWith(99);
+  });
+
+  it('skips closing fulfilled rebuild when title has 2 pkgbases', async () => {
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 100, title: '[Rebuild] foo-app, bar-lib' }]);
+    await service.closeFulfilledRebuild('foo-app');
+    expect(github.closeIssue).not.toHaveBeenCalled();
+  });
+
+  it('filters EOL and orphaned for requests before CUTOFF', async () => {
+    const beforeCutoff = '2026-01-01T00:00:00.000Z';
+    vi.mocked(aurScan.getScan).mockReturnValue(
+      makeScan({
+        findings: [
+          {
+            ruleId: 'CAUR-EOL-DEP',
+            ruleName: 'EOL',
+            severity: 'warning',
+            description: 'd',
+            file: 'PKGBUILD',
+            match: 'x',
+          },
+        ],
+        packageMeta: {
+          votes: 1,
+          popularity: 0.1,
+          firstSubmitted: '2020-01-01T00:00:00.000Z',
+          outOfDate: false,
+          orphaned: true,
+        },
+      }),
+    );
+    await service.triage(1, '[Request] foo-app', REQUEST_BODY, beforeCutoff);
+    expect(github.addLabels).not.toHaveBeenCalledWith(1, expect.arrayContaining(['info:library-eol']));
+    expect(github.addLabels).not.toHaveBeenCalledWith(1, expect.arrayContaining(['info:orphaned']));
+  });
+});

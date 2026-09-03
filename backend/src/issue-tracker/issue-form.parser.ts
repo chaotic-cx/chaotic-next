@@ -4,7 +4,7 @@
  * chaotic-aur/packages. Checkboxes render as GitHub task lists.
  */
 
-const REQUEST_TITLE_PATTERN = /^\[(Request|Rebuild|Issue)]\s+(\S+)\s*$/;
+const REQUEST_TITLE_PATTERN = /^\[(Request|Rebuild|Issue)]\s+([\w@.+-]+(?:\s*[, ]\s*[\w@.+-]+)?)\s*$/;
 
 // Requesters mix up both AUR URL shapes and often paste them without a
 // scheme; the name resolves through the AUR RPC either way.
@@ -177,7 +177,8 @@ export function parsePackageRequest(title: string, body: string): ParseResult {
   if (kind === 'Rebuild') {
     const failures: ParseFailure[] = [];
     const { names } = extractPkgbases(sections.get('Packages') ?? '');
-    const pkgbases = names.length > 0 ? names : [titleMatch[2]];
+    const titlePkgbases = titleMatch[2].split(/\s*[, ]\s*/).filter(Boolean);
+    const pkgbases = names.length > 0 ? names : titlePkgbases;
     const description = sections.get('Description') ?? '';
 
     addEmptySectionFailure(failures, 'Description', description);
@@ -196,7 +197,8 @@ export function parsePackageRequest(title: string, body: string): ParseResult {
 
   const failures: ParseFailure[] = [];
   const { names } = extractPkgbases(sections.get('Package') ?? '');
-  const pkgbases = names.length > 0 ? names : [titleMatch[2]];
+  const titlePkgbases = titleMatch[2].split(/\s*[, ]\s*/).filter(Boolean);
+  const pkgbases = names.length > 0 ? names : titlePkgbases;
   const issueType = sections.get('Issue type') ?? '';
   if (!ISSUE_TYPE_VALUES.includes(issueType as (typeof ISSUE_TYPE_VALUES)[number])) {
     failures.push({

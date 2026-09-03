@@ -1,22 +1,29 @@
+import {
+  type AurPackageScan,
+  buildClassLabel,
+  type BuildResourceStats,
+  type DiffScanSeverity,
+  vtIndicatorLink,
+} from '@chaotic-next/shared-lib';
 import { ConflictException, Injectable, type OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { AurScanService } from '../diff-scan/aur-scan.service';
-import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
-import { Package } from '../builder/builder.entity';
+import { In, Repository } from 'typeorm';
 import { suggestBuildClass } from '../builder/build-class-suggester';
+import { Package } from '../builder/builder.entity';
+import { AurScanService } from '../diff-scan/aur-scan.service';
+import { EOL_RULE_ID } from '../diff-scan/eol-dependencies';
 import { formatContainerUsage, resourceStatsToUsage } from '../portable-builder/container-usage';
 import type { PortableBuild } from '../portable-builder/portable-build.entity';
 import { PortableBuilderService } from '../portable-builder/portable-builder.service';
-import { EOL_RULE_ID } from '../diff-scan/eol-dependencies';
-import { buildClassLabel, type BuildResourceStats } from '@chaotic-next/shared-lib';
+import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import {
   BUILD_TEST_LABEL,
   CUSTOM_PACKAGE_LABEL,
   DUPLICATE_LABEL,
   GithubIssuesService,
+  type IssueCommentRef,
   LEGACY_NEEDS_INPUT_LABEL,
   LIBRARY_EOL_LABEL,
   NEEDS_INPUT_LABEL,
@@ -24,14 +31,13 @@ import {
   OFFICIAL_REPO_LABEL,
   ORPHANED_LABEL,
   TEMPLATE_VIOLATION_LABEL,
-  type IssueCommentRef,
 } from './github-issues.service';
 import type { GithubIssueEventDto } from './issue-event.dto';
 import { parsePackageRequest } from './issue-form.parser';
-import { type AurPackageScan, type DiffScanSeverity, vtIndicatorLink } from '@chaotic-next/shared-lib';
 
 /** Grace period for waiting:issuer-feedback is 7 days. */
 export const NEEDS_INPUT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+const CUTOFF_MS = Date.parse('2026-06-03T00:00:00.000Z');
 
 const SCAN_POLL_INTERVAL_MS = 3_000;
 // ponytail: caps the wait for VirusTotal enrichment; longer scans post without VT lines.
@@ -71,7 +77,7 @@ export class IssueTrackerService implements OnModuleInit {
     }
 
     if (payload.action === 'opened') {
-      await this.triage(issue.number, issue.title, issue.body ?? '');
+      await this.triage(issue.number, issue.title, issue.body ?? '', issue.created_at ?? undefined);
       return;
     }
 
@@ -79,13 +85,13 @@ export class IssueTrackerService implements OnModuleInit {
     if (payload.action === 'created' && payload.comment !== undefined && waitsForIssuerFeedback) {
       const requester = issue.user?.login;
       if (requester !== undefined && payload.comment.user?.login === requester) {
-        await this.triage(issue.number, issue.title, issue.body ?? '');
+        await this.triage(issue.number, issue.title, issue.body ?? '', issue.created_at ?? undefined);
       }
       return;
     }
 
     if ((payload.action === 'edited' || payload.action === 'reopened') && waitsForIssuerFeedback) {
-      await this.triage(issue.number, issue.title, issue.body ?? '');
+      await this.triage(issue.number, issue.title, issue.body ?? '', issue.created_at ?? undefined);
     }
   }
 
@@ -95,7 +101,7 @@ export class IssueTrackerService implements OnModuleInit {
    * Close the issue after 7 days without answer.
    * For valid requests, run the AUR scan and post one comment with the findings.
    */
-  async triage(issueNumber: number, title: string, body: string): Promise<void> {
+  async triage(issueNumber: number, title: string, body: string, createdAt?: string): Promise<void> {
     // If the body has no ### section, close the issue. It has no template.
     if (!/^###\s/m.test(body)) {
       await this.github.createComment(
@@ -109,6 +115,7 @@ export class IssueTrackerService implements OnModuleInit {
 
     const parsed = parsePackageRequest(title, body);
     if (!parsed.ok) {
+      if (this.isBeforeCutoff(createdAt)) return;
       await this.postNeedsInput(
         issueNumber,
         `Thanks for the request. Some parts of the issue need attention:\n\n${formatFailures(parsed.failures)}\n\nPlease fix the sections above. The issue closes automatically in one week without an answer.`,
@@ -175,7 +182,7 @@ export class IssueTrackerService implements OnModuleInit {
     }
 
     if (parsed.kind === 'request') {
-      await this.attachScanFindings(issueNumber, scanTargets);
+      await this.attachScanFindings(issueNumber, scanTargets, createdAt);
     }
     const stateLabels = [NEEDS_TRIAGE_LABEL, ...(isCustomRebuild ? [CUSTOM_PACKAGE_LABEL] : [])];
     await this.github.addLabels(issueNumber, stateLabels).catch(() => undefined);
@@ -311,7 +318,7 @@ export class IssueTrackerService implements OnModuleInit {
 
   // ponytail: scans pkgbases sequentially and waits up to 90s each; parallelize
   // or run detached if rebuild requests with many pkgbases become slow.
-  private async attachScanFindings(issueNumber: number, pkgbases: string[]): Promise<void> {
+  private async attachScanFindings(issueNumber: number, pkgbases: string[], requestDate?: string): Promise<void> {
     const summaries: string[] = [];
     const kinds = new Set<string>();
     let hasEolDependency = false;
@@ -321,8 +328,11 @@ export class IssueTrackerService implements OnModuleInit {
       const scan = await this.waitForTerminalScan(pkgbase);
       summaries.push(formatScanSummary(scan));
       for (const kind of scan?.pkgTypes ?? []) kinds.add(kind);
-      if (scan?.findings.some((finding) => finding.ruleId === EOL_RULE_ID)) hasEolDependency = true;
-      if (scan?.packageMeta?.orphaned) hasOrphaned = true;
+
+      if (scan && !this.isBeforeCutoff(requestDate ?? scan.packageMeta.firstSubmitted)) {
+        if (scan.findings.some((finding) => finding.ruleId === EOL_RULE_ID)) hasEolDependency = true;
+        if (scan.packageMeta.orphaned) hasOrphaned = true;
+      }
     }
     await this.github.createComment(issueNumber, `Automated AUR scan results:\n\n${summaries.join('\n\n')}`);
     // ponytail: relies on the issues API auto-creating unknown labels; verify
@@ -354,6 +364,8 @@ export class IssueTrackerService implements OnModuleInit {
   async closeFulfilledNewRequest(pkgbase: string): Promise<void> {
     const open = await this.github.findOpenRequestIssues(pkgbase);
     for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Request]'))) {
+      if (this.extractPkgbasesFromTitle(issue.title).length === 2) continue;
+
       await this.github.createComment(
         issue.number,
         `The package is now available in the chaotic-aur repository. Thank you for the request. Closing it.`,
@@ -366,12 +378,20 @@ export class IssueTrackerService implements OnModuleInit {
   async closeFulfilledRebuild(pkgbase: string): Promise<void> {
     const open = await this.github.findOpenRequestIssues(pkgbase);
     for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Rebuild]'))) {
+      if (this.extractPkgbasesFromTitle(issue.title).length === 2) continue;
+
       await this.github.createComment(
         issue.number,
         'A new build of this package is available in the chaotic-aur repository. Closing this request.',
       );
       await this.github.closeIssue(issue.number);
     }
+  }
+
+  private extractPkgbasesFromTitle(title: string): string[] {
+    const match = title.trim().match(/^\[(Request|Rebuild|Issue)]\s+([\w@.+-]+(?:\s*[, ]\s*[\w@.+-]+)?)\s*$/);
+    if (!match) return [];
+    return match[2].split(/\s*[, ]\s*/).filter(Boolean);
   }
 
   private async postNeedsInput(issueNumber: number, body: string): Promise<void> {
@@ -413,6 +433,13 @@ export class IssueTrackerService implements OnModuleInit {
       if (other !== undefined) return other.number;
     }
     return null;
+  }
+
+  private isBeforeCutoff(dateStr: string | undefined): boolean {
+    if (!dateStr) return false;
+    const ts = Date.parse(dateStr);
+    if (Number.isNaN(ts) || ts === 0) return false;
+    return ts < CUTOFF_MS;
   }
 }
 

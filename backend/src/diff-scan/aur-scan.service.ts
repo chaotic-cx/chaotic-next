@@ -164,6 +164,11 @@ export class AurScanService {
           withLlm,
         ),
       );
+
+      if (isBeforeCutoff(scan.packageMeta.firstSubmitted)) {
+        scan.findings = scan.findings.filter((finding) => !isPromptingFinding(finding));
+      }
+
       scan.pkgTypes = classifyPkgbuild(pkgbuildText.text);
 
       await this.appendCommentThreat(scan);
@@ -579,6 +584,22 @@ function packageMetaOf(info: AurRpcPackage): AurPackageMeta {
     outOfDate: info.OutOfDate !== null && info.OutOfDate !== undefined,
     orphaned: info.Maintainer === null || info.Maintainer === undefined || info.Maintainer === '',
   };
+}
+
+const CUTOFF_MS = Date.parse('2026-06-03T00:00:00.000Z');
+
+function isBeforeCutoff(firstSubmitted: string | undefined): boolean {
+  if (!firstSubmitted) return false;
+  const ts = Date.parse(firstSubmitted);
+  if (Number.isNaN(ts) || ts === 0) return false;
+  return ts < CUTOFF_MS;
+}
+
+function isPromptingFinding(finding: DiffScanFinding): boolean {
+  return (
+    (finding as { informational?: boolean }).informational === true ||
+    (finding as { countsTowardMalwareScan?: boolean }).countsTowardMalwareScan === false
+  );
 }
 
 /** The whole file framed as an all-added diff so the rule catalog can scan it. */

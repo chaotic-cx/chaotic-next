@@ -149,10 +149,51 @@ describe('DiffScanService', () => {
       expect(verdict?.label).toBe('malware');
       expect(verdict?.score).toBe(10);
     });
+
+    it('ignores informational findings for verdict', () => {
+      expect(
+        service.autoFlagVerdict([
+          finding('warning', { informational: true }),
+          finding('warning', { informational: true }),
+        ]),
+      ).toBeNull();
+      expect(
+        service.autoFlagVerdict([
+          finding('warning', { informational: true }),
+          finding('warning', { informational: true }),
+          finding('warning', { informational: true }),
+          finding('warning', { informational: true }),
+        ]),
+      ).toBeNull();
+      expect(service.autoFlagVerdict([finding('warning', { informational: true }), finding('warning')])).toBeNull();
+    });
+
+    it('ignores countsTowardMalwareScan=false findings', () => {
+      expect(service.autoFlagVerdict([finding('critical', { countsTowardMalwareScan: false })])).toBeNull();
+      expect(
+        service.autoFlagVerdict([
+          finding('warning', { countsTowardMalwareScan: false }),
+          finding('warning', { countsTowardMalwareScan: false }),
+        ]),
+      ).toBeNull();
+    });
+
+    it('counts only non-informational findings toward score', () => {
+      const verdict = service.autoFlagVerdict([
+        finding('warning', { informational: true }),
+        finding('warning'),
+        finding('warning'),
+      ]);
+      expect(verdict?.label).toBe('suspicious');
+      expect(verdict?.score).toBe(6);
+    });
   });
 });
 
-function finding(severity: DiffScanSeverity): DiffScanFinding {
+function finding(
+  severity: DiffScanSeverity,
+  opts?: { informational?: boolean; countsTowardMalwareScan?: boolean },
+): DiffScanFinding {
   return {
     ruleId: 'TEST-001',
     ruleName: 'Test rule',
@@ -161,6 +202,7 @@ function finding(severity: DiffScanSeverity): DiffScanFinding {
     file: 'foo/PKGBUILD',
     line: 1,
     match: 'test',
+    ...opts,
   };
 }
 

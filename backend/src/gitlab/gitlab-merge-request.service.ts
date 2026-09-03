@@ -139,9 +139,14 @@ function changedMergeRequests(
   });
 }
 
-function mrPkgname(title: string): string | null {
-  const match = title.match(/^chore\(update\): ([\w@.+-]+)$/);
-  return match ? match[1] : null;
+function mrPkgnames(title: string): string[] {
+  const match = title.match(/^chore\(update\): ([\w@.+-]+(?:\s*[, ]\s*[\w@.+-]+)?)$/);
+  if (!match) return [];
+  const raw = match[1] as string;
+  return raw
+    .split(/\s*[, ]\s*/)
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
 }
 
 @Injectable()
@@ -620,10 +625,13 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   /** A package is only re-checked while its MR keeps changing; a takeover on a dormant MR resurfaces with new activity. */
   private async enrichMaintainerInfo(mrs: MergeRequestWithDiffs[]): Promise<void> {
     const pending = mrs.filter((mr) => {
-      const pkgname = mrPkgname(mr.title);
-      return pkgname !== null && mr.maintainers === undefined && this.maintainerCheckedAt.get(mr.iid) !== mr.updated_at;
+      return (
+        mrPkgnames(mr.title).length > 0 &&
+        mr.maintainers === undefined &&
+        this.maintainerCheckedAt.get(mr.iid) !== mr.updated_at
+      );
     });
-    const pkgnames = [...new Set(pending.map((mr) => mrPkgname(mr.title) as string))];
+    const pkgnames = [...new Set(pending.flatMap((mr) => mrPkgnames(mr.title)))];
     if (pkgnames.length === 0) return;
 
     let changed = false;
@@ -631,8 +639,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     try {
       const statuses = await this.aurScanService.maintainerStatusFor(pkgnames);
       for (const mr of pending) {
-        const pkgname = mrPkgname(mr.title) as string;
-        const status = statuses.get(pkgname);
+        const names = mrPkgnames(mr.title);
+        const pkgname = names[0] as string;
+        const status = statuses.get(pkgname) ?? names.map((n) => statuses.get(n)).find(Boolean);
         if (!status) {
           this.pino.debug({ mrIid: mr.iid, pkgname }, 'Package not found in the AUR, skipping maintainer info');
           continue;
@@ -671,15 +680,16 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   }
 
   private async enrichPackageInfo(mrs: MergeRequestWithDiffs[]): Promise<void> {
-    const pending = mrs.filter((mr) => mrPkgname(mr.title) !== null && mr.packageInfo === undefined);
+    const pending = mrs.filter((mr) => mrPkgnames(mr.title).length > 0 && mr.packageInfo === undefined);
     if (pending.length === 0) return;
 
     const byPkgname = new Map<string, MergeRequestWithDiffs[]>();
     for (const mr of pending) {
-      const pkgname = mrPkgname(mr.title) as string;
-      const group = byPkgname.get(pkgname) ?? [];
-      group.push(mr);
-      byPkgname.set(pkgname, group);
+      for (const pkgname of mrPkgnames(mr.title)) {
+        const group = byPkgname.get(pkgname) ?? [];
+        group.push(mr);
+        byPkgname.set(pkgname, group);
+      }
     }
 
     const changedMrs: MergeRequestWithDiffs[] = [];
@@ -737,8 +747,8 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       // MRs without a parseable "chore(update): <pkgname>" title stay silent:
       // a notification without a package name is not actionable.
       const notifyable = scannable.flatMap((mr) => {
-        const pkg = mrPkgname(mr.title);
-        return pkg === null ? [] : [{ mr, pkg }];
+        const pkgs = mrPkgnames(mr.title);
+        return pkgs.length === 0 ? [] : pkgs.map((pkg) => ({ mr, pkg }));
       });
       const skipped = scannable.length - notifyable.length;
       if (skipped > 0) {
