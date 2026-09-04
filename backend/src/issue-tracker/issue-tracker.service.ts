@@ -360,11 +360,17 @@ export class IssueTrackerService implements OnModuleInit {
     return comments.some((comment) => comment.user?.login === requester && new Date(comment.created_at) > after);
   }
 
-  // Called from the Package insert subscriber.
+  // Called from the Package insert/update subscriber.
   async closeFulfilledNewRequest(pkgbase: string): Promise<void> {
+    const deployed = await this.chaoticPackages.findOne({
+      where: [{ pkgbaseName: pkgbase }, { pkgname: pkgbase }],
+    });
+    if (!deployed?.isActive || !deployed.version) return;
     const open = await this.github.findOpenRequestIssues(pkgbase);
     for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Request]'))) {
-      if (this.extractPkgbasesFromTitle(issue.title).length === 2) continue;
+      const bases = this.extractPkgbasesFromTitle(issue.title);
+      if (bases.length === 2) continue;
+      if (!bases.includes(pkgbase)) continue;
 
       await this.github.createComment(
         issue.number,
@@ -378,7 +384,9 @@ export class IssueTrackerService implements OnModuleInit {
   async closeFulfilledRebuild(pkgbase: string): Promise<void> {
     const open = await this.github.findOpenRequestIssues(pkgbase);
     for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Rebuild]'))) {
-      if (this.extractPkgbasesFromTitle(issue.title).length === 2) continue;
+      const bases = this.extractPkgbasesFromTitle(issue.title);
+      if (bases.length === 2) continue;
+      if (!bases.includes(pkgbase)) continue;
 
       await this.github.createComment(
         issue.number,

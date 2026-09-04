@@ -497,6 +497,12 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
   });
 
   it('skips closing fulfilled request when title has 2 pkgbases', async () => {
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+      pkgname: 'foo-app',
+      pkgbaseName: 'foo-app',
+      isActive: true,
+      version: '1.0-1',
+    });
     vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 99, title: '[Request] foo-app, bar-lib' }]);
     await service.closeFulfilledNewRequest('foo-app');
     expect(github.closeIssue).not.toHaveBeenCalled();
@@ -504,6 +510,12 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
   });
 
   it('closes fulfilled request with single pkgbase', async () => {
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+      pkgname: 'foo-app',
+      pkgbaseName: 'foo-app',
+      isActive: true,
+      version: '1.0-1',
+    });
     vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 99, title: '[Request] foo-app' }]);
     await service.closeFulfilledNewRequest('foo-app');
     expect(github.closeIssue).toHaveBeenCalledWith(99);
@@ -512,6 +524,79 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
   it('skips closing fulfilled rebuild when title has 2 pkgbases', async () => {
     vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 100, title: '[Rebuild] foo-app, bar-lib' }]);
     await service.closeFulfilledRebuild('foo-app');
+    expect(github.closeIssue).not.toHaveBeenCalled();
+  });
+
+  // regression: exact pkgbase match — substring search must not close sibling package
+  it('does not close alacritty-sixel-git when alacritty-git is deployed (substring trap)', async () => {
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+      pkgname: 'alacritty-git',
+      pkgbaseName: 'alacritty-git',
+      isActive: true,
+      version: '1.0-1',
+    });
+    // GitHub search `in:title "alacritty-git"` can return sibling with shared prefix
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 4152, title: '[Request] alacritty-sixel-git' },
+    ]);
+    await service.closeFulfilledNewRequest('alacritty-git');
+    expect(github.closeIssue).not.toHaveBeenCalled();
+    expect(github.createComment).not.toHaveBeenCalled();
+  });
+
+  it('does not close alacritty-sixel-git rebuild when alacritty-git is built', async () => {
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 4153, title: '[Rebuild] alacritty-sixel-git' },
+    ]);
+    await service.closeFulfilledRebuild('alacritty-git');
+    expect(github.closeIssue).not.toHaveBeenCalled();
+  });
+
+  it('closes only the exact matching issue among multiple search hits', async () => {
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+      pkgname: 'alacritty-git',
+      pkgbaseName: 'alacritty-git',
+      isActive: true,
+      version: '1.0-1',
+    });
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 10, title: '[Request] alacritty-git' },
+      { number: 11, title: '[Request] alacritty-sixel-git' },
+    ]);
+    await service.closeFulfilledNewRequest('alacritty-git');
+    expect(github.closeIssue).toHaveBeenCalledWith(10);
+    expect(github.closeIssue).not.toHaveBeenCalledWith(11);
+  });
+
+  // regression: failed/intermediate Package stubs must not close requests
+  it('does not close request when package has no version (failed-build stub)', async () => {
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+      pkgname: 'proton-pass',
+      pkgbaseName: 'proton-pass',
+      isActive: true,
+      version: null,
+    });
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 4284, title: '[Request] proton-pass' }]);
+    await service.closeFulfilledNewRequest('proton-pass');
+    expect(github.closeIssue).not.toHaveBeenCalled();
+  });
+
+  it('does not close request when package is inactive', async () => {
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+      pkgname: 'proton-pass',
+      pkgbaseName: 'proton-pass',
+      isActive: false,
+      version: '1.0-1',
+    });
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 4284, title: '[Request] proton-pass' }]);
+    await service.closeFulfilledNewRequest('proton-pass');
+    expect(github.closeIssue).not.toHaveBeenCalled();
+  });
+
+  it('does not close request when package not yet in DB', async () => {
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 4284, title: '[Request] proton-pass' }]);
+    await service.closeFulfilledNewRequest('proton-pass');
     expect(github.closeIssue).not.toHaveBeenCalled();
   });
 
