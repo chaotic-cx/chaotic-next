@@ -44,6 +44,11 @@ export class WaitingBuildsComponent {
     ),
   );
 
+  readonly isBlocked = computed(
+    () =>
+      this.buildStatusService.waitingQueue().length > 0 && this.buildStatusService.estimates().waitingStart.size === 0,
+  );
+
   selectPage(page: number): void {
     this.page.set(Math.min(Math.max(1, page), this.pageCount()));
   }

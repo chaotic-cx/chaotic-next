@@ -747,6 +747,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .addSelect('AVG(build.timeToEnd) AS average')
       .innerJoin('build.pkgbase', 'pkg')
       .where('build.timeToEnd IS NOT NULL')
+      .andWhere('build.status = :successStatus', { successStatus: BuildStatus.SUCCESS })
       .andWhere('build.timestamp > :date', { date: nDaysInPast(days) })
       .groupBy('pkg.pkgname')
       .orderBy('average', 'DESC')
@@ -912,7 +913,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .innerJoin('build.pkgbase', 'pkgbase')
       .where('pkgbase.pkgname IN (:...pkgnames)', { pkgnames })
       .andWhere('"timeToEnd" IS NOT NULL')
-      .andWhere('build.status IN (:...statuses)', { statuses: [BuildStatus.SUCCESS, BuildStatus.FAILED] })
+      .andWhere('build.status = :successStatus', { successStatus: BuildStatus.SUCCESS })
       .groupBy('pkgbase.pkgname')
       .orderBy('pkgname', 'ASC');
 

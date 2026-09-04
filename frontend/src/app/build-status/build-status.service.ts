@@ -20,6 +20,7 @@ import {
 } from './queue-estimates';
 
 export const BUILD_ESTIMATE_TOOLTIP = 'Estimated from historical average build times — actual times vary.';
+export const BUILD_OVERTIME_TOOLTIP = 'Build exceeded its historical average by 2+ minutes — may be stuck.';
 
 export interface PipelineView {
   pipeline: PipelineWithExternalStatus['pipeline'];
@@ -37,6 +38,7 @@ interface QueueEntry {
 interface ActiveQueueEntry extends QueueEntry {
   node: string;
   liveLogUrl: string;
+  startedAt?: number;
 }
 
 interface PackageAverageRow {
@@ -98,8 +100,10 @@ export class BuildStatusService {
       build_class: this.buildClassOf(pkg.build_class, pkg.node),
       node: pkg.node,
       liveLogUrl: pkg.liveLog ?? '',
+      startedAt: (pkg as { started_at?: number | null }).started_at ?? undefined,
     })),
   );
+
   readonly waitingQueue = computed<QueueEntry[]>(() =>
     (resourceValue(this.queueStatsResource)?.waiting.packages ?? []).map((pkg) => ({
       name: this.shortName(pkg.name),
@@ -135,9 +139,7 @@ export class BuildStatusService {
 
   private readonly now = signal(Date.now());
 
-  /** First time each package was seen in the active queue; builds already
-   * running when the page loaded count from load time, so their remaining
-   * time is never underestimated. */
+  /** First time each package was seen in the active queue. */
   private readonly activeFirstSeen = signal<ReadonlyMap<string, number>>(new Map());
 
   /** Wall-clock start time of each running build, keyed by rawName. */
@@ -147,19 +149,38 @@ export class BuildStatusService {
     return new Map(this.activeQueue().map((pkg) => [pkg.rawName, firstSeen.get(pkg.rawName) ?? now]));
   });
 
-  readonly estimates = computed<QueueEstimates>(() =>
-    computeQueueEstimates({
-      active: this.activeQueue().map((pkg) => ({
-        rawName: pkg.rawName,
-        startedMs: this.activeFirstSeen().get(pkg.rawName) ?? Date.now(),
-        buildClass: pkg.build_class,
-      })),
+  private readonly pipelineStartedAt = computed<Map<string, number>>(() => {
+    const map = new Map<string, number>();
+    for (const view of this.pipelineWithStatus()) {
+      for (const job of view.commit) {
+        if (job.status !== 'running' || !job.started_at) continue;
+        const ms = Date.parse(job.started_at);
+        if (Number.isNaN(ms)) continue;
+        const short = job.name; // already short after toView()
+        if (!map.has(short)) map.set(short, ms);
+      }
+    }
+    return map;
+  });
+
+  readonly estimates = computed<QueueEstimates>(() => {
+    const active = this.activeQueue().map((pkg) => ({
+      rawName: pkg.rawName,
+      startedMs:
+        pkg.startedAt ??
+        this.pipelineStartedAt().get(pkg.name) ??
+        this.activeFirstSeen().get(pkg.rawName) ??
+        Date.now(),
+      buildClass: pkg.build_class,
+    }));
+    return computeQueueEstimates({
+      active,
       waiting: this.waitingQueue().map((pkg) => ({ rawName: pkg.rawName, buildClass: pkg.build_class })),
       idle: this.idleQueue().map((node) => ({ buildClass: node.build_class })),
       nowMs: this.now(),
       avgOf: (rawName) => this.averageMinutes(rawName),
-    }),
-  );
+    });
+  });
 
   constructor() {
     // pipelineWithStatus is fed from both this resource and live SSE 'pipeline'
@@ -190,11 +211,35 @@ export class BuildStatusService {
     this.destroyRef.onDestroy(() => window.clearInterval(tick));
   }
 
-  /** Remaining-time labels for running builds keyed by pkgname, e.g. `~6m left`. */
+  /** Start-time labels for running builds, e.g. `started 08:20` or `unknown start`. */
+  readonly activeStartedLabels = computed<Map<string, string>>(() => {
+    const labels = new Map<string, string>();
+    for (const pkg of this.activeQueue()) {
+      const startedMs = pkg.startedAt ?? this.pipelineStartedAt().get(pkg.name);
+      if (startedMs === undefined) continue;
+      const date = new Date(startedMs);
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      labels.set(pkg.rawName, `started ${hh}:${mm}`);
+    }
+    return labels;
+  });
+
+  /** Remaining-time labels for running builds, e.g. `~6m left` (kept for log view). */
   readonly activeEtaLabels = computed<Map<string, string>>(() => {
     const labels = new Map<string, string>();
     for (const [pkgname, minutes] of this.estimates().activeFinish) {
+      if (this.estimates().activeOvertime.has(pkgname)) continue;
       labels.set(pkgname, `${formatEta(minutes)} left`);
+    }
+    return labels;
+  });
+
+  /** Overtime labels for running builds that exceeded average by 2+ minutes. */
+  readonly activeOvertimeLabels = computed<Map<string, string>>(() => {
+    const labels = new Map<string, string>();
+    for (const [pkgname, minutes] of this.estimates().activeOvertime) {
+      labels.set(pkgname, `${formatEta(minutes)} overtime`);
     }
     return labels;
   });

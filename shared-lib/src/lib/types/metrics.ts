@@ -10,6 +10,7 @@ export const statsObjectSchema = z.object({
         name: z.string(),
         node: z.string(),
         build_class: buildClassSchema.nullable(),
+        started_at: z.number().nullable().optional(),
       }),
     ),
   }),

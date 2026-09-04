@@ -4,7 +4,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { packageLogRouteFromUrl } from '../functions';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusSectionComponent } from './build-status-section.component';
-import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
+import { BUILD_ESTIMATE_TOOLTIP, BUILD_OVERTIME_TOOLTIP, BuildStatusService } from './build-status.service';
 import { FlipListDirective } from '../animations/flip-list.directive';
 
 @Component({
@@ -15,6 +15,7 @@ import { FlipListDirective } from '../animations/flip-list.directive';
 export class ActiveBuildsComponent {
   readonly buildStatusService = inject(BuildStatusService);
   readonly estimateTooltip = BUILD_ESTIMATE_TOOLTIP;
+  readonly overtimeTooltip = BUILD_OVERTIME_TOOLTIP;
   readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
 
   readonly sortedQueue = computed(() => this.buildStatusService.activeQueue());

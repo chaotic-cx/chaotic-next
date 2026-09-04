@@ -332,8 +332,8 @@ describe('Build insights endpoints (e2e, real PostgreSQL)', () => {
       expect(res.statusCode).toBe(200);
       const rows = await res.json();
       expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({ pkgname: 'avg-pkg', samples: '2' });
-      expect(Number(rows[0].average_build_time)).toBe(150);
+      expect(rows[0]).toMatchObject({ pkgname: 'avg-pkg', samples: '1' });
+      expect(Number(rows[0].average_build_time)).toBe(100);
     });
 
     it('returns an empty list when no package matches', async () => {

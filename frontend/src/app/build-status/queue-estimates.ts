@@ -2,6 +2,7 @@ import { formatDuration } from '../functions';
 
 const MS_PER_MINUTE = 60_000;
 const SECONDS_PER_MINUTE = 60;
+export const OVERTIME_THRESHOLD_MINUTES = 2;
 
 /** Average build duration of a package in minutes, undefined when unknown. */
 export type AverageLookup = (pkgname: string) => number | undefined;
@@ -90,8 +91,12 @@ interface Builder {
 }
 
 export interface QueueEstimates {
-  /** Remaining minutes per active package. */
+  /** Remaining minutes per active package (avg - elapsed, clamped). */
   activeFinish: Map<string, number>;
+  /** Overtime minutes per active package (elapsed - average) when >= threshold. */
+  activeOvertime: Map<string, number>;
+  /** Absolute start ms per active package (wall-clock). */
+  activeStartedAt: Map<string, number>;
   /** Minutes until each waiting package starts building. */
   waitingStart: Map<string, number>;
   /** Minutes until the whole queue (active + waiting) is done. */
@@ -99,29 +104,46 @@ export interface QueueEstimates {
 }
 
 /**
- * Wave model: the `idleCount` idle builders pick up the first waiting packages
- * immediately; every further wave of `buildersTotal` packages starts as the
- * builders free up, one wave duration after the previous. Builders are treated
- * as interchangeable (build classes are not matched).
+ * Wave model: idle builders pick up the first waiting packages immediately;
+ * every further wave starts as builders free up. Builders match by class:
+ * numeric `build <= builder`, string `===` (intentional — string builders
+ * never run numeric classes).
  */
 export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimates {
   const { active, waiting, idle, nowMs, avgOf } = input;
 
   const activeFinish = new Map<string, number>();
+  const activeOvertime = new Map<string, number>();
+  const activeStartedAt = new Map<string, number>();
   const builders: Builder[] = [];
   for (const build of active) {
+    activeStartedAt.set(build.rawName, build.startedMs);
     const average = avgOf(build.rawName);
     if (average === undefined) continue;
     const elapsedMinutes = Math.max(0, (nowMs - build.startedMs) / MS_PER_MINUTE);
     const remaining = Math.max(0, average - elapsedMinutes);
+    const overtime = elapsedMinutes - average;
+    if (overtime >= OVERTIME_THRESHOLD_MINUTES) activeOvertime.set(build.rawName, overtime);
     activeFinish.set(build.rawName, remaining);
     builders.push({ freeMinutes: remaining, buildClass: build.buildClass });
+  }
+  // Builds without known average still occupy a builder (prevents false idle for 9-only queues)
+  for (const build of active) {
+    if (!activeFinish.has(build.rawName)) {
+      builders.push({ freeMinutes: 0, buildClass: build.buildClass });
+    }
   }
   for (const node of idle) {
     builders.push({ freeMinutes: 0, buildClass: node.buildClass });
   }
 
-  const empty = { activeFinish, waitingStart: new Map<string, number>(), queueClear: undefined };
+  const empty: QueueEstimates = {
+    activeFinish,
+    activeOvertime,
+    activeStartedAt,
+    waitingStart: new Map<string, number>(),
+    queueClear: undefined,
+  };
   if (builders.length === 0 || waiting.length === 0) {
     return { ...empty, queueClear: maxOf(activeFinish.values()) };
   }
@@ -148,6 +170,8 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
 
   return {
     activeFinish,
+    activeOvertime,
+    activeStartedAt,
     waitingStart,
     queueClear: maxOf([...activeFinish.values(), ...waitingFinish.values()]),
   };

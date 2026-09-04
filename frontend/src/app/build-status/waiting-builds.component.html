@@ -61,6 +61,10 @@
     <div class="mt-4 flex shrink-0 flex-col items-center gap-3">
       @if (buildStatusService.queueClearLabel(); as label) {
         <span class="text-sm text-ctp-mauve" [pTooltip]="estimateTooltip" tooltipPosition="top">{{ label }}</span>
+      } @else if (isBlocked()) {
+        <span class="text-sm text-ctp-yellow" [pTooltip]="estimateTooltip" tooltipPosition="top"
+          >No estimate — no idle builder matches the queued classes</span
+        >
       }
       <chaotic-build-status-pager [page]="currentPage()" [pageCount]="pageCount()" (pageChange)="selectPage($event)" />
     </div>

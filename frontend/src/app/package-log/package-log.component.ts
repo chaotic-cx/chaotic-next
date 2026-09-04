@@ -80,9 +80,9 @@ export class PackageLogComponent implements OnDestroy {
     return parts.join(' · ');
   });
 
-  /** Estimated time remaining, from the live build queue, when the log is streaming. */
+  /** Start time of the running build, from the live build queue, when the log is streaming. */
   protected readonly remainingLabel = computed(() =>
-    this.streaming() ? this.buildStatusService.activeEtaLabels().get(this.pkgname() ?? '') : undefined,
+    this.streaming() ? this.buildStatusService.activeStartedLabels().get(this.pkgname() ?? '') : undefined,
   );
 
   protected readonly formattedTimestamp = computed(() => {
