@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.26
+# syntax=docker/dockerfile:1.27
 FROM node:26-alpine AS builder
 
 ENV NODE_ENV=production
