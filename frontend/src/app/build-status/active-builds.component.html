@@ -25,12 +25,61 @@
             </span>
           </span>
           <span class="flex shrink-0 items-center gap-2">
-            @if (buildStatusService.activeOvertimeLabels().get(pkg.rawName); as overtime) {
+            @if (buildStatusService.activeIsUnknown().get(pkg.rawName)) {
+              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
+                <span
+                  class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
+                  [pTooltip]="estimateTooltip"
+                  tooltipPosition="top"
+                  >{{ started }}</span
+                >
+              } @else {
+                <span class="whitespace-nowrap text-right text-sm text-ctp-subtext1">unknown start</span>
+              }
+              <span
+                class="whitespace-nowrap text-right text-sm font-semibold text-ctp-yellow"
+                [pTooltip]="buildStatusService.activeUnknownTooltip"
+                tooltipPosition="top"
+                >· unknown time left</span
+              >
+            } @else if (buildStatusService.activeEtaIsFallback().get(pkg.rawName)) {
+              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
+                <span
+                  class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
+                  [pTooltip]="estimateTooltip"
+                  tooltipPosition="top"
+                  >{{ started }}</span
+                >
+              } @else {
+                <span class="whitespace-nowrap text-right text-sm text-ctp-subtext1">unknown start</span>
+              }
+              @if (buildStatusService.activeEtaLabels().get(pkg.rawName); as eta) {
+                <span
+                  class="whitespace-nowrap text-right text-sm text-ctp-yellow"
+                  [pTooltip]="
+                    buildStatusService.activeEtaTooltips().get(pkg.rawName) ??
+                    buildStatusService.activeEtaFallbackTooltip
+                  "
+                  tooltipPosition="top"
+                  >· {{ eta }}</span
+                >
+              }
+            } @else if (buildStatusService.activeOvertimeLabels().get(pkg.rawName); as overtime) {
+              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
+                <span
+                  class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
+                  [pTooltip]="estimateTooltip"
+                  tooltipPosition="top"
+                  >{{ started }}</span
+                >
+              } @else {
+                <span class="whitespace-nowrap text-right text-sm text-ctp-subtext1">unknown start</span>
+              }
               <span
                 class="whitespace-nowrap text-right text-sm font-semibold text-ctp-red"
-                [pTooltip]="overtimeTooltip"
+                [pTooltip]="buildStatusService.activeOvertimeTooltips().get(pkg.rawName) ?? overtimeTooltip"
                 tooltipPosition="top"
-                >{{ overtime }}</span
+                >· {{ overtime }}</span
               >
             } @else {
               @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
@@ -46,7 +95,7 @@
               @if (buildStatusService.activeEtaLabels().get(pkg.rawName); as eta) {
                 <span
                   class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
-                  [pTooltip]="estimateTooltip"
+                  [pTooltip]="buildStatusService.activeEtaTooltips().get(pkg.rawName) ?? estimateTooltip"
                   tooltipPosition="top"
                   >· {{ eta }}</span
                 >

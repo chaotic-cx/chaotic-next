@@ -4,8 +4,8 @@ const MS_PER_MINUTE = 60_000;
 const SECONDS_PER_MINUTE = 60;
 export const OVERTIME_THRESHOLD_MINUTES = 2;
 
-/** Average build duration of a package in minutes, undefined when unknown. */
-export type AverageLookup = (pkgname: string) => number | undefined;
+/** Average build duration of a package in minutes, optionally per builder node, undefined when unknown. */
+export type AverageLookup = (pkgname: string, builderName?: string) => number | undefined;
 
 export interface PackageBuildAverage {
   pkgname: string;
@@ -58,6 +58,7 @@ export interface ActiveBuildInput {
   /** When the build was first seen running; wall-clock ms. */
   startedMs: number;
   buildClass: number | string | null;
+  builderName?: string;
 }
 
 export interface WaitingBuildInput {
@@ -67,6 +68,7 @@ export interface WaitingBuildInput {
 
 export interface IdleBuilderInput {
   buildClass: number | string | null;
+  builderName?: string;
 }
 
 export interface QueueEstimatesInput {
@@ -88,6 +90,7 @@ function canPickUp(builder: number | string | null, build: number | string | nul
 interface Builder {
   freeMinutes: number;
   buildClass: number | string | null;
+  builderName?: string;
 }
 
 export interface QueueEstimates {
@@ -118,23 +121,23 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
   const builders: Builder[] = [];
   for (const build of active) {
     activeStartedAt.set(build.rawName, build.startedMs);
-    const average = avgOf(build.rawName);
+    const average = avgOf(build.rawName, build.builderName) ?? avgOf(build.rawName);
     if (average === undefined) continue;
     const elapsedMinutes = Math.max(0, (nowMs - build.startedMs) / MS_PER_MINUTE);
     const remaining = Math.max(0, average - elapsedMinutes);
     const overtime = elapsedMinutes - average;
     if (overtime >= OVERTIME_THRESHOLD_MINUTES) activeOvertime.set(build.rawName, overtime);
     activeFinish.set(build.rawName, remaining);
-    builders.push({ freeMinutes: remaining, buildClass: build.buildClass });
+    builders.push({ freeMinutes: remaining, buildClass: build.buildClass, builderName: build.builderName });
   }
   // Builds without known average still occupy a builder (prevents false idle for 9-only queues)
   for (const build of active) {
     if (!activeFinish.has(build.rawName)) {
-      builders.push({ freeMinutes: 0, buildClass: build.buildClass });
+      builders.push({ freeMinutes: 0, buildClass: build.buildClass, builderName: build.builderName });
     }
   }
   for (const node of idle) {
-    builders.push({ freeMinutes: 0, buildClass: node.buildClass });
+    builders.push({ freeMinutes: 0, buildClass: node.buildClass, builderName: node.builderName });
   }
 
   const empty: QueueEstimates = {
@@ -161,7 +164,7 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
     const builder = earliestFree(eligible);
     const start = builder.freeMinutes;
     waitingStart.set(pkg.rawName, start);
-    const average = avgOf(pkg.rawName);
+    const average = avgOf(pkg.rawName, builder.builderName) ?? avgOf(pkg.rawName);
     if (average !== undefined) {
       builder.freeMinutes = start + average;
       waitingFinish.set(pkg.rawName, start + average);

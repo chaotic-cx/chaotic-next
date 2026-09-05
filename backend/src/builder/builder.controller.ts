@@ -540,17 +540,18 @@ export class BuilderController {
   }
 
   @Get('average/pkgname')
-  @ApiOperation({ summary: 'Get average build time per package.' })
+  @ApiOperation({ summary: 'Get average build time per package (optionally per builder).' })
   @ApiQuery({ name: 'pkgname', required: true, isArray: true, description: 'Package names to look up' })
+  @ApiQuery({ name: 'builder', required: false, isArray: true, description: 'Filter to specific builder nodes' })
   @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back', type: Number })
   @ApiOkResponse({
-    description: 'Average build time per package',
+    description: 'Average build time per package, per builder when filtered',
     schema: schemaResponseArray(averagePackageBuildTimeSchema).schema,
   })
   async getAverageBuildTimePerPackage(
     @Query({ schema: pkgnameListQuerySchema }) query: PkgnameListQueryDto,
   ): Promise<AveragePackageBuildTime[]> {
-    return await this.builderService.getAverageBuildTimePerPackage(query.pkgname, query.days);
+    return await this.builderService.getAverageBuildTimePerPackage(query.pkgname, query.days, query.builder);
   }
 
   @Get('class/suggestions')

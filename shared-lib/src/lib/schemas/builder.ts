@@ -72,6 +72,12 @@ export const pkgnameListQuerySchema = z.strictObject({
       z.array(z.string()).min(1),
     )
     .describe('Package names to look up; repeat the parameter for several'),
+  builder: z
+    .preprocess(
+      (value) => (value == null || value === '' ? undefined : Array.isArray(value) ? value : [value]),
+      z.array(z.string()).optional(),
+    )
+    .describe('Filter to specific builder nodes; repeat for several'),
   days: daysParamSchema.optional().describe('Lookback window in days; all time when omitted'),
 });
 export type PkgnameListQueryDto = z.infer<typeof pkgnameListQuerySchema>;

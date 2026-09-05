@@ -77,6 +77,7 @@ export type AverageBuildTime = z.infer<typeof averageBuildTimeSchema>;
 
 export const averagePackageBuildTimeSchema = z.object({
   pkgname,
+  builder: builderName.optional().describe('Builder node when per-builder average was requested'),
   average_build_time: z.string().describe('Average build time (seconds)'),
   samples: z.string().describe('Number of samples'),
 });

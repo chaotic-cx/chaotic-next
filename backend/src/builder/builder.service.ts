@@ -902,9 +902,11 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
   async getAverageBuildTimePerPackage(
     pkgnames: string[],
     days?: number,
-  ): Promise<{ pkgname: string; average_build_time: string; samples: string }[]> {
+    builderNames?: string[],
+  ): Promise<{ pkgname: string; builder?: string; average_build_time: string; samples: string }[]> {
     if (pkgnames.length === 0) return [];
 
+    const perBuilder = builderNames !== undefined && builderNames.length > 0;
     const query = this.buildRepository
       .createQueryBuilder('build')
       .select('pkgbase.pkgname AS pkgname')
@@ -917,11 +919,22 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .groupBy('pkgbase.pkgname')
       .orderBy('pkgname', 'ASC');
 
+    if (perBuilder) {
+      query.innerJoin('build.builder', 'builder');
+      query.andWhere('builder.name IN (:...builderNames)', { builderNames });
+      query.addSelect('builder.name AS builder');
+      query.addGroupBy('builder.name');
+      query.addOrderBy('builder.name', 'ASC');
+    }
+
     if (days !== undefined) {
       query.andWhere('build.timestamp > :date', { date: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
     }
 
-    return query.cache(`average-build-time-per-package-${pkgnames.join(',')}`, CACHE_TTL_MS).getRawMany();
+    const cacheKey = perBuilder
+      ? `average-build-time-per-package-builder-${pkgnames.join(',')}-${builderNames?.join(',')}-${days ?? 'all'}`
+      : `average-build-time-per-package-${pkgnames.join(',')}-${days ?? 'all'}`;
+    return query.cache(cacheKey, CACHE_TTL_MS).getRawMany();
   }
 
   async getLatestBuilds(options: {

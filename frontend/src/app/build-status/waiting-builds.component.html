@@ -32,7 +32,7 @@
             @if (buildStatusService.waitingStartEtaLabels().get(pkg.rawName); as eta) {
               <span
                 class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
-                [pTooltip]="estimateTooltip"
+                [pTooltip]="buildStatusService.waitingStartTooltips().get(pkg.rawName) ?? estimateTooltip"
                 tooltipPosition="top"
                 >{{ eta }}</span
               >

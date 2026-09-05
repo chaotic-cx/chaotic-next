@@ -298,11 +298,15 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/average/time`, params: this.daysParams(days) };
   }
 
-  getPackageAverageBuildTimesResourceRequest(pkgnames: string[], days?: number): HttpResourceRequest {
+  getPackageAverageBuildTimesResourceRequest(
+    pkgnames: string[],
+    days?: number,
+    builder?: string[],
+  ): HttpResourceRequest {
     return {
       url: `${this.appConfig.backendUrl}/builder/average/pkgname`,
       params: new HttpParams({
-        fromObject: parseQueryParams(pkgnameListQuerySchema, { pkgname: pkgnames, days }),
+        fromObject: parseQueryParams(pkgnameListQuerySchema, { pkgname: pkgnames, builder, days }),
       }),
     };
   }

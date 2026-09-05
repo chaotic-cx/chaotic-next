@@ -43,6 +43,7 @@ interface ActiveQueueEntry extends QueueEntry {
 
 interface PackageAverageRow {
   pkgname: string;
+  builder?: string;
   average_build_time: string;
   samples: string;
 }
@@ -70,6 +71,14 @@ export class BuildStatusService {
     if (names.length === 0) return undefined;
     return this.appService.getPackageAverageBuildTimesResourceRequest(names);
   });
+  private readonly builderAveragesResource = httpResource<PackageAverageRow[]>(() => {
+    const names = [...this.activeQueue().map((pkg) => pkg.name), ...this.waitingQueue().map((pkg) => pkg.name)];
+    const builders = [
+      ...new Set([...this.activeQueue().map((pkg) => pkg.node), ...this.idleQueue().map((node) => node.name)]),
+    ].filter(Boolean);
+    if (names.length === 0 || builders.length === 0) return undefined;
+    return this.appService.getPackageAverageBuildTimesResourceRequest(names, undefined, builders);
+  });
   private readonly queueLoaded = signal(false);
 
   readonly initialLoaded = signal(false);
@@ -83,7 +92,9 @@ export class BuildStatusService {
   readonly loadingDeployments = this.packageBuildsResource.isLoading;
   readonly loadingPipelines = this.pipelinesResource.isLoading;
   readonly loadingQueue = computed(() => this.queueStatsResource.isLoading() && !this.queueLoaded());
-  readonly loadingAverages = this.averagesResource.isLoading;
+  readonly loadingAverages = computed(
+    () => this.averagesResource.isLoading() || this.builderAveragesResource.isLoading(),
+  );
   readonly loading = computed(
     () => this.loadingDeployments() || this.loadingPipelines() || this.loadingQueue() || this.loadingAverages(),
   );
@@ -129,11 +140,43 @@ export class BuildStatusService {
     })),
   );
 
+  private readonly packageBuilderAverages = computed<Map<string, Map<string, number>>>(() => {
+    const map = new Map<string, Map<string, number>>();
+    for (const row of resourceValue(this.builderAveragesResource) ?? []) {
+      if (!row.builder) continue;
+      let inner = map.get(row.pkgname);
+      if (!inner) {
+        inner = new Map<string, number>();
+        map.set(row.pkgname, inner);
+      }
+      inner.set(row.builder, Number(row.average_build_time));
+    }
+    return map;
+  });
+
+  private readonly packageBuilderSamples = computed<Map<string, Map<string, number>>>(() => {
+    const map = new Map<string, Map<string, number>>();
+    for (const row of resourceValue(this.builderAveragesResource) ?? []) {
+      if (!row.builder) continue;
+      let inner = map.get(row.pkgname);
+      if (!inner) {
+        inner = new Map<string, number>();
+        map.set(row.pkgname, inner);
+      }
+      inner.set(row.builder, Number(row.samples));
+    }
+    return map;
+  });
+
   private readonly averageLookup = computed(() => {
     const entries = this.packageAverages();
     return {
       byName: new Map(entries.map((entry) => [entry.pkgname, entry.averageMinutes])),
+      byNameSamples: new Map(entries.map((entry) => [entry.pkgname, entry.samples])),
+      byBuilder: this.packageBuilderAverages(),
+      byBuilderSamples: this.packageBuilderSamples(),
       overall: overallAverageMinutes(entries),
+      overallSamples: entries.reduce((sum, e) => sum + e.samples, 0),
     };
   });
 
@@ -172,13 +215,14 @@ export class BuildStatusService {
         this.activeFirstSeen().get(pkg.rawName) ??
         Date.now(),
       buildClass: pkg.build_class,
+      builderName: pkg.node,
     }));
     return computeQueueEstimates({
       active,
       waiting: this.waitingQueue().map((pkg) => ({ rawName: pkg.rawName, buildClass: pkg.build_class })),
-      idle: this.idleQueue().map((node) => ({ buildClass: node.build_class })),
+      idle: this.idleQueue().map((node) => ({ buildClass: node.build_class, builderName: node.name })),
       nowMs: this.now(),
-      avgOf: (rawName) => this.averageMinutes(rawName),
+      avgOf: (rawName, builderName) => this.averageMinutes(rawName, builderName),
     });
   });
 
@@ -253,15 +297,91 @@ export class BuildStatusService {
     return labels;
   });
 
+  readonly activeEtaTooltips = computed<Map<string, string>>(() => {
+    const map = new Map<string, string>();
+    for (const pkg of this.activeQueue()) {
+      const base = this.activeEtaIsFallback().get(pkg.rawName) ? this.activeEtaFallbackTooltip : BUILD_ESTIMATE_TOOLTIP;
+      const samples = this.samplesFor(pkg.rawName, pkg.node);
+      map.set(pkg.rawName, samples !== undefined ? `${base} · ${samples} samples` : base);
+    }
+    return map;
+  });
+
+  readonly activeOvertimeTooltips = computed<Map<string, string>>(() => {
+    const map = new Map<string, string>();
+    for (const pkg of this.activeQueue()) {
+      if (!this.estimates().activeOvertime.has(pkg.rawName)) continue;
+      const samples = this.samplesFor(pkg.rawName, pkg.node);
+      const base = BUILD_OVERTIME_TOOLTIP;
+      map.set(pkg.rawName, samples !== undefined ? `${base} · ${samples} samples` : base);
+    }
+    return map;
+  });
+
+  readonly waitingStartTooltips = computed<Map<string, string>>(() => {
+    const map = new Map<string, string>();
+    for (const [pkgname] of this.estimates().waitingStart) {
+      const samples = this.samplesFor(pkgname);
+      const base = BUILD_ESTIMATE_TOOLTIP;
+      map.set(pkgname, samples !== undefined ? `${base} · ${samples} samples` : base);
+    }
+    return map;
+  });
+
   readonly queueClearLabel = computed<string | undefined>(() => {
     const minutes = this.estimates().queueClear;
     return minutes === undefined ? undefined : `Queue empty in ${formatEta(minutes)}`;
   });
 
-  private averageMinutes(rawName: string): number | undefined {
+  private averageMinutes(rawName: string, builderName?: string): number | undefined {
     const lookup = this.averageLookup();
-    return lookup.byName.get(this.shortName(rawName)) ?? lookup.overall;
+    const short = this.shortName(rawName);
+    if (builderName) {
+      const perBuilder = lookup.byBuilder.get(short)?.get(builderName);
+      if (perBuilder !== undefined) return perBuilder;
+    }
+    return lookup.byName.get(short) ?? lookup.overall;
   }
+
+  private samplesFor(rawName: string, builderName?: string): number | undefined {
+    const lookup = this.averageLookup();
+    const short = this.shortName(rawName);
+    if (builderName) {
+      const perBuilder = lookup.byBuilderSamples.get(short)?.get(builderName);
+      if (perBuilder !== undefined) return perBuilder;
+    }
+    const perPkg = lookup.byNameSamples.get(short);
+    if (perPkg !== undefined) return perPkg;
+    return lookup.overallSamples > 0 ? lookup.overallSamples : undefined;
+  }
+
+  /** True when the active build has no history on its current node and falls back to another builder. */
+  readonly activeEtaIsFallback = computed<Map<string, boolean>>(() => {
+    const map = new Map<string, boolean>();
+    const lookup = this.averageLookup();
+    for (const pkg of this.activeQueue()) {
+      const short = this.shortName(pkg.rawName);
+      const hasBuilder = lookup.byBuilder.get(short)?.has(pkg.node) ?? false;
+      const hasPkg = lookup.byName.has(short);
+      map.set(pkg.rawName, !hasBuilder && hasPkg);
+    }
+    return map;
+  });
+
+  readonly activeIsUnknown = computed<Map<string, boolean>>(() => {
+    const map = new Map<string, boolean>();
+    const lookup = this.averageLookup();
+    for (const pkg of this.activeQueue()) {
+      const short = this.shortName(pkg.rawName);
+      const hasBuilder = lookup.byBuilder.get(short)?.has(pkg.node) ?? false;
+      const hasPkg = lookup.byName.has(short);
+      map.set(pkg.rawName, !hasBuilder && !hasPkg && lookup.overall !== undefined);
+    }
+    return map;
+  });
+
+  readonly activeEtaFallbackTooltip = 'No history for this package on this builder — average from other builders';
+  readonly activeUnknownTooltip = 'No build history for this package — estimate unavailable';
 
   private trackFirstSeenActive(): void {
     const active = this.activeQueue();
