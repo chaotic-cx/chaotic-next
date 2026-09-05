@@ -32,6 +32,10 @@ export class NewPackageSubscriber implements EntitySubscriberInterface<Package> 
     const version = partial?.version ?? previous?.version;
     const isActive = partial?.isActive ?? previous?.isActive ?? true;
     if (!isActive || !version) return;
+
+    // Only on activation/version transitions; every unrelated update left the request already closed
+    if (previous?.isActive && previous?.version) return;
+
     const pkgbase = partial?.pkgbaseName ?? partial?.pkgname ?? previous?.pkgbaseName ?? previous?.pkgname;
     if (!pkgbase) return;
     await this.issueTracker.closeFulfilledNewRequest(pkgbase).catch(() => undefined);

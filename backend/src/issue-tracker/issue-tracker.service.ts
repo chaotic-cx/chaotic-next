@@ -45,6 +45,8 @@ const SCAN_TERMINAL_TIMEOUT_MS = 90_000;
 
 @Injectable()
 export class IssueTrackerService implements OnModuleInit {
+  private readonly pendingCloses = new Set<string>();
+
   constructor(
     private readonly github: GithubIssuesService,
     private readonly aurScan: AurScanService,
@@ -362,37 +364,51 @@ export class IssueTrackerService implements OnModuleInit {
 
   // Called from the Package insert/update subscriber.
   async closeFulfilledNewRequest(pkgbase: string): Promise<void> {
-    const deployed = await this.chaoticPackages.findOne({
-      where: [{ pkgbaseName: pkgbase }, { pkgname: pkgbase }],
-    });
-    if (!deployed?.isActive || !deployed.version) return;
-    const open = await this.github.findOpenRequestIssues(pkgbase);
-    for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Request]'))) {
-      const bases = this.extractPkgbasesFromTitle(issue.title);
-      if (bases.length === 2) continue;
-      if (!bases.includes(pkgbase)) continue;
+    const key = `request:${pkgbase}`;
+    if (this.pendingCloses.has(key)) return;
+    this.pendingCloses.add(key);
+    try {
+      const deployed = await this.chaoticPackages.findOne({
+        where: [{ pkgbaseName: pkgbase }, { pkgname: pkgbase }],
+      });
+      if (!deployed?.isActive || !deployed.version) return;
+      const open = await this.github.findOpenRequestIssues(pkgbase);
+      for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Request]'))) {
+        const bases = this.extractPkgbasesFromTitle(issue.title);
+        if (bases.length === 2) continue;
+        if (!bases.includes(pkgbase)) continue;
 
-      await this.github.createComment(
-        issue.number,
-        `The package is now available in the chaotic-aur repository. Thank you for the request. Closing it.`,
-      );
-      await this.github.closeIssue(issue.number);
+        await this.github.createComment(
+          issue.number,
+          `The package is now available in the chaotic-aur repository. Thank you for the request.`,
+        );
+        await this.github.closeIssue(issue.number);
+      }
+    } finally {
+      this.pendingCloses.delete(key);
     }
   }
 
   // Called from the Build insert subscriber.
   async closeFulfilledRebuild(pkgbase: string): Promise<void> {
-    const open = await this.github.findOpenRequestIssues(pkgbase);
-    for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Rebuild]'))) {
-      const bases = this.extractPkgbasesFromTitle(issue.title);
-      if (bases.length === 2) continue;
-      if (!bases.includes(pkgbase)) continue;
+    const key = `rebuild:${pkgbase}`;
+    if (this.pendingCloses.has(key)) return;
+    this.pendingCloses.add(key);
+    try {
+      const open = await this.github.findOpenRequestIssues(pkgbase);
+      for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Rebuild]'))) {
+        const bases = this.extractPkgbasesFromTitle(issue.title);
+        if (bases.length === 2) continue;
+        if (!bases.includes(pkgbase)) continue;
 
-      await this.github.createComment(
-        issue.number,
-        'A new build of this package is available in the chaotic-aur repository. Closing this request.',
-      );
-      await this.github.closeIssue(issue.number);
+        await this.github.createComment(
+          issue.number,
+          'A new build of this package is available in the chaotic-aur repository.',
+        );
+        await this.github.closeIssue(issue.number);
+      }
+    } finally {
+      this.pendingCloses.delete(key);
     }
   }
 

@@ -207,7 +207,7 @@ export const DATA_BINARY_EXTENSIONS = new Set([
   'zst',
 ]);
 
-const ECHO_HEREDOC_START = /^\s*cat\s*<<-?['"]?([A-Za-z_]\w*)['"]?\s*$/;
+const ECHO_HEREDOC_START = /^\s*cat\s*<<-?\s*['"]?([A-Za-z_]\w*)['"]?\s*$/;
 
 /**
  * Blanks the body of heredocs that only print text: `cat <<EOF` with no
