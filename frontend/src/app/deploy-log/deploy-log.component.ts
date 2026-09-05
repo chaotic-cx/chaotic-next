@@ -129,12 +129,7 @@ export class DeployLogComponent {
       const builder = this.builder();
       if (builder !== undefined) {
         const values = Array.isArray(builder) ? builder : [builder];
-        const expanded = values.flatMap((value) =>
-          value
-            .split(',')
-            .map((part) => part.trim())
-            .filter(Boolean),
-        );
+        const expanded = values.map((value) => value.trim()).filter(Boolean);
         if (expanded.length > 0) this.deployLogService.setBuilderFilter(expanded);
       }
     });

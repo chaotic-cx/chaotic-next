@@ -103,12 +103,7 @@ export class DeployLogService {
     const params = this.route.snapshot.queryParamMap;
     const rawAll = typeof params.getAll === 'function' ? params.getAll('builder') : [];
     const values = rawAll.length > 0 ? rawAll : params.get('builder') ? [params.get('builder') as string] : [];
-    const expanded = values.flatMap((value) =>
-      value
-        .split(',')
-        .map((part) => part.trim())
-        .filter(Boolean),
-    );
+    const expanded = values.map((value) => value.trim()).filter(Boolean);
     return expanded.length > 0 ? expanded : undefined;
   }
 
@@ -129,12 +124,8 @@ export class DeployLogService {
   statusByLabels(labels: string[] | undefined): BuildStatus[] | undefined {
     if (!labels || labels.length === 0) return undefined;
     const statuses = labels
-      .flatMap((label) =>
-        label
-          .split(',')
-          .map((part) => part.trim())
-          .filter(Boolean),
-      )
+      .map((label) => label.trim())
+      .filter(Boolean)
       .map((label) => STATUS_BY_LABEL.get(label))
       .filter((value): value is BuildStatus => value !== undefined);
     return statuses.length > 0 ? statuses : undefined;

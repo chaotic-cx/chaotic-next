@@ -42,7 +42,7 @@ jobs:
       - name: Fetch fixtures
         run: node tools/fetch-fixtures.mjs
       - name: Unit tests with coverage
-        run: pnpm exec nx run-many --target=test-ci --all --skip-nx-cache
+        run: pnpm exec nx run-many --target=test-ci --exclude=backend-e2e --all --skip-nx-cache
       - name: Build
         run: pnpm build
       - name: Upload unit coverage

@@ -77,7 +77,7 @@ export const pkgnameListQuerySchema = z.strictObject({
       (value) => (value == null || value === '' ? undefined : Array.isArray(value) ? value : [value]),
       z.array(z.string()).optional(),
     )
-    .describe('Filter to specific builder nodes; repeat for several'),
+    .describe('Filter to specific builder nodes; repeat the parameter for several'),
   days: daysParamSchema.optional().describe('Lookback window in days; all time when omitted'),
 });
 export type PkgnameListQueryDto = z.infer<typeof pkgnameListQuerySchema>;
