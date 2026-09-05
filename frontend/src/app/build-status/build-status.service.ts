@@ -2,6 +2,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { computed, DestroyRef, effect, inject, Service, signal, untracked } from '@angular/core';
 import {
   type Build,
+  DEFAULT_DEPLOYMENT_STATUSES,
   type Paginated,
   type PipelineWithExternalStatus,
   promoteBodySchema,
@@ -60,7 +61,7 @@ export class BuildStatusService {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
 
   private readonly packageBuildsResource = httpResource<Paginated<Build>>(() =>
-    this.appService.getPackageBuildsResourceRequest(20),
+    this.appService.getPackageBuildsResourceRequest(20, [...DEFAULT_DEPLOYMENT_STATUSES]),
   );
   private readonly pipelinesResource = httpResource<PipelineWithExternalStatus[]>(() =>
     this.appService.getStatusChecksResourceRequest(),

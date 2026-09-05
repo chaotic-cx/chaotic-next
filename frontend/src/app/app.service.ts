@@ -370,14 +370,12 @@ export class AppService {
     return { url: `${this.appConfig.apiUrl}/queue/stats` };
   }
 
-  getPackageBuildsResourceRequest(perPage = 20, status?: BuildStatus): HttpResourceRequest {
+  getPackageBuildsResourceRequest(perPage = 20, status?: BuildStatus | BuildStatus[]): HttpResourceRequest {
+    const statusParam = status === undefined ? undefined : Array.isArray(status) ? status : [status];
     return {
       url: `${this.appConfig.backendUrl}/builder/builds`,
       params: new HttpParams({
-        fromObject: parseQueryParams(getBuildsQuerySchema, {
-          perPage,
-          status: status === undefined ? undefined : [status],
-        }),
+        fromObject: parseQueryParams(getBuildsQuerySchema, { perPage, status: statusParam }),
       }),
     };
   }
