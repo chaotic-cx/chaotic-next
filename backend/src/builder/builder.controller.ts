@@ -75,6 +75,7 @@ import {
 } from '@chaotic-next/shared-lib';
 import { BadRequestException, Controller, Delete, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
 
 @ApiTags('builder')
@@ -351,6 +352,7 @@ export class BuilderController {
   }
 
   @Get('should-build/:pkgbase')
+  @Throttle({ default: { ttl: 60_000, limit: 3000 } })
   @ApiOperation({
     summary:
       'Whether a build for the pkgbase is likely to succeed. Failure loops return false, but become true again after a cooldown without newer builds, so packages keep getting retried.',
