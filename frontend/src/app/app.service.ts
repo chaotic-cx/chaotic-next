@@ -39,9 +39,9 @@ export interface BuildsQueryParams {
   page: number;
   perPage: number;
   q?: string;
-  builder?: string;
+  builder?: string[];
   repo?: string;
-  status?: BuildStatus;
+  status?: BuildStatus[];
   sort?: BuildSortField;
   order?: SortOrder;
 }
@@ -369,7 +369,12 @@ export class AppService {
   getPackageBuildsResourceRequest(perPage = 20, status?: BuildStatus): HttpResourceRequest {
     return {
       url: `${this.appConfig.backendUrl}/builder/builds`,
-      params: new HttpParams({ fromObject: parseQueryParams(getBuildsQuerySchema, { perPage, status }) }),
+      params: new HttpParams({
+        fromObject: parseQueryParams(getBuildsQuerySchema, {
+          perPage,
+          status: status === undefined ? undefined : [status],
+        }),
+      }),
     };
   }
 

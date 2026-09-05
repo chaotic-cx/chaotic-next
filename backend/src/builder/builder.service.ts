@@ -247,9 +247,9 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     page?: number;
     perPage?: number;
     q?: string;
-    builder?: string;
+    builder?: string[];
     repo?: string;
-    status?: BuildStatus;
+    status?: BuildStatus[];
     sort?: string;
     order?: string;
   }): Promise<Paginated<Build>> {
@@ -263,16 +263,16 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .leftJoin('build.repo', 'repo')
       .addSelect('repo.name');
 
-    if (options.builder) {
-      query.andWhere('builder.name = :builder', { builder: options.builder });
+    if (options.builder !== undefined && options.builder.length > 0) {
+      query.andWhere('builder.name IN (:...builders)', { builders: options.builder });
     }
 
     if (options.repo) {
       query.andWhere('repo.name = :repo', { repo: options.repo });
     }
 
-    if (options.status !== undefined) {
-      query.andWhere('build.status = :status', { status: options.status });
+    if (options.status !== undefined && options.status.length > 0) {
+      query.andWhere('build.status IN (:...statuses)', { statuses: options.status });
     }
 
     if (options.q) {

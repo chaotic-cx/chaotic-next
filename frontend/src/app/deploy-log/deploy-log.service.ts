@@ -6,6 +6,7 @@ import {
   Builder,
   type BuildSortField,
   BuildStatus,
+  DEFAULT_DEPLOYMENT_STATUSES,
   isBuildSortField,
   Paginated,
   STATUS_LABELS,
@@ -45,11 +46,9 @@ export class DeployLogService {
   readonly repoOptions = REPO_OPTIONS;
   readonly statusOptions = STATUS_OPTIONS;
 
-  readonly builderFilter = signal<string | undefined>(this.route.snapshot.queryParamMap.get('builder') ?? undefined);
+  readonly builderFilter = signal<string[] | undefined>(this.initialBuilderFilter());
   readonly repoFilter = signal<string | undefined>(this.route.snapshot.queryParamMap.get('repo') ?? undefined);
-  readonly statusFilter = signal<BuildStatus | undefined>(
-    STATUS_BY_LABEL.get(this.route.snapshot.queryParamMap.get('status') ?? ''),
-  );
+  readonly statusFilter = signal<BuildStatus[] | undefined>(this.initialStatusFilter());
 
   readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
 
@@ -95,9 +94,22 @@ export class DeployLogService {
     this.sortOrder.set(order);
   }
 
-  setBuilderFilter(value: string | null | undefined): void {
-    this.builderFilter.set(value ?? undefined);
+  setBuilderFilter(value: string[] | null | undefined): void {
+    this.builderFilter.set(!value || value.length === 0 ? undefined : [...value]);
     this.pagination.resetPage();
+  }
+
+  private initialBuilderFilter(): string[] | undefined {
+    const params = this.route.snapshot.queryParamMap;
+    const rawAll = typeof params.getAll === 'function' ? params.getAll('builder') : [];
+    const values = rawAll.length > 0 ? rawAll : params.get('builder') ? [params.get('builder') as string] : [];
+    const expanded = values.flatMap((value) =>
+      value
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean),
+    );
+    return expanded.length > 0 ? expanded : undefined;
   }
 
   setRepoFilter(value: string | null | undefined): void {
@@ -105,13 +117,36 @@ export class DeployLogService {
     this.pagination.resetPage();
   }
 
-  setStatusFilter(value: BuildStatus | null | undefined): void {
-    this.statusFilter.set(value ?? undefined);
+  setStatusFilter(value: BuildStatus[] | null | undefined): void {
+    this.statusFilter.set(!value || value.length === 0 ? [...DEFAULT_DEPLOYMENT_STATUSES] : [...value]);
     this.pagination.resetPage();
   }
 
   statusByLabel(label: string | undefined): BuildStatus | undefined {
     return label ? STATUS_BY_LABEL.get(label) : undefined;
+  }
+
+  statusByLabels(labels: string[] | undefined): BuildStatus[] | undefined {
+    if (!labels || labels.length === 0) return undefined;
+    const statuses = labels
+      .flatMap((label) =>
+        label
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean),
+      )
+      .map((label) => STATUS_BY_LABEL.get(label))
+      .filter((value): value is BuildStatus => value !== undefined);
+    return statuses.length > 0 ? statuses : undefined;
+  }
+
+  private initialStatusFilter(): BuildStatus[] | undefined {
+    const params = this.route.snapshot.queryParamMap;
+    const rawAll = typeof params.getAll === 'function' ? params.getAll('status') : [];
+    const labels = rawAll.length > 0 ? rawAll : params.get('status') ? [params.get('status') as string] : [];
+    const parsed = this.statusByLabels(labels);
+    if (parsed !== undefined) return parsed;
+    return [...DEFAULT_DEPLOYMENT_STATUSES];
   }
 
   reload(): void {

@@ -264,6 +264,55 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       expect(body.items[0].status).toBe(3);
     });
 
+    it('filters by multiple build statuses (repeated param, OR)', async () => {
+      await e2e.seedBuild({ status: BuildStatus.SUCCESS });
+      await e2e.seedBuild({ status: BuildStatus.FAILED });
+      await e2e.seedBuild({ status: BuildStatus.TIMED_OUT });
+      await e2e.seedBuild({ status: BuildStatus.ALREADY_BUILT });
+
+      const res = await e2e.inject<Paginated<{ status: number }>>({
+        method: 'GET',
+        url: `/builder/builds?status=${BuildStatus.SUCCESS}&status=${BuildStatus.FAILED}`,
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body.total).toBe(2);
+      expect(new Set(body.items.map((i) => i.status))).toEqual(new Set([BuildStatus.SUCCESS, BuildStatus.FAILED]));
+    });
+
+    it('filters by multiple build statuses (comma-separated, OR)', async () => {
+      await e2e.seedBuild({ status: BuildStatus.SUCCESS });
+      await e2e.seedBuild({ status: BuildStatus.FAILED });
+      await e2e.seedBuild({ status: BuildStatus.SKIPPED });
+
+      const res = await e2e.inject<Paginated<{ status: number }>>({
+        method: 'GET',
+        url: `/builder/builds?status=${BuildStatus.SUCCESS},${BuildStatus.FAILED}`,
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body.total).toBe(2);
+    });
+
+    it('filters by combined builder and status (AND across filters, OR within)', async () => {
+      const b1 = await e2e.seedBuilder({ name: 'immortalis-1' });
+      const b2 = await e2e.seedBuilder({ name: 'stormwing-2' });
+      await e2e.seedBuild({ builder: b1, status: BuildStatus.SUCCESS });
+      await e2e.seedBuild({ builder: b1, status: BuildStatus.FAILED });
+      await e2e.seedBuild({ builder: b2, status: BuildStatus.SUCCESS });
+
+      const res = await e2e.inject<Paginated<unknown>>({
+        method: 'GET',
+        url: `/builder/builds?builder=immortalis-1&status=${BuildStatus.SUCCESS}`,
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body.total).toBe(1);
+    });
+
     it('filters by builder name', async () => {
       const builder = await e2e.seedBuilder({ name: 'immortalis-1' });
       const otherBuilder = await e2e.seedBuilder({ name: 'stormwing-2' });
@@ -275,6 +324,40 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
       expect(res.statusCode).toBe(200);
       const body = await res.json();
       expect(body.total).toBe(1);
+    });
+
+    it('filters by multiple builder names (repeated param, OR)', async () => {
+      const b1 = await e2e.seedBuilder({ name: 'immortalis-1' });
+      const b2 = await e2e.seedBuilder({ name: 'stormwing-2' });
+      const b3 = await e2e.seedBuilder({ name: 'nebula-3' });
+      await e2e.seedBuild({ builder: b1 });
+      await e2e.seedBuild({ builder: b2 });
+      await e2e.seedBuild({ builder: b3 });
+
+      const res = await e2e.inject<Paginated<unknown>>({
+        method: 'GET',
+        url: '/builder/builds?builder=immortalis-1&builder=stormwing-2',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body.total).toBe(2);
+    });
+
+    it('filters by multiple builder names (comma-separated, OR)', async () => {
+      const b1 = await e2e.seedBuilder({ name: 'immortalis-1' });
+      const b2 = await e2e.seedBuilder({ name: 'stormwing-2' });
+      await e2e.seedBuild({ builder: b1 });
+      await e2e.seedBuild({ builder: b2 });
+
+      const res = await e2e.inject<Paginated<unknown>>({
+        method: 'GET',
+        url: '/builder/builds?builder=immortalis-1,stormwing-2',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body.total).toBe(2);
     });
 
     it('filters by repo name', async () => {

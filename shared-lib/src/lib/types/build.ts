@@ -52,6 +52,13 @@ export const BUILD_SUCCESS_STATUSES: readonly BuildStatus[] = [
 
 export const BUILD_VERDICT_STATUSES: readonly BuildStatus[] = [...BUILD_SUCCESS_STATUSES, ...BUILD_FAILURE_STATUSES];
 
+export const DEFAULT_DEPLOYMENT_STATUSES: readonly BuildStatus[] = [
+  BuildStatus.SUCCESS,
+  BuildStatus.FAILED,
+  BuildStatus.TIMED_OUT,
+  BuildStatus.SOFTWARE_FAILURE,
+];
+
 export const BUILD_RATE_LIMIT_FAILURE_STREAK = 5;
 export const BUILD_RATE_LIMIT_RETRY_HOURS = 24;
 

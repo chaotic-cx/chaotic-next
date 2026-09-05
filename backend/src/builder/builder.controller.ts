@@ -129,7 +129,7 @@ export class BuilderController {
   })
   async getBuilds(@Query({ schema: getBuildsQuerySchema }) query: GetBuildsQueryDto): Promise<Paginated<Build>> {
     return await this.builderService.getBuilds({
-      builder: query.builder ?? '',
+      builder: query.builder,
       repo: query.repo ?? '',
       status: query.status,
       page: query.page,

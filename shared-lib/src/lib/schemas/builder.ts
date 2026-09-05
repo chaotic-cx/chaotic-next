@@ -22,9 +22,19 @@ export const getPackagesQuerySchema = z.strictObject({
 export type GetPackagesQueryDto = z.infer<typeof getPackagesQuerySchema>;
 
 export const getBuildsQuerySchema = z.strictObject({
-  builder: z.string().optional().describe('Filter by builder name'),
+  builder: z
+    .preprocess(
+      (value) => (value == null || value === '' ? undefined : Array.isArray(value) ? value : [value]),
+      z.array(z.string()).optional(),
+    )
+    .describe('Filter by builder name; repeat the parameter for several'),
   repo: z.string().optional().describe('Filter by repository name'),
-  status: statusQuerySchema.optional().describe('Filter by numeric build status'),
+  status: z
+    .preprocess(
+      (value) => (value == null || value === '' ? undefined : Array.isArray(value) ? value : [value]),
+      z.array(statusQuerySchema).optional(),
+    )
+    .describe('Filter by numeric build status; repeat the parameter for several'),
   page: pageQuerySchema.optional(),
   perPage: perPageQuerySchema.optional(),
   q: z.string().optional().describe('Search term matched against package names'),

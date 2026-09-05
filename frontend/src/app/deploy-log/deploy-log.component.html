@@ -35,7 +35,7 @@
         </div>
         <div class="flex w-full flex-wrap items-center gap-2.5 sm:ml-auto sm:w-auto sm:flex-nowrap">
           <p-select
-            class="w-full sm:w-40"
+            class="w-full sm:w-auto sm:min-w-40"
             [options]="deployLogService.repoOptions"
             [ngModel]="deployLogService.repoFilter()"
             (ngModelChange)="onRepoFilter($event)"
@@ -43,35 +43,37 @@
             showClear
             appendTo="body"
           />
-          <p-select
-            class="w-full sm:w-40"
+          <p-multi-select
+            class="w-full sm:w-auto sm:min-w-40"
             [options]="deployLogService.builderOptions()"
             [ngModel]="deployLogService.builderFilter()"
             [filter]="true"
             (ngModelChange)="onBuilderFilter($event)"
             placeholder="All builders"
             filterPlaceholder="Search builder"
-            showClear
+            display="chip"
+            selectedItemsLabel="{0} builders"
             appendTo="body"
           />
-          <p-select
-            class="w-full sm:w-48"
+          <p-multi-select
+            class="w-full sm:w-auto sm:min-w-40"
             [options]="deployLogService.statusOptions"
             [ngModel]="deployLogService.statusFilter()"
             (ngModelChange)="onStatusFilter($event)"
             optionLabel="label"
             optionValue="value"
-            placeholder="All outcomes"
-            showClear
+            placeholder="Outcomes"
+            display="chip"
+            selectedItemsLabel="{0} outcomes"
             appendTo="body"
           >
-            <ng-template pTemplate="option" let-option>
+            <ng-template pTemplate="item" let-option>
               <span class="flex items-center gap-1">
                 <i class="pi" [class]="option.icon"></i>
                 <span>{{ option.label }}</span>
               </span>
             </ng-template>
-          </p-select>
+          </p-multi-select>
         </div>
         <p-iconfield class="w-full sm:w-64" iconPosition="left">
           <p-inputicon>

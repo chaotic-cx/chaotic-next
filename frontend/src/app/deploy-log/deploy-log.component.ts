@@ -10,6 +10,7 @@ import { Button } from '@openng/optimus-ui/button';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
+import { MultiSelectModule } from '@openng/optimus-ui/multiselect';
 import { Select } from '@openng/optimus-ui/select';
 import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
@@ -34,6 +35,7 @@ import { DeployLogService } from './deploy-log.service';
     IconField,
     InputText,
     Select,
+    MultiSelectModule,
     BytesPipe,
     RelativeTimePipe,
     TitleComponent,
@@ -74,8 +76,8 @@ export class DeployLogComponent {
   readonly search = input<string>();
 
   readonly repo = input<string>();
-  readonly builder = input<string>();
-  readonly status = input<string>();
+  readonly builder = input<string | string[]>();
+  readonly status = input<string | string[]>();
 
   protected readonly deployColumns: ColumnDef[] = [
     { key: 'pkgname', label: 'Package name' },
@@ -125,12 +127,25 @@ export class DeployLogComponent {
 
     effect(() => {
       const builder = this.builder();
-      if (builder) this.deployLogService.setBuilderFilter(builder);
+      if (builder !== undefined) {
+        const values = Array.isArray(builder) ? builder : [builder];
+        const expanded = values.flatMap((value) =>
+          value
+            .split(',')
+            .map((part) => part.trim())
+            .filter(Boolean),
+        );
+        if (expanded.length > 0) this.deployLogService.setBuilderFilter(expanded);
+      }
     });
 
     effect(() => {
       const status = this.status();
-      if (status) this.deployLogService.setStatusFilter(this.deployLogService.statusByLabel(status));
+      if (status !== undefined) {
+        const labels = Array.isArray(status) ? status : [status];
+        const parsed = this.deployLogService.statusByLabels(labels);
+        if (parsed) this.deployLogService.setStatusFilter(parsed);
+      }
     });
   }
 
@@ -173,10 +188,11 @@ export class DeployLogComponent {
     this.cdr.markForCheck();
   }
 
-  onBuilderFilter(value: string | null): void {
-    this.applyFilter((v) => this.deployLogService.setBuilderFilter(v), value);
+  onBuilderFilter(value: string[] | null): void {
+    const filterValue = value === null || value.length === 0 ? null : value;
+    this.applyFilter((v) => this.deployLogService.setBuilderFilter(v as string[] | null), filterValue);
     void this.router.navigate([], {
-      queryParams: { builder: value ?? null },
+      queryParams: { builder: filterValue },
       queryParamsHandling: 'merge',
     });
   }
@@ -189,10 +205,11 @@ export class DeployLogComponent {
     });
   }
 
-  onStatusFilter(value: BuildStatus | null): void {
-    this.applyFilter((v) => this.deployLogService.setStatusFilter(v), value);
+  onStatusFilter(value: BuildStatus[] | null): void {
+    const filterValue = value === null || value.length === 0 ? null : value;
+    this.applyFilter((v) => this.deployLogService.setStatusFilter(v as BuildStatus[] | null), filterValue);
     void this.router.navigate([], {
-      queryParams: { status: value === null ? null : STATUS_LABELS[value] },
+      queryParams: { status: filterValue === null ? null : filterValue.map((status) => STATUS_LABELS[status]) },
       queryParamsHandling: 'merge',
     });
   }
