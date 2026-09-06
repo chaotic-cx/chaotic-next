@@ -56,7 +56,6 @@
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^12.0.1",
-    "@nestjs/observe": "^0.1.8",
     "@nestjs/platform-fastify": "^12.0.1",
     "@nestjs/schedule": "^12.0.1",
     "@nestjs/swagger": "^12.0.1",

@@ -6,7 +6,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Logger } from 'nestjs-pino';
 import { provideSwagger } from './api/setup-swagger';
-import { AppModule, ObserveInstrument } from './app.module';
+import { AppModule } from './app.module';
 import { checkEnvironment } from './utils/functions';
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
@@ -20,7 +20,6 @@ async function bootstrap(): Promise<void> {
   const fastifyAdapter = new FastifyAdapter(trustProxy === undefined ? undefined : { trustProxy });
   const app: INestApplication = await NestFactory.create<NestFastifyApplication>(AppModule, fastifyAdapter, {
     bufferLogs: true,
-    instrument: ObserveInstrument,
   });
   const logger = app.get(Logger);
   app.useLogger(logger);

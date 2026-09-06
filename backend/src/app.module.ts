@@ -1,7 +1,6 @@
 import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
-import { createObserveModule } from '@nestjs/observe';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -18,7 +17,6 @@ import { BuilderModule } from './builder/builder.module';
 import { lruCacheModule } from './cache/lru-cache.module';
 import appConfig from './config/app.config';
 import { envValidationSchema } from './config/env.validation';
-import observeConfig from './config/observe.config';
 import portableBuilderConfig from './config/portable-builder.config';
 import { dataSourceOptions } from './data/data.source';
 import { MigrationLogger } from './data/migration-logger';
@@ -32,10 +30,6 @@ import { RepoManagerModule } from './repo-manager/repo-manager.module';
 import { RouterModule } from './router/router.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL_MS } from './utils/constants';
 
-export const { ObserveModule, ObserveInstrument } = createObserveModule();
-
-const observe = observeConfig();
-
 @Module({
   imports: [
     AdminModule,
@@ -46,7 +40,7 @@ const observe = observeConfig();
     ConfigModule.forRoot({
       envFilePath: '.env',
       isGlobal: true,
-      load: [appConfig, observeConfig, portableBuilderConfig],
+      load: [appConfig, portableBuilderConfig],
       validationSchema: envValidationSchema,
     }),
     HealthModule,
@@ -83,16 +77,6 @@ const observe = observeConfig();
     MetricsModule,
     NotificationsModule,
     PortableBuilderModule,
-    ObserveModule.forRoot({
-      appKey: observe.appKey,
-      appSecret: observe.appSecret,
-      serviceId: observe.serviceId,
-      runtimeMetrics: true,
-      runtimeMetricsInterval: 60_000,
-      http: {
-        getUserId: (req) => req.user?.id ?? 'anonymous',
-      },
-    }),
     RepoManagerModule,
     RouterModule,
     ScheduleModule.forRoot(),
