@@ -6,6 +6,7 @@ import { Package } from '../../builder/builder.entity';
 import { type OwnerDescriptor, type PluginBreakIndexEntry, TriggerType } from '../../interfaces/repo-manager';
 import { RebuildTriggerService, summarizeDetails } from './rebuild-triggers.service';
 import { ArchlinuxPackage, PackageElfAnalysis } from '../repo-manager.entity';
+import { buildAnalysis } from '../signal';
 import type { MockRepository } from '../test/mock-repository';
 import { createMockRepository } from '../test/mock-repository';
 
@@ -226,6 +227,192 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
       }
     ).brokenDepsForConsumer(consumer, onnxContext(), []);
 
+    expect(result).toBeNull();
+  });
+
+  it('ignores SUNWprivate_1.1 from libjli.so — quartus-130 regression (private nodes are not ABI)', () => {
+    const service = createService();
+    const consumer = makeConsumer({ neededVersionNodes: { 'libjli.so': ['SUNWprivate_1.1'] } });
+    // intellij-idea-community-edition provides libjli.so but not the private node
+    const ctx = {
+      changed: [
+        {
+          id: 999,
+          pkgname: 'intellij-idea-community-edition',
+          previousVersion: '1-1',
+          version: '1-2',
+        } as ArchlinuxPackage,
+      ],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['intellij-idea-community-edition']);
+    expect(result).toBeNull();
+  });
+
+  it('does not flag when consumer self-provides the soname (quartus bundles libjli.so)', () => {
+    const service = createService();
+    const consumer = makeConsumer({
+      providedSonames: ['libjli.so'],
+      neededVersionNodes: { 'libjli.so': ['VERS_1.28.0'] },
+    });
+    const ctx = {
+      changed: [
+        {
+          id: 999,
+          pkgname: 'intellij-idea-community-edition',
+          previousVersion: '1-1',
+          version: '1-2',
+        } as ArchlinuxPackage,
+      ],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['intellij-idea-community-edition']);
+    expect(result).toBeNull();
+  });
+
+  it('does not blame a changed provider the consumer does not depend on', () => {
+    const service = createService();
+    const consumer = makeConsumer({ neededVersionNodes: { 'libjli.so': ['VERS_1.28.0'] } });
+    const ctx = {
+      changed: [
+        {
+          id: 999,
+          pkgname: 'intellij-idea-community-edition',
+          previousVersion: '1-1',
+          version: '1-2',
+        } as ArchlinuxPackage,
+      ],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['java-runtime']);
+    expect(result).toBeNull();
+  });
+
+  it('quartus-130 via real ELF extraction — libinstrument needs SUNWprivate_1.1 from libjli.so, JDK21 drops it, but private is filtered', () => {
+    // Real readelf -VW snippets from Arch: jre8 libinstrument.so (consumer) and
+    // jdk21 libjli.so (provider) vs jdk8 libjli.so. Mirrors the reported
+    // quartus-130 → intellij-idea-community-edition false positive.
+    const LIBINSTRUMENT_VERSION_INFO = `
+Version definition section '.gnu.version_d' contains 2 entries:
+ Addr: 0x0000000000000e40  Offset: 0x00000e40  Link: 5 (.dynstr)
+  000000: Rev: 1  Flags: BASE  Index: 1  Cnt: 1  Name: libinstrument.so
+  0x001c: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: SUNWprivate_1.1
+
+Version needs section '.gnu.version_r' contains 2 entries:
+ Addr: 0x0000000000000e78  Offset: 0x00000e78  Link: 5 (.dynstr)
+  000000: Version: 1  File: libjli.so  Cnt: 1
+  0x0010:   Name: SUNWprivate_1.1  Flags: none  Version: 8
+  0x0020: Version: 1  File: libc.so.6  Cnt: 6
+  0x0030:   Name: GLIBC_ABI_DT_RELR  Flags: none  Version: 9
+  0x0040:   Name: GLIBC_2.14  Flags: none  Version: 7
+  0x0050:   Name: GLIBC_2.3  Flags: none  Version: 6
+  0x0060:   Name: GLIBC_2.3.4  Flags: none  Version: 5
+  0x0070:   Name: GLIBC_2.4  Flags: none  Version: 4
+  0x0080:   Name: GLIBC_2.2.5  Flags: none  Version: 3
+`;
+    const JDK21_LIBJLI_VERSION_INFO = `
+Version needs section '.gnu.version_r' contains 1 entry:
+ Addr: 0x0000000000001388  Offset: 0x00001388  Link: 4 (.dynstr)
+  000000: Version: 1  File: libc.so.6  Cnt: 9
+  0x0010:   Name: GLIBC_ABI_DT_RELR  Flags: none  Version: 10
+  0x0020:   Name: GLIBC_2.14  Flags: none  Version: 9
+  0x0030:   Name: GLIBC_2.3  Flags: none  Version: 8
+  0x0040:   Name: GLIBC_2.33  Flags: none  Version: 7
+  0x0050:   Name: GLIBC_2.38  Flags: none  Version: 6
+  0x0060:   Name: GLIBC_2.4  Flags: none  Version: 5
+  0x0070:   Name: GLIBC_2.34  Flags: none  Version: 4
+  0x0080:   Name: GLIBC_2.3.4  Flags: none  Version: 3
+  0x0090:   Name: GLIBC_2.2.5  Flags: none  Version: 2
+`;
+    const consumerAnalysis = buildAnalysis({
+      version: '8.504.u01-1',
+      fileList: 'usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so',
+      readelfByFile: new Map([
+        [
+          'usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so',
+          '0x0000000000000001 (NEEDED)             Shared library: [libjli.so]\n0x000000000000000e (SONAME)             Library soname: [libinstrument.so]',
+        ],
+      ]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([
+        ['usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so', LIBINSTRUMENT_VERSION_INFO],
+      ]),
+    });
+    const provider21 = buildAnalysis({
+      version: '21.0.12.1.u1-1',
+      fileList: 'usr/lib/jvm/java-21-openjdk/lib/libjli.so',
+      readelfByFile: new Map([
+        [
+          'usr/lib/jvm/java-21-openjdk/lib/libjli.so',
+          '0x000000000000000e (SONAME)             Library soname: [libjli.so]',
+        ],
+      ]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([['usr/lib/jvm/java-21-openjdk/lib/libjli.so', JDK21_LIBJLI_VERSION_INFO]]),
+    });
+
+    expect(consumerAnalysis.neededVersionNodes['libjli.so']).toEqual(['SUNWprivate_1.1']);
+    expect(provider21.providedVersionNodes['libjli.so']).toBeUndefined();
+
+    const service = createService();
+    const ctx = {
+      changed: [
+        {
+          id: 999,
+          pkgname: 'intellij-idea-community-edition',
+          previousVersion: '1-1',
+          version: '1-2',
+        } as ArchlinuxPackage,
+      ],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentVersionNodesByPkg: new Map([[999, provider21.providedVersionNodes]]),
+    };
+    const consumer = makeConsumer({
+      neededVersionNodes: consumerAnalysis.neededVersionNodes,
+      neededSonames: consumerAnalysis.neededSonames,
+    });
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['intellij-idea-community-edition']);
     expect(result).toBeNull();
   });
 });

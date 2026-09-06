@@ -607,12 +607,15 @@ export class RebuildTriggerService {
     // soname, but the version node it needs no longer exists, so it cannot
     // load. Blame the changed pkg that both provided the soname before and
     // still provides it now but dropped a required node.
+    const depsSet = new Set(consumerDeps);
     for (const [soname, requiredNodes] of Object.entries(consumer.neededVersionNodes ?? {})) {
       if (requiredNodes.length === 0) continue;
+      if (this.selfProvidesLibrary(consumer, soname)) continue;
       const culprit = ctx.changed.find(
         (pkg) =>
           ctx.previousProvidedByPkg.get(pkg.id)?.has(soname) &&
-          (ctx.currentProvidedByPkg.get(pkg.id)?.has(soname) ?? false),
+          (ctx.currentProvidedByPkg.get(pkg.id)?.has(soname) ?? false) &&
+          (depsSet.size === 0 || depsSet.has(pkg.pkgname)),
       );
       if (!culprit) continue;
       const missing = findVersionNodeBreaks({

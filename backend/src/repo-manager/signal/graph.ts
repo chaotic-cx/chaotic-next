@@ -241,6 +241,8 @@ export function formatBrokenDependency(dep: BrokenDependency): string {
   return `${dep.runtime} ${dep.pathVersion} shipped but ${dep.runtime} is ${dep.currentVersion} (${dep.path})`;
 }
 
+const PRIVATE_VERSION_NODE = /private/i;
+
 /**
  * Version nodes a consumer requires from a soname that the provider no longer
  * defines. A soname can stay identical while its version nodes are re-versioned
@@ -254,7 +256,7 @@ export function findVersionNodeBreaks(opts: {
   const breaks: { soname: string; versionNodes: string[] }[] = [];
   for (const [soname, needed] of Object.entries(opts.neededVersionNodes ?? {})) {
     const provided = new Set(opts.providerVersionNodes?.[soname] ?? []);
-    const missing = [...new Set(needed)].filter((node) => !provided.has(node));
+    const missing = [...new Set(needed)].filter((node) => !provided.has(node) && !PRIVATE_VERSION_NODE.test(node));
     if (missing.length > 0) breaks.push({ soname, versionNodes: missing });
   }
   return breaks;

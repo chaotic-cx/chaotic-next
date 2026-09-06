@@ -917,6 +917,148 @@ describe('findVersionNodeBreaks', () => {
   it('returns nothing when the consumer needs no version nodes', () => {
     expect(findVersionNodeBreaks({ neededVersionNodes: {}, providerVersionNodes: {} })).toEqual([]);
   });
+
+  it('ignores private version nodes like SUNWprivate_1.1 from libjli.so (quartus-130 regression)', () => {
+    expect(
+      findVersionNodeBreaks({
+        neededVersionNodes: { 'libjli.so': ['SUNWprivate_1.1'] },
+        providerVersionNodes: { 'libjli.so': [] },
+      }),
+    ).toEqual([]);
+    expect(
+      findVersionNodeBreaks({
+        neededVersionNodes: { 'libjli.so': ['SUNWprivate_1.1', 'GLIBC_PRIVATE'] },
+        providerVersionNodes: { 'libjli.so': [] },
+      }),
+    ).toEqual([]);
+    expect(
+      findVersionNodeBreaks({
+        neededVersionNodes: { 'libjli.so': ['SUNWprivate_1.1', 'VERS_1.28.0'] },
+        providerVersionNodes: { 'libjli.so': [] },
+      }),
+    ).toEqual([{ soname: 'libjli.so', versionNodes: ['VERS_1.28.0'] }]);
+  });
+
+  it('produces private-aware buildAnalysis — real JDK 8 vs 21 libjli.so and libinstrument.so (quartus-130 regression)', () => {
+    // Real Version definition/needs extracted via `readelf -VW` from Arch packages
+    // jdk8-openjdk (libjli.so defines SUNWprivate_1.1) vs jdk21-openjdk (no def)
+    // and jre8 libinstrument.so (needs SUNWprivate_1.1 from libjli.so).
+    // See /tmp/libjli8.readelf /tmp/libinstrument.readelf /tmp/libjli.readelf
+    const JDK8_LIBJLI_VERSION_INFO = `
+Version definition section '.gnu.version_d' contains 2 entries:
+ Addr: 0x00000000000016c8  Offset: 0x000016c8  Link: 5 (.dynstr)
+  000000: Rev: 1  Flags: BASE  Index: 1  Cnt: 1  Name: libjli.so
+  0x001c: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: SUNWprivate_1.1
+
+Version needs section '.gnu.version_r' contains 1 entry:
+ Addr: 0x0000000000001700  Offset: 0x00001700  Link: 5 (.dynstr)
+  000000: Version: 1  File: libc.so.6  Cnt: 9
+  0x0010:   Name: GLIBC_ABI_DT_RELR  Flags: none  Version: 11
+  0x0020:   Name: GLIBC_2.14  Flags: none  Version: 10
+  0x0030:   Name: GLIBC_2.3  Flags: none  Version: 9
+  0x0040:   Name: GLIBC_2.33  Flags: none  Version: 8
+  0x0050:   Name: GLIBC_2.38  Flags: none  Version: 7
+  0x0060:   Name: GLIBC_2.4  Flags: none  Version: 6
+  0x0070:   Name: GLIBC_2.34  Flags: none  Version: 5
+  0x0080:   Name: GLIBC_2.2.5  Flags: none  Version: 4
+  0x0090:   Name: GLIBC_2.3.4  Flags: none  Version: 3
+`;
+    const JDK21_LIBJLI_VERSION_INFO = `
+Version needs section '.gnu.version_r' contains 1 entry:
+ Addr: 0x0000000000001388  Offset: 0x00001388  Link: 4 (.dynstr)
+  000000: Version: 1  File: libc.so.6  Cnt: 9
+  0x0010:   Name: GLIBC_ABI_DT_RELR  Flags: none  Version: 10
+  0x0020:   Name: GLIBC_2.14  Flags: none  Version: 9
+  0x0030:   Name: GLIBC_2.3  Flags: none  Version: 8
+  0x0040:   Name: GLIBC_2.33  Flags: none  Version: 7
+  0x0050:   Name: GLIBC_2.38  Flags: none  Version: 6
+  0x0060:   Name: GLIBC_2.4  Flags: none  Version: 5
+  0x0070:   Name: GLIBC_2.34  Flags: none  Version: 4
+  0x0080:   Name: GLIBC_2.3.4  Flags: none  Version: 3
+  0x0090:   Name: GLIBC_2.2.5  Flags: none  Version: 2
+`;
+    const LIBINSTRUMENT_VERSION_INFO = `
+Version definition section '.gnu.version_d' contains 2 entries:
+ Addr: 0x0000000000000e40  Offset: 0x00000e40  Link: 5 (.dynstr)
+  000000: Rev: 1  Flags: BASE  Index: 1  Cnt: 1  Name: libinstrument.so
+  0x001c: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: SUNWprivate_1.1
+
+Version needs section '.gnu.version_r' contains 2 entries:
+ Addr: 0x0000000000000e78  Offset: 0x00000e78  Link: 5 (.dynstr)
+  000000: Version: 1  File: libjli.so  Cnt: 1
+  0x0010:   Name: SUNWprivate_1.1  Flags: none  Version: 8
+  0x0020: Version: 1  File: libc.so.6  Cnt: 6
+  0x0030:   Name: GLIBC_ABI_DT_RELR  Flags: none  Version: 9
+  0x0040:   Name: GLIBC_2.14  Flags: none  Version: 7
+  0x0050:   Name: GLIBC_2.3  Flags: none  Version: 6
+  0x0060:   Name: GLIBC_2.3.4  Flags: none  Version: 5
+  0x0070:   Name: GLIBC_2.4  Flags: none  Version: 4
+  0x0080:   Name: GLIBC_2.2.5  Flags: none  Version: 3
+`;
+    const libjli8 = buildAnalysis({
+      version: '8.504.u01-1',
+      fileList: 'usr/lib/jvm/java-8-openjdk/jre/lib/amd64/jli/libjli.so',
+      readelfByFile: new Map([
+        [
+          'usr/lib/jvm/java-8-openjdk/jre/lib/amd64/jli/libjli.so',
+          '0x000000000000000e (SONAME)             Library soname: [libjli.so]',
+        ],
+      ]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([
+        ['usr/lib/jvm/java-8-openjdk/jre/lib/amd64/jli/libjli.so', JDK8_LIBJLI_VERSION_INFO],
+      ]),
+    });
+    const libjli21 = buildAnalysis({
+      version: '21.0.12.1.u1-1',
+      fileList: 'usr/lib/jvm/java-21-openjdk/lib/libjli.so',
+      readelfByFile: new Map([
+        [
+          'usr/lib/jvm/java-21-openjdk/lib/libjli.so',
+          '0x000000000000000e (SONAME)             Library soname: [libjli.so]',
+        ],
+      ]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([['usr/lib/jvm/java-21-openjdk/lib/libjli.so', JDK21_LIBJLI_VERSION_INFO]]),
+    });
+    const instrument = buildAnalysis({
+      version: '8.504.u01-1',
+      fileList: 'usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so',
+      readelfByFile: new Map([
+        [
+          'usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so',
+          '0x0000000000000001 (NEEDED)             Shared library: [libjli.so]\n0x000000000000000e (SONAME)             Library soname: [libinstrument.so]',
+        ],
+      ]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([
+        ['usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so', LIBINSTRUMENT_VERSION_INFO],
+      ]),
+    });
+
+    expect(libjli8.providedVersionNodes['libjli.so']).toEqual(['SUNWprivate_1.1']);
+    expect(libjli21.providedVersionNodes['libjli.so']).toBeUndefined();
+    expect(instrument.neededVersionNodes['libjli.so']).toEqual(['SUNWprivate_1.1']);
+
+    // Private nodes are filtered — no break even though JDK21 drops SUNWprivate_1.1.
+    // Mimic rebuild-triggers per-soname check: only libjli.so is compared against the jli provider.
+    const libjliNeed = { 'libjli.so': instrument.neededVersionNodes['libjli.so'] };
+    expect(
+      findVersionNodeBreaks({ neededVersionNodes: libjliNeed, providerVersionNodes: libjli21.providedVersionNodes }),
+    ).toEqual([]);
+    expect(
+      findVersionNodeBreaks({ neededVersionNodes: libjliNeed, providerVersionNodes: libjli8.providedVersionNodes }),
+    ).toEqual([]);
+  });
 });
 
 describe('parseReadelfRelocations', () => {
