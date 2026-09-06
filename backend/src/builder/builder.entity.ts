@@ -281,6 +281,10 @@ export class Build {
   @Column({ type: 'float', nullable: true })
   timeToEnd!: number;
 
+  @ApiProperty({ description: 'When the job was queued (ms since epoch), for queue waiting time' })
+  @Column({ type: 'bigint', nullable: true })
+  queuedAt!: number | null;
+
   @ApiProperty({ description: 'Whether the build was replaced by a newer one' })
   @Column({ type: 'boolean', nullable: true })
   replaced!: boolean;

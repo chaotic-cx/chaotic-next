@@ -135,6 +135,7 @@ export const buildSchema = z.object({
   logUrl: z.string().optional().describe('Build log URL'),
   commit: z.string().optional().describe('Commit hash built'),
   timeToEnd: z.number().optional().describe('Build duration'),
+  queuedAt: z.coerce.date().optional().describe('When the job was queued (ISO 8601)'),
   replaced: z.boolean().optional().describe('Whether a newer build replaced this one'),
   failureTags: z
     .array(z.string())

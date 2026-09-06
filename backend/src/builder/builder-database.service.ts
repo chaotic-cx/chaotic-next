@@ -195,13 +195,7 @@ export class BuilderDatabaseService extends Service {
 
     const params = ctx.params;
 
-    if (
-      !params.builder_name ||
-      !params.target_repo ||
-      !params.pkgname ||
-      params.duration === undefined ||
-      params.status === undefined
-    ) {
+    if (!params.builder_name || !params.target_repo || !params.pkgname || params.status === undefined) {
       this.pino.warn(`Malformed build event '${ctx.eventName}': missing required fields, dropping entry`);
       return;
     }
@@ -219,7 +213,8 @@ export class BuilderDatabaseService extends Service {
       buildClass: params.build_class ? params.build_class.toString() : undefined,
       builder,
       logUrl: params.logUrl,
-      timeToEnd: params.duration,
+      timeToEnd: params.duration ?? undefined,
+      queuedAt: params.timestamp ?? null,
       commit: params.commit?.split(':')[0],
       pkgbase: pkg,
       repo,
@@ -274,7 +269,7 @@ export class BuilderDatabaseService extends Service {
           version: pkg.version ?? 'unknown',
           pkgrel: pkg.pkgrel ?? 0,
           bump: pkg.bump ?? 0,
-          duration: params.duration,
+          duration: params.duration ?? 0,
           repo: repo.name,
           status: params.status,
         },
