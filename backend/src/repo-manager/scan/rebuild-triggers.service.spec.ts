@@ -1,14 +1,14 @@
-import type { BumpService } from '../bump';
+import { PinoLogger } from 'nestjs-pino';
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
-import { PinoLogger } from 'nestjs-pino';
 import { Package } from '../../builder/builder.entity';
 import { type OwnerDescriptor, type PluginBreakIndexEntry, TriggerType } from '../../interfaces/repo-manager';
-import { RebuildTriggerService, summarizeDetails } from './rebuild-triggers.service';
+import type { BumpService } from '../bump';
 import { ArchlinuxPackage, PackageElfAnalysis } from '../repo-manager.entity';
 import { buildAnalysis } from '../signal';
 import type { MockRepository } from '../test/mock-repository';
 import { createMockRepository } from '../test/mock-repository';
+import { RebuildTriggerService, summarizeDetails } from './rebuild-triggers.service';
 
 /**
  * consumerSymbolBreaksFor is the pure plugin-ABI intersection: it must flag a
@@ -315,6 +315,144 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
     expect(result).toBeNull();
   });
 
+  it('does not blame an irrelevant package when consumer deps are unknown', () => {
+    // When consumer deps are empty and an irrelevant package (smolvm-like)
+    // provides the soname but did NOT drop version nodes, it must NOT be
+    // blamed. Only a package that actually dropped the required nodes counts.
+    const service = createService();
+    const consumer = makeConsumer({
+      neededSonames: ['libcrypto.so.3'],
+      neededVersionNodes: { 'libcrypto.so.3': ['OPENSSL_3.2.0', 'OPENSSL_3.4.0'] },
+    });
+    const smolvm = {
+      id: 777,
+      pkgname: 'smolvm',
+      previousVersion: '1.12.0-1',
+      version: '1.13.1-1',
+    } as ArchlinuxPackage;
+    const onnx = {
+      id: 222,
+      pkgname: 'onnxruntime',
+      previousVersion: '1.28.0-1',
+      version: '1.29.0-1',
+    } as ArchlinuxPackage;
+    const ctx = {
+      changed: [smolvm, onnx],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([
+        [777, new Set(['libcrypto.so.3'])],
+        [222, new Set(['libonnxruntime.so.1'])],
+      ]),
+      currentProvidedByPkg: new Map([
+        [777, new Set(['libcrypto.so.3'])],
+        [222, new Set(['libonnxruntime.so.1'])],
+      ]),
+      currentVersionNodesByPkg: new Map([
+        [777, { 'libcrypto.so.3': ['OPENSSL_3.2.0', 'OPENSSL_3.3.0', 'OPENSSL_3.4.0'] }],
+        [222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }],
+      ]),
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, []);
+    // smolvm provides libcrypto.so.3 but did NOT drop the required nodes
+    expect(result).toBeNull();
+  });
+
+  it('blames a changed package that dropped version nodes even when deps are unknown', () => {
+    // When deps are unknown, the candidate must have dropped the required
+    // version nodes to be blamed — this preserves the onnxruntime test case.
+    const service = createService();
+    const consumer = makeConsumer({
+      neededSonames: ['libonnxruntime.so.1'],
+      neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.28.0'] },
+    });
+    const onnx = {
+      id: 222,
+      pkgname: 'onnxruntime',
+      previousVersion: '1.28.0-1',
+      version: '1.29.0-1',
+    } as ArchlinuxPackage;
+    const ctx = {
+      changed: [onnx],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      currentProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      currentVersionNodesByPkg: new Map([[222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }]]),
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[],
+        ): { deps: unknown[]; archPkg: ArchlinuxPackage } | null;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, []);
+    expect(result).not.toBeNull();
+    if (!result) return;
+    expect(result.archPkg.pkgname).toBe('onnxruntime');
+  });
+
+  it('does not blame a package not in deps when deps are known (smolvm regression)', () => {
+    // When consumer deps are known, only packages in the dependency chain
+    // are blamed. smolvm in the changed set but not in deps must not be blamed.
+    const service = createService();
+    const consumer = makeConsumer({
+      neededSonames: ['libcrypto.so.3'],
+      neededVersionNodes: { 'libcrypto.so.3': ['OPENSSL_3.2.0'] },
+    });
+    const smolvm = {
+      id: 777,
+      pkgname: 'smolvm',
+      previousVersion: '1.12.0-1',
+      version: '1.13.1-1',
+    } as ArchlinuxPackage;
+    const openssl = {
+      id: 444,
+      pkgname: 'openssl',
+      previousVersion: '3.3.0-1',
+      version: '3.4.0-1',
+    } as ArchlinuxPackage;
+    const ctx = {
+      changed: [smolvm, openssl],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([
+        [777, new Set(['libcrypto.so.3'])],
+        [444, new Set(['libcrypto.so.3'])],
+      ]),
+      currentProvidedByPkg: new Map([
+        [777, new Set(['libcrypto.so.3'])],
+        [444, new Set(['libcrypto.so.3'])],
+      ]),
+      currentVersionNodesByPkg: new Map([
+        [777, { 'libcrypto.so.3': ['OPENSSL_3.3.0'] }],
+        [444, { 'libcrypto.so.3': ['OPENSSL_3.4.0'] }],
+      ]),
+    };
+    // Consumer depends on openssl, not smolvm — only openssl should be blamed
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[],
+        ): { deps: unknown[]; archPkg: ArchlinuxPackage } | null;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['openssl']);
+    expect(result).not.toBeNull();
+    if (!result) return;
+    expect(result.archPkg.pkgname).toBe('openssl');
+  });
+
   it('quartus-130 via real ELF extraction — libinstrument needs SUNWprivate_1.1 from libjli.so, JDK21 drops it, but private is filtered', () => {
     // Real readelf -VW snippets from Arch: jre8 libinstrument.so (consumer) and
     // jdk21 libjli.so (provider) vs jdk8 libjli.so. Mirrors the reported
@@ -605,5 +743,197 @@ describe('providedForDeps (provider attribution)', () => {
   it('treats missing deps as a no-op (all providers count)', () => {
     const providedByPkgname = new Map<string, Set<string>>([['libfoo.so.1', new Set(['foo'])]]);
     expect(service.providedForDeps(providedByPkgname, [], noArchSonames)).toEqual(new Set(['libfoo.so.1']));
+  });
+
+  it('treats boost and boost-libs as same provider family', () => {
+    // azahar-git/freecad-git: CI_REBUILD_TRIGGERS=boost but arch provides boost-libs
+    const providedByPkgname = new Map<string, Set<string>>([['libboost_iostreams.so.1.92.0', new Set(['boost-libs'])]]);
+    expect(
+      service.providedForDeps(providedByPkgname, ['boost'], noArchSonames).has('libboost_iostreams.so.1.92.0'),
+    ).toBe(true);
+    expect(
+      service.providedForDeps(providedByPkgname, ['boost-libs'], noArchSonames).has('libboost_iostreams.so.1.92.0'),
+    ).toBe(true);
+  });
+});
+
+describe('chaoticBrokenDepsRebuilds - hyprlang (chaotic→chaotic)', () => {
+  function makePkg(overrides: Partial<Package>): Package {
+    return {
+      id: 0,
+      pkgname: '',
+      isActive: true,
+      skipSignalScan: false,
+      bumpTriggers: [],
+      metadata: { deps: [] } as unknown as Package['metadata'],
+      ...overrides,
+    } as Package;
+  }
+
+  it('rebuilds xdg-desktop-portal-hyprland-git when hyprlang-git bumps libhyprlang.so.2 soname', async () => {
+    const hyprlang = makePkg({ id: 100, pkgname: 'hyprlang-git', version: '0.6.7-1' });
+    const xdg = makePkg({
+      id: 200,
+      pkgname: 'xdg-desktop-portal-hyprland-git',
+      version: '1.4.1-1',
+      metadata: { deps: ['hyprlang-git'] } as unknown as Package['metadata'],
+    });
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([
+      {
+        pkgType: '1',
+        pkgId: 100,
+        version: '0.6.6-1',
+        providedSonames: ['libhyprlang.so.2'],
+        neededSonames: [],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+      {
+        pkgType: '1',
+        pkgId: 100,
+        version: '0.6.7-1',
+        providedSonames: ['libhyprlang.so.3'],
+        neededSonames: [],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+      {
+        pkgType: '1',
+        pkgId: 200,
+        version: '1.4.1-1',
+        providedSonames: [],
+        neededSonames: ['libhyprlang.so.2'],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+    ]);
+    (service as unknown as Record<string, unknown>).archlinuxPackageRepository = {
+      find: async () => [],
+    } as unknown as Repository<ArchlinuxPackage>;
+    (service as unknown as Record<string, unknown>).packagesRepository = {
+      find: async () => [],
+    } as unknown as Repository<Package>;
+
+    const readConfig = async (pkg: Package) => ({ configs: {}, pkgInDb: pkg });
+    const result = await service.chaoticBrokenDepsRebuilds(hyprlang, [hyprlang, xdg], readConfig, {
+      signalScanEnabled: true,
+      abiDryRun: false,
+    } as unknown as import('../../interfaces/repo-manager').RepoSettings);
+    expect(result.length).toBe(1);
+    expect(result[0].pkg.pkgname).toBe('xdg-desktop-portal-hyprland-git');
+    expect(result[0].triggerFrom).toBe(1);
+  });
+
+  it('does not rebuild when chaotic soname unchanged', async () => {
+    const hyprlang = makePkg({ id: 100, pkgname: 'hyprlang-git', version: '0.6.7-1' });
+    const xdg = makePkg({
+      id: 200,
+      pkgname: 'xdg-desktop-portal-hyprland-git',
+      version: '1.4.1-1',
+      metadata: { deps: ['hyprlang-git'] } as unknown as Package['metadata'],
+    });
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([
+      {
+        pkgType: '1',
+        pkgId: 100,
+        version: '0.6.6-1',
+        providedSonames: ['libhyprlang.so.2'],
+        neededSonames: [],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+      {
+        pkgType: '1',
+        pkgId: 100,
+        version: '0.6.7-1',
+        providedSonames: ['libhyprlang.so.2'],
+        neededSonames: [],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+      {
+        pkgType: '1',
+        pkgId: 200,
+        version: '1.4.1-1',
+        providedSonames: [],
+        neededSonames: ['libhyprlang.so.2'],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+    ]);
+    (service as unknown as Record<string, unknown>).archlinuxPackageRepository = {
+      find: async () => [],
+    } as unknown as Repository<ArchlinuxPackage>;
+    (service as unknown as Record<string, unknown>).packagesRepository = {
+      find: async () => [],
+    } as unknown as Repository<Package>;
+    const readConfig = async (pkg: Package) => ({ configs: {}, pkgInDb: pkg });
+    const result = await service.chaoticBrokenDepsRebuilds(hyprlang, [hyprlang, xdg], readConfig, {
+      signalScanEnabled: true,
+      abiDryRun: false,
+    } as unknown as import('../../interfaces/repo-manager').RepoSettings);
+    expect(result.length).toBe(0);
   });
 });

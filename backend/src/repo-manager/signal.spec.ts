@@ -4,6 +4,7 @@ import {
   buildAnalysis,
   buildDependencyGraph,
   classifyVtableDrift,
+  compareArchVersions,
   dedupe,
   deriveDirectoriesOwned,
   derivePluginOf,
@@ -15,11 +16,11 @@ import {
   formatBrokenDependency,
   formatConsumerAbiBreak,
   formatSymbolBreak,
-  compareArchVersions,
   isElfSharedObject,
   isExecutableRegularFile,
   latestAnalysisByKey,
   libraryBaseName,
+  parentDirectory,
   parseDefinedSymbols,
   parseFileList,
   parseNmSymbolsWithSize,
@@ -28,7 +29,6 @@ import {
   parseReadelfVersionInfo,
   parseTarVerboseList,
   parseUndefinedSymbols,
-  parentDirectory,
   sameLibraryFamily,
 } from './signal';
 
@@ -1359,6 +1359,37 @@ describe('sameLibraryFamily', () => {
 
   it('does not match unrelated libraries', () => {
     expect(sameLibraryFamily('libavcodec.so.61', 'libkwin.so.6')).toBe(false);
+  });
+
+  it('matches haskell split across package version and hash — bluespec-git regression', () => {
+    // arch: haskell-split 0.2.5-... vs needed 0.2.5.1-... same libHSsplit family
+    expect(
+      sameLibraryFamily(
+        'libHSsplit-0.2.5-FQ4kT9wgw7JDP8h2QeY4XG-ghc9.6.6.so',
+        'libHSsplit-0.2.5.1-FQ4kT9wgw7JDP8h2QeY4XG-ghc9.6.6.so',
+      ),
+    ).toBe(true);
+    expect(sameLibraryFamily('libHSsplit-0.2.5.1-ABC-ghc9.6.6.so', 'libHSsplit-0.2.5-XYZ-ghc9.6.6.so')).toBe(true);
+    expect(
+      sameLibraryFamily(
+        'libHSold-time-1.1.1.0-9WWjmNUa02UkaP5dbkbXm-ghc9.6.6.so',
+        'libHSold-time-1.1.1.0-9WWjmNUa02UkaP5dbkbXm-ghc9.6.6.so',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not mix different haskell packages', () => {
+    expect(
+      sameLibraryFamily(
+        'libHSsplit-0.2.5-FQ4kT9wgw7JDP8h2QeY4XG-ghc9.6.6.so',
+        'libHSsyb-0.7.4-CWkOfF6Y0mt62kPybHOEB1-ghc9.6.6.so',
+      ),
+    ).toBe(false);
+  });
+
+  it('matches boost family across boost/boost-libs split', () => {
+    expect(sameLibraryFamily('libboost_iostreams.so.1.92.0', 'libboost_iostreams.so.1.91.0')).toBe(true);
+    expect(sameLibraryFamily('boost', 'boost-libs')).toBe(true);
   });
 });
 

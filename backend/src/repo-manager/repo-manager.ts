@@ -1,5 +1,11 @@
+import { RepoStatus } from '@chaotic-next/shared-lib';
+import { HttpService } from '@nestjs/axios';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Repository } from 'typeorm';
 import { Build, Package, Repo } from '../builder/builder.entity';
-import { BumpType, TriggerType } from '../interfaces/repo-manager';
 import type {
   BumpResult,
   IndexResult,
@@ -8,6 +14,8 @@ import type {
   RepoSettings,
   RepoUpdateRunParams,
 } from '../interfaces/repo-manager';
+import { BumpType, TriggerType } from '../interfaces/repo-manager';
+import { downloadWithRetry } from '../utils/download';
 import { ArchMirrorService } from './arch-mirror.service';
 import { BumpService, isCiFlagEnabled } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
@@ -15,14 +23,6 @@ import { ArchlinuxPackage } from './repo-manager.entity';
 import { type RepoReader, type RepoReaderFactory } from './repo-rw';
 import { CI_FLAG_REBUILD_IGNORE_ABI, RebuildTriggerService, SignalScanService } from './scan';
 import { formatConsumerAbiBreak } from './signal';
-import { RepoStatus } from '@chaotic-next/shared-lib';
-import { downloadWithRetry } from '../utils/download';
-import { HttpService } from '@nestjs/axios';
-import { mkdtemp } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { Repository } from 'typeorm';
 
 export class RepoManager {
   changedArchPackages: ArchlinuxPackage[] = [];
@@ -210,6 +210,9 @@ export class RepoManager {
         const needsRebuild: RepoUpdateRunParams[] = [
           ...(await this.explicitRebuildsFor(pkgbase, allPackages, readConfig)),
           ...(this.settings.signalScanEnabled ? await this.abiBreakRebuildsFor(pkgbase, allPackages, readConfig) : []),
+          ...(this.settings.signalScanEnabled
+            ? await this.triggers.chaoticBrokenDepsRebuilds(pkgbase, allPackages, readConfig, this.settings)
+            : []),
         ];
 
         bumped = await this.bump.bumpAndPush(needsRebuild, reader, repo);

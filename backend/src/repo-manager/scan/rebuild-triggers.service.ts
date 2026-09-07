@@ -1,19 +1,25 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PinoLogger } from 'nestjs-pino';
+import { In, Repository } from 'typeorm';
 import { Package, Repo } from '../../builder/builder.entity';
 import {
   BumpType,
   ConsumerAbiBreak,
   OwnerDescriptor,
+  type PackageConfig,
   PluginBreakEntry,
   PluginBreakIndexEntry,
   RepoSettings,
   RepoUpdateRunParams,
   TriggerType,
-  type PackageConfig,
 } from '../../interfaces/repo-manager';
+import { yieldToEventLoop } from '../../utils/functions';
 import { BumpService, isCiFlagEnabled } from '../bump';
 import { ArchlinuxPackage, PackageElfAnalysis } from '../repo-manager.entity';
 import { type RepoReader } from '../repo-rw';
 import {
+  type BrokenDependency,
   compareArchVersions,
   encodeOwnerKey,
   findBrokenDependencies,
@@ -23,20 +29,26 @@ import {
   formatConsumerAbiBreak,
   latestAnalysisByKey,
   pkgTypeOf,
-  sameLibraryFamily,
-  type BrokenDependency,
   type RuntimeName,
+  sameLibraryFamily,
 } from '../signal';
 import { latestAnalysesByPackage } from './latest-analyses';
 import { loadRuntimeVersions } from './runtime-versions';
-import { yieldToEventLoop } from '../../utils/functions';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { PinoLogger } from 'nestjs-pino';
-import { In, Repository } from 'typeorm';
 
 /** CI config flag keys (read from .CI/config); a flag is on when set to "1". */
 export const CI_FLAG_REBUILD_IGNORE_ABI = 'CI_REBUILD_IGNORE_ABI';
+
+/** Package splits: boost headers vs boost-libs sonames. */
+const PACKAGE_ALIASES: Record<string, string[]> = {
+  'boost': ['boost-libs'],
+  'boost-libs': ['boost'],
+};
+
+function depsContains(deps: Set<string>, pkgname: string): boolean {
+  if (deps.has(pkgname)) return true;
+  for (const alias of PACKAGE_ALIASES[pkgname] ?? []) if (deps.has(alias)) return true;
+  return false;
+}
 
 /**
  * Compiler-runtime symbols that fill vtable slots (pure-virtual / deleted-virtual
@@ -348,6 +360,102 @@ export class RebuildTriggerService {
     return index;
   }
 
+  /** Broken-deps rebuilds triggered by a just-deployed chaotic package (soname / version-node / runtime). */
+  async chaoticBrokenDepsRebuilds(
+    deployed: Package,
+    allPackages: Package[],
+    readConfig: (pkg: Package) => Promise<PackageConfig>,
+    settings: RepoSettings,
+  ): Promise<RepoUpdateRunParams[]> {
+    const analyses = await this.elfAnalysisRepository.find({
+      where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: deployed.id },
+    });
+    if (analyses.length < 2) return [];
+
+    const sorted = [...analyses].sort((a, b) => compareArchVersions(b.version, a.version));
+    const current = sorted[0];
+    const previous = sorted[1];
+    const previousSonames = new Set(previous.providedSonames ?? []);
+    const currentSonames = new Set(current.providedSonames ?? []);
+    const currentVersionNodes = current.providedVersionNodes ?? {};
+    const previousVersion = previous.version;
+    const currentVersion = current.version;
+
+    const [{ providedByPkgname, archProvidedSonames }, runtimes] = await Promise.all([
+      this.loadSonameProviders(),
+      loadRuntimeVersions(this.archlinuxPackageRepository),
+    ]);
+    const consumerAnalyses = await this.loadLatestChaoticAnalyses(
+      allPackages.filter((p) => p.id !== deployed.id).map((p) => p.id),
+    );
+    const needsRebuild: RepoUpdateRunParams[] = [];
+
+    for (const pkg of allPackages.filter((p) => p.id !== deployed.id)) {
+      if (pkg.skipSignalScan) continue;
+
+      const pkgConfig = await readConfig(pkg);
+      if (isCiFlagEnabled(pkgConfig.configs, CI_FLAG_REBUILD_IGNORE_ABI)) continue;
+
+      const consumerAnalysis = consumerAnalyses.get(pkg.id);
+      if (!consumerAnalysis) continue;
+
+      const consumerDeps: string[] = pkgConfig.pkgInDb.metadata?.deps ?? [];
+      const deps = findBrokenDependencies({
+        neededSonames: consumerAnalysis.neededSonames,
+        files: consumerAnalysis.files,
+        providedSonames: this.providedForDeps(providedByPkgname, consumerDeps, archProvidedSonames),
+        runtimes,
+        selfProvidedSonames: consumerAnalysis.providedSonames,
+      });
+
+      const relevant: BrokenDependency[] = [];
+      let cause: Package | ArchlinuxPackage | undefined;
+      for (const dep of deps) {
+        if (dep.kind === 'soname' && dep.soname) {
+          if (previousSonames.has(dep.soname) && !currentSonames.has(dep.soname)) {
+            relevant.push(dep);
+            cause = cause ?? deployed;
+          }
+        } else if (dep.kind === 'runtime' && dep.runtime) {
+          // runtime not from chaotic
+        }
+      }
+
+      const depsSet = new Set(consumerDeps);
+      for (const [soname, requiredNodes] of Object.entries(consumerAnalysis.neededVersionNodes ?? {})) {
+        if (requiredNodes.length === 0) continue;
+        if (this.selfProvidesLibrary(consumerAnalysis, soname)) continue;
+        if (!previousSonames.has(soname) || !currentSonames.has(soname)) continue;
+        const inDeps = depsSet.size === 0 ? true : depsContains(depsSet, deployed.pkgname);
+        if (!inDeps) continue;
+        const missing = findVersionNodeBreaks({
+          neededVersionNodes: { [soname]: requiredNodes },
+          providerVersionNodes: currentVersionNodes,
+        });
+        if (missing.length > 0) {
+          relevant.push({ kind: 'version', soname, versionNodes: missing[0].versionNodes });
+          cause = cause ?? deployed;
+        }
+      }
+
+      if (relevant.length === 0 || !cause) continue;
+      if (previousVersion === currentVersion) continue;
+
+      const entry = this.buildRebuildEntry({
+        pkgConfig,
+        archPkg: deployed,
+        bumpType: BumpType.BROKEN_DEPS,
+        reason: 'broken dependency',
+        details: relevant.map(formatBrokenDependency),
+        pkgbaseDir: pkg.pkgname,
+        settings,
+        triggerFrom: TriggerType.CHAOTIC,
+      });
+      if (entry) needsRebuild.push(entry);
+    }
+    return needsRebuild;
+  }
+
   /** ABI-break index for one just-deployed package; null when no previous analysis exists. */
   async buildDeployedOwnerBreakIndex(pkg: Package): Promise<Map<string, PluginBreakIndexEntry> | null> {
     const analyses = await this.elfAnalysisRepository.find({
@@ -450,28 +558,37 @@ export class RebuildTriggerService {
   }
 
   private async buildBrokenDepsContext(changed: ArchlinuxPackage[]): Promise<BrokenDepsContext | null> {
-    if (!changed?.length) return null;
+    const relevantChanged = changed.filter((pkg) => pkg.previousVersion);
+    if (!relevantChanged.length) return null;
+
     const [{ providedByPkgname, archProvidedSonames }, runtimes, previousRows, currentRows] = await Promise.all([
       this.loadSonameProviders(),
       loadRuntimeVersions(this.archlinuxPackageRepository),
       this.loadProvidedSonameAnalyses(
-        changed.flatMap((pkg) => (pkg.previousVersion ? [{ pkgId: pkg.id, version: pkg.previousVersion }] : [])),
+        relevantChanged.flatMap((pkg) =>
+          pkg.previousVersion ? [{ pkgId: pkg.id, version: pkg.previousVersion }] : [],
+        ),
       ),
       this.loadProvidedSonameAnalyses(
-        changed.flatMap((pkg) => (pkg.version ? [{ pkgId: pkg.id, version: pkg.version }] : [])),
+        relevantChanged.flatMap((pkg) => (pkg.version ? [{ pkgId: pkg.id, version: pkg.version }] : [])),
       ),
     ]);
+
     // Provided-soname/runtimes context is logged by SignalScanService; only the
     // run-specific part is logged here.
-    this.pino.debug({ changed: changed.length, previousAnalyses: previousRows.length }, 'Broken-deps context loaded');
+    this.pino.debug(
+      { changed: relevantChanged.length, previousAnalyses: previousRows.length },
+      'Broken-deps context loaded',
+    );
     const previousProvidedByPkg = new Map<number, Set<string>>();
     for (const row of previousRows) previousProvidedByPkg.set(row.pkgId, new Set(row.providedSonames));
     const currentProvidedByPkg = new Map<number, Set<string>>();
     for (const row of currentRows) currentProvidedByPkg.set(row.pkgId, new Set(row.providedSonames));
     const currentVersionNodesByPkg = new Map<number, Record<string, string[]>>();
     for (const row of currentRows) currentVersionNodesByPkg.set(row.pkgId, row.providedVersionNodes ?? {});
+
     return {
-      changed,
+      changed: relevantChanged,
       providedByPkgname,
       archProvidedSonames,
       runtimes,
@@ -539,7 +656,7 @@ export class RebuildTriggerService {
     }
     for (const [soname, providers] of providedByPkgname) {
       for (const provider of providers) {
-        if (deps.has(provider)) {
+        if (depsContains(deps, provider)) {
           satisfied.add(soname);
           break;
         }
@@ -606,18 +723,36 @@ export class RebuildTriggerService {
     // (onnxruntime VERS_1.28.0 -> VERS_1.29.0). The consumer still links the
     // soname, but the version node it needs no longer exists, so it cannot
     // load. Blame the changed pkg that both provided the soname before and
-    // still provides it now but dropped a required node.
+    // still provides it now but dropped a required node. When the consumer's
+    // deps are known, only blame packages in the dependency chain to avoid
+    // false attribution (e.g. smolvm bumping unrelated packages).
     const depsSet = new Set(consumerDeps);
     for (const [soname, requiredNodes] of Object.entries(consumer.neededVersionNodes ?? {})) {
       if (requiredNodes.length === 0) continue;
       if (this.selfProvidesLibrary(consumer, soname)) continue;
-      const culprit = ctx.changed.find(
+      const candidates = ctx.changed.filter(
         (pkg) =>
           ctx.previousProvidedByPkg.get(pkg.id)?.has(soname) &&
-          (ctx.currentProvidedByPkg.get(pkg.id)?.has(soname) ?? false) &&
-          (depsSet.size === 0 || depsSet.has(pkg.pkgname)),
+          (ctx.currentProvidedByPkg.get(pkg.id)?.has(soname) ?? false),
       );
+
+      // When deps are known, restrict to packages the consumer actually
+      // depends on. When deps are unknown, require the candidate to have
+      // dropped the required version nodes so we don't blame irrelevant packages.
+      const culprit =
+        depsSet.size > 0
+          ? candidates.find((pkg) => depsContains(depsSet, pkg.pkgname))
+          : candidates.find((pkg) => {
+              const nodes = ctx.currentVersionNodesByPkg.get(pkg.id) ?? {};
+              return (
+                findVersionNodeBreaks({
+                  neededVersionNodes: { [soname]: requiredNodes },
+                  providerVersionNodes: nodes,
+                }).length > 0
+              );
+            });
       if (!culprit) continue;
+
       const missing = findVersionNodeBreaks({
         neededVersionNodes: { [soname]: requiredNodes },
         providerVersionNodes: ctx.currentVersionNodesByPkg.get(culprit.id) ?? {},

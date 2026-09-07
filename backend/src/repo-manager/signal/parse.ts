@@ -234,7 +234,21 @@ const RUNTIME_SONAME_PREFIXES: readonly string[] = Object.values(RUNTIME_INTERPR
 
 export function sameLibraryFamily(a: string, b: string): boolean {
   if (libraryBaseName(a) === libraryBaseName(b)) return true;
-  return RUNTIME_SONAME_PREFIXES.some((prefix) => a.startsWith(prefix) && b.startsWith(prefix));
+  if (RUNTIME_SONAME_PREFIXES.some((prefix) => a.startsWith(prefix) && b.startsWith(prefix))) return true;
+
+  // haskell: libHS<pkg>-<ver>-<hash>-ghc<ver>.so — hash/ver must not hide break
+  if (a.startsWith('libHS') && b.startsWith('libHS')) {
+    const pkgA = a.slice(5).split('-')[0];
+    const pkgB = b.slice(5).split('-')[0];
+    if (pkgA && pkgA === pkgB) return true;
+  }
+
+  // boost split: boost headers vs boost-libs sonames
+  return (
+    (a.startsWith('libboost_') && b.startsWith('libboost_')) ||
+    (a === 'boost' && b === 'boost-libs') ||
+    (a === 'boost-libs' && b === 'boost')
+  );
 }
 
 export function latestAnalysisByKey<T extends { version: string }>(
