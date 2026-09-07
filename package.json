@@ -131,7 +131,7 @@
     "@rspack/core": "^2.2.2",
     "@rspack/dev-server": "^2.2.0",
     "@schematics/angular": "22.1.7",
-    "@swc/core": "1.16.1",
+    "@swc/core": "1.16.2",
     "@swc/helpers": "0.5.23",
     "@tailwindcss/postcss": "^4.3.3",
     "@testcontainers/postgresql": "^12.1.0",
