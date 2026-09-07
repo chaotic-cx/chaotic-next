@@ -283,7 +283,11 @@ export class BuildStatusService {
   /** Overtime labels for running builds that exceeded average by 2+ minutes. */
   readonly activeOvertimeLabels = computed<Map<string, string>>(() => {
     const labels = new Map<string, string>();
+    const isFallback = this.activeEtaIsFallback();
+    const isUnknown = this.activeIsUnknown();
+
     for (const [pkgname, minutes] of this.estimates().activeOvertime) {
+      if (isFallback.get(pkgname) || isUnknown.get(pkgname)) continue;
       labels.set(pkgname, `${formatEta(minutes)} overtime`);
     }
     return labels;

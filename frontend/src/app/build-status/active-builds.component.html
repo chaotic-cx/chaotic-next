@@ -63,6 +63,13 @@
                   tooltipPosition="top"
                   >· {{ eta }}</span
                 >
+              } @else {
+                <span
+                  class="whitespace-nowrap text-right text-sm font-semibold text-ctp-yellow"
+                  [pTooltip]="buildStatusService.activeUnknownTooltip"
+                  tooltipPosition="top"
+                  >· unknown time left</span
+                >
               }
             } @else if (buildStatusService.activeOvertimeLabels().get(pkg.rawName); as overtime) {
               @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
