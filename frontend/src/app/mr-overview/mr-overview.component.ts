@@ -136,10 +136,14 @@ export class MrOverviewComponent implements OnInit {
   private evaluatingNewMrs = false;
 
   protected readonly nvcheckerMrs = computed(() =>
-    this.mrOverviewService.mergeRequests().filter((mr) => mr.labels.includes('nvchecker') && !mr.labels.includes('hold')),
+    this.mrOverviewService
+      .mergeRequests()
+      .filter((mr) => mr.labels.includes('nvchecker') && !mr.labels.includes('hold')),
   );
   protected readonly packageMrs = computed(() =>
-    this.mrOverviewService.mergeRequests().filter((mr) => !mr.labels.includes('nvchecker') && !mr.labels.includes('hold')),
+    this.mrOverviewService
+      .mergeRequests()
+      .filter((mr) => !mr.labels.includes('nvchecker') && !mr.labels.includes('hold')),
   );
   protected readonly holdMrs = computed(() =>
     this.mrOverviewService.mergeRequests().filter((mr) => mr.labels.includes('hold')),
@@ -285,11 +289,7 @@ export class MrOverviewComponent implements OnInit {
 
   protected onTabChange(value: string | number | undefined): void {
     const tab =
-      value === PACKAGE_UPDATES_TAB
-        ? PACKAGE_UPDATES_TAB
-        : value === ON_HOLD_TAB
-          ? ON_HOLD_TAB
-          : AUR_UPDATES_TAB;
+      value === PACKAGE_UPDATES_TAB ? PACKAGE_UPDATES_TAB : value === ON_HOLD_TAB ? ON_HOLD_TAB : AUR_UPDATES_TAB;
     this.activeTabValue.set(tab);
     this.focusedIndex.set(NO_FOCUSED_PANEL);
     this.hasNewMr.set(false);

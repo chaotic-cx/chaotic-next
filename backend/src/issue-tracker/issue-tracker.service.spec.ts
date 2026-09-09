@@ -1,9 +1,9 @@
+import type { AurPackageScan } from '@chaotic-next/shared-lib';
 import { type PinoLogger } from 'nestjs-pino';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { DUPLICATE_LABEL, GithubIssuesService, NEEDS_INPUT_LABEL } from './github-issues.service';
 import { IssueTrackerService } from './issue-tracker.service';
-import type { AurPackageScan } from '@chaotic-next/shared-lib';
 
 const REQUEST_BODY = `### Package
 
@@ -240,6 +240,18 @@ describe('IssueTrackerService.triage', () => {
     expect(aurScan.startScan).not.toHaveBeenCalled();
     expect(github.addLabels).toHaveBeenCalledWith(1, ['info:official-repo']);
     expect(github.closeIssue).toHaveBeenCalledWith(1);
+  });
+
+  it('does not close a request when the official package is deactivated', async () => {
+    vi.mocked(service['archPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    await service.triage(1, '[Request] foo-app', REQUEST_BODY);
+    const call = vi.mocked(service['archPackages'].findOne as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
+      where?: Record<string, unknown>;
+    };
+    expect(call.where).toHaveProperty('deactivatedAt');
+    expect((call.where?.deactivatedAt as { _type?: string })?._type).toBe('isNull');
+    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app');
+    expect(github.closeIssue).not.toHaveBeenCalled();
   });
 
   it('reports orphaned packages in the scan summary', async () => {

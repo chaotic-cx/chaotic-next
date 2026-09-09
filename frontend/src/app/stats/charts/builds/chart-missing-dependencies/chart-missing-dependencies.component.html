@@ -1,0 +1,55 @@
+<div class="card flex h-[20rem] max-h-[60vh] flex-col text-left sm:h-[22rem]">
+  @if (chart.hasData()) {
+    <div class="flex items-center justify-between px-1 pb-2 text-left">
+      <span class="text-sm text-ctp-subtext0">
+        {{ visibleRows().length }} package{{ visibleRows().length === 1 ? '' : 's' }} with missing deps
+      </span>
+    </div>
+    <ul class="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1 text-left" aria-live="polite">
+      @for (row of visibleRows(); track row.pkgname) {
+        @defer (on viewport) {
+          <li class="flex flex-col gap-1.5 rounded-lg bg-ctp-surface0/60 px-2.5 py-2 text-sm text-left">
+            <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span class="min-w-0 break-all text-left font-medium text-ctp-text" [title]="row.pkgname">{{
+                row.pkgname
+              }}</span>
+              @if (row.version) {
+                <span class="shrink-0 text-left text-xs text-ctp-overlay1">{{ row.version }}</span>
+              }
+              <span class="ml-auto shrink-0 rounded-md bg-ctp-surface1 px-1.5 py-0.5 text-xs text-ctp-red">
+                {{ row.missingDeps.length + row.missingMakeDeps.length }} missing
+              </span>
+            </div>
+            <div class="flex flex-col gap-1 text-left text-xs leading-relaxed text-ctp-subtext0">
+              @if (row.missingDeps.length > 0) {
+                <div class="flex flex-wrap items-baseline gap-1 wrap-break-word">
+                  <span class="shrink-0 text-ctp-overlay1">deps:</span>
+                  @for (dep of row.missingDeps; track dep) {
+                    <span class="rounded bg-ctp-surface1/70 px-1 py-0.5 break-all">{{ dep }}</span>
+                  }
+                </div>
+              }
+              @if (row.missingMakeDeps.length > 0) {
+                <div class="flex flex-wrap items-baseline gap-1 wrap-break-word">
+                  <span class="shrink-0 text-ctp-overlay1">makedeps:</span>
+                  @for (dep of row.missingMakeDeps; track dep) {
+                    <span class="rounded bg-ctp-surface1/70 px-1 py-0.5 break-all">{{ dep }}</span>
+                  }
+                </div>
+              }
+            </div>
+          </li>
+        } @placeholder {
+          <li class="h-9 rounded-lg bg-ctp-surface0/60" aria-hidden="true"></li>
+        }
+      }
+    </ul>
+    @if (visibleRows().length === 0) {
+      <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">No missing dependencies.</p>
+    }
+  } @else if (chart.loading()) {
+    <div class="flex flex-1 items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
+  }
+</div>

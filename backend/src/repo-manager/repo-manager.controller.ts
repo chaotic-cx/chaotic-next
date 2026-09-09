@@ -1,4 +1,6 @@
 import {
+  type ArchOverlapReport,
+  archOverlapReportSchema,
   BrokenPackageReport,
   brokenPackageReportSchema,
   type BrokenPackagesQueryDto,
@@ -8,6 +10,8 @@ import {
   type BumpPackagesResult,
   bumpPackagesResultSchema,
   dependencyEdgeSchema,
+  type MissingDependencyReport,
+  missingDependencyReportSchema,
   PackageRebuildTriggerSources,
   packageRebuildTriggerSourcesSchema,
   Paginated,
@@ -23,7 +27,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import { AuthGuard, OptionalAuth, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { schemaResponse, schemaResponseArray } from '../api/response-schema';
 import { auth } from '../auth/auth';
@@ -70,6 +74,30 @@ export class RepoManagerController {
     @Query({ schema: brokenPackagesQuerySchema }) query: BrokenPackagesQueryDto,
   ): Promise<Paginated<BrokenPackageReport>> {
     return this.repoManager.getBrokenPackages(query.page, query.perPage);
+  }
+
+  @Get('missing-deps')
+  @UseGuards(AuthGuard)
+  @OptionalAuth()
+  @ApiOperation({ summary: 'Chaotic packages with deps/makedeps nothing provides (ignores .so).' })
+  @ApiOkResponse({
+    description: 'Packages with missing dependencies',
+    schema: schemaResponseArray(missingDependencyReportSchema).schema,
+  })
+  getMissingDependencies(): Promise<MissingDependencyReport[]> {
+    return this.repoManager.getMissingDependencies();
+  }
+
+  @Get('arch-overlap')
+  @UseGuards(AuthGuard)
+  @OptionalAuth()
+  @ApiOperation({ summary: 'Active Chaotic packages also present in Arch repos (core/extra/multilib).' })
+  @ApiOkResponse({
+    description: 'Packages present in both Arch and Chaotic repos',
+    schema: schemaResponseArray(archOverlapReportSchema).schema,
+  })
+  getArchOverlap(): Promise<ArchOverlapReport[]> {
+    return this.repoManager.getArchOverlap();
   }
 
   @Post('broken/bump')

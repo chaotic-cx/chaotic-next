@@ -20,6 +20,7 @@ function isFindOperator(value: unknown): value is FindOperatorShape {
 function valueMatches(entityValue: unknown, criterion: unknown): boolean {
   if (isFindOperator(criterion)) {
     if (criterion._type === 'in') return Array.isArray(criterion._value) && criterion._value.includes(entityValue);
+    if (criterion._type === 'isNull') return entityValue === null || entityValue === undefined;
     if (criterion._type === 'not') {
       if (isFindOperator(criterion._value)) return !valueMatches(entityValue, criterion._value);
       return entityValue !== criterion._value;

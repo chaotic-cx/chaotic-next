@@ -1,3 +1,27 @@
+import {
+  type ArchOverlapReport,
+  type BumpPackagesResult,
+  type MissingDependencyReport,
+  Paginated,
+  RepoStatus,
+} from '@chaotic-next/shared-lib';
+import { HttpService } from '@nestjs/axios';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { InjectRepository } from '@nestjs/typeorm';
+import { CronJob } from 'cron';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { randomUUID } from 'node:crypto';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { requiredGroupForRepo } from '../auth/gitlab-groups';
 import { Build, Package, Repo } from '../builder/builder.entity';
 import {
@@ -28,29 +52,11 @@ import {
   buildDependencyGraph,
   CHAOTIC_PKG_TYPE,
   compareArchVersions,
-  latestAnalysisByKey,
-  pkgTypeOf,
   type DependencyEdge,
   type DependencyNode,
+  latestAnalysisByKey,
+  pkgTypeOf,
 } from './signal';
-import { Paginated, RepoStatus, type BumpPackagesResult } from '@chaotic-next/shared-lib';
-import { HttpService } from '@nestjs/axios';
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-  OnModuleInit,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { CronJob } from 'cron';
-import { SchedulerRegistry } from '@nestjs/schedule';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { randomUUID } from 'node:crypto';
-import { In, IsNull, Not, Repository } from 'typeorm';
 
 /** The cron scheduler runs on German time so runs align with Arch mirror syncs. */
 const CRON_TIME_ZONE = 'Europe/Berlin';
@@ -59,7 +65,6 @@ const CRON_TIME_ZONE = 'Europe/Berlin';
 export class RepoManagerService implements OnModuleInit {
   private repoManager!: RepoManager;
   private repos!: Repo[];
-  private workDirs: { dir: string; busy: boolean }[] = [];
 
   constructor(
     private configService: ConfigService,
@@ -206,6 +211,66 @@ export class RepoManagerService implements OnModuleInit {
     allBrokenReports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));
     const items = allBrokenReports.slice(skip, skip + safePerPage);
     return paginate(items, total, safePage, safePerPage);
+  }
+
+  async getMissingDependencies(): Promise<MissingDependencyReport[]> {
+    const strip = (raw: string): string => raw.split('=')[0].split('<')[0].split('>')[0].trim();
+    const [archPkgs, chaoticPkgs] = await Promise.all([
+      this.archlinuxPackageRepository.find({ where: { deactivatedAt: IsNull() } }),
+      this.packageRepository.find({ where: { isActive: true }, relations: { repo: true } }),
+    ]);
+    const provided = new Set<string>();
+    for (const pkg of archPkgs) {
+      provided.add(pkg.pkgname);
+      for (const name of pkg.metadata?.provides ?? []) provided.add(strip(name));
+    }
+    for (const pkg of chaoticPkgs) {
+      provided.add(pkg.pkgname);
+      if (pkg.pkgbaseName) provided.add(pkg.pkgbaseName);
+      for (const name of pkg.metadata?.provides ?? []) provided.add(strip(name));
+    }
+    const reports: MissingDependencyReport[] = [];
+    for (const pkg of chaoticPkgs) {
+      const deps = (pkg.metadata?.deps ?? [])
+        .filter((d) => !d.includes('.so'))
+        .map(strip)
+        .filter((d) => !provided.has(d));
+      const makeDeps = (pkg.metadata?.makeDeps ?? [])
+        .filter((d) => !d.includes('.so'))
+        .map(strip)
+        .filter((d) => !provided.has(d));
+      if (deps.length === 0 && makeDeps.length === 0) continue;
+      reports.push({
+        pkgname: pkg.pkgname,
+        version: pkg.version ?? undefined,
+        repoName: pkg.repo?.name ?? undefined,
+        missingDeps: [...new Set(deps)].sort(),
+        missingMakeDeps: [...new Set(makeDeps)].sort(),
+      });
+    }
+    return reports;
+  }
+
+  async getArchOverlap(): Promise<ArchOverlapReport[]> {
+    const [archPkgs, chaoticPkgs] = await Promise.all([
+      this.archlinuxPackageRepository.find({ where: { deactivatedAt: IsNull() } }),
+      this.packageRepository.find({ where: { isActive: true }, relations: { repo: true } }),
+    ]);
+    const archByName = new Map<string, (typeof archPkgs)[number]>();
+    for (const arch of archPkgs) archByName.set(arch.pkgname, arch);
+    const reports: ArchOverlapReport[] = [];
+    for (const pkg of chaoticPkgs) {
+      const arch = archByName.get(pkg.pkgname);
+      if (!arch) continue;
+      reports.push({
+        pkgname: pkg.pkgname,
+        chaoticVersion: pkg.version ?? undefined,
+        archVersion: arch.version ?? undefined,
+        repoName: pkg.repo?.name ?? undefined,
+      });
+    }
+    reports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));
+    return reports;
   }
 
   /**

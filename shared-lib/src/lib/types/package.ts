@@ -170,6 +170,23 @@ export const brokenPackageReportSchema = z.object({
 });
 export type BrokenPackageReport = z.infer<typeof brokenPackageReportSchema>;
 
+export const missingDependencyReportSchema = z.object({
+  pkgname: z.string().describe('Chaotic package with unresolvable deps'),
+  version: z.string().optional().describe('Package version'),
+  repoName: z.string().optional().describe('Repository name'),
+  missingDeps: z.array(z.string()).describe('Runtime deps nothing provides'),
+  missingMakeDeps: z.array(z.string()).describe('Build-time deps nothing provides'),
+});
+export type MissingDependencyReport = z.infer<typeof missingDependencyReportSchema>;
+
+export const archOverlapReportSchema = z.object({
+  pkgname: z.string().describe('Package present in both Arch and Chaotic repos'),
+  chaoticVersion: z.string().optional().describe('Chaotic package version'),
+  archVersion: z.string().optional().describe('Arch package version'),
+  repoName: z.string().optional().describe('Chaotic repository name'),
+});
+export type ArchOverlapReport = z.infer<typeof archOverlapReportSchema>;
+
 /** Outcome of one background ELF-signal rescan, served by GET /admin/rescan/:jobId. */
 export const rescanJobSchema = z.object({
   jobId: z.string(),

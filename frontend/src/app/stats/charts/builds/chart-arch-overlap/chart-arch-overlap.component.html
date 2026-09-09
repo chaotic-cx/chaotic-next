@@ -1,0 +1,46 @@
+<div class="card flex h-[20rem] max-h-[60vh] flex-col text-left sm:h-[22rem]">
+  @if (chart.hasData()) {
+    <div class="flex items-center justify-between px-1 pb-2 text-left">
+      <span class="text-sm text-ctp-subtext0">
+        {{ visibleRows().length }} package{{ visibleRows().length === 1 ? '' : 's' }} also in Arch repos
+      </span>
+    </div>
+    <ul class="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1 text-left" aria-live="polite">
+      @for (row of visibleRows(); track row.pkgname) {
+        @defer (on viewport) {
+          <li class="flex flex-col gap-1.5 rounded-lg bg-ctp-surface0/60 px-2.5 py-2 text-sm text-left">
+            <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span class="min-w-0 break-all text-left font-medium text-ctp-text" [title]="row.pkgname">{{
+                row.pkgname
+              }}</span>
+              @if (row.repoName) {
+                <span class="shrink-0 rounded-md bg-ctp-surface1 px-1.5 py-0.5 text-xs text-ctp-subtext0">{{
+                  row.repoName
+                }}</span>
+              }
+            </div>
+            <div class="flex flex-wrap items-baseline gap-1.5 text-xs leading-relaxed">
+              @if (row.chaoticVersion) {
+                <span class="rounded bg-ctp-surface1/70 px-1 py-0.5 text-ctp-subtext0"
+                  >chaotic: {{ row.chaoticVersion }}</span
+                >
+              }
+              @if (row.archVersion) {
+                <span class="rounded bg-ctp-surface1/70 px-1 py-0.5 text-ctp-blue">arch: {{ row.archVersion }}</span>
+              }
+            </div>
+          </li>
+        } @placeholder {
+          <li class="h-9 rounded-lg bg-ctp-surface0/60" aria-hidden="true"></li>
+        }
+      }
+    </ul>
+    @if (visibleRows().length === 0) {
+      <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">No Arch overlap.</p>
+    }
+  } @else if (chart.loading()) {
+    <div class="flex flex-1 items-center justify-center">
+      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+    </div>
+  }
+</div>

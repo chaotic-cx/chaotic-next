@@ -132,6 +132,9 @@ export type UserAgentTrend = z.infer<typeof userAgentTrendSchema>;
 
 // ---- Health ----
 
+export const versionSchema = z.object({ version: z.string().describe('Application version') });
+export type VersionDto = z.infer<typeof versionSchema>;
+
 export const healthCheckResultSchema = z.object({
   status: z.enum(['ok', 'error']).describe('Overall health status'),
   info: z

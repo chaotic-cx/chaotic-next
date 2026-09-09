@@ -1,18 +1,14 @@
+import { healthCheckResultSchema, versionSchema, type VersionDto } from '@chaotic-next/shared-lib';
+import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { getHeapStatistics } from 'node:v8';
 import { schemaResponse } from '../api/response-schema';
 import { DbHealthIndicator } from './db.health';
 import { type HealthCheckResult, type HealthIndicatorResult } from './health.types';
 import { RedisHealthIndicator } from './redis.health';
-import { healthCheckResultSchema } from '@chaotic-next/shared-lib';
-import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
-import { getHeapStatistics } from 'node:v8';
 
 /** Liveness fails when used heap exceeds this share of the configured heap limit. */
 const HEAP_PRESSURE_LIMIT_RATIO = 0.9;
-
-class VersionDto {
-  @ApiProperty({ description: 'Application version' }) version!: string;
-}
 
 type HealthCheck = { key: string; run: () => Promise<HealthIndicatorResult> };
 
@@ -95,7 +91,7 @@ export class HealthController {
 
   @Get('version')
   @ApiOperation({ summary: 'Application version.' })
-  @ApiOkResponse({ description: 'Version info', type: VersionDto })
+  @ApiOkResponse({ description: 'Version info', schema: schemaResponse(versionSchema).schema })
   getVersion(): VersionDto {
     return { version: __VERSION__ };
   }

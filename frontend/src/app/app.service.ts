@@ -218,6 +218,14 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/builds/failed/unresolved`, params: this.daysParams(days) };
   }
 
+  getMissingDependenciesResourceRequest(): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/repo/missing-deps` };
+  }
+
+  getArchOverlapResourceRequest(): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/repo/arch-overlap` };
+  }
+
   async silenceUnresolvedFailedBuild(pkgname: string): Promise<void> {
     await lastValueFrom(
       this.http.post(

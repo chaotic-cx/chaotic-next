@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
 import { Card } from '@openng/optimus-ui/card';
+import { ChartArchOverlapComponent } from '../charts/builds/chart-arch-overlap/chart-arch-overlap.component';
 import { ChartAverageBuildTimeTrendComponent } from '../charts/builds/chart-average-build-time-trend/chart-average-build-time-trend.component';
-import { ChartBuilderUtilizationComponent } from '../charts/builds/chart-builder-utilization/chart-builder-utilization.component';
 import { ChartBuildFailuresOverTimeComponent } from '../charts/builds/chart-build-failures-over-time/chart-build-failures-over-time.component';
+import { ChartBuilderUtilizationComponent } from '../charts/builds/chart-builder-utilization/chart-builder-utilization.component';
 import { ChartFailedHotspotsComponent } from '../charts/builds/chart-failed-hotspots/chart-failed-hotspots.component';
 import { ChartFlakyPackagesComponent } from '../charts/builds/chart-flaky-packages/chart-flaky-packages.component';
+import { ChartMissingDependenciesComponent } from '../charts/builds/chart-missing-dependencies/chart-missing-dependencies.component';
 import { ChartThroughputComponent } from '../charts/builds/chart-throughput/chart-throughput.component';
 import { ChartUnresolvedFailuresComponent } from '../charts/builds/chart-unresolved-failures/chart-unresolved-failures.component';
 
@@ -15,8 +17,10 @@ import { ChartUnresolvedFailuresComponent } from '../charts/builds/chart-unresol
     ChartAverageBuildTimeTrendComponent,
     ChartBuilderUtilizationComponent,
     ChartBuildFailuresOverTimeComponent,
+    ChartArchOverlapComponent,
     ChartFailedHotspotsComponent,
     ChartFlakyPackagesComponent,
+    ChartMissingDependenciesComponent,
     ChartThroughputComponent,
     ChartUnresolvedFailuresComponent,
   ],
@@ -46,6 +50,20 @@ import { ChartUnresolvedFailuresComponent } from '../charts/builds/chart-unresol
       <p-card [style]="{ overflow: 'hidden' }" header="Failed builds with no more recent success">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-unresolved-failures />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
+      </p-card>
+      <p-card [style]="{ overflow: 'hidden' }" header="Packages with missing dependencies">
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-missing-dependencies />
+        } @placeholder {
+          <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
+        }
+      </p-card>
+      <p-card [style]="{ overflow: 'hidden' }" header="Packages now also in Arch repos">
+        @defer (on viewport; prefetch on idle) {
+          <chaotic-chart-arch-overlap />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
