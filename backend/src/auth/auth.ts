@@ -13,6 +13,7 @@ import { CreateUser1786779403609 } from './generated/migrations/1786779403609-cr
 import { CreateVerification1786779403609 } from './generated/migrations/1786779403609-create-verification';
 import { AddUserGroups1787411324082 } from './generated/migrations/1787411324082-add-user-groups';
 import { AddAccountIssuer1787942324294 } from './generated/migrations/1787942324294-add-account-issuer';
+import { DropAccountIssuer1788975624603 } from './generated/migrations/1788975624603-drop-account-issuer';
 import { GITLAB_LOGIN_GROUPS } from './gitlab-groups';
 
 interface GitLabProfile {
@@ -40,6 +41,7 @@ const authDataSource = new DataSource({
     CreateVerification1786779403609,
     AddUserGroups1787411324082,
     AddAccountIssuer1787942324294,
+    DropAccountIssuer1788975624603,
   ],
   migrationsRun: true,
   migrationsTableName: 'auth_migrations',
