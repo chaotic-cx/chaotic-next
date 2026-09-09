@@ -9,7 +9,7 @@ import { ConflictException, Injectable, type OnModuleInit } from '@nestjs/common
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { suggestBuildClass } from '../builder/build-class-suggester';
 import { Package } from '../builder/builder.entity';
 import { AurScanService } from '../diff-scan/aur-scan.service';
@@ -425,7 +425,10 @@ export class IssueTrackerService implements OnModuleInit {
 
   private async findAlreadyPackaged(bases: string[]): Promise<{ where: 'chaotic' | 'official'; url: string } | null> {
     const chaotic = await this.chaoticPackages.findOne({
-      where: [{ pkgname: In(bases) }, { pkgbaseName: In(bases) }],
+      where: [
+        { pkgname: In(bases), isActive: true },
+        { pkgbaseName: In(bases), isActive: true },
+      ],
     });
     if (chaotic !== null) {
       const matched = chaotic.pkgbaseName ?? chaotic.pkgname;
@@ -434,7 +437,7 @@ export class IssueTrackerService implements OnModuleInit {
         url: `https://aur.chaotic.cx/stats/search?search=${encodeURIComponent(matched)}`,
       };
     }
-    const official = await this.archPackages.findOne({ where: { pkgname: In(bases) } });
+    const official = await this.archPackages.findOne({ where: { pkgname: In(bases), deactivatedAt: IsNull() } });
     if (official !== null) {
       return { where: 'official', url: `https://archlinux.org/packages/?q=${encodeURIComponent(official.pkgname)}` };
     }
