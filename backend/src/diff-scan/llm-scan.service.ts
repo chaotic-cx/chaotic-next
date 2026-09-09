@@ -9,6 +9,7 @@ const DEFAULT_LLM_MODELS = [
   'minimax/minimax-m3:free',
   'cohere/north-mini-code:free',
   'google/gemma-4-31b-it:free',
+  'openrouter/free',
 ] as const;
 const TIMEOUT_MS = 30_000;
 const MAX_PROMPT_CHARS = 12_000;
@@ -90,8 +91,8 @@ export class LlmScanService {
             signal: AbortSignal.timeout(TIMEOUT_MS),
           });
 
-          if (res.status === 429) {
-            this.pino.debug({ status: res.status, model }, 'LLM rate limited, trying next model');
+          if (res.status === 429 || res.status === 404) {
+            this.pino.debug({ status: res.status, model }, 'LLM rate limited or not found, trying next model');
             continue;
           }
           if (!res.ok) {
