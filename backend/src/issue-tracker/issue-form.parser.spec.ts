@@ -150,14 +150,14 @@ describe('parsePackageRequest', () => {
   });
 
   it('accepts common SPDX license spellings', () => {
-    for (const license of ['GPL-3.0-or-later', 'MIT', 'Apache 2.0', 'GPLv3', 'BSD-3-Clause']) {
+    for (const license of ['GPL-3.0-or-later', 'MIT', 'Apache-2.0', 'GPL-3.0-only', 'BSD-3-Clause']) {
       const body = REQUEST_BODY.replace('GPL-3.0-or-later', license);
       expect(parsePackageRequest('[Request] foo-app', body)).toMatchObject({ ok: true });
     }
   });
 
   it('accepts the full AGPL license name', () => {
-    const body = REQUEST_BODY.replace('GPL-3.0-or-later', 'GNU Affero General Public License v3.0');
+    const body = REQUEST_BODY.replace('GPL-3.0-or-later', 'AGPL-3.0-only');
     expect(parsePackageRequest('[Request] foo-app', body)).toMatchObject({ ok: true });
   });
 
@@ -256,5 +256,26 @@ describe('parsePackageRequest', () => {
   it('accepts ttf-twemoji comma case from #885', () => {
     const result = parsePackageRequest('[Request] ttf-twemoji, ttf-twemoji-git', REQUEST_BODY);
     expect(result).toMatchObject({ ok: true, kind: 'request' });
+  });
+
+  it('accepts multiline license if one line is a valid SPDX expression', () => {
+    const body = REQUEST_BODY.replace('GPL-3.0-or-later', 'Use-it-after-midnight\nMIT');
+    expect(parsePackageRequest('[Request] foo-app', body)).toMatchObject({ ok: true });
+  });
+
+  it('accepts multiline license with valid LicenseRef on second line', () => {
+    const body = REQUEST_BODY.replace(
+      'GPL-3.0-or-later',
+      'LicenseRef-License_with_underscores\nLicenseRef-Proprietary',
+    );
+    expect(parsePackageRequest('[Request] foo-app', body)).toMatchObject({ ok: true });
+  });
+
+  it('rejects multiline license if no line is a valid SPDX expression', () => {
+    const body = REQUEST_BODY.replace('GPL-3.0-or-later', 'Use-it-after-midnight\nApache-2.0 OR 2-BSD-Clause');
+    expect(parsePackageRequest('[Request] foo-app', body)).toMatchObject({
+      ok: false,
+      failures: [{ section: 'License' }],
+    });
   });
 });

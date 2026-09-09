@@ -1,3 +1,6 @@
+// @ts-expect-error - spdx-expression-parse has no type declarations
+import spdxParse from 'spdx-expression-parse';
+
 /**
  * GitHub issue forms render answers as `### <label>` headings followed by the
  * answer text. These match the labels in .github/ISSUE_TEMPLATE of
@@ -100,23 +103,30 @@ function addEmptySectionFailure(failures: ParseFailure[], section: string, answe
   }
 }
 
-// Common SPDX license identifiers plus everyday spellings of them. The full
-// list lives at https://spdx.org/licenses.
-const OPEN_SOURCE_LICENSE_REGEX =
-  /\b((?:agpl|lgpl|gpl)(?:v?\d[\d.]*)?|affero|general public license|mit|bsd|apache|mozilla|mpl|isc|unlicense|wtfpl|zlib|cc0|cc-by|cecill|cddl|epl|eupl|artistic|ncsa|postgresql|openssl|osl|afl|hpnd|python|ms-pl|ms-rl|sip|openvpn|sissl|wap)\b/;
+function isSpdxExpression(value: string): boolean {
+  try {
+    spdxParse(value.trim());
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function addLicenseFailure(failures: ParseFailure[], answer: string): void {
   if (answer.length === 0 || answer === '_No response_') {
     failures.push({ section: 'License', problem: 'The License section is empty.' });
     return;
   }
-  const normalized = answer.toLowerCase();
-  if (!OPEN_SOURCE_LICENSE_REGEX.test(normalized)) {
-    failures.push({
-      section: 'License',
-      problem: `"${answer.trim()}" is not a recognized open-source license. Use an SPDX identifier, see https://spdx.org/licenses.`,
-    });
-  }
+  const lines = answer
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const candidates = lines.length > 1 ? [...lines, answer.trim()] : lines;
+  if (candidates.some(isSpdxExpression)) return;
+  failures.push({
+    section: 'License',
+    problem: `"${answer.trim()}" is not a recognized open-source license. Use an SPDX identifier, see https://spdx.org/licenses.`,
+  });
 }
 
 const UNCHECKED_TASK_REGEX = /^- \[ \]/m;
