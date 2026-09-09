@@ -1,3 +1,12 @@
+import { HttpService } from '@nestjs/axios';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { type AxiosResponse } from 'axios';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { IsNull, Repository } from 'typeorm';
 import {
   IndexCandidate,
   IndexResult,
@@ -12,19 +21,10 @@ import { errorCode } from '../utils/functions';
 import { extractPacmanDatabase, parsePacmanDatabases } from './offline/pacman-parse';
 import { ArchlinuxPackage, bulkGetOrCreateArch, PackageElfAnalysis } from './repo-manager.entity';
 import { saveInBatches } from './save';
-import { SignalScanService, type ScanJob } from './scan';
+import { type ScanJob, SignalScanService } from './scan';
 import { pkgTypeOf } from './signal';
-import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { type AxiosResponse } from 'axios';
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { Repository } from 'typeorm';
 
-const ARCH_REPOS = ['core', 'extra'] as const;
+const ARCH_REPOS = ['core', 'extra', 'multilib'] as const;
 const DEFAULT_MIRROR_URL = 'https://arch.mirror.constant.com';
 const ARCH_DATABASE_URL = (mirrorUrl: string, repo: string): string => `${mirrorUrl}/${repo}/os/x86_64/${repo}.files`;
 
@@ -168,8 +168,6 @@ export class ArchMirrorService {
       }
       const parsed: ParsedPackage[] = await this.parsePacmanDatabases(workDirs);
 
-      // Ensure every package has an archlinux_package row so analyses get a
-      // stable pkgId, and gather the download candidates.
       const candidates: IndexCandidate[] = [];
       const archPkgNames = parsed
         .filter((pkg) => pkg.name && pkg.metaData?.filename)
@@ -184,6 +182,7 @@ export class ArchMirrorService {
         archPkg.arch = ARCH;
         archPkg.pkgrel = pkg.pkgrel;
         archPkg.metadata = pkg.metaData;
+        archPkg.deactivatedAt = null;
         archToUpdate.push(archPkg);
 
         candidates.push({
@@ -194,10 +193,21 @@ export class ArchMirrorService {
           pkgType: TriggerType.ARCH,
         });
       }
-      // Persist every row in batches instead of one save() per package.
-      await saveInBatches(this.archPkgRepository, archToUpdate);
 
+      {
+        const currentNames = new Set(archPkgNames);
+        const activeRows = await this.archPkgRepository.find({ where: { deactivatedAt: IsNull() } });
+        for (const row of activeRows) {
+          if (!currentNames.has(row.pkgname) && !archToUpdate.includes(row)) {
+            row.deactivatedAt = new Date();
+            archToUpdate.push(row);
+          }
+        }
+      }
+
+      await saveInBatches(this.archPkgRepository, archToUpdate);
       const result: IndexResult = await this.indexCandidates(candidates, tempDir);
+
       // Newly-indexed providers can resolve other packages' missing sonames, so
       // refresh every broken flag against the now-complete index.
       await this.signalScanService.recomputeBroken();
@@ -331,13 +341,25 @@ export class ArchMirrorService {
       this.archPkgRepository,
     );
 
+    const currentNames = new Set(currentArchVersions.map((p) => p.name).filter((n): n is string => !!n));
     const changed: ArchlinuxPackage[] = [];
+    const changedByName = new Map<string, ArchlinuxPackage>();
+    const markChanged = (row: ArchlinuxPackage): void => {
+      if (!changedByName.has(row.pkgname)) {
+        changedByName.set(row.pkgname, row);
+        changed.push(row);
+      }
+    };
     for (const pkg of currentArchVersions) {
       if (!pkg.name) continue;
       const archPkg = archByName.get(pkg.name);
       if (!archPkg) continue;
 
       if (!settings.regenDatabase && archPkg.version && archPkg.version === pkg.version) {
+        if (archPkg.deactivatedAt !== null) {
+          archPkg.deactivatedAt = null;
+          markChanged(archPkg);
+        }
         continue;
       }
 
@@ -350,10 +372,26 @@ export class ArchMirrorService {
       archPkg.arch = ARCH;
       archPkg.pkgrel = pkg.pkgrel;
       archPkg.metadata = pkg.metaData;
-      changed.push(archPkg);
+      archPkg.deactivatedAt = null;
+      markChanged(archPkg);
 
       // We are only interested in the base packages but still want all metadata saved
       if (pkg.base === pkg.name) result.push(archPkg);
+    }
+
+    // Packages that disappeared from core+extra+multilib are no longer installable.
+    const activeRows = await this.archPkgRepository.find({ where: { deactivatedAt: IsNull() } });
+    for (const row of activeRows) {
+      if (!currentNames.has(row.pkgname)) {
+        row.deactivatedAt = new Date();
+        markChanged(row);
+      }
+    }
+    if (activeRows.some((r: ArchlinuxPackage) => r.deactivatedAt !== null)) {
+      this.pino.info(
+        { count: activeRows.filter((r: ArchlinuxPackage) => r.deactivatedAt !== null).length },
+        'Deactivating Arch packages no longer in DBs',
+      );
     }
 
     // Persist updates in batches instead of one fire-and-forget save per package.

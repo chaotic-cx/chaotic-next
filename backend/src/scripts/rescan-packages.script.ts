@@ -15,7 +15,7 @@ type RepoKind = 'arch' | 'chaotic';
 const REPO_KINDS: RepoKind[] = ['arch', 'chaotic'];
 
 const DEFAULT_MIRROR_URL = 'https://geo.mirror.pkgbuild.com';
-const DEFAULT_ARCH_REPOS = 'core,extra';
+const DEFAULT_ARCH_REPOS = 'core,extra,multilib';
 
 interface RescanContext {
   http: HttpService;

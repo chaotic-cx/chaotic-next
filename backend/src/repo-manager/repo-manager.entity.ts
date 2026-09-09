@@ -52,6 +52,10 @@ export class ArchlinuxPackage {
   @ApiProperty({ description: 'Parsed package metadata', type: Object })
   @Column({ type: 'jsonb', nullable: true })
   metadata!: ParsedPackageMetadata | null;
+
+  @ApiProperty({ description: 'When the package vanished from the Arch sync DBs, null while active' })
+  @Column({ type: 'timestamp', nullable: true })
+  deactivatedAt!: Date | null;
 }
 
 @Entity()
