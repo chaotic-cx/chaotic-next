@@ -43,16 +43,20 @@ const NO_FOCUSED_PANEL = -1;
 const FIRST_PANEL_INDEX = 0;
 const AUR_UPDATES_TAB = '0';
 const PACKAGE_UPDATES_TAB = '1';
+const ON_HOLD_TAB = '2';
 const HIGHLIGHT_RENDER_DELAY_MS = 100;
 const FLASH_DURATION_MS = 1800;
 
-const TAB_QUERY_PARAMS: Record<'0' | '1', string> = {
+const TAB_QUERY_PARAMS: Record<'0' | '1' | '2', string> = {
   [AUR_UPDATES_TAB]: 'aur',
   [PACKAGE_UPDATES_TAB]: 'packages',
+  [ON_HOLD_TAB]: 'hold',
 };
 
-function tabFromQueryParam(value: string): '0' | '1' {
-  return value === TAB_QUERY_PARAMS[PACKAGE_UPDATES_TAB] ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB;
+function tabFromQueryParam(value: string): '0' | '1' | '2' {
+  if (value === TAB_QUERY_PARAMS[PACKAGE_UPDATES_TAB]) return PACKAGE_UPDATES_TAB;
+  if (value === TAB_QUERY_PARAMS[ON_HOLD_TAB]) return ON_HOLD_TAB;
+  return AUR_UPDATES_TAB;
 }
 
 function parseNewMrIids(raw: string | null): number[] {
@@ -123,8 +127,8 @@ export class MrOverviewComponent implements OnInit {
   /** Index of the MR panel currently focused by j/k navigation, -1 when none. */
   protected readonly focusedIndex = signal(NO_FOCUSED_PANEL);
 
-  /** Which tab the j/k navigation operates on: 0 = AUR updates, 1 = package updates. */
-  protected readonly activeTabValue = signal<'0' | '1'>(AUR_UPDATES_TAB);
+  /** Which tab the j/k navigation operates on: 0 = AUR, 1 = package updates, 2 = on hold. */
+  protected readonly activeTabValue = signal<'0' | '1' | '2'>(AUR_UPDATES_TAB);
 
   protected readonly hasNewMr = signal(false);
   protected readonly presenter = presenter;
@@ -132,10 +136,13 @@ export class MrOverviewComponent implements OnInit {
   private evaluatingNewMrs = false;
 
   protected readonly nvcheckerMrs = computed(() =>
-    this.mrOverviewService.mergeRequests().filter((mr) => mr.labels.includes('nvchecker')),
+    this.mrOverviewService.mergeRequests().filter((mr) => mr.labels.includes('nvchecker') && !mr.labels.includes('hold')),
   );
   protected readonly packageMrs = computed(() =>
-    this.mrOverviewService.mergeRequests().filter((mr) => !mr.labels.includes('nvchecker')),
+    this.mrOverviewService.mergeRequests().filter((mr) => !mr.labels.includes('nvchecker') && !mr.labels.includes('hold')),
+  );
+  protected readonly holdMrs = computed(() =>
+    this.mrOverviewService.mergeRequests().filter((mr) => mr.labels.includes('hold')),
   );
 
   constructor() {
@@ -209,7 +216,8 @@ export class MrOverviewComponent implements OnInit {
   private highlightLinkedMr(iid: number): void {
     const mr = untracked(this.mrOverviewService.mergeRequests).find((candidate) => candidate.iid === iid);
     if (!mr) return;
-    this.activeTabValue.set(mr.labels.includes('nvchecker') ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB);
+    if (mr.labels.includes('hold')) this.activeTabValue.set(ON_HOLD_TAB);
+    else this.activeTabValue.set(mr.labels.includes('nvchecker') ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB);
 
     // Let Angular render the freshly loaded list before touching the DOM.
     window.setTimeout(() => this.flashMrPanel(iid), HIGHLIGHT_RENDER_DELAY_MS);
@@ -223,9 +231,11 @@ export class MrOverviewComponent implements OnInit {
     window.setTimeout(() => panel.classList.remove('new-mr-flash'), FLASH_DURATION_MS);
   }
 
-  private readonly focusedMrs = computed<MergeRequestWithDiffs[]>(() =>
-    this.activeTabValue() === AUR_UPDATES_TAB ? this.packageMrs() : this.nvcheckerMrs(),
-  );
+  private readonly focusedMrs = computed<MergeRequestWithDiffs[]>(() => {
+    const tab = this.activeTabValue();
+    if (tab === ON_HOLD_TAB) return this.holdMrs();
+    return tab === AUR_UPDATES_TAB ? this.packageMrs() : this.nvcheckerMrs();
+  });
 
   protected onKeydown(event: KeyboardEvent): void {
     if (event.key !== 'j' && event.key !== 'k' && event.key !== 'Enter' && event.key !== ' ') return;
@@ -274,7 +284,12 @@ export class MrOverviewComponent implements OnInit {
   }
 
   protected onTabChange(value: string | number | undefined): void {
-    const tab = value === PACKAGE_UPDATES_TAB ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB;
+    const tab =
+      value === PACKAGE_UPDATES_TAB
+        ? PACKAGE_UPDATES_TAB
+        : value === ON_HOLD_TAB
+          ? ON_HOLD_TAB
+          : AUR_UPDATES_TAB;
     this.activeTabValue.set(tab);
     this.focusedIndex.set(NO_FOCUSED_PANEL);
     this.hasNewMr.set(false);

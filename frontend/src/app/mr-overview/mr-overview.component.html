@@ -21,6 +21,7 @@
         AUR updates ({{ packageMrs().length }})
       </p-tab>
       <p-tab value="1">Package updates ({{ nvcheckerMrs().length }})</p-tab>
+      <p-tab value="2">On hold ({{ holdMrs().length }})</p-tab>
     </p-tablist>
     <p-tabpanels>
       <p-tabpanel value="0">
@@ -34,6 +35,11 @@
             tabBody;
             context: { $implicit: nvcheckerMrs(), empty: 'No open package update requests found.' }
           "
+        />
+      </p-tabpanel>
+      <p-tabpanel value="2">
+        <ng-container
+          *ngTemplateOutlet="tabBody; context: { $implicit: holdMrs(), empty: 'No merge requests on hold.' }"
         />
       </p-tabpanel>
     </p-tabpanels>
