@@ -20,6 +20,7 @@ import { Controller, Get, Param, Query, Sse } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { type Observable } from 'rxjs';
+import { z } from 'zod';
 
 @ApiTags('metrics')
 @Controller('metrics')
@@ -28,7 +29,7 @@ export class MetricsController {
 
   @Get('users')
   @ApiOperation({ summary: 'Get unique user count for a given number of days.' })
-  @ApiOkResponse({ description: 'User count', type: Number })
+  @ApiOkResponse({ description: 'User count', schema: schemaResponse(z.number()).schema })
   users(@Query({ schema: metricsQuerySchema }) query: MetricsQueryDto): Promise<number> {
     return this.metricsService.uniqueUsers(query.days);
   }

@@ -58,7 +58,7 @@ export class NotificationController {
 
   @Put('preferences')
   @ApiOperation({ summary: 'Update push notification preferences of the session user' })
-  @ApiOkResponse({ description: 'Preferences stored.' })
+  @ApiOkResponse({ description: 'Preferences stored.', schema: schemaResponse(z.object({})).schema })
   setPreferences(
     @Session() session: UserSession<typeof auth>,
     @Body({ schema: notificationPreferencesSchema }) body: NotificationPreferenceDto[],

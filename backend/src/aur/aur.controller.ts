@@ -8,6 +8,8 @@ import {
 import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import { z } from 'zod';
+import { schemaResponse } from '../api/response-schema';
 
 @ApiTags('aur')
 @ApiCookieAuth('better-auth.session_token')
@@ -18,7 +20,10 @@ export class AurController {
 
   @Get('suggestions')
   @ApiOperation({ summary: 'Get AUR package name suggestions for a search term.' })
-  @ApiOkResponse({ description: 'List of matching AUR package names', type: String, isArray: true })
+  @ApiOkResponse({
+    description: 'List of matching AUR package names',
+    schema: schemaResponse(z.array(z.string())).schema,
+  })
   async getSuggestions(@Query({ schema: aurSuggestionsQuerySchema }) query: AurSuggestionsQueryDto): Promise<string[]> {
     const q = query.q;
     if (q === undefined) {

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { schemaResponse, schemaResponseArray } from '../api/response-schema';
 import { GITLAB_GROUP_CHAOTIC_AUR } from '../auth/gitlab-groups';
 import { RequireGroups } from '../decorators/require-groups.decorator';
@@ -223,7 +224,7 @@ export class BuilderController {
   @Get('count/package/:pkgname')
   @ApiOperation({ summary: 'Get build count for a package.' })
   @ApiParam({ name: 'pkgname', description: 'Package name' })
-  @ApiOkResponse({ description: 'Build count for package', type: Number })
+  @ApiOkResponse({ description: 'Build count for package', schema: schemaResponse(z.number()).schema })
   async getLatestBuildsCountByPkgname(@Param('pkgname') pkgname: string): Promise<number> {
     return await this.builderService.getLastBuildsCountForPackage(pkgname);
   }
