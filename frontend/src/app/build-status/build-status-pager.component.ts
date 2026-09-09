@@ -1,3 +1,4 @@
+/* eslint-disable @angular-eslint/prefer-signal-model -- pager uses explicit input/output for clamped pagination */
 import { Component, input, output } from '@angular/core';
 
 @Component({
