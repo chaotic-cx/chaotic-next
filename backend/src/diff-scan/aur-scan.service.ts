@@ -21,6 +21,7 @@ import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
 import { commentThreatFinding, evaluateCommentThreats, parseAurComments } from './aur-comments';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
+import { AurScanMetric, type AurScanSource } from './aur-scan-metric.entity';
 import { AurResponseCache } from './aur-response-cache';
 import { DiffScanService } from './diff-scan.service';
 import { extractIndicators, type ScanIndicator } from './indicators';
@@ -54,6 +55,7 @@ export interface AurScanOptions {
    */
   withVirusTotal?: boolean;
   withLlm?: boolean;
+  source?: AurScanSource;
 }
 
 @Injectable()
@@ -73,6 +75,9 @@ export class AurScanService {
     @Optional()
     @InjectRepository(AurMaintainerSnapshot)
     private readonly snapshotRepository?: Repository<AurMaintainerSnapshot>,
+    @Optional()
+    @InjectRepository(AurScanMetric)
+    private readonly metricRepository?: Repository<AurScanMetric>,
   ) {}
 
   getScan(packageName: string): AurPackageScan | null {
@@ -100,6 +105,19 @@ export class AurScanService {
         return () => updates.unsubscribe();
       }),
     );
+  }
+
+  async getMetrics(): Promise<Record<AurScanSource, number> & { total: number }> {
+    if (!this.metricRepository) return { anonymous: 0, authorized: 0, automated: 0, total: 0 };
+    const rows = await this.metricRepository
+      .createQueryBuilder('m')
+      .select('m.source', 'source')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('m.source')
+      .getRawMany<{ source: AurScanSource; count: string }>();
+    const map = { anonymous: 0, authorized: 0, automated: 0 } as Record<AurScanSource, number>;
+    for (const row of rows) map[row.source] = Number(row.count);
+    return { ...map, total: map.anonymous + map.authorized + map.automated };
   }
 
   async startScan(packageName: string, options?: AurScanOptions): Promise<AurPackageScan> {
@@ -198,6 +216,11 @@ export class AurScanService {
       },
       'AUR scan finished',
     );
+    if (options?.source && this.metricRepository) {
+      await this.metricRepository.save({ packageName, source: options.source }).catch((err) => {
+        this.pino.warn({ err, packageName }, 'Failed to save aur scan metric');
+      });
+    }
     this.scanUpdates.next({ ...scan });
     return { ...scan };
   }

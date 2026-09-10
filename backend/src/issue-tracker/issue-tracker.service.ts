@@ -326,7 +326,7 @@ export class IssueTrackerService implements OnModuleInit {
     let hasEolDependency = false;
     let hasOrphaned = false;
     for (const pkgbase of pkgbases) {
-      this.aurScan.startScan(pkgbase);
+      this.aurScan.startScan(pkgbase, { source: 'automated' });
       const scan = await this.waitForTerminalScan(pkgbase);
       summaries.push(formatScanSummary(scan));
       for (const kind of scan?.pkgTypes ?? []) kinds.add(kind);

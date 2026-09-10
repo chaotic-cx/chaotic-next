@@ -25,6 +25,7 @@ import {
   AurPackageScan,
   aurPackageScanSchema,
   aurScanBodySchema,
+  aurScanMetricsSchema,
   AurScanStreamChunk,
   aurSearchQuerySchema,
   bumpPackagesGitlabBodySchema,
@@ -217,7 +218,15 @@ export class GitlabController {
     if (!body) throw new BadRequestException('Missing request body');
     const withVirusTotal = session?.user !== undefined;
     const withLlm = session?.user !== undefined;
-    return this.aurScanService.startScan(body.package, { withVirusTotal, withLlm });
+    const source = session?.user ? 'authorized' : 'anonymous';
+    return this.aurScanService.startScan(body.package, { withVirusTotal, withLlm, source });
+  }
+
+  @Get('aur-scan/metrics')
+  @ApiOperation({ summary: 'How many AUR packages have been scanned, by source.' })
+  @ApiOkResponse({ description: 'Scan counts by source.', schema: schemaResponse(aurScanMetricsSchema).schema })
+  async aurScanMetrics() {
+    return this.aurScanService.getMetrics();
   }
 
   @Get('aur-scan/:packageName')

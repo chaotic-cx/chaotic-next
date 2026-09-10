@@ -144,3 +144,11 @@ export const aurScanStreamChunkSchema = z.object({
   complete: z.boolean(),
 });
 export type AurScanStreamChunk = z.infer<typeof aurScanStreamChunkSchema>;
+
+export const aurScanMetricsSchema = z.object({
+  anonymous: z.number(),
+  authorized: z.number(),
+  automated: z.number(),
+  total: z.number(),
+});
+export type AurScanMetrics = z.infer<typeof aurScanMetricsSchema>;

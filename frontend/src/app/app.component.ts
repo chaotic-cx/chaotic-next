@@ -129,7 +129,7 @@ export class AppComponent implements OnInit {
   private updateMetaTags() {
     this.meta.addTag({ name: 'description', content: "Building packages for you, so you don't have to!" });
     this.meta.addTag({ name: 'keywords', content: 'Chaotic-AUR, AUR, repository, Archlinux' });
-    this.meta.addTag({ property: 'og:title', content: 'Chaotic-AUR - automated binary repo 👨🏻‍💻' });
+    this.meta.addTag({ property: 'og:title', content: 'Chaotic-AUR - semi-automated binary repository 👨🏻‍💻' });
     this.meta.addTag({ property: 'og:description', content: "Building packages for you, so you don't have to!" });
     this.meta.addTag({ property: 'og:image', content: '/assets/logo.png' });
     this.meta.addTag({ property: 'og:site_name', content: 'Chaotic-AUR' });

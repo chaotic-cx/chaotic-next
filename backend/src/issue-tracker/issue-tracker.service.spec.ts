@@ -110,7 +110,7 @@ describe('IssueTrackerService.triage', () => {
 
   it('scans a valid request, labels the package kind, and reports a clean result', async () => {
     await service.triage(1, '[Request] foo-app', REQUEST_BODY);
-    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app');
+    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app', expect.objectContaining({ source: 'automated' }));
     expect(github.createComment).toHaveBeenCalledWith(1, expect.stringContaining(': no critical or warning findings'));
     expect(github.createComment).toHaveBeenCalledWith(
       1,
@@ -187,7 +187,7 @@ describe('IssueTrackerService.triage', () => {
     });
     await service.triage(1, '[Request] foo-app', body);
     expect(github.createComment).not.toHaveBeenCalledWith(1, expect.stringContaining('several package bases'));
-    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app');
+    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app', expect.objectContaining({ source: 'automated' }));
   });
 
   it('tags needs-input when a request covers several package bases', async () => {
@@ -250,7 +250,7 @@ describe('IssueTrackerService.triage', () => {
     };
     expect(call.where).toHaveProperty('deactivatedAt');
     expect((call.where?.deactivatedAt as { _type?: string })?._type).toBe('isNull');
-    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app');
+    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app', expect.objectContaining({ source: 'automated' }));
     expect(github.closeIssue).not.toHaveBeenCalled();
   });
 
@@ -308,7 +308,7 @@ describe('IssueTrackerService.triage', () => {
     await service.triage(1, '[Request] firedragon', REQUEST_BODY.replace(/foo-app/g, 'firedragon'));
     expect(github.closeIssue).not.toHaveBeenCalled();
     expect(github.addLabels).not.toHaveBeenCalledWith(1, [DUPLICATE_LABEL]);
-    expect(aurScan.startScan).toHaveBeenCalledWith('firedragon');
+    expect(aurScan.startScan).toHaveBeenCalledWith('firedragon', expect.objectContaining({ source: 'automated' }));
   });
 
   it('does not scan rebuild requests — only package requests are scanned', async () => {
@@ -369,7 +369,7 @@ describe('IssueTrackerService.handleIssueEvent', () => {
 
   it('triages on opened', async () => {
     await service.handleIssueEvent(payload('opened'));
-    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app');
+    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app', expect.objectContaining({ source: 'automated' }));
   });
 
   it('retriages on edited only when the issue carries needs-input', async () => {

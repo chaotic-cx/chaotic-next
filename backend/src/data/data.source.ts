@@ -37,6 +37,8 @@ import { AddPortableBuildScan1788121232938 } from '../migrations/1788121232938-A
 import { AddVersionNodes1788122000000 } from '../migrations/1788122000000-AddVersionNodes';
 import { AddBuildQueuedAt1788687100000 } from '../migrations/1788687100000-AddBuildQueuedAt';
 import { AddArchPackageIsActive1788976585794 } from '../migrations/1788976585794-AddArchPackageIsActive';
+import { AurScanMetric1789064731000 } from '../migrations/1789064731000-AurScanMetric';
+import { AurScanMetric } from '../diff-scan/aur-scan-metric.entity';
 import { NotificationPreference } from '../notifications/notification-preference.entity';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
 import { PortableBuild } from '../portable-builder/portable-build.entity';
@@ -70,6 +72,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AurMaintainerInfoEntity,
     DiffScanRuleData,
     PortableBuild,
+    AurScanMetric,
   ],
   subscribers: [UpdateLastBuilderActive],
   migrations: [
@@ -105,6 +108,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AddVersionNodes1788122000000,
     AddBuildQueuedAt1788687100000,
     AddArchPackageIsActive1788976585794,
+    AurScanMetric1789064731000,
   ],
   migrationsRun: true,
   cache: true,

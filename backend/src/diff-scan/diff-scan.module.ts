@@ -5,6 +5,7 @@ import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { AurAuthService } from './aur-auth.service';
 import { AurMaintainerInfoEntity } from './aur-maintainer-info.entity';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
+import { AurScanMetric } from './aur-scan-metric.entity';
 import { AurScanService } from './aur-scan.service';
 import { DiffScanService } from './diff-scan.service';
 import { LlmScanService } from './llm-scan.service';
@@ -24,6 +25,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       VirusTotalVerdict,
       AurMaintainerSnapshot,
       AurMaintainerInfoEntity,
+      AurScanMetric,
       DiffScanRuleData,
       ArchlinuxPackage,
       Package,

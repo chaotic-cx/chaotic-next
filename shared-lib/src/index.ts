@@ -1,4 +1,4 @@
-export { totalEngines, aurPackageScanSchema, aurScanStreamChunkSchema } from './lib/types/aur';
+export { totalEngines, aurPackageScanSchema, aurScanStreamChunkSchema, aurScanMetricsSchema } from './lib/types/aur';
 export { vtIndicatorLink } from './lib/virustotal';
 export type {
   DiffScanSeverity,
@@ -14,6 +14,7 @@ export type {
   AurPackageMeta,
   AurPackageScan,
   AurScanStreamChunk,
+  AurScanMetrics,
 } from './lib/types/aur';
 export {
   isBuildStatus,

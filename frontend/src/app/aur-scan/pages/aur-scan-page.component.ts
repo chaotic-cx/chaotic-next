@@ -3,12 +3,12 @@ import { Component, computed, effect, inject, input, signal, untracked } from '@
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
+import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Card } from '@openng/optimus-ui/card';
 import { firstValueFrom } from 'rxjs';
-import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
-import { setPageSeo } from '../../functions';
 import { AppService } from '../../app.service';
+import { setPageSeo } from '../../functions';
 import { TitleComponent } from '../../title/title.component';
 import { AurScanResultComponent } from '../aur-scan-result.component';
 import { AurScanService } from '../aur-scan.service';
@@ -33,6 +33,7 @@ export class AurScanPageComponent {
 
   protected readonly currentPackageName = signal('');
   protected readonly hasResults = computed(() => this.currentPackageName() !== '');
+  protected readonly metrics = this.aurScanService.metrics;
 
   protected readonly searchModel = signal({ query: '' });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {
@@ -52,6 +53,8 @@ export class AurScanPageComponent {
       'Scan AUR packages for malicious PKGBUILD content, suspicious URLs and risky maintainership changes',
       'Chaotic-AUR, AUR, security, PKGBUILD, VirusTotal, scan',
     );
+    void this.aurScanService.loadMetrics();
+
     effect(() => {
       const linked = (this.search() ?? '').trim();
       if (!linked || linked === this.lastSeenRoutePackage) return;

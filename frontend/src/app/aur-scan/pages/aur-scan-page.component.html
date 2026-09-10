@@ -1,5 +1,11 @@
 <chaotic-title [subtitleHtml]="subtitle" title="AUR Scan" />
 
+@if (metrics(); as m) {
+  <div class="chaotic-container-wide-center px-0.5 sm:px-2.5 mb-4 text-sm text-ctp-subtext0">
+    Scanned so far: {{ m.total }} · web {{ m.anonymous + m.authorized }}, automated {{ m.automated }}
+  </div>
+}
+
 <div
   class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5"
   animate.enter="ctp-scale-enter"
