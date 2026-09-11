@@ -373,10 +373,15 @@ export class GitlabController {
     @Session() session: UserSession<typeof auth>,
     @Body({ schema: flagMrBodySchema }) body: FlagMrDto,
   ): Promise<void> {
-    await this.gitlabMergeRequestService.flagMergeRequest(body.iid, body.label, {
-      userId: session.user.id,
-      userName: session.user.name,
-    });
+    await this.gitlabMergeRequestService.flagMergeRequest(
+      body.iid,
+      body.label,
+      {
+        userId: session.user.id,
+        userName: session.user.name,
+      },
+      body.reason,
+    );
   }
 
   @Post('bump-packages')

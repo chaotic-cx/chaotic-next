@@ -1,23 +1,27 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   type AurMaintainerChange,
   type AurMaintainerInfo,
   type DiffScanFinding,
   type DiffScanSeverity,
+  FLAG_REASON_MAX_LENGTH,
   MergeRequestWithDiffs,
   type MrPackageInfo,
   PKGBUILD_SOURCE_AUR,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
 import { Button } from '@openng/optimus-ui/button';
+import { Dialog } from '@openng/optimus-ui/dialog';
 import { Panel } from '@openng/optimus-ui/panel';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@openng/optimus-ui/tabs';
 import { TagModule } from '@openng/optimus-ui/tag';
+import { Textarea } from '@openng/optimus-ui/textarea';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { filter } from 'rxjs';
@@ -92,7 +96,11 @@ export function newMrChipDecision(
     ProgressSpinner,
     Panel,
     Button,
+    DatePipe,
+    Dialog,
+    FormsModule,
     NgTemplateOutlet,
+    Textarea,
     Tooltip,
     RouterLink,
     TagModule,
@@ -129,6 +137,11 @@ export class MrOverviewComponent implements OnInit {
 
   /** Which tab the j/k navigation operates on: 0 = AUR, 1 = package updates, 2 = on hold. */
   protected readonly activeTabValue = signal<'0' | '1' | '2'>(AUR_UPDATES_TAB);
+
+  /** Pending flag dialog: which MR and label the reason is collected for. */
+  protected readonly flagDialog = signal<{ mr: MergeRequestWithDiffs; label: 'dangerous' | 'hold' } | null>(null);
+  protected readonly flagReason = signal('');
+  protected readonly flagReasonMaxLength = FLAG_REASON_MAX_LENGTH;
 
   protected readonly hasNewMr = signal(false);
   protected readonly presenter = presenter;
@@ -321,6 +334,42 @@ export class MrOverviewComponent implements OnInit {
     void this.mrOverviewService.loadOpenMrs();
   }
 
+  protected openFlagDialog(mr: MergeRequestWithDiffs, label: 'dangerous' | 'hold'): void {
+    if (this.actionsDisabled(mr)) return;
+    if (mr.labels.includes(label)) return;
+    this.flagReason.set(mr.flagReason?.action === label ? mr.flagReason.text : '');
+    this.flagDialog.set({ mr, label });
+  }
+
+  protected closeFlagDialog(): void {
+    this.flagDialog.set(null);
+    this.flagReason.set('');
+  }
+
+  protected flagDialogTitle(): string {
+    const pending = this.flagDialog();
+    if (!pending) return '';
+    return pending.label === 'dangerous' ? `Flag !${pending.mr.iid} as dangerous` : `Put !${pending.mr.iid} on hold`;
+  }
+
+  protected flagReasonValid(): boolean {
+    return this.flagReason().trim().length > 0;
+  }
+
+  protected async confirmFlag(): Promise<void> {
+    const pending = this.flagDialog();
+    if (!pending || !this.flagReasonValid()) return;
+    const ok = await this.mrOverviewService.flag(pending.mr, pending.label, this.flagReason().trim());
+    if (ok) this.closeFlagDialog();
+  }
+
+  protected flagReasonLine(mr: MergeRequestWithDiffs): string | null {
+    const reason = mr.flagReason;
+    if (!reason) return null;
+    const author = reason.userName ? ` — ${reason.userName}` : '';
+    return `“${reason.text}”${author}`;
+  }
+
   isLoading(mr: MergeRequestWithDiffs, action: 'approve' | 'flag:dangerous' | 'flag:hold' | 'any'): boolean {
     const loadingMap = this.mrOverviewService.loadingMap();
     if (action === 'any') {
@@ -339,7 +388,7 @@ export class MrOverviewComponent implements OnInit {
     return mr.labels.includes('malware') || mr.labels.includes('dangerous');
   }
 
-  /** Shared disabled state of all review action buttons; hold additionally blocks flag/hold. */
+  /** Shared disabled state of all review action buttons; hold additionally blocks hold. */
   protected actionsDisabled(mr: MergeRequestWithDiffs): boolean {
     return this.requiresManualReview(mr) || mr.labels.includes('approved') || this.isLoading(mr, 'any');
   }
@@ -364,7 +413,7 @@ export class MrOverviewComponent implements OnInit {
           label: mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous',
           icon: 'pi pi-exclamation-triangle',
           severity: 'danger',
-          disabled: this.actionsDisabled(mr) || mr.labels.includes('hold'),
+          disabled: this.actionsDisabled(mr),
           loading: this.isLoading(mr, 'flag:dangerous'),
           tooltip: 'Flag this merge request as dangerous and prevent auto-merge',
         };

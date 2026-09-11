@@ -8,6 +8,7 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
+import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
 import {
@@ -38,7 +39,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 
 @Component({
   selector: 'chaotic-admin-mr-actions-page',
-  imports: [DatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule],
+  imports: [DatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule, Tooltip],
   template: `
     <div class="table-container">
       <p-table
@@ -81,7 +82,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
-                placeholder="Search MR, commit, user"
+                placeholder="Search MR, commit, user, reason"
               />
             </p-iconfield>
           </div>
@@ -92,6 +93,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <th style="min-width: 8rem">MR</th>
             <th style="min-width: 8rem">Action</th>
             <th style="min-width: 10rem">Commit</th>
+            <th style="min-width: 12rem">Reason</th>
             <th style="min-width: 10rem">User</th>
             <th style="min-width: 8rem">Created</th>
           </tr>
@@ -122,6 +124,15 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 >
                   <code class="text-sm">{{ shortSha(action.commitSha) }}</code>
                 </a>
+              } @else {
+                <span class="text-ctp-subtext0">—</span>
+              }
+            </td>
+            <td>
+              @if (action.reason) {
+                <span class="block max-w-64 truncate" [pTooltip]="action.reason" tooltipPosition="top">{{
+                  action.reason
+                }}</span>
               } @else {
                 <span class="text-ctp-subtext0">—</span>
               }

@@ -1,20 +1,6 @@
-import { BuildClassSuggesterService } from '../builder/build-class-suggester.service';
-import { Builder, Package, Repo, toPackageDto } from '../builder/builder.entity';
-import { MrAction as MrActionEntity } from '../gitlab/mr-action.entity';
-import { PipelineTrigger as PipelineTriggerEntity } from '../gitlab/pipeline-trigger.entity';
-import { TriggerType } from '../interfaces/repo-manager';
-import {
-  ArchlinuxPackage,
-  PackageBump as PackageBumpEntity,
-  PackageElfAnalysis,
-} from '../repo-manager/repo-manager.entity';
-import { SignalScanService } from '../repo-manager/scan';
-import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from '../repo-manager/signal';
-import { encryptAes, errorMessage } from '../utils/functions';
-import { downloadFile } from '../utils/download';
-import { paginate, resolvePagination } from '../utils/pagination';
 import {
   AdminPackageElfAnalysis,
+  type BuildClassSuggestion,
   MrAction,
   Package as PackageDto,
   PackageBump,
@@ -25,7 +11,6 @@ import {
   PKG_TYPE_ARCH,
   PKG_TYPE_CHAOTIC,
   PkgType,
-  type BuildClassSuggestion,
   type RescanJob,
 } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
@@ -38,6 +23,21 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ILike, In, Repository } from 'typeorm';
+import { BuildClassSuggesterService } from '../builder/build-class-suggester.service';
+import { Builder, Package, Repo, toPackageDto } from '../builder/builder.entity';
+import { MrAction as MrActionEntity } from '../gitlab/mr-action.entity';
+import { PipelineTrigger as PipelineTriggerEntity } from '../gitlab/pipeline-trigger.entity';
+import { TriggerType } from '../interfaces/repo-manager';
+import {
+  ArchlinuxPackage,
+  PackageBump as PackageBumpEntity,
+  PackageElfAnalysis,
+} from '../repo-manager/repo-manager.entity';
+import { SignalScanService } from '../repo-manager/scan';
+import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from '../repo-manager/signal';
+import { downloadFile } from '../utils/download';
+import { encryptAes, errorMessage } from '../utils/functions';
+import { paginate, resolvePagination } from '../utils/pagination';
 
 export interface RescanPackageInput {
   pkgname: string;
@@ -335,6 +335,11 @@ export class AdminService {
   async listMrActions(page?: number, perPage?: number, q?: string, action?: string): Promise<Paginated<MrAction>> {
     const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
     const conditions = this.buildAuditWhere(q, action !== undefined ? { action } : undefined, 'mergeRequestIid');
+    if (q) {
+      const extra = action !== undefined ? { action } : {};
+      conditions.push({ reason: ILike(`%${q}%`), ...extra });
+    }
+
     const [rows, total] = await this.mrActionRepository.findAndCount({
       where: conditions.length ? conditions : {},
       order: { createdAt: 'DESC' },
@@ -346,6 +351,7 @@ export class AdminService {
       mergeRequestIid: row.mergeRequestIid,
       commitSha: row.commitSha,
       action: row.action,
+      reason: row.reason ?? null,
       userId: row.userId,
       userName: row.userName,
       createdAt: row.createdAt.toISOString(),

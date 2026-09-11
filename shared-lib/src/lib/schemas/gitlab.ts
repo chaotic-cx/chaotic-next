@@ -16,9 +16,12 @@ export const approveMrBodySchema = z.strictObject({
 
 export type ApproveMrDto = z.infer<typeof approveMrBodySchema>;
 
+export const FLAG_REASON_MAX_LENGTH = 1000;
+
 export const flagMrBodySchema = z.strictObject({
   iid: z.number().int().min(1).describe('Merge request IID'),
   label: z.enum(['dangerous', 'hold']).describe('Label to apply'),
+  reason: z.string().trim().min(1).max(FLAG_REASON_MAX_LENGTH).describe('Reason for the flag'),
 });
 
 export type FlagMrDto = z.infer<typeof flagMrBodySchema>;

@@ -605,7 +605,25 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/flag',
-        payload: { iid: 1, label: 'bogus' },
+        payload: { iid: 1, label: 'bogus', reason: 'Nope' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects a missing reason (400)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/flag',
+        payload: { iid: 1, label: 'hold' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects an empty reason (400)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/gitlab/flag',
+        payload: { iid: 1, label: 'hold', reason: '   ' },
       });
       expect(res.statusCode).toBe(400);
     });
@@ -616,11 +634,16 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/gitlab/flag',
-        payload: { iid: 42, label: 'dangerous' },
+        payload: { iid: 42, label: 'dangerous', reason: 'Ships a suspicious binary' },
       });
 
       expect(res.statusCode).toBe(204);
-      expect(flagSpy).toHaveBeenCalledWith(42, 'dangerous', { userId: 'test-user', userName: 'Test User' });
+      expect(flagSpy).toHaveBeenCalledWith(
+        42,
+        'dangerous',
+        { userId: 'test-user', userName: 'Test User' },
+        'Ships a suspicious binary',
+      );
     });
   });
 

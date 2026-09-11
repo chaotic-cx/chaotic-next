@@ -135,7 +135,7 @@ describe('Repo write authorization via GitLab group membership (e2e)', () => {
   describe('POST /gitlab endpoints mutating chaotic-aur implicitly', () => {
     it.each([
       ['/gitlab/approve', { iid: 101, sha: '4a70b438f76d5c8f6f739ea110f8c071efe8067f' }],
-      ['/gitlab/flag', { iid: 101, label: 'hold' }],
+      ['/gitlab/flag', { iid: 101, label: 'hold', reason: 'waiting on upstream' }],
       ['/gitlab/mr-scan', {}],
       ['/gitlab/run-schedule', { scheduleId: 12 }],
       ['/gitlab/trigger', { operation: 'bump-packages', packages: 'linux' }],

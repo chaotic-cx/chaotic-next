@@ -572,6 +572,7 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
         mergeRequestIid: 1,
         action: 'approve',
         commitSha: 'abc123',
+        reason: null,
         ...ACTOR,
       });
       expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
@@ -719,6 +720,7 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
         mergeRequestIid: 1,
         action: 'approve',
         commitSha: 'abc123',
+        reason: null,
         ...ACTOR,
       });
     } finally {
@@ -1007,5 +1009,53 @@ describe('GitlabMergeRequestService.new-MR push notifications', () => {
 
     expect(broadcast).not.toHaveBeenCalled();
     expect(access.pendingNotificationIids.size).toBe(0);
+  });
+});
+
+describe('GitlabMergeRequestService.flagMergeRequest', () => {
+  it('labels, comments with the reason, and records the flag', async () => {
+    const { service } = createService();
+    const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review'] });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const mrActionInsert = vi.fn();
+    setApi(service, {
+      MergeRequests: { show, edit: mrEdit },
+      MergeRequestNotes: { create: noteCreate },
+    });
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
+
+    await service.flagMergeRequest(1, 'hold', ACTOR, 'Waiting on upstream fix');
+
+    expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'hold', stateEvent: undefined });
+    expect(noteCreate).toHaveBeenCalledWith(
+      'test-project-id',
+      1,
+      '**⏸️ Put on hold by** Test User.\n\n> Waiting on upstream fix',
+    );
+    expect(mrActionInsert).toHaveBeenCalledWith({
+      mergeRequestIid: 1,
+      action: 'hold',
+      commitSha: 'abc123',
+      reason: 'Waiting on upstream fix',
+      ...ACTOR,
+    });
+  });
+
+  it('closes the MR when flagged as dangerous', async () => {
+    const { service } = createService();
+    const show = vi.fn().mockResolvedValue({ iid: 2, sha: 'def456', labels: ['human-review'] });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    setApi(service, {
+      MergeRequests: { show, edit: mrEdit },
+      MergeRequestNotes: { create: noteCreate },
+    });
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
+
+    await service.flagMergeRequest(2, 'dangerous', ACTOR, 'Contains malware');
+
+    expect(mrEdit).toHaveBeenCalledWith('test-project-id', 2, { addLabels: 'dangerous', stateEvent: 'close' });
+    expect(noteCreate).toHaveBeenCalledWith('test-project-id', 2, expect.stringContaining('> Contains malware'));
   });
 });

@@ -385,6 +385,7 @@ export class GitlabPipelineService implements OnModuleInit {
   }
 
   private get api() {
+    this.gitlabApiService.assertApiReady();
     return this.gitlabApiService.api;
   }
 

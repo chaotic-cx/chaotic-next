@@ -75,6 +75,7 @@ export type { ChaoticEvent, NotificationPayload } from './lib/types/events';
 export {
   gitlabJobSchema,
   mrActionSchema,
+  flagReasonSchema,
   PipelineOperation,
   PIPELINE_OPERATIONS,
   PIPELINE_OPERATION_GITLAB_LABELS,
@@ -93,6 +94,7 @@ export type {
   GitlabJob,
   GitlabLogChunk,
   MrAction,
+  FlagReason,
   PipelineRequestReason,
   PipelineTriggerResult,
   PipelineScheduleOption,
@@ -217,6 +219,7 @@ export type { DaysQueryDto, RepoQueryDto } from './lib/schemas/common';
 export {
   aurScanBodySchema,
   approveMrBodySchema,
+  FLAG_REASON_MAX_LENGTH,
   flagMrBodySchema,
   bumpPackagesGitlabBodySchema,
   addPackagesBodySchema,

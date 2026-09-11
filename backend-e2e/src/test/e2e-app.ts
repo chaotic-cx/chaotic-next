@@ -102,7 +102,7 @@ export interface E2eResponse<T = unknown> {
 }
 
 export type MrActionSeed = Partial<
-  Pick<MrActionEntity, 'mergeRequestIid' | 'commitSha' | 'action' | 'userId' | 'userName'>
+  Pick<MrActionEntity, 'mergeRequestIid' | 'commitSha' | 'action' | 'reason' | 'userId' | 'userName'>
 >;
 
 export type PipelineTriggerSeed = Partial<

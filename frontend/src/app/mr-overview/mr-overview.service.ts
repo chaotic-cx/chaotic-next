@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
-import { MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
+import { FLAG_REASON_MAX_LENGTH, MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { lastValueFrom } from 'rxjs';
@@ -122,7 +122,9 @@ export class MrOverviewService {
     }
   }
 
-  async flag(mr: MergeRequestWithDiffs, label: MrFlagLabel): Promise<void> {
+  readonly flagReasonMaxLength = FLAG_REASON_MAX_LENGTH;
+
+  async flag(mr: MergeRequestWithDiffs, label: MrFlagLabel, reason: string): Promise<boolean> {
     const copy = FLAG_COPY[label];
     const loadingKey = `${mr.iid}:flag:${label}`;
     const loadingMap = new Map(this.loadingMap());
@@ -134,20 +136,29 @@ export class MrOverviewService {
         this.http.post<unknown>(`${this.backendUrl}/gitlab/flag`, {
           iid: mr.iid,
           label,
+          reason,
         }),
       );
       this.messageToastService.success(copy.success[0], copy.success[1]);
 
+      const flagReason = {
+        action: label,
+        text: reason,
+        userName: '',
+        createdAt: new Date().toISOString(),
+      } as const;
       this.mergeRequests.update((mrs) =>
         mrs.map((item) => {
           if (item.iid !== mr.iid) return item;
           const labels = item.labels.includes(label) ? [...item.labels] : [...item.labels, label];
-          return { ...item, labels };
+          return { ...item, labels, flagReason: { ...flagReason } };
         }),
       );
+      return true;
     } catch (error) {
       this.messageToastService.error(copy.error[0], backendErrorMessage(error, copy.error[1]));
       console.error(`Error flagging merge request as ${label}:`, error);
+      return false;
     } finally {
       const finalLoadingMap = new Map(this.loadingMap());
       finalLoadingMap.delete(loadingKey);

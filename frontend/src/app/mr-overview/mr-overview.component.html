@@ -26,27 +26,48 @@
     <p-tabpanels>
       <p-tabpanel value="0">
         <ng-container
-          *ngTemplateOutlet="tabBody; context: { $implicit: packageMrs(), empty: 'No open AUR update requests found.' }"
+          *ngTemplateOutlet="
+            tabBody;
+            context: {
+              $implicit: packageMrs(),
+              empty: 'No open AUR update requests found.',
+              hideHold: false,
+              hideDangerous: false,
+            }
+          "
         />
       </p-tabpanel>
       <p-tabpanel value="1">
         <ng-container
           *ngTemplateOutlet="
             tabBody;
-            context: { $implicit: nvcheckerMrs(), empty: 'No open package update requests found.' }
+            context: {
+              $implicit: nvcheckerMrs(),
+              empty: 'No open package update requests found.',
+              hideHold: false,
+              hideDangerous: true,
+            }
           "
         />
       </p-tabpanel>
       <p-tabpanel value="2">
         <ng-container
-          *ngTemplateOutlet="tabBody; context: { $implicit: holdMrs(), empty: 'No merge requests on hold.' }"
+          *ngTemplateOutlet="
+            tabBody;
+            context: {
+              $implicit: holdMrs(),
+              empty: 'No merge requests on hold.',
+              hideHold: true,
+              hideDangerous: false,
+            }
+          "
         />
       </p-tabpanel>
     </p-tabpanels>
   </p-tabs>
 </div>
 
-<ng-template #tabBody let-mrs let-empty="empty">
+<ng-template #tabBody let-mrs let-empty="empty" let-hideHold="hideHold" let-hideDangerous="hideDangerous">
   @if (mrOverviewService.isLoading()) {
     <div class="flex justify-center my-10">
       <p-progress-spinner ariaLabel="loading" />
@@ -60,11 +81,11 @@
       <i class="text-ctp-maroon pi pi-verified mt-5" style="font-size: 5rem"></i>
     </div>
   } @else {
-    <ng-container *ngTemplateOutlet="mrList; context: { mrs }" />
+    <ng-container *ngTemplateOutlet="mrList; context: { mrs, hideHold, hideDangerous }" />
   }
 </ng-template>
 
-<ng-template #mrList let-mrs="mrs">
+<ng-template #mrList let-mrs="mrs" let-hideHold="hideHold" let-hideDangerous="hideDangerous">
   @for (mr of mrs; track mr.id; let i = $index) {
     <p-panel
       class="mr-overview-panel"
@@ -79,9 +100,19 @@
     >
       <ng-template #header>
         <div class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <a class="min-w-0 cursor-pointer wrap-break-word text-ctp-mauve" [href]="mr.web_url">{{
-            mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
-          }}</a>
+          <div class="min-w-0">
+            <a class="cursor-pointer wrap-break-word text-ctp-mauve" [href]="mr.web_url">{{
+              mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
+            }}</a>
+            @if (flagReasonLine(mr); as reasonLine) {
+              <p class="wrap-break-word text-ctp-subtext text-xs">
+                {{ reasonLine }}
+                @if (mr.flagReason; as reason) {
+                  <span class="text-ctp-subtext0"> · {{ reason.createdAt | date: 'short' }}</span>
+                }
+              </p>
+            }
+          </div>
           <div class="mr-chips flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
             @if (packageLink(mr); as link) {
               <a [href]="link.url" [pTooltip]="link.tooltip" target="_blank" rel="noopener" tooltipPosition="top">
@@ -278,7 +309,11 @@
           @let dangerous = actionButton(mr, 'dangerous');
           @let hold = actionButton(mr, 'hold');
 
-          <div class="mt-4 grid grid-cols-3 place-items-center px-12 pb-4 md:hidden">
+          <div
+            class="mt-4 grid place-items-center px-12 pb-4 md:hidden"
+            [class.grid-cols-3]="!hideHold && !hideDangerous"
+            [class.grid-cols-2]="hideHold || hideDangerous"
+          >
             <p-button
               [disabled]="approve.disabled"
               [loading]="approve.loading"
@@ -292,35 +327,43 @@
               styleClass="mr-btn-icon"
               tooltipPosition="top"
             />
-            <p-button
-              [disabled]="dangerous.disabled"
-              [loading]="dangerous.loading"
-              [icon]="dangerous.icon"
-              [attr.aria-label]="dangerous.label"
-              [pTooltip]="dangerous.tooltip"
-              (onClick)="mrOverviewService.flag(mr, 'dangerous')"
-              severity="danger"
-              size="small"
-              variant="outlined"
-              styleClass="mr-btn-icon"
-              tooltipPosition="top"
-            />
-            <p-button
-              [disabled]="hold.disabled"
-              [loading]="hold.loading"
-              [icon]="hold.icon"
-              [attr.aria-label]="hold.label"
-              [pTooltip]="hold.tooltip"
-              (onClick)="mrOverviewService.flag(mr, 'hold')"
-              severity="warn"
-              size="small"
-              variant="outlined"
-              styleClass="mr-btn-icon"
-              tooltipPosition="top"
-            />
+            @if (!hideDangerous) {
+              <p-button
+                [disabled]="dangerous.disabled"
+                [loading]="dangerous.loading"
+                [icon]="dangerous.icon"
+                [attr.aria-label]="dangerous.label"
+                [pTooltip]="dangerous.tooltip"
+                (onClick)="openFlagDialog(mr, 'dangerous')"
+                severity="danger"
+                size="small"
+                variant="outlined"
+                styleClass="mr-btn-icon"
+                tooltipPosition="top"
+              />
+            }
+            @if (!hideHold) {
+              <p-button
+                [disabled]="hold.disabled"
+                [loading]="hold.loading"
+                [icon]="hold.icon"
+                [attr.aria-label]="hold.label"
+                [pTooltip]="hold.tooltip"
+                (onClick)="openFlagDialog(mr, 'hold')"
+                severity="warn"
+                size="small"
+                variant="outlined"
+                styleClass="mr-btn-icon"
+                tooltipPosition="top"
+              />
+            }
           </div>
 
-          <div class="hidden pb-4 md:grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-10 md:justify-self-center">
+          <div
+            class="hidden pb-4 md:grid grid-cols-1 gap-2 md:gap-10 md:justify-self-center"
+            [class.md:grid-cols-3]="!hideHold && !hideDangerous"
+            [class.md:grid-cols-2]="hideHold || hideDangerous"
+          >
             <div class="w-full min-w-0">
               <p-button
                 [disabled]="approve.disabled"
@@ -337,37 +380,41 @@
               />
             </div>
 
-            <div class="w-full min-w-0">
-              <p-button
-                [disabled]="dangerous.disabled"
-                [label]="dangerous.label"
-                [loading]="dangerous.loading"
-                [icon]="dangerous.icon"
-                [pTooltip]="dangerous.tooltip"
-                (onClick)="mrOverviewService.flag(mr, 'dangerous')"
-                severity="danger"
-                size="small"
-                variant="outlined"
-                styleClass="w-50 mr-btn-danger"
-                tooltipPosition="top"
-              />
-            </div>
+            @if (!hideDangerous) {
+              <div class="w-full min-w-0">
+                <p-button
+                  [disabled]="dangerous.disabled"
+                  [label]="dangerous.label"
+                  [loading]="dangerous.loading"
+                  [icon]="dangerous.icon"
+                  [pTooltip]="dangerous.tooltip"
+                  (onClick)="openFlagDialog(mr, 'dangerous')"
+                  severity="danger"
+                  size="small"
+                  variant="outlined"
+                  styleClass="w-50 mr-btn-danger"
+                  tooltipPosition="top"
+                />
+              </div>
+            }
 
-            <div class="w-full min-w-0">
-              <p-button
-                [disabled]="hold.disabled"
-                [label]="hold.label"
-                [loading]="hold.loading"
-                [icon]="hold.icon"
-                [pTooltip]="hold.tooltip"
-                (onClick)="mrOverviewService.flag(mr, 'hold')"
-                severity="warn"
-                size="small"
-                variant="outlined"
-                styleClass="w-50 mr-btn-warn"
-                tooltipPosition="top"
-              />
-            </div>
+            @if (!hideHold) {
+              <div class="w-full min-w-0">
+                <p-button
+                  [disabled]="hold.disabled"
+                  [label]="hold.label"
+                  [loading]="hold.loading"
+                  [icon]="hold.icon"
+                  [pTooltip]="hold.tooltip"
+                  (onClick)="openFlagDialog(mr, 'hold')"
+                  severity="warn"
+                  size="small"
+                  variant="outlined"
+                  styleClass="w-50 mr-btn-warn"
+                  tooltipPosition="top"
+                />
+              </div>
+            }
           </div>
         } @else {
           <p class="text-ctp-subtext text-center text-sm pb-2">
@@ -378,3 +425,52 @@
     </p-panel>
   }
 </ng-template>
+
+<p-dialog
+  [visible]="flagDialog() !== null"
+  [modal]="true"
+  [appendTo]="'body'"
+  [style]="{ 'width': '32rem', 'max-width': '94vw' }"
+  [header]="flagDialogTitle()"
+  (onHide)="closeFlagDialog()"
+>
+  @if (flagDialog(); as pending) {
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1">
+        <span class="text-ctp-text text-sm">Reason (required, visible in the On Hold tab)</span>
+        <textarea
+          [maxlength]="flagReasonMaxLength"
+          [ngModel]="flagReason()"
+          (ngModelChange)="flagReason.set($event)"
+          pTextarea
+          rows="4"
+          placeholder="Why is this update held back or dangerous?"
+        ></textarea>
+        <span class="text-ctp-subtext0 text-xs self-end">{{ flagReason().length }}/{{ flagReasonMaxLength }}</span>
+      </label>
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <p-button
+          (onClick)="closeFlagDialog()"
+          type="button"
+          severity="secondary"
+          text
+          label="Cancel"
+          size="small"
+          styleClass="w-full sm:w-auto"
+        />
+        <p-button
+          [disabled]="
+            !flagReasonValid() || isLoading(pending.mr, pending.label === 'dangerous' ? 'flag:dangerous' : 'flag:hold')
+          "
+          [loading]="isLoading(pending.mr, pending.label === 'dangerous' ? 'flag:dangerous' : 'flag:hold')"
+          [icon]="pending.label === 'dangerous' ? 'pi pi-exclamation-triangle' : 'pi pi-pause'"
+          [severity]="pending.label === 'dangerous' ? 'danger' : 'warn'"
+          [label]="pending.label === 'dangerous' ? 'Flag as dangerous' : 'Put on hold'"
+          (onClick)="confirmFlag()"
+          size="small"
+          styleClass="w-full sm:w-auto"
+        />
+      </div>
+    </div>
+  }
+</p-dialog>

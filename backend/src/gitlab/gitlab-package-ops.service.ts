@@ -280,6 +280,7 @@ export class GitlabPackageOpsService {
   }
 
   private get api() {
+    this.gitlabApiService.assertApiReady();
     return this.gitlabApiService.api;
   }
 }

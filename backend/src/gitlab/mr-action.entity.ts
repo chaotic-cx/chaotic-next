@@ -18,6 +18,9 @@ export class MrAction {
   @Column({ type: 'varchar' })
   action!: MrActionType;
 
+  @Column({ type: 'varchar', nullable: true })
+  reason!: string | null;
+
   @Column({ type: 'varchar' })
   userId!: string;
 

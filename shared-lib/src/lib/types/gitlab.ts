@@ -33,11 +33,20 @@ export const mrActionSchema = z.object({
   mergeRequestIid: z.number().describe('Merge request IID'),
   commitSha: z.string().nullable().describe('Commit hash the action was performed on'),
   action: z.string().describe('Action performed on the merge request'),
+  reason: z.string().nullable().describe('Reason given for hold/dangerous flags'),
   userId: z.string().describe('ID of the user who performed the action'),
   userName: z.string().describe('Name of the user who performed the action'),
   createdAt: z.string().describe('When the action was performed (ISO 8601)'),
 });
 export type MrAction = z.infer<typeof mrActionSchema>;
+
+export const flagReasonSchema = z.object({
+  action: z.enum(['hold', 'dangerous']).describe('Flag the reason belongs to'),
+  text: z.string().describe('Reason text'),
+  userName: z.string().describe('Name of the user who flagged the MR'),
+  createdAt: z.string().describe('When the flag was recorded (ISO 8601)'),
+});
+export type FlagReason = z.infer<typeof flagReasonSchema>;
 
 export enum PipelineOperation {
   NONE = 'none',
@@ -173,6 +182,7 @@ export type MergeRequestWithDiffs = Pick<
 > & {
   diffs: MergeRequestDiffSchema[];
   labels: string[];
+  flagReason?: z.infer<typeof flagReasonSchema> | null;
   scanFindings?: z.infer<typeof diffScanFindingSchema>[];
   vtReports?: z.infer<typeof vtIndicatorReportSchema>[];
   maintainers?: z.infer<typeof aurMaintainerInfoSchema>[];

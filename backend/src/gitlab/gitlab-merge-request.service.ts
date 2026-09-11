@@ -1,5 +1,6 @@
 import {
   type DiffScanFinding,
+  type FlagReason,
   type MergeRequestWithDiffs,
   NotificationPayload,
   totalEngines,
@@ -14,7 +15,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { MoreThan, Repository } from 'typeorm';
+import { In, MoreThan, Repository } from 'typeorm';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { DiffScanService, type DiffScanVerdict, type MrAutoFlagLabel } from '../diff-scan/diff-scan.service';
 import { extractIndicators } from '../diff-scan/indicators';
@@ -120,6 +121,7 @@ function mrStateKey(mr: MergeRequestWithDiffs): string {
     mr.detailed_merge_status,
     mr.sha,
     mr.labels,
+    mr.flagReason,
     mr.scanFindings,
     mr.vtReports,
     mr.maintainers,
@@ -406,6 +408,8 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         return toMergeRequestWithDiffs(mr, diffs, scanFindings, previousMr);
       }),
     );
+
+    await this.attachFlagReasons(data);
 
     this.lastKnownMrs = data;
     await this.cacheManager.set(this.CACHE_KEY_MRS, data, CACHE_MRS_TTL);
@@ -1009,7 +1013,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     return mr;
   }
 
-  async flagMergeRequest(iid: number, label: MrActionType, actor: MrActor): Promise<void> {
+  async flagMergeRequest(iid: number, label: MrActionType, actor: MrActor, reason: string): Promise<void> {
     const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
 
@@ -1021,14 +1025,16 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     }
 
     const comment = label === 'dangerous' ? '🚨 Flagged as dangerous by' : '⏸️ Put on hold by';
-    await this.postActorComment(iid, comment, actor);
-    await this.recordMrAction(iid, label, mr.sha ?? null, actor);
+    await this.postActorComment(iid, comment, actor, reason);
+    await this.recordMrAction(iid, label, mr.sha ?? null, actor, reason);
     await this.cacheManager.del(this.CACHE_KEY_MRS);
     void this.refreshOpenMergeRequests();
   }
 
-  private async postActorComment(iid: number, prefix: string, actor: MrActor): Promise<void> {
-    await this.api.MergeRequestNotes.create(this.chaoticId, iid, `**${prefix}** ${actor.userName}.`);
+  private async postActorComment(iid: number, prefix: string, actor: MrActor, reason?: string): Promise<void> {
+    const body =
+      reason === undefined ? `**${prefix}** ${actor.userName}.` : `**${prefix}** ${actor.userName}.\n\n> ${reason}`;
+    await this.api.MergeRequestNotes.create(this.chaoticId, iid, body);
   }
 
   private async recordMrAction(
@@ -1036,11 +1042,51 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     action: MrActionType,
     commitSha: string | null,
     actor: MrActor,
+    reason?: string | null,
   ): Promise<void> {
-    await this.mrActionRepository.insert({ mergeRequestIid: iid, action, commitSha, ...actor });
+    await this.mrActionRepository.insert({
+      mergeRequestIid: iid,
+      action,
+      commitSha,
+      reason: reason ?? null,
+      ...actor,
+    });
+  }
+
+  private async attachFlagReasons(mrs: MergeRequestWithDiffs[]): Promise<void> {
+    if (mrs.length === 0) return;
+
+    let rows: MrAction[];
+    try {
+      rows =
+        (await this.mrActionRepository.find({
+          where: { mergeRequestIid: In(mrs.map((mr) => mr.iid)), action: In(['hold', 'dangerous']) },
+          order: { createdAt: 'DESC' },
+        })) ?? [];
+    } catch (err) {
+      this.pino.debug({ err }, 'Could not load flag reasons, serving MRs without them');
+      return;
+    }
+
+    const latest = new Map<number, FlagReason>();
+    for (const row of rows) {
+      if (row.reason === null || latest.has(row.mergeRequestIid)) continue;
+      latest.set(row.mergeRequestIid, {
+        action: row.action as FlagReason['action'],
+        text: row.reason,
+        userName: row.userName,
+        createdAt: row.createdAt.toISOString(),
+      });
+    }
+
+    for (const mr of mrs) {
+      const reason = latest.get(mr.iid);
+      if (reason !== undefined) mr.flagReason = reason;
+    }
   }
 
   private get api() {
+    this.gitlabApiService.assertApiReady();
     return this.gitlabApiService.api;
   }
 
