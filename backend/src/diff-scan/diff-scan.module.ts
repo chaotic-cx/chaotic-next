@@ -5,6 +5,7 @@ import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { AurAuthService } from './aur-auth.service';
 import { AurMaintainerInfoEntity } from './aur-maintainer-info.entity';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
+import { AurMirrorService } from './aur-mirror.service';
 import { AurScanMetric } from './aur-scan-metric.entity';
 import { AurScanService } from './aur-scan.service';
 import { DiffScanService } from './diff-scan.service';
@@ -31,7 +32,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       Package,
     ]),
   ],
-  providers: [AurScanService, DiffScanService, VirustotalService, AurAuthService, RuleDataService, LlmScanService],
-  exports: [AurScanService, DiffScanService, VirustotalService, AurAuthService, LlmScanService],
+  providers: [
+    AurScanService,
+    AurMirrorService,
+    DiffScanService,
+    VirustotalService,
+    AurAuthService,
+    RuleDataService,
+    LlmScanService,
+  ],
+  exports: [AurScanService, AurMirrorService, DiffScanService, VirustotalService, AurAuthService, LlmScanService],
 })
 export class DiffScanModule {}

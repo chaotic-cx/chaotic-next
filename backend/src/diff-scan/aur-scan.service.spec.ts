@@ -229,6 +229,35 @@ describe('AurScanService', () => {
     expect(scan.skippedBinaryFiles).toEqual(['blob.tar.xz']);
   });
 
+  it('reads repo files from the local mirror and skips cgit', async () => {
+    const { fetchMock } = makeService();
+    const mirror = {
+      readTextFile: vi.fn(async () => ({ content: PKGBUILD })),
+      readPackageFiles: vi.fn(async () => ({
+        files: [
+          { name: 'PKGBUILD', content: PKGBUILD },
+          { name: '.SRCINFO', content: 'pkgbase = evilpkg\n' },
+        ],
+        skippedBinaryFiles: [] as string[],
+      })),
+    };
+    const service = new AurScanService(
+      new DiffScanService(pinoStub),
+      { enabled: false } as never,
+      { getMaintainerRegistrationDate: vi.fn(async () => null) } as never,
+      pinoStub,
+      undefined,
+      undefined,
+      mirror as never,
+    );
+
+    const scan = await service.startScan('evilpkg');
+
+    expect(scan.status).toBe('done');
+    expect(scan.scannedFiles).toEqual(['PKGBUILD', '.SRCINFO']);
+    expect(fetchMock.mock.calls.some(([url]) => url.includes('/cgit/'))).toBe(false);
+  });
+
   it('fails with a speaking error for unknown packages', async () => {
     vi.stubGlobal(
       'fetch',

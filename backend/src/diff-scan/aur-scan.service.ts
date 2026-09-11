@@ -21,6 +21,7 @@ import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
 import { commentThreatFinding, evaluateCommentThreats, parseAurComments } from './aur-comments';
 import { AurMaintainerSnapshot } from './aur-maintainer-snapshot.entity';
+import { AurMirrorService } from './aur-mirror.service';
 import { AurScanMetric, type AurScanSource } from './aur-scan-metric.entity';
 import { AurResponseCache } from './aur-response-cache';
 import { DiffScanService } from './diff-scan.service';
@@ -78,6 +79,7 @@ export class AurScanService {
     @Optional()
     @InjectRepository(AurScanMetric)
     private readonly metricRepository?: Repository<AurScanMetric>,
+    @Optional() private readonly aurMirror?: AurMirrorService,
   ) {}
 
   getScan(packageName: string): AurPackageScan | null {
@@ -365,6 +367,11 @@ export class AurScanService {
     const info = await this.fetchInfo(packageName);
     if (!info?.PackageBase) throw new NotFoundException(`No AUR package named "${packageName}"`);
 
+    const mirrored = await this.aurMirror?.readTextFile(info.PackageBase, 'PKGBUILD');
+    if (mirrored && 'content' in mirrored) {
+      return { info, packageBase: info.PackageBase, text: mirrored.content };
+    }
+
     const pkgbuild = await this.fetchAur(`${AUR_FILE_URL}/PKGBUILD?h=${encodeURIComponent(info.PackageBase)}`);
     if (pkgbuild.status >= HTTP_SERVER_ERROR_MIN) {
       throw new Error(`AUR web interface returned ${pkgbuild.status} for the PKGBUILD of ${packageName}`);
@@ -436,6 +443,11 @@ export class AurScanService {
     files: { name: string; content: string }[];
     skippedBinaryFiles: string[];
   }> {
+    const mirrored = await this.aurMirror?.readPackageFiles(packageBase);
+    if (mirrored) {
+      this.pino.debug({ packageBase, fileCount: mirrored.files.length }, 'Read repo files from local mirror');
+      return mirrored;
+    }
     const paths = (await this.listRepoPaths(packageBase)).slice(0, MAX_SCANNED_FILES);
     const fetched = await Promise.all(paths.map((path) => this.fetchRepoFile(path, packageBase)));
 

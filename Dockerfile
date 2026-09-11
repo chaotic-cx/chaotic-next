@@ -36,7 +36,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # hadolint ignore=DL3018
-RUN apk add --no-cache autossh curl zstd bash tar binutils libarchive-tools file
+RUN apk add --no-cache autossh curl zstd bash tar binutils libarchive-tools file git
 
 # The entry point pipes console output through pino-pretty, since we don't have anything to consume raw JSON logs.
 RUN npm install -g pino-pretty@13.1.3
