@@ -47,6 +47,8 @@ export const PERSISTENCE_RULES: Rule[] = [
     severity: 'warning',
     description:
       'Adds or ships a new .install or .hook file. These scriptlets run as root on every user machine during package install/upgrade and were the injection point of the 2026 AUR malware campaign.',
+    informational: true,
+    countsTowardMalwareScan: false,
     check(change) {
       if (change.deleted_file || !INSTALL_SCRIPT_PATTERN.test(change.new_path)) return null;
       // Modifications of an existing scriptlet are CAUR-INSTALL-CHANGED's job;
@@ -113,6 +115,8 @@ export const PERSISTENCE_RULES: Rule[] = [
     pattern: /\bsystemctl\b[^\n]*\b(?:enable|start)\b/,
     scopes: ['code'],
     skipQuoted: true,
+    informational: true,
+    countsTowardMalwareScan: false,
   }),
   regexRule({
     id: 'CAUR-DAEMON-RELOAD',
@@ -123,6 +127,8 @@ export const PERSISTENCE_RULES: Rule[] = [
     pattern: /\bsystemctl\b[^\n]*\bdaemon-reload\b/,
     scopes: ['code'],
     skipQuoted: true,
+    informational: true,
+    countsTowardMalwareScan: false,
   }),
   regexRule({
     id: 'PERSIST-002',

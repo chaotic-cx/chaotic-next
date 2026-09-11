@@ -58,20 +58,25 @@ describe('campaign rules', () => {
   });
 
   it('downgrades lockfile-pinned and build-staging invocations to warnings', () => {
-    const frozen = ruleById(CAMPAIGN_RULES, 'NPM-001').check(
+    expect(ruleById(CAMPAIGN_RULES, 'NPM-001-INFO').informational).toBe(true);
+    const frozen = ruleById(CAMPAIGN_RULES, 'NPM-001-INFO').check(
       makeChange(addedOnlyDiff(['yarn install --frozen-lockfile --network-timeout 120000'])),
     );
-    expect(frozen?.severity).toBe('warning');
+    expect(frozen).not.toBeNull();
 
-    const staging = ruleById(CAMPAIGN_RULES, 'NPM-001').check(
+    const staging = ruleById(CAMPAIGN_RULES, 'NPM-001-INFO').check(
       makeChange(addedOnlyDiff(['npm install -g --prefix "$pkgdir/usr" $_npmname@$pkgver'])),
     );
-    expect(staging?.severity).toBe('warning');
+    expect(staging).not.toBeNull();
 
-    const srcdir = ruleById(CAMPAIGN_RULES, 'NPM-001').check(
+    const srcdir = ruleById(CAMPAIGN_RULES, 'NPM-001-INFO').check(
       makeChange(addedOnlyDiff(['npm install --cache "${srcdir}/npm-cache" --include dev'])),
     );
-    expect(srcdir?.severity).toBe('warning');
+    expect(srcdir).not.toBeNull();
+    // Staging/pinned must not be flagged as critical NPM-001.
+    expect(
+      ruleById(CAMPAIGN_RULES, 'NPM-001').check(makeChange(addedOnlyDiff(['npm install -g --prefix "$pkgdir/usr" x']))),
+    ).toBeNull();
   });
 
   it('flags swapped maintainer emails but not legitimate promotions', () => {

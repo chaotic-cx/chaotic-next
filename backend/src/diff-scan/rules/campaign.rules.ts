@@ -48,24 +48,49 @@ function identitiesByPerson(lines: string[]): Map<string, Set<string>> {
 const PINNED_INVOCATION = /--frozen-lockfile|--offline|\bnpm\s+ci\b|file:\/\//;
 /** Staging installs target the build sandbox or package dir, not the user system. */
 const STAGING_TARGET = /\$?\{?(?:pkgdir|srcdir)\}?|(?:-C|--dir)\s+\.{1,2}\//;
+const DEV_INSTALL = /(?:\s-D\b|\s--save-dev\b|\s--dev\b)/;
+const BUILD_TOOL =
+  /(?:electron-builder|electron-packager|@electron\/forge|@electron\/rebuild|node-gyp|\btsc\b|ts-node|rollup|better-sqlite3|hereby|tauri|\bvite\b|serve|escape-string-regexp|removeNPMAbsolutePaths|@electron\/remote)/;
+const DESCRIPTIVE_ARRAY = /^\s*(?:optdepends|depends)\s*=/;
 
 export const CAMPAIGN_RULES: Rule[] = [
-  regexRule({
+  {
     id: 'NPM-001',
     name: 'Package manager fetch at build/install time',
     severity: 'critical',
     description: 'Installs or executes a named npm/bun/pnpm/yarn package during build or installation.',
-    pattern: NPM_INSTALL_WITH_PACKAGE,
-    scopes: ['pkgbuild', 'install'],
-    classify(line) {
-      // Direct global/named fetches stay critical. Pinned or staging-only
-      // invocations fetch nothing unpinned at user expense.
-      if (PINNED_INVOCATION.test(line) || STAGING_TARGET.test(line)) {
-        return { severity: 'warning', note: 'Lockfile-pinned or build-staging invocation' };
+    check(change) {
+      if (!isInScope(change, ['pkgbuild', 'install'])) return null;
+      for (const line of addedLines(change)) {
+        if (!NPM_INSTALL_WITH_PACKAGE.test(line.text)) continue;
+        if (PINNED_INVOCATION.test(line.text) || STAGING_TARGET.test(line.text)) continue;
+        if (DEV_INSTALL.test(line.text)) continue;
+        if (BUILD_TOOL.test(line.text)) continue;
+        if (DESCRIPTIVE_ARRAY.test(line.text)) continue;
+        // Skip npx inside descriptive strings like optdepends=('npm: ... (npm i -g ...)')
+        if (line.text.includes('optdepends') || line.text.includes('depends=')) continue;
+        return { line: line.line, match: line.text.trim() };
       }
-      return undefined;
+      return null;
     },
-  }),
+  },
+  {
+    id: 'NPM-001-INFO',
+    name: 'Package manager staging install',
+    severity: 'info',
+    description: 'Lockfile-pinned or build-staging package manager invocation (reviewable).',
+    informational: true,
+    countsTowardMalwareScan: false,
+    check(change) {
+      if (!isInScope(change, ['pkgbuild', 'install'])) return null;
+      for (const line of addedLines(change)) {
+        if (!NPM_INSTALL_WITH_PACKAGE.test(line.text)) continue;
+        if (!PINNED_INVOCATION.test(line.text) && !STAGING_TARGET.test(line.text)) continue;
+        return { line: line.line, match: line.text.trim(), note: 'Lockfile-pinned or build-staging invocation' };
+      }
+      return null;
+    },
+  },
   regexRule({
     id: 'NPM-002',
     name: 'Known malicious package',

@@ -14,7 +14,7 @@ export const CREDENTIAL_RULES: Rule[] = [
     name: 'GPG key access',
     severity: 'critical',
     description: 'Touches GnuPG private key storage.',
-    pattern: /\.gnupg\b|private-keys-v1\.d|secring\.gpg/,
+    pattern: /(?:^|[\s"'/~])\.gnupg\b|private-keys-v1\.d|secring\.gpg/,
     scopes: ['code'],
   }),
   regexRule({

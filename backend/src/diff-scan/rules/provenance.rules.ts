@@ -94,6 +94,8 @@ const CHECKSUM_RULE: Rule = {
   severity: 'info',
   description:
     'Downloaded sources are not fully verified by a strong checksum. Unverified sources let upstream changes or hijacked downloads reach the build silently.',
+  informational: true,
+  countsTowardMalwareScan: false,
   runsOn: ['full-file'],
   check(change) {
     const parsed = parsePkgbuild(change);
@@ -170,6 +172,8 @@ export const PROVENANCE_RULES: Rule[] = [
     severity: 'warning',
     description:
       'Clones a git repository from a host outside the well-known forges and upstreams. Verify the repository actually belongs to the package.',
+    informational: true,
+    countsTowardMalwareScan: false,
     check(change) {
       return firstEntry(change, (entry) => entry.isVcs && entry.host !== null && !isReputable(entry.host));
     },
@@ -180,6 +184,8 @@ export const PROVENANCE_RULES: Rule[] = [
     severity: 'warning',
     description:
       'Downloads from object storage or a file-drop host whose names are attacker-choosable, so the URL proves nothing about provenance.',
+    informational: true,
+    countsTowardMalwareScan: false,
     check(change) {
       return firstEntry(change, (entry) => entry.host !== null && isGenericFileHost(entry.host));
     },
@@ -190,6 +196,8 @@ export const PROVENANCE_RULES: Rule[] = [
     severity: 'warning',
     description:
       'Downloads from a host that matches neither the package url= domain nor a reputable forge. The CHAOS-RAT campaign smuggled payloads this way, disguised as patches.',
+    informational: true,
+    countsTowardMalwareScan: false,
     check(change) {
       const parsed = parsePkgbuild(change);
       if (!parsed?.urlHost) return null;
@@ -212,6 +220,8 @@ export const PROVENANCE_RULES: Rule[] = [
     severity: 'warning',
     description:
       'A source entry still contains unresolved variables after PKGBUILD parsing, so its final download host can be neither determined nor reviewed. Verify where the download actually comes from.',
+    informational: true,
+    countsTowardMalwareScan: false,
     check(change) {
       const parsed = parsePkgbuild(change);
       const entry = parsed?.entries.find(

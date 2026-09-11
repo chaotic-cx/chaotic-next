@@ -19,9 +19,12 @@ export const OBFUSCATION_RULES: Rule[] = [
     name: 'Eval of dynamic strings',
     severity: 'warning',
     description: 'Evaluates dynamically built strings. Static review cannot follow these strings.',
-    // `eval "depends+=(…)"` is a packaging idiom for option-dependent arrays and
-    // `--eval` flags belong to interpreters, so neither counts as dynamic eval.
-    pattern: /(?<![-\w])eval\b(?!\s*"?\s*(?:make|check|opt)?depends\+?=)/,
+    // `eval "depends+=(…)"` is a packaging idiom for option-dependent arrays,
+    // `eval "cat <<EOF"` and `eval "package_*"` are packaging helpers,
+    // `--eval` flags belong to interpreters, so none counts as dynamic eval.
+    pattern: /(?<![-\w])eval\b(?!\s*"?\s*(?:make|check|opt)?depends\+?=)(?!\s*"?\s*cat\s+<<)(?!\s*"?\s*package_)/,
+    informational: true,
+    countsTowardMalwareScan: false,
   }),
   regexRule({
     id: 'OBF-003',

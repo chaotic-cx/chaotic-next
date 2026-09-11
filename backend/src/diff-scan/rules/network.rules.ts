@@ -77,6 +77,8 @@ export const NETWORK_RULES: Rule<unknown>[] = [
       transform: (raw) => hostsFromList(dnsmasqHosts(raw)),
       cacheKey: 'urlshortener-blocklist',
     },
+    informational: true,
+    countsTowardMalwareScan: false,
   }),
   listRule({
     id: 'URL-003',
@@ -89,6 +91,8 @@ export const NETWORK_RULES: Rule<unknown>[] = [
       transform: (raw) => hostsFromList(dnsmasqHosts(raw)),
       cacheKey: 'dyndns-blocklist',
     },
+    informational: true,
+    countsTowardMalwareScan: false,
   }),
   regexRule({
     id: 'URL-004',
@@ -180,6 +184,8 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     severity: 'warning',
     description: 'Overwrites PATH, which can shadow system binaries like sudo with malicious copies.',
     pattern: /^\s*(?:export\s+)?PATH=(?!.*\$\{?pkgdir}?)/,
+    informational: true,
+    countsTowardMalwareScan: false,
   }),
   regexRule({
     id: 'HIDDEN-002',
@@ -203,6 +209,8 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     name: 'Unencrypted HTTP URL',
     severity: 'info',
     description: 'Downloads a package source over plain HTTP. An attacker can change the artifact on the way.',
+    informational: true,
+    countsTowardMalwareScan: false,
     // Only the source= entries are judged; a plain-http url= homepage says
     // nothing about how the build artifacts are fetched.
     check(change) {

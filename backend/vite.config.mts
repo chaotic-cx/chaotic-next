@@ -4,6 +4,9 @@ import { swcPlugin } from '../tools/vitest/swc-plugin.mts';
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
+  cacheDir: '../node_modules/.vite/backend',
+  // @ts-expect-error Vite 8 fsModuleCache
+  experimental: { fsModuleCache: true },
   plugins: [swcPlugin()],
   resolve: {
     alias: {

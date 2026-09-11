@@ -142,6 +142,8 @@ export interface RegexRuleOptions<T = void> {
   classify?: (lineText: string) => Pick<RuleHit, 'severity' | 'note'> | undefined;
   /** Lazily loads a remote data source and rebuilds `pattern` from it. */
   data?: RegexRuleDataOptions<T>;
+  informational?: boolean;
+  countsTowardMalwareScan?: boolean;
 }
 
 export function regexRule<T>(options: RegexRuleOptions<T>): Rule<T> {
@@ -151,6 +153,8 @@ export function regexRule<T>(options: RegexRuleOptions<T>): Rule<T> {
     name: options.name,
     severity: options.severity,
     description: options.description,
+    informational: options.informational,
+    countsTowardMalwareScan: options.countsTowardMalwareScan,
     check(change) {
       if (!isInScope(change, options.scopes ?? ['any'])) return null;
       for (const line of addedLines(change)) {
@@ -204,6 +208,8 @@ export interface ListRuleOptions {
   rawOnly?: boolean;
   /** Lazily loads a remote list and merges its entries into `list`. */
   data?: ListRuleDataOptions;
+  informational?: boolean;
+  countsTowardMalwareScan?: boolean;
 }
 
 // Split a large list into several smaller parts to keep the regex small
@@ -222,6 +228,8 @@ export function listRule(options: ListRuleOptions): Rule<string[]> {
     name: options.name,
     severity: options.severity,
     description: options.description,
+    informational: options.informational,
+    countsTowardMalwareScan: options.countsTowardMalwareScan,
     check(change) {
       if (!isInScope(change, options.scopes ?? ['any'])) return null;
       for (const line of addedLines(change)) {

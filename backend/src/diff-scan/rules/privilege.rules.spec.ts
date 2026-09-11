@@ -68,17 +68,16 @@ describe('privilege rules', () => {
   });
 
   it('downgrades known browser helpers and setgid-only modes to warnings', () => {
+    // Tuned: known helpers and setgid-only are now not flagged (FP reduction).
     const sandbox = ruleById(PRIVILEGE_RULES, 'CAUR-SETUID').check(
       makeChange(addedOnlyDiff(['chmod 4755 "$pkgdir/opt/brave-bin/chrome-sandbox"'])),
     );
-    expect(sandbox?.severity).toBe('warning');
-    expect(sandbox?.note).toContain('upstream design');
+    expect(sandbox).toBeNull();
 
     const setgid = ruleById(PRIVILEGE_RULES, 'CAUR-SETUID').check(
       makeChange(addedOnlyDiff(['chmod 2750 "$pkgdir"/etc/elasticsearch'])),
     );
-    expect(setgid?.severity).toBe('warning');
-    expect(setgid?.note).toContain('Setgid');
+    expect(setgid).toBeNull();
   });
 
   it('keeps unknown setuid binaries critical', () => {

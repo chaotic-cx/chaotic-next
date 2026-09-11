@@ -10,6 +10,9 @@ const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.met
 
 export default defineConfig({
   root: repoRoot,
+  cacheDir: '../node_modules/.vite/backend-e2e',
+  // @ts-expect-error Vite 8 fsModuleCache
+  experimental: { fsModuleCache: true },
   define: { __VERSION__: JSON.stringify(appVersion.version) },
   plugins: [swcPlugin()],
   resolve: {
