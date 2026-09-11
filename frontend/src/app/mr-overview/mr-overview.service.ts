@@ -144,7 +144,7 @@ export class MrOverviewService {
       const flagReason = {
         action: label,
         text: reason,
-        userName: '',
+        userName: mr.flagReason?.userName ?? '',
         createdAt: new Date().toISOString(),
       } as const;
       this.mergeRequests.update((mrs) =>

@@ -346,6 +346,13 @@ export class MrOverviewComponent implements OnInit {
     this.flagReason.set('');
   }
 
+  protected editFlagReason(mr: MergeRequestWithDiffs): void {
+    const reason = mr.flagReason;
+    if (!reason || this.isLoading(mr, 'any')) return;
+    this.flagReason.set(reason.text);
+    this.flagDialog.set({ mr, label: reason.action });
+  }
+
   protected flagDialogTitle(): string {
     const pending = this.flagDialog();
     if (!pending) return '';

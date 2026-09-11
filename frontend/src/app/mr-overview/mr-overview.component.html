@@ -110,6 +110,20 @@
                 @if (mr.flagReason; as reason) {
                   <span class="text-ctp-subtext0"> · {{ reason.createdAt | date: 'short' }}</span>
                 }
+                @if (isLoggedIn()) {
+                  <p-button
+                    [disabled]="isLoading(mr, 'any')"
+                    (onClick)="editFlagReason(mr)"
+                    icon="pi pi-pencil"
+                    aria-label="Edit flag reason"
+                    pTooltip="Edit flag reason"
+                    tooltipPosition="top"
+                    severity="secondary"
+                    size="small"
+                    text
+                    styleClass="mr-btn-icon-inline"
+                  />
+                }
               </p>
             }
           </div>

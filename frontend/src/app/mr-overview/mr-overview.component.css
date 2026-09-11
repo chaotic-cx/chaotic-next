@@ -119,6 +119,13 @@
   padding: 0;
 }
 
+::ng-deep .p-button.mr-btn-icon-inline {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  vertical-align: -0.35rem;
+}
+
 .p-tabpanels,
 .p-tablist,
 .p-fieldset {
