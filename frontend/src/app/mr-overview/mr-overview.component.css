@@ -123,7 +123,14 @@
   width: 1.5rem;
   height: 1.5rem;
   padding: 0;
-  vertical-align: -0.35rem;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+::ng-deep .p-button.mr-btn-icon-inline .p-button-icon {
+  margin: 0;
 }
 
 .p-tabpanels,
