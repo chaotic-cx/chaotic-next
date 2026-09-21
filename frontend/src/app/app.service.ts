@@ -199,6 +199,17 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/added/per-day/${days}` };
   }
 
+  getPackageRemovalsResourceRequest(days: number): HttpResourceRequest {
+    return { url: `${this.appConfig.backendUrl}/builder/removed/per-day/${days}` };
+  }
+
+  getTopScannedAurPackagesResourceRequest(amount: number, days?: number): HttpResourceRequest {
+    return {
+      url: `${this.appConfig.backendUrl}/gitlab/aur-scan/top/${amount}`,
+      params: this.daysParams(days),
+    };
+  }
+
   getAverageBuildTimePerDayResourceRequest(days: number): HttpResourceRequest {
     return { url: `${this.appConfig.backendUrl}/builder/average/per-day/${days}` };
   }

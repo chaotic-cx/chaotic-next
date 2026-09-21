@@ -20,15 +20,18 @@ import { GitlabPipelineService } from './gitlab-pipeline.service';
 import { validatePipelineTriggerInputs } from './pipeline-trigger-inputs';
 import {
   addPackagesBodySchema,
+  amountParamSchema,
   approveMrBodySchema,
   approveMrResponseSchema,
   AurPackageScan,
   aurPackageScanSchema,
+  aurScannedPackageSchema,
   aurScanBodySchema,
   aurScanMetricsSchema,
   AurScanStreamChunk,
   aurSearchQuerySchema,
   bumpPackagesGitlabBodySchema,
+  daysParamSchema,
   daysQuerySchema,
   dropPackagesBodySchema,
   flagMrBodySchema,
@@ -227,6 +230,21 @@ export class GitlabController {
   @ApiOkResponse({ description: 'Scan counts by source.', schema: schemaResponse(aurScanMetricsSchema).schema })
   async aurScanMetrics() {
     return this.aurScanService.getMetrics();
+  }
+
+  @Get('aur-scan/top/:amount')
+  @ApiOperation({ summary: 'Most scanned AUR packages.' })
+  @ApiParam({ name: 'amount', description: 'Number of packages' })
+  @ApiQuery({ name: 'days', required: false, description: 'Limit to the last N days', type: Number })
+  @ApiOkResponse({
+    description: 'Top scanned packages by scan count',
+    schema: schemaResponseArray(aurScannedPackageSchema).schema,
+  })
+  async aurScanTop(
+    @Param('amount', { schema: amountParamSchema }) amount: number,
+    @Query('days', { schema: daysParamSchema.optional() }) days?: number,
+  ) {
+    return this.aurScanService.getTopScannedPackages({ amount, days });
   }
 
   @Get('aur-scan/:packageName')

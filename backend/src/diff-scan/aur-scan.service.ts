@@ -16,7 +16,8 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { filter, Observable, Subject } from 'rxjs';
 import { Repository } from 'typeorm';
 import { classifyPkgbuild } from '../repo-manager/pkgbuild-classifier';
-import { mapWithConcurrency } from '../utils/functions';
+import { MAX_AMOUNT, MAX_DAYS_WINDOW } from '../utils/constants';
+import { clampInt, mapWithConcurrency, nDaysInPast } from '../utils/functions';
 import { type SseMessage, withSseKeepalive } from '../utils/sse';
 import { AurAuthService } from './aur-auth.service';
 import { commentThreatFinding, evaluateCommentThreats, parseAurComments } from './aur-comments';
@@ -120,6 +121,22 @@ export class AurScanService {
     const map = { anonymous: 0, authorized: 0, automated: 0 } as Record<AurScanSource, number>;
     for (const row of rows) map[row.source] = Number(row.count);
     return { ...map, total: map.anonymous + map.authorized + map.automated };
+  }
+
+  async getTopScannedPackages(options: { amount: number; days?: number }): Promise<{ packageName: string; count: string }[]> {
+    const amount = clampInt(options.amount, 1, MAX_AMOUNT);
+    if (!this.metricRepository) return [];
+    const query = this.metricRepository
+      .createQueryBuilder('m')
+      .select('m.packageName', 'packageName')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('m.packageName')
+      .orderBy('count', 'DESC')
+      .limit(amount);
+    if (options.days !== undefined) {
+      query.where('m.createdAt > :date', { date: nDaysInPast(clampInt(options.days, 1, MAX_DAYS_WINDOW)) });
+    }
+    return query.getRawMany();
   }
 
   async startScan(packageName: string, options?: AurScanOptions): Promise<AurPackageScan> {

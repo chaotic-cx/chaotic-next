@@ -309,6 +309,14 @@ export class BuilderController {
     return await this.builderService.getPackageAdditionsPerDay({ days: days });
   }
 
+  @Get('removed/per-day/:days')
+  @ApiOperation({ summary: 'Get number of packages dropped from the repo per day.' })
+  @ApiParam({ name: 'days', description: 'Number of days' })
+  @ApiOkResponse({ description: 'Packages dropped per day', schema: schemaResponseArray(dayCountSchema).schema })
+  async getPackageRemovalsPerDay(@Param('days', { schema: daysParamSchema }) days: number): Promise<DayCount[]> {
+    return await this.builderService.getPackageRemovalsPerDay({ days: days });
+  }
+
   @Get('average/per-day/:days')
   @ApiOperation({ summary: 'Get average build time per day per status.' })
   @ApiParam({ name: 'days', description: 'Number of days' })

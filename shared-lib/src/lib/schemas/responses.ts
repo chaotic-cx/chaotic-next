@@ -57,6 +57,12 @@ export type PopularPackage = z.infer<typeof popularPackageSchema>;
 export const dayCountSchema = z.object({ day, count: buildCount });
 export type DayCount = z.infer<typeof dayCountSchema>;
 
+export const aurScannedPackageSchema = z.object({
+  packageName: z.string().describe('AUR package name'),
+  count: z.string().describe('Number of scans'),
+});
+export type AurScannedPackage = z.infer<typeof aurScannedPackageSchema>;
+
 export const dayStatusAverageSchema = z.object({ day, average, status });
 export type DayStatusAverage = z.infer<typeof dayStatusAverageSchema>;
 

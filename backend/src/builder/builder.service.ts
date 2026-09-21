@@ -501,6 +501,20 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .getRawMany();
   }
 
+  getPackageRemovalsPerDay(options: { days: number }): Promise<{ day: string; count: string }[]> {
+    const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
+    return this.packageRepository
+      .createQueryBuilder('package')
+      .select("DATE_TRUNC('day', package.removedAt AT TIME ZONE 'UTC') AS day")
+      .addSelect('COUNT(*) AS count')
+      .where('package.removedAt IS NOT NULL')
+      .groupBy('day')
+      .orderBy('day', 'DESC')
+      .limit(days)
+      .cache(`package-removals-per-day-${days}`, CACHE_TTL_MS)
+      .getRawMany();
+  }
+
   getAverageBuildTimePerDay(options: { days: number }): Promise<{ day: string; status: string; average: string }[]> {
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
     return this.buildRepository
