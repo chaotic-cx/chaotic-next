@@ -32,7 +32,9 @@ function makeGithub(): GithubIssuesService {
     addLabels: vi.fn().mockResolvedValue(undefined),
     removeLabel: vi.fn().mockResolvedValue(undefined),
     closeIssue: vi.fn().mockResolvedValue(undefined),
-    getIssue: vi.fn().mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone', labels: [] }),
+    getIssue: vi
+      .fn()
+      .mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone', labels: [] }),
     listComments: vi.fn().mockResolvedValue([]),
     findOpenRequestIssues: vi.fn().mockResolvedValue([]),
     findOpenIssuesLabeled: vi.fn().mockResolvedValue([]),
@@ -391,7 +393,12 @@ describe('IssueTrackerService.handleIssueEvent', () => {
   });
 
   it('retriages when the requester comments on an issuer-feedback issue', async () => {
-    vi.mocked(github.getIssue).mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone', labels: [] });
+    vi.mocked(github.getIssue).mockResolvedValue({
+      title: '[Request] foo-app',
+      body: REQUEST_BODY,
+      user: 'someone',
+      labels: [],
+    });
     await service.handleIssueEvent({
       action: 'created',
       issue: {
@@ -407,7 +414,12 @@ describe('IssueTrackerService.handleIssueEvent', () => {
   });
 
   it('ignores comments from other users on an issuer-feedback issue', async () => {
-    vi.mocked(github.getIssue).mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone', labels: [] });
+    vi.mocked(github.getIssue).mockResolvedValue({
+      title: '[Request] foo-app',
+      body: REQUEST_BODY,
+      user: 'someone',
+      labels: [],
+    });
     await service.handleIssueEvent({
       action: 'created',
       issue: {

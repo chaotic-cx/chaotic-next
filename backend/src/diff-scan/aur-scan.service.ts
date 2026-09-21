@@ -123,7 +123,10 @@ export class AurScanService {
     return { ...map, total: map.anonymous + map.authorized + map.automated };
   }
 
-  async getTopScannedPackages(options: { amount: number; days?: number }): Promise<{ packageName: string; count: string }[]> {
+  async getTopScannedPackages(options: {
+    amount: number;
+    days?: number;
+  }): Promise<{ packageName: string; count: string }[]> {
     const amount = clampInt(options.amount, 1, MAX_AMOUNT);
     if (!this.metricRepository) return [];
     const query = this.metricRepository

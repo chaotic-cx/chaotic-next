@@ -220,7 +220,10 @@ export class IssueTrackerService implements OnModuleInit {
       await this.attachScanFindings(issueNumber, scanTargets, createdAt);
     }
     const prioritized = existingLabels.some((label) => label.startsWith(PRIORITY_LABEL_PREFIX));
-    const stateLabels = [...(prioritized ? [] : [NEEDS_TRIAGE_LABEL]), ...(isCustomRebuild ? [CUSTOM_PACKAGE_LABEL] : [])];
+    const stateLabels = [
+      ...(prioritized ? [] : [NEEDS_TRIAGE_LABEL]),
+      ...(isCustomRebuild ? [CUSTOM_PACKAGE_LABEL] : []),
+    ];
     if (stateLabels.length > 0) {
       await this.github.addLabels(issueNumber, stateLabels).catch(() => undefined);
     }
@@ -614,8 +617,7 @@ function basesAreRelated(
   relations: { members: Map<string, Set<string>>; depends: Map<string, Set<string>> },
 ): boolean {
   const lower = bases.map((base) => base.toLowerCase());
-  const namesOf = (base: string): Set<string> =>
-    new Set([base, ...(relations.members.get(base) ?? [])]);
+  const namesOf = (base: string): Set<string> => new Set([base, ...(relations.members.get(base) ?? [])]);
   const reached = new Set([lower[0]]);
   let grew = true;
   while (grew) {
