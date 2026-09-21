@@ -30,6 +30,7 @@ import {
   NEEDS_TRIAGE_LABEL,
   OFFICIAL_REPO_LABEL,
   ORPHANED_LABEL,
+  PRIORITY_LABEL_PREFIX,
   TEMPLATE_VIOLATION_LABEL,
 } from './github-issues.service';
 import type { GithubIssueEventDto } from './issue-event.dto';
@@ -74,12 +75,20 @@ export class IssueTrackerService implements OnModuleInit {
     if (payload.action === 'labeled') {
       if (payload.label?.name === BUILD_TEST_LABEL) {
         await this.queueTestBuild(issue.number, issue.title, issue.body ?? '');
+      } else if (payload.label?.name.startsWith(PRIORITY_LABEL_PREFIX)) {
+        await this.github.removeLabel(issue.number, NEEDS_TRIAGE_LABEL).catch(() => undefined);
       }
       return;
     }
 
     if (payload.action === 'opened') {
-      await this.triage(issue.number, issue.title, issue.body ?? '', issue.created_at ?? undefined);
+      await this.triage(
+        issue.number,
+        issue.title,
+        issue.body ?? '',
+        issue.created_at ?? undefined,
+        issue.labels.map((label) => label.name),
+      );
       return;
     }
 
@@ -87,23 +96,43 @@ export class IssueTrackerService implements OnModuleInit {
     if (payload.action === 'created' && payload.comment !== undefined && waitsForIssuerFeedback) {
       const requester = issue.user?.login;
       if (requester !== undefined && payload.comment.user?.login === requester) {
-        await this.triage(issue.number, issue.title, issue.body ?? '', issue.created_at ?? undefined);
+        await this.github.removeLabel(issue.number, NEEDS_INPUT_LABEL).catch(() => undefined);
+        await this.github.removeLabel(issue.number, LEGACY_NEEDS_INPUT_LABEL).catch(() => undefined);
+        await this.triage(
+          issue.number,
+          issue.title,
+          issue.body ?? '',
+          issue.created_at ?? undefined,
+          issue.labels.map((label) => label.name),
+        );
       }
       return;
     }
 
     if ((payload.action === 'edited' || payload.action === 'reopened') && waitsForIssuerFeedback) {
-      await this.triage(issue.number, issue.title, issue.body ?? '', issue.created_at ?? undefined);
+      await this.triage(
+        issue.number,
+        issue.title,
+        issue.body ?? '',
+        issue.created_at ?? undefined,
+        issue.labels.map((label) => label.name),
+      );
     }
   }
 
   /**
    * Validate one issue.
    * Do not reject invalid issues. Post a comment and add the waiting tag.
-   * Close the issue after 7 days without answer.
    * For valid requests, run the AUR scan and post one comment with the findings.
+   * Prioritized issues skip the triage queue label.
    */
-  async triage(issueNumber: number, title: string, body: string, createdAt?: string): Promise<void> {
+  async triage(
+    issueNumber: number,
+    title: string,
+    body: string,
+    createdAt?: string,
+    existingLabels: string[] = [],
+  ): Promise<void> {
     // If the body has no ### section, close the issue. It has no template.
     if (!/^###\s/m.test(body)) {
       await this.github.createComment(
@@ -120,7 +149,7 @@ export class IssueTrackerService implements OnModuleInit {
       if (this.isBeforeCutoff(createdAt)) return;
       await this.postNeedsInput(
         issueNumber,
-        `Thanks for the request. Some parts of the issue need attention:\n\n${formatFailures(parsed.failures)}\n\nPlease fix the sections above. The issue closes automatically in one week without an answer.`,
+        `Thanks for the request. Some parts of the issue need attention:\n\n${formatFailures(parsed.failures)}\n\nPlease fix the sections above.`,
       );
       return;
     }
@@ -138,17 +167,21 @@ export class IssueTrackerService implements OnModuleInit {
         const bullets = missing.map((name) => `- \`${name}\` does not exist in the AUR (yet?).`).join('\n');
         await this.postNeedsInput(
           issueNumber,
-          `Thanks for the request. The following package bases could not be found in the AUR:\n\n${bullets}\n\nPlease check the link. The issue closes automatically in one week without an answer.`,
+          `Thanks for the request. The following package bases could not be found in the AUR:\n\n${bullets}\n\nPlease check the package name and link.`,
         );
         return;
       }
       const bases = [...new Set([...resolution.values()].filter((base): base is string => base !== null))];
       if (bases.length > 1) {
-        await this.postNeedsInput(
-          issueNumber,
-          `Thanks for the request. It covers several package bases (${bases.map((base) => `\`${base}\``).join(', ')}). Please open one request per package base.`,
-        );
-        return;
+        // Bases that depend on each other (e.g. a plugin and its library) form one valid request.
+        const relations = await this.github.getAurBaseRelations(bases);
+        if (!basesAreRelated(bases, relations)) {
+          await this.createCommentOnce(
+            issueNumber,
+            `Thanks for the request. It covers several package bases (${bases.map((base) => `\`${base}\``).join(', ')}). Please open one request per package base.`,
+          );
+          return;
+        }
       }
       scanTargets = bases;
     }
@@ -186,8 +219,11 @@ export class IssueTrackerService implements OnModuleInit {
     if (parsed.kind === 'request') {
       await this.attachScanFindings(issueNumber, scanTargets, createdAt);
     }
-    const stateLabels = [NEEDS_TRIAGE_LABEL, ...(isCustomRebuild ? [CUSTOM_PACKAGE_LABEL] : [])];
-    await this.github.addLabels(issueNumber, stateLabels).catch(() => undefined);
+    const prioritized = existingLabels.some((label) => label.startsWith(PRIORITY_LABEL_PREFIX));
+    const stateLabels = [...(prioritized ? [] : [NEEDS_TRIAGE_LABEL]), ...(isCustomRebuild ? [CUSTOM_PACKAGE_LABEL] : [])];
+    if (stateLabels.length > 0) {
+      await this.github.addLabels(issueNumber, stateLabels).catch(() => undefined);
+    }
     await this.github.removeLabel(issueNumber, NEEDS_INPUT_LABEL).catch(() => undefined);
     await this.github.removeLabel(issueNumber, LEGACY_NEEDS_INPUT_LABEL).catch(() => undefined);
   }
@@ -307,7 +343,7 @@ export class IssueTrackerService implements OnModuleInit {
     const taggedAt = new Date(lastBotComment.created_at);
     if (Date.now() - taggedAt.getTime() < NEEDS_INPUT_GRACE_MS) return;
     if (this.requesterAnswered(comments, issue.user, taggedAt)) {
-      await this.triage(issueNumber, issue.title, issue.body);
+      await this.triage(issueNumber, issue.title, issue.body, undefined, issue.labels);
       return;
     }
     await this.github.createComment(
@@ -336,7 +372,7 @@ export class IssueTrackerService implements OnModuleInit {
         if (scan.packageMeta.orphaned) hasOrphaned = true;
       }
     }
-    await this.github.createComment(issueNumber, `Automated AUR scan results:\n\n${summaries.join('\n\n')}`);
+    await this.createCommentOnce(issueNumber, `Automated AUR scan results:\n\n${summaries.join('\n\n')}`);
     // ponytail: relies on the issues API auto-creating unknown labels; verify
     // manually if labels seem to go missing.
     const labels = [...kinds].map(kindLabel);
@@ -419,8 +455,21 @@ export class IssueTrackerService implements OnModuleInit {
   }
 
   private async postNeedsInput(issueNumber: number, body: string): Promise<void> {
-    await this.github.createComment(issueNumber, body);
+    await this.createCommentOnce(issueNumber, body);
     await this.github.addLabels(issueNumber, [NEEDS_INPUT_LABEL]);
+  }
+
+  /**
+   * Never post the identical bot comment twice on one issue. Title and body
+   * edits retrigger triage, which would otherwise repost the same message.
+   */
+  private async createCommentOnce(issueNumber: number, body: string): Promise<void> {
+    const botLogin = await this.github.getBotLogin().catch(() => null);
+    if (botLogin !== null) {
+      const comments = await this.github.listComments(issueNumber).catch(() => null);
+      if (comments?.some((comment) => comment.user?.login === botLogin && comment.body === body)) return;
+    }
+    await this.github.createComment(issueNumber, body);
   }
 
   private async findAlreadyPackaged(bases: string[]): Promise<{ where: 'chaotic' | 'official'; url: string } | null> {
@@ -552,4 +601,37 @@ const KIND_LABEL_OVERRIDES: Record<string, string> = {
 
 function kindLabel(kind: string): string {
   return KIND_LABEL_OVERRIDES[kind] ?? `info:${kind}`;
+}
+
+/**
+ * True when every base connects to the rest through dependency edges, so a
+ * request that spans several bases (a package plus its dependency) stays valid.
+ * A base links to another when it depends on the other base or on one of the
+ * packages the other base ships.
+ */
+function basesAreRelated(
+  bases: string[],
+  relations: { members: Map<string, Set<string>>; depends: Map<string, Set<string>> },
+): boolean {
+  const lower = bases.map((base) => base.toLowerCase());
+  const namesOf = (base: string): Set<string> =>
+    new Set([base, ...(relations.members.get(base) ?? [])]);
+  const reached = new Set([lower[0]]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const base of lower) {
+      if (reached.has(base)) continue;
+      const linked = [...reached].some(
+        (seen) =>
+          [...(relations.depends.get(base) ?? [])].some((dep) => namesOf(seen).has(dep)) ||
+          [...(relations.depends.get(seen) ?? [])].some((dep) => namesOf(base).has(dep)),
+      );
+      if (linked) {
+        reached.add(base);
+        grew = true;
+      }
+    }
+  }
+  return reached.size === lower.length;
 }

@@ -19,6 +19,7 @@ export const CUSTOM_PACKAGE_LABEL = 'info:custom';
 export const ORPHANED_LABEL = 'info:orphaned';
 export const TEMPLATE_VIOLATION_LABEL = 'invalid:violate-issue-template';
 export const NEEDS_TRIAGE_LABEL = 'needs-triage';
+export const PRIORITY_LABEL_PREFIX = 'priority:';
 /** Adding this label queues a live test build of the issue's pkgbase. */
 export const BUILD_TEST_LABEL = 'build:test';
 
@@ -35,6 +36,7 @@ const BOT_LOGIN_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export interface IssueCommentRef {
   user: { login: string } | null;
   created_at: string;
+  body?: string;
 }
 
 export interface IssueRef {
@@ -97,12 +99,22 @@ export class GithubIssuesService {
     });
   }
 
-  async getIssue(issueNumber: number): Promise<{ title: string; body: string; user: string | null } | null> {
+  async getIssue(
+    issueNumber: number,
+  ): Promise<{ title: string; body: string; user: string | null; labels: string[] } | null> {
     try {
-      const data = await this.request<{ title: string; body?: string | null; user?: { login: string } | null }>(
-        `/repos/${this.owner}/${this.repo}/issues/${issueNumber}`,
-      );
-      return { title: data.title, body: data.body ?? '', user: data.user?.login ?? null };
+      const data = await this.request<{
+        title: string;
+        body?: string | null;
+        user?: { login: string } | null;
+        labels?: { name: string }[];
+      }>(`/repos/${this.owner}/${this.repo}/issues/${issueNumber}`);
+      return {
+        title: data.title,
+        body: data.body ?? '',
+        user: data.user?.login ?? null,
+        labels: (data.labels ?? []).map((label) => label.name),
+      };
     } catch (err: unknown) {
       const status = (err as { status?: number }).status;
       if (status === NOT_FOUND_STATUS) return null;
@@ -216,5 +228,52 @@ export class GithubIssuesService {
       for (const name of toFetch) resolution.set(name, null);
     }
     return resolution;
+  }
+
+  async getAurBaseRelations(
+    bases: string[],
+  ): Promise<{ members: Map<string, Set<string>>; depends: Map<string, Set<string>> }> {
+    const members = new Map<string, Set<string>>();
+    const depends = new Map<string, Set<string>>();
+    const wanted = new Set(bases.map((base) => base.toLowerCase()));
+    for (const base of wanted) {
+      members.set(base, new Set());
+      depends.set(base, new Set());
+    }
+    if (wanted.size === 0) return { members, depends };
+    try {
+      const query = [...wanted].map((base) => `arg[]=${encodeURIComponent(base)}`).join('&');
+      const response = await fetch(`https://aur.archlinux.org/rpc/v5/info?${query}`, {
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(AUR_INFO_TIMEOUT_MS),
+      });
+      if (!response.ok) {
+        this.pino.warn({ statusCode: response.status, bases }, 'AUR info returned a non-ok status');
+        return { members, depends };
+      }
+      const data: unknown = await response.json();
+      const results = (data as { results?: unknown }).results;
+      if (!Array.isArray(results)) return { members, depends };
+      for (const result of results) {
+        const pkgBase = (result as { PackageBase?: unknown }).PackageBase;
+        const pkgName = (result as { Name?: unknown }).Name;
+        if (typeof pkgBase !== 'string' || typeof pkgName !== 'string') continue;
+        const base = pkgBase.toLowerCase();
+        if (!wanted.has(base)) continue;
+        members.get(base)?.add(pkgName.toLowerCase());
+        for (const field of ['Depends', 'MakeDepends', 'CheckDepends'] as const) {
+          const deps = (result as Record<string, unknown>)[field];
+          if (!Array.isArray(deps)) continue;
+          for (const dep of deps) {
+            if (typeof dep !== 'string') continue;
+            const name = dep.match(/^[\w@.+-]+/)?.[0]?.toLowerCase();
+            if (name) depends.get(base)?.add(name);
+          }
+        }
+      }
+    } catch (err) {
+      this.pino.warn({ err, bases }, 'AUR base relation lookup failed');
+    }
+    return { members, depends };
   }
 }

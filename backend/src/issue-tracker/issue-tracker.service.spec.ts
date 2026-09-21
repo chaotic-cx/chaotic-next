@@ -2,7 +2,13 @@ import type { AurPackageScan } from '@chaotic-next/shared-lib';
 import { type PinoLogger } from 'nestjs-pino';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AurScanService } from '../diff-scan/aur-scan.service';
-import { DUPLICATE_LABEL, GithubIssuesService, NEEDS_INPUT_LABEL } from './github-issues.service';
+import {
+  DUPLICATE_LABEL,
+  GithubIssuesService,
+  LEGACY_NEEDS_INPUT_LABEL,
+  NEEDS_INPUT_LABEL,
+  NEEDS_TRIAGE_LABEL,
+} from './github-issues.service';
 import { IssueTrackerService } from './issue-tracker.service';
 
 const REQUEST_BODY = `### Package
@@ -26,7 +32,7 @@ function makeGithub(): GithubIssuesService {
     addLabels: vi.fn().mockResolvedValue(undefined),
     removeLabel: vi.fn().mockResolvedValue(undefined),
     closeIssue: vi.fn().mockResolvedValue(undefined),
-    getIssue: vi.fn().mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone' }),
+    getIssue: vi.fn().mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone', labels: [] }),
     listComments: vi.fn().mockResolvedValue([]),
     findOpenRequestIssues: vi.fn().mockResolvedValue([]),
     findOpenIssuesLabeled: vi.fn().mockResolvedValue([]),
@@ -36,6 +42,7 @@ function makeGithub(): GithubIssuesService {
       return Promise.resolve(resolution);
     }),
     getBotLogin: vi.fn().mockResolvedValue('request-bot'),
+    getAurBaseRelations: vi.fn().mockResolvedValue({ members: new Map(), depends: new Map() }),
   } as unknown as GithubIssuesService;
 }
 
@@ -384,7 +391,7 @@ describe('IssueTrackerService.handleIssueEvent', () => {
   });
 
   it('retriages when the requester comments on an issuer-feedback issue', async () => {
-    vi.mocked(github.getIssue).mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone' });
+    vi.mocked(github.getIssue).mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone', labels: [] });
     await service.handleIssueEvent({
       action: 'created',
       issue: {
@@ -400,7 +407,7 @@ describe('IssueTrackerService.handleIssueEvent', () => {
   });
 
   it('ignores comments from other users on an issuer-feedback issue', async () => {
-    vi.mocked(github.getIssue).mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone' });
+    vi.mocked(github.getIssue).mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone', labels: [] });
     await service.handleIssueEvent({
       action: 'created',
       issue: {
@@ -476,6 +483,120 @@ describe('IssueTrackerService.sweepStale', () => {
     await service.sweepStale();
 
     expect(github.closeIssue).not.toHaveBeenCalled();
+  });
+});
+
+describe('IssueTrackerService priority, dedup, and related bases', () => {
+  let github: GithubIssuesService;
+  let aurScan: AurScanService;
+  let service: IssueTrackerService;
+
+  beforeEach(() => {
+    github = makeGithub();
+    aurScan = makeAurScan();
+    service = makeService(github, aurScan);
+  });
+
+  function twoBaseBody(first: string, second: string): string {
+    return REQUEST_BODY.replace(
+      'https://aur.archlinux.org/pkgbase/foo-app',
+      `https://aur.archlinux.org/pkgbase/${first}\nhttps://aur.archlinux.org/pkgbase/${second}`,
+    );
+  }
+
+  function resolveBasesVerbatim(): void {
+    vi.mocked(github.resolveAurPackageBases).mockImplementation((names: string[]) => {
+      const resolution = new Map<string, string | null>();
+      for (const name of names) resolution.set(name, name);
+      return Promise.resolve(resolution);
+    });
+  }
+
+  it('skips needs-triage when a priority label is already attached', async () => {
+    await service.triage(1, '[Request] foo-app', REQUEST_BODY, undefined, ['priority:high']);
+    expect(aurScan.startScan).toHaveBeenCalledWith('foo-app', expect.objectContaining({ source: 'automated' }));
+    expect(github.addLabels).not.toHaveBeenCalledWith(1, expect.arrayContaining([NEEDS_TRIAGE_LABEL]));
+  });
+
+  it('keeps the custom label but skips needs-triage for prioritized custom rebuilds', async () => {
+    const body =
+      '### Packages\n\nhttps://github.com/example/my-custom-pkg\n\n### Description\n\nBroken on new kernel.\n\n- [x] This is a custom package that is not available on the AUR.\n';
+    await service.triage(1, '[Rebuild] my-custom-pkg', body, undefined, ['priority:low']);
+    expect(github.addLabels).toHaveBeenCalledWith(1, ['info:custom']);
+  });
+
+  it('removes needs-triage when a priority label is attached afterwards', async () => {
+    await service.handleIssueEvent({
+      action: 'labeled',
+      label: { name: 'priority:high' },
+      issue: { number: 1, title: '[Request] foo-app', body: REQUEST_BODY, labels: [{ name: 'needs-triage' }] },
+    });
+    expect(github.removeLabel).toHaveBeenCalledWith(1, NEEDS_TRIAGE_LABEL);
+  });
+
+  it('drops both waiting labels when the requester comments', async () => {
+    await service.handleIssueEvent({
+      action: 'created',
+      issue: {
+        number: 1,
+        title: '[Request] foo-app',
+        body: REQUEST_BODY,
+        labels: [{ name: 'waiting:issuer-feedback' }],
+        user: { login: 'someone' },
+      },
+      comment: { user: { login: 'someone' } },
+    });
+    expect(github.removeLabel).toHaveBeenCalledWith(1, NEEDS_INPUT_LABEL);
+    expect(github.removeLabel).toHaveBeenCalledWith(1, LEGACY_NEEDS_INPUT_LABEL);
+  });
+
+  it('never reposts the identical several-bases comment on retriage', async () => {
+    resolveBasesVerbatim();
+    const body = twoBaseBody('foo-app', 'bar-lib');
+    await service.triage(1, '[Request] foo-app', body);
+    const posted = vi.mocked(github.createComment).mock.calls[0]?.[1] as string;
+    expect(posted).toContain('several package bases');
+    vi.mocked(github.listComments).mockResolvedValue([
+      { user: { login: 'request-bot' }, created_at: new Date().toISOString(), body: posted },
+    ]);
+    vi.mocked(github.createComment).mockClear();
+    await service.triage(1, '[Request] foo-app', body);
+    expect(github.createComment).not.toHaveBeenCalled();
+  });
+
+  it('treats bases as one valid request when one depends on the other', async () => {
+    resolveBasesVerbatim();
+    vi.mocked(github.getAurBaseRelations).mockResolvedValue({
+      members: new Map([
+        ['openrgb-hotplug', new Set(['openrgb'])],
+        ['hidapi-hotplug', new Set(['hidapi'])],
+      ]),
+      depends: new Map([
+        ['openrgb-hotplug', new Set(['hidapi', 'gcc'])],
+        ['hidapi-hotplug', new Set(['gcc'])],
+      ]),
+    });
+    await service.triage(1, '[Request] openrgb-hotplug', twoBaseBody('openrgb-hotplug', 'hidapi-hotplug'));
+    expect(github.createComment).not.toHaveBeenCalledWith(1, expect.stringContaining('several package bases'));
+    expect(aurScan.startScan).toHaveBeenCalledWith('openrgb-hotplug', expect.objectContaining({ source: 'automated' }));
+    expect(aurScan.startScan).toHaveBeenCalledWith('hidapi-hotplug', expect.objectContaining({ source: 'automated' }));
+  });
+
+  it('still asks for one request per base when the bases are unrelated', async () => {
+    resolveBasesVerbatim();
+    vi.mocked(github.getAurBaseRelations).mockResolvedValue({
+      members: new Map([
+        ['foo-app', new Set(['foo-app'])],
+        ['bar-lib', new Set(['bar-lib'])],
+      ]),
+      depends: new Map([
+        ['foo-app', new Set(['gcc'])],
+        ['bar-lib', new Set(['glibc'])],
+      ]),
+    });
+    await service.triage(1, '[Request] foo-app', twoBaseBody('foo-app', 'bar-lib'));
+    expect(github.createComment).toHaveBeenCalledWith(1, expect.stringContaining('several package bases'));
+    expect(aurScan.startScan).not.toHaveBeenCalled();
   });
 });
 
