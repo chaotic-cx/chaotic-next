@@ -219,7 +219,6 @@ export class PortableBuilderService implements OnModuleInit, OnModuleDestroy {
       await this.builds.update(build.id, { status: 'cloning', startedAt, error: null });
       await fs.mkdir(pkgbuildsDir, { recursive: true });
       await fs.mkdir(artifactDir, { recursive: true });
-      // ponytail: the shared pacman cache grows unbounded; prune it externally if disk fills up
       await fs.mkdir(path.join(this.config.workDir, 'pkgcache'), { recursive: true });
 
       await this.cloneFromAur(build.pkgbase, pkgbuildsDir, appendToLog);

@@ -46,7 +46,7 @@ const DEFERRED_MERGE_MAX_AGE_DAYS = 1;
 const MAX_DEFERRED_MERGE_ATTEMPTS = 5;
 const MERGE_STATUS_SETTLE_TIMEOUT_MS = CACHE_TTL_MS;
 const MERGE_STATUS_SETTLE_POLL_MS = 3_000;
-const BLOCKING_MERGE_LABELS = ['malware', 'dangerous', 'hold'] as const;
+const BLOCKING_MERGE_LABELS = ['hold'] as const;
 
 type DetailedMergeStatus = MergeRequestSchema['detailed_merge_status'] | 'commits_status';
 
@@ -861,12 +861,6 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<{ deferred: boolean }> {
     const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
-    if (labels.includes('malware')) {
-      throw new BadRequestException(
-        'This merge request is flagged as malware by the automated security scan and requires manual review.',
-        { errorCode: 'MR_FLAGGED_MALWARE' },
-      );
-    }
     const targetSha = mr.sha ?? sha;
     await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: targetSha });
 

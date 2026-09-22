@@ -531,17 +531,32 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     }
   });
 
-  it('refuses to approve MRs the scan flagged as malware', async () => {
+  it('approves MRs the scan flagged as malware once a human approves', async () => {
     const { service } = createService();
     const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review', 'malware'] });
+    const mrEdit = vi.fn().mockResolvedValue({});
+    const mrAccept = vi.fn().mockResolvedValue({});
     const approvalsApprove = vi.fn().mockResolvedValue({});
+    const noteCreate = vi.fn().mockResolvedValue({});
+    const mrActionInsert = vi.fn();
     setApi(service, {
-      MergeRequests: { show, edit: vi.fn() },
+      MergeRequests: { show, edit: mrEdit, accept: mrAccept },
       MergeRequestApprovals: { approve: approvalsApprove },
+      MergeRequestNotes: { create: noteCreate },
     });
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
-    await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('malware');
-    expect(approvalsApprove).not.toHaveBeenCalled();
+    vi.useFakeTimers();
+    // 03:00 UTC - outside scheduled pipeline window
+    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
+    try {
+      await service.approveMergeRequest(1, 'abc123', ACTOR);
+
+      expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+      expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('approves regular MRs, posts comment, records action, and merges', async () => {
@@ -780,17 +795,30 @@ describe('GitlabMergeRequestService.processDeferredMerges', () => {
     }
   });
 
-  it('skips deferred merges for MRs labeled malware', async () => {
-    const { service, mrAccept } = deferredSetup();
-    const mrAll = vi.fn().mockResolvedValue([{ iid: 7, sha: 'sha7', labels: ['human-review', 'malware'] }]);
-    setApi(service, { MergeRequests: { all: mrAll } });
+  it('merges human-approved MRs labeled malware, but still skips held ones', async () => {
+    const { service, mrActionRepository } = createService();
+    const mrAccept = vi.fn().mockResolvedValue({});
+    mrActionRepository.find.mockResolvedValue([
+      { mergeRequestIid: 7, commitSha: 'sha7', createdAt: new Date() },
+      { mergeRequestIid: 8, commitSha: 'sha8', createdAt: new Date() },
+    ]);
+    setApi(service, {
+      MergeRequests: {
+        all: vi.fn().mockResolvedValue([
+          { iid: 7, sha: 'sha7', labels: ['human-review', 'malware'] },
+          { iid: 8, sha: 'sha8', labels: ['human-review', 'hold'] },
+        ]),
+        accept: mrAccept,
+      },
+    });
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
 
     try {
       await service.processDeferredMerges();
-      expect(mrAccept).not.toHaveBeenCalled();
+      expect(mrAccept).toHaveBeenCalledWith('test-project-id', 7, { sha: 'sha7' });
+      expect(mrAccept).not.toHaveBeenCalledWith('test-project-id', 8, expect.anything());
     } finally {
       vi.useRealTimers();
     }

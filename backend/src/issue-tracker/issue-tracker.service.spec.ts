@@ -129,6 +129,50 @@ describe('IssueTrackerService.triage', () => {
     expect(github.removeLabel).toHaveBeenCalledWith(1, NEEDS_INPUT_LABEL);
   });
 
+  it('never reposts scan results on retriage', async () => {
+    vi.mocked(github.listComments).mockResolvedValue([
+      {
+        user: { login: 'request-bot' },
+        created_at: new Date().toISOString(),
+        body: 'Automated AUR scan results:\n\nold summary',
+      },
+    ]);
+    await service.triage(1, '[Request] foo-app', REQUEST_BODY);
+    expect(aurScan.startScan).not.toHaveBeenCalled();
+    expect(github.createComment).not.toHaveBeenCalled();
+  });
+
+  it('holds the scan post until VirusTotal enrichment finishes', async () => {
+    const waiting = makeScan({ status: 'awaiting-vt', vtPending: 2 });
+    const done = makeScan({ status: 'done', vtPending: 0 });
+    let calls = 0;
+    vi.mocked(aurScan.getScan).mockImplementation(() => (++calls <= 2 ? waiting : done));
+    vi.useFakeTimers();
+    try {
+      const triage = service.triage(1, '[Request] foo-app', REQUEST_BODY);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await triage;
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(github.createComment).toHaveBeenCalledWith(1, expect.stringContaining('Automated AUR scan results'));
+    expect(github.createComment).not.toHaveBeenCalledWith(1, expect.stringContaining('still running'));
+  });
+
+  it('posts the analysis without VirusTotal when enrichment never finishes', async () => {
+    vi.mocked(aurScan.getScan).mockImplementation(() => makeScan({ status: 'awaiting-vt', vtPending: 2 }));
+    vi.useFakeTimers();
+    try {
+      const triage = service.triage(1, '[Request] foo-app', REQUEST_BODY);
+      await vi.advanceTimersByTimeAsync(16 * 60 * 1000);
+      await triage;
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(github.createComment).toHaveBeenCalledWith(1, expect.stringContaining('Automated AUR scan results'));
+    expect(github.createComment).not.toHaveBeenCalledWith(1, expect.stringContaining('VirusTotal'));
+  });
+
   it('reports scan findings and VT verdicts on the issue', async () => {
     vi.mocked(aurScan.getScan).mockReturnValue(
       makeScan({

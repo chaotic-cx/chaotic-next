@@ -41,12 +41,13 @@ export const NEEDS_INPUT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 const CUTOFF_MS = Date.parse('2026-06-03T00:00:00.000Z');
 
 const SCAN_POLL_INTERVAL_MS = 3_000;
-// ponytail: caps the wait for VirusTotal enrichment; longer scans post without VT lines.
-const SCAN_TERMINAL_TIMEOUT_MS = 90_000;
+const SCAN_TERMINAL_TIMEOUT_MS = 15 * 60 * 1000;
+const SCAN_RESULTS_HEADER = 'Automated AUR scan results:';
 
 @Injectable()
 export class IssueTrackerService implements OnModuleInit {
   private readonly pendingCloses = new Set<string>();
+  private readonly scanPostsInFlight = new Set<number>();
 
   constructor(
     private readonly github: GithubIssuesService,
@@ -232,8 +233,6 @@ export class IssueTrackerService implements OnModuleInit {
   }
 
   /** Close waiting:issuer-feedback issues without answer for 7 days. Use GitHub search. Keep no local state. */
-  // ponytail: grace anchored on the bot's last issuer-feedback comment and the
-  // local clock; switch to GitHub event timestamps if clock drift matters.
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async sweepStale(): Promise<void> {
     const stale = await this.github.findOpenIssuesLabeled(NEEDS_INPUT_LABEL);
@@ -357,37 +356,55 @@ export class IssueTrackerService implements OnModuleInit {
     await this.github.closeIssue(issueNumber);
   }
 
-  // ponytail: scans pkgbases sequentially and waits up to 90s each; parallelize
-  // or run detached if rebuild requests with many pkgbases become slow.
   private async attachScanFindings(issueNumber: number, pkgbases: string[], requestDate?: string): Promise<void> {
-    const summaries: string[] = [];
-    const kinds = new Set<string>();
-    let hasEolDependency = false;
-    let hasOrphaned = false;
-    for (const pkgbase of pkgbases) {
-      this.aurScan.startScan(pkgbase, { source: 'automated' });
-      const scan = await this.waitForTerminalScan(pkgbase);
-      summaries.push(formatScanSummary(scan));
-      for (const kind of scan?.pkgTypes ?? []) kinds.add(kind);
-
-      if (scan && !this.isBeforeCutoff(requestDate ?? scan.packageMeta.firstSubmitted)) {
-        if (scan.findings.some((finding) => finding.ruleId === EOL_RULE_ID)) hasEolDependency = true;
-        if (scan.packageMeta.orphaned) hasOrphaned = true;
+    if (this.scanPostsInFlight.has(issueNumber)) return;
+    this.scanPostsInFlight.add(issueNumber);
+    try {
+      if (await this.hasScanResultsComment(issueNumber)) return;
+      for (const pkgbase of pkgbases) {
+        this.aurScan.startScan(pkgbase, { source: 'automated' });
       }
-    }
-    await this.createCommentOnce(issueNumber, `Automated AUR scan results:\n\n${summaries.join('\n\n')}`);
-    // ponytail: relies on the issues API auto-creating unknown labels; verify
-    // manually if labels seem to go missing.
-    const labels = [...kinds].map(kindLabel);
-    if (hasEolDependency) labels.push(LIBRARY_EOL_LABEL);
-    if (hasOrphaned) labels.push(ORPHANED_LABEL);
-    if (labels.length > 0) {
-      await this.github.addLabels(issueNumber, labels).catch(() => undefined);
+      const deadline = Date.now() + SCAN_TERMINAL_TIMEOUT_MS;
+      const summaries: string[] = [];
+      const kinds = new Set<string>();
+      let hasEolDependency = false;
+      let hasOrphaned = false;
+      for (const pkgbase of pkgbases) {
+        const scan = await this.waitForTerminalScan(pkgbase, deadline);
+        summaries.push(formatScanSummary(scan));
+        for (const kind of scan?.pkgTypes ?? []) kinds.add(kind);
+
+        if (scan && !this.isBeforeCutoff(requestDate ?? scan.packageMeta.firstSubmitted)) {
+          if (scan.findings.some((finding) => finding.ruleId === EOL_RULE_ID)) hasEolDependency = true;
+          if (scan.packageMeta.orphaned) hasOrphaned = true;
+        }
+      }
+
+      if (await this.hasScanResultsComment(issueNumber)) return;
+      await this.github.createComment(issueNumber, `${SCAN_RESULTS_HEADER}\n\n${summaries.join('\n\n')}`);
+
+      const labels = [...kinds].map(kindLabel);
+      if (hasEolDependency) labels.push(LIBRARY_EOL_LABEL);
+      if (hasOrphaned) labels.push(ORPHANED_LABEL);
+      if (labels.length > 0) {
+        await this.github.addLabels(issueNumber, labels).catch(() => undefined);
+      }
+    } finally {
+      this.scanPostsInFlight.delete(issueNumber);
     }
   }
 
-  private async waitForTerminalScan(packageName: string): Promise<AurPackageScan | null> {
-    const deadline = Date.now() + SCAN_TERMINAL_TIMEOUT_MS;
+  private async hasScanResultsComment(issueNumber: number): Promise<boolean> {
+    const botLogin = await this.github.getBotLogin().catch(() => null);
+    if (botLogin === null) return false;
+    const comments = await this.github.listComments(issueNumber).catch(() => null);
+    return (
+      comments?.some((comment) => comment.user?.login === botLogin && comment.body?.startsWith(SCAN_RESULTS_HEADER)) ??
+      false
+    );
+  }
+
+  private async waitForTerminalScan(packageName: string, deadline: number): Promise<AurPackageScan | null> {
     let scan = this.aurScan.getScan(packageName);
     while (scan !== null && (scan.status === 'scanning' || scan.status === 'awaiting-vt') && Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, SCAN_POLL_INTERVAL_MS));
@@ -586,7 +603,6 @@ function formatScanSummary(scan: AurPackageScan | null): string {
   }
   if (scan.packageMeta.orphaned) lines.push('', 'The package has no maintainer on the AUR.');
   else if (scan.packageMeta.outOfDate) lines.push('', 'The AUR shows this package as out-of-date.');
-  if (scan.vtPending > 0) lines.push('VirusTotal analysis is still running.');
   return lines.join('\n');
 }
 

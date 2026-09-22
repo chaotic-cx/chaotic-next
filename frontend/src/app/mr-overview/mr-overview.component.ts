@@ -390,14 +390,9 @@ export class MrOverviewComponent implements OnInit {
     return loadingMap.get(key) === true;
   }
 
-  /** MRs flagged as malware or dangerous only proceed through manual review, never the buttons. */
-  protected requiresManualReview(mr: MergeRequestWithDiffs): boolean {
-    return mr.labels.includes('malware') || mr.labels.includes('dangerous');
-  }
-
   /** Shared disabled state of all review action buttons; hold additionally blocks hold. */
   protected actionsDisabled(mr: MergeRequestWithDiffs): boolean {
-    return this.requiresManualReview(mr) || mr.labels.includes('approved') || this.isLoading(mr, 'any');
+    return mr.labels.includes('approved') || this.isLoading(mr, 'any');
   }
 
   /** Display config for a review action button, shared by the mobile and desktop layouts. */
