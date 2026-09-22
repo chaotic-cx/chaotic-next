@@ -186,7 +186,7 @@ export class IssueTrackerService implements OnModuleInit {
       scanTargets = bases;
     }
 
-    if (parsed.kind === 'request') {
+    if (parsed.kind === 'request' && scanTargets.length === 1) {
       const alreadyShipped = await this.findAlreadyPackaged(scanTargets);
       if (alreadyShipped !== null) {
         const where =
@@ -414,7 +414,7 @@ export class IssueTrackerService implements OnModuleInit {
       const open = await this.github.findOpenRequestIssues(pkgbase);
       for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Request]'))) {
         const bases = this.extractPkgbasesFromTitle(issue.title);
-        if (bases.length === 2) continue;
+        if (bases.length !== 1) continue;
         if (!bases.includes(pkgbase)) continue;
 
         await this.github.createComment(
@@ -437,7 +437,7 @@ export class IssueTrackerService implements OnModuleInit {
       const open = await this.github.findOpenRequestIssues(pkgbase);
       for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Rebuild]'))) {
         const bases = this.extractPkgbasesFromTitle(issue.title);
-        if (bases.length === 2) continue;
+        if (bases.length !== 1) continue;
         if (!bases.includes(pkgbase)) continue;
 
         await this.github.createComment(
@@ -505,13 +505,15 @@ export class IssueTrackerService implements OnModuleInit {
     kind: 'request' | 'rebuild' | 'issue',
     pkgbases: string[],
   ): Promise<number | null> {
+    if (pkgbases.length !== 1) return null;
+    const target = pkgbases[0].toLowerCase();
     const prefix = kind === 'request' ? '[Request]' : kind === 'rebuild' ? '[Rebuild]' : '[Issue]';
-    for (const pkgbase of pkgbases) {
-      const open = await this.github.findOpenRequestIssues(pkgbase);
-      const other = open.find((issue) => issue.number !== issueNumber && issue.title.trim().startsWith(prefix));
-      if (other !== undefined) return other.number;
-    }
-    return null;
+    const open = await this.github.findOpenRequestIssues(pkgbases[0]);
+    const other = open.find((issue) => {
+      if (issue.number === issueNumber || !issue.title.trim().startsWith(prefix)) return false;
+      return this.extractPkgbasesFromTitle(issue.title).some((base) => base.toLowerCase() === target);
+    });
+    return other?.number ?? null;
   }
 
   private isBeforeCutoff(dateStr: string | undefined): boolean {

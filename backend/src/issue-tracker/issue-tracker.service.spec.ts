@@ -320,6 +320,67 @@ describe('IssueTrackerService.triage', () => {
     expect(aurScan.startScan).toHaveBeenCalledWith('firedragon', expect.objectContaining({ source: 'automated' }));
   });
 
+  it('never closes a multi-base request as a duplicate when one base overlaps', async () => {
+    const body = REQUEST_BODY.replace(
+      'https://aur.archlinux.org/pkgbase/foo-app',
+      'https://aur.archlinux.org/pkgbase/foo-app\nhttps://aur.archlinux.org/pkgbase/bar-lib',
+    );
+    vi.mocked(github.resolveAurPackageBases).mockImplementation((names: string[]) => {
+      const resolution = new Map<string, string | null>();
+      for (const name of names) resolution.set(name, name);
+      return Promise.resolve(resolution);
+    });
+    vi.mocked(github.getAurBaseRelations).mockResolvedValue({
+      members: new Map([
+        ['foo-app', new Set(['foo-app'])],
+        ['bar-lib', new Set(['bar-lib'])],
+      ]),
+      depends: new Map([
+        ['foo-app', new Set(['bar-lib'])],
+        ['bar-lib', new Set()],
+      ]),
+    });
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 42, title: '[Request] foo-app' }]);
+    await service.triage(7, '[Request] foo-app', body);
+    expect(github.closeIssue).not.toHaveBeenCalled();
+    expect(github.addLabels).not.toHaveBeenCalledWith(7, [DUPLICATE_LABEL]);
+  });
+
+  it('does not close on substring duplicate (alacritty-git vs alacritty-sixel-git)', async () => {
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 11, title: '[Request] alacritty-sixel-git' }]);
+    await service.triage(1, '[Request] alacritty-git', REQUEST_BODY.replace(/foo-app/g, 'alacritty-git'));
+    expect(github.closeIssue).not.toHaveBeenCalled();
+    expect(github.addLabels).not.toHaveBeenCalledWith(1, [DUPLICATE_LABEL]);
+  });
+
+  it('never closes a multi-base request when one base is already packaged', async () => {
+    const body = REQUEST_BODY.replace(
+      'https://aur.archlinux.org/pkgbase/foo-app',
+      'https://aur.archlinux.org/pkgbase/foo-app\nhttps://aur.archlinux.org/pkgbase/bar-lib',
+    );
+    vi.mocked(github.resolveAurPackageBases).mockImplementation((names: string[]) => {
+      const resolution = new Map<string, string | null>();
+      for (const name of names) resolution.set(name, name);
+      return Promise.resolve(resolution);
+    });
+    vi.mocked(github.getAurBaseRelations).mockResolvedValue({
+      members: new Map([
+        ['foo-app', new Set(['foo-app'])],
+        ['bar-lib', new Set(['bar-lib'])],
+      ]),
+      depends: new Map([
+        ['foo-app', new Set(['bar-lib'])],
+        ['bar-lib', new Set()],
+      ]),
+    });
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+      pkgname: 'foo-app',
+      pkgbaseName: 'foo-app',
+    });
+    await service.triage(7, '[Request] foo-app', body);
+    expect(github.closeIssue).not.toHaveBeenCalled();
+  });
+
   it('does not scan rebuild requests — only package requests are scanned', async () => {
     const rebuildBody = [
       '### Packages',

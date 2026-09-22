@@ -30,6 +30,8 @@ export class PipelineListComponent {
   readonly STAGGER_CAP = 8;
 
   statusDotClass(status: string): string {
+    const partial = status.match(/^(\d+)\/(\d+) successful$/);
+    if (partial) return partial[1] === partial[2] ? 'bg-ctp-green' : 'bg-ctp-red';
     if (status.includes('success')) return 'bg-ctp-green';
     if (status.includes('failed')) return 'bg-ctp-red';
     return STATUS_DOT_CLASS[status] ?? FALLBACK_DOT_CLASS;

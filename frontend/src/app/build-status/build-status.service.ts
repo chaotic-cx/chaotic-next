@@ -453,7 +453,7 @@ export class BuildStatusService {
     const failedJobs = pipeline.commit.filter((job) => job.status === 'failed').length;
     let statusText = pipeline.pipeline.status;
     if (failedJobs > 0) {
-      statusText = `${failedJobs}/${pipeline.commit.length} failed`;
+      statusText = `${pipeline.commit.length - failedJobs}/${pipeline.commit.length} successful`;
     } else if (pipeline.pipeline.status === 'canceled') {
       statusText = 'success';
     }
