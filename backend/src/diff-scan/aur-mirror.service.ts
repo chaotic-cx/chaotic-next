@@ -7,6 +7,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { sleep } from '../utils/functions';
 
 const execFileP = promisify(execFile);
 
@@ -19,6 +20,8 @@ const MAX_FILES_PER_PACKAGE = 10;
 const TEXT_SNIFF_BYTES = 8192;
 const CONTROL_BYTE_RATIO_LIMIT = 0.1;
 const PACKAGE_BASE_PATTERN = /^[a-z0-9][a-z0-9@._+-]*$/i;
+const BRANCH_FETCH_ATTEMPTS = 3;
+const BRANCH_FETCH_RETRY_WAIT_MS = 200;
 
 export type MirrorFile = { content: string } | { binary: true };
 
@@ -130,10 +133,22 @@ export class AurMirrorService implements OnModuleInit {
     if (!this.ready || !PACKAGE_BASE_PATTERN.test(packageBase)) return false;
     try {
       if (await this.hasFreshRef(packageBase)) return true;
-      await this.git(['fetch', '--depth=1', '--no-filter', 'origin', packageBase], FETCH_TIMEOUT_MS);
-      await this.git(['rev-parse', '--verify', refOf(packageBase)], READ_TIMEOUT_MS);
-      this.branchFetchedAt.set(packageBase, Date.now());
-      return true;
+      // Explicit destination ref: the opportunistic remote-tracking update of
+      // a bare `fetch origin <branch>` is lost while a full sync fetch runs concurrently
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await this.git(
+            ['fetch', '--depth=1', '--no-filter', 'origin', `+${packageBase}:${refOf(packageBase)}`],
+            FETCH_TIMEOUT_MS,
+          );
+          await this.git(['rev-parse', '--verify', refOf(packageBase)], READ_TIMEOUT_MS);
+          this.branchFetchedAt.set(packageBase, Date.now());
+          return true;
+        } catch (err) {
+          if (attempt >= BRANCH_FETCH_ATTEMPTS) throw err;
+          await sleep(BRANCH_FETCH_RETRY_WAIT_MS);
+        }
+      }
     } catch (err) {
       this.pino.debug({ err, packageBase }, 'AUR mirror branch unavailable');
       return false;
