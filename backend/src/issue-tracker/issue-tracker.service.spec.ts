@@ -25,6 +25,9 @@ GPL-3.0-or-later
 `;
 
 const EIGHT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
+const RECENT_ISSUE_DATE = '2026-07-01T00:00:00.000Z';
+const LEGACY_ISSUE_DATE = '2021-08-19T19:46:17.000Z';
+const openRecent = { state: 'open', created_at: RECENT_ISSUE_DATE } as const;
 
 function makeGithub(): GithubIssuesService {
   return {
@@ -32,9 +35,14 @@ function makeGithub(): GithubIssuesService {
     addLabels: vi.fn().mockResolvedValue(undefined),
     removeLabel: vi.fn().mockResolvedValue(undefined),
     closeIssue: vi.fn().mockResolvedValue(undefined),
-    getIssue: vi
-      .fn()
-      .mockResolvedValue({ title: '[Request] foo-app', body: REQUEST_BODY, user: 'someone', labels: [] }),
+    getIssue: vi.fn().mockResolvedValue({
+      title: '[Request] foo-app',
+      body: REQUEST_BODY,
+      user: 'someone',
+      labels: [],
+      state: 'open',
+      createdAt: RECENT_ISSUE_DATE,
+    }),
     listComments: vi.fn().mockResolvedValue([]),
     findOpenRequestIssues: vi.fn().mockResolvedValue([]),
     findOpenIssuesLabeled: vi.fn().mockResolvedValue([]),
@@ -348,7 +356,9 @@ describe('IssueTrackerService.triage', () => {
   });
 
   it('closes a duplicate of the same kind without scanning', async () => {
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 42, title: '[Request] foo-app' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 42, title: '[Request] foo-app', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.triage(7, '[Request] foo-app', REQUEST_BODY);
     expect(aurScan.startScan).not.toHaveBeenCalled();
     expect(github.createComment).toHaveBeenCalledWith(7, expect.stringContaining('#42'));
@@ -357,7 +367,9 @@ describe('IssueTrackerService.triage', () => {
   });
 
   it('never treats a rebuild issue as a duplicate of a package request', async () => {
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 3, title: '[Rebuild] firedragon' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 3, title: '[Rebuild] firedragon', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.triage(1, '[Request] firedragon', REQUEST_BODY.replace(/foo-app/g, 'firedragon'));
     expect(github.closeIssue).not.toHaveBeenCalled();
     expect(github.addLabels).not.toHaveBeenCalledWith(1, [DUPLICATE_LABEL]);
@@ -384,14 +396,18 @@ describe('IssueTrackerService.triage', () => {
         ['bar-lib', new Set()],
       ]),
     });
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 42, title: '[Request] foo-app' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 42, title: '[Request] foo-app', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.triage(7, '[Request] foo-app', body);
     expect(github.closeIssue).not.toHaveBeenCalled();
     expect(github.addLabels).not.toHaveBeenCalledWith(7, [DUPLICATE_LABEL]);
   });
 
   it('does not close on substring duplicate (alacritty-git vs alacritty-sixel-git)', async () => {
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 11, title: '[Request] alacritty-sixel-git' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 11, title: '[Request] alacritty-sixel-git', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.triage(1, '[Request] alacritty-git', REQUEST_BODY.replace(/foo-app/g, 'alacritty-git'));
     expect(github.closeIssue).not.toHaveBeenCalled();
     expect(github.addLabels).not.toHaveBeenCalledWith(1, [DUPLICATE_LABEL]);
@@ -478,7 +494,7 @@ describe('IssueTrackerService.handleIssueEvent', () => {
     action: string,
     labels: { name: string }[] = [],
   ): Parameters<IssueTrackerService['handleIssueEvent']>[0] {
-    return { action, issue: { number: 1, title: '[Request] foo-app', body: REQUEST_BODY, labels } };
+    return { action, issue: { number: 1, title: '[Request] foo-app', body: REQUEST_BODY, labels, ...openRecent } };
   }
 
   it('triages on opened', async () => {
@@ -503,6 +519,8 @@ describe('IssueTrackerService.handleIssueEvent', () => {
       body: REQUEST_BODY,
       user: 'someone',
       labels: [],
+      state: 'open',
+      createdAt: RECENT_ISSUE_DATE,
     });
     await service.handleIssueEvent({
       action: 'created',
@@ -512,6 +530,7 @@ describe('IssueTrackerService.handleIssueEvent', () => {
         body: REQUEST_BODY,
         labels: [{ name: 'waiting:issuer-feedback' }],
         user: { login: 'someone' },
+        ...openRecent,
       },
       comment: { user: { login: 'someone' } },
     });
@@ -524,6 +543,8 @@ describe('IssueTrackerService.handleIssueEvent', () => {
       body: REQUEST_BODY,
       user: 'someone',
       labels: [],
+      state: 'open',
+      createdAt: RECENT_ISSUE_DATE,
     });
     await service.handleIssueEvent({
       action: 'created',
@@ -533,12 +554,63 @@ describe('IssueTrackerService.handleIssueEvent', () => {
         body: REQUEST_BODY,
         labels: [{ name: 'waiting:issuer-feedback' }],
         user: { login: 'someone' },
+        ...openRecent,
       },
       comment: { user: { login: 'someone-else' } },
     });
     expect(github.removeLabel).not.toHaveBeenCalled();
     expect(aurScan.startScan).not.toHaveBeenCalled();
   });
+
+  it.each(['opened', 'edited', 'reopened', 'created', 'labeled'])(
+    'never touches an issue created before CUTOFF on %s',
+    async (action) => {
+      await service.handleIssueEvent({
+        action,
+        label: { name: 'build:test' },
+        comment: { user: { login: 'someone' } },
+        issue: {
+          number: 893,
+          title: ' [Request] qv2ray',
+          body: 'free text without template sections',
+          labels: [{ name: NEEDS_INPUT_LABEL }, { name: 'priority:low' }],
+          user: { login: 'someone' },
+          state: 'open',
+          created_at: LEGACY_ISSUE_DATE,
+        },
+      });
+      expectUntouched();
+    },
+  );
+
+  it.each(['opened', 'edited', 'reopened', 'created', 'labeled'])(
+    'never touches a closed issue on %s',
+    async (action) => {
+      await service.handleIssueEvent({
+        action,
+        label: { name: 'build:test' },
+        comment: { user: { login: 'someone' } },
+        issue: {
+          number: 1,
+          title: '[Request] foo-app',
+          body: 'free text without template sections',
+          labels: [{ name: NEEDS_INPUT_LABEL }],
+          user: { login: 'someone' },
+          state: 'closed',
+          created_at: RECENT_ISSUE_DATE,
+        },
+      });
+      expectUntouched();
+    },
+  );
+
+  function expectUntouched(): void {
+    expect(github.createComment).not.toHaveBeenCalled();
+    expect(github.addLabels).not.toHaveBeenCalled();
+    expect(github.removeLabel).not.toHaveBeenCalled();
+    expect(github.closeIssue).not.toHaveBeenCalled();
+    expect(aurScan.startScan).not.toHaveBeenCalled();
+  }
 
   it('ignores unrelated actions', async () => {
     await service.handleIssueEvent(payload('closed'));
@@ -561,7 +633,9 @@ describe('IssueTrackerService.sweepStale', () => {
   }
 
   it('retriages instead of closing when the requester answered after the bot', async () => {
-    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([{ number: 9, title: 'x' }]);
+    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([
+      { number: 9, title: 'x', createdAt: RECENT_ISSUE_DATE },
+    ]);
     vi.mocked(github.listComments).mockResolvedValue([
       comment('request-bot', EIGHT_DAYS_MS),
       comment('someone', 24 * 60 * 60 * 1000),
@@ -574,7 +648,9 @@ describe('IssueTrackerService.sweepStale', () => {
   });
 
   it('closes an unanswered stale issue', async () => {
-    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([{ number: 10, title: 'x' }]);
+    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([
+      { number: 10, title: 'x', createdAt: RECENT_ISSUE_DATE },
+    ]);
     vi.mocked(github.listComments).mockResolvedValue([comment('request-bot', EIGHT_DAYS_MS)]);
 
     await service.sweepStale();
@@ -585,7 +661,9 @@ describe('IssueTrackerService.sweepStale', () => {
   });
 
   it('skips issues whose needs-input tag is younger than the grace period', async () => {
-    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([{ number: 11, title: 'x' }]);
+    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([
+      { number: 11, title: 'x', createdAt: RECENT_ISSUE_DATE },
+    ]);
     vi.mocked(github.listComments).mockResolvedValue([comment('request-bot', 24 * 60 * 60 * 1000)]);
 
     await service.sweepStale();
@@ -593,8 +671,30 @@ describe('IssueTrackerService.sweepStale', () => {
     expect(github.closeIssue).not.toHaveBeenCalled();
   });
 
+  it('never closes a stale issue created before CUTOFF', async () => {
+    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([
+      { number: 893, title: 'x', createdAt: LEGACY_ISSUE_DATE },
+    ]);
+    vi.mocked(github.getIssue).mockResolvedValue({
+      title: 'x',
+      body: '',
+      user: 'someone',
+      labels: [NEEDS_INPUT_LABEL],
+      state: 'open',
+      createdAt: LEGACY_ISSUE_DATE,
+    });
+    vi.mocked(github.listComments).mockResolvedValue([comment('request-bot', EIGHT_DAYS_MS)]);
+
+    await service.sweepStale();
+
+    expect(github.createComment).not.toHaveBeenCalled();
+    expect(github.closeIssue).not.toHaveBeenCalled();
+  });
+
   it('skips issues without a bot comment', async () => {
-    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([{ number: 12, title: 'x' }]);
+    vi.mocked(github.findOpenIssuesLabeled).mockResolvedValue([
+      { number: 12, title: 'x', createdAt: RECENT_ISSUE_DATE },
+    ]);
     vi.mocked(github.listComments).mockResolvedValue([comment('someone', EIGHT_DAYS_MS)]);
 
     await service.sweepStale();
@@ -646,7 +746,13 @@ describe('IssueTrackerService priority, dedup, and related bases', () => {
     await service.handleIssueEvent({
       action: 'labeled',
       label: { name: 'priority:high' },
-      issue: { number: 1, title: '[Request] foo-app', body: REQUEST_BODY, labels: [{ name: 'needs-triage' }] },
+      issue: {
+        number: 1,
+        title: '[Request] foo-app',
+        body: REQUEST_BODY,
+        labels: [{ name: 'needs-triage' }],
+        ...openRecent,
+      },
     });
     expect(github.removeLabel).toHaveBeenCalledWith(1, NEEDS_TRIAGE_LABEL);
   });
@@ -660,6 +766,7 @@ describe('IssueTrackerService priority, dedup, and related bases', () => {
         body: REQUEST_BODY,
         labels: [{ name: 'waiting:issuer-feedback' }],
         user: { login: 'someone' },
+        ...openRecent,
       },
       comment: { user: { login: 'someone' } },
     });
@@ -728,22 +835,29 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
     service = makeService(github, aurScan);
   });
 
-  it('suppresses needs-input for requests before CUTOFF', async () => {
-    const beforeCutoff = '2026-01-01T00:00:00.000Z';
+  it('still prompts for requests after CUTOFF', async () => {
     await service.triage(
       1,
       'bad title',
       '### Package\n\nfoo\n\n### Purpose\n\nx\n\n### License\n\nMIT\n',
-      beforeCutoff,
+      RECENT_ISSUE_DATE,
     );
-    expect(github.addLabels).not.toHaveBeenCalledWith(1, expect.arrayContaining([NEEDS_INPUT_LABEL]));
-    expect(github.createComment).not.toHaveBeenCalledWith(1, expect.stringContaining('needs attention'));
+    expect(github.addLabels).toHaveBeenCalledWith(1, expect.arrayContaining([NEEDS_INPUT_LABEL]));
   });
 
-  it('still prompts for requests after CUTOFF', async () => {
-    const afterCutoff = '2026-07-01T00:00:00.000Z';
-    await service.triage(1, 'bad title', '### Package\n\nfoo\n\n### Purpose\n\nx\n\n### License\n\nMIT\n', afterCutoff);
-    expect(github.addLabels).toHaveBeenCalledWith(1, expect.arrayContaining([NEEDS_INPUT_LABEL]));
+  it('never closes a fulfilled request created before CUTOFF', async () => {
+    vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+      pkgname: 'foo-app',
+      pkgbaseName: 'foo-app',
+      isActive: true,
+      version: '1.0-1',
+    });
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 893, title: '[Request] foo-app', createdAt: LEGACY_ISSUE_DATE },
+    ]);
+    await service.closeFulfilledNewRequest('foo-app');
+    expect(github.closeIssue).not.toHaveBeenCalled();
+    expect(github.createComment).not.toHaveBeenCalled();
   });
 
   it('skips closing fulfilled request when title has 2 pkgbases', async () => {
@@ -753,7 +867,9 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
       isActive: true,
       version: '1.0-1',
     });
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 99, title: '[Request] foo-app, bar-lib' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 99, title: '[Request] foo-app, bar-lib', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.closeFulfilledNewRequest('foo-app');
     expect(github.closeIssue).not.toHaveBeenCalled();
     expect(github.createComment).not.toHaveBeenCalled();
@@ -766,13 +882,17 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
       isActive: true,
       version: '1.0-1',
     });
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 99, title: '[Request] foo-app' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 99, title: '[Request] foo-app', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.closeFulfilledNewRequest('foo-app');
     expect(github.closeIssue).toHaveBeenCalledWith(99);
   });
 
   it('skips closing fulfilled rebuild when title has 2 pkgbases', async () => {
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 100, title: '[Rebuild] foo-app, bar-lib' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 100, title: '[Rebuild] foo-app, bar-lib', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.closeFulfilledRebuild('foo-app');
     expect(github.closeIssue).not.toHaveBeenCalled();
   });
@@ -787,7 +907,7 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
     });
     // GitHub search `in:title "alacritty-git"` can return sibling with shared prefix
     vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
-      { number: 4152, title: '[Request] alacritty-sixel-git' },
+      { number: 4152, title: '[Request] alacritty-sixel-git', createdAt: RECENT_ISSUE_DATE },
     ]);
     await service.closeFulfilledNewRequest('alacritty-git');
     expect(github.closeIssue).not.toHaveBeenCalled();
@@ -796,7 +916,7 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
 
   it('does not close alacritty-sixel-git rebuild when alacritty-git is built', async () => {
     vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
-      { number: 4153, title: '[Rebuild] alacritty-sixel-git' },
+      { number: 4153, title: '[Rebuild] alacritty-sixel-git', createdAt: RECENT_ISSUE_DATE },
     ]);
     await service.closeFulfilledRebuild('alacritty-git');
     expect(github.closeIssue).not.toHaveBeenCalled();
@@ -810,8 +930,8 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
       version: '1.0-1',
     });
     vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
-      { number: 10, title: '[Request] alacritty-git' },
-      { number: 11, title: '[Request] alacritty-sixel-git' },
+      { number: 10, title: '[Request] alacritty-git', createdAt: RECENT_ISSUE_DATE },
+      { number: 11, title: '[Request] alacritty-sixel-git', createdAt: RECENT_ISSUE_DATE },
     ]);
     await service.closeFulfilledNewRequest('alacritty-git');
     expect(github.closeIssue).toHaveBeenCalledWith(10);
@@ -826,7 +946,9 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
       isActive: true,
       version: null,
     });
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 4284, title: '[Request] proton-pass' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 4284, title: '[Request] proton-pass', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.closeFulfilledNewRequest('proton-pass');
     expect(github.closeIssue).not.toHaveBeenCalled();
   });
@@ -838,14 +960,18 @@ describe('IssueTrackerService cutoff and 2-pkgbase handling', () => {
       isActive: false,
       version: '1.0-1',
     });
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 4284, title: '[Request] proton-pass' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 4284, title: '[Request] proton-pass', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.closeFulfilledNewRequest('proton-pass');
     expect(github.closeIssue).not.toHaveBeenCalled();
   });
 
   it('does not close request when package not yet in DB', async () => {
     vi.mocked(service['chaoticPackages'].findOne as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 4284, title: '[Request] proton-pass' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 4284, title: '[Request] proton-pass', createdAt: RECENT_ISSUE_DATE },
+    ]);
     await service.closeFulfilledNewRequest('proton-pass');
     expect(github.closeIssue).not.toHaveBeenCalled();
   });

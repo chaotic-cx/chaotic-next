@@ -42,6 +42,7 @@ export interface IssueCommentRef {
 export interface IssueRef {
   number: number;
   title: string;
+  createdAt: string;
 }
 
 /**
@@ -99,12 +100,19 @@ export class GithubIssuesService {
     });
   }
 
-  async getIssue(
-    issueNumber: number,
-  ): Promise<{ title: string; body: string; user: string | null; labels: string[] } | null> {
+  async getIssue(issueNumber: number): Promise<{
+    title: string;
+    body: string;
+    user: string | null;
+    labels: string[];
+    state: string;
+    createdAt: string;
+  } | null> {
     try {
       const data = await this.request<{
         title: string;
+        state: string;
+        created_at: string;
         body?: string | null;
         user?: { login: string } | null;
         labels?: { name: string }[];
@@ -114,6 +122,8 @@ export class GithubIssuesService {
         body: data.body ?? '',
         user: data.user?.login ?? null,
         labels: (data.labels ?? []).map((label) => label.name),
+        state: data.state,
+        createdAt: data.created_at,
       };
     } catch (err: unknown) {
       const status = (err as { status?: number }).status;
@@ -143,10 +153,10 @@ export class GithubIssuesService {
   }
 
   private async searchOpenIssues(query: string, perPage: number): Promise<IssueRef[]> {
-    const data = await this.request<{ items: { number: number; title: string }[] }>(
+    const data = await this.request<{ items: { number: number; title: string; created_at: string }[] }>(
       `/search/issues?q=${encodeURIComponent(query)}&per_page=${perPage}`,
     );
-    return data.items.map((item) => ({ number: item.number, title: item.title }));
+    return data.items.map((item) => ({ number: item.number, title: item.title, createdAt: item.created_at }));
   }
 
   /** Login of the account behind GITHUB_TOKEN; the sweep anchors the grace period on its comments. */

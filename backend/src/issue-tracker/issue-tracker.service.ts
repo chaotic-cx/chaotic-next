@@ -24,6 +24,7 @@ import {
   DUPLICATE_LABEL,
   GithubIssuesService,
   type IssueCommentRef,
+  type IssueRef,
   LEGACY_NEEDS_INPUT_LABEL,
   LIBRARY_EOL_LABEL,
   NEEDS_INPUT_LABEL,
@@ -39,6 +40,7 @@ import { parsePackageRequest } from './issue-form.parser';
 /** Grace period for waiting:issuer-feedback is 7 days. */
 export const NEEDS_INPUT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 const CUTOFF_MS = Date.parse('2026-06-03T00:00:00.000Z');
+const OPEN_STATE = 'open';
 
 const SCAN_POLL_INTERVAL_MS = 3_000;
 const SCAN_TERMINAL_TIMEOUT_MS = 15 * 60 * 1000;
@@ -70,6 +72,7 @@ export class IssueTrackerService implements OnModuleInit {
 
   async handleIssueEvent(payload: GithubIssueEventDto): Promise<void> {
     const issue = payload.issue;
+    if (!isActionable(issue.state, issue.created_at)) return;
     const waitsForIssuerFeedback = issue.labels.some(
       (label) => label.name === NEEDS_INPUT_LABEL || label.name === LEGACY_NEEDS_INPUT_LABEL,
     );
@@ -87,7 +90,7 @@ export class IssueTrackerService implements OnModuleInit {
         issue.number,
         issue.title,
         issue.body ?? '',
-        issue.created_at ?? undefined,
+        issue.created_at,
         issue.labels.map((label) => label.name),
       );
       return;
@@ -103,7 +106,7 @@ export class IssueTrackerService implements OnModuleInit {
           issue.number,
           issue.title,
           issue.body ?? '',
-          issue.created_at ?? undefined,
+          issue.created_at,
           issue.labels.map((label) => label.name),
         );
       }
@@ -115,7 +118,7 @@ export class IssueTrackerService implements OnModuleInit {
         issue.number,
         issue.title,
         issue.body ?? '',
-        issue.created_at ?? undefined,
+        issue.created_at,
         issue.labels.map((label) => label.name),
       );
     }
@@ -147,7 +150,6 @@ export class IssueTrackerService implements OnModuleInit {
 
     const parsed = parsePackageRequest(title, body);
     if (!parsed.ok) {
-      if (this.isBeforeCutoff(createdAt)) return;
       await this.postNeedsInput(
         issueNumber,
         `Thanks for the request. Some parts of the issue need attention:\n\n${formatFailures(parsed.failures)}\n\nPlease fix the sections above.`,
@@ -336,7 +338,7 @@ export class IssueTrackerService implements OnModuleInit {
 
   private async sweepOne(issueNumber: number): Promise<void> {
     const issue = await this.github.getIssue(issueNumber);
-    if (!issue) return;
+    if (!issue || !isActionable(issue.state, issue.createdAt)) return;
     const comments = await this.github.listComments(issueNumber);
     const botLogin = await this.github.getBotLogin();
     if (botLogin === null) return;
@@ -345,7 +347,7 @@ export class IssueTrackerService implements OnModuleInit {
     const taggedAt = new Date(lastBotComment.created_at);
     if (Date.now() - taggedAt.getTime() < NEEDS_INPUT_GRACE_MS) return;
     if (this.requesterAnswered(comments, issue.user, taggedAt)) {
-      await this.triage(issueNumber, issue.title, issue.body, undefined, issue.labels);
+      await this.triage(issueNumber, issue.title, issue.body, issue.createdAt, issue.labels);
       return;
     }
     await this.github.createComment(
@@ -428,8 +430,8 @@ export class IssueTrackerService implements OnModuleInit {
         where: [{ pkgbaseName: pkgbase }, { pkgname: pkgbase }],
       });
       if (!deployed?.isActive || !deployed.version) return;
-      const open = await this.github.findOpenRequestIssues(pkgbase);
-      for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Request]'))) {
+      const open = await this.findActionableRequestIssues(pkgbase, '[Request]');
+      for (const issue of open) {
         const bases = this.extractPkgbasesFromTitle(issue.title);
         if (bases.length !== 1) continue;
         if (!bases.includes(pkgbase)) continue;
@@ -451,8 +453,8 @@ export class IssueTrackerService implements OnModuleInit {
     if (this.pendingCloses.has(key)) return;
     this.pendingCloses.add(key);
     try {
-      const open = await this.github.findOpenRequestIssues(pkgbase);
-      for (const issue of open.filter((candidate) => candidate.title.trim().startsWith('[Rebuild]'))) {
+      const open = await this.findActionableRequestIssues(pkgbase, '[Rebuild]');
+      for (const issue of open) {
         const bases = this.extractPkgbasesFromTitle(issue.title);
         if (bases.length !== 1) continue;
         if (!bases.includes(pkgbase)) continue;
@@ -466,6 +468,13 @@ export class IssueTrackerService implements OnModuleInit {
     } finally {
       this.pendingCloses.delete(key);
     }
+  }
+
+  private async findActionableRequestIssues(pkgbase: string, titlePrefix: string): Promise<IssueRef[]> {
+    const open = await this.github.findOpenRequestIssues(pkgbase);
+    return open.filter(
+      (issue) => issue.title.trim().startsWith(titlePrefix) && isActionable(OPEN_STATE, issue.createdAt),
+    );
   }
 
   private extractPkgbasesFromTitle(title: string): string[] {
@@ -542,6 +551,11 @@ export class IssueTrackerService implements OnModuleInit {
 }
 
 const COMMENT_LOG_TAIL_CHARS = 1500;
+
+/** Only open issues created after the cutoff may receive comments, labels, or state changes. */
+function isActionable(state: string, createdAt: string): boolean {
+  return state === OPEN_STATE && Date.parse(createdAt) >= CUTOFF_MS;
+}
 
 function toAverages(stats: BuildResourceStats) {
   return {

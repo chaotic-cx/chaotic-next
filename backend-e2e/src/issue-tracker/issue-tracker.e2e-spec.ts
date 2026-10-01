@@ -7,6 +7,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createE2eApp, type E2eApp } from '../test/e2e-app';
 
 const WEBHOOK_SECRET = 'test-github-webhook-secret';
+const openRecentIssue = { state: 'open', created_at: '2026-07-01T00:00:00.000Z' } as const;
+
 process.env.GITHUB_WEBHOOK_SECRET = WEBHOOK_SECRET;
 process.env.GITHUB_TOKEN ??= 'e2e-github-stub-token';
 
@@ -117,7 +119,10 @@ describe('Issue tracker webhook (e2e)', () => {
   }
 
   it('rejects missing signature with 401', async () => {
-    const payload = { action: 'opened', issue: { number: 1, title: '[Request] foo', body: validBody(), labels: [] } };
+    const payload = {
+      action: 'opened',
+      issue: { number: 1, title: '[Request] foo', body: validBody(), labels: [], ...openRecentIssue },
+    };
     const res = await e2e.inject({
       method: 'POST',
       url: '/issue-tracker/webhook',
@@ -128,7 +133,10 @@ describe('Issue tracker webhook (e2e)', () => {
   });
 
   it('rejects invalid signature with 401', async () => {
-    const payload = { action: 'opened', issue: { number: 1, title: '[Request] foo', body: validBody(), labels: [] } };
+    const payload = {
+      action: 'opened',
+      issue: { number: 1, title: '[Request] foo', body: validBody(), labels: [], ...openRecentIssue },
+    };
     const res = await post(payload, {
       'x-hub-signature-256': 'sha256=badbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadab',
     });
@@ -136,7 +144,10 @@ describe('Issue tracker webhook (e2e)', () => {
   });
 
   it('ignores unsupported event with 204', async () => {
-    const payload = { action: 'opened', issue: { number: 1, title: '[Request] foo', body: validBody(), labels: [] } };
+    const payload = {
+      action: 'opened',
+      issue: { number: 1, title: '[Request] foo', body: validBody(), labels: [], ...openRecentIssue },
+    };
     const res = await post(payload, { 'x-github-event': 'push' });
     expect(res.statusCode).toBe(204);
   });
@@ -145,7 +156,7 @@ describe('Issue tracker webhook (e2e)', () => {
     const github = e2e.app.get(GithubIssuesService);
     const payload = {
       action: 'opened',
-      issue: { number: 10, title: '[Request] chaotic-mirrorlist', body: validBody(), labels: [] },
+      issue: { number: 10, title: '[Request] chaotic-mirrorlist', body: validBody(), labels: [], ...openRecentIssue },
     };
     const res = await post(payload);
     expect(res.statusCode).toBe(204);
@@ -157,7 +168,7 @@ describe('Issue tracker webhook (e2e)', () => {
     const github = e2e.app.get(GithubIssuesService);
     const payload = {
       action: 'opened',
-      issue: { number: 11, title: '[Request] foo', body: 'no headings here', labels: [] },
+      issue: { number: 11, title: '[Request] foo', body: 'no headings here', labels: [], ...openRecentIssue },
     };
     const res = await post(payload);
     expect(res.statusCode).toBe(204);
@@ -167,10 +178,12 @@ describe('Issue tracker webhook (e2e)', () => {
 
   it('closes duplicate', async () => {
     const github = e2e.app.get(GithubIssuesService);
-    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([{ number: 99, title: '[Request] chaotic-mirrorlist' }]);
+    vi.mocked(github.findOpenRequestIssues).mockResolvedValue([
+      { number: 99, title: '[Request] chaotic-mirrorlist', createdAt: '2026-07-01T00:00:00.000Z' },
+    ]);
     const payload = {
       action: 'opened',
-      issue: { number: 12, title: '[Request] chaotic-mirrorlist', body: validBody(), labels: [] },
+      issue: { number: 12, title: '[Request] chaotic-mirrorlist', body: validBody(), labels: [], ...openRecentIssue },
     };
     const res = await post(payload);
     expect(res.statusCode).toBe(204);
@@ -189,6 +202,7 @@ describe('Issue tracker webhook (e2e)', () => {
         title: '[Rebuild] chaotic-mirrorlist',
         body: validRebuildBody(),
         labels: [{ name: 'build:test' }],
+        ...openRecentIssue,
       },
     };
     const res = await post(payload);
@@ -209,6 +223,7 @@ describe('Issue tracker webhook (e2e)', () => {
         title: '[Rebuild] chaotic-mirrorlist',
         body: validRebuildBody(),
         labels: [{ name: 'build:test' }],
+        ...openRecentIssue,
       },
     };
     const res = await post(payload);
@@ -229,6 +244,7 @@ describe('Issue tracker webhook (e2e)', () => {
         body: validBody(),
         labels: [{ name: 'waiting:issuer-feedback' }],
         user: { login: 'alice' },
+        ...openRecentIssue,
       },
     };
     const res = await post(payload, { 'x-github-event': 'issue_comment' });
@@ -246,6 +262,7 @@ describe('Issue tracker webhook (e2e)', () => {
         body: validBody(),
         labels: [{ name: 'waiting:issuer-feedback' }],
         user: { login: 'alice' },
+        ...openRecentIssue,
       },
     };
     const res = await post(payload);
@@ -274,7 +291,7 @@ describe('Issue tracker webhook (e2e)', () => {
     ].join('\n');
     const payload = {
       action: 'opened',
-      issue: { number: 17, title: '[Issue] chaotic-mirrorlist', body, labels: [] },
+      issue: { number: 17, title: '[Issue] chaotic-mirrorlist', body, labels: [], ...openRecentIssue },
     };
     const res = await post(payload);
     expect(res.statusCode).toBe(204);
@@ -306,7 +323,7 @@ describe('Issue tracker webhook (e2e)', () => {
     } as unknown as ReturnType<AurScanService['getScan']>);
     const payload = {
       action: 'opened',
-      issue: { number: 18, title: '[Request] chaotic-mirrorlist', body: validBody(), labels: [] },
+      issue: { number: 18, title: '[Request] chaotic-mirrorlist', body: validBody(), labels: [], ...openRecentIssue },
     };
     const res = await post(payload);
     expect(res.statusCode).toBe(204);
