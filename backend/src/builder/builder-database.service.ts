@@ -99,7 +99,7 @@ export class BuilderDatabaseService extends Service {
   private pendingDeploymentChecks: PendingDeploymentCheck[] = [];
   private bumpChain: Promise<void> = Promise.resolve();
 
-  private busyUpdating = false;
+  private refreshInFlight: Promise<void> | null = null;
   private scheduledUpdate = false;
 
   constructor({
@@ -288,9 +288,8 @@ export class BuilderDatabaseService extends Service {
 
   /**
    * Runs the work deferred by successful builds: the repository databases now
-   * carry the newly deployed packages, so rebuild triggers can be checked and
-   * the cached Chaotic versions refreshed. Bump checks run one after another,
-   * because concurrent checks would skip each other in RepoManager.
+   * carry the newly deployed packages. The Chaotic versions refresh first,
+   * so that the rebuild triggers scan the new archives, not the old ones.
    */
   async runDeferredDeploymentChecks(event: DatabaseSuccessEvent): Promise<void> {
     const deployedBuilds = this.takeDeployedBuilds(event);
@@ -303,11 +302,15 @@ export class BuilderDatabaseService extends Service {
       'Running deferred deployment checks',
     );
 
+    try {
+      await this.requestChaoticVersionsUpdate();
+    } catch (err: unknown) {
+      this.pino.error(`Failed to refresh Chaotic versions before bump checks: ${errorMessage(err)}`);
+    }
+
     for (const build of deployedBuilds) {
       this.bumpChain = this.bumpChain.then(() => this.runBumpCheck(build));
     }
-
-    await this.requestChaoticVersionsUpdate();
 
     // Re-emit build events with the now-correct version/pkgrel after the
     // DB poll — the initial `builds.success` emission used a stale/NULL
@@ -339,13 +342,20 @@ export class BuilderDatabaseService extends Service {
     }
   }
 
-  async requestChaoticVersionsUpdate(): Promise<void> {
-    if (this.busyUpdating) {
+  /**
+   * A request during a running refresh waits for one more refresh.
+   * Else the caller could read versions from before its own request.
+   */
+  requestChaoticVersionsUpdate(): Promise<void> {
+    if (this.refreshInFlight) {
       this.pino.warn('Scheduling Chaotic version update, another update is in progress');
       this.scheduledUpdate = true;
-      return;
+      return this.refreshInFlight;
     }
-    await this.refreshChaoticVersions();
+    this.refreshInFlight = this.refreshChaoticVersions().finally(() => {
+      this.refreshInFlight = null;
+    });
+    return this.refreshInFlight;
   }
 
   private takeDeployedBuilds(event: DatabaseSuccessEvent): Partial<Build>[] {
@@ -380,16 +390,9 @@ export class BuilderDatabaseService extends Service {
   }
 
   private async refreshChaoticVersions(): Promise<void> {
-    this.busyUpdating = true;
-    try {
-      await this.repoManagerService.updateChaoticVersions();
-      if (!this.scheduledUpdate) {
-        return;
-      }
+    do {
       this.scheduledUpdate = false;
       await this.repoManagerService.updateChaoticVersions();
-    } finally {
-      this.busyUpdating = false;
-    }
+    } while (this.scheduledUpdate);
   }
 }

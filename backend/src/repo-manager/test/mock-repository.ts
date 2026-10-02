@@ -21,6 +21,7 @@ function valueMatches(entityValue: unknown, criterion: unknown): boolean {
   if (isFindOperator(criterion)) {
     if (criterion._type === 'in') return Array.isArray(criterion._value) && criterion._value.includes(entityValue);
     if (criterion._type === 'isNull') return entityValue === null || entityValue === undefined;
+    if (criterion._type === 'moreThanOrEqual') return (entityValue as number) >= (criterion._value as number);
     if (criterion._type === 'not') {
       if (isFindOperator(criterion._value)) return !valueMatches(entityValue, criterion._value);
       return entityValue !== criterion._value;
@@ -33,8 +34,9 @@ function valueMatches(entityValue: unknown, criterion: unknown): boolean {
   return entityValue === criterion;
 }
 
-function matches<T>(entity: T, where: FindOptionsWhere<T> | undefined): boolean {
+function matches<T>(entity: T, where: FindOptionsWhere<T> | FindOptionsWhere<T>[] | undefined): boolean {
   if (!where) return true;
+  if (Array.isArray(where)) return where.some((alternative) => matches(entity, alternative));
   return Object.entries(where).every(([key, value]) => valueMatches((entity as Record<string, unknown>)[key], value));
 }
 

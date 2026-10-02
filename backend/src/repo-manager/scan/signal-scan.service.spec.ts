@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- test fixtures assert on freshly created entities */
 import { describe, expect, it } from 'vitest';
+import { SignalComputeClient } from '../compute/signal-compute.client';
 import { TriggerType } from '../../interfaces/repo-manager';
 import { ArchlinuxPackage, PackageElfAnalysis } from '../repo-manager.entity';
-import { Package, Repo } from '../../builder/builder.entity';
+import { Package } from '../../builder/builder.entity';
 import { SignalScanService } from './signal-scan.service';
 import { MIN_PROVIDED_SONAMES } from '../signal';
 import { createMockRepository } from '../test/mock-repository';
@@ -44,7 +45,12 @@ function makeAnalysis(
   } as PackageElfAnalysis;
 }
 
-function seedProvidedSonames(analysisRepo: MockRepository<PackageElfAnalysis>): void {
+/** An active Chaotic provider of enough sonames, so that the soname check runs. */
+function seedProvidedSonames(
+  analysisRepo: MockRepository<PackageElfAnalysis>,
+  packageRepo: MockRepository<Package>,
+): void {
+  packageRepo.seed([{ id: 500, pkgname: 'seed-provider', isActive: true } as Package]);
   const provider = makeAnalysis({ pkgType: '1', pkgId: 500, version: '1.0-1' });
   const providedSonames: string[] = [];
   for (let index = 0; index < MIN_PROVIDED_SONAMES + 20; index++) providedSonames.push(`libseed${index}.so.1`);
@@ -58,12 +64,15 @@ function createService() {
   });
   const archPkgRepo = createMockRepository<ArchlinuxPackage>({ keyOf: (p) => String(p.id) });
   const packageRepo = createMockRepository<Package>({ keyOf: (p) => String(p.id) });
-  const repoRepo = createMockRepository<Repo>({ keyOf: (r) => String(r.id) });
 
   // python at 3.13 makes any shipped python3.12 dir a stale-runtime break.
   archPkgRepo.seed([{ id: 1, pkgname: 'python', version: '3.13.1' } as ArchlinuxPackage]);
 
-  const service = new SignalScanService(analysisRepo, archPkgRepo, packageRepo, repoRepo, pinoStub);
+  const compute = SignalComputeClient.inline(
+    { analyses: analysisRepo, archPackages: archPkgRepo, packages: packageRepo },
+    pinoStub,
+  );
+  const service = new SignalScanService(analysisRepo, compute, pinoStub);
   return { service, analysisRepo, archPkgRepo, packageRepo };
 }
 
@@ -121,7 +130,7 @@ describe('SignalScanService.recomputeBroken — skip-signal-scanned packages are
 
   it('deletes the ELF analysis rows of a binary-only package with skipSignalScan true', async () => {
     const { service, analysisRepo, packageRepo } = createService();
-    seedProvidedSonames(analysisRepo);
+    seedProvidedSonames(analysisRepo, packageRepo);
     const analysis = makeAnalysis({ pkgType: '1', pkgId: 11, version: '1.0-1' });
     analysis.neededSonames = ['libc.so.1'];
     analysis.files = [];
@@ -135,8 +144,8 @@ describe('SignalScanService.recomputeBroken — skip-signal-scanned packages are
   });
 
   it('still flags a normal package with the same missing soname', async () => {
-    const { service, analysisRepo } = createService();
-    seedProvidedSonames(analysisRepo);
+    const { service, analysisRepo, packageRepo } = createService();
+    seedProvidedSonames(analysisRepo, packageRepo);
     const analysis = makeAnalysis({ pkgType: '1', pkgId: 12, version: '1.0-1' });
     analysis.neededSonames = ['libc.so.1'];
     analysis.files = [];
@@ -205,5 +214,20 @@ describe('SignalScanService.recomputeBroken — only latest version per package 
     expect(pkg30.find((a) => a.version === '2.0-1')!.brokenReasons.some((r) => r.includes('python'))).toBe(true);
     expect(pkg31.find((a) => a.version === '3.0-1')!.broken).toBe(true);
     expect(pkg31.find((a) => a.version === '3.0-1')!.brokenReasons.some((r) => r.includes('python'))).toBe(true);
+  });
+});
+
+describe('SignalScanService.scanPackages — failed scans', () => {
+  it('reports a failed scan with its reason and stores no analysis for it', async () => {
+    const { service, analysisRepo } = createService();
+    const job = { file: '/nonexistent/missing.pkg.tar.zst', pkgType: TriggerType.CHAOTIC, pkgId: 9, version: '1.0-1' };
+
+    const report = await service.scanPackages([job]);
+
+    expect(report.scanned).toBe(0);
+    expect(report.failed).toHaveLength(1);
+    expect(report.failed[0].job).toBe(job);
+    expect(report.failed[0].reason).not.toBe('');
+    expect([...analysisRepo.store.values()].some((a) => a.pkgId === 9)).toBe(false);
   });
 });

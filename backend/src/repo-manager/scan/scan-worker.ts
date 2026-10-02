@@ -35,6 +35,8 @@ const MAX_WORKERS = 4;
 
 let pool: Worker[] | null = null;
 let workersSupported = true;
+// Why the scans run on the main thread, or null while the worker pool works.
+let degradedReason: string | null = null;
 let nextWorker = 0;
 let nextTaskId = 0;
 const pendingById = new Map<number, PendingTask>();
@@ -43,6 +45,7 @@ const taskIdsByWorker = new Map<Worker, Set<number>>();
 async function scanInline(input: ScanWorkerInput): Promise<ScanOutcome> {
   const scanned = await scanArchive(input.file);
   if (!scanned) return { result: null, warnings: [] };
+
   return { result: buildAnalysis({ version: input.version, ...scanned }), warnings: scanned.warnings };
 }
 
@@ -52,18 +55,25 @@ async function scanInline(input: ScanWorkerInput): Promise<ScanOutcome> {
  * worker chunk only exists in the rspack bundle, not in raw TS under vitest or
  * ts-node) or crashes, so scans still complete either way.
  */
-function degradeToInline(worker: Worker): void {
+function degradeToInline(worker: Worker, reason: string): void {
   workersSupported = false;
+  degradedReason ??= reason;
   const taskIds = taskIdsByWorker.get(worker) ?? new Set<number>();
   taskIdsByWorker.delete(worker);
+
   for (const id of taskIds) {
     const task = pendingById.get(id);
     if (!task) continue;
+
     pendingById.delete(id);
     void scanInline(task.input).then(task.resolve, task.reject);
   }
+
   if (pool) {
-    for (const w of pool) void w.terminate();
+    for (const w of pool) {
+      void w.terminate();
+    }
+
     pool = null;
   }
 }
@@ -75,21 +85,32 @@ function spawnWorker(): Worker {
   worker.on('message', (response: ScanResponse) => {
     const task = pendingById.get(response.id);
     if (!task) return;
+
     pendingById.delete(response.id);
     taskIdsByWorker.get(worker)?.delete(response.id);
-    if (response.error) task.reject(new Error(response.error));
-    else task.resolve({ result: response.result ?? null, warnings: response.warnings ?? [] });
+
+    if (response.error) {
+      task.reject(new Error(response.error));
+    } else {
+      task.resolve({ result: response.result ?? null, warnings: response.warnings ?? [] });
+    }
   });
-  worker.on('error', () => degradeToInline(worker));
+
+  worker.on('error', (err: Error) => degradeToInline(worker, `scan worker error: ${err.message}`));
   worker.on('exit', (code) => {
-    if (code !== 0) degradeToInline(worker);
+    if (code !== 0) {
+      degradeToInline(worker, `scan worker exited with code ${code}`);
+    }
   });
+
   return worker;
 }
 
 function getPool(): Worker[] | null {
   if (pool) return pool;
+
   if (!workersSupported || process.env.VITEST === 'true') return null;
+
   pool = [];
   for (let i = 0; i < MAX_WORKERS; i++) {
     try {
@@ -101,7 +122,12 @@ function getPool(): Worker[] | null {
       return null;
     }
   }
+
   return pool;
+}
+
+export function scanWorkerDegradedReason(): string | null {
+  return degradedReason;
 }
 
 export async function scanPackageInWorker(input: ScanWorkerInput): Promise<ScanOutcome> {
@@ -113,6 +139,7 @@ export async function scanPackageInWorker(input: ScanWorkerInput): Promise<ScanO
     pendingById.set(id, { input, resolve, reject });
     const worker = workers[nextWorker++ % workers.length];
     taskIdsByWorker.get(worker)?.add(id);
+
     try {
       worker.postMessage({ id, file: input.file, version: input.version } satisfies ScanRequest);
     } catch {
@@ -133,6 +160,7 @@ if (port) {
         result: scanned ? buildAnalysis({ version: request.version, ...scanned }) : null,
         warnings: scanned?.warnings ?? [],
       };
+
       port.postMessage(response);
     } catch (err) {
       port.postMessage({ id: request.id, error: err instanceof Error ? err.message : String(err) });

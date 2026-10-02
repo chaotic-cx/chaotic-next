@@ -10,6 +10,7 @@ import {
   PackageBump,
   PackageElfAnalysis,
 } from '@chaotic-next/backend/repo-manager/repo-manager.entity';
+import { SignalComputeClient } from '@chaotic-next/backend/repo-manager/compute/signal-compute.client';
 import { RepoManager } from '@chaotic-next/backend/repo-manager/repo-manager';
 import { encodeOwnerKey, ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from '@chaotic-next/backend/repo-manager/signal';
 import { Builder, Package, Repo } from '@chaotic-next/backend/builder/builder.entity';
@@ -73,11 +74,19 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
       error: () => undefined,
       fatal: () => undefined,
     } as unknown as PinoLogger;
+    const compute = SignalComputeClient.inline(
+      {
+        analyses: dataSource.getRepository(PackageElfAnalysis),
+        archPackages: dataSource.getRepository(ArchlinuxPackage),
+        packages: dataSource.getRepository(Package),
+      },
+      pinoStub,
+    );
     const triggers = new RebuildTriggerService(
-      dataSource.getRepository(PackageElfAnalysis),
+      compute,
+      bump,
       dataSource.getRepository(ArchlinuxPackage),
       dataSource.getRepository(Package),
-      bump,
       pinoStub,
     );
     return new RepoManager(
@@ -144,9 +153,7 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
       },
     ];
 
-    await bumpService.bumpPackages(needsRebuild, reader);
-    const needsPush = needsRebuild.filter((p) => p.gotBumped === true);
-    await bumpService.pushChanges(needsPush, repo);
+    await bumpService.bumpAndPush(needsRebuild, reader, repo);
 
     const bumps = await dataSource.getRepository(PackageBump).find({ relations: { pkg: true } });
     const bump = bumps.find((b) => b.pkg?.id === consumer.id);

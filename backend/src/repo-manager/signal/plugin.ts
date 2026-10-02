@@ -22,7 +22,7 @@ export interface DirectoryIndex {
   direct: Map<string, string[]>;
   ancestors: Map<string, string[]>;
   keyToPkgname: Map<string, string>;
-  /** owner key -> the file paths it ships (used to detect shadowing forks). */
+  // owner key -> the file paths it ships, to detect shadowing forks. Filled on demand for plugin candidates.
   keyToFiles: Map<string, Set<string>>;
 }
 
@@ -194,7 +194,10 @@ function addOwnersNamedInSegments(
   }
 }
 
-function collectPluginCandidates(files: string[], index: DirectoryIndex): Set<string> {
+/**
+ * Owner keys whose directories a consumer installs into. derivePluginOf filters them further.
+ */
+export function collectPluginCandidates(files: string[], index: DirectoryIndex): Set<string> {
   const plugins = new Set<string>();
   for (const file of files) {
     const parent = parentDirectory(file);
@@ -372,4 +375,8 @@ export function triggerTypeOf(pkgType: PackageElfPkgType): TriggerType {
 
 export function encodeOwnerKey(pkgType: TriggerType, pkgId: number): string {
   return `${pkgType === TriggerType.ARCH ? 'a' : 'c'}${pkgId}`;
+}
+
+export function decodeOwnerKey(key: string): { pkgType: TriggerType; pkgId: number } {
+  return { pkgType: key.startsWith('a') ? TriggerType.ARCH : TriggerType.CHAOTIC, pkgId: Number(key.slice(1)) };
 }

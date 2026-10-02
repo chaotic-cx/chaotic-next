@@ -126,9 +126,10 @@ async function main(): Promise<void> {
       console.log('No packages to rescan');
       return;
     }
-    await service.scanPackages(jobs);
+    const report = await service.scanPackages(jobs);
     await service.recomputeBroken();
-    console.log(`Rescanned ${jobs.length} ${kind} package(s)`);
+    for (const { job, reason } of report.failed) console.error(`Failed to scan ${job.file}: ${reason}`);
+    console.log(`Rescanned ${report.scanned} of ${jobs.length} ${kind} package(s)`);
   } finally {
     await rm(ctx.tempDir, { recursive: true, force: true });
     await app.close();

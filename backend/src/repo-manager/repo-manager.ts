@@ -17,17 +17,26 @@ import type {
 import { BumpType, TriggerType } from '../interfaces/repo-manager';
 import { downloadWithRetry } from '../utils/download';
 import { ArchMirrorService } from './arch-mirror.service';
-import { BumpService, isCiFlagEnabled } from './bump';
+import { BumpService } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
 import { ArchlinuxPackage } from './repo-manager.entity';
 import { type RepoReader, type RepoReaderFactory } from './repo-rw';
-import { CI_FLAG_REBUILD_IGNORE_ABI, RebuildTriggerService, SignalScanService } from './scan';
-import { formatConsumerAbiBreak } from './signal';
+import { acceptsSignalRebuild, type DetectedTrigger, RebuildTriggerService, SignalScanService } from './scan';
+import { groupByPkgbase, pkgbaseOf } from './scan/pkgbase-outputs';
+
+// How long a pending Arch change waits for a successful scan of its current version.
+export const UNSCANNED_CHANGE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function isUnscannedChangeExpired(pkg: ArchlinuxPackage, now: Date): boolean {
+  if (pkg.lastUpdated === null) return true;
+
+  return now.getTime() - pkg.lastUpdated.getTime() >= UNSCANNED_CHANGE_MAX_AGE_MS;
+}
 
 export class RepoManager {
   changedArchPackages: ArchlinuxPackage[] = [];
   status: RepoStatus = RepoStatus.INACTIVE;
-  deployInProgress = false;
+  private deploymentQueue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly settings: RepoSettings,
@@ -68,11 +77,12 @@ export class RepoManager {
         this.changedArchPackages,
         this.settings,
       );
-
       if (needsRebuild.length === 0) {
         return { repo: repo.name, bumped: [], origin: TriggerType.ARCH };
       }
-      const bumpedPackages: PackageBumpEntry[] = await this.bump.bumpAndPush(needsRebuild, reader, repo);
+
+      const notYetBumped = await this.bump.dropAlreadyBumpedForArch(needsRebuild);
+      const bumpedPackages: PackageBumpEntry[] = await this.bump.bumpAndPush(notYetBumped, reader, repo);
 
       return {
         repo: repo.name,
@@ -92,11 +102,39 @@ export class RepoManager {
     await this.archMirror.scanChangedArchPackages(this.changedArchPackages, this.settings);
   }
 
+  /**
+   * A change without a current analysis would look unchanged, so it waits for a scan. After UNSCANNED_CHANGE_MAX_AGE_MS it is released, so that a package that never scans is not downloaded on every run.
+   */
+  async selectScannedChanges(now = new Date()): Promise<void> {
+    const scanned = await this.archMirror.withCurrentAnalysis(this.changedArchPackages);
+    const unscanned = this.changedArchPackages.filter((pkg) => !scanned.includes(pkg));
+    const expired = unscanned.filter((pkg) => isUnscannedChangeExpired(pkg, now));
+    if (expired.length > 0) {
+      this.pino.error(
+        { pkgnames: expired.map((pkg) => pkg.pkgname) },
+        'Changed Arch packages never got an analysis, releasing them without rebuild triggers',
+      );
+      await this.archMirror.clearTriggersPending(expired);
+    }
+
+    const waiting = unscanned.length - expired.length;
+    if (waiting > 0) {
+      this.pino.warn({ unscanned: waiting }, 'Changed Arch packages without analysis stay pending');
+    }
+
+    this.changedArchPackages = scanned;
+  }
+
+  async markChangesProcessed(): Promise<void> {
+    await this.archMirror.clearTriggersPending(this.changedArchPackages);
+  }
+
   async indexArchMirror(): Promise<IndexResult> {
     if (this.status === RepoStatus.ACTIVE) {
       this.pino.warn('RepoManager is already active, skipping full Arch mirror index');
       return { scanned: 0, skipped: 0, failed: 0 };
     }
+
     this.status = RepoStatus.ACTIVE;
     try {
       return await this.archMirror.indexArchMirror(this.settings);
@@ -105,57 +143,53 @@ export class RepoManager {
     }
   }
 
-  async indexChaoticRepo(): Promise<IndexResult> {
-    if (this.deployInProgress) {
-      this.pino.warn('Deployment is already in progress, skipping Chaotic repo index');
-      return { scanned: 0, skipped: 0, failed: 0 };
-    }
-    this.deployInProgress = true;
-    try {
-      return await this.chaoticIndex.indexChaoticRepo();
-    } finally {
-      this.deployInProgress = false;
-    }
+  indexChaoticRepo(dbUrl?: string): Promise<IndexResult> {
+    return this.serializeDeploymentWork(() => this.chaoticIndex.indexChaoticRepo(dbUrl));
+  }
+
+  isAbiDryRun(): boolean {
+    return this.settings.abiDryRun;
+  }
+
+  async hasMissedBreaks(): Promise<boolean> {
+    const uncovered = await this.triggers.countUncoveredMissedBreaks();
+
+    return uncovered > 0;
   }
 
   async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
     await this.chaoticIndex.updateChaoticDatabaseVersions(repos);
   }
 
-  private async scanBuiltChaoticPackage(build: Partial<Build>): Promise<void> {
-    const pkg: Package | undefined = build.pkgbase;
-    if (!pkg) return;
+  private async scanBuiltChaoticPackage(pkg: Package, repoName: string): Promise<void> {
     if (pkg.skipSignalScan) {
       this.pino.info({ pkgname: pkg.pkgname }, 'Skipping scan: marked binary-only (skip signal scan)');
       return;
     }
-    const filename: string | undefined = pkg.metadata?.filename;
-    if (!filename) {
-      this.pino.warn({ pkgname: pkg.pkgname }, 'No filename for built package, skipping scan');
-      return;
-    }
 
-    const repoName: string | undefined = build.repo?.name;
-    if (!repoName) {
-      this.pino.warn({ pkgname: pkg.pkgname }, 'No repo name, skipping scan');
+    const filename: string | undefined = pkg.metadata?.filename;
+    if (!filename || !pkg.version) {
+      this.pino.error(
+        { pkgname: pkg.pkgname, version: pkg.version, filename },
+        'No filename or version for built package, skipping scan',
+      );
       return;
     }
 
     const secretMirrorUrl: string | undefined = this.settings.secretMirrorUrl;
     if (!secretMirrorUrl) {
-      this.pino.warn({ pkgname: pkg.pkgname }, 'No secretMirrorUrl configured, skipping scan');
+      this.pino.error({ pkgname: pkg.pkgname }, 'No secretMirrorUrl configured, skipping scan');
       return;
     }
 
     const downloadUrl = `${secretMirrorUrl}/${repoName}/x86_64/${filename}`;
     const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-signal-'));
     const downloadPath: string = join(tempDir, filename);
-
     try {
       await downloadWithRetry(this.httpService.axiosRef, downloadUrl, downloadPath);
 
       this.pino.info({ pkgname: pkg.pkgname, version: pkg.version }, 'Scanning built package for ELF signals');
-      await this.signalScanService.scanPackages([
+      const report = await this.signalScanService.scanPackages([
         {
           file: downloadPath,
           pkgType: TriggerType.CHAOTIC,
@@ -163,148 +197,204 @@ export class RepoManager {
           version: pkg.version,
         },
       ]);
+
+      for (const { reason } of report.failed) {
+        this.pino.error({ pkgname: pkg.pkgname, filename, reason }, 'Built package failed to scan');
+      }
     } catch (err: unknown) {
-      this.pino.warn({ err, filename }, 'Failed to download or scan package');
+      this.pino.error({ err, pkgname: pkg.pkgname, downloadUrl }, 'Failed to download or scan built package');
     } finally {
       await this.archMirror.cleanUp([tempDir]);
     }
   }
 
-  async checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<BumpResult> {
-    if (this.deployInProgress) {
-      this.pino.warn('Deployment is already in progress, skipping');
-      return { repo: build.repo?.name ?? '', bumped: [], origin: TriggerType.CHAOTIC };
-    }
-    this.deployInProgress = true;
-    try {
-      return await this.collectPostDeploymentRebuilds(build);
-    } finally {
-      this.deployInProgress = false;
-    }
+  /**
+   * A deployment waits for a running one instead of being skipped, because a skipped check loses its rebuilds.
+   */
+  checkPackageDepsAfterDeployment(build: Partial<Build>): Promise<BumpResult[]> {
+    return this.serializeDeploymentWork(() => this.collectPostDeploymentRebuilds(build));
   }
 
-  /** Rebuild dependents of a just-deployed Chaotic package (explicit triggers + ABI channel). */
-  private async collectPostDeploymentRebuilds(build: Partial<Build>): Promise<BumpResult> {
-    const { repo, pkgbase } = build;
-    if (!repo || !pkgbase) {
-      return { repo: repo?.name ?? '', bumped: [], origin: TriggerType.CHAOTIC };
-    }
-    this.pino.info({ pkgname: pkgbase.pkgname, repo: repo.name }, 'Checking rebuild triggers after deployment');
-
-    try {
-      if (this.settings.signalScanEnabled) {
-        await this.scanBuiltChaoticPackage(build);
-        await this.signalScanService.recomputeBroken();
-      }
-
-      const allPackages: Package[] = await this.packagesRepository.find({
-        where: { isActive: true },
-      });
-      const reader = await this.readerFactory.open(repo);
-      let bumped: PackageBumpEntry[] = [];
-      try {
-        // Each config is read at most once (memoized), even though the explicit
-        // and the ABI pass both need it for every package.
-        const readConfig = this.memoizedConfigReader(reader, repo);
-
-        const needsRebuild: RepoUpdateRunParams[] = [
-          ...(await this.explicitRebuildsFor(pkgbase, allPackages, readConfig)),
-          ...(this.settings.signalScanEnabled ? await this.abiBreakRebuildsFor(pkgbase, allPackages, readConfig) : []),
-          ...(this.settings.signalScanEnabled
-            ? await this.triggers.chaoticBrokenDepsRebuilds(pkgbase, allPackages, readConfig, this.settings)
-            : []),
-        ];
-
-        bumped = await this.bump.bumpAndPush(needsRebuild, reader, repo);
-      } finally {
-        await reader.dispose();
-      }
-
-      return {
-        repo: repo.name,
-        bumped: bumped,
-        origin: TriggerType.CHAOTIC,
-      };
-    } catch (err: unknown) {
-      this.pino.error({ err, pkgname: pkgbase.pkgname }, 'Rebuild-trigger check after deployment failed');
-      return { repo: repo.name, bumped: [], origin: TriggerType.CHAOTIC };
-    }
-  }
-
-  /** Reads each package's `.CI/config` at most once per deployment check. */
-  private memoizedConfigReader(reader: RepoReader, repo: Repo): (pkg: Package) => Promise<PackageConfig> {
-    const cache = new Map<string, Promise<PackageConfig>>();
-    return (pkg: Package): Promise<PackageConfig> => {
-      const cached = cache.get(pkg.pkgname);
-      if (cached) return cached;
-      const pending = this.bump.readPackageConfig(reader, { pkgbaseDir: pkg.pkgname, repo, pkgInDb: pkg });
-      cache.set(pkg.pkgname, pending);
-      return pending;
-    };
-  }
-
-  /** Packages listing the deployed package in their DB-side `bumpTriggers`. */
-  private async explicitRebuildsFor(
-    deployed: Package,
-    allPackages: Package[],
-    readConfig: (pkg: Package) => Promise<PackageConfig>,
-  ): Promise<RepoUpdateRunParams[]> {
-    const needsRebuild: RepoUpdateRunParams[] = [];
-    for (const pkg of allPackages) {
-      const hasExplicitTrigger = pkg.bumpTriggers?.some((trigger) => trigger.pkgname === deployed.pkgname);
-      if (!hasExplicitTrigger) continue;
-
-      const configs: PackageConfig = await readConfig(pkg);
-      needsRebuild.push({
-        configs: configs.configs,
-        pkg,
-        archPkg: deployed,
-        bumpType: BumpType.EXPLICIT,
-        triggerFrom: TriggerType.CHAOTIC,
-      });
-      this.pino.debug({ pkgname: pkg.pkgname, trigger: deployed.pkgname }, 'Rebuilding because of explicit trigger');
-    }
-    return needsRebuild;
+  private serializeDeploymentWork<T>(work: () => Promise<T>): Promise<T> {
+    const result = this.deploymentQueue.then(work);
+    this.deploymentQueue = result.catch(() => undefined);
+    return result;
   }
 
   /**
-   * Rebuild dependents of the just-deployed Chaotic package whose ELF signal
-   * changed incompatibly: the owner lost symbols or a vtable slot drifted, and
-   * a dependent imports a shifted slot. This is the same ABI signal as the
-   * arch->chaotic plugin channel, applied to chaotic->chaotic.
+   * Every output of the deployed PKGBUILD counts, and each consumer is bumped in its own repo.
    */
-  private async abiBreakRebuildsFor(
-    deployed: Package,
-    allPackages: Package[],
-    readConfig: (pkg: Package) => Promise<PackageConfig>,
-  ): Promise<RepoUpdateRunParams[]> {
-    const ownerIndex = await this.triggers.buildDeployedOwnerBreakIndex(deployed);
-    if (!ownerIndex) return [];
+  private async collectPostDeploymentRebuilds(build: Partial<Build>): Promise<BumpResult[]> {
+    const { repo, pkgbase } = build;
+    if (!repo || !pkgbase) return [];
 
-    const consumers = allPackages.filter((pkg) => pkg.id !== deployed.id);
-    const consumerAnalyses = await this.triggers.loadLatestChaoticAnalyses(consumers.map((pkg) => pkg.id));
+    this.pino.info({ pkgname: pkgbase.pkgname, repo: repo.name }, 'Checking rebuild triggers after deployment');
 
-    const needsRebuild: RepoUpdateRunParams[] = [];
-    for (const pkg of consumers) {
-      const configs: PackageConfig = await readConfig(pkg);
-      if (pkg.skipSignalScan || isCiFlagEnabled(configs.configs, CI_FLAG_REBUILD_IGNORE_ABI)) continue;
-      const consumerAnalysis = consumerAnalyses.get(pkg.id);
-      const breaks = consumerAnalysis ? this.triggers.consumerSymbolBreaksFor(consumerAnalysis, ownerIndex) : [];
-      const trigger = breaks[0];
-      if (!trigger) continue;
+    const activePackages: Package[] = await this.packagesRepository.find({
+      where: { isActive: true },
+      relations: { repo: true },
+    });
 
-      const entry = this.triggers.buildRebuildEntry({
-        pkgConfig: configs,
-        archPkg: deployed,
-        bumpType: BumpType.PLUGIN,
-        reason: `plugin ABI break of ${trigger.pkgname}`,
-        details: breaks.map(formatConsumerAbiBreak),
-        pkgbaseDir: pkg.pkgname,
-        settings: this.settings,
-        triggerFrom: TriggerType.CHAOTIC,
-      });
-      if (entry) needsRebuild.push(entry);
+    const deployedOutputs = deployedOutputsOf(pkgbase, repo, activePackages);
+    if (this.settings.signalScanEnabled) {
+      for (const output of deployedOutputs) {
+        await this.scanBuiltChaoticPackage(output, repo.name);
+      }
+
+      await this.signalScanService.recomputeBroken();
     }
-    return needsRebuild;
+
+    const deployedIds = new Set(deployedOutputs.map((pkg) => pkg.id));
+    const consumers = activePackages.filter((pkg) => !deployedIds.has(pkg.id));
+    const detected = this.settings.signalScanEnabled
+      ? await this.triggers.deploymentTriggers(deployedOutputs, consumers)
+      : new Map<number, DetectedTrigger>();
+    for (const [pkgId, trigger] of explicitTriggers(pkgbase, deployedOutputs, consumers)) {
+      detected.set(pkgId, trigger);
+    }
+
+    return this.bumpDetectedPerRepo(
+      consumers.filter((pkg) => detected.has(pkg.id)),
+      detected,
+    );
   }
+
+  /**
+   * A failed repo does not stop the others.
+   */
+  private async bumpDetectedPerRepo(
+    candidates: Package[],
+    detected: Map<number, DetectedTrigger>,
+  ): Promise<BumpResult[]> {
+    const results: BumpResult[] = [];
+    const failedRepos: string[] = [];
+    for (const { repo, packages } of groupByRepo(candidates)) {
+      if (!repo.gitlabProjectId) {
+        this.pino.warn({ repo: repo.name }, 'Repo has no gitlabProjectId, skipping rebuilds after deployment');
+        continue;
+      }
+
+      try {
+        results.push(await this.bumpDetectedInRepo(repo, packages, detected));
+      } catch (err: unknown) {
+        failedRepos.push(repo.name);
+        this.pino.error({ err, repo: repo.name }, 'Rebuilds after deployment failed for repo');
+      }
+    }
+
+    if (failedRepos.length > 0) {
+      throw new Error(`Rebuilds after deployment failed for repos: ${failedRepos.join(', ')}`);
+    }
+
+    return results;
+  }
+
+  private async bumpDetectedInRepo(
+    repo: Repo,
+    packages: Package[],
+    detected: Map<number, DetectedTrigger>,
+  ): Promise<BumpResult> {
+    const reader = await this.readerFactory.open(repo);
+    try {
+      const needsRebuild: RepoUpdateRunParams[] = [];
+      for (const [pkgbaseDir, outputs] of groupByPkgbase(packages)) {
+        const pkgConfig: PackageConfig = await this.bump.readPackageConfig(reader, {
+          pkgbaseDir,
+          repo,
+          pkgInDb: outputs.find((pkg) => pkg.pkgname === pkgbaseDir),
+        });
+
+        const entry = this.deploymentEntry(outputs, detected, pkgConfig, pkgbaseDir);
+        if (entry) {
+          needsRebuild.push(entry);
+        }
+      }
+
+      const bumped = await this.bump.bumpAndPush(needsRebuild, reader, repo);
+      return { repo: repo.name, bumped, origin: TriggerType.CHAOTIC };
+    } finally {
+      await reader.dispose();
+    }
+  }
+
+  /**
+   * An explicit trigger ignores the binary-only and ignore-ABI flags.
+   */
+  private deploymentEntry(
+    outputs: Package[],
+    detected: Map<number, DetectedTrigger>,
+    pkgConfig: PackageConfig,
+    pkgbaseDir: string,
+  ): RepoUpdateRunParams | null {
+    const triggers: DetectedTrigger[] = [];
+    for (const pkg of outputs) {
+      const trigger = detected.get(pkg.id);
+      if (trigger) {
+        triggers.push(trigger);
+      }
+    }
+
+    const explicit = triggers.find((trigger) => trigger.bumpType === BumpType.EXPLICIT);
+    if (explicit) {
+      this.pino.debug(
+        { pkgname: pkgbaseDir, trigger: explicit.archPkg.pkgname },
+        'Rebuilding because of explicit trigger',
+      );
+      return {
+        configs: pkgConfig.configs,
+        pkg: pkgConfig.pkgInDb,
+        archPkg: explicit.archPkg,
+        bumpType: BumpType.EXPLICIT,
+        triggerFrom: TriggerType.CHAOTIC,
+      };
+    }
+
+    const signal = triggers[0];
+    if (!signal) return null;
+
+    if (!acceptsSignalRebuild(pkgConfig)) return null;
+
+    return this.triggers.buildRebuildEntry({ ...signal, pkgConfig, pkgbaseDir, settings: this.settings });
+  }
+}
+
+function deployedOutputsOf(pkgbase: Package, repo: Repo, activePackages: Package[]): Package[] {
+  const outputs = activePackages.filter((pkg) => pkg.repo.id === repo.id && pkgbaseOf(pkg) === pkgbase.pkgname);
+  return outputs.length > 0 ? outputs : [pkgbase];
+}
+
+function explicitTriggers(
+  pkgbase: Package,
+  deployedOutputs: Package[],
+  consumers: Package[],
+): Map<number, DetectedTrigger> {
+  const deployedNames = new Set([pkgbase.pkgname, ...deployedOutputs.map((pkg) => pkg.pkgname)]);
+  const triggers = new Map<number, DetectedTrigger>();
+  for (const pkg of consumers) {
+    if (!pkg.bumpTriggers?.some((trigger) => deployedNames.has(trigger.pkgname))) continue;
+
+    triggers.set(pkg.id, {
+      bumpType: BumpType.EXPLICIT,
+      archPkg: pkgbase,
+      triggerFrom: TriggerType.CHAOTIC,
+      reason: `explicit trigger ${pkgbase.pkgname}`,
+      details: [],
+    });
+  }
+
+  return triggers;
+}
+
+function groupByRepo(packages: Package[]): { repo: Repo; packages: Package[] }[] {
+  const groups = new Map<number, { repo: Repo; packages: Package[] }>();
+  for (const pkg of packages) {
+    const group = groups.get(pkg.repo.id);
+    if (group) {
+      group.packages.push(pkg);
+    } else {
+      groups.set(pkg.repo.id, { repo: pkg.repo, packages: [pkg] });
+    }
+  }
+
+  return [...groups.values()];
 }

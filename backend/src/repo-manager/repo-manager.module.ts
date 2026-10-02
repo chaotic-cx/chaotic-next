@@ -8,6 +8,7 @@ import { RepoManagerController } from './repo-manager.controller';
 import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from './repo-manager.entity';
 import { RepoManagerService } from './repo-manager.service';
 import { GitlabRepoReaderFactory, GitlabRepoWriter, REPO_READER_FACTORY, REPO_WRITER } from './repo-rw';
+import { SignalComputeClient } from './compute/signal-compute.client';
 import { RebuildTriggerService, SignalScanService } from './scan';
 import { HttpModule } from '@nestjs/axios';
 import { forwardRef, Module } from '@nestjs/common';
@@ -29,6 +30,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     ArchMirrorService,
     ChaoticIndexService,
     RebuildTriggerService,
+    SignalComputeClient,
     BumpService,
     { provide: REPO_WRITER, useClass: GitlabRepoWriter },
     { provide: REPO_READER_FACTORY, useClass: GitlabRepoReaderFactory },

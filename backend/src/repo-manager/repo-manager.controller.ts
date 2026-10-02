@@ -15,6 +15,8 @@ import {
   PackageRebuildTriggerSources,
   packageRebuildTriggerSourcesSchema,
   Paginated,
+  type RebuildCoverageReport,
+  rebuildCoverageReportSchema,
 } from '@chaotic-next/shared-lib';
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
@@ -74,6 +76,15 @@ export class RepoManagerController {
     @Query({ schema: brokenPackagesQuerySchema }) query: BrokenPackagesQueryDto,
   ): Promise<Paginated<BrokenPackageReport>> {
     return this.repoManager.getBrokenPackages(query.page, query.perPage);
+  }
+
+  @Get('rebuild-coverage')
+  @ApiOperation({
+    summary: 'List the gaps in the rebuild coverage: missed breaks, unanalyzed packages, sonames of removed packages.',
+  })
+  @ApiOkResponse({ description: 'Rebuild coverage gaps.', schema: schemaResponse(rebuildCoverageReportSchema).schema })
+  getRebuildCoverage(): Promise<RebuildCoverageReport> {
+    return this.repoManager.getRebuildCoverage();
   }
 
   @Get('missing-deps')

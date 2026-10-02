@@ -108,3 +108,83 @@ describe('BuilderDatabaseService.logBuild', () => {
     expect(save).not.toHaveBeenCalled();
   });
 });
+
+describe('BuilderDatabaseService deferred deployment checks', () => {
+  const deployedBuild = { pkgbase: pkgRow, repo: repoRow } as unknown as Partial<Build>;
+
+  function createDeploymentService(repoManagerService: Record<string, unknown>): BuilderDatabaseService {
+    const service = new BuilderDatabaseService({
+      broker: brokerStub,
+      dbConnections: {
+        build: {} as never,
+        builder: {} as never,
+        package: {} as never,
+        repo: {} as never,
+        silencedFailure: {} as never,
+      },
+      lookup: lookupStub as never,
+      repoManagerService: repoManagerService as never,
+      sseSubject: new Subject<Partial<MessageEvent<ChaoticEvent>>>(),
+      gitlabPipelineService: {} as never,
+      buildClassSync: { syncFromDeployment: () => Promise.resolve() },
+      logger: { ...pinoStub, warn: () => undefined } as unknown as PinoLogger,
+    });
+    (service as unknown as { pendingDeploymentChecks: unknown[] }).pendingDeploymentChecks = [
+      { build: deployedBuild, pkgbase: 'paru', pkgname: 'paru', queuedAt: Date.now(), targetRepo: 'chaotic-aur' },
+    ];
+    return service;
+  }
+
+  function bumpChainOf(service: BuilderDatabaseService): Promise<void> {
+    return (service as unknown as { bumpChain: Promise<void> }).bumpChain;
+  }
+
+  it('refreshes the Chaotic versions before the bump check reads the deployed package', async () => {
+    const order: string[] = [];
+    const service = createDeploymentService({
+      updateChaoticVersions: vi.fn(async () => {
+        order.push('refresh');
+      }),
+      eventuallyBumpAffected: vi.fn(async () => {
+        order.push('bump-check');
+      }),
+    });
+
+    await service.runDeferredDeploymentChecks({ arch: 'x86_64', pkgname: 'paru', target_repo: 'chaotic-aur' });
+    await bumpChainOf(service);
+
+    expect(order).toEqual(['refresh', 'bump-check']);
+  });
+
+  it('still runs the bump check when the refresh fails', async () => {
+    const eventuallyBumpAffected = vi.fn(async () => undefined);
+    const service = createDeploymentService({
+      updateChaoticVersions: vi.fn(async () => {
+        throw new Error('database pull failed');
+      }),
+      eventuallyBumpAffected,
+    });
+
+    await service.runDeferredDeploymentChecks({ arch: 'x86_64', pkgname: 'paru', target_repo: 'chaotic-aur' });
+    await bumpChainOf(service);
+
+    expect(eventuallyBumpAffected).toHaveBeenCalledWith(deployedBuild);
+  });
+
+  it('resolves a request during a refresh only after one more refresh', async () => {
+    let finishFirst: () => void = () => undefined;
+    const updateChaoticVersions = vi
+      .fn<() => Promise<void>>()
+      .mockImplementationOnce(() => new Promise<void>((resolve) => (finishFirst = resolve)))
+      .mockResolvedValue(undefined);
+    const service = createDeploymentService({ updateChaoticVersions });
+
+    const first = service.requestChaoticVersionsUpdate();
+    const second = service.requestChaoticVersionsUpdate();
+    const third = service.requestChaoticVersionsUpdate();
+    finishFirst();
+    await Promise.all([first, second, third]);
+
+    expect(updateChaoticVersions).toHaveBeenCalledTimes(2);
+  });
+});

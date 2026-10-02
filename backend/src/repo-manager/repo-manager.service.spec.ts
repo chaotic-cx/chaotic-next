@@ -3,7 +3,9 @@ import { HttpService } from '@nestjs/axios';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { PinoLogger } from 'nestjs-pino';
 import type { Repository } from 'typeorm';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { RepoStatus } from '@chaotic-next/shared-lib';
+import type { RepoManager } from './repo-manager';
 import { Package, Repo } from '../builder/builder.entity';
 import { BumpService } from './bump';
 import { ChaoticIndexService } from './chaotic-index.service';
@@ -312,3 +314,85 @@ function buildService(
     {} as RepoReaderFactory,
   );
 }
+
+describe('RepoManagerService.run', () => {
+  function runService(
+    startRun: (repo: Repo) => Promise<unknown>,
+    options: { changed?: unknown[]; hasMissedBreaks?: boolean } = {},
+  ): {
+    service: RepoManagerService;
+    manager: Record<string, ReturnType<typeof vi.fn> | unknown>;
+  } {
+    const service = new RepoManagerService(
+      { get: () => true } as unknown as ConfigService,
+      {} as HttpService,
+      { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as PinoLogger,
+      {} as Repository<ArchlinuxPackage>,
+      {} as Repository<Repo>,
+      {} as Repository<Package>,
+      {} as Repository<PackageElfAnalysis>,
+      { recomputeBroken: vi.fn(async () => undefined) } as unknown as SignalScanService,
+      {} as ArchMirrorService,
+      {} as ChaoticIndexService,
+      {} as RebuildTriggerService,
+      {} as BumpService,
+      {} as SchedulerRegistry,
+      {} as RepoWriter,
+      {} as RepoReaderFactory,
+    );
+    const manager = {
+      status: RepoStatus.INACTIVE,
+      changedArchPackages: options.changed ?? [{ id: 1, pkgname: 'llvm-libs' }],
+      hasMissedBreaks: vi.fn(async () => options.hasMissedBreaks ?? false),
+      pullArchlinuxPackages: vi.fn(async () => undefined),
+      scanChangedArchPackages: vi.fn(async () => undefined),
+      selectScannedChanges: vi.fn(async () => undefined),
+      startRun: vi.fn(startRun),
+      markChangesProcessed: vi.fn(async () => undefined),
+    };
+    Object.assign(service as unknown as { repoManager: RepoManager; repos: Repo[] }, {
+      repoManager: manager,
+      repos: [{ name: 'chaotic-aur' }, { name: 'garuda' }],
+    });
+    return { service, manager };
+  }
+
+  it('skips the repos when nothing changed and no break waits for a rebuild', async () => {
+    const { service, manager } = runService(async (repo) => ({ repo: repo.name, bumped: [] }), { changed: [] });
+
+    await service.run();
+
+    expect(manager.startRun).not.toHaveBeenCalled();
+  });
+
+  it('checks the repos without a change when a break still waits for a rebuild', async () => {
+    const { service, manager } = runService(async (repo) => ({ repo: repo.name, bumped: [] }), {
+      changed: [],
+      hasMissedBreaks: true,
+    });
+
+    await service.run();
+
+    expect(manager.startRun).toHaveBeenCalledTimes(2);
+  });
+
+  it('marks the changes processed when every repo succeeded', async () => {
+    const { service, manager } = runService(async (repo) => ({ repo: repo.name, bumped: [] }));
+
+    await service.run();
+
+    expect(manager.markChangesProcessed).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the changes pending and still runs the other repos when one repo fails', async () => {
+    const { service, manager } = runService(async (repo) => {
+      if (repo.name === 'chaotic-aur') throw new Error('gitlab unavailable');
+      return { repo: repo.name, bumped: [] };
+    });
+
+    await service.run();
+
+    expect(manager.startRun).toHaveBeenCalledTimes(2);
+    expect(manager.markChangesProcessed).not.toHaveBeenCalled();
+  });
+});

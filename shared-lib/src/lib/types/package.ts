@@ -187,6 +187,39 @@ export const archOverlapReportSchema = z.object({
 });
 export type ArchOverlapReport = z.infer<typeof archOverlapReportSchema>;
 
+export const rebuildCoverageReportSchema = z.object({
+  uncoveredBreaks: z
+    .array(
+      z.object({
+        pkgname: z.string().describe('Chaotic package that broke after its build'),
+        repoName: z.string().optional().describe('Repository name'),
+        version: z.string().describe('Analyzed package version'),
+        brokenSince: z.string().describe('Start of the broken state (ISO 8601)'),
+        reasons: z.array(z.string()).describe('Reasons the package is flagged broken'),
+      }),
+    )
+    .describe('Packages that a dependency change broke after their build, without a bump since'),
+  unanalyzed: z
+    .array(
+      z.object({
+        pkgname: z.string().describe('Chaotic package without an analysis of its current version'),
+        repoName: z.string().optional().describe('Repository name'),
+        version: z.string().optional().describe('Current package version'),
+      }),
+    )
+    .describe('Packages that the trigger checks cannot see, because no analysis exists'),
+  removedProviderSonames: z
+    .array(
+      z.object({
+        soname: z.string().describe('Needed soname that only removed Arch packages provided'),
+        removedProviders: z.array(z.string()).describe('Arch packages that left the sync DBs'),
+        consumers: z.array(z.string()).describe('Chaotic packages that need the soname'),
+      }),
+    )
+    .describe('Sonames that no active package provides any more'),
+});
+export type RebuildCoverageReport = z.infer<typeof rebuildCoverageReportSchema>;
+
 /** Outcome of one background ELF-signal rescan, served by GET /admin/rescan/:jobId. */
 export const rescanJobSchema = z.object({
   jobId: z.string(),

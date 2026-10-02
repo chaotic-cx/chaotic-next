@@ -5,22 +5,34 @@ import {
   type PackageBumpEntry,
   type PackageConfig,
   type RepoUpdateRunParams,
+  TriggerType,
 } from '../../interfaces/repo-manager';
 import { isSourceCompiledPackage } from '../pkgbuild-classifier';
-import { PackageBump, PackageElfAnalysis } from '../repo-manager.entity';
+import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager.entity';
 import { REPO_WRITER, type BumpCommitAction, type RepoReader, type RepoWriter } from '../repo-rw';
 import { CHAOTIC_PKG_TYPE } from '../signal/plugin';
 import { applyPackageBump, parseCiConfig } from './bump-config';
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 
-/** CI config flag keys (read from .CI/config); a flag is on when set to "1". */
+// A `.CI/config` flag is on when its value is "1".
 const CI_FLAG_SIGNAL_SCAN_IGNORE = 'CI_SIGNAL_SCAN_IGNORE';
 
-/** Pkgname fragments marking prebuilt binaries; rebuilding those from source makes no sense. */
+// Prebuilt binaries cannot be rebuilt from source.
 const NON_SOURCE_PKGNAME_FRAGMENTS = ['-bin', '-appimage', '-snap', '-support', '-meta'] as const;
+
+interface PreparedBump {
+  param: RepoUpdateRunParams;
+  entry: PackageBumpEntry;
+}
+
+function archChangeTime(entry: RepoUpdateRunParams): Date | null {
+  if (entry.triggerFrom !== TriggerType.ARCH || !(entry.archPkg instanceof ArchlinuxPackage)) return null;
+
+  return entry.archPkg.lastUpdated;
+}
 
 export function isCiFlagEnabled(configs: Record<string, string | undefined>, key: string): boolean {
   return configs[key] === '1';
@@ -45,23 +57,49 @@ export class BumpService {
   ) {}
 
   async bumpAndPush(needsRebuild: RepoUpdateRunParams[], reader: RepoReader, repo: Repo): Promise<PackageBumpEntry[]> {
-    const bumpedEntries = await this.bumpPackages(needsRebuild, reader);
-    const needsPush = needsRebuild.filter((entry) => entry.gotBumped === true);
-    await this.pushChanges(needsPush, repo);
-    return bumpedEntries;
+    const prepared = await this.prepareBumps(needsRebuild, reader);
+    await this.pushChanges(
+      prepared.map(({ param }) => param),
+      repo,
+    );
+    await this.recordBumps(prepared);
+    return prepared.map(({ entry }) => entry);
   }
 
-  async bumpPackages(needsRebuild: RepoUpdateRunParams[], reader: RepoReader): Promise<PackageBumpEntry[]> {
-    const bumpedEntries: PackageBumpEntry[] = [];
+  async dropAlreadyBumpedForArch(needsRebuild: RepoUpdateRunParams[]): Promise<RepoUpdateRunParams[]> {
+    const archTriggered = needsRebuild.filter((entry) => archChangeTime(entry) !== null);
+    if (archTriggered.length === 0) return needsRebuild;
 
+    const changeTimes = archTriggered.map((entry) => archChangeTime(entry)?.getTime() ?? Number.POSITIVE_INFINITY);
+    const earliestChange = new Date(Math.min(...changeTimes));
+
+    const earlierBumps = await this.packagesRepository.manager.find(PackageBump, {
+      where: {
+        pkg: { id: In(archTriggered.map((entry) => entry.pkg.id)) },
+        timestamp: MoreThanOrEqual(earliestChange),
+      },
+      relations: { pkg: true },
+      select: { id: true, timestamp: true, pkg: { id: true } },
+    });
+
+    return needsRebuild.filter((entry) => !this.wasBumpedAfterChange(entry, earlierBumps));
+  }
+
+  private wasBumpedAfterChange(entry: RepoUpdateRunParams, earlierBumps: PackageBump[]): boolean {
+    const changedAt = archChangeTime(entry);
+    if (changedAt === null) return false;
+
+    return earlierBumps.some((bump) => bump.pkg.id === entry.pkg.id && bump.timestamp >= changedAt);
+  }
+
+  private async prepareBumps(needsRebuild: RepoUpdateRunParams[], reader: RepoReader): Promise<PreparedBump[]> {
+    const prepared: PreparedBump[] = [];
     for (const param of needsRebuild) {
       if (NON_SOURCE_PKGNAME_FRAGMENTS.some((fragment) => param.pkg.pkgname.includes(fragment))) continue;
 
-      const existingEntry: PackageBumpEntry | undefined = bumpedEntries.find(
-        (entry) => entry.pkg.pkgname === param.pkg.pkgname,
-      );
-      if (existingEntry) {
-        this.pino.warn({ trigger: existingEntry.triggerName, pkgname: param.pkg.pkgname }, 'Already bumped, skipping');
+      const existing = prepared.find(({ entry }) => entry.pkg.pkgname === param.pkg.pkgname);
+      if (existing) {
+        this.pino.warn({ trigger: existing.entry.triggerName, pkgname: param.pkg.pkgname }, 'Already bumped, skipping');
         continue;
       }
 
@@ -78,7 +116,7 @@ export class BumpService {
 
       // A manual bump has no triggering package, so omit the self-referential name.
       const triggerName = param.bumpType === BumpType.MANUAL ? undefined : param.archPkg.pkgname;
-      const bumpEntry: PackageBumpEntry = {
+      const entry: PackageBumpEntry = {
         pkg: param.pkg,
         bumpType: param.bumpType,
         trigger: param.archPkg.id,
@@ -86,24 +124,27 @@ export class BumpService {
         triggerName,
         details: param.details,
       };
-      bumpedEntries.push(bumpEntry);
 
-      this.recordBumpTrigger(param);
-
-      // Persist package + bump atomically.
-      await this.packagesRepository.manager.transaction(async (manager) => {
-        await manager.save(Package, param.pkg);
-        await manager.save(PackageBump, bumpEntry);
-      });
-
+      prepared.push({ param, entry });
       param.gotBumped = true;
     }
 
-    return bumpedEntries;
+    return prepared;
+  }
+
+  private async recordBumps(prepared: PreparedBump[]): Promise<void> {
+    for (const { param, entry } of prepared) {
+      this.recordBumpTrigger(param);
+      await this.packagesRepository.manager.transaction(async (manager) => {
+        await manager.save(Package, param.pkg);
+        await manager.save(PackageBump, entry);
+      });
+    }
   }
 
   private recordBumpTrigger(param: RepoUpdateRunParams): void {
     if (param.bumpType === BumpType.MANUAL) return;
+
     const triggers = param.pkg.bumpTriggers ?? [];
     const existing = triggers.find((trigger) => trigger.pkgname === param.archPkg.pkgname);
     if (existing) {
@@ -111,14 +152,18 @@ export class BumpService {
     } else {
       triggers.push({ pkgname: param.archPkg.pkgname, archVersion: param.archPkg.version ?? '' });
     }
+
     param.pkg.bumpTriggers = triggers;
   }
 
-  /** Forwards bumpPackages' rewritten `.CI/config`s to the writer as one atomic commit per repo. */
+  /**
+   * Forwards prepareBumps' rewritten `.CI/config`s to the writer as one atomic commit per repo.
+   */
   async pushChanges(needsRebuild: RepoUpdateRunParams[], repo: Repo): Promise<void> {
     const actions: BumpCommitAction[] = [];
     for (const param of needsRebuild) {
       if (!param.bumpedConfigContent) continue;
+
       actions.push({
         pkgname: param.pkg.pkgname,
         content: param.bumpedConfigContent,
@@ -128,6 +173,7 @@ export class BumpService {
         details: param.details,
       });
     }
+
     if (actions.length === 0) return;
 
     this.pino.info({ count: actions.length, repo: repo.name }, 'Committing bumps via GitLab API');
@@ -145,14 +191,15 @@ export class BumpService {
     let pkg = pkgInDb;
     if (!pkg) {
       if (!repo) throw new Error(`readPackageConfig for ${pkgbaseDir} needs either pkgInDb or repo`);
+
       pkg = await this.lookup.getOrCreatePackage(pkgbaseDir, repo);
     }
+
     const currentTriggersInDb: { pkgname: string; archVersion: string }[] = pkg.bumpTriggers ?? [];
 
     const configText = await reader.readFile(`${pkgbaseDir}/.CI/config`).catch(() => '');
 
     const configs = parseCiConfig(configText);
-
     if (!configs['CI_REBUILD_TRIGGERS'] && currentTriggersInDb.length > 0) {
       this.pino.debug({ pkgbaseDir }, 'Removing rebuild triggers from database');
       pkg.bumpTriggers = null;

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- test fixtures assert on freshly created entities */
 import { existsSync } from 'node:fs';
+import { SignalComputeClient } from './compute/signal-compute.client';
 import { execFileSync } from 'node:child_process';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Package, Repo } from '../builder/builder.entity';
@@ -106,7 +107,11 @@ function createService() {
     { id: 2013, pkgname: 'srb2', version: '2.2.15-1.3' } as Package,
   ]);
 
-  const service = new SignalScanService(analysisRepo, archPkgRepo, packageRepo, repoRepo, pinoStub);
+  const compute = SignalComputeClient.inline(
+    { analyses: analysisRepo, archPackages: archPkgRepo, packages: packageRepo },
+    pinoStub,
+  );
+  const service = new SignalScanService(analysisRepo, compute, pinoStub);
   return { service, analysisRepo, archPkgRepo, packageRepo, repoRepo };
 }
 

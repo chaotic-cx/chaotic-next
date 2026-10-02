@@ -1,0 +1,1130 @@
+import { PinoLogger } from 'nestjs-pino';
+import type { Repository } from 'typeorm';
+import { describe, expect, it, vi } from 'vitest';
+import { Package } from '../../builder/builder.entity';
+import { type OwnerDescriptor, type PluginBreakIndexEntry, TriggerType } from '../../interfaces/repo-manager';
+import { ArchlinuxPackage, PackageElfAnalysis } from '../repo-manager.entity';
+import { buildAnalysis } from '../signal';
+import type { MockRepository } from '../test/mock-repository';
+import { createMockRepository } from '../test/mock-repository';
+import { DependencyClosure } from './dependency-closure';
+import { missedBreaksIn, summarizeDetails, TriggerDetector } from './trigger-detector';
+
+/**
+ * consumerSymbolBreaksFor is the pure plugin-ABI intersection: it must flag a
+ * consumer importing symbols an owner dropped, but NOT a consumer that bundles
+ * its own copy of the owner's library (e.g. python39 shipping libpython3.9 is
+ * not a victim of the system python dropping symbols on a 3.13 -> 3.14 bump).
+ */
+
+const OWNER_KEY = 'a222';
+
+function makeConsumer(overrides: Partial<PackageElfAnalysis> = {}): PackageElfAnalysis {
+  return {
+    id: 1,
+    pkgType: '1',
+    pkgId: 1,
+    version: '1.0-1',
+    files: [],
+    neededSonames: [],
+    providedSonames: [],
+    importedSymbols: [],
+    exportedSymbols: {},
+    vtables: {},
+    directoriesOwned: [],
+    directDirectories: [],
+    pluginOf: [OWNER_KEY],
+    broken: false,
+    brokenReasons: [],
+    scannedAt: new Date(),
+    ...overrides,
+  } as PackageElfAnalysis;
+}
+
+function breakIndex(): Map<string, PluginBreakIndexEntry> {
+  const index = new Map<string, PluginBreakIndexEntry>();
+  index.set(OWNER_KEY, {
+    pkgname: 'python',
+    pkgId: 222,
+    symbolBreaks: [
+      {
+        pkgname: 'python',
+        pkgId: 222,
+        soname: 'libpython3.13.so.1.0',
+        lostSymbols: ['PyArg_ParseTuple', 'PyBool_Type'],
+      },
+    ],
+    vtableDrifts: [],
+  });
+  return index;
+}
+
+function createService(): TriggerDetector {
+  const stubRepo = {} as unknown as Repository<PackageElfAnalysis>;
+  const stubArchRepo = {} as unknown as Repository<ArchlinuxPackage>;
+  const stubPackageRepo = {} as unknown as Repository<Package>;
+  const stubPino = {
+    trace: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+  } as unknown as PinoLogger;
+  return new TriggerDetector(stubRepo, stubArchRepo, stubPackageRepo, stubPino);
+}
+
+function createMockService(): {
+  service: TriggerDetector;
+  analysisRepo: MockRepository<PackageElfAnalysis>;
+} {
+  const analysisRepo = createMockRepository<PackageElfAnalysis>({
+    keyOf: (a) => `${a.pkgType}|${a.pkgId}|${a.version}`,
+  });
+  const stubArchRepo = {} as unknown as Repository<ArchlinuxPackage>;
+  const stubPackageRepo = {} as unknown as Repository<Package>;
+  const stubPino = {
+    trace: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+  } as unknown as PinoLogger;
+  const service = new TriggerDetector(analysisRepo, stubArchRepo, stubPackageRepo, stubPino);
+  return { service, analysisRepo };
+}
+
+describe('consumerSymbolBreaksFor', () => {
+  it('flags a consumer importing a dropped symbol from the affected library', () => {
+    const service = createService();
+    const consumer = makeConsumer({ importedSymbols: ['PyArg_ParseTuple', 'malloc'] });
+
+    const breaks = service.consumerSymbolBreaksFor(consumer, breakIndex());
+
+    expect(breaks).toHaveLength(1);
+    expect(breaks[0]).toMatchObject({ symbol: 'PyArg_ParseTuple', soname: 'libpython3.13.so.1.0' });
+  });
+
+  it('does not flag a consumer that imports nothing the owner dropped', () => {
+    const service = createService();
+    const consumer = makeConsumer({ importedSymbols: ['malloc', 'free'] });
+
+    expect(service.consumerSymbolBreaksFor(consumer, breakIndex())).toEqual([]);
+  });
+
+  it('does not flag a consumer that bundles its own copy of the affected library', () => {
+    // python39 ships its own libpython3.9.so.1.0, so it resolves Py* symbols
+    // against its bundled interpreter, not the system python. A python bump must
+    // not rebuild it.
+    const service = createService();
+    const consumer = makeConsumer({
+      importedSymbols: ['PyArg_ParseTuple', 'PyBool_Type'],
+      providedSonames: ['libpython3.9.so.1.0'],
+    });
+
+    expect(service.consumerSymbolBreaksFor(consumer, breakIndex())).toEqual([]);
+  });
+
+  it('still flags a consumer that provides an unrelated library', () => {
+    // Bundling libfoo.so must not mask a real python break.
+    const service = createService();
+    const consumer = makeConsumer({
+      importedSymbols: ['PyBool_Type'],
+      providedSonames: ['libfoo.so.1'],
+    });
+
+    const breaks = service.consumerSymbolBreaksFor(consumer, breakIndex());
+    expect(breaks).toHaveLength(1);
+    expect((breaks[0] as { symbol: string }).symbol).toBe('PyBool_Type');
+  });
+
+  it('ignores universal runtime vtable slots that every C++ binary imports', () => {
+    // __cxa_pure_virtual appears as a pure-virtual placeholder slot in many
+    // vtables and is imported by every C++ package. Matching against it would
+    // flag every C++ consumer whenever any library's vtable drifts.
+    const service = createService();
+    const vtableIndex = new Map<string, PluginBreakIndexEntry>();
+    vtableIndex.set(OWNER_KEY, {
+      pkgname: 'flac',
+      pkgId: 2322,
+      symbolBreaks: [],
+      vtableDrifts: [
+        {
+          vtable: '_ZTVN4FLAC7Decoder4FileE',
+          shiftedSlots: ['__cxa_pure_virtual', '_ZN4FLAC7Decoder6Stream4initEv'],
+        },
+      ],
+    });
+    const consumer = makeConsumer({
+      importedSymbols: ['__cxa_pure_virtual'],
+    });
+
+    expect(service.consumerSymbolBreaksFor(consumer, vtableIndex)).toEqual([]);
+  });
+});
+
+describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () => {
+  function onnxContext(): {
+    changed: ArchlinuxPackage[];
+    providedByPkgname: Map<string, Set<string>>;
+    archProvidedSonames: Set<string>;
+    runtimes: Partial<Record<'python' | 'perl' | 'ruby' | 'ghc', string | null>>;
+    previousProvidedByPkg: Map<number, Set<string>>;
+    currentProvidedByPkg: Map<number, Set<string>>;
+    currentVersionNodesByPkg: Map<number, Record<string, string[]>>;
+    droppedSonames: Set<string>;
+    dependencyClosure: null;
+  } {
+    const onnx = {
+      id: 222,
+      pkgname: 'onnxruntime',
+      previousVersion: '1.28.0-1',
+      version: '1.29.0-1',
+    } as ArchlinuxPackage;
+    const empty = new Map<string, Set<string>>();
+    return {
+      changed: [onnx],
+      providedByPkgname: empty,
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      currentProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      currentVersionNodesByPkg: new Map([[222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }]]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: null,
+    };
+  }
+
+  it('flags a consumer needing a version node the updated provider dropped', () => {
+    const service = createService();
+    const consumer = makeConsumer({
+      neededSonames: ['libonnxruntime.so.1'],
+      neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.28.0'] },
+    });
+
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[],
+        ): { deps: { kind: 'version'; soname: string; versionNodes: string[] }[]; archPkg: ArchlinuxPackage } | null;
+      }
+    ).brokenDepsForConsumer(consumer, onnxContext(), []);
+
+    expect(result).not.toBeNull();
+    if (!result) return;
+    expect(result.archPkg.pkgname).toBe('onnxruntime');
+    expect(result.deps).toEqual([{ kind: 'version', soname: 'libonnxruntime.so.1', versionNodes: ['VERS_1.28.0'] }]);
+  });
+
+  it('does not flag when the needed node is still provided', () => {
+    const service = createService();
+    const consumer = makeConsumer({ neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.29.0'] } });
+
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, onnxContext(), []);
+
+    expect(result).toBeNull();
+  });
+
+  it('ignores SUNWprivate_1.1 from libjli.so — quartus-130 regression (private nodes are not ABI)', () => {
+    const service = createService();
+    const consumer = makeConsumer({ neededVersionNodes: { 'libjli.so': ['SUNWprivate_1.1'] } });
+    // intellij-idea-community-edition provides libjli.so but not the private node
+    const ctx = {
+      changed: [
+        {
+          id: 999,
+          pkgname: 'intellij-idea-community-edition',
+          previousVersion: '1-1',
+          version: '1-2',
+        } as ArchlinuxPackage,
+      ],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: null,
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['intellij-idea-community-edition']);
+    expect(result).toBeNull();
+  });
+
+  it('does not flag when consumer self-provides the soname (quartus bundles libjli.so)', () => {
+    const service = createService();
+    const consumer = makeConsumer({
+      providedSonames: ['libjli.so'],
+      neededVersionNodes: { 'libjli.so': ['VERS_1.28.0'] },
+    });
+    const ctx = {
+      changed: [
+        {
+          id: 999,
+          pkgname: 'intellij-idea-community-edition',
+          previousVersion: '1-1',
+          version: '1-2',
+        } as ArchlinuxPackage,
+      ],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: null,
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['intellij-idea-community-edition']);
+    expect(result).toBeNull();
+  });
+
+  it('does not blame a changed provider the consumer does not depend on', () => {
+    const service = createService();
+    const consumer = makeConsumer({ neededVersionNodes: { 'libjli.so': ['VERS_1.28.0'] } });
+    const ctx = {
+      changed: [
+        {
+          id: 999,
+          pkgname: 'intellij-idea-community-edition',
+          previousVersion: '1-1',
+          version: '1-2',
+        } as ArchlinuxPackage,
+      ],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: null,
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['java-runtime']);
+    expect(result).toBeNull();
+  });
+
+  it('does not blame an irrelevant package when consumer deps are unknown', () => {
+    // When consumer deps are empty and an irrelevant package (smolvm-like)
+    // provides the soname but did NOT drop version nodes, it must NOT be
+    // blamed. Only a package that actually dropped the required nodes counts.
+    const service = createService();
+    const consumer = makeConsumer({
+      neededSonames: ['libcrypto.so.3'],
+      neededVersionNodes: { 'libcrypto.so.3': ['OPENSSL_3.2.0', 'OPENSSL_3.4.0'] },
+    });
+    const smolvm = {
+      id: 777,
+      pkgname: 'smolvm',
+      previousVersion: '1.12.0-1',
+      version: '1.13.1-1',
+    } as ArchlinuxPackage;
+    const onnx = {
+      id: 222,
+      pkgname: 'onnxruntime',
+      previousVersion: '1.28.0-1',
+      version: '1.29.0-1',
+    } as ArchlinuxPackage;
+    const ctx = {
+      changed: [smolvm, onnx],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([
+        [777, new Set(['libcrypto.so.3'])],
+        [222, new Set(['libonnxruntime.so.1'])],
+      ]),
+      currentProvidedByPkg: new Map([
+        [777, new Set(['libcrypto.so.3'])],
+        [222, new Set(['libonnxruntime.so.1'])],
+      ]),
+      currentVersionNodesByPkg: new Map([
+        [777, { 'libcrypto.so.3': ['OPENSSL_3.2.0', 'OPENSSL_3.3.0', 'OPENSSL_3.4.0'] }],
+        [222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }],
+      ]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: null,
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, []);
+    // smolvm provides libcrypto.so.3 but did NOT drop the required nodes
+    expect(result).toBeNull();
+  });
+
+  it('blames a changed package that dropped version nodes even when deps are unknown', () => {
+    // When deps are unknown, the candidate must have dropped the required
+    // version nodes to be blamed — this preserves the onnxruntime test case.
+    const service = createService();
+    const consumer = makeConsumer({
+      neededSonames: ['libonnxruntime.so.1'],
+      neededVersionNodes: { 'libonnxruntime.so.1': ['VERS_1.28.0'] },
+    });
+    const onnx = {
+      id: 222,
+      pkgname: 'onnxruntime',
+      previousVersion: '1.28.0-1',
+      version: '1.29.0-1',
+    } as ArchlinuxPackage;
+    const ctx = {
+      changed: [onnx],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      currentProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      currentVersionNodesByPkg: new Map([[222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }]]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: null,
+    };
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[],
+        ): { deps: unknown[]; archPkg: ArchlinuxPackage } | null;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, []);
+    expect(result).not.toBeNull();
+    if (!result) return;
+    expect(result.archPkg.pkgname).toBe('onnxruntime');
+  });
+
+  it('does not blame a package not in deps when deps are known (smolvm regression)', () => {
+    // When consumer deps are known, only packages in the dependency chain
+    // are blamed. smolvm in the changed set but not in deps must not be blamed.
+    const service = createService();
+    const consumer = makeConsumer({
+      neededSonames: ['libcrypto.so.3'],
+      neededVersionNodes: { 'libcrypto.so.3': ['OPENSSL_3.2.0'] },
+    });
+    const smolvm = {
+      id: 777,
+      pkgname: 'smolvm',
+      previousVersion: '1.12.0-1',
+      version: '1.13.1-1',
+    } as ArchlinuxPackage;
+    const openssl = {
+      id: 444,
+      pkgname: 'openssl',
+      previousVersion: '3.3.0-1',
+      version: '3.4.0-1',
+    } as ArchlinuxPackage;
+    const ctx = {
+      changed: [smolvm, openssl],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([
+        [777, new Set(['libcrypto.so.3'])],
+        [444, new Set(['libcrypto.so.3'])],
+      ]),
+      currentProvidedByPkg: new Map([
+        [777, new Set(['libcrypto.so.3'])],
+        [444, new Set(['libcrypto.so.3'])],
+      ]),
+      currentVersionNodesByPkg: new Map([
+        [777, { 'libcrypto.so.3': ['OPENSSL_3.3.0'] }],
+        [444, { 'libcrypto.so.3': ['OPENSSL_3.4.0'] }],
+      ]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: null,
+    };
+    // Consumer depends on openssl, not smolvm — only openssl should be blamed
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[],
+        ): { deps: unknown[]; archPkg: ArchlinuxPackage } | null;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['openssl']);
+    expect(result).not.toBeNull();
+    if (!result) return;
+    expect(result.archPkg.pkgname).toBe('openssl');
+  });
+
+  it('quartus-130 via real ELF extraction — libinstrument needs SUNWprivate_1.1 from libjli.so, JDK21 drops it, but private is filtered', () => {
+    // Real readelf -VW snippets from Arch: jre8 libinstrument.so (consumer) and
+    // jdk21 libjli.so (provider) vs jdk8 libjli.so. Mirrors the reported
+    // quartus-130 → intellij-idea-community-edition false positive.
+    const LIBINSTRUMENT_VERSION_INFO = `
+Version definition section '.gnu.version_d' contains 2 entries:
+ Addr: 0x0000000000000e40  Offset: 0x00000e40  Link: 5 (.dynstr)
+  000000: Rev: 1  Flags: BASE  Index: 1  Cnt: 1  Name: libinstrument.so
+  0x001c: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: SUNWprivate_1.1
+
+Version needs section '.gnu.version_r' contains 2 entries:
+ Addr: 0x0000000000000e78  Offset: 0x00000e78  Link: 5 (.dynstr)
+  000000: Version: 1  File: libjli.so  Cnt: 1
+  0x0010:   Name: SUNWprivate_1.1  Flags: none  Version: 8
+  0x0020: Version: 1  File: libc.so.6  Cnt: 6
+  0x0030:   Name: GLIBC_ABI_DT_RELR  Flags: none  Version: 9
+  0x0040:   Name: GLIBC_2.14  Flags: none  Version: 7
+  0x0050:   Name: GLIBC_2.3  Flags: none  Version: 6
+  0x0060:   Name: GLIBC_2.3.4  Flags: none  Version: 5
+  0x0070:   Name: GLIBC_2.4  Flags: none  Version: 4
+  0x0080:   Name: GLIBC_2.2.5  Flags: none  Version: 3
+`;
+    const JDK21_LIBJLI_VERSION_INFO = `
+Version needs section '.gnu.version_r' contains 1 entry:
+ Addr: 0x0000000000001388  Offset: 0x00001388  Link: 4 (.dynstr)
+  000000: Version: 1  File: libc.so.6  Cnt: 9
+  0x0010:   Name: GLIBC_ABI_DT_RELR  Flags: none  Version: 10
+  0x0020:   Name: GLIBC_2.14  Flags: none  Version: 9
+  0x0030:   Name: GLIBC_2.3  Flags: none  Version: 8
+  0x0040:   Name: GLIBC_2.33  Flags: none  Version: 7
+  0x0050:   Name: GLIBC_2.38  Flags: none  Version: 6
+  0x0060:   Name: GLIBC_2.4  Flags: none  Version: 5
+  0x0070:   Name: GLIBC_2.34  Flags: none  Version: 4
+  0x0080:   Name: GLIBC_2.3.4  Flags: none  Version: 3
+  0x0090:   Name: GLIBC_2.2.5  Flags: none  Version: 2
+`;
+    const consumerAnalysis = buildAnalysis({
+      version: '8.504.u01-1',
+      fileList: 'usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so',
+      readelfByFile: new Map([
+        [
+          'usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so',
+          '0x0000000000000001 (NEEDED)             Shared library: [libjli.so]\n0x000000000000000e (SONAME)             Library soname: [libinstrument.so]',
+        ],
+      ]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([
+        ['usr/lib/jvm/java-8-openjdk/jre/lib/amd64/libinstrument.so', LIBINSTRUMENT_VERSION_INFO],
+      ]),
+    });
+    const provider21 = buildAnalysis({
+      version: '21.0.12.1.u1-1',
+      fileList: 'usr/lib/jvm/java-21-openjdk/lib/libjli.so',
+      readelfByFile: new Map([
+        [
+          'usr/lib/jvm/java-21-openjdk/lib/libjli.so',
+          '0x000000000000000e (SONAME)             Library soname: [libjli.so]',
+        ],
+      ]),
+      importsByFile: new Map(),
+      exportsByFile: new Map(),
+      relocationsByFile: new Map(),
+      nmSizesByFile: new Map(),
+      versionInfoByFile: new Map([['usr/lib/jvm/java-21-openjdk/lib/libjli.so', JDK21_LIBJLI_VERSION_INFO]]),
+    });
+
+    expect(consumerAnalysis.neededVersionNodes['libjli.so']).toEqual(['SUNWprivate_1.1']);
+    expect(provider21.providedVersionNodes['libjli.so']).toBeUndefined();
+
+    const service = createService();
+    const ctx = {
+      changed: [
+        {
+          id: 999,
+          pkgname: 'intellij-idea-community-edition',
+          previousVersion: '1-1',
+          version: '1-2',
+        } as ArchlinuxPackage,
+      ],
+      providedByPkgname: new Map(),
+      archProvidedSonames: new Set(),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      currentVersionNodesByPkg: new Map([[999, provider21.providedVersionNodes]]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: null,
+    };
+    const consumer = makeConsumer({
+      neededVersionNodes: consumerAnalysis.neededVersionNodes,
+      neededSonames: consumerAnalysis.neededSonames,
+    });
+    const result = (
+      service as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, ctx, ['intellij-idea-community-edition']);
+    expect(result).toBeNull();
+  });
+});
+
+describe('summarizeDetails', () => {
+  it('truncates a long list to the first entry plus a count suffix', () => {
+    const details = ['libpython3.13.so.1.0: symbol PyArg_ParseTuple missing', 'two', 'three', 'four'];
+    expect(summarizeDetails(details)).toEqual(['libpython3.13.so.1.0: symbol PyArg_ParseTuple missing', '... 3 more']);
+  });
+});
+
+describe('buildPluginBreakIndex', () => {
+  const owner = (pkgId: number, previousVersion: string, currentVersion: string): OwnerDescriptor => ({
+    pkgType: TriggerType.ARCH,
+    pkgId,
+    pkgname: 'python',
+    previousVersion,
+    currentVersion,
+  });
+
+  function makeAnalysis(overrides: Partial<PackageElfAnalysis>): PackageElfAnalysis {
+    return {
+      id: overrides.pkgId ?? 0,
+      pkgType: '0',
+      pkgId: overrides.pkgId ?? 0,
+      version: overrides.version ?? '',
+      files: [],
+      neededSonames: [],
+      providedSonames: [],
+      importedSymbols: [],
+      exportedSymbols: {},
+      vtables: {},
+      directoriesOwned: [],
+      directDirectories: [],
+      pluginOf: [],
+      broken: false,
+      brokenReasons: [],
+      scannedAt: new Date(),
+      ...overrides,
+    } as PackageElfAnalysis;
+  }
+
+  it('flags symbols dropped from a soname that still exists', async () => {
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([
+      makeAnalysis({
+        pkgId: 222,
+        version: '3.13',
+        exportedSymbols: { 'libpython3.13.so.1.0': ['PyArg_ParseTuple', 'PyBool_Type'] },
+      }),
+      makeAnalysis({ pkgId: 222, version: '3.14', exportedSymbols: { 'libpython3.13.so.1.0': ['PyArg_ParseTuple'] } }),
+    ]);
+
+    const index = await service.buildPluginBreakIndex([owner(222, '3.13', '3.14')]);
+
+    expect(index.get('a222')?.symbolBreaks).toEqual([
+      { pkgname: 'python', pkgId: 222, soname: 'libpython3.13.so.1.0', lostSymbols: ['PyBool_Type'] },
+    ]);
+  });
+
+  it('does NOT report a soname rename as symbol loss (the soname channel handles it)', async () => {
+    // python 3.13 -> 3.14 renames libpython3.13.so.1.0 to libpython3.14.so.1.0.
+    // The old soname disappears, so this must not be reported as "all symbols
+    // lost" — that is a BROKEN_DEPS/soname break, not a symbol-loss plugin break.
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([
+      makeAnalysis({
+        pkgId: 222,
+        version: '3.13',
+        exportedSymbols: { 'libpython3.13.so.1.0': ['PyArg_ParseTuple', 'PyBool_Type', 'PyLong_FromLong'] },
+      }),
+      makeAnalysis({
+        pkgId: 222,
+        version: '3.14',
+        exportedSymbols: { 'libpython3.14.so.1.0': ['PyArg_ParseTuple', 'PyBool_Type', 'PyLong_FromLong'] },
+      }),
+    ]);
+
+    const index = await service.buildPluginBreakIndex([owner(222, '3.13', '3.14')]);
+
+    // No symbol breaks and no vtable drift, so no index entry is created at all.
+    expect(index.size).toBe(0);
+  });
+});
+
+describe('loadLatestChaoticAnalyses', () => {
+  function makeChaoticAnalysis(overrides: Partial<PackageElfAnalysis>): PackageElfAnalysis {
+    return {
+      id: 0,
+      pkgType: '1',
+      pkgId: 0,
+      version: '',
+      files: [],
+      neededSonames: [],
+      providedSonames: [],
+      importedSymbols: [],
+      exportedSymbols: {},
+      vtables: {},
+      directoriesOwned: [],
+      directDirectories: [],
+      pluginOf: [],
+      broken: false,
+      brokenReasons: [],
+      scannedAt: new Date(),
+      ...overrides,
+    } as PackageElfAnalysis;
+  }
+
+  it('keeps only the newest version per package by Arch version order', async () => {
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([
+      makeChaoticAnalysis({ pkgId: 7, version: '2:9', importedSymbols: ['old'] }),
+      makeChaoticAnalysis({ pkgId: 7, version: '2:13', importedSymbols: ['new'] }),
+      makeChaoticAnalysis({ pkgId: 7, version: '1.10', importedSymbols: ['older'] }),
+    ]);
+
+    const map = await service.loadLatestChaoticAnalyses([7]);
+
+    expect(map.size).toBe(1);
+    expect(map.get(7)?.importedSymbols).toEqual(['new']);
+  });
+
+  it('loads only the columns the trigger checks read', async () => {
+    // Full rows hydrate megabytes of exportedSymbols/vtables per package and
+    // exhausted the heap; the query must stay restricted to the narrow set.
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([makeChaoticAnalysis({ pkgId: 7, version: '1.0', importedSymbols: ['foo'], pluginOf: ['a1'] })]);
+
+    const map = await service.loadLatestChaoticAnalyses([7]);
+
+    const row = map.get(7) as unknown as Record<string, unknown>;
+    expect(Object.keys(row).sort()).toEqual([
+      'broken',
+      'brokenReasons',
+      'brokenSince',
+      'files',
+      'importedSymbols',
+      'neededSonames',
+      'neededVersionNodes',
+      'pkgId',
+      'pluginOf',
+      'providedSonames',
+      'scannedAt',
+      'version',
+    ]);
+  });
+
+  it('queries in batches of 500 ids and still resolves every package', async () => {
+    const { service, analysisRepo } = createMockService();
+    const pkgIds = Array.from({ length: 1200 }, (unused, index) => index + 1);
+    analysisRepo.seed(pkgIds.map((pkgId) => makeChaoticAnalysis({ pkgId, version: '1.0' })));
+
+    const map = await service.loadLatestChaoticAnalyses(pkgIds);
+
+    expect(analysisRepo.find).toHaveBeenCalledTimes(3);
+    expect(map.size).toBe(1200);
+  });
+});
+
+describe('providedForDeps (provider attribution)', () => {
+  const service = createService();
+  const noArchSonames = new Set<string>();
+
+  it('attributes a soname to its real provider, not any provider', () => {
+    // AyuGram needs libavfilter.so.11 and depends on ffmpeg. The soname is also
+    // provided by an unrelated package (losslesscut-bin's bundled ffmpeg-obs),
+    // which must NOT satisfy AyuGram. Only ffmpeg's current libavfilter.so.12
+    // counts because AyuGram depends on ffmpeg.
+    const providedByPkgname = new Map<string, Set<string>>([
+      ['libavfilter.so.11', new Set(['ffmpeg-obs', 'losslesscut-bin'])],
+      ['libavfilter.so.12', new Set(['ffmpeg'])],
+    ]);
+
+    // Depends on ffmpeg -> only libavfilter.so.12 is satisfied.
+    const ffmpegConsumer = service.providedForDeps(providedByPkgname, ['ffmpeg', 'qt6-base'], noArchSonames);
+    expect(ffmpegConsumer.has('libavfilter.so.12')).toBe(true);
+    expect(ffmpegConsumer.has('libavfilter.so.11')).toBe(false);
+
+    // Depends on ffmpeg-obs -> libavfilter.so.11 is satisfied via that provider.
+    const obsConsumer = service.providedForDeps(providedByPkgname, ['ffmpeg-obs'], noArchSonames);
+    expect(obsConsumer.has('libavfilter.so.11')).toBe(true);
+  });
+
+  it('always satisfies sonames any current Arch package provides (transitive resolution)', () => {
+    // spotify needs libharfbuzz.so.0 while only declaring gtk3; pacman pulls
+    // harfbuzz transitively, so the Arch-provided soname must not be flagged.
+    const providedByPkgname = new Map<string, Set<string>>([['libharfbuzz.so.0', new Set(['harfbuzz'])]]);
+    const archSonames = new Set(['libharfbuzz.so.0']);
+
+    const consumer = service.providedForDeps(providedByPkgname, ['gtk3'], archSonames);
+    expect(consumer.has('libharfbuzz.so.0')).toBe(true);
+  });
+
+  it('treats unknown deps as a no-op (all providers count)', () => {
+    const providedByPkgname = new Map<string, Set<string>>([['libfoo.so.1', new Set(['foo'])]]);
+    expect(service.providedForDeps(providedByPkgname, null, noArchSonames)).toEqual(new Set(['libfoo.so.1']));
+  });
+
+  it('counts no Chaotic provider for a package without dependencies', () => {
+    const providedByPkgname = new Map<string, Set<string>>([['libfoo.so.1', new Set(['foo'])]]);
+    expect(service.providedForDeps(providedByPkgname, [], noArchSonames)).toEqual(new Set());
+  });
+
+  it('treats boost and boost-libs as same provider family', () => {
+    // azahar-git/freecad-git: CI_REBUILD_TRIGGERS=boost but arch provides boost-libs
+    const providedByPkgname = new Map<string, Set<string>>([['libboost_iostreams.so.1.92.0', new Set(['boost-libs'])]]);
+    expect(
+      service.providedForDeps(providedByPkgname, ['boost'], noArchSonames).has('libboost_iostreams.so.1.92.0'),
+    ).toBe(true);
+    expect(
+      service.providedForDeps(providedByPkgname, ['boost-libs'], noArchSonames).has('libboost_iostreams.so.1.92.0'),
+    ).toBe(true);
+  });
+});
+
+describe('chaoticBrokenDepsRebuilds - hyprlang (chaotic→chaotic)', () => {
+  function makePkg(overrides: Partial<Package>): Package {
+    return {
+      id: 0,
+      pkgname: '',
+      isActive: true,
+      skipSignalScan: false,
+      bumpTriggers: [],
+      metadata: { deps: [] } as unknown as Package['metadata'],
+      ...overrides,
+    } as Package;
+  }
+
+  it('rebuilds xdg-desktop-portal-hyprland-git when hyprlang-git bumps libhyprlang.so.2 soname', async () => {
+    const hyprlang = makePkg({ id: 100, pkgname: 'hyprlang-git', version: '0.6.7-1' });
+    const xdg = makePkg({
+      id: 200,
+      pkgname: 'xdg-desktop-portal-hyprland-git',
+      version: '1.4.1-1',
+      metadata: { deps: ['hyprlang-git'] } as unknown as Package['metadata'],
+    });
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([
+      {
+        pkgType: '1',
+        pkgId: 100,
+        version: '0.6.6-1',
+        providedSonames: ['libhyprlang.so.2'],
+        neededSonames: [],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+      {
+        pkgType: '1',
+        pkgId: 100,
+        version: '0.6.7-1',
+        providedSonames: ['libhyprlang.so.3'],
+        neededSonames: [],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+      {
+        pkgType: '1',
+        pkgId: 200,
+        version: '1.4.1-1',
+        providedSonames: [],
+        neededSonames: ['libhyprlang.so.2'],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+    ]);
+    (service as unknown as Record<string, unknown>).archlinuxPackageRepository = {
+      find: async () => [],
+    } as unknown as Repository<ArchlinuxPackage>;
+    const packageRepo = createMockRepository<Package>({ keyOf: (pkg) => String(pkg.id) });
+    packageRepo.seed([hyprlang, xdg]);
+    (service as unknown as Record<string, unknown>).packagesRepository = packageRepo;
+
+    const result = await service.deploymentTriggers([hyprlang.id], [xdg.id]);
+    expect([...result.keys()]).toEqual([200]);
+    expect(result.get(200)?.ownerId).toBe(100);
+    expect(result.get(200)?.triggerFrom).toBe(TriggerType.CHAOTIC);
+  });
+
+  it('does not rebuild when chaotic soname unchanged', async () => {
+    const hyprlang = makePkg({ id: 100, pkgname: 'hyprlang-git', version: '0.6.7-1' });
+    const xdg = makePkg({
+      id: 200,
+      pkgname: 'xdg-desktop-portal-hyprland-git',
+      version: '1.4.1-1',
+      metadata: { deps: ['hyprlang-git'] } as unknown as Package['metadata'],
+    });
+    const { service, analysisRepo } = createMockService();
+    analysisRepo.seed([
+      {
+        pkgType: '1',
+        pkgId: 100,
+        version: '0.6.6-1',
+        providedSonames: ['libhyprlang.so.2'],
+        neededSonames: [],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+      {
+        pkgType: '1',
+        pkgId: 100,
+        version: '0.6.7-1',
+        providedSonames: ['libhyprlang.so.2'],
+        neededSonames: [],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+      {
+        pkgType: '1',
+        pkgId: 200,
+        version: '1.4.1-1',
+        providedSonames: [],
+        neededSonames: ['libhyprlang.so.2'],
+        files: [],
+        importedSymbols: [],
+        pluginOf: [],
+        neededVersionNodes: {},
+        exportedSymbols: {},
+        vtables: {},
+        directoriesOwned: [],
+        directDirectories: [],
+        broken: false,
+        brokenReasons: [],
+        scannedAt: new Date(),
+        hasCompiledCode: true,
+      } as unknown as PackageElfAnalysis,
+    ]);
+    (service as unknown as Record<string, unknown>).archlinuxPackageRepository = {
+      find: async () => [],
+    } as unknown as Repository<ArchlinuxPackage>;
+    const packageRepo = createMockRepository<Package>({ keyOf: (pkg) => String(pkg.id) });
+    packageRepo.seed([hyprlang, xdg]);
+    (service as unknown as Record<string, unknown>).packagesRepository = packageRepo;
+    const result = await service.deploymentTriggers([hyprlang.id], [xdg.id]);
+    expect(result.size).toBe(0);
+  });
+});
+
+describe('brokenDepsForConsumer — dropped soname still shipped by a compat package (llvm 23 style)', () => {
+  // clang 23 dropped libclang-cpp.so.22.1, but clang22 (a compat package that
+  // nothing installs with the consumer) still ships it. The consumer depends
+  // on clang, so it cannot load after the update and needs a rebuild.
+  const clang = { id: 10, pkgname: 'clang', previousVersion: '22.1.8-1', version: '23.1.1-1' } as ArchlinuxPackage;
+  const consumer = makeConsumer({ neededSonames: ['libclang-cpp.so.22.1'], pluginOf: [] });
+
+  function compatContext(): unknown {
+    return {
+      changed: [clang],
+      providedByPkgname: new Map([
+        ['libclang-cpp.so.22.1', new Set(['clang22'])],
+        ['libclang-cpp.so.23.1', new Set(['clang'])],
+      ]),
+      archProvidedSonames: new Set(['libclang-cpp.so.22.1', 'libclang-cpp.so.23.1']),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[10, new Set(['libclang-cpp.so.22.1'])]]),
+      currentProvidedByPkg: new Map([[10, new Set(['libclang-cpp.so.23.1'])]]),
+      currentVersionNodesByPkg: new Map([[10, {}]]),
+      droppedSonames: new Set(['libclang-cpp.so.22.1']),
+      dependencyClosure: new DependencyClosure([
+        { pkgname: 'clang', deps: ['llvm-libs'], provides: [] },
+        { pkgname: 'llvm-libs', deps: [], provides: [] },
+        { pkgname: 'clang22', deps: [], provides: [] },
+        { pkgname: 'iwyu-helper', deps: ['clang22'], provides: [] },
+      ]),
+    };
+  }
+
+  function brokenDeps(deps: string[] | null): { archPkg: ArchlinuxPackage; deps: unknown[] } | null {
+    return (
+      createService() as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[] | null,
+        ): { archPkg: ArchlinuxPackage; deps: unknown[] } | null;
+      }
+    ).brokenDepsForConsumer(consumer, compatContext(), deps);
+  }
+
+  it('flags the consumer and blames the package that dropped the soname', () => {
+    const result = brokenDeps(['clang', 'llvm-libs']);
+
+    expect(result?.archPkg.pkgname).toBe('clang');
+    expect(result?.deps).toEqual([{ kind: 'soname', soname: 'libclang-cpp.so.22.1' }]);
+  });
+
+  it('does not flag a consumer that depends on the compat package directly', () => {
+    expect(brokenDeps(['clang22'])).toBeNull();
+  });
+
+  it('does not flag a consumer that pulls the compat package in transitively', () => {
+    expect(brokenDeps(['iwyu-helper'])).toBeNull();
+  });
+
+  it('keeps the lenient any-Arch-provider rule for consumers without recorded deps', () => {
+    expect(brokenDeps(null)).toBeNull();
+  });
+
+  it('flags a consumer without dependencies, because nothing installs the compat package for it', () => {
+    expect(brokenDeps([])?.archPkg.pkgname).toBe('clang');
+  });
+});
+
+describe('consumerSymbolBreaksFor — consumers that only link the library', () => {
+  it('flags a consumer that needs the soname and imports a lost symbol', () => {
+    const consumer = makeConsumer({
+      pluginOf: [],
+      neededSonames: ['libpython3.13.so.1.0'],
+      importedSymbols: ['PyBool_Type'],
+    });
+
+    expect(createService().consumerSymbolBreaksFor(consumer, breakIndex())).toEqual([
+      { symbol: 'PyBool_Type', soname: 'libpython3.13.so.1.0', pkgname: 'python', pkgId: 222 },
+    ]);
+  });
+
+  it('does not flag a consumer that imports the symbol name but does not link the soname', () => {
+    const consumer = makeConsumer({ pluginOf: [], neededSonames: ['libfoo.so.1'], importedSymbols: ['PyBool_Type'] });
+
+    expect(createService().consumerSymbolBreaksFor(consumer, breakIndex())).toEqual([]);
+  });
+
+  it('counts a vtable drift only for plugins of the owner', () => {
+    const index = new Map<string, PluginBreakIndexEntry>([
+      [
+        OWNER_KEY,
+        {
+          pkgname: 'kwin',
+          pkgId: 222,
+          symbolBreaks: [],
+          vtableDrifts: [{ vtable: '_ZTVN4KWin6EffectE', shiftedSlots: ['_ZN4KWin6Effect5paintEv'] }],
+        },
+      ],
+    ]);
+    const linker = makeConsumer({ pluginOf: [], importedSymbols: ['_ZN4KWin6Effect5paintEv'] });
+    const plugin = makeConsumer({ importedSymbols: ['_ZN4KWin6Effect5paintEv'] });
+
+    expect(createService().consumerSymbolBreaksFor(linker, index)).toEqual([]);
+    expect(createService().consumerSymbolBreaksFor(plugin, index)).toHaveLength(1);
+  });
+});
+
+describe('brokenDepsForConsumer — version node dropped by a transitive dependency', () => {
+  // The consumer depends on llvm, and llvm pulls in llvm-libs, which ships
+  // libLLVM.so.22.1 and re-versioned its nodes.
+  const llvmLibs = {
+    id: 30,
+    pkgname: 'llvm-libs',
+    previousVersion: '22.1.7-1',
+    version: '22.1.8-1',
+  } as ArchlinuxPackage;
+  const consumer = makeConsumer({
+    pluginOf: [],
+    neededSonames: ['libLLVM.so.22.1'],
+    neededVersionNodes: { 'libLLVM.so.22.1': ['LLVM_22.1.7'] },
+  });
+
+  function context(): unknown {
+    return {
+      changed: [llvmLibs],
+      providedByPkgname: new Map([['libLLVM.so.22.1', new Set(['llvm-libs'])]]),
+      archProvidedSonames: new Set(['libLLVM.so.22.1']),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[30, new Set(['libLLVM.so.22.1'])]]),
+      currentProvidedByPkg: new Map([[30, new Set(['libLLVM.so.22.1'])]]),
+      currentVersionNodesByPkg: new Map([[30, { 'libLLVM.so.22.1': ['LLVM_22.1.8'] }]]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: new DependencyClosure([
+        { pkgname: 'llvm', deps: ['llvm-libs'], provides: [] },
+        { pkgname: 'llvm-libs', deps: [], provides: [] },
+      ]),
+    };
+  }
+
+  function brokenDeps(deps: string[]): { archPkg: ArchlinuxPackage } | null {
+    return (
+      createService() as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[],
+        ): { archPkg: ArchlinuxPackage } | null;
+      }
+    ).brokenDepsForConsumer(consumer, context(), deps);
+  }
+
+  it('blames the dependency that llvm pulls in', () => {
+    expect(brokenDeps(['llvm'])?.archPkg.pkgname).toBe('llvm-libs');
+  });
+
+  it('does not blame a provider outside the dependency closure', () => {
+    expect(brokenDeps(['mesa'])).toBeNull();
+  });
+});
+
+describe('missedBreaksIn', () => {
+  const scannedAt = new Date('2026-09-01T00:00:00Z');
+
+  it('keeps a package that broke after its scan', () => {
+    const brokenSince = new Date('2026-09-10T00:00:00Z');
+    const analyses = new Map([[1, makeConsumer({ broken: true, brokenSince, scannedAt })]]);
+
+    expect(missedBreaksIn(analyses)).toEqual(new Map([[1, brokenSince]]));
+  });
+
+  it('ignores a package that was broken as built', () => {
+    const analyses = new Map([[1, makeConsumer({ broken: true, brokenSince: scannedAt, scannedAt })]]);
+
+    expect(missedBreaksIn(analyses).size).toBe(0);
+  });
+});

@@ -2,6 +2,7 @@ import {
   type ArchOverlapReport,
   type BumpPackagesResult,
   type MissingDependencyReport,
+  type RebuildCoverageReport,
   Paginated,
   RepoStatus,
 } from '@chaotic-next/shared-lib';
@@ -60,6 +61,9 @@ import {
 
 /** The cron scheduler runs on German time so runs align with Arch mirror syncs. */
 const CRON_TIME_ZONE = 'Europe/Berlin';
+
+// Daily scan of the Chaotic packages without a current analysis, for example after a failed post-deploy scan.
+const CHAOTIC_ANALYSIS_BACKFILL_CRON = '0 4 * * *';
 
 @Injectable()
 export class RepoManagerService implements OnModuleInit {
@@ -123,8 +127,49 @@ export class RepoManagerService implements OnModuleInit {
       }),
     );
 
+    if (this.configService.get<boolean>('repoMan.signalScanEnabled')) {
+      this.schedulerRegistry.addCronJob(
+        'chaotic-analysis-backfill',
+        CronJob.from({
+          cronTime: CHAOTIC_ANALYSIS_BACKFILL_CRON,
+          onTick: this.backfillChaoticAnalyses.bind(this),
+          start: true,
+          timeZone: CRON_TIME_ZONE,
+        }),
+      );
+    }
+
     this.repoManager = this.createRepoManager();
+    this.warnAboutAbiDryRun();
     this.pino.info({ count: this.repos.length }, 'RepoManager service initialized');
+  }
+
+  /**
+   * In dry-run mode, signal rebuilds are only logged. A missing setting must be noticed.
+   */
+  private warnAboutAbiDryRun(): void {
+    if (this.configService.get<boolean>('repoMan.abiDryRun') === undefined) {
+      this.pino.warn('repoMan.abiDryRun is not set, so it defaults to true');
+    }
+    if (this.repoManager.isAbiDryRun()) {
+      this.pino.warn('ABI dry-run is on: broken-dependency and plugin rebuilds are only logged, never bumped');
+    }
+  }
+
+  /**
+   * The trigger checks cannot see a package without an analysis.
+   * A failed post-deploy scan would else hide the package until its next build.
+   */
+  async backfillChaoticAnalyses(): Promise<void> {
+    const repos = await this.repoRepository.find({ where: { isActive: true, dbPath: Not(IsNull()) } });
+    for (const repo of repos) {
+      try {
+        const result = await this.repoManager.indexChaoticRepo(repo.dbPath);
+        this.pino.info({ repo: repo.name, ...result }, 'Backfilled Chaotic package analyses');
+      } catch (err: unknown) {
+        this.pino.error({ err, repo: repo.name }, 'Failed to backfill Chaotic package analyses');
+      }
+    }
   }
 
   async updateChaoticVersions(): Promise<void> {
@@ -163,9 +208,21 @@ export class RepoManagerService implements OnModuleInit {
     }
   }
 
+  /**
+   * Pull and scan only. The changes stay pending for the next run.
+   */
   async triggerSignalScan(): Promise<void> {
-    await this.repoManager.pullArchlinuxPackages();
-    await this.repoManager.scanChangedArchPackages();
+    if (this.repoManager.status === RepoStatus.ACTIVE) {
+      this.pino.warn('RepoManager is already active, skipping signal scan');
+      return;
+    }
+    this.repoManager.status = RepoStatus.ACTIVE;
+    try {
+      await this.repoManager.pullArchlinuxPackages();
+      await this.repoManager.scanChangedArchPackages();
+    } finally {
+      this.repoManager.status = RepoStatus.INACTIVE;
+    }
   }
 
   async indexArchMirror(): Promise<IndexResult> {
@@ -211,6 +268,10 @@ export class RepoManagerService implements OnModuleInit {
     allBrokenReports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));
     const items = allBrokenReports.slice(skip, skip + safePerPage);
     return paginate(items, total, safePage, safePerPage);
+  }
+
+  getRebuildCoverage(): Promise<RebuildCoverageReport> {
+    return this.rebuildTriggerService.rebuildCoverage();
   }
 
   async getMissingDependencies(): Promise<MissingDependencyReport[]> {
@@ -616,27 +677,51 @@ export class RepoManagerService implements OnModuleInit {
     try {
       await this.repoManager.pullArchlinuxPackages();
 
-      if (this.repoManager.changedArchPackages.length === 0) {
-        this.pino.info(run, 'No packages changed in Arch repos, skipping run');
+      // When the signal scanner is enabled, download the changed packages from
+      // the mirror and scan them before computing rebuild triggers.
+      let hasMissedBreaks = false;
+      if (this.configService.get<boolean>('repoMan.signalScanEnabled')) {
+        await this.repoManager.scanChangedArchPackages();
+        await this.repoManager.selectScannedChanges();
+        // Fresh broken flags find breaks that an earlier change caused without a bump.
+        await this.signalScanService.recomputeBroken();
+        hasMissedBreaks = await this.repoManager.hasMissedBreaks();
+      }
+
+      if (this.repoManager.changedArchPackages.length === 0 && !hasMissedBreaks) {
+        this.pino.info(run, 'No pending Arch package changes, skipping run');
         return;
       }
 
-      // When the signal scanner is enabled, download the changed packages from
-      // the mirror and scan them before computing rebuild triggers.
-      if (this.configService.get<boolean>('repoMan.signalScanEnabled')) {
-        await this.repoManager.scanChangedArchPackages();
-      }
-
-      const results: BumpResult[] = [];
-      for (const repo of this.repos) {
-        const result: BumpResult = await this.repoManager.startRun(repo);
-        results.push(result);
-      }
-
+      const { results, allSucceeded } = await this.startRunForEachRepo(run);
       this.summarizeChanges(results, this.repoManager);
+
+      // A change stays pending until every repo processed it. A failed repo retries it on the next run.
+      if (allSucceeded) {
+        await this.repoManager.markChangesProcessed();
+      } else {
+        this.pino.warn(run, 'Not every repo processed the Arch changes, keeping them pending for the next run');
+      }
     } finally {
       this.repoManager.status = RepoStatus.INACTIVE;
     }
+  }
+
+  private async startRunForEachRepo(run: {
+    runId: string;
+    component: string;
+  }): Promise<{ results: BumpResult[]; allSucceeded: boolean }> {
+    const results: BumpResult[] = [];
+    let allSucceeded = true;
+    for (const repo of this.repos) {
+      try {
+        results.push(await this.repoManager.startRun(repo));
+      } catch (err: unknown) {
+        allSucceeded = false;
+        this.pino.error({ ...run, err, repo: repo.name }, 'Rebuild-trigger run failed for repo');
+      }
+    }
+    return { results, allSucceeded };
   }
 
   createRepoManager(): RepoManager {
@@ -687,10 +772,10 @@ export class RepoManagerService implements OnModuleInit {
     }
   }
 
-  async eventuallyBumpAffected(build: Partial<Build>) {
-    const result: BumpResult[] = [await this.repoManager.checkPackageDepsAfterDeployment(build)];
-    if (result.length > 0) {
-      this.summarizeChanges(result, this.repoManager);
+  async eventuallyBumpAffected(build: Partial<Build>): Promise<void> {
+    const results: BumpResult[] = await this.repoManager.checkPackageDepsAfterDeployment(build);
+    if (results.length > 0) {
+      this.summarizeChanges(results, this.repoManager);
     }
   }
 }

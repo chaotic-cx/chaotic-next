@@ -56,6 +56,19 @@ export class ArchlinuxPackage {
   @ApiProperty({ description: 'When the package vanished from the Arch sync DBs, null while active' })
   @Column({ type: 'timestamp', nullable: true })
   deactivatedAt!: Date | null;
+
+  @ApiProperty({
+    description: 'True while the change from previousVersion to version has not run through every rebuild trigger',
+  })
+  @Column({ type: 'boolean', default: false })
+  triggersPending!: boolean;
+}
+
+/**
+ * True when the package left the Arch sync DBs.
+ */
+export function isRemoved(pkg: ArchlinuxPackage): boolean {
+  return pkg.deactivatedAt !== null;
 }
 
 @Entity()
@@ -147,6 +160,13 @@ export class PackageElfAnalysis {
 
   @Column({ type: 'jsonb', default: () => "'[]'" })
   brokenReasons!: string[];
+
+  /**
+   * Start of the current broken state. For a package that is broken as built, this is the scan time.
+   * Null while the package is not broken.
+   */
+  @Column({ type: 'timestamp', nullable: true })
+  brokenSince!: Date | null;
 
   @Column({ type: 'boolean', default: false })
   hasCompiledCode!: boolean;

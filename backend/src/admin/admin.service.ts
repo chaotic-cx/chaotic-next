@@ -33,7 +33,7 @@ import {
   PackageBump as PackageBumpEntity,
   PackageElfAnalysis,
 } from '../repo-manager/repo-manager.entity';
-import { SignalScanService } from '../repo-manager/scan';
+import { type ScanReport, SignalScanService } from '../repo-manager/scan';
 import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from '../repo-manager/signal';
 import { downloadFile } from '../utils/download';
 import { encryptAes, errorMessage } from '../utils/functions';
@@ -654,9 +654,11 @@ export class AdminService {
 
     const file = join(tempDir, filename);
     await this.downloadPackage(secretMirrorUrl, pkg.pkgname, filename, file);
-    await this.signalScanService.scanPackages([
-      { file, pkgType: TriggerType.ARCH, pkgId: pkg.id, version: pkg.version },
-    ]);
+    throwOnScanFailure(
+      await this.signalScanService.scanPackages([
+        { file, pkgType: TriggerType.ARCH, pkgId: pkg.id, version: pkg.version },
+      ]),
+    );
   }
 
   private async rescanChaoticPackage(
@@ -676,9 +678,11 @@ export class AdminService {
 
     const file = join(tempDir, filename);
     await this.downloadPackage(secretMirrorUrl, pkg.repo.name, filename, file);
-    await this.signalScanService.scanPackages([
-      { file, pkgType: TriggerType.CHAOTIC, pkgId: pkg.id, version: pkg.version },
-    ]);
+    throwOnScanFailure(
+      await this.signalScanService.scanPackages([
+        { file, pkgType: TriggerType.CHAOTIC, pkgId: pkg.id, version: pkg.version },
+      ]),
+    );
   }
 
   private async downloadPackage(mirrorUrl: string, repoName: string, filename: string, dest: string): Promise<void> {
@@ -793,4 +797,12 @@ export class AdminService {
       throw error;
     }
   }
+}
+
+/**
+ * A failed scan must show up on the rescan job, not count as rescanned.
+ */
+function throwOnScanFailure(report: ScanReport): void {
+  const [failure] = report.failed;
+  if (failure) throw new Error(`scan failed: ${failure.reason}`);
 }
