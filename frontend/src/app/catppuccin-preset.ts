@@ -1,5 +1,5 @@
 import { flavors } from '@catppuccin/palette';
-import { CatppuccinAura } from '@garudalinux/themes/catppuccin';
+import { CatppuccinAura } from '@garudalinux/themes/catppuccin/aura';
 import { definePreset } from '@openng/optimus-ui-themes';
 
 const latte = flavors.latte.colors;

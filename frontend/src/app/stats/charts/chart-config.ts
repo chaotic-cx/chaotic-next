@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { httpResource, type HttpResourceRequest } from '@angular/common/http';
-import { computed } from '@angular/core';
+import { HttpParams, httpResource, type HttpResourceRequest } from '@angular/common/http';
+import { computed, effect } from '@angular/core';
 import type { Chart, ChartData, ChartOptions, ChartType } from 'chart.js';
 import { resourceFailed, resourceValue } from '../../functions';
 import { seriesColor, themePalette } from '../../theme';
@@ -149,15 +149,63 @@ export function groupOverTimeChart(rows: GroupOverTimeRow[], formatDay: (day: st
   return { labels, datasets };
 }
 
+// Enough for every chart on every tab with a few filter combinations, so the memory use stays small.
+const CHART_CACHE_LIMIT = 100;
+
+/*
+ * The last response per request, kept across tab switches.
+ * A revisited tab draws at once from this cache while the resource loads again in the background.
+ */
+const chartResponseCache = new Map<string, unknown>();
+
+function chartRequestKey(request: HttpResourceRequest | undefined): string | undefined {
+  if (!request) {
+    return undefined;
+  }
+
+  const params = request.params instanceof HttpParams ? request.params : new HttpParams({ fromObject: request.params });
+
+  return `${request.url}?${params.toString()}`;
+}
+
+function rememberChartResponse(key: string, value: unknown): void {
+  chartResponseCache.delete(key);
+  chartResponseCache.set(key, value);
+
+  if (chartResponseCache.size > CHART_CACHE_LIMIT) {
+    const oldestKey = chartResponseCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      chartResponseCache.delete(oldestKey);
+    }
+  }
+}
+
 export function chartResource<T>(request: () => HttpResourceRequest | undefined) {
   const resource = httpResource<T>(request);
+  const key = computed(() => chartRequestKey(request()));
+
+  const cached = computed(() => {
+    const currentKey = key();
+    return currentKey === undefined ? undefined : (chartResponseCache.get(currentKey) as T | undefined);
+  });
+
+  const value = computed(() => resourceValue(resource) ?? cached());
+
+  effect(() => {
+    const currentKey = key();
+    const loaded = resourceValue(resource);
+    if (currentKey !== undefined && loaded !== undefined) {
+      rememberChartResponse(currentKey, loaded);
+    }
+  });
+
   return {
     resource,
-    loading: resource.isLoading,
+    loading: computed(() => resource.isLoading() && value() === undefined),
     failed: resourceFailed(resource),
     retry: () => resource.reload(),
-    hasData: computed(() => resource.hasValue()),
-    data: computed(() => (resourceValue(resource) ?? []) as T),
+    hasData: computed(() => value() !== undefined),
+    data: computed(() => (value() ?? []) as T),
   };
 }
 

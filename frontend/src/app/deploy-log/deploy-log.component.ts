@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { type Build, BuildStatus, STATUS_LABELS } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { IconField } from '@openng/optimus-ui/iconfield';
@@ -87,7 +87,7 @@ const STATUS_LABEL_KEYS: Record<BuildStatus, string> = {
   imports: [
     TableSkeletonRowsComponent,
     LoadErrorComponent,
-    CommonModule,
+    DatePipe,
     TableModule,
     InputIcon,
     IconField,

@@ -1,6 +1,6 @@
 import { Service, signal, type WritableResource, inject } from '@angular/core';
 import type { UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { TranslocoService } from '@jsverse/transloco';
 import { backendErrorMessage } from '../../../../api-errors';
 import { AppService } from '../../../../app.service';

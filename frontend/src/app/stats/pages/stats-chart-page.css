@@ -1,17 +1,20 @@
-:host {
-  animation: ctp-item-enter var(--chaotic-duration-base) var(--chaotic-ease-out);
-}
-
 :host ::ng-deep .p-card {
   background: var(--p-card-background);
   backdrop-filter: blur(var(--chaotic-blur));
   -webkit-backdrop-filter: blur(var(--chaotic-blur));
 }
 
+/* Same height as the chart card, so the chart replaces the placeholder without a jump. */
 .chaotic-chart-placeholder {
-  min-height: 18rem;
+  min-height: 20rem;
   border-radius: var(--chaotic-radius-md);
   background: color-mix(in srgb, var(--catppuccin-color-surface0) 30%, transparent);
+}
+
+@media (min-width: 640px) {
+  .chaotic-chart-placeholder {
+    min-height: 18rem;
+  }
 }
 
 :host ::ng-deep .p-card-title {

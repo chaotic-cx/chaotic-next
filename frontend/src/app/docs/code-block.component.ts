@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Highlight } from 'ngx-highlightjs';
@@ -51,6 +51,11 @@ const COPIED_LINE_KEYS: CopiedLabelKeys = {
     </div>
   `,
   styles: `
+    :host {
+      display: block;
+      container-type: inline-size;
+    }
+
     .code-block {
       display: flex;
       align-items: flex-start;
@@ -117,7 +122,33 @@ const COPIED_LINE_KEYS: CopiedLabelKeys = {
       background: transparent !important;
       padding: 0 !important;
       white-space: pre-wrap;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+    }
+
+    /* Narrow blocks: the actions go above the code, and long commands scroll instead of breaking mid-word. */
+    @container (max-width: 40rem) {
+      .code-block {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 0.25rem 0.25rem 0.5rem 1rem;
+      }
+
+      .code-block__actions {
+        order: -1;
+        justify-content: space-between;
+      }
+
+      pre {
+        overflow-x: auto;
+        padding-inline-end: 0.75rem;
+      }
+
+      pre code {
+        width: max-content;
+        white-space: pre;
+        overflow-wrap: normal;
+      }
     }
   `,
 })

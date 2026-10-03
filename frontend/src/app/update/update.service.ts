@@ -1,7 +1,7 @@
 import { inject, Service } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { TranslocoService } from '@jsverse/transloco';
 
 const UPDATE_TOAST_LIFE_MS = 20000;

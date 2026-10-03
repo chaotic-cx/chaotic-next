@@ -1,5 +1,5 @@
 <div class="chaotic-page flex flex-col" *transloco="let t; prefix: 'home'">
-  <section class="home-hero" aria-labelledby="home-title">
+  <section class="home-hero chaotic-text-inset" aria-labelledby="home-title">
     <a
       class="home-hero__logo hero-enter"
       [attr.aria-label]="t('hero.appletLabel')"
@@ -50,7 +50,7 @@
   <chaotic-pipeline-strip class="hero-enter" style="--stagger: 5" />
 
   <section class="home-news" aria-labelledby="home-news-title">
-    <aside class="home-news__aside">
+    <aside class="home-news__aside chaotic-text-inset">
       <h2 class="chaotic-section-title" id="home-news-title">{{ t('news.title') }}</h2>
       <p class="home-news__note">{{ t('news.note') }}</p>
       <a class="home-news__community" href="https://t.me/chaotic_aur_sac" target="_blank" rel="noopener noreferrer">
@@ -71,7 +71,7 @@
   </section>
 
   <section class="home-section" aria-labelledby="home-recent-title">
-    <div class="home-section__head">
+    <div class="home-section__head chaotic-text-inset">
       <h2 class="chaotic-section-title" id="home-recent-title">{{ t('recent.title') }}</h2>
       <a class="home-section__link" routerLink="/packages">{{ t('recent.link') }}</a>
     </div>
@@ -83,11 +83,11 @@
   </section>
 
   <section class="home-section" aria-labelledby="home-map-title">
-    <div class="home-section__head">
+    <div class="home-section__head chaotic-text-inset">
       <h2 class="chaotic-section-title" id="home-map-title">{{ t('map.title') }}</h2>
       <a class="home-section__link" routerLink="/map">{{ t('map.link') }}</a>
     </div>
-    <p class="home-section__note">{{ t('map.note') }}</p>
+    <p class="home-section__note chaotic-text-inset">{{ t('map.note') }}</p>
     @if (mirrorsService.error()) {
       <chaotic-load-error
         class="mb-3 block"

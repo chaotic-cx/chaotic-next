@@ -180,3 +180,27 @@
 .mr-scan__icon {
   color: var(--scan-hue);
 }
+
+/* A failed refresh keeps the loaded list on screen and says so above it. */
+.mr-refresh-failed {
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.mr-refresh-failed__retry {
+  color: var(--catppuccin-color-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.mr-refresh-failed__retry:hover,
+.mr-refresh-failed__retry:focus-visible {
+  color: var(--catppuccin-color-mauve);
+}
+
+@media (pointer: coarse) {
+  .mr-refresh-failed__retry {
+    min-height: 2.75rem;
+  }
+}

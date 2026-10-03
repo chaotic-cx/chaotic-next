@@ -225,8 +225,10 @@ export class StatsComponent implements OnInit {
 
   protected navigate(value: string | number | undefined): void {
     if (typeof value === 'string' && isStatsTab(value)) {
+      // A tab switch keeps the scroll position, so the tabs stay where the pointer is.
       void this.router.navigate([value], {
         relativeTo: this.route,
+        scroll: 'manual',
       });
     }
   }
@@ -236,6 +238,7 @@ export class StatsComponent implements OnInit {
       relativeTo: this.route,
       queryParams: { range: timeRangeToParam(days ?? null) },
       queryParamsHandling: 'merge',
+      scroll: 'manual',
     });
   }
 
@@ -244,6 +247,7 @@ export class StatsComponent implements OnInit {
       relativeTo: this.route,
       queryParams: { repo: repo || null },
       queryParamsHandling: 'merge',
+      scroll: 'manual',
     });
   }
 }

@@ -1,5 +1,5 @@
 import type { ChartOptions } from 'chart.js';
-import { Chart } from 'chart.js/auto';
+import { Chart } from 'chart.js';
 import { prefersReducedMotion } from '../../functions';
 import { themePalette } from '../../theme';
 

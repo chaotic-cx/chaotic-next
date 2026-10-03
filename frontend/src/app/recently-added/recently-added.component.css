@@ -4,7 +4,7 @@
   border-radius: var(--p-panel-border-radius, 12px);
   backdrop-filter: blur(var(--chaotic-blur));
   -webkit-backdrop-filter: blur(var(--chaotic-blur));
-  padding: 1rem;
+  padding: 1rem var(--chaotic-inset);
 }
 
 .recent-card {

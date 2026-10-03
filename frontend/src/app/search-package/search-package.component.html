@@ -36,6 +36,29 @@
     </p>
     @if (!currentPackageName()) {
       <p class="search-hint">{{ t('searchPackage.hint', { count: minSuggestionQueryLength }) }}</p>
+      @if (recentSearches.recent().length > 0) {
+        <section class="search-recent" aria-labelledby="search-recent-label">
+          <h2 class="search-recent__label" id="search-recent-label">{{ t('searchPackage.recent.label') }}</h2>
+          <ul class="search-recent__list">
+            @for (name of recentSearches.recent(); track name) {
+              <li class="search-recent__item">
+                <button class="search-recent__open" (click)="selectPackage(name)" type="button">{{ name }}</button>
+                <button
+                  class="search-recent__remove"
+                  [attr.aria-label]="t('searchPackage.recent.remove', { name })"
+                  (click)="recentSearches.remove(name)"
+                  type="button"
+                >
+                  <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+              </li>
+            }
+          </ul>
+          <button class="search-recent__clear" (click)="recentSearches.clear()" type="button">
+            {{ t('searchPackage.recent.clear') }}
+          </button>
+        </section>
+      }
     }
   </div>
 
@@ -85,7 +108,7 @@
   }
 
   @if (hasSearchData()) {
-    <div class="w-full" animate.enter="ctp-item-enter">
+    <div class="w-full">
       <div class="scroll-mt-24 mt-4 flex flex-col gap-4" #resultsSection>
         @if (sheet(); as pkg) {
           <article class="pkg-sheet" aria-labelledby="pkg-sheet-name" animate.enter="ctp-fade-enter">

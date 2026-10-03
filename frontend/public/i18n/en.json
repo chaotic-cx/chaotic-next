@@ -698,6 +698,7 @@
     },
     "loading": "Loading merge requests",
     "loadError": "Could not load merge requests from GitLab.",
+    "refreshFailed": "Could not refresh the merge requests. The list shows the last loaded state.",
     "browseOnGitlab": "Browse all merge requests on GitLab",
     "editFlagReason": "Edit flag reason",
     "flagReason": {
@@ -749,10 +750,6 @@
       "confirmHold": "Put on hold"
     },
     "toast": {
-      "loadFailed": {
-        "title": "Error fetching merge requests",
-        "message": "An error occurred while fetching merge requests. Please try again."
-      },
       "approved": {
         "title": "Approval Successful",
         "message": "Merge request approved and merged.",
@@ -846,6 +843,11 @@
       "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search"
     },
     "hint": "Type {{count}} or more characters for suggestions. Press Enter to open a package.",
+    "recent": {
+      "label": "Recent",
+      "remove": "Remove {{name}} from recent searches",
+      "clear": "Clear"
+    },
     "loading": "Loading {{name}}",
     "notFound": {
       "message": "{{repo}} has no package named {{name}}.",
@@ -985,7 +987,8 @@
       "summaryOther": "{{title}}: chart with {{count}} entries. The data table lists the values.",
       "showTable": "Show data table",
       "showChart": "Show chart",
-      "labelColumn": "Label"
+      "labelColumn": "Label",
+      "staleData": "Update failed. The chart shows the last loaded data."
     },
     "failureSilence": {
       "silenced": {
