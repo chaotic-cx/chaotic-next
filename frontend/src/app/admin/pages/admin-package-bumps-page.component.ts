@@ -1,8 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PackageBump } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
@@ -19,22 +21,19 @@ import {
   restoreQueryParams,
 } from '../admin-url-sync';
 import { AdminService } from '../admin.service';
+import { injectActiveTranslation } from '../../i18n/active-translation';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
-const BUMP_TYPE_OPTIONS = [
-  { label: 'Explicit', value: 0 },
-  { label: 'Global', value: 1 },
-  { label: 'From deps', value: 2 },
-  { label: 'From deps (chaotic)', value: 3 },
-  { label: 'Plugin', value: 6 },
-  { label: 'Broken deps', value: 7 },
-  { label: 'Manual', value: 8 },
+const BUMP_TYPES = [
+  { labelKey: marker('admin.packageBumps.bumpTypes.explicit'), value: 0 },
+  { labelKey: marker('admin.packageBumps.bumpTypes.global'), value: 1 },
+  { labelKey: marker('admin.packageBumps.bumpTypes.fromDeps'), value: 2 },
+  { labelKey: marker('admin.packageBumps.bumpTypes.fromDepsChaotic'), value: 3 },
+  { labelKey: marker('admin.packageBumps.bumpTypes.plugin'), value: 6 },
+  { labelKey: marker('admin.packageBumps.bumpTypes.brokenDeps'), value: 7 },
+  { labelKey: marker('admin.packageBumps.bumpTypes.manual'), value: 8 },
 ];
-
-const BUMP_TYPE_LABELS: Record<number, string> = Object.fromEntries(
-  BUMP_TYPE_OPTIONS.map((option) => [option.value, option.label]),
-);
 
 const SOURCE_OPTIONS = [
   { label: 'Arch', value: 0 },
@@ -63,9 +62,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     TableModule,
     TagModule,
     RouterLink,
+    TranslocoDirective,
   ],
   template: `
-    <div class="table-container">
+    <div class="table-container" *transloco="let t; prefix: 'admin'">
       <p-table
         #bumpsTable
         [value]="service.packageBumps()?.items ?? []"
@@ -85,22 +85,22 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
           <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
             <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
               <p-select
-                [options]="bumpTypeOptions"
+                [options]="bumpTypeOptions()"
                 [ngModel]="service.packageBumpTypeFilter()"
+                [placeholder]="t('packageBumps.columns.bumpType')"
                 (ngModelChange)="setBumpTypeFilter($event)"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Bump type"
                 showClear
                 appendTo="body"
               />
               <p-select
                 [options]="sourceOptions"
                 [ngModel]="service.packageBumpSourceFilter()"
+                [placeholder]="t('packageBumps.source')"
                 (ngModelChange)="setSourceFilter($event)"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Source"
                 showClear
                 appendTo="body"
               />
@@ -112,23 +112,23 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               <input
                 class="w-full"
                 [value]="service.packageBumpQuery()"
+                [placeholder]="t('pages.searchPkgname')"
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
-                placeholder="Search pkgname"
               />
             </p-iconfield>
           </div>
         </ng-template>
         <ng-template #header>
           <tr>
-            <th style="min-width: 3rem">ID</th>
-            <th style="min-width: 10rem">Package</th>
-            <th style="min-width: 7rem">Bump type</th>
-            <th style="min-width: 10rem">Trigger</th>
-            <th style="min-width: 7rem">Triggered by</th>
-            <th style="min-width: 12rem">Details</th>
-            <th style="min-width: 7rem">Timestamp</th>
+            <th style="min-width: 3rem">{{ t('pages.columns.id') }}</th>
+            <th style="min-width: 10rem">{{ t('pages.columns.package') }}</th>
+            <th style="min-width: 7rem">{{ t('packageBumps.columns.bumpType') }}</th>
+            <th style="min-width: 10rem">{{ t('packageBumps.columns.trigger') }}</th>
+            <th style="min-width: 7rem">{{ t('packageBumps.columns.triggeredBy') }}</th>
+            <th style="min-width: 12rem">{{ t('packageBumps.columns.details') }}</th>
+            <th style="min-width: 7rem">{{ t('packageBumps.columns.timestamp') }}</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-bump>
@@ -161,7 +161,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             </td>
             <td>
               @if (bump.bumpType === manualBumpType) {
-                <p-tag value="Manual" severity="success" />
+                <p-tag [value]="t('packageBumps.bumpTypes.manual')" severity="success" />
               } @else {
                 <p-tag [value]="sourceLabel(bump.triggerFrom)" [severity]="sourceSeverity(bump.triggerFrom)" />
               }
@@ -179,7 +179,9 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             />
           } @else {
             <tr>
-              <td [attr.colspan]="7"><p class="chaotic-card__empty">No package bumps match these filters.</p></td>
+              <td [attr.colspan]="7">
+                <p class="chaotic-card__empty">{{ t('packageBumps.empty') }}</p>
+              </td>
             </tr>
           }
         </ng-template>
@@ -191,11 +193,25 @@ export class AdminPackageBumpsPageComponent {
   readonly service = inject(AdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeTranslation = injectActiveTranslation();
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
-  readonly bumpTypeOptions = BUMP_TYPE_OPTIONS;
+  readonly bumpTypeOptions = computed(() => {
+    this.activeTranslation();
+
+    return BUMP_TYPES.map((bumpType) => ({
+      label: this.transloco.translate(bumpType.labelKey),
+      value: bumpType.value,
+    }));
+  });
+
+  private readonly bumpTypeLabels = computed(
+    () => new Map(this.bumpTypeOptions().map((option) => [option.value, option.label])),
+  );
+
   readonly sourceOptions = SOURCE_OPTIONS;
   readonly manualBumpType = BUMP_TYPE_MANUAL;
 
@@ -216,7 +232,7 @@ export class AdminPackageBumpsPageComponent {
   }
 
   bumpTypeLabel(bumpType: number): string {
-    return BUMP_TYPE_LABELS[bumpType] ?? String(bumpType);
+    return this.bumpTypeLabels().get(bumpType) ?? String(bumpType);
   }
 
   sourceLabel(triggerFrom: number): string {

@@ -4,12 +4,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Select } from '@openng/optimus-ui/select';
 import { Tab, TabList, Tabs } from '@openng/optimus-ui/tabs';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { resourceValue, setPageSeo } from '../functions';
+import { injectActiveTranslation } from '../i18n/active-translation';
 import { TitleComponent } from '../title/title.component';
 import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
 import { isStatsTab, StatsService, type StatsTab } from './stats.service';
@@ -18,20 +21,57 @@ const ALL_TIME_RANGE_PARAM = 'all';
 
 interface StatsTabLink {
   value: StatsTab;
-  label: string;
-  tooltip: string;
+  labelKey: string;
+  tooltipKey: string;
 }
 
 const STATS_TAB_LINKS: StatsTabLink[] = [
-  { value: 'search', label: 'Search', tooltip: 'Search for package statistics' },
-  { value: 'globals', label: 'Globals', tooltip: 'Global usage statistics' },
-  { value: 'downloads', label: 'Downloads', tooltip: 'Download statistics and trends' },
-  { value: 'update-review', label: 'Update reviews', tooltip: 'Update review statistics' },
-  { value: 'builder-stats', label: 'Builders', tooltip: 'Builder performance statistics' },
-  { value: 'resource-usage', label: 'Resource usage', tooltip: 'Heaviest packages by container resource usage' },
-  { value: 'additions', label: 'Packages', tooltip: 'Packages added to and dropped from the repository over time' },
-  { value: 'insights', label: 'Insights', tooltip: 'Build and usage insights' },
+  {
+    value: 'search',
+    labelKey: marker('stats.tabs.search.label'),
+    tooltipKey: marker('stats.tabs.search.tooltip'),
+  },
+  {
+    value: 'globals',
+    labelKey: marker('stats.tabs.globals.label'),
+    tooltipKey: marker('stats.tabs.globals.tooltip'),
+  },
+  {
+    value: 'downloads',
+    labelKey: marker('stats.tabs.downloads.label'),
+    tooltipKey: marker('stats.tabs.downloads.tooltip'),
+  },
+  {
+    value: 'update-review',
+    labelKey: marker('stats.tabs.updateReview.label'),
+    tooltipKey: marker('stats.tabs.updateReview.tooltip'),
+  },
+  {
+    value: 'builder-stats',
+    labelKey: marker('stats.tabs.builderStats.label'),
+    tooltipKey: marker('stats.tabs.builderStats.tooltip'),
+  },
+  {
+    value: 'resource-usage',
+    labelKey: marker('stats.tabs.resourceUsage.label'),
+    tooltipKey: marker('stats.tabs.resourceUsage.tooltip'),
+  },
+  {
+    value: 'additions',
+    labelKey: marker('stats.tabs.additions.label'),
+    tooltipKey: marker('stats.tabs.additions.tooltip'),
+  },
+  {
+    value: 'insights',
+    labelKey: marker('stats.tabs.insights.label'),
+    tooltipKey: marker('stats.tabs.insights.tooltip'),
+  },
 ];
+
+interface SelectOption<TValue> {
+  label: string;
+  value: TValue;
+}
 
 function timeRangeToParam(days: number | null): string {
   return days === null ? ALL_TIME_RANGE_PARAM : String(days);
@@ -45,7 +85,18 @@ function paramToTimeRange(value: string): number | null | undefined {
 
 @Component({
   selector: 'chaotic-stats',
-  imports: [TabList, Tabs, Tab, DecimalPipe, FormsModule, Select, TitleComponent, Tooltip, RouterOutlet],
+  imports: [
+    TabList,
+    Tabs,
+    Tab,
+    DecimalPipe,
+    FormsModule,
+    Select,
+    TitleComponent,
+    Tooltip,
+    RouterOutlet,
+    TranslocoDirective,
+  ],
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.css',
 })
@@ -54,8 +105,11 @@ export class StatsComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly statsService = inject(StatsService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly search = input<string>();
 
@@ -95,9 +149,9 @@ export class StatsComponent implements OnInit {
 
   constructor() {
     setPageSeo(
-      'Statistics and data · Chaotic-AUR',
-      'Package and repository statistics for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics',
+      this.transloco.translate('stats.seo.title'),
+      this.transloco.translate('stats.seo.description'),
+      this.transloco.translate('stats.seo.keywords'),
     );
     this.router.events
       .pipe(
@@ -132,10 +186,26 @@ export class StatsComponent implements OnInit {
     });
   }
 
-  readonly subtitle = 'Package downloads, build performance and repository trends.';
-
   protected readonly tabs = STATS_TAB_LINKS;
   protected readonly searchRepoOptions = REPO_OPTIONS;
+
+  protected readonly repoOptions = computed<SelectOption<string>[]>(() => {
+    this.activeTranslation();
+
+    const allRepos = { label: this.transloco.translate('common.all'), value: '' };
+    const repos = REPO_OPTIONS.map((repo) => ({ label: repo, value: repo }));
+
+    return [allRepos, ...repos];
+  });
+
+  protected readonly timeRangeOptions = computed<SelectOption<number | null>[]>(() => {
+    this.activeTranslation();
+
+    return this.statsService.timeRangeOptions.map((range) => ({
+      label: this.transloco.translate(range.labelKey),
+      value: range.days,
+    }));
+  });
 
   ngOnInit(): void {
     // Legacy deep links used fragments (#builder-stats); forward them to the

@@ -1,4 +1,5 @@
 import { Component, input, output } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { UIChart } from '@openng/optimus-ui/chart';
 import type { ChartData, ChartType } from 'chart.js';
 import { LoadErrorComponent } from '../../../load-error/load-error.component';
@@ -6,7 +7,7 @@ import { applyChartTheme } from '../chart-theme';
 
 @Component({
   selector: 'chaotic-chart-card',
-  imports: [UIChart, LoadErrorComponent],
+  imports: [UIChart, LoadErrorComponent, TranslocoDirective],
   templateUrl: './chart-card.component.html',
   styleUrl: './chart-card.component.css',
 })

@@ -1,28 +1,29 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input } from '@angular/core';
 import { PackageRebuildTriggerSources } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
 
 @Component({
   selector: 'chaotic-package-trigger-sources',
-  imports: [ProgressSpinner],
+  imports: [ProgressSpinner, TranslocoDirective],
   template: `
-    <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-3" *transloco="let t; prefix: 'triggerSources'">
       @if (loading()) {
         <p-progress-spinner
           [style]="{ width: '24px', height: '24px' }"
-          ariaLabel="Loading dependency sources"
+          [ariaLabel]="t('loadingAriaLabel')"
           strokeWidth="4"
         />
       } @else if (!data()) {
-        <span class="text-ctp-subtext text-xs">No dependency data for this package.</span>
+        <span class="text-ctp-subtext text-xs">{{ t('noData') }}</span>
       } @else {
         <div class="flex flex-col gap-2">
-          <span class="text-ctp-text text-sm font-semibold">Soname dependencies</span>
+          <span class="text-ctp-text text-sm font-semibold">{{ t('sonameDependencies') }}</span>
           @if (data()!.sonameDependencies.length === 0) {
-            <p class="text-ctp-subtext text-xs">No soname dependencies indexed.</p>
+            <p class="text-ctp-subtext text-xs">{{ t('noSonameDependencies') }}</p>
           } @else {
             <div class="flex flex-wrap justify-center gap-1.5">
               @for (dep of data()!.sonameDependencies; track dep.soname) {
@@ -39,7 +40,7 @@ import { resourceValue } from '../functions';
         </div>
         @if (data()!.pluginOwners.length > 0) {
           <div class="flex flex-col gap-2">
-            <span class="text-ctp-text text-sm font-semibold">Plugin of</span>
+            <span class="text-ctp-text text-sm font-semibold">{{ t('pluginOf') }}</span>
             <div class="flex flex-wrap justify-center gap-1.5">
               @for (owner of data()!.pluginOwners; track owner.pkgname) {
                 <span
@@ -53,7 +54,7 @@ import { resourceValue } from '../functions';
         }
         @if (data()!.explicitTriggers.length > 0) {
           <div class="flex flex-col gap-2">
-            <span class="text-ctp-text text-sm font-semibold">Explicit triggers</span>
+            <span class="text-ctp-text text-sm font-semibold">{{ t('explicitTriggers') }}</span>
             <div class="flex flex-wrap justify-center gap-1.5">
               @for (trigger of data()!.explicitTriggers; track trigger.pkgname) {
                 <span

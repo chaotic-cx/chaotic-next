@@ -1,5 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { AppService, ALL_TIME_DAYS } from '../../../../app.service';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { StatsService } from '../../../stats.service';
 import { LoadErrorComponent } from '../../../../load-error/load-error.component';
 import { chartResource } from '../../chart-config';
@@ -26,6 +28,19 @@ export interface UtilizationGrid {
 }
 
 const HOURS_PER_DAY = 24;
+const HOUR_DIGITS = 2;
+const PER_DAY_DECIMALS = 1;
+const HOUR_LABEL_STEP = 3;
+
+function hourAxisLabel(hour: number): string {
+  if (hour % HOUR_LABEL_STEP === 0) {
+    return String(hour);
+  }
+
+  return '';
+}
+
+const HOUR_LABELS: readonly string[] = Array.from({ length: HOURS_PER_DAY }, (unused, hour) => hourAxisLabel(hour));
 
 /**
  * Turns sparse builder/hour buckets into a dense matrix: one row per builder
@@ -61,13 +76,16 @@ export function utilizationShade(count: number, max: number): number {
 
 @Component({
   selector: 'chaotic-chart-builder-utilization',
-  imports: [LoadErrorComponent],
+  imports: [LoadErrorComponent, TranslocoDirective],
   templateUrl: './chart-builder-utilization.component.html',
   styleUrl: './chart-builder-utilization.component.css',
 })
 export class ChartBuilderUtilizationComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly days = computed(() => this.statsService.timeRangeDays() ?? ALL_TIME_DAYS);
 
@@ -77,22 +95,33 @@ export class ChartBuilderUtilizationComponent {
 
   readonly grid = computed(() => buildUtilizationGrid(this.chart.data()));
 
-  readonly hourLabels = computed(() =>
-    Array.from({ length: HOURS_PER_DAY }, (unused, hour) => (hour % 3 === 0 ? String(hour) : '')),
-  );
+  protected readonly hourLabels = HOUR_LABELS;
 
   protected cellBackground(count: number): string {
     if (count <= 0) return 'var(--ctp-mocha-surface0)';
     return `color-mix(in srgb, var(--ctp-mocha-mauve) ${utilizationShade(count, this.grid().max)}%, transparent)`;
   }
 
-  protected rangeLabel(): string {
+  protected readonly rangeLabel = computed(() => {
+    this.activeTranslation();
+
     const days = this.days();
-    return days >= ALL_TIME_DAYS ? 'the whole recorded history' : `the last ${days} day${days === 1 ? '' : 's'}`;
+    if (days >= ALL_TIME_DAYS) {
+      return this.transloco.translate('stats.charts.builderUtilization.rangeAll');
+    }
+
+    if (days === 1) {
+      return this.transloco.translate('stats.charts.builderUtilization.rangeLastOne', { days });
+    }
+
+    return this.transloco.translate('stats.charts.builderUtilization.rangeLastOther', { days });
+  });
+
+  protected formatHour(hour: number): string {
+    return String(hour).padStart(HOUR_DIGITS, '0');
   }
 
-  protected cellTitle(row: UtilizationRow, cell: UtilizationCell): string {
-    const perDay = (cell.count / this.days()).toFixed(1);
-    return `${row.builder} · ${String(cell.hour).padStart(2, '0')}:00 UTC — ${perDay} builds/day`;
+  protected buildsPerDay(cell: UtilizationCell): string {
+    return (cell.count / this.days()).toFixed(PER_DAY_DECIMALS);
   }
 }

@@ -1,12 +1,14 @@
+import { marker } from '@jsverse/transloco-keys-manager/marker';
+
 export interface AdminNavItem {
   path: string;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: string;
 }
 
 export interface AdminNavGroup {
-  label: string | null;
+  labelKey: string | null;
   items: AdminNavItem[];
 }
 
@@ -14,87 +16,87 @@ export const ADMIN_DEFAULT_PATH = 'overview';
 
 export const ADMIN_NAV: AdminNavGroup[] = [
   {
-    label: null,
+    labelKey: null,
     items: [
       {
         path: ADMIN_DEFAULT_PATH,
-        label: 'Overview',
-        description: 'Failing builds, broken packages and recent maintainer activity.',
+        labelKey: marker('admin.layout.nav.overview.label'),
+        descriptionKey: marker('admin.layout.nav.overview.description'),
         icon: 'pi pi-gauge',
       },
     ],
   },
   {
-    label: 'Packages',
+    labelKey: marker('admin.layout.groups.packages'),
     items: [
       {
         path: 'packages',
-        label: 'Chaotic packages',
-        description: 'Add, edit and rebuild packages of the Chaotic-AUR repositories.',
+        labelKey: marker('admin.layout.nav.packages.label'),
+        descriptionKey: marker('admin.layout.nav.packages.description'),
         icon: 'pi pi-box',
       },
       {
         path: 'arch',
-        label: 'Arch packages',
-        description: 'Reference data of the Arch Linux packages that trigger rebuilds.',
+        labelKey: marker('admin.layout.nav.arch.label'),
+        descriptionKey: marker('admin.layout.nav.arch.description'),
         icon: 'pi pi-server',
       },
       {
         path: 'package-elf-analysis',
-        label: 'ELF analysis',
-        description: 'Sonames and symbols that the signal scanner indexed per package.',
+        labelKey: marker('admin.layout.nav.packageElfAnalysis.label'),
+        descriptionKey: marker('admin.layout.nav.packageElfAnalysis.description'),
         icon: 'pi pi-microchip',
       },
       {
         path: 'package-bumps',
-        label: 'Package bumps',
-        description: 'Rebuilds that the repo manager triggered and their causes.',
+        labelKey: marker('admin.layout.nav.packageBumps.label'),
+        descriptionKey: marker('admin.layout.nav.packageBumps.description'),
         icon: 'pi pi-replay',
       },
     ],
   },
   {
-    label: 'Infrastructure',
+    labelKey: marker('admin.layout.groups.infrastructure'),
     items: [
       {
         path: 'repos',
-        label: 'Repositories',
-        description: 'Repository sources, git refs and GitLab connections.',
+        labelKey: marker('admin.layout.nav.repos.label'),
+        descriptionKey: marker('admin.layout.nav.repos.description'),
         icon: 'pi pi-database',
       },
       {
         path: 'builders',
-        label: 'Builders',
-        description: 'Build machines and their build classes.',
+        labelKey: marker('admin.layout.nav.builders.label'),
+        descriptionKey: marker('admin.layout.nav.builders.description'),
         icon: 'pi pi-desktop',
       },
       {
         path: 'repo-operations',
-        label: 'Repo operations',
-        description: 'Repo manager runs, rescans and the broken package report.',
+        labelKey: marker('admin.layout.nav.repoOperations.label'),
+        descriptionKey: marker('admin.layout.nav.repoOperations.description'),
         icon: 'pi pi-wrench',
       },
     ],
   },
   {
-    label: 'Activity',
+    labelKey: marker('admin.layout.groups.activity'),
     items: [
       {
         path: 'mr-actions',
-        label: 'MR actions',
-        description: 'Merge request reviews that maintainers performed.',
+        labelKey: marker('admin.layout.nav.mrActions.label'),
+        descriptionKey: marker('admin.layout.nav.mrActions.description'),
         icon: 'pi pi-check-square',
       },
       {
         path: 'pipeline-triggers',
-        label: 'Pipeline triggers',
-        description: 'GitLab pipelines that maintainers started from this site.',
+        labelKey: marker('admin.layout.nav.pipelineTriggers.label'),
+        descriptionKey: marker('admin.layout.nav.pipelineTriggers.description'),
         icon: 'pi pi-play-circle',
       },
       {
         path: 'manager-logs',
-        label: 'Manager logs',
-        description: 'Internal logs of the Chaotic manager instance.',
+        labelKey: marker('admin.layout.nav.managerLogs.label'),
+        descriptionKey: marker('admin.layout.nav.managerLogs.description'),
         icon: 'pi pi-align-left',
       },
     ],

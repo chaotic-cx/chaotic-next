@@ -2,8 +2,10 @@ import { Component, computed, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { Mirror } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { CodeBlockComponent } from '../docs/code-block.component';
 import { setPageSeo } from '../functions';
+import { injectActiveTranslation } from '../i18n/active-translation';
 import { TitleComponent } from '../title/title.component';
 import { type MirrorStatus, MirrorRowComponent } from './mirror-row.component';
 import { MirrorsService } from './mirrors.service';
@@ -19,7 +21,7 @@ const SKELETON_ROW_COUNT = 6;
 
 @Component({
   selector: 'chaotic-mirrors',
-  imports: [TitleComponent, MirrorRowComponent, CodeBlockComponent, RouterLink],
+  imports: [TitleComponent, MirrorRowComponent, CodeBlockComponent, RouterLink, TranslocoDirective],
   templateUrl: './mirrors.component.html',
   styles: `
     .mirrors-featured {
@@ -39,54 +41,61 @@ const SKELETON_ROW_COUNT = 6;
       font-size: 0.9375rem;
       color: var(--ctp-mocha-subtext1);
     }
-
-    .mirrors-featured__body a {
-      color: var(--ctp-mocha-mauve);
-    }
   `,
   providers: [MessageToastService],
 })
 export class MirrorsComponent {
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly mirrorsService = inject(MirrorsService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   protected readonly geoServer = 'Server = https://geo-mirror.chaotic.cx/$repo/$arch';
   protected readonly cdnServer = 'Server = https://cdn-mirror.chaotic.cx/$repo/$arch';
   protected readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
 
-  protected readonly groups = computed<MirrorGroup[]>(() =>
-    [
+  protected readonly groups = computed<MirrorGroup[]>(() => {
+    this.activeTranslation();
+
+    const groups: MirrorGroup[] = [
       {
-        status: 'online' as const,
-        title: 'Online',
-        hint: 'Up to date',
+        status: 'online',
+        title: this.transloco.translate('mirrors.status.online'),
+        hint: this.transloco.translate('mirrors.hint.online'),
         mirrors: this.mirrorsService.onlineMirrors(),
       },
       {
-        status: 'outdated' as const,
-        title: 'Outdated',
-        hint: 'Not used by the GEO mirror; direct requests return an error',
+        status: 'outdated',
+        title: this.transloco.translate('mirrors.status.outdated'),
+        hint: this.transloco.translate('mirrors.hint.outdated'),
         mirrors: this.mirrorsService.outdatedMirrors(),
       },
       {
-        status: 'offline' as const,
-        title: 'Offline',
-        hint: 'The up-to-date check fails completely',
+        status: 'offline',
+        title: this.transloco.translate('mirrors.status.offline'),
+        hint: this.transloco.translate('mirrors.hint.offline'),
         mirrors: this.mirrorsService.offlineMirrors(),
       },
-    ].filter((group) => group.mirrors.length > 0),
-  );
+    ];
+
+    return groups.filter((group) => group.mirrors.length > 0);
+  });
 
   constructor() {
     setPageSeo(
-      'Mirrors · Chaotic-AUR',
-      'Chaotic-AUR mirrors, down for everyone or just me?',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR mirrors',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.mirrors') }),
+      this.transloco.translate('mirrors.seo.description'),
+      this.transloco.translate('mirrors.seo.keywords'),
     );
+
     effect(() => {
       if (this.mirrorsService.error()) {
-        this.messageToastService.error('Error', 'Failed to fetch mirror list, the router may be down');
+        this.messageToastService.error(
+          this.transloco.translate('common.error'),
+          this.transloco.translate('mirrors.fetchError'),
+        );
       }
     });
   }

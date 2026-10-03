@@ -1,6 +1,6 @@
 @if (visible()) {
-  <div class="mobile-nav" id="mobile-nav">
-    <nav class="mobile-nav__links" aria-label="Main">
+  <div class="mobile-nav" id="mobile-nav" *transloco="let t; prefix: 'mobileNav'">
+    <nav class="mobile-nav__links" [attr.aria-label]="t('ariaLabel')">
       @for (item of items(); track item.label) {
         <a class="mobile-nav__link" [routerLink]="item.routerLink" (click)="closed.emit()">
           <i [class]="item.icon" aria-hidden="true"></i>

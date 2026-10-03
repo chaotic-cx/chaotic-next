@@ -798,6 +798,23 @@ body > app-root > chaotic-footer > div > p-card > div {
   transition: none !important;
 }
 
+/*
+ * Form controls and their placeholders use the same text size as tables and small buttons.
+ * The theme injects `.p-inputtext`, `.p-textarea` and `.p-select-label { font-size: 1rem }`
+ * at runtime, after this file. The extra element or parent selector makes these rules win.
+ */
+input.p-inputtext,
+textarea.p-textarea,
+.p-select .p-select-label,
+.p-select-option,
+.p-select-filter,
+.p-multiselect-label,
+.p-multiselect-option,
+.p-multiselect-filter,
+.p-multiselect-display-chip .p-chip {
+  font-size: 0.875rem;
+}
+
 .p-tablist,
 .p-datatable-header,
 .p-stepper .p-steplist {

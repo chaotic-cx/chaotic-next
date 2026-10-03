@@ -1,8 +1,8 @@
-<section class="chaotic-card">
+<section class="chaotic-card" *transloco="let t; prefix: 'buildStatus.active'">
   <chaotic-build-status-section
     [count]="buildStatusService.loadingQueue() || buildStatusService.queueFailed() ? undefined : sortedQueue().length"
     [iconClass]="sortedQueue().length > 0 ? 'pi-spin text-ctp-mauve' : 'text-ctp-subtext0'"
-    title="Building now"
+    [title]="t('title')"
     icon="pi-cog"
   />
   @if (buildStatusService.loadingQueue()) {
@@ -12,11 +12,11 @@
       }
     </ul>
   } @else if (buildStatusService.queueFailed()) {
-    <chaotic-load-error (retry)="buildStatusService.refreshQueueStats()" message="Could not load running builds." />
+    <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.refreshQueueStats()" />
   } @else if (sortedQueue().length === 0) {
     <p class="chaotic-card__empty">
       <i class="pi pi-moon" aria-hidden="true"></i>
-      No builds running right now
+      {{ t('empty') }}
     </p>
   } @else {
     <ul class="max-h-[30rem] overflow-y-auto" chaoticFlipList>
@@ -41,7 +41,7 @@
               class="build-progress"
               [class.is-overtime]="etaViews().get(pkg.rawName)?.tone === 'danger'"
               [class.is-indeterminate]="!buildStatusService.activeProgress().has(pkg.rawName)"
-              [attr.aria-label]="`Build progress for ${pkg.name}`"
+              [attr.aria-label]="t('progressAriaLabel', { name: pkg.name })"
               [attr.aria-valuenow]="progressPercent(pkg.rawName)"
               role="progressbar"
               aria-valuemin="0"
@@ -51,17 +51,17 @@
             </div>
             <span class="chaotic-row__meta">
               {{ pkg.node }} · {{ pkg.build_class | buildClass }} ·
-              <span [pTooltip]="estimateTooltip" tooltipPosition="top">{{
-                buildStatusService.activeStartedLabels().get(pkg.rawName) ?? 'unknown start'
+              <span [pTooltip]="buildStatusService.estimateTooltip()" tooltipPosition="top">{{
+                buildStatusService.activeStartedLabels().get(pkg.rawName) ?? t('unknownStart')
               }}</span>
             </span>
           </div>
           <a
             class="chaotic-icon-btn"
             [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
-            pTooltip="Open live build log"
+            [pTooltip]="t('openLog')"
+            [attr.aria-label]="t('openLogAriaLabel', { name: pkg.name })"
             tooltipPosition="left"
-            aria-label="Open live build log for {{ pkg.name }}"
           >
             <i class="pi pi-align-left" aria-hidden="true"></i>
           </a>

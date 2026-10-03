@@ -1,11 +1,8 @@
-<div class="chaotic-page">
-  <chaotic-title
-    title="About us"
-    subtitle="Chaotic-AUR is a binary repository for Arch Linux, run by a team of volunteers who pre-build AUR packages."
-  />
+<div class="chaotic-page" *transloco="let t">
+  <chaotic-title [title]="t('about.title')" [subtitle]="t('about.subtitle')" />
 
   <section class="about-section" id="team-members" aria-labelledby="team-title">
-    <h2 class="chaotic-section-title" id="team-title">The team</h2>
+    <h2 class="chaotic-section-title" id="team-title">{{ t('about.team.title') }}</h2>
     <ul class="about-team">
       @for (member of team; track member.github) {
         <li>
@@ -15,13 +12,19 @@
             target="_blank"
             rel="noopener noreferrer"
           >
-            <img class="about-member__avatar" [ngSrc]="member.avatarUrl ?? ''" width="48" height="48" alt="" />
+            <img
+              class="about-member__avatar"
+              [ngSrc]="`/assets/avatars/${member.github}.webp`"
+              width="48"
+              height="48"
+              alt=""
+            />
             <span class="min-w-0 flex-1">
               <span class="about-member__name">{{ member.name }}</span>
-              <span class="about-member__role">{{ member.role }}</span>
+              <span class="about-member__role">{{ t(member.roleKey) }}</span>
             </span>
             <i class="pi pi-github text-ctp-subtext0" aria-hidden="true"></i>
-            <span class="sr-only">GitHub profile of {{ member.name }}</span>
+            <span class="sr-only">{{ t('about.team.githubProfile', { name: member.name }) }}</span>
           </a>
         </li>
       }
@@ -30,55 +33,49 @@
 
   <div class="about-grid">
     <section class="chaotic-card" id="build-nodes">
-      <header class="chaotic-card__header"><h2 class="chaotic-card__title">Build infrastructure</h2></header>
+      <header class="chaotic-card__header">
+        <h2 class="chaotic-card__title">{{ t('about.buildInfrastructure.title') }}</h2>
+      </header>
       <div class="about-card__body">
-        <p>
-          Most packages build automatically from their
-          <a href="https://aur.archlinux.org" rel="noopener" target="_blank">AUR</a> source. Some exceptions live in
-          <a href="https://github.com/chaotic-aur/packages" rel="noopener" target="_blank">our package repository</a>.
-        </p>
-        <p>
-          The main node runs in Hetzner's Finnish datacenter on an
-          <a href="https://www.hetzner.com/dedicated-rootserver/ex44/" rel="noopener" target="_blank">EX44</a>, with
-          hardware from Garuda Linux.
-        </p>
+        <p [innerHTML]="t('about.buildInfrastructure.sources')"></p>
+        <p [innerHTML]="t('about.buildInfrastructure.mainNode')"></p>
       </div>
     </section>
 
     <section class="chaotic-card" id="contact-us">
-      <header class="chaotic-card__header"><h2 class="chaotic-card__title">Get in touch</h2></header>
+      <header class="chaotic-card__header">
+        <h2 class="chaotic-card__title">{{ t('about.contact.title') }}</h2>
+      </header>
       <div class="about-card__body" id="reporting-bugs">
-        <p>
-          For questions and support, use our issue trackers or the Telegram group. For private matters, pick one of
-          <a href="https://keyoxide.org/D245D484F3578CB17FD6DA6B67DB29BFF3C96757" rel="noopener" target="_blank"
-            >these channels</a
-          >.
-        </p>
-        <p>
-          Open <a href="https://github.com/chaotic-aur/packages/issues" rel="noopener" target="_blank">an issue</a> for
-          enhancements, database corruptions and other requests. Report build bugs to the AUR package maintainers.
-        </p>
+        <p [innerHTML]="t('about.contact.channels')"></p>
+        <p [innerHTML]="t('about.contact.issues')"></p>
       </div>
     </section>
 
     <section class="chaotic-card" id="mirrors">
-      <header class="chaotic-card__header"><h2 class="chaotic-card__title">Mirrors</h2></header>
+      <header class="chaotic-card__header">
+        <h2 class="chaotic-card__title">{{ t('about.mirrors.title') }}</h2>
+      </header>
       <div class="about-card__body">
         <p>
-          The <a routerLink="/mirrors">mirror list</a> shows every mirror and its status. We distribute files with
-          <a href="https://syncthing.net/" rel="noopener" target="_blank">Syncthing</a>.
+          {{ t('about.mirrors.mirrorList.intro') }}
+          <a routerLink="/mirrors">{{ t('about.mirrors.mirrorList.linkText') }}</a>
+          {{ t('about.mirrors.mirrorList.outro') }}
+          <span [innerHTML]="t('about.mirrors.syncthing')"></span>
         </p>
-        <p>To host a mirror yourself, contact us through any of the channels above.</p>
+        <p>{{ t('about.mirrors.hostMirror') }}</p>
       </div>
     </section>
 
     <section class="chaotic-card" id="memorial">
-      <header class="chaotic-card__header"><h2 class="chaotic-card__title">Memorial</h2></header>
+      <header class="chaotic-card__header">
+        <h2 class="chaotic-card__title">{{ t('about.memorial.title') }}</h2>
+      </header>
       <div class="about-card__body">
-        <p>For our 3rd and 6th birthday, the community shared their desktop and terminal screenshots.</p>
+        <p>{{ t('about.memorial.text') }}</p>
         <p class="flex flex-wrap gap-x-4 gap-y-1">
-          <a routerLink="/memorial-v2">2024 edition</a>
-          <a routerLink="/memorial">2021 edition</a>
+          <a routerLink="/memorial-v2">{{ t('about.memorial.edition2024') }}</a>
+          <a routerLink="/memorial">{{ t('about.memorial.edition2021') }}</a>
         </p>
       </div>
     </section>
@@ -86,14 +83,14 @@
 
   <section class="chaotic-card about-section" id="useful-links" aria-labelledby="links-title">
     <header class="chaotic-card__header">
-      <h2 class="chaotic-card__title" id="links-title">Useful links</h2>
+      <h2 class="chaotic-card__title" id="links-title">{{ t('about.usefulLinks.title') }}</h2>
     </header>
     <dl class="about-links">
       @for (link of usefulLinks; track link.href) {
         <div>
-          <dt>{{ link.label }}</dt>
+          <dt>{{ t(link.labelKey) }}</dt>
           <dd>
-            <a [href]="link.href" rel="noopener" target="_blank">{{ link.text }}</a>
+            <a [href]="link.href" rel="noopener" target="_blank">{{ link.textKey ? t(link.textKey) : link.text }}</a>
           </dd>
         </div>
       }
@@ -102,25 +99,24 @@
 
   <section class="chaotic-card about-section" id="special-thanks" aria-labelledby="thanks-title">
     <header class="chaotic-card__header">
-      <h2 class="chaotic-card__title" id="thanks-title">Special thanks</h2>
+      <h2 class="chaotic-card__title" id="thanks-title">{{ t('about.specialThanks.title') }}</h2>
     </header>
     <ul class="about-thanks">
-      @for (person of specialThanks; track person.name) {
+      @for (person of specialThanks; track $index) {
         <li>
+          @let name = person.nameKey ? t(person.nameKey) : person.name;
           @if (person.href) {
-            <a [href]="person.href" rel="noopener" target="_blank">{{ person.name }}</a>
+            <a [href]="person.href" rel="noopener" target="_blank">{{ name }}</a>
           } @else {
-            <span class="text-ctp-text">{{ person.name }}</span>
+            <span class="text-ctp-text">{{ name }}</span>
           }
-          @if (person.note) {
-            <span class="text-ctp-subtext0">, {{ person.note }}</span>
+          @if (person.noteKey) {
+            <span class="text-ctp-subtext0">, {{ t(person.noteKey) }}</span>
           }
         </li>
       }
     </ul>
   </section>
 
-  <p class="about-dedication">
-    In memory of our colleague Rustem Bakirov, a proactive co-maintainer who left us in December 2021 at the age of 20.
-  </p>
+  <p class="about-dedication">{{ t('about.dedication') }}</p>
 </div>

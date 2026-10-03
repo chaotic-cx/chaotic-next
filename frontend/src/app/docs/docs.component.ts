@@ -1,6 +1,8 @@
 import { Location } from '@angular/common';
 import { afterNextRender, Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { preferredScrollBehavior, setPageSeo } from '../functions';
@@ -9,19 +11,19 @@ import { CodeBlockComponent } from './code-block.component';
 
 interface DocsSection {
   id: string;
-  title: string;
+  titleKey: string;
 }
 
 const DOCS_SECTIONS: DocsSection[] = [
-  { id: 'setup', title: 'Setup' },
-  { id: 'important', title: 'Reporting bugs' },
-  { id: 'package-builds', title: 'Package builds' },
-  { id: 'requesting-new-packages', title: 'Requesting new packages' },
-  { id: 'recommendations', title: 'Recommendations' },
-  { id: 'update-review-process', title: 'Update review process' },
-  { id: 'aur-package-scan', title: 'AUR package scan' },
-  { id: 'public-api', title: 'Public API' },
-  { id: 'further-information', title: 'Further information' },
+  { id: 'setup', titleKey: marker('docs.sections.setup') },
+  { id: 'important', titleKey: marker('docs.sections.reportingBugs') },
+  { id: 'package-builds', titleKey: marker('docs.sections.packageBuilds') },
+  { id: 'requesting-new-packages', titleKey: marker('docs.sections.requestingNewPackages') },
+  { id: 'recommendations', titleKey: marker('docs.sections.recommendations') },
+  { id: 'update-review-process', titleKey: marker('docs.sections.updateReviewProcess') },
+  { id: 'aur-package-scan', titleKey: marker('docs.sections.aurPackageScan') },
+  { id: 'public-api', titleKey: marker('docs.sections.publicApi') },
+  { id: 'further-information', titleKey: marker('docs.sections.furtherInformation') },
 ];
 
 /* A section counts as active once its top passes the upper third of the viewport. */
@@ -32,12 +34,13 @@ const SCROLLSPY_RESUME_FALLBACK_MS = 1200;
   selector: 'chaotic-docs',
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
-  imports: [TitleComponent, RouterLink, CodeBlockComponent],
+  imports: [TitleComponent, RouterLink, CodeBlockComponent, TranslocoDirective],
 })
 export class DocsComponent {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly transloco = inject(TranslocoService);
 
   readonly sections = DOCS_SECTIONS;
   readonly activeSection = signal<string>(DOCS_SECTIONS[0].id);
@@ -58,9 +61,9 @@ export class DocsComponent {
 
   constructor() {
     setPageSeo(
-      'Get started · Chaotic-AUR',
-      'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.docs') }),
+      this.transloco.translate('docs.seo.description'),
+      this.transloco.translate('docs.seo.keywords'),
     );
     this.receiveKeys =
       `$ sudo pacman-key --recv-key ${this.appConfig.primaryKey} --keyserver keyserver.ubuntu.com\n` +

@@ -1,5 +1,5 @@
-<div class="chaotic-page">
-  <chaotic-title [subtitle]="subtitle()" title="Pipeline logs" />
+<div class="chaotic-page" *transloco="let t; prefix: 'logViewer'">
+  <chaotic-title [subtitle]="selectedJob()?.name ?? t('noJobSelected')" [title]="t('title')" />
 
   <div class="log-viewer">
     @if (error()) {
@@ -35,7 +35,7 @@
           appendTo="body"
         />
         @if (streaming()) {
-          <span class="live-badge">● live</span>
+          <span class="live-badge">{{ t('live') }}</span>
         }
       </div>
     }
@@ -43,7 +43,7 @@
     <div class="log-panel-wrap">
       @if (loading()) {
         <div class="log-loading">
-          <p-progress-spinner ariaLabel="Loading logs" />
+          <p-progress-spinner [ariaLabel]="t('loadingLogs')" />
         </div>
       } @else {
         <chaotic-xterm-log

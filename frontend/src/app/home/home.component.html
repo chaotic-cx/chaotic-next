@@ -1,19 +1,23 @@
-<div class="chaotic-page flex flex-col">
+<div class="chaotic-page flex flex-col" *transloco="let t; prefix: 'home'">
   <section class="home-hero" aria-labelledby="home-title">
     <a
       class="home-hero__logo hero-enter"
+      [attr.aria-label]="t('hero.appletLabel')"
       style="--stagger: 0"
       href="/aizawa/"
-      aria-label="Open the interactive Chaotic-AUR applet"
     >
       <img priority ngSrc="/assets/logo.svg" alt="" width="741" height="711" />
     </a>
     <h1 class="home-hero__title hero-enter" id="home-title" style="--stagger: 1">
-      Building AUR packages for you, so you don't have to.
+      {{ t('hero.title') }}
     </h1>
     <p class="home-hero__lede hero-enter" style="--stagger: 2">
-      Chaotic-AUR is a semi-automated binary repository for Arch Linux. AUR packages built, signed and mirrored
-      worldwide.
+      @let liveMirrorCount = mirrorsService.onlineMirrorCount();
+      @if (liveMirrorCount === null) {
+        {{ t('hero.lede') }}
+      } @else {
+        {{ t('hero.ledeWithMirrorCount', { count: liveMirrorCount }) }}
+      }
     </p>
     <div class="home-hero__actions hero-enter" style="--stagger: 3">
       <p-autoComplete
@@ -23,18 +27,18 @@
         [suggestions]="suggestions()"
         [delay]="300"
         [minQueryLength]="3"
+        [ariaLabel]="t('search.ariaLabel')"
+        [placeholder]="t('search.placeholder')"
         (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
         (completeMethod)="searchSuggestions($event)"
         (onSelect)="searchPackages($event.value)"
         (onKeyUp)="onKeyUp($event)"
-        ariaLabel="Search packages"
-        placeholder="Search packages, e.g. firedragon"
         appendTo="body"
       />
     </div>
     <a class="home-hero__setup hero-enter" style="--stagger: 4" routerLink="/docs" fragment="setup">
-      <span class="home-hero__setup-lead">New here?</span>
-      Add the repository in four steps
+      <span class="home-hero__setup-lead">{{ t('setup.lead') }}</span>
+      {{ t('setup.text') }}
       <i class="pi pi-arrow-right" aria-hidden="true"></i>
     </a>
   </section>
@@ -43,13 +47,17 @@
 
   <section class="home-news" aria-labelledby="home-news-title">
     <aside class="home-news__aside">
-      <h2 class="chaotic-section-title" id="home-news-title">Latest news</h2>
-      <p class="home-news__note">Announcements from the maintainers about the repository and its packages.</p>
+      <h2 class="chaotic-section-title" id="home-news-title">{{ t('news.title') }}</h2>
+      <p class="home-news__note">{{ t('news.note') }}</p>
       <a class="home-news__community" href="https://t.me/chaotic_aur_sac" target="_blank" rel="noopener noreferrer">
         <i class="pi pi-telegram" aria-hidden="true"></i>
-        Join the community chat
+        {{ t('news.community') }}
       </a>
-      <span class="home-news__hint">Bridged to Matrix.</span>
+      <span class="home-news__hint">
+        {{ t('news.hint.intro') }}
+        <a [href]="matrixRoomUrl" target="_blank" rel="noopener noreferrer">{{ t('news.hint.linkText') }}</a
+        >{{ t('news.hint.outro') }}
+      </span>
     </aside>
     @defer (on viewport; prefetch on idle) {
       <chaotic-newsfeed class="min-w-0" />
@@ -60,8 +68,8 @@
 
   <section class="home-section" aria-labelledby="home-recent-title">
     <div class="home-section__head">
-      <h2 class="chaotic-section-title" id="home-recent-title">Recently added</h2>
-      <a class="home-section__link" routerLink="/packages">Browse all packages</a>
+      <h2 class="chaotic-section-title" id="home-recent-title">{{ t('recent.title') }}</h2>
+      <a class="home-section__link" routerLink="/packages">{{ t('recent.link') }}</a>
     </div>
     @defer (on viewport; prefetch on idle) {
       <chaotic-recently-added />
@@ -72,10 +80,10 @@
 
   <section class="home-section" aria-labelledby="home-map-title">
     <div class="home-section__head">
-      <h2 class="chaotic-section-title" id="home-map-title">Mirror map</h2>
-      <a class="home-section__link" routerLink="/map">Open the live traffic map</a>
+      <h2 class="chaotic-section-title" id="home-map-title">{{ t('map.title') }}</h2>
+      <a class="home-section__link" routerLink="/map">{{ t('map.link') }}</a>
     </div>
-    <p class="home-section__note">Where our mirrors are located. Pick a mirror to see its details.</p>
+    <p class="home-section__note">{{ t('map.note') }}</p>
     @defer (on viewport) {
       <chaotic-mirror-map [mirrors]="mirrorsService.mirrors()" [self]="mirrorsService.self()" [focus]="focus()" />
     } @placeholder {

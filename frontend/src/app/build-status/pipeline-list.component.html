@@ -1,13 +1,13 @@
-<ul chaoticFlipList>
+<ul *transloco="let t; prefix: 'buildStatus.pipelines'" chaoticFlipList>
   @for (pipeline of pipelines(); track pipeline.pipeline.id) {
     <li class="chaotic-row" animate.enter="ctp-fade-enter">
       <button
         class="group flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+        [attr.aria-label]="t('openDetailsAriaLabel', { id: pipeline.pipeline.id })"
         (click)="openPipeline.emit(pipeline.pipeline.id)"
         type="button"
-        aria-label="Open details for pipeline {{ pipeline.pipeline.id }}"
       >
-        <span class="size-2 shrink-0 rounded-full" [class]="statusDotClass(pipeline.statusText)"></span>
+        <span class="size-2 shrink-0 rounded-full" [class]="statusDotClass(pipeline)"></span>
         <span class="min-w-0">
           <span class="block truncate text-sm font-medium text-ctp-text group-hover:text-ctp-mauve">{{
             pipeline.statusText.replaceAll('_', ' ')
@@ -23,9 +23,9 @@
       <a
         class="chaotic-icon-btn"
         [routerLink]="['/logs', pipeline.pipeline.id]"
-        pTooltip="View live logs"
+        [pTooltip]="t('viewLogs')"
+        [attr.aria-label]="t('viewLogsAriaLabel', { id: pipeline.pipeline.id })"
         tooltipPosition="left"
-        aria-label="View live logs for pipeline {{ pipeline.pipeline.id }}"
       >
         <i class="pi pi-align-left" aria-hidden="true"></i>
       </a>

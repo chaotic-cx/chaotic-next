@@ -1,6 +1,7 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
-import { BuildStatusPager } from './build-status-pager.component';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { LoadErrorComponent } from '../load-error/load-error.component';
+import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BuildStatusService } from './build-status.service';
 import { PipelineListComponent } from './pipeline-list.component';
@@ -10,7 +11,13 @@ const SKELETON_ROW_COUNT = 4;
 
 @Component({
   selector: 'chaotic-build-status-pipelines',
-  imports: [LoadErrorComponent, BuildStatusSectionComponent, PipelineListComponent, BuildStatusPager],
+  imports: [
+    LoadErrorComponent,
+    BuildStatusSectionComponent,
+    PipelineListComponent,
+    BuildStatusPager,
+    TranslocoDirective,
+  ],
   templateUrl: './build-status-pipelines.component.html',
 })
 export class BuildStatusPipelinesComponent {

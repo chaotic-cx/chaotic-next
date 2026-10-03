@@ -45,11 +45,3 @@
   padding-top: 1rem;
   border-top: 1px solid var(--ctp-mocha-surface0);
 }
-
-.mobile-nav__auth ::ng-deep chaotic-auth-button > div {
-  margin-left: 0;
-}
-
-.mobile-nav__auth ::ng-deep .p-button.ml-3 {
-  margin-left: 0;
-}

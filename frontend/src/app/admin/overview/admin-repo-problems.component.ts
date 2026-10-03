@@ -8,10 +8,12 @@ import type {
   Paginated,
   RebuildCoverageReport,
 } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { APP_CONFIG } from '../../../environments/app-config.token';
 import { AppService } from '../../app.service';
 import { resourceFailed, resourceValue } from '../../functions';
-import { formatRelativeTime } from '../../pipes/relative-time.pipe';
+import { injectActiveTranslation } from '../../i18n/active-translation';
+import { formatRelativeTime, injectRelativeTimeLabels } from '../../pipes/relative-time.pipe';
 import { AdminProblemSectionComponent, type ProblemRow } from './admin-problem-section.component';
 
 const PREVIEW_SIZE = 3;
@@ -20,47 +22,51 @@ const REPO_OPERATIONS_PAGE = '../repo-operations';
 
 @Component({
   selector: 'chaotic-admin-repo-problems',
-  imports: [AdminProblemSectionComponent],
+  imports: [AdminProblemSectionComponent, TranslocoDirective],
   template: `
-    <section class="chaotic-card" aria-labelledby="overview-problems-title">
+    <section
+      class="chaotic-card"
+      *transloco="let t; prefix: 'admin.overview.repoProblems'"
+      aria-labelledby="overview-problems-title"
+    >
       <header class="chaotic-card__header">
-        <h2 class="chaotic-card__title" id="overview-problems-title">Repository problems</h2>
+        <h2 class="chaotic-card__title" id="overview-problems-title">{{ t('title') }}</h2>
       </header>
       <chaotic-admin-problem-section
         [count]="brokenCount()"
         [rows]="brokenRows()"
         [failed]="brokenFailed()"
         [link]="repoOperationsPage"
+        [title]="t('broken.title')"
+        [emptyText]="t('broken.empty')"
+        [linkLabel]="t('broken.link')"
         (retry)="brokenResource.reload()"
-        title="Broken ELF links"
-        emptyText="Every package links against libraries that exist."
-        linkLabel="Rescan"
       />
       <chaotic-admin-problem-section
         [count]="missingCount()"
         [rows]="missingRows()"
         [failed]="missingFailed()"
         [link]="insightsPage"
+        [title]="t('missing.title')"
+        [emptyText]="t('missing.empty')"
         (retry)="missingResource.reload()"
-        title="Missing dependencies"
-        emptyText="Every dependency has a provider."
       />
       <chaotic-admin-problem-section
         [count]="uncoveredCount()"
         [rows]="uncoveredRows()"
         [failed]="coverageFailed()"
+        [title]="t('uncovered.title')"
+        [emptyText]="t('uncovered.empty')"
         (retry)="coverageResource.reload()"
-        title="Breaks without a rebuild"
-        emptyText="Every break has a rebuild trigger."
       />
       <chaotic-admin-problem-section
         [count]="overlapCount()"
         [rows]="overlapRows()"
         [failed]="overlapFailed()"
         [link]="insightsPage"
+        [title]="t('overlap.title')"
+        [emptyText]="t('overlap.empty')"
         (retry)="overlapResource.reload()"
-        title="Also in Arch"
-        emptyText="No chaotic-aur package duplicates an Arch package."
       />
     </section>
   `,
@@ -68,6 +74,9 @@ const REPO_OPERATIONS_PAGE = '../repo-operations';
 export class AdminRepoProblemsComponent {
   private readonly appService = inject(AppService);
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeTranslation = injectActiveTranslation();
+  private readonly relativeTimeLabels = injectRelativeTimeLabels();
 
   protected readonly insightsPage = INSIGHTS_PAGE;
   protected readonly repoOperationsPage = REPO_OPERATIONS_PAGE;
@@ -110,12 +119,16 @@ export class AdminRepoProblemsComponent {
 
   private readonly uncoveredBreaks = computed(() => resourceValue(this.coverageResource)?.uncoveredBreaks);
   protected readonly uncoveredCount = computed(() => this.uncoveredBreaks()?.length ?? null);
-  protected readonly uncoveredRows = computed<ProblemRow[]>(() =>
-    (this.uncoveredBreaks() ?? []).slice(0, PREVIEW_SIZE).map((entry) => ({
+  protected readonly uncoveredRows = computed<ProblemRow[]>(() => {
+    this.activeTranslation();
+
+    return (this.uncoveredBreaks() ?? []).slice(0, PREVIEW_SIZE).map((entry) => ({
       name: entry.pkgname,
-      detail: `broken ${formatRelativeTime(entry.brokenSince)}`,
-    })),
-  );
+      detail: this.transloco.translate('admin.overview.repoProblems.uncovered.detail', {
+        since: formatRelativeTime(entry.brokenSince, this.relativeTimeLabels()),
+      }),
+    }));
+  });
 
   private readonly overlapReports = computed(() =>
     resourceValue(this.overlapResource)?.filter((report) => report.repoName === CHAOTIC_AUR_REPO),

@@ -1,149 +1,127 @@
 import { NgOptimizedImage } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { TeamList } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
+import { MATRIX_ROOM_ALIAS, MATRIX_ROOM_URL } from '../community-links';
 import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 interface UsefulLink {
-  label: string;
-  text: string;
+  labelKey: string;
+  text?: string;
+  textKey?: string;
   href: string;
 }
 
 const USEFUL_LINKS: UsefulLink[] = [
-  { label: 'News channel', text: 't.me/s/chaotic_aur', href: 'https://t.me/s/chaotic_aur' },
-  { label: 'Community chat', text: 't.me/chaotic_aur_sac', href: 'https://t.me/s/chaotic_aur_sac' },
+  { labelKey: marker('about.usefulLinks.newsChannel'), text: 't.me/s/chaotic_aur', href: 'https://t.me/s/chaotic_aur' },
   {
-    label: 'Matrix bridge',
-    text: '#chaotic-aur:mozilla.org',
-    href: 'https://matrix.to/#/%23chaotic-aur:mozilla.org',
+    labelKey: marker('about.usefulLinks.communityChat'),
+    text: 't.me/chaotic_aur_sac',
+    href: 'https://t.me/s/chaotic_aur_sac',
   },
-  { label: 'Package list', text: 'pkgs.org', href: 'https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/' },
   {
-    label: 'Manual downloads',
+    labelKey: marker('about.usefulLinks.matrixBridge'),
+    text: MATRIX_ROOM_ALIAS,
+    href: MATRIX_ROOM_URL,
+  },
+  {
+    labelKey: marker('about.usefulLinks.packageList'),
+    text: 'pkgs.org',
+    href: 'https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/',
+  },
+  {
+    labelKey: marker('about.usefulLinks.manualDownloads'),
     text: 'builds.garudalinux.org',
     href: 'https://builds.garudalinux.org/repos/chaotic-aur/x86_64/',
   },
-  { label: 'Infra toolbox', text: 'github.com/chaotic-aur/toolbox', href: 'https://github.com/chaotic-aur/toolbox' },
-  { label: 'Status page', text: 'uptimes.chaotic.cx', href: 'https://uptimes.chaotic.cx' },
-  { label: 'Build logs', text: 'logfiles', href: 'https://builds.garudalinux.org/repos/chaotic-aur/logs/' },
-  { label: 'Signing keys', text: 'chaotic.gpg', href: 'https://aur.chaotic.cx/chaotic.gpg' },
+  {
+    labelKey: marker('about.usefulLinks.infraToolbox'),
+    text: 'github.com/chaotic-aur/toolbox',
+    href: 'https://github.com/chaotic-aur/toolbox',
+  },
+  { labelKey: marker('about.usefulLinks.statusPage'), text: 'uptimes.chaotic.cx', href: 'https://uptimes.chaotic.cx' },
+  {
+    labelKey: marker('about.usefulLinks.buildLogs'),
+    textKey: marker('about.usefulLinks.buildLogsText'),
+    href: 'https://builds.garudalinux.org/repos/chaotic-aur/logs/',
+  },
+  {
+    labelKey: marker('about.usefulLinks.signingKeys'),
+    text: 'chaotic.gpg',
+    href: 'https://aur.chaotic.cx/chaotic.gpg',
+  },
 ];
 
+// Proper names stay in `name`; descriptive entries use `nameKey` for translation.
 interface Thanks {
-  name: string;
-  note?: string;
+  name?: string;
+  nameKey?: string;
+  noteKey?: string;
   href?: string;
 }
 
 const SPECIAL_THANKS: Thanks[] = [
-  { name: 'Librewish (Shrinivas Kumbhar)', note: 'former co-maintainer, Garuda Linux founder' },
-  { name: 'Garuda Linux staffers' },
-  { name: 'All current and past mirror providers' },
+  { name: 'Librewish (Shrinivas Kumbhar)', noteKey: marker('about.specialThanks.librewishNote') },
+  { nameKey: marker('about.specialThanks.garudaStaffers') },
+  { nameKey: marker('about.specialThanks.mirrorProviders') },
   { name: 'Tk-Glitch (TkG)', href: 'https://github.com/Tk-Glitch' },
   { name: 'Kodehawa', href: 'https://github.com/Kodehawa' },
   { name: 'Figue', href: 'https://aur.archlinux.org/account/figue' },
   { name: 'Benjamim Gois', href: 'https://github.com/benjamimgois' },
   {
     name: 'Dr Juan Carlos Ponce Campuzano',
-    note: 'creator of the Aizawa applet and our logo',
+    noteKey: marker('about.specialThanks.aizawaNote'),
     href: 'https://www.patreon.com/jcponce',
   },
-  { name: 'BlackStarMuzic', note: 'clean version of our logo' },
-  { name: 'Frogging Family and Linux Gaming Dev Discord servers' },
+  { name: 'BlackStarMuzic', noteKey: marker('about.specialThanks.cleanLogoNote') },
+  { nameKey: marker('about.specialThanks.discordServers') },
   { name: 'André, Gabriel Olivato and Maiser', href: 'https://github.com/olivatooo' },
-  { name: 'AUR package maintainers, Arch Linux TUs and staffers' },
-  { name: 'Everybody who helped with the projects we pre-build' },
+  { nameKey: marker('about.specialThanks.aurMaintainers') },
+  { nameKey: marker('about.specialThanks.projectHelpers') },
+];
+
+interface TeamMember {
+  name: string;
+  github: string;
+  roleKey: string;
+}
+
+const TEAM: TeamMember[] = [
+  { name: 'Nico Jensch', github: 'dr460nf1r3', roleKey: marker('about.team.roles.leadMaintainer') },
+  { name: 'TNE', github: 'JustTNE', roleKey: marker('about.team.roles.infraMaintainer') },
+  { name: 'Pedro H. Lara Campos', github: 'PedroHLC', roleKey: marker('about.team.roles.founder') },
+  { name: 'Paulo Matias', github: 'thotypous', roleKey: marker('about.team.roles.formerTuCoFounder') },
+  { name: 'Technetium1', github: 'technetium1', roleKey: marker('about.team.roles.packageMaintenance') },
+  { name: 'xiota', github: 'xiota', roleKey: marker('about.team.roles.packageMaintenance') },
+  { name: 'Yumi', github: 'a0xz', roleKey: marker('about.team.roles.mirrorManagement') },
+  { name: 'Joëlle van Essen', github: 'JoelleJS', roleKey: marker('about.team.roles.packageReviews') },
+  { name: 'SolarAquarion', github: 'SolarAquarion', roleKey: marker('about.team.roles.packageMaintenance') },
+  { name: 'LordKitsuna', github: 'lordkitsuna', roleKey: marker('about.team.roles.formerKernelBuilder') },
+  { name: 'João Figueiredo', github: 'IslandC0der', roleKey: marker('about.team.roles.kdeGitPackages') },
+  { name: 'Alexjp', github: 'alexjp', roleKey: marker('about.team.roles.kdeGitPackages') },
+  { name: 'Rustem B.', github: 'RustemB', roleKey: marker('about.team.roles.packageMaintenance') },
 ];
 
 @Component({
   selector: 'chaotic-about',
-  imports: [NgOptimizedImage, TitleComponent, RouterLink],
+  imports: [NgOptimizedImage, TitleComponent, RouterLink, TranslocoDirective],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',
 })
 export class AboutComponent {
+  private readonly transloco = inject(TranslocoService);
+
   readonly usefulLinks = USEFUL_LINKS;
   readonly specialThanks = SPECIAL_THANKS;
-
-  team: TeamList = [
-    {
-      name: 'Nico Jensch',
-      github: 'dr460nf1r3',
-      role: 'Lead Maintainer',
-    },
-    {
-      name: 'TNE',
-      github: 'JustTNE',
-      role: 'Infra maintainer',
-    },
-    {
-      name: 'Pedro H. Lara Campos',
-      github: 'PedroHLC',
-      role: 'Founder',
-    },
-    {
-      name: 'Paulo Matias',
-      github: 'thotypous',
-      role: 'Former TU, Co-founder',
-    },
-    {
-      name: 'Technetium1',
-      github: 'technetium1',
-      role: 'Package maintenance',
-    },
-    {
-      name: 'xiota',
-      github: 'xiota',
-      role: 'Package maintenance',
-    },
-    {
-      name: 'Yumi',
-      github: 'a0xz',
-      role: 'Mirror management',
-    },
-    {
-      name: 'Joëlle van Essen',
-      github: 'JoelleJS',
-      role: 'Package reviews',
-    },
-    {
-      name: 'SolarAquarion',
-      github: 'SolarAquarion',
-      role: 'Package maintenance',
-    },
-    {
-      name: 'LordKitsuna',
-      github: 'lordkitsuna',
-      role: 'Former kernel builder',
-    },
-    {
-      name: 'João Figueiredo',
-      github: 'IslandC0der',
-      role: 'KDE git packages',
-    },
-    {
-      name: 'Alexjp',
-      github: 'alexjp',
-      role: 'KDE git packages',
-    },
-    {
-      name: 'Rustem B.',
-      github: 'RustemB',
-      role: 'Package maintenance',
-    },
-  ];
+  readonly team = TEAM;
 
   constructor() {
-    for (const member of this.team) {
-      member.avatarUrl = `/assets/avatars/${member.github}.webp`;
-    }
-
     setPageSeo(
-      'About us · Chaotic-AUR',
-      'Learn more about the Chaotic-AUR team and project',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.about') }),
+      this.transloco.translate('about.seo.description'),
+      this.transloco.translate('about.seo.keywords'),
     );
   }
 }

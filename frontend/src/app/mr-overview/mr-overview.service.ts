@@ -3,28 +3,41 @@ import { inject, Service, signal } from '@angular/core';
 import { FLAG_REASON_MAX_LENGTH, isReviewQueueMergeRequest, MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
+import { TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { backendErrorMessage } from '../api-errors';
 
 export type MrFlagLabel = 'dangerous' | 'hold';
 
-const FLAG_COPY: Record<MrFlagLabel, { success: [string, string]; error: [string, string] }> = {
+interface FlagToastKeys {
+  successTitle: string;
+  successMessage: string;
+  errorMessage: string;
+}
+
+const FLAG_TOAST_KEYS: Record<MrFlagLabel, FlagToastKeys> = {
   dangerous: {
-    success: ['Flagged as Dangerous', 'The merge request has been flagged as dangerous.'],
-    error: ['Flagging Failed', 'Failed to flag the merge request as dangerous. Please try again later.'],
+    successTitle: marker('reviewQueue.toast.flagDangerous.title'),
+    successMessage: marker('reviewQueue.toast.flagDangerous.message'),
+    errorMessage: marker('reviewQueue.toast.flagDangerous.error'),
   },
   hold: {
-    success: ['Flagged as On Hold', 'The merge request has been flagged as on hold.'],
-    error: ['Flagging Failed', 'Failed to flag the merge request as on hold. Please try again later.'],
+    successTitle: marker('reviewQueue.toast.flagHold.title'),
+    successMessage: marker('reviewQueue.toast.flagHold.message'),
+    errorMessage: marker('reviewQueue.toast.flagHold.error'),
   },
 };
+
+const HTTP_UNAUTHORIZED = 401;
 
 @Service()
 export class MrOverviewService {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
   private readonly http = inject(HttpClient);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
 
   readonly mergeRequests = signal<MergeRequestWithDiffs[]>([]);
   readonly isLoading = signal<boolean>(true);
@@ -57,8 +70,8 @@ export class MrOverviewService {
       this.isLoading.set(false);
       this.loadFailed.set(true);
       this.messageToastService.error(
-        'Error fetching merge requests',
-        'An error occurred while fetching merge requests. Please try again.',
+        this.transloco.translate('reviewQueue.toast.loadFailed.title'),
+        this.transloco.translate('reviewQueue.toast.loadFailed.message'),
       );
       console.error('Error extracting merge requests:', error);
       return false;
@@ -89,13 +102,14 @@ export class MrOverviewService {
         }),
       );
 
+      const successTitle = this.transloco.translate('reviewQueue.toast.approved.title');
       if (res?.deferred) {
         this.messageToastService.success(
-          'Approval Successful',
-          'Merge request approved. The merge will be executed once the scheduled pipeline completes.',
+          successTitle,
+          this.transloco.translate('reviewQueue.toast.approved.deferredMessage'),
         );
       } else {
-        this.messageToastService.success('Approval Successful', 'Merge request approved and merged.');
+        this.messageToastService.success(successTitle, this.transloco.translate('reviewQueue.toast.approved.message'));
       }
 
       this.mergeRequests.update((mrs) =>
@@ -106,16 +120,17 @@ export class MrOverviewService {
         }),
       );
     } catch (error) {
-      if (error instanceof HttpErrorResponse && error.status === 401) {
+      if (error instanceof HttpErrorResponse && error.status === HTTP_UNAUTHORIZED) {
         this.messageToastService.info(
-          'Already approved',
-          'This update seems to have been already approved by you? GitLab does not always return a valid status at all times.',
+          this.transloco.translate('reviewQueue.toast.alreadyApproved.title'),
+          this.transloco.translate('reviewQueue.toast.alreadyApproved.message'),
         );
         return;
       }
+
       this.messageToastService.error(
-        'Approval Failed',
-        backendErrorMessage(error, 'Failed to approve the merge request. Please try again later.'),
+        this.transloco.translate('reviewQueue.toast.approveFailed.title'),
+        backendErrorMessage(error, this.transloco.translate('reviewQueue.toast.approveFailed.message')),
       );
       console.error('Error approving merge request:', error);
     } finally {
@@ -128,7 +143,7 @@ export class MrOverviewService {
   readonly flagReasonMaxLength = FLAG_REASON_MAX_LENGTH;
 
   async flag(mr: MergeRequestWithDiffs, label: MrFlagLabel, reason: string): Promise<boolean> {
-    const copy = FLAG_COPY[label];
+    const toastKeys = FLAG_TOAST_KEYS[label];
     const loadingKey = `${mr.iid}:flag:${label}`;
     const loadingMap = new Map(this.loadingMap());
     loadingMap.set(loadingKey, true);
@@ -142,7 +157,10 @@ export class MrOverviewService {
           reason,
         }),
       );
-      this.messageToastService.success(copy.success[0], copy.success[1]);
+      this.messageToastService.success(
+        this.transloco.translate(toastKeys.successTitle),
+        this.transloco.translate(toastKeys.successMessage),
+      );
 
       const flagReason = {
         action: label,
@@ -159,7 +177,10 @@ export class MrOverviewService {
       );
       return true;
     } catch (error) {
-      this.messageToastService.error(copy.error[0], backendErrorMessage(error, copy.error[1]));
+      this.messageToastService.error(
+        this.transloco.translate('reviewQueue.toast.flagFailedTitle'),
+        backendErrorMessage(error, this.transloco.translate(toastKeys.errorMessage)),
+      );
       console.error(`Error flagging merge request as ${label}:`, error);
       return false;
     } finally {

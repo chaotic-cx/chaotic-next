@@ -1,12 +1,9 @@
-<div class="chaotic-page docs">
-  <chaotic-title
-    title="Get started"
-    subtitle="Add Chaotic-AUR to pacman in five steps, then learn how builds and reviews work."
-  />
+<div class="chaotic-page docs" *transloco="let t">
+  <chaotic-title [title]="t('docs.title')" [subtitle]="t('docs.subtitle')" />
 
   <div class="docs__layout">
-    <nav class="docs__toc" aria-label="On this page">
-      <span class="docs__toc-label">On this page</span>
+    <nav class="docs__toc" [attr.aria-label]="t('docs.toc')">
+      <span class="docs__toc-label">{{ t('docs.toc') }}</span>
       <ul>
         @for (section of sections; track section.id) {
           <li>
@@ -15,7 +12,7 @@
               [attr.aria-current]="activeSection() === section.id ? 'location' : null"
               [href]="`#${section.id}`"
               (click)="jumpTo($event, section.id)"
-              >{{ section.title }}</a
+              >{{ t(section.titleKey) }}</a
             >
           </li>
         }
@@ -24,174 +21,106 @@
 
     <article class="docs__content">
       <section class="docs-section chaotic-surface" id="setup" data-docs-section>
-        <h2>Setup</h2>
+        <h2>{{ t('docs.sections.setup') }}</h2>
         <ol class="docs-steps">
           <li>
-            <h3>Import the primary key</h3>
-            <p>
-              Retrieve and locally sign the
-              <a
-                href="https://keyserver.ubuntu.com/pks/lookup?search=3056513887B78AEB&fingerprint=on&op=index"
-                rel="noopener"
-                target="_blank"
-                >primary key</a
-              >. It lets pacman trust our keyring and mirror list.
-            </p>
+            <h3>{{ t('docs.setup.importKey.title') }}</h3>
+            <p [innerHTML]="t('docs.setup.importKey.text')"></p>
             <chaotic-code-block [code]="receiveKeys" />
           </li>
           <li>
-            <h3>Install the keyring and mirror list</h3>
-            <p>
-              This installs
-              <a href="https://github.com/chaotic-aur/keyring" rel="noopener" target="_blank">chaotic-keyring</a>
-              and
-              <a
-                href="https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/chaotic-mirrorlist"
-                rel="noopener"
-                target="_blank"
-                >chaotic-mirrorlist</a
-              >.
-            </p>
+            <h3>{{ t('docs.setup.installKeyring.title') }}</h3>
+            <p [innerHTML]="t('docs.setup.installKeyring.text')"></p>
             <chaotic-code-block [code]="installRepoPackages" />
           </li>
           <li>
-            <h3>Add the repository to pacman</h3>
-            <p>Append the following to the end of <code>/etc/pacman.conf</code>:</p>
+            <h3>{{ t('docs.setup.addRepository.title') }}</h3>
+            <p [innerHTML]="t('docs.setup.addRepository.text')"></p>
             <chaotic-code-block [code]="appendRepo" language="ini" />
           </li>
           <li>
-            <h3>Sync and update</h3>
-            <p>Run a full system update, which also syncs our mirror list.</p>
+            <h3>{{ t('docs.setup.sync.title') }}</h3>
+            <p>{{ t('docs.setup.sync.text') }}</p>
             <chaotic-code-block [code]="syncMirrors" />
           </li>
           <li>
-            <h3>Install packages</h3>
-            <p>The repository is ready to use.</p>
+            <h3>{{ t('docs.setup.install.title') }}</h3>
+            <p>{{ t('docs.setup.install.text') }}</p>
             <chaotic-code-block [code]="installPackage" />
           </li>
         </ol>
       </section>
 
       <section class="docs-section chaotic-surface" id="important" data-docs-section>
-        <h2>Reporting bugs</h2>
-        <p>
-          Report package bugs to our
-          <a href="https://github.com/chaotic-aur/packages/issues/new/choose" rel="noopener" target="_blank"
-            >bug tracker</a
-          >
-          or comment on the AUR first. Report upstream only after you confirm that the issue is not a packaging issue.
-          This gets bugs fixed faster.
-        </p>
+        <h2>{{ t('docs.sections.reportingBugs') }}</h2>
+        <p [innerHTML]="t('docs.reportingBugs.text')"></p>
       </section>
 
       <section class="docs-section chaotic-surface" id="package-builds" data-docs-section>
-        <h2>Package builds</h2>
+        <h2>{{ t('docs.sections.packageBuilds') }}</h2>
         <p>
-          The <a routerLink="/deployments">deploy log</a> shows whether a package was deployed after its last AUR
-          update. Report build failures or broken packages as an issue in our
-          <a href="https://github.com/chaotic-aur/packages" rel="noopener" target="_blank">GitHub repository</a>.
+          {{ t('docs.packageBuilds.deployLog.intro') }}
+          <a routerLink="/deployments">{{ t('docs.packageBuilds.deployLog.linkText') }}</a>
+          {{ t('docs.packageBuilds.deployLog.outro') }}
+          <span [innerHTML]="t('docs.packageBuilds.reportFailures')"></span>
         </p>
-        <p>
-          Our main repository is on
-          <a href="https://gitlab.com/chaotic-aur/pkgbuilds" rel="noopener" target="_blank">GitLab</a>, because the
-          build system uses its CI pipelines extensively.
-        </p>
+        <p [innerHTML]="t('docs.packageBuilds.mainRepository')"></p>
       </section>
 
       <section class="docs-section chaotic-surface" id="requesting-new-packages" data-docs-section>
-        <h2>Requesting new packages</h2>
-        <p>
-          Submit package requests as an issue in our
-          <a href="https://github.com/chaotic-aur/packages/issues/new/choose" rel="noopener" target="_blank"
-            >GitHub repository</a
-          >. We prefer GitHub for historical reasons, so requests on GitLab can go unnoticed.
-        </p>
-        <p>Before you submit a request:</p>
+        <h2>{{ t('docs.sections.requestingNewPackages') }}</h2>
+        <p [innerHTML]="t('docs.requestingNewPackages.text')"></p>
+        <p>{{ t('docs.requestingNewPackages.beforeYouSubmit') }}</p>
         <ul class="docs-list">
-          <li>
-            Search the
-            <a href="https://github.com/chaotic-aur/packages/issues" rel="noopener" target="_blank">existing issues</a>.
-            We possibly handled or removed the package before, for a reason.
-          </li>
-          <li>Make sure that the license permits redistribution.</li>
-          <li>
-            Make sure that the package is not on our
-            <a
-              href="https://gitlab.com/chaotic-aur/pkgbuilds/-/blob/main/README.md#banished-and-rejected-packages-"
-              rel="noopener"
-              target="_blank"
-              >ban list</a
-            >.
-          </li>
+          <li [innerHTML]="t('docs.requestingNewPackages.searchIssues')"></li>
+          <li>{{ t('docs.requestingNewPackages.license') }}</li>
+          <li [innerHTML]="t('docs.requestingNewPackages.banList')"></li>
         </ul>
       </section>
 
       <section class="docs-section chaotic-surface" id="recommendations" data-docs-section>
-        <h2>Recommendations</h2>
-        <p>
-          To keep a locally built version of a package (for example with native optimizations),
-          <a href="https://www.archlinux.org/pacman/pacman.conf.5.html" rel="noopener" target="_blank"
-            >ignore its updates</a
-          >
-          in <code>/etc/pacman.conf</code>:
-        </p>
+        <h2>{{ t('docs.sections.recommendations') }}</h2>
+        <p [innerHTML]="t('docs.recommendations.ignoreUpdates')"></p>
         <chaotic-code-block [code]="ignorePkg" language="ini" />
-        <p>To install a package from a specific repository, prefix it with the repository name:</p>
+        <p>{{ t('docs.recommendations.specificRepository') }}</p>
         <chaotic-code-block [code]="installPackageSpecific" />
-        <p>
-          AUR helpers like
-          <a href="https://github.com/Morganamilo/paru" rel="noopener" target="_blank">paru</a>
-          support the same syntax:
-        </p>
+        <p [innerHTML]="t('docs.recommendations.aurHelpers')"></p>
         <chaotic-code-block [code]="installPackageParu" />
       </section>
 
       <section class="docs-section chaotic-surface" id="update-review-process" data-docs-section>
-        <h2>Update review process</h2>
+        <h2>{{ t('docs.sections.updateReviewProcess') }}</h2>
+        <p [innerHTML]="t('docs.updateReviewProcess.mergeRequests')"></p>
+        <p>{{ t('docs.updateReviewProcess.humanApproval') }}</p>
         <p>
-          Some AUR updates change more than <code>pkgver</code>, <code>pkgrel</code> or checksums. For these, our build
-          system opens a merge request against the
-          <a href="https://gitlab.com/chaotic-aur/pkgbuilds" rel="noopener" target="_blank">pkgbuilds</a>
-          repository. Packages that build from a git branch update automatically when only their upstream commit
-          changes. The
-          <a href="https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/state" rel="noopener" target="_blank">state</a>
-          branch tracks these commits. AUR updates that change the PKGBUILD are the exception.
+          {{ t('docs.updateReviewProcess.reviewQueue.intro') }}
+          <a routerLink="/review-queue">{{ t('docs.updateReviewProcess.reviewQueue.linkText') }}</a>
+          {{ t('docs.updateReviewProcess.reviewQueue.outro') }}
         </p>
-        <p>
-          The system flags suspicious changes automatically. Then a maintainer inspects each diff for malicious changes.
-          A merge request is merged and deployed only after a human approves it.
-        </p>
-        <p>The <a routerLink="/review-queue">review queue</a> shows the pending updates.</p>
       </section>
 
       <section class="docs-section chaotic-surface" id="aur-package-scan" data-docs-section>
-        <h2>AUR package scan</h2>
+        <h2>{{ t('docs.sections.aurPackageScan') }}</h2>
         <p>
-          Screen AUR packages before you install them with our <a routerLink="/aur-scan">AUR scanner</a>. It fetches the
-          PKGBUILD and its sources and inspects them with our static security rules.
+          {{ t('docs.aurPackageScan.scanner.intro') }}
+          <a routerLink="/aur-scan">{{ t('docs.aurPackageScan.scanner.linkText') }}</a
+          >{{ t('docs.aurPackageScan.scanner.outro') }}
         </p>
-        <p>
-          It also shows maintainer insights, such as novice maintainers and orphaned packages. Always read the source
-          code and PKGBUILD before you install a package. The scanner shows them next to the findings.
-        </p>
+        <p>{{ t('docs.aurPackageScan.insights') }}</p>
       </section>
 
       <section class="docs-section chaotic-surface" id="public-api" data-docs-section>
-        <h2>Public API</h2>
+        <h2>{{ t('docs.sections.publicApi') }}</h2>
         <p>
-          Chaotic-AUR has a public JSON API to query packages, builds, metrics and repository state. The interactive
-          <a [href]="apiDocsUrl" rel="noopener" target="_blank">API documentation</a>
-          lists all endpoints and schemas.
+          {{ t('docs.publicApi.intro') }}
+          <a [href]="apiDocsUrl" rel="noopener" target="_blank">{{ t('docs.publicApi.linkText') }}</a>
+          {{ t('docs.publicApi.outro') }}
         </p>
       </section>
 
       <section class="docs-section chaotic-surface" id="further-information" data-docs-section>
-        <h2>Further information</h2>
-        <p>
-          The
-          <a href="https://chaotic-manager.pages.dev" rel="noopener" target="_blank">Chaotic Manager</a>
-          documentation explains the build system in depth.
-        </p>
+        <h2>{{ t('docs.sections.furtherInformation') }}</h2>
+        <p [innerHTML]="t('docs.furtherInformation.text')"></p>
       </section>
     </article>
   </div>

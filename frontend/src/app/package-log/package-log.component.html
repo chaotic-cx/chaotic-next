@@ -1,9 +1,9 @@
-<div class="chaotic-page">
-  <chaotic-title [subtitle]="subtitle()" title="{{ pkgname() || 'Package log' }}" />
+<div class="chaotic-page" *transloco="let t; prefix: 'packageLog'">
+  <chaotic-title [subtitle]="subtitle() ?? t('subtitle')" [title]="pkgname() || t('title')" />
 
   <div class="package-log">
-    @if (error()) {
-      <p class="log-error">{{ error() }}</p>
+    @if (streamFailed()) {
+      <p class="log-error">{{ t('streamError') }}</p>
     }
 
     @if (builder() || streaming()) {
@@ -16,22 +16,22 @@
         }
         <div class="toolbar-right">
           @if (streaming()) {
-            <span class="live-badge">● live</span>
+            <span class="live-badge">{{ t('live') }}</span>
           }
           <button
             class="download-btn"
             [class.hide-download]="searchQuery()"
+            [attr.aria-label]="t('downloadLog')"
             (click)="downloadLog()"
             type="button"
-            aria-label="Download log"
           >
             <i class="pi pi-download"></i>
           </button>
           @if (searchQuery()) {
-            <button class="search-nav" (click)="searchPrevious()" type="button" aria-label="Previous match">
+            <button class="search-nav" [attr.aria-label]="t('previousMatch')" (click)="searchPrevious()" type="button">
               <i class="pi pi-angle-up"></i>
             </button>
-            <button class="search-nav" (click)="searchNext()" type="button" aria-label="Next match">
+            <button class="search-nav" [attr.aria-label]="t('nextMatch')" (click)="searchNext()" type="button">
               <i class="pi pi-angle-down"></i>
             </button>
           }
@@ -43,12 +43,12 @@
               class="w-full"
               #searchInput
               [value]="searchQuery()"
+              [placeholder]="t('searchBuffer')"
               (input)="onSearch($any($event.target).value)"
               (keydown.enter)="searchNext()"
               (keydown.shift.enter)="searchPrevious()"
               pInputText
               type="text"
-              placeholder="Search buffer"
             />
           </p-iconfield>
         </div>

@@ -1,4 +1,4 @@
-<div class="flex flex-col items-center w-full">
+<div class="flex flex-col items-center w-full" *transloco="let t">
   <div class="flex w-full flex-col items-center gap-6 py-4">
     <div
       class="flex flex-col items-center justify-center transition-[padding] duration-200"
@@ -19,13 +19,13 @@
         [suggestions]="suggestions()"
         [delay]="300"
         [minQueryLength]="3"
+        [placeholder]="t('searchPackage.placeholder')"
         (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
         (completeMethod)="searchSuggestions($event)"
         (onSelect)="selectPackage($event.value)"
         (onKeyUp)="onKeyUp($event)"
         (onBlur)="onInputBlur()"
         appendTo="body"
-        placeholder="Start searching"
       />
     </div>
   </div>
@@ -58,11 +58,11 @@
 
             <dl class="pkg-sheet__facts">
               <div class="pkg-fact">
-                <dt>Downloads</dt>
+                <dt>{{ t('searchPackage.facts.downloads') }}</dt>
                 <dd class="pkg-fact__number">{{ downloads() === null ? '–' : (downloads() | number) }}</dd>
               </div>
               <div class="pkg-fact">
-                <dt>Built</dt>
+                <dt>{{ t('searchPackage.facts.built') }}</dt>
                 <dd>
                   @if (pkg.builtAt) {
                     <span [pTooltip]="(pkg.builtAt | date: 'medium') ?? undefined" tooltipPosition="top">{{
@@ -74,18 +74,18 @@
                 </dd>
               </div>
               <div class="pkg-fact">
-                <dt>Added</dt>
+                <dt>{{ t('searchPackage.facts.added') }}</dt>
                 <dd>{{ pkg.addedAt ? (pkg.addedAt | date: 'mediumDate') : '–' }}</dd>
               </div>
               <div class="pkg-fact">
-                <dt>License</dt>
+                <dt>{{ t('searchPackage.facts.license') }}</dt>
                 <dd>{{ pkg.license ?? '–' }}</dd>
               </div>
             </dl>
 
             <dl class="pkg-sheet__details">
               @if (pkg.homepage) {
-                <dt>Homepage</dt>
+                <dt>{{ t('searchPackage.details.homepage') }}</dt>
                 <dd>
                   <a class="pkg-sheet__link" [href]="pkg.homepage" target="_blank" rel="noopener noreferrer">{{
                     pkg.homepage
@@ -93,15 +93,15 @@
                 </dd>
               }
               @if (pkg.pkgbaseName) {
-                <dt>Pkgbase</dt>
+                <dt>{{ t('searchPackage.details.pkgbase') }}</dt>
                 <dd class="font-mono">{{ pkg.pkgbaseName }}</dd>
               }
               @if (pkg.packager) {
-                <dt>Packager</dt>
+                <dt>{{ t('searchPackage.details.packager') }}</dt>
                 <dd>{{ pkg.packager }}</dd>
               }
               @if (pkg.filename) {
-                <dt>File</dt>
+                <dt>{{ t('searchPackage.details.file') }}</dt>
                 <dd>
                   <a
                     class="pkg-sheet__link font-mono"
@@ -114,10 +114,10 @@
               }
             </dl>
 
-            @for (group of pkg.groups; track group.label) {
-              <section class="pkg-group" [attr.aria-label]="group.label">
+            @for (group of pkg.groups; track group.labelKey) {
+              <section class="pkg-group" [attr.aria-label]="t(group.labelKey)">
                 <h3 class="pkg-group__label">
-                  {{ group.label }}
+                  {{ t(group.labelKey) }}
                   <span class="pkg-group__count">{{ group.entries.length }}</span>
                 </h3>
                 <ul class="pkg-group__list">

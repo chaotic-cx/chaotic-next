@@ -1,11 +1,11 @@
-<div class="chaotic-page">
-  <chaotic-title [subtitle]="subtitle" title="AUR scan" />
+<div class="chaotic-page" *transloco="let t; prefix: 'aurScan.page'">
+  <chaotic-title [subtitle]="t('subtitle')" [title]="t('title')" />
 
   <section class="chaotic-card" aria-labelledby="aur-scan-card-title">
     <header class="chaotic-card__header">
-      <h2 class="chaotic-card__title" id="aur-scan-card-title">Scan a package</h2>
+      <h2 class="chaotic-card__title" id="aur-scan-card-title">{{ t('cardTitle') }}</h2>
       @if (metrics(); as m) {
-        <span class="aur-scan-count">{{ m.total | number }} scanned so far</span>
+        <span class="aur-scan-count">{{ t('scannedSoFar', { count: (m.total | number) }) }}</span>
       }
     </header>
     <form class="aur-scan-form" (submit)="$event.preventDefault(); scanQuery()">
@@ -17,12 +17,12 @@
         [suggestions]="suggestions()"
         [delay]="300"
         [minQueryLength]="3"
+        [ariaLabel]="t('inputLabel')"
+        [placeholder]="t('inputPlaceholder')"
         (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
         (completeMethod)="searchSuggestions($event)"
         (onSelect)="selectPackage($event.value)"
         (onKeyUp)="onKeyUp($event)"
-        ariaLabel="AUR package name"
-        placeholder="AUR package name, e.g. firedragon"
         appendTo="body"
       />
     </form>
@@ -33,8 +33,7 @@
       </div>
     } @else {
       <p class="border-t border-(--chaotic-border) px-4 py-4 text-sm text-ctp-subtext0">
-        The scan fetches the PKGBUILD and its sources, checks them against our static security rules and VirusTotal, and
-        reports maintainer changes.
+        {{ t('intro') }}
       </p>
     }
   </section>

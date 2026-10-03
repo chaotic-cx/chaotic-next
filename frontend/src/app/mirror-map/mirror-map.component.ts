@@ -1,12 +1,15 @@
 import { Component, computed, effect, ElementRef, inject, input, OnDestroy, viewChild } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
 import type { Mirror, MirrorSelf } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import type { Feature, FeatureCollection, Polygon } from 'geojson';
 import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
 import { Map as MaplibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl';
+import { injectActiveTranslation } from '../i18n/active-translation';
+import { injectLazyStylesheet } from '../lazy-stylesheet';
 import { getCountryCoordinates } from './country-coordinates';
 import { LiveTrafficService, type TrafficHit } from './live-traffic.service';
-import { injectLazyStylesheet } from '../lazy-stylesheet';
 
 const { mocha } = flavors;
 const WORKER_URL = '/maplibre-gl-worker.mjs';
@@ -117,6 +120,7 @@ const CIRCLE_RADIUS_KM = 2414.016;
 const CIRCLE_STEPS = 128;
 const FOCUS_ZOOM = 3;
 const FOCUS_SPEED = 1.2;
+const POPUP_OFFSET_PX = 25;
 
 const TRAFFIC_METEORS_SOURCE_ID = 'traffic-meteors-source';
 const TRAFFIC_METEORS_LAYER_ID = 'traffic-meteors-layer';
@@ -162,25 +166,29 @@ function mirrorStatus(mirror: Mirror): MirrorStatus {
   return mirror.geo_active ? 'active' : mirror.healthy ? 'healthy' : 'down';
 }
 
-const STATUS_LABELS: Record<MirrorStatus, string> = {
-  active: 'Active',
-  healthy: 'Healthy',
-  down: 'Down',
+const STATUS_LABEL_KEYS: Record<MirrorStatus, string> = {
+  active: marker('mirrorMap.status.active'),
+  healthy: marker('mirrorMap.status.healthy'),
+  down: marker('mirrorMap.status.down'),
 };
 
-function mirrorPopupHtml(mirror: Mirror, status: MirrorStatus): string {
-  const lastUpdate = new Date(mirror.last_update).toLocaleString(navigator.language, {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  });
+interface MirrorPopupLabels {
+  status: string;
+  official: string;
+  lastUpdate: string;
+}
+
+function mirrorPopupHtml(mirror: Mirror, labels: MirrorPopupLabels): string {
+  const officialIcon = `<i class="pi pi-verified" style="color: #89b4fa" title="${labels.official}"></i>`;
+
   return `
     <b>${mirror.subdomain}</b>
-    <span style="opacity: 0.7">| ${STATUS_LABELS[status]}</span>
-    ${mirror.official ? '<i class="pi pi-verified" style="color: #89b4fa" title="Official mirror"></i>' : ''}
+    <span style="opacity: 0.7">| ${labels.status}</span>
+    ${mirror.official ? officialIcon : ''}
     <br />
     <a href="https://${mirror.subdomain}.chaotic.cx" target="_blank" rel="noopener" tabindex="-1">${mirror.subdomain}.chaotic.cx</a>
     <br />
-    <span style="opacity: 0.7">Last update: ${lastUpdate}</span>
+    <span style="opacity: 0.7">${labels.lastUpdate}</span>
   `;
 }
 
@@ -247,6 +255,7 @@ interface ActiveArc {
 
 @Component({
   selector: 'chaotic-mirror-map',
+  imports: [TranslocoDirective],
   host: {
     '[class.fill-height]': 'fillHeight()',
   },
@@ -254,20 +263,20 @@ interface ActiveArc {
     <div class="mirror-map" #mapDiv></div>
 
     <!-- Map Overlays -->
-    <div class="stats">
+    <div class="stats" *transloco="let t; prefix: 'mirrorMap.status'">
       <div class="stat-item">
         <span class="stat-dot" [style.background]="mocha.colors.mauve.hex"></span>
-        <span class="stat-label">Active</span>
+        <span class="stat-label">{{ t('active') }}</span>
         <span class="stat-count">{{ counts().active }}</span>
       </div>
       <div class="stat-item">
         <span class="stat-dot" [style.background]="mocha.colors.green.hex"></span>
-        <span class="stat-label">Healthy</span>
+        <span class="stat-label">{{ t('healthy') }}</span>
         <span class="stat-count">{{ counts().healthy }}</span>
       </div>
       <div class="stat-item">
         <span class="stat-dot" [style.background]="mocha.colors.red.hex"></span>
-        <span class="stat-label">Down</span>
+        <span class="stat-label">{{ t('down') }}</span>
         <span class="stat-count">{{ counts().down }}</span>
       </div>
     </div>
@@ -440,6 +449,8 @@ interface ActiveArc {
 })
 export class MirrorMapComponent implements OnDestroy {
   private readonly liveTraffic = inject(LiveTrafficService);
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeTranslation = injectActiveTranslation();
   private readonly ctp = mocha;
 
   readonly mirrors = input<Mirror[]>([]);
@@ -484,6 +495,7 @@ export class MirrorMapComponent implements OnDestroy {
       this.self();
       this.focus();
       this.showMirrors();
+      this.activeTranslation();
       if (this.map) {
         this.updateMap();
       }
@@ -525,6 +537,7 @@ export class MirrorMapComponent implements OnDestroy {
       style: initialStyle,
       center: [0, 30],
       zoom: proj === 'globe' ? 0.95 : 1.2,
+      locale: this.controlLocale(),
       transformRequest: (url: string) => {
         if (url.includes('demotiles.maplibre.org')) {
           const separator = url.includes('?') ? '&' : '?';
@@ -938,6 +951,7 @@ export class MirrorMapComponent implements OnDestroy {
           element.classList.toggle('marker-active', status === 'active');
           const svgPath = element.querySelector('svg path');
           if (svgPath) svgPath.setAttribute('fill', MARKER_COLORS[status]);
+          existing.getPopup().setHTML(this.popupHtml(mirror, status));
         } else {
           this.addMarker(mirror, position, status);
         }
@@ -956,15 +970,44 @@ export class MirrorMapComponent implements OnDestroy {
   private addMarker(mirror: Mirror, position: [number, number], status: MirrorStatus): void {
     if (!this.map) return;
 
-    const marker = new Marker({ color: MARKER_COLORS[status] })
+    const mapMarker = new Marker({ color: MARKER_COLORS[status] })
       .setLngLat(position)
       .setPopup(
-        new Popup({ offset: 25, closeButton: false, focusAfterOpen: false }).setHTML(mirrorPopupHtml(mirror, status)),
+        new Popup({ offset: POPUP_OFFSET_PX, closeButton: false, focusAfterOpen: false }).setHTML(
+          this.popupHtml(mirror, status),
+        ),
       )
       .addTo(this.map);
 
-    marker.getElement().classList.toggle('marker-active', status === 'active');
-    this.markers.set(mirror.subdomain, marker);
+    mapMarker.getElement().classList.toggle('marker-active', status === 'active');
+    this.markers.set(mirror.subdomain, mapMarker);
+  }
+
+  private popupHtml(mirror: Mirror, status: MirrorStatus): string {
+    const lastUpdate = new Date(mirror.last_update).toLocaleString(navigator.language, {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+
+    return mirrorPopupHtml(mirror, {
+      status: this.transloco.translate(STATUS_LABEL_KEYS[status]),
+      official: this.transloco.translate('mirrorMap.popup.official'),
+      lastUpdate: this.transloco.translate('mirrorMap.popup.lastUpdate', { date: lastUpdate }),
+    });
+  }
+
+  /**
+   * Labels for the built-in MapLibre controls.
+   * MapLibre reads them once, when the map is created.
+   */
+  private controlLocale(): Record<string, string> {
+    return {
+      'NavigationControl.ZoomIn': this.transloco.translate('mirrorMap.controls.zoomIn'),
+      'NavigationControl.ZoomOut': this.transloco.translate('mirrorMap.controls.zoomOut'),
+      'NavigationControl.ResetBearing': this.transloco.translate('mirrorMap.controls.resetBearing'),
+      'AttributionControl.ToggleAttribution': this.transloco.translate('mirrorMap.controls.toggleAttribution'),
+      'AttributionControl.MapFeedback': this.transloco.translate('mirrorMap.controls.mapFeedback'),
+    };
   }
 
   private updateCircleFeatures(features: Feature[]): void {
@@ -973,9 +1016,9 @@ export class MirrorMapComponent implements OnDestroy {
   }
 
   private removeStaleMarkers(currentSubdomains: Set<string>): void {
-    this.markers.forEach((marker, subdomain) => {
+    this.markers.forEach((mapMarker, subdomain) => {
       if (!currentSubdomains.has(subdomain)) {
-        marker.remove();
+        mapMarker.remove();
         this.markers.delete(subdomain);
       }
     });

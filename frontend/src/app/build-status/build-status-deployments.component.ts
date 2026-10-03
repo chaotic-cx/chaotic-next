@@ -1,34 +1,36 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { FlipListDirective } from '../animations/flip-list.directive';
 import { packageLogRouteFromUrl } from '../functions';
-import { statusIconClass } from '../status-icons';
-import { RelativeTimePipe } from '../pipes/relative-time.pipe';
-import { BuildStatusPager } from './build-status-pager.component';
 import { LoadErrorComponent } from '../load-error/load-error.component';
+import { RelativeTimePipe } from '../pipes/relative-time.pipe';
+import { statusIconClass } from '../status-icons';
+import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BuildStatusService } from './build-status.service';
 
 const DEPLOYMENTS_PAGE_SIZE = 6;
 const SKELETON_ROW_COUNT = 4;
 
-const FAILURE_TAG_DESCRIPTIONS: Record<string, string> = {
-  dependency: 'Missing dependency',
-  compile: 'Compile error',
-  link: 'Link error',
-  package: 'Packaging error',
-  check: 'Check failed',
-  prepare: 'Prepare failed',
-  toolchain: 'Toolchain issue',
-  download: 'Download failed',
-  network: 'Network error',
-  checksum: 'Checksum mismatch',
-  metadata: 'Metadata or pkgver issue',
-  interfere: 'Interfere prepare failed (our tooling)',
-  silent: 'Silent: resolves itself',
-  transient: 'Transient: usually passes on retry',
+const FAILURE_TAG_DESCRIPTION_KEYS: Record<string, string> = {
+  dependency: marker('buildStatus.deployments.failureTags.dependency'),
+  compile: marker('buildStatus.deployments.failureTags.compile'),
+  link: marker('buildStatus.deployments.failureTags.link'),
+  package: marker('buildStatus.deployments.failureTags.package'),
+  check: marker('buildStatus.deployments.failureTags.check'),
+  prepare: marker('buildStatus.deployments.failureTags.prepare'),
+  toolchain: marker('buildStatus.deployments.failureTags.toolchain'),
+  download: marker('buildStatus.deployments.failureTags.download'),
+  network: marker('buildStatus.deployments.failureTags.network'),
+  checksum: marker('buildStatus.deployments.failureTags.checksum'),
+  metadata: marker('buildStatus.deployments.failureTags.metadata'),
+  interfere: marker('buildStatus.deployments.failureTags.interfere'),
+  silent: marker('buildStatus.deployments.failureTags.silent'),
+  transient: marker('buildStatus.deployments.failureTags.transient'),
 };
 
 @Component({
@@ -42,6 +44,7 @@ const FAILURE_TAG_DESCRIPTIONS: Record<string, string> = {
     LoadErrorComponent,
     BuildStatusPager,
     FlipListDirective,
+    TranslocoDirective,
   ],
   templateUrl: './build-status-deployments.component.html',
 })
@@ -69,7 +72,7 @@ export class BuildStatusDeploymentsComponent {
     this.page.set(Math.min(Math.max(1, page), this.pageCount()));
   }
 
-  tagDescription(tag: string): string {
-    return FAILURE_TAG_DESCRIPTIONS[tag] ?? tag;
+  tagDescriptionKey(tag: string): string | undefined {
+    return FAILURE_TAG_DESCRIPTION_KEYS[tag];
   }
 }

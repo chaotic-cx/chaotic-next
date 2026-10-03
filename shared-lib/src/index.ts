@@ -53,6 +53,9 @@ export {
   snapBuildClassToEven,
   buildClassSortKey,
   buildClassLabel,
+  buildClassTierName,
+  parseBuildClass,
+  BUILD_CLASS_TIER_NAMES,
   CAUR_ALLOWED_CORS,
   PKG_TYPE_ARCH,
   PKG_TYPE_CHAOTIC,
@@ -69,6 +72,7 @@ export type {
   PkgType,
   PackageKey,
   BuildClass,
+  BuildClassTierName,
   BuildResourceAverages,
   BuildClassSuggestion,
 } from './lib/types/core';

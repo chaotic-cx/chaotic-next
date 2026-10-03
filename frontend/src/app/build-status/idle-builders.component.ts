@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
-import { BuildClassPipe } from '../pipes/build-class.pipe';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { LoadErrorComponent } from '../load-error/load-error.component';
+import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BuildStatusService } from './build-status.service';
 
@@ -8,7 +9,7 @@ const SKELETON_CHIP_COUNT = 3;
 
 @Component({
   selector: 'chaotic-build-status-idle-builders',
-  imports: [LoadErrorComponent, BuildStatusSectionComponent, BuildClassPipe],
+  imports: [LoadErrorComponent, BuildStatusSectionComponent, BuildClassPipe, TranslocoDirective],
   templateUrl: './idle-builders.component.html',
   styles: `
     .builder-chip {

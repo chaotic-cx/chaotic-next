@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
@@ -31,7 +32,7 @@ import { PackageLogService } from './package-log.service';
 
 @Component({
   selector: 'chaotic-package-log',
-  imports: [XtermLogComponent, TitleComponent, IconField, InputIcon, InputText],
+  imports: [XtermLogComponent, TitleComponent, IconField, InputIcon, InputText, TranslocoDirective],
   templateUrl: './package-log.component.html',
   styleUrl: './package-log.component.css',
   host: {
@@ -44,6 +45,7 @@ export class PackageLogComponent implements OnDestroy {
   private readonly meta = inject(Meta);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly transloco = inject(TranslocoService);
 
   readonly pkgname = input<string>();
   readonly timestamp = input<string>();
@@ -51,7 +53,7 @@ export class PackageLogComponent implements OnDestroy {
   protected readonly scrollToLine = signal<number | undefined>(undefined);
   protected readonly logChunks = signal<string[]>([]);
   protected readonly streaming = signal(false);
-  protected readonly error = signal<string | undefined>(undefined);
+  protected readonly streamFailed = signal(false);
 
   protected readonly builder = signal<string | undefined>(undefined);
   protected readonly searchQuery = signal('');
@@ -71,7 +73,10 @@ export class PackageLogComponent implements OnDestroy {
   });
 
   protected readonly subtitle = computed(() => {
-    if (!this.pkgname()) return 'Build log';
+    if (!this.pkgname()) {
+      return undefined;
+    }
+
     const parts = [this.formattedTimestamp()];
     const elapsed = this.elapsedLabel();
     if (elapsed) parts.push(elapsed);
@@ -136,7 +141,7 @@ export class PackageLogComponent implements OnDestroy {
     this.scanBuffer = '';
     this.logChunks.set([]);
     this.builder.set(undefined);
-    this.error.set(undefined);
+    this.streamFailed.set(false);
     this.streaming.set(false);
     this.isCompleted = false;
     this.endReason.set(undefined);
@@ -144,9 +149,9 @@ export class PackageLogComponent implements OnDestroy {
     this.cumulativeOffset = 0;
 
     updateSeoTags(this.meta, {
-      title: `${pkgname} build log · Chaotic-AUR`,
-      description: 'Build log of a Chaotic-AUR package',
-      keywords: 'Chaotic-AUR, build, log, package',
+      title: this.transloco.translate('packageLog.seo.title', { pkgname }),
+      description: this.transloco.translate('packageLog.seo.description'),
+      keywords: this.transloco.translate('packageLog.seo.keywords'),
       url: this.router.url,
     });
 
@@ -185,7 +190,7 @@ export class PackageLogComponent implements OnDestroy {
       },
       onErrorExhausted: () => {
         this.streaming.set(false);
-        this.error.set('Log stream ended unexpectedly. Please retry in a moment.');
+        this.streamFailed.set(true);
       },
     });
     this.stream.open();

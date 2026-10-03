@@ -1,50 +1,53 @@
 import { Component, inject, signal } from '@angular/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { AdminService } from '../admin.service';
 
 interface OperationConfirmation {
-  header: string;
-  message: string;
+  headerKey: string;
+  messageKey: string;
 }
 
 interface Operation {
   key: string;
-  label: string;
-  description: string;
-  actionLabel: string;
+  labelKey: string;
+  descriptionKey: string;
+  actionLabelKey: string;
   run: () => Promise<void>;
   confirmation?: OperationConfirmation;
 }
 
 interface OperationGroup {
-  label: string;
+  labelKey: string;
   spansTwoRows: boolean;
   operations: Operation[];
 }
 
 @Component({
   selector: 'chaotic-admin-operation-list',
+  imports: [TranslocoDirective],
   template: `
-    <section class="chaotic-card" aria-labelledby="operations-title">
+    <section class="chaotic-card" *transloco="let t" aria-labelledby="operations-title">
       <header class="chaotic-card__header">
-        <h2 class="chaotic-card__title" id="operations-title">Operations</h2>
-        <span class="operations-hint">Every operation runs in the background. A toast confirms the start.</span>
+        <h2 class="chaotic-card__title" id="operations-title">{{ t('admin.operationList.title') }}</h2>
+        <span class="operations-hint">{{ t('admin.operationList.hint') }}</span>
       </header>
       <div class="operation-groups">
-        @for (group of groups; track group.label) {
+        @for (group of groups; track group.labelKey) {
           <div
             class="operation-group"
             [class.operation-group--wide]="group.spansTwoRows"
-            [attr.aria-label]="group.label"
+            [attr.aria-label]="t(group.labelKey)"
             role="group"
           >
-            <p class="operation-group__label">{{ group.label }}</p>
+            <p class="operation-group__label">{{ t(group.labelKey) }}</p>
             <ul class="operation-list">
               @for (operation of group.operations; track operation.key) {
                 <li class="operation">
                   <div class="operation__text">
-                    <p class="operation__label">{{ operation.label }}</p>
-                    <p class="operation__desc">{{ operation.description }}</p>
+                    <p class="operation__label">{{ t(operation.labelKey) }}</p>
+                    <p class="operation__desc">{{ t(operation.descriptionKey) }}</p>
                   </div>
                   <button
                     class="operation__run"
@@ -55,9 +58,9 @@ interface OperationGroup {
                   >
                     @if (runningKey() === operation.key) {
                       <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-                      Starting
+                      {{ t('admin.operationList.starting') }}
                     } @else {
-                      {{ operation.actionLabel }}
+                      {{ t(operation.actionLabelKey) }}
                     }
                   </button>
                 </li>
@@ -183,83 +186,82 @@ interface OperationGroup {
 export class AdminOperationListComponent {
   private readonly service = inject(AdminService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly runningKey = signal<string | null>(null);
 
   protected readonly groups: OperationGroup[] = [
     {
-      label: 'Repo manager',
+      labelKey: marker('admin.operationList.groups.repoManager'),
       spansTwoRows: false,
       operations: [
         {
           key: 'repo-run',
-          label: 'Repo run',
-          description: 'Check Arch for updates and bump the Chaotic packages that depend on them.',
-          actionLabel: 'Run',
+          labelKey: marker('admin.operationList.repoRun.label'),
+          descriptionKey: marker('admin.operationList.repoRun.description'),
+          actionLabelKey: marker('admin.operationList.actions.run'),
           run: () => this.service.triggerRepoRun(),
         },
         {
           key: 'build-classes',
-          label: 'Build classes',
-          description: 'Read the build class of every active package from its .CI/config again.',
-          actionLabel: 'Rescan',
+          labelKey: marker('admin.operationList.buildClasses.label'),
+          descriptionKey: marker('admin.operationList.buildClasses.description'),
+          actionLabelKey: marker('admin.operationList.actions.rescan'),
           run: () => this.service.rescanBuildClasses(),
           confirmation: {
-            header: 'Rescan build classes',
-            message: 'Read the build class of every active package from its .CI/config again?',
+            headerKey: marker('admin.operationList.buildClasses.confirmHeader'),
+            messageKey: marker('admin.operationList.buildClasses.confirmMessage'),
           },
         },
       ],
     },
     {
-      label: 'ELF signal index',
+      labelKey: marker('admin.operationList.groups.elfSignalIndex'),
       spansTwoRows: true,
       operations: [
         {
           key: 'signal-scan',
-          label: 'Changed Arch packages',
-          description: 'Scan the Arch packages that changed since the last scan for ELF signals.',
-          actionLabel: 'Scan',
+          labelKey: marker('admin.operationList.signalScan.label'),
+          descriptionKey: marker('admin.operationList.signalScan.description'),
+          actionLabelKey: marker('admin.operationList.actions.scan'),
           run: () => this.service.triggerSignalScan(),
         },
         {
           key: 'index-arch',
-          label: 'Full Arch mirror',
-          description: 'Index every package of the Arch mirror. This takes long.',
-          actionLabel: 'Index',
+          labelKey: marker('admin.operationList.indexArch.label'),
+          descriptionKey: marker('admin.operationList.indexArch.description'),
+          actionLabelKey: marker('admin.operationList.actions.index'),
           run: () => this.service.indexArchMirror(),
         },
         {
           key: 'index-chaotic',
-          label: 'Full Chaotic repo',
-          description: 'Index every Chaotic-AUR package from the CDN mirror. This takes long.',
-          actionLabel: 'Index',
+          labelKey: marker('admin.operationList.indexChaotic.label'),
+          descriptionKey: marker('admin.operationList.indexChaotic.description'),
+          actionLabelKey: marker('admin.operationList.actions.index'),
           run: () => this.service.indexChaoticRepo(),
         },
         {
           key: 'derivations',
-          label: 'Signal derivations',
-          description:
-            'Rebuild the soname directory, pluginOf links and broken flags from stored analyses. No re-scan.',
-          actionLabel: 'Recompute',
+          labelKey: marker('admin.operationList.derivations.label'),
+          descriptionKey: marker('admin.operationList.derivations.description'),
+          actionLabelKey: marker('admin.operationList.actions.recompute'),
           run: () => this.service.recomputeSignalDerivations(),
           confirmation: {
-            header: 'Recompute signal derivations',
-            message:
-              'Rebuild the signal directory index, every pluginOf derivation and the broken flags from the stored analyses? No archives are scanned again.',
+            headerKey: marker('admin.operationList.derivations.confirmHeader'),
+            messageKey: marker('admin.operationList.derivations.confirmMessage'),
           },
         },
       ],
     },
     {
-      label: 'Merge requests',
+      labelKey: marker('admin.operationList.groups.mergeRequests'),
       spansTwoRows: false,
       operations: [
         {
           key: 'mr-scan',
-          label: 'Open merge requests',
-          description: 'Check open merge requests with the scan rules, auto-flag labels and VirusTotal.',
-          actionLabel: 'Scan',
+          labelKey: marker('admin.operationList.mrScan.label'),
+          descriptionKey: marker('admin.operationList.mrScan.description'),
+          actionLabelKey: marker('admin.operationList.actions.scan'),
           run: () => this.service.triggerMrScan(),
         },
       ],
@@ -272,11 +274,13 @@ export class AdminOperationListComponent {
       return;
     }
 
+    const message = this.transloco.translate(operation.confirmation.messageKey);
+
     this.confirmationService.confirm({
-      header: operation.confirmation.header,
-      message: `${operation.confirmation.message} The job runs in the background.`,
-      acceptLabel: operation.actionLabel,
-      rejectLabel: 'Cancel',
+      header: this.transloco.translate(operation.confirmation.headerKey),
+      message: this.transloco.translate('admin.operationList.confirmInBackground', { message }),
+      acceptLabel: this.transloco.translate(operation.actionLabelKey),
+      rejectLabel: this.transloco.translate('common.cancel'),
       accept: () => void this.run(operation),
     });
   }

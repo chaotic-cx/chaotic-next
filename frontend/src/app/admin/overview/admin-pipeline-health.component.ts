@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { BuildStatusService, type PipelineView } from '../../build-status/build-status.service';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
@@ -27,15 +28,19 @@ interface PipelineRow {
 
 @Component({
   selector: 'chaotic-admin-pipeline-health',
-  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink],
+  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink, TranslocoDirective],
   template: `
-    <section class="chaotic-card" aria-labelledby="overview-pipelines-title">
+    <section
+      class="chaotic-card"
+      *transloco="let t; prefix: 'admin.overview.pipelineHealth'"
+      aria-labelledby="overview-pipelines-title"
+    >
       <header class="chaotic-card__header">
-        <h2 class="chaotic-card__title" id="overview-pipelines-title">Pipelines</h2>
+        <h2 class="chaotic-card__title" id="overview-pipelines-title">{{ t('title') }}</h2>
         @if (failedCount() > 0) {
-          <span class="pipeline-failed">{{ failedCount() }} with failed jobs</span>
+          <span class="pipeline-failed">{{ t('failedCount', { count: failedCount() }) }}</span>
         }
-        <a class="chaotic-card__link" routerLink="/status">Build status</a>
+        <a class="chaotic-card__link" routerLink="/status">{{ t('buildStatusLink') }}</a>
       </header>
       @if (buildStatusService.loadingPipelines() && rows().length === 0) {
         <ul class="chaotic-mini-list" aria-hidden="true">
@@ -44,9 +49,9 @@ interface PipelineRow {
           }
         </ul>
       } @else if (buildStatusService.pipelinesFailed() && rows().length === 0) {
-        <chaotic-load-error (retry)="buildStatusService.getPipelines()" message="Could not load pipelines." />
+        <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.getPipelines()" />
       } @else if (rows().length === 0) {
-        <p class="chaotic-card__empty">No pipelines ran recently.</p>
+        <p class="chaotic-card__empty">{{ t('empty') }}</p>
       } @else {
         <ul class="chaotic-mini-list">
           @for (row of rows(); track row.id) {

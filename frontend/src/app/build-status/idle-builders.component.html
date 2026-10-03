@@ -1,11 +1,11 @@
-<section class="chaotic-card">
+<section class="chaotic-card" *transloco="let t; prefix: 'buildStatus.idle'">
   <chaotic-build-status-section
     [count]="
       buildStatusService.loadingQueue() || buildStatusService.queueFailed()
         ? undefined
         : buildStatusService.idleQueue().length
     "
-    title="Idle builders"
+    [title]="t('title')"
     icon="pi-server"
   />
   @if (buildStatusService.loadingQueue()) {
@@ -15,9 +15,9 @@
       }
     </div>
   } @else if (buildStatusService.queueFailed()) {
-    <chaotic-load-error (retry)="buildStatusService.refreshQueueStats()" message="Could not load builders." />
+    <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.refreshQueueStats()" />
   } @else if (buildStatusService.idleQueue().length === 0) {
-    <p class="chaotic-card__empty">All builders are busy</p>
+    <p class="chaotic-card__empty">{{ t('empty') }}</p>
   } @else {
     <ul class="flex flex-wrap gap-2 p-4">
       @for (builder of buildStatusService.idleQueue(); track builder.rawName) {

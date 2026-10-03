@@ -1,8 +1,12 @@
-<div class="card flex h-[20rem] flex-col">
+<div class="card flex h-[20rem] flex-col" *transloco="let t">
   @if (chart.hasData()) {
     <div class="flex items-center justify-between px-1 pb-2">
       <span class="text-sm text-ctp-subtext0">
-        {{ activeCount() }} package{{ activeCount() === 1 ? '' : 's' }} failing
+        @if (activeCount() === 1) {
+          {{ t('stats.charts.unresolvedFailures.countOne', { count: activeCount() }) }}
+        } @else {
+          {{ t('stats.charts.unresolvedFailures.countOther', { count: activeCount() }) }}
+        }
       </span>
       @if (isLoggedIn() && silencedCount() > 0) {
         <button
@@ -11,9 +15,9 @@
           type="button"
         >
           @if (showSilenced()) {
-            Hide silenced
+            {{ t('stats.charts.unresolvedFailures.hideSilenced') }}
           } @else {
-            Show silenced ({{ silencedCount() }})
+            {{ t('stats.charts.unresolvedFailures.showSilenced', { count: silencedCount() }) }}
           }
         </button>
       }
@@ -31,14 +35,19 @@
               @if (isRateLimited(row)) {
                 <i
                   class="pi pi-bolt shrink-0 text-ctp-yellow"
-                  pTooltip="Rate limited: skipped by the build dispatcher until its next retry"
+                  [pTooltip]="t('stats.charts.unresolvedFailures.rateLimited')"
                   tooltipPosition="top"
                 ></i>
               }
               @if (row.consecutiveFailures >= 2) {
                 <span
                   class="shrink-0 rounded-md bg-ctp-surface1 px-1.5 py-0.5 text-xs text-ctp-red max-sm:ml-auto"
-                  [pTooltip]="streakTooltip(row)"
+                  [pTooltip]="
+                    t('stats.charts.unresolvedFailures.streakTooltip', {
+                      count: row.consecutiveFailures,
+                      since: (row.streakStartedAt | relativeTime),
+                    })
+                  "
                   tooltipPosition="top"
                 >
                   ×{{ row.consecutiveFailures }} · {{ streakDurationLabel(row.streakStartedAt) }}
@@ -47,17 +56,17 @@
             </div>
             <div class="flex items-center gap-2 pl-4 max-sm:w-full sm:ml-auto sm:pl-0">
               <span class="text-xs whitespace-nowrap text-ctp-subtext0">
-                {{ formatRelativeTime(row.timestamp) }}
+                {{ row.timestamp | relativeTime }}
               </span>
               <div class="ml-auto flex items-center gap-2">
                 @if (row.logUrl; as logUrl) {
                   @if (isLogPurged(row.timestamp)) {
                     <button
                       class="inline-flex h-6 w-6 shrink-0 cursor-not-allowed items-center justify-center rounded-md text-ctp-overlay1 opacity-50"
-                      [attr.aria-label]="`Build log purged for ${row.pkgname}`"
+                      [attr.aria-label]="t('stats.charts.unresolvedFailures.logPurgedLabel', { package: row.pkgname })"
+                      [pTooltip]="t('stats.charts.unresolvedFailures.logPurged')"
                       disabled
                       type="button"
-                      pTooltip="Log purged"
                       tooltipPosition="left"
                     >
                       <i class="pi pi-bars"></i>
@@ -66,8 +75,8 @@
                     <a
                       class="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-ctp-mauve hover:text-ctp-text"
                       [routerLink]="packageLogRouteFromUrl(logUrl)"
-                      [attr.aria-label]="`Open build log for ${row.pkgname}`"
-                      pTooltip="Open build log"
+                      [attr.aria-label]="t('stats.charts.unresolvedFailures.openLogLabel', { package: row.pkgname })"
+                      [pTooltip]="t('stats.charts.unresolvedFailures.openLog')"
                       tooltipPosition="left"
                     >
                       <i class="pi pi-bars"></i>
@@ -79,9 +88,15 @@
                     class="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-ctp-overlay1 hover:text-ctp-text disabled:cursor-not-allowed disabled:opacity-50"
                     [disabled]="busyPkgname() !== null"
                     [attr.aria-label]="
-                      row.silenced ? `Unsilence ${row.pkgname}` : `Silence ${row.pkgname} until next failure`
+                      row.silenced
+                        ? t('stats.charts.unresolvedFailures.unsilenceLabel', { package: row.pkgname })
+                        : t('stats.charts.unresolvedFailures.silenceLabel', { package: row.pkgname })
                     "
-                    [pTooltip]="row.silenced ? 'Unsilence' : 'Silence until next failure'"
+                    [pTooltip]="
+                      row.silenced
+                        ? t('stats.charts.unresolvedFailures.unsilence')
+                        : t('stats.charts.unresolvedFailures.silence')
+                    "
                     (click)="toggleSilence(row)"
                     type="button"
                     tooltipPosition="left"
@@ -104,7 +119,9 @@
       }
     </ul>
     @if (visibleRows().length === 0) {
-      <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">Nothing failing right now.</p>
+      <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">
+        {{ t('stats.charts.unresolvedFailures.empty') }}
+      </p>
     }
   } @else if (chart.failed()) {
     <chaotic-load-error (retry)="chart.retry()" />
@@ -112,9 +129,9 @@
     <div class="flex flex-1 items-center justify-center">
       <i
         class="pi pi-spin pi-spinner text-ctp-overlay1"
+        [attr.aria-label]="t('common.loading')"
         style="font-size: 1.5rem"
         role="status"
-        aria-label="Loading"
       ></i>
     </div>
   }

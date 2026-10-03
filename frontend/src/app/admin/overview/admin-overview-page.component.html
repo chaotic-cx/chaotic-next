@@ -1,47 +1,49 @@
-<div class="overview">
-  <section class="overview-metrics chaotic-surface" aria-label="Repository health">
+<div class="overview" *transloco="let t; prefix: 'admin.overview.page'">
+  <section class="overview-metrics chaotic-surface" [attr.aria-label]="t('healthLabel')">
     <div class="metric metric--hero">
-      <span class="metric__label">Failing packages</span>
+      <span class="metric__label">{{ t('failing.label') }}</span>
       <span class="metric__value">{{ failuresLoading() ? '–' : failingCount() }}</span>
       <span class="metric__context">
         @if (failuresFailed()) {
-          Could not load failures
+          {{ t('failing.loadError') }}
         } @else if (failingCount() === 0) {
-          Every package built on its last attempt
+          {{ t('failing.none') }}
         } @else {
-          {{ rateLimitedCount() }} rate-limited · longest streak ×{{ longestStreak() }}
+          {{ t('failing.context', { rateLimited: rateLimitedCount(), streak: longestStreak() }) }}
         }
       </span>
     </div>
 
     <a class="metric metric--link" routerLink="/review-queue">
-      <span class="metric__label">Merge requests to review</span>
+      <span class="metric__label">{{ t('mergeRequests.label') }}</span>
       <span class="metric__value">{{ mrCounts()?.toReview ?? '–' }}</span>
       <span class="metric__context">
         @if (mrCountsFailed()) {
-          Could not load merge requests
+          {{ t('mergeRequests.loadError') }}
         } @else {
-          {{ mrCounts()?.onHold ?? '–' }} on hold
+          {{ t('mergeRequests.onHold', { count: mrCounts()?.onHold ?? '–' }) }}
         }
       </span>
     </a>
 
     <div class="metric">
-      <span class="metric__label">Build queue</span>
+      <span class="metric__label">{{ t('buildQueue.label') }}</span>
       <span class="metric__value">
         {{ buildStatusService.loadingQueue() ? '–' : buildStatusService.waitingQueue().length }}
       </span>
-      <span class="metric__context">{{ buildStatusService.activeQueue().length }} building now</span>
+      <span class="metric__context">{{
+        t('buildQueue.buildingNow', { count: buildStatusService.activeQueue().length })
+      }}</span>
     </div>
 
     <a class="metric metric--link" routerLink="../builders">
-      <span class="metric__label">Builders online</span>
+      <span class="metric__label">{{ t('builders.label') }}</span>
       <span class="metric__value">{{ buildStatusService.loadingQueue() ? '–' : onlineBuilders() }}</span>
       <span class="metric__context">
         @if (enabledBuilders(); as enabled) {
-          of {{ enabled }} enabled · {{ busyBuilders() }} busy
+          {{ t('builders.enabledBusy', { enabled: enabled, busy: busyBuilders() }) }}
         } @else {
-          {{ busyBuilders() }} busy
+          {{ t('builders.busy', { busy: busyBuilders() }) }}
         }
       </span>
     </a>
@@ -50,13 +52,13 @@
   <div class="overview-grid">
     <section class="chaotic-card overview-failures" aria-labelledby="overview-failures-title">
       <header class="chaotic-card__header">
-        <h2 class="chaotic-card__title" id="overview-failures-title">Unresolved failures</h2>
+        <h2 class="chaotic-card__title" id="overview-failures-title">{{ t('failures.title') }}</h2>
         @if (!failuresLoading() && !failuresFailed()) {
           <span class="chaotic-card__count">{{ failingCount() }}</span>
         }
         @if (isLoggedIn() && silencedCount() > 0) {
           <button class="chaotic-card__link overview-toggle" (click)="showSilenced.set(!showSilenced())" type="button">
-            {{ showSilenced() ? 'Hide silenced' : `Show ${silencedCount()} silenced` }}
+            {{ showSilenced() ? t('failures.hideSilenced') : t('failures.showSilenced', { count: silencedCount() }) }}
           </button>
         }
       </header>
@@ -68,11 +70,11 @@
           }
         </ul>
       } @else if (failuresFailed()) {
-        <chaotic-load-error (retry)="retryFailures()" message="Could not load unresolved failures." />
+        <chaotic-load-error [message]="t('failures.loadError')" (retry)="retryFailures()" />
       } @else if (failureRows().length === 0) {
         <div class="overview-empty">
           <i class="pi pi-check-circle text-ctp-green" aria-hidden="true"></i>
-          <p>Nothing is failing. Every package built on its last attempt.</p>
+          <p>{{ t('failures.empty') }}</p>
         </div>
       } @else {
         <chaotic-admin-failure-table

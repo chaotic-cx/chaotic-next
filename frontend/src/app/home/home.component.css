@@ -42,6 +42,8 @@
 .home-hero__search ::ng-deep input {
   box-sizing: border-box;
   height: 2.75rem;
+  /* The hero search stays larger than the other form controls. */
+  font-size: 1rem;
   padding-block: 0;
   text-align: left;
 }
@@ -138,6 +140,12 @@
 .home-news__hint {
   font-size: 0.8125rem;
   color: var(--ctp-mocha-overlay1);
+}
+
+.home-news__hint a {
+  color: var(--ctp-mocha-mauve);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .home-section {

@@ -1,0 +1,91 @@
+{
+  "seo": {
+    "description": "Documentation for Chaotic-AUR, a repository of packages for Arch Linux",
+    "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation"
+  },
+  "title": "Get started",
+  "subtitle": "Add Chaotic-AUR to pacman in five steps, then learn how builds and reviews work.",
+  "toc": "On this page",
+  "sections": {
+    "setup": "Setup",
+    "reportingBugs": "Reporting bugs",
+    "packageBuilds": "Package builds",
+    "requestingNewPackages": "Requesting new packages",
+    "recommendations": "Recommendations",
+    "updateReviewProcess": "Update review process",
+    "aurPackageScan": "AUR package scan",
+    "publicApi": "Public API",
+    "furtherInformation": "Further information"
+  },
+  "setup": {
+    "importKey": {
+      "title": "Import the primary key",
+      "text": "Retrieve and locally sign the <a href=\"https://keyserver.ubuntu.com/pks/lookup?search=3056513887B78AEB&amp;fingerprint=on&amp;op=index\" rel=\"noopener\" target=\"_blank\">primary key</a>. It lets pacman trust our keyring and mirror list."
+    },
+    "installKeyring": {
+      "title": "Install the keyring and mirror list",
+      "text": "This installs <a href=\"https://github.com/chaotic-aur/keyring\" rel=\"noopener\" target=\"_blank\">chaotic-keyring</a> and <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/chaotic-mirrorlist\" rel=\"noopener\" target=\"_blank\">chaotic-mirrorlist</a>."
+    },
+    "addRepository": {
+      "title": "Add the repository to pacman",
+      "text": "Append the following to the end of <code>/etc/pacman.conf</code>:"
+    },
+    "sync": {
+      "title": "Sync and update",
+      "text": "Run a full system update, which also syncs our mirror list."
+    },
+    "install": {
+      "title": "Install packages",
+      "text": "The repository is ready to use."
+    }
+  },
+  "reportingBugs": {
+    "text": "Report package bugs to our <a href=\"https://github.com/chaotic-aur/packages/issues/new/choose\" rel=\"noopener\" target=\"_blank\">bug tracker</a> or comment on the AUR first. Report upstream only after you confirm that the issue is not a packaging issue. This gets bugs fixed faster."
+  },
+  "packageBuilds": {
+    "deployLog": {
+      "intro": "The",
+      "linkText": "deploy log",
+      "outro": "shows whether a package was deployed after its last AUR update."
+    },
+    "reportFailures": "Report build failures or broken packages as an issue in our <a href=\"https://github.com/chaotic-aur/packages\" rel=\"noopener\" target=\"_blank\">GitHub repository</a>.",
+    "mainRepository": "Our main repository is on <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds\" rel=\"noopener\" target=\"_blank\">GitLab</a>, because the build system uses its CI pipelines extensively."
+  },
+  "requestingNewPackages": {
+    "text": "Submit package requests as an issue in our <a href=\"https://github.com/chaotic-aur/packages/issues/new/choose\" rel=\"noopener\" target=\"_blank\">GitHub repository</a>. We prefer GitHub for historical reasons, so requests on GitLab can go unnoticed.",
+    "beforeYouSubmit": "Before you submit a request:",
+    "searchIssues": "Search the <a href=\"https://github.com/chaotic-aur/packages/issues\" rel=\"noopener\" target=\"_blank\">existing issues</a>. We possibly handled or removed the package before, for a reason.",
+    "license": "Make sure that the license permits redistribution.",
+    "banList": "Make sure that the package is not on our <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds/-/blob/main/README.md#banished-and-rejected-packages-\" rel=\"noopener\" target=\"_blank\">ban list</a>."
+  },
+  "recommendations": {
+    "ignoreUpdates": "To keep a locally built version of a package (for example with native optimizations), <a href=\"https://www.archlinux.org/pacman/pacman.conf.5.html\" rel=\"noopener\" target=\"_blank\">ignore its updates</a> in <code>/etc/pacman.conf</code>:",
+    "specificRepository": "To install a package from a specific repository, prefix it with the repository name:",
+    "aurHelpers": "AUR helpers like <a href=\"https://github.com/Morganamilo/paru\" rel=\"noopener\" target=\"_blank\">paru</a> support the same syntax:"
+  },
+  "updateReviewProcess": {
+    "mergeRequests": "Some AUR updates change more than <code>pkgver</code>, <code>pkgrel</code> or checksums. For these, our build system opens a merge request against the <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds\" rel=\"noopener\" target=\"_blank\">pkgbuilds</a> repository. Packages that build from a git branch update automatically when only their upstream commit changes. The <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/state\" rel=\"noopener\" target=\"_blank\">state</a> branch tracks these commits. AUR updates that change the PKGBUILD are the exception.",
+    "humanApproval": "The system flags suspicious changes automatically. Then a maintainer inspects each diff for malicious changes. A merge request is merged and deployed only after a human approves it.",
+    "reviewQueue": {
+      "intro": "The",
+      "linkText": "review queue",
+      "outro": "shows the pending updates."
+    }
+  },
+  "aurPackageScan": {
+    "scanner": {
+      "intro": "Screen AUR packages before you install them with our",
+      "linkText": "AUR scanner",
+      "outro": ". It fetches the PKGBUILD and its sources and inspects them with our static security rules."
+    },
+    "insights": "It also shows maintainer insights, such as novice maintainers and orphaned packages. Always read the source code and PKGBUILD before you install a package. The scanner shows them next to the findings."
+  },
+  "publicApi": {
+    "intro": "Chaotic-AUR has a public JSON API to query packages, builds, metrics and repository state. The interactive",
+    "linkText": "API documentation",
+    "outro": "lists all endpoints and schemas."
+  },
+  "furtherInformation": {
+    "text": "The <a href=\"https://chaotic-manager.pages.dev\" rel=\"noopener\" target=\"_blank\">Chaotic Manager</a> documentation explains the build system in depth."
+  }
+}

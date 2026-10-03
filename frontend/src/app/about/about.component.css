@@ -74,13 +74,13 @@
   line-height: 1.6;
 }
 
-.about-card__body a,
+.about-card__body ::ng-deep a,
 .about-links a,
 .about-thanks a {
   color: var(--ctp-mocha-mauve);
 }
 
-.about-card__body a:hover,
+.about-card__body ::ng-deep a:hover,
 .about-links a:hover,
 .about-thanks a:hover {
   text-decoration: underline;

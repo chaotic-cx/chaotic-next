@@ -1,7 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MrAction } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
@@ -9,8 +12,8 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { ActivatedRoute, Router } from '@angular/router';
 import { commitUrl, mergeRequestUrl } from '../../gitlab-links';
+import { injectActiveTranslation } from '../../i18n/active-translation';
 import { AdminService } from '../admin.service';
 import {
   createAdminPagination,
@@ -33,9 +36,9 @@ const ACTION_SEVERITY: Record<string, TagSeverity> = {
 };
 
 const ACTION_OPTIONS = [
-  { label: 'Approve', value: 'approve' },
-  { label: 'Dangerous', value: 'dangerous' },
-  { label: 'Hold', value: 'hold' },
+  { labelKey: marker('admin.mrActions.actions.approve'), value: 'approve' },
+  { labelKey: marker('admin.mrActions.actions.dangerous'), value: 'dangerous' },
+  { labelKey: marker('admin.mrActions.actions.hold'), value: 'hold' },
 ];
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | null | undefined;
@@ -53,9 +56,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     TableModule,
     TagModule,
     Tooltip,
+    TranslocoDirective,
   ],
   template: `
-    <div class="table-container">
+    <div class="table-container" *transloco="let t; prefix: 'admin'">
       <p-table
         #mrActionsTable
         [value]="service.mrActions()?.items ?? []"
@@ -75,12 +79,12 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
           <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
             <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
               <p-select
-                [options]="actionOptions"
+                [options]="actionOptions()"
                 [ngModel]="service.mrActionActionFilter()"
+                [placeholder]="t('mrActions.columns.action')"
                 (ngModelChange)="setActionFilter($event)"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Action"
                 showClear
                 appendTo="body"
               />
@@ -92,23 +96,23 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               <input
                 class="w-full"
                 [value]="service.mrActionQuery()"
+                [placeholder]="t('mrActions.searchPlaceholder')"
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
-                placeholder="Search MR, commit, user, reason"
               />
             </p-iconfield>
           </div>
         </ng-template>
         <ng-template #header>
           <tr>
-            <th style="min-width: 3rem">ID</th>
-            <th style="min-width: 5rem">MR</th>
-            <th style="min-width: 7rem">Action</th>
-            <th style="min-width: 6rem">Commit</th>
-            <th style="min-width: 12rem">Reason</th>
-            <th style="min-width: 8rem">User</th>
-            <th style="min-width: 7rem">Created</th>
+            <th style="min-width: 3rem">{{ t('pages.columns.id') }}</th>
+            <th style="min-width: 5rem">{{ t('mrActions.columns.mr') }}</th>
+            <th style="min-width: 7rem">{{ t('mrActions.columns.action') }}</th>
+            <th style="min-width: 6rem">{{ t('pages.columns.commit') }}</th>
+            <th style="min-width: 12rem">{{ t('mrActions.columns.reason') }}</th>
+            <th style="min-width: 8rem">{{ t('pages.columns.user') }}</th>
+            <th style="min-width: 7rem">{{ t('pages.columns.created') }}</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-action>
@@ -165,7 +169,9 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             />
           } @else {
             <tr>
-              <td [attr.colspan]="7"><p class="chaotic-card__empty">No MR actions match these filters.</p></td>
+              <td [attr.colspan]="7">
+                <p class="chaotic-card__empty">{{ t('mrActions.empty') }}</p>
+              </td>
             </tr>
           }
         </ng-template>
@@ -177,11 +183,20 @@ export class AdminMrActionsPageComponent {
   readonly service = inject(AdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeTranslation = injectActiveTranslation();
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
-  readonly actionOptions = ACTION_OPTIONS;
+  readonly actionOptions = computed(() => {
+    this.activeTranslation();
+
+    return ACTION_OPTIONS.map((option) => ({
+      label: this.transloco.translate(option.labelKey),
+      value: option.value,
+    }));
+  });
 
   private readonly syncSearch = createDebounced(400, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.mrActionQuery()) }),

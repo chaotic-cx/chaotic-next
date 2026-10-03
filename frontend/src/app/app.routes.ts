@@ -1,56 +1,67 @@
 import { type Routes } from '@angular/router';
+import { provideTranslocoScope } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { authGuard } from './auth/auth.guard';
 import { backendChildGuard, backendGuard } from './backend-status/backend-required.guard';
+import { translationScopeResolver } from './i18n/translation-scope.resolver';
 import { MEMORIAL_2021, MEMORIAL_2024 } from './memorial/memorial.configs';
 import { AUTH_PRELOAD_DATA, SKIP_PRELOAD_DATA } from './preload.strategy';
 
+const TRANSLATION_SCOPE_RESOLVE = { translations: translationScopeResolver };
+
 export const routes: Routes = [
   {
-    title: 'Chaotic-AUR',
+    title: marker('routes.home'),
     path: '',
     loadComponent: () => import('./home/home.component').then((c) => c.HomeComponent),
   },
   {
-    title: 'Get started · Chaotic-AUR',
+    title: marker('routes.docs'),
+    providers: [provideTranslocoScope('docs')],
+    resolve: TRANSLATION_SCOPE_RESOLVE,
     path: 'docs',
     loadComponent: () => import('./docs/docs.component').then((c) => c.DocsComponent),
   },
   {
-    title: 'Privacy Policy · Chaotic-AUR',
+    title: marker('routes.privacy'),
+    providers: [provideTranslocoScope('privacy-policy')],
+    resolve: TRANSLATION_SCOPE_RESOLVE,
     path: 'privacy',
     loadComponent: () => import('./privacy-policy/privacy-policy.component').then((c) => c.PrivacyPolicyComponent),
   },
   {
-    title: 'Code of Conduct · Chaotic-AUR',
+    title: marker('routes.codeOfConduct'),
+    providers: [provideTranslocoScope('code-of-conduct')],
+    resolve: TRANSLATION_SCOPE_RESOLVE,
     path: 'code-of-conduct',
     loadComponent: () => import('./code-of-conduct/code-of-conduct.component').then((c) => c.CodeOfConductComponent),
   },
   {
-    title: 'Build status · Chaotic-AUR',
+    title: marker('routes.buildStatus'),
     path: 'status',
     canActivate: [backendGuard],
     loadComponent: () => import('./build-status/build-status.component').then((c) => c.BuildStatusComponent),
   },
   {
-    title: 'Deployments · Chaotic-AUR',
+    title: marker('routes.deployments'),
     path: 'deployments',
     canActivate: [backendGuard],
     loadComponent: () => import('./deploy-log/deploy-log.component').then((c) => c.DeployLogComponent),
   },
   {
-    title: 'Packages · Chaotic-AUR',
+    title: marker('routes.packages'),
     path: 'packages',
     canActivate: [backendGuard],
     loadComponent: () => import('./package-list/package-list.component').then((c) => c.PackageListComponent),
   },
   {
-    title: 'AUR Scan · Chaotic-AUR',
+    title: marker('routes.aurScan'),
     path: 'aur-scan',
     canActivate: [backendGuard],
     loadComponent: () => import('./aur-scan/pages/aur-scan-page.component').then((c) => c.AurScanPageComponent),
   },
   {
-    title: 'Statistics and data · Chaotic-AUR',
+    title: marker('routes.stats'),
     path: 'stats',
     canActivate: [backendGuard],
     loadComponent: () => import('./stats/stats.component').then((c) => c.StatsComponent),
@@ -99,7 +110,7 @@ export const routes: Routes = [
     ],
   },
   {
-    title: 'Review queue · Chaotic-AUR',
+    title: marker('routes.reviewQueue'),
     path: 'review-queue',
     canActivate: [backendGuard],
     loadComponent: () => import('./mr-overview/mr-overview.component').then((c) => c.MrOverviewComponent),
@@ -109,56 +120,62 @@ export const routes: Routes = [
     redirectTo: 'review-queue',
   },
   {
-    title: 'Pipeline logs · Chaotic-AUR',
+    title: marker('routes.pipelineLogs'),
     path: 'logs/:pipelineId',
     data: SKIP_PRELOAD_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./log-viewer/log-viewer.component').then((c) => c.LogViewerComponent),
   },
   {
-    title: 'Package log · Chaotic-AUR',
+    title: marker('routes.packageLog'),
     path: 'logs/package/:pkgname/:timestamp',
     data: SKIP_PRELOAD_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./package-log/package-log.component').then((c) => c.PackageLogComponent),
   },
   {
-    title: 'Mirrors · Chaotic-AUR',
+    title: marker('routes.mirrors'),
     path: 'mirrors',
     loadComponent: () => import('./mirrors/mirrors.component').then((c) => c.MirrorsComponent),
   },
   {
-    title: 'Mirror map · Chaotic-AUR',
+    title: marker('routes.mirrorMap'),
     path: 'map',
     data: SKIP_PRELOAD_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./map/map.component').then((c) => c.MapComponent),
   },
   {
-    title: 'Memorial 2024 · Chaotic-AUR',
+    title: marker('routes.memorial2024'),
+    providers: [provideTranslocoScope('memorial')],
+    resolve: TRANSLATION_SCOPE_RESOLVE,
     path: 'memorial-v2',
     data: { ...SKIP_PRELOAD_DATA, memorial: MEMORIAL_2024 },
     loadComponent: () => import('./memorial/memorial.component').then((c) => c.MemorialComponent),
   },
   {
-    title: 'Settings · Chaotic-AUR',
+    title: marker('routes.settings'),
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () => import('./settings/settings.component').then((c) => c.SettingsComponent),
   },
   {
-    title: 'About us · Chaotic-AUR',
+    title: marker('routes.about'),
+    providers: [provideTranslocoScope('about')],
+    resolve: TRANSLATION_SCOPE_RESOLVE,
     path: 'about',
     loadComponent: () => import('./about/about.component').then((c) => c.AboutComponent),
   },
   {
-    title: 'Memorial 2021 · Chaotic-AUR',
+    title: marker('routes.memorial2021'),
+    providers: [provideTranslocoScope('memorial')],
+    resolve: TRANSLATION_SCOPE_RESOLVE,
     path: 'memorial',
     data: { ...SKIP_PRELOAD_DATA, memorial: MEMORIAL_2021 },
     loadComponent: () => import('./memorial/memorial.component').then((c) => c.MemorialComponent),
   },
   {
-    title: 'Sign in · Chaotic-AUR',
+    title: marker('routes.login'),
     path: 'login',
     data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./login/login.component').then((c) => c.LoginComponent),
@@ -169,7 +186,9 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/auth-callback.component').then((c) => c.AuthCallbackComponent),
   },
   {
-    title: 'Admin · Chaotic-AUR',
+    title: marker('routes.admin'),
+    providers: [provideTranslocoScope('admin')],
+    resolve: TRANSLATION_SCOPE_RESOLVE,
     path: 'admin',
     canActivate: [authGuard],
     canActivateChild: [backendChildGuard],
@@ -249,13 +268,13 @@ export const routes: Routes = [
     ],
   },
   {
-    title: 'Backend unavailable · Chaotic-AUR',
+    title: marker('routes.backendDown'),
     path: 'backend-down',
     data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./backend-down/backend-down.component').then((c) => c.BackendDownComponent),
   },
   {
-    title: 'Not found · Chaotic-AUR',
+    title: marker('routes.notFound'),
     path: 'not-found',
     data: SKIP_PRELOAD_DATA,
     loadComponent: () => import('./not-found/not-found.component').then((c) => c.NotFoundComponent),

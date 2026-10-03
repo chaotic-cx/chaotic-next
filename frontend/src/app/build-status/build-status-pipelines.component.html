@@ -1,5 +1,5 @@
-<section class="chaotic-card">
-  <chaotic-build-status-section title="Pipelines" icon="pi-sitemap" />
+<section class="chaotic-card" *transloco="let t; prefix: 'buildStatus.pipelines'">
+  <chaotic-build-status-section [title]="t('title')" icon="pi-sitemap" />
   @if (buildStatusService.loadingPipelines() && paginatedPipelines().length === 0) {
     <ul aria-hidden="true">
       @for (_ of skeletonRows; track $index) {
@@ -7,9 +7,9 @@
       }
     </ul>
   } @else if (buildStatusService.pipelinesFailed() && paginatedPipelines().length === 0) {
-    <chaotic-load-error (retry)="buildStatusService.getPipelines()" message="Could not load pipelines." />
+    <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.getPipelines()" />
   } @else if (paginatedPipelines().length === 0) {
-    <p class="chaotic-card__empty">No recent pipelines</p>
+    <p class="chaotic-card__empty">{{ t('empty') }}</p>
   } @else {
     <chaotic-pipeline-list [pipelines]="paginatedPipelines()" (openPipeline)="openPipeline.emit($event)" />
     @if (pageCount() > 1) {

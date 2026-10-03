@@ -1,0 +1,21 @@
+<ng-container *transloco="let t; prefix: 'languageSwitcher'">
+  <p-button
+    [label]="activeLanguageCode()"
+    [ariaLabel]="t('ariaLabel', { language: activeLanguageName() })"
+    [pTooltip]="t('tooltip')"
+    (onClick)="languageMenu.toggle($event)"
+    icon="pi pi-language"
+    severity="secondary"
+    size="small"
+    tooltipPosition="left"
+    text
+    rounded
+  />
+  <p-menu
+    #languageMenu
+    [model]="languageItems()"
+    [popup]="true"
+    (onShow)="alignMenuEnd(languageMenu)"
+    appendTo="body"
+  />
+</ng-container>

@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { setPageSeo } from '../functions';
 import { ADMIN_NAV, findAdminNavItem } from './admin-nav';
 
@@ -22,13 +23,14 @@ interface IndicatorBox {
 
 @Component({
   selector: 'chaotic-admin',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, TranslocoDirective],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css',
 })
 export class AdminComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   private readonly routerEvents = toSignal(this.router.events, { initialValue: null });
   private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
@@ -45,9 +47,9 @@ export class AdminComponent {
 
   constructor() {
     setPageSeo(
-      'Admin · Chaotic-AUR',
-      'Administrative tools for the Chaotic-AUR backend',
-      'Chaotic-AUR, Admin, Repository, Packages, Builders, Archlinux',
+      this.transloco.translate('admin.layout.seo.title'),
+      this.transloco.translate('admin.layout.seo.description'),
+      this.transloco.translate('admin.layout.seo.keywords'),
     );
 
     afterRenderEffect(() => {

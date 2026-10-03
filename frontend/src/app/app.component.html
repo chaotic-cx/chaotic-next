@@ -1,14 +1,14 @@
-<div class="background flex min-h-svh flex-col">
-  <garuda-shell class="flex-1 p-2" [menuItems]="menuItems">
+<div class="background flex min-h-svh flex-col" *transloco="let t; prefix: 'app'">
+  <garuda-shell class="flex-1 p-2" [menuItems]="menuItems()">
     <div class="flex items-center gap-2" garudaShellBarStart>
-      <a class="flex items-center" routerLink="/" aria-label="Go to the home page">
+      <a class="flex items-center" [attr.aria-label]="t('goHome')" routerLink="/">
         <img ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="" />
       </a>
       <button
         class="mobile-nav-trigger chaotic-icon-btn"
         #mobileNavTrigger
         [attr.aria-expanded]="mobileNavOpen()"
-        [attr.aria-label]="mobileNavOpen() ? 'Close navigation menu' : 'Open navigation menu'"
+        [attr.aria-label]="mobileNavOpen() ? t('mobileNav.close') : t('mobileNav.open')"
         (click)="mobileNavOpen.update((open) => !open)"
         aria-controls="mobile-nav"
         type="button"
@@ -22,15 +22,16 @@
     <div class="flex items-center gap-2" garudaShellBarEnd>
       <div class="flex h-[15px] w-[15px] items-center justify-center">
         @if (loadingService.isLoading()) {
-          <p-progress-spinner [style]="{ width: '15px', height: '15px' }" ariaLabel="loading" strokeWidth="5" />
+          <p-progress-spinner [style]="{ width: '15px', height: '15px' }" [ariaLabel]="t('loading')" strokeWidth="5" />
         }
       </div>
+      <chaotic-language-switcher />
       <chaotic-auth-button />
     </div>
   </garuda-shell>
   <chaotic-footer [inert]="mobileNavOpen()" />
 
-  <chaotic-mobile-nav [items]="mobileItems" [visible]="mobileNavOpen()" (closed)="closeMobileNav(mobileNavTrigger)" />
+  <chaotic-mobile-nav [items]="mobileItems()" [visible]="mobileNavOpen()" (closed)="closeMobileNav(mobileNavTrigger)" />
 </div>
 
 <p-confirm-dialog [appendTo]="'body'" acceptButtonStyleClass="p-button-sm" rejectButtonStyleClass="p-button-sm" />

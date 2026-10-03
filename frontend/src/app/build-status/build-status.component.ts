@@ -2,6 +2,7 @@ import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { AppService } from '../app.service';
 import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
@@ -23,6 +24,7 @@ import { WaitingBuildsComponent } from './waiting-builds.component';
     ActiveBuildsComponent,
     WaitingBuildsComponent,
     IdleBuildersComponent,
+    TranslocoDirective,
   ],
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
@@ -34,16 +36,18 @@ export class BuildStatusComponent implements OnInit {
   messageToastService = inject(MessageToastService);
   router = inject(Router);
   route = inject(ActivatedRoute);
+  private readonly transloco = inject(TranslocoService);
 
   readonly dialogData = signal<PipelineView | null>(null);
   readonly dialogVisible = signal<boolean>(false);
 
   constructor() {
     setPageSeo(
-      'Build status',
-      'Current build status and queue information for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
+      this.transloco.translate('buildStatus.seo.title'),
+      this.transloco.translate('buildStatus.seo.description'),
+      this.transloco.translate('buildStatus.seo.keywords'),
     );
+
     this.appService.chaoticEvent.pipe(takeUntilDestroyed()).subscribe((event) => {
       this.buildStatusService.applyQueueEvent(event);
       if (event.type === 'pipeline') {

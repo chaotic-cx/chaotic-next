@@ -1,6 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { AuthService } from 'ngx-better-auth';
 import { filter, take, timeout } from 'rxjs';
 import {
@@ -12,27 +14,31 @@ import {
 
 const SESSION_TIMEOUT_MS = 10_000;
 
-function errorMessageForCode(code: string): string {
-  if (code === 'user_info_is_missing') {
-    return 'Only members of the Chaotic-AUR GitLab group are allowed to sign in.';
-  }
-  return 'Sign-in could not be completed. Please try again.';
+const ERROR_KEYS_BY_CODE: Record<string, string> = {
+  user_info_is_missing: marker('auth.callback.errors.notMember'),
+};
+
+const GENERIC_ERROR_KEY = marker('auth.callback.errors.generic');
+
+function errorKeyForCode(code: string): string {
+  return ERROR_KEYS_BY_CODE[code] ?? GENERIC_ERROR_KEY;
 }
 
 @Component({
   selector: 'chaotic-auth-callback',
+  imports: [TranslocoDirective],
   template: `
-    <div class="flex w-full items-center justify-center px-4 py-28 md:py-36">
+    <div class="flex w-full items-center justify-center px-4 py-28 md:py-36" *transloco="let t">
       <div
         class="w-full max-w-sm rounded-2xl border border-ctp-surface1 p-8 shadow-lg backdrop-blur-(--chaotic-blur) text-center"
       >
-        @if (errorMessage()) {
-          <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">Sign-in unavailable</h1>
-          <p class="text-ctp-subtext mt-2 text-sm">{{ errorMessage() }}</p>
+        @if (errorKey(); as errorKey) {
+          <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">{{ t('auth.callback.unavailable') }}</h1>
+          <p class="text-ctp-subtext mt-2 text-sm">{{ t(errorKey) }}</p>
         } @else {
           <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-ctp-surface1 border-t-ctp-blue"></div>
-          <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">Signing you in</h1>
-          <p class="text-ctp-subtext mt-2 text-sm">Completing GitLab authentication...</p>
+          <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">{{ t('auth.callback.signingIn') }}</h1>
+          <p class="text-ctp-subtext mt-2 text-sm">{{ t('auth.callback.completing') }}</p>
         }
       </div>
     </div>
@@ -42,13 +48,13 @@ export class AuthCallbackComponent {
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
 
-  readonly errorMessage = signal<string | null>(null);
+  readonly errorKey = signal<string | null>(null);
 
   constructor() {
     const code = this.route.snapshot.queryParamMap.get('error');
-    this.errorMessage.set(code ? errorMessageForCode(code) : null);
+    this.errorKey.set(code ? errorKeyForCode(code) : null);
 
-    if (this.errorMessage()) {
+    if (this.errorKey()) {
       return;
     }
 

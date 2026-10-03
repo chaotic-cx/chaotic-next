@@ -2,8 +2,10 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { TranslocoService } from '@jsverse/transloco';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../../../../app.service';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
@@ -19,6 +21,9 @@ export class ChartUseragentComponent {
   private readonly appService = inject(AppService);
   private readonly observer = inject(BreakpointObserver);
   protected readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly chart = chartResource<{ name: string; count: number }[]>(() =>
     this.appService.getUserAgentsResourceRequest(
@@ -28,6 +33,8 @@ export class ChartUseragentComponent {
   );
 
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
+    this.activeTranslation();
+
     // Don't display more than 30 user agents and truncate overly long ones.
     const maxUserAgents = 30;
     const maxNameLength = 50;
@@ -52,7 +59,7 @@ export class ChartUseragentComponent {
         datasets: [
           {
             data,
-            label: 'Router hits',
+            label: this.transloco.translate('stats.charts.routerHits'),
             backgroundColor: CATPPUCCIN_FLAVOURS,
           },
         ],

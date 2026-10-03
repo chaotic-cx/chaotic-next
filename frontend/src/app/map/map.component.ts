@@ -1,6 +1,7 @@
 import { Component, effect, inject, OnDestroy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { parseFocusQuery, setPageSeo } from '../functions';
 import { LiveTrafficService } from '../mirror-map/live-traffic.service';
@@ -11,13 +12,10 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
 
 @Component({
   selector: 'chaotic-map',
-  imports: [TitleComponent, MirrorMapComponent, LiveTrafficFeedComponent],
+  imports: [TitleComponent, MirrorMapComponent, LiveTrafficFeedComponent, TranslocoDirective],
   template: `
-    <div class="mx-auto flex w-full flex-1 flex-col">
-      <chaotic-title
-        title="Mirror map"
-        subtitleHtml="Where our mirrors are located. Pick a mirror from the overview to see details."
-      />
+    <div class="mx-auto flex w-full flex-1 flex-col" *transloco="let t; prefix: 'map'">
+      <chaotic-title [title]="t('title')" [subtitleHtml]="t('subtitle')" />
 
       <chaotic-mirror-map
         class="backdrop-blur-(--chaotic-blur) w-full flex-1"
@@ -51,6 +49,7 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
 export class MapComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly mirrorsService = inject(MirrorsService);
   protected readonly trafficService = inject(LiveTrafficService);
@@ -61,10 +60,11 @@ export class MapComponent implements OnDestroy {
 
   constructor() {
     setPageSeo(
-      'Mirror map · Chaotic-AUR',
-      'Map of Chaotic-AUR mirrors and live traffic.',
-      'Chaotic-AUR, Mirrors, Map, Repository, Archlinux, AUR, Live Traffic',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.mirrorMap') }),
+      this.transloco.translate('map.seo.description'),
+      this.transloco.translate('map.seo.keywords'),
     );
+
     this.trafficService.connect();
     const params = this.route.snapshot.queryParamMap;
     if (params.has('hits')) {

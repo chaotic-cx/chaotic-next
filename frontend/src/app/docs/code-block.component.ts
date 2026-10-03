@@ -1,19 +1,38 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Highlight } from 'ngx-highlightjs';
+import { injectActiveTranslation } from '../i18n/active-translation';
 
 const COPIED_RESET_MS = 1500;
 const PROMPT_PREFIX = /^\$ /gm;
+const SHELL_LANGUAGE = 'shell';
+
+interface CopiedLabelKeys {
+  one: string;
+  other: string;
+}
+
+const COPIED_COMMAND_KEYS: CopiedLabelKeys = {
+  one: marker('codeBlock.copiedCommandOne'),
+  other: marker('codeBlock.copiedCommandOther'),
+};
+
+const COPIED_LINE_KEYS: CopiedLabelKeys = {
+  one: marker('codeBlock.copiedLineOne'),
+  other: marker('codeBlock.copiedLineOther'),
+};
 
 @Component({
   selector: 'chaotic-code-block',
-  imports: [Highlight],
+  imports: [Highlight, TranslocoDirective],
   template: `
-    <div class="code-block">
+    <div class="code-block" *transloco="let t">
       <pre><code [highlight]="code()" [language]="language()"></code></pre>
       <button
         class="chaotic-icon-btn"
-        [attr.aria-label]="copied() ? copiedLabel() : 'Copy to clipboard'"
+        [attr.aria-label]="copied() ? copiedLabel() : t('common.copyToClipboard')"
         (click)="copy()"
         type="button"
       >
@@ -88,18 +107,28 @@ const PROMPT_PREFIX = /^\$ /gm;
 })
 export class CodeBlockComponent {
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly code = input.required<string>();
-  readonly language = input('shell');
+  readonly language = input(SHELL_LANGUAGE);
 
   protected readonly copied = signal(false);
 
   protected readonly copiedLabel = computed(() => {
+    this.activeTranslation();
+
     const lineCount = this.code()
       .split('\n')
       .filter((line) => line.trim() !== '').length;
-    const noun = this.language() === 'shell' ? 'command' : 'line';
-    return lineCount === 1 ? `Copied the ${noun}` : `Copied ${lineCount} ${noun}s`;
+    const keys = this.language() === SHELL_LANGUAGE ? COPIED_COMMAND_KEYS : COPIED_LINE_KEYS;
+
+    if (lineCount === 1) {
+      return this.transloco.translate(keys.one);
+    }
+
+    return this.transloco.translate(keys.other, { count: lineCount });
   });
 
   protected copy(): void {
@@ -112,7 +141,10 @@ export class CodeBlockComponent {
         setTimeout(() => this.copied.set(false), COPIED_RESET_MS);
       })
       .catch((err) => {
-        this.messageToastService.error('Copy failed', 'Failed copying to clipboard');
+        this.messageToastService.error(
+          this.transloco.translate('common.copyFailed'),
+          this.transloco.translate('common.failedCopyingToClipboard'),
+        );
         console.error(err);
       });
   }

@@ -89,18 +89,18 @@
   margin-top: 0.75rem;
 }
 
-.docs-section a {
+.docs-section ::ng-deep a {
   color: var(--ctp-mocha-mauve);
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--ctp-mocha-mauve) 40%, transparent);
   text-underline-offset: 0.2em;
 }
 
-.docs-section a:hover {
+.docs-section ::ng-deep a:hover {
   text-decoration-color: currentColor;
 }
 
-.docs-section :not(pre) > code {
+.docs-section ::ng-deep :not(pre) > code {
   padding: 0.1em 0.35em;
   border-radius: 4px;
   background: var(--ctp-mocha-surface0);

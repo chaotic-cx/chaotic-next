@@ -1,5 +1,6 @@
 import { Component, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { MultiSelectModule } from '@openng/optimus-ui/multiselect';
 import { ColumnVisibilityService } from './column-visibility.service';
 
@@ -11,21 +12,21 @@ export interface ColumnDef {
 
 @Component({
   selector: 'chaotic-column-toggle',
-  imports: [MultiSelectModule, FormsModule],
+  imports: [MultiSelectModule, FormsModule, TranslocoDirective],
   template: `
-    <div class="hidden sm:block">
+    <div class="hidden sm:block" *transloco="let t; prefix: 'tableColumns'">
       <p-multi-select
         class="sm:w-40"
         [(ngModel)]="selected"
         [options]="columns()"
         [maxSelectedLabels]="0"
         [showHeader]="false"
-        [tooltip]="'Choose visible columns'"
+        [tooltip]="t('tooltip')"
+        [selectedItemsLabel]="t('selectedItems')"
+        [placeholder]="t('placeholder')"
         (onChange)="persist()"
         optionLabel="label"
         optionValue="key"
-        selectedItemsLabel="{0} columns"
-        placeholder="Columns"
         appendTo="body"
       />
     </div>

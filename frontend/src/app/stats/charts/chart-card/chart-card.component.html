@@ -1,15 +1,15 @@
-<div [class]="containerClass()" [style.height.px]="height()">
+<div *transloco="let t; prefix: 'stats.chartCard'" [class]="containerClass()" [style.height.px]="height()">
   @if (hasData()) {
     <p-chart [class]="chartClass()" [data]="data()" [options]="options()" [responsive]="true" [type]="type()" />
   } @else if (failed()) {
     <div class="absolute inset-0 flex items-center justify-center">
-      <chaotic-load-error (retry)="retry.emit()" message="Could not load this chart." />
+      <chaotic-load-error [message]="t('loadError')" (retry)="retry.emit()" />
     </div>
   } @else if (loading()) {
-    <div class="chart-card__skeleton" role="status" aria-label="Loading chart"></div>
+    <div class="chart-card__skeleton" [attr.aria-label]="t('loading')" role="status"></div>
   } @else {
     <div class="absolute inset-0 flex items-center justify-center text-sm text-ctp-subtext0">
-      No data for this time range
+      {{ t('noData') }}
     </div>
   }
 </div>

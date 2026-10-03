@@ -1,12 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { type Build, BuildStatus, STATUS_LABELS } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
-import { LoadErrorComponent } from '../load-error/load-error.component';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Button } from '@openng/optimus-ui/button';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
@@ -18,6 +29,8 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { castTo, formatCpuTime, formatDuration, packageLogRouteFromUrl } from '../functions';
+import { injectActiveTranslation } from '../i18n/active-translation';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { statusIconClass } from '../status-icons';
 import { BytesPipe } from '../pipes/bytes.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
@@ -29,6 +42,42 @@ import { TitleComponent } from '../title/title.component';
 import { DeployLogService } from './deploy-log.service';
 
 const PAGE_SIZE = 25;
+const SECONDS_PER_MINUTE = 60;
+
+interface DeployColumn {
+  key: string;
+  labelKey: string;
+  defaultVisible?: boolean;
+}
+
+const DEPLOY_COLUMNS: DeployColumn[] = [
+  { key: 'pkgname', labelKey: marker('deployLog.columns.pkgname') },
+  { key: 'builder', labelKey: marker('deployLog.columns.builder') },
+  { key: 'repo', labelKey: marker('deployLog.columns.repo') },
+  { key: 'outcome', labelKey: marker('deployLog.columns.outcome') },
+  { key: 'failureTags', labelKey: marker('deployLog.columns.failureTags'), defaultVisible: true },
+  { key: 'logUrl', labelKey: marker('deployLog.columns.logUrl') },
+  { key: 'duration', labelKey: marker('deployLog.columns.duration') },
+  // Resource usage columns stay hidden unless explicitly enabled; most
+  // builds predate sampling and would only show "n/a".
+  { key: 'peakMemory', labelKey: marker('deployLog.columns.peakMemory'), defaultVisible: false },
+  { key: 'cpuTime', labelKey: marker('deployLog.columns.cpuTime'), defaultVisible: false },
+  { key: 'diskIo', labelKey: marker('deployLog.columns.diskIo'), defaultVisible: false },
+  { key: 'networkIo', labelKey: marker('deployLog.columns.networkIo'), defaultVisible: false },
+  { key: 'timestamp', labelKey: marker('deployLog.columns.timestamp') },
+  { key: 'actions', labelKey: marker('deployLog.columns.actions') },
+];
+
+const STATUS_LABEL_KEYS: Record<BuildStatus, string> = {
+  [BuildStatus.SUCCESS]: marker('deployLog.status.success'),
+  [BuildStatus.ALREADY_BUILT]: marker('deployLog.status.alreadyBuilt'),
+  [BuildStatus.SKIPPED]: marker('deployLog.status.skipped'),
+  [BuildStatus.FAILED]: marker('deployLog.status.failure'),
+  [BuildStatus.TIMED_OUT]: marker('deployLog.status.timeout'),
+  [BuildStatus.CANCELED]: marker('deployLog.status.canceled'),
+  [BuildStatus.CANCELED_REQUEUE]: marker('deployLog.status.canceledRequeue'),
+  [BuildStatus.SOFTWARE_FAILURE]: marker('deployLog.status.softwareFailure'),
+};
 
 @Component({
   selector: 'chaotic-deploy-log',
@@ -51,6 +100,7 @@ const PAGE_SIZE = 25;
     RouterLink,
     Tooltip,
     ColumnVisibilityComponent,
+    TranslocoDirective,
   ],
   templateUrl: './deploy-log.component.html',
   styleUrl: './deploy-log.component.css',
@@ -63,8 +113,12 @@ export class DeployLogComponent {
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
   protected readonly deployLogService = inject(DeployLogService);
   protected readonly columnVisibility = inject(ColumnVisibilityService);
+
+  private readonly activeTranslation = injectActiveTranslation();
+
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   protected readonly pageSize = PAGE_SIZE;
@@ -74,12 +128,21 @@ export class DeployLogComponent {
 
   readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
 
-  protected buildDuration(minutes: number | undefined): string {
-    return minutes ? formatDuration(Math.round(minutes * 60)) : 'n/a';
+  protected readonly statusLabelKeys = STATUS_LABEL_KEYS;
+
+  protected buildDuration(minutes: number | undefined): string | null {
+    if (!minutes) {
+      return null;
+    }
+
+    return formatDuration(Math.round(minutes * SECONDS_PER_MINUTE));
   }
 
-  protected buildCpuTime(nanoseconds: number | null | undefined): string {
-    if (nanoseconds === null || nanoseconds === undefined) return 'n/a';
+  protected buildCpuTime(nanoseconds: number | null | undefined): string | null {
+    if (nanoseconds === null || nanoseconds === undefined) {
+      return null;
+    }
+
     return formatCpuTime(nanoseconds);
   }
 
@@ -89,23 +152,24 @@ export class DeployLogComponent {
   readonly builder = input<string | string[]>();
   readonly status = input<string | string[]>();
 
-  protected readonly deployColumns: ColumnDef[] = [
-    { key: 'pkgname', label: 'Package name' },
-    { key: 'builder', label: 'Builder' },
-    { key: 'repo', label: 'Repository' },
-    { key: 'outcome', label: 'Outcome' },
-    { key: 'failureTags', label: 'Failure tags', defaultVisible: true },
-    { key: 'logUrl', label: 'Log URL' },
-    { key: 'duration', label: 'Duration' },
-    // Resource usage columns stay hidden unless explicitly enabled; most
-    // builds predate sampling and would only show "n/a".
-    { key: 'peakMemory', label: 'Peak memory', defaultVisible: false },
-    { key: 'cpuTime', label: 'CPU time', defaultVisible: false },
-    { key: 'diskIo', label: 'Disk I/O', defaultVisible: false },
-    { key: 'networkIo', label: 'Network I/O', defaultVisible: false },
-    { key: 'timestamp', label: 'Time of finish' },
-    { key: 'actions', label: 'Details' },
-  ];
+  protected readonly deployColumns = computed<ColumnDef[]>(() => {
+    this.activeTranslation();
+
+    return DEPLOY_COLUMNS.map((column) => ({
+      key: column.key,
+      label: this.transloco.translate(column.labelKey),
+      defaultVisible: column.defaultVisible,
+    }));
+  });
+
+  protected readonly statusOptions = computed(() => {
+    this.activeTranslation();
+
+    return this.deployLogService.statusOptions.map((option) => ({
+      ...option,
+      label: this.transloco.translate(STATUS_LABEL_KEYS[option.value]),
+    }));
+  });
 
   protected readonly searchModel = signal({ query: this.deployLogService.searchValue() });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {
@@ -113,7 +177,7 @@ export class DeployLogComponent {
   });
 
   constructor() {
-    this.columnVisibility.register('deploy-log-table', this.deployColumns);
+    this.columnVisibility.register('deploy-log-table', this.deployColumns());
     this.appService.chaoticEvent
       .pipe(
         filter((event) => event.type === 'build'),

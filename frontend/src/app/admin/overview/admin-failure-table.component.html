@@ -1,4 +1,4 @@
-<div class="failure-table-wrap">
+<div class="failure-table-wrap" *transloco="let t; prefix: 'admin.overview.failureTable'">
   <table class="failure-table">
     <colgroup>
       <col />
@@ -9,11 +9,13 @@
     </colgroup>
     <thead>
       <tr>
-        <th scope="col">Package</th>
-        <th class="cell-status" scope="col">Status</th>
-        <th class="is-numeric" scope="col">Streak</th>
-        <th class="is-numeric" scope="col">Last failure</th>
-        <th scope="col"><span class="sr-only">Actions</span></th>
+        <th scope="col">{{ t('columns.package') }}</th>
+        <th class="cell-status" scope="col">{{ t('columns.status') }}</th>
+        <th class="is-numeric" scope="col">{{ t('columns.streak') }}</th>
+        <th class="is-numeric" scope="col">{{ t('columns.lastFailure') }}</th>
+        <th scope="col">
+          <span class="sr-only">{{ t('columns.actions') }}</span>
+        </th>
       </tr>
     </thead>
     <tbody>
@@ -26,8 +28,8 @@
               @if (isRateLimited(row)) {
                 <i
                   class="pi pi-bolt text-ctp-yellow"
-                  [attr.aria-label]="'Rate limited'"
-                  pTooltip="Rate limited: the dispatcher skips it until its next retry"
+                  [attr.aria-label]="t('rateLimited.label')"
+                  [pTooltip]="t('rateLimited.tooltip')"
                   tooltipPosition="top"
                 ></i>
               }
@@ -45,8 +47,8 @@
                 <a
                   class="chaotic-icon-btn"
                   [routerLink]="packageLogRouteFromUrl(row.logUrl)"
-                  [attr.aria-label]="`Open build log of ${row.pkgname}`"
-                  pTooltip="Open build log"
+                  [attr.aria-label]="t('openLog.label', { pkgname: row.pkgname })"
+                  [pTooltip]="t('openLog.tooltip')"
                   tooltipPosition="left"
                 >
                   <i class="pi pi-align-left" aria-hidden="true"></i>
@@ -56,8 +58,12 @@
                 <button
                   class="chaotic-icon-btn"
                   [disabled]="busy()"
-                  [attr.aria-label]="(row.silenced ? 'Unsilence ' : 'Silence ') + row.pkgname"
-                  [pTooltip]="row.silenced ? 'Unsilence' : 'Silence until it fails again'"
+                  [attr.aria-label]="
+                    row.silenced
+                      ? t('silence.unsilenceLabel', { pkgname: row.pkgname })
+                      : t('silence.silenceLabel', { pkgname: row.pkgname })
+                  "
+                  [pTooltip]="row.silenced ? t('silence.unsilenceTooltip') : t('silence.silenceTooltip')"
                   (click)="toggleSilence.emit(row)"
                   type="button"
                   tooltipPosition="left"

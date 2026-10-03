@@ -1,6 +1,7 @@
 import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Divider } from '@openng/optimus-ui/divider';
 import { Panel } from '@openng/optimus-ui/panel';
@@ -11,18 +12,19 @@ import { TitleComponent } from '../title/title.component';
   selector: 'chaotic-privacy-policy',
   templateUrl: './privacy-policy.component.html',
   styleUrl: './privacy-policy.component.css',
-  imports: [Panel, Divider, TitleComponent, PrimeTemplate],
+  imports: [Panel, Divider, TitleComponent, PrimeTemplate, TranslocoDirective],
 })
 export class PrivacyPolicyComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly transloco = inject(TranslocoService);
 
   constructor() {
     setPageSeo(
-      'Privacy Policy · Chaotic-AUR',
-      'Privacy Policy for Chaotic-AUR, a repository of packages for Arch Linux',
-      'Chaotic-AUR, Privacy Policy, Data Protection, GDPR',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.privacy') }),
+      this.transloco.translate('privacyPolicy.seo.description'),
+      this.transloco.translate('privacyPolicy.seo.keywords'),
     );
   }
 
