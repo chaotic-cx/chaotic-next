@@ -30,7 +30,7 @@ const STATUS_DOT_CLASSES: Record<MirrorStatus, string> = {
         <span class="chaotic-row__meta">
           @if (mirror().latlon; as latlon) {
             <a
-              class="hover:text-ctp-mauve"
+              class="hover:text-ctp-mauve focus-visible:text-ctp-mauve"
               [routerLink]="['/map']"
               [queryParams]="{ focus: latlon.join(',') }"
               [pTooltip]="t('showOnMap')"
@@ -67,8 +67,8 @@ const STATUS_DOT_CLASSES: Record<MirrorStatus, string> = {
       border: 1px solid var(--chaotic-border);
       border-radius: var(--chaotic-radius-sm);
       font-size: 0.6875rem;
-      font-weight: 600;
-      color: var(--ctp-mocha-subtext1);
+      font-weight: var(--chaotic-weight-semibold);
+      color: var(--catppuccin-color-subtext1);
     }
   `,
 })

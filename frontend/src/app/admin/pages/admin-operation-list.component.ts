@@ -31,7 +31,13 @@ interface OperationGroup {
     <section class="chaotic-card" *transloco="let t" aria-labelledby="operations-title">
       <header class="chaotic-card__header">
         <h2 class="chaotic-card__title" id="operations-title">{{ t('admin.operationList.title') }}</h2>
-        <span class="operations-hint">{{ t('admin.operationList.hint') }}</span>
+        <span class="operations-hint" aria-live="polite">
+          @if (runningKey() === null) {
+            {{ t('admin.operationList.hint') }}
+          } @else {
+            {{ t('admin.operationList.busyHint') }}
+          }
+        </span>
       </header>
       <div class="operation-groups">
         @for (group of groups; track group.labelKey) {
@@ -53,6 +59,9 @@ interface OperationGroup {
                     class="operation__run"
                     [disabled]="runningKey() !== null"
                     [attr.aria-busy]="runningKey() === operation.key"
+                    [attr.title]="
+                      runningKey() !== null && runningKey() !== operation.key ? t('admin.operationList.busyHint') : null
+                    "
                     (click)="start(operation)"
                     type="button"
                   >
@@ -75,7 +84,7 @@ interface OperationGroup {
     .operations-hint {
       margin-left: auto;
       font-size: 0.8125rem;
-      color: var(--ctp-mocha-overlay1);
+      color: var(--chaotic-fg-faint);
     }
 
     @media (max-width: 767px) {
@@ -104,8 +113,8 @@ interface OperationGroup {
     .operation-group__label {
       padding-top: 0.75rem;
       font-size: 0.75rem;
-      font-weight: 500;
-      color: var(--ctp-mocha-overlay1);
+      font-weight: var(--chaotic-weight-medium);
+      color: var(--chaotic-fg-faint);
     }
 
     .operation {
@@ -127,15 +136,15 @@ interface OperationGroup {
 
     .operation__label {
       font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--ctp-mocha-text);
+      font-weight: var(--chaotic-weight-medium);
+      color: var(--catppuccin-color-text);
     }
 
     .operation__desc {
       margin-top: 0.125rem;
       font-size: 0.8125rem;
       line-height: 1.45;
-      color: var(--ctp-mocha-subtext0);
+      color: var(--chaotic-fg-muted);
     }
 
     .operation__run {
@@ -145,26 +154,32 @@ interface OperationGroup {
       justify-content: center;
       gap: 0.375rem;
       width: 7rem;
-      height: 2rem;
+      min-height: 2rem;
       border: 1px solid var(--chaotic-border);
       border-radius: var(--chaotic-radius-sm);
       font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--ctp-mocha-text);
+      font-weight: var(--chaotic-weight-semibold);
+      color: var(--catppuccin-color-text);
       cursor: pointer;
       transition:
-        border-color 120ms ease-out,
-        color 120ms ease-out,
-        background-color 120ms ease-out;
+        border-color var(--chaotic-duration-fast) var(--chaotic-ease-out),
+        color var(--chaotic-duration-fast) var(--chaotic-ease-out),
+        background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+    }
+
+    @media (pointer: coarse) {
+      .operation__run {
+        min-height: 2.75rem;
+      }
     }
 
     .operation__run:hover:not(:disabled) {
-      border-color: var(--ctp-mocha-mauve);
-      color: var(--ctp-mocha-mauve);
+      border-color: var(--catppuccin-color-mauve);
+      color: var(--catppuccin-color-mauve);
     }
 
     .operation__run:active:not(:disabled) {
-      background: color-mix(in srgb, var(--ctp-mocha-mauve) 10%, transparent);
+      background: color-mix(in srgb, var(--catppuccin-color-mauve) 10%, transparent);
     }
 
     .operation__run:disabled {
@@ -174,11 +189,11 @@ interface OperationGroup {
 
     .operation__run[aria-busy='true'] {
       opacity: 1;
-      color: var(--ctp-mocha-subtext0);
+      color: var(--chaotic-fg-muted);
     }
 
     .operation__run:focus-visible {
-      outline: 2px solid var(--ctp-mocha-mauve);
+      outline: 2px solid var(--catppuccin-color-mauve);
       outline-offset: 2px;
     }
   `,

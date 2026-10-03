@@ -9,7 +9,7 @@
   } @else if (buildStatusService.pipelinesFailed() && paginatedPipelines().length === 0) {
     <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.getPipelines()" />
   } @else if (paginatedPipelines().length === 0) {
-    <p class="chaotic-card__empty">{{ t('empty') }}</p>
+    <chaotic-empty-state [message]="t('empty')" icon="pi-sitemap" />
   } @else {
     <chaotic-pipeline-list [pipelines]="paginatedPipelines()" (openPipeline)="openPipeline.emit($event)" />
     @if (pageCount() > 1) {

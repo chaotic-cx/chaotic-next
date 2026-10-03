@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormField, form, required, submit } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ArchPackage, PKG_TYPE_ARCH } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Dialog } from '@openng/optimus-ui/dialog';
@@ -12,16 +13,24 @@ import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
+import { TablePageReportDirective } from '../../table-page-report.directive';
 import { AdminService, ArchPackageFormData } from '../admin.service';
 import {
   createAdminPagination,
   type StatefulTableRef,
   createDebounced,
+  QUERY_SYNC_DEBOUNCE_MS,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
   restoreQueryParams,
 } from '../admin-url-sync';
+import { EditConflictGuard } from '../edit-conflict';
+import { EditConflictNoticeComponent } from '../edit-conflict-notice.component';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
@@ -32,18 +41,27 @@ interface ArchPackageFormModel {
   arch: string;
 }
 
+function archPackageConflictFields(pkg: ArchPackage): Record<string, unknown> {
+  return { pkgname: pkg.pkgname, version: pkg.version, pkgrel: pkg.pkgrel, arch: pkg.arch };
+}
+
 @Component({
   selector: 'chaotic-admin-arch-packages-page',
   imports: [
     TableSkeletonRowsComponent,
+    EditConflictNoticeComponent,
     Button,
+    ClearFiltersComponent,
     Dialog,
+    EmptyStateComponent,
     FormField,
     FormsModule,
     IconField,
     InputIcon,
     InputText,
+    LoadErrorComponent,
     TableModule,
+    TablePageReportDirective,
     Tooltip,
     TranslocoDirective,
   ],
@@ -57,24 +75,27 @@ interface ArchPackageFormModel {
           [paginator]="true"
           [lazy]="true"
           [totalRecords]="service.archPackagesTotal()"
-          [showCurrentPageReport]="true"
+          [chaoticTableFailed]="service.archPackagesStatus.failed()"
           [rowsPerPageOptions]="[25, 50, 100]"
           (onLazyLoad)="onLazyLoad(archPackagesTable, $event)"
           dataKey="id"
           stateStorage="local"
           stateKey="admin-arch-packages-table"
           paginatorDropdownAppendTo="body"
+          chaoticPageReport
         >
           <ng-template #caption>
-            <div class="flex">
-              <p-iconfield class="ml-auto w-full sm:w-64" iconPosition="left">
+            <div class="flex flex-wrap items-center justify-end gap-2.5">
+              <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
+              <p-iconfield class="w-full sm:w-64" iconPosition="left">
                 <p-inputicon>
-                  <i class="pi pi-search"></i>
+                  <i class="pi pi-search" aria-hidden="true"></i>
                 </p-inputicon>
                 <input
                   class="w-full"
                   [value]="service.archQuery()"
                   [placeholder]="t('admin.pages.searchPkgname')"
+                  [attr.aria-label]="t('admin.pages.searchPkgname')"
                   (input)="onSearch($event)"
                   pInputText
                   type="text"
@@ -96,9 +117,17 @@ interface ArchPackageFormModel {
           <ng-template pTemplate="body" let-pkg>
             <tr>
               <td>{{ pkg.id }}</td>
-              <td>{{ pkg.pkgname }}</td>
-              <td>{{ pkg.version }}{{ pkg.pkgrel ? '-' + pkg.pkgrel : '' }}</td>
-              <td>{{ pkg.arch }}</td>
+              <td>
+                <span class="block max-w-xs truncate" [title]="pkg.pkgname">{{ pkg.pkgname }}</span>
+              </td>
+              <td>
+                @if (pkg.version) {
+                  {{ pkg.version }}{{ pkg.pkgrel ? '-' + pkg.pkgrel : '' }}
+                } @else {
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                }
+              </td>
+              <td>{{ pkg.arch ?? missingValue }}</td>
               <td class="cell-actions">
                 <div class="flex items-center justify-end gap-1">
                   <button
@@ -145,7 +174,21 @@ interface ArchPackageFormModel {
             } @else {
               <tr>
                 <td [attr.colspan]="5">
-                  <p class="chaotic-card__empty">{{ t('admin.archPackages.empty') }}</p>
+                  @if (service.archPackagesStatus.failed()) {
+                    <chaotic-load-error
+                      [message]="t('admin.archPackages.loadError')"
+                      [error]="service.archPackagesStatus.error()"
+                      (retry)="service.archPackagesStatus.reload()"
+                    />
+                  } @else if (filtersActive()) {
+                    <chaotic-empty-state [filtered]="true" (clearFilters)="clearFilters()">
+                      <p>{{ t('admin.archPackages.empty') }}</p>
+                    </chaotic-empty-state>
+                  } @else {
+                    <chaotic-empty-state [hint]="t('admin.archPackages.firstRun.hint')">
+                      <p>{{ t('admin.archPackages.firstRun.message') }}</p>
+                    </chaotic-empty-state>
+                  }
                 </td>
               </tr>
             }
@@ -182,7 +225,14 @@ interface ArchPackageFormModel {
             <span class="text-ctp-text text-sm">{{ t('admin.pages.columns.arch') }}</span>
             <input [formField]="packageForm.arch" pInputText type="text" />
           </label>
-          <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          @if (conflict.changed()) {
+            <chaotic-edit-conflict-notice
+              [messageKey]="conflictMessageKey"
+              (review)="reviewConflict()"
+              (saveAnyway)="saveAnyway()"
+            />
+          }
+          <div class="flex flex-wrap justify-end gap-2">
             <p-button
               [label]="t('common.cancel')"
               (onClick)="dialogVisible.set(false)"
@@ -190,7 +240,6 @@ interface ArchPackageFormModel {
               severity="secondary"
               text
               size="small"
-              styleClass="w-full sm:w-auto"
             />
             <p-button
               [disabled]="packageForm().invalid()"
@@ -198,7 +247,6 @@ interface ArchPackageFormModel {
               type="submit"
               severity="primary"
               size="small"
-              styleClass="w-full sm:w-auto"
             />
           </div>
         </form>
@@ -213,13 +261,18 @@ export class AdminArchPackagesPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+  protected readonly missingValue = MISSING_VALUE;
+
+  protected readonly filtersActive = computed(() => this.service.archQuery() !== '');
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<ArchPackage | null>(null);
+  protected readonly conflict = new EditConflictGuard<ArchPackage>(archPackageConflictFields);
+  protected readonly conflictMessageKey = marker('admin.editConflict.messages.archPackage');
 
-  private readonly syncSearch = createDebounced(400, () =>
+  private readonly syncSearch = createDebounced(QUERY_SYNC_DEBOUNCE_MS, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.archQuery()) }),
   );
 
@@ -239,22 +292,53 @@ export class AdminArchPackagesPageComponent {
   }
 
   openEdit(pkg: ArchPackage): void {
+    this.conflict.begin(pkg);
     this.editing.set(pkg);
+    this.fillForm(pkg);
+    this.dialogVisible.set(true);
+  }
+
+  private fillForm(pkg: ArchPackage): void {
     this.model.set({
       pkgname: pkg.pkgname,
       version: pkg.version ?? '',
       pkgrel: pkg.pkgrel === undefined ? '' : String(pkg.pkgrel),
       arch: pkg.arch ?? '',
     });
-    this.dialogVisible.set(true);
+  }
+
+  protected reviewConflict(): void {
+    const latest = this.conflict.review();
+    if (latest === null) {
+      return;
+    }
+
+    this.editing.set(latest);
+    this.fillForm(latest);
+  }
+
+  protected saveAnyway(): void {
+    this.conflict.overwrite();
+    this.save();
   }
 
   save(): void {
     submit(this.packageForm, async () => {
-      const data = this.toFormData(this.model());
       const current = this.editing();
-      if (current) await this.service.updateArchPackage(current.id, data);
-      this.dialogVisible.set(false);
+      if (!current) {
+        this.dialogVisible.set(false);
+        return;
+      }
+
+      const unchanged = await this.conflict.confirmUnchanged(() => this.service.findArchPackage(current));
+      if (!unchanged) {
+        return;
+      }
+
+      const saved = await this.service.updateArchPackage(current.id, this.toFormData(this.model()));
+      if (saved) {
+        this.dialogVisible.set(false);
+      }
     });
   }
 
@@ -281,13 +365,24 @@ export class AdminArchPackagesPageComponent {
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);
     this.service.archPage.set(this.pagination.page());
-    this.service.archPerPage.set(event.rows ?? 25);
+    this.service.archPerPage.set(this.pagination.perPage());
+  }
+
+  clearFilters(): void {
+    this.service.archQuery.set('');
+    this.resetToFirstPage();
+    patchQueryParams(this.router, this.route, { q: null });
   }
 
   onSearch(event: Event): void {
     this.service.archQuery.set((event.target as HTMLInputElement).value);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     this.syncSearch();
+  }
+
+  private resetToFirstPage(): void {
+    this.pagination.resetPage();
+    this.service.archPage.set(this.pagination.page());
   }
 
   private toFormData(model: ArchPackageFormModel): ArchPackageFormData {

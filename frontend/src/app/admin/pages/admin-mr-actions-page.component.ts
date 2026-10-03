@@ -12,13 +12,19 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
 import { commitUrl, mergeRequestUrl } from '../../gitlab-links';
 import { injectActiveTranslation } from '../../i18n/active-translation';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
+import { TablePageReportDirective } from '../../table-page-report.directive';
 import { AdminService } from '../admin.service';
 import {
   createAdminPagination,
   type StatefulTableRef,
   createDebounced,
+  QUERY_SYNC_DEBOUNCE_MS,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
@@ -47,13 +53,17 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
   selector: 'chaotic-admin-mr-actions-page',
   imports: [
     TableSkeletonRowsComponent,
+    ClearFiltersComponent,
     DatePipe,
+    EmptyStateComponent,
     FormsModule,
     IconField,
     InputIcon,
     InputText,
+    LoadErrorComponent,
     Select,
     TableModule,
+    TablePageReportDirective,
     TagModule,
     Tooltip,
     TranslocoDirective,
@@ -67,36 +77,40 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="service.mrActionsTotal()"
-        [showCurrentPageReport]="true"
+        [chaoticTableFailed]="service.mrActionsStatus.failed()"
         [rowsPerPageOptions]="[25, 50, 100]"
         (onLazyLoad)="onLazyLoad(mrActionsTable, $event)"
         dataKey="id"
         stateStorage="local"
         stateKey="admin-mr-actions-table"
         paginatorDropdownAppendTo="body"
+        chaoticPageReport
       >
         <ng-template #caption>
           <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-            <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+            <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
               <p-select
                 [options]="actionOptions()"
                 [ngModel]="service.mrActionActionFilter()"
                 [placeholder]="t('mrActions.columns.action')"
+                [ariaLabel]="t('mrActions.actionFilterLabel')"
                 (ngModelChange)="setActionFilter($event)"
                 optionLabel="label"
                 optionValue="value"
                 showClear
                 appendTo="body"
               />
+              <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
             </div>
             <p-iconfield class="w-full sm:w-64" iconPosition="left">
               <p-inputicon>
-                <i class="pi pi-search"></i>
+                <i class="pi pi-search" aria-hidden="true"></i>
               </p-inputicon>
               <input
                 class="w-full"
                 [value]="service.mrActionQuery()"
                 [placeholder]="t('mrActions.searchPlaceholder')"
+                [attr.aria-label]="t('mrActions.searchPlaceholder')"
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
@@ -120,7 +134,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <td>{{ action.id }}</td>
             <td>
               <a
-                class="cursor-pointer text-ctp-mauve hover:underline"
+                class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
                 [href]="mrUrl(action.mergeRequestIid)"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -134,7 +148,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <td>
               @if (action.commitSha) {
                 <a
-                  class="cursor-pointer text-ctp-mauve hover:underline"
+                  class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
                   [href]="commitUrl(action.commitSha)"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -142,7 +156,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                   <code class="text-sm">{{ shortSha(action.commitSha) }}</code>
                 </a>
               } @else {
-                <span class="text-ctp-subtext0">—</span>
+                <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
             <td>
@@ -151,11 +165,11 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                   action.reason
                 }}</span>
               } @else {
-                <span class="text-ctp-subtext0">—</span>
+                <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
             <td>
-              <span class="font-medium">{{ action.userName }}</span>
+              <span class="font-medium">{{ action.userName || missingValue }}</span>
             </td>
             <td>{{ action.createdAt | date: 'short' }}</td>
           </tr>
@@ -170,7 +184,21 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
           } @else {
             <tr>
               <td [attr.colspan]="7">
-                <p class="chaotic-card__empty">{{ t('mrActions.empty') }}</p>
+                @if (service.mrActionsStatus.failed()) {
+                  <chaotic-load-error
+                    [message]="t('mrActions.loadError')"
+                    [error]="service.mrActionsStatus.error()"
+                    (retry)="service.mrActionsStatus.reload()"
+                  />
+                } @else if (filtersActive()) {
+                  <chaotic-empty-state [filtered]="true" (clearFilters)="clearFilters()">
+                    <p>{{ t('mrActions.empty') }}</p>
+                  </chaotic-empty-state>
+                } @else {
+                  <chaotic-empty-state [hint]="t('mrActions.firstRun.hint')">
+                    <p>{{ t('mrActions.firstRun.message') }}</p>
+                  </chaotic-empty-state>
+                }
               </td>
             </tr>
           }
@@ -186,6 +214,11 @@ export class AdminMrActionsPageComponent {
   private readonly transloco = inject(TranslocoService);
   private readonly activeTranslation = injectActiveTranslation();
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+  protected readonly missingValue = MISSING_VALUE;
+
+  protected readonly filtersActive = computed(
+    () => this.service.mrActionQuery() !== '' || this.service.mrActionActionFilter() !== undefined,
+  );
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -198,7 +231,7 @@ export class AdminMrActionsPageComponent {
     }));
   });
 
-  private readonly syncSearch = createDebounced(400, () =>
+  private readonly syncSearch = createDebounced(QUERY_SYNC_DEBOUNCE_MS, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.mrActionQuery()) }),
   );
 
@@ -227,18 +260,30 @@ export class AdminMrActionsPageComponent {
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);
     this.service.mrActionPage.set(this.pagination.page());
-    this.service.mrActionPerPage.set(event.rows ?? 25);
+    this.service.mrActionPerPage.set(this.pagination.perPage());
   }
 
   onSearch(event: Event): void {
     this.service.mrActionQuery.set((event.target as HTMLInputElement).value);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     this.syncSearch();
   }
 
   setActionFilter(value: string | null | undefined): void {
     this.service.mrActionActionFilter.set(value ?? undefined);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     patchQueryParams(this.router, this.route, { action: stringFilterToQuery(value ?? undefined) });
+  }
+
+  clearFilters(): void {
+    this.service.mrActionQuery.set('');
+    this.service.mrActionActionFilter.set(undefined);
+    this.resetToFirstPage();
+    patchQueryParams(this.router, this.route, { q: null, action: null });
+  }
+
+  private resetToFirstPage(): void {
+    this.pagination.resetPage();
+    this.service.mrActionPage.set(this.pagination.page());
   }
 }

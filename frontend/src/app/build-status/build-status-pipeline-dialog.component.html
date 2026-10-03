@@ -26,7 +26,7 @@
         >
       </span>
       <a
-        class="flex cursor-pointer items-center gap-1.5 text-ctp-mauve hover:text-ctp-text"
+        class="flex cursor-pointer items-center gap-1.5 text-ctp-mauve hover:text-ctp-text focus-visible:text-ctp-text"
         [href]="dialog.pipeline.web_url"
         target="_blank"
         rel="noopener"
@@ -35,7 +35,7 @@
         <span>GitLab</span>
       </a>
       <a
-        class="flex cursor-pointer items-center gap-1.5 font-mono text-ctp-mauve hover:text-ctp-text"
+        class="flex cursor-pointer items-center gap-1.5 font-mono text-ctp-mauve hover:text-ctp-text focus-visible:text-ctp-text"
         [href]="`https://gitlab.com/chaotic-aur/pkgbuilds/-/commit/${dialog.pipeline.sha}`"
         [pTooltip]="t('viewCommit')"
         target="_blank"
@@ -55,7 +55,7 @@
             <div class="min-w-0 flex-1">
               <div class="flex items-center justify-between gap-3">
                 <a
-                  class="truncate cursor-pointer font-semibold text-ctp-mauve hover:text-ctp-text"
+                  class="truncate cursor-pointer font-semibold text-ctp-mauve hover:text-ctp-text focus-visible:text-ctp-text"
                   [href]="job.target_url ?? undefined"
                   target="_blank"
                   rel="noopener"
@@ -88,7 +88,7 @@
     } @else {
       <div class="ml-2.5">
         <a
-          class="text-ctp-mauve hover:underline inline-flex cursor-pointer items-center gap-1"
+          class="text-ctp-mauve hover:underline focus-visible:underline inline-flex cursor-pointer items-center gap-1"
           [routerLink]="['/logs', dialog.pipeline.id]"
           [pTooltip]="t('openLogs')"
           tooltipPosition="left"

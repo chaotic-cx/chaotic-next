@@ -16,7 +16,7 @@
         [ngModelOptions]="{ standalone: true }"
         [suggestions]="suggestions()"
         [delay]="300"
-        [minQueryLength]="3"
+        [minQueryLength]="minQueryLength"
         [ariaLabel]="t('inputLabel')"
         [placeholder]="t('inputPlaceholder')"
         (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
@@ -26,6 +26,15 @@
         appendTo="body"
       />
     </form>
+
+    @if (!isLoggedIn()) {
+      <p class="aur-scan-hint">
+        {{ t('virusTotalHint') }}
+        <a class="aur-scan-hint__link" [queryParams]="{ returnUrl: '/aur-scan' }" routerLink="/login">{{
+          t('signIn')
+        }}</a>
+      </p>
+    }
 
     @if (currentPackageName(); as name) {
       <div class="border-t border-(--chaotic-border) px-4 pt-5" animate.enter="ctp-fade-enter">

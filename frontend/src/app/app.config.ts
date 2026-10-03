@@ -1,4 +1,4 @@
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
 import {
   ApplicationConfig,
   inject,
@@ -11,14 +11,15 @@ import {
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling, withPreloading } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideGarudaNG } from '@garudalinux/core';
-import { CatppuccinAura } from '@garudalinux/themes/catppuccin';
 import { provideBetterAuth } from 'ngx-better-auth';
 import { provideHighlightOptions } from 'ngx-highlightjs';
 import { APP_CONFIG } from '../environments/app-config.token';
 import { environment } from '../environments/environment.dev';
 import { routes } from './app.routes';
 import { provideAuthInitializer } from './auth/auth-initializer';
+import { sessionExpiryInterceptor } from './auth/session-expiry.interceptor';
 import { provideBackendStatusInitializer } from './backend-status/backend-status-initializer';
+import { CATPPUCCIN_PRESET } from './catppuccin-preset';
 import { provideI18n } from './i18n/i18n.providers';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
 import { NotificationService } from './notification/notification.service';
@@ -39,7 +40,7 @@ export const appConfig: ApplicationConfig = {
       { font: 'Inter Variable' },
       {
         theme: {
-          preset: CatppuccinAura,
+          preset: CATPPUCCIN_PRESET,
           options: {
             darkModeSelector: '.dark-mode',
           },
@@ -60,7 +61,7 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAuthInitializer(),
     provideBackendStatusInitializer(),
-    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClient(withInterceptors([sessionExpiryInterceptor]), withInterceptorsFromDi()),
     provideI18n(),
     provideRouter(
       routes,

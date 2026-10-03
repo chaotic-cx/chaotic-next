@@ -5,6 +5,14 @@
     <p class="text-ctp-subtext1 mt-3 text-sm">
       {{ t('message') }}
     </p>
+    <p class="text-ctp-subtext0 mt-2 text-sm">
+      {{ t('mirrorsHint') }}
+      <a
+        class="text-ctp-text underline underline-offset-4 hover:text-ctp-mauve focus-visible:text-ctp-mauve"
+        routerLink="/mirrors"
+        >{{ t('mirrorsLink') }}</a
+      >
+    </p>
     <span class="relative mt-4 inline-flex h-3 w-3">
       <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-ctp-mauve opacity-75"></span>
       <span class="relative inline-flex h-3 w-3 rounded-full bg-ctp-mauve"></span>

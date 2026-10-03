@@ -6,6 +6,8 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { AppService } from '../app.service';
 import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
+import { StaleNoticeComponent } from '../ui-states/stale-notice.component';
+import { UnknownValueComponent } from '../ui-states/unknown-value.component';
 import { ActiveBuildsComponent } from './active-builds.component';
 import { BuildStatusDeploymentsComponent } from './build-status-deployments.component';
 import { BuildStatusPipelineDialogComponent } from './build-status-pipeline-dialog.component';
@@ -25,6 +27,8 @@ import { WaitingBuildsComponent } from './waiting-builds.component';
     WaitingBuildsComponent,
     IdleBuildersComponent,
     TranslocoDirective,
+    StaleNoticeComponent,
+    UnknownValueComponent,
   ],
   templateUrl: './build-status.component.html',
   styleUrl: './build-status.component.css',
@@ -85,7 +89,6 @@ export class BuildStatusComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.buildStatusService.beginNavigation();
     void this.updateAll();
   }
 

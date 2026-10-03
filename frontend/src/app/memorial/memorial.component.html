@@ -18,12 +18,12 @@
           @for (link of termLinks; track link.full) {
             @defer (on viewport) {
               <div
-                class="card group flex flex-col p-0! overflow-hidden rounded-2xl border! border-ctp-crust! transition-[border-color,box-shadow] duration-300 hover:border-ctp-mauve/50! hover:shadow-xl"
+                class="card group flex flex-col p-0! overflow-hidden rounded-2xl border! border-ctp-crust! transition-[border-color,box-shadow] duration-(--chaotic-duration-slow) hover:border-ctp-mauve/50! hover:shadow-xl has-focus-visible:border-ctp-mauve/50! has-focus-visible:shadow-xl"
               >
                 <div class="relative aspect-video w-full overflow-hidden rounded-t-2xl bg-ctp-crust/50">
                   <p-image
                     class="h-full w-full"
-                    [imageClass]="'h-full w-full rounded-t-2xl object-cover transition-transform duration-500 group-hover:scale-105'"
+                    [imageClass]="'h-full w-full rounded-t-2xl object-cover transition-transform duration-(--chaotic-duration-max) group-hover:scale-105 group-has-focus-visible:scale-105'"
                     [preview]="true"
                     [appendTo]="'body'"
                     [previewImageSrc]="link.preview"
@@ -33,11 +33,11 @@
                 </div>
                 <div class="flex items-center justify-between border-t border-ctp-crust px-4 py-3 bg-ctp-crust/30">
                   <span
-                    class="font-mono text-xs font-medium text-ctp-subtext0 group-hover:text-ctp-mauve transition-colors"
+                    class="font-mono text-xs font-medium text-ctp-subtext0 group-hover:text-ctp-mauve group-has-focus-visible:text-ctp-mauve transition-colors"
                   >
                     {{ link.author }}
                   </span>
-                  <span class="text-[10px] uppercase tracking-wider text-ctp-overlay1 font-semibold">{{
+                  <span class="text-[0.625rem] uppercase tracking-wider text-ctp-overlay1 font-semibold">{{
                     t('memorial.terminals.badge')
                   }}</span>
                 </div>
@@ -72,12 +72,12 @@
           @for (link of desktopLinks; track link.full) {
             @defer (on viewport) {
               <div
-                class="card group flex flex-col p-0! overflow-hidden rounded-2xl border! border-ctp-crust! transition-[border-color,box-shadow] duration-300 hover:border-ctp-teal/50! hover:shadow-xl"
+                class="card group flex flex-col p-0! overflow-hidden rounded-2xl border! border-ctp-crust! transition-[border-color,box-shadow] duration-(--chaotic-duration-slow) hover:border-ctp-teal/50! hover:shadow-xl has-focus-visible:border-ctp-teal/50! has-focus-visible:shadow-xl"
               >
                 <div class="relative aspect-video w-full overflow-hidden rounded-t-2xl bg-ctp-crust/50">
                   <p-image
                     class="h-full w-full"
-                    [imageClass]="'h-full w-full rounded-t-2xl object-cover transition-transform duration-500 group-hover:scale-105'"
+                    [imageClass]="'h-full w-full rounded-t-2xl object-cover transition-transform duration-(--chaotic-duration-max) group-hover:scale-105 group-has-focus-visible:scale-105'"
                     [preview]="true"
                     [appendTo]="'body'"
                     [previewImageSrc]="link.preview"
@@ -87,11 +87,11 @@
                 </div>
                 <div class="flex items-center justify-between border-t border-ctp-crust px-4 py-3 bg-ctp-crust/30">
                   <span
-                    class="font-mono text-xs font-medium text-ctp-subtext0 group-hover:text-ctp-teal transition-colors"
+                    class="font-mono text-xs font-medium text-ctp-subtext0 group-hover:text-ctp-teal group-has-focus-visible:text-ctp-teal transition-colors"
                   >
                     {{ link.author }}
                   </span>
-                  <span class="text-[10px] uppercase tracking-wider text-ctp-overlay1 font-semibold">{{
+                  <span class="text-[0.625rem] uppercase tracking-wider text-ctp-overlay1 font-semibold">{{
                     t('memorial.desktops.badge')
                   }}</span>
                 </div>

@@ -6,6 +6,7 @@ import { Menu } from '@openng/optimus-ui/menu';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { AVAILABLE_LANGUAGES, storeLanguage } from '../i18n/languages';
+import { alignMenuEnd } from '../menu-align';
 
 const ACTIVE_ICON = 'pi pi-check';
 
@@ -52,6 +53,7 @@ export class LanguageSwitcherComponent {
       items.push({
         label: nativeLanguageName(language),
         icon,
+        state: { lang: language },
         command: () => this.selectLanguage(language),
       });
     }
@@ -59,21 +61,7 @@ export class LanguageSwitcherComponent {
     return items;
   });
 
-  /**
-   * Aligns the right edge of the popup with the right edge of the button.
-   * By default the popup starts at the left edge of the button and runs out of the window.
-   */
-  protected alignMenuEnd(menu: Menu): void {
-    const popup: HTMLElement | undefined = menu.container;
-    const button: HTMLElement | undefined = menu.target;
-    if (popup === undefined || button === undefined) {
-      return;
-    }
-
-    const buttonRight = button.getBoundingClientRect().right + window.scrollX;
-    const popupLeft = Math.max(0, buttonRight - popup.offsetWidth);
-    popup.style.insetInlineStart = `${popupLeft}px`;
-  }
+  protected readonly alignMenuEnd = alignMenuEnd;
 
   private selectLanguage(language: string): void {
     storeLanguage(language);

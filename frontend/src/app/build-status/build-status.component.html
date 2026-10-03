@@ -1,41 +1,48 @@
 <div class="chaotic-page" *transloco="let t; prefix: 'buildStatus.page'">
   <chaotic-title [title]="t('title')" [subtitle]="t('subtitle')" />
+  <chaotic-stale-notice />
 
   <p class="sr-only" role="status" aria-live="polite">{{ buildStatusService.liveSummary() }}</p>
   <dl class="chaotic-stats chaotic-surface" [attr.aria-label]="t('summaryAriaLabel')">
     <div class="chaotic-stats__item chaotic-stats__item--primary">
       <dt>{{ t('building') }}</dt>
       <dd>
-        {{
-          buildStatusService.loadingQueue() || buildStatusService.queueFailed()
-            ? '–'
-            : buildStatusService.activeQueue().length
-        }}
+        @if (buildStatusService.queueCountKnown()) {
+          {{ buildStatusService.activeQueue().length }}
+        } @else {
+          <chaotic-unknown-value />
+        }
       </dd>
     </div>
     <div class="chaotic-stats__item">
       <dt>{{ t('queued') }}</dt>
       <dd>
-        {{
-          buildStatusService.loadingQueue() || buildStatusService.queueFailed()
-            ? '–'
-            : buildStatusService.waitingQueue().length
-        }}
+        @if (buildStatusService.queueCountKnown()) {
+          {{ buildStatusService.waitingQueue().length }}
+        } @else {
+          <chaotic-unknown-value />
+        }
       </dd>
     </div>
     <div class="chaotic-stats__item">
       <dt>{{ t('idleBuilders') }}</dt>
       <dd>
-        {{
-          buildStatusService.loadingQueue() || buildStatusService.queueFailed()
-            ? '–'
-            : buildStatusService.idleQueue().length
-        }}
+        @if (buildStatusService.queueCountKnown()) {
+          {{ buildStatusService.idleQueue().length }}
+        } @else {
+          <chaotic-unknown-value />
+        }
       </dd>
     </div>
     <div class="chaotic-stats__item">
       <dt>{{ t('queueClearsIn') }}</dt>
-      <dd>{{ buildStatusService.queueClearEta() ?? '–' }}</dd>
+      <dd>
+        @if (buildStatusService.queueClearEta(); as eta) {
+          {{ eta }}
+        } @else {
+          <chaotic-unknown-value />
+        }
+      </dd>
     </div>
   </dl>
 

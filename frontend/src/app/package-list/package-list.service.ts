@@ -47,10 +47,12 @@ export class PackageListService {
   private readonly page = retainedResourceValue(this.resource);
   readonly loading = loadingWithoutValue(this.resource, this.page);
   readonly failed = resourceFailed(this.resource);
+  readonly error = this.resource.error;
 
   retry(): void {
     this.resource.reload();
   }
+
   readonly total = computed(() => this.page()?.total ?? 0);
   readonly packageList = computed<Package[]>(() => (this.page()?.items ?? []).filter((pkg) => pkg.version));
 

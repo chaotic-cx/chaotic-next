@@ -1,6 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { flavors } from '@catppuccin/palette';
 import type { UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
 import { BUILD_RATE_LIMIT_FAILURE_STREAK, BUILD_RATE_LIMIT_RETRY_HOURS, BuildStatus } from '@chaotic-next/shared-lib';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -8,6 +7,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { isLogPurged, packageLogRouteFromUrl } from '../../../../functions';
+import { BUILD_STATUS_LABEL_KEYS } from '../../../../i18n/build-status-labels';
 import { RelativeTimePipe } from '../../../../pipes/relative-time.pipe';
 import { StatsService } from '../../../stats.service';
 import { LoadErrorComponent } from '../../../../load-error/load-error.component';
@@ -30,14 +30,15 @@ export function visibleFailureRows(rows: UnresolvedFailedBuild[], showSilenced: 
     );
 }
 
+// CSS variables, so the dots follow the active flavour without a re-render.
 const STATUS_COLORS: Partial<Record<BuildStatus, string>> = {
-  [BuildStatus.FAILED]: flavors.mocha.colors.red.hex,
-  [BuildStatus.TIMED_OUT]: flavors.mocha.colors.peach.hex,
-  [BuildStatus.SOFTWARE_FAILURE]: flavors.mocha.colors.maroon.hex,
+  [BuildStatus.FAILED]: 'var(--catppuccin-color-red)',
+  [BuildStatus.TIMED_OUT]: 'var(--catppuccin-color-peach)',
+  [BuildStatus.SOFTWARE_FAILURE]: 'var(--catppuccin-color-maroon)',
 };
 
 export function failureStatusColor(status: BuildStatus): string {
-  return STATUS_COLORS[status] ?? flavors.mocha.colors.overlay1.hex;
+  return STATUS_COLORS[status] ?? 'var(--catppuccin-color-overlay1)';
 }
 
 const RATE_LIMIT_RETRY_MS = BUILD_RATE_LIMIT_RETRY_HOURS * 60 * 60 * 1000;
@@ -95,6 +96,8 @@ export class ChartUnresolvedFailuresComponent {
   readonly visibleRows = computed(() => visibleFailureRows(this.failures(), this.showSilenced()));
 
   readonly statusColor = failureStatusColor;
+
+  protected readonly statusLabelKeys = BUILD_STATUS_LABEL_KEYS;
 
   protected readonly isRateLimited = isRateLimited;
   protected readonly isLogPurged = isLogPurged;

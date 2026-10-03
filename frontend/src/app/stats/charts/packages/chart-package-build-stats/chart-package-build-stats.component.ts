@@ -1,12 +1,22 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
+import type { AccentName } from '@catppuccin/palette';
 import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { cycledColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, mochaScales } from '../../chart-config';
+import {
+  axisChartOptions,
+  axisScales,
+  chartResource,
+  type ChartConfig,
+  formatDay,
+  hasPlottedValue,
+} from '../../chart-config';
+
+const REPO_COLOR_NAMES: readonly AccentName[] = ['lavender', 'blue', 'green', 'yellow', 'red', 'pink', 'teal', 'mauve'];
 
 @Component({
   selector: 'chaotic-chart-package-build-stats',
@@ -37,13 +47,10 @@ export class ChartPackageBuildStatsComponent {
 
     const data = this.chart.data();
     if (data.length === 0) return null;
-    return this.buildChartConfig(data);
-  });
 
-  readonly loadingChart: ChartConfig<'line'> = {
-    data: { labels: [], datasets: [] },
-    options: mochaAxisChartOptions<'line'>(),
-  };
+    const config = this.buildChartConfig(data);
+    return hasPlottedValue(config) ? config : null;
+  });
 
   private buildChartConfig(data: { day: string; repo: string; count: string }[]): ChartConfig<'line'> {
     const repoData: { [repo: string]: { [day: string]: number } } = {};
@@ -68,38 +75,24 @@ export class ChartPackageBuildStatsComponent {
             repo,
           }),
           data: sortedDays.map((day) => repoData[repo][day] || 0),
-          backgroundColor: this.getColor(index),
-          borderColor: this.getColor(index),
+          backgroundColor: cycledColor(REPO_COLOR_NAMES, index),
+          borderColor: cycledColor(REPO_COLOR_NAMES, index),
           fill: false,
         })),
       },
       options: {
-        ...mochaAxisChartOptions<'line'>(),
+        ...axisChartOptions<'line'>(),
         scales: {
-          ...mochaScales(),
+          ...axisScales(),
           y: {
-            ...mochaScales().y,
+            ...axisScales().y,
             ticks: {
-              ...mochaScales().y.ticks,
+              ...axisScales().y.ticks,
               precision: 0,
             },
           },
         },
       },
     };
-  }
-
-  private getColor(index: number): string {
-    const colors = [
-      flavors.mocha.colors.lavender.hex,
-      flavors.mocha.colors.blue.hex,
-      flavors.mocha.colors.green.hex,
-      flavors.mocha.colors.yellow.hex,
-      flavors.mocha.colors.red.hex,
-      flavors.mocha.colors.pink.hex,
-      flavors.mocha.colors.teal.hex,
-      flavors.mocha.colors.mauve.hex,
-    ];
-    return colors[index % colors.length];
   }
 }

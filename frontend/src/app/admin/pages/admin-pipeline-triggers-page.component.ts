@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PIPELINE_OPERATIONS, PipelineScheduleOption, PipelineTriggerAction } from '@chaotic-next/shared-lib';
@@ -16,6 +16,7 @@ import {
   createAdminPagination,
   type StatefulTableRef,
   createDebounced,
+  QUERY_SYNC_DEBOUNCE_MS,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
@@ -24,6 +25,11 @@ import {
   stringFilterToQuery,
 } from '../admin-url-sync';
 import { AdminService } from '../admin.service';
+import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
+import { TablePageReportDirective } from '../../table-page-report.directive';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
@@ -40,13 +46,17 @@ const REPO_OPTIONS = [
     TableSkeletonRowsComponent,
     DatePipe,
     Button,
+    ClearFiltersComponent,
     Dialog,
+    EmptyStateComponent,
     FormsModule,
     IconField,
     InputIcon,
     InputText,
+    LoadErrorComponent,
     Select,
     TableModule,
+    TablePageReportDirective,
     TagModule,
     TranslocoDirective,
   ],
@@ -60,54 +70,48 @@ const REPO_OPTIONS = [
           [paginator]="true"
           [lazy]="true"
           [totalRecords]="service.pipelineTriggersTotal()"
-          [showCurrentPageReport]="true"
+          [chaoticTableFailed]="service.pipelineTriggersStatus.failed()"
           [rowsPerPageOptions]="[25, 50, 100]"
           (onLazyLoad)="onLazyLoad(pipelineTriggersTable, $event)"
           dataKey="id"
           stateStorage="local"
           stateKey="admin-pipeline-triggers-table"
           paginatorDropdownAppendTo="body"
+          chaoticPageReport
         >
           <ng-template #caption>
             <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="flex w-full sm:hidden">
-                <p-button
-                  class="w-full"
-                  [label]="t('admin.pipelineTriggers.runSchedule')"
-                  (onClick)="openScheduleDialog()"
-                  styleClass="w-full justify-center"
-                  icon="pi pi-play"
-                  text
-                  severity="primary"
-                />
-              </div>
-              <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
                 <p-button
                   [label]="t('admin.pipelineTriggers.runSchedule')"
                   (onClick)="openScheduleDialog()"
                   icon="pi pi-play"
                   text
                   severity="primary"
+                  size="small"
                 />
                 <p-select
                   [options]="operationOptions"
                   [ngModel]="service.pipelineTriggerOperationFilter()"
                   [placeholder]="t('admin.pipelineTriggers.columns.operation')"
+                  [ariaLabel]="t('admin.pipelineTriggers.operationFilterLabel')"
                   (ngModelChange)="setOperationFilter($event)"
                   optionLabel="label"
                   optionValue="value"
                   showClear
                   appendTo="body"
                 />
+                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
               </div>
               <p-iconfield class="w-full sm:w-64" iconPosition="left">
                 <p-inputicon>
-                  <i class="pi pi-search"></i>
+                  <i class="pi pi-search" aria-hidden="true"></i>
                 </p-inputicon>
                 <input
                   class="w-full"
                   [value]="service.pipelineTriggerQuery()"
                   [placeholder]="t('admin.pipelineTriggers.searchPlaceholder')"
+                  [attr.aria-label]="t('admin.pipelineTriggers.searchPlaceholder')"
                   (input)="onSearch($event)"
                   pInputText
                   type="text"
@@ -134,7 +138,7 @@ const REPO_OPTIONS = [
                 @if (trigger.pipelineId) {
                   @if (trigger.webUrl) {
                     <a
-                      class="cursor-pointer text-ctp-mauve hover:underline"
+                      class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
                       [href]="trigger.webUrl"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -145,25 +149,25 @@ const REPO_OPTIONS = [
                     #{{ trigger.pipelineId }}
                   }
                 } @else {
-                  <span class="text-ctp-subtext0">—</span>
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
               <td>
                 <p-tag [value]="trigger.operation" [severity]="trigger.operation === 'None' ? 'secondary' : 'info'" />
               </td>
               <td>
-                <code class="text-sm">{{ formatInputs(trigger) }}</code>
+                <code class="line-clamp-2 text-sm" [title]="formatInputs(trigger)">{{ formatInputs(trigger) }}</code>
               </td>
-              <td>{{ trigger.ref }}</td>
+              <td>{{ trigger.ref || missingValue }}</td>
               <td>
                 @if (trigger.commitSha) {
                   <code class="text-sm">{{ shortSha(trigger.commitSha) }}</code>
                 } @else {
-                  <span class="text-ctp-subtext0">—</span>
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
               <td>
-                <span class="font-medium">{{ trigger.userName }}</span>
+                <span class="font-medium">{{ trigger.userName || missingValue }}</span>
               </td>
               <td>{{ trigger.createdAt | date: 'short' }}</td>
             </tr>
@@ -178,7 +182,21 @@ const REPO_OPTIONS = [
             } @else {
               <tr>
                 <td [attr.colspan]="8">
-                  <p class="chaotic-card__empty">{{ t('admin.pipelineTriggers.empty') }}</p>
+                  @if (service.pipelineTriggersStatus.failed()) {
+                    <chaotic-load-error
+                      [message]="t('admin.pipelineTriggers.loadError')"
+                      [error]="service.pipelineTriggersStatus.error()"
+                      (retry)="service.pipelineTriggersStatus.reload()"
+                    />
+                  } @else if (filtersActive()) {
+                    <chaotic-empty-state [filtered]="true" (clearFilters)="clearFilters()">
+                      <p>{{ t('admin.pipelineTriggers.empty') }}</p>
+                    </chaotic-empty-state>
+                  } @else {
+                    <chaotic-empty-state [hint]="t('admin.pipelineTriggers.firstRun.hint')">
+                      <p>{{ t('admin.pipelineTriggers.firstRun.message') }}</p>
+                    </chaotic-empty-state>
+                  }
                 </td>
               </tr>
             }
@@ -195,7 +213,7 @@ const REPO_OPTIONS = [
       >
         <div class="flex flex-col gap-4 py-2">
           <div class="flex flex-col gap-1.5">
-            <label class="font-medium text-ctp-text text-sm" for="repo-select">{{
+            <label class="font-medium text-ctp-text text-sm" id="repo-select-label" for="repo-select">{{
               t('admin.pipelineTriggers.scheduleDialog.repository')
             }}</label>
             <p-select
@@ -205,6 +223,7 @@ const REPO_OPTIONS = [
               [placeholder]="t('admin.pipelineTriggers.scheduleDialog.selectRepository')"
               (ngModelChange)="onRepoChange($event)"
               inputId="repo-select"
+              ariaLabelledBy="repo-select-label"
               optionLabel="label"
               optionValue="value"
               appendTo="body"
@@ -212,7 +231,7 @@ const REPO_OPTIONS = [
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="font-medium text-ctp-text text-sm" for="schedule-select">{{
+            <label class="font-medium text-ctp-text text-sm" id="schedule-select-label" for="schedule-select">{{
               t('admin.pipelineTriggers.scheduleDialog.schedule')
             }}</label>
             <p-select
@@ -227,6 +246,7 @@ const REPO_OPTIONS = [
               "
               (ngModelChange)="selectedScheduleId.set($event)"
               inputId="schedule-select"
+              ariaLabelledBy="schedule-select-label"
               optionLabel="label"
               optionValue="value"
               appendTo="body"
@@ -263,13 +283,18 @@ export class AdminPipelineTriggersPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+  protected readonly missingValue = MISSING_VALUE;
+
+  protected readonly filtersActive = computed(
+    () => this.service.pipelineTriggerQuery() !== '' || this.service.pipelineTriggerOperationFilter() !== undefined,
+  );
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
   readonly operationOptions = OPERATION_OPTIONS;
   readonly repoOptions = REPO_OPTIONS;
 
-  private readonly syncSearch = createDebounced(400, () =>
+  private readonly syncSearch = createDebounced(QUERY_SYNC_DEBOUNCE_MS, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.pipelineTriggerQuery()) }),
   );
 
@@ -315,8 +340,10 @@ export class AdminPipelineTriggersPageComponent {
 
     this.isSubmitting.set(true);
     try {
-      await this.service.runSchedule(id, repo);
-      this.scheduleDialogVisible.set(false);
+      const started = await this.service.runSchedule(id, repo);
+      if (started) {
+        this.scheduleDialogVisible.set(false);
+      }
     } finally {
       this.isSubmitting.set(false);
     }
@@ -347,18 +374,30 @@ export class AdminPipelineTriggersPageComponent {
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);
     this.service.pipelineTriggerPage.set(this.pagination.page());
-    this.service.pipelineTriggerPerPage.set(event.rows ?? 25);
+    this.service.pipelineTriggerPerPage.set(this.pagination.perPage());
   }
 
   onSearch(event: Event): void {
     this.service.pipelineTriggerQuery.set((event.target as HTMLInputElement).value);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     this.syncSearch();
   }
 
   setOperationFilter(value: string | null | undefined): void {
     this.service.pipelineTriggerOperationFilter.set(value ?? undefined);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     patchQueryParams(this.router, this.route, { operation: stringFilterToQuery(value ?? undefined) });
+  }
+
+  clearFilters(): void {
+    this.service.pipelineTriggerQuery.set('');
+    this.service.pipelineTriggerOperationFilter.set(undefined);
+    this.resetToFirstPage();
+    patchQueryParams(this.router, this.route, { q: null, operation: null });
+  }
+
+  private resetToFirstPage(): void {
+    this.pagination.resetPage();
+    this.service.pipelineTriggerPage.set(this.pagination.page());
   }
 }

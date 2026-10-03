@@ -1,5 +1,6 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
@@ -17,6 +18,7 @@ const SKELETON_ROW_COUNT = 4;
     PipelineListComponent,
     BuildStatusPager,
     TranslocoDirective,
+    EmptyStateComponent,
   ],
   templateUrl: './build-status-pipelines.component.html',
 })

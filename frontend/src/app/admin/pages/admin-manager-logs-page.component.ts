@@ -1,7 +1,8 @@
-import { AfterViewInit, Component, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
+import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { APP_CONFIG } from '../../../environments/app-config.token';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { ResilientSseStream } from '../../sse-stream';
 import { XtermLogComponent } from '../../xterm-log/xterm-log.component';
 
@@ -10,7 +11,7 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
 
 @Component({
   selector: 'chaotic-admin-manager-logs-page',
-  imports: [ProgressSpinner, TranslocoDirective, XtermLogComponent],
+  imports: [LoadErrorComponent, ProgressSpinner, TranslocoDirective, XtermLogComponent],
   template: `
     <ng-container *transloco="let t; prefix: 'admin.managerLogs'">
       <p class="log-status" [class.is-live]="streaming()" role="status">
@@ -24,12 +25,12 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
         }
       </p>
 
-      @if (error()) {
-        <p class="mb-2 text-sm text-ctp-red">{{ error() }}</p>
+      @if (error(); as message) {
+        <chaotic-load-error class="mb-2" [message]="message" (retry)="reconnect()" />
       }
 
       @if (streaming() || logChunks().length > 0) {
-        <div class="log-panel-wrap" [style.height.px]="logHeight()">
+        <div class="log-panel-wrap log-panel-wrap--viewport">
           <chaotic-xterm-log [chunk]="logChunks()" [clearSignal]="clearSignal()" />
         </div>
       } @else if (loading()) {
@@ -52,68 +53,64 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
         min-height: 20rem;
       }
 
+      .log-panel-wrap--viewport {
+        --log-panel-viewport-offset: 21.875rem;
+        --log-panel-min-height: 25rem;
+
+        height: max(calc(100dvh - var(--log-panel-viewport-offset)), var(--log-panel-min-height));
+      }
+
       .log-status {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-        font-size: 0.8125rem;
-        color: var(--ctp-mocha-overlay1);
+        gap: var(--chaotic-space-sm);
+        margin-bottom: var(--chaotic-space-sm);
+        font-size: var(--chaotic-text-sm);
+        color: var(--chaotic-fg-faint);
       }
 
       .log-status__dot {
         width: 0.5rem;
         height: 0.5rem;
-        border-radius: 9999px;
-        background: var(--ctp-mocha-overlay0);
+        border-radius: var(--chaotic-radius-pill);
+        background: var(--catppuccin-color-overlay0);
       }
 
       .log-status.is-live {
-        color: var(--ctp-mocha-green);
+        color: var(--chaotic-ink-green);
       }
 
       .log-status.is-live .log-status__dot {
-        background: var(--ctp-mocha-green);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--ctp-mocha-green) 20%, transparent);
+        background: var(--catppuccin-color-green);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--catppuccin-color-green) 20%, transparent);
       }
     `,
   ],
 })
-export class AdminManagerLogsPageComponent implements AfterViewInit, OnDestroy {
+export class AdminManagerLogsPageComponent implements OnDestroy {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
   private readonly transloco = inject(TranslocoService);
-  private readonly host = viewChild<ElementRef<HTMLElement>>('host');
 
   readonly logChunks = signal<string[]>([]);
   readonly clearSignal = signal(false);
   readonly streaming = signal(false);
   readonly loading = signal(true);
   readonly error = signal<string | undefined>(undefined);
-  readonly logHeight = signal(600);
 
   private stream: ResilientSseStream | undefined;
-  private resizeObserver: ResizeObserver | undefined;
   private readonly isMobile = window.matchMedia('(pointer: coarse)').matches;
 
   constructor() {
     this.connect();
   }
 
-  ngAfterViewInit(): void {
-    this.resizeObserver = new ResizeObserver(() => this.updateHeight());
-    this.resizeObserver.observe(document.documentElement);
-    this.updateHeight();
-  }
-
   ngOnDestroy(): void {
-    this.resizeObserver?.disconnect();
     this.stream?.close();
   }
 
-  private updateHeight(): void {
-    const viewportHeight = window.innerHeight;
-    const offset = 350;
-    this.logHeight.set(Math.max(viewportHeight - offset, 400));
+  protected reconnect(): void {
+    this.loading.set(true);
+    this.connect();
   }
 
   private connect(): void {

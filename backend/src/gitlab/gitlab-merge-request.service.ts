@@ -8,7 +8,15 @@ import {
 } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { BadRequestException, Inject, Injectable, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  OnApplicationShutdown,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
@@ -16,6 +24,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { In, MoreThan, Repository } from 'typeorm';
+import { gitlabErrorStatus } from '../api/all-exceptions.filter';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { DiffScanService, type DiffScanVerdict, type MrAutoFlagLabel } from '../diff-scan/diff-scan.service';
 import { extractIndicators } from '../diff-scan/indicators';
@@ -858,11 +867,27 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     return query;
   }
 
+  /**
+   * GitLab answers 401 when the bot account already approved the merge request.
+   * That 401 becomes a 409, so the frontend can tell it from an expired session.
+   */
+  private async approveOnGitlab(iid: number, sha: string): Promise<void> {
+    try {
+      await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha });
+    } catch (error) {
+      if (gitlabErrorStatus(error) === HttpStatus.UNAUTHORIZED) {
+        throw new ConflictException(`Merge request !${iid} is already approved`, { cause: error });
+      }
+
+      throw error;
+    }
+  }
+
   async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<{ deferred: boolean }> {
     const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
     const targetSha = mr.sha ?? sha;
-    await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: targetSha });
+    await this.approveOnGitlab(iid, targetSha);
 
     if (!labels.includes('approved')) {
       await this.api.MergeRequests.edit(this.chaoticId, iid, {

@@ -1,4 +1,11 @@
 :host {
+  --failure-col-name-min: 10rem;
+  --failure-col-status: 9rem;
+  --failure-col-streak: 6.5rem;
+  --failure-col-time: 7.5rem;
+  --failure-col-actions: 5.5rem;
+  --failure-fixed-cols: calc(var(--failure-col-streak) + var(--failure-col-time) + var(--failure-col-actions));
+
   display: block;
   min-width: 0;
 }
@@ -6,7 +13,7 @@
 .failure-table-wrap {
   height: 100%;
   max-height: min(36rem, 62vh);
-  overflow-y: auto;
+  overflow: auto;
 }
 
 @media (min-width: 1280px) {
@@ -17,28 +24,33 @@
 
 .failure-table {
   width: 100%;
+  min-width: calc(var(--failure-col-name-min) + var(--failure-col-status) + var(--failure-fixed-cols));
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--chaotic-text-base);
 }
 
 .col-status {
-  width: 9rem;
+  width: var(--failure-col-status);
 }
 
 .col-streak {
-  width: 6.5rem;
+  width: var(--failure-col-streak);
 }
 
 .col-time {
-  width: 7.5rem;
+  width: var(--failure-col-time);
 }
 
 .col-actions {
-  width: 5.5rem;
+  width: var(--failure-col-actions);
 }
 
 @media (max-width: 767px) {
+  .failure-table {
+    min-width: calc(var(--failure-col-name-min) + var(--failure-fixed-cols));
+  }
+
   .col-status,
   .cell-status {
     display: none;
@@ -48,20 +60,22 @@
 .failure-table th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: var(--chaotic-z-sticky);
   height: 2.25rem;
-  padding: 0 1rem;
-  background: var(--ctp-mocha-mantle);
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 0 var(--chaotic-space-lg);
+  background: var(--chaotic-surface-overlay);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+  font-size: var(--chaotic-text-xs);
+  font-weight: var(--chaotic-weight-medium);
   text-align: left;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
   border-bottom: 1px solid var(--chaotic-border);
 }
 
 .failure-table td {
   height: 2.75rem;
-  padding: 0 1rem;
+  padding: 0 var(--chaotic-space-lg);
   overflow: hidden;
   text-overflow: ellipsis;
   border-bottom: 1px solid var(--chaotic-border);
@@ -69,11 +83,13 @@
 }
 
 .failure-table tbody tr {
-  transition: background-color 120ms ease-out;
+  transition: background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.failure-table tbody tr:hover {
-  background: color-mix(in srgb, var(--ctp-mocha-surface0) 35%, transparent);
+/* The row takes no focus. :has() mirrors the hover for a focused link or button in it. */
+.failure-table tbody tr:hover,
+.failure-table tbody tr:has(:focus-visible) {
+  background: color-mix(in srgb, var(--catppuccin-color-surface0) 35%, transparent);
 }
 
 .failure-table tr.is-silenced {
@@ -88,7 +104,7 @@
 .failure-name {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--chaotic-space-sm);
   min-width: 0;
 }
 
@@ -97,34 +113,35 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
-  font-size: 0.8125rem;
-  color: var(--ctp-mocha-text);
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-text);
 }
 
-.failure-name a:hover {
-  color: var(--ctp-mocha-mauve);
+.failure-name a:hover,
+.failure-name a:focus-visible {
+  color: var(--catppuccin-color-mauve);
 }
 
 .failure-name .pi {
   flex: none;
-  font-size: 0.75rem;
+  font-size: var(--chaotic-text-xs);
 }
 
 .status-dot {
   flex: none;
   width: 6px;
   height: 6px;
-  border-radius: 9999px;
+  border-radius: var(--chaotic-radius-pill);
 }
 
 .failure-status {
-  color: var(--ctp-mocha-subtext1);
+  color: var(--catppuccin-color-subtext1);
 }
 
 .failure-since {
-  margin-left: 0.25rem;
-  font-size: 0.8125rem;
-  color: var(--ctp-mocha-overlay1);
+  margin-left: var(--chaotic-space-2xs);
+  font-size: var(--chaotic-text-sm);
+  color: var(--chaotic-fg-faint);
 }
 
 .failure-actions {

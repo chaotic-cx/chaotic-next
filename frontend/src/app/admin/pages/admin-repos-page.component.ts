@@ -4,6 +4,7 @@ import { FormField, form, required, submit } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Repo } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Checkbox } from '@openng/optimus-ui/checkbox';
@@ -15,8 +16,20 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
 import { AdminService, RepoFormData } from '../admin.service';
-import { createDebounced, patchQueryParams, restoreQueryParams, stringFilterToQuery } from '../admin-url-sync';
+import {
+  createDebounced,
+  patchQueryParams,
+  QUERY_SYNC_DEBOUNCE_MS,
+  restoreQueryParams,
+  stringFilterToQuery,
+} from '../admin-url-sync';
+import { EditConflictGuard } from '../edit-conflict';
+import { EditConflictNoticeComponent } from '../edit-conflict-notice.component';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
@@ -30,18 +43,33 @@ interface RepoFormModel {
   apiToken: string;
 }
 
+function repoConflictFields(repo: Repo): Record<string, unknown> {
+  return {
+    name: repo.name,
+    repoUrl: repo.repoUrl,
+    isActive: repo.isActive,
+    gitRef: repo.gitRef,
+    dbPath: repo.dbPath,
+    gitlabProjectId: repo.gitlabProjectId,
+  };
+}
+
 @Component({
   selector: 'chaotic-admin-repos-page',
   imports: [
     TableSkeletonRowsComponent,
+    EditConflictNoticeComponent,
     Button,
     Checkbox,
+    ClearFiltersComponent,
     Dialog,
+    EmptyStateComponent,
     FormField,
     FormsModule,
     IconField,
     InputIcon,
     InputText,
+    LoadErrorComponent,
     Select,
     TableModule,
     TagModule,
@@ -54,26 +82,29 @@ interface RepoFormModel {
         <p-table [value]="filteredRepos()" dataKey="id">
           <ng-template #caption>
             <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
                 <p-select
                   [options]="service.activeOptions()"
                   [ngModel]="activeFilter()"
                   [placeholder]="t('admin.pages.activeStatus')"
+                  [ariaLabel]="t('admin.pages.activeStatus')"
                   (ngModelChange)="onActiveChange($event)"
                   optionLabel="label"
                   optionValue="value"
                   showClear
                   appendTo="body"
                 />
+                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
               </div>
               <p-iconfield class="w-full sm:w-64" iconPosition="left">
                 <p-inputicon>
-                  <i class="pi pi-search"></i>
+                  <i class="pi pi-search" aria-hidden="true"></i>
                 </p-inputicon>
                 <input
                   class="w-full"
                   [value]="query()"
                   [placeholder]="t('admin.pages.searchName')"
+                  [attr.aria-label]="t('admin.pages.searchName')"
                   (input)="onSearch($event)"
                   pInputText
                   type="text"
@@ -96,9 +127,17 @@ interface RepoFormModel {
           <ng-template pTemplate="body" let-repo>
             <tr>
               <td>{{ repo.id }}</td>
-              <td>{{ repo.name }}</td>
-              <td>{{ repo.gitRef }}</td>
-              <td class="text-ctp-subtext">{{ repo.repoUrl }}</td>
+              <td>
+                <span class="block max-w-xs truncate" [title]="repo.name">{{ repo.name }}</span>
+              </td>
+              <td>{{ repo.gitRef || missingValue }}</td>
+              <td class="text-ctp-subtext">
+                @if (repo.repoUrl) {
+                  <span class="block max-w-md truncate" [title]="repo.repoUrl">{{ repo.repoUrl }}</span>
+                } @else {
+                  {{ missingValue }}
+                }
+              </td>
               <td>
                 @if (repo.isActive) {
                   <p-tag [value]="t('admin.pages.active')" severity="success" />
@@ -138,7 +177,21 @@ interface RepoFormModel {
             } @else {
               <tr>
                 <td [attr.colspan]="6">
-                  <p class="chaotic-card__empty">{{ t('admin.repos.empty') }}</p>
+                  @if (service.reposStatus.failed()) {
+                    <chaotic-load-error
+                      [message]="t('admin.repos.loadError')"
+                      [error]="service.reposStatus.error()"
+                      (retry)="service.reposStatus.reload()"
+                    />
+                  } @else if (filtersActive()) {
+                    <chaotic-empty-state [filtered]="true" (clearFilters)="clearFilters()">
+                      <p>{{ t('admin.repos.empty') }}</p>
+                    </chaotic-empty-state>
+                  } @else {
+                    <chaotic-empty-state>
+                      <p>{{ t('admin.repos.firstRun.message') }}</p>
+                    </chaotic-empty-state>
+                  }
                 </td>
               </tr>
             }
@@ -155,10 +208,21 @@ interface RepoFormModel {
       >
         <form class="flex flex-col gap-4" (submit)="save(); $event.preventDefault()">
           <label class="flex flex-col gap-1">
-            <span class="text-ctp-text text-sm">{{ t('admin.pages.columns.name') }}</span>
-            <input [formField]="repoForm.name" pInputText type="text" />
-            @if (repoForm.name().touched() && repoForm.name().errors().length) {
-              <span class="text-ctp-red text-xs">{{ t('admin.repos.editDialog.nameRequired') }}</span>
+            <span class="text-ctp-text text-sm">
+              {{ t('admin.pages.columns.name') }}
+              <span class="text-ctp-red" aria-hidden="true">*</span>
+            </span>
+            <input
+              [formField]="repoForm.name"
+              [attr.aria-invalid]="showNameError()"
+              [attr.aria-describedby]="showNameError() ? 'repo-name-error' : null"
+              pInputText
+              type="text"
+            />
+            @if (showNameError()) {
+              <span class="text-ctp-red text-xs" id="repo-name-error">{{
+                t('admin.repos.editDialog.nameRequired')
+              }}</span>
             }
           </label>
           <label class="flex flex-col gap-1">
@@ -192,7 +256,14 @@ interface RepoFormModel {
             <p-checkbox [formField]="repoForm.isActive" [binary]="true" inputId="repoIsActive" />
             <label class="text-ctp-text text-sm" for="repoIsActive">{{ t('admin.pages.active') }}</label>
           </div>
-          <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          @if (conflict.changed()) {
+            <chaotic-edit-conflict-notice
+              [messageKey]="conflictMessageKey"
+              (review)="reviewConflict()"
+              (saveAnyway)="saveAnyway()"
+            />
+          }
+          <div class="flex flex-wrap justify-end gap-2">
             <p-button
               [label]="t('common.cancel')"
               (onClick)="dialogVisible.set(false)"
@@ -200,7 +271,6 @@ interface RepoFormModel {
               severity="secondary"
               text
               size="small"
-              styleClass="w-full sm:w-auto"
             />
             <p-button
               [disabled]="repoForm().invalid()"
@@ -208,7 +278,6 @@ interface RepoFormModel {
               type="submit"
               severity="primary"
               size="small"
-              styleClass="w-full sm:w-auto"
             />
           </div>
         </form>
@@ -223,14 +292,19 @@ export class AdminReposPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+  protected readonly missingValue = MISSING_VALUE;
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<Repo | null>(null);
+  protected readonly conflict = new EditConflictGuard<Repo>(repoConflictFields);
+  protected readonly conflictMessageKey = marker('admin.editConflict.messages.repo');
 
-  readonly activeFilter = signal<'active' | 'inactive' | undefined>(undefined);
+  readonly activeFilter = signal<'true' | 'false' | undefined>(undefined);
   readonly query = signal('');
 
-  private readonly syncSearch = createDebounced(400, () =>
+  protected readonly filtersActive = computed(() => this.query() !== '' || this.activeFilter() !== undefined);
+
+  private readonly syncSearch = createDebounced(QUERY_SYNC_DEBOUNCE_MS, () =>
     patchQueryParams(this.router, this.route, { q: this.query() === '' ? null : this.query() }),
   );
 
@@ -238,7 +312,7 @@ export class AdminReposPageComponent {
     this.service.useLists(['repos']);
     restoreQueryParams(this.route, {
       q: (raw) => this.query.set(raw ?? ''),
-      active: (raw) => this.activeFilter.set(raw === 'active' || raw === 'inactive' ? raw : undefined),
+      active: (raw) => this.activeFilter.set(raw === 'true' || raw === 'false' ? raw : undefined),
     });
   }
 
@@ -247,7 +321,7 @@ export class AdminReposPageComponent {
     const filter = this.activeFilter();
     const q = this.query().trim().toLowerCase();
     return repos.filter((repo) => {
-      const matchesActive = !filter || (filter === 'active' ? repo.isActive : !repo.isActive);
+      const matchesActive = filter === undefined || String(repo.isActive) === filter;
       const matchesQuery = !q || repo.name.toLowerCase().includes(q);
       return matchesActive && matchesQuery;
     });
@@ -258,9 +332,15 @@ export class AdminReposPageComponent {
     this.syncSearch();
   }
 
-  onActiveChange(value: 'active' | 'inactive' | null | undefined): void {
+  onActiveChange(value: 'true' | 'false' | null | undefined): void {
     this.activeFilter.set(value ?? undefined);
     patchQueryParams(this.router, this.route, { active: stringFilterToQuery(value ?? undefined) });
+  }
+
+  clearFilters(): void {
+    this.query.set('');
+    this.activeFilter.set(undefined);
+    patchQueryParams(this.router, this.route, { q: null, active: null });
   }
 
   private readonly model = signal<RepoFormModel>(emptyModel());
@@ -268,8 +348,19 @@ export class AdminReposPageComponent {
     required(s.name);
   });
 
+  protected readonly showNameError = computed(() => {
+    const name = this.repoForm.name();
+    return name.touched() && name.errors().length > 0;
+  });
+
   openEdit(repo: Repo): void {
+    this.conflict.begin(repo);
     this.editing.set(repo);
+    this.fillForm(repo);
+    this.dialogVisible.set(true);
+  }
+
+  private fillForm(repo: Repo): void {
     this.model.set({
       name: repo.name,
       repoUrl: repo.repoUrl ?? '',
@@ -279,15 +370,40 @@ export class AdminReposPageComponent {
       gitlabProjectId: repo.gitlabProjectId ?? '',
       apiToken: '',
     });
-    this.dialogVisible.set(true);
+  }
+
+  protected reviewConflict(): void {
+    const latest = this.conflict.review();
+    if (latest === null) {
+      return;
+    }
+
+    this.editing.set(latest);
+    this.fillForm(latest);
+  }
+
+  protected saveAnyway(): void {
+    this.conflict.overwrite();
+    this.save();
   }
 
   save(): void {
     submit(this.repoForm, async () => {
-      const data = this.toFormData(this.model());
       const current = this.editing();
-      if (current) await this.service.updateRepo(current.id, data);
-      this.dialogVisible.set(false);
+      if (!current) {
+        this.dialogVisible.set(false);
+        return;
+      }
+
+      const unchanged = await this.conflict.confirmUnchanged(() => this.service.findRepo(current.id));
+      if (!unchanged) {
+        return;
+      }
+
+      const saved = await this.service.updateRepo(current.id, this.toFormData(this.model()));
+      if (saved) {
+        this.dialogVisible.set(false);
+      }
     });
   }
 

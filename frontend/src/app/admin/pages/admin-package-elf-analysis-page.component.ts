@@ -13,24 +13,32 @@ import { Dialog } from '@openng/optimus-ui/dialog';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
-import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
 import { injectActiveTranslation } from '../../i18n/active-translation';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { PackageTriggerSourcesComponent } from '../../package-trigger-sources/package-trigger-sources.component';
 import { AdminService, ElfAnalysisFormData } from '../admin.service';
 import {
   createAdminPagination,
   type StatefulTableRef,
   createDebounced,
+  QUERY_SYNC_DEBOUNCE_MS,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
   restoreQueryParams,
 } from '../admin-url-sync';
+import { EditConflictGuard } from '../edit-conflict';
+import { EditConflictNoticeComponent } from '../edit-conflict-notice.component';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
+import { SkeletonListComponent } from '../../table-skeleton/skeleton-list.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
+import { TablePageReportDirective } from '../../table-page-report.directive';
 
 interface ElfAnalysisFormModel {
   pkgType: '0' | '1';
@@ -43,24 +51,41 @@ interface ElfAnalysisFormModel {
 const PKG_TYPE_LABELS = { '0': 'Arch', '1': 'Chaotic' } as const;
 const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) => ({ label, value }));
 
+const REBUILD_TRIGGER_SKELETON_ROWS = 2;
+
+function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string, unknown> {
+  return {
+    pkgType: row.pkgType,
+    pkgId: row.pkgId,
+    version: row.version,
+    broken: row.broken,
+    brokenReasons: row.brokenReasons.join(', '),
+  };
+}
+
 @Component({
   selector: 'chaotic-admin-package-elf-analysis-page',
   imports: [
     TableSkeletonRowsComponent,
+    EditConflictNoticeComponent,
     DatePipe,
     Button,
     Checkbox,
+    ClearFiltersComponent,
     Dialog,
+    EmptyStateComponent,
     FormField,
     FormsModule,
     IconField,
     InputIcon,
     InputText,
+    LoadErrorComponent,
     PackageTriggerSourcesComponent,
-    ProgressSpinner,
+    SkeletonListComponent,
     RouterLink,
     Select,
     TableModule,
+    TablePageReportDirective,
     Tooltip,
     TranslocoDirective,
   ],
@@ -74,21 +99,23 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
           [paginator]="true"
           [lazy]="true"
           [totalRecords]="service.elfAnalysisTotal()"
-          [showCurrentPageReport]="true"
+          [chaoticTableFailed]="service.elfAnalysisStatus.failed()"
           [rowsPerPageOptions]="[25, 50, 100]"
           (onLazyLoad)="onLazyLoad(elfAnalysisTable, $event)"
           dataKey="id"
           stateStorage="local"
           stateKey="admin-elf-analysis-table"
           paginatorDropdownAppendTo="body"
+          chaoticPageReport
         >
           <ng-template #caption>
             <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
                 <p-select
                   [options]="pkgTypeOptions"
                   [ngModel]="service.elfAnalysisPkgTypeFilter()"
                   [placeholder]="t('admin.elfAnalysis.packageType')"
+                  [ariaLabel]="t('admin.elfAnalysis.packageType')"
                   (ngModelChange)="setPkgTypeFilter($event)"
                   optionLabel="label"
                   optionValue="value"
@@ -99,21 +126,24 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
                   [options]="brokenOptions()"
                   [ngModel]="service.elfAnalysisBrokenFilter()"
                   [placeholder]="t('admin.elfAnalysis.status.broken')"
+                  [ariaLabel]="t('admin.elfAnalysis.statusFilterLabel')"
                   (ngModelChange)="setBrokenFilter($event)"
                   optionLabel="label"
                   optionValue="value"
                   showClear
                   appendTo="body"
                 />
+                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
               </div>
               <p-iconfield class="w-full sm:w-64" iconPosition="left">
                 <p-inputicon>
-                  <i class="pi pi-search"></i>
+                  <i class="pi pi-search" aria-hidden="true"></i>
                 </p-inputicon>
                 <input
                   class="w-full"
                   [value]="service.elfAnalysisQuery()"
                   [placeholder]="t('admin.elfAnalysis.searchPlaceholder')"
+                  [attr.aria-label]="t('admin.elfAnalysis.searchPlaceholder')"
                   (input)="onSearch($event)"
                   pInputText
                   type="text"
@@ -141,17 +171,20 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
                 <div class="flex flex-col gap-0.5">
                   @if (row.pkgname) {
                     <a
-                      class="cursor-pointer font-mono text-[0.8125rem] text-ctp-text hover:text-ctp-mauve"
+                      class="block max-w-xs cursor-pointer truncate font-mono text-[0.8125rem] text-ctp-text hover:text-ctp-mauve focus-visible:text-ctp-mauve"
                       [routerLink]="packageLink(row)"
                       [queryParams]="{ q: row.pkgname }"
+                      [title]="row.pkgname"
                     >
                       {{ row.pkgname }}
                     </a>
+                  } @else {
+                    <span class="text-ctp-subtext0">{{ missingValue }}</span>
                   }
                   <span class="text-xs text-ctp-overlay1">{{ pkgTypeLabel(row.pkgType) }} · #{{ row.pkgId }}</span>
                 </div>
               </td>
-              <td>{{ row.version }}</td>
+              <td>{{ row.version || missingValue }}</td>
               <td class="text-ctp-subtext1">{{ t(binaryLabelKey(row)) }}</td>
               <td>
                 <div class="flex flex-col gap-0.5">
@@ -212,7 +245,21 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
             } @else {
               <tr>
                 <td [attr.colspan]="7">
-                  <p class="chaotic-card__empty">{{ t('admin.elfAnalysis.empty') }}</p>
+                  @if (service.elfAnalysisStatus.failed()) {
+                    <chaotic-load-error
+                      [message]="t('admin.elfAnalysis.loadError')"
+                      [error]="service.elfAnalysisStatus.error()"
+                      (retry)="service.elfAnalysisStatus.reload()"
+                    />
+                  } @else if (filtersActive()) {
+                    <chaotic-empty-state [filtered]="true" (clearFilters)="clearFilters()">
+                      <p>{{ t('admin.elfAnalysis.empty') }}</p>
+                    </chaotic-empty-state>
+                  } @else {
+                    <chaotic-empty-state [hint]="t('admin.elfAnalysis.firstRun.hint')">
+                      <p>{{ t('admin.elfAnalysis.firstRun.message') }}</p>
+                    </chaotic-empty-state>
+                  }
                 </td>
               </tr>
             }
@@ -266,10 +313,12 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
             <div class="flex flex-col gap-2">
               <span class="text-ctp-text text-sm">{{ t('admin.elfAnalysis.editDialog.rebuildTriggers') }}</span>
               @if (service.elfAnalysisBumpsLoading()) {
-                <p-progress-spinner
-                  [style]="{ width: '24px', height: '24px' }"
-                  [ariaLabel]="t('admin.elfAnalysis.editDialog.loadingRebuildTriggers')"
-                  strokeWidth="4"
+                <chaotic-skeleton-list [rows]="rebuildTriggerSkeletonRows" />
+              } @else if (service.elfAnalysisBumpsStatus.failed()) {
+                <chaotic-load-error
+                  [message]="t('admin.elfAnalysis.editDialog.rebuildTriggersLoadError')"
+                  [error]="service.elfAnalysisBumpsStatus.error()"
+                  (retry)="service.elfAnalysisBumpsStatus.reload()"
                 />
               } @else if (!service.elfAnalysisBumps() || service.elfAnalysisBumps()?.length === 0) {
                 <span class="text-ctp-subtext text-xs">{{ t('admin.elfAnalysis.editDialog.noRebuildTriggers') }}</span>
@@ -299,7 +348,14 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
               <chaotic-package-trigger-sources [pkgname]="editing()?.pkgname" />
             </div>
           </div>
-          <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          @if (conflict.changed()) {
+            <chaotic-edit-conflict-notice
+              [messageKey]="conflictMessageKey"
+              (review)="reviewConflict()"
+              (saveAnyway)="saveAnyway()"
+            />
+          }
+          <div class="flex flex-wrap justify-end gap-2">
             <p-button
               [label]="t('common.cancel')"
               (onClick)="closeDialog()"
@@ -307,7 +363,6 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
               severity="secondary"
               text
               size="small"
-              styleClass="w-full sm:w-auto"
             />
             <p-button
               [disabled]="elfForm().invalid()"
@@ -315,7 +370,6 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
               type="submit"
               severity="primary"
               size="small"
-              styleClass="w-full sm:w-auto"
             />
           </div>
         </form>
@@ -331,11 +385,22 @@ export class AdminPackageElfAnalysisPageComponent {
   private readonly transloco = inject(TranslocoService);
   private readonly activeTranslation = injectActiveTranslation();
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+  protected readonly missingValue = MISSING_VALUE;
+  protected readonly rebuildTriggerSkeletonRows = REBUILD_TRIGGER_SKELETON_ROWS;
+
+  protected readonly filtersActive = computed(
+    () =>
+      this.service.elfAnalysisQuery() !== '' ||
+      this.service.elfAnalysisPkgTypeFilter() !== undefined ||
+      this.service.elfAnalysisBrokenFilter() !== undefined,
+  );
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<AdminPackageElfAnalysis | null>(null);
+  protected readonly conflict = new EditConflictGuard<AdminPackageElfAnalysis>(elfAnalysisConflictFields);
+  protected readonly conflictMessageKey = marker('admin.editConflict.messages.elfAnalysis');
 
   readonly pkgTypeOptions = PKG_TYPE_OPTIONS;
   readonly brokenOptions = computed(() => {
@@ -364,7 +429,7 @@ export class AdminPackageElfAnalysisPageComponent {
     return marker('admin.elfAnalysis.binary.prebuilt');
   }
 
-  private readonly syncSearch = createDebounced(400, () =>
+  private readonly syncSearch = createDebounced(QUERY_SYNC_DEBOUNCE_MS, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.elfAnalysisQuery()) }),
   );
 
@@ -392,8 +457,14 @@ export class AdminPackageElfAnalysisPageComponent {
   }
 
   openEdit(row: AdminPackageElfAnalysis): void {
+    this.conflict.begin(row);
     this.editing.set(row);
     this.service.setElfAnalysisBumpsFor(row.id);
+    this.fillForm(row);
+    this.dialogVisible.set(true);
+  }
+
+  private fillForm(row: AdminPackageElfAnalysis): void {
     this.model.set({
       pkgType: row.pkgType,
       pkgId: String(row.pkgId),
@@ -401,7 +472,21 @@ export class AdminPackageElfAnalysisPageComponent {
       broken: row.broken,
       brokenReasons: row.brokenReasons?.join(', ') ?? '',
     });
-    this.dialogVisible.set(true);
+  }
+
+  protected reviewConflict(): void {
+    const latest = this.conflict.review();
+    if (latest === null) {
+      return;
+    }
+
+    this.editing.set(latest);
+    this.fillForm(latest);
+  }
+
+  protected saveAnyway(): void {
+    this.conflict.overwrite();
+    this.save();
   }
 
   setPkgType(value: string | null | undefined): void {
@@ -412,10 +497,21 @@ export class AdminPackageElfAnalysisPageComponent {
 
   save(): void {
     submit(this.elfForm, async () => {
-      const data = this.toFormData(this.model());
       const current = this.editing();
-      if (current) await this.service.updateElfAnalysis(current.id, data);
-      this.closeDialog();
+      if (!current) {
+        this.closeDialog();
+        return;
+      }
+
+      const unchanged = await this.conflict.confirmUnchanged(() => this.service.findElfAnalysis(current));
+      if (!unchanged) {
+        return;
+      }
+
+      const saved = await this.service.updateElfAnalysis(current.id, this.toFormData(this.model()));
+      if (saved) {
+        this.closeDialog();
+      }
     });
   }
 
@@ -439,7 +535,7 @@ export class AdminPackageElfAnalysisPageComponent {
 
   setPkgTypeFilter(value: string | null | undefined): void {
     this.service.elfAnalysisPkgTypeFilter.set(value === null || value === undefined ? undefined : (value as '0' | '1'));
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     patchQueryParams(this.router, this.route, {
       pkgType: value === null || value === undefined ? null : (value as '0' | '1'),
     });
@@ -447,7 +543,7 @@ export class AdminPackageElfAnalysisPageComponent {
 
   setBrokenFilter(value: boolean | null | undefined): void {
     this.service.elfAnalysisBrokenFilter.set(value === null || value === undefined ? undefined : value);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     patchQueryParams(this.router, this.route, {
       broken: value === null || value === undefined ? null : String(value),
     });
@@ -456,13 +552,26 @@ export class AdminPackageElfAnalysisPageComponent {
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);
     this.service.elfAnalysisPage.set(this.pagination.page());
-    this.service.elfAnalysisPerPage.set(event.rows ?? 25);
+    this.service.elfAnalysisPerPage.set(this.pagination.perPage());
   }
 
   onSearch(event: Event): void {
     this.service.elfAnalysisQuery.set((event.target as HTMLInputElement).value);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     this.syncSearch();
+  }
+
+  clearFilters(): void {
+    this.service.elfAnalysisQuery.set('');
+    this.service.elfAnalysisPkgTypeFilter.set(undefined);
+    this.service.elfAnalysisBrokenFilter.set(undefined);
+    this.resetToFirstPage();
+    patchQueryParams(this.router, this.route, { q: null, pkgType: null, broken: null });
+  }
+
+  private resetToFirstPage(): void {
+    this.pagination.resetPage();
+    this.service.elfAnalysisPage.set(this.pagination.page());
   }
 
   private toFormData(model: ElfAnalysisFormModel): ElfAnalysisFormData {

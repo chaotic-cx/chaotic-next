@@ -33,11 +33,11 @@ function errorKeyForCode(code: string): string {
         class="w-full max-w-sm rounded-2xl border border-ctp-surface1 p-8 shadow-lg backdrop-blur-(--chaotic-blur) text-center"
       >
         @if (errorKey(); as errorKey) {
-          <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">{{ t('auth.callback.unavailable') }}</h1>
+          <h1 class="text-ctp-text mt-6 text-2xl font-semibold">{{ t('auth.callback.unavailable') }}</h1>
           <p class="text-ctp-subtext mt-2 text-sm">{{ t(errorKey) }}</p>
         } @else {
           <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-ctp-surface1 border-t-ctp-blue"></div>
-          <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">{{ t('auth.callback.signingIn') }}</h1>
+          <h1 class="text-ctp-text mt-6 text-2xl font-semibold">{{ t('auth.callback.signingIn') }}</h1>
           <p class="text-ctp-subtext mt-2 text-sm">{{ t('auth.callback.completing') }}</p>
         }
       </div>

@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { form, FormField, required, submit } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Builder } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Checkbox } from '@openng/optimus-ui/checkbox';
@@ -15,17 +16,25 @@ import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
+import { TablePageReportDirective } from '../../table-page-report.directive';
 import { AdminService, BuilderFormData } from '../admin.service';
 import {
   createAdminPagination,
   type StatefulTableRef,
   createDebounced,
+  QUERY_SYNC_DEBOUNCE_MS,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
   restoreQueryParams,
   stringFilterToQuery,
 } from '../admin-url-sync';
+import { EditConflictGuard } from '../edit-conflict';
+import { EditConflictNoticeComponent } from '../edit-conflict-notice.component';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
@@ -36,20 +45,34 @@ interface BuilderFormModel {
   isActive: boolean;
 }
 
+function builderConflictFields(builder: Builder): Record<string, unknown> {
+  return {
+    name: builder.name,
+    description: builder.description,
+    builderClass: builder.builderClass,
+    isActive: builder.isActive,
+  };
+}
+
 @Component({
   selector: 'chaotic-admin-builders-page',
   imports: [
     TableSkeletonRowsComponent,
+    EditConflictNoticeComponent,
     Button,
     Checkbox,
+    ClearFiltersComponent,
     Dialog,
+    EmptyStateComponent,
     FormField,
     FormsModule,
     IconField,
     InputIcon,
     InputText,
+    LoadErrorComponent,
     Select,
     TableModule,
+    TablePageReportDirective,
     TagModule,
     Tooltip,
     TranslocoDirective,
@@ -64,36 +87,40 @@ interface BuilderFormModel {
           [paginator]="true"
           [lazy]="true"
           [totalRecords]="service.buildersTotal()"
-          [showCurrentPageReport]="true"
+          [chaoticTableFailed]="service.buildersStatus.failed()"
           [rowsPerPageOptions]="[25, 50, 100]"
           (onLazyLoad)="onLazyLoad(buildersTable, $event)"
           dataKey="id"
           stateStorage="local"
           stateKey="admin-builders-table"
           paginatorDropdownAppendTo="body"
+          chaoticPageReport
         >
           <ng-template #caption>
             <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
                 <p-select
                   [options]="service.activeOptions()"
                   [ngModel]="service.builderActiveFilter()"
                   [placeholder]="t('admin.pages.activeStatus')"
+                  [ariaLabel]="t('admin.pages.activeStatus')"
                   (ngModelChange)="setActiveFilter($event)"
                   optionLabel="label"
                   optionValue="value"
                   showClear
                   appendTo="body"
                 />
+                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
               </div>
               <p-iconfield class="w-full sm:w-64" iconPosition="left">
                 <p-inputicon>
-                  <i class="pi pi-search"></i>
+                  <i class="pi pi-search" aria-hidden="true"></i>
                 </p-inputicon>
                 <input
                   class="w-full"
                   [value]="service.builderQuery()"
                   [placeholder]="t('admin.pages.searchName')"
+                  [attr.aria-label]="t('admin.pages.searchName')"
                   (input)="onSearch($event)"
                   pInputText
                   type="text"
@@ -116,9 +143,17 @@ interface BuilderFormModel {
           <ng-template pTemplate="body" let-builder>
             <tr>
               <td>{{ builder.id }}</td>
-              <td>{{ builder.name }}</td>
-              <td class="text-ctp-subtext">{{ builder.description }}</td>
-              <td>{{ builder.builderClass }}</td>
+              <td>
+                <span class="block max-w-xs truncate" [title]="builder.name">{{ builder.name }}</span>
+              </td>
+              <td class="text-ctp-subtext">
+                @if (builder.description) {
+                  <span class="line-clamp-2" [title]="builder.description">{{ builder.description }}</span>
+                } @else {
+                  {{ missingValue }}
+                }
+              </td>
+              <td>{{ builder.builderClass || missingValue }}</td>
               <td>
                 @if (builder.isActive) {
                   <p-tag [value]="t('admin.pages.active')" severity="success" />
@@ -162,7 +197,21 @@ interface BuilderFormModel {
             } @else {
               <tr>
                 <td [attr.colspan]="6">
-                  <p class="chaotic-card__empty">{{ t('admin.builders.empty') }}</p>
+                  @if (service.buildersStatus.failed()) {
+                    <chaotic-load-error
+                      [message]="t('admin.builders.loadError')"
+                      [error]="service.buildersStatus.error()"
+                      (retry)="service.buildersStatus.reload()"
+                    />
+                  } @else if (filtersActive()) {
+                    <chaotic-empty-state [filtered]="true" (clearFilters)="clearFilters()">
+                      <p>{{ t('admin.builders.empty') }}</p>
+                    </chaotic-empty-state>
+                  } @else {
+                    <chaotic-empty-state>
+                      <p>{{ t('admin.builders.firstRun.message') }}</p>
+                    </chaotic-empty-state>
+                  }
                 </td>
               </tr>
             }
@@ -179,10 +228,21 @@ interface BuilderFormModel {
       >
         <form class="flex flex-col gap-4" (submit)="save(); $event.preventDefault()">
           <label class="flex flex-col gap-1">
-            <span class="text-ctp-text text-sm">{{ t('admin.pages.columns.name') }}</span>
-            <input [formField]="builderForm.name" pInputText type="text" />
-            @if (builderForm.name().touched() && builderForm.name().errors().length) {
-              <span class="text-ctp-red text-xs">{{ t('admin.builders.editDialog.nameRequired') }}</span>
+            <span class="text-ctp-text text-sm">
+              {{ t('admin.pages.columns.name') }}
+              <span class="text-ctp-red" aria-hidden="true">*</span>
+            </span>
+            <input
+              [formField]="builderForm.name"
+              [attr.aria-invalid]="showNameError()"
+              [attr.aria-describedby]="showNameError() ? 'builder-name-error' : null"
+              pInputText
+              type="text"
+            />
+            @if (showNameError()) {
+              <span class="text-ctp-red text-xs" id="builder-name-error">{{
+                t('admin.builders.editDialog.nameRequired')
+              }}</span>
             }
           </label>
           <label class="flex flex-col gap-1">
@@ -197,7 +257,14 @@ interface BuilderFormModel {
             <p-checkbox [formField]="builderForm.isActive" [binary]="true" inputId="builderIsActive" />
             <label class="text-ctp-text text-sm" for="builderIsActive">{{ t('admin.pages.active') }}</label>
           </div>
-          <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          @if (conflict.changed()) {
+            <chaotic-edit-conflict-notice
+              [messageKey]="conflictMessageKey"
+              (review)="reviewConflict()"
+              (saveAnyway)="saveAnyway()"
+            />
+          }
+          <div class="flex flex-wrap justify-end gap-2">
             <p-button
               [label]="t('common.cancel')"
               (onClick)="dialogVisible.set(false)"
@@ -205,7 +272,6 @@ interface BuilderFormModel {
               severity="secondary"
               text
               size="small"
-              styleClass="w-full sm:w-auto"
             />
             <p-button
               [disabled]="builderForm().invalid()"
@@ -213,7 +279,6 @@ interface BuilderFormModel {
               type="submit"
               severity="primary"
               size="small"
-              styleClass="w-full sm:w-auto"
             />
           </div>
         </form>
@@ -228,19 +293,31 @@ export class AdminBuildersPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+  protected readonly missingValue = MISSING_VALUE;
+
+  protected readonly filtersActive = computed(
+    () => this.service.builderQuery() !== '' || this.service.builderActiveFilter() !== undefined,
+  );
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<Builder | null>(null);
+  protected readonly conflict = new EditConflictGuard<Builder>(builderConflictFields);
+  protected readonly conflictMessageKey = marker('admin.editConflict.messages.builder');
 
-  private readonly syncSearch = createDebounced(400, () =>
+  private readonly syncSearch = createDebounced(QUERY_SYNC_DEBOUNCE_MS, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.builderQuery()) }),
   );
 
   private readonly model = signal<BuilderFormModel>(emptyModel());
   readonly builderForm = form(this.model, (s) => {
     required(s.name);
+  });
+
+  protected readonly showNameError = computed(() => {
+    const name = this.builderForm.name();
+    return name.touched() && name.errors().length > 0;
   });
 
   constructor() {
@@ -255,22 +332,53 @@ export class AdminBuildersPageComponent {
   }
 
   openEdit(builder: Builder): void {
+    this.conflict.begin(builder);
     this.editing.set(builder);
+    this.fillForm(builder);
+    this.dialogVisible.set(true);
+  }
+
+  private fillForm(builder: Builder): void {
     this.model.set({
       name: builder.name,
       description: builder.description ?? '',
       builderClass: builder.builderClass ?? '',
       isActive: builder.isActive ?? true,
     });
-    this.dialogVisible.set(true);
+  }
+
+  protected reviewConflict(): void {
+    const latest = this.conflict.review();
+    if (latest === null) {
+      return;
+    }
+
+    this.editing.set(latest);
+    this.fillForm(latest);
+  }
+
+  protected saveAnyway(): void {
+    this.conflict.overwrite();
+    this.save();
   }
 
   save(): void {
     submit(this.builderForm, async () => {
-      const data = this.toFormData(this.model());
       const current = this.editing();
-      if (current) await this.service.updateBuilder(current.id, data);
-      this.dialogVisible.set(false);
+      if (!current) {
+        this.dialogVisible.set(false);
+        return;
+      }
+
+      const unchanged = await this.conflict.confirmUnchanged(() => this.service.findBuilder(current));
+      if (!unchanged) {
+        return;
+      }
+
+      const saved = await this.service.updateBuilder(current.id, this.toFormData(this.model()));
+      if (saved) {
+        this.dialogVisible.set(false);
+      }
     });
   }
 
@@ -287,19 +395,31 @@ export class AdminBuildersPageComponent {
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);
     this.service.builderPage.set(this.pagination.page());
-    this.service.builderPerPage.set(event.rows ?? 25);
+    this.service.builderPerPage.set(this.pagination.perPage());
   }
 
   onSearch(event: Event): void {
     this.service.builderQuery.set((event.target as HTMLInputElement).value);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     this.syncSearch();
   }
 
   setActiveFilter(value: 'true' | 'false' | null | undefined): void {
     this.service.builderActiveFilter.set(value ?? undefined);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     patchQueryParams(this.router, this.route, { active: stringFilterToQuery(value ?? undefined) });
+  }
+
+  clearFilters(): void {
+    this.service.builderQuery.set('');
+    this.service.builderActiveFilter.set(undefined);
+    this.resetToFirstPage();
+    patchQueryParams(this.router, this.route, { q: null, active: null });
+  }
+
+  private resetToFirstPage(): void {
+    this.pagination.resetPage();
+    this.service.builderPage.set(this.pagination.page());
   }
 
   private toFormData(model: BuilderFormModel): BuilderFormData {

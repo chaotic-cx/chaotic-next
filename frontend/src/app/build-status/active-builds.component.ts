@@ -3,10 +3,12 @@ import { RouterLink } from '@angular/router';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { FlipListDirective } from '../animations/flip-list.directive';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { packageLogRouteFromUrl } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
+import { UnknownValueComponent } from '../ui-states/unknown-value.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BuildStatusService } from './build-status.service';
 
@@ -37,6 +39,8 @@ const ETA_TONE_CLASSES: Record<EtaTone, string> = {
     BuildClassPipe,
     FlipListDirective,
     TranslocoDirective,
+    EmptyStateComponent,
+    UnknownValueComponent,
   ],
   templateUrl: './active-builds.component.html',
   styleUrl: './active-builds.component.css',

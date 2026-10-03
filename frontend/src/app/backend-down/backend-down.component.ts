@@ -1,12 +1,12 @@
 import { NgOptimizedImage } from '@angular/common';
 import { Component, effect, inject } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { BackendStatusService } from '../backend-status/backend-status.service';
 
 @Component({
   selector: 'chaotic-backend-down',
-  imports: [NgOptimizedImage, TranslocoDirective],
+  imports: [NgOptimizedImage, RouterLink, TranslocoDirective],
   templateUrl: './backend-down.component.html',
 })
 export class BackendDownComponent {

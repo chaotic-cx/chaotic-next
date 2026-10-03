@@ -5,10 +5,10 @@ import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { translateBuildClass } from '../../../../pipes/build-class.pipe';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { seriesColors } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, pieChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-packages-per-build-class',
@@ -40,11 +40,11 @@ export class ChartPackagesPerBuildClassComponent {
           {
             label: this.transloco.translate('stats.charts.packages'),
             data: data.map((d) => parseCount(d.count)),
-            backgroundColor: CATPPUCCIN_FLAVOURS,
+            backgroundColor: seriesColors(),
           },
         ],
       },
-      options: mochaPieChartOptions<'pie'>(),
+      options: pieChartOptions<'pie'>(),
     };
   });
 }

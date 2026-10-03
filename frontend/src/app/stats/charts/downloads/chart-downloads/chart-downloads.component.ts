@@ -13,8 +13,8 @@ import {
   chartRowHeight,
   clampAmount,
   type ChartConfig,
-  mochaAxisChartOptions,
-  SINGLE_SERIES_COLOR,
+  axisChartOptions,
+  singleSeriesColor,
 } from '../../chart-config';
 
 @Component({
@@ -65,12 +65,12 @@ export class ChartDownloadsComponent {
           {
             data,
             label: this.transloco.translate('stats.charts.downloads.label'),
-            backgroundColor: SINGLE_SERIES_COLOR,
+            backgroundColor: singleSeriesColor(),
             borderRadius: 4,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
     };
   });
 }

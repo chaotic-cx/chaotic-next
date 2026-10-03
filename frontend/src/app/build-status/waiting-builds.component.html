@@ -1,10 +1,6 @@
 <section class="chaotic-card" *transloco="let t; prefix: 'buildStatus.waiting'">
   <chaotic-build-status-section
-    [count]="
-      buildStatusService.loadingQueue() || buildStatusService.queueFailed()
-        ? undefined
-        : buildStatusService.waitingQueue().length
-    "
+    [count]="buildStatusService.queueCountKnown() ? buildStatusService.waitingQueue().length : undefined"
     [iconClass]="buildStatusService.waitingQueue().length > 0 ? 'text-ctp-lavender' : 'text-ctp-subtext0'"
     [title]="t('title')"
     icon="pi-hourglass"
@@ -32,19 +28,20 @@
   } @else if (buildStatusService.queueFailed()) {
     <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.refreshQueueStats()" />
   } @else if (buildStatusService.waitingQueue().length === 0) {
-    <p class="chaotic-card__empty">
-      <i class="pi pi-check-circle" aria-hidden="true"></i>
-      {{ t('empty') }}
-    </p>
+    <chaotic-empty-state [message]="t('empty')" icon="pi-check-circle" />
   } @else {
     <ol class="queue-page-list" chaoticFlipList>
       @for (pkg of paginatedQueue(); track pkg.rawName; let index = $index) {
         <li class="chaotic-row" animate.enter="ctp-fade-enter">
           <span class="queue-position">{{ pageOffset() + index + 1 }}</span>
           <div class="min-w-0 flex-1">
-            <a class="chaotic-row__name" [routerLink]="['/stats/search']" [queryParams]="{ search: pkg.name }">{{
-              pkg.name
-            }}</a>
+            <a
+              class="chaotic-row__name"
+              [routerLink]="['/stats/search']"
+              [queryParams]="{ search: pkg.name }"
+              [title]="pkg.name"
+              >{{ pkg.name }}</a
+            >
             <span class="chaotic-row__meta">{{ pkg.repo }} · {{ pkg.build_class | buildClass }}</span>
           </div>
           @if (buildStatusService.waitingStartEtaLabels().get(pkg.rawName); as eta) {

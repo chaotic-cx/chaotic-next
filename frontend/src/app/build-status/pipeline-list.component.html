@@ -9,14 +9,19 @@
       >
         <span class="size-2 shrink-0 rounded-full" [class]="statusDotClass(pipeline)"></span>
         <span class="min-w-0">
-          <span class="block truncate text-sm font-medium text-ctp-text group-hover:text-ctp-mauve">{{
-            pipeline.statusText.replaceAll('_', ' ')
-          }}</span>
+          <span
+            class="block truncate text-sm font-medium text-ctp-text group-hover:text-ctp-mauve group-focus-visible:text-ctp-mauve"
+            >{{ pipeline.statusText.replaceAll('_', ' ') }}</span
+          >
           <span class="chaotic-row__meta">
             #{{ pipeline.pipeline.id }} ·
-            <span [pTooltip]="(pipeline.pipeline.created_at | date: 'short') ?? undefined" tooltipPosition="top">{{
-              pipeline.pipeline.created_at | relativeTime
-            }}</span>
+            <time
+              [attr.datetime]="pipeline.pipeline.created_at | isoDateTime"
+              [pTooltip]="(pipeline.pipeline.created_at | date: 'short') ?? undefined"
+              tooltipPosition="top"
+              >{{ pipeline.pipeline.created_at | relativeTime
+              }}<span class="sr-only"> ({{ pipeline.pipeline.created_at | date: 'short' }})</span></time
+            >
           </span>
         </span>
       </button>

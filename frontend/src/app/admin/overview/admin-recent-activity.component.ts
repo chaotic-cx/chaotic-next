@@ -9,6 +9,7 @@ import { resourceFailed, resourceValue } from '../../functions';
 import { mergeRequestUrl } from '../../gitlab-links';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
+import { SkeletonListComponent } from '../../table-skeleton/skeleton-list.component';
 import { OVERVIEW_SKELETON_ROWS } from './overview-constants';
 
 const ACTIVITY_FETCH_SIZE = 6;
@@ -46,7 +47,7 @@ interface ActivityEntry {
 
 @Component({
   selector: 'chaotic-admin-recent-activity',
-  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink, TranslocoDirective],
+  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink, SkeletonListComponent, TranslocoDirective],
   template: `
     <section class="chaotic-card h-full" *transloco="let t" aria-labelledby="overview-activity-title">
       <header class="chaotic-card__header">
@@ -58,13 +59,13 @@ interface ActivityEntry {
         }}</a>
       </header>
       @if (loading()) {
-        <ul class="chaotic-mini-list" aria-hidden="true">
-          @for (row of skeletonRows; track row) {
-            <li><span class="chaotic-skeleton h-4 w-full"></span></li>
-          }
-        </ul>
+        <chaotic-skeleton-list [rows]="skeletonRows" />
       } @else if (failed()) {
-        <chaotic-load-error [message]="t('admin.overview.recentActivity.loadError')" (retry)="retry()" />
+        <chaotic-load-error
+          [message]="t('admin.overview.recentActivity.loadError')"
+          [error]="mrActionsResource.error()"
+          (retry)="retry()"
+        />
       } @else if (entries().length === 0) {
         <p class="chaotic-card__empty">{{ t('admin.overview.recentActivity.empty') }}</p>
       } @else {
@@ -96,22 +97,23 @@ interface ActivityEntry {
       flex: 1;
       min-width: 0;
       line-height: 1.45;
-      color: var(--ctp-mocha-subtext0);
+      color: var(--chaotic-fg-muted);
     }
 
     .activity-user {
-      font-weight: 500;
-      color: var(--ctp-mocha-text);
+      font-weight: var(--chaotic-weight-medium);
+      color: var(--catppuccin-color-text);
     }
 
     .activity-target {
       font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
       font-size: 0.8125rem;
-      color: var(--ctp-mocha-text);
+      color: var(--catppuccin-color-text);
     }
 
-    a.activity-target:hover {
-      color: var(--ctp-mocha-mauve);
+    a.activity-target:hover,
+    a.activity-target:focus-visible {
+      color: var(--catppuccin-color-mauve);
     }
   `,
 })
@@ -120,7 +122,7 @@ export class AdminRecentActivityComponent {
 
   protected readonly skeletonRows = OVERVIEW_SKELETON_ROWS;
 
-  private readonly mrActionsResource = httpResource<Paginated<MrAction>>(() => ({
+  protected readonly mrActionsResource = httpResource<Paginated<MrAction>>(() => ({
     url: `${this.backendUrl}/admin/mr-actions`,
     params: { page: 1, perPage: ACTIVITY_FETCH_SIZE },
   }));

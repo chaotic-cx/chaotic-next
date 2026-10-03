@@ -30,20 +30,23 @@ const COPIED_LINE_KEYS: CopiedLabelKeys = {
   template: `
     <div class="code-block" *transloco="let t">
       <pre><code [highlight]="code()" [language]="language()"></code></pre>
-      <button
-        class="chaotic-icon-btn"
-        [attr.aria-label]="copied() ? copiedLabel() : t('common.copyToClipboard')"
-        (click)="copy()"
-        type="button"
-      >
-        @if (copied()) {
-          <svg class="copied-check" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M3 8.5l3.25 3.25L13 5" />
-          </svg>
-        } @else {
-          <i class="pi pi-copy" aria-hidden="true"></i>
-        }
-      </button>
+      <div class="code-block__actions">
+        <span class="code-block__language">{{ language() }}</span>
+        <button
+          class="chaotic-icon-btn"
+          [attr.aria-label]="copied() ? copiedLabel() : t('common.copyToClipboard')"
+          (click)="copy()"
+          type="button"
+        >
+          @if (copied()) {
+            <svg class="copied-check" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3 8.5l3.25 3.25L13 5" />
+            </svg>
+          } @else {
+            <i class="pi pi-copy" aria-hidden="true"></i>
+          }
+        </button>
+      </div>
       <span class="sr-only" role="status">{{ copied() ? copiedLabel() : '' }}</span>
     </div>
   `,
@@ -56,7 +59,7 @@ const COPIED_LINE_KEYS: CopiedLabelKeys = {
       margin-block: 0.75rem;
       border-radius: var(--chaotic-radius-md);
       border: 1px solid var(--chaotic-border);
-      background: color-mix(in srgb, var(--ctp-mocha-crust) 70%, transparent);
+      background: color-mix(in srgb, var(--catppuccin-color-crust) 70%, transparent);
     }
 
     pre {
@@ -68,16 +71,29 @@ const COPIED_LINE_KEYS: CopiedLabelKeys = {
       line-height: 1.6;
     }
 
+    .code-block__actions {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .code-block__language {
+      font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+      font-size: 0.6875rem;
+      color: var(--chaotic-fg-faint);
+    }
+
     .copied-check {
       width: 1rem;
       height: 1rem;
       fill: none;
-      stroke: var(--ctp-mocha-green);
+      stroke: var(--catppuccin-color-green);
       stroke-width: 2;
       stroke-linecap: round;
       stroke-linejoin: round;
       stroke-dasharray: 16;
-      animation: copied-check-draw 220ms ease-out both;
+      animation: copied-check-draw var(--chaotic-duration-base) var(--chaotic-ease-out) both;
     }
 
     @keyframes copied-check-draw {
@@ -132,7 +148,11 @@ export class CodeBlockComponent {
   });
 
   protected copy(): void {
-    if (!navigator.clipboard) return;
+    // Browsers expose no clipboard on insecure (plain HTTP) origins.
+    if (!navigator.clipboard) {
+      this.showCopyFailed();
+      return;
+    }
 
     navigator.clipboard
       .writeText(this.code().replace(PROMPT_PREFIX, ''))
@@ -141,11 +161,15 @@ export class CodeBlockComponent {
         setTimeout(() => this.copied.set(false), COPIED_RESET_MS);
       })
       .catch((err) => {
-        this.messageToastService.error(
-          this.transloco.translate('common.copyFailed'),
-          this.transloco.translate('common.failedCopyingToClipboard'),
-        );
+        this.showCopyFailed();
         console.error(err);
       });
+  }
+
+  private showCopyFailed(): void {
+    this.messageToastService.error(
+      this.transloco.translate('common.copyFailed'),
+      this.transloco.translate('common.failedCopyingToClipboard'),
+    );
   }
 }

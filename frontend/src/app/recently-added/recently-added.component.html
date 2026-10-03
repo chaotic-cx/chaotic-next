@@ -1,13 +1,16 @@
 <div class="w-full" *transloco="let t; prefix: 'recentlyAdded'">
   <div class="recently-added-section">
     @if (loading() && packages().length === 0) {
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
         @for (_ of placeholderCount; track $index) {
-          <div class="h-24 animate-pulse rounded-[10px] bg-ctp-surface0/30 motion-reduce:animate-none"></div>
+          <div class="recent-skeleton chaotic-skeleton"></div>
         }
       </div>
+      <chaotic-slow-loading-hint />
+    } @else if (resource.error() && packages().length === 0) {
+      <chaotic-load-error [message]="t('loadError')" [error]="resource.error()" (retry)="resource.reload()" />
     } @else if (packages().length === 0) {
-      <p class="py-6 text-center text-sm text-ctp-subtext0">{{ t('empty') }}</p>
+      <chaotic-empty-state [message]="t('empty')" icon="pi-box" />
     } @else {
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         @for (pkg of packages(); track pkg.id; let index = $index) {
@@ -18,7 +21,9 @@
             [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
             animate.enter="finding-item-enter"
           >
-            <span class="truncate font-mono text-sm font-semibold text-ctp-text">{{ pkg.pkgname }}</span>
+            <span class="truncate font-mono text-sm font-semibold text-ctp-text" [title]="pkg.pkgname">{{
+              pkg.pkgname
+            }}</span>
             <span class="truncate text-sm text-ctp-subtext1">{{ versionLabel(pkg) }}</span>
             <span class="mt-auto flex items-center justify-between gap-2 pt-2">
               @if (pkg.reponame) {

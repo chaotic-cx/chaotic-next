@@ -1,12 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
 import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { isMobileSignal, truncateLabel } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { themePalette } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, axisChartOptions } from '../../chart-config';
 
 export interface FlakyPackageRow {
   pkgname: string;
@@ -50,11 +50,11 @@ export class ChartFlakyPackagesComponent {
           {
             label: this.transloco.translate('stats.charts.flakyPackages.label'),
             data,
-            backgroundColor: flavors.mocha.colors.peach.hex,
+            backgroundColor: themePalette().peach.hex,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y' }),
     };
   });
 }

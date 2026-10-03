@@ -2,8 +2,8 @@
   position: relative;
   height: 4px;
   overflow: hidden;
-  border-radius: 9999px;
-  background: var(--ctp-mocha-surface0);
+  border-radius: var(--chaotic-radius-pill);
+  background: var(--catppuccin-color-surface0);
 }
 
 .build-progress > span {
@@ -11,18 +11,18 @@
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  background: var(--ctp-mocha-mauve);
+  background: var(--catppuccin-color-mauve);
   transform-origin: left center;
-  transition: transform 600ms ease-out;
+  transition: transform var(--chaotic-duration-max) var(--chaotic-ease-out);
 }
 
 .build-progress.is-overtime > span {
-  background: var(--ctp-mocha-red);
+  background: var(--catppuccin-color-red);
 }
 
 .build-progress.is-indeterminate > span {
   width: 35%;
-  background: color-mix(in srgb, var(--ctp-mocha-mauve) 60%, transparent);
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 60%, transparent);
   animation: build-progress-slide 1.6s ease-in-out infinite;
 }
 

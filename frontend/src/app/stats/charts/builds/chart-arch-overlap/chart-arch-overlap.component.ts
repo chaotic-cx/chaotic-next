@@ -13,7 +13,6 @@ export function visibleArchOverlapRows(rows: ArchOverlapReport[]): ArchOverlapRe
   selector: 'chaotic-chart-arch-overlap',
   imports: [LoadErrorComponent, TranslocoDirective],
   templateUrl: './chart-arch-overlap.component.html',
-  styleUrl: './chart-arch-overlap.component.css',
 })
 export class ChartArchOverlapComponent {
   private readonly appService = inject(AppService);

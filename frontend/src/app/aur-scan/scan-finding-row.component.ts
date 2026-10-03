@@ -50,11 +50,12 @@ const SEVERITY_LABELS: Record<DiffScanSeverity, string> = {
       border-radius: var(--chaotic-radius-sm);
       text-align: left;
       cursor: pointer;
-      transition: background-color 120ms ease-out;
+      transition: background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
     }
 
-    .finding:hover {
-      background: color-mix(in srgb, var(--ctp-mocha-surface0) 45%, transparent);
+    .finding:hover,
+    .finding:focus-visible {
+      background: color-mix(in srgb, var(--catppuccin-color-surface0) 45%, transparent);
     }
 
     .finding__severity {
@@ -63,14 +64,14 @@ const SEVERITY_LABELS: Record<DiffScanSeverity, string> = {
       align-items: center;
       gap: 0.375rem;
       font-size: 0.75rem;
-      font-weight: 600;
+      font-weight: var(--chaotic-weight-semibold);
       color: var(--finding-tone);
     }
 
     .finding__dot {
       width: 0.4375rem;
       height: 0.4375rem;
-      border-radius: 9999px;
+      border-radius: var(--chaotic-radius-pill);
       background: var(--finding-tone);
     }
 
@@ -78,14 +79,14 @@ const SEVERITY_LABELS: Record<DiffScanSeverity, string> = {
       grid-area: rule;
       min-width: 0;
       font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--ctp-mocha-text);
+      font-weight: var(--chaotic-weight-semibold);
+      color: var(--catppuccin-color-text);
     }
 
     .finding__location {
       grid-area: location;
       font-size: 0.75rem;
-      color: var(--ctp-mocha-sky);
+      color: var(--chaotic-ink-sky);
       white-space: nowrap;
     }
 
@@ -93,19 +94,19 @@ const SEVERITY_LABELS: Record<DiffScanSeverity, string> = {
       grid-area: match;
       overflow-wrap: anywhere;
       font-size: 0.75rem;
-      color: var(--ctp-mocha-subtext0);
+      color: var(--chaotic-fg-muted);
     }
 
     .finding--critical {
-      --finding-tone: var(--ctp-mocha-red);
+      --finding-tone: var(--catppuccin-color-red);
     }
 
     .finding--warning {
-      --finding-tone: var(--ctp-mocha-peach);
+      --finding-tone: var(--catppuccin-color-peach);
     }
 
     .finding--info {
-      --finding-tone: var(--ctp-mocha-overlay2);
+      --finding-tone: var(--catppuccin-color-overlay2);
     }
 
     @media (max-width: 639px) {

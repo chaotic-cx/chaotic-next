@@ -1,12 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
 import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { isMobileSignal, parseCount, truncateLabel } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { themePalette } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, axisChartOptions } from '../../chart-config';
 
 const TOP_PACKAGES = 12;
 
@@ -42,11 +42,11 @@ export class ChartFailedHotspotsComponent {
           {
             label: this.transloco.translate('stats.charts.failedHotspots.label'),
             data,
-            backgroundColor: flavors.mocha.colors.red.hex,
+            backgroundColor: themePalette().red.hex,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y' }),
     };
   });
 }

@@ -1,0 +1,19 @@
+.not-found__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.not-found__link {
+  color: var(--catppuccin-color-text);
+  text-decoration: underline;
+  text-decoration-color: var(--catppuccin-color-surface2);
+  text-underline-offset: 0.25em;
+}
+
+.not-found__link:hover,
+.not-found__link:focus-visible {
+  color: var(--catppuccin-color-mauve);
+  text-decoration-color: currentColor;
+}

@@ -44,28 +44,28 @@ export interface BarRow {
       white-space: nowrap;
       font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
       font-size: 0.8125rem;
-      color: var(--ctp-mocha-text);
+      color: var(--catppuccin-color-text);
     }
 
     .bar-track {
       height: 6px;
       overflow: hidden;
-      border-radius: 9999px;
-      background: color-mix(in srgb, var(--ctp-mocha-surface0) 70%, transparent);
+      border-radius: var(--chaotic-radius-pill);
+      background: color-mix(in srgb, var(--catppuccin-color-surface0) 70%, transparent);
     }
 
     .bar-fill {
       display: block;
       height: 100%;
       border-radius: inherit;
-      background: color-mix(in srgb, var(--ctp-mocha-mauve) 70%, transparent);
+      background: color-mix(in srgb, var(--catppuccin-color-mauve) 70%, transparent);
     }
 
     .bar-detail {
       font-size: 0.75rem;
       font-variant-numeric: tabular-nums;
       text-align: right;
-      color: var(--ctp-mocha-overlay1);
+      color: var(--chaotic-fg-faint);
     }
   `,
 })

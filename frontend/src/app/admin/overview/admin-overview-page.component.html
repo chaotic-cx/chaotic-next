@@ -2,7 +2,7 @@
   <section class="overview-metrics chaotic-surface" [attr.aria-label]="t('healthLabel')">
     <div class="metric metric--hero">
       <span class="metric__label">{{ t('failing.label') }}</span>
-      <span class="metric__value">{{ failuresLoading() ? '–' : failingCount() }}</span>
+      <span class="metric__value">{{ failuresLoading() || failuresFailed() ? missingValue : failingCount() }}</span>
       <span class="metric__context">
         @if (failuresFailed()) {
           {{ t('failing.loadError') }}
@@ -16,29 +16,29 @@
 
     <a class="metric metric--link" routerLink="/review-queue">
       <span class="metric__label">{{ t('mergeRequests.label') }}</span>
-      <span class="metric__value">{{ mrCounts()?.toReview ?? '–' }}</span>
+      <span class="metric__value">{{ mrCounts()?.toReview ?? missingValue }}</span>
       <span class="metric__context">
         @if (mrCountsFailed()) {
           {{ t('mergeRequests.loadError') }}
         } @else {
-          {{ t('mergeRequests.onHold', { count: mrCounts()?.onHold ?? '–' }) }}
+          {{ t('mergeRequests.onHold', { count: mrCounts()?.onHold ?? missingValue }) }}
         }
       </span>
     </a>
 
-    <div class="metric">
+    <a class="metric metric--link" routerLink="/status">
       <span class="metric__label">{{ t('buildQueue.label') }}</span>
       <span class="metric__value">
-        {{ buildStatusService.loadingQueue() ? '–' : buildStatusService.waitingQueue().length }}
+        {{ buildStatusService.loadingQueue() ? missingValue : buildStatusService.waitingQueue().length }}
       </span>
       <span class="metric__context">{{
         t('buildQueue.buildingNow', { count: buildStatusService.activeQueue().length })
       }}</span>
-    </div>
+    </a>
 
     <a class="metric metric--link" routerLink="../builders">
       <span class="metric__label">{{ t('builders.label') }}</span>
-      <span class="metric__value">{{ buildStatusService.loadingQueue() ? '–' : onlineBuilders() }}</span>
+      <span class="metric__value">{{ buildStatusService.loadingQueue() ? missingValue : onlineBuilders() }}</span>
       <span class="metric__context">
         @if (enabledBuilders(); as enabled) {
           {{ t('builders.enabledBusy', { enabled: enabled, busy: busyBuilders() }) }}
@@ -64,13 +64,17 @@
       </header>
 
       @if (failuresLoading()) {
-        <ul class="failure-skeleton" aria-hidden="true">
-          @for (row of skeletonRows; track row) {
+        <ul class="failure-skeleton skeleton-reveal" aria-hidden="true">
+          @for (row of skeletonRowIndexes; track row) {
             <li><span class="chaotic-skeleton h-4 flex-1"></span><span class="chaotic-skeleton h-4 w-24"></span></li>
           }
         </ul>
       } @else if (failuresFailed()) {
-        <chaotic-load-error [message]="t('failures.loadError')" (retry)="retryFailures()" />
+        <chaotic-load-error
+          [message]="t('failures.loadError')"
+          [error]="failuresResource.error()"
+          (retry)="retryFailures()"
+        />
       } @else if (failureRows().length === 0) {
         <div class="overview-empty">
           <i class="pi pi-check-circle text-ctp-green" aria-hidden="true"></i>

@@ -1,6 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
 
 export interface ProblemRow {
   name: string;
@@ -14,7 +15,7 @@ export interface ProblemRow {
     <ng-container *transloco="let t">
       <div class="problem-head">
         <h3 class="problem-title">{{ title() }}</h3>
-        <span class="problem-count" [class.is-zero]="count() === 0">{{ count() ?? '–' }}</span>
+        <span class="problem-count" [class.is-zero]="count() === 0">{{ count() ?? missingValue }}</span>
         @if (link(); as target) {
           <a class="chaotic-card__link" [routerLink]="target">{{
             linkLabel() ?? t('admin.overview.problemSection.open')
@@ -60,19 +61,19 @@ export interface ProblemRow {
 
     .problem-title {
       font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--ctp-mocha-text);
+      font-weight: var(--chaotic-weight-medium);
+      color: var(--catppuccin-color-text);
     }
 
     .problem-count {
       font-size: 0.8125rem;
-      font-weight: 600;
+      font-weight: var(--chaotic-weight-semibold);
       font-variant-numeric: tabular-nums;
-      color: var(--ctp-mocha-peach);
+      color: var(--chaotic-ink-peach);
     }
 
     .problem-count.is-zero {
-      color: var(--ctp-mocha-overlay1);
+      color: var(--chaotic-fg-faint);
     }
 
     .problem-list {
@@ -82,19 +83,20 @@ export interface ProblemRow {
     .problem-note {
       padding: 0.375rem 1rem 0.5rem;
       font-size: 0.8125rem;
-      color: var(--ctp-mocha-overlay1);
+      color: var(--chaotic-fg-faint);
     }
 
     .problem-retry {
       margin-left: 0.25rem;
-      color: var(--ctp-mocha-subtext1);
+      color: var(--catppuccin-color-subtext1);
       text-decoration: underline;
       text-underline-offset: 0.2em;
       cursor: pointer;
     }
 
-    .problem-retry:hover {
-      color: var(--ctp-mocha-mauve);
+    .problem-retry:hover,
+    .problem-retry:focus-visible {
+      color: var(--catppuccin-color-mauve);
     }
   `,
 })
@@ -107,4 +109,6 @@ export class AdminProblemSectionComponent {
   readonly link = input<string | null>(null);
   readonly linkLabel = input<string>();
   readonly retry = output();
+
+  protected readonly missingValue = MISSING_VALUE;
 }

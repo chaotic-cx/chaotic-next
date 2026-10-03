@@ -1,6 +1,6 @@
 <section class="chaotic-card" *transloco="let t">
   <chaotic-build-status-section [title]="t('buildStatus.deployments.title')" icon="pi-box">
-    <a class="text-xs text-ctp-subtext0 hover:text-ctp-mauve" routerLink="/deployments">{{
+    <a class="text-xs text-ctp-subtext0 hover:text-ctp-mauve focus-visible:text-ctp-mauve" routerLink="/deployments">{{
       t('buildStatus.deployments.viewAll')
     }}</a>
   </chaotic-build-status-section>
@@ -16,7 +16,7 @@
       (retry)="buildStatusService.refreshPackageBuilds()"
     />
   } @else if (paginatedDeployments().length === 0) {
-    <p class="chaotic-card__empty">{{ t('buildStatus.deployments.empty') }}</p>
+    <chaotic-empty-state [message]="t('buildStatus.deployments.empty')" icon="pi-box" />
   } @else {
     <ul chaoticFlipList>
       @for (deployment of paginatedDeployments(); track deployment.id) {
@@ -27,6 +27,7 @@
               class="chaotic-row__name"
               [routerLink]="['/stats/search']"
               [queryParams]="{ search: deployment.pkgbase.pkgname }"
+              [title]="deployment.pkgbase.pkgname"
               >{{ deployment.pkgbase.pkgname }}</a
             >
             <span class="chaotic-row__meta">
@@ -42,7 +43,7 @@
                 @for (tag of deployment.failureTags; track tag) {
                   @let descriptionKey = tagDescriptionKey(tag);
                   <span
-                    class="rounded-full bg-ctp-red/15 px-1.5 py-0.5 text-[11px] font-medium text-ctp-red"
+                    class="rounded-full bg-ctp-red/15 px-1.5 py-0.5 text-xs font-medium text-ctp-red"
                     [pTooltip]="descriptionKey ? t(descriptionKey) : tag"
                     tooltipPosition="top"
                     >{{ tag }}</span

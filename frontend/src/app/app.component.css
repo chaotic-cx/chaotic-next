@@ -5,8 +5,30 @@
   margin: 0 auto;
   padding-bottom: 4em;
   flex: 1 0 auto;
-  min-height: calc(100vh - 120px);
+  min-height: calc(100svh - 120px);
   position: relative;
+}
+
+.router-container:focus {
+  outline: none;
+}
+
+.skip-link {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 0.5rem);
+  left: calc(env(safe-area-inset-left) + 0.5rem);
+  z-index: var(--chaotic-z-top);
+  padding: 0.5rem 1rem;
+  border-radius: var(--chaotic-radius-sm);
+  background: var(--catppuccin-color-mauve);
+  color: var(--catppuccin-color-crust);
+  font-size: 0.875rem;
+  font-weight: var(--chaotic-weight-semibold);
+  transform: translateY(calc(-100% - 1rem));
+}
+
+.skip-link:focus-visible {
+  transform: none;
 }
 
 @media (min-width: 768px) {

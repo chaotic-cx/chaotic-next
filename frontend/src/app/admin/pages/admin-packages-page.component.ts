@@ -28,6 +28,9 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AurScanResultComponent } from '../../aur-scan/aur-scan-result.component';
 import { AurScanService, isScanSettled } from '../../aur-scan/aur-scan.service';
+import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { BuildClassPipe } from '../../pipes/build-class.pipe';
 import { formatBytes, formatCpuTime, formatDuration } from '../../functions';
 import { injectActiveTranslation } from '../../i18n/active-translation';
@@ -35,6 +38,7 @@ import {
   createAdminPagination,
   type StatefulTableRef,
   createDebounced,
+  QUERY_SYNC_DEBOUNCE_MS,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
@@ -42,7 +46,11 @@ import {
   stringFilterFromQuery,
   stringFilterToQuery,
 } from '../admin-url-sync';
-import { AdminService, PackageFormData } from '../admin.service';
+import { AdminService, DEFAULT_PACKAGE_ACTIVE_FILTER, PackageFormData } from '../admin.service';
+import { EditConflictGuard } from '../edit-conflict';
+import { EditConflictNoticeComponent } from '../edit-conflict-notice.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
+import { TablePageReportDirective } from '../../table-page-report.directive';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
@@ -68,24 +76,45 @@ interface PackageFormModel {
 
 const NO_REPO = '0';
 
+// Query value for "show active and inactive packages"; no value means the default filter.
+const ALL_ACTIVE_STATES = 'all';
+
+function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
+  return {
+    pkgname: pkg.pkgname,
+    isActive: pkg.isActive,
+    skipSignalScan: pkg.skipSignalScan,
+    failureSilenced: pkg.failureSilenced,
+    version: pkg.version,
+    pkgrel: pkg.pkgrel,
+    bump: pkg.bump,
+    repo: pkg.repo,
+  };
+}
+
 @Component({
   selector: 'chaotic-admin-packages-page',
   imports: [
     TableSkeletonRowsComponent,
+    EditConflictNoticeComponent,
     AutoComplete,
     AurScanResultComponent,
     BuildClassPipe,
     Button,
     Checkbox,
+    ClearFiltersComponent,
     Dialog,
+    EmptyStateComponent,
     FormField,
     FormsModule,
     IconField,
     InputIcon,
     InputText,
+    LoadErrorComponent,
     Menu,
     Select,
     TableModule,
+    TablePageReportDirective,
     TagModule,
     Tooltip,
     TranslocoDirective,
@@ -100,39 +129,31 @@ const NO_REPO = '0';
           [paginator]="true"
           [lazy]="true"
           [totalRecords]="adminService.packagesTotal()"
-          [showCurrentPageReport]="true"
+          [chaoticTableFailed]="adminService.packagesStatus.failed()"
           [rowsPerPageOptions]="[25, 50, 100]"
           (onLazyLoad)="onLazyLoad(packagesTable, $event)"
           dataKey="id"
           stateStorage="local"
           stateKey="admin-packages-table"
           paginatorDropdownAppendTo="body"
+          chaoticPageReport
         >
           <ng-template #caption>
             <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="flex w-full sm:hidden">
-                <p-button
-                  class="w-full"
-                  [label]="t('admin.packages.addPackage')"
-                  (onClick)="openAddAurDialog()"
-                  styleClass="w-full justify-center"
-                  icon="pi pi-plus"
-                  text
-                  severity="primary"
-                />
-              </div>
-              <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
                 <p-button
                   [label]="t('admin.packages.addPackage')"
                   (onClick)="openAddAurDialog()"
                   icon="pi pi-plus"
                   text
                   severity="primary"
+                  size="small"
                 />
                 <p-select
                   [options]="adminService.repos() ?? []"
                   [ngModel]="adminService.packageRepoFilter()"
                   [placeholder]="t('admin.packages.allRepos')"
+                  [ariaLabel]="t('admin.pages.repoFilterLabel')"
                   (ngModelChange)="onRepoChange($event)"
                   optionLabel="name"
                   optionValue="id"
@@ -143,21 +164,24 @@ const NO_REPO = '0';
                   [options]="adminService.activeOptions()"
                   [ngModel]="adminService.packageActiveFilter()"
                   [placeholder]="t('admin.pages.activeStatus')"
+                  [ariaLabel]="t('admin.pages.activeStatus')"
                   (ngModelChange)="onActiveChange($event)"
                   optionLabel="label"
                   optionValue="value"
                   showClear
                   appendTo="body"
                 />
+                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
               </div>
               <p-iconfield class="w-full sm:w-64" iconPosition="left">
                 <p-inputicon>
-                  <i class="pi pi-search"></i>
+                  <i class="pi pi-search" aria-hidden="true"></i>
                 </p-inputicon>
                 <input
                   class="w-full"
                   [value]="adminService.packageQuery()"
                   [placeholder]="t('admin.pages.searchPkgname')"
+                  [attr.aria-label]="t('admin.pages.searchPkgname')"
                   (input)="onSearch($event)"
                   pInputText
                   type="text"
@@ -182,20 +206,34 @@ const NO_REPO = '0';
           <ng-template pTemplate="body" let-pkg>
             <tr>
               <td>{{ pkg.id }}</td>
-              <td>{{ pkg.pkgname }}</td>
-              <td>{{ pkg.version }}{{ pkg.pkgrel ? '-' + formatPkgrel(pkg.pkgrel, pkg.bump ?? 0) : '' }}</td>
+              <td>
+                <span class="block max-w-xs truncate" [title]="pkg.pkgname">{{ pkg.pkgname }}</span>
+              </td>
+              <td>
+                @if (pkg.version) {
+                  {{ pkg.version }}{{ pkg.pkgrel ? '-' + formatPkgrel(pkg.pkgrel, pkg.bump ?? 0) : '' }}
+                } @else {
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                }
+              </td>
               <td>
                 @if (pkg.reponame) {
-                  <button class="cursor-pointer text-ctp-mauve hover:underline" (click)="goToRepos()" type="button">
+                  <button
+                    class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
+                    (click)="goToRepos()"
+                    type="button"
+                  >
                     {{ pkg.reponame }}
                   </button>
+                } @else {
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
               <td>
                 @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
                   {{ pkg.pkgbaseName }}
                 } @else {
-                  <span class="text-ctp-subtext0">-</span>
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
               <td>
@@ -276,7 +314,30 @@ const NO_REPO = '0';
             } @else {
               <tr>
                 <td [attr.colspan]="8">
-                  <p class="chaotic-card__empty">{{ t('admin.packages.empty') }}</p>
+                  @if (adminService.packagesStatus.failed()) {
+                    <chaotic-load-error
+                      [message]="t('admin.packages.loadError')"
+                      [error]="adminService.packagesStatus.error()"
+                      (retry)="adminService.packagesStatus.reload()"
+                    />
+                  } @else if (filtersActive()) {
+                    <chaotic-empty-state [filtered]="true" (clearFilters)="clearFilters()">
+                      <p>{{ t('admin.packages.empty') }}</p>
+                    </chaotic-empty-state>
+                  } @else {
+                    <chaotic-empty-state [hint]="t('admin.packages.firstRun.hint')">
+                      <p>{{ t('admin.packages.firstRun.message') }}</p>
+                      <p-button
+                        [label]="t('admin.packages.addPackage')"
+                        (onClick)="openAddAurDialog()"
+                        emptyStateAction
+                        icon="pi pi-plus"
+                        size="small"
+                        severity="primary"
+                        text
+                      />
+                    </chaotic-empty-state>
+                  }
                 </td>
               </tr>
             }
@@ -295,10 +356,21 @@ const NO_REPO = '0';
       >
         <form class="flex flex-col gap-4" (submit)="save(); $event.preventDefault()">
           <label class="flex flex-col gap-1">
-            <span class="text-ctp-text text-sm">{{ t('admin.pages.form.packageName') }}</span>
-            <input [formField]="packageForm.pkgname" pInputText type="text" />
-            @if (packageForm.pkgname().touched() && packageForm.pkgname().errors().length) {
-              <span class="text-ctp-red text-xs">{{ t('admin.pages.form.packageNameRequired') }}</span>
+            <span class="text-ctp-text text-sm">
+              {{ t('admin.pages.form.packageName') }}
+              <span class="text-ctp-red" aria-hidden="true">*</span>
+            </span>
+            <input
+              [formField]="packageForm.pkgname"
+              [attr.aria-invalid]="showPkgnameError()"
+              [attr.aria-describedby]="showPkgnameError() ? 'package-name-error' : null"
+              pInputText
+              type="text"
+            />
+            @if (showPkgnameError()) {
+              <span class="text-ctp-red text-xs" id="package-name-error">{{
+                t('admin.pages.form.packageNameRequired')
+              }}</span>
             }
           </label>
           <div class="flex flex-wrap gap-4">
@@ -316,12 +388,16 @@ const NO_REPO = '0';
             </label>
           </div>
           <div class="flex flex-col gap-1">
-            <span class="text-ctp-text text-sm">{{ t('admin.pages.columns.repo') }}</span>
+            <label class="text-ctp-text text-sm" id="pkgRepoLabel" for="pkgRepo">{{
+              t('admin.pages.columns.repo')
+            }}</label>
             <p-select
               [ngModel]="model().repoId"
               [ngModelOptions]="{ standalone: true }"
               [options]="repoOptions()"
               (ngModelChange)="setRepoId($event)"
+              inputId="pkgRepo"
+              ariaLabelledBy="pkgRepoLabel"
               optionLabel="label"
               optionValue="value"
               showClear
@@ -357,7 +433,14 @@ const NO_REPO = '0';
               </label>
             </div>
           </div>
-          <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          @if (conflict.changed()) {
+            <chaotic-edit-conflict-notice
+              [messageKey]="conflictMessageKey"
+              (review)="reviewConflict()"
+              (saveAnyway)="saveAnyway()"
+            />
+          }
+          <div class="flex flex-wrap justify-end gap-2">
             <p-button
               [label]="t('common.cancel')"
               (onClick)="dialogVisible.set(false)"
@@ -365,7 +448,6 @@ const NO_REPO = '0';
               severity="secondary"
               text
               size="small"
-              styleClass="w-full sm:w-auto"
             />
             <p-button
               [disabled]="packageForm().invalid()"
@@ -373,7 +455,6 @@ const NO_REPO = '0';
               type="submit"
               severity="primary"
               size="small"
-              styleClass="w-full sm:w-auto"
             />
           </div>
         </form>
@@ -390,17 +471,19 @@ const NO_REPO = '0';
           <div class="flex flex-col gap-4">
             <div class="flex flex-col gap-1.5">
               <div class="flex items-center justify-between">
-                <span class="font-medium text-ctp-text text-sm">{{ t('admin.pages.form.packageName') }}</span>
+                <label class="font-medium text-ctp-text text-sm" for="aurPackageName">{{
+                  t('admin.pages.form.packageName')
+                }}</label>
                 @if (aurPackageName() && !isAurMissing()) {
                   <a
-                    class="font-medium text-ctp-mauve text-sm hover:underline flex items-center gap-1"
+                    class="font-medium text-ctp-mauve text-sm hover:underline focus-visible:underline flex items-center gap-1"
                     [href]="'https://aur.archlinux.org/packages/' + aurPackageName()"
                     [pTooltip]="t('admin.packages.addDialog.openAurPage')"
                     target="_blank"
                     rel="noopener"
                     tooltipPosition="top"
                   >
-                    AUR <i class="pi pi-external-link text-xs"></i>
+                    AUR <i class="pi pi-external-link text-xs" aria-hidden="true"></i>
                   </a>
                 }
               </div>
@@ -414,6 +497,7 @@ const NO_REPO = '0';
                 (completeMethod)="searchAurSuggestions($event)"
                 (onBlur)="confirmAurPackage()"
                 (onSelect)="confirmAurPackage()"
+                inputId="aurPackageName"
                 appendTo="body"
               />
               @if (aurPackageName()) {
@@ -450,14 +534,15 @@ const NO_REPO = '0';
                 <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   @for (card of requestReasonCards; track card.reason) {
                     <button
-                      class="flex cursor-pointer flex-col gap-0.5 rounded-lg border p-2.5 text-left transition-colors hover:border-ctp-mauve hover:bg-ctp-surface0/40"
+                      class="flex cursor-pointer flex-col gap-0.5 rounded-lg border p-2.5 text-left transition-colors hover:border-ctp-mauve focus-visible:border-ctp-mauve hover:bg-ctp-surface0/40 focus-visible:bg-ctp-surface0/40"
                       [class.border-ctp-mauve]="aurRequestReason() === card.reason"
                       [class.border-ctp-surface1]="aurRequestReason() !== card.reason"
+                      [attr.aria-pressed]="aurRequestReason() === card.reason"
                       (click)="aurRequestReason.set(card.reason)"
                       type="button"
                     >
                       <span class="text-ctp-text text-xs font-bold">{{ card.reason }}</span>
-                      <span class="text-ctp-subtext0 text-[11px] leading-tight">{{ t(card.descriptionKey) }}</span>
+                      <span class="text-ctp-subtext0 text-xs leading-tight">{{ t(card.descriptionKey) }}</span>
                     </button>
                   }
                 </div>
@@ -475,24 +560,20 @@ const NO_REPO = '0';
             </div>
           </div>
 
-          <div class="flex flex-row items-center justify-end gap-2 mt-6 pt-4 border-t border-ctp-surface0/50">
+          <div class="flex flex-wrap items-center justify-end gap-2 mt-6 pt-4 border-t border-ctp-surface0/50">
             <p-button
-              class="flex-1 sm:flex-initial"
               [label]="t('common.cancel')"
               (onClick)="addAurDialogVisible.set(false)"
-              styleClass="w-full justify-center sm:w-auto"
               type="button"
               severity="secondary"
               text
               size="small"
             />
             <p-button
-              class="flex-1 sm:flex-initial"
               [disabled]="!canAddAurPackage()"
               [icon]="isScanOngoing() || isAdding() ? 'pi pi-spinner pi-spin' : 'pi pi-plus-circle'"
               [label]="t('admin.packages.addDialog.submit')"
               (onClick)="triggerAddAurPackage()"
-              styleClass="w-full justify-center sm:w-auto"
               type="button"
               severity="primary"
               size="small"
@@ -516,6 +597,14 @@ export class AdminPackagesPageComponent {
 
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
   protected readonly formatPkgrel = formatPkgrel;
+  protected readonly missingValue = MISSING_VALUE;
+
+  protected readonly filtersActive = computed(
+    () =>
+      this.adminService.packageQuery() !== '' ||
+      this.adminService.packageRepoFilter() !== undefined ||
+      this.adminService.packageActiveFilter() !== DEFAULT_PACKAGE_ACTIVE_FILTER,
+  );
 
   private readonly rowMenuTarget = signal<PackageDto | null>(null);
 
@@ -628,14 +717,21 @@ export class AdminPackagesPageComponent {
 
   readonly dialogVisible = signal(false);
   readonly editing = signal<PackageDto | null>(null);
+  protected readonly conflict = new EditConflictGuard<PackageDto>(packageConflictFields);
+  protected readonly conflictMessageKey = marker('admin.editConflict.messages.package');
 
-  private readonly syncSearch = createDebounced(400, () =>
+  private readonly syncSearch = createDebounced(QUERY_SYNC_DEBOUNCE_MS, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.adminService.packageQuery()) }),
   );
 
   protected readonly model = signal<PackageFormModel>(emptyModel());
   readonly packageForm = form(this.model, (s) => {
     required(s.pkgname);
+  });
+
+  protected readonly showPkgnameError = computed(() => {
+    const pkgname = this.packageForm.pkgname();
+    return pkgname.touched() && pkgname.errors().length > 0;
   });
 
   readonly repoOptions = computed(() => {
@@ -721,7 +817,7 @@ export class AdminPackagesPageComponent {
 
     this.isAdding.set(true);
     try {
-      await this.adminService.addPackages(
+      const added = await this.adminService.addPackages(
         [{ pkgname, source: 'aur' }],
         currentRepo ?? 'chaotic-aur',
         this.aurRequestOrigin(),
@@ -729,7 +825,9 @@ export class AdminPackagesPageComponent {
         this.aurCustomRequestReason(),
         'main',
       );
-      this.addAurDialogVisible.set(false);
+      if (added) {
+        this.addAurDialogVisible.set(false);
+      }
     } finally {
       this.isAdding.set(false);
     }
@@ -768,13 +866,21 @@ export class AdminPackagesPageComponent {
       active: (raw) => {
         if (raw === 'true' || raw === 'false') {
           this.adminService.packageActiveFilter.set(raw);
+        } else if (raw === ALL_ACTIVE_STATES) {
+          this.adminService.packageActiveFilter.set(undefined);
         }
       },
     });
   }
 
   openEdit(pkg: PackageDto): void {
+    this.conflict.begin(pkg);
     this.editing.set(pkg);
+    this.fillForm(pkg);
+    this.dialogVisible.set(true);
+  }
+
+  private fillForm(pkg: PackageDto): void {
     this.model.set({
       pkgname: pkg.pkgname,
       isActive: pkg.isActive,
@@ -785,15 +891,40 @@ export class AdminPackagesPageComponent {
       bump: pkg.bump === undefined ? '' : String(pkg.bump),
       repoId: pkg.repo === undefined ? NO_REPO : String(pkg.repo),
     });
-    this.dialogVisible.set(true);
+  }
+
+  protected reviewConflict(): void {
+    const latest = this.conflict.review();
+    if (latest === null) {
+      return;
+    }
+
+    this.editing.set(latest);
+    this.fillForm(latest);
+  }
+
+  protected saveAnyway(): void {
+    this.conflict.overwrite();
+    this.save();
   }
 
   save(): void {
     submit(this.packageForm, async () => {
-      const data = this.toFormData(this.model());
       const current = this.editing();
-      if (current) await this.adminService.updatePackage(current.id, data);
-      this.dialogVisible.set(false);
+      if (!current) {
+        this.dialogVisible.set(false);
+        return;
+      }
+
+      const unchanged = await this.conflict.confirmUnchanged(() => this.adminService.findPackage(current));
+      if (!unchanged) {
+        return;
+      }
+
+      const saved = await this.adminService.updatePackage(current.id, this.toFormData(this.model()));
+      if (saved) {
+        this.dialogVisible.set(false);
+      }
     });
   }
 
@@ -871,7 +1002,7 @@ export class AdminPackagesPageComponent {
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);
     this.adminService.packagePage.set(this.pagination.page());
-    this.adminService.packagePerPage.set(event.rows ?? 25);
+    this.adminService.packagePerPage.set(this.pagination.perPage());
   }
 
   onSearch(event: Event): void {
@@ -890,7 +1021,15 @@ export class AdminPackagesPageComponent {
   onActiveChange(active: 'true' | 'false' | null | undefined): void {
     this.pagination.resetPage();
     this.adminService.setPackageActiveFilter(active);
-    patchQueryParams(this.router, this.route, { active: stringFilterToQuery(active ?? undefined) });
+    patchQueryParams(this.router, this.route, { active: activeFilterToQuery(active ?? undefined) });
+  }
+
+  clearFilters(): void {
+    this.pagination.resetPage();
+    this.adminService.packageQuery.set('');
+    this.adminService.setPackageRepoFilter(undefined);
+    this.adminService.setPackageActiveFilter(DEFAULT_PACKAGE_ACTIVE_FILTER);
+    patchQueryParams(this.router, this.route, { q: null, repo: null, active: null });
   }
 
   goToRepos(): void {
@@ -913,6 +1052,14 @@ export class AdminPackagesPageComponent {
       repoId: model.repoId === NO_REPO ? undefined : Number(model.repoId),
     };
   }
+}
+
+function activeFilterToQuery(active: 'true' | 'false' | undefined): string | null {
+  if (active === DEFAULT_PACKAGE_ACTIVE_FILTER) {
+    return null;
+  }
+
+  return active ?? ALL_ACTIVE_STATES;
 }
 
 function emptyModel(): PackageFormModel {

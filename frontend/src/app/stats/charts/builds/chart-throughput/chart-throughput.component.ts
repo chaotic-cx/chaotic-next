@@ -1,13 +1,14 @@
 import { Component, computed, inject } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
+import type { AccentName } from '@catppuccin/palette';
 import { TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { paletteColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, formatDay, axisChartOptions } from '../../chart-config';
 
 interface ThroughputRow {
   day: string;
@@ -20,16 +21,16 @@ interface ThroughputRow {
 const SERIES: {
   key: keyof Pick<ThroughputRow, 'success' | 'alreadyBuilt' | 'skipped' | 'failed'>;
   labelKey: string;
-  color: string;
+  colorName: AccentName;
 }[] = [
-  { key: 'success', labelKey: marker('stats.charts.throughput.success'), color: flavors.mocha.colors.green.hex },
+  { key: 'success', labelKey: marker('stats.charts.throughput.success'), colorName: 'green' },
   {
     key: 'alreadyBuilt',
     labelKey: marker('stats.charts.throughput.alreadyBuilt'),
-    color: flavors.mocha.colors.blue.hex,
+    colorName: 'blue',
   },
-  { key: 'skipped', labelKey: marker('stats.charts.throughput.skipped'), color: flavors.mocha.colors.yellow.hex },
-  { key: 'failed', labelKey: marker('stats.charts.throughput.failed'), color: flavors.mocha.colors.red.hex },
+  { key: 'skipped', labelKey: marker('stats.charts.throughput.skipped'), colorName: 'yellow' },
+  { key: 'failed', labelKey: marker('stats.charts.throughput.failed'), colorName: 'red' },
 ];
 
 @Component({
@@ -70,12 +71,12 @@ export class ChartThroughputComponent {
         datasets: SERIES.map((series) => ({
           label: this.transloco.translate(series.labelKey),
           data: labels.map((day) => parseCount(byDay.get(day)?.[series.key] ?? '0')),
-          backgroundColor: series.color,
-          borderColor: series.color,
+          backgroundColor: paletteColor(series.colorName),
+          borderColor: paletteColor(series.colorName),
           fill: false,
         })),
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
   });
 }

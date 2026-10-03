@@ -1,5 +1,5 @@
 :host {
-  animation: ctp-item-enter 0.25s ease-out;
+  animation: ctp-item-enter var(--chaotic-duration-base) var(--chaotic-ease-out);
 }
 
 :host ::ng-deep .p-card {
@@ -11,12 +11,12 @@
 .chaotic-chart-placeholder {
   min-height: 18rem;
   border-radius: var(--chaotic-radius-md);
-  background: color-mix(in srgb, var(--ctp-mocha-surface0) 30%, transparent);
+  background: color-mix(in srgb, var(--catppuccin-color-surface0) 30%, transparent);
 }
 
 :host ::ng-deep .p-card-title {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: var(--chaotic-weight-semibold);
   letter-spacing: -0.01em;
   text-align: left;
 }

@@ -1,17 +1,18 @@
 <ng-container *transloco="let t; prefix: 'auth.button'">
   @if (isLoggedIn()) {
-    <div class="flex flex-nowrap items-center gap-2">
-      <span class="auth-actions flex items-center gap-2">
+    <div class="chaotic-bar-actions">
+      <span class="auth-actions chaotic-bar-actions">
         <a
-          class="my-auto text-lg leading-none text-ctp-maroon"
+          class="chaotic-bar-action text-ctp-maroon"
           [attr.aria-label]="t('adminLabel')"
           [pTooltip]="t('adminTooltip')"
           routerLink="/admin"
           tooltipPosition="left"
         >
-          <i class="pi pi-shield"></i>
+          <i class="pi pi-shield" aria-hidden="true"></i>
         </a>
         <p-button
+          [ariaLabel]="t('signOut')"
           [loading]="isLogoutLoading()"
           [pTooltip]="t('signOut')"
           (onClick)="logout()"
@@ -24,30 +25,28 @@
         />
       </span>
       <span class="auth-avatar">
-        @if (user(); as user) {
-          @if (user.image) {
-            <a
-              class="inline-flex items-center"
-              [pTooltip]="t('openSettings')"
-              routerLink="/settings"
-              tooltipPosition="left"
-            >
-              <p-avatar
-                [image]="avatarUrl()"
-                [label]="avatarUrl() ? undefined : avatarLabel()"
-                [pTooltip]="t('openSettings')"
-                (onImageError)="onAvatarError()"
-                shape="circle"
-                tooltipPosition="left"
-              />
-            </a>
-          }
+        @if (user()) {
+          <a
+            class="inline-flex items-center"
+            [attr.aria-label]="t('openSettings')"
+            [pTooltip]="t('openSettings')"
+            routerLink="/settings"
+            tooltipPosition="left"
+          >
+            <p-avatar
+              [image]="avatarUrl()"
+              [label]="avatarUrl() ? undefined : avatarLabel()"
+              (onImageError)="onAvatarError()"
+              shape="circle"
+            />
+          </a>
         }
       </span>
     </div>
   } @else {
-    <span class="auth-actions">
+    <span class="auth-actions chaotic-bar-actions">
       <p-button
+        [ariaLabel]="t('signIn')"
         [loading]="isLoginLoading()"
         [pTooltip]="t('signIn')"
         (onClick)="login()"

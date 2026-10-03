@@ -9,6 +9,7 @@ import { AppService } from '../../app.service';
 import { BuildStatusService } from '../../build-status/build-status.service';
 import { resourceFailed, resourceValue } from '../../functions';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
 import {
   isRateLimited,
   visibleFailureRows,
@@ -34,7 +35,7 @@ import { OVERVIEW_SKELETON_ROWS } from './overview-constants';
     TranslocoDirective,
   ],
   templateUrl: './admin-overview-page.component.html',
-  styleUrl: './admin-overview-page.component.css',
+  styleUrls: ['./admin-overview-page.component.css'],
 })
 export class AdminOverviewPageComponent {
   private readonly appService = inject(AppService);
@@ -43,7 +44,8 @@ export class AdminOverviewPageComponent {
   protected readonly buildStatusService = inject(BuildStatusService);
   protected readonly isLoggedIn = inject(AuthService).isLoggedIn;
 
-  protected readonly skeletonRows = OVERVIEW_SKELETON_ROWS;
+  protected readonly skeletonRowIndexes = Array.from({ length: OVERVIEW_SKELETON_ROWS }, (unused, index) => index);
+  protected readonly missingValue = MISSING_VALUE;
   protected readonly showSilenced = signal(false);
   protected readonly busyPkgname = this.failureSilence.busyPkgname;
 

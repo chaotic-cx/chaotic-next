@@ -1,6 +1,7 @@
 {
   "app": {
     "goHome": "Zur Startseite",
+    "skipToContent": "Zum Inhalt springen",
     "mobileNav": {
       "open": "Navigationsmenü öffnen",
       "close": "Navigationsmenü schließen"
@@ -30,7 +31,9 @@
         "title": "AUR-Paket-Scan · Chaotic-AUR",
         "description": "AUR-Pakete auf bösartige PKGBUILD-Inhalte, verdächtige URLs und riskante Maintainer-Wechsel scannen",
         "keywords": "Chaotic-AUR, AUR, Sicherheit, PKGBUILD, Scan"
-      }
+      },
+      "virusTotalHint": "Angemeldete Nutzer bekommen zusätzlich einen VirusTotal-Check der Source-URLs.",
+      "signIn": "Anmelden"
     },
     "status": {
       "done": "Scan abgeschlossen",
@@ -39,8 +42,9 @@
       "scanning": "Quellen werden gescannt…"
     },
     "errors": {
-      "generic": "Das AUR-Paket konnte nicht gescannt werden. Existiert es?",
-      "rateLimited": "Zu viele Scans gestartet. Warte eine Minute und versuch es noch mal."
+      "rateLimited": "Zu viele Scans gestartet. Warte eine Minute und versuch es noch mal.",
+      "request": "Der Scan konnte nicht gestartet werden.",
+      "streamLost": "Die Verbindung zum Scan ist abgebrochen. Der Scan läuft weiter. Verbinde dich neu, um das Ergebnis zu sehen."
     },
     "details": "Quellen: {{sources}} · Gescannt: {{scanned}} · Stimmen: {{votes}} · Beliebtheit: {{popularity}} · Seit {{year}}",
     "pkgTypes": "Pakettypen",
@@ -76,7 +80,6 @@
       "since": "Seit",
       "votes": "Stimmen",
       "novice": "Neu",
-      "unknownSince": "unbekannt",
       "summary": "{{packages}} Paket(e) · seit {{since}} · {{votes}} Stimmen",
       "summaryUnknownSince": "{{packages}} Paket(e) · seit unbekannt · {{votes}} Stimmen",
       "orphaned": "Kein Maintainer. Dieses Paket ist im AUR verwaist."
@@ -119,7 +122,8 @@
     },
     "loginFailed": {
       "title": "Anmeldung fehlgeschlagen",
-      "message": "Die GitLab-Anmeldung konnte nicht gestartet werden."
+      "message": "Die GitLab-Anmeldung konnte nicht gestartet werden.",
+      "popupBlocked": "Dein Browser hat das Anmeldefenster blockiert. Erlaube Pop-ups für diese Seite und versuche es erneut."
     },
     "logoutFailed": {
       "title": "Abmeldung fehlgeschlagen",
@@ -133,12 +137,18 @@
         "notMember": "Nur Mitglieder der Chaotic-AUR-Gruppe auf GitLab dürfen sich anmelden.",
         "generic": "Anmeldung konnte nicht abgeschlossen werden. Versuche es noch mal."
       }
+    },
+    "sessionExpired": {
+      "message": "Deine Session ist abgelaufen.",
+      "signIn": "Erneut anmelden"
     }
   },
   "backendDown": {
     "logoAlt": "Chaotic-AUR-Logo",
     "title": "Backend nicht verfügbar",
-    "message": "Sobald es wieder online ist, wirst du automatisch weitergeleitet. Verbinde erneut..."
+    "message": "Sobald das Backend wieder online ist, kommst du automatisch zurück zu deiner Seite. Neuer Verbindungsversuch läuft…",
+    "mirrorsHint": "Paketinstallationen funktionieren weiter, weil Pacman von den Mirrors lädt.",
+    "mirrorsLink": "Mirror-Status"
   },
   "buildStatus": {
     "seo": {
@@ -173,11 +183,11 @@
     "active": {
       "title": "Laufende Builds",
       "loadError": "Laufende Builds konnten nicht geladen werden.",
-      "empty": "Gerade laufen keine Builds",
+      "empty": "Gerade laufen keine Builds.",
+      "emptyAction": "Zu den letzten Deployments",
       "progressAriaLabel": "Build-Fortschritt für {{name}}",
-      "unknownStart": "Start unbekannt",
       "startedAt": "gestartet {{time}}",
-      "unknownTimeLeft": "Restzeit unbekannt",
+      "unknownTimeLeft": "Keine Schätzung",
       "timeLeft": "noch {{eta}}",
       "overtime": "{{eta}} überfällig",
       "openLog": "Live-Build-Log öffnen",
@@ -272,7 +282,6 @@
     "save": "Speichern",
     "edit": "Bearbeiten",
     "delete": "Löschen",
-    "error": "Fehler",
     "pagination": "Seitennavigation",
     "previousPage": "Vorherige Seite",
     "nextPage": "Nächste Seite",
@@ -294,6 +303,10 @@
     "outcomes": "Ergebnisse",
     "selectedOutcomes": "{0} Ergebnisse",
     "searchKeyword": "Suchbegriff",
+    "repoFilterLabel": "Nach Repository filtern",
+    "builderFilterLabel": "Nach Builder filtern",
+    "outcomeFilterLabel": "Nach Ergebnis filtern",
+    "searchLabel": "Deployments durchsuchen",
     "columns": {
       "pkgname": "Paketname",
       "builder": "Builder",
@@ -319,14 +332,14 @@
       "canceledRequeue": "canceled-requeue",
       "softwareFailure": "software-failure"
     },
-    "notAvailable": "n/a",
     "purged": "gelöscht",
     "openBuildLog": "Build-Log öffnen",
     "log": "Log",
     "viewStatisticsFor": "Statistiken für {{pkgname}}",
     "viewPackageStatistics": "Paketstatistiken ansehen",
     "loadError": "Deployments konnten nicht geladen werden.",
-    "empty": "Keine Deployments passen zu diesen Filtern."
+    "empty": "Keine Deployments passen zu diesen Filtern.",
+    "firstRunEmpty": "Noch keine Deployments. Abgeschlossene Builds erscheinen hier."
   },
   "diffRenderer": {
     "fileDiff": "Datei-Diff",
@@ -337,6 +350,7 @@
   "footer": {
     "ariaLabel": "Footer-Links",
     "codeOfConduct": "Verhaltenskodex",
+    "opensInNewTab": "(öffnet in neuem Tab)",
     "privacy": "Datenschutzerklärung"
   },
   "home": {
@@ -353,7 +367,7 @@
     },
     "setup": {
       "lead": "Neu hier?",
-      "text": "Repo in vier Schritten einrichten"
+      "text": "Repo in fünf Schritten einrichten"
     },
     "news": {
       "title": "Neuigkeiten",
@@ -396,33 +410,43 @@
     "tooltip": "Sprache ändern"
   },
   "loadError": {
-    "defaultMessage": "Diese Daten konnten nicht geladen werden."
+    "defaultMessage": "Diese Daten konnten nicht geladen werden.",
+    "hints": {
+      "offline": "Du bist offline. Überprüfe deine Verbindung und versuche es erneut.",
+      "unreachable": "Der Server antwortet nicht. Versuche es gleich noch einmal.",
+      "permission": "Deine Session ist abgelaufen oder dein Account hat keinen Zugriff auf diese Daten. Melde dich erneut an.",
+      "server": "Der Server meldet einen Fehler. Versuche es erneut oder kopiere die Details für einen Bug-Report."
+    },
+    "signIn": "Erneut anmelden",
+    "copyDetails": "Details kopieren",
+    "copied": "Kopiert"
   },
   "logViewer": {
     "title": "Pipeline-Logs",
     "noJobSelected": "Kein Job ausgewählt",
     "live": "● live",
-    "loadingLogs": "Logs werden geladen",
-    "streamError": "Der Log-Stream ist unerwartet abgebrochen. Versuche es gleich noch mal.",
-    "linkCopied": {
-      "title": "Link kopiert",
-      "message": "Link zu Zeile {{line}} kopiert."
-    },
-    "copyFailed": {
-      "title": "Kopieren fehlgeschlagen",
-      "message": "Der Link zu Zeile {{line}} konnte nicht kopiert werden."
-    },
+    "jobSelectLabel": "Job auswählen",
     "seo": {
       "title": "Logs von Pipeline #{{pipelineId}} · Chaotic-AUR",
       "description": "Live-Build-Logs eines Chaotic-AUR-Pipeline-Jobs",
       "keywords": "Chaotic-AUR, GitLab, Pipeline, Log, Build"
+    },
+    "back": "Zurück",
+    "heading": "Pipeline #{{pipelineId}}",
+    "loadingJobs": "Jobs werden geladen",
+    "noJobs": "Diese Pipeline hat noch keine Jobs.",
+    "jobsError": {
+      "notFound": "Pipeline #{{pipelineId}} existiert nicht oder wurde von GitLab entfernt.",
+      "generic": "Die Jobs von Pipeline #{{pipelineId}} konnten nicht geladen werden.",
+      "rateLimited": "Zu viele Anfragen. Warte eine Minute und versuche es dann erneut."
     }
   },
   "login": {
     "logoAlt": "Chaotic-AUR-Logo",
     "title": "Anmelden",
     "description": "Melde dich mit deinem GitLab-Account an, um Chaotic-AUR-Pakete zu reviewen und zu verwalten.",
-    "continue": "Weiter mit GitLab"
+    "continue": "Weiter mit GitLab",
+    "membersOnly": "Nur Mitglieder der Chaotic-AUR-Gruppe auf GitLab können sich anmelden."
   },
   "map": {
     "title": "Mirror-Karte",
@@ -441,10 +465,18 @@
       "hits": "Hits",
       "topCountries": "Top-Länder:",
       "topRepos": "Top-Repos:",
-      "waiting": "Warte auf den ersten Hit..."
+      "waiting": "Warte auf den ersten Hit…",
+      "disconnectedHint": "Der Live-Traffic-Stream ist getrennt.",
+      "reconnect": "Neu verbinden",
+      "connection": {
+        "connected": "Live-Traffic-Stream verbunden",
+        "connecting": "Verbindung zum Live-Traffic-Stream wird aufgebaut",
+        "disconnected": "Live-Traffic-Stream getrennt"
+      }
     }
   },
   "mirrorMap": {
+    "markerLabel": "Mirror {{mirror}}, {{status}}",
     "status": {
       "active": "Aktiv",
       "healthy": "Healthy",
@@ -485,7 +517,8 @@
       "title": "CDN-Mirror",
       "description": "Gehostet auf <a class=\"text-ctp-mauve\" href=\"https://www.cloudflare.com/developer-platform/products/r2/\" rel=\"noopener\" target=\"_blank\">Cloudflare R2</a> und daher weltweit verteilt."
     },
-    "unavailable": "Die Mirror-Liste ist gerade nicht verfügbar. Vermutlich ist der Router down.",
+    "loadError": "Die Mirror-Liste konnte nicht geladen werden.",
+    "empty": "Keine Mirrors gemeldet. Der Router hat eine leere Liste geliefert.",
     "hostMirror": {
       "intro": "Du willst einen Mirror hosten? Melde dich über die Kanäle auf der",
       "aboutLink": "Über-uns-Seite",
@@ -493,7 +526,6 @@
       "mapLink": "Live-Karte",
       "outro": "."
     },
-    "fetchError": "Mirror-Liste konnte nicht geladen werden, vermutlich ist der Router down",
     "seo": {
       "description": "Chaotic-AUR-Mirrors: für alle down oder nur bei mir?",
       "keywords": "Chaotic-AUR, Repository, Pakete, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR Pakete, Chaotic-AUR Repository, Chaotic-AUR Mirrors"
@@ -557,18 +589,23 @@
   "newsfeed": {
     "defaultAuthor": "Maintainer",
     "showMore": "Weitere Neuigkeiten",
-    "fetchFailed": "Neuigkeiten konnten nicht geladen werden"
+    "loadError": "Die Neuigkeiten konnten nicht geladen werden.",
+    "empty": "Noch keine Neuigkeiten. Ankündigungen der Maintainer erscheinen hier."
   },
   "notFound": {
-    "subtitle": "Diese Seite gibt es nicht. Überprüfe die Adresse oder geh zurück zur Startseite."
+    "subtitle": "Diese Seite gibt es nicht. Überprüfe die Adresse oder geh zurück zur Startseite.",
+    "title": "Seite nicht gefunden",
+    "linksLabel": "Hilfreiche Links",
+    "home": "Startseite",
+    "packages": "Pakete durchsuchen"
   },
   "packageList": {
     "title": "Pakete",
     "subtitle": "Alle Pakete, die gerade in unseren Repos deployed sind. Überprüfe vor der Installation, zu welchem Repo ein Paket gehört.",
-    "clearFilters": "Filter zurücksetzen",
-    "clearFiltersTooltip": "Alle Filter und die Suche zurücksetzen",
     "allRepos": "Alle Repos",
+    "repoFilterLabel": "Nach Repository filtern",
     "searchPlaceholder": "Suchbegriff",
+    "searchLabel": "Pakete durchsuchen",
     "columns": {
       "name": "Name",
       "version": "Version",
@@ -582,7 +619,6 @@
     },
     "actionsHeader": "Aktionen",
     "buildClassTooltip": "Wie viele Ressourcen der Build braucht",
-    "notAvailable": "n/a",
     "actions": {
       "statsLabel": "Statistiken für {{pkgname}}",
       "statsTooltip": "Paketstatistiken ansehen",
@@ -594,6 +630,7 @@
       "start": "Keine Pakete gefunden für",
       "end": "."
     },
+    "empty": "Noch keine Pakete deployed. Neue Pakete erscheinen hier nach ihrem ersten Build.",
     "noMatchFilters": "Keine Pakete passen zu diesen Filtern.",
     "seo": {
       "title": "Paketliste · Chaotic-AUR",
@@ -604,17 +641,18 @@
   "packageLog": {
     "title": "Paket-Log",
     "subtitle": "Build-Log",
-    "streamError": "Der Log-Stream ist unerwartet abgebrochen. Versuche es gleich noch mal.",
     "live": "● live",
     "downloadLog": "Log herunterladen",
     "previousMatch": "Vorheriger Treffer",
     "nextMatch": "Nächster Treffer",
     "searchBuffer": "Log durchsuchen",
+    "searchLabel": "Build-Log durchsuchen",
     "seo": {
       "title": "Build-Log von {{pkgname}} · Chaotic-AUR",
       "description": "Build-Log eines Chaotic-AUR-Pakets",
       "keywords": "Chaotic-AUR, Build, Log, Paket"
-    }
+    },
+    "back": "Zurück"
   },
   "pipes": {
     "relativeTime": {
@@ -633,7 +671,8 @@
     }
   },
   "recentlyAdded": {
-    "empty": "Zuletzt wurden keine Pakete hinzugefügt."
+    "empty": "Zuletzt wurden keine Pakete hinzugefügt.",
+    "loadError": "Die zuletzt hinzugefügten Pakete konnten nicht geladen werden."
   },
   "reviewQueue": {
     "title": "Review-Queue",
@@ -737,6 +776,14 @@
         "title": "Auf Hold gesetzt",
         "message": "Der Merge Request ist jetzt auf Hold.",
         "error": "Merge Request konnte nicht auf Hold gesetzt werden. Versuche es später noch mal."
+      },
+      "signInRequired": {
+        "title": "Session abgelaufen",
+        "message": "Melde dich erneut an und wiederhole die Aktion."
+      },
+      "noPermission": {
+        "title": "Keine Berechtigung",
+        "message": "Dein Account darf keine Merge Requests reviewen."
       }
     }
   },
@@ -763,10 +810,13 @@
     "login": "Anmelden",
     "admin": "Admin",
     "backendDown": "Backend nicht verfügbar",
-    "notFound": "Seite nicht gefunden"
+    "notFound": "Seite nicht gefunden",
+    "recordTitleFormat": "{{record}} · {{page}}"
   },
   "searchPackage": {
-    "placeholder": "Paket suchen",
+    "placeholder": "Paketname in {{repo}}, z. B. firedragon",
+    "inputLabel": "Pakete suchen",
+    "resultStatus": "{{name}} aus {{repo}} wird angezeigt",
     "invalidName": "Ungültiger Paketname",
     "facts": {
       "downloads": "Downloads",
@@ -794,6 +844,17 @@
       "title": "Paketsuche · Chaotic-AUR",
       "description": "Pakete im Chaotic-AUR-Repository suchen",
       "keywords": "Chaotic-AUR, Repository, Pakete, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR Pakete, Chaotic-AUR Repository, Chaotic-AUR Paketsuche"
+    },
+    "hint": "Gib mindestens {{count}} Zeichen ein, um Vorschläge zu sehen. Drücke Enter, um ein Paket zu öffnen.",
+    "loading": "{{name}} wird geladen",
+    "notFound": {
+      "message": "{{repo}} enthält kein Paket namens {{name}}.",
+      "hint": "Überprüfe die Schreibweise oder scanne stattdessen das AUR-Paket:",
+      "scanLink": "{{name}} im AUR scannen"
+    },
+    "error": {
+      "rateLimited": "Zu viele Anfragen. Warte eine Minute und versuche es dann erneut.",
+      "generic": "{{name}} konnte nicht geladen werden."
     }
   },
   "settings": {
@@ -802,8 +863,10 @@
     "notifications": {
       "title": "Benachrichtigungen",
       "loading": "Deine Einstellungen werden geladen…",
-      "loadError": "Deine Einstellungen konnten nicht geladen werden. Versuche es später noch mal.",
+      "loadError": "Deine Benachrichtigungseinstellungen konnten nicht geladen werden.",
       "saveFailed": "Speichern fehlgeschlagen. Deine Einstellungen wurden wiederhergestellt.",
+      "unsupported": "Dieser Browser unterstützt keine Push-Benachrichtigungen. Deine Auswahl gilt trotzdem auf anderen Geräten.",
+      "blocked": "Dein Browser blockiert Benachrichtigungen für diese Seite. Erlaube sie in den Seiteneinstellungen, um sie zu erhalten.",
       "types": {
         "buildFailure": "Fehlgeschlagene Builds (ohne sporadische)",
         "mrReview": "Merge-Request-Reviews"
@@ -917,7 +980,12 @@
     "chartCard": {
       "loadError": "Dieses Diagramm konnte nicht geladen werden.",
       "loading": "Diagramm wird geladen",
-      "noData": "Keine Daten für diesen Zeitraum"
+      "noData": "Keine Daten für diesen Zeitraum",
+      "summaryOne": "{{title}}: Diagramm mit {{count}} Eintrag. Die Datentabelle zeigt die Werte.",
+      "summaryOther": "{{title}}: Diagramm mit {{count}} Einträgen. Die Datentabelle zeigt die Werte.",
+      "showTable": "Datentabelle anzeigen",
+      "showChart": "Diagramm anzeigen",
+      "labelColumn": "Bezeichnung"
     },
     "failureSilence": {
       "silenced": {
@@ -1054,13 +1122,36 @@
     "selectedItems": "{0} Spalten",
     "placeholder": "Spalten"
   },
+  "tablePagination": {
+    "pageReport": "{first}–{last} von {totalRecords}"
+  },
+  "tableSkeleton": {
+    "stillLoading": "Lädt noch. Der Server antwortet gerade langsam."
+  },
+  "themeSwitcher": {
+    "ariaLabel": "Theme: {{theme}}",
+    "dark": "Dunkel",
+    "light": "Hell",
+    "system": "System",
+    "tooltip": "Theme ändern"
+  },
   "triggerSources": {
     "loadingAriaLabel": "Abhängigkeitsquellen werden geladen",
     "noData": "Keine Abhängigkeitsdaten für dieses Paket.",
     "sonameDependencies": "Soname-Abhängigkeiten",
     "noSonameDependencies": "Keine Soname-Abhängigkeiten indexiert.",
     "pluginOf": "Plugin von",
-    "explicitTriggers": "Explizite Trigger"
+    "explicitTriggers": "Explizite Trigger",
+    "loadError": "Die Abhängigkeitsquellen konnten nicht geladen werden.",
+    "pkgType": {
+      "arch": "Arch",
+      "chaotic": "Chaotic-AUR"
+    }
+  },
+  "uiStates": {
+    "unknownValue": "Unbekannt",
+    "liveUpdatesPaused": "Live-Updates pausiert. Reconnect läuft…",
+    "offline": "Du bist offline. Live-Updates laufen weiter, sobald du wieder online bist."
   },
   "update": {
     "ready": {
@@ -1074,5 +1165,34 @@
   },
   "xtermLog": {
     "lineLabel": "Zeile {{line}}"
+  },
+  "gitlabStatus": {
+    "created": "Erstellt",
+    "waitingForResource": "Wartet auf Ressource",
+    "preparing": "Wird vorbereitet",
+    "pending": "Pending",
+    "running": "Läuft",
+    "success": "Erfolgreich",
+    "failed": "Fehlgeschlagen",
+    "canceled": "Abgebrochen",
+    "skipped": "Übersprungen",
+    "manual": "Manuell",
+    "scheduled": "Geplant"
+  },
+  "logStream": {
+    "connecting": "Verbindung zum Log wird aufgebaut…",
+    "slow": "Verbindung wird noch aufgebaut. Ein Build in der Queue sendet die ersten Zeilen, sobald er startet.",
+    "reconnecting": "Verbindung verloren. Reconnect läuft…",
+    "failed": "Der Log-Stream ist abgebrochen und der Reconnect ist fehlgeschlagen.",
+    "empty": "Dieses Log ist leer.",
+    "purged": "Dieses Log existiert nicht mehr. Build-Logs werden {{days}} Tage nach dem Build gelöscht.",
+    "linkCopied": {
+      "title": "Link kopiert",
+      "message": "Link zu Zeile {{line}} kopiert."
+    },
+    "copyFailed": {
+      "title": "Kopieren fehlgeschlagen",
+      "message": "Der Link zu Zeile {{line}} konnte nicht kopiert werden."
+    }
   }
 }

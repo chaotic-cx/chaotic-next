@@ -12,8 +12,8 @@ import {
   chartRowHeight,
   clampAmount,
   type ChartConfig,
-  mochaAxisChartOptions,
-  SINGLE_SERIES_COLOR,
+  axisChartOptions,
+  singleSeriesColor,
   roundToTenth,
 } from '../../chart-config';
 import { RESOURCE_METRICS, type ResourceMetricKey } from '../../chart-resource-metrics';
@@ -68,11 +68,11 @@ export class ChartHeavyPackagesResourceComponent {
               unit: metric.unit,
             }),
             data: data.map((d) => roundToTenth(parseCount(d.average) * metric.scale)),
-            backgroundColor: SINGLE_SERIES_COLOR,
+            backgroundColor: singleSeriesColor(),
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y' }),
     };
   });
 

@@ -1,19 +1,25 @@
 import { DatePipe } from '@angular/common';
 import { httpResource, type HttpResourceRequest } from '@angular/common/http';
 import { computed } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
 import type { Chart, ChartData, ChartOptions, ChartType } from 'chart.js';
 import { resourceFailed, resourceValue } from '../../functions';
-import { CATPPUCCIN_FLAVOURS } from '../../theme';
-import { CHART_GRID_COLOR, CHART_TICK_COLOR } from './chart-theme';
+import { seriesColor, themePalette } from '../../theme';
+import { chartColorOptions, chartGridColor, chartTickColor } from './chart-theme';
 
 export interface ChartConfig<TType extends ChartType = ChartType> {
   data: ChartData<TType>;
   options: ChartOptions<TType>;
 }
 
-export const SINGLE_SERIES_COLOR = flavors.mocha.colors.mauve.hex;
-export const SINGLE_SERIES_FILL = `${SINGLE_SERIES_COLOR}33`;
+const SINGLE_SERIES_FILL_ALPHA_HEX = '33';
+
+export function singleSeriesColor(): string {
+  return themePalette().mauve.hex;
+}
+
+export function singleSeriesFill(): string {
+  return `${singleSeriesColor()}${SINGLE_SERIES_FILL_ALPHA_HEX}`;
+}
 
 const CATEGORY_TICK_PADDING_PX = 16;
 
@@ -24,51 +30,57 @@ interface AxisStyling {
 }
 
 /** Gridlines only on the value axis; the category axis stays clean and its labels never rotate. */
-export function mochaScales(indexAxis: 'x' | 'y' = 'x'): { x: AxisStyling; y: AxisStyling } {
+export function axisScales(indexAxis: 'x' | 'y' = 'x'): { x: AxisStyling; y: AxisStyling } {
+  const tickColor = chartTickColor();
+  const gridColor = chartGridColor();
   const valueAxis: AxisStyling = {
-    ticks: { color: CHART_TICK_COLOR },
-    grid: { display: true, color: CHART_GRID_COLOR },
+    ticks: { color: tickColor },
+    grid: { display: true, color: gridColor },
     border: { display: false },
   };
   const categoryAxis: AxisStyling = {
     ticks:
       indexAxis === 'x'
-        ? { color: CHART_TICK_COLOR, maxRotation: 0, autoSkipPadding: CATEGORY_TICK_PADDING_PX }
-        : { color: CHART_TICK_COLOR, autoSkip: false },
-    grid: { display: false, color: CHART_GRID_COLOR },
+        ? { color: tickColor, maxRotation: 0, autoSkipPadding: CATEGORY_TICK_PADDING_PX }
+        : { color: tickColor, autoSkip: false },
+    grid: { display: false, color: gridColor },
     border: { display: false },
   };
   return indexAxis === 'x' ? { x: categoryAxis, y: valueAxis } : { x: valueAxis, y: categoryAxis };
 }
 
-interface MochaAxisChartOptions {
+interface AxisChartConfig {
   indexAxis?: 'x' | 'y';
   showLegend?: boolean;
 }
 
-export function mochaAxisChartOptions<TType extends ChartType>(
-  config: MochaAxisChartOptions = {},
-): ChartOptions<TType> {
+export function axisChartOptions<TType extends ChartType>(config: AxisChartConfig = {}): ChartOptions<TType> {
   const { indexAxis = 'x', showLegend = true } = config;
+  const colors = chartColorOptions();
 
   return {
+    ...colors,
     maintainAspectRatio: false,
     indexAxis,
     plugins: {
+      ...colors.plugins,
       legend: { display: showLegend },
     },
-    scales: mochaScales(indexAxis),
+    scales: axisScales(indexAxis),
   } as unknown as ChartOptions<TType>;
 }
 
 const SIDE_LEGEND_MIN_WIDTH_PX = 520;
 
-export function mochaPieChartOptions<TType extends ChartType>(): ChartOptions<TType> {
+export function pieChartOptions<TType extends ChartType>(): ChartOptions<TType> {
+  const colors = chartColorOptions();
+
   return {
+    ...colors,
     maintainAspectRatio: false,
     interaction: { mode: 'nearest', intersect: true },
     onResize: placeLegendBySize,
-    plugins: { legend: { position: 'bottom' } },
+    plugins: { ...colors.plugins, legend: { position: 'bottom' } },
   } as unknown as ChartOptions<TType>;
 }
 
@@ -124,7 +136,7 @@ export function groupOverTimeChart(rows: GroupOverTimeRow[], formatDay: (day: st
   for (const row of rows) cells.set(`${row.day}\u0000${row.group}`, parseInt(row.count, 10));
 
   const datasets = topGroups.map((group, index) => {
-    const color = CATPPUCCIN_FLAVOURS[index % CATPPUCCIN_FLAVOURS.length];
+    const color = seriesColor(index);
     return {
       label: group,
       data: [...dayLabel.keys()].map((day) => cells.get(`${day}\u0000${group}`) ?? 0),
@@ -154,6 +166,13 @@ let dayPipe: DatePipe | undefined;
 export function formatDay(day: string): string {
   dayPipe ??= new DatePipe(navigator.language);
   return dayPipe.transform(day, 'shortDate') ?? day;
+}
+
+/** True when a series has at least one point above zero. Otherwise the chart only draws a flat baseline. */
+export function hasPlottedValue<TType extends ChartType>(config: ChartConfig<TType>): boolean {
+  return config.data.datasets.some((dataset) =>
+    (dataset.data as readonly unknown[]).some((point) => typeof point === 'number' && point > 0),
+  );
 }
 
 export function roundToTenth(value: number): number {

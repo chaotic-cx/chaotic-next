@@ -5,6 +5,10 @@ import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
+import { TablePageReportDirective } from '../../table-page-report.directive';
 import { AdminService } from '../admin.service';
 import { AdminOperationListComponent } from './admin-operation-list.component';
 import { createAdminPagination, type StatefulTableRef } from '../admin-url-sync';
@@ -13,7 +17,17 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
 
 @Component({
   selector: 'chaotic-admin-repo-operations-page',
-  imports: [TableSkeletonRowsComponent, AdminOperationListComponent, Button, TableModule, Tooltip, TranslocoDirective],
+  imports: [
+    TableSkeletonRowsComponent,
+    AdminOperationListComponent,
+    Button,
+    EmptyStateComponent,
+    LoadErrorComponent,
+    TableModule,
+    TablePageReportDirective,
+    Tooltip,
+    TranslocoDirective,
+  ],
   template: `
     <div class="flex flex-col gap-5" *transloco="let t">
       <chaotic-admin-operation-list />
@@ -21,7 +35,12 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
       <div class="min-w-0">
         <div class="mb-2 flex flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <span class="p-panel-title block text-ctp-text">{{ t('admin.repoOperations.brokenPackages') }}</span>
-          <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            @if (service.brokenSelection().length === 0) {
+              <span class="text-[0.8125rem] text-ctp-overlay1" id="broken-selection-hint">{{
+                t('admin.repoOperations.selectionHint')
+              }}</span>
+            }
             <p-button
               [disabled]="service.brokenSelection().length === 0"
               [badge]="service.brokenSelection().length.toString()"
@@ -31,7 +50,6 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
               icon="pi pi-microchip"
               size="small"
               severity="secondary"
-              styleClass="w-full sm:w-auto"
               tooltipPosition="left"
             />
             <p-button
@@ -43,7 +61,6 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
               icon="pi pi-arrow-up"
               size="small"
               severity="danger"
-              styleClass="w-full sm:w-auto"
               tooltipPosition="left"
             />
           </div>
@@ -57,7 +74,7 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
             [paginator]="true"
             [lazy]="true"
             [totalRecords]="service.brokenReportsTotal()"
-            [showCurrentPageReport]="true"
+            [chaoticTableFailed]="service.brokenReportsStatus.failed()"
             [scrollable]="true"
             [rowsPerPageOptions]="[25, 50, 100]"
             [selectionMode]="'multiple'"
@@ -68,6 +85,7 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
             stateStorage="local"
             stateKey="admin-repo-operations-table"
             paginatorDropdownAppendTo="body"
+            chaoticPageReport
           >
             <ng-template #header>
               <tr>
@@ -81,10 +99,16 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
             <ng-template pTemplate="body" let-report>
               <tr [pSelectableRow]="report">
                 <td><p-tableCheckbox [value]="report" /></td>
-                <td>{{ report.pkgname }}</td>
-                <td>{{ report.version }}</td>
-                <td>{{ report.repoName }}</td>
-                <td class="text-ctp-subtext">{{ report.reasons.join(', ') }}</td>
+                <td>
+                  <span class="block max-w-xs truncate" [title]="report.pkgname">{{ report.pkgname }}</span>
+                </td>
+                <td>{{ report.version || missingValue }}</td>
+                <td>{{ report.repoName || missingValue }}</td>
+                <td class="text-ctp-subtext">
+                  <span class="line-clamp-2" [title]="report.reasons.join(', ')">{{
+                    report.reasons.join(', ') || missingValue
+                  }}</span>
+                </td>
               </tr>
             </ng-template>
             <ng-template #emptymessage>
@@ -97,7 +121,20 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
               } @else {
                 <tr>
                   <td [attr.colspan]="5">
-                    <p class="chaotic-card__empty">{{ t('admin.repoOperations.empty') }}</p>
+                    @if (service.brokenReportsStatus.failed()) {
+                      <chaotic-load-error
+                        [message]="t('admin.repoOperations.loadError')"
+                        [error]="service.brokenReportsStatus.error()"
+                        (retry)="service.brokenReportsStatus.reload()"
+                      />
+                    } @else {
+                      <chaotic-empty-state>
+                        <p class="inline-flex items-center gap-2">
+                          <i class="pi pi-check-circle text-ctp-green" aria-hidden="true"></i>
+                          {{ t('admin.repoOperations.empty') }}
+                        </p>
+                      </chaotic-empty-state>
+                    }
                   </td>
                 </tr>
               }
@@ -115,6 +152,7 @@ export class AdminRepoOperationsPageComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly transloco = inject(TranslocoService);
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+  protected readonly missingValue = MISSING_VALUE;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -154,7 +192,7 @@ export class AdminRepoOperationsPageComponent {
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);
     this.service.brokenPage.set(this.pagination.page());
-    this.service.brokenPerPage.set(event.rows ?? 25);
+    this.service.brokenPerPage.set(this.pagination.perPage());
   }
 
   /**

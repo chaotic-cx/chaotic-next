@@ -1,3 +1,7 @@
 <div class="chaotic-page min-h-[60vh]" *transloco="let t; prefix: 'notFound'">
-  <chaotic-title [subtitle]="t('subtitle')" title="404" />
+  <chaotic-title [subtitle]="t('subtitle')" [title]="t('title')" />
+  <nav class="not-found__links" [attr.aria-label]="t('linksLabel')">
+    <a class="not-found__link" routerLink="/">{{ t('home') }}</a>
+    <a class="not-found__link" routerLink="/packages">{{ t('packages') }}</a>
+  </nav>
 </div>

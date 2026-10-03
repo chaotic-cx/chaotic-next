@@ -11,6 +11,8 @@ import { map } from 'rxjs';
 import { AppService } from '../app.service';
 import { MATRIX_ROOM_URL } from '../community-links';
 import { parseFocusQuery } from '../functions';
+import { LoadErrorComponent } from '../load-error/load-error.component';
+import { lightLogo } from '../logo';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { MirrorsService } from '../mirrors/mirrors.service';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
@@ -26,6 +28,7 @@ import { PipelineStripComponent } from './pipeline-strip.component';
     RecentlyAddedComponent,
     MirrorMapComponent,
     PipelineStripComponent,
+    LoadErrorComponent,
     RouterLink,
     NgOptimizedImage,
     TranslocoDirective,
@@ -39,6 +42,7 @@ export class HomeComponent {
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
   protected readonly mirrorsService = inject(MirrorsService);
+  protected readonly lightLogo = lightLogo;
 
   protected readonly matrixRoomUrl = MATRIX_ROOM_URL;
 

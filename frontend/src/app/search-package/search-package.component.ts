@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient, httpResource } from '@angular/common/http';
+import { httpResource } from '@angular/common/http';
 import {
   ChangeDetectorRef,
   Component,
@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { form, pattern } from '@angular/forms/signals';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   CHAOTIC_AUR_REPO,
   formatPkgrel,
@@ -26,15 +26,21 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { RequestFailure, requestFailure } from '../api-errors';
 import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../stats/charts/packages/chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../stats/charts/packages/chart-package-build-stats/chart-package-build-stats.component';
 import { ChartPackageResourceStatsComponent } from '../stats/charts/packages/chart-package-resource-stats/chart-package-resource-stats.component';
 import { CodeBlockComponent } from '../docs/code-block.component';
 import { preferredScrollBehavior, resourceValue, setPageSeo } from '../functions';
+import { bindRecordTitle } from '../i18n/record-title';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
+import { IsoDateTimePipe } from '../pipes/iso-date-time.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StatsService } from '../stats/stats.service';
+import { SLOW_LOADING_AFTER_MS } from '../table-skeleton/skeleton-timing';
+import { delayedFlag } from '../utils/delayed-flag';
 
 type PackageListKey =
   'deps' | 'makeDeps' | 'optDeps' | 'checkDepends' | 'provides' | 'conflicts' | 'replaces' | 'soNameList';
@@ -52,6 +58,11 @@ const PACKAGE_LIST_GROUPS: { key: PackageListKey; labelKey: string }[] = [
 
 const OPTIONAL_DEPENDENCY_SEPARATOR = ': ';
 const MS_PER_SECOND = 1000;
+const MIN_SUGGESTION_QUERY_LENGTH = 3;
+const SKELETON_FACT_CELLS = [0, 1, 2, 3];
+
+const RATE_LIMITED_KEY = marker('searchPackage.error.rateLimited');
+const GENERIC_FAILURE_KEY = marker('searchPackage.error.generic');
 
 interface PackageListEntry {
   name: string;
@@ -84,7 +95,10 @@ interface PackageSheet {
     AutoComplete,
     CommonModule,
     FormsModule,
+    IsoDateTimePipe,
+    LoadErrorComponent,
     RelativeTimePipe,
+    RouterLink,
     Tooltip,
     CodeBlockComponent,
     ChartPackageBuildStatsComponent,
@@ -94,10 +108,9 @@ interface PackageSheet {
     TranslocoDirective,
   ],
   templateUrl: './search-package.component.html',
-  styleUrl: './search-package.component.css',
+  styleUrls: ['./search-package.component.css'],
 })
 export class SearchPackageComponent {
-  private readonly http = inject(HttpClient);
   private readonly appService = inject(AppService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
@@ -149,7 +162,34 @@ export class SearchPackageComponent {
 
   protected readonly hasSearchData = computed<boolean>(() => this.currentPackageName() !== '' && this.sheet() !== null);
 
+  protected readonly selectedRepo = this.packageStatsService.packageSearchSelectedRepo;
+  protected readonly minSuggestionQueryLength = MIN_SUGGESTION_QUERY_LENGTH;
+  protected readonly skeletonFactCells = SKELETON_FACT_CELLS;
+
+  protected readonly packageFailure = computed<RequestFailure | null>(() => {
+    if (this.packageResource.status() !== 'error') {
+      return null;
+    }
+
+    return requestFailure(this.packageResource.error());
+  });
+
+  protected readonly packageError = computed(() => this.packageResource.error());
+
+  protected readonly packageFailureKey = computed(() => {
+    const failure = this.packageFailure();
+    if (failure === null || failure === 'notFound') {
+      return null;
+    }
+
+    return failure === 'rateLimited' ? RATE_LIMITED_KEY : GENERIC_FAILURE_KEY;
+  });
+
+  protected readonly slowLoading = delayedFlag(this.packageResource.isLoading, SLOW_LOADING_AFTER_MS);
+
   constructor() {
+    bindRecordTitle(computed(() => this.sheet()?.pkgname));
+
     setPageSeo(
       this.transloco.translate('searchPackage.seo.title'),
       this.transloco.translate('searchPackage.seo.description'),
@@ -170,7 +210,7 @@ export class SearchPackageComponent {
 
   async searchSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
     const query = event.query.trim();
-    if (query.length < 3) {
+    if (query.length < MIN_SUGGESTION_QUERY_LENGTH) {
       this.suggestions.set([]);
       return;
     }
@@ -192,11 +232,12 @@ export class SearchPackageComponent {
     this.cdr.markForCheck();
   }
 
-  async onEnter(): Promise<void> {
+  onEnter(): void {
     const typed = this.searchModel().query.trim();
     if (!typed || !this.searchForm.query().valid()) return;
+
+    // Enter always opens the typed name, so an unknown name shows the not-found state.
     this.selectPackage(typed);
-    await this.commitPackage(typed);
   }
 
   async onInputBlur(): Promise<void> {
@@ -207,7 +248,15 @@ export class SearchPackageComponent {
       return;
     }
     if (!this.searchForm.query().valid()) return;
+
+    // Already open, for example after Enter. Committing again would hide its not-found state.
+    if (typed === this.currentPackageName()) return;
+
     await this.commitPackage(typed);
+  }
+
+  protected retryPackage(): void {
+    this.packageResource.reload();
   }
 
   private repo(): string {

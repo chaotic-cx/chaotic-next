@@ -1,12 +1,11 @@
 <div class="chaotic-page" *transloco="let t; prefix: 'packageLog'">
+  <chaotic-back-link [label]="t('back')" fallback="/deployments" />
   <chaotic-title [subtitle]="subtitle() ?? t('subtitle')" [title]="pkgname() || t('title')" />
 
   <div class="package-log">
-    @if (streamFailed()) {
-      <p class="log-error">{{ t('streamError') }}</p>
-    }
+    <chaotic-log-stream-status [state]="logStream.state()" (retry)="retryStream()" />
 
-    @if (builder() || streaming()) {
+    @if (builder() || logStream.live()) {
       <div class="log-toolbar">
         @if (builder(); as host) {
           <span class="builder-name">
@@ -15,7 +14,7 @@
           </span>
         }
         <div class="toolbar-right">
-          @if (streaming()) {
+          @if (logStream.live()) {
             <span class="live-badge">{{ t('live') }}</span>
           }
           <button
@@ -43,6 +42,7 @@
               class="w-full"
               #searchInput
               [value]="searchQuery()"
+              [attr.aria-label]="t('searchLabel')"
               [placeholder]="t('searchBuffer')"
               (input)="onSearch($any($event.target).value)"
               (keydown.enter)="searchNext()"
@@ -58,7 +58,7 @@
     <div class="log-panel-wrap">
       <chaotic-xterm-log
         #term
-        [chunk]="logChunks()"
+        [chunk]="logStream.chunks()"
         [scrollToLine]="scrollToLine()"
         (lineClick)="onLineClick($event)"
       />

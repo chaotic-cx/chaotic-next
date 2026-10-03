@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { describe, expect, it } from 'vitest';
-import { isLogPurged, loadingWithoutValue, retainedResourceValue, vtIndicatorLink } from './functions';
+import { isLogPurged, loadingWithoutValue, retainedResourceValue, sameItems, vtIndicatorLink } from './functions';
 
 describe('vtIndicatorLink', () => {
   it('passes file hashes through unchanged', () => {
@@ -77,5 +77,17 @@ describe('loadingWithoutValue', () => {
 
     fake.value.set(undefined);
     expect(loading()).toBe(false);
+  });
+});
+
+describe('sameItems', () => {
+  it('treats new arrays with the same items in the same order as equal', () => {
+    expect(sameItems(['firedragon', 'paru'], ['firedragon', 'paru'])).toBe(true);
+  });
+
+  it('detects a changed order, a changed item and a changed length', () => {
+    expect(sameItems(['firedragon', 'paru'], ['paru', 'firedragon'])).toBe(false);
+    expect(sameItems(['firedragon'], ['paru'])).toBe(false);
+    expect(sameItems(['firedragon'], ['firedragon', 'paru'])).toBe(false);
   });
 });

@@ -66,6 +66,7 @@
     "@openng/icons": "^1.0.0",
     "@openng/optimus-ui": "^2.0.2",
     "@openng/optimus-ui-tailwindcss": "^2.0.2",
+    "@openng/optimus-ui-themes": "2.0.2",
     "@scalar/nestjs-api-reference": "^1.2.18",
     "@thallesp/nestjs-better-auth": "^2.8.0",
     "@xterm/addon-fit": "^0.11.0",
