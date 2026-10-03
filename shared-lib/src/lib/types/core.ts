@@ -1,10 +1,8 @@
 import { z } from 'zod';
 
-export const CAUR_ALLOWED_CORS = [
-  'https://aur.chaotic.cx',
-  'https://caur-frontend-pages.dev',
-  'https://v2.caur-frontend.pages.dev',
-];
+const CLOUDFLARE_PAGES_DEPLOYMENTS = /^https:\/\/([a-z0-9-]+\.)?caur-frontend\.pages\.dev$/;
+
+export const CAUR_ALLOWED_CORS: (string | RegExp)[] = ['https://aur.chaotic.cx', CLOUDFLARE_PAGES_DEPLOYMENTS];
 
 export type SortOrder = 'ASC' | 'DESC';
 
