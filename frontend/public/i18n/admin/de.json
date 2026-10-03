@@ -1,0 +1,646 @@
+{
+  "layout": {
+    "title": "Admin",
+    "navLabel": "Admin-Bereiche",
+    "seo": {
+      "title": "Admin · Chaotic-AUR",
+      "description": "Admin-Tools für das Chaotic-AUR-Backend",
+      "keywords": "Chaotic-AUR, Admin, Repository, Pakete, Builder, Archlinux"
+    },
+    "groups": {
+      "packages": "Pakete",
+      "infrastructure": "Infrastruktur",
+      "activity": "Aktivität"
+    },
+    "nav": {
+      "overview": {
+        "label": "Übersicht",
+        "description": "Fehlgeschlagene Builds, kaputte Pakete und letzte Maintainer-Aktivität."
+      },
+      "packages": {
+        "label": "Chaotic-Pakete",
+        "description": "Pakete der Chaotic-AUR-Repos hinzufügen, bearbeiten und neu bauen."
+      },
+      "arch": {
+        "label": "Arch-Pakete",
+        "description": "Referenzdaten der Arch-Linux-Pakete, die Rebuilds auslösen."
+      },
+      "packageElfAnalysis": {
+        "label": "ELF-Analyse",
+        "description": "Sonames und Symbole, die der Signal-Scanner pro Paket indexiert hat."
+      },
+      "packageBumps": {
+        "label": "Paket-Bumps",
+        "description": "Rebuilds, die der Repo-Manager ausgelöst hat, und ihre Ursachen."
+      },
+      "repos": {
+        "label": "Repos",
+        "description": "Repo-Quellen, Git-Refs und GitLab-Verbindungen."
+      },
+      "builders": {
+        "label": "Builder",
+        "description": "Build-Maschinen und ihre Build-Klassen."
+      },
+      "repoOperations": {
+        "label": "Repo-Operationen",
+        "description": "Repo-Manager-Runs, Rescans und der Report zu kaputten Paketen."
+      },
+      "mrActions": {
+        "label": "MR-Aktionen",
+        "description": "Merge-Request-Reviews der Maintainer."
+      },
+      "pipelineTriggers": {
+        "label": "Pipeline-Trigger",
+        "description": "GitLab-Pipelines, die Maintainer von dieser Seite aus gestartet haben."
+      },
+      "managerLogs": {
+        "label": "Manager-Logs",
+        "description": "Interne Logs der Chaotic-Manager-Instanz."
+      }
+    }
+  },
+  "overview": {
+    "page": {
+      "healthLabel": "Zustand des Repos",
+      "failing": {
+        "label": "Fehlgeschlagene Pakete",
+        "loadError": "Fehler konnten nicht geladen werden",
+        "none": "Alle Pakete haben zuletzt erfolgreich gebaut",
+        "context": "{{rateLimited}} rate-limited · längste Serie ×{{streak}}"
+      },
+      "mergeRequests": {
+        "label": "Merge Requests zum Review",
+        "loadError": "Merge Requests konnten nicht geladen werden",
+        "onHold": "{{count}} auf Hold"
+      },
+      "buildQueue": {
+        "label": "Build-Queue",
+        "buildingNow": "{{count}} laufen gerade"
+      },
+      "builders": {
+        "label": "Builder online",
+        "enabledBusy": "von {{enabled}} aktiven · {{busy}} bauen gerade",
+        "busy": "{{busy}} bauen gerade"
+      },
+      "failures": {
+        "title": "Ungelöste Fehler",
+        "hideSilenced": "Stummgeschaltete ausblenden",
+        "showSilenced": "{{count}} stummgeschaltete anzeigen",
+        "loadError": "Ungelöste Fehler konnten nicht geladen werden.",
+        "empty": "Nichts schlägt fehl. Alle Pakete haben zuletzt erfolgreich gebaut."
+      }
+    },
+    "buildTrends": {
+      "windowDays": "{{days}} Tage",
+      "insightsLink": "Insights",
+      "flaky": {
+        "title": "Flaky Pakete",
+        "loadError": "Flaky Pakete konnten nicht geladen werden.",
+        "empty": "Kein Paket ist abwechselnd fehlgeschlagen und durchgelaufen.",
+        "detail": "{{percent}} % von {{attempts}}"
+      },
+      "builders": {
+        "title": "Builder-Auslastung",
+        "loadError": "Builder-Auslastung konnte nicht geladen werden.",
+        "empty": "Keine Builds in den letzten {{days}} Tagen.",
+        "detail": "{{count}} Builds"
+      }
+    },
+    "failureTable": {
+      "columns": {
+        "package": "Paket",
+        "status": "Status",
+        "streak": "Streak",
+        "lastFailure": "Letzter Fehler",
+        "actions": "Aktionen"
+      },
+      "rateLimited": {
+        "label": "Rate-limited",
+        "tooltip": "Rate-limited: Der Dispatcher überspringt es bis zum nächsten Retry"
+      },
+      "openLog": {
+        "label": "Build-Log von {{pkgname}} öffnen",
+        "tooltip": "Build-Log öffnen"
+      },
+      "silence": {
+        "silenceLabel": "{{pkgname}} stummschalten",
+        "unsilenceLabel": "Stummschaltung von {{pkgname}} aufheben",
+        "silenceTooltip": "Stummschalten, bis es wieder fehlschlägt",
+        "unsilenceTooltip": "Stummschaltung aufheben"
+      }
+    },
+    "pipelineHealth": {
+      "title": "Pipelines",
+      "failedCount": "{{count}} mit fehlgeschlagenen Jobs",
+      "buildStatusLink": "Build-Status",
+      "loadError": "Pipelines konnten nicht geladen werden.",
+      "empty": "Zuletzt liefen keine Pipelines."
+    },
+    "problemSection": {
+      "loadError": "Laden fehlgeschlagen.",
+      "empty": "Nichts zu beheben.",
+      "open": "Öffnen"
+    },
+    "repoProblems": {
+      "title": "Repo-Probleme",
+      "broken": {
+        "title": "Kaputte ELF-Links",
+        "empty": "Jedes Paket linkt gegen vorhandene Libraries.",
+        "link": "Neu scannen"
+      },
+      "missing": {
+        "title": "Fehlende Abhängigkeiten",
+        "empty": "Jede Abhängigkeit hat einen Provider."
+      },
+      "uncovered": {
+        "title": "Kaputt ohne Rebuild",
+        "empty": "Für jeden Bruch gibt es einen Rebuild-Trigger.",
+        "detail": "kaputt ({{since}})"
+      },
+      "overlap": {
+        "title": "Auch in Arch",
+        "empty": "Kein chaotic-aur-Paket dupliziert ein Arch-Paket."
+      }
+    },
+    "recentActivity": {
+      "title": "Letzte Aktivität",
+      "allMrActions": "Alle MR-Aktionen",
+      "loadError": "Letzte Aktivität konnte nicht geladen werden.",
+      "empty": "Noch keine Maintainer-Aktionen erfasst.",
+      "mrVerbs": {
+        "approve": "hat freigegeben:",
+        "hold": "hat auf Hold gesetzt:",
+        "dangerous": "hat als gefährlich markiert:",
+        "unknown": "{{action}}"
+      },
+      "pipelineVerbs": {
+        "none": "hat eine Pipeline gestartet",
+        "bumpPackages": "hat Rebuilds ausgelöst",
+        "schedulePackages": "hat Builds eingeplant",
+        "runSchedule": "hat einen Zeitplan ausgeführt",
+        "dropPackages": "hat Pakete entfernt",
+        "addPackages": "hat Pakete hinzugefügt",
+        "unknown": "hat {{operation}} ausgeführt"
+      }
+    }
+  },
+  "service": {
+    "packageBump": {
+      "success": "Paket-Bump ausgelöst",
+      "error": "Paket-Bump konnte nicht ausgelöst werden."
+    },
+    "packageSchedule": {
+      "success": "Paket-Build eingeplant",
+      "error": "Paket-Build konnte nicht eingeplant werden."
+    },
+    "packageDrop": {
+      "success": "Entfernen des Pakets gestartet",
+      "error": "Entfernen des Pakets konnte nicht gestartet werden."
+    },
+    "packageAdd": {
+      "success": "Hinzufügen des Pakets gestartet",
+      "error": "Hinzufügen des Pakets konnte nicht gestartet werden."
+    },
+    "scheduleRun": {
+      "success": "Ausführung des Zeitplans ausgelöst",
+      "error": "Ausführung des Zeitplans konnte nicht ausgelöst werden."
+    },
+    "packageUpdate": {
+      "success": "Paket aktualisiert",
+      "error": "Das Paket konnte nicht aktualisiert werden."
+    },
+    "packageDelete": {
+      "success": "Paket gelöscht",
+      "error": "Das Paket konnte nicht gelöscht werden."
+    },
+    "archPackageUpdate": {
+      "success": "Arch-Paket aktualisiert",
+      "error": "Das Arch-Paket konnte nicht aktualisiert werden."
+    },
+    "archPackageDelete": {
+      "success": "Arch-Paket gelöscht",
+      "error": "Das Arch-Paket konnte nicht gelöscht werden."
+    },
+    "repoUpdate": {
+      "success": "Repo aktualisiert",
+      "error": "Das Repo konnte nicht aktualisiert werden."
+    },
+    "repoDelete": {
+      "success": "Repo gelöscht",
+      "error": "Das Repo konnte nicht gelöscht werden."
+    },
+    "builderUpdate": {
+      "success": "Builder aktualisiert",
+      "error": "Der Builder konnte nicht aktualisiert werden."
+    },
+    "builderDelete": {
+      "success": "Builder gelöscht",
+      "error": "Der Builder konnte nicht gelöscht werden."
+    },
+    "elfAnalysisUpdate": {
+      "success": "ELF-Analyse aktualisiert",
+      "error": "Die ELF-Analyse konnte nicht aktualisiert werden."
+    },
+    "elfAnalysisDelete": {
+      "success": "ELF-Analyse gelöscht",
+      "error": "Die ELF-Analyse konnte nicht gelöscht werden."
+    },
+    "repoRun": {
+      "success": "Repo-Run gestartet. Je nach Last kann das dauern.",
+      "error": "Repo-Run konnte nicht gestartet werden."
+    },
+    "signalScan": {
+      "success": "Signal-Scan gestartet. Je nach Last kann das dauern.",
+      "error": "Signal-Scan konnte nicht gestartet werden."
+    },
+    "mrScan": {
+      "success": "Merge-Request-Scan gestartet. Je nach Last kann das dauern.",
+      "error": "Merge-Request-Scan konnte nicht gestartet werden."
+    },
+    "archMirrorIndex": {
+      "success": "Indexierung des Arch-Mirrors gestartet. Je nach Last kann das dauern.",
+      "error": "Indexierung des Arch-Mirrors konnte nicht gestartet werden."
+    },
+    "chaoticRepoIndex": {
+      "success": "Indexierung des Chaotic-Repos gestartet. Je nach Last kann das dauern.",
+      "error": "Indexierung des Chaotic-Repos konnte nicht gestartet werden."
+    },
+    "buildClassRescan": {
+      "success": "Rescan der Build-Klassen gestartet. Läuft im Hintergrund.",
+      "error": "Rescan der Build-Klassen konnte nicht gestartet werden."
+    },
+    "signalDerivationRecompute": {
+      "success": "Neuberechnung der Signal-Ableitungen gestartet. Läuft im Hintergrund und kann dauern.",
+      "error": "Neuberechnung der Signal-Ableitungen konnte nicht gestartet werden."
+    },
+    "summary": {
+      "success": "Erfolgreich",
+      "operationFailed": "Aktion fehlgeschlagen"
+    },
+    "activeOptions": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "buildClassAdjust": {
+      "adjustedSummary": "Build-Klasse angepasst",
+      "unchangedSummary": "Build-Klasse unverändert",
+      "adjustedDetail": "Build-Klasse von {{pkgbase}} auf {{buildClass}} angepasst.",
+      "unchangedDetail": "{{pkgbase}} entspricht bereits der vorgeschlagenen Klasse ({{buildClass}}).",
+      "error": "Die Build-Klasse von {{pkgname}} konnte nicht angepasst werden."
+    },
+    "rescan": {
+      "startedSummary": "Rescan gestartet",
+      "startedDetail": "{{packages}} wird neu gescannt.",
+      "startedDetailTruncated": "{{packages}} und {{remaining}} weitere werden neu gescannt.",
+      "packageError": "Der Rescan von {{pkgname}} konnte nicht gestartet werden.",
+      "error": "Der Rescan konnte nicht gestartet werden.",
+      "stillRunningSummary": "Rescan läuft noch",
+      "stillRunningDetail": "Läuft im Hintergrund weiter, schau später noch mal rein.",
+      "finishedSummary": "Rescan abgeschlossen",
+      "finishedDetail": "{{count}} Paket(e) erfolgreich gescannt.",
+      "finishedWithFailuresSummary": "Rescan mit Fehlern abgeschlossen",
+      "finishedWithFailuresDetail": "{{rescanned}} gescannt, {{failedCount}} fehlgeschlagen: {{failures}}"
+    },
+    "brokenBump": {
+      "success": "{{count}} Paket(e) bumped und Änderungen committed.",
+      "error": "Bump der ausgewählten Pakete fehlgeschlagen."
+    }
+  },
+  "operationList": {
+    "title": "Operationen",
+    "hint": "Jede Operation läuft im Hintergrund. Ein Toast bestätigt den Start.",
+    "starting": "Wird gestartet",
+    "confirmInBackground": "{{message}} Der Job läuft im Hintergrund.",
+    "groups": {
+      "repoManager": "Repo-Manager",
+      "elfSignalIndex": "ELF-Signal-Index",
+      "mergeRequests": "Merge Requests"
+    },
+    "actions": {
+      "run": "Ausführen",
+      "rescan": "Neu scannen",
+      "scan": "Scannen",
+      "index": "Indexieren",
+      "recompute": "Neu berechnen"
+    },
+    "repoRun": {
+      "label": "Repo-Run",
+      "description": "Arch auf Updates prüfen und die davon abhängigen Chaotic-Pakete bumpen."
+    },
+    "buildClasses": {
+      "label": "Build-Klassen",
+      "description": "Die Build-Klasse jedes aktiven Pakets erneut aus seiner .CI/config lesen.",
+      "confirmHeader": "Build-Klassen neu scannen",
+      "confirmMessage": "Die Build-Klasse jedes aktiven Pakets erneut aus seiner .CI/config lesen?"
+    },
+    "signalScan": {
+      "label": "Geänderte Arch-Pakete",
+      "description": "Die seit dem letzten Scan geänderten Arch-Pakete nach ELF-Signalen scannen."
+    },
+    "indexArch": {
+      "label": "Gesamter Arch-Mirror",
+      "description": "Jedes Paket des Arch-Mirrors indexieren. Das dauert lange."
+    },
+    "indexChaotic": {
+      "label": "Gesamtes Chaotic-Repo",
+      "description": "Jedes Chaotic-AUR-Paket vom CDN-Mirror indexieren. Das dauert lange."
+    },
+    "derivations": {
+      "label": "Signal-Ableitungen",
+      "description": "Soname-Verzeichnis, pluginOf-Links und Broken-Flags aus den gespeicherten Analysen neu aufbauen. Kein Rescan.",
+      "confirmHeader": "Signal-Ableitungen neu berechnen",
+      "confirmMessage": "Signal-Verzeichnisindex, alle pluginOf-Ableitungen und Broken-Flags aus den gespeicherten Analysen neu aufbauen? Es wird kein Archiv neu gescannt."
+    },
+    "mrScan": {
+      "label": "Offene Merge Requests",
+      "description": "Offene Merge Requests mit den Scan-Regeln, Auto-Flag-Labels und VirusTotal prüfen."
+    }
+  },
+  "managerLogs": {
+    "status": {
+      "connected": "Verbunden",
+      "connecting": "Verbinde...",
+      "disconnected": "Getrennt"
+    },
+    "connectingAriaLabel": "Verbinde mit den Manager-Logs",
+    "streamEnded": "Der Log-Stream ist unerwartet abgebrochen. Lade die Seite neu, um es noch mal zu versuchen."
+  },
+  "repoOperations": {
+    "brokenPackages": "Kaputte Pakete",
+    "rescanSelected": {
+      "label": "Auswahl neu scannen",
+      "tooltip": "ELF-Signal-Analyse für die ausgewählten kaputten Pakete neu ausführen, kann dauern"
+    },
+    "bumpSelected": {
+      "label": "Auswahl bumpen",
+      "tooltip": "Ausgewählte kaputte Pakete neu bauen und Änderungen committen"
+    },
+    "columns": {
+      "reasons": "Gründe"
+    },
+    "empty": "Keine kaputten Pakete gefunden.",
+    "bumpConfirm": {
+      "message": "{{count}} ausgewählte kaputte Paket(e) neu bauen? Das erhöht pkgrel und committed die Änderungen.",
+      "header": "Ausgewählte Pakete bumpen",
+      "accept": "Bump"
+    },
+    "rescanConfirm": {
+      "message": "ELF-Signal-Analyse für {{count}} ausgewählte Paket(e) neu ausführen? Jedes Archiv wird im Hintergrund geladen und gescannt, die Ergebnisse kommen also nicht sofort.",
+      "header": "Ausgewählte Pakete neu scannen",
+      "accept": "Neu scannen"
+    }
+  },
+  "pages": {
+    "columns": {
+      "id": "ID",
+      "name": "Name",
+      "version": "Version",
+      "repo": "Repo",
+      "package": "Paket",
+      "arch": "Arch",
+      "actions": "Aktionen",
+      "commit": "Commit",
+      "user": "Benutzer",
+      "created": "Erstellt"
+    },
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "activeStatus": "Status",
+    "searchPkgname": "pkgname suchen",
+    "searchName": "Name suchen",
+    "editAriaLabel": "{{name}} bearbeiten",
+    "deleteAriaLabel": "{{name}} löschen",
+    "form": {
+      "packageName": "Paketname",
+      "packageNameRequired": "Paketname fehlt",
+      "pkgrel": "Pkgrel"
+    },
+    "rescanElf": {
+      "label": "ELF-Signale neu scannen",
+      "ariaLabel": "ELF-Signale von {{name}} neu scannen",
+      "confirmMessage": "ELF-Signale für <code>{{pkgname}}</code> neu scannen? Dabei wird das Paketarchiv heruntergeladen und gescannt.",
+      "accept": "Neu scannen"
+    }
+  },
+  "archPackages": {
+    "empty": "Keine Arch-Pakete passen zu dieser Suche.",
+    "editDialog": {
+      "header": "Arch-Paket bearbeiten"
+    },
+    "deleteConfirm": {
+      "message": "Arch-Paket „{{pkgname}}“ löschen? Das kann nicht rückgängig gemacht werden.",
+      "header": "Arch-Paket löschen"
+    }
+  },
+  "builders": {
+    "columns": {
+      "description": "Beschreibung",
+      "class": "Klasse"
+    },
+    "empty": "Keine Builder passen zu diesen Filtern.",
+    "editDialog": {
+      "header": "Builder bearbeiten",
+      "nameRequired": "Builder-Name fehlt"
+    },
+    "deleteConfirm": {
+      "message": "Builder „{{name}}“ löschen? Das kann nicht rückgängig gemacht werden.",
+      "header": "Builder löschen"
+    }
+  },
+  "repos": {
+    "fields": {
+      "gitRef": "Git-Ref",
+      "repoUrl": "Repo-URL",
+      "dbPath": "DB-Pfad",
+      "gitlabProjectId": "GitLab-Projekt-ID",
+      "apiToken": "API-Token"
+    },
+    "empty": "Keine Repos passen zu dieser Suche.",
+    "editDialog": {
+      "header": "Repo bearbeiten",
+      "nameRequired": "Repo-Name fehlt",
+      "apiTokenKeepHint": "Leer lassen, um das aktuelle Token zu behalten.",
+      "apiTokenHint": "Zur Authentifizierung bei diesem Repo. Wird verschlüsselt gespeichert."
+    },
+    "deleteConfirm": {
+      "message": "Repo „{{name}}“ löschen? Das kann nicht rückgängig gemacht werden.",
+      "header": "Repo löschen"
+    }
+  },
+  "mrActions": {
+    "actions": {
+      "approve": "Freigeben",
+      "dangerous": "Gefährlich",
+      "hold": "Hold"
+    },
+    "searchPlaceholder": "MR, Commit, Benutzer, Grund suchen",
+    "columns": {
+      "mr": "MR",
+      "action": "Aktion",
+      "reason": "Grund"
+    },
+    "empty": "Keine MR-Aktionen passen zu diesen Filtern."
+  },
+  "packageBumps": {
+    "bumpTypes": {
+      "explicit": "Explizit",
+      "global": "Global",
+      "fromDeps": "Über Abhängigkeiten",
+      "fromDepsChaotic": "Über Abhängigkeiten (chaotic)",
+      "plugin": "Plugin",
+      "brokenDeps": "Kaputte Abhängigkeiten",
+      "manual": "Manuell"
+    },
+    "source": "Quelle",
+    "columns": {
+      "bumpType": "Bump-Typ",
+      "trigger": "Trigger",
+      "triggeredBy": "Ausgelöst von",
+      "details": "Details",
+      "timestamp": "Zeitstempel"
+    },
+    "empty": "Keine Paket-Bumps passen zu diesen Filtern."
+  },
+  "pipelineTriggers": {
+    "runSchedule": "Zeitplan ausführen",
+    "searchPlaceholder": "Pipeline, Commit, Benutzer suchen",
+    "columns": {
+      "pipeline": "Pipeline",
+      "operation": "Operation",
+      "inputs": "Inputs",
+      "ref": "Ref"
+    },
+    "empty": "Keine Pipeline-Trigger passen zu diesen Filtern.",
+    "scheduleDialog": {
+      "title": "Zeitplan ausführen",
+      "repository": "Repo",
+      "selectRepository": "Repo auswählen...",
+      "schedule": "Zeitplan",
+      "selectSchedule": "Zeitplan auswählen...",
+      "selectRepositoryFirst": "Erst ein Repo auswählen...",
+      "fallbackLabel": "Zeitplan #{{id}}"
+    }
+  },
+  "elfAnalysis": {
+    "packageType": "Pakettyp",
+    "status": {
+      "broken": "Kaputt",
+      "ok": "OK"
+    },
+    "searchPlaceholder": "Version oder Paket-ID suchen",
+    "columns": {
+      "binary": "Binary",
+      "status": "Status",
+      "scanned": "Gescannt"
+    },
+    "binary": {
+      "none": "Kein ELF",
+      "fromSource": "ELF, aus dem Source gebaut",
+      "prebuilt": "ELF, prebuilt"
+    },
+    "empty": "Keine ELF-Analysen passen zu diesen Filtern.",
+    "editDialog": {
+      "header": "ELF-Analyse bearbeiten",
+      "packageId": "Paket-ID",
+      "versionRequired": "Version fehlt",
+      "brokenReasons": "Gründe für kaputt",
+      "brokenReasonsHint": "Gründe kommagetrennt, leer lassen, wenn nicht kaputt.",
+      "rebuildTriggers": "Rebuild-Trigger",
+      "loadingRebuildTriggers": "Rebuild-Trigger werden geladen",
+      "noRebuildTriggers": "Keine Rebuild-Trigger gefunden.",
+      "triggeredBy": "(ausgelöst von {{name}})",
+      "rebuildTriggerSources": "Quellen der Rebuild-Trigger"
+    },
+    "deleteConfirm": {
+      "message": "ELF-Analyse-Zeile #{{id}} für {{version}} löschen? Das kann nicht rückgängig gemacht werden.",
+      "header": "ELF-Analyse löschen"
+    }
+  },
+  "packages": {
+    "requestReasons": {
+      "unset": "Kein bestimmter Grund.",
+      "request": "Von einem Benutzer angefragt.",
+      "depends": "Wird als Abhängigkeit gebraucht.",
+      "dependsOptional": "Optionale Abhängigkeit.",
+      "dependsMake": "Make-Abhängigkeit.",
+      "dependsCheck": "Check-Abhängigkeit."
+    },
+    "addPackage": "Paket hinzufügen",
+    "allRepos": "Alle Repos",
+    "columns": {
+      "pkgbase": "Pkgbase",
+      "buildClass": "Build-Klasse"
+    },
+    "buildClass": {
+      "unset": "nicht gesetzt",
+      "suggested": "vorgeschlagen {{buildClass}}",
+      "buildCountOne": "{{count}} Build",
+      "buildCountOther": "{{count}} Builds",
+      "peakMemory": "Peak {{value}}",
+      "cpuTime": "CPU {{value}}",
+      "diskIo": "Disk {{value}}",
+      "duration": "Dauer {{value}}",
+      "matchesSuggestion": "Passt zur Klasse, die der Ressourcenverbrauch vorschlägt",
+      "noSamples": "Noch keine Messwerte zum Ressourcenverbrauch",
+      "suggestsClass": "Laut Ressourcenverbrauch passt Klasse {{buildClass}}"
+    },
+    "silenced": {
+      "label": "Stummgeschaltet",
+      "tooltip": "Fehler stummgeschaltet bis zum nächsten fehlgeschlagenen Build"
+    },
+    "moreActionsAriaLabel": "Weitere Aktionen für {{name}}",
+    "empty": "Keine Pakete passen zu diesen Filtern.",
+    "editDialog": {
+      "header": "Paket bearbeiten",
+      "noRepo": "Keines",
+      "skipSignalScan": "Signal-Scan überspringen",
+      "silenceFailedBuild": "Fehlgeschlagenen Build stummschalten",
+      "silenceFailedBuildTooltip": "Blendet das Paket in „Fehlgeschlagene Builds ohne späteren Erfolg“ aus, bis es wieder fehlschlägt"
+    },
+    "addDialog": {
+      "header": "AUR-Paket hinzufügen",
+      "openAurPage": "AUR-Paketseite öffnen",
+      "searchPlaceholder": "AUR-Paket suchen...",
+      "alreadyExists": "Das Paket „{{name}}“ ist schon im Repo.",
+      "notInAur": "Das Paket „{{name}}“ gibt es im AUR nicht.",
+      "requestDetails": "Details zur Anfrage",
+      "requestOrigin": "Quelle der Anfrage",
+      "requestReason": "Grund der Anfrage",
+      "customRequestReason": "Eigener Grund",
+      "customRequestReasonPlaceholder": "Warum wird dieses Paket hinzugefügt?",
+      "submit": "Paket hinzufügen"
+    },
+    "rowMenu": {
+      "build": "Build starten",
+      "scheduleBuild": "Build einplanen",
+      "dangerZone": "Danger Zone",
+      "dropFromRepository": "Aus dem Repo entfernen",
+      "deleteRecord": "Eintrag löschen"
+    },
+    "bump": {
+      "label": "Bump",
+      "confirmHeader": "Paket bumpen",
+      "confirmMessage": "Paket <code>{{pkgname}}</code> bumpen? Das erstellt einen Git-Commit, der den Bump-Zähler in <code>{{pkgname}}/.CI/config</code> erhöht."
+    },
+    "schedule": {
+      "confirmHeader": "Paket-Build einplanen",
+      "confirmMessage": "Paket <code>{{pkgname}}</code> einplanen? Das startet einen Build auf dem Manager.",
+      "accept": "Einplanen"
+    },
+    "adjustBuildClass": {
+      "header": "Build-Klasse anpassen",
+      "accept": "Anpassen",
+      "noSuggestion": "keine",
+      "confirmMessage": "Build-Klasse von <code>{{pkgname}}</code> anpassen? Vorschlag: <code>{{suggestion}}</code>. Eine gerade Klasse wird in <code>{{pkgbase}}/.CI/config</code> committed, eine ungerade Klasse ist manuell gesetzt und bleibt unverändert."
+    },
+    "drop": {
+      "confirmHeader": "Paket entfernen",
+      "confirmMessage": "Paket <code>{{pkgname}}</code> entfernen? Das erstellt einen Git-Commit, der <code>{{pkgname}}/.CI/config</code> löscht.",
+      "accept": "Entfernen"
+    },
+    "deleteConfirm": {
+      "message": "Paket <code>{{pkgname}}</code> löschen? Das kann nicht rückgängig gemacht werden.",
+      "header": "Paket löschen"
+    }
+  }
+}

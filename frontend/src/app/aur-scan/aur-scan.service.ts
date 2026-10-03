@@ -7,13 +7,15 @@ import {
   aurScanStreamChunkSchema,
 } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { ResilientSseStream } from '../sse-stream';
 
 const HTTP_TOO_MANY_REQUESTS = 429;
-const GENERIC_SCAN_ERROR_MESSAGE = 'Could not scan the AUR package. Does it exist?';
-const RATE_LIMITED_SCAN_ERROR_MESSAGE = 'Too many scans have been started. Please wait a minute and try again.';
+const GENERIC_SCAN_ERROR_KEY = marker('aurScan.errors.generic');
+const RATE_LIMITED_SCAN_ERROR_KEY = marker('aurScan.errors.rateLimited');
 
 export function isScanSettled(scan: AurPackageScan | undefined): boolean {
   return scan?.status === 'done' || scan?.status === 'failed';
@@ -24,6 +26,7 @@ export class AurScanService {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
   private readonly http = inject(HttpClient);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
 
   readonly scans = signal<ReadonlyMap<string, AurPackageScan>>(new Map());
   readonly metrics = signal<AurScanMetrics | null>(null);
@@ -55,15 +58,20 @@ export class AurScanService {
 
       if (!isScanSettled(scan)) this.openStream(scan.packageName);
     } catch (error) {
-      this.messageToastService.error('Scan failed', this.errorMessageFor(error));
+      this.messageToastService.error(
+        this.transloco.translate('aurScan.status.failed'),
+        this.transloco.translate(this.errorKeyFor(error)),
+      );
       console.error('AUR scan failed:', error);
     }
   }
 
-  private errorMessageFor(error: unknown): string {
-    return error instanceof HttpErrorResponse && error.status === HTTP_TOO_MANY_REQUESTS
-      ? RATE_LIMITED_SCAN_ERROR_MESSAGE
-      : GENERIC_SCAN_ERROR_MESSAGE;
+  private errorKeyFor(error: unknown): string {
+    if (error instanceof HttpErrorResponse && error.status === HTTP_TOO_MANY_REQUESTS) {
+      return RATE_LIMITED_SCAN_ERROR_KEY;
+    }
+
+    return GENERIC_SCAN_ERROR_KEY;
   }
 
   private openStream(packageName: string): void {

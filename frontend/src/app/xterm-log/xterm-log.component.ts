@@ -1,5 +1,6 @@
-import { Component, effect, ElementRef, input, OnDestroy, OnInit, output, viewChild } from '@angular/core';
+import { Component, effect, ElementRef, inject, input, OnDestroy, OnInit, output, viewChild } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
+import { TranslocoService } from '@jsverse/transloco';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
@@ -121,6 +122,8 @@ const XTERM_THEME = {
   ],
 })
 export class XtermLogComponent implements OnInit, OnDestroy {
+  private readonly transloco = inject(TranslocoService);
+
   readonly chunk = input<string[]>([]);
   readonly clearSignal = input<boolean>(false);
   readonly scrollToLine = input<number | undefined>(undefined);
@@ -311,7 +314,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       button.textContent = logicalLine === undefined ? '' : String(logicalLine);
       if (logicalLine !== undefined) {
         button.dataset['line'] = String(logicalLine);
-        button.setAttribute('aria-label', `Line ${logicalLine}`);
+        button.setAttribute('aria-label', this.transloco.translate('xtermLog.lineLabel', { line: logicalLine }));
       } else {
         delete button.dataset['line'];
         button.removeAttribute('aria-label');

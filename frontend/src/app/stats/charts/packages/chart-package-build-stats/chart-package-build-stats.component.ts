@@ -1,7 +1,9 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
+import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, mochaScales } from '../../chart-config';
@@ -15,6 +17,9 @@ import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, moch
 export class ChartPackageBuildStatsComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly packageName = input.required<string>();
 
@@ -28,6 +33,8 @@ export class ChartPackageBuildStatsComponent {
   });
 
   readonly chartConfig = computed<ChartConfig<'line'> | null>(() => {
+    this.activeTranslation();
+
     const data = this.chart.data();
     if (data.length === 0) return null;
     return this.buildChartConfig(data);
@@ -56,7 +63,10 @@ export class ChartPackageBuildStatsComponent {
       data: {
         labels: sortedDays.map((day) => formatDay(day)),
         datasets: Object.keys(repoData).map((repo, index) => ({
-          label: `Builds for ${this.packageName()} in ${repo}`,
+          label: this.transloco.translate('stats.charts.packageBuildStats.label', {
+            package: this.packageName(),
+            repo,
+          }),
           data: sortedDays.map((day) => repoData[repo][day] || 0),
           backgroundColor: this.getColor(index),
           borderColor: this.getColor(index),

@@ -1,15 +1,16 @@
 import { Component } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Card } from '@openng/optimus-ui/card';
 import { ChartReviewOverTimeComponent } from '../charts/reviews/chart-review-over-time/chart-review-over-time.component';
 import { ChartReviewStatsComponent } from '../charts/reviews/chart-review-stats/chart-review-stats.component';
 
 @Component({
   selector: 'chaotic-stats-update-review-page',
-  imports: [Card, ChartReviewStatsComponent, ChartReviewOverTimeComponent],
+  imports: [TranslocoDirective, Card, ChartReviewStatsComponent, ChartReviewOverTimeComponent],
   styleUrl: './stats-chart-page.css',
   template: `
-    <div class="flex flex-col gap-4">
-      <p-card [style]="{ overflow: 'hidden' }" header="Total update reviews">
+    <div class="flex flex-col gap-4" *transloco="let t; prefix: 'stats.pages.updateReview'">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('reviewStats')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-review-stats />
         } @placeholder {
@@ -17,7 +18,7 @@ import { ChartReviewStatsComponent } from '../charts/reviews/chart-review-stats/
         }
       </p-card>
 
-      <p-card [style]="{ overflow: 'hidden' }" header="Update reviews over time">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('reviewOverTime')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-review-over-time />
         } @placeholder {

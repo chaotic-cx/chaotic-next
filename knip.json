@@ -24,6 +24,7 @@
     "@catppuccin/*",
     "@eslint/*",
     "@fontsource-variable/*",
+    "@jsverse/transloco-optimize",
     "@nx/*",
     "@openng/icons",
     "@openng/optimus-ui-tailwindcss",

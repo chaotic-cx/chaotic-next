@@ -1,0 +1,91 @@
+{
+  "seo": {
+    "description": "Dokumentation für Chaotic-AUR, ein Repository mit Paketen für Arch Linux",
+    "keywords": "Chaotic-AUR, Repository, Pakete, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR Pakete, Chaotic-AUR Repository, Chaotic-AUR Dokumentation"
+  },
+  "title": "Erste Schritte",
+  "subtitle": "Richte Chaotic-AUR in fünf Schritten in Pacman ein und erfahre, wie Builds und Reviews funktionieren.",
+  "toc": "Auf dieser Seite",
+  "sections": {
+    "setup": "Einrichtung",
+    "reportingBugs": "Bugs melden",
+    "packageBuilds": "Paket-Builds",
+    "requestingNewPackages": "Neue Pakete anfragen",
+    "recommendations": "Empfehlungen",
+    "updateReviewProcess": "Review-Prozess für Updates",
+    "aurPackageScan": "AUR-Paket-Scan",
+    "publicApi": "Öffentliche API",
+    "furtherInformation": "Weitere Informationen"
+  },
+  "setup": {
+    "importKey": {
+      "title": "Signing-Key importieren",
+      "text": "Lade den <a href=\"https://keyserver.ubuntu.com/pks/lookup?search=3056513887B78AEB&amp;fingerprint=on&amp;op=index\" rel=\"noopener\" target=\"_blank\">Signing-Key</a> herunter und signiere ihn lokal. Damit vertraut Pacman unserem Keyring und der Mirror-Liste."
+    },
+    "installKeyring": {
+      "title": "Keyring und Mirror-Liste installieren",
+      "text": "Damit installierst du <a href=\"https://github.com/chaotic-aur/keyring\" rel=\"noopener\" target=\"_blank\">chaotic-keyring</a> und <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/chaotic-mirrorlist\" rel=\"noopener\" target=\"_blank\">chaotic-mirrorlist</a>."
+    },
+    "addRepository": {
+      "title": "Repo zu Pacman hinzufügen",
+      "text": "Füge Folgendes am Ende von <code>/etc/pacman.conf</code> hinzu:"
+    },
+    "sync": {
+      "title": "Synchronisieren und aktualisieren",
+      "text": "Führe ein vollständiges Systemupdate aus. Dabei wird auch unsere Mirror-Liste synchronisiert."
+    },
+    "install": {
+      "title": "Pakete installieren",
+      "text": "Das Repo ist jetzt einsatzbereit."
+    }
+  },
+  "reportingBugs": {
+    "text": "Melde Paket-Bugs zuerst in unserem <a href=\"https://github.com/chaotic-aur/packages/issues/new/choose\" rel=\"noopener\" target=\"_blank\">Bugtracker</a> oder kommentiere im AUR. Melde es erst Upstream, wenn klar ist, dass es kein Packaging-Problem ist. So werden Bugs schneller gefixt."
+  },
+  "packageBuilds": {
+    "deployLog": {
+      "intro": "Das",
+      "linkText": "Deploy-Log",
+      "outro": "zeigt, ob ein Paket nach seinem letzten AUR-Update deployed wurde."
+    },
+    "reportFailures": "Melde fehlgeschlagene Builds oder kaputte Pakete als Issue in unserem <a href=\"https://github.com/chaotic-aur/packages\" rel=\"noopener\" target=\"_blank\">GitHub-Repository</a>.",
+    "mainRepository": "Unser Haupt-Repo liegt auf <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds\" rel=\"noopener\" target=\"_blank\">GitLab</a>, weil das Build-System stark auf dessen CI-Pipelines setzt."
+  },
+  "requestingNewPackages": {
+    "text": "Erstelle Paket-Requests als Issue in unserem <a href=\"https://github.com/chaotic-aur/packages/issues/new/choose\" rel=\"noopener\" target=\"_blank\">GitHub-Repository</a>. Aus historischen Gründen bevorzugen wir GitHub, Requests auf GitLab gehen deshalb leicht unter.",
+    "beforeYouSubmit": "Bevor du einen Request erstellst:",
+    "searchIssues": "Durchsuche die <a href=\"https://github.com/chaotic-aur/packages/issues\" rel=\"noopener\" target=\"_blank\">vorhandenen Issues</a>. Vielleicht hatten wir das Paket schon mal oder haben es aus gutem Grund entfernt.",
+    "license": "Stelle sicher, dass die Lizenz die Weiterverbreitung erlaubt.",
+    "banList": "Stelle sicher, dass das Paket nicht auf unserer <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds/-/blob/main/README.md#banished-and-rejected-packages-\" rel=\"noopener\" target=\"_blank\">Ban-Liste</a> steht."
+  },
+  "recommendations": {
+    "ignoreUpdates": "Wenn du eine lokal gebaute Version eines Pakets behalten willst (zum Beispiel mit nativen Optimierungen), <a href=\"https://www.archlinux.org/pacman/pacman.conf.5.html\" rel=\"noopener\" target=\"_blank\">ignoriere seine Updates</a> in <code>/etc/pacman.conf</code>:",
+    "specificRepository": "Wenn du ein Paket aus einem bestimmten Repo installieren willst, stell dem Paketnamen den Repo-Namen voran:",
+    "aurHelpers": "AUR-Helper wie <a href=\"https://github.com/Morganamilo/paru\" rel=\"noopener\" target=\"_blank\">paru</a> unterstützen dieselbe Syntax:"
+  },
+  "updateReviewProcess": {
+    "mergeRequests": "Manche AUR-Updates ändern mehr als <code>pkgver</code>, <code>pkgrel</code> oder Checksummen. Für diese öffnet unser Build-System einen Merge Request im Repo <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds\" rel=\"noopener\" target=\"_blank\">pkgbuilds</a>. Pakete, die aus einem Git-Branch gebaut werden, aktualisieren sich automatisch, wenn sich nur ihr Upstream-Commit ändert. Der Branch <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/state\" rel=\"noopener\" target=\"_blank\">state</a> trackt diese Commits. Eine Ausnahme sind AUR-Updates, die das PKGBUILD ändern.",
+    "humanApproval": "Das System markiert verdächtige Änderungen automatisch. Danach prüft ein Maintainer jeden Diff auf schädliche Änderungen. Ein Merge Request wird erst merged und deployed, wenn ein Mensch ihn überprüft hat.",
+    "reviewQueue": {
+      "intro": "Die",
+      "linkText": "Review-Queue",
+      "outro": "zeigt die ausstehenden Updates."
+    }
+  },
+  "aurPackageScan": {
+    "scanner": {
+      "intro": "Überprüfe AUR-Pakete vor der Installation mit unserem",
+      "linkText": "AUR-Scanner",
+      "outro": ". Er lädt das PKGBUILD und seine Quellen herunter und untersucht sie mit unseren statischen Sicherheitsregeln."
+    },
+    "insights": "Er zeigt auch Infos zu den Maintainern, zum Beispiel neue Maintainer und verwaiste Pakete. Lies vor der Installation immer den Quellcode und das PKGBUILD. Der Scanner zeigt beides neben den Befunden an."
+  },
+  "publicApi": {
+    "intro": "Chaotic-AUR bietet eine öffentliche JSON-API, mit der du Pakete, Builds, Metriken und den Repo-Zustand abfragen kannst. Die interaktive",
+    "linkText": "API-Dokumentation",
+    "outro": "listet alle Endpunkte und Schemas auf."
+  },
+  "furtherInformation": {
+    "text": "Die Dokumentation zum <a href=\"https://chaotic-manager.pages.dev\" rel=\"noopener\" target=\"_blank\">Chaotic Manager</a> erklärt das Build-System im Detail."
+  }
+}

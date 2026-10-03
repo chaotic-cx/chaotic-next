@@ -1,4 +1,4 @@
-<div class="w-full">
+<div class="w-full" *transloco="let t; prefix: 'recentlyAdded'">
   <div class="recently-added-section">
     @if (loading() && packages().length === 0) {
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -7,7 +7,7 @@
         }
       </div>
     } @else if (packages().length === 0) {
-      <p class="py-6 text-center text-sm text-ctp-subtext0">No packages were added recently.</p>
+      <p class="py-6 text-center text-sm text-ctp-subtext0">{{ t('empty') }}</p>
     } @else {
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         @for (pkg of packages(); track pkg.id; let index = $index) {

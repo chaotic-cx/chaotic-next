@@ -22,6 +22,8 @@ import {
   ParsedPackageMetadata,
   SpecificPackageMetrics,
 } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
@@ -37,15 +39,15 @@ import { StatsService } from '../stats/stats.service';
 type PackageListKey =
   'deps' | 'makeDeps' | 'optDeps' | 'checkDepends' | 'provides' | 'conflicts' | 'replaces' | 'soNameList';
 
-const PACKAGE_LIST_GROUPS: { key: PackageListKey; label: string }[] = [
-  { key: 'deps', label: 'Depends on' },
-  { key: 'optDeps', label: 'Optional dependencies' },
-  { key: 'makeDeps', label: 'Build dependencies' },
-  { key: 'checkDepends', label: 'Check dependencies' },
-  { key: 'provides', label: 'Provides' },
-  { key: 'conflicts', label: 'Conflicts with' },
-  { key: 'replaces', label: 'Replaces' },
-  { key: 'soNameList', label: 'Shared libraries' },
+const PACKAGE_LIST_GROUPS: { key: PackageListKey; labelKey: string }[] = [
+  { key: 'deps', labelKey: marker('searchPackage.groups.deps') },
+  { key: 'optDeps', labelKey: marker('searchPackage.groups.optDeps') },
+  { key: 'makeDeps', labelKey: marker('searchPackage.groups.makeDeps') },
+  { key: 'checkDepends', labelKey: marker('searchPackage.groups.checkDepends') },
+  { key: 'provides', labelKey: marker('searchPackage.groups.provides') },
+  { key: 'conflicts', labelKey: marker('searchPackage.groups.conflicts') },
+  { key: 'replaces', labelKey: marker('searchPackage.groups.replaces') },
+  { key: 'soNameList', labelKey: marker('searchPackage.groups.soNameList') },
 ];
 
 const OPTIONAL_DEPENDENCY_SEPARATOR = ': ';
@@ -57,7 +59,7 @@ interface PackageListEntry {
 }
 
 interface PackageListGroup {
-  label: string;
+  labelKey: string;
   entries: PackageListEntry[];
 }
 
@@ -89,6 +91,7 @@ interface PackageSheet {
     ChartPackageAverageBuildTimeComponent,
     ChartPackageResourceStatsComponent,
     PackageTriggerSourcesComponent,
+    TranslocoDirective,
   ],
   templateUrl: './search-package.component.html',
   styleUrl: './search-package.component.css',
@@ -99,6 +102,7 @@ export class SearchPackageComponent {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
   protected readonly packageStatsService = inject(StatsService);
 
   readonly search = input<string>();
@@ -109,7 +113,7 @@ export class SearchPackageComponent {
 
   protected readonly searchModel = signal({ query: '' });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {
-    pattern(schemaPath.query, PKGNAME_PATTERN, { message: 'Invalid package name' });
+    pattern(schemaPath.query, PKGNAME_PATTERN, { message: this.transloco.translate('searchPackage.invalidName') });
   });
 
   protected readonly suggestions = signal<string[]>([]);
@@ -147,9 +151,9 @@ export class SearchPackageComponent {
 
   constructor() {
     setPageSeo(
-      'Package search · Chaotic-AUR',
-      'Search packages available in the Chaotic-AUR repository',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search',
+      this.transloco.translate('searchPackage.seo.title'),
+      this.transloco.translate('searchPackage.seo.description'),
+      this.transloco.translate('searchPackage.seo.keywords'),
     );
     effect(() => {
       const q = this.search();
@@ -268,8 +272,8 @@ function toPackageSheet(pkg: Package, repo: string): PackageSheet {
 }
 
 function toListGroups(metadata: ParsedPackageMetadata): PackageListGroup[] {
-  return PACKAGE_LIST_GROUPS.map(({ key, label }) => ({
-    label,
+  return PACKAGE_LIST_GROUPS.map(({ key, labelKey }) => ({
+    labelKey,
     entries: (metadata[key] ?? []).map(toListEntry),
   })).filter((group) => group.entries.length > 0);
 }

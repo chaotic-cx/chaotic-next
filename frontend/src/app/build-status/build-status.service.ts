@@ -9,24 +9,27 @@ import {
   promoteBodySchema,
   type StatsObject,
 } from '@chaotic-next/shared-lib';
+import { translateSignal, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { AppService } from '../app.service';
 import { resourceFailed, resourceValue } from '../functions';
+import { injectActiveTranslation } from '../i18n/active-translation';
 import {
   computeQueueEstimates,
   formatEta,
+  OVERTIME_THRESHOLD_MINUTES,
   overallAverageMinutes,
   type PackageBuildAverage,
   type QueueEstimates,
 } from './queue-estimates';
 
-export const BUILD_ESTIMATE_TOOLTIP = 'Estimated from historical average build times — actual times vary.';
-export const BUILD_OVERTIME_TOOLTIP = 'Build exceeded its historical average by 2+ minutes — may be stuck.';
-
 export interface PipelineView {
   pipeline: PipelineWithExternalStatus['pipeline'];
   commit: PipelineWithExternalStatus['commit'];
+  // Effective GitLab status: a canceled pipeline counts as success.
+  status: string;
+  failedJobs: number;
   statusText: string;
 }
 
@@ -61,6 +64,16 @@ export class BuildStatusService {
   private readonly destroyRef = inject(DestroyRef);
   private readonly http = inject(HttpClient);
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
+
+  readonly estimateTooltip = translateSignal('buildStatus.estimates.tooltip');
+  readonly overtimeTooltip = translateSignal('buildStatus.estimates.overtimeTooltip', {
+    minutes: OVERTIME_THRESHOLD_MINUTES,
+  });
+  readonly activeEtaFallbackTooltip = translateSignal('buildStatus.estimates.fallbackTooltip');
+  readonly activeUnknownTooltip = translateSignal('buildStatus.estimates.unknownTooltip');
 
   private readonly packageBuildsResource = httpResource<Paginated<Build>>(() =>
     this.appService.getPackageBuildsResourceRequest(20, [...DEFAULT_DEPLOYMENT_STATUSES]),
@@ -104,17 +117,30 @@ export class BuildStatusService {
 
   /** One sentence for screen readers, announced politely whenever the counts change. */
   readonly liveSummary = computed(() => {
+    this.activeTranslation();
+
     if (this.loadingQueue()) return '';
-    if (this.queueFailed()) return 'Build status is unavailable.';
-    const active = this.activeQueue().length;
-    const waiting = this.waitingQueue().length;
-    const idle = this.idleQueue().length;
-    return `${active} ${active === 1 ? 'build' : 'builds'} running, ${waiting} queued, ${idle} ${idle === 1 ? 'builder' : 'builders'} idle.`;
+
+    if (this.queueFailed()) {
+      return this.transloco.translate('buildStatus.liveSummary.unavailable');
+    }
+
+    return this.transloco.translate('buildStatus.liveSummary.text', {
+      running: this.runningBuildsText(this.activeQueue().length),
+      waiting: this.waitingQueue().length,
+      idle: this.idleBuildersText(this.idleQueue().length),
+    });
   });
 
   readonly latestDeployments = computed<Build[]>(() => resourceValue(this.packageBuildsResource)?.items ?? []);
 
-  readonly pipelineWithStatus = signal<PipelineView[]>([]);
+  private readonly pipelineData = signal<PipelineWithExternalStatus[]>([]);
+
+  readonly pipelineWithStatus = computed<PipelineView[]>(() => {
+    this.activeTranslation();
+
+    return this.pipelineData().map((pipeline) => this.toView(pipeline));
+  });
 
   readonly activeQueue = computed<ActiveQueueEntry[]>(() =>
     (resourceValue(this.queueStatsResource)?.active.packages ?? []).map((pkg) => ({
@@ -240,7 +266,7 @@ export class BuildStatusService {
   });
 
   constructor() {
-    // pipelineWithStatus is fed from both this resource and live SSE 'pipeline'
+    // pipelineData is fed from both this resource and live SSE 'pipeline'
     // events (see BuildStatusComponent), so it cannot be a pure computed; the
     // effect only seeds it from the resource while events mutate it.
     effect(() => {
@@ -266,6 +292,8 @@ export class BuildStatusService {
 
   /** Start-time labels for running builds, e.g. `started 08:20` or `unknown start`. */
   readonly activeStartedLabels = computed<Map<string, string>>(() => {
+    this.activeTranslation();
+
     const labels = new Map<string, string>();
     for (const pkg of this.activeQueue()) {
       const startedMs = pkg.startedAt ?? this.pipelineStartedAt().get(pkg.name);
@@ -273,39 +301,46 @@ export class BuildStatusService {
       const date = new Date(startedMs);
       const hh = String(date.getHours()).padStart(2, '0');
       const mm = String(date.getMinutes()).padStart(2, '0');
-      labels.set(pkg.rawName, `started ${hh}:${mm}`);
+      labels.set(pkg.rawName, this.transloco.translate('buildStatus.active.startedAt', { time: `${hh}:${mm}` }));
     }
     return labels;
   });
 
   /** Remaining-time labels for running builds, e.g. `~6m left` (kept for log view). */
   readonly activeEtaLabels = computed<Map<string, string>>(() => {
+    this.activeTranslation();
+
     const labels = new Map<string, string>();
     for (const [pkgname, minutes] of this.estimates().activeFinish) {
       if (this.estimates().activeOvertime.has(pkgname)) continue;
-      labels.set(pkgname, `${formatEta(minutes)} left`);
+
+      labels.set(pkgname, this.transloco.translate('buildStatus.active.timeLeft', { eta: formatEta(minutes) }));
     }
     return labels;
   });
 
   /** Overtime labels for running builds that exceeded average by 2+ minutes. */
   readonly activeOvertimeLabels = computed<Map<string, string>>(() => {
+    this.activeTranslation();
+
     const labels = new Map<string, string>();
     const isFallback = this.activeEtaIsFallback();
     const isUnknown = this.activeIsUnknown();
 
     for (const [pkgname, minutes] of this.estimates().activeOvertime) {
       if (isFallback.get(pkgname) || isUnknown.get(pkgname)) continue;
-      labels.set(pkgname, `${formatEta(minutes)} overtime`);
+      labels.set(pkgname, this.transloco.translate('buildStatus.active.overtime', { eta: formatEta(minutes) }));
     }
     return labels;
   });
 
   /** Start-time labels for queued builds keyed by pkgname, e.g. `starts in ~12m`. */
   readonly waitingStartEtaLabels = computed<Map<string, string>>(() => {
+    this.activeTranslation();
+
     const labels = new Map<string, string>();
     for (const [pkgname, minutes] of this.estimates().waitingStart) {
-      labels.set(pkgname, `starts in ${formatEta(minutes)}`);
+      labels.set(pkgname, this.transloco.translate('buildStatus.waiting.startsIn', { eta: formatEta(minutes) }));
     }
     return labels;
   });
@@ -313,9 +348,10 @@ export class BuildStatusService {
   readonly activeEtaTooltips = computed<Map<string, string>>(() => {
     const map = new Map<string, string>();
     for (const pkg of this.activeQueue()) {
-      const base = this.activeEtaIsFallback().get(pkg.rawName) ? this.activeEtaFallbackTooltip : BUILD_ESTIMATE_TOOLTIP;
-      const samples = this.samplesFor(pkg.rawName, pkg.node);
-      map.set(pkg.rawName, samples !== undefined ? `${base} · ${samples} samples` : base);
+      const base = this.activeEtaIsFallback().get(pkg.rawName)
+        ? this.activeEtaFallbackTooltip()
+        : this.estimateTooltip();
+      map.set(pkg.rawName, this.withSamples(base, this.samplesFor(pkg.rawName, pkg.node)));
     }
     return map;
   });
@@ -324,9 +360,7 @@ export class BuildStatusService {
     const map = new Map<string, string>();
     for (const pkg of this.activeQueue()) {
       if (!this.estimates().activeOvertime.has(pkg.rawName)) continue;
-      const samples = this.samplesFor(pkg.rawName, pkg.node);
-      const base = BUILD_OVERTIME_TOOLTIP;
-      map.set(pkg.rawName, samples !== undefined ? `${base} · ${samples} samples` : base);
+      map.set(pkg.rawName, this.withSamples(this.overtimeTooltip(), this.samplesFor(pkg.rawName, pkg.node)));
     }
     return map;
   });
@@ -334,9 +368,7 @@ export class BuildStatusService {
   readonly waitingStartTooltips = computed<Map<string, string>>(() => {
     const map = new Map<string, string>();
     for (const [pkgname] of this.estimates().waitingStart) {
-      const samples = this.samplesFor(pkgname);
-      const base = BUILD_ESTIMATE_TOOLTIP;
-      map.set(pkgname, samples !== undefined ? `${base} · ${samples} samples` : base);
+      map.set(pkgname, this.withSamples(this.estimateTooltip(), this.samplesFor(pkgname)));
     }
     return map;
   });
@@ -366,10 +398,27 @@ export class BuildStatusService {
     return minutes === undefined ? undefined : formatEta(minutes);
   });
 
-  readonly queueClearLabel = computed<string | undefined>(() => {
-    const minutes = this.estimates().queueClear;
-    return minutes === undefined ? undefined : `Queue empty in ${formatEta(minutes)}`;
-  });
+  private withSamples(tooltip: string, samples: number | undefined): string {
+    if (samples === undefined) return tooltip;
+
+    return this.transloco.translate('buildStatus.estimates.withSamples', { tooltip, samples });
+  }
+
+  private runningBuildsText(count: number): string {
+    if (count === 1) {
+      return this.transloco.translate('buildStatus.liveSummary.buildsRunningOne', { count });
+    }
+
+    return this.transloco.translate('buildStatus.liveSummary.buildsRunningOther', { count });
+  }
+
+  private idleBuildersText(count: number): string {
+    if (count === 1) {
+      return this.transloco.translate('buildStatus.liveSummary.buildersOne', { count });
+    }
+
+    return this.transloco.translate('buildStatus.liveSummary.buildersOther', { count });
+  }
 
   private averageMinutes(rawName: string, builderName?: string): number | undefined {
     const lookup = this.averageLookup();
@@ -417,9 +466,6 @@ export class BuildStatusService {
     }
     return map;
   });
-
-  readonly activeEtaFallbackTooltip = 'No history for this package on this builder — average from other builders';
-  readonly activeUnknownTooltip = 'No build history for this package — estimate unavailable';
 
   private trackFirstSeenActive(): void {
     const active = this.activeQueue();
@@ -473,7 +519,7 @@ export class BuildStatusService {
   }
 
   transformPipelineData(pipelines: PipelineWithExternalStatus[]): void {
-    this.pipelineWithStatus.set(pipelines.slice(0, MAX_VISIBLE_PIPELINES).map((pipeline) => this.toView(pipeline)));
+    this.pipelineData.set(pipelines.slice(0, MAX_VISIBLE_PIPELINES));
   }
 
   applyPipelineDelta(delta: PipelineWithExternalStatus[]): void {
@@ -482,26 +528,33 @@ export class BuildStatusService {
       this.transformPipelineData(delta);
       return;
     }
-    const current = this.pipelineWithStatus();
-    const byId = new Map(current.map((view) => [view.pipeline.id, view]));
-    for (const pipeline of delta) byId.set(pipeline.pipeline.id, this.toView(pipeline));
+    const current = this.pipelineData();
+    const byId = new Map(current.map((pipeline) => [pipeline.pipeline.id, pipeline]));
+    for (const pipeline of delta) byId.set(pipeline.pipeline.id, pipeline);
     const merged = [...byId.values()].sort((a, b) => b.pipeline.id - a.pipeline.id).slice(0, MAX_VISIBLE_PIPELINES);
-    this.pipelineWithStatus.set(merged);
+    this.pipelineData.set(merged);
   }
 
   private toView(pipeline: PipelineWithExternalStatus): PipelineView {
     const failedJobs = pipeline.commit.filter((job) => job.status === 'failed').length;
-    let statusText = pipeline.pipeline.status;
-    if (failedJobs > 0) {
-      statusText = `${pipeline.commit.length - failedJobs}/${pipeline.commit.length} successful`;
-    } else if (pipeline.pipeline.status === 'canceled') {
-      statusText = 'success';
-    }
+    const status = pipeline.pipeline.status === 'canceled' ? 'success' : pipeline.pipeline.status;
+
     return {
       pipeline: pipeline.pipeline,
       commit: pipeline.commit.map((job) => ({ ...job, name: job.name.split(': ')[1] ?? job.name })),
-      statusText,
+      status,
+      failedJobs,
+      statusText: this.pipelineStatusText(status, failedJobs, pipeline.commit.length),
     };
+  }
+
+  private pipelineStatusText(status: string, failedJobs: number, totalJobs: number): string {
+    if (failedJobs === 0) return status;
+
+    return this.transloco.translate('buildStatus.pipelines.partialSuccess', {
+      successful: totalJobs - failedJobs,
+      total: totalJobs,
+    });
   }
 
   private shortName(name: string): string {

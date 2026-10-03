@@ -2,6 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { type Package, type Paginated, formatPkgrel } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { AppService } from '../app.service';
 import { resourceValue } from '../functions';
@@ -12,7 +13,7 @@ const STAGGER_CAP = 8;
 
 @Component({
   selector: 'chaotic-recently-added',
-  imports: [RouterLink, TagModule, RelativeTimePipe],
+  imports: [RouterLink, TagModule, RelativeTimePipe, TranslocoDirective],
   templateUrl: './recently-added.component.html',
   styleUrl: './recently-added.component.css',
 })

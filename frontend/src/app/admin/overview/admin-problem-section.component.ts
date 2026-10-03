@@ -1,5 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
 
 export interface ProblemRow {
   name: string;
@@ -8,32 +9,36 @@ export interface ProblemRow {
 
 @Component({
   selector: 'chaotic-admin-problem-section',
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoDirective],
   template: `
-    <div class="problem-head">
-      <h3 class="problem-title">{{ title() }}</h3>
-      <span class="problem-count" [class.is-zero]="count() === 0">{{ count() ?? '–' }}</span>
-      @if (link(); as target) {
-        <a class="chaotic-card__link" [routerLink]="target">{{ linkLabel() }}</a>
-      }
-    </div>
-    @if (failed()) {
-      <p class="problem-note">
-        Could not load.
-        <button class="problem-retry" (click)="retry.emit()" type="button">Try again</button>
-      </p>
-    } @else if (count() === 0) {
-      <p class="problem-note">{{ emptyText() }}</p>
-    } @else if (rows().length > 0) {
-      <ul class="chaotic-mini-list problem-list">
-        @for (row of rows(); track row.name) {
-          <li>
-            <span class="chaotic-mini-list__name">{{ row.name }}</span>
-            <span class="chaotic-mini-list__meta" [title]="row.detail">{{ row.detail }}</span>
-          </li>
+    <ng-container *transloco="let t">
+      <div class="problem-head">
+        <h3 class="problem-title">{{ title() }}</h3>
+        <span class="problem-count" [class.is-zero]="count() === 0">{{ count() ?? '–' }}</span>
+        @if (link(); as target) {
+          <a class="chaotic-card__link" [routerLink]="target">{{
+            linkLabel() ?? t('admin.overview.problemSection.open')
+          }}</a>
         }
-      </ul>
-    }
+      </div>
+      @if (failed()) {
+        <p class="problem-note">
+          {{ t('admin.overview.problemSection.loadError') }}
+          <button class="problem-retry" (click)="retry.emit()" type="button">{{ t('common.tryAgain') }}</button>
+        </p>
+      } @else if (count() === 0) {
+        <p class="problem-note">{{ emptyText() ?? t('admin.overview.problemSection.empty') }}</p>
+      } @else if (rows().length > 0) {
+        <ul class="chaotic-mini-list problem-list">
+          @for (row of rows(); track row.name) {
+            <li>
+              <span class="chaotic-mini-list__name">{{ row.name }}</span>
+              <span class="chaotic-mini-list__meta" [title]="row.detail">{{ row.detail }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </ng-container>
   `,
   styles: `
     :host {
@@ -98,8 +103,8 @@ export class AdminProblemSectionComponent {
   readonly count = input<number | null>(null);
   readonly rows = input<ProblemRow[]>([]);
   readonly failed = input(false);
-  readonly emptyText = input('Nothing to fix.');
+  readonly emptyText = input<string>();
   readonly link = input<string | null>(null);
-  readonly linkLabel = input('Open');
+  readonly linkLabel = input<string>();
   readonly retry = output();
 }

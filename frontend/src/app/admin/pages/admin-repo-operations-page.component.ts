@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { ConfirmationService } from '@openng/optimus-ui/api';
-import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
 import { AdminOperationListComponent } from './admin-operation-list.component';
 import { createAdminPagination, type StatefulTableRef } from '../admin-url-sync';
@@ -12,37 +13,37 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
 
 @Component({
   selector: 'chaotic-admin-repo-operations-page',
-  imports: [TableSkeletonRowsComponent, AdminOperationListComponent, Button, TableModule, Tooltip],
+  imports: [TableSkeletonRowsComponent, AdminOperationListComponent, Button, TableModule, Tooltip, TranslocoDirective],
   template: `
-    <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-5" *transloco="let t">
       <chaotic-admin-operation-list />
 
       <div class="min-w-0">
         <div class="mb-2 flex flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-          <span class="p-panel-title block text-ctp-text">Broken packages</span>
+          <span class="p-panel-title block text-ctp-text">{{ t('admin.repoOperations.brokenPackages') }}</span>
           <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             <p-button
               [disabled]="service.brokenSelection().length === 0"
               [badge]="service.brokenSelection().length.toString()"
+              [label]="t('admin.repoOperations.rescanSelected.label')"
+              [pTooltip]="t('admin.repoOperations.rescanSelected.tooltip')"
               (onClick)="confirmRescan()"
-              label="Rescan selected"
               icon="pi pi-microchip"
               size="small"
               severity="secondary"
               styleClass="w-full sm:w-auto"
-              pTooltip="Re-run the ELF signal analysis for the selected broken packages; may take a while"
               tooltipPosition="left"
             />
             <p-button
               [disabled]="service.brokenSelection().length === 0"
               [badge]="service.brokenSelection().length.toString()"
+              [label]="t('admin.repoOperations.bumpSelected.label')"
+              [pTooltip]="t('admin.repoOperations.bumpSelected.tooltip')"
               (onClick)="confirmBump()"
-              label="Bump selected"
               icon="pi pi-arrow-up"
               size="small"
               severity="danger"
               styleClass="w-full sm:w-auto"
-              pTooltip="Rebuild the selected broken packages and commit the changes"
               tooltipPosition="left"
             />
           </div>
@@ -71,10 +72,10 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
             <ng-template #header>
               <tr>
                 <th style="width: 3rem"><p-tableHeaderCheckbox /></th>
-                <th style="min-width: 12rem">Package</th>
-                <th style="min-width: 8rem">Version</th>
-                <th style="min-width: 8rem">Repo</th>
-                <th style="min-width: 16rem">Reasons</th>
+                <th style="min-width: 12rem">{{ t('admin.pages.columns.package') }}</th>
+                <th style="min-width: 8rem">{{ t('admin.pages.columns.version') }}</th>
+                <th style="min-width: 8rem">{{ t('admin.pages.columns.repo') }}</th>
+                <th style="min-width: 16rem">{{ t('admin.repoOperations.columns.reasons') }}</th>
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-report>
@@ -95,7 +96,9 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
                 />
               } @else {
                 <tr>
-                  <td [attr.colspan]="5"><p class="chaotic-card__empty">No broken packages found.</p></td>
+                  <td [attr.colspan]="5">
+                    <p class="chaotic-card__empty">{{ t('admin.repoOperations.empty') }}</p>
+                  </td>
                 </tr>
               }
             </ng-template>
@@ -110,6 +113,7 @@ export class AdminRepoOperationsPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly transloco = inject(TranslocoService);
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
@@ -124,11 +128,12 @@ export class AdminRepoOperationsPageComponent {
   confirmBump(): void {
     const count = this.service.brokenSelection().length;
     if (count === 0) return;
+
     this.confirmationService.confirm({
-      message: `Rebuild ${count} selected broken package(s)? This bumps their pkgrel and commits the changes.`,
-      header: 'Bump selected packages',
-      acceptLabel: 'Bump',
-      rejectLabel: 'Cancel',
+      message: this.transloco.translate('admin.repoOperations.bumpConfirm.message', { count }),
+      header: this.transloco.translate('admin.repoOperations.bumpConfirm.header'),
+      acceptLabel: this.transloco.translate('admin.repoOperations.bumpConfirm.accept'),
+      rejectLabel: this.transloco.translate('common.cancel'),
       accept: () => void this.service.bumpBrokenPackages(),
     });
   }
@@ -136,13 +141,12 @@ export class AdminRepoOperationsPageComponent {
   confirmRescan(): void {
     const count = this.service.brokenSelection().length;
     if (count === 0) return;
+
     this.confirmationService.confirm({
-      message:
-        `Re-run the ELF signal analysis for ${count} selected package(s)? ` +
-        'Each archive is downloaded and scanned in the background, so results are not immediate.',
-      header: 'Rescan selected packages',
-      acceptLabel: 'Rescan',
-      rejectLabel: 'Cancel',
+      message: this.transloco.translate('admin.repoOperations.rescanConfirm.message', { count }),
+      header: this.transloco.translate('admin.repoOperations.rescanConfirm.header'),
+      acceptLabel: this.transloco.translate('admin.repoOperations.rescanConfirm.accept'),
+      rejectLabel: this.transloco.translate('common.cancel'),
       accept: () => void this.service.rescanBrokenPackages(),
     });
   }

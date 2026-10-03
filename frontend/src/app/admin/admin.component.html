@@ -1,6 +1,6 @@
-<div class="chaotic-page admin-shell">
-  <nav class="admin-nav" #nav (window:resize)="onNavResize()" aria-label="Admin sections">
-    <p class="admin-nav__title">Admin</p>
+<div class="chaotic-page admin-shell" *transloco="let t">
+  <nav class="admin-nav" #nav [attr.aria-label]="t('admin.layout.navLabel')" (window:resize)="onNavResize()">
+    <p class="admin-nav__title">{{ t('admin.layout.title') }}</p>
     @if (indicator(); as box) {
       <span
         class="admin-nav__indicator"
@@ -11,10 +11,10 @@
         aria-hidden="true"
       ></span>
     }
-    @for (group of groups; track group.label) {
+    @for (group of groups; track group.labelKey) {
       <div class="admin-nav__group">
-        @if (group.label) {
-          <p class="admin-nav__group-label">{{ group.label }}</p>
+        @if (group.labelKey; as groupLabelKey) {
+          <p class="admin-nav__group-label">{{ t(groupLabelKey) }}</p>
         }
         <ul class="admin-nav__list">
           @for (item of group.items; track item.path) {
@@ -28,7 +28,7 @@
                 ariaCurrentWhenActive="page"
               >
                 <i [class]="item.icon" aria-hidden="true"></i>
-                {{ item.label }}
+                {{ t(item.labelKey) }}
               </a>
             </li>
           }
@@ -39,8 +39,8 @@
 
   <main class="admin-main">
     <header class="admin-header">
-      <h1 class="admin-header__title">{{ activeItem().label }}</h1>
-      <p class="admin-header__desc">{{ activeItem().description }}</p>
+      <h1 class="admin-header__title">{{ t(activeItem().labelKey) }}</h1>
+      <p class="admin-header__desc">{{ t(activeItem().descriptionKey) }}</p>
     </header>
     <div class="admin-content">
       <router-outlet />

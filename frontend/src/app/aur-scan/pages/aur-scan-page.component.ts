@@ -1,11 +1,12 @@
+import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
-import { DecimalPipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { AppService } from '../../app.service';
 import { setPageSeo } from '../../functions';
@@ -17,7 +18,7 @@ const MIN_QUERY_LENGTH = 3;
 
 @Component({
   selector: 'chaotic-aur-scan-page',
-  imports: [AutoComplete, DecimalPipe, FormsModule, TitleComponent, AurScanResultComponent],
+  imports: [AutoComplete, DecimalPipe, FormsModule, TitleComponent, AurScanResultComponent, TranslocoDirective],
   styleUrl: './aur-scan-page.css',
   templateUrl: './aur-scan-page.component.html',
 })
@@ -26,11 +27,10 @@ export class AurScanPageComponent {
   private readonly appService = inject(AppService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
   protected readonly aurScanService = inject(AurScanService);
 
   readonly search = input<string>();
-
-  readonly subtitle = 'Check an AUR package for malicious or suspicious content before you install it.';
 
   protected readonly currentPackageName = signal('');
   protected readonly metrics = this.aurScanService.metrics;
@@ -38,7 +38,9 @@ export class AurScanPageComponent {
   protected readonly searchModel = signal({ query: '' });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {
     debounce(schemaPath.query, 300);
-    pattern(schemaPath.query, PKGNAME_PATTERN, { message: 'Invalid package name' });
+    pattern(schemaPath.query, PKGNAME_PATTERN, {
+      message: this.transloco.translate('aurScan.page.invalidPackageName'),
+    });
   });
 
   protected readonly suggestions = signal<string[]>([]);
@@ -49,9 +51,9 @@ export class AurScanPageComponent {
 
   constructor() {
     setPageSeo(
-      'AUR package scan · Chaotic-AUR',
-      'Scan AUR packages for malicious PKGBUILD content, suspicious URLs and risky maintainership changes',
-      'Chaotic-AUR, AUR, security, PKGBUILD, VirusTotal, scan',
+      this.transloco.translate('aurScan.page.seo.title'),
+      this.transloco.translate('aurScan.page.seo.description'),
+      this.transloco.translate('aurScan.page.seo.keywords'),
     );
     void this.aurScanService.loadMetrics();
 

@@ -1,20 +1,22 @@
-<chaotic-chart-card
-  [data]="chartConfig().data"
-  [options]="chartConfig().options"
-  [hasData]="chart.hasData()"
-  [loading]="chart.loading()"
-  [failed]="chart.failed()"
-  [chartClass]="'w-full max-w-xl'"
-  (retry)="chart.retry()"
-  type="pie"
-  containerClass="card relative flex min-h-[24rem] items-center justify-center"
-/>
-<p-input-number
-  [(ngModel)]="statsService.countryRanksRange"
-  [showButtons]="true"
-  [min]="0"
-  [max]="30"
-  mode="decimal"
-  inputId="minmaxCountry"
-  placeholder="Amount of countries to show"
-/>
+<ng-container *transloco="let t; prefix: 'stats.charts.countries'">
+  <chaotic-chart-card
+    [data]="chartConfig().data"
+    [options]="chartConfig().options"
+    [hasData]="chart.hasData()"
+    [loading]="chart.loading()"
+    [failed]="chart.failed()"
+    [chartClass]="'w-full max-w-xl'"
+    (retry)="chart.retry()"
+    type="pie"
+    containerClass="card relative flex min-h-[24rem] items-center justify-center"
+  />
+  <p-input-number
+    [(ngModel)]="statsService.countryRanksRange"
+    [showButtons]="true"
+    [min]="0"
+    [max]="30"
+    [placeholder]="t('amountPlaceholder')"
+    mode="decimal"
+    inputId="minmaxCountry"
+  />
+</ng-container>

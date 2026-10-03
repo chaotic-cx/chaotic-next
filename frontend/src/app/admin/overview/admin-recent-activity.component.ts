@@ -2,6 +2,8 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MrAction, Paginated, PipelineOperation, PipelineTriggerAction } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { APP_CONFIG } from '../../../environments/app-config.token';
 import { resourceFailed, resourceValue } from '../../functions';
 import { mergeRequestUrl } from '../../gitlab-links';
@@ -12,38 +14,48 @@ import { OVERVIEW_SKELETON_ROWS } from './overview-constants';
 const ACTIVITY_FETCH_SIZE = 6;
 const ACTIVITY_VISIBLE_SIZE = 8;
 
-const MR_ACTION_VERBS: Record<string, string> = {
-  approve: 'approved',
-  hold: 'put on hold',
-  dangerous: 'flagged as dangerous',
+const MR_ACTION_VERB_KEYS: Record<string, string> = {
+  approve: marker('admin.overview.recentActivity.mrVerbs.approve'),
+  hold: marker('admin.overview.recentActivity.mrVerbs.hold'),
+  dangerous: marker('admin.overview.recentActivity.mrVerbs.dangerous'),
 };
 
-const PIPELINE_OPERATION_VERBS: Record<PipelineOperation, string> = {
-  [PipelineOperation.NONE]: 'started a pipeline on',
-  [PipelineOperation.BUMP_PACKAGES]: 'bumped packages on',
-  [PipelineOperation.SCHEDULE_PACKAGES]: 'scheduled packages on',
-  [PipelineOperation.RUN_SCHEDULE]: 'ran a schedule on',
-  [PipelineOperation.DROP_PACKAGES]: 'dropped packages on',
-  [PipelineOperation.ADD_PACKAGES]: 'added packages on',
+const UNKNOWN_MR_ACTION_VERB_KEY = marker('admin.overview.recentActivity.mrVerbs.unknown');
+
+const PIPELINE_OPERATION_VERB_KEYS: Record<PipelineOperation, string> = {
+  [PipelineOperation.NONE]: marker('admin.overview.recentActivity.pipelineVerbs.none'),
+  [PipelineOperation.BUMP_PACKAGES]: marker('admin.overview.recentActivity.pipelineVerbs.bumpPackages'),
+  [PipelineOperation.SCHEDULE_PACKAGES]: marker('admin.overview.recentActivity.pipelineVerbs.schedulePackages'),
+  [PipelineOperation.RUN_SCHEDULE]: marker('admin.overview.recentActivity.pipelineVerbs.runSchedule'),
+  [PipelineOperation.DROP_PACKAGES]: marker('admin.overview.recentActivity.pipelineVerbs.dropPackages'),
+  [PipelineOperation.ADD_PACKAGES]: marker('admin.overview.recentActivity.pipelineVerbs.addPackages'),
 };
+
+const UNKNOWN_PIPELINE_OPERATION_VERB_KEY = marker('admin.overview.recentActivity.pipelineVerbs.unknown');
 
 interface ActivityEntry {
   key: string;
   user: string;
-  verb: string;
-  target: string;
+  verbKey: string;
+  verbParams: Record<string, string>;
+  // Merge requests show their !iid; pipeline triggers show no target.
+  target: string | null;
   href: string | null;
   at: string;
 }
 
 @Component({
   selector: 'chaotic-admin-recent-activity',
-  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink],
+  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink, TranslocoDirective],
   template: `
-    <section class="chaotic-card h-full" aria-labelledby="overview-activity-title">
+    <section class="chaotic-card h-full" *transloco="let t" aria-labelledby="overview-activity-title">
       <header class="chaotic-card__header">
-        <h2 class="chaotic-card__title" id="overview-activity-title">Recent activity</h2>
-        <a class="chaotic-card__link" routerLink="../mr-actions">All MR actions</a>
+        <h2 class="chaotic-card__title" id="overview-activity-title">
+          {{ t('admin.overview.recentActivity.title') }}
+        </h2>
+        <a class="chaotic-card__link" routerLink="../mr-actions">{{
+          t('admin.overview.recentActivity.allMrActions')
+        }}</a>
       </header>
       @if (loading()) {
         <ul class="chaotic-mini-list" aria-hidden="true">
@@ -52,22 +64,24 @@ interface ActivityEntry {
           }
         </ul>
       } @else if (failed()) {
-        <chaotic-load-error (retry)="retry()" message="Could not load recent activity." />
+        <chaotic-load-error [message]="t('admin.overview.recentActivity.loadError')" (retry)="retry()" />
       } @else if (entries().length === 0) {
-        <p class="chaotic-card__empty">No maintainer actions recorded yet.</p>
+        <p class="chaotic-card__empty">{{ t('admin.overview.recentActivity.empty') }}</p>
       } @else {
         <ol class="chaotic-mini-list">
           @for (entry of entries(); track entry.key) {
             <li>
               <p class="activity-text">
                 <span class="activity-user">{{ entry.user }}</span>
-                {{ entry.verb }}
-                @if (entry.href) {
-                  <a class="activity-target" [href]="entry.href" target="_blank" rel="noopener noreferrer">{{
-                    entry.target
-                  }}</a>
-                } @else {
-                  <span class="activity-target">{{ entry.target }}</span>
+                {{ t(entry.verbKey, entry.verbParams) }}
+                @if (entry.target !== null) {
+                  @if (entry.href) {
+                    <a class="activity-target" [href]="entry.href" target="_blank" rel="noopener noreferrer">{{
+                      entry.target
+                    }}</a>
+                  } @else {
+                    <span class="activity-target">{{ entry.target }}</span>
+                  }
                 }
               </p>
               <span class="chaotic-mini-list__meta">{{ entry.at | relativeTime }}</span>
@@ -140,7 +154,8 @@ function toMrActivity(action: MrAction): ActivityEntry {
   return {
     key: `mr-${action.id}`,
     user: action.userName,
-    verb: MR_ACTION_VERBS[action.action] ?? action.action,
+    verbKey: MR_ACTION_VERB_KEYS[action.action] ?? UNKNOWN_MR_ACTION_VERB_KEY,
+    verbParams: { action: action.action },
     target: `!${action.mergeRequestIid}`,
     href: mergeRequestUrl(action.mergeRequestIid),
     at: action.createdAt,
@@ -148,13 +163,16 @@ function toMrActivity(action: MrAction): ActivityEntry {
 }
 
 function toTriggerActivity(trigger: PipelineTriggerAction): ActivityEntry {
-  const verb = PIPELINE_OPERATION_VERBS[trigger.operation as PipelineOperation] ?? `ran ${trigger.operation} on`;
+  const verbKey =
+    PIPELINE_OPERATION_VERB_KEYS[trigger.operation as PipelineOperation] ?? UNKNOWN_PIPELINE_OPERATION_VERB_KEY;
+
   return {
     key: `trigger-${trigger.id}`,
     user: trigger.userName,
-    verb,
-    target: trigger.ref,
-    href: trigger.webUrl ?? null,
+    verbKey,
+    verbParams: { operation: trigger.operation },
+    target: null,
+    href: null,
     at: trigger.createdAt,
   };
 }

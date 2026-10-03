@@ -1,20 +1,17 @@
-<div class="chaotic-page">
-  <chaotic-title
-    title="Mirrors"
-    subtitle="Where the repository is served from, and whether each mirror is up to date."
-  />
+<div class="chaotic-page" *transloco="let t; prefix: 'mirrors'">
+  <chaotic-title [title]="t('title')" [subtitle]="t('subtitle')" />
 
-  <dl class="chaotic-stats chaotic-surface" style="--stats-columns: 3" aria-label="Mirror summary">
+  <dl class="chaotic-stats chaotic-surface" [attr.aria-label]="t('summaryLabel')" style="--stats-columns: 3">
     <div class="chaotic-stats__item chaotic-stats__item--primary">
-      <dt>Online</dt>
+      <dt>{{ t('status.online') }}</dt>
       <dd>{{ mirrorsService.loading() ? '–' : mirrorsService.onlineMirrors().length }}</dd>
     </div>
     <div class="chaotic-stats__item">
-      <dt>Outdated</dt>
+      <dt>{{ t('status.outdated') }}</dt>
       <dd>{{ mirrorsService.loading() ? '–' : mirrorsService.outdatedMirrors().length }}</dd>
     </div>
     <div class="chaotic-stats__item">
-      <dt>Offline</dt>
+      <dt>{{ t('status.offline') }}</dt>
       <dd>{{ mirrorsService.loading() ? '–' : mirrorsService.offlineMirrors().length }}</dd>
     </div>
   </dl>
@@ -23,26 +20,21 @@
     <section class="chaotic-card">
       <header class="chaotic-card__header">
         <i class="pi pi-compass text-sm text-ctp-mauve" aria-hidden="true"></i>
-        <h2 class="chaotic-card__title">GEO mirror</h2>
-        <span class="ml-auto text-xs text-ctp-subtext0">Recommended</span>
+        <h2 class="chaotic-card__title">{{ t('geo.title') }}</h2>
+        <span class="ml-auto text-xs text-ctp-subtext0">{{ t('geo.recommended') }}</span>
       </header>
       <div class="mirrors-featured__body">
-        <p>Routes every request to the closest healthy mirror automatically.</p>
+        <p>{{ t('geo.description') }}</p>
         <chaotic-code-block [code]="geoServer" language="ini" />
       </div>
     </section>
     <section class="chaotic-card">
       <header class="chaotic-card__header">
         <i class="pi pi-cloud text-sm text-ctp-mauve" aria-hidden="true"></i>
-        <h2 class="chaotic-card__title">CDN mirror</h2>
+        <h2 class="chaotic-card__title">{{ t('cdn.title') }}</h2>
       </header>
       <div class="mirrors-featured__body">
-        <p>
-          Hosted on
-          <a href="https://www.cloudflare.com/developer-platform/products/r2/" rel="noopener" target="_blank"
-            >Cloudflare R2</a
-          >, so it is distributed globally.
-        </p>
+        <p [innerHTML]="t('cdn.description')"></p>
         <chaotic-code-block [code]="cdnServer" language="ini" />
       </div>
     </section>
@@ -70,14 +62,15 @@
           }
         </ul>
       } @else {
-        <p class="chaotic-card__empty">The mirror list is unavailable right now. The router is possibly down.</p>
+        <p class="chaotic-card__empty">{{ t('unavailable') }}</p>
       }
     </section>
   }
 
   <p class="mt-6 text-sm text-ctp-subtext0">
-    Want to host a mirror? Get in touch through the channels on the
-    <a class="text-ctp-mauve" routerLink="/about">about page</a>. See every mirror on the
-    <a class="text-ctp-mauve" routerLink="/map">live traffic map</a>.
+    {{ t('hostMirror.intro') }}
+    <a class="text-ctp-mauve" routerLink="/about">{{ t('hostMirror.aboutLink') }}</a
+    >{{ t('hostMirror.middle') }} <a class="text-ctp-mauve" routerLink="/map">{{ t('hostMirror.mapLink') }}</a
+    >{{ t('hostMirror.outro') }}
   </p>
 </div>

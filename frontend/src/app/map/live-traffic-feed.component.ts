@@ -1,12 +1,16 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { LiveTrafficService } from '../mirror-map/live-traffic.service';
 
 @Component({
   selector: 'chaotic-live-traffic-feed',
-  imports: [DatePipe],
+  imports: [DatePipe, TranslocoDirective],
   template: `
-    <div class="live-feed-card mt-4 rounded-xl border border-ctp-surface0 p-4 backdrop-blur-(--chaotic-blur)">
+    <div
+      class="live-feed-card mt-4 rounded-xl border border-ctp-surface0 p-4 backdrop-blur-(--chaotic-blur)"
+      *transloco="let t; prefix: 'map.liveFeed'"
+    >
       <div
         class="flex flex-col items-center gap-3 border-b border-ctp-surface0 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
       >
@@ -21,7 +25,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
               <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-ctp-overlay0"></span>
             }
           </div>
-          <span class="font-bold text-ctp-text">Live Traffic Stream</span>
+          <span class="font-bold text-ctp-text">{{ t('title') }}</span>
         </div>
 
         <div class="grid w-full grid-cols-3 gap-2 text-xs font-semibold sm:flex sm:w-auto sm:order-3">
@@ -37,7 +41,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
             type="button"
           >
             <i class="text-[11px]" [class]="trafficService.showHits() ? 'pi pi-bolt' : 'pi pi-eye-slash'"></i>
-            <span>Hits</span>
+            <span>{{ t('toggleHits') }}</span>
           </button>
 
           <button
@@ -55,7 +59,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
               class="text-[11px]"
               [class]="trafficService.mapProjection() === 'globe' ? 'pi pi-compass' : 'pi pi-map'"
             ></i>
-            <span>{{ trafficService.mapProjection() === 'globe' ? '3D Globe' : '2D Map' }}</span>
+            <span>{{ trafficService.mapProjection() === 'globe' ? t('globe') : t('flatMap') }}</span>
           </button>
 
           <button
@@ -70,7 +74,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
             type="button"
           >
             <i class="text-[11px]" [class]="trafficService.showMirrors() ? 'pi pi-globe' : 'pi pi-eye-slash'"></i>
-            <span>Mirrors</span>
+            <span>{{ t('toggleMirrors') }}</span>
           </button>
         </div>
 
@@ -79,11 +83,11 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
         >
           <div class="flex items-center gap-1.5">
             <span class="text-ctp-text font-bold text-sm">{{ trafficService.currentReqPerSec() }}</span>
-            <span>req/s</span>
+            <span>{{ t('requestsPerSecond') }}</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span class="text-ctp-text font-bold text-sm">{{ trafficService.totalHitsReceived() }}</span>
-            <span>hits</span>
+            <span>{{ t('hits') }}</span>
           </div>
         </div>
       </div>
@@ -91,7 +95,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
       <div class="mt-3 flex min-h-[28px] flex-wrap items-center justify-between gap-2 text-xs">
         @if (trafficService.isConnected() || trafficService.totalHitsReceived() > 0) {
           <div class="flex items-center gap-2">
-            <span class="text-ctp-subtext1">Top Countries:</span>
+            <span class="text-ctp-subtext1">{{ t('topCountries') }}</span>
             <div class="flex flex-wrap gap-1.5">
               @for (item of trafficService.topCountries(); track item.country) {
                 <span class="rounded bg-ctp-surface0 px-2 py-0.5 text-ctp-mauve font-medium">
@@ -101,7 +105,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-ctp-subtext1">Top Repos:</span>
+            <span class="text-ctp-subtext1">{{ t('topRepos') }}</span>
             <div class="flex flex-wrap gap-1.5">
               @for (item of trafficService.topRepos(); track item.repo) {
                 <span class="rounded bg-ctp-surface0 px-2 py-0.5 text-ctp-sapphire font-medium">
@@ -116,7 +120,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
       <div class="traffic-river mt-3 h-56 overflow-y-auto text-xs text-ctp-subtext1">
         @if (trafficService.recentHits().length === 0) {
           <div class="flex h-full items-center justify-center text-ctp-overlay1">
-            <i class="pi pi-spin pi-spinner mr-2"></i>Waiting for the first hit to arrive...
+            <i class="pi pi-spin pi-spinner mr-2"></i>{{ t('waiting') }}
           </div>
         } @else {
           <div class="flex flex-col gap-1.5">

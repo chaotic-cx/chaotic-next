@@ -1,23 +1,15 @@
-<div class="chaotic-page">
-  <chaotic-title title="Code of Conduct" subtitle="Contributor Covenant Code of Conduct for our community." />
+<div class="chaotic-page" *transloco="let t; prefix: 'codeOfConduct'">
+  <chaotic-title [title]="t('title')" [subtitle]="t('subtitle')" />
 
   <div class="mt-5">
     <p-panel id="our-pledge">
       <ng-template pTemplate="header">
-        <button class="cursor-pointer font-bold" (click)="scrollTo('our-pledge')">Our Pledge</button>
+        <button class="cursor-pointer font-bold" (click)="scrollTo('our-pledge')">{{ t('ourPledge.title') }}</button>
       </ng-template>
       <div class="chaotic-panel text-md">
-        <p>
-          We as members, contributors, and leaders pledge to make participation in our community a harassment-free
-          experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex
-          characteristics, gender identity and expression, level of experience, education, socio-economic status,
-          nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
-        </p>
+        <p>{{ t('ourPledge.harassmentFree') }}</p>
         <p-divider />
-        <p>
-          We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy
-          community.
-        </p>
+        <p>{{ t('ourPledge.healthyCommunity') }}</p>
       </div>
     </p-panel>
   </div>
@@ -25,30 +17,27 @@
   <div class="mt-5">
     <p-panel id="our-standards">
       <ng-template pTemplate="header">
-        <button class="cursor-pointer font-bold" (click)="scrollTo('our-standards')">Our Standards</button>
+        <button class="cursor-pointer font-bold" (click)="scrollTo('our-standards')">
+          {{ t('ourStandards.title') }}
+        </button>
       </ng-template>
       <div class="chaotic-panel text-md">
-        <p>Examples of behavior that contributes to a positive environment for our community include:</p>
+        <p>{{ t('ourStandards.positiveIntro') }}</p>
         <ul class="mt-2 list-inside list-disc space-y-1">
-          <li>Demonstrating empathy and kindness toward other people</li>
-          <li>Being respectful of differing opinions, viewpoints, and experiences</li>
-          <li>Giving and gracefully accepting constructive feedback</li>
-          <li>
-            Accepting responsibility and apologizing to those affected by our mistakes, and learning from the experience
-          </li>
-          <li>Focusing on what is best not just for us as individuals, but for the overall community</li>
+          <li>{{ t('ourStandards.positive.empathy') }}</li>
+          <li>{{ t('ourStandards.positive.respect') }}</li>
+          <li>{{ t('ourStandards.positive.feedback') }}</li>
+          <li>{{ t('ourStandards.positive.responsibility') }}</li>
+          <li>{{ t('ourStandards.positive.community') }}</li>
         </ul>
         <p-divider />
-        <p>Examples of unacceptable behavior include:</p>
+        <p>{{ t('ourStandards.unacceptableIntro') }}</p>
         <ul class="mt-2 list-inside list-disc space-y-1">
-          <li>The use of sexualized language or imagery, and sexual attention or advances of any kind</li>
-          <li>Trolling, insulting or derogatory comments, and personal or political attacks</li>
-          <li>Public or private harassment</li>
-          <li>
-            Publishing others' private information, such as a physical or email address, without their explicit
-            permission
-          </li>
-          <li>Other conduct which could reasonably be considered inappropriate in a professional setting</li>
+          <li>{{ t('ourStandards.unacceptable.sexualized') }}</li>
+          <li>{{ t('ourStandards.unacceptable.trolling') }}</li>
+          <li>{{ t('ourStandards.unacceptable.harassment') }}</li>
+          <li>{{ t('ourStandards.unacceptable.privateInformation') }}</li>
+          <li>{{ t('ourStandards.unacceptable.inappropriate') }}</li>
         </ul>
       </div>
     </p-panel>
@@ -58,21 +47,13 @@
     <p-panel id="enforcement-responsibilities">
       <ng-template pTemplate="header">
         <button class="cursor-pointer font-bold" (click)="scrollTo('enforcement-responsibilities')">
-          Enforcement Responsibilities
+          {{ t('enforcementResponsibilities.title') }}
         </button>
       </ng-template>
       <div class="chaotic-panel text-md">
-        <p>
-          Community leaders are responsible for clarifying and enforcing our standards of acceptable behavior and will
-          take appropriate and fair corrective action in response to any behavior that they deem inappropriate,
-          threatening, offensive, or harmful.
-        </p>
+        <p>{{ t('enforcementResponsibilities.clarify') }}</p>
         <p-divider />
-        <p>
-          Community leaders have the right and responsibility to remove, edit, or reject comments, commits, code, wiki
-          edits, issues, and other contributions that are not aligned to this Code of Conduct, and will communicate
-          reasons for moderation decisions when appropriate.
-        </p>
+        <p>{{ t('enforcementResponsibilities.moderate') }}</p>
       </div>
     </p-panel>
   </div>
@@ -80,15 +61,10 @@
   <div class="mt-5">
     <p-panel id="scope">
       <ng-template pTemplate="header">
-        <button class="cursor-pointer font-bold" (click)="scrollTo('scope')">Scope</button>
+        <button class="cursor-pointer font-bold" (click)="scrollTo('scope')">{{ t('scope.title') }}</button>
       </ng-template>
       <div class="chaotic-panel text-md">
-        <p>
-          This Code of Conduct applies within all community spaces, and also applies when an individual is officially
-          representing the community in public spaces. Examples of representing our community include using an official
-          email address, posting via an official social media account, or acting as an appointed representative at an
-          online or offline event.
-        </p>
+        <p>{{ t('scope.text') }}</p>
       </div>
     </p-panel>
   </div>
@@ -96,17 +72,12 @@
   <div class="mt-5">
     <p-panel id="enforcement">
       <ng-template pTemplate="header">
-        <button class="cursor-pointer font-bold" (click)="scrollTo('enforcement')">Enforcement</button>
+        <button class="cursor-pointer font-bold" (click)="scrollTo('enforcement')">{{ t('enforcement.title') }}</button>
       </ng-template>
       <div class="chaotic-panel text-md">
-        <p>
-          Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders
-          responsible for enforcement at
-          <a class="text-ctp-mauve" href="mailto:coc@chaotic.cx">coc@chaotic.cx</a>. All complaints will be reviewed and
-          investigated promptly and fairly.
-        </p>
+        <p [innerHTML]="t('enforcement.report')"></p>
         <p-divider />
-        <p>All community leaders are obligated to respect the privacy and security of the reporter of any incident.</p>
+        <p>{{ t('enforcement.privacy') }}</p>
       </div>
     </p-panel>
   </div>
@@ -115,71 +86,40 @@
     <p-panel id="enforcement-guidelines">
       <ng-template pTemplate="header">
         <button class="cursor-pointer font-bold" (click)="scrollTo('enforcement-guidelines')">
-          Enforcement Guidelines
+          {{ t('enforcementGuidelines.title') }}
         </button>
       </ng-template>
       <div class="chaotic-panel text-md">
-        <p>
-          Community leaders will follow these Community Impact Guidelines in determining the consequences for any action
-          they deem in violation of this Code of Conduct:
-        </p>
+        <p>{{ t('enforcementGuidelines.intro') }}</p>
 
         <div class="mt-4">
-          <h3 class="text-lg font-bold">1. Correction</h3>
-          <p class="mt-1">
-            <strong>Community Impact</strong>: Use of inappropriate language or other behavior deemed unprofessional or
-            unwelcome in the community.
-          </p>
-          <p class="mt-1">
-            <strong>Consequence</strong>: A private, written warning from community leaders, providing clarity around
-            the nature of the violation and an explanation of why the behavior was inappropriate. A public apology may
-            be requested.
-          </p>
+          <h3 class="text-lg font-bold">{{ t('enforcementGuidelines.correction.title') }}</h3>
+          <p class="mt-1" [innerHTML]="t('enforcementGuidelines.correction.impact')"></p>
+          <p class="mt-1" [innerHTML]="t('enforcementGuidelines.correction.consequence')"></p>
         </div>
 
         <p-divider />
 
         <div>
-          <h3 class="text-lg font-bold">2. Warning</h3>
-          <p class="mt-1">
-            <strong>Community Impact</strong>: A violation through a single incident or series of actions.
-          </p>
-          <p class="mt-1">
-            <strong>Consequence</strong>: A warning with consequences for continued behavior. No interaction with the
-            people involved, including unsolicited interaction with those enforcing the Code of Conduct, for a specified
-            period of time. This includes avoiding interactions in community spaces as well as external channels like
-            social media. Violating these terms may lead to a temporary or permanent ban.
-          </p>
+          <h3 class="text-lg font-bold">{{ t('enforcementGuidelines.warning.title') }}</h3>
+          <p class="mt-1" [innerHTML]="t('enforcementGuidelines.warning.impact')"></p>
+          <p class="mt-1" [innerHTML]="t('enforcementGuidelines.warning.consequence')"></p>
         </div>
 
         <p-divider />
 
         <div>
-          <h3 class="text-lg font-bold">3. Temporary Ban</h3>
-          <p class="mt-1">
-            <strong>Community Impact</strong>: A serious violation of community standards, including sustained
-            inappropriate behavior.
-          </p>
-          <p class="mt-1">
-            <strong>Consequence</strong>: A temporary ban from any sort of interaction or public communication with the
-            community for a specified period of time. No public or private interaction with the people involved,
-            including unsolicited interaction with those enforcing the Code of Conduct, is allowed during this period.
-            Violating these terms may lead to a permanent ban.
-          </p>
+          <h3 class="text-lg font-bold">{{ t('enforcementGuidelines.temporaryBan.title') }}</h3>
+          <p class="mt-1" [innerHTML]="t('enforcementGuidelines.temporaryBan.impact')"></p>
+          <p class="mt-1" [innerHTML]="t('enforcementGuidelines.temporaryBan.consequence')"></p>
         </div>
 
         <p-divider />
 
         <div>
-          <h3 class="text-lg font-bold">4. Permanent Ban</h3>
-          <p class="mt-1">
-            <strong>Community Impact</strong>: Demonstrating a pattern of violation of community standards, including
-            sustained inappropriate behavior, harassment of an individual, or aggression toward or disparagement of
-            classes of individuals.
-          </p>
-          <p class="mt-1">
-            <strong>Consequence</strong>: A permanent ban from any sort of public interaction within the community.
-          </p>
+          <h3 class="text-lg font-bold">{{ t('enforcementGuidelines.permanentBan.title') }}</h3>
+          <p class="mt-1" [innerHTML]="t('enforcementGuidelines.permanentBan.impact')"></p>
+          <p class="mt-1" [innerHTML]="t('enforcementGuidelines.permanentBan.consequence')"></p>
         </div>
       </div>
     </p-panel>
@@ -188,40 +128,14 @@
   <div class="mt-5">
     <p-panel id="attribution">
       <ng-template pTemplate="header">
-        <button class="cursor-pointer font-bold" (click)="scrollTo('attribution')">Attribution</button>
+        <button class="cursor-pointer font-bold" (click)="scrollTo('attribution')">{{ t('attribution.title') }}</button>
       </ng-template>
       <div class="chaotic-panel text-md">
-        <p>
-          This Code of Conduct is adapted from the
-          <a
-            class="text-ctp-mauve"
-            href="https://www.contributor-covenant.org/version/2/1/code_of_conduct.html"
-            rel="noopener"
-            target="_blank"
-            >Contributor Covenant</a
-          >, version 2.1.
-        </p>
+        <p [innerHTML]="t('attribution.adaptedFrom')"></p>
         <p-divider />
-        <p>
-          Community Impact Guidelines were inspired by
-          <a class="text-ctp-mauve" href="https://github.com/mozilla/diversity" rel="noopener" target="_blank"
-            >Mozilla's code of conduct enforcement ladder</a
-          >.
-        </p>
+        <p [innerHTML]="t('attribution.inspiredBy')"></p>
         <p-divider />
-        <p>
-          For answers to common questions about this code of conduct, see the
-          <a class="text-ctp-mauve" href="https://www.contributor-covenant.org/faq" rel="noopener" target="_blank"
-            >FAQ</a
-          >. Translations are available in many languages at the
-          <a
-            class="text-ctp-mauve"
-            href="https://www.contributor-covenant.org/translations"
-            rel="noopener"
-            target="_blank"
-            >Contributor Covenant website</a
-          >.
-        </p>
+        <p [innerHTML]="t('attribution.faq')"></p>
       </div>
     </p-panel>
   </div>

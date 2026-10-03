@@ -1,4 +1,4 @@
-<section class="chaotic-card">
+<section class="chaotic-card" *transloco="let t; prefix: 'buildStatus.waiting'">
   <chaotic-build-status-section
     [count]="
       buildStatusService.loadingQueue() || buildStatusService.queueFailed()
@@ -6,17 +6,20 @@
         : buildStatusService.waitingQueue().length
     "
     [iconClass]="buildStatusService.waitingQueue().length > 0 ? 'text-ctp-lavender' : 'text-ctp-subtext0'"
-    title="Queue"
+    [title]="t('title')"
     icon="pi-hourglass"
   >
     @if (buildStatusService.queueClearEta(); as eta) {
-      <span class="text-xs text-ctp-subtext0" [pTooltip]="estimateTooltip" tooltipPosition="top"
-        >Clears in <span class="font-medium tabular-nums text-ctp-text">{{ eta }}</span></span
-      >
+      <span
+        class="text-xs text-ctp-subtext0"
+        [pTooltip]="buildStatusService.estimateTooltip()"
+        [innerHTML]="t('clearsIn', { eta })"
+        tooltipPosition="top"
+      ></span>
     } @else if (isBlocked()) {
-      <span class="text-xs text-ctp-yellow" [pTooltip]="estimateTooltip" tooltipPosition="top"
-        >No idle builder matches the queued classes</span
-      >
+      <span class="text-xs text-ctp-yellow" [pTooltip]="buildStatusService.estimateTooltip()" tooltipPosition="top">{{
+        t('blocked')
+      }}</span>
     }
   </chaotic-build-status-section>
 
@@ -27,11 +30,11 @@
       }
     </ul>
   } @else if (buildStatusService.queueFailed()) {
-    <chaotic-load-error (retry)="buildStatusService.refreshQueueStats()" message="Could not load the queue." />
+    <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.refreshQueueStats()" />
   } @else if (buildStatusService.waitingQueue().length === 0) {
     <p class="chaotic-card__empty">
       <i class="pi pi-check-circle" aria-hidden="true"></i>
-      The queue is empty
+      {{ t('empty') }}
     </p>
   } @else {
     <ol class="queue-page-list" chaoticFlipList>
@@ -47,7 +50,9 @@
           @if (buildStatusService.waitingStartEtaLabels().get(pkg.rawName); as eta) {
             <span
               class="shrink-0 whitespace-nowrap text-xs tabular-nums text-ctp-subtext1"
-              [pTooltip]="buildStatusService.waitingStartTooltips().get(pkg.rawName) ?? estimateTooltip"
+              [pTooltip]="
+                buildStatusService.waitingStartTooltips().get(pkg.rawName) ?? buildStatusService.estimateTooltip()
+              "
               tooltipPosition="top"
               >{{ eta }}</span
             >
@@ -56,10 +61,10 @@
             <button
               class="chaotic-icon-btn text-ctp-green!"
               [disabled]="promoting() !== null"
-              [attr.aria-label]="`Promote ${pkg.name} to front of queue`"
+              [attr.aria-label]="t('promoteAriaLabel', { name: pkg.name })"
+              [pTooltip]="t('promoteTooltip')"
               (click)="promote(pkg.name, pkg.rawName, pkg.repo)"
               type="button"
-              pTooltip="Promote to front of queue"
               tooltipPosition="left"
             >
               <i [class]="promoting() === pkg.name ? 'pi pi-spin pi-spinner' : 'pi pi-arrow-up'" aria-hidden="true"></i>
@@ -70,7 +75,7 @@
     </ol>
     @if (pageCount() > 1) {
       <footer class="chaotic-card__footer">
-        <span>{{ buildStatusService.waitingQueue().length }} packages waiting</span>
+        <span>{{ t('packagesWaiting', { count: buildStatusService.waitingQueue().length }) }}</span>
         <chaotic-build-status-pager
           [page]="currentPage()"
           [pageCount]="pageCount()"

@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { APP_CONFIG } from '../../../environments/app-config.token';
 import { ResilientSseStream } from '../../sse-stream';
@@ -9,26 +10,34 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
 
 @Component({
   selector: 'chaotic-admin-manager-logs-page',
-  imports: [ProgressSpinner, XtermLogComponent],
+  imports: [ProgressSpinner, TranslocoDirective, XtermLogComponent],
   template: `
-    <p class="log-status" [class.is-live]="streaming()" role="status">
-      <span class="log-status__dot" aria-hidden="true"></span>
-      {{ streaming() ? 'Connected' : loading() ? 'Connecting' : 'Disconnected' }}
-    </p>
+    <ng-container *transloco="let t; prefix: 'admin.managerLogs'">
+      <p class="log-status" [class.is-live]="streaming()" role="status">
+        <span class="log-status__dot" aria-hidden="true"></span>
+        @if (streaming()) {
+          {{ t('status.connected') }}
+        } @else if (loading()) {
+          {{ t('status.connecting') }}
+        } @else {
+          {{ t('status.disconnected') }}
+        }
+      </p>
 
-    @if (error()) {
-      <p class="mb-2 text-sm text-ctp-red">{{ error() }}</p>
-    }
+      @if (error()) {
+        <p class="mb-2 text-sm text-ctp-red">{{ error() }}</p>
+      }
 
-    @if (streaming() || logChunks().length > 0) {
-      <div class="log-panel-wrap" [style.height.px]="logHeight()">
-        <chaotic-xterm-log [chunk]="logChunks()" [clearSignal]="clearSignal()" />
-      </div>
-    } @else if (loading()) {
-      <div class="log-panel-wrap items-center justify-center">
-        <p-progress-spinner ariaLabel="Connecting to manager logs" />
-      </div>
-    }
+      @if (streaming() || logChunks().length > 0) {
+        <div class="log-panel-wrap" [style.height.px]="logHeight()">
+          <chaotic-xterm-log [chunk]="logChunks()" [clearSignal]="clearSignal()" />
+        </div>
+      } @else if (loading()) {
+        <div class="log-panel-wrap items-center justify-center">
+          <p-progress-spinner [ariaLabel]="t('connectingAriaLabel')" />
+        </div>
+      }
+    </ng-container>
   `,
   styles: [
     `
@@ -72,6 +81,7 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
 })
 export class AdminManagerLogsPageComponent implements AfterViewInit, OnDestroy {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
+  private readonly transloco = inject(TranslocoService);
   private readonly host = viewChild<ElementRef<HTMLElement>>('host');
 
   readonly logChunks = signal<string[]>([]);
@@ -125,7 +135,7 @@ export class AdminManagerLogsPageComponent implements AfterViewInit, OnDestroy {
       onErrorExhausted: () => {
         this.loading.set(false);
         this.streaming.set(false);
-        this.error.set('Log stream ended unexpectedly. Reload the page to retry.');
+        this.error.set(this.transloco.translate('admin.managerLogs.streamEnded'));
       },
     });
     this.stream.open();

@@ -1,6 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { isLogPurged, packageLogRouteFromUrl } from '../../functions';
 import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
@@ -12,7 +13,7 @@ import {
 
 @Component({
   selector: 'chaotic-admin-failure-table',
-  imports: [RelativeTimePipe, RouterLink, Tooltip],
+  imports: [RelativeTimePipe, RouterLink, Tooltip, TranslocoDirective],
   templateUrl: './admin-failure-table.component.html',
   styleUrl: './admin-failure-table.component.css',
 })

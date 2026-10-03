@@ -1,0 +1,1078 @@
+{
+  "app": {
+    "goHome": "Go to the home page",
+    "mobileNav": {
+      "open": "Open navigation menu",
+      "close": "Close navigation menu"
+    },
+    "deploymentToast": {
+      "title": "Package deployment",
+      "message": "{{package}} is now live in {{repo}}."
+    },
+    "meta": {
+      "description": "Building packages for you, so you don't have to!",
+      "keywords": "Chaotic-AUR, AUR, repository, Archlinux",
+      "ogTitle": "Chaotic-AUR - semi-automated binary repository 👨🏻‍💻"
+    },
+    "loading": "Loading"
+  },
+  "aurScan": {
+    "page": {
+      "title": "AUR scan",
+      "subtitle": "Check an AUR package for malicious or suspicious content before you install it.",
+      "cardTitle": "Scan a package",
+      "scannedSoFar": "{{count}} scanned so far",
+      "inputLabel": "AUR package name",
+      "inputPlaceholder": "AUR package name, e.g. firedragon",
+      "intro": "The scan fetches the PKGBUILD and its sources, checks them against our static security rules, and reports maintainer changes.",
+      "invalidPackageName": "Invalid package name",
+      "seo": {
+        "title": "AUR package scan · Chaotic-AUR",
+        "description": "Scan AUR packages for malicious PKGBUILD content, suspicious URLs and risky maintainership changes",
+        "keywords": "Chaotic-AUR, AUR, security, PKGBUILD, scan"
+      }
+    },
+    "status": {
+      "done": "Scan complete",
+      "failed": "Scan failed",
+      "awaitingVt": "Checking VirusTotal. This can take a while because of rate limits.",
+      "scanning": "Scanning sources…"
+    },
+    "errors": {
+      "generic": "Could not scan the AUR package. Does it exist?",
+      "rateLimited": "Too many scans have been started. Please wait a minute and try again."
+    },
+    "details": "Sources: {{sources}} · Scanned: {{scanned}} · Votes: {{votes}} · Popularity: {{popularity}} · Since {{year}}",
+    "pkgTypes": "Package types",
+    "findingCountOne": "{{count}} finding",
+    "findingCountOther": "{{count}} findings",
+    "noFindings": "No findings",
+    "sections": {
+      "findings": "Findings",
+      "scannedSources": "Scanned sources"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "verdict": {
+      "malicious": "malicious",
+      "suspicious": "suspicious",
+      "clean": "clean",
+      "unknown": "unknown"
+    },
+    "vt": {
+      "indicators": "VirusTotal indicators",
+      "pending": "Results appear once every indicator is checked.",
+      "flaggedCount": "{{count}} flagged by VirusTotal",
+      "enginesFlagged": "{{flagged}}/{{total}} engines flagged",
+      "noEngineData": "no engine data"
+    },
+    "maintainers": {
+      "title": "Maintainers",
+      "account": "Account",
+      "packages": "Packages",
+      "since": "Since",
+      "votes": "Votes",
+      "novice": "New",
+      "unknownSince": "unknown",
+      "summary": "{{packages}} package(s) · since {{since}} · {{votes}} votes",
+      "summaryUnknownSince": "{{packages}} package(s) · since unknown · {{votes}} votes",
+      "orphaned": "No maintainer. This package is orphaned in the AUR."
+    },
+    "maintainerChange": {
+      "changed": "Maintainer changed",
+      "noviceTookOver": "New maintainer took over",
+      "summary": "{{changes}} since {{date}}"
+    },
+    "pkgType": {
+      "electron": "The package wraps an Electron application.",
+      "nodejs": "The package builds or runs with the Node.js runtime.",
+      "kernelModule": "The package builds or installs a Linux kernel module.",
+      "python": "The package depends on Python tooling.",
+      "ruby": "The package depends on Ruby tooling.",
+      "perl": "The package depends on Perl tooling.",
+      "php": "The package depends on PHP tooling.",
+      "java": "The package depends on Java tooling.",
+      "dotnet": "The package depends on the .NET framework.",
+      "haskell": "The package depends on the Haskell toolchain.",
+      "rust": "The package builds with Cargo.",
+      "go": "The package builds with the Go toolchain.",
+      "compiled": "The package is built natively from source.",
+      "font": "The package name matches a font profile.",
+      "theme": "The package name matches a theme or icon profile.",
+      "extension": "The package name matches an extension profile.",
+      "firmware": "The package name matches a firmware profile.",
+      "prebuilt": "The package ships prebuilt binaries. The PKGBUILD repackages them.",
+      "shell": "The package depends on shell runtimes.",
+      "meta": "The package has no source and no build function. It pulls dependencies only."
+    }
+  },
+  "auth": {
+    "button": {
+      "adminLabel": "Admin",
+      "adminTooltip": "Manage packages and repositories",
+      "signOut": "Sign out",
+      "openSettings": "Open settings",
+      "signIn": "Sign in with GitLab"
+    },
+    "loginFailed": {
+      "title": "Login failed",
+      "message": "Could not start the GitLab sign-in flow."
+    },
+    "logoutFailed": {
+      "title": "Logout failed",
+      "message": "Could not sign out. Please try again."
+    },
+    "callback": {
+      "unavailable": "Sign-in unavailable",
+      "signingIn": "Signing you in",
+      "completing": "Completing GitLab authentication...",
+      "errors": {
+        "notMember": "Only members of the Chaotic-AUR GitLab group are allowed to sign in.",
+        "generic": "Sign-in could not be completed. Please try again."
+      }
+    }
+  },
+  "backendDown": {
+    "logoAlt": "Chaotic-AUR logo",
+    "title": "Backend unavailable",
+    "message": "You will be automatically redirected once it is back online. Retrying connection..."
+  },
+  "buildStatus": {
+    "seo": {
+      "title": "Build status",
+      "description": "Current build status and queue information for Chaotic-AUR",
+      "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status"
+    },
+    "page": {
+      "title": "Build status",
+      "subtitle": "Running builds, the queue and recent pipelines, updated live.",
+      "summaryAriaLabel": "Build summary",
+      "building": "Building",
+      "queued": "Queued",
+      "idleBuilders": "Idle builders",
+      "queueClearsIn": "Queue clears in"
+    },
+    "liveSummary": {
+      "unavailable": "Build status is unavailable.",
+      "text": "{{running}}, {{waiting}} queued, {{idle}} idle.",
+      "buildsRunningOne": "{{count}} build running",
+      "buildsRunningOther": "{{count}} builds running",
+      "buildersOne": "{{count}} builder",
+      "buildersOther": "{{count}} builders"
+    },
+    "estimates": {
+      "tooltip": "Estimated from historical average build times — actual times vary.",
+      "overtimeTooltip": "Build exceeded its historical average by {{minutes}}+ minutes — may be stuck.",
+      "fallbackTooltip": "No history for this package on this builder — average from other builders",
+      "unknownTooltip": "No build history for this package — estimate unavailable",
+      "withSamples": "{{tooltip}} · {{samples}} samples"
+    },
+    "active": {
+      "title": "Building now",
+      "loadError": "Could not load running builds.",
+      "empty": "No builds running right now",
+      "progressAriaLabel": "Build progress for {{name}}",
+      "unknownStart": "unknown start",
+      "startedAt": "started {{time}}",
+      "unknownTimeLeft": "unknown time left",
+      "timeLeft": "{{eta}} left",
+      "overtime": "{{eta}} overtime",
+      "openLog": "Open live build log",
+      "openLogAriaLabel": "Open live build log for {{name}}"
+    },
+    "waiting": {
+      "title": "Queue",
+      "clearsIn": "Clears in <span class=\"font-medium tabular-nums text-ctp-text\">{{eta}}</span>",
+      "blocked": "No idle builder matches the queued classes",
+      "loadError": "Could not load the queue.",
+      "empty": "The queue is empty",
+      "startsIn": "starts in {{eta}}",
+      "promoteAriaLabel": "Promote {{name}} to front of queue",
+      "promoteTooltip": "Promote to front of queue",
+      "packagesWaiting": "{{count}} packages waiting",
+      "promoteSuccess": {
+        "title": "Build promoted",
+        "message": "{{name}} has been promoted to the front of the queue."
+      },
+      "promoteError": {
+        "title": "Promote failed",
+        "message": "Could not promote {{name}}."
+      }
+    },
+    "idle": {
+      "title": "Idle builders",
+      "loadError": "Could not load builders.",
+      "empty": "All builders are busy"
+    },
+    "deployments": {
+      "title": "Latest deployments",
+      "viewAll": "View all",
+      "loadError": "Could not load deployments.",
+      "empty": "No recent deployments",
+      "openLog": "Open build log",
+      "openLogAriaLabel": "Open build log for {{name}}",
+      "failureTags": {
+        "dependency": "Missing dependency",
+        "compile": "Compile error",
+        "link": "Link error",
+        "package": "Packaging error",
+        "check": "Check failed",
+        "prepare": "Prepare failed",
+        "toolchain": "Toolchain issue",
+        "download": "Download failed",
+        "network": "Network error",
+        "checksum": "Checksum mismatch",
+        "metadata": "Metadata or pkgver issue",
+        "interfere": "Interfere prepare failed (our tooling)",
+        "silent": "Silent: resolves itself",
+        "transient": "Transient: usually passes on retry"
+      }
+    },
+    "pipelines": {
+      "title": "Pipelines",
+      "loadError": "Could not load pipelines.",
+      "empty": "No recent pipelines",
+      "partialSuccess": "{{successful}}/{{total}} successful",
+      "openDetailsAriaLabel": "Open details for pipeline {{id}}",
+      "viewLogs": "View live logs",
+      "viewLogsAriaLabel": "View live logs for pipeline {{id}}"
+    },
+    "dialog": {
+      "header": "Pipeline details",
+      "source": "Source",
+      "created": "Created",
+      "viewCommit": "View commit",
+      "notStarted": "Not started",
+      "openLogs": "Open live build logs",
+      "noJobs": "No jobs yet — open pipeline logs"
+    }
+  },
+  "buildStatusNames": {
+    "success": "Success",
+    "alreadyBuilt": "Already Built",
+    "skipped": "Skipped",
+    "failed": "Failed",
+    "timedOut": "Timed Out",
+    "canceled": "Canceled",
+    "canceledRequeue": "Canceled Requeue",
+    "softwareFailure": "Software Failure"
+  },
+  "codeBlock": {
+    "copiedCommandOne": "Copied the command",
+    "copiedCommandOther": "Copied {{count}} commands",
+    "copiedLineOne": "Copied the line",
+    "copiedLineOther": "Copied {{count}} lines"
+  },
+  "common": {
+    "tryAgain": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "error": "Error",
+    "pagination": "Pagination",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "loading": "Loading",
+    "copyToClipboard": "Copy to clipboard",
+    "copyFailed": "Copy failed",
+    "failedCopyingToClipboard": "Failed copying to clipboard",
+    "clearFilters": "Clear filters",
+    "actions": "Actions",
+    "all": "All"
+  },
+  "deployLog": {
+    "title": "Deployments",
+    "subtitle": "The most recent deployments to Chaotic-AUR-managed repositories.",
+    "allRepos": "All repos",
+    "allBuilders": "All builders",
+    "searchBuilder": "Search builder",
+    "selectedBuilders": "{0} builders",
+    "outcomes": "Outcomes",
+    "selectedOutcomes": "{0} outcomes",
+    "searchKeyword": "Search keyword",
+    "columns": {
+      "pkgname": "Package name",
+      "builder": "Builder",
+      "repo": "Repository",
+      "outcome": "Outcome",
+      "failureTags": "Failure tags",
+      "logUrl": "Log URL",
+      "duration": "Duration",
+      "peakMemory": "Peak memory",
+      "cpuTime": "CPU time",
+      "diskIo": "Disk I/O",
+      "networkIo": "Network I/O",
+      "timestamp": "Time of finish",
+      "actions": "Details"
+    },
+    "status": {
+      "success": "success",
+      "alreadyBuilt": "already-built",
+      "skipped": "skipped",
+      "failure": "failure",
+      "timeout": "timeout",
+      "canceled": "canceled",
+      "canceledRequeue": "canceled-requeue",
+      "softwareFailure": "software-failure"
+    },
+    "notAvailable": "n/a",
+    "purged": "purged",
+    "openBuildLog": "Open build log",
+    "log": "Log",
+    "viewStatisticsFor": "View statistics for {{pkgname}}",
+    "viewPackageStatistics": "View package statistics",
+    "loadError": "Could not load deployments.",
+    "empty": "No deployments match these filters."
+  },
+  "diffRenderer": {
+    "fileDiff": "File diff",
+    "flaggedLine": "Flagged line {{line}}, show findings:",
+    "added": "Added",
+    "removed": "Removed"
+  },
+  "footer": {
+    "ariaLabel": "Footer links",
+    "codeOfConduct": "Code of Conduct",
+    "privacy": "Privacy Policy"
+  },
+  "home": {
+    "hero": {
+      "appletLabel": "Open the interactive Chaotic-AUR applet",
+      "title": "Building AUR packages for you, so you don't have to.",
+      "lede": "Chaotic-AUR is a semi-automated binary repository for Arch Linux. AUR packages built, signed and mirrored worldwide.",
+      "ledeWithMirrorCount": "Chaotic-AUR is a semi-automated binary repository for Arch Linux. AUR packages built, signed and served from {{count}} mirrors worldwide."
+    },
+    "search": {
+      "ariaLabel": "Search packages",
+      "placeholder": "Search packages, e.g. firedragon",
+      "invalidName": "Invalid package name"
+    },
+    "setup": {
+      "lead": "New here?",
+      "text": "Add the repository in four steps"
+    },
+    "news": {
+      "title": "Latest news",
+      "note": "Announcements from the maintainers about the repository and its packages.",
+      "community": "Join the community chat",
+      "hint": {
+        "intro": "Bridged to",
+        "linkText": "Matrix",
+        "outro": "."
+      }
+    },
+    "recent": {
+      "title": "Recently added",
+      "link": "Browse all packages"
+    },
+    "map": {
+      "title": "Mirror map",
+      "link": "Open the live traffic map",
+      "note": "Where our mirrors are located. Pick a mirror to see its details."
+    },
+    "pipelineStrip": {
+      "loadError": "The build service is not responding right now.",
+      "live": "(live)",
+      "notLive": "(not live)",
+      "title": "Live build pipeline",
+      "openStatus": "Open build status",
+      "queued": "Queued",
+      "building": "Building",
+      "deployed": "Deployed",
+      "unavailable": "Unavailable",
+      "queueEmpty": "Queue is empty",
+      "buildersIdle": "All builders are idle",
+      "noDeployments": "No recent deployments",
+      "more": "+{{count}} more",
+      "allDeployments": "All deployments"
+    }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Language: {{language}}",
+    "tooltip": "Change language"
+  },
+  "loadError": {
+    "defaultMessage": "Could not load this data."
+  },
+  "logViewer": {
+    "title": "Pipeline logs",
+    "noJobSelected": "No job selected",
+    "live": "● live",
+    "loadingLogs": "Loading logs",
+    "streamError": "Log stream ended unexpectedly. Please retry in a moment.",
+    "linkCopied": {
+      "title": "Link copied",
+      "message": "Link to line {{line}} is on your clipboard."
+    },
+    "copyFailed": {
+      "title": "Copy failed",
+      "message": "Could not copy the link to line {{line}}."
+    },
+    "seo": {
+      "title": "Pipeline #{{pipelineId}} logs · Chaotic-AUR",
+      "description": "Live build logs of a Chaotic-AUR pipeline job",
+      "keywords": "Chaotic-AUR, GitLab, pipeline, log, build"
+    }
+  },
+  "login": {
+    "logoAlt": "Chaotic-AUR logo",
+    "title": "Sign in",
+    "description": "Sign in with your GitLab account to review and manage Chaotic-AUR packages.",
+    "continue": "Continue with GitLab"
+  },
+  "map": {
+    "title": "Mirror map",
+    "subtitle": "Where our mirrors are located. Pick a mirror from the overview to see details.",
+    "seo": {
+      "description": "Map of Chaotic-AUR mirrors and live traffic.",
+      "keywords": "Chaotic-AUR, Mirrors, Map, Repository, Archlinux, AUR, Live Traffic"
+    },
+    "liveFeed": {
+      "title": "Live Traffic Stream",
+      "toggleHits": "Hits",
+      "globe": "3D Globe",
+      "flatMap": "2D Map",
+      "toggleMirrors": "Mirrors",
+      "requestsPerSecond": "req/s",
+      "hits": "hits",
+      "topCountries": "Top Countries:",
+      "topRepos": "Top Repos:",
+      "waiting": "Waiting for the first hit to arrive..."
+    }
+  },
+  "mirrorMap": {
+    "status": {
+      "active": "Active",
+      "healthy": "Healthy",
+      "down": "Down"
+    },
+    "popup": {
+      "official": "Official mirror",
+      "lastUpdate": "Last update: {{date}}"
+    },
+    "controls": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetBearing": "Drag to rotate map, click to reset north",
+      "toggleAttribution": "Toggle attribution",
+      "mapFeedback": "Map feedback"
+    }
+  },
+  "mirrors": {
+    "title": "Mirrors",
+    "subtitle": "Where the repository is served from, and whether each mirror is up to date.",
+    "summaryLabel": "Mirror summary",
+    "status": {
+      "online": "Online",
+      "outdated": "Outdated",
+      "offline": "Offline"
+    },
+    "hint": {
+      "online": "Up to date",
+      "outdated": "Not used by the GEO mirror; direct requests return an error",
+      "offline": "The up-to-date check fails completely"
+    },
+    "geo": {
+      "title": "GEO mirror",
+      "recommended": "Recommended",
+      "description": "Routes every request to the closest healthy mirror automatically."
+    },
+    "cdn": {
+      "title": "CDN mirror",
+      "description": "Hosted on <a class=\"text-ctp-mauve\" href=\"https://www.cloudflare.com/developer-platform/products/r2/\" rel=\"noopener\" target=\"_blank\">Cloudflare R2</a>, so it is distributed globally."
+    },
+    "unavailable": "The mirror list is unavailable right now. The router is possibly down.",
+    "hostMirror": {
+      "intro": "Want to host a mirror? Get in touch through the channels on the",
+      "aboutLink": "about page",
+      "middle": ". See every mirror on the",
+      "mapLink": "live traffic map",
+      "outro": "."
+    },
+    "fetchError": "Failed to fetch mirror list, the router may be down",
+    "seo": {
+      "description": "Chaotic-AUR mirrors, down for everyone or just me?",
+      "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR mirrors"
+    },
+    "row": {
+      "showOnMap": "Show on the mirror map",
+      "locationUnknown": "Location unknown",
+      "official": "Official",
+      "officialTooltip": "Run by the Chaotic-AUR operations team",
+      "geo": "GEO",
+      "geoTooltip": "The GEO mirror routes requests to this mirror",
+      "unreachable": "Unreachable"
+    }
+  },
+  "mobileNav": {
+    "ariaLabel": "Main"
+  },
+  "nav": {
+    "home": {
+      "label": "Home",
+      "tooltip": "Go to the homepage"
+    },
+    "docs": {
+      "label": "Get started",
+      "tooltip": "View documentation and guides"
+    },
+    "packages": {
+      "label": "Packages",
+      "tooltip": "Browse available packages"
+    },
+    "buildStatus": {
+      "label": "Build status",
+      "tooltip": "Check current build status and queue"
+    },
+    "reviewQueue": {
+      "label": "Review queue",
+      "tooltip": "Review and approve pending package updates"
+    },
+    "aurScan": {
+      "label": "AUR scan",
+      "tooltip": "Scan AUR packages for security issues"
+    },
+    "stats": {
+      "label": "Statistics",
+      "tooltip": "View usage statistics and charts"
+    },
+    "deployments": {
+      "label": "Deployments",
+      "tooltip": "View deployment logs and history"
+    },
+    "mirrors": {
+      "label": "Mirrors",
+      "tooltip": "Find mirror servers for downloads"
+    },
+    "about": {
+      "label": "About us",
+      "tooltip": "Learn about the Chaotic-AUR project"
+    },
+    "more": "More"
+  },
+  "newsfeed": {
+    "defaultAuthor": "Maintainer",
+    "showMore": "Show more news",
+    "fetchFailed": "Failed to fetch news"
+  },
+  "notFound": {
+    "subtitle": "This page does not exist. Check the address, or go back to the home page."
+  },
+  "packageList": {
+    "title": "Packages",
+    "subtitle": "Every package currently deployed to our repositories. Check which repository a package belongs to before you install it.",
+    "clearFilters": "Clear filters",
+    "clearFiltersTooltip": "Clear all filters and search",
+    "allRepos": "All repos",
+    "searchPlaceholder": "Search keyword",
+    "columns": {
+      "name": "Name",
+      "version": "Version",
+      "lastUpdated": "Last updated",
+      "buildClass": "Build class",
+      "pkgbaseName": "Pkgbase",
+      "description": "Description",
+      "homepage": "Homepage",
+      "repo": "Repository",
+      "actions": "PKGBUILD"
+    },
+    "actionsHeader": "Actions",
+    "buildClassTooltip": "How resource-hungry the package build is",
+    "notAvailable": "n/a",
+    "actions": {
+      "statsLabel": "View statistics for {{pkgname}}",
+      "statsTooltip": "View package statistics",
+      "pkgbuildLabel": "View the PKGBUILD of {{pkgname}}",
+      "pkgbuildTooltip": "View the PKGBUILD"
+    },
+    "loadError": "Could not load packages.",
+    "noMatchQuery": {
+      "start": "No packages match",
+      "end": "."
+    },
+    "noMatchFilters": "No packages match these filters.",
+    "seo": {
+      "title": "Package list · Chaotic-AUR",
+      "description": "List of all packages available in the Chaotic-AUR repository",
+      "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package list"
+    }
+  },
+  "packageLog": {
+    "title": "Package log",
+    "subtitle": "Build log",
+    "streamError": "Log stream ended unexpectedly. Please retry in a moment.",
+    "live": "● live",
+    "downloadLog": "Download log",
+    "previousMatch": "Previous match",
+    "nextMatch": "Next match",
+    "searchBuffer": "Search buffer",
+    "seo": {
+      "title": "{{pkgname}} build log · Chaotic-AUR",
+      "description": "Build log of a Chaotic-AUR package",
+      "keywords": "Chaotic-AUR, build, log, package"
+    }
+  },
+  "pipes": {
+    "relativeTime": {
+      "justNow": "just now"
+    },
+    "buildClass": {
+      "custom": "Custom",
+      "label": "{{buildClass}} ({{tier}})",
+      "tier": {
+        "none": "None",
+        "light": "Light",
+        "medium": "Medium",
+        "heavy": "Heavy",
+        "veryHeavy": "Very Heavy"
+      }
+    }
+  },
+  "recentlyAdded": {
+    "empty": "No packages were added recently."
+  },
+  "reviewQueue": {
+    "title": "Review queue",
+    "subtitle": "Package updates that wait for a human review. Approved merge requests merge automatically.",
+    "seo": {
+      "title": "Review queue · Chaotic-AUR",
+      "description": "Review and approve pending merge requests for Chaotic-AUR",
+      "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review, Chaotic-AUR review queue"
+    },
+    "newMr": {
+      "tooltip": "A new merge request has arrived and needs review. Click to refresh.",
+      "refresh": "Refresh merge requests"
+    },
+    "tabs": {
+      "aur": "AUR updates",
+      "packages": "Package updates"
+    },
+    "onHold": "On hold",
+    "empty": {
+      "aur": "No open AUR update requests found.",
+      "packages": "No open package update requests found.",
+      "hold": "No merge requests on hold."
+    },
+    "loading": "Loading merge requests",
+    "loadError": "Could not load merge requests from GitLab.",
+    "browseOnGitlab": "Browse all merge requests on GitLab",
+    "editFlagReason": "Edit flag reason",
+    "flagReason": {
+      "withAuthor": "“{{text}}” — {{author}}",
+      "withoutAuthor": "“{{text}}”"
+    },
+    "packageLink": {
+      "custom": "Custom",
+      "customTooltip": "PKGBUILD maintained in the pkgbuilds repo ({{source}})",
+      "aurTooltip": "Open the AUR page for {{pkgname}}"
+    },
+    "chips": {
+      "ciOverrideTooltip": "This package applies .CI interfere/build override files. Open the .CI folder.",
+      "aurManaged": "AUR managed",
+      "aurManagedTooltip": "The CI auto-pushes this package's AUR repo.",
+      "autoUpdated": "Auto-updated",
+      "autoUpdatedTooltip": "Versions are auto-checked via nvchecker.",
+      "rebuildsOn": "Rebuilds on: {{triggers}}",
+      "rebuildsOnTooltip": "This package is rebuilt when these libraries change."
+    },
+    "securityScan": "Security scan",
+    "noFileChanges": "This merge request has no file changes.",
+    "actions": {
+      "approve": {
+        "label": "Approve update",
+        "done": "Already approved",
+        "tooltip": "Approve this merge request for auto-merge"
+      },
+      "dangerous": {
+        "label": "Flag as dangerous",
+        "done": "Already flagged",
+        "tooltip": "Flag this merge request as dangerous and prevent auto-merge"
+      },
+      "hold": {
+        "label": "Hold for now",
+        "done": "Already on hold",
+        "tooltip": "Put this merge request on hold for later review"
+      }
+    },
+    "signInPrompt": {
+      "link": "Sign in",
+      "outro": "to approve, flag or hold updates."
+    },
+    "flagDialog": {
+      "titleDangerous": "Flag !{{iid}} as dangerous",
+      "titleHold": "Put !{{iid}} on hold",
+      "reasonLabel": "Reason (required, visible in the On Hold tab)",
+      "reasonPlaceholder": "Why is this update held back or dangerous?",
+      "confirmHold": "Put on hold"
+    },
+    "toast": {
+      "loadFailed": {
+        "title": "Error fetching merge requests",
+        "message": "An error occurred while fetching merge requests. Please try again."
+      },
+      "approved": {
+        "title": "Approval Successful",
+        "message": "Merge request approved and merged.",
+        "deferredMessage": "Merge request approved. The merge will be executed once the scheduled pipeline completes."
+      },
+      "alreadyApproved": {
+        "title": "Already approved",
+        "message": "This update seems to have been already approved by you? GitLab does not always return a valid status at all times."
+      },
+      "approveFailed": {
+        "title": "Approval Failed",
+        "message": "Failed to approve the merge request. Please try again later."
+      },
+      "flagFailedTitle": "Flagging Failed",
+      "flagDangerous": {
+        "title": "Flagged as Dangerous",
+        "message": "The merge request has been flagged as dangerous.",
+        "error": "Failed to flag the merge request as dangerous. Please try again later."
+      },
+      "flagHold": {
+        "title": "Flagged as On Hold",
+        "message": "The merge request has been flagged as on hold.",
+        "error": "Failed to flag the merge request as on hold. Please try again later."
+      }
+    }
+  },
+  "routes": {
+    "titleFormat": "{{page}} · Chaotic-AUR",
+    "home": "Chaotic-AUR",
+    "docs": "Get started",
+    "privacy": "Privacy Policy",
+    "codeOfConduct": "Code of Conduct",
+    "buildStatus": "Build status",
+    "deployments": "Deployments",
+    "packages": "Packages",
+    "aurScan": "AUR Scan",
+    "stats": "Statistics and data",
+    "reviewQueue": "Review queue",
+    "pipelineLogs": "Pipeline logs",
+    "packageLog": "Package log",
+    "mirrors": "Mirrors",
+    "mirrorMap": "Mirror map",
+    "memorial2024": "Memorial 2024",
+    "settings": "Settings",
+    "about": "About us",
+    "memorial2021": "Memorial 2021",
+    "login": "Sign in",
+    "admin": "Admin",
+    "backendDown": "Backend unavailable",
+    "notFound": "Not found"
+  },
+  "searchPackage": {
+    "placeholder": "Start searching",
+    "invalidName": "Invalid package name",
+    "facts": {
+      "downloads": "Downloads",
+      "built": "Built",
+      "added": "Added",
+      "license": "License"
+    },
+    "details": {
+      "homepage": "Homepage",
+      "pkgbase": "Pkgbase",
+      "packager": "Packager",
+      "file": "File"
+    },
+    "groups": {
+      "deps": "Depends on",
+      "optDeps": "Optional dependencies",
+      "makeDeps": "Build dependencies",
+      "checkDepends": "Check dependencies",
+      "provides": "Provides",
+      "conflicts": "Conflicts with",
+      "replaces": "Replaces",
+      "soNameList": "Shared libraries"
+    },
+    "seo": {
+      "title": "Package search · Chaotic-AUR",
+      "description": "Search packages available in the Chaotic-AUR repository",
+      "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account preferences.",
+    "notifications": {
+      "title": "Notifications",
+      "loading": "Loading your preferences…",
+      "loadError": "Your preferences could not be loaded. Please try again later.",
+      "saveFailed": "Saving failed. Your settings were restored.",
+      "types": {
+        "buildFailure": "Build failures (only non-transient)",
+        "mrReview": "Merge request reviews"
+      }
+    }
+  },
+  "stats": {
+    "title": "Statistics",
+    "subtitle": "Package downloads, build performance and repository trends.",
+    "seo": {
+      "title": "Statistics and data · Chaotic-AUR",
+      "description": "Package and repository statistics for Chaotic-AUR",
+      "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package statistics"
+    },
+    "tabs": {
+      "search": {
+        "label": "Search",
+        "tooltip": "Search for package statistics"
+      },
+      "globals": {
+        "label": "Globals",
+        "tooltip": "Global usage statistics"
+      },
+      "downloads": {
+        "label": "Downloads",
+        "tooltip": "Download statistics and trends"
+      },
+      "updateReview": {
+        "label": "Update reviews",
+        "tooltip": "Update review statistics"
+      },
+      "builderStats": {
+        "label": "Builders",
+        "tooltip": "Builder performance statistics"
+      },
+      "resourceUsage": {
+        "label": "Resource usage",
+        "tooltip": "Heaviest packages by container resource usage"
+      },
+      "additions": {
+        "label": "Packages",
+        "tooltip": "Packages added to and dropped from the repository over time"
+      },
+      "insights": {
+        "label": "Insights",
+        "tooltip": "Build and usage insights"
+      }
+    },
+    "toolbar": {
+      "totalUsers": "Total users",
+      "searchRepository": "Repository to search",
+      "repository": "Repository",
+      "timeRange": "Time range"
+    },
+    "timeRanges": {
+      "days7": "7d",
+      "days30": "30d",
+      "days90": "90d",
+      "months6": "6m",
+      "years1": "1y",
+      "years2": "2y"
+    },
+    "pages": {
+      "additions": {
+        "added": "Packages added over time",
+        "dropped": "Packages dropped over time",
+        "topAurScans": "Most scanned packages via AUR scanner"
+      },
+      "builderStats": {
+        "averageBuildTime": "Average build time per status",
+        "buildersAmount": "Builds per builder",
+        "buildsPerDay": "Builds per day",
+        "popularPackages": "Popular packages",
+        "heavyPackages": "Heavy packages",
+        "packagesPerBuildClass": "Packages per build class",
+        "pkgbaseComposition": "Single vs. split packages"
+      },
+      "downloads": {
+        "downloads": "Downloads by package",
+        "downloadersTrend": "Top downloaders over time",
+        "mirrorOverTime": "Mirror popularity over time",
+        "countryOverTime": "Top countries over time"
+      },
+      "globals": {
+        "countries": "Countries",
+        "userAgents": "User agents",
+        "rpsHistory": "Requests per second, last hour"
+      },
+      "insights": {
+        "averageBuildTimeTrend": "Average build time (minutes)",
+        "throughput": "Queue throughput",
+        "failedHotspots": "Failed build hotspots",
+        "unresolvedFailures": "Failed builds with no more recent success",
+        "missingDependencies": "Packages with missing dependencies",
+        "archOverlap": "Packages now also in Arch repos",
+        "buildFailuresOverTime": "Build failures over time",
+        "flakyPackages": "Flakiest packages",
+        "builderUtilization": "Builder utilization"
+      },
+      "updateReview": {
+        "reviewStats": "Total update reviews",
+        "reviewOverTime": "Update reviews over time"
+      }
+    },
+    "resourceMetrics": {
+      "memory": "Memory",
+      "cpu": "CPU time",
+      "disk": "Disk I/O",
+      "network": "Network I/O"
+    },
+    "chartCard": {
+      "loadError": "Could not load this chart.",
+      "loading": "Loading chart",
+      "noData": "No data for this time range"
+    },
+    "failureSilence": {
+      "silenced": {
+        "title": "Failure silenced",
+        "message": "{{package}} stays hidden until it fails again."
+      },
+      "unsilenced": {
+        "title": "Failure unsilenced",
+        "message": "{{package}} shows up as failing again."
+      },
+      "error": {
+        "title": "Operation failed",
+        "message": "Could not update {{package}}."
+      }
+    },
+    "charts": {
+      "numberOfPackages": "Number of packages",
+      "packages": "Packages",
+      "routerHits": "Router hits",
+      "additions": {
+        "label": "Packages added"
+      },
+      "removals": {
+        "label": "Packages dropped"
+      },
+      "averageBuildTime": {
+        "label": "Average build time (minutes)"
+      },
+      "buildersAmount": {
+        "label": "Builds per builder"
+      },
+      "buildsPerDay": {
+        "label": "Builds per day"
+      },
+      "failedHotspots": {
+        "label": "Failed builds"
+      },
+      "flakyPackages": {
+        "label": "Failure rate (%)"
+      },
+      "heavyPackages": {
+        "label": "Average Build Time (minutes)"
+      },
+      "heavyPackagesResource": {
+        "label": "{{metric}} per build ({{unit}})"
+      },
+      "popularPackages": {
+        "label": "Build count"
+      },
+      "topAurScans": {
+        "label": "Scan count"
+      },
+      "downloads": {
+        "label": "Download count"
+      },
+      "countries": {
+        "amountPlaceholder": "Amount of countries to show"
+      },
+      "reviewStats": {
+        "label": "Reviews"
+      },
+      "rpsHistory": {
+        "label": "Requests per second"
+      },
+      "pkgbaseComposition": {
+        "single": "Single package",
+        "split": "Split package members"
+      },
+      "throughput": {
+        "success": "Successful",
+        "alreadyBuilt": "Already built",
+        "skipped": "Skipped",
+        "failed": "Failed"
+      },
+      "packageAverageBuildTime": {
+        "label": "Average build time (minutes) for {{package}}"
+      },
+      "packageBuildStats": {
+        "label": "Builds for {{package}} in {{repo}}"
+      },
+      "packageResourceStats": {
+        "label": "{{series}} ({{unit}})",
+        "averageMemory": "Average memory",
+        "peakMemory": "Peak memory",
+        "loadError": "Could not load resource usage."
+      },
+      "archOverlap": {
+        "countOne": "{{count}} package also in Arch repos",
+        "countOther": "{{count}} packages also in Arch repos",
+        "chaoticVersion": "chaotic: {{version}}",
+        "archVersion": "arch: {{version}}",
+        "empty": "No Arch overlap."
+      },
+      "missingDependencies": {
+        "countOne": "{{count}} package with missing deps",
+        "countOther": "{{count}} packages with missing deps",
+        "missingCount": "{{count}} missing",
+        "depsLabel": "deps:",
+        "makeDepsLabel": "makedeps:",
+        "empty": "No missing dependencies."
+      },
+      "builderUtilization": {
+        "ariaLabel": "Builder utilization heatmap over the last {{days}} days",
+        "utcHour": "UTC hour",
+        "cellTitle": "{{builder}} · {{hour}}:00 UTC — {{perDay}} builds/day",
+        "summaryOne": "Average builds per day and UTC hour over {{range}}. Peak day: {{max}} build in one hour.",
+        "summaryOther": "Average builds per day and UTC hour over {{range}}. Peak day: {{max}} builds in one hour.",
+        "rangeAll": "the whole recorded history",
+        "rangeLastOne": "the last {{days}} day",
+        "rangeLastOther": "the last {{days}} days",
+        "empty": "No builder activity recorded."
+      },
+      "unresolvedFailures": {
+        "countOne": "{{count}} package failing",
+        "countOther": "{{count}} packages failing",
+        "hideSilenced": "Hide silenced",
+        "showSilenced": "Show silenced ({{count}})",
+        "rateLimited": "Rate limited: skipped by the build dispatcher until its next retry",
+        "streakTooltip": "{{count}} failed builds since {{since}}",
+        "logPurged": "Log purged",
+        "logPurgedLabel": "Build log purged for {{package}}",
+        "openLog": "Open build log",
+        "openLogLabel": "Open build log for {{package}}",
+        "silence": "Silence until next failure",
+        "silenceLabel": "Silence {{package}} until next failure",
+        "unsilence": "Unsilence",
+        "unsilenceLabel": "Unsilence {{package}}",
+        "empty": "Nothing failing right now."
+      }
+    }
+  },
+  "tableColumns": {
+    "tooltip": "Choose visible columns",
+    "selectedItems": "{0} columns",
+    "placeholder": "Columns"
+  },
+  "triggerSources": {
+    "loadingAriaLabel": "Loading dependency sources",
+    "noData": "No dependency data for this package.",
+    "sonameDependencies": "Soname dependencies",
+    "noSonameDependencies": "No soname dependencies indexed.",
+    "pluginOf": "Plugin of",
+    "explicitTriggers": "Explicit triggers"
+  },
+  "update": {
+    "ready": {
+      "title": "App updated",
+      "message": "A new version is ready. Reload to use it."
+    },
+    "failed": {
+      "title": "Update failed",
+      "message": "Could not install the new version."
+    }
+  },
+  "xtermLog": {
+    "lineLabel": "Line {{line}}"
+  }
+}

@@ -1,6 +1,7 @@
 import { Service, signal, type WritableResource, inject } from '@angular/core';
 import type { UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { backendErrorMessage } from '../../../../api-errors';
 import { AppService } from '../../../../app.service';
 
@@ -9,6 +10,7 @@ import { AppService } from '../../../../app.service';
 export class FailureSilenceService {
   private readonly appService = inject(AppService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
 
   readonly busyPkgname = signal<string | null>(null);
 
@@ -25,15 +27,24 @@ export class FailureSilenceService {
     try {
       if (silencing) {
         await this.appService.silenceUnresolvedFailedBuild(row.pkgname);
-        this.messageToastService.success('Failure silenced', `${row.pkgname} stays hidden until it fails again.`);
+        this.messageToastService.success(
+          this.transloco.translate('stats.failureSilence.silenced.title'),
+          this.transloco.translate('stats.failureSilence.silenced.message', { package: row.pkgname }),
+        );
       } else {
         await this.appService.unsilenceUnresolvedFailedBuild(row.pkgname);
-        this.messageToastService.success('Failure unsilenced', `${row.pkgname} shows up as failing again.`);
+        this.messageToastService.success(
+          this.transloco.translate('stats.failureSilence.unsilenced.title'),
+          this.transloco.translate('stats.failureSilence.unsilenced.message', { package: row.pkgname }),
+        );
       }
     } catch (error) {
       this.messageToastService.error(
-        'Operation failed',
-        backendErrorMessage(error, `Could not update ${row.pkgname}.`),
+        this.transloco.translate('stats.failureSilence.error.title'),
+        backendErrorMessage(
+          error,
+          this.transloco.translate('stats.failureSilence.error.message', { package: row.pkgname }),
+        ),
       );
       failures.reload();
     } finally {

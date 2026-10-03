@@ -1,6 +1,8 @@
-<section class="chaotic-card">
-  <chaotic-build-status-section title="Latest deployments" icon="pi-box">
-    <a class="text-xs text-ctp-subtext0 hover:text-ctp-mauve" routerLink="/deployments">View all</a>
+<section class="chaotic-card" *transloco="let t">
+  <chaotic-build-status-section [title]="t('buildStatus.deployments.title')" icon="pi-box">
+    <a class="text-xs text-ctp-subtext0 hover:text-ctp-mauve" routerLink="/deployments">{{
+      t('buildStatus.deployments.viewAll')
+    }}</a>
   </chaotic-build-status-section>
   @if (buildStatusService.loadingDeployments() && paginatedDeployments().length === 0) {
     <ul aria-hidden="true">
@@ -9,9 +11,12 @@
       }
     </ul>
   } @else if (buildStatusService.deploymentsFailed() && paginatedDeployments().length === 0) {
-    <chaotic-load-error (retry)="buildStatusService.refreshPackageBuilds()" message="Could not load deployments." />
+    <chaotic-load-error
+      [message]="t('buildStatus.deployments.loadError')"
+      (retry)="buildStatusService.refreshPackageBuilds()"
+    />
   } @else if (paginatedDeployments().length === 0) {
-    <p class="chaotic-card__empty">No recent deployments</p>
+    <p class="chaotic-card__empty">{{ t('buildStatus.deployments.empty') }}</p>
   } @else {
     <ul chaoticFlipList>
       @for (deployment of paginatedDeployments(); track deployment.id) {
@@ -35,9 +40,10 @@
             @if (deployment.failureTags?.length) {
               <span class="mt-1 flex flex-wrap gap-1">
                 @for (tag of deployment.failureTags; track tag) {
+                  @let descriptionKey = tagDescriptionKey(tag);
                   <span
                     class="rounded-full bg-ctp-red/15 px-1.5 py-0.5 text-[11px] font-medium text-ctp-red"
-                    [pTooltip]="tagDescription(tag)"
+                    [pTooltip]="descriptionKey ? t(descriptionKey) : tag"
                     tooltipPosition="top"
                     >{{ tag }}</span
                   >
@@ -48,9 +54,9 @@
           <a
             class="chaotic-icon-btn"
             [routerLink]="packageLogRouteFromUrl(deployment.logUrl ?? '')"
-            pTooltip="Open build log"
+            [pTooltip]="t('buildStatus.deployments.openLog')"
+            [attr.aria-label]="t('buildStatus.deployments.openLogAriaLabel', { name: deployment.pkgbase.pkgname })"
             tooltipPosition="left"
-            aria-label="Open build log for {{ deployment.pkgbase.pkgname }}"
           >
             <i class="pi pi-align-left" aria-hidden="true"></i>
           </a>

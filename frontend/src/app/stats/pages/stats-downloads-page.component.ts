@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Card } from '@openng/optimus-ui/card';
 import { ChartDownloadsComponent } from '../charts/downloads/chart-downloads/chart-downloads.component';
 import { ChartDownloadersTrendComponent } from '../charts/downloads/chart-downloaders-trend/chart-downloaders-trend.component';
@@ -9,6 +10,7 @@ import { StatsService } from '../stats.service';
 @Component({
   selector: 'chaotic-stats-downloads-page',
   imports: [
+    TranslocoDirective,
     Card,
     ChartDownloadsComponent,
     ChartDownloadersTrendComponent,
@@ -17,8 +19,8 @@ import { StatsService } from '../stats.service';
   ],
   styleUrl: './stats-chart-page.css',
   template: `
-    <div class="flex flex-col gap-8">
-      <p-card [style]="{ overflow: 'hidden' }" header="Downloads by package">
+    <div class="flex flex-col gap-8" *transloco="let t; prefix: 'stats.pages.downloads'">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('downloads')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-downloads [(range)]="statsService.globalPackageMetricRange" />
         } @placeholder {
@@ -26,7 +28,7 @@ import { StatsService } from '../stats.service';
         }
       </p-card>
 
-      <p-card [style]="{ overflow: 'hidden' }" header="Top downloaders over time">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('downloadersTrend')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-downloaders-trend />
         } @placeholder {
@@ -34,7 +36,7 @@ import { StatsService } from '../stats.service';
         }
       </p-card>
 
-      <p-card [style]="{ overflow: 'hidden' }" header="Mirror popularity over time">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('mirrorOverTime')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-mirror-over-time />
         } @placeholder {
@@ -42,7 +44,7 @@ import { StatsService } from '../stats.service';
         }
       </p-card>
 
-      <p-card [style]="{ overflow: 'hidden' }" header="Top countries over time">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('countryOverTime')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-country-over-time />
         } @placeholder {

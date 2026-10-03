@@ -29,4 +29,13 @@ export class MirrorsService {
   readonly onlineMirrors = computed(() => this.mirrors().filter((m) => m.healthy));
   readonly outdatedMirrors = computed(() => this.mirrors().filter((m) => !m.healthy && m.last_update !== 0));
   readonly offlineMirrors = computed(() => this.mirrors().filter((m) => !m.healthy && m.last_update === 0));
+
+  // Null until the mirror list has loaded, so callers can tell "loading" from "0 online".
+  readonly onlineMirrorCount = computed(() => {
+    if (this.mirrorData() === null) {
+      return null;
+    }
+
+    return this.onlineMirrors().length;
+  });
 }

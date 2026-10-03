@@ -1,21 +1,29 @@
 import { Component, input, output } from '@angular/core';
 import { type DiffScanFinding, type DiffScanSeverity } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 
 const SEVERITY_LABELS: Record<DiffScanSeverity, string> = {
-  critical: 'Critical',
-  warning: 'Warning',
-  info: 'Info',
+  critical: marker('aurScan.severity.critical'),
+  warning: marker('aurScan.severity.warning'),
+  info: marker('aurScan.severity.info'),
 };
 
 @Component({
   selector: 'chaotic-scan-finding-row',
-  imports: [Tooltip],
+  imports: [Tooltip, TranslocoDirective],
   template: `
-    <button class="finding" [class]="'finding--' + finding().severity" (click)="activate.emit()" type="button">
+    <button
+      class="finding"
+      *transloco="let t"
+      [class]="'finding--' + finding().severity"
+      (click)="activate.emit()"
+      type="button"
+    >
       <span class="finding__severity">
         <span class="finding__dot" aria-hidden="true"></span>
-        {{ severityLabels[finding().severity] }}
+        {{ t(severityLabels[finding().severity]) }}
       </span>
       <span class="finding__rule" [pTooltip]="finding().description" tooltipPosition="top">{{
         finding().ruleName

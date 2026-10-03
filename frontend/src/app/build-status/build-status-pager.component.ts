@@ -1,8 +1,10 @@
 /* eslint-disable @angular-eslint/prefer-signal-model -- pager uses explicit input/output for clamped pagination */
 import { Component, input, output } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 
 @Component({
   selector: 'chaotic-build-status-pager',
+  imports: [TranslocoDirective],
   templateUrl: './build-status-pager.component.html',
 })
 export class BuildStatusPager {

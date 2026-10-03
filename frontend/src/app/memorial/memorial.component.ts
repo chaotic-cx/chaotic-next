@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Card } from '@openng/optimus-ui/card';
 import { Image } from '@openng/optimus-ui/image';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
@@ -26,23 +27,27 @@ function buildLinks(filenames: string[], specialTreatment: string[], folder: str
 
 @Component({
   selector: 'chaotic-memorial',
-  imports: [Card, Image, TitleComponent, ProgressSpinner, RouterLink],
+  imports: [Card, Image, TitleComponent, ProgressSpinner, RouterLink, TranslocoDirective],
   templateUrl: './memorial.component.html',
   styleUrl: './memorial.component.css',
 })
 export class MemorialComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly config = this.route.snapshot.data['memorial'] as MemorialConfig;
-
-  readonly heading = `Memorial — ${this.config.year} Edition`;
 
   readonly desktopLinks = buildLinks(this.config.desktops, this.config.specialDesktops, 'desktops', this.config.year);
 
   readonly termLinks = buildLinks(this.config.terms, this.config.specialTerms, 'terminals', this.config.year);
 
   constructor() {
-    const config = this.config;
-    setPageSeo(this.route.snapshot.title ?? '', config.description, config.keywords);
+    const routeTitleKey = this.route.snapshot.title ?? '';
+
+    setPageSeo(
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate(routeTitleKey) }),
+      this.transloco.translate(this.config.descriptionKey),
+      this.transloco.translate(this.config.keywordsKey),
+    );
   }
 }

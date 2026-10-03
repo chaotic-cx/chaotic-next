@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Card } from '@openng/optimus-ui/card';
 import { ChartArchOverlapComponent } from '../charts/builds/chart-arch-overlap/chart-arch-overlap.component';
 import { ChartAverageBuildTimeTrendComponent } from '../charts/builds/chart-average-build-time-trend/chart-average-build-time-trend.component';
@@ -13,6 +14,7 @@ import { ChartUnresolvedFailuresComponent } from '../charts/builds/chart-unresol
 @Component({
   selector: 'chaotic-stats-insights-page',
   imports: [
+    TranslocoDirective,
     Card,
     ChartAverageBuildTimeTrendComponent,
     ChartBuilderUtilizationComponent,
@@ -25,64 +27,64 @@ import { ChartUnresolvedFailuresComponent } from '../charts/builds/chart-unresol
     ChartUnresolvedFailuresComponent,
   ],
   template: `
-    <div class="grid h-full grid-cols-1 gap-8 lg:grid-cols-2">
-      <p-card [style]="{ overflow: 'hidden' }" header="Average build time (minutes)">
+    <div class="grid h-full grid-cols-1 gap-8 lg:grid-cols-2" *transloco="let t; prefix: 'stats.pages.insights'">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('averageBuildTimeTrend')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-average-build-time-trend />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Queue throughput">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('throughput')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-throughput />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Failed build hotspots">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('failedHotspots')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-failed-hotspots />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Failed builds with no more recent success">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('unresolvedFailures')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-unresolved-failures />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Packages with missing dependencies">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('missingDependencies')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-missing-dependencies />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Packages now also in Arch repos">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('archOverlap')">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-arch-overlap />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Build failures over time" styleClass="lg:col-span-2">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('buildFailuresOverTime')" styleClass="lg:col-span-2">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-build-failures-over-time />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Flakiest packages" styleClass="lg:col-span-2">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('flakyPackages')" styleClass="lg:col-span-2">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-flaky-packages />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Builder utilization" styleClass="lg:col-span-2">
+      <p-card [style]="{ overflow: 'hidden' }" [header]="t('builderUtilization')" styleClass="lg:col-span-2">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-builder-utilization />
         } @placeholder {

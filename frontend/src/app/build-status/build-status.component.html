@@ -1,10 +1,10 @@
-<div class="chaotic-page">
-  <chaotic-title title="Build status" subtitle="Running builds, the queue and recent pipelines, updated live." />
+<div class="chaotic-page" *transloco="let t; prefix: 'buildStatus.page'">
+  <chaotic-title [title]="t('title')" [subtitle]="t('subtitle')" />
 
   <p class="sr-only" role="status" aria-live="polite">{{ buildStatusService.liveSummary() }}</p>
-  <dl class="chaotic-stats chaotic-surface" aria-label="Build summary">
+  <dl class="chaotic-stats chaotic-surface" [attr.aria-label]="t('summaryAriaLabel')">
     <div class="chaotic-stats__item chaotic-stats__item--primary">
-      <dt>Building</dt>
+      <dt>{{ t('building') }}</dt>
       <dd>
         {{
           buildStatusService.loadingQueue() || buildStatusService.queueFailed()
@@ -14,7 +14,7 @@
       </dd>
     </div>
     <div class="chaotic-stats__item">
-      <dt>Queued</dt>
+      <dt>{{ t('queued') }}</dt>
       <dd>
         {{
           buildStatusService.loadingQueue() || buildStatusService.queueFailed()
@@ -24,7 +24,7 @@
       </dd>
     </div>
     <div class="chaotic-stats__item">
-      <dt>Idle builders</dt>
+      <dt>{{ t('idleBuilders') }}</dt>
       <dd>
         {{
           buildStatusService.loadingQueue() || buildStatusService.queueFailed()
@@ -34,7 +34,7 @@
       </dd>
     </div>
     <div class="chaotic-stats__item">
-      <dt>Queue clears in</dt>
+      <dt>{{ t('queueClearsIn') }}</dt>
       <dd>{{ buildStatusService.queueClearEta() ?? '–' }}</dd>
     </div>
   </dl>

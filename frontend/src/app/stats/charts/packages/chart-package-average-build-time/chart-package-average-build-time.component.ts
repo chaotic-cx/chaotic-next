@@ -1,5 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
@@ -13,6 +15,9 @@ import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roun
 export class ChartPackageAverageBuildTimeComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly packageName = input.required<string>();
 
@@ -26,6 +31,8 @@ export class ChartPackageAverageBuildTimeComponent {
   });
 
   readonly chartConfig = computed<ChartConfig<'line'> | null>(() => {
+    this.activeTranslation();
+
     const rows = this.chart.data();
     if (rows.length === 0) return null;
 
@@ -45,7 +52,9 @@ export class ChartPackageAverageBuildTimeComponent {
         labels,
         datasets: [
           {
-            label: `Average build time (minutes) for ${this.packageName()}`,
+            label: this.transloco.translate('stats.charts.packageAverageBuildTime.label', {
+              package: this.packageName(),
+            }),
             data: labels.map((day) => dataMap.get(day) ?? 0),
             backgroundColor: CATPPUCCIN_FLAVOURS[0],
             borderColor: CATPPUCCIN_FLAVOURS[0],

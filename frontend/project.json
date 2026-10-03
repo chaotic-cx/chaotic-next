@@ -6,7 +6,7 @@
   "sourceRoot": "frontend/src",
   "tags": [],
   "targets": {
-    "build": {
+    "build-angular": {
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
@@ -76,6 +76,25 @@
           "extractLicenses": false,
           "sourceMap": true
         }
+      },
+      "cache": true
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        {
+          "target": "build-angular",
+          "params": "forward"
+        }
+      ],
+      "outputs": ["{workspaceRoot}/dist/frontend"],
+      "defaultConfiguration": "production",
+      "options": {
+        "command": "transloco-optimize dist/frontend/browser/i18n"
+      },
+      "configurations": {
+        "production": {},
+        "development": {}
       }
     },
     "serve": {
@@ -84,10 +103,10 @@
       "continuous": true,
       "configurations": {
         "production": {
-          "buildTarget": "frontend:build:production"
+          "buildTarget": "frontend:build-angular:production"
         },
         "development": {
-          "buildTarget": "frontend:build:development",
+          "buildTarget": "frontend:build-angular:development",
           "port": 4201
         }
       }

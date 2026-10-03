@@ -19,6 +19,7 @@ import { environment } from '../environments/environment.dev';
 import { routes } from './app.routes';
 import { provideAuthInitializer } from './auth/auth-initializer';
 import { provideBackendStatusInitializer } from './backend-status/backend-status-initializer';
+import { provideI18n } from './i18n/i18n.providers';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
 import { NotificationService } from './notification/notification.service';
 import { SelectivePreloadStrategy } from './preload.strategy';
@@ -60,6 +61,7 @@ export const appConfig: ApplicationConfig = {
     provideAuthInitializer(),
     provideBackendStatusInitializer(),
     provideHttpClient(withInterceptorsFromDi()),
+    provideI18n(),
     provideRouter(
       routes,
       withComponentInputBinding(),

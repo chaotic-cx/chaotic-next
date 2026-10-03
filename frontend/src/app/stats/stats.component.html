@@ -1,12 +1,12 @@
-<div class="chaotic-page">
-  <chaotic-title [subtitleHtml]="subtitle" title="Statistics" />
+<div class="chaotic-page" *transloco="let t">
+  <chaotic-title [subtitleHtml]="t('stats.subtitle')" [title]="t('stats.title')" />
 
   <div class="stats-tabs-container">
     <p-tabs [value]="activeTab() ?? undefined" [scrollable]="true" (valueChange)="navigate($event)">
       <p-tablist>
         @for (tab of tabs; track tab.value) {
-          <p-tab [value]="tab.value" [pTooltip]="tab.tooltip" [showDelay]="400" tooltipPosition="bottom">{{
-            tab.label
+          <p-tab [value]="tab.value" [pTooltip]="t(tab.tooltipKey)" [showDelay]="400" tooltipPosition="bottom">{{
+            t(tab.labelKey)
           }}</p-tab>
         }
       </p-tablist>
@@ -14,7 +14,7 @@
     <div class="p-tabpanels flex flex-col">
       <div class="stats-toolbar">
         <span class="stats-toolbar__users">
-          <span class="text-ctp-subtext0">Total users</span>
+          <span class="text-ctp-subtext0">{{ t('stats.toolbar.totalUsers') }}</span>
           <span class="font-semibold tabular-nums text-ctp-text">{{
             statsService.usersLoading() ? '–' : ((statsService.totalUsers() | number) ?? '–')
           }}</span>
@@ -24,31 +24,31 @@
             <p-select
               [(ngModel)]="statsService.packageSearchSelectedRepo"
               [options]="searchRepoOptions"
+              [ariaLabel]="t('stats.toolbar.searchRepository')"
               (ngModelChange)="onRepoChange($event)"
-              ariaLabel="Repository to search"
               appendTo="body"
             />
           }
           @if (repoFilterVisible()) {
             <p-select
               [(ngModel)]="statsService.selectedRepo"
-              [options]="statsService.repoOptions"
+              [options]="repoOptions()"
+              [ariaLabel]="t('stats.toolbar.repository')"
+              [placeholder]="t('stats.toolbar.repository')"
               (ngModelChange)="onRepoChange($event)"
-              ariaLabel="Repository"
               appendTo="body"
               optionLabel="label"
               optionValue="value"
-              placeholder="Repository"
             />
           }
-          <label class="sr-only" for="statsTimeRange">Time range</label>
+          <label class="sr-only" for="statsTimeRange">{{ t('stats.toolbar.timeRange') }}</label>
           <p-select
             [(ngModel)]="statsService.timeRangeDays"
-            [options]="statsService.timeRangeOptions"
+            [options]="timeRangeOptions()"
             (ngModelChange)="onTimeRangeChange($event)"
             inputId="statsTimeRange"
             optionLabel="label"
-            optionValue="days"
+            optionValue="value"
             appendTo="body"
           />
         </div>

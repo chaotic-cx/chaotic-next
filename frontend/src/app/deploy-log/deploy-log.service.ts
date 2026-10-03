@@ -20,12 +20,16 @@ import { createLazyTablePagination } from '../table-pagination';
 
 export const REPO_OPTIONS = ['chaotic-aur', 'garuda'];
 
-const STATUS_OPTIONS: { label: string; value: BuildStatus; icon: string }[] = Object.entries(BUILD_STATUS_ICONS).map(
-  ([key, icon]) => {
-    const value = Number(key) as BuildStatus;
-    return { label: STATUS_LABELS[value], value, icon };
-  },
-);
+export interface StatusOption {
+  value: BuildStatus;
+  icon: string;
+}
+
+const STATUS_OPTIONS: StatusOption[] = Object.entries(BUILD_STATUS_ICONS).map(([key, icon]) => {
+  const value = Number(key) as BuildStatus;
+
+  return { value, icon };
+});
 
 const DEFAULT_SORT_FIELD: BuildSortField = 'timestamp';
 

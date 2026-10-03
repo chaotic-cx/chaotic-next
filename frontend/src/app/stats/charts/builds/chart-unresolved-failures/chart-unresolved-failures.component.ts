@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { flavors } from '@catppuccin/palette';
 import type { UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
 import { BUILD_RATE_LIMIT_FAILURE_STREAK, BUILD_RATE_LIMIT_RETRY_HOURS, BuildStatus } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { isLogPurged, packageLogRouteFromUrl } from '../../../../functions';
-import { formatRelativeTime } from '../../../../pipes/relative-time.pipe';
+import { RelativeTimePipe } from '../../../../pipes/relative-time.pipe';
 import { StatsService } from '../../../stats.service';
 import { LoadErrorComponent } from '../../../../load-error/load-error.component';
 import { chartResource } from '../../chart-config';
@@ -66,7 +67,7 @@ export function streakDurationLabel(startedIso: string, nowMs: number = Date.now
 
 @Component({
   selector: 'chaotic-chart-unresolved-failures',
-  imports: [LoadErrorComponent, RouterLink, Tooltip],
+  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink, Tooltip, TranslocoDirective],
   templateUrl: './chart-unresolved-failures.component.html',
   styleUrl: './chart-unresolved-failures.component.css',
 })
@@ -83,7 +84,6 @@ export class ChartUnresolvedFailuresComponent {
   readonly isLoggedIn = this.authService.isLoggedIn;
   readonly showSilenced = signal(false);
 
-  protected readonly formatRelativeTime = formatRelativeTime;
   protected readonly busyPkgname = this.failureSilence.busyPkgname;
 
   private readonly failures = computed(() => this.chart.data());
@@ -100,10 +100,6 @@ export class ChartUnresolvedFailuresComponent {
   protected readonly isLogPurged = isLogPurged;
   protected readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
   protected readonly streakDurationLabel = streakDurationLabel;
-
-  protected streakTooltip(row: UnresolvedFailedBuild): string {
-    return `${row.consecutiveFailures} failed builds since ${formatRelativeTime(row.streakStartedAt)}`;
-  }
 
   isBusy(row: UnresolvedFailedBuild): boolean {
     return this.busyPkgname() === row.pkgname;

@@ -2,6 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Builder, MAX_PER_PAGE, MergeRequestCounts, Paginated, UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService } from 'ngx-better-auth';
 import { APP_CONFIG } from '../../../environments/app-config.token';
 import { AppService } from '../../app.service';
@@ -30,6 +31,7 @@ import { OVERVIEW_SKELETON_ROWS } from './overview-constants';
     AdminRepoProblemsComponent,
     LoadErrorComponent,
     RouterLink,
+    TranslocoDirective,
   ],
   templateUrl: './admin-overview-page.component.html',
   styleUrl: './admin-overview-page.component.css',

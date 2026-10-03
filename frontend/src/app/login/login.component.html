@@ -1,23 +1,16 @@
-<div class="flex justify-center px-4 pt-36 pb-8">
+<div class="flex justify-center px-4 pt-36 pb-8" *transloco="let t; prefix: 'login'">
   <div class="hero-card mx-auto w-full max-w-xl p-8 text-center">
-    <img
-      class="mx-auto rounded-xl"
-      ngSrc="/assets/logo_400.png"
-      width="64"
-      height="64"
-      priority
-      alt="Chaotic-AUR logo"
-    />
-    <h1 class="text-ctp-maroon mt-6 text-2xl font-bold">Sign in</h1>
+    <img class="mx-auto rounded-xl" [alt]="t('logoAlt')" ngSrc="/assets/logo_400.png" width="64" height="64" priority />
+    <h1 class="text-ctp-maroon mt-6 text-2xl font-bold">{{ t('title') }}</h1>
     <p class="text-ctp-subtext1 mt-3 text-sm">
-      Sign in with your GitLab account to review and manage Chaotic-AUR packages.
+      {{ t('description') }}
     </p>
     <p-button
       [loading]="isLoading()"
+      [ariaLabel]="t('continue')"
       (onClick)="login()"
       severity="secondary"
       size="small"
-      ariaLabel="Continue with GitLab"
       styleClass="mt-6 w-full"
     >
       <span class="flex w-full items-center justify-center gap-2">
@@ -37,7 +30,7 @@
           />
           <path d="M28.381,13.029H21.156l3.105-9.557a.534.534,0,0,1,1.015,0l3.105,9.557Z" style="fill: #e24329" />
         </svg>
-        <span>Continue with GitLab</span>
+        <span>{{ t('continue') }}</span>
       </span>
     </p-button>
   </div>

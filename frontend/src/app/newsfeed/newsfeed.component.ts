@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Panel } from '@openng/optimus-ui/panel';
@@ -13,13 +14,14 @@ const NEWS_INCREMENT = 3;
 
 @Component({
   selector: 'chaotic-newsfeed',
-  imports: [CommonModule, Panel, Button, PrimeTemplate],
+  imports: [CommonModule, Panel, Button, PrimeTemplate, TranslocoDirective],
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
   providers: [MessageToastService],
 })
 export class NewsfeedComponent {
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
 
   private readonly newsResource = httpResource<Message[]>(() => ({ url: '/news.json' }));
 
@@ -48,7 +50,10 @@ export class NewsfeedComponent {
   constructor() {
     effect(() => {
       if (this.newsResource.error()) {
-        this.messageToastService.error('Error', 'Failed to fetch news');
+        this.messageToastService.error(
+          this.transloco.translate('common.error'),
+          this.transloco.translate('newsfeed.fetchFailed'),
+        );
       }
     });
   }

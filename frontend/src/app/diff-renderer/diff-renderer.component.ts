@@ -1,21 +1,23 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, input, output, signal } from '@angular/core';
 import { type DiffScanFinding } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { diffWords, type WordSegment } from './word-diff';
 
 const HUNK_START = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
 const DIFF_MARKER_LENGTH = 1;
 
-const CHANGE_LABELS: Partial<Record<DiffLineType, string>> = {
-  added: 'Added',
-  removed: 'Removed',
+const CHANGE_LABEL_KEYS: Partial<Record<DiffLineType, string>> = {
+  added: marker('diffRenderer.added'),
+  removed: marker('diffRenderer.removed'),
 };
 
 @Component({
   selector: 'chaotic-diff-renderer',
   templateUrl: './diff-renderer.component.html',
   styleUrl: './diff-renderer.component.css',
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, TranslocoDirective],
   preserveWhitespaces: false,
 })
 export class DiffRendererComponent {
@@ -32,8 +34,8 @@ export class DiffRendererComponent {
   /** The new-file line number whose findings are expanded inline, if any. */
   readonly expandedLine = signal<number | null>(null);
 
-  protected changeLabel(line: DiffLine): string | undefined {
-    return CHANGE_LABELS[line.type];
+  protected changeLabelKey(line: DiffLine): string | undefined {
+    return CHANGE_LABEL_KEYS[line.type];
   }
 
   readonly parsedLines = computed(() => {

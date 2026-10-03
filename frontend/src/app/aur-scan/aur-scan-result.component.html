@@ -1,4 +1,4 @@
-<div class="scan-report">
+<div class="scan-report" *transloco="let t">
   <header class="scan-report__summary">
     <div class="min-w-0">
       @if (showTitle()) {
@@ -8,26 +8,29 @@
         @switch (scan()?.status) {
           @case ('done') {
             <i class="pi pi-check-circle text-ctp-green" aria-hidden="true"></i>
-            Scan complete
+            {{ t('aurScan.status.done') }}
           }
           @case ('failed') {
             <i class="pi pi-times-circle text-ctp-red" aria-hidden="true"></i>
-            Scan failed
+            {{ t('aurScan.status.failed') }}
           }
           @case ('awaiting-vt') {
             <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
-            Checking VirusTotal. This can take a while because of rate limits.
+            {{ t('aurScan.status.awaitingVt') }}
           }
           @default {
             <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
-            Scanning sources…
+            {{ t('aurScan.status.scanning') }}
           }
         }
       </p>
       @if (scan()?.pkgTypes?.length) {
-        <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Package types">
+        <ul class="mt-2 flex flex-wrap gap-1.5" [attr.aria-label]="t('aurScan.pkgTypes')">
           @for (kind of scan()?.pkgTypes; track kind) {
-            <li class="scan-chip" [pTooltip]="presenter.pkgTypeExplanation(kind)" tooltipPosition="top">{{ kind }}</li>
+            @let explanation = presenter.pkgTypeExplanation(kind);
+            <li class="scan-chip" [pTooltip]="explanation ? t(explanation) : undefined" tooltipPosition="top">
+              {{ kind }}
+            </li>
           }
         </ul>
       }
@@ -35,21 +38,20 @@
     <div class="flex flex-wrap items-center gap-2 sm:justify-end">
       @if (scan(); as current) {
         @if (current.findings.length > 0) {
-          <p-tag
-            [severity]="findingsSeverity()"
-            [value]="`${current.findings.length} finding${current.findings.length !== 1 ? 's' : ''}`"
-          />
+          @let count = presenter.findingCount(current.findings.length);
+          <p-tag [severity]="findingsSeverity()" [value]="t(count.key, count.params)" />
         } @else if (current.status === 'done') {
-          <p-tag severity="success" value="No findings" />
+          <p-tag [value]="t('aurScan.noFindings')" severity="success" />
         }
         @if (flaggedVtCount() > 0) {
-          <p-tag [value]="`${flaggedVtCount()} flagged by VirusTotal`" severity="warn" />
+          <p-tag [value]="t('aurScan.vt.flaggedCount', { count: flaggedVtCount() })" severity="warn" />
         }
         @if (current.maintainerChange; as change) {
+          @let changeSummary = presenter.maintainerChangeSummary(change);
           <p-tag
-            [pTooltip]="presenter.maintainerChangeSummary(change)"
+            [pTooltip]="changeSummary ? t(changeSummary.key, changeSummary.params) : undefined"
+            [value]="t('aurScan.maintainerChange.changed')"
             severity="danger"
-            value="Maintainer changed"
             tooltipPosition="bottom"
           />
         }
@@ -64,7 +66,7 @@
 
     @if (current.findings.length > 0) {
       <section class="scan-section">
-        <h3 class="scan-section__title">Findings</h3>
+        <h3 class="scan-section__title">{{ t('aurScan.sections.findings') }}</h3>
         <div class="flex flex-col">
           @for (finding of current.findings; track finding) {
             <chaotic-scan-finding-row
@@ -79,15 +81,15 @@
 
     @if (current.maintainers.length > 0 || current.packageMeta.orphaned || current.maintainerChange) {
       <section class="scan-section">
-        <h3 class="scan-section__title">Maintainers</h3>
+        <h3 class="scan-section__title">{{ t('aurScan.maintainers.title') }}</h3>
         @if (current.maintainers.length > 0) {
           <table class="scan-table">
             <thead>
               <tr>
-                <th scope="col">Account</th>
-                <th class="text-right" scope="col">Packages</th>
-                <th class="text-right" scope="col">Since</th>
-                <th class="text-right" scope="col">Votes</th>
+                <th scope="col">{{ t('aurScan.maintainers.account') }}</th>
+                <th class="text-right" scope="col">{{ t('aurScan.maintainers.packages') }}</th>
+                <th class="text-right" scope="col">{{ t('aurScan.maintainers.since') }}</th>
+                <th class="text-right" scope="col">{{ t('aurScan.maintainers.votes') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -102,11 +104,13 @@
                       >{{ maintainer.username }}</a
                     >
                     @if (maintainer.novice) {
-                      <p-tag class="ml-2" severity="warn" value="New" />
+                      <p-tag class="ml-2" [value]="t('aurScan.maintainers.novice')" severity="warn" />
                     }
                   </td>
                   <td class="text-right tabular-nums">{{ maintainer.packagesMaintained }}</td>
-                  <td class="text-right tabular-nums">{{ presenter.maintainerSince(maintainer) }}</td>
+                  <td class="text-right tabular-nums">
+                    {{ presenter.maintainerSince(maintainer) ?? t('aurScan.maintainers.unknownSince') }}
+                  </td>
                   <td class="text-right tabular-nums">{{ maintainer.totalVotes }}</td>
                 </tr>
               }
@@ -116,15 +120,17 @@
         @if (current.maintainerChange; as change) {
           <p class="mt-3 flex flex-wrap items-center gap-2 text-sm text-ctp-subtext0">
             @if (presenter.tookOverByNovice(change, current.maintainers)) {
-              <p-tag severity="danger" value="New maintainer took over" />
+              <p-tag [value]="t('aurScan.maintainerChange.noviceTookOver')" severity="danger" />
             } @else {
-              <p-tag severity="warn" value="Maintainer changed" />
+              <p-tag [value]="t('aurScan.maintainerChange.changed')" severity="warn" />
             }
-            {{ presenter.maintainerChangeSummary(change) }}
+            @if (presenter.maintainerChangeSummary(change); as changeSummary) {
+              {{ t(changeSummary.key, changeSummary.params) }}
+            }
           </p>
         }
         @if (current.packageMeta.orphaned) {
-          <p class="mt-3 text-sm text-ctp-red">No maintainer. This package is orphaned in the AUR.</p>
+          <p class="mt-3 text-sm text-ctp-red">{{ t('aurScan.maintainers.orphaned') }}</p>
         }
       </section>
     }
@@ -132,16 +138,19 @@
     @if (current.status === 'awaiting-vt') {
       <section class="scan-section">
         <h3 class="scan-section__title">VirusTotal</h3>
-        <p class="text-sm text-ctp-subtext0">Results appear once every indicator is checked.</p>
+        <p class="text-sm text-ctp-subtext0">{{ t('aurScan.vt.pending') }}</p>
       </section>
     } @else if (current.vtReports.length > 0) {
       <section class="scan-section">
-        <h3 class="scan-section__title">VirusTotal indicators</h3>
+        <h3 class="scan-section__title">{{ t('aurScan.vt.indicators') }}</h3>
         <ul class="flex flex-col gap-3">
           @for (report of current.vtReports; track report) {
             <li class="flex flex-col gap-1">
               <div class="flex min-w-0 items-center gap-2">
-                <p-tag [severity]="presenter.vtVerdictSeverity[report.verdict]" [value]="report.verdict" />
+                <p-tag
+                  [severity]="presenter.vtVerdictSeverity[report.verdict]"
+                  [value]="t(presenter.vtVerdictLabels[report.verdict])"
+                />
                 <a
                   class="min-w-0 break-all text-sm font-medium text-ctp-text hover:text-ctp-mauve"
                   [href]="vtLink(report)"
@@ -150,8 +159,9 @@
                   >{{ report.value }}</a
                 >
               </div>
+              @let engines = presenter.vtEngines(report);
               <p class="text-xs text-ctp-subtext0">
-                <code class="break-all">{{ report.context }}</code> · {{ presenter.vtEngines(report) }}
+                <code class="break-all">{{ report.context }}</code> · {{ t(engines.key, engines.params) }}
               </p>
             </li>
           }
@@ -161,7 +171,7 @@
 
     @if (current.sourceFiles?.length) {
       <section class="scan-section">
-        <h3 class="scan-section__title">Scanned sources</h3>
+        <h3 class="scan-section__title">{{ t('aurScan.sections.scannedSources') }}</h3>
         <div class="flex flex-col gap-2">
           @for (file of current.sourceFiles; track file.name) {
             <div class="chaotic-file">

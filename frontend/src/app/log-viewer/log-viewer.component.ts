@@ -5,6 +5,7 @@ import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GitlabJob } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { Select } from '@openng/optimus-ui/select';
 import { copyLineLink, errorMessage, parseLogChunk, preferredScrollBehavior, updateSeoTags } from '../functions';
@@ -18,7 +19,7 @@ const RELEVANT_LOG_JOB_PATTERN = /commit|schedule/;
 
 @Component({
   selector: 'chaotic-log-viewer',
-  imports: [XtermLogComponent, CommonModule, FormsModule, ProgressSpinner, Select, TitleComponent],
+  imports: [XtermLogComponent, CommonModule, FormsModule, ProgressSpinner, Select, TitleComponent, TranslocoDirective],
   templateUrl: './log-viewer.component.html',
   styleUrl: './log-viewer.component.css',
 })
@@ -28,6 +29,7 @@ export class LogViewerComponent implements OnDestroy {
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   readonly pipelineId = input<string>();
 
@@ -47,10 +49,6 @@ export class LogViewerComponent implements OnDestroy {
   protected readonly jobOptions = computed(() =>
     this.jobs().map((job) => ({ label: `${job.name} (${job.status})`, value: job.id })),
   );
-  protected readonly subtitle = computed(() => {
-    const job = this.selectedJob();
-    return job ? job.name : 'No job selected';
-  });
 
   private stream: ResilientSseStream | undefined;
   private isCompleted = false;
@@ -120,9 +118,9 @@ export class LogViewerComponent implements OnDestroy {
     this.scrollToLine.set(undefined);
 
     updateSeoTags(this.meta, {
-      title: `Pipeline #${pipelineId} logs · Chaotic-AUR`,
-      description: 'Live build logs of a Chaotic-AUR pipeline job',
-      keywords: 'Chaotic-AUR, GitLab, pipeline, log, build',
+      title: this.transloco.translate('logViewer.seo.title', { pipelineId }),
+      description: this.transloco.translate('logViewer.seo.description'),
+      keywords: this.transloco.translate('logViewer.seo.keywords'),
       url: this.router.url,
     });
 
@@ -184,7 +182,7 @@ export class LogViewerComponent implements OnDestroy {
       onErrorExhausted: () => {
         this.loading.set(false);
         this.streaming.set(false);
-        this.error.set('Log stream ended unexpectedly. Please retry in a moment.');
+        this.error.set(this.transloco.translate('logViewer.streamError'));
       },
     });
     this.stream.open();
@@ -197,9 +195,17 @@ export class LogViewerComponent implements OnDestroy {
 
   protected onLineClick(line: number): void {
     copyLineLink(line)
-      .then(() => this.messageToastService.success('Link copied', `Link to line ${line} is on your clipboard.`))
+      .then(() =>
+        this.messageToastService.success(
+          this.transloco.translate('logViewer.linkCopied.title'),
+          this.transloco.translate('logViewer.linkCopied.message', { line }),
+        ),
+      )
       .catch((error: unknown) => {
-        this.messageToastService.error('Copy failed', `Could not copy the link to line ${line}.`);
+        this.messageToastService.error(
+          this.transloco.translate('logViewer.copyFailed.title'),
+          this.transloco.translate('logViewer.copyFailed.message', { line }),
+        );
         console.error(error);
       });
     void this.router.navigate([], {

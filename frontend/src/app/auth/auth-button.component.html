@@ -1,57 +1,63 @@
-@if (isLoggedIn()) {
-  <div class="ml-3 flex flex-nowrap items-center gap-2">
-    <span class="auth-actions flex items-center gap-2">
-      <a
-        class="my-auto text-lg leading-none text-ctp-maroon"
-        routerLink="/admin"
-        aria-label="Admin"
-        pTooltip="Manage packages and repositories"
-        tooltipPosition="left"
-      >
-        <i class="pi pi-shield"></i>
-      </a>
+<ng-container *transloco="let t; prefix: 'auth.button'">
+  @if (isLoggedIn()) {
+    <div class="flex flex-nowrap items-center gap-2">
+      <span class="auth-actions flex items-center gap-2">
+        <a
+          class="my-auto text-lg leading-none text-ctp-maroon"
+          [attr.aria-label]="t('adminLabel')"
+          [pTooltip]="t('adminTooltip')"
+          routerLink="/admin"
+          tooltipPosition="left"
+        >
+          <i class="pi pi-shield"></i>
+        </a>
+        <p-button
+          [loading]="isLogoutLoading()"
+          [pTooltip]="t('signOut')"
+          (onClick)="logout()"
+          icon="pi pi-sign-out"
+          severity="secondary"
+          size="small"
+          text
+          rounded
+          tooltipPosition="left"
+        />
+      </span>
+      <span class="auth-avatar">
+        @if (user(); as user) {
+          @if (user.image) {
+            <a
+              class="inline-flex items-center"
+              [pTooltip]="t('openSettings')"
+              routerLink="/settings"
+              tooltipPosition="left"
+            >
+              <p-avatar
+                [image]="avatarUrl()"
+                [label]="avatarUrl() ? undefined : avatarLabel()"
+                [pTooltip]="t('openSettings')"
+                (onImageError)="onAvatarError()"
+                shape="circle"
+                tooltipPosition="left"
+              />
+            </a>
+          }
+        }
+      </span>
+    </div>
+  } @else {
+    <span class="auth-actions">
       <p-button
-        [loading]="isLogoutLoading()"
-        (onClick)="logout()"
-        icon="pi pi-sign-out"
+        [loading]="isLoginLoading()"
+        [pTooltip]="t('signIn')"
+        (onClick)="login()"
+        icon="pi pi-sign-in"
         severity="secondary"
         size="small"
+        tooltipPosition="left"
         text
         rounded
-        pTooltip="Sign out"
-        tooltipPosition="left"
       />
     </span>
-    <span class="auth-avatar">
-      @if (user(); as user) {
-        @if (user.image) {
-          <a class="inline-flex items-center" routerLink="/settings" pTooltip="Open settings" tooltipPosition="left">
-            <p-avatar
-              [image]="avatarUrl()"
-              [label]="avatarUrl() ? undefined : avatarLabel()"
-              (onImageError)="onAvatarError()"
-              shape="circle"
-              pTooltip="Open settings"
-              tooltipPosition="left"
-            />
-          </a>
-        }
-      }
-    </span>
-  </div>
-} @else {
-  <span class="auth-actions">
-    <p-button
-      [loading]="isLoginLoading()"
-      (onClick)="login()"
-      icon="pi pi-sign-in"
-      severity="secondary"
-      size="small"
-      styleClass="ml-3"
-      pTooltip="Sign in with GitLab"
-      tooltipPosition="left"
-      text
-      rounded
-    />
-  </span>
-}
+  }
+</ng-container>

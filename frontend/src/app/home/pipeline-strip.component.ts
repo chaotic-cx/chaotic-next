@@ -2,6 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { AppService } from '../app.service';
 import { BuildStatusService } from '../build-status/build-status.service';
 import { LoadErrorComponent } from '../load-error/load-error.component';
@@ -12,7 +13,7 @@ const STAGE_PREVIEW_SIZE = 4;
 
 @Component({
   selector: 'chaotic-pipeline-strip',
-  imports: [NgTemplateOutlet, RouterLink, RelativeTimePipe, LoadErrorComponent],
+  imports: [NgTemplateOutlet, RouterLink, RelativeTimePipe, LoadErrorComponent, TranslocoDirective],
   templateUrl: './pipeline-strip.component.html',
   styleUrl: './pipeline-strip.component.css',
 })

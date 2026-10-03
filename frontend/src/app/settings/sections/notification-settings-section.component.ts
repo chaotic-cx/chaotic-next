@@ -2,27 +2,29 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { type NotificationPreferenceDto, type NotificationType } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Panel } from '@openng/optimus-ui/panel';
 import { ToggleSwitchModule } from '@openng/optimus-ui/toggleswitch';
 import { firstValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../../environments/app-config.token';
 
-const TYPE_LABELS: Record<NotificationType, string> = {
-  'build-failure': 'Build failures (only non-transient)',
-  'mr-review': 'Merge request reviews',
+const TYPE_LABEL_KEYS: Record<NotificationType, string> = {
+  'build-failure': marker('settings.notifications.types.buildFailure'),
+  'mr-review': marker('settings.notifications.types.mrReview'),
 };
 
 @Component({
   selector: 'chaotic-notification-settings-section',
   templateUrl: './notification-settings-section.component.html',
-  imports: [FormsModule, PrimeTemplate, Panel, ToggleSwitchModule],
+  imports: [FormsModule, PrimeTemplate, Panel, ToggleSwitchModule, TranslocoDirective],
 })
 export class NotificationSettingsSectionComponent {
   private readonly http = inject(HttpClient);
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
 
-  readonly typeLabels = TYPE_LABELS;
+  readonly typeLabelKeys = TYPE_LABEL_KEYS;
   readonly saving = signal(false);
   readonly saveFailed = signal(false);
 

@@ -40,10 +40,12 @@ import {
   updatePackageBodySchema,
 } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { backendErrorMessage } from '../api-errors';
 import { debouncedSignal, loadingWithoutValue, resourceSignal, retainedResourceValue } from '../functions';
+import { injectActiveTranslation } from '../i18n/active-translation';
 import { parseQueryParams } from '../utils/api-params';
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -113,16 +115,13 @@ export interface ActiveOption {
   value: 'true' | 'false';
 }
 
-export const ACTIVE_OPTIONS: ActiveOption[] = [
-  { label: 'Active', value: 'true' },
-  { label: 'Inactive', value: 'false' },
-];
-
 @Service()
 export class AdminService {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
   private readonly http = inject(HttpClient);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly packagePage = signal(1);
   readonly packagePerPage = signal(DEFAULT_ADMIN_PER_PAGE);
@@ -164,7 +163,14 @@ export class AdminService {
   readonly brokenPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly brokenSelection = signal<BrokenPackageReport[]>([]);
 
-  readonly activeOptions = ACTIVE_OPTIONS;
+  readonly activeOptions = computed<ActiveOption[]>(() => {
+    this.activeTranslation();
+
+    return [
+      { label: this.transloco.translate('admin.service.activeOptions.active'), value: 'true' },
+      { label: this.transloco.translate('admin.service.activeOptions.inactive'), value: 'false' },
+    ];
+  });
 
   /** How many live components use each list. A list only loads while its count is above zero. */
   private readonly listUsers = signal<ReadonlyMap<AdminList, number>>(new Map());
@@ -348,8 +354,8 @@ export class AdminService {
           `${this.backendUrl}/gitlab/bump-packages`,
           bumpPackagesGitlabBodySchema.parse({ packages, repo, ref }),
         ),
-      'Package bump triggered',
-      'Could not trigger package bump.',
+      this.transloco.translate('admin.service.packageBump.success'),
+      this.transloco.translate('admin.service.packageBump.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -362,16 +368,13 @@ export class AdminService {
           {},
         ),
       );
-      const detail = result.adjusted
-        ? `Adjusted build class of ${result.pkgbase} to ${result.buildClass}.`
-        : `${result.pkgbase} already matches its suggested class (${result.buildClass}).`;
-      const summary = result.adjusted ? 'Build class adjusted' : 'Build class unchanged';
-      this.messageToastService.success(summary, detail);
+      this.reportBuildClassAdjustment(result);
       this.packagesResource.reload();
     } catch (error) {
-      const detail = `Could not adjust the build class of ${pkg.pkgname}.`;
-      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
-      console.error(detail, error);
+      this.reportFailure(
+        this.transloco.translate('admin.service.buildClassAdjust.error', { pkgname: pkg.pkgname }),
+        error,
+      );
     }
   }
 
@@ -387,8 +390,8 @@ export class AdminService {
             target_repo: reponame,
           }),
         ),
-      'Package build scheduled',
-      'Could not schedule package build.',
+      this.transloco.translate('admin.service.packageSchedule.success'),
+      this.transloco.translate('admin.service.packageSchedule.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -400,8 +403,8 @@ export class AdminService {
           `${this.backendUrl}/gitlab/drop-packages`,
           dropPackagesBodySchema.parse({ packages, repo, ref }),
         ),
-      'Package drop triggered',
-      'Could not trigger package drop.',
+      this.transloco.translate('admin.service.packageDrop.success'),
+      this.transloco.translate('admin.service.packageDrop.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -427,8 +430,8 @@ export class AdminService {
             ref,
           }),
         ),
-      'Package add triggered',
-      'Could not trigger package add.',
+      this.transloco.translate('admin.service.packageAdd.success'),
+      this.transloco.translate('admin.service.packageAdd.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -436,8 +439,8 @@ export class AdminService {
   async runSchedule(scheduleId: number, repo: string): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/gitlab/run-schedule`, runScheduleBodySchema.parse({ scheduleId, repo })),
-      'Schedule execution triggered',
-      'Could not trigger schedule execution.',
+      this.transloco.translate('admin.service.scheduleRun.success'),
+      this.transloco.translate('admin.service.scheduleRun.error'),
       () => this.pipelineTriggersResource.reload(),
     );
   }
@@ -450,8 +453,8 @@ export class AdminService {
     await this.runMutation(
       () =>
         this.http.patch(`${this.backendUrl}/admin/packages/${id}`, updatePackageBodySchema.partial().parse(payload)),
-      'Package updated',
-      'Could not update the package.',
+      this.transloco.translate('admin.service.packageUpdate.success'),
+      this.transloco.translate('admin.service.packageUpdate.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -459,8 +462,8 @@ export class AdminService {
   async deletePackage(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/packages/${id}`),
-      'Package deleted',
-      'Could not delete the package.',
+      this.transloco.translate('admin.service.packageDelete.success'),
+      this.transloco.translate('admin.service.packageDelete.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -472,8 +475,8 @@ export class AdminService {
           `${this.backendUrl}/admin/arch-packages/${id}`,
           updateArchPackageBodySchema.partial().parse(data),
         ),
-      'Arch package updated',
-      'Could not update the Arch package.',
+      this.transloco.translate('admin.service.archPackageUpdate.success'),
+      this.transloco.translate('admin.service.archPackageUpdate.error'),
       () => this.archPackagesResource.reload(),
     );
   }
@@ -481,8 +484,8 @@ export class AdminService {
   async deleteArchPackage(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/arch-packages/${id}`),
-      'Arch package deleted',
-      'Could not delete the Arch package.',
+      this.transloco.translate('admin.service.archPackageDelete.success'),
+      this.transloco.translate('admin.service.archPackageDelete.error'),
       () => this.archPackagesResource.reload(),
     );
   }
@@ -490,8 +493,8 @@ export class AdminService {
   async updateRepo(id: number, data: Partial<RepoFormData>): Promise<void> {
     await this.runMutation(
       () => this.http.patch(`${this.backendUrl}/admin/repos/${id}`, createRepoBodySchema.partial().parse(data)),
-      'Repo updated',
-      'Could not update the repo.',
+      this.transloco.translate('admin.service.repoUpdate.success'),
+      this.transloco.translate('admin.service.repoUpdate.error'),
       () => this.reposResource.reload(),
     );
   }
@@ -499,8 +502,8 @@ export class AdminService {
   async deleteRepo(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/repos/${id}`),
-      'Repo deleted',
-      'Could not delete the repo.',
+      this.transloco.translate('admin.service.repoDelete.success'),
+      this.transloco.translate('admin.service.repoDelete.error'),
       () => this.reposResource.reload(),
     );
   }
@@ -508,8 +511,8 @@ export class AdminService {
   async updateBuilder(id: number, data: Partial<BuilderFormData>): Promise<void> {
     await this.runMutation(
       () => this.http.patch(`${this.backendUrl}/admin/builders/${id}`, createBuilderBodySchema.partial().parse(data)),
-      'Builder updated',
-      'Could not update the builder.',
+      this.transloco.translate('admin.service.builderUpdate.success'),
+      this.transloco.translate('admin.service.builderUpdate.error'),
       () => this.buildersResource.reload(),
     );
   }
@@ -517,8 +520,8 @@ export class AdminService {
   async deleteBuilder(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/builders/${id}`),
-      'Builder deleted',
-      'Could not delete the builder.',
+      this.transloco.translate('admin.service.builderDelete.success'),
+      this.transloco.translate('admin.service.builderDelete.error'),
       () => this.buildersResource.reload(),
     );
   }
@@ -530,8 +533,8 @@ export class AdminService {
           `${this.backendUrl}/admin/package-elf-analysis/${id}`,
           createElfAnalysisBodySchema.partial().parse(data),
         ),
-      'ELF analysis updated',
-      'Could not update the ELF analysis.',
+      this.transloco.translate('admin.service.elfAnalysisUpdate.success'),
+      this.transloco.translate('admin.service.elfAnalysisUpdate.error'),
       () => this.elfAnalysisResource.reload(),
     );
   }
@@ -539,8 +542,8 @@ export class AdminService {
   async deleteElfAnalysis(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/package-elf-analysis/${id}`),
-      'ELF analysis deleted',
-      'Could not delete the ELF analysis.',
+      this.transloco.translate('admin.service.elfAnalysisDelete.success'),
+      this.transloco.translate('admin.service.elfAnalysisDelete.error'),
       () => this.elfAnalysisResource.reload(),
     );
   }
@@ -563,69 +566,70 @@ export class AdminService {
   async triggerRepoRun(): Promise<void> {
     await this.runMutation(
       () => this.http.get(`${this.backendUrl}/repo/run`),
-      'Repo run started. It can take a while depending on load.',
-      'Could not trigger the repo run.',
+      this.transloco.translate('admin.service.repoRun.success'),
+      this.transloco.translate('admin.service.repoRun.error'),
     );
   }
 
   async triggerSignalScan(): Promise<void> {
     await this.runMutation(
       () => this.http.get(`${this.backendUrl}/repo/signal-scan`),
-      'Signal scan started. It can take a while depending on load.',
-      'Could not trigger the signal scan.',
+      this.transloco.translate('admin.service.signalScan.success'),
+      this.transloco.translate('admin.service.signalScan.error'),
     );
   }
 
   async triggerMrScan(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/gitlab/mr-scan`, {}),
-      'Merge request scan started. It can take a while depending on load.',
-      'Could not trigger the merge request scan.',
+      this.transloco.translate('admin.service.mrScan.success'),
+      this.transloco.translate('admin.service.mrScan.error'),
     );
   }
 
   async indexArchMirror(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/repo/index/arch`, {}),
-      'Arch mirror index started. It can take a while depending on load.',
-      'Could not trigger the Arch mirror index.',
+      this.transloco.translate('admin.service.archMirrorIndex.success'),
+      this.transloco.translate('admin.service.archMirrorIndex.error'),
     );
   }
 
   async indexChaoticRepo(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/repo/index/chaotic`, {}),
-      'Chaotic repo index started. It can take a while depending on load.',
-      'Could not trigger the Chaotic repo index.',
+      this.transloco.translate('admin.service.chaoticRepoIndex.success'),
+      this.transloco.translate('admin.service.chaoticRepoIndex.error'),
     );
   }
 
   async rescanBuildClasses(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/admin/rescan-build-classes`, {}),
-      'Build class rescan started. It runs in the background.',
-      'Could not trigger the build class rescan.',
+      this.transloco.translate('admin.service.buildClassRescan.success'),
+      this.transloco.translate('admin.service.buildClassRescan.error'),
     );
   }
 
   async recomputeSignalDerivations(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/admin/recompute-signal-derivations`, {}),
-      'Signal derivation recompute started. It runs in the background and can take a while.',
-      'Could not trigger the signal derivation recompute.',
+      this.transloco.translate('admin.service.signalDerivationRecompute.success'),
+      this.transloco.translate('admin.service.signalDerivationRecompute.error'),
     );
   }
 
   async rescanPackage(pkgname: string, pkgType: PkgType): Promise<void> {
     try {
       const jobId = await this.startRescan([{ pkgname, pkgType }]);
-      this.messageToastService.success('Rescan started', `Rescanning ${pkgname}.`);
+      this.messageToastService.success(
+        this.transloco.translate('admin.service.rescan.startedSummary'),
+        this.rescanStartedDetail([pkgname]),
+      );
       const job = await this.waitForRescan(jobId);
       this.reportRescanOutcome(job);
     } catch (error) {
-      const detail = `Could not start the rescan of ${pkgname}.`;
-      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
-      console.error(detail, error);
+      this.reportFailure(this.transloco.translate('admin.service.rescan.packageError', { pkgname }), error);
     }
   }
 
@@ -638,14 +642,15 @@ export class AdminService {
     try {
       const jobId = await this.startRescan(packages);
       this.brokenSelection.set([]);
-      this.messageToastService.success('Rescan started', rescanStartedDetail(packages.map((pkg) => pkg.pkgname)));
+      this.messageToastService.success(
+        this.transloco.translate('admin.service.rescan.startedSummary'),
+        this.rescanStartedDetail(packages.map((pkg) => pkg.pkgname)),
+      );
       const job = await this.waitForRescan(jobId);
       this.reportRescanOutcome(job);
       this.brokenReportsResource.reload();
     } catch (error) {
-      const detail = 'Could not start the rescan.';
-      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
-      console.error(detail, error);
+      this.reportFailure(this.transloco.translate('admin.service.rescan.error'), error);
     }
   }
 
@@ -657,8 +662,8 @@ export class AdminService {
           `${this.backendUrl}/repo/broken/bump`,
           bumpPackagesBodySchema.parse({ pkgnames }),
         ),
-      `Bumped ${pkgnames.length} package(s) and committed the changes.`,
-      'Could not bump the selected packages.',
+      this.transloco.translate('admin.service.brokenBump.success', { count: pkgnames.length }),
+      this.transloco.translate('admin.service.brokenBump.error'),
       () => {
         this.brokenSelection.set([]);
         this.brokenReportsResource.reload();
@@ -709,12 +714,36 @@ export class AdminService {
   ): Promise<void> {
     try {
       await lastValueFrom(request());
-      this.messageToastService.success('Success', successDetail);
+      this.messageToastService.success(this.transloco.translate('admin.service.summary.success'), successDetail);
       onSuccess?.();
     } catch (error) {
-      this.messageToastService.error('Operation failed', backendErrorMessage(error, errorDetail));
-      console.error(errorDetail, error);
+      this.reportFailure(errorDetail, error);
     }
+  }
+
+  private reportFailure(detail: string, error: unknown): void {
+    this.messageToastService.error(
+      this.transloco.translate('admin.service.summary.operationFailed'),
+      backendErrorMessage(error, detail),
+    );
+    console.error(detail, error);
+  }
+
+  private reportBuildClassAdjustment(result: AdjustBuildClassResponse): void {
+    const params = { pkgbase: result.pkgbase, buildClass: result.buildClass };
+
+    if (result.adjusted) {
+      this.messageToastService.success(
+        this.transloco.translate('admin.service.buildClassAdjust.adjustedSummary'),
+        this.transloco.translate('admin.service.buildClassAdjust.adjustedDetail', params),
+      );
+      return;
+    }
+
+    this.messageToastService.success(
+      this.transloco.translate('admin.service.buildClassAdjust.unchangedSummary'),
+      this.transloco.translate('admin.service.buildClassAdjust.unchangedDetail', params),
+    );
   }
 
   private async startRescan(packages: { pkgname: string; pkgType: string; repo?: string }[]): Promise<string> {
@@ -743,24 +772,39 @@ export class AdminService {
 
   private reportRescanOutcome(job: RescanJob | null): void {
     if (!job) {
-      this.messageToastService.info('Rescan still running', 'It keeps running in the background; check back later.');
+      this.messageToastService.info(
+        this.transloco.translate('admin.service.rescan.stillRunningSummary'),
+        this.transloco.translate('admin.service.rescan.stillRunningDetail'),
+      );
       return;
     }
+
     if (job.failed.length === 0) {
-      this.messageToastService.success('Rescan finished', `${job.rescanned} package(s) scanned successfully.`);
+      this.messageToastService.success(
+        this.transloco.translate('admin.service.rescan.finishedSummary'),
+        this.transloco.translate('admin.service.rescan.finishedDetail', { count: job.rescanned }),
+      );
       return;
     }
+
     this.messageToastService.warn(
-      'Rescan finished with failures',
-      `${job.rescanned} scanned, ${job.failed.length} failed: ${job.failed.join('; ')}`,
+      this.transloco.translate('admin.service.rescan.finishedWithFailuresSummary'),
+      this.transloco.translate('admin.service.rescan.finishedWithFailuresDetail', {
+        rescanned: job.rescanned,
+        failedCount: job.failed.length,
+        failures: job.failed.join('; '),
+      }),
     );
   }
-}
 
-function rescanStartedDetail(pkgnames: string[]): string {
-  if (pkgnames.length <= RESCAN_NAMED_LIMIT) return `Rescanning ${pkgnames.join(', ')}.`;
+  private rescanStartedDetail(pkgnames: string[]): string {
+    if (pkgnames.length <= RESCAN_NAMED_LIMIT) {
+      return this.transloco.translate('admin.service.rescan.startedDetail', { packages: pkgnames.join(', ') });
+    }
 
-  const named = pkgnames.slice(0, RESCAN_NAMED_LIMIT).join(', ');
-  const remaining = pkgnames.length - RESCAN_NAMED_LIMIT;
-  return `Rescanning ${named} and ${remaining} more.`;
+    const named = pkgnames.slice(0, RESCAN_NAMED_LIMIT).join(', ');
+    const remaining = pkgnames.length - RESCAN_NAMED_LIMIT;
+
+    return this.transloco.translate('admin.service.rescan.startedDetailTruncated', { packages: named, remaining });
+  }
 }

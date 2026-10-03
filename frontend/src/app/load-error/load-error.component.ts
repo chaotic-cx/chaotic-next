@@ -1,14 +1,16 @@
 import { Component, input, output } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 
 @Component({
   selector: 'chaotic-load-error',
+  imports: [TranslocoDirective],
   template: `
-    <div class="chaotic-card__empty flex-col text-center sm:flex-row" role="alert">
+    <div class="chaotic-card__empty flex-col text-center sm:flex-row" *transloco="let t" role="alert">
       <span class="inline-flex items-center gap-2">
         <i class="pi pi-exclamation-circle text-ctp-red" aria-hidden="true"></i>
-        {{ message() }}
+        {{ message() ?? t('loadError.defaultMessage') }}
       </span>
-      <button class="load-error__retry" (click)="retry.emit()" type="button">Try again</button>
+      <button class="load-error__retry" (click)="retry.emit()" type="button">{{ t('common.tryAgain') }}</button>
     </div>
   `,
   styles: `
@@ -29,6 +31,6 @@ import { Component, input, output } from '@angular/core';
   `,
 })
 export class LoadErrorComponent {
-  readonly message = input('Could not load this data.');
+  readonly message = input<string>();
   readonly retry = output();
 }

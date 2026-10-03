@@ -1,14 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { FlipListDirective } from '../animations/flip-list.directive';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
-import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
-import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
+import { BuildStatusService } from './build-status.service';
 import { paginateByStartTime } from './queue-estimates';
 
 const WAITING_PAGE_SIZE = 8;
@@ -24,6 +25,7 @@ const SKELETON_ROW_COUNT = 4;
     Tooltip,
     FlipListDirective,
     RouterLink,
+    TranslocoDirective,
   ],
   templateUrl: './waiting-builds.component.html',
   styleUrl: './waiting-builds.component.css',
@@ -32,7 +34,7 @@ export class WaitingBuildsComponent {
   readonly buildStatusService = inject(BuildStatusService);
   private readonly authService = inject(AuthService);
   private readonly messageToastService = inject(MessageToastService);
-  readonly estimateTooltip = BUILD_ESTIMATE_TOOLTIP;
+  private readonly transloco = inject(TranslocoService);
 
   readonly isLoggedIn = this.authService.isLoggedIn;
   readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
@@ -71,10 +73,16 @@ export class WaitingBuildsComponent {
     this.promoting.set(pkgName);
     try {
       await this.buildStatusService.promote(pkgbase, 'x86_64', repo);
-      this.messageToastService.success('Build promoted', `${pkgName} has been promoted to the front of the queue.`);
+      this.messageToastService.success(
+        this.transloco.translate('buildStatus.waiting.promoteSuccess.title'),
+        this.transloco.translate('buildStatus.waiting.promoteSuccess.message', { name: pkgName }),
+      );
       this.buildStatusService.refreshQueueStats();
     } catch {
-      this.messageToastService.error('Promote failed', `Could not promote ${pkgName}.`);
+      this.messageToastService.error(
+        this.transloco.translate('buildStatus.waiting.promoteError.title'),
+        this.transloco.translate('buildStatus.waiting.promoteError.message', { name: pkgName }),
+      );
     } finally {
       this.promoting.set(null);
     }

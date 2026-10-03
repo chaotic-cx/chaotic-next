@@ -14,6 +14,8 @@ import {
   PKGBUILD_SOURCE_AUR,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Button } from '@openng/optimus-ui/button';
 import type { ButtonSeverity } from '@openng/optimus-ui/types/button';
 import { Dialog } from '@openng/optimus-ui/dialog';
@@ -27,16 +29,31 @@ import { AuthService } from 'ngx-better-auth';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { preferredScrollBehavior, setPageSeo } from '../functions';
-import { presenter } from '../aur-scan/scan-presenter';
-import { LoadErrorComponent } from '../load-error/load-error.component';
 import { ScanFindingRowComponent } from '../aur-scan/scan-finding-row.component';
+import { presenter, type TranslatableText } from '../aur-scan/scan-presenter';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
+import { injectActiveTranslation } from '../i18n/active-translation';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { TitleComponent } from '../title/title.component';
 import { MrOverviewService } from './mr-overview.service';
 
 interface ScanSummary {
   tagSeverity: 'danger' | 'warn' | 'info';
-  label: string;
+  label: TranslatableText;
+}
+
+interface ActionButton {
+  labelKey: string;
+  tooltipKey: string;
+  severity: ButtonSeverity;
+  disabled: boolean;
+  loading: boolean;
+}
+
+interface PackageLink {
+  isCustom: boolean;
+  url: string;
+  tooltip: TranslatableText;
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -123,6 +140,7 @@ const MR_ACTION_STYLE_CLASSES: Record<MrAction, string> = {
     TabPanel,
     TabPanels,
     Tabs,
+    TranslocoDirective,
   ],
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
@@ -136,11 +154,12 @@ export class MrOverviewComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly hostElement = inject(ElementRef).nativeElement as HTMLElement;
+  private readonly transloco = inject(TranslocoService);
   protected readonly mrOverviewService = inject(MrOverviewService);
 
-  /** Stagger caps the entry delay so long finding lists do not feel sluggish. */
+  private readonly activeTranslation = injectActiveTranslation();
 
-  /** Finding row a diff renderer should reveal, if any. */
+  // Finding row a diff renderer should reveal, if any.
   private readonly diffScrollTarget = signal<{ iid: number; path: string; line: number } | null>(null);
 
   readonly isLoggedIn = this.authService.isLoggedIn;
@@ -177,9 +196,9 @@ export class MrOverviewComponent implements OnInit {
 
   constructor() {
     setPageSeo(
-      'Review queue · Chaotic-AUR',
-      'Review and approve pending merge requests for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review, Chaotic-AUR review queue',
+      this.transloco.translate('reviewQueue.seo.title'),
+      this.transloco.translate('reviewQueue.seo.description'),
+      this.transloco.translate('reviewQueue.seo.keywords'),
     );
     this.appService.chaoticEvent
       .pipe(
@@ -355,11 +374,21 @@ export class MrOverviewComponent implements OnInit {
     this.flagDialog.set({ mr, label: reason.action });
   }
 
-  protected flagDialogTitle(): string {
+  protected readonly flagDialogTitle = computed(() => {
+    this.activeTranslation();
+
     const pending = this.flagDialog();
-    if (!pending) return '';
-    return pending.label === 'dangerous' ? `Flag !${pending.mr.iid} as dangerous` : `Put !${pending.mr.iid} on hold`;
-  }
+    if (!pending) {
+      return '';
+    }
+
+    const params = { iid: pending.mr.iid };
+    if (pending.label === 'dangerous') {
+      return this.transloco.translate('reviewQueue.flagDialog.titleDangerous', params);
+    }
+
+    return this.transloco.translate('reviewQueue.flagDialog.titleHold', params);
+  });
 
   protected flagReasonValid(): boolean {
     return this.flagReason().trim().length > 0;
@@ -372,11 +401,20 @@ export class MrOverviewComponent implements OnInit {
     if (ok) this.closeFlagDialog();
   }
 
-  protected flagReasonLine(mr: MergeRequestWithDiffs): string | null {
+  protected flagReasonLine(mr: MergeRequestWithDiffs): TranslatableText | null {
     const reason = mr.flagReason;
-    if (!reason) return null;
-    const author = reason.userName ? ` — ${reason.userName}` : '';
-    return `“${reason.text}”${author}`;
+    if (!reason) {
+      return null;
+    }
+
+    if (reason.userName) {
+      return {
+        key: marker('reviewQueue.flagReason.withAuthor'),
+        params: { text: reason.text, author: reason.userName },
+      };
+    }
+
+    return { key: marker('reviewQueue.flagReason.withoutAuthor'), params: { text: reason.text } };
   }
 
   isLoading(mr: MergeRequestWithDiffs, action: 'approve' | 'flag:dangerous' | 'flag:hold' | 'any'): boolean {
@@ -415,34 +453,37 @@ export class MrOverviewComponent implements OnInit {
     this.openFlagDialog(mr, action);
   }
 
-  protected actionButton(
-    mr: MergeRequestWithDiffs,
-    action: MrAction,
-  ): { label: string; severity: ButtonSeverity; disabled: boolean; loading: boolean; tooltip: string } {
+  protected actionButton(mr: MergeRequestWithDiffs, action: MrAction): ActionButton {
     switch (action) {
       case 'approve':
         return {
-          label: mr.labels.includes('approved') ? 'Already approved' : 'Approve update',
+          labelKey: mr.labels.includes('approved')
+            ? marker('reviewQueue.actions.approve.done')
+            : marker('reviewQueue.actions.approve.label'),
           severity: 'success',
           disabled: this.actionsDisabled(mr),
           loading: this.isLoading(mr, 'approve'),
-          tooltip: 'Approve this merge request for auto-merge',
+          tooltipKey: marker('reviewQueue.actions.approve.tooltip'),
         };
       case 'dangerous':
         return {
-          label: mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous',
+          labelKey: mr.labels.includes('dangerous')
+            ? marker('reviewQueue.actions.dangerous.done')
+            : marker('reviewQueue.actions.dangerous.label'),
           severity: 'danger',
           disabled: this.actionsDisabled(mr),
           loading: this.isLoading(mr, 'flag:dangerous'),
-          tooltip: 'Flag this merge request as dangerous and prevent auto-merge',
+          tooltipKey: marker('reviewQueue.actions.dangerous.tooltip'),
         };
       case 'hold':
         return {
-          label: mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now',
+          labelKey: mr.labels.includes('hold')
+            ? marker('reviewQueue.actions.hold.done')
+            : marker('reviewQueue.actions.hold.label'),
           severity: 'warn',
           disabled: this.actionsDisabled(mr) || mr.labels.includes('hold'),
           loading: this.isLoading(mr, 'flag:hold'),
-          tooltip: 'Put this merge request on hold for later review',
+          tooltipKey: marker('reviewQueue.actions.hold.tooltip'),
         };
     }
   }
@@ -469,10 +510,10 @@ export class MrOverviewComponent implements OnInit {
     const findings = mr.scanFindings ?? [];
     if (findings.length === 0) return null;
     const worst = findings.reduce((a, b) => (this.severityOrder[a.severity] <= this.severityOrder[b.severity] ? a : b));
-    const label = `${findings.length} finding${findings.length === 1 ? '' : 's'}`;
+
     return {
       tagSeverity: this.presenter.findingSeverity[worst.severity],
-      label,
+      label: this.presenter.findingCount(findings.length),
     };
   }
 
@@ -558,21 +599,25 @@ export class MrOverviewComponent implements OnInit {
     return `https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/${pkgname}/.CI`;
   }
 
-  protected packageLink(mr: MergeRequestWithDiffs): { label: string; url: string; tooltip: string } | null {
+  protected packageLink(mr: MergeRequestWithDiffs): PackageLink | null {
     const info = mr.packageInfo;
-    if (!info) return null;
+    if (!info) {
+      return null;
+    }
+
     const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== PKGBUILD_SOURCE_AUR;
     if (isCustom) {
       return {
-        label: 'Custom',
+        isCustom,
         url: `https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/${info.pkgname}`,
-        tooltip: `PKGBUILD maintained in the pkgbuilds repo (${info.pkgbuildSource})`,
+        tooltip: { key: marker('reviewQueue.packageLink.customTooltip'), params: { source: info.pkgbuildSource } },
       };
     }
+
     return {
-      label: 'AUR',
+      isCustom,
       url: `https://aur.archlinux.org/packages/${info.pkgname}`,
-      tooltip: `Open the AUR page for ${info.pkgname}`,
+      tooltip: { key: marker('reviewQueue.packageLink.aurTooltip'), params: { pkgname: info.pkgname } },
     };
   }
 }

@@ -2,9 +2,11 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { FluidModule } from '@openng/optimus-ui/fluid';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../../../../app.service';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
@@ -12,7 +14,7 @@ import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../cha
 
 @Component({
   selector: 'chaotic-chart-countries',
-  imports: [ChartCardComponent, FormsModule, InputNumber, FluidModule],
+  imports: [ChartCardComponent, FormsModule, InputNumber, FluidModule, TranslocoDirective],
   templateUrl: './chart-countries.component.html',
   styleUrl: './chart-countries.component.css',
 })
@@ -20,6 +22,9 @@ export class ChartCountriesComponent {
   private readonly appService = inject(AppService);
   private readonly observer = inject(BreakpointObserver);
   protected readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly chart = chartResource<{ name: string; count: number }[]>(() =>
     this.appService.getCountryRanksResourceRequest(
@@ -29,6 +34,8 @@ export class ChartCountriesComponent {
   );
 
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
+    this.activeTranslation();
+
     const all = this.chart.data();
     const relevantData = all.slice(0, this.statsService.countryRanksRange());
     const labels: string[] = [];
@@ -44,7 +51,7 @@ export class ChartCountriesComponent {
         datasets: [
           {
             data,
-            label: 'Router hits',
+            label: this.transloco.translate('stats.charts.routerHits'),
             backgroundColor: CATPPUCCIN_FLAVOURS,
           },
         ],
