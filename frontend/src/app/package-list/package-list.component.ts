@@ -14,7 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { debounce, FormField, form } from '@angular/forms/signals';
 import { Router } from '@angular/router';
 import { Package, formatPkgrel } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { IconFieldModule } from '@openng/optimus-ui/iconfield';
 import { InputIconModule } from '@openng/optimus-ui/inputicon';

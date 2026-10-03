@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import {
   ChangeDetectorRef,
@@ -41,6 +41,7 @@ import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StatsService } from '../stats/stats.service';
 import { SLOW_LOADING_AFTER_MS } from '../table-skeleton/skeleton-timing';
 import { delayedFlag } from '../utils/delayed-flag';
+import { RecentSearchesService } from './recent-searches.service';
 
 type PackageListKey =
   'deps' | 'makeDeps' | 'optDeps' | 'checkDepends' | 'provides' | 'conflicts' | 'replaces' | 'soNameList';
@@ -93,7 +94,8 @@ interface PackageSheet {
   selector: 'chaotic-search-package',
   imports: [
     AutoComplete,
-    CommonModule,
+    DatePipe,
+    DecimalPipe,
     FormsModule,
     IsoDateTimePipe,
     LoadErrorComponent,
@@ -117,6 +119,7 @@ export class SearchPackageComponent {
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
   protected readonly packageStatsService = inject(StatsService);
+  protected readonly recentSearches = inject(RecentSearchesService);
 
   readonly search = input<string>();
 
@@ -203,6 +206,11 @@ export class SearchPackageComponent {
     });
 
     effect(() => {
+      const pkgname = this.sheet()?.pkgname;
+      if (pkgname) this.recentSearches.add(pkgname);
+    });
+
+    effect(() => {
       if (!this.scrollToResults || !this.hasSearchData()) return;
       this.resultsSection()?.nativeElement.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
     });
@@ -284,6 +292,7 @@ export class SearchPackageComponent {
       queryParams: { search: query },
       queryParamsHandling: 'merge',
       replaceUrl: true,
+      scroll: 'manual',
     });
   }
 
@@ -294,6 +303,7 @@ export class SearchPackageComponent {
       queryParams: { search: null },
       queryParamsHandling: 'merge',
       replaceUrl: true,
+      scroll: 'manual',
     });
   }
 

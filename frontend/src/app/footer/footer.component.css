@@ -13,3 +13,11 @@
 .chaotic-footer ::ng-deep .p-card-body {
   padding: var(--spacing) calc(var(--spacing) * 2) !important;
 }
+
+@media (pointer: coarse) {
+  .chaotic-footer nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}

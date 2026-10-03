@@ -2,9 +2,10 @@ import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { BuildStatus, formatPkgrel } from '@chaotic-next/shared-lib';
-import { MessageToastService, ShellComponent } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
+import { ShellComponent } from '@garudalinux/core/shell';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ConfirmationService, MenuItem } from '@openng/optimus-ui/api';
 import { ConfirmDialog } from '@openng/optimus-ui/confirmdialog';
@@ -18,13 +19,15 @@ import { LanguageSwitcherComponent } from './language-switcher/language-switcher
 import { LoadingService } from './loading/loading.service';
 import { lightLogo } from './logo';
 import { MobileNavComponent } from './mobile-nav/mobile-nav.component';
+import { NavActiveCurrentDirective } from './nav-active-current.directive';
 import { ThemeSwitcherComponent } from './theme-switcher/theme-switcher.component';
 import { ConnectionBannerComponent } from './ui-states/connection-banner.component';
 import { UpdateService } from './update/update.service';
 
 @Component({
   imports: [
-    RouterModule,
+    RouterLink,
+    RouterOutlet,
     ShellComponent,
     ConfirmDialog,
     NgOptimizedImage,
@@ -37,6 +40,7 @@ import { UpdateService } from './update/update.service';
     ConnectionBannerComponent,
     SessionExpiredBannerComponent,
     TranslocoDirective,
+    NavActiveCurrentDirective,
   ],
   selector: 'chaotic-root',
   templateUrl: './app.component.html',

@@ -2,7 +2,7 @@
   <chaotic-title [title]="t('about.title')" [subtitle]="t('about.subtitle')" />
 
   <section class="about-section" id="team-members" aria-labelledby="team-title">
-    <h2 class="chaotic-section-title" id="team-title">{{ t('about.team.title') }}</h2>
+    <h2 class="chaotic-section-title chaotic-text-inset" id="team-title">{{ t('about.team.title') }}</h2>
     <ul class="about-team">
       @for (member of team; track member.github) {
         <li>
@@ -118,5 +118,5 @@
     </ul>
   </section>
 
-  <p class="about-dedication">{{ t('about.dedication') }}</p>
+  <p class="about-dedication chaotic-text-inset">{{ t('about.dedication') }}</p>
 </div>

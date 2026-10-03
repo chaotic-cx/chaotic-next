@@ -39,6 +39,11 @@
   background: var(--catppuccin-color-surface0);
 }
 
+.mobile-nav__link.is-active {
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 12%, transparent);
+  font-weight: var(--chaotic-weight-semibold);
+}
+
 .mobile-nav__auth {
   display: flex;
   justify-content: center;

@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
 import { FLAG_REASON_MAX_LENGTH, isReviewQueueMergeRequest, MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
@@ -97,12 +97,9 @@ export class MrOverviewService {
       this.loadFailed.set(false);
       return true;
     } catch (error) {
+      // The page reports the failure inline: an error for an empty list, a refresh note above a loaded list.
       this.isLoading.set(false);
       this.loadFailed.set(true);
-      this.messageToastService.error(
-        this.transloco.translate('reviewQueue.toast.loadFailed.title'),
-        this.transloco.translate('reviewQueue.toast.loadFailed.message'),
-      );
       console.error('Error extracting merge requests:', error);
       return false;
     }

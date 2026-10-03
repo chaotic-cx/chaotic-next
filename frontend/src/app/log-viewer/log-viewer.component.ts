@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
@@ -55,7 +54,6 @@ const JOBS_FAILURE_KEYS: Record<RequestFailure, string> = {
   selector: 'chaotic-log-viewer',
   imports: [
     BackLinkComponent,
-    CommonModule,
     FormsModule,
     LoadErrorComponent,
     LogStreamStatusComponent,

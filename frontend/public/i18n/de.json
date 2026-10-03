@@ -698,6 +698,7 @@
     },
     "loading": "Merge Requests werden geladen",
     "loadError": "Merge Requests konnten nicht von GitLab geladen werden.",
+    "refreshFailed": "Die Merge Requests konnten nicht aktualisiert werden. Die Liste zeigt den zuletzt geladenen Stand.",
     "browseOnGitlab": "Alle Merge Requests auf GitLab ansehen",
     "editFlagReason": "Grund bearbeiten",
     "flagReason": {
@@ -749,10 +750,6 @@
       "confirmHold": "Auf Hold setzen"
     },
     "toast": {
-      "loadFailed": {
-        "title": "Fehler beim Laden der Merge Requests",
-        "message": "Beim Laden der Merge Requests ist ein Fehler aufgetreten. Versuche es noch mal."
-      },
       "approved": {
         "title": "Freigabe erfolgreich",
         "message": "Merge Request freigegeben und merged.",
@@ -846,6 +843,11 @@
       "keywords": "Chaotic-AUR, Repository, Pakete, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR Pakete, Chaotic-AUR Repository, Chaotic-AUR Paketsuche"
     },
     "hint": "Gib mindestens {{count}} Zeichen ein, um Vorschläge zu sehen. Drücke Enter, um ein Paket zu öffnen.",
+    "recent": {
+      "label": "Zuletzt gesucht",
+      "remove": "{{name}} aus den letzten Suchen entfernen",
+      "clear": "Leeren"
+    },
     "loading": "{{name}} wird geladen",
     "notFound": {
       "message": "{{repo}} enthält kein Paket namens {{name}}.",
@@ -985,7 +987,8 @@
       "summaryOther": "{{title}}: Diagramm mit {{count}} Einträgen. Die Datentabelle zeigt die Werte.",
       "showTable": "Datentabelle anzeigen",
       "showChart": "Diagramm anzeigen",
-      "labelColumn": "Bezeichnung"
+      "labelColumn": "Bezeichnung",
+      "staleData": "Aktualisierung fehlgeschlagen. Das Diagramm zeigt die zuletzt geladenen Daten."
     },
     "failureSilence": {
       "silenced": {

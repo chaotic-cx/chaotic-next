@@ -357,6 +357,8 @@ export class MrOverviewComponent implements OnInit {
       relativeTo: this.route,
       queryParams: { tab: TAB_QUERY_PARAMS[tab] },
       queryParamsHandling: 'merge',
+      // Only the query parameter changes, so the page keeps its scroll position.
+      scroll: 'manual',
     });
   }
 

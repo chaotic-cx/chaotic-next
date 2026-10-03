@@ -128,6 +128,21 @@ function errorDetails(error: unknown): string {
     .load-error__copy:focus-visible {
       color: var(--catppuccin-color-mauve);
     }
+
+    @media (pointer: coarse) {
+      .load-error__action,
+      .load-error__copy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+      }
+
+      .load-error__copy {
+        padding-inline: 0.5rem;
+      }
+    }
   `,
 })
 export class LoadErrorComponent {

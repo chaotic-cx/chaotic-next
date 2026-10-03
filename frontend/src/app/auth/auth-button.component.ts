@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Avatar } from '@openng/optimus-ui/avatar';
 import { Button } from '@openng/optimus-ui/button';

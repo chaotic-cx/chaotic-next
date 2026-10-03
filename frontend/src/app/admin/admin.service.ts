@@ -40,7 +40,7 @@ import {
   updateArchPackageBodySchema,
   updatePackageBodySchema,
 } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';

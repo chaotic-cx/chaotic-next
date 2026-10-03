@@ -83,6 +83,14 @@ ng-terminal,
   top: calc(env(safe-area-inset-top) + 8px);
 }
 
+/*
+ * The header bar is a box like the cards, so its logo starts on the text line.
+ * The right-hand icons have their own inset, so the visible icon ends on the same line.
+ */
+.garuda-shell-menubar.p-menubar {
+  padding-inline: var(--chaotic-inset) calc(var(--chaotic-inset) - var(--chaotic-bar-icon-inset));
+}
+
 .garuda-shell__dropdown:not(.garuda-shell-relative) {
   top: calc(env(safe-area-inset-top) + 68px);
 }
@@ -136,6 +144,51 @@ ng-terminal,
     min-width: 2.75rem;
     min-height: 2.75rem;
   }
+}
+
+/* The logo stays on the text line. On touch screens the tap area grows to the right of it. */
+.chaotic-home-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Touch screens: the PrimeNG controls and the header home link get the 44px tap size. */
+@media (pointer: coarse) {
+  .chaotic-home-link,
+  .p-toast-close-button.p-toast-close-button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .p-select.p-select {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+
+  .p-tablist-nav-button.p-tablist-nav-button {
+    width: 2.75rem;
+  }
+
+  /* The stacked stepper arrows sit side by side, so each one can be 44px. */
+  .p-inputnumber-stacked .p-inputnumber-button-group {
+    flex-direction: row;
+  }
+
+  .p-inputnumber-stacked .p-inputnumber-button.p-inputnumber-button,
+  .p-inputnumber-stacked .p-inputnumber-input.p-inputnumber-input {
+    min-height: 2.75rem;
+  }
+
+  .p-inputnumber-stacked .p-inputnumber-button.p-inputnumber-button {
+    min-width: 2.75rem;
+  }
+}
+
+/* The shell's back-to-top button stays clear of the home indicator and rounded corners. */
+.p-scrolltop.p-scrolltop {
+  inset-block-end: calc(env(safe-area-inset-bottom) + 1.25rem);
+  inset-inline-end: calc(env(safe-area-inset-right) + 1.25rem);
 }
 
 @media (max-width: 960px) {
@@ -305,6 +358,17 @@ ng-terminal,
   /* Fast responses never flash a skeleton. The box keeps its space, so nothing shifts. */
   --chaotic-skeleton-delay: 200ms;
   --chaotic-page-max: 96rem;
+  /*
+   * Two alignment lines. Boxes (header bar, banner, cards, panels) start at the shell edge.
+   * All text starts one inset further in: inside a box the inset is its padding, outside a box it is a margin.
+   */
+  --chaotic-inset: 1rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --chaotic-inset: 1.25rem;
+  }
 }
 
 /*
@@ -434,13 +498,12 @@ code {
   width: 100%;
   max-width: var(--chaotic-page-max);
   margin-inline: auto;
-  padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
 }
 
-@media (min-width: 768px) {
-  .chaotic-page {
-    padding-inline: max(1.5rem, env(safe-area-inset-left)) max(1.5rem, env(safe-area-inset-right));
-  }
+/* Loose text outside a box sits on the same line as the text inside the boxes. */
+.chaotic-text-inset {
+  padding-inline: var(--chaotic-inset);
 }
 
 .chaotic-surface {
@@ -470,7 +533,7 @@ code {
   align-items: center;
   gap: 0.625rem;
   min-height: 3rem;
-  padding: 0.625rem 1rem;
+  padding: 0.625rem var(--chaotic-inset);
   border-bottom: 1px solid var(--chaotic-border);
 }
 
@@ -671,8 +734,10 @@ a.chaotic-row__name:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  margin: 0.5rem 0.5rem 0;
-  padding: 0.5rem 1rem;
+  /* A box like the cards: its edge at the shell edge, its text on the inset line. */
+  max-width: var(--chaotic-page-max);
+  margin: 0.5rem auto 0;
+  padding: 0.5rem var(--chaotic-inset);
   border: 1px solid color-mix(in srgb, var(--catppuccin-color-yellow) 40%, transparent);
   border-radius: var(--chaotic-radius-md);
   background: color-mix(in srgb, var(--catppuccin-color-yellow) 10%, var(--chaotic-surface));
@@ -1081,8 +1146,8 @@ chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb:hover,
 }
 
 .p-card-body {
-  padding-inline: unset !important;
-  @apply mx-auto max-w-11/12 p-0 md:p-5;
+  @apply py-0 md:py-5;
+  padding-inline: var(--chaotic-inset) !important;
 }
 
 .p-card-header {
@@ -1200,6 +1265,11 @@ body > app-root > chaotic-footer > div > p-card > div {
 
 .p-panel-header {
   @apply text-ctp-text;
+}
+
+.p-panel-header,
+.p-panel-content {
+  padding-inline: var(--chaotic-inset);
 }
 
 .p-tab {

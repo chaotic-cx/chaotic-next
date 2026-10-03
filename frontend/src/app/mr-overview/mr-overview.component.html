@@ -91,6 +91,15 @@
         >
       </div>
     } @else {
+      @if (mrOverviewService.loadFailed()) {
+        <p class="mr-refresh-failed chaotic-stale-notice" role="status">
+          <span class="chaotic-stale-notice__dot" aria-hidden="true"></span>
+          {{ t('reviewQueue.refreshFailed') }}
+          <button class="mr-refresh-failed__retry" (click)="refreshMrs()" type="button">
+            {{ t('common.tryAgain') }}
+          </button>
+        </p>
+      }
       <ng-container *ngTemplateOutlet="mrList; context: { mrs, hideHold, hideDangerous }" />
     }
   </ng-template>
@@ -106,7 +115,6 @@
         [attr.data-mr-iid]="mr.iid"
         [attr.tabindex]="panelTabIndex(i)"
         (focus)="focusedIndex.set(i)"
-        animate.enter="ctp-item-enter"
         animate.leave="ctp-item-leave"
       >
         <ng-template #header>

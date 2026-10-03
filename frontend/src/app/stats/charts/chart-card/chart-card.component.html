@@ -1,5 +1,14 @@
 <div *transloco="let t; prefix: 'stats.chartCard'" [class]="containerClass()" [style.height.px]="height()">
   @if (hasData()) {
+    @if (failed()) {
+      <p class="chart-card__stale chaotic-stale-notice" role="status">
+        <span class="chaotic-stale-notice__dot" aria-hidden="true"></span>
+        {{ t('staleData') }}
+        <button class="chart-card__stale-retry" *transloco="let tr" (click)="retry.emit()" type="button">
+          {{ tr('common.tryAgain') }}
+        </button>
+      </p>
+    }
     <button
       class="chart-card__table-toggle"
       [class.chart-card__table-toggle--hidden]="!showTable()"

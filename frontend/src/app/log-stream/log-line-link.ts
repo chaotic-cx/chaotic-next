@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
 import { TranslocoService } from '@jsverse/transloco';
 import { copyLineLink } from '../functions';
 

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling, withPreloading } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
-import { provideGarudaNG } from '@garudalinux/core';
+import { provideGarudaNG } from '@garudalinux/core/config';
 import { provideBetterAuth } from 'ngx-better-auth';
 import { provideHighlightOptions } from 'ngx-highlightjs';
 import { APP_CONFIG } from '../environments/app-config.token';

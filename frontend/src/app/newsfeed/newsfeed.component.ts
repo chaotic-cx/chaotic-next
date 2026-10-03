@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -17,7 +17,7 @@ const NEWS_INCREMENT = 3;
 @Component({
   selector: 'chaotic-newsfeed',
   imports: [
-    CommonModule,
+    DatePipe,
     Panel,
     Button,
     PrimeTemplate,

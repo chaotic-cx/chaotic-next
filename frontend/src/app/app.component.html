@@ -1,8 +1,8 @@
 <div class="background flex min-h-svh flex-col" *transloco="let t; prefix: 'app'">
   <a class="skip-link" (click)="skipToContent($event, mainContent)" href="#content">{{ t('skipToContent') }}</a>
-  <garuda-shell class="flex-1 p-2" [menuItems]="menuItems()">
+  <garuda-shell class="flex-1 p-2" [menuItems]="menuItems()" chaoticNavActiveCurrent>
     <div class="flex items-center gap-2" garudaShellBarStart>
-      <a class="flex items-center" [attr.aria-label]="t('goHome')" routerLink="/">
+      <a class="chaotic-home-link" [attr.aria-label]="t('goHome')" routerLink="/">
         @if (lightLogo()) {
           <img ngSrc="/assets/logo-latte.svg" width="28" height="28" priority alt="" />
         } @else {
