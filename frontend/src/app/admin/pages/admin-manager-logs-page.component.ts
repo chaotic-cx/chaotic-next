@@ -11,15 +11,13 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
   selector: 'chaotic-admin-manager-logs-page',
   imports: [ProgressSpinner, XtermLogComponent],
   template: `
-    @if (streaming()) {
-      <span class="mb-2 flex items-center gap-1.5 text-sm text-ctp-green">
-        <span class="inline-block ml-2 h-2 w-2 rounded-full bg-ctp-green"></span>
-        Connected
-      </span>
-    }
+    <p class="log-status" [class.is-live]="streaming()" role="status">
+      <span class="log-status__dot" aria-hidden="true"></span>
+      {{ streaming() ? 'Connected' : loading() ? 'Connecting' : 'Disconnected' }}
+    </p>
 
     @if (error()) {
-      <p class="mb-2 text-ctp-red text-sm">{{ error() }}</p>
+      <p class="mb-2 text-sm text-ctp-red">{{ error() }}</p>
     }
 
     @if (streaming() || logChunks().length > 0) {
@@ -27,7 +25,7 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
         <chaotic-xterm-log [chunk]="logChunks()" [clearSignal]="clearSignal()" />
       </div>
     } @else if (loading()) {
-      <div class="flex min-h-[20rem] flex-col items-center justify-center gap-2 py-10 text-center text-ctp-subtext0">
+      <div class="log-panel-wrap items-center justify-center">
         <p-progress-spinner ariaLabel="Connecting to manager logs" />
       </div>
     }
@@ -43,6 +41,31 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
         display: flex;
         flex-direction: column;
         min-height: 20rem;
+      }
+
+      .log-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.8125rem;
+        color: var(--ctp-mocha-overlay1);
+      }
+
+      .log-status__dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 9999px;
+        background: var(--ctp-mocha-overlay0);
+      }
+
+      .log-status.is-live {
+        color: var(--ctp-mocha-green);
+      }
+
+      .log-status.is-live .log-status__dot {
+        background: var(--ctp-mocha-green);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--ctp-mocha-green) 20%, transparent);
       }
     `,
   ],

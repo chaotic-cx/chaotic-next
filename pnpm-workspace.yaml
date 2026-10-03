@@ -25,3 +25,5 @@ minimumReleaseAgeExclude:
   - '@nestjs/typeorm@12.0.1'
   - '@nestjs/cli@12.0.0'
   - '@nestjs/schematics@12.0.0'
+patchedDependencies:
+  '@garudalinux/themes@2.0.0': patches/@garudalinux__themes@2.0.0.patch

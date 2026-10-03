@@ -23,6 +23,8 @@ import {
   stringFilterToQuery,
 } from '../admin-url-sync';
 import { AdminService } from '../admin.service';
+import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
 const OPERATION_OPTIONS = PIPELINE_OPERATIONS.map((operation) => ({ label: operation, value: operation }));
 
@@ -33,14 +35,25 @@ const REPO_OPTIONS = [
 
 @Component({
   selector: 'chaotic-admin-pipeline-triggers-page',
-  imports: [DatePipe, Button, Dialog, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule],
+  imports: [
+    TableSkeletonRowsComponent,
+    DatePipe,
+    Button,
+    Dialog,
+    FormsModule,
+    IconField,
+    InputIcon,
+    InputText,
+    Select,
+    TableModule,
+    TagModule,
+  ],
   template: `
     <div class="table-container">
       <p-table
         #pipelineTriggersTable
         [value]="service.pipelineTriggers()?.items ?? []"
         [rows]="pagination.perPage()"
-        [loading]="service.pipelineTriggersLoading()"
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="service.pipelineTriggersTotal()"
@@ -102,13 +115,13 @@ const REPO_OPTIONS = [
         <ng-template #header>
           <tr>
             <th style="min-width: 3rem">ID</th>
-            <th style="min-width: 8rem">Pipeline</th>
-            <th style="min-width: 10rem">Operation</th>
-            <th style="min-width: 16rem">Inputs</th>
-            <th style="min-width: 8rem">Ref</th>
-            <th style="min-width: 8rem">Commit</th>
-            <th style="min-width: 10rem">User</th>
-            <th style="min-width: 8rem">Created</th>
+            <th style="min-width: 5rem">Pipeline</th>
+            <th style="min-width: 8rem">Operation</th>
+            <th style="min-width: 14rem">Inputs</th>
+            <th style="min-width: 5rem">Ref</th>
+            <th style="min-width: 6rem">Commit</th>
+            <th style="min-width: 7rem">User</th>
+            <th style="min-width: 7rem">Created</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-trigger>
@@ -151,6 +164,19 @@ const REPO_OPTIONS = [
             </td>
             <td>{{ trigger.createdAt | date: 'short' }}</td>
           </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          @if (service.pipelineTriggersLoading()) {
+            <chaotic-table-skeleton-rows
+              [rowHeight]="rowHeights.adminPipelineTriggers"
+              [rows]="pagination.perPage()"
+              [columns]="8"
+            />
+          } @else {
+            <tr>
+              <td [attr.colspan]="8"><p class="chaotic-card__empty">No pipeline triggers match these filters.</p></td>
+            </tr>
+          }
         </ng-template>
       </p-table>
     </div>
@@ -221,6 +247,7 @@ export class AdminPipelineTriggersPageComponent {
   readonly service = inject(AdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -279,6 +306,7 @@ export class AdminPipelineTriggersPageComponent {
   }
 
   constructor() {
+    this.service.useLists(['pipelineTriggers']);
     this.pagination.restoreFromQuery(this.route);
     this.service.pipelineTriggerPage.set(this.pagination.page());
     this.service.pipelineTriggerPerPage.set(this.pagination.perPage());

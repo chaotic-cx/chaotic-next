@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
-import { FLAG_REASON_MAX_LENGTH, MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
+import { FLAG_REASON_MAX_LENGTH, isReviewQueueMergeRequest, MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { MergeRequestDiffSchema } from '@gitbeaker/core';
 import { lastValueFrom } from 'rxjs';
@@ -28,6 +28,7 @@ export class MrOverviewService {
 
   readonly mergeRequests = signal<MergeRequestWithDiffs[]>([]);
   readonly isLoading = signal<boolean>(true);
+  readonly loadFailed = signal<boolean>(false);
   readonly loadingMap = signal<Map<string, boolean>>(new Map());
 
   async loadOpenMrs(): Promise<boolean> {
@@ -38,7 +39,7 @@ export class MrOverviewService {
 
       this.mergeRequests.set(
         mergeRequests
-          .filter((mr) => mr.labels.includes('human-review') && !mr.labels.includes('dangerous'))
+          .filter(isReviewQueueMergeRequest)
           .map((mr) => ({
             ...mr,
             title: this.extractPkgName(mr.title) || mr.title,
@@ -50,9 +51,11 @@ export class MrOverviewService {
           ),
       );
       this.isLoading.set(false);
+      this.loadFailed.set(false);
       return true;
     } catch (error) {
       this.isLoading.set(false);
+      this.loadFailed.set(true);
       this.messageToastService.error(
         'Error fetching merge requests',
         'An error occurred while fetching merge requests. Please try again.',

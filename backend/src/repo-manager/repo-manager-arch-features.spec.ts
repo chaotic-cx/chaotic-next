@@ -12,7 +12,7 @@ import { ArchlinuxPackage, PackageElfAnalysis } from './repo-manager.entity';
 import { RepoManagerService } from './repo-manager.service';
 import type { RepoReaderFactory, RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
-import { createMockRepository } from './test/mock-repository';
+import { createMockRepository, createPassThroughCache } from './test/mock-repository';
 
 function buildService(
   archRepo: ReturnType<typeof createMockRepository<ArchlinuxPackage>>,
@@ -35,6 +35,7 @@ function buildService(
     {} as SchedulerRegistry,
     {} as RepoWriter,
     {} as RepoReaderFactory,
+    createPassThroughCache(),
   );
 }
 

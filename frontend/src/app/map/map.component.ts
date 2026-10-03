@@ -20,7 +20,7 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
       />
 
       <chaotic-mirror-map
-        class="backdrop-blur-xs w-full flex-1"
+        class="backdrop-blur-(--chaotic-blur) w-full flex-1"
         [fillHeight]="true"
         [mirrors]="mirrorsService.mirrors()"
         [self]="mirrorsService.self()"

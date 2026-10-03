@@ -1,5 +1,5 @@
 import { MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { PipelineSchema } from '@gitbeaker/rest';
 import {
   diffScanFindingSchema,
@@ -190,3 +190,20 @@ export type MergeRequestWithDiffs = Pick<
   packageInfo?: z.infer<typeof mrPackageInfoSchema>;
   diff_refs?: { base_sha: string; head_sha: string; start_sha: string } | null;
 };
+
+export const MR_LABEL_HUMAN_REVIEW = 'human-review';
+export const MR_LABEL_DANGEROUS = 'dangerous';
+export const MR_LABEL_HOLD = 'hold';
+export const MR_LABEL_APPROVED = 'approved';
+
+/** Whether a merge request belongs in the review queue: it waits for a human and is not flagged dangerous. */
+export function isReviewQueueMergeRequest(mr: { labels: string[] }): boolean {
+  return mr.labels.includes(MR_LABEL_HUMAN_REVIEW) && !mr.labels.includes(MR_LABEL_DANGEROUS);
+}
+
+/** Counts the review queue merge requests that still need an approval, split by hold state. */
+export function countReviewQueue(mrs: { labels: string[] }[]): { toReview: number; onHold: number } {
+  const pending = mrs.filter((mr) => isReviewQueueMergeRequest(mr) && !mr.labels.includes(MR_LABEL_APPROVED));
+  const onHold = pending.filter((mr) => mr.labels.includes(MR_LABEL_HOLD)).length;
+  return { toReview: pending.length - onHold, onHold };
+}

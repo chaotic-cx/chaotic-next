@@ -1,5 +1,6 @@
+import { signal } from '@angular/core';
 import { describe, expect, it } from 'vitest';
-import { isLogPurged, vtIndicatorLink } from './functions';
+import { isLogPurged, loadingWithoutValue, retainedResourceValue, vtIndicatorLink } from './functions';
 
 describe('vtIndicatorLink', () => {
   it('passes file hashes through unchanged', () => {
@@ -31,5 +32,50 @@ describe('isLogPurged', () => {
 
   it('treats an unparseable timestamp as not purged', () => {
     expect(isLogPurged('not-a-date', NOW)).toBe(false);
+  });
+});
+
+function fakeResource<T>(initial: T | undefined) {
+  const value = signal<T | undefined>(initial);
+  const loading = signal(false);
+  return {
+    value,
+    loading,
+    resource: {
+      hasValue: () => value() !== undefined,
+      value: () => value() as T,
+      isLoading: () => loading(),
+    },
+  };
+}
+
+describe('retainedResourceValue', () => {
+  it('keeps the last value while the resource has none', () => {
+    const fake = fakeResource<string>('first page');
+    const retained = retainedResourceValue(fake.resource);
+    expect(retained()).toBe('first page');
+
+    fake.value.set(undefined);
+    expect(retained()).toBe('first page');
+
+    fake.value.set('second page');
+    expect(retained()).toBe('second page');
+  });
+});
+
+describe('loadingWithoutValue', () => {
+  it('reports loading only while nothing is available to show', () => {
+    const fake = fakeResource<string>(undefined);
+    const retained = retainedResourceValue(fake.resource);
+    const loading = loadingWithoutValue(fake.resource, retained);
+
+    fake.loading.set(true);
+    expect(loading()).toBe(true);
+
+    fake.value.set('rows');
+    expect(loading()).toBe(false);
+
+    fake.value.set(undefined);
+    expect(loading()).toBe(false);
   });
 });

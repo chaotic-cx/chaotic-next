@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GitlabJob } from '@chaotic-next/shared-lib';
+import { MessageToastService } from '@garudalinux/core';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { Select } from '@openng/optimus-ui/select';
-import { copyLineLink, errorMessage, parseLogChunk, updateSeoTags } from '../functions';
+import { copyLineLink, errorMessage, parseLogChunk, preferredScrollBehavior, updateSeoTags } from '../functions';
 import { ResilientSseStream } from '../sse-stream';
 import { TitleComponent } from '../title/title.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
@@ -23,6 +24,7 @@ const RELEVANT_LOG_JOB_PATTERN = /commit|schedule/;
 })
 export class LogViewerComponent implements OnDestroy {
   private readonly logService = inject(LogViewerService);
+  private readonly messageToastService = inject(MessageToastService);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -65,7 +67,7 @@ export class LogViewerComponent implements OnDestroy {
       this.selectedJobId();
       this.jobs();
       const el = this.jobListEl()?.nativeElement.querySelector('.job-chip-selected');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      if (el) el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'nearest', inline: 'center' });
     });
   }
 
@@ -194,7 +196,12 @@ export class LogViewerComponent implements OnDestroy {
   }
 
   protected onLineClick(line: number): void {
-    copyLineLink(line);
+    copyLineLink(line)
+      .then(() => this.messageToastService.success('Link copied', `Link to line ${line} is on your clipboard.`))
+      .catch((error: unknown) => {
+        this.messageToastService.error('Copy failed', `Could not copy the link to line ${line}.`);
+        console.error(error);
+      });
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { line },

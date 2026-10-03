@@ -1,12 +1,11 @@
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { Router, RouterModule } from '@angular/router';
 import { BuildStatus, formatPkgrel } from '@chaotic-next/shared-lib';
 import { MessageToastService, ShellComponent } from '@garudalinux/core';
 import { ConfirmationService, MenuItem } from '@openng/optimus-ui/api';
-import { Button } from '@openng/optimus-ui/button';
 import { ConfirmDialog } from '@openng/optimus-ui/confirmdialog';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from './app.service';
@@ -21,7 +20,6 @@ import { UpdateService } from './update/update.service';
     RouterModule,
     ShellComponent,
     ConfirmDialog,
-    Button,
     NgOptimizedImage,
     FooterComponent,
     ProgressSpinner,
@@ -45,30 +43,24 @@ export class AppComponent implements OnInit {
 
   protected readonly mobileNavOpen = signal(false);
 
-  readonly items = computed<MenuItem[]>(() => [
-    {
-      icon: 'pi pi-home',
-      label: 'Home',
-      routerLink: '/',
-      tooltip: 'Go to the homepage',
-    },
+  protected closeMobileNav(trigger: HTMLButtonElement): void {
+    this.mobileNavOpen.set(false);
+    trigger.focus();
+  }
+
+  private readonly homeItem: MenuItem = {
+    icon: 'pi pi-home',
+    label: 'Home',
+    routerLink: '/',
+    tooltip: 'Go to the homepage',
+  };
+
+  private readonly primaryItems: MenuItem[] = [
     {
       icon: 'pi pi-book',
       label: 'Get started',
       routerLink: '/docs',
       tooltip: 'View documentation and guides',
-    },
-    {
-      icon: 'pi pi-gauge',
-      label: 'Build status',
-      routerLink: '/status',
-      tooltip: 'Check current build status and queue',
-    },
-    {
-      icon: 'pi pi-receipt',
-      label: 'Deployments',
-      routerLink: '/deployments',
-      tooltip: 'View deployment logs and history',
     },
     {
       icon: 'pi pi-table',
@@ -77,11 +69,26 @@ export class AppComponent implements OnInit {
       tooltip: 'Browse available packages',
     },
     {
+      icon: 'pi pi-gauge',
+      label: 'Build status',
+      routerLink: '/status',
+      tooltip: 'Check current build status and queue',
+    },
+    {
+      icon: 'pi pi-check-square',
+      label: 'Review queue',
+      routerLink: '/review-queue',
+      tooltip: 'Review and approve pending package updates',
+    },
+    {
       icon: 'pi pi-verified',
-      label: 'AUR Scan',
+      label: 'AUR scan',
       routerLink: '/aur-scan',
       tooltip: 'Scan AUR packages for security issues',
     },
+  ];
+
+  private readonly secondaryItems: MenuItem[] = [
     {
       icon: 'pi pi-chart-bar',
       label: 'Statistics',
@@ -89,10 +96,10 @@ export class AppComponent implements OnInit {
       tooltip: 'View usage statistics and charts',
     },
     {
-      icon: 'pi pi-check-square',
-      label: 'Review Queue',
-      routerLink: '/update-review',
-      tooltip: 'Review and approve pending package updates',
+      icon: 'pi pi-receipt',
+      label: 'Deployments',
+      routerLink: '/deployments',
+      tooltip: 'View deployment logs and history',
     },
     {
       icon: 'pi pi-cloud-download',
@@ -106,7 +113,14 @@ export class AppComponent implements OnInit {
       routerLink: '/about',
       tooltip: 'Learn about the Chaotic-AUR project',
     },
-  ]);
+  ];
+
+  readonly menuItems: MenuItem[] = [
+    ...this.primaryItems,
+    { icon: 'pi pi-ellipsis-h', label: 'More', items: this.secondaryItems },
+  ];
+
+  readonly mobileItems: MenuItem[] = [this.homeItem, ...this.primaryItems, ...this.secondaryItems];
 
   ngOnInit() {
     void this.loadLocale();
@@ -120,7 +134,7 @@ export class AppComponent implements OnInit {
         if (!this.router.url || validRoutesRegex.test(this.router.url))
           this.messageToastService.success(
             'Package deployment',
-            `${event.package}-${event.version}-${formatPkgrel(event.pkgrel ?? 0, event.bump ?? 0)} has just been deployed to ${event.repo} 🚀`,
+            `${event.package}-${event.version}-${formatPkgrel(event.pkgrel ?? 0, event.bump ?? 0)} is now live in ${event.repo}.`,
           );
       }
     });
@@ -131,7 +145,7 @@ export class AppComponent implements OnInit {
     this.meta.addTag({ name: 'keywords', content: 'Chaotic-AUR, AUR, repository, Archlinux' });
     this.meta.addTag({ property: 'og:title', content: 'Chaotic-AUR - semi-automated binary repository 👨🏻‍💻' });
     this.meta.addTag({ property: 'og:description', content: "Building packages for you, so you don't have to!" });
-    this.meta.addTag({ property: 'og:image', content: '/assets/logo.png' });
+    this.meta.addTag({ property: 'og:image', content: '/assets/logo_400.png' });
     this.meta.addTag({ property: 'og:site_name', content: 'Chaotic-AUR' });
     this.meta.addTag({ property: 'og:url', content: 'https://aur.chaotic.cx' });
   }

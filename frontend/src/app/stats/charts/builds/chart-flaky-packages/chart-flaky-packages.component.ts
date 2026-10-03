@@ -6,7 +6,7 @@ import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
 
-interface FlakyPackageRow {
+export interface FlakyPackageRow {
   pkgname: string;
   attempts: number;
   failures: number;

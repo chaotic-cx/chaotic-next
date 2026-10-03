@@ -6,15 +6,25 @@ import { AuthService } from 'ngx-better-auth';
 import { FlipListDirective } from '../animations/flip-list.directive';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
 import { paginateByStartTime } from './queue-estimates';
 
-const WAITING_PAGE_SIZE = 6;
+const WAITING_PAGE_SIZE = 8;
+const SKELETON_ROW_COUNT = 4;
 
 @Component({
   selector: 'chaotic-build-status-waiting-builds',
-  imports: [BuildStatusSectionComponent, BuildStatusPager, BuildClassPipe, Tooltip, FlipListDirective, RouterLink],
+  imports: [
+    LoadErrorComponent,
+    BuildStatusSectionComponent,
+    BuildStatusPager,
+    BuildClassPipe,
+    Tooltip,
+    FlipListDirective,
+    RouterLink,
+  ],
   templateUrl: './waiting-builds.component.html',
   styleUrl: './waiting-builds.component.css',
 })
@@ -25,6 +35,7 @@ export class WaitingBuildsComponent {
   readonly estimateTooltip = BUILD_ESTIMATE_TOOLTIP;
 
   readonly isLoggedIn = this.authService.isLoggedIn;
+  readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
   readonly promoting = signal<string | null>(null);
 
   private readonly page = signal(1);
@@ -34,6 +45,8 @@ export class WaitingBuildsComponent {
   );
 
   readonly currentPage = computed(() => Math.min(this.page(), this.pageCount()));
+
+  readonly pageOffset = computed(() => (this.currentPage() - 1) * WAITING_PAGE_SIZE);
 
   readonly paginatedQueue = computed(() =>
     paginateByStartTime(

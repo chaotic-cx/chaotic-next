@@ -3,7 +3,9 @@
   [options]="chartConfig().options"
   [hasData]="chart.hasData()"
   [loading]="chart.loading()"
+  [failed]="chart.failed()"
   [chartClass]="'w-full max-w-xl'"
+  (retry)="chart.retry()"
   type="pie"
   containerClass="card relative flex min-h-[24rem] items-center justify-center"
 />

@@ -7,7 +7,7 @@
   --p-content-border-color: var(--ctp-mocha-crust);
   --p-card-background: color-mix(in srgb, var(--ctp-mocha-mantle) 53%, transparent);
   --p-panel-border-color: var(--ctp-mocha-crust);
-  --p-panel-border-radius: 12px;
+  --p-panel-border-radius: var(--chaotic-radius-lg);
 
   --p-button-primary-background: var(--ctp-mocha-mauve);
   --p-button-primary-border-color: var(--ctp-mocha-mauve);
@@ -72,42 +72,46 @@
 }
 
 .p-tag {
+  --tag-hue: var(--ctp-mocha-mauve);
+  gap: 0.375rem;
+  padding: 0.1875rem 0.625rem !important;
+  border: 0 !important;
+  border-radius: 9999px !important;
+  background-color: color-mix(in srgb, var(--tag-hue) 16%, transparent) !important;
+  color: var(--tag-hue) !important;
+  font-size: 0.75rem !important;
   font-weight: 600;
-  border-radius: 6px;
+  line-height: 1.25;
+}
+
+.p-tag .p-tag-icon {
+  color: inherit !important;
+  font-size: 0.6875rem;
 }
 
 .p-tag-success,
 .p-tag[data-p='success'] {
-  background-color: color-mix(in srgb, var(--ctp-mocha-green) 20%, transparent) !important;
-  color: var(--ctp-mocha-green) !important;
-  border: 1px solid color-mix(in srgb, var(--ctp-mocha-green) 40%, transparent) !important;
+  --tag-hue: var(--ctp-mocha-green);
 }
 
 .p-tag-info,
 .p-tag[data-p='info'] {
-  background-color: color-mix(in srgb, var(--ctp-mocha-blue) 20%, transparent) !important;
-  color: var(--ctp-mocha-blue) !important;
-  border: 1px solid color-mix(in srgb, var(--ctp-mocha-blue) 40%, transparent) !important;
+  --tag-hue: var(--ctp-mocha-sapphire);
 }
 
 .p-tag-warn,
 .p-tag[data-p='warn'] {
-  background-color: color-mix(in srgb, var(--ctp-mocha-yellow) 20%, transparent) !important;
-  color: var(--ctp-mocha-yellow) !important;
-  border: 1px solid color-mix(in srgb, var(--ctp-mocha-yellow) 40%, transparent) !important;
+  --tag-hue: var(--ctp-mocha-yellow);
 }
 
 .p-tag-danger,
 .p-tag[data-p='danger'] {
-  background-color: color-mix(in srgb, var(--ctp-mocha-red) 20%, transparent) !important;
-  color: var(--ctp-mocha-red) !important;
-  border: 1px solid color-mix(in srgb, var(--ctp-mocha-red) 40%, transparent) !important;
+  --tag-hue: var(--ctp-mocha-red);
 }
 
 .p-tag-secondary,
 .p-tag[data-p='secondary'] {
-  background-color: var(--ctp-mocha-surface2) !important;
-  color: var(--ctp-mocha-subtext1) !important;
+  --tag-hue: var(--ctp-mocha-subtext1);
 }
 
 .p-button-success:not(.p-button-outlined):not(.p-button-text) {
@@ -200,8 +204,8 @@
     --p-dialog-mask-background,
     color-mix(in srgb, var(--ctp-mocha-crust) 65%, transparent)
   ) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: blur(var(--chaotic-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--chaotic-blur)) !important;
 }
 
 .p-button:disabled,

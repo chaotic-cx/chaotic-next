@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import { buildClassSchema } from './core';
 
 export const moleculerCurrentQueueObjectSchema = z.object({

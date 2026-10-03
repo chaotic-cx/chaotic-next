@@ -15,7 +15,7 @@ import { APP_CONFIG } from '../../environments/app-config.token';
 import { type EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
 import { BUILD_STATUS_ICONS } from '../status-icons';
-import { isLogPurged, resourceValue } from '../functions';
+import { isLogPurged, loadingWithoutValue, resourceFailed, resourceValue, retainedResourceValue } from '../functions';
 import { createLazyTablePagination } from '../table-pagination';
 
 export const REPO_OPTIONS = ['chaotic-aur', 'garuda'];
@@ -72,10 +72,16 @@ export class DeployLogService {
     }),
   );
 
-  readonly loading = computed(() => this.resource.isLoading());
-  readonly total = computed(() => resourceValue(this.resource)?.total ?? 0);
+  private readonly page = retainedResourceValue(this.resource);
+  readonly loading = loadingWithoutValue(this.resource, this.page);
+  readonly failed = resourceFailed(this.resource);
+
+  retry(): void {
+    this.resource.reload();
+  }
+  readonly total = computed(() => this.page()?.total ?? 0);
   readonly packageList = computed<Build[]>(() =>
-    (resourceValue(this.resource)?.items ?? []).map((build) => ({
+    (this.page()?.items ?? []).map((build) => ({
       ...build,
       statusText: STATUS_LABELS[build.status],
       logUrl: isLogPurged(build.timestamp) ? 'purged' : build.logUrl,

@@ -15,9 +15,9 @@ import {
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
 import { Button } from '@openng/optimus-ui/button';
+import type { ButtonSeverity } from '@openng/optimus-ui/types/button';
 import { Dialog } from '@openng/optimus-ui/dialog';
 import { Panel } from '@openng/optimus-ui/panel';
-import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@openng/optimus-ui/tabs';
 import { TagModule } from '@openng/optimus-ui/tag';
@@ -26,8 +26,10 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
-import { setPageSeo } from '../functions';
+import { preferredScrollBehavior, setPageSeo } from '../functions';
 import { presenter } from '../aur-scan/scan-presenter';
+import { LoadErrorComponent } from '../load-error/load-error.component';
+import { ScanFindingRowComponent } from '../aur-scan/scan-finding-row.component';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
 import { TitleComponent } from '../title/title.component';
 import { MrOverviewService } from './mr-overview.service';
@@ -35,7 +37,6 @@ import { MrOverviewService } from './mr-overview.service';
 interface ScanSummary {
   tagSeverity: 'danger' | 'warn' | 'info';
   label: string;
-  hasCritical: boolean;
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -87,13 +88,26 @@ export function newMrChipDecision(
   return { dot: present.length > 0, highlightIid: present[0] ?? null };
 }
 
+type MrAction = 'approve' | 'dangerous' | 'hold';
+
+const SKELETON_PANEL_COUNT = 2;
+
+const MR_ACTIONS: readonly MrAction[] = ['approve', 'dangerous', 'hold'];
+
+const MR_ACTION_STYLE_CLASSES: Record<MrAction, string> = {
+  approve: 'mr-btn-approve',
+  dangerous: 'mr-btn-danger',
+  hold: 'mr-btn-warn',
+};
+
 @Component({
   selector: 'chaotic-mr-overview',
   imports: [
     TitleComponent,
     TableModule,
     DiffRendererComponent,
-    ProgressSpinner,
+    ScanFindingRowComponent,
+    LoadErrorComponent,
     Panel,
     Button,
     DatePipe,
@@ -113,7 +127,7 @@ export function newMrChipDecision(
   templateUrl: './mr-overview.component.html',
   styleUrl: './mr-overview.component.css',
   host: {
-    '(document:keydown)': 'onKeydown($event)',
+    '(keydown)': 'onKeydown($event)',
   },
 })
 export class MrOverviewComponent implements OnInit {
@@ -125,7 +139,6 @@ export class MrOverviewComponent implements OnInit {
   protected readonly mrOverviewService = inject(MrOverviewService);
 
   /** Stagger caps the entry delay so long finding lists do not feel sluggish. */
-  protected readonly findingStaggerCap = 8;
 
   /** Finding row a diff renderer should reveal, if any. */
   private readonly diffScrollTarget = signal<{ iid: number; path: string; line: number } | null>(null);
@@ -243,7 +256,7 @@ export class MrOverviewComponent implements OnInit {
   private flashMrPanel(iid: number): void {
     const panel = this.hostElement.querySelector<HTMLElement>(`[data-mr-panel][data-mr-iid="${iid}"]`);
     if (!panel) return;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    panel.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
     panel.classList.add('new-mr-flash');
     window.setTimeout(() => panel.classList.remove('new-mr-flash'), FLASH_DURATION_MS);
   }
@@ -255,27 +268,17 @@ export class MrOverviewComponent implements OnInit {
   });
 
   protected onKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'j' && event.key !== 'k' && event.key !== 'Enter' && event.key !== ' ') return;
+    if (event.key !== 'j' && event.key !== 'k') return;
     if (isEditableTarget(event.target)) return;
 
-    if (event.key === 'j' || event.key === 'k') {
-      event.preventDefault();
-      if (this.focusedIndex() === NO_FOCUSED_PANEL) this.focusFirstMr();
-      else this.moveFocus(event.key === 'j' ? 1 : -1);
-      return;
-    }
-
-    // Enter/Space only toggle the focused MR's findings when the panel itself
-    // has focus, so activating buttons or links inside it is never hijacked.
-    if (event.target === this.focusedPanel(this.focusedIndex())) {
-      this.toggleFocusedFindings();
-      event.preventDefault();
-    }
+    event.preventDefault();
+    if (this.focusedIndex() === NO_FOCUSED_PANEL) this.focusFirstMr();
+    else this.moveFocus(event.key === 'j' ? 1 : -1);
   }
 
   private focusFirstMr(): void {
     this.focusedIndex.set(FIRST_PANEL_INDEX);
-    this.focusedPanel(FIRST_PANEL_INDEX)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    this.focusedPanel(FIRST_PANEL_INDEX)?.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'nearest' });
     this.focusedPanel(FIRST_PANEL_INDEX)?.focus();
   }
 
@@ -285,7 +288,7 @@ export class MrOverviewComponent implements OnInit {
     const next = (this.focusedIndex() + delta + count) % count;
     this.focusedIndex.set(next);
     const panel = this.focusedPanel(next);
-    panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    panel?.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'nearest' });
     panel?.focus();
   }
 
@@ -313,16 +316,15 @@ export class MrOverviewComponent implements OnInit {
     });
   }
 
+  protected panelTabIndex(index: number): number {
+    const focused = this.focusedIndex();
+    const isTabStop = focused === index || (focused === NO_FOCUSED_PANEL && index === FIRST_PANEL_INDEX);
+    return isTabStop ? 0 : -1;
+  }
+
   private focusedPanel(index: number): HTMLElement | null {
     const panels = this.hostElement.querySelectorAll<HTMLElement>('[data-mr-panel]');
     return panels[index] ?? null;
-  }
-
-  private toggleFocusedFindings(): void {
-    const panel = this.focusedPanel(this.focusedIndex());
-    if (!panel) return;
-    const fieldset = panel.querySelector<HTMLElement>('[data-scan-fieldset]');
-    fieldset?.click();
   }
 
   ngOnInit() {
@@ -396,15 +398,31 @@ export class MrOverviewComponent implements OnInit {
   }
 
   /** Display config for a review action button, shared by the mobile and desktop layouts. */
+  protected readonly actionStyleClass = MR_ACTION_STYLE_CLASSES;
+  protected readonly skeletonPanels = Array.from({ length: SKELETON_PANEL_COUNT });
+
+  protected visibleActions(hideHold: boolean, hideDangerous: boolean): MrAction[] {
+    return MR_ACTIONS.filter(
+      (action) => !(action === 'hold' && hideHold) && !(action === 'dangerous' && hideDangerous),
+    );
+  }
+
+  protected runAction(mr: MergeRequestWithDiffs, action: MrAction): void {
+    if (action === 'approve') {
+      void this.mrOverviewService.approve(mr);
+      return;
+    }
+    this.openFlagDialog(mr, action);
+  }
+
   protected actionButton(
     mr: MergeRequestWithDiffs,
-    action: 'approve' | 'dangerous' | 'hold',
-  ): { label: string; icon: string; severity: string; disabled: boolean; loading: boolean; tooltip: string } {
+    action: MrAction,
+  ): { label: string; severity: ButtonSeverity; disabled: boolean; loading: boolean; tooltip: string } {
     switch (action) {
       case 'approve':
         return {
           label: mr.labels.includes('approved') ? 'Already approved' : 'Approve update',
-          icon: 'pi pi-check',
           severity: 'success',
           disabled: this.actionsDisabled(mr),
           loading: this.isLoading(mr, 'approve'),
@@ -413,7 +431,6 @@ export class MrOverviewComponent implements OnInit {
       case 'dangerous':
         return {
           label: mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous',
-          icon: 'pi pi-exclamation-triangle',
           severity: 'danger',
           disabled: this.actionsDisabled(mr),
           loading: this.isLoading(mr, 'flag:dangerous'),
@@ -422,7 +439,6 @@ export class MrOverviewComponent implements OnInit {
       case 'hold':
         return {
           label: mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now',
-          icon: 'pi pi-pause',
           severity: 'warn',
           disabled: this.actionsDisabled(mr) || mr.labels.includes('hold'),
           loading: this.isLoading(mr, 'flag:hold'),
@@ -457,21 +473,16 @@ export class MrOverviewComponent implements OnInit {
     return {
       tagSeverity: this.presenter.findingSeverity[worst.severity],
       label,
-      hasCritical: worst.severity === 'critical',
     };
   }
 
-  private readonly findingsOpen = signal<ReadonlyMap<number, boolean>>(new Map());
-
-  /** Whether the scan-findings card is expanded; defaults to open when a finding is critical. */
-  protected isFindingsOpen(mr: MergeRequestWithDiffs): boolean {
-    return this.findingsOpen().get(mr.iid) ?? this.scanSummary(mr)?.hasCritical ?? false;
-  }
-
-  protected toggleFindings(mr: MergeRequestWithDiffs): void {
-    const next = new Map(this.findingsOpen());
-    next.set(mr.iid, !this.isFindingsOpen(mr));
-    this.findingsOpen.set(next);
+  protected hasScanDetails(mr: MergeRequestWithDiffs): boolean {
+    return (
+      this.scanFindings(mr).length > 0 ||
+      this.vtReports(mr).length > 0 ||
+      this.maintainers(mr).length > 0 ||
+      this.maintainerChange(mr) !== null
+    );
   }
 
   protected scrollToFinding(mr: MergeRequestWithDiffs, finding: DiffScanFinding): void {
@@ -480,7 +491,7 @@ export class MrOverviewComponent implements OnInit {
     this.diffScrollTarget.set({ iid: mr.iid, path: finding.file, line: finding.line ?? -1 });
     const sectionId = this.diffSectionId(mr.iid, finding.file);
     this.hostElement.querySelector(`[data-diff-section="${sectionId}"]`)?.scrollIntoView({
-      behavior: 'smooth',
+      behavior: preferredScrollBehavior(),
       block: 'start',
     });
   }

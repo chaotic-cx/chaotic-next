@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MessageToastService } from '@garudalinux/core';
 import { Button } from '@openng/optimus-ui/button';
 import { AuthService } from 'ngx-better-auth';
-import { GitlabLoginService } from '../auth/gitlab-login.service';
+import { DEFAULT_LOGIN_REDIRECT, GitlabLoginService } from '../auth/gitlab-login.service';
 
 @Component({
   selector: 'chaotic-login',
@@ -38,6 +38,6 @@ export class LoginComponent {
   }
 
   private returnUrl(): string {
-    return this.route.snapshot.queryParamMap.get('returnUrl') ?? '/';
+    return this.route.snapshot.queryParamMap.get('returnUrl') ?? DEFAULT_LOGIN_REDIRECT;
   }
 }

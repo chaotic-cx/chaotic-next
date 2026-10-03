@@ -162,6 +162,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@garudalinux/themes@2.0.0': 8395c643807951097437bed9d6c2d10db47d7c6c7d17a697a180679f5730d85b
+
 importers:
 
   .:
@@ -201,7 +204,7 @@ importers:
         version: 2.0.0(ea6c6453a3cdb51b07e388f15a943a73)
       '@garudalinux/themes':
         specifier: 2.0.0
-        version: 2.0.0(3ee60cbfe8b8d888714be85af567399a)
+        version: 2.0.0(patch_hash=8395c643807951097437bed9d6c2d10db47d7c6c7d17a697a180679f5730d85b)(3ee60cbfe8b8d888714be85af567399a)
       '@gitbeaker/core':
         specifier: 44.0.0-pre.0
         version: 44.0.0-pre.0
@@ -10763,7 +10766,7 @@ snapshots:
       tslib: 2.8.1
       vite: 8.2.2(@types/node@26.5.0)(esbuild@0.28.2)(jiti@2.7.0)(less@4.9.1(supports-color@8.1.1))(sass-embedded@1.104.0)(sass@1.104.0)(terser@5.51.2)(yaml@2.9.0)
 
-  '@garudalinux/themes@2.0.0(3ee60cbfe8b8d888714be85af567399a)':
+  '@garudalinux/themes@2.0.0(patch_hash=8395c643807951097437bed9d6c2d10db47d7c6c7d17a697a180679f5730d85b)(3ee60cbfe8b8d888714be85af567399a)':
     dependencies:
       '@analogjs/vite-plugin-angular': 2.7.2(@angular/build@22.1.7(@angular/compiler-cli@22.1.5(@angular/compiler@22.1.5)(typescript@6.0.3))(@angular/compiler@22.1.5)(@angular/core@22.1.5(@angular/compiler@22.1.5)(rxjs@7.8.2))(@angular/platform-browser@22.1.5(@angular/common@22.1.5(@angular/core@22.1.5(@angular/compiler@22.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.5(@angular/compiler@22.1.5)(rxjs@7.8.2)))(@angular/service-worker@22.1.5(@angular/core@22.1.5(@angular/compiler@22.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@types/node@26.5.0)(istanbul-lib-instrument@6.0.3(supports-color@8.1.1))(jiti@2.7.0)(less@4.9.1(supports-color@8.1.1))(postcss@8.5.28)(sass-embedded@1.104.0)(supports-color@8.1.1)(tailwindcss@4.3.3)(terser@5.51.2)(tslib@2.8.1)(typescript@6.0.3)(vitest@5.0.0)(yaml@2.9.0))(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(vite@8.2.2(@types/node@26.5.0)(esbuild@0.28.2)(jiti@2.7.0)(less@4.9.1(supports-color@8.1.1))(sass-embedded@1.104.0)(sass@1.104.0)(terser@5.51.2)(yaml@2.9.0))
       '@analogjs/vitest-angular': 2.7.2(5970050dbfa04e4ba91ddf1c5eaa9e93)

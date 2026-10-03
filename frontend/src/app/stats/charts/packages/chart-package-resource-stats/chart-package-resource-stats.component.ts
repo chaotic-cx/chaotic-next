@@ -4,6 +4,7 @@ import type { PackageResourceDayRow } from '@chaotic-next/shared-lib';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
+import { LoadErrorComponent } from '../../../../load-error/load-error.component';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roundToTenth } from '../../chart-config';
 import { RESOURCE_METRIC_ORDER, RESOURCE_METRICS, type ResourceMetricKey } from '../../chart-resource-metrics';
@@ -33,7 +34,7 @@ export interface PackageResourceChart {
 
 @Component({
   selector: 'chaotic-chart-package-resource-stats',
-  imports: [ChartCardComponent],
+  imports: [ChartCardComponent, LoadErrorComponent],
   templateUrl: './chart-package-resource-stats.component.html',
   styleUrl: './chart-package-resource-stats.component.css',
 })

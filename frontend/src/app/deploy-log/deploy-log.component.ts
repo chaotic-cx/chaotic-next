@@ -6,6 +6,7 @@ import { debounce, FormField, form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { type Build, BuildStatus, STATUS_LABELS } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { Button } from '@openng/optimus-ui/button';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
@@ -22,12 +23,18 @@ import { BytesPipe } from '../pipes/bytes.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
 import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
+import { TABLE_ROW_HEIGHTS } from '../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../table-skeleton/table-skeleton-rows.component';
 import { TitleComponent } from '../title/title.component';
 import { DeployLogService } from './deploy-log.service';
+
+const PAGE_SIZE = 25;
 
 @Component({
   selector: 'chaotic-deploy-log',
   imports: [
+    TableSkeletonRowsComponent,
+    LoadErrorComponent,
     CommonModule,
     TableModule,
     Button,
@@ -58,6 +65,9 @@ export class DeployLogComponent {
   private readonly router = inject(Router);
   protected readonly deployLogService = inject(DeployLogService);
   protected readonly columnVisibility = inject(ColumnVisibilityService);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+
+  protected readonly pageSize = PAGE_SIZE;
   protected readonly deployTable = viewChild<Table>('deployTable');
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');

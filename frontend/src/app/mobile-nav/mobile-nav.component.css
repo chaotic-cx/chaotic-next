@@ -5,8 +5,8 @@
   z-index: 900;
   padding: calc(env(safe-area-inset-top) + 5rem) 1.5rem calc(env(safe-area-inset-bottom) + 2rem);
   background: rgb(from var(--ctp-mocha-mantle) r g b / 0.92);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+  backdrop-filter: blur(var(--chaotic-blur));
   overflow-y: auto;
 }
 

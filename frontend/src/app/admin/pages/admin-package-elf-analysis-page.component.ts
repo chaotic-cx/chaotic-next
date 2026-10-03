@@ -14,7 +14,6 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
-import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { PackageTriggerSourcesComponent } from '../../package-trigger-sources/package-trigger-sources.component';
 import { AdminService, ElfAnalysisFormData } from '../admin.service';
@@ -27,6 +26,8 @@ import {
   queryToQuery,
   restoreQueryParams,
 } from '../admin-url-sync';
+import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
 interface ElfAnalysisFormModel {
   pkgType: '0' | '1';
@@ -42,6 +43,7 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
 @Component({
   selector: 'chaotic-admin-package-elf-analysis-page',
   imports: [
+    TableSkeletonRowsComponent,
     DatePipe,
     Button,
     Checkbox,
@@ -56,7 +58,6 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
     RouterLink,
     Select,
     TableModule,
-    TagModule,
     Tooltip,
   ],
   template: `
@@ -65,7 +66,6 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
         #elfAnalysisTable
         [value]="service.elfAnalysis()?.items ?? []"
         [rows]="pagination.perPage()"
-        [loading]="service.elfAnalysisLoading()"
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="service.elfAnalysisTotal()"
@@ -119,82 +119,90 @@ const PKG_TYPE_OPTIONS = Object.entries(PKG_TYPE_LABELS).map(([value, label]) =>
         <ng-template #header>
           <tr>
             <th style="min-width: 3rem">ID</th>
-            <th style="min-width: 6rem">Type</th>
             <th style="min-width: 12rem">Package</th>
-            <th style="min-width: 10rem">Version</th>
-            <th style="min-width: 7rem">Has ELF</th>
-            <th style="min-width: 7rem">Source compiled</th>
-            <th style="min-width: 6rem">Broken</th>
-            <th style="min-width: 12rem">Broken reasons</th>
-            <th style="min-width: 9rem">Scanned</th>
-            <th class="cell-actions" style="min-width: 8rem">Actions</th>
+            <th style="min-width: 8rem">Version</th>
+            <th style="min-width: 8rem">Binary</th>
+            <th style="min-width: 14rem">Status</th>
+            <th style="min-width: 7rem">Scanned</th>
+            <th class="cell-actions"><span class="sr-only">Actions</span></th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row>
           <tr>
             <td>{{ row.id }}</td>
-            <td>{{ pkgTypeLabel(row.pkgType) }}</td>
             <td>
-              @if (row.pkgname) {
-                <a
-                  class="cursor-pointer text-ctp-mauve hover:underline"
-                  [routerLink]="packageLink(row)"
-                  [queryParams]="{ q: row.pkgname }"
-                >
-                  {{ row.pkgname }}
-                </a>
-                <span class="text-ctp-subtext text-xs">#{{ row.pkgId }}</span>
-              } @else {
-                <span class="text-ctp-subtext">#{{ row.pkgId }}</span>
-              }
+              <div class="flex flex-col gap-0.5">
+                @if (row.pkgname) {
+                  <a
+                    class="cursor-pointer font-mono text-[0.8125rem] text-ctp-text hover:text-ctp-mauve"
+                    [routerLink]="packageLink(row)"
+                    [queryParams]="{ q: row.pkgname }"
+                  >
+                    {{ row.pkgname }}
+                  </a>
+                }
+                <span class="text-xs text-ctp-overlay1">{{ pkgTypeLabel(row.pkgType) }} · #{{ row.pkgId }}</span>
+              </div>
             </td>
             <td>{{ row.version }}</td>
+            <td class="text-ctp-subtext1">{{ binaryLabel(row) }}</td>
             <td>
-              @if (row.hasCompiledCode) {
-                <p-tag value="Yes" severity="success" />
-              } @else {
-                <p-tag value="No" severity="secondary" />
-              }
+              <div class="flex flex-col gap-0.5">
+                <span class="inline-flex items-center gap-2">
+                  <span
+                    class="h-1.5 w-1.5 shrink-0 rounded-full"
+                    [class.bg-ctp-red]="row.broken"
+                    [class.bg-ctp-green]="!row.broken"
+                    aria-hidden="true"
+                  ></span>
+                  {{ row.broken ? 'Broken' : 'OK' }}
+                </span>
+                @if (row.broken && row.brokenReasons?.length) {
+                  <span class="line-clamp-2 text-xs text-ctp-overlay1" [title]="row.brokenReasons.join(', ')">{{
+                    row.brokenReasons.join(', ')
+                  }}</span>
+                }
+              </div>
             </td>
-            <td>
-              @if (row.isSourceCompiled) {
-                <p-tag value="Yes" severity="success" />
-              } @else {
-                <p-tag value="No" severity="secondary" />
-              }
-            </td>
-            <td>
-              @if (row.broken) {
-                <p-tag value="Broken" severity="danger" />
-              } @else {
-                <p-tag value="OK" severity="success" />
-              }
-            </td>
-            <td class="text-ctp-subtext">{{ row.brokenReasons?.join(', ') }}</td>
             <td>{{ row.scannedAt | date: 'short' }}</td>
             <td class="cell-actions">
-              <div class="flex gap-2">
-                <p-button
-                  (onClick)="openEdit(row)"
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  text
-                  rounded
+              <div class="flex items-center justify-end gap-1">
+                <button
+                  class="chaotic-icon-btn"
+                  [attr.aria-label]="'Edit ' + row.pkgname"
+                  (click)="openEdit(row)"
+                  type="button"
                   pTooltip="Edit"
                   tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="confirmDelete(row)"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
+                >
+                  <i class="pi pi-pencil" aria-hidden="true"></i>
+                </button>
+                <button
+                  class="chaotic-icon-btn chaotic-icon-btn--danger"
+                  [attr.aria-label]="'Delete ' + row.pkgname"
+                  (click)="confirmDelete(row)"
+                  type="button"
                   pTooltip="Delete"
                   tooltipPosition="left"
-                />
+                >
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                </button>
               </div>
             </td>
           </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          @if (service.elfAnalysisLoading()) {
+            <chaotic-table-skeleton-rows
+              [rowHeight]="rowHeights.adminElfAnalysis"
+              [rows]="pagination.perPage()"
+              [columns]="7"
+            />
+          } @else {
+            <tr>
+              <td [attr.colspan]="7"><p class="chaotic-card__empty">No ELF analyses match these filters.</p></td>
+            </tr>
+          }
         </ng-template>
       </p-table>
     </div>
@@ -304,6 +312,7 @@ export class AdminPackageElfAnalysisPageComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -321,11 +330,17 @@ export class AdminPackageElfAnalysisPageComponent {
     return PKG_TYPE_LABELS[type as keyof typeof PKG_TYPE_LABELS] ?? type;
   }
 
+  protected binaryLabel(row: AdminPackageElfAnalysis): string {
+    if (!row.hasCompiledCode) return 'No ELF';
+    return row.isSourceCompiled ? 'ELF, from source' : 'ELF, prebuilt';
+  }
+
   private readonly syncSearch = createDebounced(400, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.elfAnalysisQuery()) }),
   );
 
   constructor() {
+    this.service.useLists(['elfAnalysis']);
     this.pagination.restoreFromQuery(this.route);
     this.service.elfAnalysisPage.set(this.pagination.page());
     this.service.elfAnalysisPerPage.set(this.pagination.perPage());

@@ -11,11 +11,12 @@ import {
   type PipelineRequestReason,
 } from '@chaotic-next/shared-lib';
 import type { BuildClassSuggestion } from '@chaotic-next/shared-lib';
-import { ConfirmationService } from '@openng/optimus-ui/api';
+import { ConfirmationService, type MenuItem } from '@openng/optimus-ui/api';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
 import { Checkbox } from '@openng/optimus-ui/checkbox';
 import { Dialog } from '@openng/optimus-ui/dialog';
+import { Menu } from '@openng/optimus-ui/menu';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
@@ -39,6 +40,8 @@ import {
   stringFilterToQuery,
 } from '../admin-url-sync';
 import { AdminService, PackageFormData } from '../admin.service';
+import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
 const REQUEST_REASON_DESCRIPTIONS: Record<PipelineRequestReason, string> = {
   'unset': 'No specific reason.',
@@ -65,6 +68,7 @@ const NO_REPO = '0';
 @Component({
   selector: 'chaotic-admin-packages-page',
   imports: [
+    TableSkeletonRowsComponent,
     AutoComplete,
     AurScanResultComponent,
     BuildClassPipe,
@@ -76,6 +80,7 @@ const NO_REPO = '0';
     IconField,
     InputIcon,
     InputText,
+    Menu,
     Select,
     TableModule,
     TagModule,
@@ -87,7 +92,6 @@ const NO_REPO = '0';
         #packagesTable
         [value]="adminService.packages()?.items ?? []"
         [rows]="pagination.perPage()"
-        [loading]="adminService.packagesLoading()"
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="adminService.packagesTotal()"
@@ -154,13 +158,12 @@ const NO_REPO = '0';
           <tr>
             <th style="min-width: 3rem">ID</th>
             <th style="min-width: 12rem">Name</th>
-            <th style="min-width: 10rem">Version</th>
-            <th style="min-width: 8rem">Repo</th>
-            <th style="min-width: 10rem">Pkgbase</th>
-            <th style="min-width: 6rem">Class</th>
-            <th style="min-width: 10rem">Suggested class</th>
+            <th style="min-width: 8rem">Version</th>
+            <th style="min-width: 6rem">Repo</th>
+            <th style="min-width: 8rem">Pkgbase</th>
+            <th style="min-width: 7rem">Build class</th>
             <th style="min-width: 6rem">Active</th>
-            <th class="cell-actions" style="min-width: 8rem">Actions</th>
+            <th class="cell-actions"><span class="sr-only">Actions</span></th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-pkg>
@@ -183,25 +186,28 @@ const NO_REPO = '0';
               }
             </td>
             <td>
-              @if (pkg.buildClass !== null && pkg.buildClass !== undefined) {
-                <span
-                  [pTooltip]="buildClassMismatchTooltip(pkg)"
-                  [class.text-ctp-red]="hasBuildClassMismatch(pkg)"
-                  tooltipPosition="left"
-                  >{{ pkg.buildClass | buildClass }}</span
-                >
-              } @else {
-                <span class="text-ctp-subtext0">unset</span>
-              }
-            </td>
-            <td>
-              @if (pkg.buildClassSuggestion; as suggestion) {
-                @if (suggestion.suggestedBuildClass !== null) {
-                  <span [pTooltip]="buildClassSuggestionTooltip(suggestion)" tooltipPosition="left">
-                    {{ suggestion.suggestedBuildClass | buildClass }}
-                  </span>
+              <div class="flex flex-col gap-0.5">
+                @if (pkg.buildClass !== null && pkg.buildClass !== undefined) {
+                  <span
+                    [pTooltip]="buildClassMismatchTooltip(pkg)"
+                    [class.text-ctp-red]="hasBuildClassMismatch(pkg)"
+                    tooltipPosition="left"
+                    >{{ pkg.buildClass | buildClass }}</span
+                  >
+                } @else {
+                  <span class="text-ctp-subtext0">unset</span>
                 }
-              }
+                @if (pkg.buildClassSuggestion; as suggestion) {
+                  @if (suggestion.suggestedBuildClass !== null) {
+                    <span
+                      class="text-xs text-ctp-overlay1"
+                      [pTooltip]="buildClassSuggestionTooltip(suggestion)"
+                      tooltipPosition="left"
+                      >suggested {{ suggestion.suggestedBuildClass | buildClass }}</span
+                    >
+                  }
+                }
+              </div>
             </td>
             <td>
               @if (pkg.isActive) {
@@ -219,76 +225,47 @@ const NO_REPO = '0';
               }
             </td>
             <td class="cell-actions">
-              <div class="flex flex-nowrap items-center gap-1 sm:gap-2">
-                <p-button
-                  (onClick)="bumpPackage(pkg)"
-                  icon="pi pi-arrow-up"
-                  severity="warn"
-                  text
-                  rounded
-                  pTooltip="Bump"
-                  tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="schedulePackage(pkg)"
-                  icon="pi pi-calendar-plus"
-                  severity="info"
-                  text
-                  rounded
-                  pTooltip="Schedule build"
-                  tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="rescanPackage(pkg)"
-                  icon="pi pi-refresh"
-                  severity="success"
-                  text
-                  rounded
-                  pTooltip="Rescan ELF signals"
-                  tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="adjustBuildClass(pkg)"
-                  icon="pi pi-sliders-h"
-                  severity="help"
-                  text
-                  rounded
-                  pTooltip="Adjust build class"
-                  tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="dropPackage(pkg)"
-                  icon="pi pi-minus-circle"
-                  severity="danger"
-                  text
-                  rounded
-                  pTooltip="Drop"
-                  tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="openEdit(pkg)"
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  text
-                  rounded
+              <div class="flex flex-nowrap items-center justify-end gap-1">
+                <button
+                  class="chaotic-icon-btn"
+                  [attr.aria-label]="'Edit ' + pkg.pkgname"
+                  (click)="openEdit(pkg)"
+                  type="button"
                   pTooltip="Edit"
                   tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="confirmDelete(pkg)"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
-                  pTooltip="Delete"
-                  tooltipPosition="left"
-                />
+                >
+                  <i class="pi pi-pencil" aria-hidden="true"></i>
+                </button>
+                <button
+                  class="chaotic-icon-btn"
+                  [attr.aria-label]="'More actions for ' + pkg.pkgname"
+                  (click)="openRowMenu(rowMenu, $event, pkg)"
+                  aria-haspopup="menu"
+                  type="button"
+                >
+                  <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+                </button>
               </div>
             </td>
           </tr>
         </ng-template>
+        <ng-template #emptymessage>
+          @if (adminService.packagesLoading()) {
+            <chaotic-table-skeleton-rows
+              [rowHeight]="rowHeights.adminPackages"
+              [rows]="pagination.perPage()"
+              [columns]="8"
+            />
+          } @else {
+            <tr>
+              <td [attr.colspan]="8"><p class="chaotic-card__empty">No packages match these filters.</p></td>
+            </tr>
+          }
+        </ng-template>
       </p-table>
     </div>
+
+    <p-menu #rowMenu [model]="rowMenuItems()" [popup]="true" appendTo="body" styleClass="row-menu" />
 
     <p-dialog
       [(visible)]="dialogVisible"
@@ -511,7 +488,48 @@ export class AdminPackagesPageComponent {
   private readonly router = inject(Router);
 
   protected readonly adminService = inject(AdminService);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
   protected readonly formatPkgrel = formatPkgrel;
+
+  private readonly rowMenuTarget = signal<PackageDto | null>(null);
+
+  protected readonly rowMenuItems = computed<MenuItem[]>(() => {
+    const pkg = this.rowMenuTarget();
+    if (!pkg) return [];
+    return [
+      {
+        label: 'Build',
+        items: [
+          { label: 'Bump', icon: 'pi pi-arrow-up', command: () => this.bumpPackage(pkg) },
+          { label: 'Schedule build', icon: 'pi pi-calendar-plus', command: () => this.schedulePackage(pkg) },
+          { label: 'Rescan ELF signals', icon: 'pi pi-refresh', command: () => this.rescanPackage(pkg) },
+          { label: 'Adjust build class', icon: 'pi pi-sliders-h', command: () => this.adjustBuildClass(pkg) },
+        ],
+      },
+      {
+        label: 'Danger zone',
+        items: [
+          {
+            label: 'Drop from repository',
+            icon: 'pi pi-minus-circle',
+            styleClass: 'row-menu__danger',
+            command: () => this.dropPackage(pkg),
+          },
+          {
+            label: 'Delete record',
+            icon: 'pi pi-trash',
+            styleClass: 'row-menu__danger',
+            command: () => this.confirmDelete(pkg),
+          },
+        ],
+      },
+    ];
+  });
+
+  protected openRowMenu(menu: Menu, event: Event, pkg: PackageDto): void {
+    this.rowMenuTarget.set(pkg);
+    menu.toggle(event);
+  }
 
   protected buildClassSuggestionTooltip(suggestion: BuildClassSuggestion): string {
     const { samples, averages } = suggestion;
@@ -669,6 +687,7 @@ export class AdminPackagesPageComponent {
   }
 
   constructor() {
+    this.adminService.useLists(['packages', 'repos']);
     this.pagination.restoreFromQuery(this.route);
     this.adminService.packagePage.set(this.pagination.page());
     this.adminService.packagePerPage.set(this.pagination.perPage());

@@ -18,7 +18,7 @@ import { StatsService } from '../stats.service';
   styleUrl: './stats-chart-page.css',
   template: `
     <div class="flex flex-col gap-8">
-      <p-card [style]="{ overflow: 'hidden' }" header="Downloads by Package">
+      <p-card [style]="{ overflow: 'hidden' }" header="Downloads by package">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-downloads [(range)]="statsService.globalPackageMetricRange" />
         } @placeholder {
@@ -26,7 +26,7 @@ import { StatsService } from '../stats.service';
         }
       </p-card>
 
-      <p-card [style]="{ overflow: 'hidden' }" header="Top Downloaders Over Time">
+      <p-card [style]="{ overflow: 'hidden' }" header="Top downloaders over time">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-downloaders-trend />
         } @placeholder {
@@ -34,7 +34,7 @@ import { StatsService } from '../stats.service';
         }
       </p-card>
 
-      <p-card [style]="{ overflow: 'hidden' }" header="Mirror Popularity Over Time">
+      <p-card [style]="{ overflow: 'hidden' }" header="Mirror popularity over time">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-mirror-over-time />
         } @placeholder {
@@ -42,7 +42,7 @@ import { StatsService } from '../stats.service';
         }
       </p-card>
 
-      <p-card [style]="{ overflow: 'hidden' }" header="Top Countries Over Time">
+      <p-card [style]="{ overflow: 'hidden' }" header="Top countries over time">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-country-over-time />
         } @placeholder {

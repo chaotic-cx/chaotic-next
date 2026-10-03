@@ -2,6 +2,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { computed, DestroyRef, effect, inject, Service, signal, untracked } from '@angular/core';
 import {
   type Build,
+  type ChaoticEvent,
   DEFAULT_DEPLOYMENT_STATUSES,
   type Paginated,
   type PipelineWithExternalStatus,
@@ -11,7 +12,7 @@ import {
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { AppService } from '../app.service';
-import { resourceValue } from '../functions';
+import { resourceFailed, resourceValue } from '../functions';
 import {
   computeQueueEstimates,
   formatEta,
@@ -51,6 +52,7 @@ interface PackageAverageRow {
 
 const MAX_VISIBLE_PIPELINES = 40;
 const ESTIMATE_TICK_MS = 30_000;
+const MS_PER_MINUTE = 60_000;
 const BUILD_CLASS_UNKNOWN = 'unknown';
 
 @Service()
@@ -82,12 +84,8 @@ export class BuildStatusService {
   });
   private readonly queueLoaded = signal(false);
 
-  readonly initialLoaded = signal(false);
-  readonly cardMinHeight = signal<number | undefined>(undefined);
-
   beginNavigation(): void {
     this.queueLoaded.set(false);
-    this.initialLoaded.set(false);
   }
 
   readonly loadingDeployments = this.packageBuildsResource.isLoading;
@@ -99,6 +97,20 @@ export class BuildStatusService {
   readonly loading = computed(
     () => this.loadingDeployments() || this.loadingPipelines() || this.loadingQueue() || this.loadingAverages(),
   );
+
+  readonly queueFailed = resourceFailed(this.queueStatsResource);
+  readonly deploymentsFailed = resourceFailed(this.packageBuildsResource);
+  readonly pipelinesFailed = resourceFailed(this.pipelinesResource);
+
+  /** One sentence for screen readers, announced politely whenever the counts change. */
+  readonly liveSummary = computed(() => {
+    if (this.loadingQueue()) return '';
+    if (this.queueFailed()) return 'Build status is unavailable.';
+    const active = this.activeQueue().length;
+    const waiting = this.waitingQueue().length;
+    const idle = this.idleQueue().length;
+    return `${active} ${active === 1 ? 'build' : 'builds'} running, ${waiting} queued, ${idle} ${idle === 1 ? 'builder' : 'builders'} idle.`;
+  });
 
   readonly latestDeployments = computed<Build[]>(() => resourceValue(this.packageBuildsResource)?.items ?? []);
 
@@ -248,10 +260,6 @@ export class BuildStatusService {
       if (this.queueLoaded()) void this.packageAverages();
     });
 
-    effect(() => {
-      if (!this.loading()) this.initialLoaded.set(true);
-    });
-
     const tick = window.setInterval(() => this.now.set(Date.now()), ESTIMATE_TICK_MS);
     this.destroyRef.onDestroy(() => window.clearInterval(tick));
   }
@@ -331,6 +339,31 @@ export class BuildStatusService {
       map.set(pkgname, samples !== undefined ? `${base} · ${samples} samples` : base);
     }
     return map;
+  });
+
+  /** Share of the estimated build time already elapsed, 0–1. Overtime builds report 1. */
+  readonly activeProgress = computed<Map<string, number>>(() => {
+    const progress = new Map<string, number>();
+    const estimates = this.estimates();
+    const nowMs = this.now();
+    for (const pkg of this.activeQueue()) {
+      if (estimates.activeOvertime.has(pkg.rawName)) {
+        progress.set(pkg.rawName, 1);
+        continue;
+      }
+      const startedMs = estimates.activeStartedAt.get(pkg.rawName);
+      const remainingMinutes = estimates.activeFinish.get(pkg.rawName);
+      if (startedMs === undefined || remainingMinutes === undefined) continue;
+      const elapsedMinutes = Math.max(0, (nowMs - startedMs) / MS_PER_MINUTE);
+      const totalMinutes = elapsedMinutes + remainingMinutes;
+      progress.set(pkg.rawName, totalMinutes > 0 ? Math.min(1, elapsedMinutes / totalMinutes) : 1);
+    }
+    return progress;
+  });
+
+  readonly queueClearEta = computed<string | undefined>(() => {
+    const minutes = this.estimates().queueClear;
+    return minutes === undefined ? undefined : formatEta(minutes);
   });
 
   readonly queueClearLabel = computed<string | undefined>(() => {
@@ -421,6 +454,13 @@ export class BuildStatusService {
 
   refreshQueueStats(): void {
     this.queueStatsResource.reload();
+  }
+
+  applyQueueEvent(event: ChaoticEvent): void {
+    const refreshesBuilds = event.type === 'build' || event.type === 'queue_promoted';
+    const refreshesQueue = refreshesBuilds || event.type === 'queue';
+    if (refreshesBuilds) this.refreshPackageBuilds();
+    if (refreshesQueue) this.refreshQueueStats();
   }
 
   async promote(pkgbase: string, arch = 'x86_64', targetRepo = 'chaotic-aur'): Promise<void> {

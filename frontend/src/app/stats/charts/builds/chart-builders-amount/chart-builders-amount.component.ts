@@ -1,10 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { AppService } from '../../../../app.service';
-import { parseCount, shuffleArray } from '../../../../functions';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { parseCount } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, mochaAxisChartOptions, SINGLE_SERIES_COLOR } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-builders-amount',
@@ -36,11 +35,12 @@ export class ChartBuildersAmountComponent {
           {
             data: values,
             label: 'Builds per builder',
-            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
+            backgroundColor: SINGLE_SERIES_COLOR,
+            borderRadius: 4,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>(),
+      options: mochaAxisChartOptions<'bar'>({ showLegend: false }),
     };
   });
 }

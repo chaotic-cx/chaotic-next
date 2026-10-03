@@ -23,11 +23,8 @@ const FALLBACK_DOT_CLASS = 'bg-ctp-subtext0';
 })
 export class PipelineListComponent {
   readonly pipelines = input<PipelineView[]>([]);
-  readonly loading = input<boolean>(true);
 
   readonly openPipeline = output<number>();
-
-  readonly STAGGER_CAP = 8;
 
   statusDotClass(status: string): string {
     const partial = status.match(/^(\d+)\/(\d+) successful$/);

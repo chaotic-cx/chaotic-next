@@ -1,6 +1,7 @@
 import { httpResource } from '@angular/common/http';
 import { ChangeDetectorRef, Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { Select } from '@openng/optimus-ui/select';
@@ -10,9 +11,27 @@ import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { resourceValue, setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
+import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
 import { isStatsTab, StatsService, type StatsTab } from './stats.service';
 
 const ALL_TIME_RANGE_PARAM = 'all';
+
+interface StatsTabLink {
+  value: StatsTab;
+  label: string;
+  tooltip: string;
+}
+
+const STATS_TAB_LINKS: StatsTabLink[] = [
+  { value: 'search', label: 'Search', tooltip: 'Search for package statistics' },
+  { value: 'globals', label: 'Globals', tooltip: 'Global usage statistics' },
+  { value: 'downloads', label: 'Downloads', tooltip: 'Download statistics and trends' },
+  { value: 'update-review', label: 'Update reviews', tooltip: 'Update review statistics' },
+  { value: 'builder-stats', label: 'Builders', tooltip: 'Builder performance statistics' },
+  { value: 'resource-usage', label: 'Resource usage', tooltip: 'Heaviest packages by container resource usage' },
+  { value: 'additions', label: 'Packages', tooltip: 'Packages added to and dropped from the repository over time' },
+  { value: 'insights', label: 'Insights', tooltip: 'Build and usage insights' },
+];
 
 function timeRangeToParam(days: number | null): string {
   return days === null ? ALL_TIME_RANGE_PARAM : String(days);
@@ -26,7 +45,7 @@ function paramToTimeRange(value: string): number | null | undefined {
 
 @Component({
   selector: 'chaotic-stats',
-  imports: [TabList, Tabs, Tab, FormsModule, Select, TitleComponent, Tooltip, RouterOutlet],
+  imports: [TabList, Tabs, Tab, DecimalPipe, FormsModule, Select, TitleComponent, Tooltip, RouterOutlet],
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.css',
 })
@@ -113,7 +132,10 @@ export class StatsComponent implements OnInit {
     });
   }
 
-  readonly subtitle = 'Area for package statistics and other fun stuff.';
+  readonly subtitle = 'Package downloads, build performance and repository trends.';
+
+  protected readonly tabs = STATS_TAB_LINKS;
+  protected readonly searchRepoOptions = REPO_OPTIONS;
 
   ngOnInit(): void {
     // Legacy deep links used fragments (#builder-stats); forward them to the

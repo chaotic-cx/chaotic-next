@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../../../../app.service';
 import { isMobileSignal, parseCount, truncateLabel } from '../../../../functions';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import {
@@ -12,6 +11,7 @@ import {
   clampAmount,
   type ChartConfig,
   mochaAxisChartOptions,
+  SINGLE_SERIES_COLOR,
 } from '../../chart-config';
 
 @Component({
@@ -55,11 +55,11 @@ export class ChartTopAurScansComponent {
           {
             data: values,
             label: 'Scan count',
-            backgroundColor: CATPPUCCIN_FLAVOURS,
+            backgroundColor: SINGLE_SERIES_COLOR,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
+      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
     };
   });
 }

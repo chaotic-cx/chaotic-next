@@ -56,6 +56,7 @@ export {
   CAUR_ALLOWED_CORS,
   PKG_TYPE_ARCH,
   PKG_TYPE_CHAOTIC,
+  CHAOTIC_AUR_REPO,
   BUILD_CLASS_MIN,
   BUILD_CLASS_MAX,
   buildClassSuggestionSchema,
@@ -89,6 +90,12 @@ export {
   pipelineScheduleOptionSchema,
   pipelineTriggerActionSchema,
   packageBumpSchema,
+  MR_LABEL_HUMAN_REVIEW,
+  MR_LABEL_DANGEROUS,
+  MR_LABEL_HOLD,
+  MR_LABEL_APPROVED,
+  isReviewQueueMergeRequest,
+  countReviewQueue,
 } from './lib/types/gitlab';
 export type {
   GitlabJob,
@@ -297,6 +304,7 @@ export {
   approveMrResponseSchema,
   pipelineWithExternalStatusSchema,
   mergeRequestWithDiffsSchema,
+  mergeRequestCountsSchema,
   reviewStatsSchema,
   reviewStatsOverTimeSchema,
   dependencyEdgeSchema,
@@ -330,6 +338,7 @@ export type {
   AdjustBuildClassResponse,
   BumpPackagesResult,
   ApproveMrResponse,
+  MergeRequestCounts,
   PackagesPerBuildClass,
   PkgbaseComposition,
 } from './lib/schemas/responses';

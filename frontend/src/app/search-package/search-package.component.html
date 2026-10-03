@@ -1,18 +1,20 @@
 <div class="flex flex-col items-center w-full">
-  <div class="flex w-full max-w-xl flex-col items-center gap-6 px-4 py-4 transition-all duration-300">
+  <div class="flex w-full flex-col items-center gap-6 py-4">
     <div
-      class="flex flex-col items-center justify-center transition-all duration-300"
+      class="flex flex-col items-center justify-center transition-[padding] duration-200"
       [class.py-8]="!hasSearchData()"
       [class.py-2]="hasSearchData()"
     >
       <i
-        class="pi pi-search text-ctp-maroon transition-all duration-300"
-        [style.font-size]="hasSearchData() ? '3rem' : '8rem'"
+        class="pi pi-search text-ctp-mauve/80 transition-transform duration-200 motion-reduce:transition-none"
+        [class.scale-50]="hasSearchData()"
+        style="font-size: 5rem"
       ></i>
     </div>
     <div class="relative w-full">
       <p-autoComplete
-        class="w-full"
+        class="package-search"
+        [fluid]="true"
         [ngModel]="searchModel().query"
         [suggestions]="suggestions()"
         [delay]="300"
@@ -37,119 +39,101 @@
   >
     <div class="overflow-hidden">
       <div class="scroll-mt-24 mt-4 flex flex-col gap-4" #resultsSection>
-        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          @for (dataset of packageSearchData(); track dataset.key; let index = $index) {
-            <div
-              class="group flex flex-col justify-between rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
-              [style.--stagger]="index > STAGGER_CAP ? STAGGER_CAP : index"
-              animate.enter="ctp-fade-enter"
-            >
-              <div
-                class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-ctp-subtext0"
-              >
-                <span>{{ packageDetailLabel(dataset.key) }}</span>
-                @if (dataset.key === 'url') {
-                  <i class="pi pi-external-link text-ctp-mauve text-xs"></i>
-                } @else if (dataset.key === 'downloads') {
-                  <i class="pi pi-download text-ctp-blue text-xs"></i>
-                } @else if (
-                  dataset.key === 'createdAt' || dataset.key === 'lastUpdated' || dataset.key === 'buildDate'
-                ) {
-                  <i class="pi pi-clock text-ctp-teal text-xs"></i>
-                } @else if (dataset.key === 'version') {
-                  <i class="pi pi-tag text-ctp-peach text-xs"></i>
-                } @else if (dataset.key === 'pkgname' || dataset.key === 'name' || dataset.key === 'pkgbase') {
-                  <i class="pi pi-box text-ctp-lavender text-xs"></i>
-                } @else if (dataset.key === 'reponame' || dataset.key === 'repo') {
-                  <i class="pi pi-database text-ctp-sapphire text-xs"></i>
-                } @else if (dataset.key === 'arch' || dataset.key === 'architectures') {
-                  <i class="pi pi-desktop text-ctp-sky text-xs"></i>
-                } @else if (dataset.key === 'license' || dataset.key === 'licenses') {
-                  <i class="pi pi-shield text-ctp-green text-xs"></i>
-                } @else if (dataset.key === 'packager' || dataset.key === 'maintainer') {
-                  <i class="pi pi-user text-ctp-yellow text-xs"></i>
-                } @else if (dataset.key === 'description') {
-                  <i class="pi pi-info-circle text-ctp-subtext0 text-xs"></i>
-                } @else if (
-                  dataset.key === 'compressedSize' || dataset.key === 'installedSize' || dataset.key === 'size'
-                ) {
-                  <i class="pi pi-file text-ctp-maroon text-xs"></i>
-                } @else if (
-                  dataset.key === 'depends' ||
-                  dataset.key === 'makedepends' ||
-                  dataset.key === 'optdepends' ||
-                  dataset.key === 'checkdepends'
-                ) {
-                  <i class="pi pi-sitemap text-ctp-flamingo text-xs"></i>
-                } @else {
-                  <i class="pi pi-info-circle text-ctp-overlay1 text-xs"></i>
+        @if (sheet(); as pkg) {
+          <article class="pkg-sheet" aria-labelledby="pkg-sheet-name" animate.enter="ctp-fade-enter">
+            <header class="pkg-sheet__head">
+              <div class="pkg-sheet__identity">
+                <h2 class="pkg-sheet__name" id="pkg-sheet-name">{{ pkg.pkgname }}</h2>
+                @if (pkg.version) {
+                  <span class="pkg-sheet__version">{{ pkg.version }}</span>
                 }
+                <span class="pkg-sheet__repo">{{ pkg.repo }}</span>
               </div>
-              <div class="mt-2.5 flex flex-1 items-center text-sm font-medium text-ctp-text">
-                @if (dataset.key === 'url') {
-                  <a
-                    class="text-ctp-mauve hover:text-ctp-pink transition-colors break-all flex items-center gap-1 font-mono text-xs"
-                    [href]="asString(dataset.value)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >{{ asString(dataset.value) }}</a
-                  >
-                } @else if (dataset.key === 'filename') {
-                  <a
-                    class="text-ctp-sapphire hover:text-ctp-sky transition-colors break-all flex items-center gap-1 font-mono text-xs"
-                    [href]="getMirrorDownloadUrl(asString(dataset.value))"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >{{ asString(dataset.value) }}</a
-                  >
-                } @else if (dataset.key === 'createdAt') {
-                  <span
-                    class="cursor-help font-mono text-xs text-ctp-subtext1 hover:text-ctp-text transition-colors"
-                    [pTooltip]="(asDate(dataset.value) | relativeTime) ?? undefined"
-                    tooltipPosition="top"
-                    >{{ asDate(dataset.value) | date: 'medium' }}</span
-                  >
-                } @else if (dataset.key === 'buildDate') {
-                  <span
-                    class="cursor-help font-mono text-xs text-ctp-subtext1 hover:text-ctp-text transition-colors"
-                    [pTooltip]="(asNumber(dataset.value) * 1000 | date: 'short') ?? undefined"
-                    tooltipPosition="top"
-                    >{{ asNumber(dataset.value) * 1000 | relativeTime }}</span
-                  >
-                } @else if (dataset.key === 'version') {
-                  <span
-                    class="rounded-md bg-ctp-peach/15 px-2.5 py-1 font-mono text-xs font-semibold text-ctp-peach border border-ctp-peach/30"
-                  >
-                    {{ asString(dataset.value) }}
-                  </span>
-                } @else if (dataset.key === 'downloads') {
-                  <span class="font-mono text-base font-bold text-ctp-blue">
-                    {{ asNumber(dataset.value) | number }}
-                  </span>
-                } @else if (isArray(dataset.value)) {
-                  @if (dataset.value.length === 0) {
-                    <span class="text-ctp-subtext0 text-xs">n/a</span>
+              @if (pkg.description) {
+                <p class="pkg-sheet__desc">{{ pkg.description }}</p>
+              }
+            </header>
+
+            <chaotic-code-block [code]="installCommand()" />
+
+            <dl class="pkg-sheet__facts">
+              <div class="pkg-fact">
+                <dt>Downloads</dt>
+                <dd class="pkg-fact__number">{{ downloads() === null ? '–' : (downloads() | number) }}</dd>
+              </div>
+              <div class="pkg-fact">
+                <dt>Built</dt>
+                <dd>
+                  @if (pkg.builtAt) {
+                    <span [pTooltip]="(pkg.builtAt | date: 'medium') ?? undefined" tooltipPosition="top">{{
+                      pkg.builtAt | relativeTime
+                    }}</span>
                   } @else {
-                    <div class="flex flex-wrap gap-1.5">
-                      @for (item of dataset.value; track item) {
-                        <span
-                          class="rounded-full border border-ctp-surface1 bg-ctp-surface0/60 px-2.5 py-0.5 text-xs text-ctp-subtext1"
-                          >{{ item }}</span
-                        >
-                      }
-                    </div>
+                    –
                   }
-                } @else if (isString(dataset.value) && dataset.value.trim()) {
-                  <span class="wrap-break-word">{{ dataset.value }}</span>
-                } @else if (isNumber(dataset.value) || isBoolean(dataset.value)) {
-                  <span class="font-mono">{{ dataset.value }}</span>
-                } @else {
-                  <span class="text-ctp-subtext0 text-xs">n/a</span>
-                }
+                </dd>
               </div>
-            </div>
-          }
-        </div>
+              <div class="pkg-fact">
+                <dt>Added</dt>
+                <dd>{{ pkg.addedAt ? (pkg.addedAt | date: 'mediumDate') : '–' }}</dd>
+              </div>
+              <div class="pkg-fact">
+                <dt>License</dt>
+                <dd>{{ pkg.license ?? '–' }}</dd>
+              </div>
+            </dl>
+
+            <dl class="pkg-sheet__details">
+              @if (pkg.homepage) {
+                <dt>Homepage</dt>
+                <dd>
+                  <a class="pkg-sheet__link" [href]="pkg.homepage" target="_blank" rel="noopener noreferrer">{{
+                    pkg.homepage
+                  }}</a>
+                </dd>
+              }
+              @if (pkg.pkgbaseName) {
+                <dt>Pkgbase</dt>
+                <dd class="font-mono">{{ pkg.pkgbaseName }}</dd>
+              }
+              @if (pkg.packager) {
+                <dt>Packager</dt>
+                <dd>{{ pkg.packager }}</dd>
+              }
+              @if (pkg.filename) {
+                <dt>File</dt>
+                <dd>
+                  <a
+                    class="pkg-sheet__link font-mono"
+                    [href]="getMirrorDownloadUrl(pkg, pkg.filename)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ pkg.filename }}</a
+                  >
+                </dd>
+              }
+            </dl>
+
+            @for (group of pkg.groups; track group.label) {
+              <section class="pkg-group" [attr.aria-label]="group.label">
+                <h3 class="pkg-group__label">
+                  {{ group.label }}
+                  <span class="pkg-group__count">{{ group.entries.length }}</span>
+                </h3>
+                <ul class="pkg-group__list">
+                  @for (entry of group.entries; track entry.name) {
+                    <li class="pkg-chip">
+                      <span class="pkg-chip__name">{{ entry.name }}</span>
+                      @if (entry.note) {
+                        <span class="pkg-chip__note">{{ entry.note }}</span>
+                      }
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+          </article>
+        }
         <div class="mt-10">
           <chaotic-package-trigger-sources [pkgname]="currentPackageName()" />
         </div>

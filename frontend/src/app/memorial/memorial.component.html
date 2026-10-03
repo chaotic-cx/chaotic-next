@@ -1,4 +1,4 @@
-<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
+<div class="chaotic-page">
   <chaotic-title [subtitle]="config.subtitle" [subtitleHtml]="config.subtitleHtml" [title]="heading" />
 
   <p-card class="bg-transparent!">
@@ -18,7 +18,7 @@
           @for (link of termLinks; track link.full) {
             @defer (on viewport) {
               <div
-                class="card group flex flex-col p-0! overflow-hidden rounded-2xl border! border-ctp-crust! transition-all duration-300 hover:border-ctp-mauve/50! hover:shadow-xl"
+                class="card group flex flex-col p-0! overflow-hidden rounded-2xl border! border-ctp-crust! transition-[border-color,box-shadow] duration-300 hover:border-ctp-mauve/50! hover:shadow-xl"
               >
                 <div class="relative aspect-video w-full overflow-hidden rounded-t-2xl bg-ctp-crust/50">
                   <p-image
@@ -66,7 +66,7 @@
           @for (link of desktopLinks; track link.full) {
             @defer (on viewport) {
               <div
-                class="card group flex flex-col p-0! overflow-hidden rounded-2xl border! border-ctp-crust! transition-all duration-300 hover:border-ctp-teal/50! hover:shadow-xl"
+                class="card group flex flex-col p-0! overflow-hidden rounded-2xl border! border-ctp-crust! transition-[border-color,box-shadow] duration-300 hover:border-ctp-teal/50! hover:shadow-xl"
               >
                 <div class="relative aspect-video w-full overflow-hidden rounded-t-2xl bg-ctp-crust/50">
                   <p-image

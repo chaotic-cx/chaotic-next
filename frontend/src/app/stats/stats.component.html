@@ -1,38 +1,47 @@
-<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
-  <chaotic-title [subtitleHtml]="subtitle" title="Statistics and data" />
+<div class="chaotic-page">
+  <chaotic-title [subtitleHtml]="subtitle" title="Statistics" />
 
   <div class="stats-tabs-container">
-    <p-tabs [value]="activeTab() ?? undefined" (valueChange)="navigate($event)">
+    <p-tabs [value]="activeTab() ?? undefined" [scrollable]="true" (valueChange)="navigate($event)">
       <p-tablist>
-        <p-tab pTooltip="Search for package statistics" tooltipPosition="bottom" value="search">Search</p-tab>
-        <p-tab pTooltip="Global usage statistics" tooltipPosition="bottom" value="globals">Globals</p-tab>
-        <p-tab pTooltip="Download statistics and trends" tooltipPosition="bottom" value="downloads">Downloads</p-tab>
-        <p-tab pTooltip="Update review statistics" tooltipPosition="bottom" value="update-review">
-          Update Reviews
-        </p-tab>
-        <p-tab pTooltip="Builder performance statistics" tooltipPosition="bottom" value="builder-stats">
-          Builder Stats
-        </p-tab>
-        <p-tab pTooltip="Heaviest packages by container resource usage" tooltipPosition="bottom" value="resource-usage">
-          Resource Usage
-        </p-tab>
-        <p-tab
-          pTooltip="Packages added to and dropped from the repository over time"
-          tooltipPosition="bottom"
-          value="additions"
-        >
-          Packages
-        </p-tab>
-        <p-tab pTooltip="Build and usage insights" tooltipPosition="bottom" value="insights"> Insights </p-tab>
+        @for (tab of tabs; track tab.value) {
+          <p-tab [value]="tab.value" [pTooltip]="tab.tooltip" [showDelay]="400" tooltipPosition="bottom">{{
+            tab.label
+          }}</p-tab>
+        }
       </p-tablist>
     </p-tabs>
     <div class="p-tabpanels flex flex-col">
-      <div class="mb-4 grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-2 sm:flex sm:items-center">
-        <span class="text-sm text-ctp-subtext1 justify-self-start ml-2.5">
-          Total users: {{ statsService.usersLoading() ? 'loading…' : (statsService.totalUsers() ?? '–') }}
+      <div class="stats-toolbar">
+        <span class="stats-toolbar__users">
+          <span class="text-ctp-subtext0">Total users</span>
+          <span class="font-semibold tabular-nums text-ctp-text">{{
+            statsService.usersLoading() ? '–' : ((statsService.totalUsers() | number) ?? '–')
+          }}</span>
         </span>
-        <div class="flex items-center justify-self-end gap-2 sm:ml-auto">
-          <label class="text-sm text-ctp-subtext1" for="statsTimeRange">Time range</label>
+        <div class="stats-toolbar__filters">
+          @if (activeTab() === 'search') {
+            <p-select
+              [(ngModel)]="statsService.packageSearchSelectedRepo"
+              [options]="searchRepoOptions"
+              (ngModelChange)="onRepoChange($event)"
+              ariaLabel="Repository to search"
+              appendTo="body"
+            />
+          }
+          @if (repoFilterVisible()) {
+            <p-select
+              [(ngModel)]="statsService.selectedRepo"
+              [options]="statsService.repoOptions"
+              (ngModelChange)="onRepoChange($event)"
+              ariaLabel="Repository"
+              appendTo="body"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Repository"
+            />
+          }
+          <label class="sr-only" for="statsTimeRange">Time range</label>
           <p-select
             [(ngModel)]="statsService.timeRangeDays"
             [options]="statsService.timeRangeOptions"
@@ -43,18 +52,6 @@
             appendTo="body"
           />
         </div>
-        @if (repoFilterVisible()) {
-          <p-select
-            class="col-span-2 w-full sm:col-span-1 sm:w-auto"
-            [(ngModel)]="statsService.selectedRepo"
-            [options]="statsService.repoOptions"
-            (ngModelChange)="onRepoChange($event)"
-            appendTo="body"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Repo"
-          />
-        }
       </div>
       <router-outlet />
     </div>

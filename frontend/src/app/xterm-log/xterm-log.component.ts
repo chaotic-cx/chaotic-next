@@ -6,6 +6,7 @@ import { SerializeAddon } from '@xterm/addon-serialize';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
+import { injectLazyStylesheet } from '../lazy-stylesheet';
 
 const { mocha } = flavors;
 const DEFAULT_FONT_SIZE = 12;
@@ -62,10 +63,12 @@ const XTERM_THEME = {
         position: relative;
         display: flex;
         flex-direction: row;
-        border: 1px solid var(--ctp-mocha-surface1);
-        border-radius: 0.75rem;
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
+        border: 1px solid var(--chaotic-border);
+        border-radius: var(--chaotic-radius-lg);
+        background: var(--chaotic-surface);
+        box-shadow: var(--chaotic-shadow);
+        backdrop-filter: blur(var(--chaotic-blur));
+        -webkit-backdrop-filter: blur(var(--chaotic-blur));
         overflow: hidden;
         padding: 0.75rem;
       }
@@ -134,6 +137,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   private resizeObserver?: ResizeObserver;
 
   constructor() {
+    injectLazyStylesheet('xterm');
     effect(() => {
       if (this.clearSignal()) {
         this.receivedLength = 0;

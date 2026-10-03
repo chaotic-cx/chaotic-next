@@ -1,11 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { BuildStatus, isBuildStatus, STATUS_DISPLAY_NAMES } from '@chaotic-next/shared-lib';
 import { AppService } from '../../../../app.service';
-import { shuffleArray } from '../../../../functions';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, mochaAxisChartOptions, SINGLE_SERIES_COLOR } from '../../chart-config';
 
 interface AverageBuildTimeRow {
   status: BuildStatus;
@@ -52,11 +50,12 @@ export class ChartAverageBuildTimeComponent {
           {
             data: values,
             label: 'Average build time (minutes)',
-            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
+            backgroundColor: SINGLE_SERIES_COLOR,
+            borderRadius: 4,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>(),
+      options: mochaAxisChartOptions<'bar'>({ showLegend: false }),
     };
   });
 }

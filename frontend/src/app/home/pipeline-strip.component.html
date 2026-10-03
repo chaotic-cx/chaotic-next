@@ -1,0 +1,119 @@
+<section class="pipeline-strip chaotic-surface" aria-labelledby="pipeline-strip-title">
+  @if (buildStatusService.queueFailed() || buildStatusService.deploymentsFailed()) {
+    <chaotic-load-error (retry)="retryAll()" message="The build service is not responding right now." />
+  }
+  <p class="sr-only" role="status" aria-live="polite">{{ buildStatusService.liveSummary() }}</p>
+  <header class="pipeline-strip__header">
+    <h2 class="pipeline-strip__title" id="pipeline-strip-title">
+      <span class="pipeline-strip__live" [class.is-offline]="!sseConnected()" aria-hidden="true"></span>
+      <span class="sr-only">{{ sseConnected() ? '(live)' : '(not live)' }}</span>
+      Live build pipeline
+    </h2>
+    <a class="pipeline-strip__more" routerLink="/status">
+      Open build status
+      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+    </a>
+  </header>
+
+  <ol class="pipeline-strip__stages">
+    <li class="pipeline-stage">
+      <div class="pipeline-stage__head">
+        <span class="pipeline-stage__label">Queued</span>
+        <span class="pipeline-stage__count">
+          {{ buildStatusService.loadingQueue() ? '–' : buildStatusService.waitingQueue().length }}
+        </span>
+      </div>
+      @if (buildStatusService.loadingQueue()) {
+        <ng-container *ngTemplateOutlet="skeleton" />
+      } @else if (buildStatusService.queueFailed()) {
+        <p class="pipeline-stage__empty text-ctp-red">Unavailable</p>
+      } @else if (waiting().length === 0) {
+        <p class="pipeline-stage__empty">Queue is empty</p>
+      } @else {
+        <ul class="pipeline-stage__list">
+          @for (pkg of waiting(); track pkg.rawName) {
+            <li class="pipeline-row">
+              <a class="pipeline-row__name" [routerLink]="['/stats/search']" [queryParams]="{ search: pkg.name }">{{
+                pkg.name
+              }}</a>
+              <span class="pipeline-row__meta">{{ pkg.repo }}</span>
+            </li>
+          }
+        </ul>
+        @if (waitingOverflow() > 0) {
+          <p class="pipeline-stage__overflow">+{{ waitingOverflow() }} more</p>
+        }
+      }
+    </li>
+
+    <li class="pipeline-stage pipeline-stage--active">
+      <div class="pipeline-stage__head">
+        <span class="pipeline-stage__label">Building</span>
+        <span class="pipeline-stage__count">
+          {{ buildStatusService.loadingQueue() ? '–' : buildStatusService.activeQueue().length }}
+        </span>
+      </div>
+      @if (buildStatusService.loadingQueue()) {
+        <ng-container *ngTemplateOutlet="skeleton" />
+      } @else if (buildStatusService.queueFailed()) {
+        <p class="pipeline-stage__empty text-ctp-red">Unavailable</p>
+      } @else if (active().length === 0) {
+        <p class="pipeline-stage__empty">All builders are idle</p>
+      } @else {
+        <ul class="pipeline-stage__list">
+          @for (pkg of active(); track pkg.rawName) {
+            <li class="pipeline-row">
+              <a class="pipeline-row__name" [routerLink]="['/stats/search']" [queryParams]="{ search: pkg.name }">{{
+                pkg.name
+              }}</a>
+              <span class="pipeline-row__meta">{{ pkg.node }}</span>
+            </li>
+          }
+        </ul>
+        @if (activeOverflow() > 0) {
+          <p class="pipeline-stage__overflow">+{{ activeOverflow() }} more</p>
+        }
+      }
+    </li>
+
+    <li class="pipeline-stage">
+      <div class="pipeline-stage__head">
+        <span class="pipeline-stage__label">Deployed</span>
+        @if (lastDeployment(); as last) {
+          <span class="pipeline-stage__since">{{ last.timestamp | relativeTime }}</span>
+        }
+      </div>
+      @if (buildStatusService.loadingDeployments() && deployed().length === 0) {
+        <ng-container *ngTemplateOutlet="skeleton" />
+      } @else if (buildStatusService.deploymentsFailed() && deployed().length === 0) {
+        <p class="pipeline-stage__empty text-ctp-red">Unavailable</p>
+      } @else if (deployed().length === 0) {
+        <p class="pipeline-stage__empty">No recent deployments</p>
+      } @else {
+        <ul class="pipeline-stage__list">
+          @for (build of deployed(); track build.id) {
+            <li class="pipeline-row">
+              <span class="pipeline-row__status pi {{ statusIconClass(build.status) }}" aria-hidden="true"></span>
+              <a
+                class="pipeline-row__name"
+                [routerLink]="['/stats/search']"
+                [queryParams]="{ search: build.pkgbase.pkgname }"
+                >{{ build.pkgbase.pkgname }}</a
+              >
+              <span class="pipeline-row__meta">{{ build.timestamp | relativeTime }}</span>
+            </li>
+          }
+        </ul>
+        <a class="pipeline-stage__overflow pipeline-stage__overflow--link" routerLink="/deployments">All deployments</a>
+      }
+    </li>
+  </ol>
+</section>
+
+<ng-template #skeleton>
+  <ul class="pipeline-stage__list" aria-hidden="true">
+    @for (_ of placeholderRows; track $index) {
+      <li class="pipeline-row pipeline-row--skeleton"></li>
+    }
+  </ul>
+</ng-template>

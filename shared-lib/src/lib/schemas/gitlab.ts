@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const aurScanBodySchema = z.strictObject({
   package: z.string().min(1).describe('AUR package name to scan'),

@@ -7,6 +7,7 @@ import {
   RepoStatus,
 } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
+import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
   ConflictException,
@@ -37,6 +38,8 @@ import {
   SonameDependency,
   TriggerType,
 } from '../interfaces/repo-manager';
+import { cachedResult } from '../utils/cache';
+import { REPORT_CACHE_TTL_MS } from '../utils/constants';
 import { bumpTypeToText } from '../utils/functions';
 import { paginate, resolvePagination } from '../utils/pagination';
 import { ArchMirrorService } from './arch-mirror.service';
@@ -65,6 +68,10 @@ const CRON_TIME_ZONE = 'Europe/Berlin';
 // Daily scan of the Chaotic packages without a current analysis, for example after a failed post-deploy scan.
 const CHAOTIC_ANALYSIS_BACKFILL_CRON = '0 4 * * *';
 
+const MISSING_DEPS_CACHE_KEY = 'repo-report:missing-deps';
+const ARCH_OVERLAP_CACHE_KEY = 'repo-report:arch-overlap';
+const REPORT_CACHE_KEYS = [MISSING_DEPS_CACHE_KEY, ARCH_OVERLAP_CACHE_KEY];
+
 @Injectable()
 export class RepoManagerService implements OnModuleInit {
   private repoManager!: RepoManager;
@@ -90,6 +97,7 @@ export class RepoManagerService implements OnModuleInit {
     private schedulerRegistry: SchedulerRegistry,
     @Inject(REPO_WRITER) private repoWriter: RepoWriter,
     @Inject(REPO_READER_FACTORY) private readerFactory: RepoReaderFactory,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   onModuleInit(): void {
@@ -274,7 +282,23 @@ export class RepoManagerService implements OnModuleInit {
     return this.rebuildTriggerService.rebuildCoverage();
   }
 
-  async getMissingDependencies(): Promise<MissingDependencyReport[]> {
+  getMissingDependencies(): Promise<MissingDependencyReport[]> {
+    return cachedResult(this.cacheManager, MISSING_DEPS_CACHE_KEY, REPORT_CACHE_TTL_MS, () =>
+      this.computeMissingDependencies(),
+    );
+  }
+
+  getArchOverlap(): Promise<ArchOverlapReport[]> {
+    return cachedResult(this.cacheManager, ARCH_OVERLAP_CACHE_KEY, REPORT_CACHE_TTL_MS, () =>
+      this.computeArchOverlap(),
+    );
+  }
+
+  private async clearReportCache(): Promise<void> {
+    await Promise.all(REPORT_CACHE_KEYS.map((key) => this.cacheManager.del(key)));
+  }
+
+  private async computeMissingDependencies(): Promise<MissingDependencyReport[]> {
     const strip = (raw: string): string => raw.split('=')[0].split('<')[0].split('>')[0].trim();
     const [archPkgs, chaoticPkgs] = await Promise.all([
       this.archlinuxPackageRepository.find({ where: { deactivatedAt: IsNull() } }),
@@ -312,7 +336,7 @@ export class RepoManagerService implements OnModuleInit {
     return reports;
   }
 
-  async getArchOverlap(): Promise<ArchOverlapReport[]> {
+  private async computeArchOverlap(): Promise<ArchOverlapReport[]> {
     const [archPkgs, chaoticPkgs] = await Promise.all([
       this.archlinuxPackageRepository.find({ where: { deactivatedAt: IsNull() } }),
       this.packageRepository.find({ where: { isActive: true }, relations: { repo: true } }),
@@ -704,6 +728,7 @@ export class RepoManagerService implements OnModuleInit {
       }
     } finally {
       this.repoManager.status = RepoStatus.INACTIVE;
+      await this.clearReportCache();
     }
   }
 

@@ -14,7 +14,7 @@ import { ChartHeavyPackagesResourceComponent } from '../charts/builds/chart-heav
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="CPU Time">
+      <p-card [style]="{ overflow: 'hidden' }" header="CPU time">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-heavy-packages-resource metric="cpu" />
         } @placeholder {

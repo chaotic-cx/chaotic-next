@@ -31,9 +31,16 @@
       }}
       in one hour.
     </p>
+  } @else if (chart.failed()) {
+    <chaotic-load-error (retry)="chart.retry()" />
   } @else if (chart.loading()) {
     <div class="flex flex-1 items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+      <i
+        class="pi pi-spin pi-spinner text-ctp-overlay1"
+        style="font-size: 1.5rem"
+        role="status"
+        aria-label="Loading"
+      ></i>
     </div>
   } @else {
     <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">No builder activity recorded.</p>

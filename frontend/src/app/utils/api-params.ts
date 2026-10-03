@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import type * as z from 'zod';
 
 export type QueryParamValue = string | number | boolean;
 export type QueryParams = Record<string, QueryParamValue | QueryParamValue[]>;

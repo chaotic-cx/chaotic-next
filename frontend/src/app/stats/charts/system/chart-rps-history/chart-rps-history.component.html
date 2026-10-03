@@ -1,9 +1,11 @@
-@if (hasData() || chart.loading()) {
+@if (hasData() || chart.loading() || chart.failed()) {
   <chaotic-chart-card
     [data]="chartConfig().data"
     [options]="chartConfig().options"
     [hasData]="hasData()"
     [loading]="chart.loading()"
+    [failed]="chart.failed()"
+    (retry)="chart.retry()"
     containerClass="card relative flex h-[16rem] sm:h-[12rem] justify-center"
   />
 }

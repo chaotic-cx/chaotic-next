@@ -5,6 +5,7 @@ import { debounce, FormField, form } from '@angular/forms/signals';
 import { Router } from '@angular/router';
 import { Package, formatPkgrel } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { Button } from '@openng/optimus-ui/button';
 import { IconFieldModule } from '@openng/optimus-ui/iconfield';
 import { InputIconModule } from '@openng/optimus-ui/inputicon';
@@ -21,12 +22,18 @@ import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
 import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
+import { TABLE_ROW_HEIGHTS } from '../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../table-skeleton/table-skeleton-rows.component';
 import { TitleComponent } from '../title/title.component';
 import { PackageListService } from './package-list.service';
+
+const PAGE_SIZE = 25;
 
 @Component({
   selector: 'chaotic-package-list',
   imports: [
+    TableSkeletonRowsComponent,
+    LoadErrorComponent,
     DatePipe,
     TableModule,
     IconFieldModule,
@@ -57,6 +64,9 @@ export class PackageListComponent {
   private readonly router = inject(Router);
   protected readonly packageListService = inject(PackageListService);
   protected readonly columnVisibility = inject(ColumnVisibilityService);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+
+  protected readonly pageSize = PAGE_SIZE;
 
   protected readonly formatPkgrel = formatPkgrel;
 

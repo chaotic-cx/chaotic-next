@@ -1,3 +1,4 @@
+import { type Cache } from '@nestjs/cache-manager';
 import {
   type DeepPartial,
   type FindManyOptions,
@@ -151,4 +152,13 @@ export function createMockRepository<T extends object>(opts: MockRepositoryOptio
   };
 
   return api as unknown as MockRepository<T>;
+}
+
+/** A cache that never holds a value, so every lookup runs the real computation. */
+export function createPassThroughCache(): Cache {
+  return {
+    get: async () => undefined,
+    set: async () => undefined,
+    del: async () => true,
+  } as unknown as Cache;
 }

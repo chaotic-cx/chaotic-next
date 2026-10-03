@@ -4,10 +4,19 @@
 
 :host ::ng-deep .p-card {
   background: var(--p-card-background);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
 }
 
 .chaotic-chart-placeholder {
-  min-height: 10rem;
+  min-height: 18rem;
+  border-radius: var(--chaotic-radius-md);
+  background: color-mix(in srgb, var(--ctp-mocha-surface0) 30%, transparent);
+}
+
+:host ::ng-deep .p-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-align: left;
 }

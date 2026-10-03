@@ -1,10 +1,10 @@
-<chaotic-title
-  title="Update review"
-  subtitleHtml="Package updates currently queued for human review with the option to approve the MR for auto-merge."
-/>
+<div class="chaotic-page">
+  <chaotic-title
+    title="Review queue"
+    subtitle="Package updates that wait for a human review. Approved merge requests merge automatically."
+  />
 
-<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 text-left! sm:px-2.5">
-  <p-tabs [value]="activeTabValue()" (valueChange)="onTabChange($event)">
+  <p-tabs [value]="activeTabValue()" [scrollable]="true" (valueChange)="onTabChange($event)">
     <p-tablist>
       <p-tab value="0">
         @if (hasNewMr()) {
@@ -18,10 +18,14 @@
             <i class="pi pi-circle-fill text-ctp-red"></i>
           </button>
         }
-        AUR updates ({{ packageMrs().length }})
+        AUR updates <span class="mr-tab-count">{{ packageMrs().length }}</span>
       </p-tab>
-      <p-tab value="1">Package updates ({{ nvcheckerMrs().length }})</p-tab>
-      <p-tab value="2">On hold ({{ holdMrs().length }})</p-tab>
+      <p-tab value="1"
+        >Package updates <span class="mr-tab-count">{{ nvcheckerMrs().length }}</span></p-tab
+      >
+      <p-tab value="2"
+        >On hold <span class="mr-tab-count">{{ holdMrs().length }}</span></p-tab
+      >
     </p-tablist>
     <p-tabpanels>
       <p-tabpanel value="0">
@@ -69,16 +73,24 @@
 
 <ng-template #tabBody let-mrs let-empty="empty" let-hideHold="hideHold" let-hideDangerous="hideDangerous">
   @if (mrOverviewService.isLoading()) {
-    <div class="flex justify-center my-10">
-      <p-progress-spinner ariaLabel="loading" />
+    <div class="flex flex-col gap-4" role="status" aria-label="Loading merge requests">
+      @for (_ of skeletonPanels; track $index) {
+        <div class="chaotic-skeleton h-56"></div>
+      }
+    </div>
+  } @else if (mrOverviewService.loadFailed() && mrs.length === 0) {
+    <div class="chaotic-card">
+      <chaotic-load-error (retry)="refreshMrs()" message="Could not load merge requests from GitLab." />
     </div>
   } @else if (mrs.length === 0) {
-    <div class="flex flex-col items-center gap-2 mt-5 text-center">
-      <p class="text-ctp-text">{{ empty }}</p>
-      <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
-        >You can also browse all merge requests on GitLab.
-      </a>
-      <i class="text-ctp-maroon pi pi-verified mt-5" style="font-size: 5rem"></i>
+    <div class="flex flex-col items-center gap-3 py-12 text-center">
+      <i class="pi pi-verified text-ctp-green" style="font-size: 2.5rem" aria-hidden="true"></i>
+      <p class="font-medium text-ctp-text">{{ empty }}</p>
+      <a
+        class="text-sm text-ctp-subtext1 underline underline-offset-4 hover:text-ctp-mauve"
+        href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
+        >Browse all merge requests on GitLab</a
+      >
     </div>
   } @else {
     <ng-container *ngTemplateOutlet="mrList; context: { mrs, hideHold, hideDangerous }" />
@@ -94,16 +106,20 @@
       [class.mr-approved]="mr.labels.includes('approved')"
       [attr.data-mr-panel]="''"
       [attr.data-mr-iid]="mr.iid"
-      [attr.tabindex]="focusedIndex() === i ? 0 : -1"
+      [attr.tabindex]="panelTabIndex(i)"
+      (focus)="focusedIndex.set(i)"
       animate.enter="ctp-item-enter"
       animate.leave="ctp-item-leave"
     >
       <ng-template #header>
         <div class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div class="min-w-0">
-            <a class="cursor-pointer wrap-break-word text-ctp-mauve" [href]="mr.web_url">{{
-              mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
+            <a class="wrap-break-word font-semibold text-ctp-text hover:text-ctp-mauve" [href]="mr.web_url">{{
+              mr.title
             }}</a>
+            @if (mr.labels.includes('hold')) {
+              <p-tag class="ml-2 align-middle" severity="warn" value="On hold" />
+            }
             @if (flagReasonLine(mr); as reasonLine) {
               <p class="wrap-break-word text-ctp-subtext text-xs">
                 {{ reasonLine }}
@@ -145,12 +161,12 @@
                 pTooltip="This package applies .CI interfere/build override files. Open the .CI folder."
                 tooltipPosition="top"
               >
-                <p-tag [value]="ciOverrideFiles(mr).join(', ')" severity="info" icon="pi pi-folder" />
+                <p-tag [value]="ciOverrideFiles(mr).join(', ')" severity="secondary" icon="pi pi-folder" />
               </a>
             }
             @if (isAurManaged(mr)) {
               <p-tag
-                severity="info"
+                severity="secondary"
                 value="AUR managed"
                 icon="pi pi-arrow-up-right"
                 pTooltip="The CI auto-pushes this package's AUR repo."
@@ -159,7 +175,7 @@
             }
             @if (isNvchecker(mr)) {
               <p-tag
-                severity="info"
+                severity="secondary"
                 value="Auto-updated"
                 icon="pi pi-refresh"
                 pTooltip="Versions are auto-checked via nvchecker."
@@ -169,7 +185,7 @@
             @if (rebuildTriggers(mr).length > 0) {
               <p-tag
                 [value]="`Rebuilds on: ${rebuildTriggers(mr).join(', ')}`"
-                severity="info"
+                severity="secondary"
                 icon="pi pi-sync"
                 pTooltip="This package is rebuilt when these libraries change."
                 tooltipPosition="top"
@@ -180,127 +196,82 @@
       </ng-template>
 
       <div class="chaotic-lazy-viewport">
-        @if (scanSummary(mr); as summary) {
-          <section class="mb-5 rounded-lg border border-ctp-crust bg-ctp-mantle/40">
-            <header
-              class="flex cursor-pointer items-center justify-between gap-2 border-ctp-crust px-3 py-2"
-              [attr.data-scan-fieldset]="''"
-              [attr.aria-expanded]="isFindingsOpen(mr)"
-              (click)="toggleFindings(mr)"
-              (keydown.enter)="toggleFindings(mr)"
-              (keydown.space)="toggleFindings(mr)"
-              role="button"
-              tabindex="0"
-            >
-              <span class="flex items-center gap-2 text-sm font-semibold text-ctp-text">
-                <i class="pi pi-shield text-ctp-mauve"></i>
-                Security scan
+        @if (hasScanDetails(mr)) {
+          <section class="chaotic-file mr-scan" [attr.data-tone]="scanSummary(mr)?.tagSeverity ?? 'success'">
+            <header class="chaotic-file__header">
+              <i class="pi pi-shield mr-scan__icon" aria-hidden="true"></i>
+              <h3 class="font-semibold">Security scan</h3>
+              <span class="ml-auto">
+                @if (scanSummary(mr); as summary) {
+                  <p-tag [severity]="summary.tagSeverity" [value]="summary.label" />
+                } @else {
+                  <p-tag severity="success" value="No findings" />
+                }
               </span>
-              <div class="flex items-center gap-2">
-                <p-tag [severity]="summary.tagSeverity" [value]="summary.label" />
-                <i
-                  [class]="
-                    isFindingsOpen(mr) ? 'pi pi-chevron-up text-ctp-subtext' : 'pi pi-chevron-down text-ctp-subtext'
-                  "
-                ></i>
-              </div>
             </header>
-            <div
-              class="grid transition-[grid-template-rows] duration-150 ease-in-out"
-              [class.grid-rows-[1fr]]="isFindingsOpen(mr)"
-              [class.grid-rows-[0fr]]="!isFindingsOpen(mr)"
-            >
-              <div class="overflow-hidden">
-                <div class="flex flex-col gap-2 px-3 py-2">
-                  @for (finding of scanFindings(mr); track $index; let index = $index) {
-                    <div
-                      class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 text-left backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
-                      [style.--stagger]="index > findingStaggerCap ? findingStaggerCap : index"
-                      (click)="scrollToFinding(mr, finding)"
-                      (keydown.enter)="scrollToFinding(mr, finding)"
-                      animate.enter="finding-item-enter"
-                      role="button"
-                      tabindex="0"
-                    >
-                      <div class="flex items-center justify-between gap-3">
-                        <span
-                          class="min-w-0 wrap-break-word font-semibold text-sm"
-                          [class.text-ctp-red]="finding.severity === 'critical'"
-                          [class.text-ctp-peach]="finding.severity === 'warning'"
-                          [class.text-ctp-subtext0]="finding.severity === 'info'"
-                          [pTooltip]="finding.description"
-                          tooltipPosition="top"
-                        >
-                          {{ finding.ruleName }}
-                        </span>
-                        <code class="shrink-0 whitespace-nowrap text-ctp-sky text-xs">
-                          {{ fileLocation(mr, finding) }}
-                        </code>
-                      </div>
-                      <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
-                    </div>
-                  }
-
-                  @if (vtReports(mr).length) {
-                    <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
-                      <span class="text-sm font-semibold">VirusTotal indicators</span>
-                      @for (report of vtReports(mr); track $index) {
-                        <div class="flex flex-col gap-y-1 sm:flex-row sm:items-center sm:gap-x-2">
-                          <div class="flex min-w-0 items-center gap-2">
-                            <span class="min-w-0 break-all text-xs font-semibold">{{ report.value }}</span>
-                          </div>
-                          <span class="hidden text-ctp-subtext0 sm:inline">·</span>
-                          <div class="flex items-center flex-wrap gap-x-2 sm:flex-nowrap">
-                            <code class="whitespace-nowrap text-xs text-ctp-sky">{{ report.context }}</code>
-                            <span class="text-xs text-ctp-subtext">{{ presenter.vtEngines(report) }}</span>
-                          </div>
-                        </div>
-                      }
-                    </div>
-                  }
-
-                  @if (maintainers(mr).length || maintainerChange(mr)) {
-                    <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
-                      <span class="text-sm font-semibold">Maintainers</span>
-                      @for (maintainer of maintainers(mr); track maintainer.username) {
-                        <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
-                          <div class="flex min-w-0 items-center gap-2">
-                            @if (maintainer.novice) {
-                              <p-tag severity="warn" value="New" />
-                            }
-                            <span class="text-xs font-semibold">{{ maintainer.username }}</span>
-                          </div>
-                          <span class="text-xs text-ctp-subtext">{{ presenter.maintainerSummary(maintainer) }}</span>
-                        </div>
-                      }
-                      @if (maintainerChange(mr); as change) {
-                        <div class="flex flex-wrap items-center gap-2">
-                          @if (presenter.tookOverByNovice(change, maintainers(mr))) {
-                            <p-tag severity="danger" value="New maintainer took over" />
-                          } @else {
-                            <p-tag severity="warn" value="Maintainer changed" />
-                          }
-                          <span class="text-xs text-ctp-subtext">{{ presenter.maintainerChangeSummary(change) }}</span>
-                        </div>
-                      }
-                    </div>
-                  }
-                </div>
+            @if (scanFindings(mr).length) {
+              <div class="flex flex-col p-1.5">
+                @for (finding of scanFindings(mr); track $index) {
+                  <chaotic-scan-finding-row
+                    [finding]="finding"
+                    [location]="fileLocation(mr, finding)"
+                    (activate)="scrollToFinding(mr, finding)"
+                  />
+                }
               </div>
-            </div>
+            }
+            @if (vtReports(mr).length || maintainers(mr).length || maintainerChange(mr)) {
+              <div class="mr-scan-facts">
+                @if (vtReports(mr).length) {
+                  <div class="flex min-w-0 flex-col gap-1.5">
+                    <h4 class="text-xs font-semibold text-ctp-subtext1">VirusTotal indicators</h4>
+                    @for (report of vtReports(mr); track $index) {
+                      <p class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+                        <span class="break-all font-semibold text-ctp-text">{{ report.value }}</span>
+                        <code class="text-ctp-sky">{{ report.context }}</code>
+                        <span class="text-ctp-subtext0">{{ presenter.vtEngines(report) }}</span>
+                      </p>
+                    }
+                  </div>
+                }
+                @if (maintainers(mr).length || maintainerChange(mr)) {
+                  <div class="flex min-w-0 flex-col gap-1.5">
+                    <h4 class="text-xs font-semibold text-ctp-subtext1">Maintainers</h4>
+                    @for (maintainer of maintainers(mr); track maintainer.username) {
+                      <p class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                        <span class="font-semibold text-ctp-text">{{ maintainer.username }}</span>
+                        @if (maintainer.novice) {
+                          <p-tag severity="warn" value="New" />
+                        }
+                        <span class="text-ctp-subtext0">{{ presenter.maintainerSummary(maintainer) }}</span>
+                      </p>
+                    }
+                    @if (maintainerChange(mr); as change) {
+                      <p class="flex flex-wrap items-center gap-2 text-xs">
+                        @if (presenter.tookOverByNovice(change, maintainers(mr))) {
+                          <p-tag severity="danger" value="New maintainer took over" />
+                        } @else {
+                          <p-tag severity="warn" value="Maintainer changed" />
+                        }
+                        <span class="text-ctp-subtext0">{{ presenter.maintainerChangeSummary(change) }}</span>
+                      </p>
+                    }
+                  </div>
+                }
+              </div>
+            }
           </section>
         }
 
         @if (mr.diffs && mr.diffs.length > 0) {
           @for (change of mr.diffs; track change.new_path) {
             <section
-              class="mb-5 overflow-x-auto rounded-lg border border-ctp-crust bg-ctp-mantle/40 chaotic-lazy-viewport"
+              class="chaotic-file chaotic-lazy-viewport"
               [attr.data-diff-section]="diffSectionId(mr.iid, change.new_path)"
             >
-              <header class="flex flex-wrap items-center gap-2 border-b border-ctp-crust px-3 py-2">
-                <code class="min-w-0 flex-1 break-all font-mono text-sm text-ctp-text">{{
-                  stripPkgPrefix(mr, change.new_path)
-                }}</code>
+              <header class="chaotic-file__header">
+                <i class="pi pi-file text-xs text-ctp-subtext0" aria-hidden="true"></i>
+                <code class="min-w-0 flex-1 break-all">{{ stripPkgPrefix(mr, change.new_path) }}</code>
               </header>
               @defer (on viewport; prefetch on idle) {
                 <chaotic-diff-renderer
@@ -315,123 +286,29 @@
             </section>
           }
         } @else {
-          <span class="text-ctp-text">No changes</span>
+          <p class="py-4 text-sm text-ctp-subtext0">This merge request has no file changes.</p>
         }
 
         @if (isLoggedIn()) {
-          @let approve = actionButton(mr, 'approve');
-          @let dangerous = actionButton(mr, 'dangerous');
-          @let hold = actionButton(mr, 'hold');
-
-          <div
-            class="mt-4 grid place-items-center px-12 pb-4 md:hidden"
-            [class.grid-cols-3]="!hideHold && !hideDangerous"
-            [class.grid-cols-2]="hideHold || hideDangerous"
-          >
-            <p-button
-              [disabled]="approve.disabled"
-              [loading]="approve.loading"
-              [icon]="approve.icon"
-              [attr.aria-label]="approve.label"
-              [pTooltip]="approve.tooltip"
-              (onClick)="mrOverviewService.approve(mr)"
-              severity="success"
-              size="small"
-              variant="outlined"
-              styleClass="mr-btn-icon"
-              tooltipPosition="top"
-            />
-            @if (!hideDangerous) {
+          <div class="mr-actions">
+            @for (action of visibleActions(hideHold, hideDangerous); track action) {
+              @let button = actionButton(mr, action);
               <p-button
-                [disabled]="dangerous.disabled"
-                [loading]="dangerous.loading"
-                [icon]="dangerous.icon"
-                [attr.aria-label]="dangerous.label"
-                [pTooltip]="dangerous.tooltip"
-                (onClick)="openFlagDialog(mr, 'dangerous')"
-                severity="danger"
+                [disabled]="button.disabled"
+                [label]="button.label"
+                [loading]="button.loading"
+                [pTooltip]="button.tooltip"
+                [styleClass]="actionStyleClass[action]"
+                [severity]="button.severity"
+                (onClick)="runAction(mr, action)"
                 size="small"
                 variant="outlined"
-                styleClass="mr-btn-icon"
                 tooltipPosition="top"
               />
-            }
-            @if (!hideHold) {
-              <p-button
-                [disabled]="hold.disabled"
-                [loading]="hold.loading"
-                [icon]="hold.icon"
-                [attr.aria-label]="hold.label"
-                [pTooltip]="hold.tooltip"
-                (onClick)="openFlagDialog(mr, 'hold')"
-                severity="warn"
-                size="small"
-                variant="outlined"
-                styleClass="mr-btn-icon"
-                tooltipPosition="top"
-              />
-            }
-          </div>
-
-          <div
-            class="hidden pb-4 md:grid grid-cols-1 gap-2 md:gap-10 md:justify-self-center"
-            [class.md:grid-cols-3]="!hideHold && !hideDangerous"
-            [class.md:grid-cols-2]="hideHold || hideDangerous"
-          >
-            <div class="w-full min-w-0">
-              <p-button
-                [disabled]="approve.disabled"
-                [label]="approve.label"
-                [loading]="approve.loading"
-                [icon]="approve.icon"
-                [pTooltip]="approve.tooltip"
-                (onClick)="mrOverviewService.approve(mr)"
-                severity="success"
-                size="small"
-                variant="outlined"
-                styleClass="w-50 mr-btn-approve"
-                tooltipPosition="top"
-              />
-            </div>
-
-            @if (!hideDangerous) {
-              <div class="w-full min-w-0">
-                <p-button
-                  [disabled]="dangerous.disabled"
-                  [label]="dangerous.label"
-                  [loading]="dangerous.loading"
-                  [icon]="dangerous.icon"
-                  [pTooltip]="dangerous.tooltip"
-                  (onClick)="openFlagDialog(mr, 'dangerous')"
-                  severity="danger"
-                  size="small"
-                  variant="outlined"
-                  styleClass="w-50 mr-btn-danger"
-                  tooltipPosition="top"
-                />
-              </div>
-            }
-
-            @if (!hideHold) {
-              <div class="w-full min-w-0">
-                <p-button
-                  [disabled]="hold.disabled"
-                  [label]="hold.label"
-                  [loading]="hold.loading"
-                  [icon]="hold.icon"
-                  [pTooltip]="hold.tooltip"
-                  (onClick)="openFlagDialog(mr, 'hold')"
-                  severity="warn"
-                  size="small"
-                  variant="outlined"
-                  styleClass="w-50 mr-btn-warn"
-                  tooltipPosition="top"
-                />
-              </div>
             }
           </div>
         } @else {
-          <p class="text-ctp-subtext text-center text-sm pb-2">
+          <p class="pb-2 text-center text-sm text-ctp-subtext0">
             <a class="text-ctp-mauve" routerLink="/login">Sign in</a> to approve, flag or hold updates.
           </p>
         }
@@ -463,26 +340,16 @@
         <span class="text-ctp-subtext0 text-xs self-end">{{ flagReason().length }}/{{ flagReasonMaxLength }}</span>
       </label>
       <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <p-button
-          (onClick)="closeFlagDialog()"
-          type="button"
-          severity="secondary"
-          text
-          label="Cancel"
-          size="small"
-          styleClass="w-full sm:w-auto"
-        />
+        <p-button (onClick)="closeFlagDialog()" type="button" severity="secondary" text label="Cancel" size="small" />
         <p-button
           [disabled]="
             !flagReasonValid() || isLoading(pending.mr, pending.label === 'dangerous' ? 'flag:dangerous' : 'flag:hold')
           "
           [loading]="isLoading(pending.mr, pending.label === 'dangerous' ? 'flag:dangerous' : 'flag:hold')"
-          [icon]="pending.label === 'dangerous' ? 'pi pi-exclamation-triangle' : 'pi pi-pause'"
           [severity]="pending.label === 'dangerous' ? 'danger' : 'warn'"
           [label]="pending.label === 'dangerous' ? 'Flag as dangerous' : 'Put on hold'"
           (onClick)="confirmFlag()"
           size="small"
-          styleClass="w-full sm:w-auto"
         />
       </div>
     </div>

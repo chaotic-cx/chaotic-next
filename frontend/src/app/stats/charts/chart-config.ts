@@ -2,62 +2,84 @@ import { DatePipe } from '@angular/common';
 import { httpResource, type HttpResourceRequest } from '@angular/common/http';
 import { computed } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
-import type { ChartData, ChartOptions, ChartType } from 'chart.js';
-import { resourceValue } from '../../functions';
+import type { Chart, ChartData, ChartOptions, ChartType } from 'chart.js';
+import { resourceFailed, resourceValue } from '../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../theme';
+import { CHART_GRID_COLOR, CHART_TICK_COLOR } from './chart-theme';
 
 export interface ChartConfig<TType extends ChartType = ChartType> {
   data: ChartData<TType>;
   options: ChartOptions<TType>;
 }
 
-const MOCHA_TEXT = flavors.mocha.colors.text.hex;
-const MOCHA_SURFACE_0 = flavors.mocha.colors.surface0.hex;
-const CHART_FONT_FAMILY = "'Inter Variable', 'Helvetica', 'Arial', sans-serif";
+export const SINGLE_SERIES_COLOR = flavors.mocha.colors.mauve.hex;
+export const SINGLE_SERIES_FILL = `${SINGLE_SERIES_COLOR}33`;
+
+const CATEGORY_TICK_PADDING_PX = 16;
 
 interface AxisStyling {
-  ticks: { color: string };
-  grid: { color: string };
+  ticks: { color: string; maxRotation?: number; autoSkipPadding?: number; autoSkip?: boolean };
+  grid: { display: boolean; color: string };
+  border: { display: boolean };
 }
 
-export function mochaLegendLabels(): { usePointStyle: false; color: string; family: string } {
-  return { usePointStyle: false, color: MOCHA_TEXT, family: CHART_FONT_FAMILY };
-}
-
-export function mochaScales(): { x: AxisStyling; y: AxisStyling } {
-  const axis: AxisStyling = {
-    ticks: { color: MOCHA_TEXT },
-    grid: { color: MOCHA_SURFACE_0 },
+/** Gridlines only on the value axis; the category axis stays clean and its labels never rotate. */
+export function mochaScales(indexAxis: 'x' | 'y' = 'x'): { x: AxisStyling; y: AxisStyling } {
+  const valueAxis: AxisStyling = {
+    ticks: { color: CHART_TICK_COLOR },
+    grid: { display: true, color: CHART_GRID_COLOR },
+    border: { display: false },
   };
-  return { x: axis, y: axis };
+  const categoryAxis: AxisStyling = {
+    ticks:
+      indexAxis === 'x'
+        ? { color: CHART_TICK_COLOR, maxRotation: 0, autoSkipPadding: CATEGORY_TICK_PADDING_PX }
+        : { color: CHART_TICK_COLOR, autoSkip: false },
+    grid: { display: false, color: CHART_GRID_COLOR },
+    border: { display: false },
+  };
+  return indexAxis === 'x' ? { x: categoryAxis, y: valueAxis } : { x: valueAxis, y: categoryAxis };
 }
 
 interface MochaAxisChartOptions {
   indexAxis?: 'x' | 'y';
+  showLegend?: boolean;
 }
 
 export function mochaAxisChartOptions<TType extends ChartType>(
   config: MochaAxisChartOptions = {},
 ): ChartOptions<TType> {
-  const { indexAxis = 'x' } = config;
+  const { indexAxis = 'x', showLegend = true } = config;
 
-  const options = {
+  return {
     maintainAspectRatio: false,
-    aspectRatio: 0.4,
+    indexAxis,
     plugins: {
-      legend: { labels: mochaLegendLabels() },
+      legend: { display: showLegend },
     },
-    scales: mochaScales(),
-  } as const;
-  return (indexAxis === 'y' ? { ...options, indexAxis: 'y' } : options) as unknown as ChartOptions<TType>;
+    scales: mochaScales(indexAxis),
+  } as unknown as ChartOptions<TType>;
 }
+
+const SIDE_LEGEND_MIN_WIDTH_PX = 520;
 
 export function mochaPieChartOptions<TType extends ChartType>(): ChartOptions<TType> {
   return {
-    plugins: {
-      legend: { labels: mochaLegendLabels(), position: 'top' },
-    },
+    maintainAspectRatio: false,
+    interaction: { mode: 'nearest', intersect: true },
+    onResize: placeLegendBySize,
+    plugins: { legend: { position: 'bottom' } },
   } as unknown as ChartOptions<TType>;
+}
+
+/** Side legend when the card is wide enough, bottom legend on narrow cards. */
+function placeLegendBySize(chart: Chart, size: { width: number }): void {
+  const legend = chart.options.plugins?.legend;
+  if (!legend) return;
+  const position = size.width >= SIDE_LEGEND_MIN_WIDTH_PX ? 'right' : 'bottom';
+  if (legend.position === position) return;
+  legend.position = position;
+  chart.update('none');
 }
 
 export interface GroupOverTimeRow {
@@ -120,6 +142,8 @@ export function chartResource<T>(request: () => HttpResourceRequest | undefined)
   return {
     resource,
     loading: resource.isLoading,
+    failed: resourceFailed(resource),
+    retry: () => resource.reload(),
     hasData: computed(() => resource.hasValue()),
     data: computed(() => (resourceValue(resource) ?? []) as T),
   };
