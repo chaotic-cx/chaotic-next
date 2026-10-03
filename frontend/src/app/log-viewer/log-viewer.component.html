@@ -1,56 +1,58 @@
-<chaotic-title [subtitle]="subtitle()" title="Pipeline logs" />
+<div class="chaotic-page">
+  <chaotic-title [subtitle]="subtitle()" title="Pipeline logs" />
 
-<div class="log-viewer">
-  @if (error()) {
-    <p class="log-error">{{ error() }}</p>
-  }
+  <div class="log-viewer">
+    @if (error()) {
+      <p class="log-error">{{ error() }}</p>
+    }
 
-  @if (jobs().length > 0) {
-    <div class="log-toolbar">
-      <div class="job-list" #jobList>
-        @for (job of jobs(); track job.id) {
-          <button
-            class="job-chip"
-            [class.job-chip-selected]="job.id === selectedJobId()"
-            [class.job-running]="runningStatuses.has(job.status)"
-            [class.job-failed]="job.status === 'failed'"
-            [class.job-success]="job.status === 'success'"
-            (click)="selectJob(job)"
-            type="button"
-          >
-            <span class="job-name">{{ job.name }}</span>
-            <span class="job-status">{{ job.status }}</span>
-          </button>
+    @if (jobs().length > 0) {
+      <div class="log-toolbar">
+        <div class="job-list" #jobList>
+          @for (job of jobs(); track job.id) {
+            <button
+              class="job-chip"
+              [class.job-chip-selected]="job.id === selectedJobId()"
+              [class.job-running]="runningStatuses.has(job.status)"
+              [class.job-failed]="job.status === 'failed'"
+              [class.job-success]="job.status === 'success'"
+              (click)="selectJob(job)"
+              type="button"
+            >
+              <span class="job-name">{{ job.name }}</span>
+              <span class="job-status">{{ job.status }}</span>
+            </button>
+          }
+        </div>
+        <p-select
+          class="job-select w-full min-w-0"
+          [options]="jobOptions()"
+          [ngModel]="selectedJobId()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="onJobSelect($event)"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+        />
+        @if (streaming()) {
+          <span class="live-badge">● live</span>
         }
       </div>
-      <p-select
-        class="job-select w-full min-w-0"
-        [options]="jobOptions()"
-        [ngModel]="selectedJobId()"
-        [ngModelOptions]="{ standalone: true }"
-        (ngModelChange)="onJobSelect($event)"
-        optionLabel="label"
-        optionValue="value"
-        appendTo="body"
-      />
-      @if (streaming()) {
-        <span class="live-badge">● live</span>
+    }
+
+    <div class="log-panel-wrap">
+      @if (loading()) {
+        <div class="log-loading">
+          <p-progress-spinner ariaLabel="Loading logs" />
+        </div>
+      } @else {
+        <chaotic-xterm-log
+          [chunk]="logChunks()"
+          [clearSignal]="clearSignal()"
+          [scrollToLine]="scrollToLine()"
+          (lineClick)="onLineClick($event)"
+        />
       }
     </div>
-  }
-
-  <div class="log-panel-wrap">
-    @if (loading()) {
-      <div class="log-loading">
-        <p-progress-spinner ariaLabel="Loading logs" />
-      </div>
-    } @else {
-      <chaotic-xterm-log
-        [chunk]="logChunks()"
-        [clearSignal]="clearSignal()"
-        [scrollToLine]="scrollToLine()"
-        (lineClick)="onLineClick($event)"
-      />
-    }
   </div>
 </div>

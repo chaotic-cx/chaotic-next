@@ -28,7 +28,7 @@ code {
 
 .line-number {
   @apply w-5 shrink-0 text-right select-none;
-  color: var(--ctp-mocha-overlay0);
+  color: var(--ctp-mocha-overlay2);
 }
 
 .line-content {
@@ -70,7 +70,7 @@ code {
 }
 
 .finding-description {
-  color: var(--ctp-mocha-subtext);
+  color: var(--ctp-mocha-subtext0);
   font-size: 0.7rem;
   white-space: normal;
   word-break: break-word;

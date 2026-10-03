@@ -1,18 +1,19 @@
-<div class="mb-5 px-2.5 text-center md:px-0">
+<header class="chaotic-page-header">
   @switch (level()) {
     @case ('h2') {
-      <h2 class="text-ctp-maroon text-2xl font-extrabold">{{ title() }}</h2>
+      <h2 class="chaotic-page-header__title">{{ title() }}</h2>
     }
     @case ('h3') {
-      <h3 class="text-ctp-maroon text-2xl font-extrabold">{{ title() }}</h3>
+      <h3 class="chaotic-page-header__title">{{ title() }}</h3>
     }
     @default {
-      <h1 class="text-ctp-maroon text-2xl font-extrabold">{{ title() }}</h1>
+      <h1 class="chaotic-page-header__title">{{ title() }}</h1>
     }
   }
   @if (subtitleHtml()) {
-    <p class="text-ctp-text my-4 text-lg" [innerHtml]="subtitleHtml()"></p>
-  } @else {
-    <p class="text-ctp-text my-4 text-lg">{{ subtitle() }}</p>
+    <p class="chaotic-page-header__subtitle" [innerHtml]="subtitleHtml()"></p>
+  } @else if (subtitle()) {
+    <p class="chaotic-page-header__subtitle">{{ subtitle() }}</p>
   }
-</div>
+  <ng-content />
+</header>

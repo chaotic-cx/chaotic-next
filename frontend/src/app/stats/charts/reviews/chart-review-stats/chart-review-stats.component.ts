@@ -1,6 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
 import { AppService } from '../../../../app.service';
-import { shuffleArray } from '../../../../functions';
 import { StatsService } from '../../../stats.service';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
@@ -41,7 +40,7 @@ export class ChartReviewStatsComponent {
           {
             data,
             label: 'Reviews',
-            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
+            backgroundColor: CATPPUCCIN_FLAVOURS,
           },
         ],
       },

@@ -21,6 +21,8 @@ import {
   queryToQuery,
   restoreQueryParams,
 } from '../admin-url-sync';
+import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
 interface ArchPackageFormModel {
   pkgname: string;
@@ -31,14 +33,24 @@ interface ArchPackageFormModel {
 
 @Component({
   selector: 'chaotic-admin-arch-packages-page',
-  imports: [Button, Dialog, FormField, FormsModule, IconField, InputIcon, InputText, TableModule, Tooltip],
+  imports: [
+    TableSkeletonRowsComponent,
+    Button,
+    Dialog,
+    FormField,
+    FormsModule,
+    IconField,
+    InputIcon,
+    InputText,
+    TableModule,
+    Tooltip,
+  ],
   template: `
     <div class="table-container">
       <p-table
         #archPackagesTable
         [value]="service.archPackages()?.items ?? []"
         [rows]="pagination.perPage()"
-        [loading]="service.archPackagesLoading()"
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="service.archPackagesTotal()"
@@ -73,7 +85,7 @@ interface ArchPackageFormModel {
             <th style="min-width: 12rem">Name</th>
             <th style="min-width: 10rem">Version</th>
             <th style="min-width: 6rem">Arch</th>
-            <th class="cell-actions" style="min-width: 8rem">Actions</th>
+            <th class="cell-actions"><span class="sr-only">Actions</span></th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-pkg>
@@ -83,37 +95,53 @@ interface ArchPackageFormModel {
             <td>{{ pkg.version }}{{ pkg.pkgrel ? '-' + pkg.pkgrel : '' }}</td>
             <td>{{ pkg.arch }}</td>
             <td class="cell-actions">
-              <div class="flex gap-2">
-                <p-button
-                  (onClick)="rescanPackage(pkg)"
-                  icon="pi pi-refresh"
-                  severity="success"
-                  text
-                  rounded
+              <div class="flex items-center justify-end gap-1">
+                <button
+                  class="chaotic-icon-btn"
+                  [attr.aria-label]="'Rescan ELF signals ' + pkg.pkgname"
+                  (click)="rescanPackage(pkg)"
+                  type="button"
                   pTooltip="Rescan ELF signals"
                   tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="openEdit(pkg)"
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  text
-                  rounded
+                >
+                  <i class="pi pi-refresh" aria-hidden="true"></i>
+                </button>
+                <button
+                  class="chaotic-icon-btn"
+                  [attr.aria-label]="'Edit ' + pkg.pkgname"
+                  (click)="openEdit(pkg)"
+                  type="button"
                   pTooltip="Edit"
                   tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="confirmDelete(pkg)"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
+                >
+                  <i class="pi pi-pencil" aria-hidden="true"></i>
+                </button>
+                <button
+                  class="chaotic-icon-btn chaotic-icon-btn--danger"
+                  [attr.aria-label]="'Delete ' + pkg.pkgname"
+                  (click)="confirmDelete(pkg)"
+                  type="button"
                   pTooltip="Delete"
                   tooltipPosition="left"
-                />
+                >
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                </button>
               </div>
             </td>
           </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          @if (service.archPackagesLoading()) {
+            <chaotic-table-skeleton-rows
+              [rowHeight]="rowHeights.adminArchPackages"
+              [rows]="pagination.perPage()"
+              [columns]="5"
+            />
+          } @else {
+            <tr>
+              <td [attr.colspan]="5"><p class="chaotic-card__empty">No Arch packages match this search.</p></td>
+            </tr>
+          }
         </ng-template>
       </p-table>
     </div>
@@ -175,6 +203,7 @@ export class AdminArchPackagesPageComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -191,6 +220,7 @@ export class AdminArchPackagesPageComponent {
   });
 
   constructor() {
+    this.service.useLists(['archPackages']);
     this.pagination.restoreFromQuery(this.route);
     this.service.archPage.set(this.pagination.page());
     this.service.archPerPage.set(this.pagination.perPage());

@@ -23,14 +23,14 @@ import { ChartPopularPackagesComponent } from '../charts/builds/chart-popular-pa
   template: `
     <div class="flex flex-col gap-8">
       <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
-        <p-card [style]="{ overflow: 'hidden' }" header="Average Build Time per Status">
+        <p-card [style]="{ overflow: 'hidden' }" header="Average build time per status">
           @defer (on viewport; prefetch on idle) {
             <chaotic-chart-average-build-time />
           } @placeholder {
             <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
           }
         </p-card>
-        <p-card [style]="{ overflow: 'hidden' }" header="Builds per Builder">
+        <p-card [style]="{ overflow: 'hidden' }" header="Builds per builder">
           @defer (on viewport; prefetch on idle) {
             <chaotic-chart-builders-amount />
           } @placeholder {
@@ -38,21 +38,21 @@ import { ChartPopularPackagesComponent } from '../charts/builds/chart-popular-pa
           }
         </p-card>
       </div>
-      <p-card [style]="{ overflow: 'hidden' }" header="Builds per Day">
+      <p-card [style]="{ overflow: 'hidden' }" header="Builds per day">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-builds-per-day />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Popular Packages">
+      <p-card [style]="{ overflow: 'hidden' }" header="Popular packages">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-popular-packages />
         } @placeholder {
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card [style]="{ overflow: 'hidden' }" header="Heavy Packages">
+      <p-card [style]="{ overflow: 'hidden' }" header="Heavy packages">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-heavy-packages />
         } @placeholder {
@@ -60,14 +60,14 @@ import { ChartPopularPackagesComponent } from '../charts/builds/chart-popular-pa
         }
       </p-card>
       <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
-        <p-card [style]="{ overflow: 'hidden' }" header="Packages per Build Class">
+        <p-card [style]="{ overflow: 'hidden' }" header="Packages per build class">
           @defer (on viewport; prefetch on idle) {
             <chaotic-chart-packages-per-build-class />
           } @placeholder {
             <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
           }
         </p-card>
-        <p-card [style]="{ overflow: 'hidden' }" header="Single vs Split Packages">
+        <p-card [style]="{ overflow: 'hidden' }" header="Single vs. split packages">
           @defer (on viewport; prefetch on idle) {
             <chaotic-chart-pkgbase-composition />
           } @placeholder {

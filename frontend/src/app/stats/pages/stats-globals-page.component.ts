@@ -9,7 +9,7 @@ import { ChartUseragentComponent } from '../charts/system/chart-useragent/chart-
   imports: [Card, ChartCountriesComponent, ChartUseragentComponent, ChartRpsHistoryComponent],
   template: `
     <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
-      <p-card [style]="{ overflow: 'hidden' }" header="Country list">
+      <p-card [style]="{ overflow: 'hidden' }" header="Countries">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-countries />
         } @placeholder {
@@ -23,7 +23,7 @@ import { ChartUseragentComponent } from '../charts/system/chart-useragent/chart-
           <div class="chaotic-chart-placeholder" aria-hidden="true"></div>
         }
       </p-card>
-      <p-card class="xl:col-span-2" [style]="{ overflow: 'hidden' }" header="RPS over last hour">
+      <p-card class="xl:col-span-2" [style]="{ overflow: 'hidden' }" header="Requests per second, last hour">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-rps-history />
         } @placeholder {

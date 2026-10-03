@@ -5,8 +5,8 @@
 
 .chaotic-footer ::ng-deep .p-card {
   background: rgb(from var(--ctp-mocha-base) r g b / 0.8);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
   border-radius: 0;
 }
 

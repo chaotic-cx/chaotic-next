@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { isMobileSignal, parseCount, truncateLabel } from '../../../../functions';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import {
@@ -12,6 +11,7 @@ import {
   clampAmount,
   type ChartConfig,
   mochaAxisChartOptions,
+  SINGLE_SERIES_COLOR,
   roundToTenth,
 } from '../../chart-config';
 import { RESOURCE_METRICS, type ResourceMetricKey } from '../../chart-resource-metrics';
@@ -58,7 +58,7 @@ export class ChartHeavyPackagesResourceComponent {
           {
             label: `${metric.label} per build (${metric.unit})`,
             data: data.map((d) => roundToTenth(parseCount(d.average) * metric.scale)),
-            backgroundColor: CATPPUCCIN_FLAVOURS,
+            backgroundColor: SINGLE_SERIES_COLOR,
           },
         ],
       },

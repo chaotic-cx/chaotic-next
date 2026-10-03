@@ -1,6 +1,6 @@
 import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '../types/core';
 import { pageQuerySchema, perPageQuerySchema } from './common';
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const bumpPackagesBodySchema = z.strictObject({
   pkgnames: z.array(z.string()).min(1).describe('Package names to bump'),

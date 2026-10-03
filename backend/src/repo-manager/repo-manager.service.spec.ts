@@ -14,7 +14,7 @@ import { RepoManagerService } from './repo-manager.service';
 import { ArchlinuxPackage, PackageElfAnalysis } from './repo-manager.entity';
 import type { RepoReaderFactory, RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
-import { createMockRepository, MockRepository } from './test/mock-repository';
+import { createMockRepository, createPassThroughCache, MockRepository } from './test/mock-repository';
 
 describe('RepoManagerService.getBrokenPackages', () => {
   it('returns only the latest version per package, not stale broken versions', async () => {
@@ -312,6 +312,7 @@ function buildService(
     {} as SchedulerRegistry,
     {} as RepoWriter,
     {} as RepoReaderFactory,
+    createPassThroughCache(),
   );
 }
 
@@ -339,6 +340,7 @@ describe('RepoManagerService.run', () => {
       {} as SchedulerRegistry,
       {} as RepoWriter,
       {} as RepoReaderFactory,
+      createPassThroughCache(),
     );
     const manager = {
       status: RepoStatus.INACTIVE,

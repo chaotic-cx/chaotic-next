@@ -21,9 +21,11 @@ export const AUTH_RESULT_KEY = 'auth-result';
 // event from the popup triggers the opener's session refetch without a reload.
 export const AUTH_SESSION_SYNC_KEY = 'better-auth.message';
 
+export const DEFAULT_LOGIN_REDIRECT = '/admin/overview';
+
 function safeRedirectPath(returnPath: string | null): string {
   if (returnPath?.startsWith('/') && !returnPath.startsWith('//')) return returnPath;
-  return '/';
+  return DEFAULT_LOGIN_REDIRECT;
 }
 
 @Service()

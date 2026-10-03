@@ -23,7 +23,9 @@ function errorMessageForCode(code: string): string {
   selector: 'chaotic-auth-callback',
   template: `
     <div class="flex w-full items-center justify-center px-4 py-28 md:py-36">
-      <div class="w-full max-w-sm rounded-2xl border border-ctp-surface1 p-8 shadow-lg backdrop-blur-md text-center">
+      <div
+        class="w-full max-w-sm rounded-2xl border border-ctp-surface1 p-8 shadow-lg backdrop-blur-(--chaotic-blur) text-center"
+      >
         @if (errorMessage()) {
           <h1 class="text-ctp-text mt-6 text-2xl font-extrabold">Sign-in unavailable</h1>
           <p class="text-ctp-subtext mt-2 text-sm">{{ errorMessage() }}</p>

@@ -14,42 +14,67 @@ import {
 import { FormsModule } from '@angular/forms';
 import { form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
-import { formatPkgrel, Package, PKGNAME_PATTERN, SpecificPackageMetrics } from '@chaotic-next/shared-lib';
+import {
+  CHAOTIC_AUR_REPO,
+  formatPkgrel,
+  Package,
+  PKGNAME_PATTERN,
+  ParsedPackageMetadata,
+  SpecificPackageMetrics,
+} from '@chaotic-next/shared-lib';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../stats/charts/packages/chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../stats/charts/packages/chart-package-build-stats/chart-package-build-stats.component';
 import { ChartPackageResourceStatsComponent } from '../stats/charts/packages/chart-package-resource-stats/chart-package-resource-stats.component';
-import { resourceValue, setPageSeo } from '../functions';
+import { CodeBlockComponent } from '../docs/code-block.component';
+import { preferredScrollBehavior, resourceValue, setPageSeo } from '../functions';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { StatsService } from '../stats/stats.service';
 
-const PACKAGE_DETAIL_LABELS: Record<string, string> = {
-  'lastUpdated': 'Last update',
-  'id': 'ID',
-  'pkgname': 'Package name',
-  'createdAt': 'Added at',
-  'version': 'Version',
-  'deps': 'Dependencies',
-  'desc': 'Description',
-  'filename': 'Filename',
-  'license': 'License',
-  'packager': 'Packager',
-  'url': 'URL',
-  'buildDate': 'Build date',
-  'checkDepends': 'Check dependencies',
-  'conflicts': 'Conflicts',
-  'makeDeps': 'Make dependencies',
-  'optDeps': 'Optional dependencies',
-  'provides': 'Provides',
-  'replaces': 'Replaces',
-  'soNameList': 'SO name list',
-  'pkgrel': 'Pkgrel',
-  'downloads': 'Downloads',
-  'user-agents': 'User agents',
-};
+type PackageListKey =
+  'deps' | 'makeDeps' | 'optDeps' | 'checkDepends' | 'provides' | 'conflicts' | 'replaces' | 'soNameList';
+
+const PACKAGE_LIST_GROUPS: { key: PackageListKey; label: string }[] = [
+  { key: 'deps', label: 'Depends on' },
+  { key: 'optDeps', label: 'Optional dependencies' },
+  { key: 'makeDeps', label: 'Build dependencies' },
+  { key: 'checkDepends', label: 'Check dependencies' },
+  { key: 'provides', label: 'Provides' },
+  { key: 'conflicts', label: 'Conflicts with' },
+  { key: 'replaces', label: 'Replaces' },
+  { key: 'soNameList', label: 'Shared libraries' },
+];
+
+const OPTIONAL_DEPENDENCY_SEPARATOR = ': ';
+const MS_PER_SECOND = 1000;
+
+interface PackageListEntry {
+  name: string;
+  note: string | null;
+}
+
+interface PackageListGroup {
+  label: string;
+  entries: PackageListEntry[];
+}
+
+interface PackageSheet {
+  pkgname: string;
+  pkgbaseName: string | null;
+  version: string | null;
+  repo: string;
+  description: string | null;
+  homepage: string | null;
+  packager: string | null;
+  license: string | null;
+  filename: string | null;
+  builtAt: number | null;
+  addedAt: string | null;
+  groups: PackageListGroup[];
+}
 
 @Component({
   selector: 'chaotic-search-package',
@@ -59,6 +84,7 @@ const PACKAGE_DETAIL_LABELS: Record<string, string> = {
     FormsModule,
     RelativeTimePipe,
     Tooltip,
+    CodeBlockComponent,
     ChartPackageBuildStatsComponent,
     ChartPackageAverageBuildTimeComponent,
     ChartPackageResourceStatsComponent,
@@ -74,8 +100,6 @@ export class SearchPackageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly packageStatsService = inject(StatsService);
-
-  readonly STAGGER_CAP = 8;
 
   readonly search = input<string>();
 
@@ -106,99 +130,20 @@ export class SearchPackageComponent {
     );
   });
 
-  protected readonly packageSearchData = computed<{ key: string; value: unknown }[]>(() => {
-    const result = resourceValue(this.packageResource);
-    if (!result) return [];
-
-    const data: Record<string, unknown> = { ...result };
-    const rows: { key: string; value: unknown }[] = [];
-
-    if (data['version'] !== undefined) {
-      data['version'] = `${data['version']}-${formatPkgrel(Number(data['pkgrel'] ?? 0), Number(data['bump'] ?? 0))}`;
-    }
-    delete data['pkgrel'];
-    delete data['bump'];
-
-    const skippedKeys = new Set([
-      'id',
-      'isActive',
-      'skipSignalScan',
-      'bumpCount',
-      'bumpTriggers',
-      'providedSonames',
-      'requiredSonames',
-      'provided_sonames',
-      'required_sonames',
-      'sonames',
-      'lastUpdated',
-    ]);
-    for (const [key, value] of Object.entries(data)) {
-      if (skippedKeys.has(key)) continue;
-      if (value === null || value === undefined) continue;
-      if (typeof value === 'object') {
-        for (const [innerKey, innerValue] of Object.entries(value)) {
-          if (skippedKeys.has(innerKey)) continue;
-          if (innerValue === null || innerValue === undefined) continue;
-          if (Array.isArray(innerValue) && innerValue.length === 0) continue;
-          if (typeof innerValue === 'string' && !innerValue.trim()) continue;
-          rows.push({ key: innerKey, value: innerValue });
-        }
-      } else {
-        if (Array.isArray(value) && value.length === 0) continue;
-        if (typeof value === 'string' && !value.trim()) continue;
-        rows.push({ key, value });
-      }
-    }
-
-    const downloads = this.packageMetricsResource.value()?.downloads;
-    if (downloads !== undefined) {
-      const existingIndex = rows.findIndex((d) => d.key === 'downloads');
-      if (existingIndex >= 0) {
-        rows[existingIndex] = { key: 'downloads', value: downloads };
-      } else {
-        rows.push({ key: 'downloads', value: downloads });
-      }
-    }
-
-    const preferredKeyOrder: Record<string, number> = {
-      pkgname: 1,
-      name: 1,
-      pkgbase: 1,
-      version: 2,
-      description: 3,
-      desc: 3,
-      buildDate: 4,
-      createdAt: 5,
-      downloads: 6,
-      url: 7,
-      filename: 8,
-      packager: 9,
-      maintainer: 9,
-      license: 10,
-      licenses: 10,
-      deps: 11,
-      depends: 11,
-      makeDeps: 12,
-      makedepends: 12,
-      optDeps: 13,
-      optdepends: 13,
-      checkDepends: 14,
-      checkdepends: 14,
-    };
-
-    rows.sort((a, b) => {
-      const orderA = preferredKeyOrder[a.key] ?? 99;
-      const orderB = preferredKeyOrder[b.key] ?? 99;
-      return orderA - orderB;
-    });
-
-    return rows;
+  protected readonly sheet = computed<PackageSheet | null>(() => {
+    const pkg = resourceValue(this.packageResource);
+    if (!pkg) return null;
+    return toPackageSheet(pkg, this.repo() || CHAOTIC_AUR_REPO);
   });
 
-  protected readonly hasSearchData = computed<boolean>(() => {
-    const data = this.packageSearchData();
-    return this.currentPackageName() !== '' && data.length > 0;
+  protected readonly downloads = computed(() => this.packageMetricsResource.value()?.downloads ?? null);
+
+  protected readonly installCommand = computed(() => {
+    const sheet = this.sheet();
+    return sheet ? `$ sudo pacman -S ${sheet.repo}/${sheet.pkgname}` : '';
   });
+
+  protected readonly hasSearchData = computed<boolean>(() => this.currentPackageName() !== '' && this.sheet() !== null);
 
   constructor() {
     setPageSeo(
@@ -215,7 +160,7 @@ export class SearchPackageComponent {
 
     effect(() => {
       if (!this.scrollToResults || !this.hasSearchData()) return;
-      this.resultsSection()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.resultsSection()?.nativeElement.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
     });
   }
 
@@ -299,42 +244,51 @@ export class SearchPackageComponent {
     });
   }
 
-  protected getMirrorDownloadUrl(filename: string): string {
-    const repo = this.packageStatsService.packageSearchSelectedRepo() || 'chaotic-aur';
-    return `https://cdn-mirror.chaotic.cx/${repo}/x86_64/${filename}`;
+  protected getMirrorDownloadUrl(sheet: PackageSheet, filename: string): string {
+    return `https://cdn-mirror.chaotic.cx/${sheet.repo}/x86_64/${filename}`;
   }
+}
 
-  protected packageDetailLabel(key: string): string {
-    return PACKAGE_DETAIL_LABELS[key] ?? key;
-  }
+function toPackageSheet(pkg: Package, repo: string): PackageSheet {
+  const metadata = pkg.metadata;
+  return {
+    pkgname: pkg.pkgname,
+    pkgbaseName: pkg.pkgbaseName && pkg.pkgbaseName !== pkg.pkgname ? pkg.pkgbaseName : null,
+    version: pkg.version ? `${pkg.version}-${formatPkgrel(pkg.pkgrel ?? 0, pkg.bump ?? 0)}` : null,
+    repo: pkg.reponame ?? repo,
+    description: nonBlank(metadata?.desc),
+    homepage: nonBlank(metadata?.url),
+    packager: nonBlank(metadata?.packager),
+    license: nonBlank(metadata?.license),
+    filename: nonBlank(metadata?.filename),
+    builtAt: toBuildTimestamp(metadata?.buildDate),
+    addedAt: pkg.createdAt ?? null,
+    groups: metadata ? toListGroups(metadata) : [],
+  };
+}
 
-  protected isArray(value: unknown): value is unknown[] {
-    return Array.isArray(value);
-  }
+function toListGroups(metadata: ParsedPackageMetadata): PackageListGroup[] {
+  return PACKAGE_LIST_GROUPS.map(({ key, label }) => ({
+    label,
+    entries: (metadata[key] ?? []).map(toListEntry),
+  })).filter((group) => group.entries.length > 0);
+}
 
-  protected isString(value: unknown): value is string {
-    return typeof value === 'string';
-  }
+function toListEntry(value: string): PackageListEntry {
+  const separatorIndex = value.indexOf(OPTIONAL_DEPENDENCY_SEPARATOR);
+  if (separatorIndex < 0) return { name: value, note: null };
 
-  protected isNumber(value: unknown): value is number {
-    return typeof value === 'number';
-  }
+  return {
+    name: value.slice(0, separatorIndex),
+    note: value.slice(separatorIndex + OPTIONAL_DEPENDENCY_SEPARATOR.length),
+  };
+}
 
-  protected isBoolean(value: unknown): value is boolean {
-    return typeof value === 'boolean';
-  }
+function toBuildTimestamp(buildDate: string | undefined): number | null {
+  const seconds = Number(buildDate);
+  return buildDate && Number.isFinite(seconds) ? seconds * MS_PER_SECOND : null;
+}
 
-  protected asString(value: unknown): string {
-    return typeof value === 'string' ? value : String(value ?? '');
-  }
-
-  protected asNumber(value: unknown): number {
-    return typeof value === 'number' ? value : Number(value);
-  }
-
-  protected asDate(value: unknown): string | number | Date {
-    if (value instanceof Date) return value;
-    const num = Number(value);
-    return Number.isFinite(num) ? num : String(value ?? '');
-  }
+function nonBlank(value: string | undefined): string | null {
+  return value?.trim() ? value : null;
 }

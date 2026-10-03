@@ -4,6 +4,8 @@
     [options]="config.options"
     [hasData]="true"
     [loading]="chart.loading()"
+    [failed]="chart.failed()"
+    (retry)="chart.retry()"
     containerClass="card relative flex h-[16rem] sm:h-[12rem] justify-center"
   />
 } @else if (chart.loading()) {

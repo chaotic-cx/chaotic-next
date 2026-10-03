@@ -1,0 +1,37 @@
+:host {
+  display: block;
+}
+
+.chaotic-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-block: 0.5rem 1.5rem;
+  text-align: left;
+}
+
+@media (min-width: 768px) {
+  .chaotic-page-header {
+    margin-block: 1rem 2rem;
+  }
+}
+
+.chaotic-page-header__title {
+  color: var(--ctp-mocha-text);
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+@media (min-width: 768px) {
+  .chaotic-page-header__title {
+    font-size: 1.875rem;
+  }
+}
+
+.chaotic-page-header__subtitle {
+  color: var(--ctp-mocha-subtext0);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}

@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { AppService, ALL_TIME_DAYS } from '../../../../app.service';
 import { StatsService } from '../../../stats.service';
+import { LoadErrorComponent } from '../../../../load-error/load-error.component';
 import { chartResource } from '../../chart-config';
 
 export interface BuilderUtilizationRowDto {
@@ -60,7 +61,7 @@ export function utilizationShade(count: number, max: number): number {
 
 @Component({
   selector: 'chaotic-chart-builder-utilization',
-  imports: [],
+  imports: [LoadErrorComponent],
   templateUrl: './chart-builder-utilization.component.html',
   styleUrl: './chart-builder-utilization.component.css',
 })

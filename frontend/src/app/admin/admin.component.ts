@@ -1,15 +1,28 @@
-import { Component, computed, inject } from '@angular/core';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+  viewChildren,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Tab, TabList, Tabs } from '@openng/optimus-ui/tabs';
-import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { setPageSeo } from '../functions';
-import { TitleComponent } from '../title/title.component';
-import { isAdminTab } from './admin-tabs';
+import { ADMIN_NAV, findAdminNavItem } from './admin-nav';
+
+interface IndicatorBox {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
 
 @Component({
   selector: 'chaotic-admin',
-  imports: [RouterOutlet, Tab, TabList, Tabs, TitleComponent, Tooltip],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css',
 })
@@ -18,11 +31,17 @@ export class AdminComponent {
   private readonly router = inject(Router);
 
   private readonly routerEvents = toSignal(this.router.events, { initialValue: null });
+  private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
+  private readonly links = viewChildren<ElementRef<HTMLAnchorElement>>('navLink');
 
-  protected readonly activeTab = computed<string>(() => {
+  protected readonly groups = ADMIN_NAV;
+
+  protected readonly activeItem = computed(() => {
     void this.routerEvents();
-    return this.route.firstChild?.snapshot?.url?.[0]?.path ?? 'packages';
+    return findAdminNavItem(this.route.firstChild?.snapshot?.url?.[0]?.path);
   });
+
+  protected readonly indicator = signal<IndicatorBox | null>(null);
 
   constructor() {
     setPageSeo(
@@ -30,13 +49,28 @@ export class AdminComponent {
       'Administrative tools for the Chaotic-AUR backend',
       'Chaotic-AUR, Admin, Repository, Packages, Builders, Archlinux',
     );
+
+    afterRenderEffect(() => {
+      const activePath = this.activeItem().path;
+      const link = this.links().find((ref) => ref.nativeElement.dataset['path'] === activePath);
+      this.indicator.set(link ? this.measure(link.nativeElement) : null);
+    });
   }
 
-  protected navigate(value: string | number | undefined): void {
-    if (typeof value === 'string' && isAdminTab(value)) {
-      void this.router.navigate([value], {
-        relativeTo: this.route,
-      });
-    }
+  protected onNavResize(): void {
+    const activePath = this.activeItem().path;
+    const link = this.links().find((ref) => ref.nativeElement.dataset['path'] === activePath);
+    if (link) this.indicator.set(this.measure(link.nativeElement));
+  }
+
+  private measure(link: HTMLElement): IndicatorBox {
+    const navBox = this.nav().nativeElement.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    return {
+      top: linkBox.top - navBox.top + this.nav().nativeElement.scrollTop,
+      left: linkBox.left - navBox.left + this.nav().nativeElement.scrollLeft,
+      width: linkBox.width,
+      height: linkBox.height,
+    };
   }
 }

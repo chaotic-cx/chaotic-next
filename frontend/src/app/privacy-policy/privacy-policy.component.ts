@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Divider } from '@openng/optimus-ui/divider';
 import { Panel } from '@openng/optimus-ui/panel';
-import { setPageSeo } from '../functions';
+import { preferredScrollBehavior, setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
@@ -34,7 +34,7 @@ export class PrivacyPolicyComponent implements OnInit {
 
   private scrollToFragment(fragment: string | null): void {
     if (!fragment) return;
-    document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById(fragment)?.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
   }
 
   scrollTo(id: string): void {

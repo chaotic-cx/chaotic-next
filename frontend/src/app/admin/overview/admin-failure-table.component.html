@@ -1,0 +1,74 @@
+<div class="failure-table-wrap">
+  <table class="failure-table">
+    <colgroup>
+      <col />
+      <col class="col-status" />
+      <col class="col-streak" />
+      <col class="col-time" />
+      <col class="col-actions" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">Package</th>
+        <th class="cell-status" scope="col">Status</th>
+        <th class="is-numeric" scope="col">Streak</th>
+        <th class="is-numeric" scope="col">Last failure</th>
+        <th scope="col"><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.pkgname) {
+        <tr [class.is-silenced]="row.silenced">
+          <td>
+            <span class="failure-name">
+              <span class="status-dot" [style.background]="statusColor(row.status)" aria-hidden="true"></span>
+              <a [routerLink]="['/stats/search']" [queryParams]="{ search: row.pkgname }">{{ row.pkgname }}</a>
+              @if (isRateLimited(row)) {
+                <i
+                  class="pi pi-bolt text-ctp-yellow"
+                  [attr.aria-label]="'Rate limited'"
+                  pTooltip="Rate limited: the dispatcher skips it until its next retry"
+                  tooltipPosition="top"
+                ></i>
+              }
+            </span>
+          </td>
+          <td class="failure-status cell-status">{{ row.statusText }}</td>
+          <td class="is-numeric">
+            ×{{ row.consecutiveFailures }}
+            <span class="failure-since">{{ streakDurationLabel(row.streakStartedAt) }}</span>
+          </td>
+          <td class="is-numeric failure-since">{{ row.timestamp | relativeTime }}</td>
+          <td>
+            <span class="failure-actions">
+              @if (row.logUrl && !isLogPurged(row.timestamp)) {
+                <a
+                  class="chaotic-icon-btn"
+                  [routerLink]="packageLogRouteFromUrl(row.logUrl)"
+                  [attr.aria-label]="`Open build log of ${row.pkgname}`"
+                  pTooltip="Open build log"
+                  tooltipPosition="left"
+                >
+                  <i class="pi pi-align-left" aria-hidden="true"></i>
+                </a>
+              }
+              @if (canSilence()) {
+                <button
+                  class="chaotic-icon-btn"
+                  [disabled]="busy()"
+                  [attr.aria-label]="(row.silenced ? 'Unsilence ' : 'Silence ') + row.pkgname"
+                  [pTooltip]="row.silenced ? 'Unsilence' : 'Silence until it fails again'"
+                  (click)="toggleSilence.emit(row)"
+                  type="button"
+                  tooltipPosition="left"
+                >
+                  <i [class]="row.silenced ? 'pi pi-bell' : 'pi pi-bell-slash'" aria-hidden="true"></i>
+                </button>
+              }
+            </span>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

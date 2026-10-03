@@ -1,308 +1,126 @@
-<div class="mx-auto max-w-4xl">
+<div class="chaotic-page">
   <chaotic-title
     title="About us"
-    subtitleHtml="Chaotic-AUR is a repository that provides a large number of packages for Arch Linux.<br>
-         The repository is maintained by a team of volunteers who work to provide pre-compiled packages for their users."
+    subtitle="Chaotic-AUR is a binary repository for Arch Linux, run by a team of volunteers who pre-build AUR packages."
   />
-  <div>
-    <div class="chaotic-panel mt-5" animate.enter="ctp-item-enter">
-      <p-panel id="team-members">
-        <ng-template pTemplate="header">
-          <button class="cursor-pointer font-bold" (click)="scrollTo('team-members')">Team members</button>
-        </ng-template>
-        @if (isWide()) {
-          <div class="grid grid-cols-2 items-stretch gap-10 md:grid-cols-3 lg:grid-cols-4">
-            @for (member of team; track member) {
-              <p-card>
-                <h3 class="flex h-16 items-center justify-center px-2 text-center text-lg font-bold text-ctp-maroon">
-                  {{ member.name }}
-                </h3>
-                <div class="flex flex-col items-center pb-4">
-                  <img
-                    class="my-4 h-20 w-20 rounded-full shadow-lg"
-                    ngSrc="{{ member.avatarUrl }}"
-                    height="200"
-                    width="200"
-                    alt="{{ member.name }} avatar"
-                  />
-                  <span class="text-ctp-peach text-sm">{{ member.role }}</span>
-                  <a class="mt-4" href="https://github.com/{{ member.github }}" rel="noopener noreferrer">
-                    <i class="pi pi-github" pRipple style="font-size: 1.5rem"></i>
-                  </a>
-                </div>
-              </p-card>
-            }
-          </div>
-        } @else {
-          <p-accordion [value]="0">
-            @for (member of team; track member.name) {
-              <p-accordion-panel [value]="$index">
-                <p-accordion-header>{{ member.name }}</p-accordion-header>
-                <p-accordion-content>
-                  <div class="flex flex-col items-center pb-5">
-                    <img
-                      class="my-5 h-24 w-24 rounded-full shadow-lg"
-                      ngSrc="{{ member.avatarUrl }}"
-                      height="200"
-                      width="200"
-                      alt="{{ member.name }} avatar"
-                    />
-                    <span class="text-ctp-peach text-sm">{{ member.role }}</span>
-                    <a class="mt-5" href="https://github.com/{{ member.github }}" rel="noopener noreferrer">
-                      <i class="pi pi-github" pRipple style="font-size: 1.5rem"></i>
-                    </a>
-                  </div>
-                </p-accordion-content>
-              </p-accordion-panel>
-            }
-          </p-accordion>
-        }
-      </p-panel>
-    </div>
 
-    <div class="chaotic-panel mt-5" animate.enter="ctp-item-enter">
-      <p-panel id="contact-us">
-        <ng-template pTemplate="header">
-          <button class="cursor-pointer font-bold" (click)="scrollTo('contact-us')">Contact us</button>
-        </ng-template>
-        <ul class="chaotic-list-regular text-ctp-text">
-          <li>Please use our issue trackers or the Telegram group, for general questions and support.</li>
-          <li>
-            If a matter needs to be discussed privately, feel free to pick any of
-            <a
-              class="text-ctp-mauve"
-              href="https://keyoxide.org/D245D484F3578CB17FD6DA6B67DB29BFF3C96757"
-              rel="noopener"
-              target="_blank"
-              >these channels</a
-            >.
-          </li>
-        </ul>
-      </p-panel>
-    </div>
+  <section class="about-section" id="team-members" aria-labelledby="team-title">
+    <h2 class="chaotic-section-title" id="team-title">The team</h2>
+    <ul class="about-team">
+      @for (member of team; track member.github) {
+        <li>
+          <a
+            class="about-member chaotic-surface"
+            [href]="`https://github.com/${member.github}`"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img class="about-member__avatar" [ngSrc]="member.avatarUrl ?? ''" width="48" height="48" alt="" />
+            <span class="min-w-0 flex-1">
+              <span class="about-member__name">{{ member.name }}</span>
+              <span class="about-member__role">{{ member.role }}</span>
+            </span>
+            <i class="pi pi-github text-ctp-subtext0" aria-hidden="true"></i>
+            <span class="sr-only">GitHub profile of {{ member.name }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </section>
 
-    <div class="chaotic-panel mt-5" animate.enter="ctp-item-enter">
-      <p-panel id="build-nodes">
-        <ng-template pTemplate="header">
-          <button class="cursor-pointer font-bold" (click)="scrollTo('build-nodes')">Build nodes</button>
-        </ng-template>
-        <ul class="chaotic-list-regular text-ctp-text">
-          <li>
-            Most packages available in this repo are automatically built from their respective
-            <a class="text-ctp-mauve" href="https://aur.archlinux.org" rel="noopener" target="_blank">AUR</a>
-            source package.
-          </li>
-          <li>
-            However there are a few exceptions, check
-            <a class="text-ctp-mauve" href="https://github.com/chaotic-aur/packages">our package repository</a>
-            to find out which ones.
-          </li>
-          <li>
-            The main node in is located in Hetzner's finnish datacenter and runs in one of
-            <a
-              class="text-ctp-mauve"
-              href="https://www.hetzner.com/dedicated-rootserver/ex44/"
-              rel="noopener"
-              target="_blank"
-              >these</a
-            >. The hardware is provided by Garuda Linux.
-          </li>
-          <li>
-            The second building cluster is a node in
-            <a class="text-ctp-mauve" href="https://www2.ufscar.br/" rel="noopener" target="_blank">UFSCar's</a>
-            datacenter which is hosted in São Carlos, São Paulo, Brazil.
-          </li>
-        </ul>
-      </p-panel>
-    </div>
+  <div class="about-grid">
+    <section class="chaotic-card" id="build-nodes">
+      <header class="chaotic-card__header"><h2 class="chaotic-card__title">Build infrastructure</h2></header>
+      <div class="about-card__body">
+        <p>
+          Most packages build automatically from their
+          <a href="https://aur.archlinux.org" rel="noopener" target="_blank">AUR</a> source. Some exceptions live in
+          <a href="https://github.com/chaotic-aur/packages" rel="noopener" target="_blank">our package repository</a>.
+        </p>
+        <p>
+          The main node runs in Hetzner's Finnish datacenter on an
+          <a href="https://www.hetzner.com/dedicated-rootserver/ex44/" rel="noopener" target="_blank">EX44</a>, with
+          hardware from Garuda Linux.
+        </p>
+      </div>
+    </section>
 
-    <div class="mt-5" animate.enter="ctp-item-enter">
-      <p-panel id="reporting-bugs">
-        <ng-template pTemplate="header">
-          <button class="cursor-pointer font-bold" (click)="scrollTo('reporting-bugs')">Reporting bugs</button>
-        </ng-template>
-        <ul class="chaotic-list-regular text-ctp-text">
-          <li>
-            Feel free to create
-            <a
-              class="text-ctp-mauve"
-              href="https://github.com/chaotic-aur/packages/issues"
-              rel="noopener"
-              target="_blank"
-              >issues</a
-            >
-            to suggest enhancements, flag database corruptions, and all other requests.
-          </li>
-          <li>Please report build bugs to the AUR package maintainers.</li>
-        </ul>
-      </p-panel>
-    </div>
+    <section class="chaotic-card" id="contact-us">
+      <header class="chaotic-card__header"><h2 class="chaotic-card__title">Get in touch</h2></header>
+      <div class="about-card__body" id="reporting-bugs">
+        <p>
+          For questions and support, use our issue trackers or the Telegram group. For private matters, pick one of
+          <a href="https://keyoxide.org/D245D484F3578CB17FD6DA6B67DB29BFF3C96757" rel="noopener" target="_blank"
+            >these channels</a
+          >.
+        </p>
+        <p>
+          Open <a href="https://github.com/chaotic-aur/packages/issues" rel="noopener" target="_blank">an issue</a> for
+          enhancements, database corruptions and other requests. Report build bugs to the AUR package maintainers.
+        </p>
+      </div>
+    </section>
 
-    <div class="mt-5" animate.enter="ctp-item-enter">
-      <p-panel id="mirrors">
-        <ng-template pTemplate="header">
-          <button class="cursor-pointer font-bold" (click)="scrollTo('mirrors')">Mirrors</button>
-        </ng-template>
-        <ul class="chaotic-list-regular text-ctp-text">
-          <li>
-            We have a few mirrors available for you to use. You can find the list of mirrors and their status
-            <a class="text-ctp-mauve" href="https://status.chaotic.cx/map" rel="noopener" target="_blank">here</a>.
-          </li>
-          <li>If you want to host a mirror yourself, please get in contact with us in some way.</li>
-          <li>
-            We prefer
-            <a class="text-ctp-mauve" href="https://syncthing.net/" rel="noopener" target="_blank">Syncthing</a>
-            as method for distributing our files.
-          </li>
-        </ul>
-      </p-panel>
-    </div>
+    <section class="chaotic-card" id="mirrors">
+      <header class="chaotic-card__header"><h2 class="chaotic-card__title">Mirrors</h2></header>
+      <div class="about-card__body">
+        <p>
+          The <a routerLink="/mirrors">mirror list</a> shows every mirror and its status. We distribute files with
+          <a href="https://syncthing.net/" rel="noopener" target="_blank">Syncthing</a>.
+        </p>
+        <p>To host a mirror yourself, contact us through any of the channels above.</p>
+      </div>
+    </section>
 
-    <div class="mt-5" animate.enter="ctp-item-enter">
-      <p-panel id="useful-links">
-        <ng-template pTemplate="header">
-          <button class="cursor-pointer font-bold" (click)="scrollTo('useful-links')">Useful links</button>
-        </ng-template>
-        <ul class="chaotic-list-regular text-ctp-text">
-          <li>
-            Telegram channel with news and updates:
-            <a class="text-ctp-mauve" href="https://t.me/s/chaotic_aur" rel="noopener" target="_blank"
-              >t.me/s/chaotic_aur</a
-            >
-          </li>
-          <li>
-            Our community group for on- and off topics: feel free to come by! 😊
-            <a class="text-ctp-mauve" href="https://t.me/s/chaotic_aur_sac" rel="noopener" target="_blank"
-              >t.me/s/chaotic_aur_sac</a
-            >
-          </li>
-          <li>
-            Our community group bridged with Matrix:
-            <a
-              class="text-ctp-mauve"
-              href="https://matrix.to/#/%23chaotic-aur:mozilla.org"
-              rel="noopener"
-              target="_blank"
-              >matrix.to/#/chaotic-aur:mozilla.org</a
-            >
-          </li>
-          <li>
-            Repository package list:
-            <a
-              class="text-ctp-mauve"
-              href="https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/"
-              rel="noopener"
-              target="_blank"
-              >pkgs.org</a
-            >
-          </li>
-          <li>
-            Main package directory (for manual downloads):
-            <a
-              class="text-ctp-mauve"
-              href="https://builds.garudalinux.org/repos/chaotic-aur/x86_64/"
-              rel="noopener"
-              target="_blank"
-              >downloads</a
-            >
-          </li>
-          <li>
-            Infra / toolbox source code:
-            <a class="text-ctp-mauve" href="https://github.com/chaotic-aur/toolbox" rel="noopener" target="_blank"
-              >GitHub</a
-            >
-          </li>
-          <li>
-            Status page:
-            <a class="text-ctp-mauve" href="https://uptimes.chaotic.cx" rel="noopener" target="_blank">monitoring</a>
-          </li>
-          <li>
-            Latest logs:
-            <a
-              class="text-ctp-mauve"
-              href="https://builds.garudalinux.org/repos/chaotic-aur/logs/"
-              rel="noopener"
-              target="_blank"
-              >logfiles</a
-            >
-          </li>
-          <li>
-            Chaotic keys:
-            <a class="text-ctp-mauve" href="https://aur.chaotic.cx/chaotic.gpg" rel="noopener" target="_blank"
-              >keyring</a
-            >
-          </li>
-        </ul>
-      </p-panel>
-    </div>
-
-    <div class="mt-5" animate.enter="ctp-item-enter">
-      <p-panel id="memorial">
-        <ng-template pTemplate="header">
-          <button class="cursor-pointer font-bold" (click)="scrollTo('memorial')">Memorial</button>
-        </ng-template>
-        <div class="chaotic-panel text-md">
-          <p>
-            For the 3rd and 6th birthday of Chaotic-AUR, our community contributed desktop and terminal screenshots.
-          </p>
-          <div class="mt-4 flex gap-4">
-            <a class="text-ctp-mauve" routerLink="/memorial-v2">Memorial — 2024 Edition</a>
-            <a class="text-ctp-mauve" routerLink="/memorial">Memorial — 2021 Edition</a>
-          </div>
-        </div>
-      </p-panel>
-    </div>
-
-    <div class="mt-5" animate.enter="ctp-item-enter">
-      <p-panel id="special-thanks">
-        <ng-template pTemplate="header">
-          <button class="cursor-pointer font-bold" (click)="scrollTo('special-thanks')">Special thanks</button>
-        </ng-template>
-        <ul class="chaotic-list-regular text-ctp-text">
-          <li>Librewish (Shrinivas Kumbhar) - Former Co-maintainer, Garuda Linux founder</li>
-          <li>Garuda Linux staffers</li>
-          <li>All our current and past mirror providers</li>
-          <li>
-            <a class="text-ctp-mauve" href="https://github.com/Tk-Glitch" rel="noopener" target="_blank"
-              >Tk-Glitch (TkG)</a
-            >
-          </li>
-          <li>
-            <a class="text-ctp-mauve" href="https://github.com/Kodehawa" rel="noopener" target="_blank">Kodehawa</a>
-          </li>
-          <li>
-            <a class="text-ctp-mauve" href="https://aur.archlinux.org/account/figue" rel="noopener" target="_blank">
-              Figue
-            </a>
-          </li>
-          <li>
-            <a class="text-ctp-mauve" href="https://github.com/benjamimgois" rel="noopener" target="_blank">
-              Benjamim Gois
-            </a>
-          </li>
-          <li>
-            <a class="text-ctp-mauve" href="https://www.patreon.com/jcponce" rel="noopener" target="_blank"
-              >Dr Juan Carlos Ponce Campuzano</a
-            >, creator of the Aizawa applet and our logo
-          </li>
-          <li>BlackStarMuzic for creating the clean version of our logo</li>
-          <li>Frogging Family and Linux Gaming Dev Discord servers</li>
-          <li>
-            André,
-            <a class="text-ctp-mauve" href="https://github.com/olivatooo" rel="noopener" target="_blank"
-              >Gabriel Olivato</a
-            >
-            and Maiser
-          </li>
-          <li>AUR package maintainers, ArchLinux TUs and staffers</li>
-          <li>And everybody who somehow helped with all the projects we are pre-building! 🤗</li>
-        </ul>
-      </p-panel>
-    </div>
-    <div class="my-10 px-2.5 text-center">
-      <a class="text-ctp-subtext0">
-        In memory of our colleague Rustem Bakirov. A proactive co-maintainer who in Dec/2021 left us at the age of 20.
-      </a>
-    </div>
+    <section class="chaotic-card" id="memorial">
+      <header class="chaotic-card__header"><h2 class="chaotic-card__title">Memorial</h2></header>
+      <div class="about-card__body">
+        <p>For our 3rd and 6th birthday, the community shared their desktop and terminal screenshots.</p>
+        <p class="flex flex-wrap gap-x-4 gap-y-1">
+          <a routerLink="/memorial-v2">2024 edition</a>
+          <a routerLink="/memorial">2021 edition</a>
+        </p>
+      </div>
+    </section>
   </div>
+
+  <section class="chaotic-card about-section" id="useful-links" aria-labelledby="links-title">
+    <header class="chaotic-card__header">
+      <h2 class="chaotic-card__title" id="links-title">Useful links</h2>
+    </header>
+    <dl class="about-links">
+      @for (link of usefulLinks; track link.href) {
+        <div>
+          <dt>{{ link.label }}</dt>
+          <dd>
+            <a [href]="link.href" rel="noopener" target="_blank">{{ link.text }}</a>
+          </dd>
+        </div>
+      }
+    </dl>
+  </section>
+
+  <section class="chaotic-card about-section" id="special-thanks" aria-labelledby="thanks-title">
+    <header class="chaotic-card__header">
+      <h2 class="chaotic-card__title" id="thanks-title">Special thanks</h2>
+    </header>
+    <ul class="about-thanks">
+      @for (person of specialThanks; track person.name) {
+        <li>
+          @if (person.href) {
+            <a [href]="person.href" rel="noopener" target="_blank">{{ person.name }}</a>
+          } @else {
+            <span class="text-ctp-text">{{ person.name }}</span>
+          }
+          @if (person.note) {
+            <span class="text-ctp-subtext0">, {{ person.note }}</span>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <p class="about-dedication">
+    In memory of our colleague Rustem Bakirov, a proactive co-maintainer who left us in December 2021 at the age of 20.
+  </p>
 </div>

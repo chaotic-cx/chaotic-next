@@ -1,0 +1,65 @@
+diff --git a/fesm2022/garudalinux-themes-catppuccin.mjs b/fesm2022/garudalinux-themes-catppuccin.mjs
+index 9e2d90af35220557b70d495c85a9c099149e85f0..c7055e912ff12af22afe3ced0ea0c66a40b58663 100644
+--- a/fesm2022/garudalinux-themes-catppuccin.mjs
++++ b/fesm2022/garudalinux-themes-catppuccin.mjs
+@@ -1192,14 +1192,14 @@ const tokensAlt = {
+         },
+     },
+ };
+-const CatppuccinAura = definePreset(Aura, tokens);
+-const CatppuccinNora = definePreset(Nora, tokens);
+-const CatppuccinMaterial = definePreset(Material, tokens);
+-const CatppuccinLara = definePreset(Lara, tokens);
+-const CatppuccinAuraAlt = definePreset(Aura, tokensAlt);
+-const CatppuccinNoraAlt = definePreset(Nora, tokensAlt);
+-const CatppuccinMaterialAlt = definePreset(Material, tokensAlt);
+-const CatppuccinLaraAlt = definePreset(Lara, tokensAlt);
++const CatppuccinAura = /* @__PURE__ */ definePreset(Aura, tokens);
++const CatppuccinNora = /* @__PURE__ */ definePreset(Nora, tokens);
++const CatppuccinMaterial = /* @__PURE__ */ definePreset(Material, tokens);
++const CatppuccinLara = /* @__PURE__ */ definePreset(Lara, tokens);
++const CatppuccinAuraAlt = /* @__PURE__ */ definePreset(Aura, tokensAlt);
++const CatppuccinNoraAlt = /* @__PURE__ */ definePreset(Nora, tokensAlt);
++const CatppuccinMaterialAlt = /* @__PURE__ */ definePreset(Material, tokensAlt);
++const CatppuccinLaraAlt = /* @__PURE__ */ definePreset(Lara, tokensAlt);
+ 
+ /**
+  * Generated bundle index. Do not edit.
+diff --git a/fesm2022/garudalinux-themes-dr460nized.mjs b/fesm2022/garudalinux-themes-dr460nized.mjs
+index 8a4bfeea0ccf51cc5788e53dba81219d3e68e0c7..d44054fac25c576880675aa6d0a80fa62a054337 100644
+--- a/fesm2022/garudalinux-themes-dr460nized.mjs
++++ b/fesm2022/garudalinux-themes-dr460nized.mjs
+@@ -365,10 +365,10 @@ const tokensDr460nized = {
+         },
+     },
+ };
+-const Dr460nizedAura = definePreset(Aura, tokensDr460nized);
+-const Dr460nizedNora = definePreset(Nora, tokensDr460nized);
+-const Dr460nizedLara = definePreset(Lara, tokensDr460nized);
+-const Dr460nizedMaterial = definePreset(Material, tokensDr460nized);
++const Dr460nizedAura = /* @__PURE__ */ definePreset(Aura, tokensDr460nized);
++const Dr460nizedNora = /* @__PURE__ */ definePreset(Nora, tokensDr460nized);
++const Dr460nizedLara = /* @__PURE__ */ definePreset(Lara, tokensDr460nized);
++const Dr460nizedMaterial = /* @__PURE__ */ definePreset(Material, tokensDr460nized);
+ 
+ /**
+  * Generated bundle index. Do not edit.
+diff --git a/fesm2022/garudalinux-themes-vo1ded.mjs b/fesm2022/garudalinux-themes-vo1ded.mjs
+index 52658fd97df6ca6afe8662d4c3722ee7b729b71a..2a8b4dfe2a4f47b902fd9a4ae3f2c30be86e1754 100644
+--- a/fesm2022/garudalinux-themes-vo1ded.mjs
++++ b/fesm2022/garudalinux-themes-vo1ded.mjs
+@@ -55,10 +55,10 @@ const vo1dedTokens = {
+         },
+     },
+ };
+-const Vo1dedAura = definePreset(Aura, vo1dedTokens);
+-const Vo1dedNora = definePreset(Nora, vo1dedTokens);
+-const Vo1dedMaterial = definePreset(Material, vo1dedTokens);
+-const Vo1dedLara = definePreset(Lara, vo1dedTokens);
++const Vo1dedAura = /* @__PURE__ */ definePreset(Aura, vo1dedTokens);
++const Vo1dedNora = /* @__PURE__ */ definePreset(Nora, vo1dedTokens);
++const Vo1dedMaterial = /* @__PURE__ */ definePreset(Material, vo1dedTokens);
++const Vo1dedLara = /* @__PURE__ */ definePreset(Lara, vo1dedTokens);
+ 
+ /**
+  * Generated bundle index. Do not edit.

@@ -4,6 +4,7 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { vtIndicatorLink } from '../functions';
 import { SourceViewerComponent } from '../source-viewer/source-viewer.component';
+import { ScanFindingRowComponent } from './scan-finding-row.component';
 import { AurScanService } from './aur-scan.service';
 import { presenter } from './scan-presenter';
 
@@ -11,13 +12,12 @@ const POPULARITY_DECIMALS = 2;
 
 @Component({
   selector: 'chaotic-aur-scan-result',
-  imports: [TagModule, Tooltip, SourceViewerComponent],
+  imports: [TagModule, Tooltip, SourceViewerComponent, ScanFindingRowComponent],
   templateUrl: './aur-scan-result.component.html',
+  styleUrl: './aur-scan-result.component.css',
 })
 export class AurScanResultComponent {
   private readonly scanService = inject(AurScanService);
-
-  readonly STAGGER_CAP = 8;
 
   readonly packageName = input.required<string>();
   readonly showTitle = input(true);
@@ -77,6 +77,13 @@ export class AurScanResultComponent {
     }
     return byLine;
   }
+
+  protected readonly findingsSeverity = computed(() => {
+    const findings = this.scan()?.findings ?? [];
+    if (findings.some((finding) => finding.severity === 'critical')) return 'danger';
+    if (findings.some((finding) => finding.severity === 'warning')) return 'warn';
+    return 'info';
+  });
 
   protected flaggedVtCount(): number {
     return (this.scan()?.vtReports ?? []).filter(

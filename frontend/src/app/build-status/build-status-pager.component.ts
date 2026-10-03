@@ -4,7 +4,6 @@ import { Component, input, output } from '@angular/core';
 @Component({
   selector: 'chaotic-build-status-pager',
   templateUrl: './build-status-pager.component.html',
-  styleUrl: './build-status-pager.component.css',
 })
 export class BuildStatusPager {
   readonly page = input.required<number>();

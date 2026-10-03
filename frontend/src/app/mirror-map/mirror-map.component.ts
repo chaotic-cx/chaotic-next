@@ -6,6 +6,7 @@ import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
 import { Map as MaplibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl';
 import { getCountryCoordinates } from './country-coordinates';
 import { LiveTrafficService, type TrafficHit } from './live-traffic.service';
+import { injectLazyStylesheet } from '../lazy-stylesheet';
 
 const { mocha } = flavors;
 const WORKER_URL = '/maplibre-gl-worker.mjs';
@@ -309,14 +310,14 @@ interface ActiveArc {
         position: absolute;
         inset: 0;
         background-color: transparent;
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
+        backdrop-filter: blur(var(--chaotic-blur));
+        -webkit-backdrop-filter: blur(var(--chaotic-blur));
       }
 
       :host ::ng-deep .maplibregl-ctrl-group {
         background: rgba(24, 24, 37, 0.85) !important;
-        backdrop-filter: blur(10px) !important;
-        -webkit-backdrop-filter: blur(10px) !important;
+        backdrop-filter: blur(var(--chaotic-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--chaotic-blur)) !important;
         border: 1px solid #313244 !important;
         border-radius: 12px !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
@@ -396,8 +397,8 @@ interface ActiveArc {
         bottom: 25px;
         left: 25px;
         background: rgba(24, 24, 37, 0.85);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(var(--chaotic-blur));
+        -webkit-backdrop-filter: blur(var(--chaotic-blur));
         border: 1px solid #313244;
         border-radius: 12px;
         padding: 12px 16px;
@@ -472,6 +473,7 @@ export class MirrorMapComponent implements OnDestroy {
   });
 
   constructor() {
+    injectLazyStylesheet('maplibre');
     effect(() => {
       const div = this.mapDiv();
       if (div && !this.map) {

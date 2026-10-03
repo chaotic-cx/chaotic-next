@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
+import { computed, DestroyRef, inject, linkedSignal, signal, type Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { type ParamMap, Router } from '@angular/router';
@@ -31,17 +31,6 @@ export function isChaoticEvent(value: unknown): value is ChaoticEvent {
   if (typeof value !== 'object' || value === null) return false;
   const type = (value as { type: unknown }).type;
   return typeof type === 'string' && CHAOTIC_EVENT_TYPES.has(type);
-}
-
-export function shuffleArray<T>(array: readonly T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i >= 0; i--) {
-    const j: number = Math.floor(Math.random() * (i + 1));
-    const temp = shuffled[i];
-    shuffled[i] = shuffled[j];
-    shuffled[j] = temp;
-  }
-  return shuffled;
 }
 
 export function castTo<T>(value: unknown): T {
@@ -130,20 +119,43 @@ export function resourceValue<T>(resource: { hasValue(): boolean; value(): T }):
   return resource.hasValue() ? resource.value() : undefined;
 }
 
+/** Keeps the last loaded value while a resource loads again, so lists do not blank out between requests. */
+export function retainedResourceValue<T>(resource: { hasValue(): boolean; value(): T }): Signal<T | undefined> {
+  return linkedSignal<T | undefined, T | undefined>({
+    source: () => resourceValue(resource),
+    computation: (next, previous) => next ?? previous?.value,
+  });
+}
+
+/** True only while a resource loads and no earlier value exists to show in the meantime. */
+export function loadingWithoutValue(resource: { isLoading(): boolean }, value: Signal<unknown>): Signal<boolean> {
+  return computed(() => resource.isLoading() && value() === undefined);
+}
+
 export function debouncedSignal<T>(source: Signal<T>, delayMs: number): Signal<T> {
   return toSignal(toObservable(source).pipe(debounceTime(delayMs), distinctUntilChanged()), {
     initialValue: source(),
   });
 }
 
+/** Smooth scrolling unless the user asked for reduced motion; JS-driven scrolls ignore the CSS media rule. */
+export function preferredScrollBehavior(): ScrollBehavior {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+}
+
+/** True once the resource's last request failed. Lets templates show an error state instead of an empty one. */
+export function resourceFailed(resource: { status(): string }): Signal<boolean> {
+  return computed(() => resource.status() === 'error');
+}
+
 export function resourceSignal<T>(resource: { hasValue(): boolean; value(): T }): Signal<T | undefined> {
   return computed(() => resourceValue(resource));
 }
 
-export function copyLineLink(line: number): void {
+export function copyLineLink(line: number): Promise<void> {
   const url = new URL(window.location.href);
   url.searchParams.set('line', String(line));
-  void navigator.clipboard.writeText(url.toString());
+  return navigator.clipboard.writeText(url.toString());
 }
 
 export interface SeoTags {

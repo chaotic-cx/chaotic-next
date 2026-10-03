@@ -601,7 +601,9 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     const since = nDaysInPast(clampInt(options?.days ?? UNRESOLVED_FAILURE_LOOKBACK_DAYS, 1, MAX_DAYS_WINDOW));
 
     // The streak aggregates count the same set: failures of this package newer
-    // than its last resolving build inside the window.
+    // than its last resolving build inside the window. The resolving-build
+    // lookup correlates to the outer row "l", so it runs once per package
+    // instead of once per failed build.
     const failureStreakScope = (qb: SelectQueryBuilder<Build>): SelectQueryBuilder<Build> =>
       qb
         .from(Build, 'f')
@@ -615,7 +617,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
               .subQuery()
               .select('COALESCE(MAX(r.id), 0)')
               .from(Build, 'r')
-              .where('r."pkgbaseId" = f."pkgbaseId"')
+              .where('r."pkgbaseId" = l."pkgbaseId"')
               .andWhere('r.timestamp > :since', { since })
               .andWhere('r.status IN (:...successes)', { successes: BUILD_SUCCESS_STATUSES })
               .getQuery() +

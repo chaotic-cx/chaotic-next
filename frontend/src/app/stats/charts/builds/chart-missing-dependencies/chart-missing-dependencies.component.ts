@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import type { MissingDependencyReport } from '@chaotic-next/shared-lib';
 import { AppService } from '../../../../app.service';
+import { LoadErrorComponent } from '../../../../load-error/load-error.component';
 import { chartResource } from '../../chart-config';
 
 export function visibleMissingRows(rows: MissingDependencyReport[]): MissingDependencyReport[] {
@@ -14,6 +15,7 @@ export function visibleMissingRows(rows: MissingDependencyReport[]): MissingDepe
 
 @Component({
   selector: 'chaotic-chart-missing-dependencies',
+  imports: [LoadErrorComponent],
   templateUrl: './chart-missing-dependencies.component.html',
   styleUrl: './chart-missing-dependencies.component.css',
 })

@@ -1,20 +1,22 @@
 <div class="background flex min-h-svh flex-col">
-  <garuda-shell class="flex-1 p-2" [menuItems]="items()">
+  <garuda-shell class="flex-1 p-2" [menuItems]="menuItems">
     <div class="flex items-center gap-2" garudaShellBarStart>
       <a class="flex items-center" routerLink="/" aria-label="Go to the home page">
-        <img ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="logo" />
+        <img ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="" />
       </a>
-      <p-button
-        class="mobile-nav-trigger"
-        [icon]="mobileNavOpen() ? 'pi pi-times' : 'pi pi-bars'"
-        [ariaLabel]="mobileNavOpen() ? 'Close navigation menu' : 'Open navigation menu'"
-        (onClick)="mobileNavOpen.update((open) => !open)"
-        size="small"
-        text
-        rounded
-      />
+      <button
+        class="mobile-nav-trigger chaotic-icon-btn"
+        #mobileNavTrigger
+        [attr.aria-expanded]="mobileNavOpen()"
+        [attr.aria-label]="mobileNavOpen() ? 'Close navigation menu' : 'Open navigation menu'"
+        (click)="mobileNavOpen.update((open) => !open)"
+        aria-controls="mobile-nav"
+        type="button"
+      >
+        <i [class]="mobileNavOpen() ? 'pi pi-times' : 'pi pi-bars'" aria-hidden="true"></i>
+      </button>
     </div>
-    <div class="router-container">
+    <div class="router-container" [inert]="mobileNavOpen()">
       <router-outlet #routerOutlet="outlet" />
     </div>
     <div class="flex items-center gap-2" garudaShellBarEnd>
@@ -26,9 +28,9 @@
       <chaotic-auth-button />
     </div>
   </garuda-shell>
-  <chaotic-footer />
+  <chaotic-footer [inert]="mobileNavOpen()" />
 
-  <chaotic-mobile-nav [items]="items()" [visible]="mobileNavOpen()" (closed)="mobileNavOpen.set(false)" />
+  <chaotic-mobile-nav [items]="mobileItems" [visible]="mobileNavOpen()" (closed)="closeMobileNav(mobileNavTrigger)" />
 </div>
 
 <p-confirm-dialog [appendTo]="'body'" acceptButtonStyleClass="p-button-sm" rejectButtonStyleClass="p-button-sm" />

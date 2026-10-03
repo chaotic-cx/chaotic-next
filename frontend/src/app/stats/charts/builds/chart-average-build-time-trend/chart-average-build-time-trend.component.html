@@ -3,4 +3,6 @@
   [options]="chartConfig()!.options"
   [hasData]="chart.hasData()"
   [loading]="chart.loading()"
+  [failed]="chart.failed()"
+  (retry)="chart.retry()"
 />

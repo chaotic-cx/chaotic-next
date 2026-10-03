@@ -1,3 +1,18 @@
-:host ::ng-deep .p-card {
-  background: transparent;
+.aur-scan-form {
+  padding: 1rem;
+}
+
+.aur-scan-form__input ::ng-deep input {
+  box-sizing: border-box;
+  height: 2.5rem;
+  padding-block: 0;
+  text-align: left;
+}
+
+.aur-scan-count {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ctp-mocha-overlay1);
 }

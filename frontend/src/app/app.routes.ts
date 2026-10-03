@@ -111,12 +111,14 @@ export const routes: Routes = [
   {
     title: 'Pipeline logs · Chaotic-AUR',
     path: 'logs/:pipelineId',
+    data: SKIP_PRELOAD_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./log-viewer/log-viewer.component').then((c) => c.LogViewerComponent),
   },
   {
     title: 'Package log · Chaotic-AUR',
     path: 'logs/package/:pkgname/:timestamp',
+    data: SKIP_PRELOAD_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./package-log/package-log.component').then((c) => c.PackageLogComponent),
   },
@@ -128,6 +130,7 @@ export const routes: Routes = [
   {
     title: 'Mirror map · Chaotic-AUR',
     path: 'map',
+    data: SKIP_PRELOAD_DATA,
     canActivate: [backendGuard],
     loadComponent: () => import('./map/map.component').then((c) => c.MapComponent),
   },
@@ -173,7 +176,13 @@ export const routes: Routes = [
     data: AUTH_PRELOAD_DATA,
     loadComponent: () => import('./admin/admin.component').then((c) => c.AdminComponent),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'packages' },
+      { path: '', pathMatch: 'full', redirectTo: 'overview' },
+      {
+        path: 'overview',
+        data: AUTH_PRELOAD_DATA,
+        loadComponent: () =>
+          import('./admin/overview/admin-overview-page.component').then((c) => c.AdminOverviewPageComponent),
+      },
       {
         path: 'packages',
         data: AUTH_PRELOAD_DATA,

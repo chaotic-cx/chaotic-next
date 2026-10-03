@@ -1,11 +1,11 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
-import { Card } from '@openng/optimus-ui/card';
+import { DecimalPipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { AppService } from '../../app.service';
 import { setPageSeo } from '../../functions';
@@ -13,9 +13,11 @@ import { TitleComponent } from '../../title/title.component';
 import { AurScanResultComponent } from '../aur-scan-result.component';
 import { AurScanService } from '../aur-scan.service';
 
+const MIN_QUERY_LENGTH = 3;
+
 @Component({
   selector: 'chaotic-aur-scan-page',
-  imports: [AutoComplete, Card, FormsModule, TitleComponent, AurScanResultComponent],
+  imports: [AutoComplete, DecimalPipe, FormsModule, TitleComponent, AurScanResultComponent],
   styleUrl: './aur-scan-page.css',
   templateUrl: './aur-scan-page.component.html',
 })
@@ -28,11 +30,9 @@ export class AurScanPageComponent {
 
   readonly search = input<string>();
 
-  readonly subtitle =
-    'Scan AUR packages for potentially malicious and suspicious content and other indicators for a problematic PKGBUILD.';
+  readonly subtitle = 'Check an AUR package for malicious or suspicious content before you install it.';
 
   protected readonly currentPackageName = signal('');
-  protected readonly hasResults = computed(() => this.currentPackageName() !== '');
   protected readonly metrics = this.aurScanService.metrics;
 
   protected readonly searchModel = signal({ query: '' });
@@ -81,7 +81,7 @@ export class AurScanPageComponent {
 
   async searchSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
     const query = event.query.trim();
-    if (query.length < 3) {
+    if (query.length < MIN_QUERY_LENGTH) {
       this.suggestions.set([]);
       return;
     }
@@ -109,9 +109,12 @@ export class AurScanPageComponent {
   }
 
   protected onKeyUp(event: KeyboardEvent): void {
-    if (event.key !== 'Enter') return;
+    if (event.key === 'Enter') this.scanQuery();
+  }
+
+  protected scanQuery(): void {
     const query = this.searchModel().query.trim();
-    if (query.length >= 3 && this.searchForm.query().valid()) this.selectPackage(query);
+    if (query.length >= MIN_QUERY_LENGTH && this.searchForm.query().valid()) this.selectPackage(query);
   }
 
   private syncQueryParam(pkg: string): void {

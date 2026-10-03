@@ -51,6 +51,7 @@ export const appConfig: ApplicationConfig = {
       languages: {
         bash: () => import('highlight.js/lib/languages/bash'),
         shell: () => import('highlight.js/lib/languages/shell'),
+        ini: () => import('highlight.js/lib/languages/ini'),
       },
     }),
     provideBetterAuth({

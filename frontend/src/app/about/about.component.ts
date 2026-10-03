@@ -1,42 +1,71 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import type { TeamList } from '@chaotic-next/shared-lib';
-import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from '@openng/optimus-ui/accordion';
-import { PrimeTemplate } from '@openng/optimus-ui/api';
-import { Card } from '@openng/optimus-ui/card';
-import { Panel } from '@openng/optimus-ui/panel';
-import { Ripple } from '@openng/optimus-ui/ripple';
 import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
+interface UsefulLink {
+  label: string;
+  text: string;
+  href: string;
+}
+
+const USEFUL_LINKS: UsefulLink[] = [
+  { label: 'News channel', text: 't.me/s/chaotic_aur', href: 'https://t.me/s/chaotic_aur' },
+  { label: 'Community chat', text: 't.me/chaotic_aur_sac', href: 'https://t.me/s/chaotic_aur_sac' },
+  {
+    label: 'Matrix bridge',
+    text: '#chaotic-aur:mozilla.org',
+    href: 'https://matrix.to/#/%23chaotic-aur:mozilla.org',
+  },
+  { label: 'Package list', text: 'pkgs.org', href: 'https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/' },
+  {
+    label: 'Manual downloads',
+    text: 'builds.garudalinux.org',
+    href: 'https://builds.garudalinux.org/repos/chaotic-aur/x86_64/',
+  },
+  { label: 'Infra toolbox', text: 'github.com/chaotic-aur/toolbox', href: 'https://github.com/chaotic-aur/toolbox' },
+  { label: 'Status page', text: 'uptimes.chaotic.cx', href: 'https://uptimes.chaotic.cx' },
+  { label: 'Build logs', text: 'logfiles', href: 'https://builds.garudalinux.org/repos/chaotic-aur/logs/' },
+  { label: 'Signing keys', text: 'chaotic.gpg', href: 'https://aur.chaotic.cx/chaotic.gpg' },
+];
+
+interface Thanks {
+  name: string;
+  note?: string;
+  href?: string;
+}
+
+const SPECIAL_THANKS: Thanks[] = [
+  { name: 'Librewish (Shrinivas Kumbhar)', note: 'former co-maintainer, Garuda Linux founder' },
+  { name: 'Garuda Linux staffers' },
+  { name: 'All current and past mirror providers' },
+  { name: 'Tk-Glitch (TkG)', href: 'https://github.com/Tk-Glitch' },
+  { name: 'Kodehawa', href: 'https://github.com/Kodehawa' },
+  { name: 'Figue', href: 'https://aur.archlinux.org/account/figue' },
+  { name: 'Benjamim Gois', href: 'https://github.com/benjamimgois' },
+  {
+    name: 'Dr Juan Carlos Ponce Campuzano',
+    note: 'creator of the Aizawa applet and our logo',
+    href: 'https://www.patreon.com/jcponce',
+  },
+  { name: 'BlackStarMuzic', note: 'clean version of our logo' },
+  { name: 'Frogging Family and Linux Gaming Dev Discord servers' },
+  { name: 'André, Gabriel Olivato and Maiser', href: 'https://github.com/olivatooo' },
+  { name: 'AUR package maintainers, Arch Linux TUs and staffers' },
+  { name: 'Everybody who helped with the projects we pre-build' },
+];
+
 @Component({
   selector: 'chaotic-about',
-  imports: [
-    NgOptimizedImage,
-    Ripple,
-    Panel,
-    Card,
-    Accordion,
-    AccordionPanel,
-    AccordionHeader,
-    AccordionContent,
-    TitleComponent,
-    RouterLink,
-    PrimeTemplate,
-  ],
+  imports: [NgOptimizedImage, TitleComponent, RouterLink],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',
 })
-export class AboutComponent implements OnInit {
-  private readonly observer = inject(BreakpointObserver);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
-
-  protected readonly isWide = signal<boolean>(true);
+export class AboutComponent {
+  readonly usefulLinks = USEFUL_LINKS;
+  readonly specialThanks = SPECIAL_THANKS;
 
   team: TeamList = [
     {
@@ -116,30 +145,5 @@ export class AboutComponent implements OnInit {
       'Learn more about the Chaotic-AUR team and project',
       'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
     );
-
-    this.observer
-      .observe(['(min-width: 768px)'])
-      .pipe(takeUntilDestroyed())
-      .subscribe((result) => {
-        this.isWide.set(result.matches);
-      });
-  }
-
-  ngOnInit() {
-    this.route.fragment
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((fragment) => this.scrollToFragment(fragment));
-  }
-
-  scrollTo(id: string): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      fragment: id,
-    });
-  }
-
-  private scrollToFragment(fragment: string | null): void {
-    if (!fragment) return;
-    document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

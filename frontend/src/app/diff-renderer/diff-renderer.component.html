@@ -1,30 +1,56 @@
-<div class="diff-renderer">
-  <pre class="m-0 overflow-y-hidden">
-    <code>
-      @for (line of parsedLines(); track $index) {
-        @if (flaggedLine(line); as findings) {
-          <div
-            [class]="lineClass(line)"
-            [attr.data-line]="line.lineNumber"
-            role="button"
-            tabindex="0"
-            (click)="toggle(line)"
-            (keydown.enter)="toggle(line)"
-          >@if (line.segments) { @for (segment of line.segments; track $index) {<span [class]="segment.changed ? 'word-changed' : ''">{{ segment.text }}</span>} } @else { {{ line.content }} }</div>
-          @if (expandedLine() === line.lineNumber) {
-            <div class="findings">
-              @for (finding of findings; track finding.ruleId) {
-                <div class="finding">
-                  <span class="finding-rule">{{ finding.ruleName }}</span>
-                  <span class="finding-description">{{ finding.description }}</span>
-                </div>
-              }
-            </div>
-          }
-        } @else {
-          <div [class]="lineClass(line)">@if (line.segments) { @for (segment of line.segments; track $index) {<span [class]="segment.changed ? 'word-changed' : ''">{{ segment.text }}</span>} } @else { {{ line.content }} }</div>
+<div class="diff" role="group" aria-label="File diff">
+  @for (line of parsedLines(); track $index) {
+    @if (line.type === 'hunk-header') {
+      <div class="diff-hunk">{{ line.content }}</div>
+    } @else {
+      @let findings = flaggedLine(line);
+      @if (findings) {
+        <button
+          [class]="lineClass(line)"
+          [attr.data-line]="line.lineNumber"
+          [attr.aria-expanded]="expandedLine() === line.lineNumber"
+          (click)="toggle(line)"
+          type="button"
+        >
+          <ng-container *ngTemplateOutlet="lineContent; context: { $implicit: line, flagged: true }" />
+        </button>
+        @if (expandedLine() === line.lineNumber) {
+          <div class="diff-findings">
+            @for (finding of findings; track finding.ruleId) {
+              <div class="diff-finding">
+                <span class="diff-finding__rule">{{ finding.ruleName }}</span>
+                <span class="diff-finding__description">{{ finding.description }}</span>
+              </div>
+            }
+          </div>
         }
+      } @else {
+        <div [class]="lineClass(line)" [attr.data-line]="line.lineNumber">
+          <ng-container *ngTemplateOutlet="lineContent; context: { $implicit: line, flagged: false }" />
+        </div>
       }
-    </code>
-  </pre>
+    }
+  }
 </div>
+
+<ng-template #lineContent let-line let-flagged="flagged">
+  <span class="diff-line__number" aria-hidden="true">{{ line.oldLineNumber }}</span>
+  <span class="diff-line__number" aria-hidden="true">{{ line.lineNumber }}</span>
+  <span class="diff-line__marker" aria-hidden="true">
+    @if (flagged) {
+      <i class="pi pi-exclamation-triangle"></i>
+    } @else {
+      {{ line.marker }}
+    }
+  </span>
+  <span class="diff-line__code">
+    @if (flagged) {
+      <span class="sr-only">Flagged line {{ line.lineNumber }}, show findings: </span>
+    } @else if (changeLabel(line); as label) {
+      <span class="sr-only">{{ label }}: </span>
+    }
+    @for (segment of displaySegments(line); track $index) {
+      <span [class.word-changed]="segment.changed">{{ segment.text }}</span>
+    }
+  </span>
+</ng-template>

@@ -6,7 +6,7 @@ import { Button } from '@openng/optimus-ui/button';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { finalize } from 'rxjs/operators';
-import { GitlabLoginService } from './gitlab-login.service';
+import { DEFAULT_LOGIN_REDIRECT, GitlabLoginService } from './gitlab-login.service';
 
 function initialsOf(name: string | null | undefined): string {
   return (name ?? '?')
@@ -57,7 +57,7 @@ export class AuthButtonComponent {
   login(): void {
     this.isLoginLoading.set(true);
     this.gitlabLoginService
-      .login('/')
+      .login(DEFAULT_LOGIN_REDIRECT)
       .pipe(finalize(() => this.isLoginLoading.set(false)))
       .subscribe({
         error: () => {

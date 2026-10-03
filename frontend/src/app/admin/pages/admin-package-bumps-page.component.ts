@@ -19,6 +19,8 @@ import {
   restoreQueryParams,
 } from '../admin-url-sync';
 import { AdminService } from '../admin.service';
+import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
 const BUMP_TYPE_OPTIONS = [
   { label: 'Explicit', value: 0 },
@@ -50,14 +52,24 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 
 @Component({
   selector: 'chaotic-admin-package-bumps-page',
-  imports: [DatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule, RouterLink],
+  imports: [
+    TableSkeletonRowsComponent,
+    DatePipe,
+    FormsModule,
+    IconField,
+    InputIcon,
+    InputText,
+    Select,
+    TableModule,
+    TagModule,
+    RouterLink,
+  ],
   template: `
     <div class="table-container">
       <p-table
         #bumpsTable
         [value]="service.packageBumps()?.items ?? []"
         [rows]="pagination.perPage()"
-        [loading]="service.packageBumpsLoading()"
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="service.packageBumpsTotal()"
@@ -111,12 +123,12 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         <ng-template #header>
           <tr>
             <th style="min-width: 3rem">ID</th>
-            <th style="min-width: 12rem">Package</th>
-            <th style="min-width: 10rem">Bump type</th>
-            <th style="min-width: 12rem">Trigger</th>
-            <th style="min-width: 8rem">Triggered by</th>
-            <th style="min-width: 14rem">Details</th>
-            <th style="min-width: 9rem">Timestamp</th>
+            <th style="min-width: 10rem">Package</th>
+            <th style="min-width: 7rem">Bump type</th>
+            <th style="min-width: 10rem">Trigger</th>
+            <th style="min-width: 7rem">Triggered by</th>
+            <th style="min-width: 12rem">Details</th>
+            <th style="min-width: 7rem">Timestamp</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-bump>
@@ -158,6 +170,19 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <td>{{ bump.timestamp | date: 'short' }}</td>
           </tr>
         </ng-template>
+        <ng-template #emptymessage>
+          @if (service.packageBumpsLoading()) {
+            <chaotic-table-skeleton-rows
+              [rowHeight]="rowHeights.adminPackageBumps"
+              [rows]="pagination.perPage()"
+              [columns]="7"
+            />
+          } @else {
+            <tr>
+              <td [attr.colspan]="7"><p class="chaotic-card__empty">No package bumps match these filters.</p></td>
+            </tr>
+          }
+        </ng-template>
       </p-table>
     </div>
   `,
@@ -166,6 +191,7 @@ export class AdminPackageBumpsPageComponent {
   readonly service = inject(AdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -178,6 +204,7 @@ export class AdminPackageBumpsPageComponent {
   );
 
   constructor() {
+    this.service.useLists(['packageBumps']);
     this.pagination.restoreFromQuery(this.route);
     this.service.packageBumpPage.set(this.pagination.page());
     this.service.packageBumpPerPage.set(this.pagination.perPage());

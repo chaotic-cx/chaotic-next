@@ -7,10 +7,12 @@ import { packageLogRouteFromUrl } from '../functions';
 import { statusIconClass } from '../status-icons';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BuildStatusService } from './build-status.service';
 
-const DEPLOYMENTS_PAGE_SIZE = 5;
+const DEPLOYMENTS_PAGE_SIZE = 6;
+const SKELETON_ROW_COUNT = 4;
 
 const FAILURE_TAG_DESCRIPTIONS: Record<string, string> = {
   dependency: 'Missing dependency',
@@ -37,6 +39,7 @@ const FAILURE_TAG_DESCRIPTIONS: Record<string, string> = {
     Tooltip,
     RelativeTimePipe,
     BuildStatusSectionComponent,
+    LoadErrorComponent,
     BuildStatusPager,
     FlipListDirective,
   ],
@@ -46,6 +49,7 @@ export class BuildStatusDeploymentsComponent {
   readonly buildStatusService = inject(BuildStatusService);
   readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
   readonly statusIconClass = statusIconClass;
+  readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
 
   private readonly page = signal(1);
 

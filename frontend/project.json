@@ -32,7 +32,19 @@
             "output": "/"
           }
         ],
-        "styles": ["frontend/src/styles.css"],
+        "styles": [
+          "frontend/src/styles.css",
+          {
+            "input": "node_modules/maplibre-gl/dist/maplibre-gl.css",
+            "bundleName": "maplibre",
+            "inject": false
+          },
+          {
+            "input": "node_modules/@xterm/xterm/css/xterm.css",
+            "bundleName": "xterm",
+            "inject": false
+          }
+        ],
         "scripts": []
       },
       "configurations": {

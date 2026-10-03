@@ -9,7 +9,7 @@ import { ChartReviewStatsComponent } from '../charts/reviews/chart-review-stats/
   styleUrl: './stats-chart-page.css',
   template: `
     <div class="flex flex-col gap-4">
-      <p-card [style]="{ overflow: 'hidden' }" header="Total Update Reviews">
+      <p-card [style]="{ overflow: 'hidden' }" header="Total update reviews">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-review-stats />
         } @placeholder {
@@ -17,7 +17,7 @@ import { ChartReviewStatsComponent } from '../charts/reviews/chart-review-stats/
         }
       </p-card>
 
-      <p-card [style]="{ overflow: 'hidden' }" header="Update Reviews Over Time">
+      <p-card [style]="{ overflow: 'hidden' }" header="Update reviews over time">
         @defer (on viewport; prefetch on idle) {
           <chaotic-chart-review-over-time />
         } @placeholder {

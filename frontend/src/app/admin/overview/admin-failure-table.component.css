@@ -1,0 +1,134 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.failure-table-wrap {
+  height: 100%;
+  max-height: min(36rem, 62vh);
+  overflow-y: auto;
+}
+
+@media (min-width: 1280px) {
+  .failure-table-wrap {
+    max-height: none;
+  }
+}
+
+.failure-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.col-status {
+  width: 9rem;
+}
+
+.col-streak {
+  width: 6.5rem;
+}
+
+.col-time {
+  width: 7.5rem;
+}
+
+.col-actions {
+  width: 5.5rem;
+}
+
+@media (max-width: 767px) {
+  .col-status,
+  .cell-status {
+    display: none;
+  }
+}
+
+.failure-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 2.25rem;
+  padding: 0 1rem;
+  background: var(--ctp-mocha-mantle);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: left;
+  color: var(--ctp-mocha-subtext0);
+  border-bottom: 1px solid var(--chaotic-border);
+}
+
+.failure-table td {
+  height: 2.75rem;
+  padding: 0 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--chaotic-border);
+  white-space: nowrap;
+}
+
+.failure-table tbody tr {
+  transition: background-color 120ms ease-out;
+}
+
+.failure-table tbody tr:hover {
+  background: color-mix(in srgb, var(--ctp-mocha-surface0) 35%, transparent);
+}
+
+.failure-table tr.is-silenced {
+  opacity: 0.5;
+}
+
+.failure-table .is-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.failure-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.failure-name a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--ctp-mocha-text);
+}
+
+.failure-name a:hover {
+  color: var(--ctp-mocha-mauve);
+}
+
+.failure-name .pi {
+  flex: none;
+  font-size: 0.75rem;
+}
+
+.status-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+}
+
+.failure-status {
+  color: var(--ctp-mocha-subtext1);
+}
+
+.failure-since {
+  margin-left: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--ctp-mocha-overlay1);
+}
+
+.failure-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.125rem;
+}

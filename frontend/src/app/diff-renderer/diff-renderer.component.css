@@ -1,111 +1,138 @@
-@reference '../../styles.css';
+:host {
+  display: block;
+}
 
-.diff-renderer {
+.diff {
+  overflow-x: auto;
   font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.75rem;
-  border-radius: 0.25rem;
-  max-width: 100%;
-  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--ctp-mocha-text);
 }
 
-pre {
-  @apply m-0 p-0.5;
-  line-height: 1;
-  font-size: 0;
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-code {
-  @apply block;
-}
-
-div {
-  @apply m-0;
-  line-height: 1;
-  font-size: 0.75rem;
-  white-space: pre-wrap;
-  word-break: break-all;
-  text-indent: -1ch;
-  padding-left: 1ch;
-  padding-right: 1ch;
+.diff-line {
+  display: grid;
   width: 100%;
-  box-sizing: border-box;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  grid-template-columns: 3.25rem 3.25rem 1.5rem minmax(0, 1fr);
+  min-width: max-content;
 }
 
-.context {
-  @apply text-ctp-text bg-transparent;
+@media (max-width: 639px) {
+  .diff-line {
+    grid-template-columns: 0 2.5rem 1.25rem minmax(0, 1fr);
+  }
+
+  .diff-line__number:first-child {
+    visibility: hidden;
+  }
+}
+
+.diff-line__number {
+  padding-right: 0.625rem;
+  text-align: right;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ctp-mocha-overlay2);
+  user-select: none;
+}
+
+.diff-line__marker {
+  text-align: center;
+  color: var(--ctp-mocha-overlay2);
+  user-select: none;
+}
+
+.diff-line__code {
+  padding-right: 1rem;
+  white-space: pre;
 }
 
 .added {
-  background: rgba(166, 227, 161, 0.1);
+  background: color-mix(in srgb, var(--ctp-mocha-green) 10%, transparent);
+}
+
+.added .diff-line__number,
+.added .diff-line__marker {
+  background: color-mix(in srgb, var(--ctp-mocha-green) 8%, transparent);
   color: var(--ctp-mocha-green);
 }
 
 .removed {
-  background: rgba(243, 139, 168, 0.1);
+  background: color-mix(in srgb, var(--ctp-mocha-red) 10%, transparent);
+}
+
+.removed .diff-line__number,
+.removed .diff-line__marker {
+  background: color-mix(in srgb, var(--ctp-mocha-red) 8%, transparent);
   color: var(--ctp-mocha-red);
 }
 
 .added .word-changed {
-  background: rgba(166, 227, 161, 0.25);
   border-radius: 2px;
+  background: color-mix(in srgb, var(--ctp-mocha-green) 30%, transparent);
 }
 
 .removed .word-changed {
-  background: rgba(243, 139, 168, 0.25);
   border-radius: 2px;
+  background: color-mix(in srgb, var(--ctp-mocha-red) 30%, transparent);
 }
 
-.hunk-header {
+.diff-hunk {
+  padding: 0.25rem 1rem;
+  background: color-mix(in srgb, var(--ctp-mocha-blue) 8%, transparent);
   color: var(--ctp-mocha-blue);
-  background: rgba(137, 180, 250, 0.1);
-  font-weight: bold;
-}
-
-.highlighted {
-  background: rgba(249, 226, 175, 0.18);
-  box-shadow: inset 2px 0 0 var(--ctp-mocha-yellow);
+  font-size: 0.75rem;
+  white-space: pre;
 }
 
 .flagged {
-  background: rgba(249, 226, 175, 0.18);
-  box-shadow: inset 2px 0 0 var(--ctp-mocha-yellow);
   cursor: pointer;
+  box-shadow: inset 3px 0 0 var(--ctp-mocha-yellow);
+}
+
+.flagged .diff-line__marker {
+  color: var(--ctp-mocha-yellow);
 }
 
 .flagged:hover,
 .flagged.expanded {
-  background: rgba(249, 226, 175, 0.28);
+  background: color-mix(in srgb, var(--ctp-mocha-yellow) 14%, transparent);
 }
 
-.findings {
-  @apply m-0 pr-1 pl-2;
-  background: transparent;
-  border-left: 2px solid var(--ctp-mocha-yellow);
-  text-indent: 0;
-  white-space: normal;
-  padding-top: 0.25rem;
+.diff-findings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.25rem 0.75rem 0.5rem 7.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--ctp-mocha-yellow) 35%, transparent);
+  border-radius: var(--chaotic-radius-md);
+  background: var(--ctp-mocha-mantle);
+  font-family: 'Inter Variable', Inter, sans-serif;
 }
 
-.finding {
-  @apply flex flex-col gap-0.5 py-1;
-  border-bottom: 1px solid var(--ctp-mocha-surface0);
+@media (max-width: 639px) {
+  .diff-findings {
+    margin-left: 0.75rem;
+  }
 }
 
-.finding:last-child {
-  border-bottom: none;
+.diff-finding {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
 }
 
-.finding-rule {
-  color: var(--ctp-mocha-yellow);
+.diff-finding__rule {
+  font-size: 0.8125rem;
   font-weight: 600;
-  font-size: 0.75rem;
+  color: var(--ctp-mocha-yellow);
 }
 
-.finding-description {
-  color: var(--ctp-mocha-subtext);
-  font-size: 0.7rem;
-  white-space: normal;
-  word-break: break-word;
+.diff-finding__description {
+  font-size: 0.8125rem;
+  color: var(--ctp-mocha-subtext0);
 }

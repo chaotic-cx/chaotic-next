@@ -4,7 +4,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../../../../app.service';
-import { shuffleArray } from '../../../../functions';
 import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
@@ -54,7 +53,7 @@ export class ChartUseragentComponent {
           {
             data,
             label: 'Router hits',
-            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
+            backgroundColor: CATPPUCCIN_FLAVOURS,
           },
         ],
       },

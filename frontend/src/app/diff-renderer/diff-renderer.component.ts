@@ -1,15 +1,21 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, input, output, signal } from '@angular/core';
 import { type DiffScanFinding } from '@chaotic-next/shared-lib';
 import { diffWords, type WordSegment } from './word-diff';
 
-const HUNK_START = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+const HUNK_START = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
 const DIFF_MARKER_LENGTH = 1;
+
+const CHANGE_LABELS: Partial<Record<DiffLineType, string>> = {
+  added: 'Added',
+  removed: 'Removed',
+};
 
 @Component({
   selector: 'chaotic-diff-renderer',
   templateUrl: './diff-renderer.component.html',
   styleUrl: './diff-renderer.component.css',
-  imports: [],
+  imports: [NgTemplateOutlet],
   preserveWhitespaces: false,
 })
 export class DiffRendererComponent {
@@ -26,12 +32,16 @@ export class DiffRendererComponent {
   /** The new-file line number whose findings are expanded inline, if any. */
   readonly expandedLine = signal<number | null>(null);
 
+  protected changeLabel(line: DiffLine): string | undefined {
+    return CHANGE_LABELS[line.type];
+  }
+
   readonly parsedLines = computed(() => {
     if (!this.diff()) return [];
 
-    const lines = this.diff().split('\n');
     const result: DiffLine[] = [];
     let inHunk = false;
+    let oldLineNumber = 0;
     let newLineNumber = 0;
     const pendingRemoved: DiffLine[] = [];
 
@@ -42,40 +52,58 @@ export class DiffRendererComponent {
       pendingRemoved.length = 0;
     };
 
-    for (const line of lines) {
-      if (line.startsWith('@@')) {
+    for (const raw of this.diff().split('\n')) {
+      if (raw.startsWith('@@')) {
         flushPendingRemoved();
-        const start = line.match(HUNK_START);
+        const start = raw.match(HUNK_START);
         if (start) {
-          newLineNumber = Number.parseInt(start[1] ?? '1', 10);
+          oldLineNumber = Number.parseInt(start[1] ?? '1', 10);
+          newLineNumber = Number.parseInt(start[2] ?? '1', 10);
           inHunk = true;
         }
-        result.push({ type: 'hunk-header', content: line });
-      } else if (line.startsWith('\\')) {
+        result.push({ type: 'hunk-header', marker: '', content: raw });
+      } else if (raw.startsWith('\\')) {
         flushPendingRemoved();
-        result.push({ type: 'context', content: line });
-      } else if (line.startsWith('+') && !line.startsWith('+++')) {
-        const added: DiffLine = { type: 'added', content: line, lineNumber: inHunk ? newLineNumber : undefined };
+        result.push({ type: 'context', marker: '', content: raw });
+      } else if (raw.startsWith('+') && !raw.startsWith('+++')) {
+        const added: DiffLine = {
+          type: 'added',
+          marker: '+',
+          content: stripDiffMarker(raw),
+          lineNumber: inHunk ? newLineNumber : undefined,
+        };
         const removed = pendingRemoved.shift();
         if (removed) {
-          const { removed: removedSegments, added: addedSegments } = diffWords(
-            stripDiffMarker(removed.content),
-            stripDiffMarker(added.content),
-          );
-          removed.segments = reattachMarker(removed.content, removedSegments);
-          added.segments = reattachMarker(added.content, addedSegments);
+          const words = diffWords(removed.content, added.content);
+          removed.segments = words.removed;
+          added.segments = words.added;
           result.push(removed, added);
         } else {
           added.segments = allChangedSegments(added.content);
           result.push(added);
         }
         if (inHunk) newLineNumber++;
-      } else if (line.startsWith('-') && !line.startsWith('---')) {
-        pendingRemoved.push({ type: 'removed', content: line });
+      } else if (raw.startsWith('-') && !raw.startsWith('---')) {
+        pendingRemoved.push({
+          type: 'removed',
+          marker: '-',
+          content: stripDiffMarker(raw),
+          oldLineNumber: inHunk ? oldLineNumber : undefined,
+        });
+        if (inHunk) oldLineNumber++;
       } else {
         flushPendingRemoved();
-        result.push({ type: 'context', content: line, lineNumber: inHunk ? newLineNumber : undefined });
-        if (inHunk) newLineNumber++;
+        result.push({
+          type: 'context',
+          marker: '',
+          content: stripDiffMarker(raw),
+          oldLineNumber: inHunk ? oldLineNumber : undefined,
+          lineNumber: inHunk ? newLineNumber : undefined,
+        });
+        if (inHunk) {
+          oldLineNumber++;
+          newLineNumber++;
+        }
       }
     }
     flushPendingRemoved();
@@ -117,7 +145,7 @@ export class DiffRendererComponent {
   lineClass(line: DiffLine): string {
     const flagged = this.flaggedLine(line) !== undefined;
     const expanded = this.expandedLine() === line.lineNumber;
-    return [line.type, flagged ? 'flagged' : '', expanded ? 'expanded' : ''].filter(Boolean).join(' ');
+    return ['diff-line', line.type, flagged ? 'flagged' : '', expanded ? 'expanded' : ''].filter(Boolean).join(' ');
   }
 
   /** The findings attached to a line, or undefined when the line is not flagged. */
@@ -125,6 +153,10 @@ export class DiffRendererComponent {
     if (line.lineNumber === undefined) return undefined;
     const findings = this.findingsByLine().get(line.lineNumber);
     return findings && findings.length > 0 ? findings : undefined;
+  }
+
+  displaySegments(line: DiffLine): WordSegment[] {
+    return line.segments ?? [{ text: line.content, changed: false }];
   }
 
   toggle(line: DiffLine): void {
@@ -141,16 +173,13 @@ function stripDiffMarker(content: string): string {
   return content.slice(DIFF_MARKER_LENGTH);
 }
 
-function reattachMarker(content: string, segments: WordSegment[]): WordSegment[] {
-  const marker = content.slice(0, DIFF_MARKER_LENGTH);
-  if (segments.length === 0) return [{ text: marker, changed: false }];
-  segments[0].text = marker + segments[0].text;
-  return segments;
-}
+type DiffLineType = 'context' | 'added' | 'removed' | 'hunk-header';
 
 interface DiffLine {
-  type: 'context' | 'added' | 'removed' | 'hunk-header';
+  type: DiffLineType;
+  marker: string;
   content: string;
+  oldLineNumber?: number;
   lineNumber?: number;
   segments?: WordSegment[];
 }

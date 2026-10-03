@@ -1,9 +1,16 @@
 @if (chart.loading()) {
   <div class="card relative flex h-[16rem] sm:h-[12rem] justify-center">
     <div class="absolute inset-0 flex items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+      <i
+        class="pi pi-spin pi-spinner text-ctp-overlay1"
+        style="font-size: 1.5rem"
+        role="status"
+        aria-label="Loading"
+      ></i>
     </div>
   </div>
+} @else if (chart.failed()) {
+  <chaotic-load-error (retry)="chart.retry()" message="Could not load resource usage." />
 }
 <div class="flex flex-col gap-6">
   @for (entry of charts(); track entry.key) {

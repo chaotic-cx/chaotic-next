@@ -42,6 +42,9 @@ import {
   gitlabWebhookBodySchema,
   MergeRequestWithDiffs,
   mergeRequestWithDiffsSchema,
+  mergeRequestCountsSchema,
+  countReviewQueue,
+  MergeRequestCounts,
   offsetQuerySchema,
   type GitlabWebhookBodyDto,
   PipelineScheduleOption,
@@ -327,6 +330,13 @@ export class GitlabController {
   })
   async getOpenMergeRequests(): Promise<MergeRequestWithDiffs[]> {
     return await this.gitlabMergeRequestService.getOpenMergeRequests();
+  }
+
+  @Get('merge-requests/counts')
+  @ApiOperation({ summary: 'Count the review queue merge requests that wait for a review or are on hold.' })
+  @ApiOkResponse({ description: 'Review queue counts', schema: schemaResponse(mergeRequestCountsSchema).schema })
+  async getMergeRequestCounts(): Promise<MergeRequestCounts> {
+    return countReviewQueue(await this.gitlabMergeRequestService.getOpenMergeRequests());
   }
 
   @Get('schedules')

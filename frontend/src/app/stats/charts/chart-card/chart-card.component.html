@@ -1,9 +1,15 @@
 <div [class]="containerClass()" [style.height.px]="height()">
   @if (hasData()) {
     <p-chart [class]="chartClass()" [data]="data()" [options]="options()" [responsive]="true" [type]="type()" />
-  } @else if (loading()) {
+  } @else if (failed()) {
     <div class="absolute inset-0 flex items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+      <chaotic-load-error (retry)="retry.emit()" message="Could not load this chart." />
+    </div>
+  } @else if (loading()) {
+    <div class="chart-card__skeleton" role="status" aria-label="Loading chart"></div>
+  } @else {
+    <div class="absolute inset-0 flex items-center justify-center text-sm text-ctp-subtext0">
+      No data for this time range
     </div>
   }
 </div>

@@ -6,7 +6,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
   selector: 'chaotic-live-traffic-feed',
   imports: [DatePipe],
   template: `
-    <div class="live-feed-card mt-4 rounded-xl border border-ctp-surface0 p-4 backdrop-blur-xs">
+    <div class="live-feed-card mt-4 rounded-xl border border-ctp-surface0 p-4 backdrop-blur-(--chaotic-blur)">
       <div
         class="flex flex-col items-center gap-3 border-b border-ctp-surface0 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
       >
@@ -26,7 +26,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
 
         <div class="grid w-full grid-cols-3 gap-2 text-xs font-semibold sm:flex sm:w-auto sm:order-3">
           <button
-            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
+            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors duration-200"
             [class.bg-ctp-blue]="trafficService.showHits()"
             [class.text-ctp-crust]="trafficService.showHits()"
             [class.border-ctp-blue]="trafficService.showHits()"
@@ -41,7 +41,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
           </button>
 
           <button
-            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
+            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors duration-200"
             [class.bg-ctp-peach]="trafficService.mapProjection() === 'globe'"
             [class.text-ctp-crust]="trafficService.mapProjection() === 'globe'"
             [class.border-ctp-peach]="trafficService.mapProjection() === 'globe'"
@@ -59,7 +59,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
           </button>
 
           <button
-            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200"
+            class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors duration-200"
             [class.bg-ctp-mauve]="trafficService.showMirrors()"
             [class.text-ctp-crust]="trafficService.showMirrors()"
             [class.border-ctp-mauve]="trafficService.showMirrors()"
@@ -122,7 +122,7 @@ import { LiveTrafficService } from '../mirror-map/live-traffic.service';
           <div class="flex flex-col gap-1.5">
             @for (hit of trafficService.recentHits(); track hit.id) {
               <div
-                class="traffic-row flex items-center gap-3 rounded bg-ctp-surface0/50 px-2.5 py-1.5 transition-all hover:bg-ctp-surface0"
+                class="traffic-row flex items-center gap-3 rounded bg-ctp-surface0/50 px-2.5 py-1.5 transition-colors hover:bg-ctp-surface0"
               >
                 <span class="text-[11px] text-ctp-overlay1 font-medium">
                   {{ hit.timestamp | date: 'mediumTime' }}

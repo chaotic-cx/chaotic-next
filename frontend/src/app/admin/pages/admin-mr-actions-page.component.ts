@@ -10,6 +10,7 @@ import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
+import { commitUrl, mergeRequestUrl } from '../../gitlab-links';
 import { AdminService } from '../admin.service';
 import {
   createAdminPagination,
@@ -22,6 +23,8 @@ import {
   stringFilterFromQuery,
   stringFilterToQuery,
 } from '../admin-url-sync';
+import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
 const ACTION_SEVERITY: Record<string, TagSeverity> = {
   approve: 'success',
@@ -39,14 +42,24 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 
 @Component({
   selector: 'chaotic-admin-mr-actions-page',
-  imports: [DatePipe, FormsModule, IconField, InputIcon, InputText, Select, TableModule, TagModule, Tooltip],
+  imports: [
+    TableSkeletonRowsComponent,
+    DatePipe,
+    FormsModule,
+    IconField,
+    InputIcon,
+    InputText,
+    Select,
+    TableModule,
+    TagModule,
+    Tooltip,
+  ],
   template: `
     <div class="table-container">
       <p-table
         #mrActionsTable
         [value]="service.mrActions()?.items ?? []"
         [rows]="pagination.perPage()"
-        [loading]="service.mrActionsLoading()"
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="service.mrActionsTotal()"
@@ -90,12 +103,12 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         <ng-template #header>
           <tr>
             <th style="min-width: 3rem">ID</th>
-            <th style="min-width: 8rem">MR</th>
-            <th style="min-width: 8rem">Action</th>
-            <th style="min-width: 10rem">Commit</th>
+            <th style="min-width: 5rem">MR</th>
+            <th style="min-width: 7rem">Action</th>
+            <th style="min-width: 6rem">Commit</th>
             <th style="min-width: 12rem">Reason</th>
-            <th style="min-width: 10rem">User</th>
-            <th style="min-width: 8rem">Created</th>
+            <th style="min-width: 8rem">User</th>
+            <th style="min-width: 7rem">Created</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-action>
@@ -143,6 +156,19 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <td>{{ action.createdAt | date: 'short' }}</td>
           </tr>
         </ng-template>
+        <ng-template #emptymessage>
+          @if (service.mrActionsLoading()) {
+            <chaotic-table-skeleton-rows
+              [rowHeight]="rowHeights.adminMrActions"
+              [rows]="pagination.perPage()"
+              [columns]="7"
+            />
+          } @else {
+            <tr>
+              <td [attr.colspan]="7"><p class="chaotic-card__empty">No MR actions match these filters.</p></td>
+            </tr>
+          }
+        </ng-template>
       </p-table>
     </div>
   `,
@@ -151,6 +177,7 @@ export class AdminMrActionsPageComponent {
   readonly service = inject(AdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -161,6 +188,7 @@ export class AdminMrActionsPageComponent {
   );
 
   constructor() {
+    this.service.useLists(['mrActions']);
     this.pagination.restoreFromQuery(this.route);
     this.service.mrActionPage.set(this.pagination.page());
     this.service.mrActionPerPage.set(this.pagination.perPage());
@@ -170,9 +198,6 @@ export class AdminMrActionsPageComponent {
     });
   }
 
-  private readonly mrBaseUrl = 'https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests';
-  private readonly commitBaseUrl = 'https://gitlab.com/chaotic-aur/pkgbuilds/-/commit';
-
   severity(action: MrAction): TagSeverity {
     return ACTION_SEVERITY[action.action] ?? 'secondary';
   }
@@ -181,13 +206,8 @@ export class AdminMrActionsPageComponent {
     return sha.slice(0, 8);
   }
 
-  commitUrl(sha: string): string {
-    return `${this.commitBaseUrl}/${sha}`;
-  }
-
-  mrUrl(iid: number): string {
-    return `${this.mrBaseUrl}/${iid}`;
-  }
+  readonly commitUrl = commitUrl;
+  readonly mrUrl = mergeRequestUrl;
 
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);

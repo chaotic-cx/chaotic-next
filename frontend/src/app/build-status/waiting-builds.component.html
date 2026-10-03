@@ -1,85 +1,82 @@
-@if (buildStatusService.waitingQueue().length > 0) {
-  <section class="flex min-h-0 flex-1 flex-col">
-    <chaotic-build-status-section
-      title="Waiting builds"
-      subtitle="These are currently queued builds"
-      icon="pi-hourglass"
-      iconClass="text-ctp-lavender"
-    />
-    <ul
-      class="queue-page-list min-h-0 flex-1 divide-y divide-white/5 overflow-y-auto pr-1"
-      animate.enter="content-fade"
-      chaoticFlipList
-    >
-      @for (pkg of paginatedQueue(); track pkg.rawName; let index = $index) {
-        <li
-          class="flex items-center justify-between gap-3 py-2.5"
-          [style.--stagger]="index"
-          animate.enter="pipeline-item-enter"
-        >
-          <div class="min-w-0 flex-1">
-            <a
-              class="block cursor-pointer truncate font-semibold"
-              [routerLink]="['/stats/search']"
-              [queryParams]="{ search: pkg.name }"
-              >{{ pkg.name }}</a
-            >
-            <span class="block text-sm text-ctp-subtext1"
-              >{{ pkg.repo }} &middot; {{ pkg.build_class | buildClass }}</span
-            >
-          </div>
-          <div class="flex shrink-0 items-center gap-2">
-            @if (buildStatusService.waitingStartEtaLabels().get(pkg.rawName); as eta) {
-              <span
-                class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
-                [pTooltip]="buildStatusService.waitingStartTooltips().get(pkg.rawName) ?? estimateTooltip"
-                tooltipPosition="top"
-                >{{ eta }}</span
-              >
-            }
-            @if (isLoggedIn()) {
-              <button
-                class="cursor-pointer text-ctp-green hover:text-ctp-text disabled:cursor-not-allowed disabled:opacity-50"
-                [disabled]="promoting() !== null"
-                [attr.aria-label]="`Promote ${pkg.name} to front of queue`"
-                (click)="promote(pkg.name, pkg.rawName, pkg.repo)"
-                type="button"
-                pTooltip="Promote to front of queue"
-                tooltipPosition="left"
-              >
-                @if (promoting() === pkg.name) {
-                  <i class="pi pi-spin pi-spinner"></i>
-                } @else {
-                  <i class="pi pi-arrow-up"></i>
-                }
-              </button>
-            }
-          </div>
-        </li>
+<section class="chaotic-card">
+  <chaotic-build-status-section
+    [count]="
+      buildStatusService.loadingQueue() || buildStatusService.queueFailed()
+        ? undefined
+        : buildStatusService.waitingQueue().length
+    "
+    [iconClass]="buildStatusService.waitingQueue().length > 0 ? 'text-ctp-lavender' : 'text-ctp-subtext0'"
+    title="Queue"
+    icon="pi-hourglass"
+  >
+    @if (buildStatusService.queueClearEta(); as eta) {
+      <span class="text-xs text-ctp-subtext0" [pTooltip]="estimateTooltip" tooltipPosition="top"
+        >Clears in <span class="font-medium tabular-nums text-ctp-text">{{ eta }}</span></span
+      >
+    } @else if (isBlocked()) {
+      <span class="text-xs text-ctp-yellow" [pTooltip]="estimateTooltip" tooltipPosition="top"
+        >No idle builder matches the queued classes</span
+      >
+    }
+  </chaotic-build-status-section>
+
+  @if (buildStatusService.loadingQueue()) {
+    <ul aria-hidden="true">
+      @for (_ of skeletonRows; track $index) {
+        <li class="chaotic-row"><span class="chaotic-skeleton h-6 flex-1"></span></li>
       }
     </ul>
-    <div class="mt-4 flex shrink-0 flex-col items-center gap-3">
-      @if (buildStatusService.queueClearLabel(); as label) {
-        <span class="text-sm text-ctp-mauve" [pTooltip]="estimateTooltip" tooltipPosition="top">{{ label }}</span>
-      } @else if (isBlocked()) {
-        <span class="text-sm text-ctp-yellow" [pTooltip]="estimateTooltip" tooltipPosition="top"
-          >No estimate — no idle builder matches the queued classes</span
-        >
+  } @else if (buildStatusService.queueFailed()) {
+    <chaotic-load-error (retry)="buildStatusService.refreshQueueStats()" message="Could not load the queue." />
+  } @else if (buildStatusService.waitingQueue().length === 0) {
+    <p class="chaotic-card__empty">
+      <i class="pi pi-check-circle" aria-hidden="true"></i>
+      The queue is empty
+    </p>
+  } @else {
+    <ol class="queue-page-list" chaoticFlipList>
+      @for (pkg of paginatedQueue(); track pkg.rawName; let index = $index) {
+        <li class="chaotic-row" animate.enter="ctp-fade-enter">
+          <span class="queue-position">{{ pageOffset() + index + 1 }}</span>
+          <div class="min-w-0 flex-1">
+            <a class="chaotic-row__name" [routerLink]="['/stats/search']" [queryParams]="{ search: pkg.name }">{{
+              pkg.name
+            }}</a>
+            <span class="chaotic-row__meta">{{ pkg.repo }} · {{ pkg.build_class | buildClass }}</span>
+          </div>
+          @if (buildStatusService.waitingStartEtaLabels().get(pkg.rawName); as eta) {
+            <span
+              class="shrink-0 whitespace-nowrap text-xs tabular-nums text-ctp-subtext1"
+              [pTooltip]="buildStatusService.waitingStartTooltips().get(pkg.rawName) ?? estimateTooltip"
+              tooltipPosition="top"
+              >{{ eta }}</span
+            >
+          }
+          @if (isLoggedIn()) {
+            <button
+              class="chaotic-icon-btn text-ctp-green!"
+              [disabled]="promoting() !== null"
+              [attr.aria-label]="`Promote ${pkg.name} to front of queue`"
+              (click)="promote(pkg.name, pkg.rawName, pkg.repo)"
+              type="button"
+              pTooltip="Promote to front of queue"
+              tooltipPosition="left"
+            >
+              <i [class]="promoting() === pkg.name ? 'pi pi-spin pi-spinner' : 'pi pi-arrow-up'" aria-hidden="true"></i>
+            </button>
+          }
+        </li>
       }
-      <chaotic-build-status-pager [page]="currentPage()" [pageCount]="pageCount()" (pageChange)="selectPage($event)" />
-    </div>
-  </section>
-} @else {
-  <section class="flex min-h-0 flex-1 flex-col">
-    <chaotic-build-status-section
-      title="Waiting builds"
-      subtitle="These are currently queued builds"
-      icon="pi-hourglass"
-      iconClass="text-ctp-subtext0"
-    />
-    <div class="flex min-h-[5rem] flex-1 flex-col items-center justify-center gap-2 py-6 text-center text-ctp-subtext0">
-      <i class="pi pi-check-circle text-3xl"></i>
-      <span class="text-sm font-medium">No builds waiting in queue</span>
-    </div>
-  </section>
-}
+    </ol>
+    @if (pageCount() > 1) {
+      <footer class="chaotic-card__footer">
+        <span>{{ buildStatusService.waitingQueue().length }} packages waiting</span>
+        <chaotic-build-status-pager
+          [page]="currentPage()"
+          [pageCount]="pageCount()"
+          (pageChange)="selectPage($event)"
+        />
+      </footer>
+    }
+  }
+</section>

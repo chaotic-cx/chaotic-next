@@ -25,6 +25,8 @@ import {
   restoreQueryParams,
   stringFilterToQuery,
 } from '../admin-url-sync';
+import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
 interface BuilderFormModel {
   name: string;
@@ -36,6 +38,7 @@ interface BuilderFormModel {
 @Component({
   selector: 'chaotic-admin-builders-page',
   imports: [
+    TableSkeletonRowsComponent,
     Button,
     Checkbox,
     Dialog,
@@ -55,7 +58,6 @@ interface BuilderFormModel {
         #buildersTable
         [value]="service.builders()?.items ?? []"
         [rows]="pagination.perPage()"
-        [loading]="service.buildersLoading()"
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="service.buildersTotal()"
@@ -103,7 +105,7 @@ interface BuilderFormModel {
             <th style="min-width: 14rem">Description</th>
             <th style="min-width: 10rem">Class</th>
             <th style="min-width: 6rem">Active</th>
-            <th class="cell-actions" style="min-width: 8rem">Actions</th>
+            <th class="cell-actions"><span class="sr-only">Actions</span></th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-builder>
@@ -120,28 +122,43 @@ interface BuilderFormModel {
               }
             </td>
             <td class="cell-actions">
-              <div class="flex gap-2">
-                <p-button
-                  (onClick)="openEdit(builder)"
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  text
-                  rounded
+              <div class="flex items-center justify-end gap-1">
+                <button
+                  class="chaotic-icon-btn"
+                  [attr.aria-label]="'Edit ' + builder.name"
+                  (click)="openEdit(builder)"
+                  type="button"
                   pTooltip="Edit"
                   tooltipPosition="left"
-                />
-                <p-button
-                  (onClick)="confirmDelete(builder)"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
+                >
+                  <i class="pi pi-pencil" aria-hidden="true"></i>
+                </button>
+                <button
+                  class="chaotic-icon-btn chaotic-icon-btn--danger"
+                  [attr.aria-label]="'Delete ' + builder.name"
+                  (click)="confirmDelete(builder)"
+                  type="button"
                   pTooltip="Delete"
                   tooltipPosition="left"
-                />
+                >
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                </button>
               </div>
             </td>
           </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          @if (service.buildersLoading()) {
+            <chaotic-table-skeleton-rows
+              [rowHeight]="rowHeights.adminBuilders"
+              [rows]="pagination.perPage()"
+              [columns]="6"
+            />
+          } @else {
+            <tr>
+              <td [attr.colspan]="6"><p class="chaotic-card__empty">No builders match these filters.</p></td>
+            </tr>
+          }
         </ng-template>
       </p-table>
     </div>
@@ -201,6 +218,7 @@ export class AdminBuildersPageComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -217,6 +235,7 @@ export class AdminBuildersPageComponent {
   });
 
   constructor() {
+    this.service.useLists(['builders']);
     this.pagination.restoreFromQuery(this.route);
     this.service.builderPage.set(this.pagination.page());
     this.service.builderPerPage.set(this.pagination.perPage());

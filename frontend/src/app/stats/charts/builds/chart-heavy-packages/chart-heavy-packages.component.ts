@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { isMobileSignal, truncateLabel } from '../../../../functions';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import {
@@ -12,6 +11,7 @@ import {
   clampAmount,
   type ChartConfig,
   mochaAxisChartOptions,
+  SINGLE_SERIES_COLOR,
 } from '../../chart-config';
 
 @Component({
@@ -49,11 +49,12 @@ export class ChartHeavyPackagesComponent {
           {
             label: 'Average Build Time (minutes)',
             data: data.map((d) => parseFloat(d.average)),
-            backgroundColor: CATPPUCCIN_FLAVOURS,
+            backgroundColor: SINGLE_SERIES_COLOR,
+            borderRadius: 4,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
+      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
     };
   });
 }

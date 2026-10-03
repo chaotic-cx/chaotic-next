@@ -225,8 +225,10 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/builds/failed/over-time/${amount}/${days}` };
   }
 
+  /** Without days, the backend applies its own lookback window, which keeps the query fast. */
   getUnresolvedFailedBuildsResourceRequest(days?: number): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/builder/builds/failed/unresolved`, params: this.daysParams(days) };
+    const url = `${this.appConfig.backendUrl}/builder/builds/failed/unresolved`;
+    return days === undefined ? { url } : { url, params: this.daysParams(days) };
   }
 
   getMissingDependenciesResourceRequest(): HttpResourceRequest {

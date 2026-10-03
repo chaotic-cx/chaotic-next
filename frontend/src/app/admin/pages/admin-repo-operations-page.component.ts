@@ -1,93 +1,21 @@
 import { Component, inject } from '@angular/core';
 import { Button } from '@openng/optimus-ui/button';
-import { Panel } from '@openng/optimus-ui/panel';
 import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
+import { AdminOperationListComponent } from './admin-operation-list.component';
 import { createAdminPagination, type StatefulTableRef } from '../admin-url-sync';
+import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
+import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
 
 @Component({
   selector: 'chaotic-admin-repo-operations-page',
-  imports: [Button, Panel, TableModule, Tooltip],
+  imports: [TableSkeletonRowsComponent, AdminOperationListComponent, Button, TableModule, Tooltip],
   template: `
     <div class="flex flex-col gap-5">
-      <p-panel class="min-w-0" header="Trigger operations">
-        <div class="flex flex-col gap-4">
-          <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
-            <p-button
-              (onClick)="service.triggerRepoRun()"
-              label="Trigger repo run"
-              icon="pi pi-play"
-              size="small"
-              styleClass="w-full sm:w-auto"
-              pTooltip="Run the repo manager over the configured repositories"
-              tooltipPosition="bottom"
-            />
-            <p-button
-              (onClick)="service.triggerSignalScan()"
-              label="Trigger signal scan"
-              icon="pi pi-microchip"
-              severity="secondary"
-              size="small"
-              styleClass="w-full sm:w-auto"
-              pTooltip="Scan changed Arch packages for ELF signals"
-              tooltipPosition="bottom"
-            />
-            <p-button
-              (onClick)="service.triggerMrScan()"
-              label="Trigger MR scan"
-              icon="pi pi-shield"
-              severity="secondary"
-              size="small"
-              styleClass="w-full sm:w-auto"
-              pTooltip="Scan open merge requests for malicious changes: rule findings, auto-flag labels and VirusTotal checks"
-              tooltipPosition="bottom"
-            />
-            <p-button
-              (onClick)="service.indexArchMirror()"
-              label="Index Arch mirror"
-              icon="pi pi-database"
-              severity="secondary"
-              size="small"
-              styleClass="w-full sm:w-auto"
-              pTooltip="Index the full Arch mirror into the ELF signal index"
-              tooltipPosition="bottom"
-            />
-            <p-button
-              (onClick)="service.indexChaoticRepo()"
-              label="Index Chaotic repo"
-              icon="pi pi-database"
-              severity="secondary"
-              size="small"
-              styleClass="w-full sm:w-auto"
-              pTooltip="Index the full Chaotic-AUR repo (CDN mirror) into the ELF signal index"
-              tooltipPosition="bottom"
-            />
-            <p-button
-              (onClick)="confirmRescanBuildClasses()"
-              label="Rescan build classes"
-              icon="pi pi-refresh"
-              severity="secondary"
-              size="small"
-              styleClass="w-full sm:w-auto"
-              pTooltip="Re-read the build class of every active package from its .CI/config; runs in the background"
-              tooltipPosition="bottom"
-            />
-            <p-button
-              (onClick)="confirmRecomputeSignalDerivations()"
-              label="Recompute signal derivations"
-              icon="pi pi-replay"
-              severity="secondary"
-              size="small"
-              styleClass="w-full sm:w-auto"
-              pTooltip="Rebuild the signal directory index, every pluginOf derivation, and the broken flags from stored analyses; runs in the background, no re-scanning"
-              tooltipPosition="bottom"
-            />
-          </div>
-        </div>
-      </p-panel>
+      <chaotic-admin-operation-list />
 
       <div class="min-w-0">
         <div class="mb-2 flex flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
@@ -125,7 +53,6 @@ import { createAdminPagination, type StatefulTableRef } from '../admin-url-sync'
             [(selection)]="service.brokenSelection"
             [value]="service.brokenReports()"
             [rows]="pagination.perPage()"
-            [loading]="service.brokenReportsLoading()"
             [paginator]="true"
             [lazy]="true"
             [totalRecords]="service.brokenReportsTotal()"
@@ -159,8 +86,18 @@ import { createAdminPagination, type StatefulTableRef } from '../admin-url-sync'
                 <td class="text-ctp-subtext">{{ report.reasons.join(', ') }}</td>
               </tr>
             </ng-template>
-            <ng-template #empty>
-              <span class="text-ctp-subtext">No broken packages found.</span>
+            <ng-template #emptymessage>
+              @if (service.brokenReportsLoading()) {
+                <chaotic-table-skeleton-rows
+                  [rowHeight]="rowHeights.adminBrokenReports"
+                  [rows]="pagination.perPage()"
+                  [columns]="5"
+                />
+              } @else {
+                <tr>
+                  <td [attr.colspan]="5"><p class="chaotic-card__empty">No broken packages found.</p></td>
+                </tr>
+              }
             </ng-template>
           </p-table>
         </div>
@@ -173,10 +110,12 @@ export class AdminRepoOperationsPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly confirmationService = inject(ConfirmationService);
+  protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
   constructor() {
+    this.service.useLists(['brokenReports']);
     this.pagination.restoreFromQuery(this.route);
     this.service.brokenPage.set(this.pagination.page());
     this.service.brokenPerPage.set(this.pagination.perPage());
@@ -205,28 +144,6 @@ export class AdminRepoOperationsPageComponent {
       acceptLabel: 'Rescan',
       rejectLabel: 'Cancel',
       accept: () => void this.service.rescanBrokenPackages(),
-    });
-  }
-
-  confirmRescanBuildClasses(): void {
-    this.confirmationService.confirm({
-      message: 'Re-read the build class of every active package from its .CI/config? The job runs in the background.',
-      header: 'Rescan build classes',
-      acceptLabel: 'Rescan',
-      rejectLabel: 'Cancel',
-      accept: () => void this.service.rescanBuildClasses(),
-    });
-  }
-
-  confirmRecomputeSignalDerivations(): void {
-    this.confirmationService.confirm({
-      message:
-        'Rebuild the signal directory index, every pluginOf derivation, and the broken flags from the stored analyses? ' +
-        'No archives are re-scanned. The job runs in the background.',
-      header: 'Recompute signal derivations',
-      acceptLabel: 'Recompute',
-      rejectLabel: 'Cancel',
-      accept: () => void this.service.recomputeSignalDerivations(),
     });
   }
 

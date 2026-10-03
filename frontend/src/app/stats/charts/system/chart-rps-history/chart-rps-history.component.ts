@@ -1,9 +1,16 @@
 import { Component, computed, inject } from '@angular/core';
 import type { RpsHistorySample } from '@chaotic-next/shared-lib';
 import { AppService } from '../../../../app.service';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import {
+  chartResource,
+  type ChartConfig,
+  mochaAxisChartOptions,
+  SINGLE_SERIES_COLOR,
+  SINGLE_SERIES_FILL,
+} from '../../chart-config';
+
+const SPIKY_LINE_WIDTH_PX = 1.5;
 
 const TIME_FORMATTER = new Intl.DateTimeFormat(navigator.language, { timeStyle: 'short' });
 
@@ -29,14 +36,15 @@ export class ChartRpsHistoryComponent {
           {
             label: 'Requests per second',
             data: samples.map((sample) => sample.requests),
-            backgroundColor: CATPPUCCIN_FLAVOURS[0],
-            borderColor: CATPPUCCIN_FLAVOURS[0],
-            fill: false as const,
-            pointRadius: 0,
+            backgroundColor: SINGLE_SERIES_FILL,
+            borderColor: SINGLE_SERIES_COLOR,
+            borderWidth: SPIKY_LINE_WIDTH_PX,
+            tension: 0,
+            fill: 'origin' as const,
           },
         ],
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: mochaAxisChartOptions<'line'>({ showLegend: false }),
     };
   });
 }
