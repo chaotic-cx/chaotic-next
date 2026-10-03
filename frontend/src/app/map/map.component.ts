@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { parseFocusQuery, setPageSeo } from '../functions';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { LiveTrafficService } from '../mirror-map/live-traffic.service';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { MirrorsService } from '../mirrors/mirrors.service';
@@ -12,10 +13,19 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
 
 @Component({
   selector: 'chaotic-map',
-  imports: [TitleComponent, MirrorMapComponent, LiveTrafficFeedComponent, TranslocoDirective],
+  imports: [TitleComponent, MirrorMapComponent, LiveTrafficFeedComponent, LoadErrorComponent, TranslocoDirective],
   template: `
     <div class="mx-auto flex w-full flex-1 flex-col" *transloco="let t; prefix: 'map'">
       <chaotic-title [title]="t('title')" [subtitleHtml]="t('subtitle')" />
+
+      @if (mirrorsService.error()) {
+        <chaotic-load-error
+          class="mb-3 block"
+          [message]="mirrorsService.errorMessage()"
+          [error]="mirrorsService.error()"
+          (retry)="mirrorsService.reload()"
+        />
+      }
 
       <chaotic-mirror-map
         class="backdrop-blur-(--chaotic-blur) w-full flex-1"
@@ -23,6 +33,7 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
         [mirrors]="mirrorsService.mirrors()"
         [self]="mirrorsService.self()"
         [focus]="focus()"
+        [countsKnown]="mirrorsService.mirrorData() !== null"
         [livePingsEnabled]="true"
         [showHits]="trafficService.showHits()"
         [showMirrors]="trafficService.showMirrors()"
@@ -40,7 +51,7 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
-        min-height: calc(100vh - 130px);
+        min-height: calc(100dvh - 130px);
         width: 100%;
       }
     `,

@@ -9,9 +9,9 @@
       [rows]="pageSize"
       [rowsPerPageOptions]="[25, 50, 100, 200]"
       [paginator]="true"
-      [showCurrentPageReport]="true"
       [lazy]="true"
       [totalRecords]="deployLogService.total()"
+      [chaoticTableFailed]="deployLogService.failed()"
       [sortOrder]="-1"
       (onLazyLoad)="onLazyLoad($event)"
       dataKey="id"
@@ -19,18 +19,13 @@
       stateStorage="local"
       stateKey="deploy-log-table"
       paginatorDropdownAppendTo="body"
+      chaoticPageReport
     >
       <ng-template #caption>
         <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
           <div class="flex flex-wrap items-center gap-2.5">
-            <p-button
-              class="hidden sm:inline-flex"
-              [outlined]="true"
-              [label]="t('common.clearFilters')"
-              (click)="clear(deployTable)"
-              size="small"
-            />
             <chaotic-column-toggle [columns]="deployColumns()" tableKey="deploy-log-table" />
+            <chaotic-clear-filters [active]="filtersActive()" (clear)="clear(deployTable)" />
           </div>
           <div class="flex w-full flex-wrap items-center gap-2.5 sm:ml-auto sm:w-auto sm:flex-nowrap">
             <p-select
@@ -38,6 +33,7 @@
               [options]="deployLogService.repoOptions"
               [ngModel]="deployLogService.repoFilter()"
               [placeholder]="t('deployLog.allRepos')"
+              [ariaLabel]="t('deployLog.repoFilterLabel')"
               (ngModelChange)="onRepoFilter($event)"
               showClear
               appendTo="body"
@@ -48,6 +44,7 @@
               [ngModel]="deployLogService.builderFilter()"
               [filter]="true"
               [placeholder]="t('deployLog.allBuilders')"
+              [ariaLabel]="t('deployLog.builderFilterLabel')"
               [filterPlaceHolder]="t('deployLog.searchBuilder')"
               [selectedItemsLabel]="t('deployLog.selectedBuilders')"
               (ngModelChange)="onBuilderFilter($event)"
@@ -59,6 +56,7 @@
               [options]="statusOptions()"
               [ngModel]="deployLogService.statusFilter()"
               [placeholder]="t('deployLog.outcomes')"
+              [ariaLabel]="t('deployLog.outcomeFilterLabel')"
               [selectedItemsLabel]="t('deployLog.selectedOutcomes')"
               (ngModelChange)="onStatusFilter($event)"
               optionLabel="label"
@@ -68,7 +66,7 @@
             >
               <ng-template pTemplate="item" let-option>
                 <span class="flex items-center gap-1">
-                  <i class="pi" [class]="option.icon"></i>
+                  <i class="pi" [class]="option.icon" aria-hidden="true"></i>
                   <span>{{ option.label }}</span>
                 </span>
               </ng-template>
@@ -76,13 +74,14 @@
           </div>
           <p-iconfield class="w-full sm:w-64" iconPosition="left">
             <p-inputicon>
-              <i class="pi pi-search"></i>
+              <i class="pi pi-search" aria-hidden="true"></i>
             </p-inputicon>
             <input
               class="w-full"
               #searchInput
               [formField]="searchForm.query"
               [placeholder]="t('deployLog.searchKeyword')"
+              [attr.aria-label]="t('deployLog.searchLabel')"
               pInputText
               type="text"
             />
@@ -159,23 +158,25 @@
           <tr>
             @if (columnVisibility.isVisible('deploy-log-table', 'pkgname')) {
               <td>
-                <span class="ml-1 align-middle">{{ build.pkgbase.pkgname }}</span>
+                <span class="ml-1 block max-w-xs truncate align-middle" [title]="build.pkgbase.pkgname">{{
+                  build.pkgbase.pkgname
+                }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'builder')) {
               <td>
-                <span class="ml-1 align-middle">{{ build.builder?.name }}</span>
+                <span class="ml-1 align-middle">{{ build.builder?.name ?? missingValue }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'repo')) {
               <td>
-                <span class="ml-1 align-middle">{{ build.repo?.name }}</span>
+                <span class="ml-1 align-middle">{{ build.repo?.name ?? missingValue }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'outcome')) {
               <td>
                 <span class="inline-flex items-center gap-1">
-                  <i [class]="`pi ${statusIconClass(build.status)}`"></i>
+                  <i [class]="`pi ${statusIconClass(build.status)}`" aria-hidden="true"></i>
                   <span>{{ t(statusLabelKeys[build.status]) }}</span>
                 </span>
               </td>
@@ -191,7 +192,7 @@
                     }
                   </span>
                 } @else {
-                  <span class="ml-1 align-middle text-ctp-subtext0">{{ t('deployLog.notAvailable') }}</span>
+                  <span class="ml-1 align-middle text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
             }
@@ -201,12 +202,12 @@
                   <span class="ml-1 align-middle text-ctp-subtext0">{{ t('deployLog.purged') }}</span>
                 } @else {
                   <a
-                    class="text-ctp-mauve hover:underline inline-flex items-center gap-1"
+                    class="text-ctp-mauve hover:underline focus-visible:underline inline-flex items-center gap-1"
                     [routerLink]="packageLogRouteFromUrl(build.logUrl ?? '')"
                     [pTooltip]="t('deployLog.openBuildLog')"
                     tooltipPosition="left"
                   >
-                    <i class="pi pi-bars"></i>
+                    <i class="pi pi-bars" aria-hidden="true"></i>
                     <span>{{ t('deployLog.log') }}</span>
                   </a>
                 }
@@ -214,9 +215,7 @@
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'duration')) {
               <td>
-                <span class="ml-1 align-middle">{{
-                  buildDuration(build.timeToEnd) ?? t('deployLog.notAvailable')
-                }}</span>
+                <span class="ml-1 align-middle">{{ buildDuration(build.timeToEnd) ?? missingValue }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'peakMemory')) {
@@ -227,7 +226,7 @@
             @if (columnVisibility.isVisible('deploy-log-table', 'cpuTime')) {
               <td>
                 <span class="ml-1 align-middle">{{
-                  buildCpuTime(build.resourceStats?.cpuTimeNs) ?? t('deployLog.notAvailable')
+                  buildCpuTime(build.resourceStats?.cpuTimeNs) ?? missingValue
                 }}</span>
               </td>
             }
@@ -279,9 +278,19 @@
           <tr>
             <td [attr.colspan]="deployColumns().length">
               @if (deployLogService.failed()) {
-                <chaotic-load-error [message]="t('deployLog.loadError')" (retry)="deployLogService.retry()" />
+                <chaotic-load-error
+                  [message]="t('deployLog.loadError')"
+                  [error]="deployLogService.error()"
+                  (retry)="deployLogService.retry()"
+                />
               } @else {
-                <p class="chaotic-card__empty">{{ t('deployLog.empty') }}</p>
+                <chaotic-empty-state [filtered]="filtersActive()" (clearFilters)="clear(deployTable)">
+                  @if (filtersActive()) {
+                    <p>{{ t('deployLog.empty') }}</p>
+                  } @else {
+                    <p>{{ t('deployLog.firstRunEmpty') }}</p>
+                  }
+                </chaotic-empty-state>
               }
             </td>
           </tr>

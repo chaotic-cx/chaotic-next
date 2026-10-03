@@ -1,7 +1,7 @@
+import { DecimalPipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { ChangeDetectorRef, Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
@@ -11,10 +11,12 @@ import { Tab, TabList, Tabs } from '@openng/optimus-ui/tabs';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
+import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
 import { resourceValue, setPageSeo } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
+import { CompactNumberPipe } from '../pipes/compact-number.pipe';
 import { TitleComponent } from '../title/title.component';
-import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
+import { UnknownValueComponent } from '../ui-states/unknown-value.component';
 import { isStatsTab, StatsService, type StatsTab } from './stats.service';
 
 const ALL_TIME_RANGE_PARAM = 'all';
@@ -89,6 +91,7 @@ function paramToTimeRange(value: string): number | null | undefined {
     TabList,
     Tabs,
     Tab,
+    CompactNumberPipe,
     DecimalPipe,
     FormsModule,
     Select,
@@ -96,6 +99,7 @@ function paramToTimeRange(value: string): number | null | undefined {
     Tooltip,
     RouterOutlet,
     TranslocoDirective,
+    UnknownValueComponent,
   ],
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.css',

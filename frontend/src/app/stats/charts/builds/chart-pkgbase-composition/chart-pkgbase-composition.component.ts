@@ -3,9 +3,9 @@ import { TranslocoService } from '@jsverse/transloco';
 import { AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { seriesColor } from '../../../../theme';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, pieChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-pkgbase-composition',
@@ -37,11 +37,11 @@ export class ChartPkgbaseCompositionComponent {
           {
             data: [counts.get('single') ?? 0, counts.get('split') ?? 0],
             label: this.transloco.translate('stats.charts.packages'),
-            backgroundColor: [CATPPUCCIN_FLAVOURS[0], CATPPUCCIN_FLAVOURS[1]],
+            backgroundColor: [seriesColor(0), seriesColor(1)],
           },
         ],
       },
-      options: mochaPieChartOptions<'pie'>(),
+      options: pieChartOptions<'pie'>(),
     };
   });
 }

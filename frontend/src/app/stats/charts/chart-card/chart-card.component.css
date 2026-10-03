@@ -1,5 +1,5 @@
 :host {
-  animation: ctp-item-enter 0.25s ease-out;
+  animation: ctp-item-enter var(--chaotic-duration-base) var(--chaotic-ease-out);
 }
 
 p-chart,
@@ -13,12 +13,47 @@ p-chart canvas {
   position: absolute;
   inset: 0;
   border-radius: var(--chaotic-radius-md);
-  background: color-mix(in srgb, var(--ctp-mocha-surface0) 30%, transparent);
-  animation: chart-pulse 2s ease-in-out infinite;
 }
 
-@keyframes chart-pulse {
-  50% {
-    opacity: 0.5;
+.chart-card__table-toggle {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: var(--chaotic-z-raised);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--chaotic-radius-sm);
+  background: var(--catppuccin-color-surface0);
+  color: var(--catppuccin-color-text);
+  font-size: var(--chaotic-text-xs);
+  cursor: pointer;
+}
+
+.chart-card__table-toggle--hidden:not(:focus-visible) {
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.chart-card__table {
+  position: absolute;
+  inset: 2.5rem 0 0;
+  overflow: auto;
+}
+
+.chart-card__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--chaotic-z-sticky);
+  background: var(--chaotic-surface-overlay);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    animation: none;
   }
 }

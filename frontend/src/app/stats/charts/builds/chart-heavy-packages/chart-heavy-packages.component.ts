@@ -12,8 +12,8 @@ import {
   chartRowHeight,
   clampAmount,
   type ChartConfig,
-  mochaAxisChartOptions,
-  SINGLE_SERIES_COLOR,
+  axisChartOptions,
+  singleSeriesColor,
 } from '../../chart-config';
 
 @Component({
@@ -56,12 +56,12 @@ export class ChartHeavyPackagesComponent {
           {
             label: this.transloco.translate('stats.charts.heavyPackages.label'),
             data: data.map((d) => parseFloat(d.average)),
-            backgroundColor: SINGLE_SERIES_COLOR,
+            backgroundColor: singleSeriesColor(),
             borderRadius: 4,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
     };
   });
 }

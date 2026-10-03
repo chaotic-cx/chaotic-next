@@ -3,7 +3,7 @@
 }
 
 .scan-report {
-  color: var(--ctp-mocha-text);
+  color: var(--catppuccin-color-text);
   display: flex;
   flex-direction: column;
   text-align: left;
@@ -21,8 +21,8 @@
 .scan-report__title {
   font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
   font-size: 1.125rem;
-  font-weight: 650;
-  color: var(--ctp-mocha-text);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
 }
 
 .scan-report__status {
@@ -30,15 +30,15 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }
 
 .scan-chip {
   padding: 0.125rem 0.5rem;
   border: 1px solid var(--chaotic-border);
-  border-radius: 9999px;
+  border-radius: var(--chaotic-radius-pill);
   font-size: 0.75rem;
-  color: var(--ctp-mocha-subtext1);
+  color: var(--catppuccin-color-subtext1);
   cursor: help;
 }
 
@@ -50,8 +50,12 @@
 .scan-section__title {
   margin-bottom: 0.75rem;
   font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--ctp-mocha-text);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
+}
+
+.scan-table-scroll {
+  overflow-x: auto;
 }
 
 .scan-table {
@@ -63,9 +67,9 @@
 .scan-table th {
   padding: 0 0.75rem 0.5rem 0;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: var(--chaotic-weight-medium);
   text-align: left;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }
 
 .scan-table th.text-right {
@@ -74,7 +78,7 @@
 
 .scan-table td {
   padding: 0.5rem 0.75rem 0.5rem 0;
-  border-top: 1px solid color-mix(in srgb, var(--ctp-mocha-surface0) 70%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--catppuccin-color-surface0) 70%, transparent);
 }
 
 .scan-table :is(th, td):last-child {

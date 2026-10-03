@@ -5,6 +5,7 @@ import { TranslocoDirective } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { FlipListDirective } from '../animations/flip-list.directive';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { packageLogRouteFromUrl } from '../functions';
 import { LoadErrorComponent } from '../load-error/load-error.component';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
@@ -45,6 +46,7 @@ const FAILURE_TAG_DESCRIPTION_KEYS: Record<string, string> = {
     BuildStatusPager,
     FlipListDirective,
     TranslocoDirective,
+    EmptyStateComponent,
   ],
   templateUrl: './build-status-deployments.component.html',
 })

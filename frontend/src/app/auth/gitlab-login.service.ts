@@ -1,5 +1,6 @@
 import { inject, Service } from '@angular/core';
 import { Router } from '@angular/router';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { AuthService } from 'ngx-better-auth';
 import { createAuthClient } from 'better-auth/client';
 import { from, Observable, of, throwError } from 'rxjs';
@@ -23,6 +24,28 @@ export const AUTH_SESSION_SYNC_KEY = 'better-auth.message';
 
 export const DEFAULT_LOGIN_REDIRECT = '/admin/overview';
 
+/**
+ * The browser blocked the sign-in window.
+ * The user can fix this, so the message differs from other sign-in failures.
+ */
+export class PopupBlockedError extends Error {
+  constructor() {
+    super('Popup blocked by browser');
+    this.name = 'PopupBlockedError';
+  }
+}
+
+/**
+ * Translation key for a failed sign-in start: a blocked pop-up or any other failure.
+ */
+export function loginFailedMessageKey(error: unknown): string {
+  if (error instanceof PopupBlockedError) {
+    return marker('auth.loginFailed.popupBlocked');
+  }
+
+  return marker('auth.loginFailed.message');
+}
+
 function safeRedirectPath(returnPath: string | null): string {
   if (returnPath?.startsWith('/') && !returnPath.startsWith('//')) return returnPath;
   return DEFAULT_LOGIN_REDIRECT;
@@ -44,7 +67,7 @@ export class GitlabLoginService {
     const popup = window.open('', POPUP_WINDOW_NAME, POPUP_FEATURES);
 
     if (!popup) {
-      return throwError(() => new Error('Popup blocked by browser'));
+      return throwError(() => new PopupBlockedError());
     }
 
     const callbackURL = window.location.origin + AUTH_CALLBACK_PATH;

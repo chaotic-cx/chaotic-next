@@ -98,8 +98,8 @@ export class ChartBuilderUtilizationComponent {
   protected readonly hourLabels = HOUR_LABELS;
 
   protected cellBackground(count: number): string {
-    if (count <= 0) return 'var(--ctp-mocha-surface0)';
-    return `color-mix(in srgb, var(--ctp-mocha-mauve) ${utilizationShade(count, this.grid().max)}%, transparent)`;
+    if (count <= 0) return 'var(--catppuccin-color-surface0)';
+    return `color-mix(in srgb, var(--catppuccin-color-mauve) ${utilizationShade(count, this.grid().max)}%, transparent)`;
   }
 
   protected readonly rangeLabel = computed(() => {

@@ -11,7 +11,7 @@
           t('stats.charts.builderUtilization.utcHour')
         }}</span>
         @for (label of hourLabels; track $index) {
-          <span class="text-center text-[10px] text-ctp-subtext0">{{ label }}</span>
+          <span class="text-center text-[0.625rem] text-ctp-subtext0">{{ label }}</span>
         }
         @for (row of grid().rows; track row.builder) {
           <span class="min-w-0 truncate self-center text-right text-xs text-ctp-subtext0" [title]="row.builder">

@@ -5,6 +5,7 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { FlipListDirective } from '../animations/flip-list.directive';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
@@ -26,6 +27,7 @@ const SKELETON_ROW_COUNT = 4;
     FlipListDirective,
     RouterLink,
     TranslocoDirective,
+    EmptyStateComponent,
   ],
   templateUrl: './waiting-builds.component.html',
   styleUrl: './waiting-builds.component.css',

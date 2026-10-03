@@ -6,7 +6,11 @@
       style="--stagger: 0"
       href="/aizawa/"
     >
-      <img priority ngSrc="/assets/logo.svg" alt="" width="741" height="711" />
+      @if (lightLogo()) {
+        <img priority ngSrc="/assets/logo-latte.svg" alt="" width="741" height="711" />
+      } @else {
+        <img priority ngSrc="/assets/logo.svg" alt="" width="741" height="711" />
+      }
     </a>
     <h1 class="home-hero__title hero-enter" id="home-title" style="--stagger: 1">
       {{ t('hero.title') }}
@@ -38,8 +42,8 @@
     </div>
     <a class="home-hero__setup hero-enter" style="--stagger: 4" routerLink="/docs" fragment="setup">
       <span class="home-hero__setup-lead">{{ t('setup.lead') }}</span>
-      {{ t('setup.text') }}
-      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+      <!-- The no-break space keeps the arrow on the line of the last word. -->
+      {{ t('setup.text') }}&nbsp;<i class="pi pi-arrow-right" aria-hidden="true"></i>
     </a>
   </section>
 
@@ -62,7 +66,7 @@
     @defer (on viewport; prefetch on idle) {
       <chaotic-newsfeed class="min-w-0" />
     } @placeholder {
-      <div class="home-placeholder h-96"></div>
+      <div class="home-placeholder chaotic-skeleton h-96" aria-hidden="true"></div>
     }
   </section>
 
@@ -74,7 +78,7 @@
     @defer (on viewport; prefetch on idle) {
       <chaotic-recently-added />
     } @placeholder {
-      <div class="home-placeholder h-64"></div>
+      <div class="home-placeholder chaotic-skeleton h-64" aria-hidden="true"></div>
     }
   </section>
 
@@ -84,10 +88,23 @@
       <a class="home-section__link" routerLink="/map">{{ t('map.link') }}</a>
     </div>
     <p class="home-section__note">{{ t('map.note') }}</p>
+    @if (mirrorsService.error()) {
+      <chaotic-load-error
+        class="mb-3 block"
+        [message]="mirrorsService.errorMessage()"
+        [error]="mirrorsService.error()"
+        (retry)="mirrorsService.reload()"
+      />
+    }
     @defer (on viewport) {
-      <chaotic-mirror-map [mirrors]="mirrorsService.mirrors()" [self]="mirrorsService.self()" [focus]="focus()" />
+      <chaotic-mirror-map
+        [mirrors]="mirrorsService.mirrors()"
+        [self]="mirrorsService.self()"
+        [focus]="focus()"
+        [countsKnown]="mirrorsService.mirrorData() !== null"
+      />
     } @placeholder {
-      <div class="home-placeholder h-[28rem]"></div>
+      <div class="home-placeholder chaotic-skeleton h-[28rem]" aria-hidden="true"></div>
     }
   </section>
 </div>

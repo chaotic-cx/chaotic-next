@@ -18,7 +18,6 @@ export function visibleMissingRows(rows: MissingDependencyReport[]): MissingDepe
   selector: 'chaotic-chart-missing-dependencies',
   imports: [LoadErrorComponent, TranslocoDirective],
   templateUrl: './chart-missing-dependencies.component.html',
-  styleUrl: './chart-missing-dependencies.component.css',
 })
 export class ChartMissingDependenciesComponent {
   private readonly appService = inject(AppService);

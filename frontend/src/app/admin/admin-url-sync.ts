@@ -1,6 +1,9 @@
 import { ActivatedRoute, Router } from '@angular/router';
 import { createLazyTablePagination, DEFAULT_PER_PAGE, type LazyTablePagination } from '../table-pagination';
 
+// Delay between the last keystroke in a search field and the URL update.
+export const QUERY_SYNC_DEBOUNCE_MS = 400;
+
 export type QueryParamSetter = (raw: string | null) => void;
 
 export type QueryParamPatch = Record<string, string | null | undefined>;

@@ -1,14 +1,14 @@
 <div class="flex flex-col items-center w-full" *transloco="let t">
   <div class="flex w-full flex-col items-center gap-6 py-4">
     <div
-      class="flex flex-col items-center justify-center transition-[padding] duration-200"
+      class="flex flex-col items-center justify-center"
       [class.py-8]="!hasSearchData()"
       [class.py-2]="hasSearchData()"
     >
       <i
-        class="pi pi-search text-ctp-mauve/80 transition-transform duration-200 motion-reduce:transition-none"
+        class="search-intro-icon pi pi-search transition-transform duration-200 motion-reduce:transition-none"
         [class.scale-50]="hasSearchData()"
-        style="font-size: 5rem"
+        aria-hidden="true"
       ></i>
     </div>
     <div class="relative w-full">
@@ -18,8 +18,9 @@
         [ngModel]="searchModel().query"
         [suggestions]="suggestions()"
         [delay]="300"
-        [minQueryLength]="3"
-        [placeholder]="t('searchPackage.placeholder')"
+        [minQueryLength]="minSuggestionQueryLength"
+        [placeholder]="t('searchPackage.placeholder', { repo: selectedRepo() })"
+        [ariaLabel]="t('searchPackage.inputLabel')"
         (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
         (completeMethod)="searchSuggestions($event)"
         (onSelect)="selectPackage($event.value)"
@@ -28,16 +29,63 @@
         appendTo="body"
       />
     </div>
+    <p class="sr-only" role="status">
+      @if (sheet(); as pkg) {
+        {{ t('searchPackage.resultStatus', { name: pkg.pkgname, repo: pkg.repo }) }}
+      }
+    </p>
+    @if (!currentPackageName()) {
+      <p class="search-hint">{{ t('searchPackage.hint', { count: minSuggestionQueryLength }) }}</p>
+    }
   </div>
 
-  <div
-    class="w-full grid transition-[grid-template-rows,opacity] duration-300 ease-out"
-    [class.grid-rows-[1fr]]="hasSearchData()"
-    [class.opacity-100]="hasSearchData()"
-    [class.grid-rows-[0fr]]="!hasSearchData()"
-    [class.opacity-0]="!hasSearchData()"
-  >
-    <div class="overflow-hidden">
+  @if (currentPackageName() && !sheet()) {
+    @if (packageFailure() === 'notFound') {
+      <div class="search-empty" role="status">
+        <p>{{ t('searchPackage.notFound.message', { name: currentPackageName(), repo: selectedRepo() }) }}</p>
+        <p class="search-empty__hint">
+          {{ t('searchPackage.notFound.hint') }}
+          <a class="pkg-sheet__link" [queryParams]="{ search: currentPackageName() }" routerLink="/aur-scan">{{
+            t('searchPackage.notFound.scanLink', { name: currentPackageName() })
+          }}</a>
+        </p>
+      </div>
+    } @else if (packageFailureKey(); as failureKey) {
+      <div class="w-full">
+        <chaotic-load-error
+          [message]="t(failureKey, { name: currentPackageName() })"
+          [error]="packageError()"
+          (retry)="retryPackage()"
+        />
+      </div>
+    } @else {
+      <div
+        class="pkg-sheet skeleton-reveal w-full"
+        [attr.aria-label]="t('searchPackage.loading', { name: currentPackageName() })"
+        role="status"
+      >
+        @if (slowLoading()) {
+          <p class="skeleton-slow-note">{{ t('tableSkeleton.stillLoading') }}</p>
+        }
+        <div class="pkg-sheet__head" aria-hidden="true">
+          <span class="chaotic-skeleton block h-8 w-64 max-w-full"></span>
+          <span class="chaotic-skeleton block h-5 w-full max-w-xl"></span>
+        </div>
+        <span class="chaotic-skeleton block h-12 w-full" aria-hidden="true"></span>
+        <div class="pkg-sheet__facts" aria-hidden="true">
+          @for (cell of skeletonFactCells; track cell) {
+            <div class="pkg-fact">
+              <span class="chaotic-skeleton block h-4 w-20"></span>
+              <span class="chaotic-skeleton block h-6 w-24"></span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+
+  @if (hasSearchData()) {
+    <div class="w-full" animate.enter="ctp-item-enter">
       <div class="scroll-mt-24 mt-4 flex flex-col gap-4" #resultsSection>
         @if (sheet(); as pkg) {
           <article class="pkg-sheet" aria-labelledby="pkg-sheet-name" animate.enter="ctp-fade-enter">
@@ -59,27 +107,31 @@
             <dl class="pkg-sheet__facts">
               <div class="pkg-fact">
                 <dt>{{ t('searchPackage.facts.downloads') }}</dt>
-                <dd class="pkg-fact__number">{{ downloads() === null ? '–' : (downloads() | number) }}</dd>
+                <dd class="pkg-fact__number">{{ downloads() === null ? '—' : (downloads() | number) }}</dd>
               </div>
               <div class="pkg-fact">
                 <dt>{{ t('searchPackage.facts.built') }}</dt>
                 <dd>
                   @if (pkg.builtAt) {
-                    <span [pTooltip]="(pkg.builtAt | date: 'medium') ?? undefined" tooltipPosition="top">{{
-                      pkg.builtAt | relativeTime
-                    }}</span>
+                    <time
+                      [attr.datetime]="pkg.builtAt | isoDateTime"
+                      [pTooltip]="(pkg.builtAt | date: 'medium') ?? undefined"
+                      tooltipPosition="top"
+                      >{{ pkg.builtAt | relativeTime
+                      }}<span class="sr-only"> ({{ pkg.builtAt | date: 'medium' }})</span></time
+                    >
                   } @else {
-                    –
+                    —
                   }
                 </dd>
               </div>
               <div class="pkg-fact">
                 <dt>{{ t('searchPackage.facts.added') }}</dt>
-                <dd>{{ pkg.addedAt ? (pkg.addedAt | date: 'mediumDate') : '–' }}</dd>
+                <dd>{{ pkg.addedAt ? (pkg.addedAt | date: 'mediumDate') : '—' }}</dd>
               </div>
               <div class="pkg-fact">
                 <dt>{{ t('searchPackage.facts.license') }}</dt>
-                <dd>{{ pkg.license ?? '–' }}</dd>
+                <dd>{{ pkg.license ?? '—' }}</dd>
               </div>
             </dl>
 
@@ -123,20 +175,18 @@
                 <ul class="pkg-group__list">
                   @for (entry of group.entries; track entry.name) {
                     <li class="pkg-chip">
-                      <span class="pkg-chip__name">{{ entry.name }}</span>
+                      <span class="pkg-chip__name" [title]="entry.name">{{ entry.name }}</span>
                       @if (entry.note) {
-                        <span class="pkg-chip__note">{{ entry.note }}</span>
+                        <span class="pkg-chip__note" [title]="entry.note">{{ entry.note }}</span>
                       }
                     </li>
                   }
                 </ul>
               </section>
             }
+            <chaotic-package-trigger-sources [pkgname]="currentPackageName()" />
           </article>
         }
-        <div class="mt-10">
-          <chaotic-package-trigger-sources [pkgname]="currentPackageName()" />
-        </div>
         <div class="mt-10 flex flex-col gap-10">
           <chaotic-chart-package-build-stats [packageName]="currentPackageName()" />
           <chaotic-chart-package-average-build-time [packageName]="currentPackageName()" />
@@ -144,5 +194,5 @@
         </div>
       </div>
     </div>
-  </div>
+  }
 </div>

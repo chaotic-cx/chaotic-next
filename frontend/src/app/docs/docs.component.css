@@ -11,15 +11,15 @@
 }
 
 .docs__toc {
-  display: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 @media (min-width: 1024px) {
   .docs__toc {
     position: sticky;
     top: 6rem;
-    display: flex;
-    flex-direction: column;
     gap: 0.75rem;
     align-self: start;
   }
@@ -27,14 +27,14 @@
 
 .docs__toc-label {
   font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--ctp-mocha-subtext0);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--chaotic-fg-muted);
 }
 
 .docs__toc ul {
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--ctp-mocha-surface1);
+  border-left: 1px solid var(--catppuccin-color-surface1);
 }
 
 .docs__toc a {
@@ -43,19 +43,40 @@
   padding: 0.3rem 0 0.3rem 0.875rem;
   border-left: 2px solid transparent;
   font-size: 0.875rem;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
   transition:
-    color 150ms ease-out,
-    border-color 150ms ease-out;
+    color var(--chaotic-duration-fast) var(--chaotic-ease-out),
+    border-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.docs__toc a:hover {
-  color: var(--ctp-mocha-text);
+.docs__toc a:hover,
+.docs__toc a:focus-visible {
+  color: var(--catppuccin-color-text);
 }
 
 .docs__toc a.is-active {
-  border-left-color: var(--ctp-mocha-mauve);
-  color: var(--ctp-mocha-text);
+  border-left-color: var(--catppuccin-color-mauve);
+  color: var(--catppuccin-color-text);
+}
+
+/* Small screens: the outline wraps as one block of links above the content, without the rail. */
+@media (max-width: 1023.98px) {
+  .docs__toc ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    border-left: 0;
+  }
+
+  .docs__toc a {
+    margin-left: 0;
+    padding: 0.25rem 0;
+    border-left: 0;
+  }
+
+  .docs__toc a.is-active {
+    color: var(--catppuccin-color-mauve);
+  }
 }
 
 .docs__content {
@@ -80,9 +101,9 @@
 .docs-section h2 {
   margin-bottom: 0.75rem;
   font-size: 1.25rem;
-  font-weight: 650;
+  font-weight: var(--chaotic-weight-semibold);
   letter-spacing: -0.015em;
-  color: var(--ctp-mocha-text);
+  color: var(--catppuccin-color-text);
 }
 
 .docs-section p + p {
@@ -90,20 +111,21 @@
 }
 
 .docs-section ::ng-deep a {
-  color: var(--ctp-mocha-mauve);
+  color: var(--catppuccin-color-mauve);
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--ctp-mocha-mauve) 40%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--catppuccin-color-mauve) 40%, transparent);
   text-underline-offset: 0.2em;
 }
 
-.docs-section ::ng-deep a:hover {
+.docs-section ::ng-deep a:hover,
+.docs-section ::ng-deep a:focus-visible {
   text-decoration-color: currentColor;
 }
 
 .docs-section ::ng-deep :not(pre) > code {
   padding: 0.1em 0.35em;
-  border-radius: 4px;
-  background: var(--ctp-mocha-surface0);
+  border-radius: var(--chaotic-radius-sm);
+  background: var(--catppuccin-color-surface0);
   font-size: 0.875em;
 }
 
@@ -129,18 +151,18 @@
   place-items: center;
   width: 1.75rem;
   height: 1.75rem;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--ctp-mocha-mauve) 18%, transparent);
-  color: var(--ctp-mocha-mauve);
+  border-radius: var(--chaotic-radius-pill);
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 18%, transparent);
+  color: var(--catppuccin-color-mauve);
   font-size: 0.8125rem;
-  font-weight: 650;
+  font-weight: var(--chaotic-weight-semibold);
   font-variant-numeric: tabular-nums;
 }
 
 .docs-steps h3 {
   margin-bottom: 0.25rem;
-  font-weight: 600;
-  color: var(--ctp-mocha-text);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
 }
 
 .docs-list {

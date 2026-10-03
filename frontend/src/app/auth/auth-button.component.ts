@@ -7,7 +7,7 @@ import { Button } from '@openng/optimus-ui/button';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { finalize } from 'rxjs/operators';
-import { DEFAULT_LOGIN_REDIRECT, GitlabLoginService } from './gitlab-login.service';
+import { DEFAULT_LOGIN_REDIRECT, GitlabLoginService, loginFailedMessageKey } from './gitlab-login.service';
 
 function initialsOf(name: string | null | undefined): string {
   return (name ?? '?')
@@ -62,10 +62,10 @@ export class AuthButtonComponent {
       .login(DEFAULT_LOGIN_REDIRECT)
       .pipe(finalize(() => this.isLoginLoading.set(false)))
       .subscribe({
-        error: () => {
+        error: (error: unknown) => {
           this.messageToastService.error(
             this.transloco.translate('auth.loginFailed.title'),
-            this.transloco.translate('auth.loginFailed.message'),
+            this.transloco.translate(loginFailedMessageKey(error)),
           );
         },
       });

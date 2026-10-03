@@ -11,11 +11,15 @@ import { ConfirmDialog } from '@openng/optimus-ui/confirmdialog';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { AppService } from './app.service';
 import { AuthButtonComponent } from './auth/auth-button.component';
+import { SessionExpiredBannerComponent } from './auth/session-expired-banner.component';
 import { FooterComponent } from './footer/footer.component';
 import { injectActiveTranslation } from './i18n/active-translation';
 import { LanguageSwitcherComponent } from './language-switcher/language-switcher.component';
 import { LoadingService } from './loading/loading.service';
+import { lightLogo } from './logo';
 import { MobileNavComponent } from './mobile-nav/mobile-nav.component';
+import { ThemeSwitcherComponent } from './theme-switcher/theme-switcher.component';
+import { ConnectionBannerComponent } from './ui-states/connection-banner.component';
 import { UpdateService } from './update/update.service';
 
 @Component({
@@ -28,7 +32,10 @@ import { UpdateService } from './update/update.service';
     ProgressSpinner,
     AuthButtonComponent,
     LanguageSwitcherComponent,
+    ThemeSwitcherComponent,
     MobileNavComponent,
+    ConnectionBannerComponent,
+    SessionExpiredBannerComponent,
     TranslocoDirective,
   ],
   selector: 'chaotic-root',
@@ -46,6 +53,7 @@ export class AppComponent implements OnInit {
   private readonly _updateService = inject(UpdateService);
 
   protected readonly loadingService = inject(LoadingService);
+  protected readonly lightLogo = lightLogo;
 
   private readonly activeTranslation = injectActiveTranslation();
 
@@ -54,6 +62,11 @@ export class AppComponent implements OnInit {
   protected closeMobileNav(trigger: HTMLButtonElement): void {
     this.mobileNavOpen.set(false);
     trigger.focus();
+  }
+
+  protected skipToContent(event: Event, main: HTMLElement): void {
+    event.preventDefault();
+    main.focus();
   }
 
   private readonly homeItem = computed<MenuItem>(() => {

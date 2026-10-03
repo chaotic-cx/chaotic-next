@@ -1,16 +1,5 @@
 <ng-container *transloco="let t">
-  @if (chart.loading()) {
-    <div class="card relative flex h-[16rem] sm:h-[12rem] justify-center">
-      <div class="absolute inset-0 flex items-center justify-center">
-        <i
-          class="pi pi-spin pi-spinner text-ctp-overlay1"
-          [attr.aria-label]="t('common.loading')"
-          style="font-size: 1.5rem"
-          role="status"
-        ></i>
-      </div>
-    </div>
-  } @else if (chart.failed()) {
+  @if (chart.failed()) {
     <chaotic-load-error [message]="t('stats.charts.packageResourceStats.loadError')" (retry)="chart.retry()" />
   }
   <div class="flex flex-col gap-6">

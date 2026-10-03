@@ -15,9 +15,13 @@
       <div class="stats-toolbar">
         <span class="stats-toolbar__users">
           <span class="text-ctp-subtext0">{{ t('stats.toolbar.totalUsers') }}</span>
-          <span class="font-semibold tabular-nums text-ctp-text">{{
-            statsService.usersLoading() ? '–' : ((statsService.totalUsers() | number) ?? '–')
-          }}</span>
+          @if (statsService.usersLoading() || statsService.totalUsers() === null) {
+            <span class="font-semibold text-ctp-text"><chaotic-unknown-value /></span>
+          } @else {
+            <span class="font-semibold tabular-nums text-ctp-text" [title]="statsService.totalUsers() | number">
+              {{ statsService.totalUsers() | compactNumber }}
+            </span>
+          }
         </span>
         <div class="stats-toolbar__filters">
           @if (activeTab() === 'search') {

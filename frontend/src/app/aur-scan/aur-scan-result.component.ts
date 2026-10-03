@@ -1,20 +1,28 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { type DiffScanFinding } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { vtIndicatorLink } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { SourceViewerComponent } from '../source-viewer/source-viewer.component';
 import { ScanFindingRowComponent } from './scan-finding-row.component';
-import { AurScanService } from './aur-scan.service';
+import { AurScanService, type ScanFailureReason } from './aur-scan.service';
 import { presenter } from './scan-presenter';
 
 const POPULARITY_DECIMALS = 2;
 
+const FAILURE_KEYS: Record<ScanFailureReason, string> = {
+  rateLimited: marker('aurScan.errors.rateLimited'),
+  request: marker('aurScan.errors.request'),
+  streamLost: marker('aurScan.errors.streamLost'),
+};
+
 @Component({
   selector: 'chaotic-aur-scan-result',
-  imports: [TagModule, Tooltip, SourceViewerComponent, ScanFindingRowComponent, TranslocoDirective],
+  imports: [LoadErrorComponent, TagModule, Tooltip, SourceViewerComponent, ScanFindingRowComponent, TranslocoDirective],
   templateUrl: './aur-scan-result.component.html',
   styleUrl: './aur-scan-result.component.css',
 })
@@ -27,6 +35,8 @@ export class AurScanResultComponent {
   readonly showTitle = input(true);
 
   protected readonly scan = computed(() => this.scanService.scanOf(this.packageName()));
+  protected readonly failure = computed(() => this.scanService.failureOf(this.packageName()));
+  protected readonly failureKeys = FAILURE_KEYS;
   protected readonly presenter = presenter;
   protected readonly collapsedFiles = signal<ReadonlySet<string>>(new Set<string>());
 
@@ -38,6 +48,10 @@ export class AurScanResultComponent {
       const name = this.packageName();
       if (name) void this.scanService.startScan(name);
     });
+  }
+
+  protected retryScan(): void {
+    this.scanService.retry(this.packageName());
   }
 
   protected scrollToFinding(finding: DiffScanFinding): void {

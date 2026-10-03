@@ -4,6 +4,7 @@ import { TranslocoDirective } from '@jsverse/transloco';
 import { BuildStatusService, type PipelineView } from '../../build-status/build-status.service';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
+import { SkeletonListComponent } from '../../table-skeleton/skeleton-list.component';
 import { OVERVIEW_SKELETON_ROWS } from './overview-constants';
 
 const VISIBLE_PIPELINES = 6;
@@ -28,7 +29,7 @@ interface PipelineRow {
 
 @Component({
   selector: 'chaotic-admin-pipeline-health',
-  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink, TranslocoDirective],
+  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink, SkeletonListComponent, TranslocoDirective],
   template: `
     <section
       class="chaotic-card"
@@ -43,11 +44,7 @@ interface PipelineRow {
         <a class="chaotic-card__link" routerLink="/status">{{ t('buildStatusLink') }}</a>
       </header>
       @if (buildStatusService.loadingPipelines() && rows().length === 0) {
-        <ul class="chaotic-mini-list" aria-hidden="true">
-          @for (row of skeletonRows; track row) {
-            <li><span class="chaotic-skeleton h-4 w-full"></span></li>
-          }
-        </ul>
+        <chaotic-skeleton-list [rows]="skeletonRows" />
       } @else if (buildStatusService.pipelinesFailed() && rows().length === 0) {
         <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.getPipelines()" />
       } @else if (rows().length === 0) {
@@ -77,11 +74,12 @@ interface PipelineRow {
       flex: none;
       width: 6px;
       height: 6px;
-      border-radius: 9999px;
+      border-radius: var(--chaotic-radius-pill);
     }
 
-    .pipeline-link:hover {
-      color: var(--ctp-mocha-mauve);
+    .pipeline-link:hover,
+    .pipeline-link:focus-visible {
+      color: var(--catppuccin-color-mauve);
     }
 
     .pipeline-status {
@@ -90,13 +88,13 @@ interface PipelineRow {
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 0.8125rem;
-      color: var(--ctp-mocha-subtext0);
+      color: var(--chaotic-fg-muted);
     }
 
     .pipeline-failed {
       font-size: 0.8125rem;
-      font-weight: 500;
-      color: var(--ctp-mocha-red);
+      font-weight: var(--chaotic-weight-medium);
+      color: var(--catppuccin-color-red);
     }
   `,
 })

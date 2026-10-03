@@ -17,11 +17,12 @@
 }
 
 .chaotic-page-header__title {
-  color: var(--ctp-mocha-text);
+  color: var(--catppuccin-color-text);
   font-size: 1.5rem;
-  font-weight: 650;
+  font-weight: var(--chaotic-weight-semibold);
   letter-spacing: -0.02em;
   line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 @media (min-width: 768px) {
@@ -31,7 +32,7 @@
 }
 
 .chaotic-page-header__subtitle {
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
   font-size: 0.9375rem;
   line-height: 1.55;
 }

@@ -9,28 +9,23 @@
 
 .home-hero__logo {
   display: block;
-  width: 3.5rem;
-  transition: transform 200ms ease-out;
-}
-
-.home-hero__logo:hover {
-  transform: rotate(-8deg) scale(1.05);
+  width: 4.5rem;
 }
 
 .home-hero__title {
   max-width: 22ch;
   font-size: clamp(1.875rem, 1.35rem + 2.1vw, 2.75rem);
-  font-weight: 700;
+  font-weight: var(--chaotic-weight-bold);
   line-height: 1.1;
   letter-spacing: -0.03em;
-  color: var(--ctp-mocha-text);
+  color: var(--catppuccin-color-text);
 }
 
 .home-hero__lede {
   max-width: 40rem;
   font-size: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
   line-height: 1.55;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }
 
 .home-hero__actions {
@@ -49,32 +44,36 @@
 }
 
 .home-hero__setup {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: inline-block;
+  max-width: 100%;
   padding-block: 0.25rem;
+  line-height: 1.5;
+  text-wrap: pretty;
   font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--ctp-mocha-text);
-  transition: color 150ms ease-out;
+  font-weight: var(--chaotic-weight-medium);
+  color: var(--catppuccin-color-text);
+  transition: color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
 .home-hero__setup-lead {
-  color: var(--ctp-mocha-subtext0);
-  font-weight: 400;
+  color: var(--chaotic-fg-muted);
+  font-weight: var(--chaotic-weight-regular);
 }
 
 .home-hero__setup .pi {
+  margin-inline-start: 0.25rem;
   font-size: 0.8125rem;
-  color: var(--ctp-mocha-mauve);
-  transition: translate 150ms ease-out;
+  color: var(--catppuccin-color-mauve);
+  transition: translate var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.home-hero__setup:hover {
-  color: var(--ctp-mocha-mauve);
+.home-hero__setup:hover,
+.home-hero__setup:focus-visible {
+  color: var(--catppuccin-color-mauve);
 }
 
-.home-hero__setup:hover .pi {
+.home-hero__setup:hover .pi,
+.home-hero__setup:focus-visible .pi {
   translate: 0.25rem 0;
 }
 
@@ -113,7 +112,7 @@
 .home-news__note,
 .home-section__note {
   font-size: 0.9375rem;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }
 
 .home-news__community {
@@ -125,25 +124,26 @@
   border-radius: var(--chaotic-radius-md);
   border: 1px solid var(--chaotic-border);
   font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--ctp-mocha-text);
+  font-weight: var(--chaotic-weight-medium);
+  color: var(--catppuccin-color-text);
   transition:
-    border-color 150ms ease-out,
-    color 150ms ease-out;
+    border-color var(--chaotic-duration-fast) var(--chaotic-ease-out),
+    color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.home-news__community:hover {
-  border-color: var(--ctp-mocha-mauve);
-  color: var(--ctp-mocha-mauve);
+.home-news__community:hover,
+.home-news__community:focus-visible {
+  border-color: var(--catppuccin-color-mauve);
+  color: var(--catppuccin-color-mauve);
 }
 
 .home-news__hint {
   font-size: 0.8125rem;
-  color: var(--ctp-mocha-overlay1);
+  color: var(--chaotic-fg-faint);
 }
 
 .home-news__hint a {
-  color: var(--ctp-mocha-mauve);
+  color: var(--catppuccin-color-mauve);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
@@ -169,24 +169,24 @@
 
 .home-section__link {
   font-size: 0.875rem;
-  color: var(--ctp-mocha-subtext1);
+  color: var(--catppuccin-color-subtext1);
   text-decoration: underline;
-  text-decoration-color: var(--ctp-mocha-surface2);
+  text-decoration-color: var(--catppuccin-color-surface2);
   text-underline-offset: 0.25em;
 }
 
-.home-section__link:hover {
-  color: var(--ctp-mocha-mauve);
+.home-section__link:hover,
+.home-section__link:focus-visible {
+  color: var(--catppuccin-color-mauve);
   text-decoration-color: currentColor;
 }
 
 .home-placeholder {
   border-radius: var(--chaotic-radius-lg);
-  background: color-mix(in srgb, var(--ctp-mocha-surface0) 30%, transparent);
 }
 
 .hero-enter {
-  animation: hero-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: hero-enter var(--chaotic-duration-slow) var(--chaotic-ease-out) both;
   animation-delay: calc(var(--stagger, 0) * 60ms);
 }
 

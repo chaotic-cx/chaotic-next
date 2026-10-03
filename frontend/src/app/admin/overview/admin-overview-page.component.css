@@ -53,48 +53,49 @@
 }
 
 .metric--hero {
-  background: color-mix(in srgb, var(--ctp-mocha-mauve) 6%, transparent);
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 6%, transparent);
 }
 
 .metric--link {
-  transition: background-color 120ms ease-out;
+  transition: background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
 .metric--link:hover {
-  background: color-mix(in srgb, var(--ctp-mocha-surface0) 40%, transparent);
+  background: color-mix(in srgb, var(--catppuccin-color-surface0) 40%, transparent);
 }
 
 .metric--link:focus-visible {
-  outline: 2px solid var(--ctp-mocha-mauve);
-  outline-offset: -2px;
+  outline: var(--chaotic-focus-ring);
+  outline-offset: calc(var(--chaotic-focus-ring-offset) * -1);
 }
 
 .metric__label {
-  font-size: 0.8125rem;
-  color: var(--ctp-mocha-subtext0);
+  font-size: var(--chaotic-text-sm);
+  color: var(--chaotic-fg-muted);
 }
 
 .metric__value {
-  font-size: 1.75rem;
-  font-weight: 650;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  font-size: var(--chaotic-text-xl);
+  font-weight: var(--chaotic-weight-semibold);
+  line-height: var(--chaotic-leading-xl);
+  letter-spacing: var(--chaotic-tracking-tight);
   font-variant-numeric: tabular-nums;
-  color: var(--ctp-mocha-text);
+  color: var(--catppuccin-color-text);
 }
 
 .metric--hero .metric__value {
-  font-size: 2.25rem;
-  color: var(--ctp-mocha-mauve);
+  font-size: var(--chaotic-text-display);
+  line-height: var(--chaotic-leading-display);
+  color: var(--catppuccin-color-mauve);
 }
 
 .metric__context {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.8125rem;
+  font-size: var(--chaotic-text-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--ctp-mocha-overlay1);
+  color: var(--chaotic-fg-faint);
 }
 
 .overview-grid {
@@ -148,9 +149,9 @@
   align-items: center;
   gap: 0.625rem;
   padding: 3rem 1rem;
-  font-size: 0.9375rem;
+  font-size: var(--chaotic-text-md);
   text-align: center;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }
 
 .overview-empty .pi {

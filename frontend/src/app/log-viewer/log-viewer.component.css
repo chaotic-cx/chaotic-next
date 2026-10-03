@@ -6,12 +6,6 @@
   min-height: 0;
 }
 
-.log-error {
-  color: var(--ctp-mocha-red);
-  font-size: 0.875rem;
-  padding-left: 0.5rem;
-}
-
 .job-list {
   display: flex;
   flex-wrap: nowrap;
@@ -20,8 +14,8 @@
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--ctp-mocha-surface2) transparent;
-  padding-bottom: 2px;
+  scrollbar-color: var(--catppuccin-color-surface2) transparent;
+  padding-bottom: 0.125rem;
 }
 
 .job-list::-webkit-scrollbar {
@@ -33,8 +27,8 @@
 }
 
 .job-list::-webkit-scrollbar-thumb {
-  background: var(--ctp-mocha-surface2);
-  border-radius: 3px;
+  background: var(--catppuccin-color-surface2);
+  border-radius: var(--chaotic-radius-pill);
 }
 
 .job-chip {
@@ -42,46 +36,66 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--ctp-mocha-surface1);
-  background: var(--ctp-mocha-surface0);
-  color: var(--ctp-mocha-text);
+  border-radius: var(--chaotic-radius-sm);
+  border: 1px solid var(--catppuccin-color-surface1);
+  background: var(--catppuccin-color-surface0);
+  color: var(--catppuccin-color-text);
   cursor: pointer;
   font-size: 0.875rem;
   transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
+    border-color var(--chaotic-duration-fast) var(--chaotic-ease-out),
+    background var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.job-chip:hover {
-  border-color: var(--ctp-mocha-mauve);
+.job-chip:hover,
+.job-chip:focus-visible {
+  border-color: var(--catppuccin-color-mauve);
 }
 
 .job-chip-selected {
-  border-color: var(--ctp-mocha-mauve);
-  background: var(--ctp-mocha-surface0);
+  border-color: var(--catppuccin-color-mauve);
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 18%, var(--catppuccin-color-surface0));
+  box-shadow: inset 0 -2px 0 var(--catppuccin-color-mauve);
+}
+
+@media (pointer: coarse) {
+  .job-chip {
+    min-height: 2.75rem;
+  }
+}
+
+.job-chip-skeleton {
+  flex: none;
+  width: 7rem;
+  height: 2.125rem;
+  border-radius: var(--chaotic-radius-sm);
 }
 
 .job-name {
-  font-weight: 600;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--chaotic-weight-semibold);
 }
 
 .job-status {
+  white-space: nowrap;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
 .job-running .job-status {
-  color: var(--ctp-mocha-mauve);
+  color: var(--catppuccin-color-mauve);
 }
 
 .job-failed .job-status {
-  color: var(--ctp-mocha-red);
+  color: var(--catppuccin-color-red);
 }
 
 .job-success .job-status {
-  color: var(--ctp-mocha-green);
+  color: var(--chaotic-ink-green);
 }
 
 .log-toolbar {
@@ -89,8 +103,8 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.875rem;
-  border: 1px solid var(--ctp-mocha-surface1);
-  border-radius: 0.75rem;
+  border: 1px solid var(--catppuccin-color-surface1);
+  border-radius: var(--chaotic-radius-md);
   background: transparent;
   backdrop-filter: blur(var(--chaotic-blur));
   -webkit-backdrop-filter: blur(var(--chaotic-blur));
@@ -100,7 +114,7 @@
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .log-toolbar {
     flex-wrap: wrap;
   }
@@ -115,9 +129,9 @@
 }
 
 .live-badge {
-  color: var(--ctp-mocha-red);
+  color: var(--catppuccin-color-red);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: var(--chaotic-weight-bold);
   animation: live-pulse 1.6s ease-in-out infinite;
 }
 
@@ -131,33 +145,10 @@
   }
 }
 
-.follow-button {
-  margin-left: auto;
-  border: 1px solid var(--ctp-mocha-surface1);
-  border-radius: 0.5rem;
-  background: transparent;
-  color: var(--ctp-mocha-text);
-  padding: 0.35rem 0.75rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-
-.follow-button:hover {
-  border-color: var(--ctp-mocha-mauve);
-}
-
 .log-panel-wrap {
   position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: calc(100dvh - 260px);
-}
-
-.log-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  min-height: 0;
 }

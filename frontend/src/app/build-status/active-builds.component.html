@@ -1,6 +1,6 @@
 <section class="chaotic-card" *transloco="let t; prefix: 'buildStatus.active'">
   <chaotic-build-status-section
-    [count]="buildStatusService.loadingQueue() || buildStatusService.queueFailed() ? undefined : sortedQueue().length"
+    [count]="buildStatusService.queueCountKnown() ? sortedQueue().length : undefined"
     [iconClass]="sortedQueue().length > 0 ? 'pi-spin text-ctp-mauve' : 'text-ctp-subtext0'"
     [title]="t('title')"
     icon="pi-cog"
@@ -14,19 +14,24 @@
   } @else if (buildStatusService.queueFailed()) {
     <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.refreshQueueStats()" />
   } @else if (sortedQueue().length === 0) {
-    <p class="chaotic-card__empty">
-      <i class="pi pi-moon" aria-hidden="true"></i>
-      {{ t('empty') }}
-    </p>
+    <chaotic-empty-state [message]="t('empty')" icon="pi-moon">
+      <a class="text-ctp-mauve hover:underline focus-visible:underline" routerLink="/deployments" emptyStateAction>{{
+        t('emptyAction')
+      }}</a>
+    </chaotic-empty-state>
   } @else {
     <ul class="max-h-[30rem] overflow-y-auto" chaoticFlipList>
       @for (pkg of sortedQueue(); track pkg.rawName) {
         <li class="chaotic-row" animate.enter="ctp-fade-enter">
           <div class="flex min-w-0 flex-1 flex-col gap-1.5">
             <div class="flex items-baseline justify-between gap-3">
-              <a class="chaotic-row__name" [routerLink]="['/stats/search']" [queryParams]="{ search: pkg.name }">{{
-                pkg.name
-              }}</a>
+              <a
+                class="chaotic-row__name"
+                [routerLink]="['/stats/search']"
+                [queryParams]="{ search: pkg.name }"
+                [title]="pkg.name"
+                >{{ pkg.name }}</a
+              >
               @if (etaViews().get(pkg.rawName); as eta) {
                 <span
                   class="shrink-0 whitespace-nowrap text-xs tabular-nums"
@@ -51,9 +56,11 @@
             </div>
             <span class="chaotic-row__meta">
               {{ pkg.node }} · {{ pkg.build_class | buildClass }} ·
-              <span [pTooltip]="buildStatusService.estimateTooltip()" tooltipPosition="top">{{
-                buildStatusService.activeStartedLabels().get(pkg.rawName) ?? t('unknownStart')
-              }}</span>
+              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as startedLabel) {
+                <span [pTooltip]="buildStatusService.estimateTooltip()" tooltipPosition="top">{{ startedLabel }}</span>
+              } @else {
+                <chaotic-unknown-value />
+              }
             </span>
           </div>
           <a

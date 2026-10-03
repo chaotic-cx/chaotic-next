@@ -47,6 +47,7 @@ export class ResilientSseStream {
       ...options,
     };
     document.addEventListener('visibilitychange', this.onVisibilityChange);
+    window.addEventListener('online', this.onOnline);
   }
 
   /** True while an EventSource exists (open or reconnecting), false when parked or closed. */
@@ -57,6 +58,7 @@ export class ResilientSseStream {
   open(): void {
     if (this.closed) return;
     this.disconnect();
+    // ui-craft-detect-ignore-next-line -- transport only. Each component that renders a stream owns its role="status" region.
     const source = new EventSource(this.options.url(), { withCredentials: true });
     this.source = source;
 
@@ -104,6 +106,7 @@ export class ResilientSseStream {
     this.closed = true;
     this.disconnect();
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    window.removeEventListener('online', this.onOnline);
   }
 
   /** Drops the connection without giving up: reconnect/visibility may resume later. */
@@ -131,5 +134,19 @@ export class ResilientSseStream {
       this.attempts = 0;
       this.open();
     }
+  };
+
+  /**
+   * The network is back: reconnect a dropped stream at once with a fresh attempt budget,
+   * instead of waiting for the next backoff timer. A live stream stays as it is.
+   */
+  private readonly onOnline = (): void => {
+    if (this.closed || this.source || document.visibilityState !== 'visible') {
+      return;
+    }
+
+    this.attempts = 0;
+    this.park();
+    this.open();
   };
 }

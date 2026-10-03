@@ -1,0 +1,24 @@
+<ng-container *transloco="let t; prefix: 'themeSwitcher'">
+  <p-button
+    [icon]="preferenceIcon()"
+    [ariaLabel]="t('ariaLabel', { theme: preferenceLabel() })"
+    [pTooltip]="t('tooltip')"
+    (onClick)="themeMenu.toggle($event)"
+    severity="secondary"
+    size="small"
+    tooltipPosition="left"
+    text
+    rounded
+  />
+  <p-menu #themeMenu [model]="themeItems()" [popup]="true" (onShow)="alignMenuEnd(themeMenu)" appendTo="body">
+    <ng-template #item let-item>
+      <a class="p-menu-item-link" [attr.aria-current]="item.state?.active ? 'true' : null" tabindex="-1">
+        <span class="p-menu-item-icon" [class]="item.icon" aria-hidden="true"></span>
+        <span class="p-menu-item-label">{{ item.label }}</span>
+        @if (item.state?.active) {
+          <span class="pi pi-check ms-auto ps-3" aria-hidden="true"></span>
+        }
+      </a>
+    </ng-template>
+  </p-menu>
+</ng-container>

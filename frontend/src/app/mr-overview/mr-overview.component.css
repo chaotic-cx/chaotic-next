@@ -1,12 +1,12 @@
 .mr-focused {
-  outline: 2px solid var(--ctp-mocha-mauve);
+  outline: 2px solid var(--catppuccin-color-mauve);
   outline-offset: 2px;
 }
 
 @keyframes chaotic-new-mr-flash {
   0%,
   55% {
-    box-shadow: 0 0 0 2px var(--ctp-mocha-yellow);
+    box-shadow: 0 0 0 2px var(--catppuccin-color-yellow);
   }
 
   100% {
@@ -14,9 +14,10 @@
   }
 }
 
+/* A one-shot highlight that fades out. It is not UI motion, so it runs longer than the max duration to be noticed. */
 .new-mr-flash {
-  animation: chaotic-new-mr-flash 1.8s ease-out;
-  border-radius: 0.75rem;
+  animation: chaotic-new-mr-flash 1.8s var(--chaotic-ease-out);
+  border-radius: var(--chaotic-radius-md);
 }
 
 ::ng-deep .mr-chips .p-tag {
@@ -49,23 +50,26 @@
 }
 
 ::ng-deep .mr-btn-approve {
-  --mr-accent: var(--ctp-mocha-green);
+  --mr-accent: var(--catppuccin-color-green);
 }
 
 ::ng-deep .mr-btn-danger {
-  --mr-accent: var(--ctp-mocha-red);
+  --mr-accent: var(--catppuccin-color-red);
 }
 
 ::ng-deep .mr-btn-warn {
-  --mr-accent: var(--ctp-mocha-yellow);
+  --mr-accent: var(--catppuccin-color-yellow);
 }
 
 ::ng-deep .mr-btn-approve,
 ::ng-deep .mr-btn-danger,
 ::ng-deep .mr-btn-warn,
 ::ng-deep .mr-btn-approve:not(:disabled):hover,
+::ng-deep .mr-btn-approve:not(:disabled):focus-visible,
 ::ng-deep .mr-btn-danger:not(:disabled):hover,
+::ng-deep .mr-btn-danger:not(:disabled):focus-visible,
 ::ng-deep .mr-btn-warn:not(:disabled):hover,
+::ng-deep .mr-btn-warn:not(:disabled):focus-visible,
 ::ng-deep .mr-btn-approve:disabled,
 ::ng-deep .mr-btn-approve[disabled],
 ::ng-deep .mr-btn-danger:disabled,
@@ -77,8 +81,11 @@
 }
 
 ::ng-deep .mr-btn-approve:not(:disabled):hover,
+::ng-deep .mr-btn-approve:not(:disabled):focus-visible,
 ::ng-deep .mr-btn-danger:not(:disabled):hover,
-::ng-deep .mr-btn-warn:not(:disabled):hover {
+::ng-deep .mr-btn-danger:not(:disabled):focus-visible,
+::ng-deep .mr-btn-warn:not(:disabled):hover,
+::ng-deep .mr-btn-warn:not(:disabled):focus-visible {
   background: color-mix(in srgb, var(--mr-accent) 15%, transparent) !important;
 }
 
@@ -133,7 +140,7 @@
   margin-left: 0.375rem;
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }
 
 .mr-scan-facts {
@@ -150,24 +157,24 @@
 }
 
 .mr-scan {
-  --scan-hue: var(--ctp-mocha-green);
+  --scan-hue: var(--catppuccin-color-green);
   border-color: color-mix(in srgb, var(--scan-hue) 30%, transparent);
 }
 
 .mr-scan[data-tone='info'] {
-  --scan-hue: var(--ctp-mocha-sapphire);
+  --scan-hue: var(--catppuccin-color-sapphire);
 }
 
 .mr-scan[data-tone='warn'] {
-  --scan-hue: var(--ctp-mocha-yellow);
+  --scan-hue: var(--catppuccin-color-yellow);
 }
 
 .mr-scan[data-tone='danger'] {
-  --scan-hue: var(--ctp-mocha-red);
+  --scan-hue: var(--catppuccin-color-red);
 }
 
 .mr-scan .chaotic-file__header {
-  background: color-mix(in srgb, var(--scan-hue) 9%, var(--ctp-mocha-mantle));
+  background: color-mix(in srgb, var(--scan-hue) 9%, var(--catppuccin-color-mantle));
 }
 
 .mr-scan__icon {

@@ -6,7 +6,7 @@ import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { BUILD_STATUS_LABEL_KEYS } from '../../../../i18n/build-status-labels';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions, SINGLE_SERIES_COLOR } from '../../chart-config';
+import { chartResource, type ChartConfig, axisChartOptions, singleSeriesColor } from '../../chart-config';
 
 interface AverageBuildTimeRow {
   status: BuildStatus;
@@ -58,12 +58,12 @@ export class ChartAverageBuildTimeComponent {
           {
             data: values,
             label: this.transloco.translate('stats.charts.averageBuildTime.label'),
-            backgroundColor: SINGLE_SERIES_COLOR,
+            backgroundColor: singleSeriesColor(),
             borderRadius: 4,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ showLegend: false }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
     };
   });
 }

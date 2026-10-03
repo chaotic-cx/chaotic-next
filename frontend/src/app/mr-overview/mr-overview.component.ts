@@ -1,5 +1,15 @@
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { Component, computed, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  OnInit,
+  signal,
+  untracked,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -28,7 +38,7 @@ import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
-import { preferredScrollBehavior, setPageSeo } from '../functions';
+import { preferredScrollBehavior, prefersReducedMotion, setPageSeo } from '../functions';
 import { ScanFindingRowComponent } from '../aur-scan/scan-finding-row.component';
 import { presenter, type TranslatableText } from '../aur-scan/scan-presenter';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
@@ -66,8 +76,7 @@ const FIRST_PANEL_INDEX = 0;
 const AUR_UPDATES_TAB = '0';
 const PACKAGE_UPDATES_TAB = '1';
 const ON_HOLD_TAB = '2';
-const HIGHLIGHT_RENDER_DELAY_MS = 100;
-const FLASH_DURATION_MS = 1800;
+const FLASH_CLASS = 'new-mr-flash';
 
 const TAB_QUERY_PARAMS: Record<'0' | '1' | '2', string> = {
   [AUR_UPDATES_TAB]: 'aur',
@@ -154,6 +163,7 @@ export class MrOverviewComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly hostElement = inject(ElementRef).nativeElement as HTMLElement;
+  private readonly injector = inject(Injector);
   private readonly transloco = inject(TranslocoService);
   protected readonly mrOverviewService = inject(MrOverviewService);
 
@@ -269,15 +279,30 @@ export class MrOverviewComponent implements OnInit {
     else this.activeTabValue.set(mr.labels.includes('nvchecker') ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB);
 
     // Let Angular render the freshly loaded list before touching the DOM.
-    window.setTimeout(() => this.flashMrPanel(iid), HIGHLIGHT_RENDER_DELAY_MS);
+    afterNextRender(() => this.flashMrPanel(iid), { injector: this.injector });
   }
 
   private flashMrPanel(iid: number): void {
     const panel = this.hostElement.querySelector<HTMLElement>(`[data-mr-panel][data-mr-iid="${iid}"]`);
     if (!panel) return;
     panel.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
-    panel.classList.add('new-mr-flash');
-    window.setTimeout(() => panel.classList.remove('new-mr-flash'), FLASH_DURATION_MS);
+    // Reduced motion runs no animation, so no animationend event would remove the class.
+    if (prefersReducedMotion()) {
+      return;
+    }
+
+    // animationend bubbles, so an animation inside the panel must not end the flash early.
+    const removeFlash = (event: AnimationEvent): void => {
+      if (event.target !== panel) {
+        return;
+      }
+
+      panel.classList.remove(FLASH_CLASS);
+      panel.removeEventListener('animationend', removeFlash);
+    };
+
+    panel.classList.add(FLASH_CLASS);
+    panel.addEventListener('animationend', removeFlash);
   }
 
   private readonly focusedMrs = computed<MergeRequestWithDiffs[]>(() => {

@@ -1,4 +1,5 @@
 import { Directive, ElementRef, inject, OnDestroy } from '@angular/core';
+import { prefersReducedMotion } from '../functions';
 
 const FLIP_DURATION_MS = 450;
 
@@ -16,7 +17,7 @@ export class FlipListDirective implements OnDestroy {
 
   constructor() {
     if (typeof window === 'undefined') return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
 
     // offsetTop/offsetLeft ignore transforms, so positions captured mid-enter
     // animation still describe the final layout slot.

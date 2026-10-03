@@ -5,10 +5,14 @@
       [attr.aria-label]="t('ariaLabel')"
     >
       <a class="text-ctp-mauve" href="https://aur.chaotic.cx" rel="noopener" target="_blank"
-        >Chaotic-AUR &copy; {{ currentYear }}</a
+        >Chaotic-AUR &copy; {{ currentYear }}<span class="sr-only"> {{ t('opensInNewTab') }}</span></a
       >
-      <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur" rel="noopener" target="_blank">GitLab</a>
-      <a class="text-ctp-mauve" href="https://github.com/chaotic-aur" rel="noopener" target="_blank">GitHub</a>
+      <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur" rel="noopener" target="_blank"
+        >GitLab<span class="sr-only"> {{ t('opensInNewTab') }}</span></a
+      >
+      <a class="text-ctp-mauve" href="https://github.com/chaotic-aur" rel="noopener" target="_blank"
+        >GitHub<span class="sr-only"> {{ t('opensInNewTab') }}</span></a
+      >
       <a class="text-ctp-mauve" routerLink="/code-of-conduct">{{ t('codeOfConduct') }}</a>
       <a class="text-ctp-mauve" routerLink="/privacy">{{ t('privacy') }}</a>
       @if (version()) {
@@ -17,7 +21,7 @@
           [href]="`https://github.com/chaotic-cx/chaotic-next/releases/tag/${version()}`"
           rel="noopener"
           target="_blank"
-          >{{ version() }}</a
+          >{{ version() }}<span class="sr-only"> {{ t('opensInNewTab') }}</span></a
         >
       }
     </nav>

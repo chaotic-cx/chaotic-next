@@ -3,10 +3,21 @@
     <span class="font-bold">{{ t('settings.notifications.title') }}</span>
   </ng-template>
   <div class="chaotic-panel text-md">
-    @if (preferencesResource.isLoading()) {
-      <p class="text-ctp-subtext0">{{ t('settings.notifications.loading') }}</p>
+    @if (browserHintKey; as hintKey) {
+      <p class="mb-3 text-sm text-ctp-yellow">{{ t(hintKey) }}</p>
+    }
+    @if (preferencesResource.isLoading() && !preferencesResource.hasValue()) {
+      <div class="flex flex-col gap-3" [attr.aria-label]="t('settings.notifications.loading')" role="status">
+        @for (_ of skeletonRows; track $index) {
+          <span class="chaotic-skeleton block h-6"></span>
+        }
+      </div>
     } @else if (preferencesResource.error()) {
-      <p class="text-ctp-red">{{ t('settings.notifications.loadError') }}</p>
+      <chaotic-load-error
+        [message]="t('settings.notifications.loadError')"
+        [error]="preferencesResource.error()"
+        (retry)="preferencesResource.reload()"
+      />
     } @else {
       <div class="flex flex-col gap-3">
         @for (pref of preferencesResource.value(); track pref.type) {

@@ -2,10 +2,17 @@ import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { seriesColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roundToTenth } from '../../chart-config';
+import {
+  axisChartOptions,
+  chartResource,
+  type ChartConfig,
+  formatDay,
+  hasPlottedValue,
+  roundToTenth,
+} from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-package-average-build-time',
@@ -47,7 +54,7 @@ export class ChartPackageAverageBuildTimeComponent {
       dataMap.set(formatDay(row.day), roundToTenth(Number(row.average)));
     }
 
-    return {
+    const config: ChartConfig<'line'> = {
       data: {
         labels,
         datasets: [
@@ -56,18 +63,15 @@ export class ChartPackageAverageBuildTimeComponent {
               package: this.packageName(),
             }),
             data: labels.map((day) => dataMap.get(day) ?? 0),
-            backgroundColor: CATPPUCCIN_FLAVOURS[0],
-            borderColor: CATPPUCCIN_FLAVOURS[0],
+            backgroundColor: seriesColor(0),
+            borderColor: seriesColor(0),
             fill: false,
           },
         ],
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
-  });
 
-  readonly loadingChart: ChartConfig<'line'> = {
-    data: { labels: [], datasets: [] },
-    options: mochaAxisChartOptions<'line'>(),
-  };
+    return hasPlottedValue(config) ? config : null;
+  });
 }

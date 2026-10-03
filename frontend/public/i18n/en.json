@@ -1,6 +1,7 @@
 {
   "app": {
     "goHome": "Go to the home page",
+    "skipToContent": "Skip to main content",
     "mobileNav": {
       "open": "Open navigation menu",
       "close": "Close navigation menu"
@@ -30,7 +31,9 @@
         "title": "AUR package scan · Chaotic-AUR",
         "description": "Scan AUR packages for malicious PKGBUILD content, suspicious URLs and risky maintainership changes",
         "keywords": "Chaotic-AUR, AUR, security, PKGBUILD, scan"
-      }
+      },
+      "virusTotalHint": "Signed-in users also get a VirusTotal check of the source URLs.",
+      "signIn": "Sign in"
     },
     "status": {
       "done": "Scan complete",
@@ -39,8 +42,9 @@
       "scanning": "Scanning sources…"
     },
     "errors": {
-      "generic": "Could not scan the AUR package. Does it exist?",
-      "rateLimited": "Too many scans have been started. Please wait a minute and try again."
+      "rateLimited": "Too many scans have been started. Please wait a minute and try again.",
+      "request": "Could not start the scan.",
+      "streamLost": "The connection to the scan dropped. The scan runs on. Reconnect to see the result."
     },
     "details": "Sources: {{sources}} · Scanned: {{scanned}} · Votes: {{votes}} · Popularity: {{popularity}} · Since {{year}}",
     "pkgTypes": "Package types",
@@ -76,7 +80,6 @@
       "since": "Since",
       "votes": "Votes",
       "novice": "New",
-      "unknownSince": "unknown",
       "summary": "{{packages}} package(s) · since {{since}} · {{votes}} votes",
       "summaryUnknownSince": "{{packages}} package(s) · since unknown · {{votes}} votes",
       "orphaned": "No maintainer. This package is orphaned in the AUR."
@@ -119,7 +122,8 @@
     },
     "loginFailed": {
       "title": "Login failed",
-      "message": "Could not start the GitLab sign-in flow."
+      "message": "Could not start the GitLab sign-in flow.",
+      "popupBlocked": "Your browser blocked the sign-in window. Allow pop-ups for this site, then try again."
     },
     "logoutFailed": {
       "title": "Logout failed",
@@ -133,12 +137,18 @@
         "notMember": "Only members of the Chaotic-AUR GitLab group are allowed to sign in.",
         "generic": "Sign-in could not be completed. Please try again."
       }
+    },
+    "sessionExpired": {
+      "message": "Your session expired.",
+      "signIn": "Sign in again"
     }
   },
   "backendDown": {
     "logoAlt": "Chaotic-AUR logo",
     "title": "Backend unavailable",
-    "message": "You will be automatically redirected once it is back online. Retrying connection..."
+    "message": "When the backend is back, you return to your page automatically. Retrying the connection…",
+    "mirrorsHint": "Package installs keep working, because Pacman downloads from the mirrors.",
+    "mirrorsLink": "Mirror status"
   },
   "buildStatus": {
     "seo": {
@@ -173,11 +183,11 @@
     "active": {
       "title": "Building now",
       "loadError": "Could not load running builds.",
-      "empty": "No builds running right now",
+      "empty": "No builds running right now.",
+      "emptyAction": "See the latest deployments",
       "progressAriaLabel": "Build progress for {{name}}",
-      "unknownStart": "unknown start",
       "startedAt": "started {{time}}",
-      "unknownTimeLeft": "unknown time left",
+      "unknownTimeLeft": "No estimate",
       "timeLeft": "{{eta}} left",
       "overtime": "{{eta}} overtime",
       "openLog": "Open live build log",
@@ -272,7 +282,6 @@
     "save": "Save",
     "edit": "Edit",
     "delete": "Delete",
-    "error": "Error",
     "pagination": "Pagination",
     "previousPage": "Previous page",
     "nextPage": "Next page",
@@ -294,6 +303,10 @@
     "outcomes": "Outcomes",
     "selectedOutcomes": "{0} outcomes",
     "searchKeyword": "Search keyword",
+    "repoFilterLabel": "Filter by repository",
+    "builderFilterLabel": "Filter by builder",
+    "outcomeFilterLabel": "Filter by outcome",
+    "searchLabel": "Search deployments",
     "columns": {
       "pkgname": "Package name",
       "builder": "Builder",
@@ -319,14 +332,14 @@
       "canceledRequeue": "canceled-requeue",
       "softwareFailure": "software-failure"
     },
-    "notAvailable": "n/a",
     "purged": "purged",
     "openBuildLog": "Open build log",
     "log": "Log",
     "viewStatisticsFor": "View statistics for {{pkgname}}",
     "viewPackageStatistics": "View package statistics",
     "loadError": "Could not load deployments.",
-    "empty": "No deployments match these filters."
+    "empty": "No deployments match these filters.",
+    "firstRunEmpty": "No deployments yet. Finished builds appear here."
   },
   "diffRenderer": {
     "fileDiff": "File diff",
@@ -337,6 +350,7 @@
   "footer": {
     "ariaLabel": "Footer links",
     "codeOfConduct": "Code of Conduct",
+    "opensInNewTab": "(opens in a new tab)",
     "privacy": "Privacy Policy"
   },
   "home": {
@@ -353,7 +367,7 @@
     },
     "setup": {
       "lead": "New here?",
-      "text": "Add the repository in four steps"
+      "text": "Add the repository in five steps"
     },
     "news": {
       "title": "Latest news",
@@ -396,33 +410,43 @@
     "tooltip": "Change language"
   },
   "loadError": {
-    "defaultMessage": "Could not load this data."
+    "defaultMessage": "Could not load this data.",
+    "hints": {
+      "offline": "You are offline. Check your connection, then try again.",
+      "unreachable": "The server did not respond. Try again in a moment.",
+      "permission": "Your session ended or your account has no access to this data. Sign in again.",
+      "server": "The server reported an error. Try again, or copy the details for a bug report."
+    },
+    "signIn": "Sign in again",
+    "copyDetails": "Copy details",
+    "copied": "Copied"
   },
   "logViewer": {
     "title": "Pipeline logs",
     "noJobSelected": "No job selected",
     "live": "● live",
-    "loadingLogs": "Loading logs",
-    "streamError": "Log stream ended unexpectedly. Please retry in a moment.",
-    "linkCopied": {
-      "title": "Link copied",
-      "message": "Link to line {{line}} is on your clipboard."
-    },
-    "copyFailed": {
-      "title": "Copy failed",
-      "message": "Could not copy the link to line {{line}}."
-    },
+    "jobSelectLabel": "Select job",
     "seo": {
       "title": "Pipeline #{{pipelineId}} logs · Chaotic-AUR",
       "description": "Live build logs of a Chaotic-AUR pipeline job",
       "keywords": "Chaotic-AUR, GitLab, pipeline, log, build"
+    },
+    "back": "Back",
+    "heading": "Pipeline #{{pipelineId}}",
+    "loadingJobs": "Loading jobs",
+    "noJobs": "This pipeline has no jobs yet.",
+    "jobsError": {
+      "notFound": "Pipeline #{{pipelineId}} does not exist, or GitLab removed it.",
+      "generic": "Could not load the jobs of pipeline #{{pipelineId}}.",
+      "rateLimited": "Too many requests. Wait a minute, then try again."
     }
   },
   "login": {
     "logoAlt": "Chaotic-AUR logo",
     "title": "Sign in",
     "description": "Sign in with your GitLab account to review and manage Chaotic-AUR packages.",
-    "continue": "Continue with GitLab"
+    "continue": "Continue with GitLab",
+    "membersOnly": "Only members of the Chaotic-AUR GitLab group can sign in."
   },
   "map": {
     "title": "Mirror map",
@@ -441,10 +465,18 @@
       "hits": "hits",
       "topCountries": "Top Countries:",
       "topRepos": "Top Repos:",
-      "waiting": "Waiting for the first hit to arrive..."
+      "waiting": "Waiting for the first hit to arrive…",
+      "disconnectedHint": "The live traffic stream is disconnected.",
+      "reconnect": "Reconnect",
+      "connection": {
+        "connected": "Live traffic stream connected",
+        "connecting": "Connecting to the live traffic stream",
+        "disconnected": "Live traffic stream disconnected"
+      }
     }
   },
   "mirrorMap": {
+    "markerLabel": "Mirror {{mirror}}, {{status}}",
     "status": {
       "active": "Active",
       "healthy": "Healthy",
@@ -485,7 +517,8 @@
       "title": "CDN mirror",
       "description": "Hosted on <a class=\"text-ctp-mauve\" href=\"https://www.cloudflare.com/developer-platform/products/r2/\" rel=\"noopener\" target=\"_blank\">Cloudflare R2</a>, so it is distributed globally."
     },
-    "unavailable": "The mirror list is unavailable right now. The router is possibly down.",
+    "loadError": "Could not load the mirror list.",
+    "empty": "No mirrors reported. The router returned an empty list.",
     "hostMirror": {
       "intro": "Want to host a mirror? Get in touch through the channels on the",
       "aboutLink": "about page",
@@ -493,7 +526,6 @@
       "mapLink": "live traffic map",
       "outro": "."
     },
-    "fetchError": "Failed to fetch mirror list, the router may be down",
     "seo": {
       "description": "Chaotic-AUR mirrors, down for everyone or just me?",
       "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR mirrors"
@@ -557,18 +589,23 @@
   "newsfeed": {
     "defaultAuthor": "Maintainer",
     "showMore": "Show more news",
-    "fetchFailed": "Failed to fetch news"
+    "loadError": "Could not load the news.",
+    "empty": "No news yet. Announcements from the maintainers appear here."
   },
   "notFound": {
-    "subtitle": "This page does not exist. Check the address, or go back to the home page."
+    "subtitle": "This page does not exist. Check the address, or go back to the home page.",
+    "title": "Page not found",
+    "linksLabel": "Helpful links",
+    "home": "Home page",
+    "packages": "Browse packages"
   },
   "packageList": {
     "title": "Packages",
     "subtitle": "Every package currently deployed to our repositories. Check which repository a package belongs to before you install it.",
-    "clearFilters": "Clear filters",
-    "clearFiltersTooltip": "Clear all filters and search",
     "allRepos": "All repos",
+    "repoFilterLabel": "Filter by repository",
     "searchPlaceholder": "Search keyword",
+    "searchLabel": "Search packages",
     "columns": {
       "name": "Name",
       "version": "Version",
@@ -582,7 +619,6 @@
     },
     "actionsHeader": "Actions",
     "buildClassTooltip": "How resource-hungry the package build is",
-    "notAvailable": "n/a",
     "actions": {
       "statsLabel": "View statistics for {{pkgname}}",
       "statsTooltip": "View package statistics",
@@ -594,6 +630,7 @@
       "start": "No packages match",
       "end": "."
     },
+    "empty": "No packages are deployed yet. New packages appear here after their first build.",
     "noMatchFilters": "No packages match these filters.",
     "seo": {
       "title": "Package list · Chaotic-AUR",
@@ -604,17 +641,18 @@
   "packageLog": {
     "title": "Package log",
     "subtitle": "Build log",
-    "streamError": "Log stream ended unexpectedly. Please retry in a moment.",
     "live": "● live",
     "downloadLog": "Download log",
     "previousMatch": "Previous match",
     "nextMatch": "Next match",
     "searchBuffer": "Search buffer",
+    "searchLabel": "Search the build log",
     "seo": {
       "title": "{{pkgname}} build log · Chaotic-AUR",
       "description": "Build log of a Chaotic-AUR package",
       "keywords": "Chaotic-AUR, build, log, package"
-    }
+    },
+    "back": "Back"
   },
   "pipes": {
     "relativeTime": {
@@ -633,7 +671,8 @@
     }
   },
   "recentlyAdded": {
-    "empty": "No packages were added recently."
+    "empty": "No packages were added recently.",
+    "loadError": "Could not load the recently added packages."
   },
   "reviewQueue": {
     "title": "Review queue",
@@ -737,6 +776,14 @@
         "title": "Flagged as On Hold",
         "message": "The merge request has been flagged as on hold.",
         "error": "Failed to flag the merge request as on hold. Please try again later."
+      },
+      "signInRequired": {
+        "title": "Session expired",
+        "message": "Sign in again, then repeat the action."
+      },
+      "noPermission": {
+        "title": "No permission",
+        "message": "Your account is not allowed to review merge requests."
       }
     }
   },
@@ -763,10 +810,13 @@
     "login": "Sign in",
     "admin": "Admin",
     "backendDown": "Backend unavailable",
-    "notFound": "Not found"
+    "notFound": "Not found",
+    "recordTitleFormat": "{{record}} · {{page}}"
   },
   "searchPackage": {
-    "placeholder": "Start searching",
+    "placeholder": "Package name in {{repo}}, e.g. firedragon",
+    "inputLabel": "Search packages",
+    "resultStatus": "Showing {{name}} from {{repo}}",
     "invalidName": "Invalid package name",
     "facts": {
       "downloads": "Downloads",
@@ -794,6 +844,17 @@
       "title": "Package search · Chaotic-AUR",
       "description": "Search packages available in the Chaotic-AUR repository",
       "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR package search"
+    },
+    "hint": "Type {{count}} or more characters for suggestions. Press Enter to open a package.",
+    "loading": "Loading {{name}}",
+    "notFound": {
+      "message": "{{repo}} has no package named {{name}}.",
+      "hint": "Check the spelling, or scan the AUR package instead:",
+      "scanLink": "Scan {{name}} in the AUR"
+    },
+    "error": {
+      "rateLimited": "Too many requests. Wait a minute, then try again.",
+      "generic": "Could not load {{name}}."
     }
   },
   "settings": {
@@ -802,8 +863,10 @@
     "notifications": {
       "title": "Notifications",
       "loading": "Loading your preferences…",
-      "loadError": "Your preferences could not be loaded. Please try again later.",
+      "loadError": "Could not load your notification preferences.",
       "saveFailed": "Saving failed. Your settings were restored.",
+      "unsupported": "This browser does not support push notifications. Your choices still apply on other devices.",
+      "blocked": "Your browser blocks notifications for this site. Allow them in the site settings to receive them.",
       "types": {
         "buildFailure": "Build failures (only non-transient)",
         "mrReview": "Merge request reviews"
@@ -917,7 +980,12 @@
     "chartCard": {
       "loadError": "Could not load this chart.",
       "loading": "Loading chart",
-      "noData": "No data for this time range"
+      "noData": "No data for this time range",
+      "summaryOne": "{{title}}: chart with {{count}} entry. The data table lists the values.",
+      "summaryOther": "{{title}}: chart with {{count}} entries. The data table lists the values.",
+      "showTable": "Show data table",
+      "showChart": "Show chart",
+      "labelColumn": "Label"
     },
     "failureSilence": {
       "silenced": {
@@ -1054,13 +1122,36 @@
     "selectedItems": "{0} columns",
     "placeholder": "Columns"
   },
+  "tablePagination": {
+    "pageReport": "{first}–{last} of {totalRecords}"
+  },
+  "tableSkeleton": {
+    "stillLoading": "Still loading. The server is slow to respond."
+  },
+  "themeSwitcher": {
+    "ariaLabel": "Theme: {{theme}}",
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System",
+    "tooltip": "Change theme"
+  },
   "triggerSources": {
     "loadingAriaLabel": "Loading dependency sources",
     "noData": "No dependency data for this package.",
     "sonameDependencies": "Soname dependencies",
     "noSonameDependencies": "No soname dependencies indexed.",
     "pluginOf": "Plugin of",
-    "explicitTriggers": "Explicit triggers"
+    "explicitTriggers": "Explicit triggers",
+    "loadError": "Could not load the dependency sources.",
+    "pkgType": {
+      "arch": "Arch",
+      "chaotic": "Chaotic-AUR"
+    }
+  },
+  "uiStates": {
+    "unknownValue": "Unknown",
+    "liveUpdatesPaused": "Live updates paused. Reconnecting…",
+    "offline": "You are offline. Live updates resume when the connection returns."
   },
   "update": {
     "ready": {
@@ -1074,5 +1165,34 @@
   },
   "xtermLog": {
     "lineLabel": "Line {{line}}"
+  },
+  "gitlabStatus": {
+    "created": "Created",
+    "waitingForResource": "Waiting for resource",
+    "preparing": "Preparing",
+    "pending": "Pending",
+    "running": "Running",
+    "success": "Success",
+    "failed": "Failed",
+    "canceled": "Canceled",
+    "skipped": "Skipped",
+    "manual": "Manual",
+    "scheduled": "Scheduled"
+  },
+  "logStream": {
+    "connecting": "Connecting to the log…",
+    "slow": "Still connecting. A queued build sends its first lines when it starts.",
+    "reconnecting": "Connection lost. Reconnecting…",
+    "failed": "The log stream stopped, and the reconnect did not work.",
+    "empty": "This log is empty.",
+    "purged": "This log is gone. Build logs are deleted {{days}} days after the build.",
+    "linkCopied": {
+      "title": "Link copied",
+      "message": "Link to line {{line}} is on your clipboard."
+    },
+    "copyFailed": {
+      "title": "Copy failed",
+      "message": "Could not copy the link to line {{line}}."
+    }
   }
 }

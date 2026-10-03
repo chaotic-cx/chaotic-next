@@ -5,7 +5,7 @@ import { parseCount } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions, SINGLE_SERIES_COLOR } from '../../chart-config';
+import { chartResource, type ChartConfig, axisChartOptions, singleSeriesColor } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-builders-amount',
@@ -42,12 +42,12 @@ export class ChartBuildersAmountComponent {
           {
             data: values,
             label: this.transloco.translate('stats.charts.buildersAmount.label'),
-            backgroundColor: SINGLE_SERIES_COLOR,
+            backgroundColor: singleSeriesColor(),
             borderRadius: 4,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ showLegend: false }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
     };
   });
 }

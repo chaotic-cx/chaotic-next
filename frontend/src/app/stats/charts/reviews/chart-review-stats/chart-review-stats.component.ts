@@ -2,10 +2,10 @@ import { Component, computed, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { AppService } from '../../../../app.service';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { seriesColors } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, pieChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-review-stats',
@@ -47,11 +47,11 @@ export class ChartReviewStatsComponent {
           {
             data,
             label: this.transloco.translate('stats.charts.reviewStats.label'),
-            backgroundColor: CATPPUCCIN_FLAVOURS,
+            backgroundColor: seriesColors(),
           },
         ],
       },
-      options: mochaPieChartOptions(),
+      options: pieChartOptions(),
     };
   });
 }

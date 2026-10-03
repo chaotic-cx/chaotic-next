@@ -1,5 +1,5 @@
 import { HttpClient, httpResource } from '@angular/common/http';
-import { computed, DestroyRef, effect, inject, Service, signal, untracked } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Service, signal, type Signal, untracked } from '@angular/core';
 import {
   type Build,
   type ChaoticEvent,
@@ -13,7 +13,14 @@ import { translateSignal, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { AppService } from '../app.service';
-import { resourceFailed, resourceValue } from '../functions';
+import {
+  loadingWithoutValue,
+  resourceFailed,
+  resourceSignal,
+  resourceValue,
+  retainedResourceValue,
+  sameItems,
+} from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import {
   computeQueueEstimates,
@@ -58,6 +65,11 @@ const ESTIMATE_TICK_MS = 30_000;
 const MS_PER_MINUTE = 60_000;
 const BUILD_CLASS_UNKNOWN = 'unknown';
 
+/** Loading counts only while nothing is shown yet. A reload keeps the last value on screen. */
+function firstLoad(resource: { isLoading(): boolean; hasValue(): boolean; value(): unknown }): Signal<boolean> {
+  return loadingWithoutValue(resource, resourceSignal(resource));
+}
+
 @Service()
 export class BuildStatusService {
   private readonly appService = inject(AppService);
@@ -82,38 +94,41 @@ export class BuildStatusService {
     this.appService.getStatusChecksResourceRequest(),
   );
   private readonly queueStatsResource = httpResource<StatsObject>(() => this.appService.getQueueStatsResourceRequest());
+  // A queue refresh creates new arrays. Comparing items keeps the averages requests stable,
+  // so the estimates do not blank out while the same packages are fetched again.
+  private readonly queuedPackageNames = computed(
+    () => [...this.activeQueue().map((pkg) => pkg.name), ...this.waitingQueue().map((pkg) => pkg.name)],
+    { equal: sameItems },
+  );
+  private readonly queueBuilderNames = computed(
+    () =>
+      [...new Set([...this.activeQueue().map((pkg) => pkg.node), ...this.idleQueue().map((node) => node.name)])].filter(
+        Boolean,
+      ),
+    { equal: sameItems },
+  );
   private readonly averagesResource = httpResource<PackageAverageRow[]>(() => {
-    const names = [...this.activeQueue().map((pkg) => pkg.name), ...this.waitingQueue().map((pkg) => pkg.name)];
+    const names = this.queuedPackageNames();
     if (names.length === 0) return undefined;
     return this.appService.getPackageAverageBuildTimesResourceRequest(names);
   });
   private readonly builderAveragesResource = httpResource<PackageAverageRow[]>(() => {
-    const names = [...this.activeQueue().map((pkg) => pkg.name), ...this.waitingQueue().map((pkg) => pkg.name)];
-    const builders = [
-      ...new Set([...this.activeQueue().map((pkg) => pkg.node), ...this.idleQueue().map((node) => node.name)]),
-    ].filter(Boolean);
+    const names = this.queuedPackageNames();
+    const builders = this.queueBuilderNames();
     if (names.length === 0 || builders.length === 0) return undefined;
     return this.appService.getPackageAverageBuildTimesResourceRequest(names, undefined, builders);
   });
-  private readonly queueLoaded = signal(false);
 
-  beginNavigation(): void {
-    this.queueLoaded.set(false);
-  }
-
-  readonly loadingDeployments = this.packageBuildsResource.isLoading;
-  readonly loadingPipelines = this.pipelinesResource.isLoading;
-  readonly loadingQueue = computed(() => this.queueStatsResource.isLoading() && !this.queueLoaded());
-  readonly loadingAverages = computed(
-    () => this.averagesResource.isLoading() || this.builderAveragesResource.isLoading(),
-  );
-  readonly loading = computed(
-    () => this.loadingDeployments() || this.loadingPipelines() || this.loadingQueue() || this.loadingAverages(),
-  );
+  readonly loadingDeployments = firstLoad(this.packageBuildsResource);
+  readonly loadingPipelines = firstLoad(this.pipelinesResource);
+  readonly loadingQueue = firstLoad(this.queueStatsResource);
 
   readonly queueFailed = resourceFailed(this.queueStatsResource);
   readonly deploymentsFailed = resourceFailed(this.packageBuildsResource);
   readonly pipelinesFailed = resourceFailed(this.pipelinesResource);
+
+  // False while the queue loads or after it failed, so counts show a dash instead of a false zero.
+  readonly queueCountKnown = computed(() => !this.loadingQueue() && !this.queueFailed());
 
   /** One sentence for screen readers, announced politely whenever the counts change. */
   readonly liveSummary = computed(() => {
@@ -171,8 +186,11 @@ export class BuildStatusService {
     })),
   );
 
+  private readonly averagesValue = retainedResourceValue(this.averagesResource);
+  private readonly builderAveragesValue = retainedResourceValue(this.builderAveragesResource);
+
   private readonly packageAverages = computed<PackageBuildAverage[]>(() =>
-    (resourceValue(this.averagesResource) ?? []).map((row) => ({
+    (this.averagesValue() ?? []).map((row) => ({
       pkgname: row.pkgname,
       averageMinutes: Number(row.average_build_time),
       samples: Number(row.samples),
@@ -181,7 +199,7 @@ export class BuildStatusService {
 
   private readonly packageBuilderAverages = computed<Map<string, Map<string, number>>>(() => {
     const map = new Map<string, Map<string, number>>();
-    for (const row of resourceValue(this.builderAveragesResource) ?? []) {
+    for (const row of this.builderAveragesValue() ?? []) {
       if (!row.builder) continue;
       let inner = map.get(row.pkgname);
       if (!inner) {
@@ -195,7 +213,7 @@ export class BuildStatusService {
 
   private readonly packageBuilderSamples = computed<Map<string, Map<string, number>>>(() => {
     const map = new Map<string, Map<string, number>>();
-    for (const row of resourceValue(this.builderAveragesResource) ?? []) {
+    for (const row of this.builderAveragesValue() ?? []) {
       if (!row.builder) continue;
       let inner = map.get(row.pkgname);
       if (!inner) {
@@ -277,14 +295,6 @@ export class BuildStatusService {
     // must persist across queue changes, so it is not pure-derivable. This
     // effect writes only its own target signal (untracked), avoiding a loop.
     effect(() => this.trackFirstSeenActive());
-
-    effect(() => {
-      if (!this.queueStatsResource.isLoading()) this.queueLoaded.set(true);
-    });
-
-    effect(() => {
-      if (this.queueLoaded()) void this.packageAverages();
-    });
 
     const tick = window.setInterval(() => this.now.set(Date.now()), ESTIMATE_TICK_MS);
     this.destroyRef.onDestroy(() => window.clearInterval(tick));

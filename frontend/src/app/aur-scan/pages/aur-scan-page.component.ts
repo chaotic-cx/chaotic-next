@@ -3,10 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
+import { AuthService } from 'ngx-better-auth';
 import { firstValueFrom } from 'rxjs';
 import { AppService } from '../../app.service';
 import { setPageSeo } from '../../functions';
@@ -18,7 +19,15 @@ const MIN_QUERY_LENGTH = 3;
 
 @Component({
   selector: 'chaotic-aur-scan-page',
-  imports: [AutoComplete, DecimalPipe, FormsModule, TitleComponent, AurScanResultComponent, TranslocoDirective],
+  imports: [
+    AutoComplete,
+    AurScanResultComponent,
+    DecimalPipe,
+    FormsModule,
+    RouterLink,
+    TitleComponent,
+    TranslocoDirective,
+  ],
   styleUrl: './aur-scan-page.css',
   templateUrl: './aur-scan-page.component.html',
 })
@@ -28,12 +37,15 @@ export class AurScanPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  private readonly authService = inject(AuthService);
   protected readonly aurScanService = inject(AurScanService);
 
   readonly search = input<string>();
 
   protected readonly currentPackageName = signal('');
   protected readonly metrics = this.aurScanService.metrics;
+  protected readonly isLoggedIn = this.authService.isLoggedIn;
+  protected readonly minQueryLength = MIN_QUERY_LENGTH;
 
   protected readonly searchModel = signal({ query: '' });
   protected readonly searchForm = form(this.searchModel, (schemaPath) => {

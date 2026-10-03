@@ -15,12 +15,18 @@ import {
   createAdminPagination,
   type StatefulTableRef,
   createDebounced,
+  QUERY_SYNC_DEBOUNCE_MS,
   patchQueryParams,
   queryFromRaw,
   queryToQuery,
   restoreQueryParams,
 } from '../admin-url-sync';
 import { AdminService } from '../admin.service';
+import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { MISSING_VALUE } from '../../table-columns/missing-value';
+import { TablePageReportDirective } from '../../table-page-report.directive';
 import { injectActiveTranslation } from '../../i18n/active-translation';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
@@ -53,13 +59,17 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
   selector: 'chaotic-admin-package-bumps-page',
   imports: [
     TableSkeletonRowsComponent,
+    ClearFiltersComponent,
     DatePipe,
+    EmptyStateComponent,
     FormsModule,
     IconField,
     InputIcon,
     InputText,
+    LoadErrorComponent,
     Select,
     TableModule,
+    TablePageReportDirective,
     TagModule,
     RouterLink,
     TranslocoDirective,
@@ -73,21 +83,23 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         [paginator]="true"
         [lazy]="true"
         [totalRecords]="service.packageBumpsTotal()"
-        [showCurrentPageReport]="true"
+        [chaoticTableFailed]="service.packageBumpsStatus.failed()"
         [rowsPerPageOptions]="[25, 50, 100]"
         (onLazyLoad)="onLazyLoad(bumpsTable, $event)"
         dataKey="id"
         stateStorage="local"
         stateKey="admin-bumps-table"
         paginatorDropdownAppendTo="body"
+        chaoticPageReport
       >
         <ng-template #caption>
           <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-            <div class="hidden sm:ml-auto sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+            <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
               <p-select
                 [options]="bumpTypeOptions()"
                 [ngModel]="service.packageBumpTypeFilter()"
                 [placeholder]="t('packageBumps.columns.bumpType')"
+                [ariaLabel]="t('packageBumps.bumpTypeFilterLabel')"
                 (ngModelChange)="setBumpTypeFilter($event)"
                 optionLabel="label"
                 optionValue="value"
@@ -98,21 +110,24 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 [options]="sourceOptions"
                 [ngModel]="service.packageBumpSourceFilter()"
                 [placeholder]="t('packageBumps.source')"
+                [ariaLabel]="t('packageBumps.sourceFilterLabel')"
                 (ngModelChange)="setSourceFilter($event)"
                 optionLabel="label"
                 optionValue="value"
                 showClear
                 appendTo="body"
               />
+              <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
             </div>
             <p-iconfield class="w-full sm:w-64" iconPosition="left">
               <p-inputicon>
-                <i class="pi pi-search"></i>
+                <i class="pi pi-search" aria-hidden="true"></i>
               </p-inputicon>
               <input
                 class="w-full"
                 [value]="service.packageBumpQuery()"
                 [placeholder]="t('pages.searchPkgname')"
+                [attr.aria-label]="t('pages.searchPkgname')"
                 (input)="onSearch($event)"
                 pInputText
                 type="text"
@@ -137,12 +152,15 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <td>
               @if (bump.pkgname) {
                 <a
-                  class="cursor-pointer text-ctp-mauve hover:underline"
+                  class="block max-w-xs cursor-pointer truncate text-ctp-mauve hover:underline focus-visible:underline"
                   [queryParams]="{ q: bump.pkgname }"
+                  [title]="bump.pkgname"
                   routerLink="/admin/packages"
                 >
                   {{ bump.pkgname }}
                 </a>
+              } @else {
+                <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
             <td>
@@ -151,12 +169,15 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <td>
               @if (bump.triggerName) {
                 <a
-                  class="cursor-pointer text-ctp-mauve hover:underline"
+                  class="block max-w-xs cursor-pointer truncate text-ctp-mauve hover:underline focus-visible:underline"
                   [routerLink]="triggerLink(bump.triggerFrom)"
                   [queryParams]="{ q: bump.triggerName }"
+                  [title]="bump.triggerName"
                 >
                   {{ bump.triggerName }}
                 </a>
+              } @else {
+                <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
             <td>
@@ -166,7 +187,9 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 <p-tag [value]="sourceLabel(bump.triggerFrom)" [severity]="sourceSeverity(bump.triggerFrom)" />
               }
             </td>
-            <td class="text-ctp-subtext">{{ detailsText(bump) }}</td>
+            <td class="text-ctp-subtext">
+              <span class="line-clamp-2" [title]="detailsText(bump)">{{ detailsText(bump) }}</span>
+            </td>
             <td>{{ bump.timestamp | date: 'short' }}</td>
           </tr>
         </ng-template>
@@ -180,7 +203,21 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
           } @else {
             <tr>
               <td [attr.colspan]="7">
-                <p class="chaotic-card__empty">{{ t('packageBumps.empty') }}</p>
+                @if (service.packageBumpsStatus.failed()) {
+                  <chaotic-load-error
+                    [message]="t('packageBumps.loadError')"
+                    [error]="service.packageBumpsStatus.error()"
+                    (retry)="service.packageBumpsStatus.reload()"
+                  />
+                } @else if (filtersActive()) {
+                  <chaotic-empty-state [filtered]="true" (clearFilters)="clearFilters()">
+                    <p>{{ t('packageBumps.empty') }}</p>
+                  </chaotic-empty-state>
+                } @else {
+                  <chaotic-empty-state [hint]="t('packageBumps.firstRun.hint')">
+                    <p>{{ t('packageBumps.firstRun.message') }}</p>
+                  </chaotic-empty-state>
+                }
               </td>
             </tr>
           }
@@ -196,6 +233,14 @@ export class AdminPackageBumpsPageComponent {
   private readonly transloco = inject(TranslocoService);
   private readonly activeTranslation = injectActiveTranslation();
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
+  protected readonly missingValue = MISSING_VALUE;
+
+  protected readonly filtersActive = computed(
+    () =>
+      this.service.packageBumpQuery() !== '' ||
+      this.service.packageBumpTypeFilter() !== undefined ||
+      this.service.packageBumpSourceFilter() !== undefined,
+  );
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
 
@@ -215,7 +260,7 @@ export class AdminPackageBumpsPageComponent {
   readonly sourceOptions = SOURCE_OPTIONS;
   readonly manualBumpType = BUMP_TYPE_MANUAL;
 
-  private readonly syncSearch = createDebounced(400, () =>
+  private readonly syncSearch = createDebounced(QUERY_SYNC_DEBOUNCE_MS, () =>
     patchQueryParams(this.router, this.route, { q: queryToQuery(this.service.packageBumpQuery()) }),
   );
 
@@ -249,13 +294,13 @@ export class AdminPackageBumpsPageComponent {
 
   detailsText(bump: PackageBump): string {
     const details = bump.details ?? [];
-    if (details.length === 0) return '—';
+    if (details.length === 0) return MISSING_VALUE;
     return details.join('; ');
   }
 
   setBumpTypeFilter(value: number | null | undefined): void {
     this.service.packageBumpTypeFilter.set(value ?? undefined);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     patchQueryParams(this.router, this.route, {
       bumpType: value === null || value === undefined ? null : String(value),
     });
@@ -263,19 +308,32 @@ export class AdminPackageBumpsPageComponent {
 
   setSourceFilter(value: number | null | undefined): void {
     this.service.packageBumpSourceFilter.set(value ?? undefined);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     patchQueryParams(this.router, this.route, { source: value === null || value === undefined ? null : String(value) });
   }
 
   onLazyLoad(table: StatefulTableRef, event: { first?: number; rows?: number | null }): void {
     this.pagination.handleStatefulLazyLoad(table, event);
     this.service.packageBumpPage.set(this.pagination.page());
-    this.service.packageBumpPerPage.set(event.rows ?? 25);
+    this.service.packageBumpPerPage.set(this.pagination.perPage());
   }
 
   onSearch(event: Event): void {
     this.service.packageBumpQuery.set((event.target as HTMLInputElement).value);
-    this.pagination.resetPage();
+    this.resetToFirstPage();
     this.syncSearch();
+  }
+
+  clearFilters(): void {
+    this.service.packageBumpQuery.set('');
+    this.service.packageBumpTypeFilter.set(undefined);
+    this.service.packageBumpSourceFilter.set(undefined);
+    this.resetToFirstPage();
+    patchQueryParams(this.router, this.route, { q: null, bumpType: null, source: null });
+  }
+
+  private resetToFirstPage(): void {
+    this.pagination.resetPage();
+    this.service.packageBumpPage.set(this.pagination.page());
   }
 }

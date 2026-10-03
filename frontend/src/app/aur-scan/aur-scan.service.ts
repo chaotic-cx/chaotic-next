@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
 import {
   type AurPackageScan,
@@ -6,16 +6,22 @@ import {
   type AurScanStreamChunk,
   aurScanStreamChunkSchema,
 } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
-import { TranslocoService } from '@jsverse/transloco';
-import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
+import { requestFailure } from '../api-errors';
 import { ResilientSseStream } from '../sse-stream';
 
-const HTTP_TOO_MANY_REQUESTS = 429;
-const GENERIC_SCAN_ERROR_KEY = marker('aurScan.errors.generic');
-const RATE_LIMITED_SCAN_ERROR_KEY = marker('aurScan.errors.rateLimited');
+/**
+ * Why a scan has no result.
+ * `rateLimited`: too many scans started. `request`: the scan request failed.
+ * `streamLost`: the scan started, but its progress stream dropped.
+ */
+export type ScanFailureReason = 'rateLimited' | 'request' | 'streamLost';
+
+export interface ScanFailure {
+  reason: ScanFailureReason;
+  error: unknown;
+}
 
 export function isScanSettled(scan: AurPackageScan | undefined): boolean {
   return scan?.status === 'done' || scan?.status === 'failed';
@@ -25,16 +31,35 @@ export function isScanSettled(scan: AurPackageScan | undefined): boolean {
 export class AurScanService {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
   private readonly http = inject(HttpClient);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly transloco = inject(TranslocoService);
 
   readonly scans = signal<ReadonlyMap<string, AurPackageScan>>(new Map());
+  readonly failures = signal<ReadonlyMap<string, ScanFailure>>(new Map());
   readonly metrics = signal<AurScanMetrics | null>(null);
 
   private readonly streams = new Map<string, ResilientSseStream>();
 
   scanOf(packageName: string): AurPackageScan | undefined {
-    return this.scans().get(packageName.trim().toLowerCase());
+    return this.scans().get(scanKey(packageName));
+  }
+
+  failureOf(packageName: string): ScanFailure | undefined {
+    return this.failures().get(scanKey(packageName));
+  }
+
+  /**
+   * Starts a failed scan again. A lost stream only reconnects, because the scan itself runs on.
+   */
+  retry(packageName: string): void {
+    const failure = this.failureOf(packageName);
+    this.clearFailure(packageName);
+
+    const scan = this.scanOf(packageName);
+    if (failure?.reason === 'streamLost' && scan) {
+      this.openStream(scan.packageName);
+      return;
+    }
+
+    void this.startScan(packageName);
   }
 
   async loadMetrics(): Promise<void> {
@@ -47,7 +72,7 @@ export class AurScanService {
 
   async startScan(packageName: string): Promise<void> {
     const name = packageName.trim();
-    if (!name || this.scanOf(name)) return;
+    if (!name || this.scanOf(name) || this.failureOf(name)) return;
 
     try {
       const scan = await lastValueFrom(
@@ -58,24 +83,26 @@ export class AurScanService {
 
       if (!isScanSettled(scan)) this.openStream(scan.packageName);
     } catch (error) {
-      this.messageToastService.error(
-        this.transloco.translate('aurScan.status.failed'),
-        this.transloco.translate(this.errorKeyFor(error)),
-      );
+      const reason = requestFailure(error) === 'rateLimited' ? 'rateLimited' : 'request';
+      this.setFailure(name, { reason, error });
       console.error('AUR scan failed:', error);
     }
   }
 
-  private errorKeyFor(error: unknown): string {
-    if (error instanceof HttpErrorResponse && error.status === HTTP_TOO_MANY_REQUESTS) {
-      return RATE_LIMITED_SCAN_ERROR_KEY;
-    }
+  private setFailure(packageName: string, failure: ScanFailure): void {
+    this.failures.update((failures) => new Map(failures).set(scanKey(packageName), failure));
+  }
 
-    return GENERIC_SCAN_ERROR_KEY;
+  private clearFailure(packageName: string): void {
+    this.failures.update((failures) => {
+      const next = new Map(failures);
+      next.delete(scanKey(packageName));
+      return next;
+    });
   }
 
   private openStream(packageName: string): void {
-    const key = packageName.toLowerCase();
+    const key = scanKey(packageName);
     if (this.streams.has(key)) return;
 
     const stream = new ResilientSseStream({
@@ -86,27 +113,33 @@ export class AurScanService {
         this.store(chunk.scan);
         if (chunk.complete) this.closeStream(chunk.scan.packageName);
       },
-      // A settled scan closes its own stream; exhaustion only frees the key
-      // so a fresh startScan can open a new one.
-      onErrorExhausted: () => this.streams.delete(key),
+      // A settled scan closes its own stream. Exhaustion frees the key and reports the lost stream.
+      onErrorExhausted: () => {
+        this.streams.delete(key);
+        this.setFailure(packageName, { reason: 'streamLost', error: undefined });
+      },
     });
     this.streams.set(key, stream);
     stream.open();
   }
 
   private closeStream(packageName: string): void {
-    const key = packageName.toLowerCase();
+    const key = scanKey(packageName);
     this.streams.get(key)?.close();
     this.streams.delete(key);
   }
 
   private store(scan: AurPackageScan): void {
-    this.scans.update((scans) => new Map(scans).set(scan.packageName.toLowerCase(), scan));
+    this.scans.update((scans) => new Map(scans).set(scanKey(scan.packageName), scan));
   }
 
   async getMetrics(): Promise<AurScanMetrics> {
     return lastValueFrom(this.http.get<AurScanMetrics>(`${this.backendUrl}/gitlab/aur-scan/metrics`));
   }
+}
+
+function scanKey(packageName: string): string {
+  return packageName.trim().toLowerCase();
 }
 
 function parseChunk(raw: string): AurScanStreamChunk | null {

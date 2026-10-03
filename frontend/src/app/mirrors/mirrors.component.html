@@ -4,15 +4,33 @@
   <dl class="chaotic-stats chaotic-surface" [attr.aria-label]="t('summaryLabel')" style="--stats-columns: 3">
     <div class="chaotic-stats__item chaotic-stats__item--primary">
       <dt>{{ t('status.online') }}</dt>
-      <dd>{{ mirrorsService.loading() ? '–' : mirrorsService.onlineMirrors().length }}</dd>
+      <dd>
+        @if (mirrorsService.mirrorData() === null) {
+          <chaotic-unknown-value />
+        } @else {
+          {{ mirrorsService.onlineMirrors().length }}
+        }
+      </dd>
     </div>
     <div class="chaotic-stats__item">
       <dt>{{ t('status.outdated') }}</dt>
-      <dd>{{ mirrorsService.loading() ? '–' : mirrorsService.outdatedMirrors().length }}</dd>
+      <dd>
+        @if (mirrorsService.mirrorData() === null) {
+          <chaotic-unknown-value />
+        } @else {
+          {{ mirrorsService.outdatedMirrors().length }}
+        }
+      </dd>
     </div>
     <div class="chaotic-stats__item">
       <dt>{{ t('status.offline') }}</dt>
-      <dd>{{ mirrorsService.loading() ? '–' : mirrorsService.offlineMirrors().length }}</dd>
+      <dd>
+        @if (mirrorsService.mirrorData() === null) {
+          <chaotic-unknown-value />
+        } @else {
+          {{ mirrorsService.offlineMirrors().length }}
+        }
+      </dd>
     </div>
   </dl>
 
@@ -61,8 +79,15 @@
             <li class="chaotic-row"><span class="chaotic-skeleton h-6 flex-1"></span></li>
           }
         </ul>
+        <chaotic-slow-loading-hint />
+      } @else if (mirrorsService.error()) {
+        <chaotic-load-error
+          [message]="mirrorsService.errorMessage()"
+          [error]="mirrorsService.error()"
+          (retry)="mirrorsService.reload()"
+        />
       } @else {
-        <p class="chaotic-card__empty">{{ t('unavailable') }}</p>
+        <chaotic-empty-state [message]="t('empty')" icon="pi-server" />
       }
     </section>
   }

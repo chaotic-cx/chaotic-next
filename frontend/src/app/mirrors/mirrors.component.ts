@@ -1,12 +1,15 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { Mirror } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { CodeBlockComponent } from '../docs/code-block.component';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { setPageSeo } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { TitleComponent } from '../title/title.component';
+import { SlowLoadingHintComponent } from '../ui-states/slow-loading-hint.component';
+import { UnknownValueComponent } from '../ui-states/unknown-value.component';
 import { type MirrorStatus, MirrorRowComponent } from './mirror-row.component';
 import { MirrorsService } from './mirrors.service';
 
@@ -21,7 +24,17 @@ const SKELETON_ROW_COUNT = 6;
 
 @Component({
   selector: 'chaotic-mirrors',
-  imports: [TitleComponent, MirrorRowComponent, CodeBlockComponent, RouterLink, TranslocoDirective],
+  imports: [
+    TitleComponent,
+    MirrorRowComponent,
+    CodeBlockComponent,
+    RouterLink,
+    TranslocoDirective,
+    LoadErrorComponent,
+    EmptyStateComponent,
+    SlowLoadingHintComponent,
+    UnknownValueComponent,
+  ],
   templateUrl: './mirrors.component.html',
   styles: `
     .mirrors-featured {
@@ -39,13 +52,11 @@ const SKELETON_ROW_COUNT = 6;
     .mirrors-featured__body {
       padding: 1rem 1.25rem 0.5rem;
       font-size: 0.9375rem;
-      color: var(--ctp-mocha-subtext1);
+      color: var(--catppuccin-color-subtext1);
     }
   `,
-  providers: [MessageToastService],
 })
 export class MirrorsComponent {
-  private readonly messageToastService = inject(MessageToastService);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly mirrorsService = inject(MirrorsService);
@@ -89,14 +100,5 @@ export class MirrorsComponent {
       this.transloco.translate('mirrors.seo.description'),
       this.transloco.translate('mirrors.seo.keywords'),
     );
-
-    effect(() => {
-      if (this.mirrorsService.error()) {
-        this.messageToastService.error(
-          this.transloco.translate('common.error'),
-          this.transloco.translate('mirrors.fetchError'),
-        );
-      }
-    });
   }
 }

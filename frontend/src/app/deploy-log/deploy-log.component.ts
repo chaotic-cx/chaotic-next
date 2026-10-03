@@ -18,7 +18,6 @@ import { type Build, BuildStatus, STATUS_LABELS } from '@chaotic-next/shared-lib
 import { MessageToastService } from '@garudalinux/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
-import { Button } from '@openng/optimus-ui/button';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
@@ -28,20 +27,24 @@ import { Table, TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
+import { ClearFiltersComponent } from '../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { castTo, formatCpuTime, formatDuration, packageLogRouteFromUrl } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { LoadErrorComponent } from '../load-error/load-error.component';
-import { statusIconClass } from '../status-icons';
 import { BytesPipe } from '../pipes/bytes.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
+import { statusIconClass } from '../status-icons';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
 import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
+import { MISSING_VALUE } from '../table-columns/missing-value';
+import { TablePageReportDirective } from '../table-page-report.directive';
+import { DEFAULT_PER_PAGE } from '../table-pagination';
 import { TABLE_ROW_HEIGHTS } from '../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../table-skeleton/table-skeleton-rows.component';
 import { TitleComponent } from '../title/title.component';
 import { DeployLogService } from './deploy-log.service';
 
-const PAGE_SIZE = 25;
 const SECONDS_PER_MINUTE = 60;
 
 interface DeployColumn {
@@ -86,7 +89,6 @@ const STATUS_LABEL_KEYS: Record<BuildStatus, string> = {
     LoadErrorComponent,
     CommonModule,
     TableModule,
-    Button,
     InputIcon,
     IconField,
     InputText,
@@ -100,6 +102,9 @@ const STATUS_LABEL_KEYS: Record<BuildStatus, string> = {
     RouterLink,
     Tooltip,
     ColumnVisibilityComponent,
+    ClearFiltersComponent,
+    EmptyStateComponent,
+    TablePageReportDirective,
     TranslocoDirective,
   ],
   templateUrl: './deploy-log.component.html',
@@ -121,7 +126,7 @@ export class DeployLogComponent {
 
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
-  protected readonly pageSize = PAGE_SIZE;
+  protected readonly pageSize = DEFAULT_PER_PAGE;
   protected readonly deployTable = viewChild<Table>('deployTable');
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
@@ -129,6 +134,10 @@ export class DeployLogComponent {
   readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
 
   protected readonly statusLabelKeys = STATUS_LABEL_KEYS;
+
+  protected readonly missingValue = MISSING_VALUE;
+
+  protected readonly filtersActive = this.deployLogService.filtersActive;
 
   protected buildDuration(minutes: number | undefined): string | null {
     if (!minutes) {

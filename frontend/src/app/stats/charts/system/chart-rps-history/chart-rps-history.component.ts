@@ -7,9 +7,9 @@ import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import {
   chartResource,
   type ChartConfig,
-  mochaAxisChartOptions,
-  SINGLE_SERIES_COLOR,
-  SINGLE_SERIES_FILL,
+  axisChartOptions,
+  singleSeriesColor,
+  singleSeriesFill,
 } from '../../chart-config';
 
 const SPIKY_LINE_WIDTH_PX = 1.5;
@@ -43,15 +43,15 @@ export class ChartRpsHistoryComponent {
           {
             label: this.transloco.translate('stats.charts.rpsHistory.label'),
             data: samples.map((sample) => sample.requests),
-            backgroundColor: SINGLE_SERIES_FILL,
-            borderColor: SINGLE_SERIES_COLOR,
+            backgroundColor: singleSeriesFill(),
+            borderColor: singleSeriesColor(),
             borderWidth: SPIKY_LINE_WIDTH_PX,
             tension: 0,
             fill: 'origin' as const,
           },
         ],
       },
-      options: mochaAxisChartOptions<'line'>({ showLegend: false }),
+      options: axisChartOptions<'line'>({ showLegend: false }),
     };
   });
 }

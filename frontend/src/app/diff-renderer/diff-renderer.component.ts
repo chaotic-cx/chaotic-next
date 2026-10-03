@@ -3,6 +3,8 @@ import { Component, computed, effect, ElementRef, inject, input, output, signal 
 import { type DiffScanFinding } from '@chaotic-next/shared-lib';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
+import { lineFlashKeyframes } from '../animations/line-flash';
+import { prefersReducedMotion } from '../functions';
 import { diffWords, type WordSegment } from './word-diff';
 
 const HUNK_START = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
@@ -128,20 +130,12 @@ export class DiffRendererComponent {
     this.scrolled.emit();
     if (!row) return;
 
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = prefersReducedMotion();
     row.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
     if (reducedMotion) return;
 
     // Start flashing once the smooth scroll has arrived.
-    row.animate(
-      [
-        { boxShadow: 'inset 0 0 0 999px rgba(203, 166, 247, 0)' },
-        { boxShadow: 'inset 0 0 0 999px rgba(203, 166, 247, 0.38)', offset: 0.2 },
-        { boxShadow: 'inset 0 0 0 999px rgba(203, 166, 247, 0.38)', offset: 0.65 },
-        { boxShadow: 'inset 0 0 0 999px rgba(203, 166, 247, 0)' },
-      ],
-      { duration: 1500, delay: 400, easing: 'ease-out' },
-    );
+    row.animate(lineFlashKeyframes(), { duration: 1500, delay: 400, easing: 'ease-out' });
   }
 
   lineClass(line: DiffLine): string {

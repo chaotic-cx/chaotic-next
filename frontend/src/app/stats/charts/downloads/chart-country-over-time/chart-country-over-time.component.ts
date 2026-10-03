@@ -2,13 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import {
-  chartResource,
-  type ChartConfig,
-  formatDay,
-  groupOverTimeChart,
-  mochaAxisChartOptions,
-} from '../../chart-config';
+import { chartResource, type ChartConfig, formatDay, groupOverTimeChart, axisChartOptions } from '../../chart-config';
 
 interface CountryRow {
   day: string;
@@ -42,7 +36,7 @@ export class ChartCountryOverTimeComponent {
     const { labels, datasets } = groupOverTimeChart(rows, formatDay);
     return {
       data: { labels, datasets },
-      options: { ...mochaAxisChartOptions<'line'>(), aspectRatio: 2 },
+      options: { ...axisChartOptions<'line'>(), aspectRatio: 2 },
     };
   });
 }

@@ -5,6 +5,7 @@ import { Meta } from '@angular/platform-browser';
 import { type ParamMap, Router } from '@angular/router';
 import type { ChaoticEvent, GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { MISSING_VALUE } from './table-columns/missing-value';
 
 const CHAOTIC_EVENT_TYPES = new Set(['build', 'pipeline', 'merge_request', 'queue', 'queue_promoted']);
 
@@ -72,7 +73,7 @@ export function formatDuration(totalSeconds: number): string {
 const BYTE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB'] as const;
 
 export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes)) return 'n/a';
+  if (!Number.isFinite(bytes)) return MISSING_VALUE;
   let value = Math.abs(bytes);
   let unitIndex = 0;
   while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
@@ -88,7 +89,7 @@ export function formatBytes(bytes: number): string {
 const NANOSECONDS_PER_SECOND = 1_000_000_000;
 
 export function formatCpuTime(nanoseconds: number): string {
-  if (!Number.isFinite(nanoseconds)) return 'n/a';
+  if (!Number.isFinite(nanoseconds)) return MISSING_VALUE;
   return formatDuration(nanoseconds / NANOSECONDS_PER_SECOND);
 }
 
@@ -127,6 +128,11 @@ export function retainedResourceValue<T>(resource: { hasValue(): boolean; value(
   });
 }
 
+/** Equality for signals that hold short lists: the same items in the same order count as unchanged. */
+export function sameItems<T>(a: readonly T[], b: readonly T[]): boolean {
+  return a.length === b.length && a.every((item, index) => item === b[index]);
+}
+
 /** True only while a resource loads and no earlier value exists to show in the meantime. */
 export function loadingWithoutValue(resource: { isLoading(): boolean }, value: Signal<unknown>): Signal<boolean> {
   return computed(() => resource.isLoading() && value() === undefined);
@@ -138,9 +144,17 @@ export function debouncedSignal<T>(source: Signal<T>, delayMs: number): Signal<T
   });
 }
 
+/**
+ * True when the user asked for reduced motion.
+ * JS-driven animations ignore the CSS media rule, so they must check this.
+ */
+export function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /** Smooth scrolling unless the user asked for reduced motion; JS-driven scrolls ignore the CSS media rule. */
 export function preferredScrollBehavior(): ScrollBehavior {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  return prefersReducedMotion() ? 'auto' : 'smooth';
 }
 
 /** True once the resource's last request failed. Lets templates show an error state instead of an empty one. */
@@ -180,7 +194,7 @@ export function setPageSeo(title: string, description: string, keywords = ''): v
   updateSeoTags(inject(Meta), { title, description, keywords, url: inject(Router).url });
 }
 
-const MOBILE_BREAKPOINT = '(max-width: 768px)';
+const MOBILE_BREAKPOINT = '(max-width: 767.98px)';
 const MAX_LABEL_LENGTH = 15;
 
 export function isMobileSignal(): Signal<boolean> {

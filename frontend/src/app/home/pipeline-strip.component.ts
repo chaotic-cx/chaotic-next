@@ -8,12 +8,22 @@ import { BuildStatusService } from '../build-status/build-status.service';
 import { LoadErrorComponent } from '../load-error/load-error.component';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { statusIconClass } from '../status-icons';
+import { StaleNoticeComponent } from '../ui-states/stale-notice.component';
+import { UnknownValueComponent } from '../ui-states/unknown-value.component';
 
 const STAGE_PREVIEW_SIZE = 4;
 
 @Component({
   selector: 'chaotic-pipeline-strip',
-  imports: [NgTemplateOutlet, RouterLink, RelativeTimePipe, LoadErrorComponent, TranslocoDirective],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    RelativeTimePipe,
+    LoadErrorComponent,
+    StaleNoticeComponent,
+    UnknownValueComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './pipeline-strip.component.html',
   styleUrl: './pipeline-strip.component.css',
 })

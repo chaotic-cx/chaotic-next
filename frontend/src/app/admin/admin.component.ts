@@ -1,7 +1,9 @@
 import {
+  afterNextRender,
   afterRenderEffect,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   inject,
   signal,
@@ -31,6 +33,7 @@ export class AdminComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly routerEvents = toSignal(this.router.events, { initialValue: null });
   private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
@@ -44,6 +47,7 @@ export class AdminComponent {
   });
 
   protected readonly indicator = signal<IndicatorBox | null>(null);
+  private pendingIndicatorFrame: number | null = null;
 
   constructor() {
     setPageSeo(
@@ -53,16 +57,49 @@ export class AdminComponent {
     );
 
     afterRenderEffect(() => {
-      const activePath = this.activeItem().path;
-      const link = this.links().find((ref) => ref.nativeElement.dataset['path'] === activePath);
-      this.indicator.set(link ? this.measure(link.nativeElement) : null);
+      this.updateIndicator();
+    });
+
+    afterNextRender(() => {
+      this.observeNavResize();
     });
   }
 
-  protected onNavResize(): void {
+  private observeNavResize(): void {
+    const observer = new ResizeObserver(() => this.scheduleIndicatorUpdate());
+    observer.observe(this.nav().nativeElement);
+
+    this.destroyRef.onDestroy(() => {
+      observer.disconnect();
+      if (this.pendingIndicatorFrame !== null) {
+        cancelAnimationFrame(this.pendingIndicatorFrame);
+      }
+    });
+  }
+
+  /**
+   * Coalesces bursts of resize notifications into one measurement per frame.
+   */
+  private scheduleIndicatorUpdate(): void {
+    if (this.pendingIndicatorFrame !== null) {
+      return;
+    }
+
+    this.pendingIndicatorFrame = requestAnimationFrame(() => {
+      this.pendingIndicatorFrame = null;
+      this.updateIndicator();
+    });
+  }
+
+  private updateIndicator(): void {
     const activePath = this.activeItem().path;
     const link = this.links().find((ref) => ref.nativeElement.dataset['path'] === activePath);
-    if (link) this.indicator.set(this.measure(link.nativeElement));
+
+    if (link) {
+      this.indicator.set(this.measure(link.nativeElement));
+    } else {
+      this.indicator.set(null);
+    }
   }
 
   private measure(link: HTMLElement): IndicatorBox {

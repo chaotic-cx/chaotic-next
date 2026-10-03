@@ -12,8 +12,8 @@ import {
   chartRowHeight,
   clampAmount,
   type ChartConfig,
-  mochaAxisChartOptions,
-  SINGLE_SERIES_COLOR,
+  axisChartOptions,
+  singleSeriesColor,
 } from '../../chart-config';
 
 @Component({
@@ -62,11 +62,11 @@ export class ChartTopAurScansComponent {
           {
             data: values,
             label: this.transloco.translate('stats.charts.topAurScans.label'),
-            backgroundColor: SINGLE_SERIES_COLOR,
+            backgroundColor: singleSeriesColor(),
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
     };
   });
 }

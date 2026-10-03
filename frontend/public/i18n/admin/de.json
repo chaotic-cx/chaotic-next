@@ -42,7 +42,7 @@
         "description": "Build-Maschinen und ihre Build-Klassen."
       },
       "repoOperations": {
-        "label": "Repo-Operationen",
+        "label": "Repo-Aktionen",
         "description": "Repo-Manager-Runs, Rescans und der Report zu kaputten Paketen."
       },
       "mrActions": {
@@ -307,8 +307,8 @@
     }
   },
   "operationList": {
-    "title": "Operationen",
-    "hint": "Jede Operation läuft im Hintergrund. Ein Toast bestätigt den Start.",
+    "title": "Aktionen",
+    "hint": "Jede Aktion läuft im Hintergrund. Ein Toast bestätigt den Start.",
     "starting": "Wird gestartet",
     "confirmInBackground": "{{message}} Der Job läuft im Hintergrund.",
     "groups": {
@@ -354,7 +354,8 @@
     "mrScan": {
       "label": "Offene Merge Requests",
       "description": "Offene Merge Requests mit den Scan-Regeln, Auto-Flag-Labels und VirusTotal prüfen."
-    }
+    },
+    "busyHint": "Eine andere Aktion wird gerade gestartet. Warte auf ihre Bestätigung."
   },
   "managerLogs": {
     "status": {
@@ -388,7 +389,9 @@
       "message": "ELF-Signal-Analyse für {{count}} ausgewählte Paket(e) neu ausführen? Jedes Archiv wird im Hintergrund geladen und gescannt, die Ergebnisse kommen also nicht sofort.",
       "header": "Ausgewählte Pakete neu scannen",
       "accept": "Neu scannen"
-    }
+    },
+    "loadError": "Kaputte Pakete konnten nicht geladen werden.",
+    "selectionHint": "Wähle Pakete aus, um sie neu zu scannen oder zu bumpen."
   },
   "pages": {
     "columns": {
@@ -408,6 +411,7 @@
     "activeStatus": "Status",
     "searchPkgname": "pkgname suchen",
     "searchName": "Name suchen",
+    "repoFilterLabel": "Nach Repository filtern",
     "editAriaLabel": "{{name}} bearbeiten",
     "deleteAriaLabel": "{{name}} löschen",
     "form": {
@@ -430,6 +434,11 @@
     "deleteConfirm": {
       "message": "Arch-Paket „{{pkgname}}“ löschen? Das kann nicht rückgängig gemacht werden.",
       "header": "Arch-Paket löschen"
+    },
+    "loadError": "Arch-Pakete konnten nicht geladen werden.",
+    "firstRun": {
+      "message": "Noch keine Arch-Pakete indexiert.",
+      "hint": "Starte „Gesamter Arch-Mirror“ unter Repo-Aktionen, um diese Liste zu füllen."
     }
   },
   "builders": {
@@ -445,6 +454,10 @@
     "deleteConfirm": {
       "message": "Builder „{{name}}“ löschen? Das kann nicht rückgängig gemacht werden.",
       "header": "Builder löschen"
+    },
+    "loadError": "Builder konnten nicht geladen werden.",
+    "firstRun": {
+      "message": "Noch keine Builder registriert."
     }
   },
   "repos": {
@@ -455,7 +468,7 @@
       "gitlabProjectId": "GitLab-Projekt-ID",
       "apiToken": "API-Token"
     },
-    "empty": "Keine Repos passen zu dieser Suche.",
+    "empty": "Keine Repos passen zu diesen Filtern.",
     "editDialog": {
       "header": "Repo bearbeiten",
       "nameRequired": "Repo-Name fehlt",
@@ -465,6 +478,10 @@
     "deleteConfirm": {
       "message": "Repo „{{name}}“ löschen? Das kann nicht rückgängig gemacht werden.",
       "header": "Repo löschen"
+    },
+    "loadError": "Repos konnten nicht geladen werden.",
+    "firstRun": {
+      "message": "Noch keine Repos konfiguriert."
     }
   },
   "mrActions": {
@@ -479,7 +496,13 @@
       "action": "Aktion",
       "reason": "Grund"
     },
-    "empty": "Keine MR-Aktionen passen zu diesen Filtern."
+    "empty": "Keine MR-Aktionen passen zu diesen Filtern.",
+    "loadError": "MR-Aktionen konnten nicht geladen werden.",
+    "actionFilterLabel": "Nach Aktion filtern",
+    "firstRun": {
+      "message": "Noch keine MR-Aktionen.",
+      "hint": "Hier erscheinen Freigaben, Holds und Dangerous-Markierungen aus der Review-Queue."
+    }
   },
   "packageBumps": {
     "bumpTypes": {
@@ -499,14 +522,22 @@
       "details": "Details",
       "timestamp": "Zeitstempel"
     },
-    "empty": "Keine Paket-Bumps passen zu diesen Filtern."
+    "empty": "Keine Paket-Bumps passen zu diesen Filtern.",
+    "loadError": "Paket-Bumps konnten nicht geladen werden.",
+    "bumpTypeFilterLabel": "Nach Bump-Typ filtern",
+    "sourceFilterLabel": "Nach Quelle filtern",
+    "firstRun": {
+      "message": "Noch keine Paket-Bumps.",
+      "hint": "Der Repo-Manager legt jedes Mal einen Bump an, wenn er einen Rebuild plant."
+    }
   },
   "pipelineTriggers": {
     "runSchedule": "Zeitplan ausführen",
     "searchPlaceholder": "Pipeline, Commit, Benutzer suchen",
+    "operationFilterLabel": "Nach Aktion filtern",
     "columns": {
       "pipeline": "Pipeline",
-      "operation": "Operation",
+      "operation": "Aktion",
       "inputs": "Inputs",
       "ref": "Ref"
     },
@@ -519,6 +550,11 @@
       "selectSchedule": "Zeitplan auswählen...",
       "selectRepositoryFirst": "Erst ein Repo auswählen...",
       "fallbackLabel": "Zeitplan #{{id}}"
+    },
+    "loadError": "Pipeline-Trigger konnten nicht geladen werden.",
+    "firstRun": {
+      "message": "Noch keine Pipeline-Trigger.",
+      "hint": "Hier erscheinen Bumps, Schedule-Runs, Adds und Drops, die im Admin-Bereich gestartet wurden."
     }
   },
   "elfAnalysis": {
@@ -546,14 +582,20 @@
       "brokenReasons": "Gründe für kaputt",
       "brokenReasonsHint": "Gründe kommagetrennt, leer lassen, wenn nicht kaputt.",
       "rebuildTriggers": "Rebuild-Trigger",
-      "loadingRebuildTriggers": "Rebuild-Trigger werden geladen",
       "noRebuildTriggers": "Keine Rebuild-Trigger gefunden.",
       "triggeredBy": "(ausgelöst von {{name}})",
-      "rebuildTriggerSources": "Quellen der Rebuild-Trigger"
+      "rebuildTriggerSources": "Quellen der Rebuild-Trigger",
+      "rebuildTriggersLoadError": "Rebuild-Trigger konnten nicht geladen werden."
     },
     "deleteConfirm": {
       "message": "ELF-Analyse-Zeile #{{id}} für {{version}} löschen? Das kann nicht rückgängig gemacht werden.",
       "header": "ELF-Analyse löschen"
+    },
+    "loadError": "ELF-Analysen konnten nicht geladen werden.",
+    "statusFilterLabel": "Nach Status filtern",
+    "firstRun": {
+      "message": "Noch keine ELF-Analysen.",
+      "hint": "Starte einen ELF-Signal-Scan unter Repo-Aktionen."
     }
   },
   "packages": {
@@ -641,6 +683,22 @@
     "deleteConfirm": {
       "message": "Paket <code>{{pkgname}}</code> löschen? Das kann nicht rückgängig gemacht werden.",
       "header": "Paket löschen"
+    },
+    "loadError": "Pakete konnten nicht geladen werden.",
+    "firstRun": {
+      "message": "Noch keine aktiven Pakete.",
+      "hint": "Füge ein Paket aus dem AUR hinzu. Es erscheint hier, sobald die Pipeline zum Hinzufügen neuer Pakete durchgelaufen ist."
+    }
+  },
+  "editConflict": {
+    "review": "Änderungen ansehen",
+    "saveAnyway": "Trotzdem speichern",
+    "messages": {
+      "package": "Dieses Paket wurde geändert, seit du es geöffnet hast.",
+      "archPackage": "Dieses Arch-Paket wurde geändert, seit du es geöffnet hast.",
+      "repo": "Dieses Repo wurde geändert, seit du es geöffnet hast.",
+      "builder": "Dieser Builder wurde geändert, seit du ihn geöffnet hast.",
+      "elfAnalysis": "Diese ELF-Analyse wurde geändert, seit du sie geöffnet hast."
     }
   }
 }

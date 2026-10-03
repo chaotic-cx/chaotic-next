@@ -1,12 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
 import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { themePalette } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, formatDay, axisChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-additions',
@@ -41,13 +41,13 @@ export class ChartAdditionsComponent {
           {
             label: this.transloco.translate('stats.charts.additions.label'),
             data: values.reverse(),
-            backgroundColor: flavors.mocha.colors.green.hex,
-            borderColor: flavors.mocha.colors.green.hex,
+            backgroundColor: themePalette().green.hex,
+            borderColor: themePalette().green.hex,
             fill: false,
           },
         ],
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
   });
 }

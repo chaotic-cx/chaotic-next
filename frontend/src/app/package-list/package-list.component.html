@@ -8,10 +8,10 @@
       [value]="packageListService.packageList()"
       [rows]="pageSize"
       [rowsPerPageOptions]="[25, 50, 100, 200]"
-      [showCurrentPageReport]="true"
       [paginator]="true"
       [lazy]="true"
       [totalRecords]="packageListService.total()"
+      [chaoticTableFailed]="packageListService.failed()"
       [sortOrder]="1"
       (onLazyLoad)="onLazyLoad($event)"
       dataKey="id"
@@ -19,19 +19,11 @@
       stateStorage="local"
       stateKey="package-list-table"
       paginatorDropdownAppendTo="body"
+      chaoticPageReport
     >
       <ng-template #caption>
         <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
           <div class="flex flex-wrap items-center gap-2.5 sm:mr-auto">
-            <p-button
-              class="hidden sm:inline-flex"
-              [outlined]="true"
-              [label]="t('clearFilters')"
-              [pTooltip]="t('clearFiltersTooltip')"
-              (click)="clear(pkgTable)"
-              size="small"
-              tooltipPosition="bottom"
-            />
             <chaotic-column-toggle [columns]="packageColumns()" tableKey="package-list-table" />
           </div>
           <p-select
@@ -39,21 +31,24 @@
             [options]="packageListService.repos() ?? []"
             [ngModel]="packageListService.repoFilter()"
             [placeholder]="t('allRepos')"
+            [ariaLabel]="t('repoFilterLabel')"
             (ngModelChange)="onRepoFilter($event)"
             optionLabel="name"
             optionValue="id"
             showClear
             appendTo="body"
           />
+          <chaotic-clear-filters [active]="filtersActive()" (clear)="clear(pkgTable)" />
           <p-iconfield class="w-full sm:w-64" iconPosition="left">
             <p-inputicon>
-              <i class="pi pi-search"></i>
+              <i class="pi pi-search" aria-hidden="true"></i>
             </p-inputicon>
             <input
               class="w-full"
               #searchInput
               [formField]="searchForm.query"
               [placeholder]="t('searchPlaceholder')"
+              [attr.aria-label]="t('searchLabel')"
               pInputText
               type="text"
             />
@@ -129,7 +124,9 @@
           <tr [class.text-ctp-subtext0]="!pkg.isActive">
             @if (columnVisibility.isVisible('package-list-table', 'name')) {
               <td>
-                <span class="font-mono text-[0.8125rem] font-semibold whitespace-nowrap">{{ pkg.pkgname }}</span>
+                <span class="block max-w-xs truncate font-mono text-[0.8125rem] font-semibold" [title]="pkg.pkgname">{{
+                  pkg.pkgname
+                }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'version')) {
@@ -141,11 +138,13 @@
             }
             @if (columnVisibility.isVisible('package-list-table', 'lastUpdated')) {
               <td>
-                <span
+                <time
                   class="align-middle"
+                  [attr.datetime]="pkg.lastUpdated | isoDateTime"
                   [pTooltip]="(pkg.lastUpdated | date: 'short') ?? undefined"
                   tooltipPosition="top"
-                  >{{ pkg.lastUpdated | relativeTime }}</span
+                  >{{ pkg.lastUpdated | relativeTime
+                  }}<span class="sr-only"> ({{ pkg.lastUpdated | date: 'short' }})</span></time
                 >
               </td>
             }
@@ -156,7 +155,7 @@
                     {{ pkg.buildClass | buildClass }}
                   </span>
                 } @else {
-                  <span class="align-middle">-</span>
+                  <span class="align-middle text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
             }
@@ -165,29 +164,32 @@
                 @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
                   <span class="align-middle">{{ pkg.pkgbaseName }}</span>
                 } @else {
-                  <span class="align-middle">-</span>
+                  <span class="align-middle text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'description')) {
               <td>
-                <span class="line-clamp-2 text-ctp-subtext1" [title]="pkg.metadata?.desc ?? ''">{{
-                  pkg.metadata?.desc
-                }}</span>
+                @if (pkg.metadata?.desc; as desc) {
+                  <span class="line-clamp-2 text-ctp-subtext1" [title]="desc">{{ desc }}</span>
+                } @else {
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                }
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'homepage')) {
               <td>
                 @if (pkg.metadata?.url; as url) {
                   <a
-                    class="block max-w-56 truncate text-ctp-mauve hover:underline"
+                    class="block max-w-56 truncate text-ctp-mauve hover:underline focus-visible:underline"
                     [href]="url"
+                    [title]="url"
                     target="_blank"
                     rel="noopener noreferrer"
                     >{{ stripPrefix(url) }}</a
                   >
                 } @else {
-                  <span class="align-middle">{{ t('notAvailable') }}</span>
+                  <span class="align-middle text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
             }
@@ -222,7 +224,7 @@
                     </button>
                   </div>
                 } @else {
-                  <span class="text-ctp-subtext0">–</span>
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
             }
@@ -240,25 +242,28 @@
           <tr>
             <td [attr.colspan]="packageColumns().length">
               @if (packageListService.failed()) {
-                <chaotic-load-error [message]="t('loadError')" (retry)="packageListService.retry()" />
+                <chaotic-load-error
+                  [message]="t('loadError')"
+                  [error]="packageListService.error()"
+                  (retry)="packageListService.retry()"
+                />
               } @else {
-                <div class="chaotic-card__empty flex-col">
+                <chaotic-empty-state [filtered]="filtersActive()" (clearFilters)="clear(pkgTable)">
                   @if (packageListService.searchValue(); as query) {
                     <p>
-                      {{ t('noMatchQuery.start') }} <span class="font-mono text-ctp-text">{{ query }}</span
+                      {{ t('noMatchQuery.start') }}
+                      <span
+                        class="inline-block max-w-xs truncate align-bottom font-mono text-ctp-text"
+                        [title]="query"
+                        >{{ query }}</span
                       >{{ t('noMatchQuery.end') }}
                     </p>
-                  } @else {
+                  } @else if (filtersActive()) {
                     <p>{{ t('noMatchFilters') }}</p>
+                  } @else {
+                    <p>{{ t('empty') }}</p>
                   }
-                  <button
-                    class="py-1 text-sm text-ctp-subtext1 underline underline-offset-4 hover:text-ctp-mauve"
-                    (click)="clear(pkgTable)"
-                    type="button"
-                  >
-                    {{ t('clearFilters') }}
-                  </button>
-                </div>
+                </chaotic-empty-state>
               }
             </td>
           </tr>

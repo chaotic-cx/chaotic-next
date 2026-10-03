@@ -1,8 +1,13 @@
 <div class="background flex min-h-svh flex-col" *transloco="let t; prefix: 'app'">
+  <a class="skip-link" (click)="skipToContent($event, mainContent)" href="#content">{{ t('skipToContent') }}</a>
   <garuda-shell class="flex-1 p-2" [menuItems]="menuItems()">
     <div class="flex items-center gap-2" garudaShellBarStart>
       <a class="flex items-center" [attr.aria-label]="t('goHome')" routerLink="/">
-        <img ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="" />
+        @if (lightLogo()) {
+          <img ngSrc="/assets/logo-latte.svg" width="28" height="28" priority alt="" />
+        } @else {
+          <img ngSrc="/assets/logo_28.png" width="28" height="28" priority alt="" />
+        }
       </a>
       <button
         class="mobile-nav-trigger chaotic-icon-btn"
@@ -16,15 +21,18 @@
         <i [class]="mobileNavOpen() ? 'pi pi-times' : 'pi pi-bars'" aria-hidden="true"></i>
       </button>
     </div>
-    <div class="router-container" [inert]="mobileNavOpen()">
+    <chaotic-connection-banner />
+    <chaotic-session-expired-banner />
+    <main class="router-container" id="content" #mainContent [inert]="mobileNavOpen()" tabindex="-1">
       <router-outlet #routerOutlet="outlet" />
-    </div>
-    <div class="flex items-center gap-2" garudaShellBarEnd>
+    </main>
+    <div class="chaotic-bar-actions" garudaShellBarEnd>
       <div class="flex h-[15px] w-[15px] items-center justify-center">
         @if (loadingService.isLoading()) {
           <p-progress-spinner [style]="{ width: '15px', height: '15px' }" [ariaLabel]="t('loading')" strokeWidth="5" />
         }
       </div>
+      <chaotic-theme-switcher />
       <chaotic-language-switcher />
       <chaotic-auth-button />
     </div>

@@ -16,7 +16,6 @@ import { Router } from '@angular/router';
 import { Package, formatPkgrel } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
-import { Button } from '@openng/optimus-ui/button';
 import { IconFieldModule } from '@openng/optimus-ui/iconfield';
 import { InputIconModule } from '@openng/optimus-ui/inputicon';
 import { InputTextModule } from '@openng/optimus-ui/inputtext';
@@ -27,19 +26,23 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
+import { ClearFiltersComponent } from '../empty-state/clear-filters.component';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { castTo, setPageSeo } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
+import { IsoDateTimePipe } from '../pipes/iso-date-time.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import { ColumnVisibilityComponent, type ColumnDef } from '../table-columns/column-visibility.component';
 import { ColumnVisibilityService } from '../table-columns/column-visibility.service';
+import { MISSING_VALUE } from '../table-columns/missing-value';
+import { TablePageReportDirective } from '../table-page-report.directive';
+import { DEFAULT_PER_PAGE } from '../table-pagination';
 import { TABLE_ROW_HEIGHTS } from '../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../table-skeleton/table-skeleton-rows.component';
 import { TitleComponent } from '../title/title.component';
 import { PackageListService } from './package-list.service';
-
-const PAGE_SIZE = 25;
 
 @Component({
   selector: 'chaotic-package-list',
@@ -55,13 +58,16 @@ const PAGE_SIZE = 25;
     MultiSelectModule,
     Select,
     TagModule,
-    Button,
     FormField,
+    IsoDateTimePipe,
     RelativeTimePipe,
     BuildClassPipe,
     TitleComponent,
     Tooltip,
     ColumnVisibilityComponent,
+    ClearFiltersComponent,
+    EmptyStateComponent,
+    TablePageReportDirective,
     TranslocoDirective,
   ],
   templateUrl: './package-list.component.html',
@@ -83,9 +89,15 @@ export class PackageListComponent {
 
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
 
-  protected readonly pageSize = PAGE_SIZE;
+  protected readonly pageSize = DEFAULT_PER_PAGE;
 
   protected readonly formatPkgrel = formatPkgrel;
+
+  protected readonly missingValue = MISSING_VALUE;
+
+  protected readonly filtersActive = computed(
+    () => this.packageListService.searchValue() !== '' || this.packageListService.repoName() !== undefined,
+  );
 
   protected stripPrefix(value?: string): string {
     if (!value) return '';

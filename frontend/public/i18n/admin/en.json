@@ -354,7 +354,8 @@
     "mrScan": {
       "label": "Open merge requests",
       "description": "Check open merge requests with the scan rules, auto-flag labels and VirusTotal."
-    }
+    },
+    "busyHint": "Another operation is starting. Wait for its confirmation."
   },
   "managerLogs": {
     "status": {
@@ -388,7 +389,9 @@
       "message": "Re-run the ELF signal analysis for {{count}} selected package(s)? Each archive is downloaded and scanned in the background, so results are not immediate.",
       "header": "Rescan selected packages",
       "accept": "Rescan"
-    }
+    },
+    "loadError": "Could not load broken packages.",
+    "selectionHint": "Select packages to rescan or bump them."
   },
   "pages": {
     "columns": {
@@ -408,6 +411,7 @@
     "activeStatus": "Active status",
     "searchPkgname": "Search pkgname",
     "searchName": "Search name",
+    "repoFilterLabel": "Filter by repository",
     "editAriaLabel": "Edit {{name}}",
     "deleteAriaLabel": "Delete {{name}}",
     "form": {
@@ -430,6 +434,11 @@
     "deleteConfirm": {
       "message": "Delete Arch package \"{{pkgname}}\"? This cannot be undone.",
       "header": "Delete Arch package"
+    },
+    "loadError": "Could not load Arch packages.",
+    "firstRun": {
+      "message": "No Arch packages indexed yet.",
+      "hint": "Run “Full Arch mirror” under Repo operations to fill this list."
     }
   },
   "builders": {
@@ -445,6 +454,10 @@
     "deleteConfirm": {
       "message": "Delete builder \"{{name}}\"? This cannot be undone.",
       "header": "Delete builder"
+    },
+    "loadError": "Could not load builders.",
+    "firstRun": {
+      "message": "No builders registered yet."
     }
   },
   "repos": {
@@ -455,7 +468,7 @@
       "gitlabProjectId": "GitLab project ID",
       "apiToken": "API token"
     },
-    "empty": "No repositories match this search.",
+    "empty": "No repositories match these filters.",
     "editDialog": {
       "header": "Edit repo",
       "nameRequired": "Repo name is required",
@@ -465,6 +478,10 @@
     "deleteConfirm": {
       "message": "Delete repo \"{{name}}\"? This cannot be undone.",
       "header": "Delete repo"
+    },
+    "loadError": "Could not load repositories.",
+    "firstRun": {
+      "message": "No repositories configured yet."
     }
   },
   "mrActions": {
@@ -479,7 +496,13 @@
       "action": "Action",
       "reason": "Reason"
     },
-    "empty": "No MR actions match these filters."
+    "empty": "No MR actions match these filters.",
+    "loadError": "Could not load MR actions.",
+    "actionFilterLabel": "Filter by action",
+    "firstRun": {
+      "message": "No MR actions yet.",
+      "hint": "Approvals, holds and dangerous flags from the review queue appear here."
+    }
   },
   "packageBumps": {
     "bumpTypes": {
@@ -499,11 +522,19 @@
       "details": "Details",
       "timestamp": "Timestamp"
     },
-    "empty": "No package bumps match these filters."
+    "empty": "No package bumps match these filters.",
+    "loadError": "Could not load package bumps.",
+    "bumpTypeFilterLabel": "Filter by bump type",
+    "sourceFilterLabel": "Filter by source",
+    "firstRun": {
+      "message": "No package bumps yet.",
+      "hint": "The repo manager records a bump each time that it schedules a rebuild."
+    }
   },
   "pipelineTriggers": {
     "runSchedule": "Run schedule",
     "searchPlaceholder": "Search pipeline, commit, user",
+    "operationFilterLabel": "Filter by operation",
     "columns": {
       "pipeline": "Pipeline",
       "operation": "Operation",
@@ -519,6 +550,11 @@
       "selectSchedule": "Select schedule...",
       "selectRepositoryFirst": "Select repository first...",
       "fallbackLabel": "Schedule #{{id}}"
+    },
+    "loadError": "Could not load pipeline triggers.",
+    "firstRun": {
+      "message": "No pipeline triggers yet.",
+      "hint": "Bumps, schedule runs, adds and drops started from the admin pages appear here."
     }
   },
   "elfAnalysis": {
@@ -546,14 +582,20 @@
       "brokenReasons": "Broken reasons",
       "brokenReasonsHint": "Comma-separated reasons; leave empty when not broken.",
       "rebuildTriggers": "Rebuild triggers",
-      "loadingRebuildTriggers": "Loading rebuild triggers",
       "noRebuildTriggers": "No rebuild triggers found.",
       "triggeredBy": "(triggered by {{name}})",
-      "rebuildTriggerSources": "Rebuild trigger sources"
+      "rebuildTriggerSources": "Rebuild trigger sources",
+      "rebuildTriggersLoadError": "Could not load rebuild triggers."
     },
     "deleteConfirm": {
       "message": "Delete ELF analysis row #{{id}} for {{version}}? This cannot be undone.",
       "header": "Delete ELF analysis"
+    },
+    "loadError": "Could not load ELF analyses.",
+    "statusFilterLabel": "Filter by status",
+    "firstRun": {
+      "message": "No ELF analyses yet.",
+      "hint": "Start an ELF signal scan under Repo operations."
     }
   },
   "packages": {
@@ -641,6 +683,22 @@
     "deleteConfirm": {
       "message": "Delete package <code>{{pkgname}}</code>? This cannot be undone.",
       "header": "Delete package"
+    },
+    "loadError": "Could not load packages.",
+    "firstRun": {
+      "message": "No active packages yet.",
+      "hint": "Add a package from the AUR. It appears here after its add pipeline finishes."
+    }
+  },
+  "editConflict": {
+    "review": "Review changes",
+    "saveAnyway": "Save anyway",
+    "messages": {
+      "package": "This package changed since you opened it.",
+      "archPackage": "This Arch package changed since you opened it.",
+      "repo": "This repository changed since you opened it.",
+      "builder": "This builder changed since you opened it.",
+      "elfAnalysis": "This ELF analysis changed since you opened it."
     }
   }
 }

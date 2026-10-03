@@ -1,10 +1,11 @@
 import { Component, computed, inject } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
+import type { AccentName } from '@catppuccin/palette';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
+import { cycledColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, formatDay, axisChartOptions } from '../../chart-config';
 
 interface FailedBuildRow {
   day: string;
@@ -13,17 +14,17 @@ interface FailedBuildRow {
 }
 
 const TOP_PACKAGES = 10;
-const SERIES_COLORS = [
-  flavors.mocha.colors.red.hex,
-  flavors.mocha.colors.peach.hex,
-  flavors.mocha.colors.yellow.hex,
-  flavors.mocha.colors.green.hex,
-  flavors.mocha.colors.teal.hex,
-  flavors.mocha.colors.sky.hex,
-  flavors.mocha.colors.blue.hex,
-  flavors.mocha.colors.lavender.hex,
-  flavors.mocha.colors.pink.hex,
-  flavors.mocha.colors.mauve.hex,
+const SERIES_COLOR_NAMES: readonly AccentName[] = [
+  'red',
+  'peach',
+  'yellow',
+  'green',
+  'teal',
+  'sky',
+  'blue',
+  'lavender',
+  'pink',
+  'mauve',
 ];
 
 @Component({
@@ -63,12 +64,12 @@ export class ChartBuildFailuresOverTimeComponent {
         datasets: packages.map((pkg, index) => ({
           label: pkg,
           data: labels.map((day) => byPackage.get(pkg)?.get(day) ?? 0),
-          backgroundColor: SERIES_COLORS[index % SERIES_COLORS.length],
-          borderColor: SERIES_COLORS[index % SERIES_COLORS.length],
+          backgroundColor: cycledColor(SERIES_COLOR_NAMES, index),
+          borderColor: cycledColor(SERIES_COLOR_NAMES, index),
           fill: false,
         })),
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
   });
 }

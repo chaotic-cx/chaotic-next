@@ -1,5 +1,5 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
+import type { AccentName } from '@catppuccin/palette';
 import type { PackageResourceDayRow } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
@@ -8,8 +8,16 @@ import { parseCount } from '../../../../functions';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { StatsService } from '../../../stats.service';
 import { LoadErrorComponent } from '../../../../load-error/load-error.component';
+import { paletteColor } from '../../../../theme';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roundToTenth } from '../../chart-config';
+import {
+  axisChartOptions,
+  chartResource,
+  type ChartConfig,
+  formatDay,
+  hasPlottedValue,
+  roundToTenth,
+} from '../../chart-config';
 import { RESOURCE_METRIC_ORDER, RESOURCE_METRICS, type ResourceMetricKey } from '../../chart-resource-metrics';
 
 type ResourceDayValueKey = Exclude<keyof PackageResourceDayRow, 'day' | 'samples'>;
@@ -17,7 +25,7 @@ type ResourceDayValueKey = Exclude<keyof PackageResourceDayRow, 'day' | 'samples
 interface ResourceSeries {
   rowKey: ResourceDayValueKey;
   labelKey: string;
-  color: string;
+  colorName: AccentName;
 }
 
 const METRIC_SERIES: Record<ResourceMetricKey, ResourceSeries[]> = {
@@ -25,25 +33,21 @@ const METRIC_SERIES: Record<ResourceMetricKey, ResourceSeries[]> = {
     {
       rowKey: 'avg_memory_bytes',
       labelKey: marker('stats.charts.packageResourceStats.averageMemory'),
-      color: flavors.mocha.colors.lavender.hex,
+      colorName: 'lavender',
     },
     {
       rowKey: 'peak_memory_bytes',
       labelKey: marker('stats.charts.packageResourceStats.peakMemory'),
-      color: flavors.mocha.colors.blue.hex,
+      colorName: 'blue',
     },
   ],
-  cpu: [
-    { rowKey: 'cpu_time_ns', labelKey: marker('stats.resourceMetrics.cpu'), color: flavors.mocha.colors.green.hex },
-  ],
-  disk: [
-    { rowKey: 'disk_io_bytes', labelKey: marker('stats.resourceMetrics.disk'), color: flavors.mocha.colors.yellow.hex },
-  ],
+  cpu: [{ rowKey: 'cpu_time_ns', labelKey: marker('stats.resourceMetrics.cpu'), colorName: 'green' }],
+  disk: [{ rowKey: 'disk_io_bytes', labelKey: marker('stats.resourceMetrics.disk'), colorName: 'yellow' }],
   network: [
     {
       rowKey: 'network_io_bytes',
       labelKey: marker('stats.resourceMetrics.network'),
-      color: flavors.mocha.colors.teal.hex,
+      colorName: 'teal',
     },
   ],
 };
@@ -77,8 +81,7 @@ export class ChartPackageResourceStatsComponent {
     );
   });
 
-  /** One chart per metric; empty until the package has sampled builds, so
-   * nothing renders without data. */
+  // One chart per metric that has sampled values. Metrics that stay at zero get no chart.
   protected readonly charts = computed<PackageResourceChart[]>(() => {
     this.activeTranslation();
 
@@ -87,7 +90,7 @@ export class ChartPackageResourceStatsComponent {
     return RESOURCE_METRIC_ORDER.map((key) => ({
       key,
       config: this.buildChartConfig(key, rows),
-    }));
+    })).filter((entry) => hasPlottedValue(entry.config));
   });
 
   private buildChartConfig(metricKey: ResourceMetricKey, rows: PackageResourceDayRow[]): ChartConfig<'line'> {
@@ -98,18 +101,18 @@ export class ChartPackageResourceStatsComponent {
     return {
       data: {
         labels,
-        datasets: METRIC_SERIES[metricKey].map(({ rowKey, labelKey, color }) => ({
+        datasets: METRIC_SERIES[metricKey].map(({ rowKey, labelKey, colorName }) => ({
           label: this.transloco.translate('stats.charts.packageResourceStats.label', {
             series: this.transloco.translate(labelKey),
             unit: metric.unit,
           }),
           data: sorted.map((row) => roundToTenth(parseCount(row[rowKey]) * metric.scale)),
-          backgroundColor: color,
-          borderColor: color,
+          backgroundColor: paletteColor(colorName),
+          borderColor: paletteColor(colorName),
           fill: false as const,
         })),
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
   }
 }

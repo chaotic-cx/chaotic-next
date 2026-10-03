@@ -33,6 +33,18 @@ const STATUS_OPTIONS: StatusOption[] = Object.entries(BUILD_STATUS_ICONS).map(([
 
 const DEFAULT_SORT_FIELD: BuildSortField = 'timestamp';
 
+function hasDefaultStatuses(statuses: BuildStatus[] | undefined): boolean {
+  if (statuses === undefined) {
+    return true;
+  }
+
+  if (statuses.length !== DEFAULT_DEPLOYMENT_STATUSES.length) {
+    return false;
+  }
+
+  return statuses.every((status) => DEFAULT_DEPLOYMENT_STATUSES.includes(status));
+}
+
 const STATUS_BY_LABEL = new Map(
   Object.entries(STATUS_LABELS).map(([key, label]) => [label, Number(key) as BuildStatus]),
 );
@@ -79,10 +91,20 @@ export class DeployLogService {
   private readonly page = retainedResourceValue(this.resource);
   readonly loading = loadingWithoutValue(this.resource, this.page);
   readonly failed = resourceFailed(this.resource);
+  readonly error = this.resource.error;
+
+  readonly filtersActive = computed(
+    () =>
+      this.searchValue() !== '' ||
+      this.builderFilter() !== undefined ||
+      this.repoFilter() !== undefined ||
+      !hasDefaultStatuses(this.statusFilter()),
+  );
 
   retry(): void {
     this.resource.reload();
   }
+
   readonly total = computed(() => this.page()?.total ?? 0);
   readonly packageList = computed<Build[]>(() =>
     (this.page()?.items ?? []).map((build) => ({

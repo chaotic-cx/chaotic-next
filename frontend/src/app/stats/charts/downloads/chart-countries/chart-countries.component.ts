@@ -7,10 +7,10 @@ import { FluidModule } from '@openng/optimus-ui/fluid';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { AppService } from '../../../../app.service';
 import { injectActiveTranslation } from '../../../../i18n/active-translation';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { seriesColors } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, pieChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-countries',
@@ -52,11 +52,11 @@ export class ChartCountriesComponent {
           {
             data,
             label: this.transloco.translate('stats.charts.routerHits'),
-            backgroundColor: CATPPUCCIN_FLAVOURS,
+            backgroundColor: seriesColors(),
           },
         ],
       },
-      options: mochaPieChartOptions(),
+      options: pieChartOptions(),
     };
   });
 

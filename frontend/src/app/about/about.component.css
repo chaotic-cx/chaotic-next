@@ -22,31 +22,32 @@
   gap: 0.875rem;
   height: 100%;
   padding: 0.875rem 1rem;
-  transition: border-color 150ms ease-out;
+  transition: border-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.about-member:hover {
-  border-color: color-mix(in srgb, var(--ctp-mocha-mauve) 50%, transparent);
+.about-member:hover,
+.about-member:focus-visible {
+  border-color: color-mix(in srgb, var(--catppuccin-color-mauve) 50%, transparent);
 }
 
 .about-member__avatar {
   flex: none;
   width: 3rem;
   height: 3rem;
-  border-radius: 9999px;
+  border-radius: var(--chaotic-radius-pill);
   object-fit: cover;
 }
 
 .about-member__name {
   display: block;
-  font-weight: 600;
-  color: var(--ctp-mocha-text);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
 }
 
 .about-member__role {
   display: block;
   font-size: 0.8125rem;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }
 
 .about-grid {
@@ -77,12 +78,15 @@
 .about-card__body ::ng-deep a,
 .about-links a,
 .about-thanks a {
-  color: var(--ctp-mocha-mauve);
+  color: var(--catppuccin-color-mauve);
 }
 
 .about-card__body ::ng-deep a:hover,
+.about-card__body ::ng-deep a:focus-visible,
 .about-links a:hover,
-.about-thanks a:hover {
+.about-links a:focus-visible,
+.about-thanks a:hover,
+.about-thanks a:focus-visible {
   text-decoration: underline;
 }
 
@@ -95,7 +99,7 @@
 
 .about-links dt {
   font-size: 0.8125rem;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }
 
 .about-links dd {
@@ -120,5 +124,5 @@
   padding-block: 1rem 2rem;
   border-top: 1px solid var(--chaotic-border);
   font-size: 0.875rem;
-  color: var(--ctp-mocha-subtext0);
+  color: var(--chaotic-fg-muted);
 }

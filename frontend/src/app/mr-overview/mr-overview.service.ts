@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { inject, Service, signal } from '@angular/core';
 import { FLAG_REASON_MAX_LENGTH, isReviewQueueMergeRequest, MergeRequestWithDiffs } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core';
@@ -30,7 +30,37 @@ const FLAG_TOAST_KEYS: Record<MrFlagLabel, FlagToastKeys> = {
   },
 };
 
-const HTTP_UNAUTHORIZED = 401;
+interface ToastKeys {
+  title: string;
+  message: string;
+}
+
+// Review actions fail with these statuses for reasons the reviewer can act on.
+const ACTION_REJECTED_TOASTS: ReadonlyMap<number, ToastKeys> = new Map([
+  [
+    HttpStatusCode.Unauthorized,
+    {
+      title: marker('reviewQueue.toast.signInRequired.title'),
+      message: marker('reviewQueue.toast.signInRequired.message'),
+    },
+  ],
+  [
+    HttpStatusCode.Forbidden,
+    {
+      title: marker('reviewQueue.toast.noPermission.title'),
+      message: marker('reviewQueue.toast.noPermission.message'),
+    },
+  ],
+]);
+
+const ALREADY_APPROVED_TOAST: ToastKeys = {
+  title: marker('reviewQueue.toast.alreadyApproved.title'),
+  message: marker('reviewQueue.toast.alreadyApproved.message'),
+};
+
+function httpStatus(error: unknown): number | undefined {
+  return error instanceof HttpErrorResponse ? error.status : undefined;
+}
 
 @Service()
 export class MrOverviewService {
@@ -120,11 +150,12 @@ export class MrOverviewService {
         }),
       );
     } catch (error) {
-      if (error instanceof HttpErrorResponse && error.status === HTTP_UNAUTHORIZED) {
-        this.messageToastService.info(
-          this.transloco.translate('reviewQueue.toast.alreadyApproved.title'),
-          this.transloco.translate('reviewQueue.toast.alreadyApproved.message'),
-        );
+      if (httpStatus(error) === HttpStatusCode.Conflict) {
+        this.showToast('info', ALREADY_APPROVED_TOAST);
+        return;
+      }
+
+      if (this.reportRejectedAction(error)) {
         return;
       }
 
@@ -177,6 +208,10 @@ export class MrOverviewService {
       );
       return true;
     } catch (error) {
+      if (this.reportRejectedAction(error)) {
+        return false;
+      }
+
       this.messageToastService.error(
         this.transloco.translate('reviewQueue.toast.flagFailedTitle'),
         backendErrorMessage(error, this.transloco.translate(toastKeys.errorMessage)),
@@ -188,6 +223,37 @@ export class MrOverviewService {
       finalLoadingMap.delete(loadingKey);
       this.loadingMap.set(finalLoadingMap);
     }
+  }
+
+  /**
+   * Shows the toast for an action the backend rejected because of the session or a missing permission.
+   * Returns false for every other failure.
+   */
+  private reportRejectedAction(error: unknown): boolean {
+    const status = httpStatus(error);
+    if (status === undefined) {
+      return false;
+    }
+
+    const toast = ACTION_REJECTED_TOASTS.get(status);
+    if (toast === undefined) {
+      return false;
+    }
+
+    this.showToast('warn', toast);
+    return true;
+  }
+
+  private showToast(severity: 'info' | 'warn', keys: ToastKeys): void {
+    const title = this.transloco.translate(keys.title);
+    const message = this.transloco.translate(keys.message);
+
+    if (severity === 'info') {
+      this.messageToastService.info(title, message);
+      return;
+    }
+
+    this.messageToastService.warn(title, message);
   }
 
   sortDiff(diffs: MergeRequestDiffSchema[]): MergeRequestDiffSchema[] {

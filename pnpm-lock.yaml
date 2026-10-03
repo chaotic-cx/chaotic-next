@@ -256,6 +256,9 @@ importers:
       '@openng/optimus-ui-tailwindcss':
         specifier: ^2.0.2
         version: 2.0.2(tailwindcss@4.3.3)
+      '@openng/optimus-ui-themes':
+        specifier: 2.0.2
+        version: 2.0.2
       '@scalar/nestjs-api-reference':
         specifier: ^1.2.18
         version: 1.2.18

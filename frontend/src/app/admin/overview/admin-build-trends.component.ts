@@ -1,4 +1,3 @@
-import { NgTemplateOutlet } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -7,6 +6,7 @@ import { AppService } from '../../app.service';
 import { resourceFailed, resourceValue } from '../../functions';
 import { injectActiveTranslation } from '../../i18n/active-translation';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { SkeletonListComponent } from '../../table-skeleton/skeleton-list.component';
 import type { BuilderUtilizationRowDto } from '../../stats/charts/builds/chart-builder-utilization/chart-builder-utilization.component';
 import type { FlakyPackageRow } from '../../stats/charts/builds/chart-flaky-packages/chart-flaky-packages.component';
 import { AdminBarListComponent, type BarRow } from './admin-bar-list.component';
@@ -19,7 +19,7 @@ const PERCENT = 100;
 
 @Component({
   selector: 'chaotic-admin-build-trends',
-  imports: [AdminBarListComponent, LoadErrorComponent, NgTemplateOutlet, RouterLink, TranslocoDirective],
+  imports: [AdminBarListComponent, LoadErrorComponent, RouterLink, SkeletonListComponent, TranslocoDirective],
   template: `
     <ng-container *transloco="let t; prefix: 'admin.overview.buildTrends'">
       <section class="chaotic-card h-full" aria-labelledby="overview-flaky-title">
@@ -29,9 +29,13 @@ const PERCENT = 100;
           <a class="chaotic-card__link" routerLink="/stats/insights">{{ t('insightsLink') }}</a>
         </header>
         @if (flakyLoading()) {
-          <ng-container *ngTemplateOutlet="skeleton" />
+          <chaotic-skeleton-list [rows]="skeletonRows" />
         } @else if (flakyFailed()) {
-          <chaotic-load-error [message]="t('flaky.loadError')" (retry)="flakyResource.reload()" />
+          <chaotic-load-error
+            [message]="t('flaky.loadError')"
+            [error]="flakyResource.error()"
+            (retry)="flakyResource.reload()"
+          />
         } @else if (flakyRows().length === 0) {
           <p class="chaotic-card__empty">{{ t('flaky.empty') }}</p>
         } @else {
@@ -46,23 +50,19 @@ const PERCENT = 100;
           <a class="chaotic-card__link" routerLink="/stats/insights">{{ t('insightsLink') }}</a>
         </header>
         @if (builderLoading()) {
-          <ng-container *ngTemplateOutlet="skeleton" />
+          <chaotic-skeleton-list [rows]="skeletonRows" />
         } @else if (builderFailed()) {
-          <chaotic-load-error [message]="t('builders.loadError')" (retry)="builderResource.reload()" />
+          <chaotic-load-error
+            [message]="t('builders.loadError')"
+            [error]="builderResource.error()"
+            (retry)="builderResource.reload()"
+          />
         } @else if (builderRows().length === 0) {
           <p class="chaotic-card__empty">{{ t('builders.empty', { days: builderWindowDays }) }}</p>
         } @else {
           <chaotic-admin-bar-list [rows]="builderRows()" />
         }
       </section>
-
-      <ng-template #skeleton>
-        <ul class="chaotic-mini-list" aria-hidden="true">
-          @for (row of skeletonRows; track row) {
-            <li><span class="chaotic-skeleton h-4 w-full"></span></li>
-          }
-        </ul>
-      </ng-template>
     </ng-container>
   `,
   styles: `
@@ -72,7 +72,7 @@ const PERCENT = 100;
 
     .trend-window {
       font-size: 0.75rem;
-      color: var(--ctp-mocha-overlay1);
+      color: var(--chaotic-fg-faint);
     }
   `,
 })

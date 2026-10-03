@@ -6,8 +6,8 @@
   flex: none;
   width: 1.75rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: var(--chaotic-weight-semibold);
   font-variant-numeric: tabular-nums;
   text-align: right;
-  color: var(--ctp-mocha-overlay1);
+  color: var(--chaotic-fg-faint);
 }

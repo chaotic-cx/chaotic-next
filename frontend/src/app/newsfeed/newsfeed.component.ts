@@ -1,12 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { httpResource } from '@angular/common/http';
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { MessageToastService } from '@garudalinux/core';
-import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { Component, computed, signal } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
 import { Panel } from '@openng/optimus-ui/panel';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { resourceValue } from '../functions';
+import { LoadErrorComponent } from '../load-error/load-error.component';
+import { SlowLoadingHintComponent } from '../ui-states/slow-loading-hint.component';
 import { Message } from './interfaces';
 
 const INITIAL_VISIBLE_NEWS = 3;
@@ -14,16 +16,24 @@ const NEWS_INCREMENT = 3;
 
 @Component({
   selector: 'chaotic-newsfeed',
-  imports: [CommonModule, Panel, Button, PrimeTemplate, TranslocoDirective],
+  imports: [
+    CommonModule,
+    Panel,
+    Button,
+    PrimeTemplate,
+    TranslocoDirective,
+    LoadErrorComponent,
+    EmptyStateComponent,
+    SlowLoadingHintComponent,
+  ],
   templateUrl: './newsfeed.component.html',
   styleUrl: './newsfeed.component.css',
-  providers: [MessageToastService],
 })
 export class NewsfeedComponent {
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly transloco = inject(TranslocoService);
+  protected readonly newsResource = httpResource<Message[]>(() => ({ url: '/news.json' }));
 
-  private readonly newsResource = httpResource<Message[]>(() => ({ url: '/news.json' }));
+  protected readonly loading = computed(() => this.newsResource.isLoading() && !this.newsResource.hasValue());
+  protected readonly skeletonPanels = Array.from({ length: INITIAL_VISIBLE_NEWS });
 
   readonly newsList = computed<{ data: Message; html: string }[]>(() => {
     const news = resourceValue(this.newsResource);
@@ -45,17 +55,6 @@ export class NewsfeedComponent {
 
   showMore() {
     this.visibleCount.update((count) => count + NEWS_INCREMENT);
-  }
-
-  constructor() {
-    effect(() => {
-      if (this.newsResource.error()) {
-        this.messageToastService.error(
-          this.transloco.translate('common.error'),
-          this.transloco.translate('newsfeed.fetchFailed'),
-        );
-      }
-    });
   }
 
   entityToHtml(message: Message): string {

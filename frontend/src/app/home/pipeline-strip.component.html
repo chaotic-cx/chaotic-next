@@ -13,6 +13,7 @@
       <span class="sr-only">{{ sseConnected() ? t('live') : t('notLive') }}</span>
       {{ t('title') }}
     </h2>
+    <chaotic-stale-notice class="mr-auto" />
     <a class="pipeline-strip__more" routerLink="/status">
       {{ t('openStatus') }}
       <i class="pi pi-arrow-right" aria-hidden="true"></i>
@@ -24,7 +25,11 @@
       <div class="pipeline-stage__head">
         <span class="pipeline-stage__label">{{ t('queued') }}</span>
         <span class="pipeline-stage__count">
-          {{ buildStatusService.loadingQueue() ? '–' : buildStatusService.waitingQueue().length }}
+          @if (buildStatusService.queueCountKnown()) {
+            {{ buildStatusService.waitingQueue().length }}
+          } @else {
+            <chaotic-unknown-value />
+          }
         </span>
       </div>
       @if (buildStatusService.loadingQueue()) {
@@ -37,9 +42,13 @@
         <ul class="pipeline-stage__list">
           @for (pkg of waiting(); track pkg.rawName) {
             <li class="pipeline-row">
-              <a class="pipeline-row__name" [routerLink]="['/stats/search']" [queryParams]="{ search: pkg.name }">{{
-                pkg.name
-              }}</a>
+              <a
+                class="pipeline-row__name"
+                [routerLink]="['/stats/search']"
+                [queryParams]="{ search: pkg.name }"
+                [title]="pkg.name"
+                >{{ pkg.name }}</a
+              >
               <span class="pipeline-row__meta">{{ pkg.repo }}</span>
             </li>
           }
@@ -54,7 +63,11 @@
       <div class="pipeline-stage__head">
         <span class="pipeline-stage__label">{{ t('building') }}</span>
         <span class="pipeline-stage__count">
-          {{ buildStatusService.loadingQueue() ? '–' : buildStatusService.activeQueue().length }}
+          @if (buildStatusService.queueCountKnown()) {
+            {{ buildStatusService.activeQueue().length }}
+          } @else {
+            <chaotic-unknown-value />
+          }
         </span>
       </div>
       @if (buildStatusService.loadingQueue()) {
@@ -67,9 +80,13 @@
         <ul class="pipeline-stage__list">
           @for (pkg of active(); track pkg.rawName) {
             <li class="pipeline-row">
-              <a class="pipeline-row__name" [routerLink]="['/stats/search']" [queryParams]="{ search: pkg.name }">{{
-                pkg.name
-              }}</a>
+              <a
+                class="pipeline-row__name"
+                [routerLink]="['/stats/search']"
+                [queryParams]="{ search: pkg.name }"
+                [title]="pkg.name"
+                >{{ pkg.name }}</a
+              >
               <span class="pipeline-row__meta">{{ pkg.node }}</span>
             </li>
           }
@@ -102,6 +119,7 @@
                 class="pipeline-row__name"
                 [routerLink]="['/stats/search']"
                 [queryParams]="{ search: build.pkgbase.pkgname }"
+                [title]="build.pkgbase.pkgname"
                 >{{ build.pkgbase.pkgname }}</a
               >
               <span class="pipeline-row__meta">{{ build.timestamp | relativeTime }}</span>
@@ -119,7 +137,7 @@
 <ng-template #skeleton>
   <ul class="pipeline-stage__list" aria-hidden="true">
     @for (_ of placeholderRows; track $index) {
-      <li class="pipeline-row pipeline-row--skeleton"></li>
+      <li class="pipeline-row pipeline-row--skeleton chaotic-skeleton"></li>
     }
   </ul>
 </ng-template>

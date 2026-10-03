@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { FlipListDirective } from '../animations/flip-list.directive';
+import { IsoDateTimePipe } from '../pipes/iso-date-time.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import type { PipelineView } from './build-status.service';
 
@@ -21,7 +22,7 @@ const FAILED_DOT_CLASS = 'bg-ctp-red';
 
 @Component({
   selector: 'chaotic-pipeline-list',
-  imports: [DatePipe, RouterLink, Tooltip, RelativeTimePipe, FlipListDirective, TranslocoDirective],
+  imports: [DatePipe, RouterLink, Tooltip, IsoDateTimePipe, RelativeTimePipe, FlipListDirective, TranslocoDirective],
   templateUrl: './pipeline-list.component.html',
 })
 export class PipelineListComponent {
