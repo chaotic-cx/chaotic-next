@@ -89,17 +89,20 @@
 
 .flagged {
   cursor: pointer;
+  background: color-mix(in srgb, var(--catppuccin-color-yellow) 14%, transparent);
   box-shadow: inset 3px 0 0 var(--catppuccin-color-yellow);
 }
 
+.flagged .diff-line__number,
 .flagged .diff-line__marker {
+  background: color-mix(in srgb, var(--catppuccin-color-yellow) 10%, transparent);
   color: var(--chaotic-ink-yellow);
 }
 
 .flagged:hover,
 .flagged:focus-visible,
 .flagged.expanded {
-  background: color-mix(in srgb, var(--catppuccin-color-yellow) 14%, transparent);
+  background: color-mix(in srgb, var(--catppuccin-color-yellow) 24%, transparent);
 }
 
 .diff-findings {

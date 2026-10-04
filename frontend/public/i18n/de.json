@@ -31,9 +31,7 @@
         "title": "AUR-Paket-Scan · Chaotic-AUR",
         "description": "AUR-Pakete auf bösartige PKGBUILD-Inhalte, verdächtige URLs und riskante Maintainer-Wechsel scannen",
         "keywords": "Chaotic-AUR, AUR, Sicherheit, PKGBUILD, Scan"
-      },
-      "virusTotalHint": "Angemeldete Nutzer bekommen zusätzlich einen VirusTotal-Check der Source-URLs.",
-      "signIn": "Anmelden"
+      }
     },
     "status": {
       "done": "Scan abgeschlossen",

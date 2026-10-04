@@ -2,16 +2,18 @@
   @if (chart.failed()) {
     <chaotic-load-error [message]="t('stats.charts.packageResourceStats.loadError')" (retry)="chart.retry()" />
   }
-  <div class="flex flex-col gap-6">
-    @for (entry of charts(); track entry.key) {
-      <chaotic-chart-card
-        [data]="entry.config.data"
-        [options]="entry.config.options"
-        [hasData]="true"
-        [loading]="false"
-        type="line"
-        containerClass="card relative flex h-[16rem] sm:h-[12rem] justify-center"
-      />
-    }
-  </div>
+  @if (charts().length > 0) {
+    <div class="flex flex-col gap-6">
+      @for (entry of charts(); track entry.key) {
+        <chaotic-chart-card
+          [data]="entry.config.data"
+          [options]="entry.config.options"
+          [hasData]="true"
+          [loading]="false"
+          type="line"
+          containerClass="card relative flex h-[16rem] sm:h-[12rem] justify-center"
+        />
+      }
+    </div>
+  }
 </ng-container>

@@ -14,7 +14,8 @@
     <div class="p-tabpanels flex flex-col">
       <div class="stats-toolbar">
         <span class="stats-toolbar__users">
-          <span class="text-ctp-subtext0">{{ t('stats.toolbar.totalUsers') }}</span>
+          <i class="pi pi-users text-ctp-subtext0 sm:hidden" aria-hidden="true"></i>
+          <span class="text-ctp-subtext0 max-sm:sr-only">{{ t('stats.toolbar.totalUsers') }}</span>
           @if (statsService.usersLoading() || statsService.totalUsers() === null) {
             <span class="font-semibold text-ctp-text"><chaotic-unknown-value /></span>
           } @else {

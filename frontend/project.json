@@ -107,7 +107,8 @@
         },
         "development": {
           "buildTarget": "frontend:build-angular:development",
-          "port": 4201
+          "port": 4201,
+          "proxyConfig": "frontend/proxy.conf.json"
         }
       }
     },

@@ -34,7 +34,6 @@
 
 .stats-toolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
@@ -43,13 +42,19 @@
 
 .stats-toolbar__users {
   display: inline-flex;
+  flex: none;
   align-items: baseline;
+  padding-inline-start: var(--chaotic-inset);
   gap: 0.5rem;
   font-size: 0.875rem;
 }
 
 .stats-toolbar__filters {
   display: flex;
-  flex-wrap: wrap;
+  min-width: 0;
   gap: 0.5rem;
+}
+
+.stats-toolbar__filters p-select {
+  min-width: 0;
 }

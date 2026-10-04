@@ -27,15 +27,6 @@
       />
     </form>
 
-    @if (!isLoggedIn()) {
-      <p class="aur-scan-hint">
-        {{ t('virusTotalHint') }}
-        <a class="aur-scan-hint__link" [queryParams]="{ returnUrl: '/aur-scan' }" routerLink="/login">{{
-          t('signIn')
-        }}</a>
-      </p>
-    }
-
     @if (!currentPackageName()) {
       <p class="border-t border-(--chaotic-border) px-4 py-4 text-sm text-ctp-subtext0">
         {{ t('intro') }}

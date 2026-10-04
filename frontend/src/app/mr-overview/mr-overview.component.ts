@@ -111,6 +111,9 @@ type MrAction = 'approve' | 'dangerous' | 'hold';
 
 const SKELETON_ROW_COUNT = 6;
 
+// Diffs that render in the same frame as an MR switch, so the first screen shows no placeholder.
+const EAGER_DIFF_COUNT = 3;
+
 const MR_ACTIONS: readonly MrAction[] = ['approve', 'dangerous', 'hold'];
 
 const MR_MENU_ITEM_CLASSES: Record<Exclude<MrAction, 'approve'>, string> = {
@@ -552,6 +555,7 @@ export class MrOverviewComponent implements OnInit {
   /** Display config for a review action button, shared by the mobile and desktop layouts. */
   protected readonly actionStyleClass = MR_ACTION_STYLE_CLASSES;
   protected readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
+  protected readonly eagerDiffCount = EAGER_DIFF_COUNT;
 
   protected actionsFor(mr: MergeRequestWithDiffs): MrAction[] {
     const onHold = mr.labels.includes('hold');

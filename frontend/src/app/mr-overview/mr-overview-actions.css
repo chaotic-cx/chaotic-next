@@ -96,18 +96,9 @@
     padding-inline-start: var(--chaotic-space-md);
   }
 
-  .mr-layout--detail .mr-detail-pane {
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
-  }
-
   .mr-actions {
-    position: fixed;
-    inset-inline: 0;
-    bottom: 0;
-    z-index: var(--chaotic-z-floating);
     flex-wrap: nowrap;
-    padding: var(--chaotic-space-sm) calc(var(--chaotic-inset) + env(safe-area-inset-right))
-      calc(var(--chaotic-space-sm) + env(safe-area-inset-bottom)) calc(var(--chaotic-inset) + env(safe-area-inset-left));
+    padding: var(--chaotic-space-sm) 0;
   }
 }
 
