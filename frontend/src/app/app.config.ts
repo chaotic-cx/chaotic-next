@@ -24,6 +24,7 @@ import { provideI18n } from './i18n/i18n.providers';
 import { HttpRequestInterceptor } from './loading/loading.interceptor';
 import { NotificationService } from './notification/notification.service';
 import { SelectivePreloadStrategy } from './preload.strategy';
+import { provideShellScrollOffset } from './shell-scroll-offset';
 
 /** True when the app runs as an installed PWA (standalone window), not a regular browser tab. */
 function isPwaInstalled(): boolean {
@@ -72,6 +73,7 @@ export const appConfig: ApplicationConfig = {
       }),
       withPreloading(SelectivePreloadStrategy),
     ),
+    provideShellScrollOffset(),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode() && isPwaInstalled(),
       registrationStrategy: 'registerWhenStable:30000',
