@@ -2,6 +2,8 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "assignees": ["dr460nf1r3"],
   "commitMessageAction": "update",
+  "minimumReleaseAge": "1 day",
+  "internalChecksFilter": "strict",
   "extends": [
     "config:base",
     ":gitSignOff",
