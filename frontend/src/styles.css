@@ -614,7 +614,7 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: var(--chaotic-text-sm);
   color: var(--catppuccin-color-text);
 }
@@ -663,7 +663,7 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: var(--chaotic-text-sm);
   font-weight: var(--chaotic-weight-semibold);
   color: var(--catppuccin-color-text);
@@ -1046,7 +1046,7 @@ kbd,
 samp {
   font-style: normal;
   font-weight: var(--chaotic-weight-regular);
-  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-optical-sizing: auto;
 }
 
@@ -1863,7 +1863,7 @@ textarea.p-textarea,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+  font-family: var(--font-mono);
   color: var(--catppuccin-color-text);
 }
 

@@ -146,7 +146,12 @@ const MR_ACTION_STYLE_CLASSES: Record<MrAction, string> = {
     TranslocoDirective,
   ],
   templateUrl: './mr-overview.component.html',
-  styleUrl: './mr-overview.component.css',
+  styleUrls: [
+    './mr-overview.component.css',
+    './mr-overview-list.css',
+    './mr-overview-detail.css',
+    './mr-overview-actions.css',
+  ],
   host: {
     '(document:keydown)': 'onKeydown($event)',
   },

@@ -43,13 +43,13 @@
           @for (pkg of waiting(); track pkg.rawName) {
             <li class="pipeline-row">
               <a
-                class="pipeline-row__name"
+                class="pipeline-row__name truncate"
                 [routerLink]="['/stats/search']"
                 [queryParams]="{ search: pkg.name }"
                 [title]="pkg.name"
                 >{{ pkg.name }}</a
               >
-              <span class="pipeline-row__meta">{{ pkg.repo }}</span>
+              <span class="pipeline-row__meta truncate">{{ pkg.repo }}</span>
             </li>
           }
         </ul>
@@ -81,13 +81,13 @@
           @for (pkg of active(); track pkg.rawName) {
             <li class="pipeline-row">
               <a
-                class="pipeline-row__name"
+                class="pipeline-row__name truncate"
                 [routerLink]="['/stats/search']"
                 [queryParams]="{ search: pkg.name }"
                 [title]="pkg.name"
                 >{{ pkg.name }}</a
               >
-              <span class="pipeline-row__meta">{{ pkg.node }}</span>
+              <span class="pipeline-row__meta truncate">{{ pkg.node }}</span>
             </li>
           }
         </ul>
@@ -116,13 +116,13 @@
             <li class="pipeline-row">
               <span class="pipeline-row__status pi {{ statusIconClass(build.status) }}" aria-hidden="true"></span>
               <a
-                class="pipeline-row__name"
+                class="pipeline-row__name truncate"
                 [routerLink]="['/stats/search']"
                 [queryParams]="{ search: build.pkgbase.pkgname }"
                 [title]="build.pkgbase.pkgname"
                 >{{ build.pkgbase.pkgname }}</a
               >
-              <span class="pipeline-row__meta">{{ build.timestamp | relativeTime }}</span>
+              <span class="pipeline-row__meta truncate">{{ build.timestamp | relativeTime }}</span>
             </li>
           }
         </ul>

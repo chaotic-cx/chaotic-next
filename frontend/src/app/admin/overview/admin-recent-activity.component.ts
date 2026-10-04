@@ -106,7 +106,7 @@ interface ActivityEntry {
     }
 
     .activity-target {
-      font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+      font-family: var(--font-mono);
       font-size: 0.8125rem;
       color: var(--catppuccin-color-text);
     }

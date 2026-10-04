@@ -5,7 +5,7 @@
 .diff {
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.55;
   color: var(--catppuccin-color-text);

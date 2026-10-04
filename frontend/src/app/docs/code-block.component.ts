@@ -84,7 +84,7 @@ const COPIED_LINE_KEYS: CopiedLabelKeys = {
     }
 
     .code-block__language {
-      font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+      font-family: var(--font-mono);
       font-size: 0.6875rem;
       color: var(--chaotic-fg-faint);
     }

@@ -112,7 +112,7 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: var(--chaotic-text-sm);
   color: var(--catppuccin-color-text);
 }

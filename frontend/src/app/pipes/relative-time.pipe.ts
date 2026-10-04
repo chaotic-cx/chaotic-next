@@ -1,5 +1,6 @@
 import { computed, Pipe, PipeTransform, type Signal } from '@angular/core';
-import { translateSignal } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
+import { injectGlobalTranslation } from '../i18n/global-translation';
 import { injectActiveLanguage } from './active-language';
 
 interface RelativeTimeDivision {
@@ -75,7 +76,7 @@ export function formatRelativeTime(
  */
 export function injectRelativeTimeLabels(): Signal<RelativeTimeLabels> {
   const activeLanguage = injectActiveLanguage();
-  const justNow = translateSignal('pipes.relativeTime.justNow');
+  const justNow = injectGlobalTranslation(marker('pipes.relativeTime.justNow'));
 
   return computed(() => ({ locale: activeLanguage(), justNow: justNow() }));
 }

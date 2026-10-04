@@ -5,14 +5,6 @@
   padding-block: 1.5rem 3rem;
 }
 
-@media (min-width: 1024px) {
-  .admin-shell {
-    grid-template-columns: var(--admin-nav-width) minmax(0, 1fr);
-    align-items: start;
-    gap: 2rem;
-  }
-}
-
 .admin-nav {
   position: relative;
   display: flex;
@@ -27,67 +19,21 @@
   scrollbar-width: none;
 }
 
-@media (min-width: 1024px) {
-  .admin-nav {
-    position: sticky;
-    top: 6rem;
-    flex-direction: column;
-    gap: 1.25rem;
-    overflow: visible;
-    padding: 1rem 0.625rem;
-  }
-}
-
 .admin-nav__title {
   display: none;
-}
-
-@media (min-width: 1024px) {
-  .admin-nav__title {
-    display: block;
-    padding-inline: 0.625rem;
-    font-size: 0.9375rem;
-    font-weight: var(--chaotic-weight-semibold);
-    color: var(--catppuccin-color-text);
-  }
 }
 
 .admin-nav__group {
   display: contents;
 }
 
-@media (min-width: 1024px) {
-  .admin-nav__group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-}
-
 .admin-nav__group-label {
   display: none;
-}
-
-@media (min-width: 1024px) {
-  .admin-nav__group-label {
-    display: block;
-    padding: 0 0.625rem 0.25rem;
-    font-size: 0.75rem;
-    font-weight: var(--chaotic-weight-medium);
-    color: var(--chaotic-fg-faint);
-  }
 }
 
 .admin-nav__list {
   display: flex;
   gap: 0.25rem;
-}
-
-@media (min-width: 1024px) {
-  .admin-nav__list {
-    flex-direction: column;
-    gap: 0.125rem;
-  }
 }
 
 .admin-nav__link {
@@ -157,6 +103,48 @@
 }
 
 @media (min-width: 1024px) {
+  .admin-shell {
+    grid-template-columns: var(--admin-nav-width) minmax(0, 1fr);
+    align-items: start;
+    gap: 2rem;
+  }
+
+  .admin-nav {
+    position: sticky;
+    top: 6rem;
+    flex-direction: column;
+    gap: 1.25rem;
+    overflow: visible;
+    padding: 1rem 0.625rem;
+  }
+
+  .admin-nav__title {
+    display: block;
+    padding-inline: 0.625rem;
+    font-size: 0.9375rem;
+    font-weight: var(--chaotic-weight-semibold);
+    color: var(--catppuccin-color-text);
+  }
+
+  .admin-nav__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .admin-nav__group-label {
+    display: block;
+    padding: 0 0.625rem 0.25rem;
+    font-size: 0.75rem;
+    font-weight: var(--chaotic-weight-medium);
+    color: var(--chaotic-fg-faint);
+  }
+
+  .admin-nav__list {
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
   .admin-nav__indicator {
     --indicator-thickness: 3px;
     --indicator-inset: 0.625rem;
