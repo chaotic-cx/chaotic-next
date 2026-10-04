@@ -1,7 +1,7 @@
 @reference '../../styles.css';
 
 .source-viewer {
-  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;

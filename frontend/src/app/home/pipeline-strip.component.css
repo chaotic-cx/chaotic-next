@@ -6,12 +6,6 @@
   padding: 0.75rem var(--chaotic-inset);
 }
 
-@media (min-width: 768px) {
-  .pipeline-strip {
-    padding-block: 1rem;
-  }
-}
-
 .pipeline-strip__header {
   display: flex;
   flex-wrap: wrap;
@@ -52,12 +46,6 @@
   transition: color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-@media (pointer: coarse) {
-  .pipeline-strip__more {
-    min-height: 2.75rem;
-  }
-}
-
 .pipeline-strip__more:hover,
 .pipeline-strip__more:focus-visible {
   color: var(--catppuccin-color-mauve);
@@ -66,27 +54,6 @@
 .pipeline-strip__stages {
   display: grid;
   gap: 0.5rem;
-}
-
-@media (min-width: 768px) {
-  .pipeline-strip__stages {
-    --stage-gap: 1.75rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--stage-gap);
-  }
-
-  .pipeline-stage + .pipeline-stage::before {
-    content: '';
-    position: absolute;
-    top: calc(var(--stage-padding) + var(--stage-count-size) / 2);
-    left: calc(var(--stage-gap) / -2 - var(--stage-border));
-    width: 1rem;
-    height: 1rem;
-    translate: -50% -50%;
-    background: var(--catppuccin-color-surface2);
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 3l5 5-5 5'/%3E%3C/svg%3E")
-      center / contain no-repeat;
-  }
 }
 
 .pipeline-stage {
@@ -104,8 +71,32 @@
 }
 
 @media (min-width: 768px) {
+  .pipeline-strip {
+    padding-block: 1rem;
+  }
+
+  .pipeline-strip__stages {
+    --stage-gap: 1.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--stage-gap);
+  }
+
   .pipeline-stage {
     --stage-padding: 1rem;
+  }
+
+  /* Chevron between stages, drawn by two borders of a rotated square. */
+  .pipeline-stage + .pipeline-stage::before {
+    content: '';
+    position: absolute;
+    top: calc(var(--stage-padding) + var(--stage-count-size) / 2);
+    left: calc(var(--stage-gap) / -2 - var(--stage-border));
+    width: 0.5rem;
+    height: 0.5rem;
+    border: solid var(--catppuccin-color-surface2);
+    border-width: 2px 2px 0 0;
+    translate: -75% -50%;
+    rotate: 45deg;
   }
 }
 
@@ -173,10 +164,7 @@
 .pipeline-row__name {
   min-width: 0;
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   color: var(--catppuccin-color-text);
 }
@@ -187,6 +175,10 @@
 }
 
 @media (pointer: coarse) {
+  .pipeline-strip__more {
+    min-height: 2.75rem;
+  }
+
   .pipeline-row__name {
     /* line-height keeps the ellipsis working while the tap target grows. */
     min-height: 2.75rem;
@@ -197,9 +189,6 @@
 .pipeline-row__meta {
   flex: none;
   max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 0.75rem;
   color: var(--chaotic-fg-faint);
 }

@@ -1,7 +1,8 @@
 import { ChangeDetectorRef, computed, Directive, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { translateSignal } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Table } from '@openng/optimus-ui/table';
+import { injectGlobalTranslation } from './i18n/global-translation';
 import { injectActiveLanguage } from './pipes/active-language';
 
 export interface PageReportValues {
@@ -39,7 +40,7 @@ export function formatPageReport(
 export class TablePageReportDirective {
   private readonly table = inject(Table);
   private readonly changeDetector = inject(ChangeDetectorRef);
-  private readonly template = translateSignal('tablePagination.pageReport');
+  private readonly template = injectGlobalTranslation(marker('tablePagination.pageReport'));
   private readonly language = injectActiveLanguage();
 
   // Same names as the table inputs, so one binding feeds the table and this directive.

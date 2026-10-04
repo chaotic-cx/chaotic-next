@@ -19,7 +19,7 @@
 }
 
 .scan-report__title {
-  font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 1.125rem;
   font-weight: var(--chaotic-weight-semibold);
   color: var(--catppuccin-color-text);
