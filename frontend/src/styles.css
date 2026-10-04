@@ -946,6 +946,16 @@ a.chaotic-row__name:focus-visible {
   --p-overlay-select-border-color: var(--chaotic-border);
   --p-select-overlay-background: var(--chaotic-surface-overlay);
   --p-multiselect-overlay-background: var(--chaotic-surface-overlay);
+
+  --p-autocomplete-background: var(--chaotic-surface);
+  --p-autocomplete-filled-background: var(--chaotic-surface);
+  --p-autocomplete-filled-hover-background: var(--chaotic-surface);
+  --p-autocomplete-filled-focus-background: var(--chaotic-surface);
+  --p-autocomplete-border-color: var(--chaotic-border);
+  --p-autocomplete-dropdown-background: var(--chaotic-surface);
+  --p-autocomplete-overlay-background: var(--chaotic-surface-overlay);
+  --p-autocomplete-overlay-border-color: var(--chaotic-border);
+  --p-autocomplete-overlay-border-radius: var(--chaotic-radius-md);
 }
 
 .p-menu.p-menu-overlay {
@@ -955,9 +965,20 @@ a.chaotic-row__name:focus-visible {
 
 .p-menu.p-menu-overlay,
 .p-select-overlay,
-.p-multiselect-overlay {
+.p-multiselect-overlay,
+.p-autocomplete-overlay {
   backdrop-filter: blur(var(--chaotic-blur));
   -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+/* The overlay takes the width of its widest option; long package names must not push it past the viewport. */
+.p-autocomplete-overlay {
+  max-width: calc(100vw - 2rem);
+}
+
+.p-autocomplete-option {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -1199,6 +1220,7 @@ chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb:hover,
 }
 
 .p-inputtext,
+.p-autocomplete-input,
 .p-select,
 .p-multiselect,
 .p-button,
@@ -1625,11 +1647,6 @@ textarea.p-textarea,
   padding: unset !important;
 }
 
-.p-autocomplete-list {
-  background: var(--catppuccin-color-crust);
-  border-radius: var(--p-autocomplete-border-radius);
-}
-
 .p-menu.row-menu {
   min-width: 13rem;
   border: 1px solid var(--chaotic-border);
@@ -1659,10 +1676,6 @@ textarea.p-textarea,
 .row-menu .row-menu__danger .p-menu-item-label,
 .row-menu .row-menu__danger .p-menu-item-icon {
   color: var(--catppuccin-color-red) !important;
-}
-
-.p-autocomplete-option {
-  background: var(--catppuccin-color-base);
 }
 
 .chaotic-lazy-viewport:not(:has(*)) {

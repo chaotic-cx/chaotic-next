@@ -82,21 +82,12 @@
               <ng-container *ngTemplateOutlet="mrDetail; context: { mr }" />
             }
             @if (selectedMr(); as mr) {
-              @if (!isMobile()) {
-                <ng-container *ngTemplateOutlet="actionBar; context: { mr }" />
-              }
+              <ng-container *ngTemplateOutlet="actionBar; context: { mr }" />
             }
           </div>
         </div>
       }
     </section>
-
-    <!-- Outside the queue surface: its backdrop filter would pin a fixed bar to the surface. -->
-    @if (detailOpen()) {
-      @if (selectedMr(); as mr) {
-        <ng-container *ngTemplateOutlet="actionBar; context: { mr }" />
-      }
-    }
   </div>
 
   <ng-template #actionBar let-mr="mr">
@@ -360,7 +351,7 @@
               <i class="pi pi-file" aria-hidden="true"></i>
               <code>{{ stripPkgPrefix(mr, change.new_path) }}</code>
             </h3>
-            @defer (on viewport; prefetch on idle) {
+            @defer (on viewport; when $index < eagerDiffCount; prefetch on idle) {
               <chaotic-diff-renderer
                 [diff]="change.diff"
                 [findingsByLine]="findingsByLine(mr, change.new_path)"

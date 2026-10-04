@@ -17,23 +17,6 @@
   color: var(--chaotic-fg-faint);
 }
 
-.aur-scan-hint {
-  padding: 0 1rem 1rem;
-  font-size: 0.8125rem;
-  color: var(--chaotic-fg-muted);
-}
-
-.aur-scan-hint__link {
-  color: var(--catppuccin-color-text);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-
-.aur-scan-hint__link:hover,
-.aur-scan-hint__link:focus-visible {
-  color: var(--catppuccin-color-mauve);
-}
-
 .aur-scan-result {
   display: block;
   margin-top: var(--chaotic-space-xl);

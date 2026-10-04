@@ -26,13 +26,14 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { AuthService } from 'ngx-better-auth';
 import { RequestFailure, requestFailure } from '../api-errors';
 import { AppService } from '../app.service';
 import { ChartPackageAverageBuildTimeComponent } from '../stats/charts/packages/chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../stats/charts/packages/chart-package-build-stats/chart-package-build-stats.component';
 import { ChartPackageResourceStatsComponent } from '../stats/charts/packages/chart-package-resource-stats/chart-package-resource-stats.component';
 import { CodeBlockComponent } from '../docs/code-block.component';
-import { preferredScrollBehavior, resourceValue, setPageSeo } from '../functions';
+import { isMobileSignal, preferredScrollBehavior, resourceValue, setPageSeo } from '../functions';
 import { bindRecordTitle } from '../i18n/record-title';
 import { LoadErrorComponent } from '../load-error/load-error.component';
 import { PackageTriggerSourcesComponent } from '../package-trigger-sources/package-trigger-sources.component';
@@ -118,8 +119,12 @@ export class SearchPackageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  private readonly authService = inject(AuthService);
   protected readonly packageStatsService = inject(StatsService);
   protected readonly recentSearches = inject(RecentSearchesService);
+
+  protected readonly isLoggedIn = this.authService.isLoggedIn;
+  protected readonly isMobile = isMobileSignal();
 
   readonly search = input<string>();
 

@@ -50,6 +50,29 @@
   color: var(--chaotic-fg-muted);
 }
 
+/* Two cards per row on phones leave too little width for the row layout, so each card stacks. */
+@media (max-width: 639px) {
+  .about-team {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .about-member {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.875rem 0.625rem;
+    text-align: center;
+  }
+
+  .about-member__name,
+  .about-member__role {
+    overflow-wrap: anywhere;
+  }
+
+  .about-member__github {
+    display: none;
+  }
+}
+
 .about-grid {
   display: grid;
   gap: 1rem;

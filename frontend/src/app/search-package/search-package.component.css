@@ -79,15 +79,35 @@
   color: var(--catppuccin-color-text);
 }
 
+/* Chips stay compact; an invisible hit area extends each button to the 2.75rem touch target. */
 @media (pointer: coarse) {
+  .search-recent__list {
+    gap: 0.5rem;
+  }
+
   .search-recent__open,
+  .search-recent__remove,
   .search-recent__clear {
-    min-height: 2.75rem;
+    position: relative;
+    min-height: 2.25rem;
+  }
+
+  .search-recent__open {
+    padding-inline: 0.75rem 0.375rem;
   }
 
   .search-recent__remove {
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-inline-end: 0;
+  }
+
+  .search-recent__open::after,
+  .search-recent__remove::after,
+  .search-recent__clear::after {
+    content: '';
+    position: absolute;
+    inset: -0.25rem 0;
   }
 }
 
@@ -233,4 +253,13 @@
 .search-intro-icon {
   font-size: 2.5rem;
   color: var(--chaotic-fg-faint);
+}
+
+/* Chart hosts without data hold only comments, so they match :empty and must not add flex gaps. */
+.pkg-charts > :empty {
+  display: none;
+}
+
+.pkg-charts:not(:has(> :not(:empty))) {
+  display: none;
 }
