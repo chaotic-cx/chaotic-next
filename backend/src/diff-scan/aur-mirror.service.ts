@@ -28,7 +28,7 @@ export type MirrorFile = { content: string } | { binary: true };
 @Injectable()
 export class AurMirrorService implements OnModuleInit {
   private ready = false;
-  private syncing = false;
+  private syncInFlight: Promise<void> | null = null;
   private readonly branchFetchedAt = new Map<string, number>();
 
   constructor(
@@ -62,16 +62,21 @@ export class AurMirrorService implements OnModuleInit {
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async sync(): Promise<void> {
-    if (!this.ready || this.syncing) return;
-    this.syncing = true;
+    if (!this.ready) return;
+
+    this.syncInFlight ??= this.fetchAll().finally(() => {
+      this.syncInFlight = null;
+    });
+    await this.syncInFlight;
+  }
+
+  private async fetchAll(): Promise<void> {
     try {
       await this.git(['fetch', '--depth=1', 'origin'], FULL_FETCH_TIMEOUT_MS);
       this.branchFetchedAt.clear();
       this.pino.debug('AUR mirror sync finished');
     } catch (err) {
       this.pino.warn({ err }, 'AUR mirror sync failed');
-    } finally {
-      this.syncing = false;
     }
   }
 
