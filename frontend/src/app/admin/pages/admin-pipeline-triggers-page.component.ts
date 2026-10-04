@@ -64,6 +64,7 @@ const REPO_OPTIONS = [
     <ng-container *transloco="let t">
       <div class="table-container">
         <p-table
+          class="chaotic-stack"
           #pipelineTriggersTable
           [value]="service.pipelineTriggers()?.items ?? []"
           [rows]="pagination.perPage()"
@@ -133,8 +134,8 @@ const REPO_OPTIONS = [
           </ng-template>
           <ng-template pTemplate="body" let-trigger>
             <tr>
-              <td>{{ trigger.id }}</td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ trigger.id }}</td>
+              <td class="stack-title">
                 @if (trigger.pipelineId) {
                   @if (trigger.webUrl) {
                     <a
@@ -152,24 +153,26 @@ const REPO_OPTIONS = [
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td>
+              <td class="stack-sub">
                 <p-tag [value]="trigger.operation" [severity]="trigger.operation === 'None' ? 'secondary' : 'info'" />
               </td>
-              <td>
+              <td class="stack-body">
                 <code class="line-clamp-2 text-sm" [title]="formatInputs(trigger)">{{ formatInputs(trigger) }}</code>
               </td>
-              <td>{{ trigger.ref || missingValue }}</td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pipelineTriggers.columns.ref')">
+                {{ trigger.ref || missingValue }}
+              </td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.commit')">
                 @if (trigger.commitSha) {
                   <code class="text-sm">{{ shortSha(trigger.commitSha) }}</code>
                 } @else {
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.user')">
                 <span class="font-medium">{{ trigger.userName || missingValue }}</span>
               </td>
-              <td>{{ trigger.createdAt | date: 'short' }}</td>
+              <td class="stack-meta">{{ trigger.createdAt | date: 'short' }}</td>
             </tr>
           </ng-template>
           <ng-template #emptymessage>

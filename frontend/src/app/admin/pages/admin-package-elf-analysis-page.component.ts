@@ -93,6 +93,7 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
     <ng-container *transloco="let t">
       <div class="table-container">
         <p-table
+          class="chaotic-stack"
           #elfAnalysisTable
           [value]="service.elfAnalysis()?.items ?? []"
           [rows]="pagination.perPage()"
@@ -166,8 +167,8 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
           </ng-template>
           <ng-template pTemplate="body" let-row>
             <tr>
-              <td>{{ row.id }}</td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ row.id }}</td>
+              <td class="stack-title">
                 <div class="flex flex-col gap-0.5">
                   @if (row.pkgname) {
                     <a
@@ -184,9 +185,11 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
                   <span class="text-xs text-ctp-overlay1">{{ pkgTypeLabel(row.pkgType) }} · #{{ row.pkgId }}</span>
                 </div>
               </td>
-              <td>{{ row.version || missingValue }}</td>
-              <td class="text-ctp-subtext1">{{ t(binaryLabelKey(row)) }}</td>
-              <td>
+              <td class="stack-sub">{{ row.version || missingValue }}</td>
+              <td class="text-ctp-subtext1 stack-meta" [attr.data-label]="t('admin.elfAnalysis.columns.binary')">
+                {{ t(binaryLabelKey(row)) }}
+              </td>
+              <td class="stack-body">
                 <div class="flex flex-col gap-0.5">
                   <span class="inline-flex items-center gap-2">
                     <span
@@ -208,7 +211,7 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
                   }
                 </div>
               </td>
-              <td>{{ row.scannedAt | date: 'short' }}</td>
+              <td class="stack-meta">{{ row.scannedAt | date: 'short' }}</td>
               <td class="cell-actions">
                 <div class="flex items-center justify-end gap-1">
                   <button

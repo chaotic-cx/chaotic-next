@@ -21,3 +21,16 @@
     min-height: 2.75rem;
   }
 }
+
+.chaotic-footer__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--chaotic-space-xs);
+}
+
+.chaotic-footer__icon {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  font-size: 0.875rem;
+}

@@ -29,6 +29,7 @@ import { filter } from 'rxjs';
 import { AppService } from '../app.service';
 import { ClearFiltersComponent } from '../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { FilterBarComponent } from '../filter-bar/filter-bar.component';
 import { castTo, formatCpuTime, formatDuration, packageLogRouteFromUrl } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { LoadErrorComponent } from '../load-error/load-error.component';
@@ -85,6 +86,7 @@ const STATUS_LABEL_KEYS: Record<BuildStatus, string> = {
 @Component({
   selector: 'chaotic-deploy-log',
   imports: [
+    FilterBarComponent,
     TableSkeletonRowsComponent,
     LoadErrorComponent,
     DatePipe,

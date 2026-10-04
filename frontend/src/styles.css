@@ -185,6 +185,17 @@ ng-terminal,
   }
 }
 
+/* Phones: an open review queue MR has a fixed action bar that the back-to-top button would cover. */
+@media (max-width: 767.98px) {
+  body:has(.mr-layout--detail) .p-scrolltop {
+    display: none;
+  }
+
+  body:has(.mr-layout--detail) .chaotic-footer {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* The shell's back-to-top button stays clear of the home indicator and rounded corners. */
 .p-scrolltop.p-scrolltop {
   inset-block-end: calc(env(safe-area-inset-bottom) + 1.25rem);
@@ -380,6 +391,8 @@ ng-terminal,
   --chaotic-surface: color-mix(in srgb, var(--catppuccin-color-mantle) 53%, transparent);
   --chaotic-surface-raised: color-mix(in srgb, var(--catppuccin-color-surface0) 45%, var(--catppuccin-color-mantle));
   --chaotic-surface-overlay: color-mix(in srgb, var(--catppuccin-color-mantle) 94%, transparent);
+  /* Opaque surface for sticky bars. */
+  --chaotic-surface-sticky: color-mix(in srgb, var(--catppuccin-color-mantle) 53%, var(--catppuccin-color-base));
   --chaotic-border: color-mix(in srgb, var(--catppuccin-color-surface1) 55%, transparent);
   --chaotic-shadow:
     0 1px 0 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.25), 0 8px 24px -12px rgb(0 0 0 / 0.45);
@@ -406,6 +419,7 @@ ng-terminal,
   --chaotic-surface: rgb(255 255 255 / 0.58);
   --chaotic-surface-raised: color-mix(in srgb, white 80%, var(--catppuccin-color-base));
   --chaotic-surface-overlay: color-mix(in srgb, white 92%, transparent);
+  --chaotic-surface-sticky: color-mix(in srgb, white 58%, var(--catppuccin-color-base));
   --chaotic-border: color-mix(in srgb, var(--catppuccin-color-surface1) 70%, transparent);
   --chaotic-shadow:
     0 1px 0 0 rgb(255 255 255 / 0.7) inset, 0 1px 2px color-mix(in srgb, var(--catppuccin-color-text) 8%, transparent),
@@ -920,6 +934,32 @@ a.chaotic-row__name:focus-visible {
   outline-offset: var(--chaotic-focus-ring-offset);
 }
 
+/* The theme injects its variables at runtime with `:root`; the doubled `:root` wins over them. */
+:root:root {
+  --p-form-field-background: var(--chaotic-surface);
+  --p-form-field-filled-background: var(--chaotic-surface);
+  --p-form-field-border-color: var(--chaotic-border);
+  --p-form-field-border-radius: var(--chaotic-radius-md);
+  --p-overlay-select-border-radius: var(--chaotic-radius-md);
+
+  --p-overlay-select-background: var(--chaotic-surface-overlay);
+  --p-overlay-select-border-color: var(--chaotic-border);
+  --p-select-overlay-background: var(--chaotic-surface-overlay);
+  --p-multiselect-overlay-background: var(--chaotic-surface-overlay);
+}
+
+.p-menu.p-menu-overlay {
+  border-color: var(--chaotic-border);
+  background: var(--chaotic-surface-overlay);
+}
+
+.p-menu.p-menu-overlay,
+.p-select-overlay,
+.p-multiselect-overlay {
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
 /*
  * Form fields already turn their border mauve on focus. An inset shadow thickens that border
  * instead of adding a second, offset ring around it.
@@ -1159,6 +1199,8 @@ chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb:hover,
 }
 
 .p-inputtext,
+.p-select,
+.p-multiselect,
 .p-button,
 .p-panel,
 .p-tabs,
@@ -1184,8 +1226,217 @@ p-scroll-top {
   @apply mx-auto;
 }
 
+/* Keeps absolute cell content such as .sr-only inside the scroller, which would otherwise widen the card. */
 .p-datatable-table-container {
+  position: relative;
   overflow-x: auto;
+}
+
+.p-paginator {
+  container-type: inline-size;
+}
+
+@container (max-width: 36rem) {
+  .p-paginator-content {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: var(--chaotic-space-2xs);
+  }
+
+  .p-paginator-first,
+  .p-paginator-last,
+  .p-paginator-pages {
+    display: none !important;
+  }
+
+  .p-paginator-current {
+    margin-inline-end: auto;
+    padding-inline: 0;
+    font-size: var(--chaotic-text-sm);
+    white-space: nowrap;
+  }
+}
+
+@media (pointer: coarse) {
+  .p-paginator .p-paginator-prev,
+  .p-paginator .p-paginator-next,
+  .p-paginator .p-paginator-first,
+  .p-paginator .p-paginator-last,
+  .p-paginator .p-paginator-page {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+.p-drawer.filter-sheet {
+  height: auto;
+  max-height: 85dvh;
+  border-radius: var(--chaotic-radius-lg) var(--chaotic-radius-lg) 0 0;
+}
+
+@media (pointer: coarse) {
+  .p-multiselect.p-multiselect,
+  input.p-inputtext.p-inputtext {
+    min-height: 2.75rem;
+  }
+
+  .p-select-option.p-select-option,
+  .p-multiselect-option.p-multiselect-option {
+    min-height: 2.75rem;
+  }
+}
+
+/* Shown only in the stacked table layout. */
+.stack-only {
+  display: none;
+}
+
+/* Set by `chaoticFillViewport`: the element fills the viewport below its own top edge. */
+@media (min-width: 768px) {
+  .chaotic-fill-viewport {
+    height: calc(100dvh - var(--chaotic-fill-top, 18rem) - var(--chaotic-space-lg));
+    min-height: 24rem;
+  }
+}
+
+/*
+ * `chaotic-stack` tables show rows as blocks on narrow screens. Cell roles: stack-title, stack-sub,
+ * stack-meta (one line, dot-joined), stack-body, stack-hide; `data-label` prefixes a value, `stack-empty` hides it.
+ */
+.chaotic-stack {
+  container: chaotic-stack / inline-size;
+  --chaotic-stack-actions-width: 6.5rem;
+}
+
+@container chaotic-stack (max-width: 40rem) {
+  .chaotic-stack .p-datatable-table,
+  .chaotic-stack .p-datatable-thead,
+  .chaotic-stack .p-datatable-tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .chaotic-stack .p-datatable-thead > tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--chaotic-space-sm);
+    padding: var(--chaotic-space-md) var(--chaotic-inset);
+    border-bottom: 1px solid var(--chaotic-border);
+  }
+
+  .chaotic-stack .p-datatable-thead > tr > th {
+    display: none;
+  }
+
+  .chaotic-stack .p-datatable-thead > tr:not(:has(> th.p-datatable-sortable-column)) {
+    display: none;
+  }
+
+  .chaotic-stack .p-datatable-thead > tr > th.p-datatable-sortable-column {
+    display: block;
+    padding: var(--chaotic-space-xs) var(--chaotic-space-md) !important;
+    border: 1px solid var(--chaotic-border);
+    border-radius: var(--chaotic-radius-pill);
+    min-width: 0 !important;
+  }
+
+  .chaotic-stack .p-datatable-thead > tr > th.p-datatable-column-sorted {
+    border-color: var(--catppuccin-color-mauve);
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--chaotic-space-sm);
+    row-gap: var(--chaotic-space-2xs);
+    padding: var(--chaotic-space-md) var(--chaotic-inset);
+    border-bottom: 1px solid var(--chaotic-border);
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr:last-child {
+    border-bottom: 0;
+  }
+
+  /* The doubled class outranks page-level `:host ::ng-deep` cell padding. */
+  .chaotic-stack.chaotic-stack .p-datatable-tbody > tr > td {
+    display: block;
+    flex: 1 0 100%;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0;
+    background: transparent !important;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-title {
+    order: 0;
+    padding-inline-end: var(--chaotic-stack-actions-width) !important;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-title .truncate {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr:not(:has(> td.cell-actions)) > td.stack-title {
+    padding-inline-end: 0 !important;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-sub {
+    order: 1;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-meta {
+    order: 2;
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+    font-size: var(--chaotic-text-sm);
+    color: var(--catppuccin-color-subtext0);
+  }
+
+  /* Trailing dots, so a wrapped line never starts with one. */
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-meta:has(~ td.stack-meta)::after {
+    content: '·';
+    margin-inline-start: var(--chaotic-space-sm);
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td[data-label]::before {
+    content: attr(data-label) ':';
+    margin-inline-end: var(--chaotic-space-2xs);
+    color: var(--catppuccin-color-subtext0);
+  }
+
+  .chaotic-stack .stack-only {
+    display: inline-block;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-body {
+    order: 3;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-hide,
+  .chaotic-stack .p-datatable-tbody > tr > td:has(> .stack-empty) {
+    display: none;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.cell-actions {
+    position: absolute;
+    inset-block-start: var(--chaotic-space-xs);
+    inset-inline-end: var(--chaotic-inset);
+    width: auto;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td[colspan] {
+    padding: var(--chaotic-space-md) 0 !important;
+  }
+
+  .chaotic-stack .skeleton-row {
+    height: var(--chaotic-stack-row-height, auto) !important;
+    padding-block: var(--chaotic-space-md);
+  }
 }
 
 .p-datatable-thead > tr > th {
@@ -1424,7 +1675,7 @@ textarea.p-textarea,
 }
 
 .chaotic-diff-placeholder {
-  @apply bg-ctp-surface0/40 animate-pulse rounded-lg;
+  @apply bg-ctp-surface0/40 animate-pulse;
   min-height: 8rem;
 }
 

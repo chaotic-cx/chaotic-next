@@ -123,6 +123,7 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
     <ng-container *transloco="let t">
       <div class="table-container">
         <p-table
+          class="chaotic-stack"
           #packagesTable
           [value]="adminService.packages()?.items ?? []"
           [rows]="pagination.perPage()"
@@ -205,18 +206,18 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
           </ng-template>
           <ng-template pTemplate="body" let-pkg>
             <tr>
-              <td>{{ pkg.id }}</td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ pkg.id }}</td>
+              <td class="stack-title">
                 <span class="block max-w-xs truncate" [title]="pkg.pkgname">{{ pkg.pkgname }}</span>
               </td>
-              <td>
+              <td class="stack-sub">
                 @if (pkg.version) {
                   {{ pkg.version }}{{ pkg.pkgrel ? '-' + formatPkgrel(pkg.pkgrel, pkg.bump ?? 0) : '' }}
                 } @else {
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.repo')">
                 @if (pkg.reponame) {
                   <button
                     class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
@@ -229,14 +230,14 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.packages.columns.pkgbase')">
                 @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
                   {{ pkg.pkgbaseName }}
                 } @else {
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.packages.columns.buildClass')">
                 <div class="flex flex-col gap-0.5">
                   @if (pkg.buildClass !== null && pkg.buildClass !== undefined) {
                     <span
@@ -264,7 +265,7 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
                   }
                 </div>
               </td>
-              <td>
+              <td class="stack-meta">
                 @if (pkg.isActive) {
                   <p-tag [value]="t('admin.pages.active')" severity="success" />
                 } @else {

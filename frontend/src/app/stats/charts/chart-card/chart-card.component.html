@@ -59,8 +59,8 @@
             ? t('summaryOne', { title: title(), count: table().rows.length })
             : t('summaryOther', { title: title(), count: table().rows.length })
         "
-        [data]="data()"
-        [options]="options()"
+        [data]="chartData()"
+        [options]="chartOptions()"
         [responsive]="true"
         [type]="type()"
         role="img"

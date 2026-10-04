@@ -90,7 +90,15 @@ export class ChartCardComponent {
 
   protected readonly showTable = signal(false);
 
-  protected readonly table = computed(() => chartTable(this.data()));
+  // The chart redraws on every new object. JSON compares by value; Chart.js mutates what it gets,
+  // so it receives a parsed copy. Chart inputs here hold plain values only.
+  private readonly dataJson = computed(() => JSON.stringify(this.data()));
+  private readonly optionsJson = computed(() => JSON.stringify(this.options()));
+
+  protected readonly chartData = computed<ChartData>(() => JSON.parse(this.dataJson()));
+  protected readonly chartOptions = computed<unknown>(() => JSON.parse(this.optionsJson()));
+
+  protected readonly table = computed(() => chartTable(this.chartData()));
 
   // Falls back to the dataset names when the parent passes no label.
   protected readonly title = computed(() => {

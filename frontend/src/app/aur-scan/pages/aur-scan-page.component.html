@@ -36,14 +36,19 @@
       </p>
     }
 
-    @if (currentPackageName(); as name) {
-      <div class="border-t border-(--chaotic-border) px-4 pt-5" animate.enter="ctp-fade-enter">
-        <chaotic-aur-scan-result [packageName]="name" />
-      </div>
-    } @else {
+    @if (!currentPackageName()) {
       <p class="border-t border-(--chaotic-border) px-4 py-4 text-sm text-ctp-subtext0">
         {{ t('intro') }}
       </p>
     }
   </section>
+
+  @if (currentPackageName(); as name) {
+    <chaotic-aur-scan-result
+      class="aur-scan-result"
+      [packageName]="name"
+      animate.enter="ctp-fade-enter"
+      layout="split"
+    />
+  }
 </div>

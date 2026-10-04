@@ -4,6 +4,7 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
+import { FillViewportDirective } from '../fill-viewport.directive';
 import { vtIndicatorLink } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { LoadErrorComponent } from '../load-error/load-error.component';
@@ -22,7 +23,15 @@ const FAILURE_KEYS: Record<ScanFailureReason, string> = {
 
 @Component({
   selector: 'chaotic-aur-scan-result',
-  imports: [LoadErrorComponent, TagModule, Tooltip, SourceViewerComponent, ScanFindingRowComponent, TranslocoDirective],
+  imports: [
+    LoadErrorComponent,
+    TagModule,
+    Tooltip,
+    SourceViewerComponent,
+    ScanFindingRowComponent,
+    TranslocoDirective,
+    FillViewportDirective,
+  ],
   templateUrl: './aur-scan-result.component.html',
   styleUrl: './aur-scan-result.component.css',
 })
@@ -33,6 +42,9 @@ export class AurScanResultComponent {
 
   readonly packageName = input.required<string>();
   readonly showTitle = input(true);
+
+  readonly layout = input<'stacked' | 'split'>('stacked');
+  protected readonly split = computed(() => this.layout() === 'split');
 
   protected readonly scan = computed(() => this.scanService.scanOf(this.packageName()));
   protected readonly failure = computed(() => this.scanService.failureOf(this.packageName()));

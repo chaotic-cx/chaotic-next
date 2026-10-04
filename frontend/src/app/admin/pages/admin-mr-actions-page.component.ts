@@ -71,6 +71,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
   template: `
     <div class="table-container" *transloco="let t; prefix: 'admin'">
       <p-table
+        class="chaotic-stack"
         #mrActionsTable
         [value]="service.mrActions()?.items ?? []"
         [rows]="pagination.perPage()"
@@ -131,8 +132,8 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         </ng-template>
         <ng-template pTemplate="body" let-action>
           <tr>
-            <td>{{ action.id }}</td>
-            <td>
+            <td class="stack-meta" [attr.data-label]="t('pages.columns.id')">{{ action.id }}</td>
+            <td class="stack-title">
               <a
                 class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
                 [href]="mrUrl(action.mergeRequestIid)"
@@ -142,10 +143,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 !{{ action.mergeRequestIid }}
               </a>
             </td>
-            <td>
+            <td class="stack-sub">
               <p-tag [value]="action.action" [severity]="severity(action)" />
             </td>
-            <td>
+            <td class="stack-meta" [attr.data-label]="t('pages.columns.commit')">
               @if (action.commitSha) {
                 <a
                   class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
@@ -159,7 +160,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
-            <td>
+            <td class="stack-body">
               @if (action.reason) {
                 <span class="block max-w-64 truncate" [pTooltip]="action.reason" tooltipPosition="top">{{
                   action.reason
@@ -168,10 +169,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
-            <td>
+            <td class="stack-meta" [attr.data-label]="t('pages.columns.user')">
               <span class="font-medium">{{ action.userName || missingValue }}</span>
             </td>
-            <td>{{ action.createdAt | date: 'short' }}</td>
+            <td class="stack-meta">{{ action.createdAt | date: 'short' }}</td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>

@@ -2,9 +2,9 @@
 
 .source-viewer {
   font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
-  border-radius: var(--chaotic-radius-sm);
   max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   @apply text-left;
 }
 

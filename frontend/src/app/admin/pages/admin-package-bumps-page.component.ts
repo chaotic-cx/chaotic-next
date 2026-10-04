@@ -77,6 +77,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
   template: `
     <div class="table-container" *transloco="let t; prefix: 'admin'">
       <p-table
+        class="chaotic-stack"
         #bumpsTable
         [value]="service.packageBumps()?.items ?? []"
         [rows]="pagination.perPage()"
@@ -148,8 +149,8 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         </ng-template>
         <ng-template pTemplate="body" let-bump>
           <tr>
-            <td>{{ bump.id }}</td>
-            <td>
+            <td class="stack-meta" [attr.data-label]="t('pages.columns.id')">{{ bump.id }}</td>
+            <td class="stack-title">
               @if (bump.pkgname) {
                 <a
                   class="block max-w-xs cursor-pointer truncate text-ctp-mauve hover:underline focus-visible:underline"
@@ -163,10 +164,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
-            <td>
+            <td class="stack-meta" [attr.data-label]="t('packageBumps.columns.bumpType')">
               <p-tag [value]="bumpTypeLabel(bump.bumpType)" severity="secondary" />
             </td>
-            <td>
+            <td class="stack-sub" [attr.data-label]="t('packageBumps.columns.trigger')">
               @if (bump.triggerName) {
                 <a
                   class="block max-w-xs cursor-pointer truncate text-ctp-mauve hover:underline focus-visible:underline"
@@ -180,17 +181,17 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
-            <td>
+            <td class="stack-meta" [attr.data-label]="t('packageBumps.columns.triggeredBy')">
               @if (bump.bumpType === manualBumpType) {
                 <p-tag [value]="t('packageBumps.bumpTypes.manual')" severity="success" />
               } @else {
                 <p-tag [value]="sourceLabel(bump.triggerFrom)" [severity]="sourceSeverity(bump.triggerFrom)" />
               }
             </td>
-            <td class="text-ctp-subtext">
+            <td class="text-ctp-subtext stack-body">
               <span class="line-clamp-2" [title]="detailsText(bump)">{{ detailsText(bump) }}</span>
             </td>
-            <td>{{ bump.timestamp | date: 'short' }}</td>
+            <td class="stack-meta">{{ bump.timestamp | date: 'short' }}</td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>

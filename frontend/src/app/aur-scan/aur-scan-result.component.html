@@ -1,218 +1,220 @@
-<div class="scan-report" *transloco="let t">
-  <header class="scan-report__summary">
-    <div class="min-w-0">
-      @if (showTitle()) {
-        <h2 class="scan-report__title" [pTooltip]="scanDetails()" tooltipPosition="bottom">{{ packageName() }}</h2>
-      }
-      <p class="scan-report__status" role="status">
-        @if (failure()) {
-          <i class="pi pi-times-circle text-ctp-red" aria-hidden="true"></i>
-          {{ t('aurScan.status.failed') }}
-        } @else {
-          @switch (scan()?.status) {
-            @case ('done') {
-              <i class="pi pi-check-circle text-ctp-green" aria-hidden="true"></i>
-              {{ t('aurScan.status.done') }}
-            }
-            @case ('failed') {
-              <i class="pi pi-times-circle text-ctp-red" aria-hidden="true"></i>
-              {{ t('aurScan.status.failed') }}
-            }
-            @case ('awaiting-vt') {
-              <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
-              {{ t('aurScan.status.awaitingVt') }}
-            }
-            @default {
-              <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
-              {{ t('aurScan.status.scanning') }}
+<div class="scan-report" *transloco="let t" [class.scan-report--split]="split()" [chaoticFillViewport]="split()">
+  <div class="scan-report__overview">
+    <header class="scan-report__summary">
+      <div class="min-w-0">
+        @if (showTitle()) {
+          <h2 class="scan-report__title" [pTooltip]="scanDetails()" tooltipPosition="bottom">{{ packageName() }}</h2>
+        }
+        <p class="scan-report__status" role="status">
+          @if (failure()) {
+            <i class="pi pi-times-circle text-ctp-red" aria-hidden="true"></i>
+            {{ t('aurScan.status.failed') }}
+          } @else {
+            @switch (scan()?.status) {
+              @case ('done') {
+                <i class="pi pi-check-circle text-ctp-green" aria-hidden="true"></i>
+                {{ t('aurScan.status.done') }}
+              }
+              @case ('failed') {
+                <i class="pi pi-times-circle text-ctp-red" aria-hidden="true"></i>
+                {{ t('aurScan.status.failed') }}
+              }
+              @case ('awaiting-vt') {
+                <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
+                {{ t('aurScan.status.awaitingVt') }}
+              }
+              @default {
+                <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
+                {{ t('aurScan.status.scanning') }}
+              }
             }
           }
+        </p>
+        @if (scan()?.pkgTypes?.length) {
+          <ul class="mt-2 flex flex-wrap gap-1.5" [attr.aria-label]="t('aurScan.pkgTypes')">
+            @for (kind of scan()?.pkgTypes; track kind) {
+              @let explanation = presenter.pkgTypeExplanation(kind);
+              <li class="scan-chip" [pTooltip]="explanation ? t(explanation) : undefined" tooltipPosition="top">
+                {{ kind }}
+              </li>
+            }
+          </ul>
         }
-      </p>
-      @if (scan()?.pkgTypes?.length) {
-        <ul class="mt-2 flex flex-wrap gap-1.5" [attr.aria-label]="t('aurScan.pkgTypes')">
-          @for (kind of scan()?.pkgTypes; track kind) {
-            @let explanation = presenter.pkgTypeExplanation(kind);
-            <li class="scan-chip" [pTooltip]="explanation ? t(explanation) : undefined" tooltipPosition="top">
-              {{ kind }}
-            </li>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+        @if (scan(); as current) {
+          @if (current.findings.length > 0) {
+            @let count = presenter.findingCount(current.findings.length);
+            <p-tag [severity]="findingsSeverity()" [value]="t(count.key, count.params)" />
+          } @else if (current.status === 'done') {
+            <p-tag [value]="t('aurScan.noFindings')" severity="success" />
           }
-        </ul>
-      }
-    </div>
-    <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-      @if (scan(); as current) {
-        @if (current.findings.length > 0) {
-          @let count = presenter.findingCount(current.findings.length);
-          <p-tag [severity]="findingsSeverity()" [value]="t(count.key, count.params)" />
-        } @else if (current.status === 'done') {
-          <p-tag [value]="t('aurScan.noFindings')" severity="success" />
-        }
-        @if (flaggedVtCount() > 0) {
-          <p-tag [value]="t('aurScan.vt.flaggedCount', { count: flaggedVtCount() })" severity="warn" />
-        }
-        @if (current.maintainerChange; as change) {
-          @let changeSummary = presenter.maintainerChangeSummary(change);
-          <p-tag
-            [pTooltip]="changeSummary ? t(changeSummary.key, changeSummary.params) : undefined"
-            [value]="t('aurScan.maintainerChange.changed')"
-            severity="danger"
-            tooltipPosition="bottom"
-          />
-        }
-      }
-    </div>
-  </header>
-
-  @if (failure(); as currentFailure) {
-    <chaotic-load-error
-      [message]="t(failureKeys[currentFailure.reason])"
-      [error]="currentFailure.error"
-      (retry)="retryScan()"
-    />
-  }
-
-  @if (scan(); as current) {
-    @if (current.status === 'failed' && current.error) {
-      <p class="scan-section text-sm text-ctp-red">{{ current.error }}</p>
-    }
-
-    @if (current.findings.length > 0) {
-      <section class="scan-section">
-        <h3 class="scan-section__title">{{ t('aurScan.sections.findings') }}</h3>
-        <div class="flex flex-col">
-          @for (finding of current.findings; track finding) {
-            <chaotic-scan-finding-row
-              [finding]="finding"
-              [location]="fileLocation(finding)"
-              (activate)="scrollToFinding(finding)"
+          @if (flaggedVtCount() > 0) {
+            <p-tag [value]="t('aurScan.vt.flaggedCount', { count: flaggedVtCount() })" severity="warn" />
+          }
+          @if (current.maintainerChange; as change) {
+            @let changeSummary = presenter.maintainerChangeSummary(change);
+            <p-tag
+              [pTooltip]="changeSummary ? t(changeSummary.key, changeSummary.params) : undefined"
+              [value]="t('aurScan.maintainerChange.changed')"
+              severity="danger"
+              tooltipPosition="bottom"
             />
           }
-        </div>
-      </section>
+        }
+      </div>
+    </header>
+
+    @if (failure(); as currentFailure) {
+      <chaotic-load-error
+        [message]="t(failureKeys[currentFailure.reason])"
+        [error]="currentFailure.error"
+        (retry)="retryScan()"
+      />
     }
 
-    @if (current.maintainers.length > 0 || current.packageMeta.orphaned || current.maintainerChange) {
-      <section class="scan-section">
-        <h3 class="scan-section__title">{{ t('aurScan.maintainers.title') }}</h3>
-        @if (current.maintainers.length > 0) {
-          <div class="scan-table-scroll">
-            <!-- ui-craft-detect-ignore-next-line -- .scan-table-scroll handles overflow in the component CSS. The short maintainer list needs no sticky header. -->
-            <table class="scan-table">
-              <thead>
-                <tr>
-                  <th scope="col">{{ t('aurScan.maintainers.account') }}</th>
-                  <th class="text-right" scope="col">{{ t('aurScan.maintainers.packages') }}</th>
-                  <th class="text-right" scope="col">{{ t('aurScan.maintainers.since') }}</th>
-                  <th class="text-right" scope="col">{{ t('aurScan.maintainers.votes') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (maintainer of current.maintainers; track maintainer.username) {
-                  <tr>
-                    <td>
-                      <a
-                        class="font-medium text-ctp-text hover:text-ctp-mauve focus-visible:text-ctp-mauve"
-                        [href]="`https://aur.archlinux.org/account/${maintainer.username}`"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >{{ maintainer.username }}</a
-                      >
-                      @if (maintainer.novice) {
-                        <p-tag class="ml-2" [value]="t('aurScan.maintainers.novice')" severity="warn" />
-                      }
-                    </td>
-                    <td class="text-right tabular-nums">{{ maintainer.packagesMaintained }}</td>
-                    <td class="text-right tabular-nums">
-                      {{ presenter.maintainerSince(maintainer) ?? '—' }}
-                    </td>
-                    <td class="text-right tabular-nums">{{ maintainer.totalVotes }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+    @if (scan(); as current) {
+      @if (current.status === 'failed' && current.error) {
+        <p class="scan-section text-sm text-ctp-red">{{ current.error }}</p>
+      }
+
+      @if (current.findings.length > 0) {
+        <section class="scan-section">
+          <h3 class="scan-section__title">{{ t('aurScan.sections.findings') }}</h3>
+          <div class="flex flex-col">
+            @for (finding of current.findings; track finding) {
+              <chaotic-scan-finding-row
+                [finding]="finding"
+                [location]="fileLocation(finding)"
+                (activate)="scrollToFinding(finding)"
+              />
+            }
           </div>
-        }
-        @if (current.maintainerChange; as change) {
-          <p class="mt-3 flex flex-wrap items-center gap-2 text-sm text-ctp-subtext0">
-            @if (presenter.tookOverByNovice(change, current.maintainers)) {
-              <p-tag [value]="t('aurScan.maintainerChange.noviceTookOver')" severity="danger" />
-            } @else {
-              <p-tag [value]="t('aurScan.maintainerChange.changed')" severity="warn" />
-            }
-            @if (presenter.maintainerChangeSummary(change); as changeSummary) {
-              {{ t(changeSummary.key, changeSummary.params) }}
-            }
-          </p>
-        }
-        @if (current.packageMeta.orphaned) {
-          <p class="mt-3 text-sm text-ctp-red">{{ t('aurScan.maintainers.orphaned') }}</p>
-        }
-      </section>
-    }
+        </section>
+      }
 
-    @if (current.status === 'awaiting-vt') {
-      <section class="scan-section">
-        <h3 class="scan-section__title">VirusTotal</h3>
-        <p class="text-sm text-ctp-subtext0">{{ t('aurScan.vt.pending') }}</p>
-      </section>
-    } @else if (current.vtReports.length > 0) {
-      <section class="scan-section">
-        <h3 class="scan-section__title">{{ t('aurScan.vt.indicators') }}</h3>
-        <ul class="flex flex-col gap-3">
-          @for (report of current.vtReports; track report) {
-            <li class="flex flex-col gap-1">
-              <div class="flex min-w-0 items-center gap-2">
-                <p-tag
-                  [severity]="presenter.vtVerdictSeverity[report.verdict]"
-                  [value]="t(presenter.vtVerdictLabels[report.verdict])"
-                />
-                <a
-                  class="min-w-0 break-all text-sm font-medium text-ctp-text hover:text-ctp-mauve focus-visible:text-ctp-mauve"
-                  [href]="vtLink(report)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >{{ report.value }}</a
-                >
-              </div>
-              @let engines = presenter.vtEngines(report);
-              <p class="text-xs text-ctp-subtext0">
-                <code class="break-all">{{ report.context }}</code> · {{ t(engines.key, engines.params) }}
-              </p>
-            </li>
-          }
-        </ul>
-      </section>
-    }
-
-    @if (current.sourceFiles?.length) {
-      <section class="scan-section">
-        <h3 class="scan-section__title">{{ t('aurScan.sections.scannedSources') }}</h3>
-        <div class="flex flex-col gap-2">
-          @for (file of current.sourceFiles; track file.name) {
-            <div class="chaotic-file">
-              <button
-                class="chaotic-disclosure__toggle"
-                [attr.aria-expanded]="isOpen(file.name)"
-                (click)="toggleFile(file.name)"
-                type="button"
-              >
-                <i class="pi text-xs" [class]="isOpen(file.name) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
-                <code>{{ file.name }}</code>
-              </button>
-              @if (isOpen(file.name)) {
-                <chaotic-source-viewer
-                  class="block"
-                  [code]="file.content"
-                  [findingsByLine]="findingsByLine(file.name)"
-                  [scrollToLine]="targetLineFor(file.name)"
-                  (scrolled)="clearScrollTarget()"
-                />
-              }
+      @if (current.maintainers.length > 0 || current.packageMeta.orphaned || current.maintainerChange) {
+        <section class="scan-section">
+          <h3 class="scan-section__title">{{ t('aurScan.maintainers.title') }}</h3>
+          @if (current.maintainers.length > 0) {
+            <div class="scan-table-scroll">
+              <!-- ui-craft-detect-ignore-next-line -- .scan-table-scroll handles overflow in the component CSS. The short maintainer list needs no sticky header. -->
+              <table class="scan-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ t('aurScan.maintainers.account') }}</th>
+                    <th class="text-right" scope="col">{{ t('aurScan.maintainers.packages') }}</th>
+                    <th class="text-right" scope="col">{{ t('aurScan.maintainers.since') }}</th>
+                    <th class="text-right" scope="col">{{ t('aurScan.maintainers.votes') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (maintainer of current.maintainers; track maintainer.username) {
+                    <tr>
+                      <td>
+                        <a
+                          class="font-medium text-ctp-text hover:text-ctp-mauve focus-visible:text-ctp-mauve"
+                          [href]="`https://aur.archlinux.org/account/${maintainer.username}`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          >{{ maintainer.username }}</a
+                        >
+                        @if (maintainer.novice) {
+                          <p-tag class="ml-2" [value]="t('aurScan.maintainers.novice')" severity="warn" />
+                        }
+                      </td>
+                      <td class="text-right tabular-nums">{{ maintainer.packagesMaintained }}</td>
+                      <td class="text-right tabular-nums">
+                        {{ presenter.maintainerSince(maintainer) ?? '—' }}
+                      </td>
+                      <td class="text-right tabular-nums">{{ maintainer.totalVotes }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
             </div>
           }
-        </div>
-      </section>
+          @if (current.maintainerChange; as change) {
+            <p class="mt-3 flex flex-wrap items-center gap-2 text-sm text-ctp-subtext0">
+              @if (presenter.tookOverByNovice(change, current.maintainers)) {
+                <p-tag [value]="t('aurScan.maintainerChange.noviceTookOver')" severity="danger" />
+              } @else {
+                <p-tag [value]="t('aurScan.maintainerChange.changed')" severity="warn" />
+              }
+              @if (presenter.maintainerChangeSummary(change); as changeSummary) {
+                {{ t(changeSummary.key, changeSummary.params) }}
+              }
+            </p>
+          }
+          @if (current.packageMeta.orphaned) {
+            <p class="mt-3 text-sm text-ctp-red">{{ t('aurScan.maintainers.orphaned') }}</p>
+          }
+        </section>
+      }
+
+      @if (current.status === 'awaiting-vt') {
+        <section class="scan-section">
+          <h3 class="scan-section__title">VirusTotal</h3>
+          <p class="text-sm text-ctp-subtext0">{{ t('aurScan.vt.pending') }}</p>
+        </section>
+      } @else if (current.vtReports.length > 0) {
+        <section class="scan-section">
+          <h3 class="scan-section__title">{{ t('aurScan.vt.indicators') }}</h3>
+          <ul class="flex flex-col gap-3">
+            @for (report of current.vtReports; track report) {
+              <li class="flex flex-col gap-1">
+                <div class="flex min-w-0 items-center gap-2">
+                  <p-tag
+                    [severity]="presenter.vtVerdictSeverity[report.verdict]"
+                    [value]="t(presenter.vtVerdictLabels[report.verdict])"
+                  />
+                  <a
+                    class="min-w-0 break-all text-sm font-medium text-ctp-text hover:text-ctp-mauve focus-visible:text-ctp-mauve"
+                    [href]="vtLink(report)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ report.value }}</a
+                  >
+                </div>
+                @let engines = presenter.vtEngines(report);
+                <p class="text-xs text-ctp-subtext0">
+                  <code class="break-all">{{ report.context }}</code> · {{ t(engines.key, engines.params) }}
+                </p>
+              </li>
+            }
+          </ul>
+        </section>
+      }
     }
+  </div>
+
+  @if (scan()?.sourceFiles?.length) {
+    <section class="scan-report__sources">
+      <h3 class="scan-section__title">{{ t('aurScan.sections.scannedSources') }}</h3>
+      @for (file of scan()?.sourceFiles ?? []; track file.name) {
+        <section class="scan-file">
+          <h3 class="scan-file__header">
+            <button
+              class="scan-file__toggle"
+              [attr.aria-expanded]="isOpen(file.name)"
+              (click)="toggleFile(file.name)"
+              type="button"
+            >
+              <i class="pi" [class]="isOpen(file.name) ? 'pi-chevron-down' : 'pi-chevron-right'" aria-hidden="true"></i>
+              <code>{{ file.name }}</code>
+            </button>
+          </h3>
+          @if (isOpen(file.name)) {
+            <chaotic-source-viewer
+              class="block"
+              [code]="file.content"
+              [findingsByLine]="findingsByLine(file.name)"
+              [scrollToLine]="targetLineFor(file.name)"
+              (scrolled)="clearScrollTarget()"
+            />
+          }
+        </section>
+      }
+    </section>
   }
 </div>
