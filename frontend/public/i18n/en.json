@@ -291,7 +291,10 @@
     "failedCopyingToClipboard": "Failed copying to clipboard",
     "clearFilters": "Clear filters",
     "actions": "Actions",
-    "all": "All"
+    "all": "All",
+    "filters": "Filters",
+    "filtersActive": "Filters active",
+    "showResults": "Show results"
   },
   "deployLog": {
     "title": "Deployments",
@@ -686,16 +689,12 @@
       "tooltip": "A new merge request has arrived and needs review. Click to refresh.",
       "refresh": "Refresh merge requests"
     },
-    "tabs": {
+    "groups": {
       "aur": "AUR updates",
       "packages": "Package updates"
     },
     "onHold": "On hold",
-    "empty": {
-      "aur": "No open AUR update requests found.",
-      "packages": "No open package update requests found.",
-      "hold": "No merge requests on hold."
-    },
+    "empty": "No merge requests wait for a review.",
     "loading": "Loading merge requests",
     "loadError": "Could not load merge requests from GitLab.",
     "refreshFailed": "Could not refresh the merge requests. The list shows the last loaded state.",
@@ -782,7 +781,13 @@
         "title": "No permission",
         "message": "Your account is not allowed to review merge requests."
       }
-    }
+    },
+    "listLabel": "Merge requests",
+    "backToList": "All merge requests",
+    "keyboardHint": "Press j and k to move through the queue.",
+    "more": "More",
+    "previousMr": "Previous merge request",
+    "nextMr": "Next merge request"
   },
   "routes": {
     "titleFormat": "{{page}} · Chaotic-AUR",

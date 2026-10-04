@@ -28,6 +28,7 @@ import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
 import { ClearFiltersComponent } from '../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { FilterBarComponent } from '../filter-bar/filter-bar.component';
 import { castTo, setPageSeo } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { LoadErrorComponent } from '../load-error/load-error.component';
@@ -66,6 +67,7 @@ import { PackageListService } from './package-list.service';
     Tooltip,
     ColumnVisibilityComponent,
     ClearFiltersComponent,
+    FilterBarComponent,
     EmptyStateComponent,
     TablePageReportDirective,
     TranslocoDirective,

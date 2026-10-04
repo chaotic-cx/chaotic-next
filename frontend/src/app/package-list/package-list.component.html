@@ -3,6 +3,7 @@
 
   <div class="table-container" animate.enter="ctp-fade-enter">
     <p-table
+      class="chaotic-stack"
       id="pkgTable"
       #pkgTable
       [value]="packageListService.packageList()"
@@ -22,37 +23,44 @@
       chaoticPageReport
     >
       <ng-template #caption>
-        <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-          <div class="flex flex-wrap items-center gap-2.5 sm:mr-auto">
+        <div class="flex flex-col gap-2.5 md:flex-row md:flex-nowrap md:items-center">
+          <div class="hidden flex-wrap items-center gap-2.5 md:mr-auto md:flex">
             <chaotic-column-toggle [columns]="packageColumns()" tableKey="package-list-table" />
+            <chaotic-clear-filters [active]="filtersActive()" (clear)="clear(pkgTable)" />
           </div>
-          <p-select
-            class="w-full sm:w-40"
-            [options]="packageListService.repos() ?? []"
-            [ngModel]="packageListService.repoFilter()"
-            [placeholder]="t('allRepos')"
-            [ariaLabel]="t('repoFilterLabel')"
-            (ngModelChange)="onRepoFilter($event)"
-            optionLabel="name"
-            optionValue="id"
-            showClear
-            appendTo="body"
-          />
-          <chaotic-clear-filters [active]="filtersActive()" (clear)="clear(pkgTable)" />
-          <p-iconfield class="w-full sm:w-64" iconPosition="left">
-            <p-inputicon>
-              <i class="pi pi-search" aria-hidden="true"></i>
-            </p-inputicon>
-            <input
-              class="w-full"
-              #searchInput
-              [formField]="searchForm.query"
-              [placeholder]="t('searchPlaceholder')"
-              [attr.aria-label]="t('searchLabel')"
-              pInputText
-              type="text"
-            />
-          </p-iconfield>
+          <chaotic-filter-bar [active]="filtersActive()" (clear)="clear(pkgTable)">
+            <ng-template #filters let-placement>
+              @if (placement === 'sheet') {
+                <chaotic-column-toggle [columns]="packageColumns()" tableKey="package-list-table" />
+              }
+              <p-select
+                class="w-full md:w-40"
+                [options]="packageListService.repos() ?? []"
+                [ngModel]="packageListService.repoFilter()"
+                [placeholder]="t('allRepos')"
+                [ariaLabel]="t('repoFilterLabel')"
+                (ngModelChange)="onRepoFilter($event)"
+                optionLabel="name"
+                optionValue="id"
+                showClear
+                appendTo="body"
+              />
+            </ng-template>
+            <p-iconfield class="w-full" iconPosition="left">
+              <p-inputicon>
+                <i class="pi pi-search" aria-hidden="true"></i>
+              </p-inputicon>
+              <input
+                class="w-full"
+                #searchInput
+                [formField]="searchForm.query"
+                [placeholder]="t('searchPlaceholder')"
+                [attr.aria-label]="t('searchLabel')"
+                pInputText
+                type="text"
+              />
+            </p-iconfield>
+          </chaotic-filter-bar>
         </div>
       </ng-template>
       <ng-template #header>
@@ -123,21 +131,21 @@
         @if (typed(unTypedPkg); as pkg) {
           <tr [class.text-ctp-subtext0]="!pkg.isActive">
             @if (columnVisibility.isVisible('package-list-table', 'name')) {
-              <td>
+              <td class="stack-title">
                 <span class="block max-w-xs truncate font-mono text-[0.8125rem] font-semibold" [title]="pkg.pkgname">{{
                   pkg.pkgname
                 }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'version')) {
-              <td>
+              <td class="stack-sub">
                 <span class="font-mono text-xs break-all text-ctp-subtext1">{{
                   `${pkg.version}${pkg.pkgrel ? `-${formatPkgrel(pkg.pkgrel, pkg.bump ?? 0)}` : ''}`
                 }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'lastUpdated')) {
-              <td>
+              <td class="stack-meta">
                 <time
                   class="align-middle"
                   [attr.datetime]="pkg.lastUpdated | isoDateTime"
@@ -149,7 +157,7 @@
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'buildClass')) {
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('columns.buildClass')">
                 @if (pkg.buildClass !== null && pkg.buildClass !== undefined) {
                   <span class="align-middle" [pTooltip]="t('buildClassTooltip')" tooltipPosition="top">
                     {{ pkg.buildClass | buildClass }}
@@ -160,7 +168,7 @@
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'pkgbaseName')) {
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('columns.pkgbaseName')">
                 @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
                   <span class="align-middle">{{ pkg.pkgbaseName }}</span>
                 } @else {
@@ -169,7 +177,7 @@
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'description')) {
-              <td>
+              <td class="stack-body">
                 @if (pkg.metadata?.desc; as desc) {
                   <span class="line-clamp-2 text-ctp-subtext1" [title]="desc">{{ desc }}</span>
                 } @else {
@@ -178,7 +186,7 @@
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'homepage')) {
-              <td>
+              <td class="stack-body">
                 @if (pkg.metadata?.url; as url) {
                   <a
                     class="block max-w-56 truncate text-ctp-mauve hover:underline focus-visible:underline"
@@ -194,7 +202,7 @@
               </td>
             }
             @if (columnVisibility.isVisible('package-list-table', 'repo')) {
-              <td>
+              <td class="stack-meta">
                 <span class="align-middle">{{ pkg.reponame }}</span>
               </td>
             }

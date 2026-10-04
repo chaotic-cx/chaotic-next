@@ -14,9 +14,9 @@ export interface ColumnDef {
   selector: 'chaotic-column-toggle',
   imports: [MultiSelectModule, FormsModule, TranslocoDirective],
   template: `
-    <div class="hidden sm:block" *transloco="let t; prefix: 'tableColumns'">
+    <div *transloco="let t; prefix: 'tableColumns'">
       <p-multi-select
-        class="sm:w-40"
+        class="w-full md:w-40"
         [(ngModel)]="selected"
         [options]="columns()"
         [maxSelectedLabels]="0"

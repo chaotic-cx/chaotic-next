@@ -69,6 +69,7 @@ function archPackageConflictFields(pkg: ArchPackage): Record<string, unknown> {
     <ng-container *transloco="let t">
       <div class="table-container">
         <p-table
+          class="chaotic-stack"
           #archPackagesTable
           [value]="service.archPackages()?.items ?? []"
           [rows]="pagination.perPage()"
@@ -116,18 +117,20 @@ function archPackageConflictFields(pkg: ArchPackage): Record<string, unknown> {
           </ng-template>
           <ng-template pTemplate="body" let-pkg>
             <tr>
-              <td>{{ pkg.id }}</td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ pkg.id }}</td>
+              <td class="stack-title">
                 <span class="block max-w-xs truncate" [title]="pkg.pkgname">{{ pkg.pkgname }}</span>
               </td>
-              <td>
+              <td class="stack-sub">
                 @if (pkg.version) {
                   {{ pkg.version }}{{ pkg.pkgrel ? '-' + pkg.pkgrel : '' }}
                 } @else {
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td>{{ pkg.arch ?? missingValue }}</td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.arch')">
+                {{ pkg.arch ?? missingValue }}
+              </td>
               <td class="cell-actions">
                 <div class="flex items-center justify-end gap-1">
                   <button

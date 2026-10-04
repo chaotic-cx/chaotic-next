@@ -4,6 +4,7 @@
 
 .diff {
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.8125rem;
   line-height: 1.55;
@@ -71,12 +72,10 @@
 }
 
 .added .word-changed {
-  border-radius: var(--chaotic-radius-sm);
   background: color-mix(in srgb, var(--catppuccin-color-green) 30%, transparent);
 }
 
 .removed .word-changed {
-  border-radius: var(--chaotic-radius-sm);
   background: color-mix(in srgb, var(--catppuccin-color-red) 30%, transparent);
 }
 

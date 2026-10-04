@@ -67,6 +67,7 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
         </div>
         <div class="overflow-x-auto">
           <p-table
+            class="chaotic-stack"
             #brokenTable
             [(selection)]="service.brokenSelection"
             [value]="service.brokenReports()"
@@ -98,13 +99,15 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
             </ng-template>
             <ng-template pTemplate="body" let-report>
               <tr [pSelectableRow]="report">
-                <td><p-tableCheckbox [value]="report" /></td>
-                <td>
+                <td class="stack-meta"><p-tableCheckbox [value]="report" /></td>
+                <td class="stack-title">
                   <span class="block max-w-xs truncate" [title]="report.pkgname">{{ report.pkgname }}</span>
                 </td>
-                <td>{{ report.version || missingValue }}</td>
-                <td>{{ report.repoName || missingValue }}</td>
-                <td class="text-ctp-subtext">
+                <td class="stack-sub">{{ report.version || missingValue }}</td>
+                <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.repo')">
+                  {{ report.repoName || missingValue }}
+                </td>
+                <td class="text-ctp-subtext stack-body">
                   <span class="line-clamp-2" [title]="report.reasons.join(', ')">{{
                     report.reasons.join(', ') || missingValue
                   }}</span>

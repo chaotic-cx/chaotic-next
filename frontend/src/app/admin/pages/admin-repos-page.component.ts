@@ -79,7 +79,7 @@ function repoConflictFields(repo: Repo): Record<string, unknown> {
   template: `
     <ng-container *transloco="let t">
       <div class="table-container">
-        <p-table [value]="filteredRepos()" dataKey="id">
+        <p-table class="chaotic-stack" [value]="filteredRepos()" dataKey="id">
           <ng-template #caption>
             <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
               <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
@@ -126,19 +126,21 @@ function repoConflictFields(repo: Repo): Record<string, unknown> {
           </ng-template>
           <ng-template pTemplate="body" let-repo>
             <tr>
-              <td>{{ repo.id }}</td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ repo.id }}</td>
+              <td class="stack-title">
                 <span class="block max-w-xs truncate" [title]="repo.name">{{ repo.name }}</span>
               </td>
-              <td>{{ repo.gitRef || missingValue }}</td>
-              <td class="text-ctp-subtext">
+              <td class="stack-meta" [attr.data-label]="t('admin.repos.fields.gitRef')">
+                {{ repo.gitRef || missingValue }}
+              </td>
+              <td class="text-ctp-subtext stack-body">
                 @if (repo.repoUrl) {
                   <span class="block max-w-md truncate" [title]="repo.repoUrl">{{ repo.repoUrl }}</span>
                 } @else {
                   {{ missingValue }}
                 }
               </td>
-              <td>
+              <td class="stack-meta">
                 @if (repo.isActive) {
                   <p-tag [value]="t('admin.pages.active')" severity="success" />
                 } @else {

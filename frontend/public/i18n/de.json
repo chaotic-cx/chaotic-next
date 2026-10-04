@@ -291,7 +291,10 @@
     "failedCopyingToClipboard": "Kopieren in die Zwischenablage fehlgeschlagen",
     "clearFilters": "Filter zurücksetzen",
     "actions": "Aktionen",
-    "all": "Alle"
+    "all": "Alle",
+    "filters": "Filter",
+    "filtersActive": "Filter aktiv",
+    "showResults": "Ergebnisse anzeigen"
   },
   "deployLog": {
     "title": "Deployments",
@@ -686,16 +689,12 @@
       "tooltip": "Ein neuer Merge Request braucht ein Review. Zum Aktualisieren klicken.",
       "refresh": "Merge Requests aktualisieren"
     },
-    "tabs": {
+    "groups": {
       "aur": "AUR-Updates",
       "packages": "Paket-Updates"
     },
     "onHold": "On Hold",
-    "empty": {
-      "aur": "Keine offenen AUR-Update-Requests.",
-      "packages": "Keine offenen Paket-Update-Requests.",
-      "hold": "Keine Merge Requests auf Hold."
-    },
+    "empty": "Keine Merge Requests warten auf ein Review.",
     "loading": "Merge Requests werden geladen",
     "loadError": "Merge Requests konnten nicht von GitLab geladen werden.",
     "refreshFailed": "Die Merge Requests konnten nicht aktualisiert werden. Die Liste zeigt den zuletzt geladenen Stand.",
@@ -782,7 +781,13 @@
         "title": "Keine Berechtigung",
         "message": "Dein Account darf keine Merge Requests reviewen."
       }
-    }
+    },
+    "listLabel": "Merge Requests",
+    "backToList": "Alle Merge Requests",
+    "keyboardHint": "Mit j und k durch die Liste wechseln.",
+    "more": "Mehr",
+    "previousMr": "Vorheriger Merge Request",
+    "nextMr": "Nächster Merge Request"
   },
   "routes": {
     "titleFormat": "{{page}} · Chaotic-AUR",

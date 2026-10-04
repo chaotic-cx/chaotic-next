@@ -81,6 +81,7 @@ function builderConflictFields(builder: Builder): Record<string, unknown> {
     <ng-container *transloco="let t">
       <div class="table-container">
         <p-table
+          class="chaotic-stack"
           #buildersTable
           [value]="service.builders()?.items ?? []"
           [rows]="pagination.perPage()"
@@ -142,19 +143,21 @@ function builderConflictFields(builder: Builder): Record<string, unknown> {
           </ng-template>
           <ng-template pTemplate="body" let-builder>
             <tr>
-              <td>{{ builder.id }}</td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ builder.id }}</td>
+              <td class="stack-title">
                 <span class="block max-w-xs truncate" [title]="builder.name">{{ builder.name }}</span>
               </td>
-              <td class="text-ctp-subtext">
+              <td class="text-ctp-subtext stack-body">
                 @if (builder.description) {
                   <span class="line-clamp-2" [title]="builder.description">{{ builder.description }}</span>
                 } @else {
                   {{ missingValue }}
                 }
               </td>
-              <td>{{ builder.builderClass || missingValue }}</td>
-              <td>
+              <td class="stack-meta" [attr.data-label]="t('admin.builders.columns.class')">
+                {{ builder.builderClass || missingValue }}
+              </td>
+              <td class="stack-meta">
                 @if (builder.isActive) {
                   <p-tag [value]="t('admin.pages.active')" severity="success" />
                 } @else {
