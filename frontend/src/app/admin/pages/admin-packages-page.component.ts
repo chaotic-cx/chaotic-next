@@ -1,3 +1,4 @@
+import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, FormField, pattern, required, submit } from '@angular/forms/signals';
@@ -14,7 +15,7 @@ import type { BuildClassSuggestion } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { ConfirmationService, type MenuItem } from '@openng/optimus-ui/api';
-import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
+import { AutoComplete } from '@openng/optimus-ui/autocomplete';
 import { Button } from '@openng/optimus-ui/button';
 import { Checkbox } from '@openng/optimus-ui/checkbox';
 import { Dialog } from '@openng/optimus-ui/dialog';
@@ -28,6 +29,7 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AurScanResultComponent } from '../../aur-scan/aur-scan-result.component';
 import { AurScanService, isScanSettled } from '../../aur-scan/aur-scan.service';
+import { createSuggestions } from '../../autocomplete-suggestions';
 import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
@@ -74,6 +76,7 @@ interface PackageFormModel {
   repoId: string;
 }
 
+const MIN_AUR_QUERY_LENGTH = 3;
 const NO_REPO = '0';
 
 // Query value for "show active and inactive packages"; no value means the default filter.
@@ -491,11 +494,11 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
               <p-autoComplete
                 class="w-full"
                 [ngModel]="aurSearchModel().query"
-                [suggestions]="aurSuggestions()"
+                [suggestions]="aurSuggestions.names()"
                 [delay]="AUR_SUGGEST_DEBOUNCE_MS"
                 [placeholder]="t('admin.packages.addDialog.searchPlaceholder')"
                 (ngModelChange)="aurSearchModel.set({ query: $event })"
-                (completeMethod)="searchAurSuggestions($event)"
+                (completeMethod)="aurSuggestions.complete($event)"
                 (onBlur)="confirmAurPackage()"
                 (onSelect)="confirmAurPackage()"
                 inputId="aurPackageName"
@@ -753,9 +756,31 @@ export class AdminPackagesPageComponent {
 
   readonly addAurDialogVisible = signal(false);
   readonly aurPackageName = signal('');
-  readonly aurSuggestions = signal<string[]>([]);
-  readonly isAurMissing = signal(false);
-  readonly isExistingPackage = signal(false);
+  readonly aurSuggestions = createSuggestions({
+    minLength: MIN_AUR_QUERY_LENGTH,
+    request: (query) =>
+      this.aurSearchForm.query().valid() ? this.adminService.getAurSuggestionsRequest(query) : undefined,
+    toNames: (names: string[]) => names,
+  });
+
+  private readonly existingPackageResource = httpResource(() => this.adminService.getPackageUrl(this.aurPackageName()));
+  private readonly aurMatchesResource = httpResource<string[]>(() => {
+    const name = this.aurPackageName();
+
+    return name ? this.adminService.getAurSuggestionsRequest(name) : undefined;
+  });
+
+  private readonly aurChecksPending = computed(
+    () => this.existingPackageResource.isLoading() || this.aurMatchesResource.isLoading(),
+  );
+  readonly isExistingPackage = computed(() => this.existingPackageResource.hasValue());
+  readonly isAurMissing = computed(() => {
+    const name = this.aurPackageName();
+    if (!name || this.aurMatchesResource.isLoading()) return false;
+
+    const matches = this.aurMatchesResource.hasValue() ? this.aurMatchesResource.value() : [];
+    return !matches.includes(name);
+  });
   readonly isAdding = signal(false);
 
   readonly isScanOngoing = computed(() => {
@@ -774,7 +799,7 @@ export class AdminPackagesPageComponent {
   readonly canAddAurPackage = computed(() => {
     const pkg = this.aurPackageName();
     if (!pkg || this.isAdding()) return false;
-    if (this.isExistingPackage() || this.isAurMissing()) return false;
+    if (this.aurChecksPending() || this.isExistingPackage() || this.isAurMissing()) return false;
     return this.scanSettled();
   });
 
@@ -790,23 +815,11 @@ export class AdminPackagesPageComponent {
   openAddAurDialog(): void {
     this.aurSearchModel.set({ query: '' });
     this.aurPackageName.set('');
-    this.aurSuggestions.set([]);
+    this.aurSuggestions.clear();
     this.aurRequestOrigin.set('');
     this.aurRequestReason.set('unset');
     this.aurCustomRequestReason.set('');
-    this.isAurMissing.set(false);
-    this.isExistingPackage.set(false);
     this.addAurDialogVisible.set(true);
-  }
-
-  async searchAurSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
-    const query = event.query.trim();
-    if (query.length < 3 || !this.aurSearchForm.query().valid()) {
-      this.aurSuggestions.set([]);
-      return;
-    }
-    const suggestions = await this.adminService.getAurSuggestions(query);
-    this.aurSuggestions.set(suggestions);
   }
 
   async triggerAddAurPackage(): Promise<void> {
@@ -837,22 +850,12 @@ export class AdminPackagesPageComponent {
   confirmAurPackage(): void {
     const name = this.aurSearchModel().query.trim();
     const isValid = this.aurSearchForm.query().valid();
-    if (!name || name.length < 3 || !isValid) {
+    if (!name || name.length < MIN_AUR_QUERY_LENGTH || !isValid) {
       this.aurPackageName.set('');
-      this.isAurMissing.set(false);
-      this.isExistingPackage.set(false);
       return;
     }
 
-    if (this.aurPackageName() === name) return;
-
     this.aurPackageName.set(name);
-    void Promise.all([this.adminService.packageExists(name), this.adminService.getAurSuggestions(name)]).then(
-      ([existsInChaotic, suggestions]) => {
-        this.isExistingPackage.set(existsInChaotic);
-        this.isAurMissing.set(!suggestions.includes(name));
-      },
-    );
   }
 
   constructor() {

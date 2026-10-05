@@ -162,13 +162,13 @@ describe('Auth & Protected Endpoints (e2e)', () => {
       expect(res.statusCode).toBe(401);
     });
 
-    it('GET /repo/run returns 401 when unauthenticated', async () => {
-      const res = await e2e.inject({ method: 'GET', url: '/repo/run' });
+    it('POST /repo/run returns 401 when unauthenticated', async () => {
+      const res = await e2e.inject({ method: 'POST', url: '/repo/run' });
       expect(res.statusCode).toBe(401);
     });
 
-    it('GET /repo/signal-scan returns 401 when unauthenticated', async () => {
-      const res = await e2e.inject({ method: 'GET', url: '/repo/signal-scan' });
+    it('POST /repo/signal-scan returns 401 when unauthenticated', async () => {
+      const res = await e2e.inject({ method: 'POST', url: '/repo/signal-scan' });
       expect(res.statusCode).toBe(401);
     });
 

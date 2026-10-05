@@ -77,6 +77,7 @@ export class MrOverviewService {
   async loadOpenMrs(): Promise<boolean> {
     try {
       const mergeRequests: MergeRequestWithDiffs[] = await lastValueFrom(
+        // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- callers await each load to decide the new-MR state; SSE and actions patch the list
         this.http.get<MergeRequestWithDiffs[]>(`${this.backendUrl}/gitlab/merge-requests`),
       );
 

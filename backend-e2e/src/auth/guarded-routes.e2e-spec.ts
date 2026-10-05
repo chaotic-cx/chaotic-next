@@ -6,8 +6,8 @@ import { createE2eApp, type E2eApp, type E2eMethod } from '../test/e2e-app';
 const GUARDED_ROUTES: { method: E2eMethod; url: string }[] = [
   { method: 'POST', url: '/api/queue/schedule' },
   { method: 'POST', url: '/api/queue/promote' },
-  { method: 'GET', url: '/repo/run' },
-  { method: 'GET', url: '/repo/signal-scan' },
+  { method: 'POST', url: '/repo/run' },
+  { method: 'POST', url: '/repo/signal-scan' },
   { method: 'GET', url: '/repo/broken' },
   { method: 'POST', url: '/repo/broken/bump' },
   { method: 'POST', url: '/repo/index/arch' },

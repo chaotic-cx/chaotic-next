@@ -51,7 +51,7 @@ export class RepoManagerController {
     void job.catch((err: unknown) => this.pino.error({ err }, `Background ${action} failed`));
   }
 
-  @Get('run')
+  @Post('run')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Trigger a repo manager run.' })
   @ApiNoContentResponse({ description: 'Repo manager run triggered.' })
@@ -59,7 +59,7 @@ export class RepoManagerController {
     this.runInBackground('repo run', this.repoManager.run());
   }
 
-  @Get('signal-scan')
+  @Post('signal-scan')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Trigger a signal scan of the changed Arch packages.' })
   @ApiNoContentResponse({ description: 'Signal scan triggered.' })

@@ -66,6 +66,7 @@ export class NotificationService {
     let subscribed: boolean;
     try {
       const status = await lastValueFrom(
+        // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot check inside the subscription reconcile flow
         this.http.get<SubscriptionStatusDto>(`${this.appConfig.backendUrl}/notifications/subscriptions/me`),
       );
       subscribed = status.subscribed;

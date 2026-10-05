@@ -4,11 +4,12 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
+import { type Package, type Paginated, PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
-import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
+import { AutoComplete } from '@openng/optimus-ui/autocomplete';
 import { map } from 'rxjs';
-import { AppService } from '../app.service';
+import { AppService, pkgnamesInRepo } from '../app.service';
+import { createSuggestions } from '../autocomplete-suggestions';
 import { MATRIX_ROOM_URL } from '../community-links';
 import { parseFocusQuery } from '../functions';
 import { LoadErrorComponent } from '../load-error/load-error.component';
@@ -18,6 +19,9 @@ import { MirrorsService } from '../mirrors/mirrors.service';
 import { NewsfeedComponent } from '../newsfeed/newsfeed.component';
 import { RecentlyAddedComponent } from '../recently-added/recently-added.component';
 import { PipelineStripComponent } from './pipeline-strip.component';
+
+const MIN_SUGGESTION_QUERY_LENGTH = 3;
+const SUGGESTION_REPO = 'chaotic-aur';
 
 @Component({
   selector: 'chaotic-home',
@@ -56,24 +60,11 @@ export class HomeComponent {
     pattern(schemaPath.query, PKGNAME_PATTERN, { message: this.transloco.translate('home.search.invalidName') });
   });
 
-  protected readonly suggestions = signal<string[]>([]);
-  private suggestionGeneration = 0;
-
-  async searchSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
-    const query = event.query.trim();
-    if (query.length < 3) {
-      this.suggestions.set([]);
-      return;
-    }
-    const generation = ++this.suggestionGeneration;
-    try {
-      const names = await this.appService.fetchPkgnameSuggestions(query, 'chaotic-aur');
-      if (generation !== this.suggestionGeneration) return;
-      this.suggestions.set(names);
-    } catch {
-      if (generation === this.suggestionGeneration) this.suggestions.set([]);
-    }
-  }
+  protected readonly suggestions = createSuggestions({
+    minLength: MIN_SUGGESTION_QUERY_LENGTH,
+    request: (query) => this.appService.getPkgnameSuggestionsRequest(query),
+    toNames: (page: Paginated<Package>) => pkgnamesInRepo(page, SUGGESTION_REPO),
+  });
 
   searchPackages(query: string): void {
     void this.router.navigate(['/stats/search'], {

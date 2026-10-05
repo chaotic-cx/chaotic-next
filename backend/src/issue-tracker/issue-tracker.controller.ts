@@ -53,6 +53,8 @@ export class IssueTrackerController {
     @Req() request: RawBodyRequest<FastifyRequest>,
     @Headers('x-github-event') event: string | undefined,
     @Headers('x-hub-signature-256') signature: string | undefined,
+    // GitHub owns the payload shape: the signature check runs first, then safeParse ignores unknown events.
+    // eslint-disable-next-line @dr460nf1r3/require-body-schema -- a schema pipe would reject before the signature check
     @Body() body: unknown,
   ): Promise<void> {
     const rawBody = request.rawBody;

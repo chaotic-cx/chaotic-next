@@ -1,14 +1,13 @@
 import { DecimalPipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { debounce, form, pattern } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PKGNAME_PATTERN } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
-import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
-import { firstValueFrom } from 'rxjs';
+import { AutoComplete } from '@openng/optimus-ui/autocomplete';
 import { AppService } from '../../app.service';
+import { createSuggestions } from '../../autocomplete-suggestions';
 import { setPageSeo } from '../../functions';
 import { TitleComponent } from '../../title/title.component';
 import { AurScanResultComponent } from '../aur-scan-result.component';
@@ -23,7 +22,6 @@ const MIN_QUERY_LENGTH = 3;
   templateUrl: './aur-scan-page.component.html',
 })
 export class AurScanPageComponent {
-  private readonly http = inject(HttpClient);
   private readonly appService = inject(AppService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -44,8 +42,11 @@ export class AurScanPageComponent {
     });
   });
 
-  protected readonly suggestions = signal<string[]>([]);
-  private suggestionGeneration = 0;
+  protected readonly suggestions = createSuggestions({
+    minLength: MIN_QUERY_LENGTH,
+    request: (query) => this.appService.getAurSuggestions(query),
+    toNames: (names: string[]) => names,
+  });
 
   /** Last ?search= value seen by the route effect; guards against re-applying stale URLs. */
   private lastSeenRoutePackage = '';
@@ -56,7 +57,7 @@ export class AurScanPageComponent {
       this.transloco.translate('aurScan.page.seo.description'),
       this.transloco.translate('aurScan.page.seo.keywords'),
     );
-    void this.aurScanService.loadMetrics();
+    this.aurScanService.loadMetrics();
 
     effect(() => {
       const linked = (this.search() ?? '').trim();
@@ -80,23 +81,6 @@ export class AurScanPageComponent {
       const query = (this.searchModel().query ?? '').trim();
       if (!query) this.clearResults();
     });
-  }
-
-  async searchSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
-    const query = event.query.trim();
-    if (query.length < MIN_QUERY_LENGTH) {
-      this.suggestions.set([]);
-      return;
-    }
-    const generation = ++this.suggestionGeneration;
-    try {
-      const request = this.appService.getAurSuggestions(query);
-      const result = await firstValueFrom(this.http.get<string[]>(request.url, { params: request.params }));
-      if (generation !== this.suggestionGeneration) return;
-      this.suggestions.set(result);
-    } catch {
-      if (generation === this.suggestionGeneration) this.suggestions.set([]);
-    }
   }
 
   protected selectPackage(name: string): void {

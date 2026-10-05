@@ -1,5 +1,5 @@
-import { HttpClient } from '@angular/common/http';
-import { inject, Service, signal } from '@angular/core';
+import { HttpClient, httpResource } from '@angular/common/http';
+import { computed, inject, Service, signal, untracked } from '@angular/core';
 import {
   type AurPackageScan,
   type AurScanMetrics,
@@ -34,7 +34,11 @@ export class AurScanService {
 
   readonly scans = signal<ReadonlyMap<string, AurPackageScan>>(new Map());
   readonly failures = signal<ReadonlyMap<string, ScanFailure>>(new Map());
-  readonly metrics = signal<AurScanMetrics | null>(null);
+  private readonly metricsRequested = signal(false);
+  private readonly metricsResource = httpResource<AurScanMetrics>(() =>
+    this.metricsRequested() ? `${this.backendUrl}/gitlab/aur-scan/metrics` : undefined,
+  );
+  readonly metrics = computed(() => (this.metricsResource.hasValue() ? this.metricsResource.value() : null));
 
   private readonly streams = new Map<string, ResilientSseStream>();
 
@@ -62,12 +66,17 @@ export class AurScanService {
     void this.startScan(packageName);
   }
 
-  async loadMetrics(): Promise<void> {
-    try {
-      this.metrics.set(await this.getMetrics());
-    } catch {
-      this.metrics.set(null);
+  /**
+   * The admin pages share this service, so the metrics load only after the scan page asks for them.
+   * Every later visit refreshes them.
+   */
+  loadMetrics(): void {
+    if (untracked(this.metricsRequested)) {
+      this.metricsResource.reload();
+      return;
     }
+
+    this.metricsRequested.set(true);
   }
 
   async startScan(packageName: string): Promise<void> {
@@ -79,7 +88,7 @@ export class AurScanService {
         this.http.post<AurPackageScan>(`${this.backendUrl}/gitlab/aur-scan`, { package: name }),
       );
       this.store(scan);
-      this.metrics.update((m) => (m ? { ...m, total: m.total + 1, anonymous: m.anonymous + 1 } : m));
+      this.countStartedScan();
 
       if (!isScanSettled(scan)) this.openStream(scan.packageName);
     } catch (error) {
@@ -87,6 +96,13 @@ export class AurScanService {
       this.setFailure(name, { reason, error });
       console.error('AUR scan failed:', error);
     }
+  }
+
+  private countStartedScan(): void {
+    if (!this.metricsResource.hasValue()) return;
+
+    const metrics = this.metricsResource.value();
+    this.metricsResource.value.set({ ...metrics, total: metrics.total + 1, anonymous: metrics.anonymous + 1 });
   }
 
   private setFailure(packageName: string, failure: ScanFailure): void {
@@ -131,10 +147,6 @@ export class AurScanService {
 
   private store(scan: AurPackageScan): void {
     this.scans.update((scans) => new Map(scans).set(scanKey(scan.packageName), scan));
-  }
-
-  async getMetrics(): Promise<AurScanMetrics> {
-    return lastValueFrom(this.http.get<AurScanMetrics>(`${this.backendUrl}/gitlab/aur-scan/metrics`));
   }
 }
 
