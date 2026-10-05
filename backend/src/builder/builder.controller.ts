@@ -91,7 +91,7 @@ export class BuilderController {
   @ApiOperation({ summary: 'Get all builders.' })
   @ApiOkResponse({ description: 'List of builders', schema: schemaResponseArray(builderSchema).schema })
   async getBuilders(): Promise<Builder[]> {
-    return await this.builderService.getBuilders();
+    return this.builderService.getBuilders();
   }
 
   @Get('packages')
@@ -103,7 +103,7 @@ export class BuilderController {
   async getPackages(
     @Query({ schema: getPackagesQuerySchema }) query: GetPackagesQueryDto,
   ): Promise<Paginated<PackageDto>> {
-    return await this.builderService.getPackages(query);
+    return this.builderService.getPackages(query);
   }
 
   @Get('package/:name')
@@ -113,14 +113,14 @@ export class BuilderController {
   @ApiQuery({ name: 'repo', required: false, description: 'Repository name to scope the lookup' })
   @ApiOkResponse({ description: 'Package details', schema: schemaResponse(packageSchema).schema })
   async getPackage(@Param('name') name: string, @Query('repo') repo?: string): Promise<Package> {
-    return await this.builderService.getPackage(name, repo);
+    return this.builderService.getPackage(name, repo);
   }
 
   @Get('repos')
   @ApiOperation({ summary: 'Get all repos.' })
   @ApiOkResponse({ description: 'List of repos', schema: schemaResponseArray(repoSchema).schema })
   async getRepos(): Promise<Repo[]> {
-    return await this.builderService.getRepos();
+    return this.builderService.getRepos();
   }
 
   @Get('builds')
@@ -130,7 +130,7 @@ export class BuilderController {
     schema: schemaResponse(paginatedSchema(buildSchema)).schema,
   })
   async getBuilds(@Query({ schema: getBuildsQuerySchema }) query: GetBuildsQueryDto): Promise<Paginated<Build>> {
-    return await this.builderService.getBuilds({
+    return this.builderService.getBuilds({
       builder: query.builder,
       repo: query.repo ?? '',
       status: query.status,
@@ -148,7 +148,7 @@ export class BuilderController {
   async getLatestBuilds(
     @Query({ schema: getLatestBuildsQuerySchema }) query: GetLatestBuildsQueryDto,
   ): Promise<Build[]> {
-    return await this.builderService.getLastBuilds({
+    return this.builderService.getLastBuilds({
       amount: query.amount ?? 50,
       offset: query.offset ?? 0,
       status: query.status,
@@ -167,7 +167,7 @@ export class BuilderController {
     @Param('amount', { schema: amountParamSchema.default(50) }) amount: number,
     @Query('offset', { schema: offsetQuerySchema.default(0) }) offset: number,
   ): Promise<BuildWithUrl[]> {
-    return await this.builderService.getLatestBuilds({ amount, offset });
+    return this.builderService.getLatestBuilds({ amount, offset });
   }
 
   @Get('latest/:pkgname')
@@ -180,7 +180,7 @@ export class BuilderController {
     @Param('pkgname') pkgname: string,
     @Query({ schema: latestForPackageQuerySchema }) query: LatestForPackageQueryDto,
   ): Promise<Build[]> {
-    return await this.builderService.getLastBuildsForPackage({ pkgname, amount: query.amount, offset: query.offset });
+    return this.builderService.getLastBuildsForPackage({ pkgname, amount: query.amount, offset: query.offset });
   }
 
   @Get('latest/:pkgname/:amount')
@@ -197,7 +197,7 @@ export class BuilderController {
     @Param('amount', { schema: amountParamSchema }) amount: number,
     @Query('offset', { schema: offsetQuerySchema.default(0) }) offset: number,
   ): Promise<Build[]> {
-    return await this.builderService.getLastBuildsForPackage({ pkgname, amount, offset });
+    return this.builderService.getLastBuildsForPackage({ pkgname, amount, offset });
   }
 
   @Get('count/days')
@@ -207,7 +207,7 @@ export class BuilderController {
     schema: schemaResponseArray(pkgCountSchema).schema,
   })
   async getBuildsPerPackage(): Promise<PkgCount[]> {
-    return await this.builderService.getBuildsPerPackage();
+    return this.builderService.getBuildsPerPackage();
   }
 
   @Get('count/days/:days')
@@ -218,7 +218,7 @@ export class BuilderController {
     schema: schemaResponseArray(pkgCountSchema).schema,
   })
   async getBuildsPerPackageWithDays(@Param('days', { schema: daysParamSchema }) days: number): Promise<PkgCount[]> {
-    return await this.builderService.getBuildsPerPackage({ days });
+    return this.builderService.getBuildsPerPackage({ days });
   }
 
   @Get('count/package/:pkgname')
@@ -226,7 +226,7 @@ export class BuilderController {
   @ApiParam({ name: 'pkgname', description: 'Package name' })
   @ApiOkResponse({ description: 'Build count for package', schema: schemaResponse(z.number()).schema })
   async getLatestBuildsCountByPkgname(@Param('pkgname') pkgname: string): Promise<number> {
-    return await this.builderService.getLastBuildsCountForPackage(pkgname);
+    return this.builderService.getLastBuildsCountForPackage(pkgname);
   }
 
   @Get('count/:pkgname/:amount')
@@ -243,7 +243,7 @@ export class BuilderController {
     @Param('amount', { schema: daysParamSchema.default(50) }) amount: number,
     @Query('offset', { schema: offsetQuerySchema.default(0) }) offset: number,
   ): Promise<DayRepoCount[]> {
-    return await this.builderService.getBuildsCountByPkgnamePerDay({ pkgname, amount, offset });
+    return this.builderService.getBuildsCountByPkgnamePerDay({ pkgname, amount, offset });
   }
 
   @Get('average/per-day/package/:pkgname')
@@ -258,7 +258,7 @@ export class BuilderController {
     @Param('pkgname') pkgname: string,
     @Query('days', { schema: daysParamSchema.default(50) }) days: number,
   ): Promise<DayAverage[]> {
-    return await this.builderService.getAverageBuildTimePerDayForPackage({ pkgname, days });
+    return this.builderService.getAverageBuildTimePerDayForPackage({ pkgname, days });
   }
 
   @Get('popular/:amount')
@@ -272,7 +272,7 @@ export class BuilderController {
     @Param('amount', { schema: amountParamSchema }) amount: number,
     @Query({ schema: popularBuildsQuerySchema }) query: PopularBuildsQueryDto,
   ): Promise<PopularPackage[]> {
-    return await this.builderService.getPopularPackages({
+    return this.builderService.getPopularPackages({
       amount,
       offset: query.offset,
       status: query.status,
@@ -290,7 +290,7 @@ export class BuilderController {
   async getBuildsPerBuilder(
     @Query('days', { schema: daysParamSchema.optional() }) days?: number,
   ): Promise<BuilderCount[]> {
-    return await this.builderService.getBuildsPerBuilder(days);
+    return this.builderService.getBuildsPerBuilder(days);
   }
 
   @Get('per-day/:days')
@@ -298,7 +298,7 @@ export class BuilderController {
   @ApiParam({ name: 'days', description: 'Number of days' })
   @ApiOkResponse({ description: 'Builds per day for all packages', schema: schemaResponseArray(dayCountSchema).schema })
   async getBuildsPerDay(@Param('days', { schema: daysParamSchema }) days: number): Promise<DayCount[]> {
-    return await this.builderService.getBuildsPerDay({ days: days });
+    return this.builderService.getBuildsPerDay({ days });
   }
 
   @Get('added/per-day/:days')
@@ -306,7 +306,7 @@ export class BuilderController {
   @ApiParam({ name: 'days', description: 'Number of days' })
   @ApiOkResponse({ description: 'Packages added per day', schema: schemaResponseArray(dayCountSchema).schema })
   async getPackageAdditionsPerDay(@Param('days', { schema: daysParamSchema }) days: number): Promise<DayCount[]> {
-    return await this.builderService.getPackageAdditionsPerDay({ days: days });
+    return this.builderService.getPackageAdditionsPerDay({ days });
   }
 
   @Get('removed/per-day/:days')
@@ -314,7 +314,7 @@ export class BuilderController {
   @ApiParam({ name: 'days', description: 'Number of days' })
   @ApiOkResponse({ description: 'Packages dropped per day', schema: schemaResponseArray(dayCountSchema).schema })
   async getPackageRemovalsPerDay(@Param('days', { schema: daysParamSchema }) days: number): Promise<DayCount[]> {
-    return await this.builderService.getPackageRemovalsPerDay({ days: days });
+    return this.builderService.getPackageRemovalsPerDay({ days });
   }
 
   @Get('average/per-day/:days')
@@ -327,7 +327,7 @@ export class BuilderController {
   async getAverageBuildTimePerDay(
     @Param('days', { schema: daysParamSchema }) days: number,
   ): Promise<DayStatusAverage[]> {
-    return await this.builderService.getAverageBuildTimePerDay({ days: days });
+    return this.builderService.getAverageBuildTimePerDay({ days });
   }
 
   @Get('builds/failed/top/:amount')
@@ -342,7 +342,7 @@ export class BuilderController {
     @Param('amount', { schema: amountParamSchema }) amount: number,
     @Query('days', { schema: daysParamSchema.optional() }) days?: number,
   ): Promise<FailedBuildHotspot[]> {
-    return await this.builderService.getFailedBuildHotspots({ amount, days });
+    return this.builderService.getFailedBuildHotspots({ amount, days });
   }
 
   @Get('builds/failed/over-time/:amount/:days')
@@ -357,7 +357,7 @@ export class BuilderController {
     @Param('amount', { schema: amountParamSchema }) amount: number,
     @Param('days', { schema: daysParamSchema }) days: number,
   ): Promise<FailedBuildOverTime[]> {
-    return await this.builderService.getFailedBuildsOverTime({ amount, days });
+    return this.builderService.getFailedBuildsOverTime({ amount, days });
   }
 
   @Get('should-build/:pkgbase')
@@ -372,7 +372,7 @@ export class BuilderController {
     if (!isValidPkgname(pkgbase)) {
       throw new BadRequestException(`Invalid package name: ${pkgbase}`, { errorCode: 'INVALID_PKGNAME' });
     }
-    return await this.builderService.getShouldBuild(pkgbase);
+    return this.builderService.getShouldBuild(pkgbase);
   }
 
   @Get('builds/failed/unresolved')
@@ -393,7 +393,7 @@ export class BuilderController {
   async getUnresolvedFailedBuilds(
     @Query('days', { schema: daysParamSchema.optional() }) days?: number,
   ): Promise<UnresolvedFailedBuild[]> {
-    return await this.builderService.getUnresolvedFailedBuilds({ days });
+    return this.builderService.getUnresolvedFailedBuilds({ days });
   }
 
   @Post('builds/failed/unresolved/:pkgname/silence')
@@ -435,7 +435,7 @@ export class BuilderController {
     schema: schemaResponseArray(flakyPackageSchema).schema,
   })
   async getFlakiestPackages(@Param('days', { schema: daysParamSchema }) days: number): Promise<FlakyPackageRow[]> {
-    return await this.builderService.getFlakiestPackages({ days });
+    return this.builderService.getFlakiestPackages({ days });
   }
 
   @Get('stats/builder-utilization/:days')
@@ -450,7 +450,7 @@ export class BuilderController {
   async getBuilderUtilization(
     @Param('days', { schema: daysParamSchema }) days: number,
   ): Promise<BuilderUtilizationRow[]> {
-    return await this.builderService.getBuilderUtilization({ days });
+    return this.builderService.getBuilderUtilization({ days });
   }
 
   @Get('stats/heavy-packages/:amount/:days')
@@ -463,7 +463,7 @@ export class BuilderController {
     @Param('amount', { schema: amountParamSchema }) amount: number,
     @Param('days', { schema: daysParamSchema }) days: number,
   ): Promise<HeavyPackage[]> {
-    return await this.builderService.getHeavyPackages({ amount, days });
+    return this.builderService.getHeavyPackages({ amount, days });
   }
 
   @Get('stats/packages-per-build-class/:days')
@@ -476,7 +476,7 @@ export class BuilderController {
   async getPackagesPerBuildClass(
     @Param('days', { schema: daysParamSchema }) days: number,
   ): Promise<PackagesPerBuildClass[]> {
-    return await this.builderService.getPackagesPerBuildClass({ days });
+    return this.builderService.getPackagesPerBuildClass({ days });
   }
 
   @Get('stats/pkgbase-composition')
@@ -486,7 +486,7 @@ export class BuilderController {
     schema: schemaResponseArray(pkgbaseCompositionSchema).schema,
   })
   async getSingleVsSplitPackages(): Promise<PkgbaseComposition[]> {
-    return await this.builderService.getSingleVsSplitPackages();
+    return this.builderService.getSingleVsSplitPackages();
   }
 
   @Get('stats/resource/package/:pkgname/:days')
@@ -501,7 +501,7 @@ export class BuilderController {
     @Param('pkgname') pkgname: string,
     @Param('days', { schema: daysParamSchema }) days: number,
   ): Promise<PackageResourceDayRow[]> {
-    return await this.builderService.getPackageResourceStatsPerDay({ pkgname, days });
+    return this.builderService.getPackageResourceStatsPerDay({ pkgname, days });
   }
 
   @Get('stats/heavy-packages/resource/:metric/:amount/:days')
@@ -526,7 +526,7 @@ export class BuilderController {
         },
       );
     }
-    return await this.builderService.getHeavyPackagesByResourceMetric({ metric, amount, days });
+    return this.builderService.getHeavyPackagesByResourceMetric({ metric, amount, days });
   }
 
   @Get('throughput/per-day/:days')
@@ -534,7 +534,7 @@ export class BuilderController {
   @ApiParam({ name: 'days', description: 'Number of days' })
   @ApiOkResponse({ description: 'Throughput per day', schema: schemaResponseArray(throughputDaySchema).schema })
   async getThroughputPerDay(@Param('days', { schema: daysParamSchema }) days: number): Promise<ThroughputDay[]> {
-    return await this.builderService.getThroughputPerDay({ days: days });
+    return this.builderService.getThroughputPerDay({ days });
   }
 
   @Get('average/time')
@@ -547,7 +547,7 @@ export class BuilderController {
   async getAverageBuildTimePerStatus(
     @Query('days', { schema: daysParamSchema.optional() }) days?: number,
   ): Promise<AverageBuildTime[]> {
-    return await this.builderService.getAverageBuildTimePerStatus(days);
+    return this.builderService.getAverageBuildTimePerStatus(days);
   }
 
   @Get('average/pkgname')
@@ -562,7 +562,7 @@ export class BuilderController {
   async getAverageBuildTimePerPackage(
     @Query({ schema: pkgnameListQuerySchema }) query: PkgnameListQueryDto,
   ): Promise<AveragePackageBuildTime[]> {
-    return await this.builderService.getAverageBuildTimePerPackage(query.pkgname, query.days, query.builder);
+    return this.builderService.getAverageBuildTimePerPackage(query.pkgname, query.days, query.builder);
   }
 
   @Get('class/suggestions')
@@ -576,6 +576,6 @@ export class BuilderController {
   async getBuildClassSuggestions(
     @Query({ schema: pkgnameListQuerySchema }) query: PkgnameListQueryDto,
   ): Promise<BuildClassSuggestion[]> {
-    return await this.suggesterService.suggestForPackages(query.pkgname, query.days);
+    return this.suggesterService.suggestForPackages(query.pkgname, query.days);
   }
 }

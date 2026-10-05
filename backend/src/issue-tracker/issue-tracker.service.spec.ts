@@ -243,7 +243,10 @@ describe('IssueTrackerService.triage', () => {
         ['foo-app', 'foo-app'],
         ['foo-portal', 'foo-app'],
       ]);
-      for (const name of names) if (!resolution.has(name)) resolution.set(name, null);
+      for (const name of names)
+        if (!resolution.has(name)) {
+          resolution.set(name, null);
+        }
       return Promise.resolve(resolution);
     });
     await service.triage(1, '[Request] foo-app', body);

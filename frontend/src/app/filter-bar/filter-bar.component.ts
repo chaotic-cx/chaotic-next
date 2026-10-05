@@ -5,8 +5,10 @@ import { Button } from '@openng/optimus-ui/button';
 import { Drawer } from '@openng/optimus-ui/drawer';
 import { isMobileSignal } from '../functions';
 
-// Filters render inline on wide screens and in a bottom sheet on phones. The `#filters` template
-// receives its placement (`inline` or `sheet`), so a page can add sheet-only controls.
+/**
+ * Filters render inline on wide screens and in a bottom sheet on phones. The `#filters` template
+ * receives its placement (`inline` or `sheet`), so a page can add sheet-only controls.
+ */
 @Component({
   selector: 'chaotic-filter-bar',
   imports: [NgTemplateOutlet, TranslocoDirective, Button, Drawer],

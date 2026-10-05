@@ -11,7 +11,9 @@ export class PackageLogService {
   getLogUrl(pkgname: string, timestamp: string, offset = 0): string {
     const base = `${this.backendUrl}/logs/${encodeURIComponent(pkgname)}/${encodeURIComponent(timestamp)}`;
     const params = new URLSearchParams({ 'ngsw-bypass': '' });
-    if (offset > 0) params.set('offset', String(offset));
+    if (offset > 0) {
+      params.set('offset', String(offset));
+    }
     return `${base}?${params.toString()}`;
   }
 }

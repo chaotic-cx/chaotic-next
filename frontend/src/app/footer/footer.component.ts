@@ -20,9 +20,7 @@ export class FooterComponent {
   // An unknown version links to no release, so the footer leaves it out.
   protected readonly version = computed(() => {
     const version = this.appService.backendVersion();
-    if (version === UNKNOWN_VERSION) {
-      return undefined;
-    }
+    if (version === UNKNOWN_VERSION) return undefined;
 
     return version;
   });

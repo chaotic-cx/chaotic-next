@@ -18,25 +18,17 @@ function isThemePreference(value: string | null): value is ThemePreference {
  * Unknown or missing values fall back to the system setting.
  */
 export function parseThemePreference(value: string | null): ThemePreference {
-  if (isThemePreference(value)) {
-    return value;
-  }
+  if (isThemePreference(value)) return value;
 
   return DEFAULT_PREFERENCE;
 }
 
 export function resolveFlavour(preference: ThemePreference, systemPrefersDark: boolean): Flavour {
-  if (preference === 'light') {
-    return LIGHT_FLAVOUR;
-  }
+  if (preference === 'light') return LIGHT_FLAVOUR;
 
-  if (preference === 'dark') {
-    return DARK_FLAVOUR;
-  }
+  if (preference === 'dark') return DARK_FLAVOUR;
 
-  if (systemPrefersDark) {
-    return DARK_FLAVOUR;
-  }
+  if (systemPrefersDark) return DARK_FLAVOUR;
 
   return LIGHT_FLAVOUR;
 }

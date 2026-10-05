@@ -312,9 +312,7 @@ export class AdminArchPackagesPageComponent {
 
   protected reviewConflict(): void {
     const latest = this.conflict.review();
-    if (latest === null) {
-      return;
-    }
+    if (latest === null) return;
 
     this.editing.set(latest);
     this.fillForm(latest);
@@ -334,9 +332,7 @@ export class AdminArchPackagesPageComponent {
       }
 
       const unchanged = await this.conflict.confirmUnchanged(() => this.service.findArchPackage(current));
-      if (!unchanged) {
-        return;
-      }
+      if (!unchanged) return;
 
       const saved = await this.service.updateArchPackage(current.id, this.toFormData(this.model()));
       if (saved) {

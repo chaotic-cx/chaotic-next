@@ -24,7 +24,7 @@ export const moleculerConfigCommonService: Partial<ServiceSchema> = {
 export function brokerConfig(nodeID: string, connection: IORedis): BrokerOptions {
   return {
     logger: moleculerConfigLog(),
-    nodeID: nodeID,
+    nodeID,
     metadata: {
       version: 1,
     },

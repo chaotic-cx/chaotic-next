@@ -44,13 +44,9 @@ export class RecentlyAddedComponent {
   protected readonly STAGGER_CAP = STAGGER_CAP;
 
   protected versionLabel(pkg: Package): string {
-    if (!pkg.version) {
-      return MISSING_VALUE;
-    }
+    if (!pkg.version) return MISSING_VALUE;
 
-    if (pkg.pkgrel === undefined) {
-      return pkg.version;
-    }
+    if (pkg.pkgrel === undefined) return pkg.version;
 
     return `${pkg.version}-${formatPkgrel(pkg.pkgrel, pkg.bump ?? 0)}`;
   }

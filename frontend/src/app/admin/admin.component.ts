@@ -81,9 +81,7 @@ export class AdminComponent {
    * Coalesces bursts of resize notifications into one measurement per frame.
    */
   private scheduleIndicatorUpdate(): void {
-    if (this.pendingIndicatorFrame !== null) {
-      return;
-    }
+    if (this.pendingIndicatorFrame !== null) return;
 
     this.pendingIndicatorFrame = requestAnimationFrame(() => {
       this.pendingIndicatorFrame = null;

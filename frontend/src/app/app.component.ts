@@ -25,6 +25,7 @@ import { ConnectionBannerComponent } from './ui-states/connection-banner.compone
 import { UpdateService } from './update/update.service';
 
 @Component({
+  selector: 'chaotic-root',
   imports: [
     RouterLink,
     RouterOutlet,
@@ -42,7 +43,6 @@ import { UpdateService } from './update/update.service';
     TranslocoDirective,
     NavActiveCurrentDirective,
   ],
-  selector: 'chaotic-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
   providers: [ConfirmationService, UpdateService],
@@ -172,7 +172,7 @@ export class AppComponent implements OnInit {
       if (event.type === 'build' && event.status === BuildStatus.SUCCESS) {
         if (!event.version || event.version === 'unknown') return;
         const validRoutesRegex = /^\/(status|deployments|packages)(\?.*|#.*)?$/;
-        if (!this.router.url || validRoutesRegex.test(this.router.url))
+        if (!this.router.url || validRoutesRegex.test(this.router.url)) {
           this.messageToastService.success(
             this.transloco.translate('app.deploymentToast.title'),
             this.transloco.translate('app.deploymentToast.message', {
@@ -180,6 +180,7 @@ export class AppComponent implements OnInit {
               repo: event.repo,
             }),
           );
+        }
       }
     });
   }

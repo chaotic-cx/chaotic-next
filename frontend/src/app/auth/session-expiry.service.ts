@@ -18,9 +18,7 @@ export class SessionExpiryService {
    * A 401 alone does not prove an expired session, because a proxied GitLab call can return it too.
    */
   async reportUnauthorized(): Promise<void> {
-    if (this.expired() || this.checking) {
-      return;
-    }
+    if (this.expired() || this.checking) return;
 
     this.checking = true;
     const alive = await this.sessionAlive();
@@ -47,9 +45,7 @@ export class SessionExpiryService {
   private async sessionAlive(): Promise<boolean | undefined> {
     try {
       const session = await this.authClient.getSession();
-      if (session.error) {
-        return session.error.status === HttpStatusCode.Unauthorized ? false : undefined;
-      }
+      if (session.error) return session.error.status === HttpStatusCode.Unauthorized ? false : undefined;
 
       return session.data !== null;
     } catch {

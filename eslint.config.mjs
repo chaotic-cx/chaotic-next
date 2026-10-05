@@ -11,6 +11,8 @@ export default [
     rules: {
       '@dr460nf1r3/prefer-mutation': 'off',
       '@dr460nf1r3/prefer-query-method': 'off',
+      '@dr460nf1r3/class-member-order': 'off',
+      '@dr460nf1r3/statement-spacing': 'off',
     },
   },
   {

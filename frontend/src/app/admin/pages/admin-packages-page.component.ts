@@ -899,9 +899,7 @@ export class AdminPackagesPageComponent {
 
   protected reviewConflict(): void {
     const latest = this.conflict.review();
-    if (latest === null) {
-      return;
-    }
+    if (latest === null) return;
 
     this.editing.set(latest);
     this.fillForm(latest);
@@ -921,9 +919,7 @@ export class AdminPackagesPageComponent {
       }
 
       const unchanged = await this.conflict.confirmUnchanged(() => this.adminService.findPackage(current));
-      if (!unchanged) {
-        return;
-      }
+      if (!unchanged) return;
 
       const saved = await this.adminService.updatePackage(current.id, this.toFormData(this.model()));
       if (saved) {
@@ -1059,9 +1055,7 @@ export class AdminPackagesPageComponent {
 }
 
 function activeFilterToQuery(active: 'true' | 'false' | undefined): string | null {
-  if (active === DEFAULT_PACKAGE_ACTIVE_FILTER) {
-    return null;
-  }
+  if (active === DEFAULT_PACKAGE_ACTIVE_FILTER) return null;
 
   return active ?? ALL_ACTIVE_STATES;
 }

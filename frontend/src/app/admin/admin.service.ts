@@ -482,8 +482,10 @@ export class AdminService {
   }
 
   async updatePackage(id: number, data: Partial<PackageFormData>): Promise<boolean> {
-    // failureSilenced is form-only display state; the update contract does not
-    // carry it (silencing happens through the failed-build silence endpoint).
+    /**
+     * failureSilenced is form-only display state; the update contract does not
+     * carry it (silencing happens through the failed-build silence endpoint).
+     */
     const payload = { ...data };
     delete payload.failureSilenced;
     return this.runMutation(

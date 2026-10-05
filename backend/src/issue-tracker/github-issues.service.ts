@@ -225,7 +225,9 @@ export class GithubIssuesService {
         for (const result of results) {
           const pkgName = (result as { Name?: unknown }).Name;
           const pkgBase = (result as { PackageBase?: unknown }).PackageBase;
-          if (typeof pkgName === 'string' && typeof pkgBase === 'string') byName.set(pkgName.toLowerCase(), pkgBase);
+          if (typeof pkgName === 'string' && typeof pkgBase === 'string') {
+            byName.set(pkgName.toLowerCase(), pkgBase);
+          }
         }
       }
       for (const name of toFetch) {
@@ -277,7 +279,9 @@ export class GithubIssuesService {
           for (const dep of deps) {
             if (typeof dep !== 'string') continue;
             const name = dep.match(/^[\w@.+-]+/)?.[0]?.toLowerCase();
-            if (name) depends.get(base)?.add(name);
+            if (name) {
+              depends.get(base)?.add(name);
+            }
           }
         }
       }

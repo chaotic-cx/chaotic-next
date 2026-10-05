@@ -20,7 +20,7 @@ import { IssueTrackerService } from './issue-tracker.service';
 const SIGNATURE_PREFIX = 'sha256=';
 
 export function verifyWebhookSignature(rawBody: Buffer, signature: string | undefined, secret: string): boolean {
-  if (signature === undefined || !signature.startsWith(SIGNATURE_PREFIX)) return false;
+  if (!signature?.startsWith(SIGNATURE_PREFIX)) return false;
   const expected = createHmac('sha256', secret).update(rawBody).digest();
   const provided = Buffer.from(signature.slice(SIGNATURE_PREFIX.length), 'hex');
   return expected.length === provided.length && timingSafeEqual(expected, provided);

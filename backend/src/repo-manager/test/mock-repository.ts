@@ -112,7 +112,9 @@ export function createMockRepository<T extends object>(opts: MockRepositoryOptio
     },
     async update(criteria: FindOptionsWhere<T>, partial: DeepPartial<T>): Promise<void> {
       for (const [key, entity] of store) {
-        if (matches(entity, criteria)) store.set(key, { ...entity, ...partial } as T);
+        if (matches(entity, criteria)) {
+          store.set(key, { ...entity, ...partial } as T);
+        }
       }
     },
     async save(entities: T | T[]): Promise<unknown> {
@@ -128,7 +130,9 @@ export function createMockRepository<T extends object>(opts: MockRepositoryOptio
     },
     async delete(criteria: FindOptionsWhere<T>): Promise<void> {
       for (const [key, entity] of store) {
-        if (matches(entity, criteria)) store.delete(key);
+        if (matches(entity, criteria)) {
+          store.delete(key);
+        }
       }
     },
     async clear(): Promise<void> {

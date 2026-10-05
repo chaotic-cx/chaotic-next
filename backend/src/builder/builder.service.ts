@@ -100,9 +100,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       });
       let redisErrorLogged = false;
       connection.on('error', (err: Error) => {
-        if (connection.status === 'end' || connection.status === 'close') {
-          return;
-        }
+        if (connection.status === 'end' || connection.status === 'close') return;
         if (!redisErrorLogged) {
           redisErrorLogged = true;
           this.pino.error({ err }, 'Redis connection error');
@@ -205,8 +203,10 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     }
 
     const order = resolveOrder(options.order);
-    // Null `createdAt` rows (packages with no build history) must not surface
-    // as "recently added": Postgres sorts NULLs first in DESC, so force them last.
+    /**
+     * Null `createdAt` rows (packages with no build history) must not surface
+     * as "recently added": Postgres sorts NULLs first in DESC, so force them last.
+     */
     query.orderBy(
       this.packageSortExpression(options.sort),
       order,
@@ -215,8 +215,10 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
 
     const [items, total] = await query.skip(skip).take(perPage).getManyAndCount();
 
-    // The frontend consumes `repo` as the numeric id (RepoNamePipe) plus a
-    // resolved `reponame`. Never leak the repo's apiToken, so only select the name.
+    /**
+     * The frontend consumes `repo` as the numeric id (RepoNamePipe) plus a
+     * resolved `reponame`. Never leak the repo's apiToken, so only select the name.
+     */
     const mapped: PackageDto[] = items.map((pkg) => toPackageDto(pkg));
     return paginate(mapped, total, page, perPage);
   }
@@ -282,8 +284,10 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    // Postgres puts NULLs first in DESC order, which would lead rankings with
-    // unsampled builds; resource counters must therefore sort NULLS LAST.
+    /**
+     * Postgres puts NULLs first in DESC order, which would lead rankings with
+     * unsampled builds; resource counters must therefore sort NULLS LAST.
+     */
     const isResourceSort = isBuildResourceSortField(options.sort ?? '');
     query.orderBy(
       this.buildSortExpression(options.sort),
@@ -367,9 +371,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     offset: number;
   }): Promise<{ day: string; repo: string; count: string }[]> {
     const requestedPackage = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
-    if (!requestedPackage) {
-      throw new NotFoundException('Package not found');
-    }
+    if (!requestedPackage) throw new NotFoundException('Package not found');
 
     const amount = clampInt(options.amount, 1, MAX_DAYS_WINDOW);
     const offset = clampInt(options.offset, 0, MAX_OFFSET);
@@ -396,9 +398,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     days: number;
   }): Promise<{ day: string; average: string }[]> {
     const requestedPackage = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
-    if (!requestedPackage) {
-      throw new NotFoundException('Package not found');
-    }
+    if (!requestedPackage) throw new NotFoundException('Package not found');
 
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
 
@@ -429,9 +429,11 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     const query = this.buildRepository
       .createQueryBuilder('build')
       .select('pkgbase.pkgname')
-      // Count distinct source commits instead of every build row: CI incidents
-      // re-queue an already-built commit hundreds of times (status ALREADY_BUILT),
-      // which would otherwise inflate the count for e.g. garuda-*-git packages.
+      /**
+       * Count distinct source commits instead of every build row: CI incidents
+       * re-queue an already-built commit hundreds of times (status ALREADY_BUILT),
+       * which would otherwise inflate the count for e.g. garuda-*-git packages.
+       */
       .addSelect('COUNT(DISTINCT build.commit) AS count')
       .innerJoin('build.pkgbase', 'pkgbase')
       .groupBy('pkgbase.pkgname')
@@ -475,9 +477,11 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       this.buildRepository
         .createQueryBuilder('build')
         .select("DATE_TRUNC('day', build.timestamp) AS day")
-        // Count distinct source commits so CI retry loops (same commit re-queued,
-        // status ALREADY_BUILT) don't inflate the daily totals, matching the
-        // per-package popular chart.
+        /**
+         * Count distinct source commits so CI retry loops (same commit re-queued,
+         * status ALREADY_BUILT) don't inflate the daily totals, matching the
+         * per-package popular chart.
+         */
         .addSelect('COUNT(DISTINCT build.commit) AS count')
         .groupBy('day')
         .orderBy('day', 'DESC')
@@ -600,10 +604,12 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
   async getUnresolvedFailedBuilds(options?: { days?: number }): Promise<UnresolvedFailedBuild[]> {
     const since = nDaysInPast(clampInt(options?.days ?? UNRESOLVED_FAILURE_LOOKBACK_DAYS, 1, MAX_DAYS_WINDOW));
 
-    // The streak aggregates count the same set: failures of this package newer
-    // than its last resolving build inside the window. The resolving-build
-    // lookup correlates to the outer row "l", so it runs once per package
-    // instead of once per failed build.
+    /**
+     * The streak aggregates count the same set: failures of this package newer
+     * than its last resolving build inside the window. The resolving-build
+     * lookup correlates to the outer row "l", so it runs once per package
+     * instead of once per failed build.
+     */
     const failureStreakScope = (qb: SelectQueryBuilder<Build>): SelectQueryBuilder<Build> =>
       qb
         .from(Build, 'f')
@@ -612,16 +618,14 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
         .andWhere('f.status IN (:...failures)', { failures: BUILD_FAILURE_STATUSES })
         .andWhere(
           (sq: SelectQueryBuilder<Build>) =>
-            'f.id > (' +
-            sq
+            `f.id > (${sq
               .subQuery()
               .select('COALESCE(MAX(r.id), 0)')
               .from(Build, 'r')
               .where('r."pkgbaseId" = l."pkgbaseId"')
               .andWhere('r.timestamp > :since', { since })
               .andWhere('r.status IN (:...successes)', { successes: BUILD_SUCCESS_STATUSES })
-              .getQuery() +
-            ')',
+              .getQuery()})`,
         );
     const rows = await this.buildRepository
       .createQueryBuilder('l')
@@ -636,16 +640,14 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .leftJoin(SilencedBuildFailure, 's', 's.pkgname = p.pkgname')
       .where(
         (qb) =>
-          'l.id IN (' +
-          qb
+          `l.id IN (${qb
             .subQuery()
             .select('MAX(b.id)')
             .from(Build, 'b')
             .where('b.timestamp > :since', { since })
             .andWhere('b.status IN (:...verdicts)', { verdicts: BUILD_VERDICT_STATUSES })
             .groupBy('b."pkgbaseId"')
-            .getQuery() +
-          ')',
+            .getQuery()})`,
       )
       .andWhere('l.status IN (:...failures)', { failures: BUILD_FAILURE_STATUSES })
       .orderBy('l.timestamp', 'DESC')
@@ -808,9 +810,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
 
   async getPackageResourceStatsPerDay(options: { pkgname: string; days: number }): Promise<PackageResourceDayRow[]> {
     const requestedPackage = await this.packageRepository.findOne({ where: { pkgname: options.pkgname } });
-    if (!requestedPackage) {
-      throw new NotFoundException('Package not found');
-    }
+    if (!requestedPackage) throw new NotFoundException('Package not found');
 
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
 
@@ -959,7 +959,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
   }): Promise<{ logUrl: string; commit: string; timeToEnd: string; pkgname: string; version: string }[]> {
     const amount = clampInt(options.amount ?? 100, 1, MAX_AMOUNT);
     const offset = clampInt(options.offset ?? 0, 0, MAX_OFFSET);
-    return await this.buildRepository
+    return this.buildRepository
       .createQueryBuilder('build')
       .select('b."logUrl"')
       .addSelect('b."commit"')
@@ -978,13 +978,15 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
 
   async getPackage(name: string, repo?: string) {
     const where = repo ? { pkgname: name, repo: { name: repo } } : { pkgname: name };
-    // Only expose complete, current rows. Legacy leftovers (e.g. from before the
-    // per-repo model) can have NULL version/pkgrel/metadata and must not be shown.
+    /**
+     * Only expose complete, current rows. Legacy leftovers (e.g. from before the
+     * per-repo model) can have NULL version/pkgrel/metadata and must not be shown.
+     */
     const pkg = await this.packageRepository.findOne({
       where,
       order: { isActive: 'DESC' },
     });
-    if (!pkg || !pkg.version || pkg.pkgrel === null || pkg.pkgrel === undefined || !pkg.metadata) {
+    if (!pkg?.version || pkg.pkgrel === null || pkg.pkgrel === undefined || !pkg.metadata) {
       throw new NotFoundException(`Package not found: ${name}`);
     }
     return pkg;

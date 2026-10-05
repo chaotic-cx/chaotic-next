@@ -69,21 +69,27 @@ export class ResilientSseStream {
 
     source.onmessage = (event) => {
       // A delivered frame proves the connection is healthy again.
-      if (event.data !== '') this.attempts = 0;
+      if (event.data !== '') {
+        this.attempts = 0;
+      }
       this.options.onMessage(event.data);
     };
 
     for (const eventType of this.options.namedEvents ?? []) {
       source.addEventListener(eventType, (event: MessageEvent) => {
-        if (event.data !== '') this.attempts = 0;
+        if (event.data !== '') {
+          this.attempts = 0;
+        }
         this.options.onNamedEvent?.(eventType, event.data);
       });
     }
 
     source.onerror = () => {
       this.options.onError?.();
-      // Backgrounded tabs get their connections dropped by the browser; park
-      // the stream so the visibility handler re-opens it once focused again.
+      /**
+       * Backgrounded tabs get their connections dropped by the browser; park
+       * the stream so the visibility handler re-opens it once focused again.
+       */
       if (document.visibilityState !== 'visible') {
         this.park();
         return;
@@ -101,7 +107,9 @@ export class ResilientSseStream {
 
   /** Stops the stream permanently; neither reconnects nor reacts to visibility changes. */
   close(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
+    if (this.reconnectTimer !== undefined) {
+      window.clearTimeout(this.reconnectTimer);
+    }
     this.reconnectTimer = undefined;
     this.closed = true;
     this.disconnect();
@@ -111,7 +119,9 @@ export class ResilientSseStream {
 
   /** Drops the connection without giving up: reconnect/visibility may resume later. */
   private park(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
+    if (this.reconnectTimer !== undefined) {
+      window.clearTimeout(this.reconnectTimer);
+    }
     this.reconnectTimer = undefined;
     this.disconnect();
   }
@@ -141,9 +151,7 @@ export class ResilientSseStream {
    * instead of waiting for the next backoff timer. A live stream stays as it is.
    */
   private readonly onOnline = (): void => {
-    if (this.closed || this.source || document.visibilityState !== 'visible') {
-      return;
-    }
+    if (this.closed || this.source || document.visibilityState !== 'visible') return;
 
     this.attempts = 0;
     this.park();

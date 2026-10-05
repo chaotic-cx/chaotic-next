@@ -20,14 +20,10 @@ const LABEL_KEY = marker('pipes.buildClass.label');
  * Custom classes stay as they are.
  */
 export function translateBuildClass(value: null | number | string, transloco: TranslocoService): string {
-  if (value === null) {
-    return transloco.translate(CUSTOM_KEY);
-  }
+  if (value === null) return transloco.translate(CUSTOM_KEY);
 
   const buildClass = parseBuildClass(value);
-  if (buildClass === null) {
-    return String(value);
-  }
+  if (buildClass === null) return String(value);
 
   const tier = transloco.translate(TIER_KEYS[buildClassTierName(buildClass)]);
   return transloco.translate(LABEL_KEY, { buildClass, tier });

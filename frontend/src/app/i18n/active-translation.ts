@@ -15,9 +15,7 @@ export function injectActiveTranslation(): Signal<number> {
   const scopes = injectProvidedScopeNames();
 
   const isRelevantLoad = (event: TranslocoEvents): boolean => {
-    if (event.type !== 'translationLoadSuccess') {
-      return false;
-    }
+    if (event.type !== 'translationLoadSuccess') return false;
 
     const loadedScope = event.payload.scope;
     return loadedScope === null || scopes.includes(loadedScope);

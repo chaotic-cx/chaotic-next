@@ -229,7 +229,9 @@ export class MrOverviewComponent implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
-        if (event.hasNewMr) this.hasNewMr.set(true);
+        if (event.hasNewMr) {
+          this.hasNewMr.set(true);
+        }
         const currentMrs = untracked(this.mrOverviewService.mergeRequests);
         const updatedById = new Map(event.mr.map((mr) => [mr.id, mr]));
         const updatedMrs = currentMrs.map((currentMr) => {
@@ -275,8 +277,12 @@ export class MrOverviewComponent implements OnInit {
         const loaded = await this.mrOverviewService.loadOpenMrs();
         const rendered = new Set(untracked(this.mrOverviewService.mergeRequests).map((mr) => mr.iid));
         const decision = newMrChipDecision(iids, loaded, rendered);
-        if (decision.dot !== null) this.hasNewMr.set(decision.dot);
-        if (decision.highlightIid !== null) this.highlightLinkedMr(decision.highlightIid);
+        if (decision.dot !== null) {
+          this.hasNewMr.set(decision.dot);
+        }
+        if (decision.highlightIid !== null) {
+          this.highlightLinkedMr(decision.highlightIid);
+        }
         if (!loaded) return;
         this.pendingNewMrIids.update((pending) => pending.filter((iid) => !iids.includes(iid)));
       }
@@ -300,15 +306,11 @@ export class MrOverviewComponent implements OnInit {
     if (!row) return;
     row.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'nearest' });
     // Reduced motion runs no animation, so no animationend event would remove the class.
-    if (prefersReducedMotion()) {
-      return;
-    }
+    if (prefersReducedMotion()) return;
 
     // animationend bubbles, so an animation inside the row must not end the flash early.
     const removeFlash = (event: AnimationEvent): void => {
-      if (event.target !== row) {
-        return;
-      }
+      if (event.target !== row) return;
 
       row.classList.remove(FLASH_CLASS);
       row.removeEventListener('animationend', removeFlash);
@@ -354,7 +356,9 @@ export class MrOverviewComponent implements OnInit {
   protected selectMr(mr: MergeRequestWithDiffs, stepping = false): void {
     this.lastSelectedIndex.set(Math.max(FIRST_INDEX, this.queueMrs().indexOf(mr)));
     const opensDetailView = this.isMobile() && !stepping;
-    if (opensDetailView) this.detailPushedToHistory = true;
+    if (opensDetailView) {
+      this.detailPushedToHistory = true;
+    }
 
     void this.router.navigate([], {
       relativeTo: this.route,
@@ -495,14 +499,10 @@ export class MrOverviewComponent implements OnInit {
     this.activeTranslation();
 
     const pending = this.flagDialog();
-    if (!pending) {
-      return '';
-    }
+    if (!pending) return '';
 
     const params = { iid: pending.mr.iid };
-    if (pending.label === 'dangerous') {
-      return this.transloco.translate('reviewQueue.flagDialog.titleDangerous', params);
-    }
+    if (pending.label === 'dangerous') return this.transloco.translate('reviewQueue.flagDialog.titleDangerous', params);
 
     return this.transloco.translate('reviewQueue.flagDialog.titleHold', params);
   });
@@ -515,14 +515,14 @@ export class MrOverviewComponent implements OnInit {
     const pending = this.flagDialog();
     if (!pending || !this.flagReasonValid()) return;
     const ok = await this.mrOverviewService.flag(pending.mr, pending.label, this.flagReason().trim());
-    if (ok) this.closeFlagDialog();
+    if (ok) {
+      this.closeFlagDialog();
+    }
   }
 
   protected flagReasonLine(mr: MergeRequestWithDiffs): TranslatableText | null {
     const reason = mr.flagReason;
-    if (!reason) {
-      return null;
-    }
+    if (!reason) return null;
 
     if (reason.userName) {
       return {
@@ -646,8 +646,10 @@ export class MrOverviewComponent implements OnInit {
   }
 
   protected scrollToFinding(mr: MergeRequestWithDiffs, finding: DiffScanFinding): void {
-    // The finding cards live above the diffs; jump to the file section first
-    // so the deferred diff renderer mounts, then it reveals the exact line.
+    /**
+     * The finding cards live above the diffs; jump to the file section first
+     * so the deferred diff renderer mounts, then it reveals the exact line.
+     */
     this.diffScrollTarget.set({ iid: mr.iid, path: finding.file, line: finding.line ?? -1 });
     const sectionId = this.diffSectionId(mr.iid, finding.file);
     this.hostElement.querySelector(`[data-diff-section="${sectionId}"]`)?.scrollIntoView({
@@ -720,9 +722,7 @@ export class MrOverviewComponent implements OnInit {
 
   protected packageLink(mr: MergeRequestWithDiffs): PackageLink | null {
     const info = mr.packageInfo;
-    if (!info) {
-      return null;
-    }
+    if (!info) return null;
 
     const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== PKGBUILD_SOURCE_AUR;
     if (isCustom) {

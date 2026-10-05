@@ -184,9 +184,11 @@ export class BumpService {
     reader: RepoReader,
     opts: { pkgbaseDir: string; repo?: Repo; pkgInDb?: Package },
   ): Promise<PackageConfig> {
-    // When the caller already has the package row (e.g. a batch loop over
-    // allPackages), pass it in to skip a getOrCreatePackage() round-trip per call —
-    // otherwise this is a mutex-guarded find+relations on every iteration.
+    /**
+     * When the caller already has the package row (e.g. a batch loop over
+     * allPackages), pass it in to skip a getOrCreatePackage() round-trip per call —
+     * otherwise this is a mutex-guarded find+relations on every iteration.
+     */
     const { pkgbaseDir, repo, pkgInDb } = opts;
     let pkg = pkgInDb;
     if (!pkg) {

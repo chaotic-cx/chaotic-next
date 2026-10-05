@@ -180,7 +180,9 @@ export function regexRule<T>(options: RegexRuleOptions<T>): Rule<T> {
       pattern = buildPattern(data);
       return { data, downloaded };
     };
-    if (refetch) rule.refetch = true;
+    if (refetch) {
+      rule.refetch = true;
+    }
   }
 
   return rule;
@@ -237,9 +239,7 @@ export function listRule(options: ListRuleOptions): Rule<string[]> {
         const rawHit = matchesAny(line.text, patterns, options.skipQuoted);
         const deobfuscatedHit =
           !rawHit && !options.rawOnly && matchesAny(deobfuscateLine(line.text), patterns, options.skipQuoted);
-        if (rawHit || deobfuscatedHit) {
-          return { line: line.line, match: line.text.trim() };
-        }
+        if (rawHit || deobfuscatedHit) return { line: line.line, match: line.text.trim() };
       }
       return null;
     },
@@ -253,7 +253,9 @@ export function listRule(options: ListRuleOptions): Rule<string[]> {
       patterns = compilePatterns([...options.list, ...loaded]);
       return { data: loaded, downloaded };
     };
-    if (refetch) rule.refetch = true;
+    if (refetch) {
+      rule.refetch = true;
+    }
   }
 
   return rule;

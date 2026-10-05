@@ -95,7 +95,9 @@ describe('GitLab pipeline events (e2e, real PostgreSQL)', () => {
       .compile();
 
     const dataSource = moduleRef.get<DataSource>(DataSource);
-    if (!dataSource.isInitialized) await dataSource.initialize();
+    if (!dataSource.isInitialized) {
+      await dataSource.initialize();
+    }
     const repoRepository = dataSource.getRepository(Repo);
 
     // Earlier spec files leave leftover rows; initApiClient must resolve exactly

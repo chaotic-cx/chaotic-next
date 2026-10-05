@@ -18,7 +18,9 @@ export class BackendDownComponent {
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/';
 
     effect(() => {
-      if (this.backendStatus.status() === 'ok') void this.router.navigateByUrl(returnUrl);
+      if (this.backendStatus.status() === 'ok') {
+        void this.router.navigateByUrl(returnUrl);
+      }
     });
   }
 }

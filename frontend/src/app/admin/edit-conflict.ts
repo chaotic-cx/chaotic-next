@@ -13,9 +13,7 @@ export function recordChanged<T>(opened: T, latest: T, fields: ConflictFields<T>
   const latestFields = fields(latest);
 
   for (const key of Object.keys(openedFields)) {
-    if (openedFields[key] !== latestFields[key]) {
-      return true;
-    }
+    if (openedFields[key] !== latestFields[key]) return true;
   }
 
   return false;
@@ -51,14 +49,10 @@ export class EditConflictGuard<T> {
     }
 
     const opened = this.opened();
-    if (opened === null) {
-      return true;
-    }
+    if (opened === null) return true;
 
     const latest = await this.loadOrUndefined(loadLatest);
-    if (latest === undefined || !recordChanged(opened, latest, this.fields)) {
-      return true;
-    }
+    if (latest === undefined || !recordChanged(opened, latest, this.fields)) return true;
 
     this.latest.set(latest);
     return false;

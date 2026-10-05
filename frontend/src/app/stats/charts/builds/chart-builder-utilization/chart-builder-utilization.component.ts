@@ -33,9 +33,7 @@ const PER_DAY_DECIMALS = 1;
 const HOUR_LABEL_STEP = 3;
 
 function hourAxisLabel(hour: number): string {
-  if (hour % HOUR_LABEL_STEP === 0) {
-    return String(hour);
-  }
+  if (hour % HOUR_LABEL_STEP === 0) return String(hour);
 
   return '';
 }
@@ -54,7 +52,9 @@ export function buildUtilizationGrid(
   let max = 0;
   for (const row of rows) {
     byKey.set(`${row.builder}:${row.hour}`, row.count);
-    if (row.count > max) max = row.count;
+    if (row.count > max) {
+      max = row.count;
+    }
   }
   const builders = [...new Set(rows.map((row) => row.builder))].sort((left, right) => left.localeCompare(right));
   return {
@@ -106,13 +106,9 @@ export class ChartBuilderUtilizationComponent {
     this.activeTranslation();
 
     const days = this.days();
-    if (days >= ALL_TIME_DAYS) {
-      return this.transloco.translate('stats.charts.builderUtilization.rangeAll');
-    }
+    if (days >= ALL_TIME_DAYS) return this.transloco.translate('stats.charts.builderUtilization.rangeAll');
 
-    if (days === 1) {
-      return this.transloco.translate('stats.charts.builderUtilization.rangeLastOne', { days });
-    }
+    if (days === 1) return this.transloco.translate('stats.charts.builderUtilization.rangeLastOne', { days });
 
     return this.transloco.translate('stats.charts.builderUtilization.rangeLastOther', { days });
   });

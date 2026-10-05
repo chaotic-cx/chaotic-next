@@ -11,9 +11,7 @@ export const DARK_FLAVOUR: Flavour = 'mocha';
  * Without that class, the app starts in the dark flavour.
  */
 function documentFlavour(): Flavour {
-  if (document.documentElement.classList.contains(LIGHT_FLAVOUR)) {
-    return LIGHT_FLAVOUR;
-  }
+  if (document.documentElement.classList.contains(LIGHT_FLAVOUR)) return LIGHT_FLAVOUR;
 
   return DARK_FLAVOUR;
 }

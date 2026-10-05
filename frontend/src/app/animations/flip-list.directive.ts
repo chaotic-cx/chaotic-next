@@ -19,8 +19,10 @@ export class FlipListDirective implements OnDestroy {
     if (typeof window === 'undefined') return;
     if (prefersReducedMotion()) return;
 
-    // offsetTop/offsetLeft ignore transforms, so positions captured mid-enter
-    // animation still describe the final layout slot.
+    /**
+     * offsetTop/offsetLeft ignore transforms, so positions captured mid-enter
+     * animation still describe the final layout slot.
+     */
     this.capture();
     this.observer = new MutationObserver(() => this.onMutations());
     this.observer.observe(this.host, { childList: true });

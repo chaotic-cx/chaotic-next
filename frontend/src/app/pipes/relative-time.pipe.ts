@@ -30,9 +30,7 @@ const formatters = new Map<string, Intl.RelativeTimeFormat>();
 
 function formatterFor(locale: string): Intl.RelativeTimeFormat {
   const cached = formatters.get(locale);
-  if (cached) {
-    return cached;
-  }
+  if (cached) return cached;
 
   const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
   formatters.set(locale, formatter);
@@ -43,26 +41,18 @@ export function formatRelativeTime(
   value: string | Date | number | null | undefined,
   labels: RelativeTimeLabels,
 ): string {
-  if (value == null) {
-    return '';
-  }
+  if (value == null) return '';
 
   const date = value instanceof Date ? value : new Date(value);
   let duration = (date.getTime() - Date.now()) / MS_PER_SECOND;
-  if (Number.isNaN(duration)) {
-    return '';
-  }
+  if (Number.isNaN(duration)) return '';
 
-  if (duration < 0 && duration > -JUST_NOW_SECONDS) {
-    return labels.justNow;
-  }
+  if (duration < 0 && duration > -JUST_NOW_SECONDS) return labels.justNow;
 
   let division = DIVISIONS[0];
   for (const current of DIVISIONS) {
     division = current;
-    if (Math.abs(duration) < current.amount) {
-      break;
-    }
+    if (Math.abs(duration) < current.amount) break;
 
     duration /= current.amount;
   }

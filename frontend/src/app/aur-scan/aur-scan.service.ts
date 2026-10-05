@@ -90,7 +90,9 @@ export class AurScanService {
       this.store(scan);
       this.countStartedScan();
 
-      if (!isScanSettled(scan)) this.openStream(scan.packageName);
+      if (!isScanSettled(scan)) {
+        this.openStream(scan.packageName);
+      }
     } catch (error) {
       const reason = requestFailure(error) === 'rateLimited' ? 'rateLimited' : 'request';
       this.setFailure(name, { reason, error });
@@ -127,7 +129,9 @@ export class AurScanService {
         const chunk = parseChunk(data);
         if (!chunk) return;
         this.store(chunk.scan);
-        if (chunk.complete) this.closeStream(chunk.scan.packageName);
+        if (chunk.complete) {
+          this.closeStream(chunk.scan.packageName);
+        }
       },
       // A settled scan closes its own stream. Exhaustion frees the key and reports the lost stream.
       onErrorExhausted: () => {

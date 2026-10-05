@@ -36,17 +36,13 @@ export class RequireGroupGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (staticGroups !== undefined) {
-      return staticGroups;
-    }
+    if (staticGroups !== undefined) return staticGroups;
 
     const fromRepo = this.reflector.getAllAndOverride<boolean>(REQUIRE_REPO_GROUP_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!fromRepo) {
-      return [];
-    }
+    if (!fromRepo) return [];
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const repoName = request.body?.['repo'] ?? request.params?.['repo'] ?? request.query?.['repo'];

@@ -26,15 +26,15 @@ const DOCS_SECTIONS: DocsSection[] = [
   { id: 'further-information', titleKey: marker('docs.sections.furtherInformation') },
 ];
 
-/* A section counts as active once its top passes the upper third of the viewport. */
+// A section counts as active once its top passes the upper third of the viewport.
 const SCROLLSPY_ROOT_MARGIN = '0px 0px -66% 0px';
 const SCROLLSPY_RESUME_FALLBACK_MS = 1200;
 
 @Component({
   selector: 'chaotic-docs',
+  imports: [TitleComponent, RouterLink, CodeBlockComponent, TranslocoDirective],
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
-  imports: [TitleComponent, RouterLink, CodeBlockComponent, TranslocoDirective],
 })
 export class DocsComponent {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
@@ -98,7 +98,9 @@ export class DocsComponent {
       (entries) => {
         if (this.scrollspyPaused) return;
         const visible = entries.find((entry) => entry.isIntersecting);
-        if (visible) this.activeSection.set(visible.target.id);
+        if (visible) {
+          this.activeSection.set(visible.target.id);
+        }
       },
       { rootMargin: SCROLLSPY_ROOT_MARGIN },
     );

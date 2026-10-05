@@ -130,14 +130,13 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
     });
 
     // Real .CI/config from pkgbuilds/mesa-tkg-git — only the bump line may change.
-    const config =
-      [
-        'CI_ON_TRIGGER=daily',
-        'BUILDER_CACHE_SOURCES=true',
-        'CI_PACKAGE_BUMP=26.2.0_devel.221337.b860e0132f9-1/1',
-        'CI_REBUILD_TRIGGERS=libxml2:libdisplay-info',
-        'CI_PKGBUILD_SOURCE=https://github.com/Frogging-Family/mesa-git.git',
-      ].join('\n') + '\n';
+    const config = `${[
+      'CI_ON_TRIGGER=daily',
+      'BUILDER_CACHE_SOURCES=true',
+      'CI_PACKAGE_BUMP=26.2.0_devel.221337.b860e0132f9-1/1',
+      'CI_REBUILD_TRIGGERS=libxml2:libdisplay-info',
+      'CI_PKGBUILD_SOURCE=https://github.com/Frogging-Family/mesa-git.git',
+    ].join('\n')}\n`;
     const reader = fakeReader({ 'mesa-tkg-git/.CI/config': config });
     const commitBumps = vi.fn().mockResolvedValue(undefined);
     const bumpService = makeBumpService({ commitBumps });
@@ -318,7 +317,7 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
     expect(actions[0].pkgname).toBe('kwin-effects-better-blur-dx');
     expect(actions[0].bumpType).toBe(BumpType.PLUGIN);
     expect(actions[0].content).toBe(
-      ['CI_PACKAGE_BUMP=2.5.1-1/1', 'CI_REBUILD_TRIGGERS=kwin', 'CI_PKGBUILD_SOURCE=aur'].join('\n') + '\n',
+      `${['CI_PACKAGE_BUMP=2.5.1-1/1', 'CI_REBUILD_TRIGGERS=kwin', 'CI_PKGBUILD_SOURCE=aur'].join('\n')}\n`,
     );
     const committedLines = actions[0].content.split('\n');
     expect(committedLines.indexOf('CI_PACKAGE_BUMP=2.5.1-1/1')).toBeLessThan(

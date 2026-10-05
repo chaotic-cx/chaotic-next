@@ -85,23 +85,21 @@ function gitlabOAuth(clientId: string, clientSecret: string) {
         scopes: ['read_user'],
         overrideUserInfo: true,
         mapProfileToUser: (profile) => ({
-          // getUserInfo below resolves the GitLab groups. This mapping
-          // writes them to the user.groups column.
+          /**
+           * getUserInfo below resolves the GitLab groups. This mapping
+           * writes them to the user.groups column.
+           */
           groups: profile.groups as string[],
         }),
         getUserInfo: async (tokens) => {
           const response = await fetch('https://gitlab.com/api/v4/user', {
             headers: { Authorization: `Bearer ${tokens.accessToken}` },
           });
-          if (!response.ok) {
-            throw new Error(`GitLab user info request failed with status ${response.status}`);
-          }
+          if (!response.ok) throw new Error(`GitLab user info request failed with status ${response.status}`);
           const profile = (await response.json()) as GitLabProfile;
 
           const memberToken = process.env.GITLAB_TOKEN || process.env.CAUR_GITLAB_TOKEN || tokens.accessToken;
-          if (allowedGroup && !(await checkGitLabGroupMembership(allowedGroup, profile.id, memberToken))) {
-            return null;
-          }
+          if (allowedGroup && !(await checkGitLabGroupMembership(allowedGroup, profile.id, memberToken))) return null;
 
           const memberships = await Promise.all(
             GITLAB_LOGIN_GROUPS.map(async (group) =>
@@ -173,9 +171,11 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      // Written from the GitLab profile at login (overrideUserInfo) and
-      // consumed by RequireGroupGuard. '/update-user' is disabled below so
-      // clients cannot forge memberships.
+      /**
+       * Written from the GitLab profile at login (overrideUserInfo) and
+       * consumed by RequireGroupGuard. '/update-user' is disabled below so
+       * clients cannot forge memberships.
+       */
       groups: {
         type: 'string[]',
         defaultValue: [],

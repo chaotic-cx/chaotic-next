@@ -90,15 +90,17 @@ export class PackageLogComponent implements OnDestroy {
   });
 
   protected readonly subtitle = computed(() => {
-    if (!this.pkgname()) {
-      return undefined;
-    }
+    if (!this.pkgname()) return undefined;
 
     const parts = [this.formattedTimestamp()];
     const elapsed = this.elapsedLabel();
-    if (elapsed) parts.push(elapsed);
+    if (elapsed) {
+      parts.push(elapsed);
+    }
     const remaining = this.remainingLabel();
-    if (remaining) parts.push(remaining);
+    if (remaining) {
+      parts.push(remaining);
+    }
     return parts.join(' · ');
   });
 
@@ -125,10 +127,14 @@ export class PackageLogComponent implements OnDestroy {
     effect(() => {
       const pkgname = this.pkgname();
       const timestamp = this.timestamp();
-      // untracked: loadLog writes many component signals; keeping this effect
-      // dependent only on the route inputs prevents any of those from retriggering
-      // a reload (and reopening the EventSource).
-      if (pkgname && timestamp) untracked(() => this.loadLog(pkgname));
+      /**
+       * untracked: loadLog writes many component signals; keeping this effect
+       * dependent only on the route inputs prevents any of those from retriggering
+       * a reload (and reopening the EventSource).
+       */
+      if (pkgname && timestamp) {
+        untracked(() => this.loadLog(pkgname));
+      }
     });
   }
 
@@ -170,17 +176,17 @@ export class PackageLogComponent implements OnDestroy {
   private openStream(): void {
     const pkgname = this.pkgname();
     const timestamp = this.timestamp();
-    if (!pkgname || !timestamp) {
-      return;
-    }
+    if (!pkgname || !timestamp) return;
 
     this.logStream.start((offset) => this.logService.getLogUrl(pkgname, timestamp, offset));
   }
 
   private onLogText(text: string): void {
     this.scanBuffer += text;
-    // Scan before trimming: markers sit near the top of the log and must be
-    // seen before the buffer is cut down to its tail.
+    /**
+     * Scan before trimming: markers sit near the top of the log and must be
+     * seen before the buffer is cut down to its tail.
+     */
     this.scanMarkers();
     if (this.scanBuffer.length > SCAN_BUFFER_LENGTH) {
       this.scanBuffer = this.scanBuffer.slice(-SCAN_BUFFER_LENGTH);
@@ -189,7 +195,9 @@ export class PackageLogComponent implements OnDestroy {
 
   protected retryStream(): void {
     const pkgname = this.pkgname();
-    if (pkgname) this.loadLog(pkgname);
+    if (pkgname) {
+      this.loadLog(pkgname);
+    }
   }
 
   private missingLogState(): LogStreamState {
@@ -222,23 +230,29 @@ export class PackageLogComponent implements OnDestroy {
       this.buildStartMs.set(markers.buildStartMs);
     }
     if (prior.endReason === undefined && markers.endReason !== undefined) {
-      // A successful build embeds a UTC finish timestamp, so its duration is
-      // exact. Failed/canceled/timed-out builds log no finish time, so the
-      // elapsed is hidden rather than shown as a misleading value.
+      /**
+       * A successful build embeds a UTC finish timestamp, so its duration is
+       * exact. Failed/canceled/timed-out builds log no finish time, so the
+       * elapsed is hidden rather than shown as a misleading value.
+       */
       this.endReason.set(markers.endReason);
       this.stopElapsedTimer();
       const endMs = markers.buildEndMs;
       if (endMs !== undefined) {
         this.buildEndMs.set(endMs);
         const start = this.buildStartMs();
-        if (start !== undefined) this.elapsed.set(elapsedSecondsBetween(start, endMs));
+        if (start !== undefined) {
+          this.elapsed.set(elapsedSecondsBetween(start, endMs));
+        }
       }
     }
   }
 
   private startElapsedTimer(): void {
-    // buildStartMs is set by scanMarkers() once the build actually starts
-    // executing; until then elapsed stays 0 (queue waiting is not shown).
+    /**
+     * buildStartMs is set by scanMarkers() once the build actually starts
+     * executing; until then elapsed stays 0 (queue waiting is not shown).
+     */
     this.buildStartMs.set(undefined);
     this.buildEndMs.set(undefined);
     const tick = () => {
@@ -252,7 +266,9 @@ export class PackageLogComponent implements OnDestroy {
       }
       this.elapsed.set(elapsedSecondsBetween(start, Date.now()));
     };
-    if (this.elapsedTimer !== undefined) window.clearInterval(this.elapsedTimer);
+    if (this.elapsedTimer !== undefined) {
+      window.clearInterval(this.elapsedTimer);
+    }
     tick();
     this.elapsedTimer = window.setInterval(tick, 1000);
   }
@@ -272,7 +288,9 @@ export class PackageLogComponent implements OnDestroy {
 
   protected onSearch(query: string): void {
     this.searchQuery.set(query);
-    if (query) this.terminalRef()?.findNext(query);
+    if (query) {
+      this.terminalRef()?.findNext(query);
+    }
   }
 
   protected searchNext(): void {

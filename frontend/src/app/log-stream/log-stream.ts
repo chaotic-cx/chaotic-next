@@ -70,9 +70,7 @@ export class LogStream {
 
   private onMessage(data: string): void {
     const chunk = parseLogChunk(data);
-    if (!chunk) {
-      return;
-    }
+    if (!chunk) return;
 
     if (chunk.complete) {
       this.completed = true;
@@ -92,9 +90,7 @@ export class LogStream {
   }
 
   private onOpen(): void {
-    if (this.state() !== 'reconnecting') {
-      return;
-    }
+    if (this.state() !== 'reconnecting') return;
 
     this.state.set(this.hasLines() ? 'live' : 'connecting');
   }

@@ -190,7 +190,9 @@ function addOwnersNamedInSegments(
   for (const owner of owners) {
     if (!owner) continue;
     const name = keyToPkgname.get(owner);
-    if (name && segments.includes(name)) plugins.add(owner);
+    if (name && segments.includes(name)) {
+      plugins.add(owner);
+    }
   }
 }
 
@@ -210,7 +212,9 @@ export function collectPluginCandidates(files: string[], index: DirectoryIndex):
     for (const dir of [parent, ...ancestors]) {
       if (GENERIC_DIRS.has(dir)) continue;
       const owners = index.ancestors.get(dir);
-      if (owners) addOwnersNamedInSegments(plugins, owners, dir, index.keyToPkgname);
+      if (owners) {
+        addOwnersNamedInSegments(plugins, owners, dir, index.keyToPkgname);
+      }
     }
   }
   return plugins;
@@ -222,19 +226,27 @@ export function derivePluginOf(files: string[], index: DirectoryIndex, options: 
 
   const plugins = collectPluginCandidates(files, index);
 
-  // A build variant of the consumer (fooyin-git vs fooyin) installs into the
-  // same own-namespace dir, so it can look like a plugin of the base.
+  /**
+   * A build variant of the consumer (fooyin-git vs fooyin) installs into the
+   * same own-namespace dir, so it can look like a plugin of the base.
+   */
   for (const owner of plugins) {
-    if (samePackageFamily(consumerPkgname, index.keyToPkgname.get(owner))) plugins.delete(owner);
+    if (samePackageFamily(consumerPkgname, index.keyToPkgname.get(owner))) {
+      plugins.delete(owner);
+    }
   }
 
-  // A consumer that ships a file the owner also ships shadows the owner (a fork
-  // like ungoogled-chromium-bin), so it is not a plugin of it. A plugin only
-  // adds its own files. It never replaces the host's files. Any shared file
-  // path means the consumer is the same software rebuilt, not an ABI consumer.
+  /**
+   * A consumer that ships a file the owner also ships shadows the owner (a fork
+   * like ungoogled-chromium-bin), so it is not a plugin of it. A plugin only
+   * adds its own files. It never replaces the host's files. Any shared file
+   * path means the consumer is the same software rebuilt, not an ABI consumer.
+   */
   for (const owner of plugins) {
     const ownerFiles = index.keyToFiles.get(owner);
-    if (ownerFiles && files.some((file) => ownerFiles.has(file))) plugins.delete(owner);
+    if (ownerFiles && files.some((file) => ownerFiles.has(file))) {
+      plugins.delete(owner);
+    }
   }
 
   const result = dedupe([...plugins]).sort();
@@ -250,16 +262,16 @@ export function derivePluginOf(files: string[], index: DirectoryIndex, options: 
       if (!parent) return false;
 
       const directOwners = index.direct.get(parent);
-      if (directOwners?.includes(ownerKey)) {
-        return !GENERIC_DIRS.has(parent) && parent.includes(ownerName);
-      }
+      if (directOwners?.includes(ownerKey)) return !GENERIC_DIRS.has(parent) && parent.includes(ownerName);
 
       return false;
     });
   });
 
-  // A huge candidate set that no direct directory-name evidence supports is
-  // index garbage, not a plugin relationship.
+  /**
+   * A huge candidate set that no direct directory-name evidence supports is
+   * index garbage, not a plugin relationship.
+   */
   return filteredByDir.length > 0 ? filteredByDir : [];
 }
 
@@ -275,9 +287,11 @@ export function buildAnalysis(opts: {
 }): PackageElfAnalysis {
   const files = parseFileList(opts.fileList);
 
-  // Every ELF object the scanner extracted and confirmed (shared objects AND
-  // executables) contributes its DT_NEEDED sonames and undefined symbols. Only
-  // shared objects carry a SONAME / exported symbols.
+  /**
+   * Every ELF object the scanner extracted and confirmed (shared objects AND
+   * executables) contributes its DT_NEEDED sonames and undefined symbols. Only
+   * shared objects carry a SONAME / exported symbols.
+   */
   const elfFiles = dedupe([...opts.readelfByFile.keys(), ...opts.importsByFile.keys(), ...opts.exportsByFile.keys()]);
 
   const needed = new Set<string>();
@@ -294,18 +308,24 @@ export function buildAnalysis(opts: {
       const { needed: fileNeeded, soname } = parseReadelfDynamic(readelf);
       for (const n of fileNeeded) needed.add(n);
       if (isElfSharedObject(file)) {
-        // A library without a SONAME is still resolvable by its filename at
-        // runtime (DT_NEEDED records the filename), so the basename counts as
-        // provided. E.g. tcl ships libtcl8.6.so without a SONAME.
+        /**
+         * A library without a SONAME is still resolvable by its filename at
+         * runtime (DT_NEEDED records the filename), so the basename counts as
+         * provided. E.g. tcl ships libtcl8.6.so without a SONAME.
+         */
         const providedName = soname ?? sonameBasename(file);
         provided.add(providedName);
         const defined = opts.exportsByFile.get(file);
-        if (defined) exported[providedName] = dedupe(parseDefinedSymbols(defined)).sort();
+        if (defined) {
+          exported[providedName] = dedupe(parseDefinedSymbols(defined)).sort();
+        }
 
         const versionInfo = opts.versionInfoByFile.get(file);
         if (versionInfo) {
           const { defined: nodes } = parseReadelfVersionInfo(versionInfo);
-          if (nodes.length > 0) providedVersionNodes[providedName] = dedupe(nodes).sort();
+          if (nodes.length > 0) {
+            providedVersionNodes[providedName] = dedupe(nodes).sort();
+          }
         }
 
         const relocations = opts.relocationsByFile.get(file);

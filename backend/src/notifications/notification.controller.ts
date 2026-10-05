@@ -22,8 +22,8 @@ import { z } from 'zod';
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  @HttpCode(HttpStatus.CREATED)
   @Post('subscribe')
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Subscribe the session user to push events' })
   @ApiCreatedResponse({
     description: 'Subscription successful.',

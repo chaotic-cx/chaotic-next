@@ -173,12 +173,24 @@ export class AdminService {
     const pkg = await this.packageRepository.findOne({ where: { id }, relations: { repo: true } });
     if (!pkg) throw new NotFoundException(`Package ${id} not found`);
 
-    if (body.pkgname !== undefined) pkg.pkgname = body.pkgname;
-    if (body.isActive !== undefined) pkg.isActive = body.isActive;
-    if (body.skipSignalScan !== undefined) pkg.skipSignalScan = body.skipSignalScan;
-    if (body.version !== undefined) pkg.version = body.version;
-    if (body.pkgrel !== undefined) pkg.pkgrel = body.pkgrel;
-    if (body.bump !== undefined) pkg.bump = body.bump;
+    if (body.pkgname !== undefined) {
+      pkg.pkgname = body.pkgname;
+    }
+    if (body.isActive !== undefined) {
+      pkg.isActive = body.isActive;
+    }
+    if (body.skipSignalScan !== undefined) {
+      pkg.skipSignalScan = body.skipSignalScan;
+    }
+    if (body.version !== undefined) {
+      pkg.version = body.version;
+    }
+    if (body.pkgrel !== undefined) {
+      pkg.pkgrel = body.pkgrel;
+    }
+    if (body.bump !== undefined) {
+      pkg.bump = body.bump;
+    }
     if (body.repoId !== undefined) {
       pkg.repo = body.repoId ? await this.findRepo(body.repoId) : (null as unknown as Repo);
     }
@@ -207,10 +219,18 @@ export class AdminService {
     const pkg = await this.archPackageRepository.findOne({ where: { id } });
     if (!pkg) throw new NotFoundException(`Arch package ${id} not found`);
 
-    if (body.pkgname !== undefined) pkg.pkgname = body.pkgname;
-    if (body.version !== undefined) pkg.version = body.version;
-    if (body.pkgrel !== undefined) pkg.pkgrel = body.pkgrel;
-    if (body.arch !== undefined) pkg.arch = body.arch;
+    if (body.pkgname !== undefined) {
+      pkg.pkgname = body.pkgname;
+    }
+    if (body.version !== undefined) {
+      pkg.version = body.version;
+    }
+    if (body.pkgrel !== undefined) {
+      pkg.pkgrel = body.pkgrel;
+    }
+    if (body.arch !== undefined) {
+      pkg.arch = body.arch;
+    }
 
     return this.archPackageRepository.save(pkg);
   }
@@ -252,14 +272,30 @@ export class AdminService {
     const repo = await this.repoRepository.findOne({ where: { id } });
     if (!repo) throw new NotFoundException(`Repo ${id} not found`);
 
-    if (body.name !== undefined) repo.name = body.name;
-    if (body.repoUrl !== undefined) repo.repoUrl = body.repoUrl;
-    if (body.isActive !== undefined) repo.isActive = body.isActive;
-    if (body.gitRef !== undefined) repo.gitRef = body.gitRef;
-    if (body.dbPath !== undefined) repo.dbPath = body.dbPath;
-    if (body.status !== undefined) repo.status = body.status;
-    if (body.gitlabProjectId !== undefined) repo.gitlabProjectId = body.gitlabProjectId;
-    if (body.apiToken !== undefined && body.apiToken !== '') repo.apiToken = this.encryptRepoToken(body.apiToken);
+    if (body.name !== undefined) {
+      repo.name = body.name;
+    }
+    if (body.repoUrl !== undefined) {
+      repo.repoUrl = body.repoUrl;
+    }
+    if (body.isActive !== undefined) {
+      repo.isActive = body.isActive;
+    }
+    if (body.gitRef !== undefined) {
+      repo.gitRef = body.gitRef;
+    }
+    if (body.dbPath !== undefined) {
+      repo.dbPath = body.dbPath;
+    }
+    if (body.status !== undefined) {
+      repo.status = body.status;
+    }
+    if (body.gitlabProjectId !== undefined) {
+      repo.gitlabProjectId = body.gitlabProjectId;
+    }
+    if (body.apiToken !== undefined && body.apiToken !== '') {
+      repo.apiToken = this.encryptRepoToken(body.apiToken);
+    }
 
     return this.repoRepository.save(repo);
   }
@@ -271,8 +307,12 @@ export class AdminService {
   async listBuilders(page?: number, perPage?: number, q?: string, active?: boolean): Promise<Paginated<Builder>> {
     const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
     const where: Record<string, unknown> = {};
-    if (q) where.name = ILike(`%${q}%`);
-    if (active !== undefined) where.isActive = active;
+    if (q) {
+      where.name = ILike(`%${q}%`);
+    }
+    if (active !== undefined) {
+      where.isActive = active;
+    }
     const [items, total] = await this.builderRepository.findAndCount({
       where,
       order: { name: 'ASC' },
@@ -295,10 +335,18 @@ export class AdminService {
     const builder = await this.builderRepository.findOne({ where: { id } });
     if (!builder) throw new NotFoundException(`Builder ${id} not found`);
 
-    if (body.name !== undefined) builder.name = body.name;
-    if (body.description !== undefined) builder.description = body.description;
-    if (body.builderClass !== undefined) builder.builderClass = body.builderClass;
-    if (body.isActive !== undefined) builder.isActive = body.isActive;
+    if (body.name !== undefined) {
+      builder.name = body.name;
+    }
+    if (body.description !== undefined) {
+      builder.description = body.description;
+    }
+    if (body.builderClass !== undefined) {
+      builder.builderClass = body.builderClass;
+    }
+    if (body.isActive !== undefined) {
+      builder.isActive = body.isActive;
+    }
 
     return this.builderRepository.save(builder);
   }
@@ -438,9 +486,11 @@ export class AdminService {
         pkgId: analysis.pkgId,
         triggerType,
       });
-    // "bump.pkgId" is always a Chaotic package, so only Chaotic analyses can be
-    // the rebuilt package; an Arch row's pkgId lives in a separate id sequence
-    // that can collide with Chaotic ids.
+    /**
+     * "bump.pkgId" is always a Chaotic package, so only Chaotic analyses can be
+     * the rebuilt package; an Arch row's pkgId lives in a separate id sequence
+     * that can collide with Chaotic ids.
+     */
     if (analysis.pkgType === PKG_TYPE_CHAOTIC) {
       query.orWhere('bump.pkgId = :pkgId', { pkgId: analysis.pkgId });
     }
@@ -511,11 +561,21 @@ export class AdminService {
     const row = await this.elfAnalysisRepository.findOne({ where: { id } });
     if (!row) throw new NotFoundException(`Package ELF analysis ${id} not found`);
 
-    if (body.pkgType !== undefined) row.pkgType = body.pkgType;
-    if (body.pkgId !== undefined) row.pkgId = body.pkgId;
-    if (body.version !== undefined) row.version = body.version;
-    if (body.broken !== undefined) row.broken = body.broken;
-    if (body.brokenReasons !== undefined) row.brokenReasons = body.brokenReasons;
+    if (body.pkgType !== undefined) {
+      row.pkgType = body.pkgType;
+    }
+    if (body.pkgId !== undefined) {
+      row.pkgId = body.pkgId;
+    }
+    if (body.version !== undefined) {
+      row.version = body.version;
+    }
+    if (body.broken !== undefined) {
+      row.broken = body.broken;
+    }
+    if (body.brokenReasons !== undefined) {
+      row.brokenReasons = body.brokenReasons;
+    }
 
     return this.toElfAnalysisView(await this.elfAnalysisRepository.save(row));
   }
@@ -629,8 +689,10 @@ export class AdminService {
           }
           job.rescanned++;
         } catch (err: unknown) {
-          // The HTTP response only acknowledges the job; per-package failures
-          // are recorded on the job (and logged) for GET /admin/rescan/:jobId.
+          /**
+           * The HTTP response only acknowledges the job; per-package failures
+           * are recorded on the job (and logged) for GET /admin/rescan/:jobId.
+           */
           const reason = `${entry.pkgname}: ${errorMessage(err)}`;
           job.failed.push(reason);
           this.pino.warn({ err, pkgname: entry.pkgname, reason }, 'Rescan failed');

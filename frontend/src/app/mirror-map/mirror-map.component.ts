@@ -349,9 +349,6 @@ interface ActiveArc {
 @Component({
   selector: 'chaotic-mirror-map',
   imports: [TranslocoDirective, UnknownValueComponent],
-  host: {
-    '[class.fill-height]': 'fillHeight()',
-  },
   template: `
     <div class="mirror-map" #mapDiv></div>
 
@@ -571,6 +568,9 @@ interface ActiveArc {
       }
     `,
   ],
+  host: {
+    '[class.fill-height]': 'fillHeight()',
+  },
 })
 export class MirrorMapComponent implements OnDestroy {
   private readonly liveTraffic = inject(LiveTrafficService);
@@ -914,7 +914,7 @@ export class MirrorMapComponent implements OnDestroy {
   }
 
   private tickAnimations(): void {
-    if (!this.map || !this.map.isStyleLoaded()) return;
+    if (!this.map?.isStyleLoaded()) return;
 
     const now = performance.now();
     const colors = this.traffic();
@@ -1133,7 +1133,9 @@ export class MirrorMapComponent implements OnDestroy {
           const element = existing.getElement();
           element.classList.toggle('marker-active', status === 'active');
           const svgPath = element.querySelector('svg path');
-          if (svgPath) svgPath.setAttribute('fill', markerColor(status));
+          if (svgPath) {
+            svgPath.setAttribute('fill', markerColor(status));
+          }
           element.setAttribute('aria-label', this.markerLabel(mirror, status));
           existing.getPopup().setHTML(this.popupHtml(mirror, status));
         } else {

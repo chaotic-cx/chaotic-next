@@ -18,8 +18,8 @@ const MIN_QUERY_LENGTH = 3;
 @Component({
   selector: 'chaotic-aur-scan-page',
   imports: [AutoComplete, AurScanResultComponent, DecimalPipe, FormsModule, TitleComponent, TranslocoDirective],
-  styleUrl: './aur-scan-page.css',
   templateUrl: './aur-scan-page.component.html',
+  styleUrl: './aur-scan-page.css',
 })
 export class AurScanPageComponent {
   private readonly appService = inject(AppService);
@@ -63,10 +63,12 @@ export class AurScanPageComponent {
       const linked = (this.search() ?? '').trim();
       if (!linked || linked === this.lastSeenRoutePackage) return;
 
-      // Consume every route value exactly once, then decide outside the
-      // reactive context: currentPackageName and the model change below would
-      // otherwise re-run this effect while the URL still holds the old value,
-      // making the stale value win over fresher user input.
+      /**
+       * Consume every route value exactly once, then decide outside the
+       * reactive context: currentPackageName and the model change below would
+       * otherwise re-run this effect while the URL still holds the old value,
+       * making the stale value win over fresher user input.
+       */
       this.lastSeenRoutePackage = linked;
       untracked(() => {
         if (this.currentPackageName() === linked) return;
@@ -79,7 +81,9 @@ export class AurScanPageComponent {
 
     effect(() => {
       const query = (this.searchModel().query ?? '').trim();
-      if (!query) this.clearResults();
+      if (!query) {
+        this.clearResults();
+      }
     });
   }
 
@@ -87,8 +91,10 @@ export class AurScanPageComponent {
     const pkg = name.trim();
     if (!pkg || !this.searchForm.query().valid()) return;
 
-    // Mark the route value as handled before navigating so the returning
-    // parameter update cannot be mistaken for a new deep link.
+    /**
+     * Mark the route value as handled before navigating so the returning
+     * parameter update cannot be mistaken for a new deep link.
+     */
     this.lastSeenRoutePackage = pkg;
     this.searchModel.update((model) => ({ ...model, query: pkg }));
     this.currentPackageName.set(pkg);
@@ -96,12 +102,16 @@ export class AurScanPageComponent {
   }
 
   protected onKeyUp(event: KeyboardEvent): void {
-    if (event.key === 'Enter') this.scanQuery();
+    if (event.key === 'Enter') {
+      this.scanQuery();
+    }
   }
 
   protected scanQuery(): void {
     const query = this.searchModel().query.trim();
-    if (query.length >= MIN_QUERY_LENGTH && this.searchForm.query().valid()) this.selectPackage(query);
+    if (query.length >= MIN_QUERY_LENGTH && this.searchForm.query().valid()) {
+      this.selectPackage(query);
+    }
   }
 
   private syncQueryParam(pkg: string): void {

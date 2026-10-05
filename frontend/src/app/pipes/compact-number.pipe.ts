@@ -10,15 +10,11 @@ const FALLBACK_COMPACT_LANGUAGE = 'en';
 
 /** Formats a large count as its rough size in the given language, with a prefix when the figure is rounded. */
 export function formatCompactCount(value: number | null | undefined, language: string): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return MISSING_VALUE;
-  }
+  if (value === null || value === undefined || !Number.isFinite(value)) return MISSING_VALUE;
 
   const exact = new Intl.NumberFormat(language).format(value);
   const compact = compactFormat(language, value);
-  if (compact !== exact) {
-    return `${APPROXIMATE_PREFIX}${compact}`;
-  }
+  if (compact !== exact) return `${APPROXIMATE_PREFIX}${compact}`;
 
   const fallback = compactFormat(FALLBACK_COMPACT_LANGUAGE, value);
   const fallbackExact = new Intl.NumberFormat(FALLBACK_COMPACT_LANGUAGE).format(value);

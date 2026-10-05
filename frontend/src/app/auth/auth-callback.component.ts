@@ -54,9 +54,7 @@ export class AuthCallbackComponent {
     const code = this.route.snapshot.queryParamMap.get('error');
     this.errorKey.set(code ? errorKeyForCode(code) : null);
 
-    if (this.errorKey()) {
-      return;
-    }
+    if (this.errorKey()) return;
 
     this.authService.sessionState$
       .pipe(

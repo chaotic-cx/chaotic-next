@@ -17,12 +17,16 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.{test,spec}.ts'],
     setupFiles: ['src/test/silence-nest-logger.ts'],
-    // Specs run git. Ignore the developer's global and system git config, so signing,
-    // hooks and aliases on one machine never change the test result.
+    /**
+     * Specs run git. Ignore the developer's global and system git config, so signing,
+     * hooks and aliases on one machine never change the test result.
+     */
     env: { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
-    // The signal-scan spec shells out to bsdtar/readelf/nm which can take a
-    // while; a generous timeout also lets the istanbul coverage reporters emit
-    // their JSON/HTML files (a too-short timeout breaks coverage finalization).
+    /**
+     * The signal-scan spec shells out to bsdtar/readelf/nm which can take a
+     * while; a generous timeout also lets the istanbul coverage reporters emit
+     * their JSON/HTML files (a too-short timeout breaks coverage finalization).
+     */
     testTimeout: 60000,
     hookTimeout: 60000,
     restoreMocks: true,

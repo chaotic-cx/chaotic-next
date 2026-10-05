@@ -10,9 +10,9 @@ import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-code-of-conduct',
+  imports: [Panel, Divider, TitleComponent, PrimeTemplate, TranslocoDirective],
   templateUrl: './code-of-conduct.component.html',
   styleUrl: './code-of-conduct.component.css',
-  imports: [Panel, Divider, TitleComponent, PrimeTemplate, TranslocoDirective],
 })
 export class CodeOfConductComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

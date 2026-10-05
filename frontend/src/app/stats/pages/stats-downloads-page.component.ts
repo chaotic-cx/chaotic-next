@@ -17,7 +17,6 @@ import { StatsService } from '../stats.service';
     ChartMirrorOverTimeComponent,
     ChartCountryOverTimeComponent,
   ],
-  styleUrl: './stats-chart-page.css',
   template: `
     <div class="flex flex-col gap-8" *transloco="let t; prefix: 'stats.pages.downloads'">
       <p-card [style]="{ overflow: 'hidden' }" [header]="t('downloads')">
@@ -53,6 +52,7 @@ import { StatsService } from '../stats.service';
       </p-card>
     </div>
   `,
+  styleUrl: './stats-chart-page.css',
 })
 export class StatsDownloadsPageComponent {
   protected readonly statsService = inject(StatsService);

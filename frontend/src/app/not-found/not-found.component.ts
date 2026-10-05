@@ -5,8 +5,8 @@ import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-not-found',
+  imports: [RouterLink, TitleComponent, TranslocoDirective],
   templateUrl: './not-found.component.html',
   styleUrl: './not-found.component.css',
-  imports: [RouterLink, TitleComponent, TranslocoDirective],
 })
 export class NotFoundComponent {}

@@ -28,9 +28,7 @@ export class LoginComponent {
     this.activeTranslation();
 
     const key = this.errorKey();
-    if (key === null) {
-      return null;
-    }
+    if (key === null) return null;
 
     return this.transloco.translate(key);
   });

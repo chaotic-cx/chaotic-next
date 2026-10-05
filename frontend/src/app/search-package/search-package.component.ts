@@ -180,9 +180,7 @@ export class SearchPackageComponent {
   protected readonly skeletonFactCells = SKELETON_FACT_CELLS;
 
   protected readonly packageFailure = computed<RequestFailure | null>(() => {
-    if (this.packageResource.status() !== 'error') {
-      return null;
-    }
+    if (this.packageResource.status() !== 'error') return null;
 
     return requestFailure(this.packageResource.error());
   });
@@ -191,9 +189,7 @@ export class SearchPackageComponent {
 
   protected readonly packageFailureKey = computed(() => {
     const failure = this.packageFailure();
-    if (failure === null || failure === 'notFound') {
-      return null;
-    }
+    if (failure === null || failure === 'notFound') return null;
 
     return failure === 'rateLimited' ? RATE_LIMITED_KEY : GENERIC_FAILURE_KEY;
   });
@@ -217,7 +213,9 @@ export class SearchPackageComponent {
 
     effect(() => {
       const pkgname = this.sheet()?.pkgname;
-      if (pkgname) this.recentSearches.add(pkgname);
+      if (pkgname) {
+        this.recentSearches.add(pkgname);
+      }
     });
 
     effect(() => {
@@ -276,7 +274,9 @@ export class SearchPackageComponent {
   }
 
   onKeyUp(event: KeyboardEvent): void {
-    if (event.key === 'Enter') this.onEnter();
+    if (event.key === 'Enter') {
+      this.onEnter();
+    }
   }
 
   private syncSearchParam(query: string): void {

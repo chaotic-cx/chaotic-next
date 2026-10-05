@@ -23,21 +23,17 @@ const SKELETON_ROW_COUNT = 2;
  * Why the browser cannot show push notifications, or null when it can.
  */
 function notificationBlockerKey(): string | null {
-  if (!areNotificationsSupported()) {
-    return marker('settings.notifications.unsupported');
-  }
+  if (!areNotificationsSupported()) return marker('settings.notifications.unsupported');
 
-  if (Notification.permission === 'denied') {
-    return marker('settings.notifications.blocked');
-  }
+  if (Notification.permission === 'denied') return marker('settings.notifications.blocked');
 
   return null;
 }
 
 @Component({
   selector: 'chaotic-notification-settings-section',
-  templateUrl: './notification-settings-section.component.html',
   imports: [FormsModule, PrimeTemplate, Panel, ToggleSwitchModule, TranslocoDirective, LoadErrorComponent],
+  templateUrl: './notification-settings-section.component.html',
 })
 export class NotificationSettingsSectionComponent {
   private readonly http = inject(HttpClient);

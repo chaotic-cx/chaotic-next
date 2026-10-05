@@ -44,7 +44,9 @@ async function fetchLogTail(url: string, maxBytes: number): Promise<string | nul
       const { done, value } = await reader.read();
       if (done) break;
       tail += decoder.decode(value, { stream: true });
-      if (tail.length > maxBytes) tail = tail.slice(-maxBytes);
+      if (tail.length > maxBytes) {
+        tail = tail.slice(-maxBytes);
+      }
     }
     return tail;
   } catch {

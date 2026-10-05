@@ -35,9 +35,7 @@ export class MirrorsService {
 
   // Null until the mirror list has loaded, so callers can tell "loading" from "0 online".
   readonly onlineMirrorCount = computed(() => {
-    if (this.mirrorData() === null) {
-      return null;
-    }
+    if (this.mirrorData() === null) return null;
 
     return this.onlineMirrors().length;
   });

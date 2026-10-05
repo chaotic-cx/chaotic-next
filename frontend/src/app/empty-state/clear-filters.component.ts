@@ -14,12 +14,12 @@ import { TranslocoDirective } from '@jsverse/transloco';
       </button>
     }
   `,
-  styleUrls: ['./text-action.css'],
   styles: `
     :host {
       display: contents;
     }
   `,
+  styleUrls: ['./text-action.css'],
 })
 export class ClearFiltersComponent {
   readonly active = input(false);

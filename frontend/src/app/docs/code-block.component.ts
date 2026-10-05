@@ -171,9 +171,7 @@ export class CodeBlockComponent {
       .filter((line) => line.trim() !== '').length;
     const keys = this.language() === SHELL_LANGUAGE ? COPIED_COMMAND_KEYS : COPIED_LINE_KEYS;
 
-    if (lineCount === 1) {
-      return this.transloco.translate(keys.one);
-    }
+    if (lineCount === 1) return this.transloco.translate(keys.one);
 
     return this.transloco.translate(keys.other, { count: lineCount });
   });

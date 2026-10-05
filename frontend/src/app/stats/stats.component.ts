@@ -123,7 +123,9 @@ export class StatsComponent implements OnInit {
     const param = this.route.snapshot.queryParamMap.get('range');
     if (param === null) return;
     const days = paramToTimeRange(param);
-    if (days !== undefined) this.statsService.timeRangeDays.set(days);
+    if (days !== undefined) {
+      this.statsService.timeRangeDays.set(days);
+    }
   }
 
   private readonly applyInitialRepo = this.initRepoFromRoute();
@@ -175,8 +177,10 @@ export class StatsComponent implements OnInit {
       this.cdr.markForCheck();
     });
 
-    // When arriving with a ?search= package name, always show the Search tab
-    // so the package detail is actually visible.
+    /**
+     * When arriving with a ?search= package name, always show the Search tab
+     * so the package detail is actually visible.
+     */
     effect(() => {
       const q = this.search();
       if (typeof q === 'string' && q.trim()) {
@@ -212,8 +216,10 @@ export class StatsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Legacy deep links used fragments (#builder-stats); forward them to the
-    // corresponding child route once.
+    /**
+     * Legacy deep links used fragments (#builder-stats); forward them to the
+     * corresponding child route once.
+     */
     const fragment = this.route.snapshot.fragment;
     if (fragment !== null && isStatsTab(fragment)) {
       void this.router.navigate([fragment], {

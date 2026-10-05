@@ -152,16 +152,14 @@ export function groupOverTimeChart(rows: GroupOverTimeRow[], formatDay: (day: st
 // Enough for every chart on every tab with a few filter combinations, so the memory use stays small.
 const CHART_CACHE_LIMIT = 100;
 
-/*
+/**
  * The last response per request, kept across tab switches.
  * A revisited tab draws at once from this cache while the resource loads again in the background.
  */
 const chartResponseCache = new Map<string, unknown>();
 
 function chartRequestKey(request: HttpResourceRequest | undefined): string | undefined {
-  if (!request) {
-    return undefined;
-  }
+  if (!request) return undefined;
 
   const params = request.params instanceof HttpParams ? request.params : new HttpParams({ fromObject: request.params });
 

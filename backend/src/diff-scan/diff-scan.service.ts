@@ -76,8 +76,10 @@ export class DiffScanService {
       isDepPresentOverride ??
       ((depName: string) => isDependencyPresent(depName, this.archPkgRepository, this.packageRepository));
 
-    // Fold each .SRCINFO's literal scalars into its sibling PKGBUILD (matched by
-    // directory) so untouched `url=`/`pkgver=` outside the diff hunks still resolve.
+    /**
+     * Fold each .SRCINFO's literal scalars into its sibling PKGBUILD (matched by
+     * directory) so untouched `url=`/`pkgver=` outside the diff hunks still resolve.
+     */
     const srcinfoVarsByDir = new Map<string, ReadonlyMap<string, string>>();
     for (const change of diffs) {
       if (isSrcinfoFile(change.new_path) && !change.deleted_file) {
@@ -88,7 +90,9 @@ export class DiffScanService {
     for (const change of diffs) {
       if (change.deleted_file) continue;
       const vars = srcinfoVarsByDir.get(posix.dirname(change.new_path));
-      if (vars) registerSrcinfoVariables(change, vars);
+      if (vars) {
+        registerSrcinfoVariables(change, vars);
+      }
 
       for (const rule of RULES) {
         if (!ruleRunsOn(rule, surface)) continue;

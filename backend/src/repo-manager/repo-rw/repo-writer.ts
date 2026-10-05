@@ -49,12 +49,8 @@ export class GitlabRepoWriter implements RepoWriter {
 
   async commitBumps(repo: Repo, actions: BumpCommitAction[]): Promise<void> {
     if (actions.length === 0) return;
-    if (!repo.gitlabProjectId) {
-      throw new Error(`Repo ${repo.name} has no gitlabProjectId; cannot create bump commit`);
-    }
-    if (!repo.apiToken) {
-      throw new Error(`Repo ${repo.name} has no api token; cannot create bump commit`);
-    }
+    if (!repo.gitlabProjectId) throw new Error(`Repo ${repo.name} has no gitlabProjectId; cannot create bump commit`);
+    if (!repo.apiToken) throw new Error(`Repo ${repo.name} has no api token; cannot create bump commit`);
 
     const token = decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
     const api = new Gitlab({ token });

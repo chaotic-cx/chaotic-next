@@ -115,9 +115,7 @@ export class LogViewerComponent {
         this.activeTranslation();
 
         const pipelineId = this.pipelineId();
-        if (!pipelineId) {
-          return undefined;
-        }
+        if (!pipelineId) return undefined;
 
         return this.transloco.translate('logViewer.heading', { pipelineId });
       }),
@@ -125,7 +123,9 @@ export class LogViewerComponent {
 
     effect(() => {
       const raw = this.pipelineId();
-      if (raw) untracked(() => this.resetPipeline(Number(raw)));
+      if (raw) {
+        untracked(() => this.resetPipeline(Number(raw)));
+      }
     });
 
     effect(() => {
@@ -140,15 +140,15 @@ export class LogViewerComponent {
       this.selectedJobId();
       this.jobs();
       const el = this.jobListEl()?.nativeElement.querySelector('.job-chip-selected');
-      if (el) el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'nearest', inline: 'center' });
+      if (el) {
+        el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'nearest', inline: 'center' });
+      }
     });
   }
 
   protected jobStatusLabel(status: string): string {
     const key = JOB_STATUS_KEYS.get(status);
-    if (key === undefined) {
-      return status;
-    }
+    if (key === undefined) return status;
 
     return this.transloco.translate(key);
   }
@@ -170,7 +170,9 @@ export class LogViewerComponent {
 
   protected onJobSelect(id: number): void {
     const job = this.jobs().find((candidate) => candidate.id === id);
-    if (job) this.selectJob(job);
+    if (job) {
+      this.selectJob(job);
+    }
   }
 
   protected retryPipeline(): void {
@@ -179,7 +181,9 @@ export class LogViewerComponent {
 
   protected retryStream(): void {
     const job = this.selectedJob();
-    if (job) this.selectJob(job);
+    if (job) {
+      this.selectJob(job);
+    }
   }
 
   private resetPipeline(pipelineId: number): void {
@@ -199,7 +203,9 @@ export class LogViewerComponent {
     const requestedJob = this.requestedJobId();
     const initial =
       jobs.find((job) => job.id === requestedJob) ?? (requestedJob === undefined ? pickInitialJob(jobs) : undefined);
-    if (initial) this.selectJob(initial);
+    if (initial) {
+      this.selectJob(initial);
+    }
   }
 
   private requestedJobId(): number | undefined {
@@ -218,9 +224,7 @@ export class LogViewerComponent {
 
   private openStream(jobId: number): void {
     const raw = this.pipelineId();
-    if (!raw) {
-      return;
-    }
+    if (!raw) return;
 
     const pipelineId = Number(raw);
     this.logStream.start((offset) => this.logService.traceStreamUrl(pipelineId, jobId, offset));

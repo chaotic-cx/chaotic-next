@@ -62,8 +62,10 @@ const DEPLOY_COLUMNS: DeployColumn[] = [
   { key: 'failureTags', labelKey: marker('deployLog.columns.failureTags'), defaultVisible: true },
   { key: 'logUrl', labelKey: marker('deployLog.columns.logUrl') },
   { key: 'duration', labelKey: marker('deployLog.columns.duration') },
-  // Resource usage columns stay hidden unless explicitly enabled; most
-  // builds predate sampling and would only show "n/a".
+  /**
+   * Resource usage columns stay hidden unless explicitly enabled; most
+   * builds predate sampling and would only show "n/a".
+   */
   { key: 'peakMemory', labelKey: marker('deployLog.columns.peakMemory'), defaultVisible: false },
   { key: 'cpuTime', labelKey: marker('deployLog.columns.cpuTime'), defaultVisible: false },
   { key: 'diskIo', labelKey: marker('deployLog.columns.diskIo'), defaultVisible: false },
@@ -142,17 +144,13 @@ export class DeployLogComponent {
   protected readonly filtersActive = this.deployLogService.filtersActive;
 
   protected buildDuration(minutes: number | undefined): string | null {
-    if (!minutes) {
-      return null;
-    }
+    if (!minutes) return null;
 
     return formatDuration(Math.round(minutes * SECONDS_PER_MINUTE));
   }
 
   protected buildCpuTime(nanoseconds: number | null | undefined): string | null {
-    if (nanoseconds === null || nanoseconds === undefined) {
-      return null;
-    }
+    if (nanoseconds === null || nanoseconds === undefined) return null;
 
     return formatCpuTime(nanoseconds);
   }
@@ -198,7 +196,9 @@ export class DeployLogComponent {
 
     effect(() => {
       const q = this.search();
-      if (q) this.searchModel.update((model) => ({ ...model, query: q }));
+      if (q) {
+        this.searchModel.update((model) => ({ ...model, query: q }));
+      }
     });
 
     effect(() => {
@@ -207,7 +207,9 @@ export class DeployLogComponent {
 
     effect(() => {
       const repo = this.repo();
-      if (repo) this.deployLogService.setRepoFilter(repo);
+      if (repo) {
+        this.deployLogService.setRepoFilter(repo);
+      }
     });
 
     effect(() => {
@@ -215,7 +217,9 @@ export class DeployLogComponent {
       if (builder !== undefined) {
         const values = Array.isArray(builder) ? builder : [builder];
         const expanded = values.map((value) => value.trim()).filter(Boolean);
-        if (expanded.length > 0) this.deployLogService.setBuilderFilter(expanded);
+        if (expanded.length > 0) {
+          this.deployLogService.setBuilderFilter(expanded);
+        }
       }
     });
 
@@ -224,7 +228,9 @@ export class DeployLogComponent {
       if (status !== undefined) {
         const labels = Array.isArray(status) ? status : [status];
         const parsed = this.deployLogService.statusByLabels(labels);
-        if (parsed) this.deployLogService.setStatusFilter(parsed);
+        if (parsed) {
+          this.deployLogService.setStatusFilter(parsed);
+        }
       }
     });
   }
@@ -296,7 +302,9 @@ export class DeployLogComponent {
 
   private applySearch(query: string): void {
     const table = this.deployTable();
-    if (table) table.first = 0;
+    if (table) {
+      table.first = 0;
+    }
     this.deployLogService.setSearch(query);
     void this.router.navigate([], {
       queryParams: { search: query || null },
@@ -320,7 +328,9 @@ export class DeployLogComponent {
 
   private applyFilter<T>(setFilter: (value: T | null) => void, value: T | null): void {
     const table = this.deployTable();
-    if (table) table.first = 0;
+    if (table) {
+      table.first = 0;
+    }
     setFilter(value);
   }
 }
