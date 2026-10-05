@@ -19,7 +19,6 @@ const STATUS_DOT_CLASSES: Record<MirrorStatus, string> = {
 @Component({
   selector: 'chaotic-mirror-row',
   imports: [DatePipe, RelativeTimePipe, Tooltip, RouterLink, TranslocoDirective],
-  host: { class: 'chaotic-row' },
   template: `
     <ng-container *transloco="let t; prefix: 'mirrors.row'">
       <span class="size-2 shrink-0 rounded-full" [class]="statusDotClasses[status()]" aria-hidden="true"></span>
@@ -71,6 +70,7 @@ const STATUS_DOT_CLASSES: Record<MirrorStatus, string> = {
       color: var(--catppuccin-color-subtext1);
     }
   `,
+  host: { class: 'chaotic-row' },
 })
 export class MirrorRowComponent {
   readonly mirror = input.required<Mirror>();

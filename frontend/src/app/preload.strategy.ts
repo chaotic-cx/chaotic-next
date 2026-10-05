@@ -55,12 +55,8 @@ export class SelectivePreloadStrategy implements PreloadingStrategy {
 
   preload(route: Route, load: () => Observable<unknown>): Observable<unknown> {
     const mode = route.data?.[PRELOAD_DATA_KEY] as PreloadMode | undefined;
-    if (mode === false || isConstrainedNetwork()) {
-      return of(null);
-    }
-    if (mode === 'authenticated' && !this.authService.isLoggedIn()) {
-      return of(null);
-    }
+    if (mode === false || isConstrainedNetwork()) return of(null);
+    if (mode === 'authenticated' && !this.authService.isLoggedIn()) return of(null);
     return whenIdle().pipe(switchMap(() => load()));
   }
 }

@@ -13,14 +13,10 @@ export const sessionExpiryInterceptor: HttpInterceptorFn = (request, next) => {
   const config = inject(APP_CONFIG);
   const isBackendRequest = request.url.startsWith(config.backendUrl);
   const isAuthRequest = request.url.startsWith(config.authBaseUrl);
-  if (!isBackendRequest || isAuthRequest) {
-    return next(request);
-  }
+  if (!isBackendRequest || isAuthRequest) return next(request);
 
   const signedIn = inject(AuthService).isLoggedIn();
-  if (!signedIn) {
-    return next(request);
-  }
+  if (!signedIn) return next(request);
 
   const sessionExpiry = inject(SessionExpiryService);
 

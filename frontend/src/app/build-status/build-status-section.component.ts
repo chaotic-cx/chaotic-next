@@ -2,7 +2,6 @@ import { Component, input } from '@angular/core';
 
 @Component({
   selector: 'chaotic-build-status-section',
-  host: { class: 'contents' },
   template: `
     <header class="chaotic-card__header">
       <i class="pi {{ icon() }} {{ iconClass() }} text-sm" aria-hidden="true"></i>
@@ -15,6 +14,7 @@ import { Component, input } from '@angular/core';
       </div>
     </header>
   `,
+  host: { class: 'contents' },
 })
 export class BuildStatusSectionComponent {
   readonly title = input.required<string>();

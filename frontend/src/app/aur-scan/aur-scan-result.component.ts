@@ -58,7 +58,9 @@ export class AurScanResultComponent {
   constructor() {
     effect(() => {
       const name = this.packageName();
-      if (name) void this.scanService.startScan(name);
+      if (name) {
+        void this.scanService.startScan(name);
+      }
     });
   }
 
@@ -92,7 +94,9 @@ export class AurScanResultComponent {
   protected toggleFile(fileName: string): void {
     this.collapsedFiles.update((collapsed) => {
       const next = new Set(collapsed);
-      if (!next.delete(fileName)) next.add(fileName);
+      if (!next.delete(fileName)) {
+        next.add(fileName);
+      }
       return next;
     });
   }
@@ -125,9 +129,7 @@ export class AurScanResultComponent {
     this.activeTranslation();
 
     const current = this.scan();
-    if (!current) {
-      return this.packageName();
-    }
+    if (!current) return this.packageName();
 
     const meta = current.packageMeta;
 

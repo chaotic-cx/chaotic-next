@@ -9,8 +9,10 @@ import {
   input,
 } from '@angular/core';
 
-// Measures the element's top edge into `--chaotic-fill-top`; `.chaotic-fill-viewport` turns it into a height.
-// Banners above move that edge and resize the body, so the body is observed.
+/**
+ * Measures the element's top edge into `--chaotic-fill-top`; `.chaotic-fill-viewport` turns it into a height.
+ * Banners above move that edge and resize the body, so the body is observed.
+ */
 @Directive({
   selector: '[chaoticFillViewport]',
   host: {

@@ -5,7 +5,7 @@ import { NotificationSettingsSectionComponent } from './sections/notification-se
 
 @Component({
   selector: 'chaotic-settings',
-  templateUrl: './settings.component.html',
   imports: [TitleComponent, NotificationSettingsSectionComponent, TranslocoDirective],
+  templateUrl: './settings.component.html',
 })
 export class SettingsComponent {}

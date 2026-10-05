@@ -34,13 +34,9 @@ const FAILURE_BY_STATUS: ReadonlyMap<number, RequestFailure> = new Map([
  * Classifies a failed request. Pass `online` in tests; it defaults to the browser state.
  */
 export function requestFailure(error: unknown, online = navigator.onLine): RequestFailure {
-  if (!online) {
-    return 'offline';
-  }
+  if (!online) return 'offline';
 
-  if (!(error instanceof HttpErrorResponse)) {
-    return 'server';
-  }
+  if (!(error instanceof HttpErrorResponse)) return 'server';
 
   return FAILURE_BY_STATUS.get(error.status) ?? 'server';
 }

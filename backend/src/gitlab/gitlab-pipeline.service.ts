@@ -202,7 +202,9 @@ export class GitlabPipelineService implements OnModuleInit {
       pipeline_id: event.pipeline_id,
     };
 
-    if (existingIndex >= 0) list.splice(existingIndex, 1);
+    if (existingIndex >= 0) {
+      list.splice(existingIndex, 1);
+    }
     list.push(entry);
     this.statusMap.set(event.pipeline_id, list);
 
@@ -249,9 +251,7 @@ export class GitlabPipelineService implements OnModuleInit {
     }
     const commits = (await response.json()) as { id: string }[];
     const head = commits[0];
-    if (!head?.id) {
-      throw new ServiceUnavailableException('Could not fetch HEAD commit from GitLab');
-    }
+    if (!head?.id) throw new ServiceUnavailableException('Could not fetch HEAD commit from GitLab');
     return head.id;
   }
 

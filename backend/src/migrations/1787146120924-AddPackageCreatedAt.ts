@@ -5,9 +5,11 @@ export class AddPackageCreatedAt1787146120924 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "package" ADD COLUMN "createdAt" TIMESTAMP`);
-    // Backfill from the first recorded build for each package, which best
-    // approximates when the package was added to the repository. Packages with
-    // no build history are left NULL (excluded from additions-over-time).
+    /**
+     * Backfill from the first recorded build for each package, which best
+     * approximates when the package was added to the repository. Packages with
+     * no build history are left NULL (excluded from additions-over-time).
+     */
     await queryRunner.query(
       `UPDATE "package" p
        SET "createdAt" = (

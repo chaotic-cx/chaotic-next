@@ -112,7 +112,9 @@ export class AurMirrorService implements OnModuleInit {
     for (const path of paths.slice(0, MAX_FILES_PER_PACKAGE)) {
       const file = await this.readTextFile(packageBase, path);
       if (!file || 'binary' in file) {
-        if (file) skippedBinaryFiles.push(path);
+        if (file) {
+          skippedBinaryFiles.push(path);
+        }
         continue;
       }
       files.push({ name: path, content: file.content });
@@ -138,8 +140,10 @@ export class AurMirrorService implements OnModuleInit {
     if (!this.ready || !PACKAGE_BASE_PATTERN.test(packageBase)) return false;
     try {
       if (await this.hasFreshRef(packageBase)) return true;
-      // Explicit destination ref: the opportunistic remote-tracking update of
-      // a bare `fetch origin <branch>` is lost while a full sync fetch runs concurrently
+      /**
+       * Explicit destination ref: the opportunistic remote-tracking update of
+       * a bare `fetch origin <branch>` is lost while a full sync fetch runs concurrently
+       */
       for (let attempt = 1; ; attempt++) {
         try {
           await this.git(
@@ -198,7 +202,9 @@ function looksTextual(bytes: Uint8Array): boolean {
   let controlBytes = 0;
   for (const byte of sample) {
     if (byte === 0) return false;
-    if (byte < 7 || (byte > 13 && byte < 32)) controlBytes++;
+    if (byte < 7 || (byte > 13 && byte < 32)) {
+      controlBytes++;
+    }
   }
   return sample.length === 0 || controlBytes / sample.length < CONTROL_BYTE_RATIO_LIMIT;
 }

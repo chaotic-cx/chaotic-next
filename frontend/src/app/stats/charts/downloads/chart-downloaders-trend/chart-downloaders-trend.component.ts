@@ -33,7 +33,9 @@ export class ChartDownloadersTrendComponent {
     const series = new Map(agents.map((a) => [a, [] as number[]]));
     for (const row of rows) {
       const day = formatDay(row.day);
-      if (!labels.includes(day)) labels.push(day);
+      if (!labels.includes(day)) {
+        labels.push(day);
+      }
       series.get(row.userAgent)?.push(parseCount(row.count));
     }
     return {

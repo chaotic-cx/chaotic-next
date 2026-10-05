@@ -66,7 +66,9 @@ export class LlmScanService {
 
     const task = async (): Promise<DiffScanFinding[]> => {
       const waitMs = 6000 - (Date.now() - this.lastCallAt);
-      if (waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
+      if (waitMs > 0) {
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
       this.lastCallAt = Date.now();
       try {
         if (!this.apiKey) return [];
@@ -107,7 +109,9 @@ export class LlmScanService {
 
           if (this.cache.size >= 200) {
             const oldest = this.cache.keys().next().value as string | undefined;
-            if (oldest !== undefined) this.cache.delete(oldest);
+            if (oldest !== undefined) {
+              this.cache.delete(oldest);
+            }
           }
           this.cache.set(cacheKey, findings);
 

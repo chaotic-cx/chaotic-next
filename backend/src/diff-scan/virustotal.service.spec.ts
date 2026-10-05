@@ -165,7 +165,9 @@ describe('VirustotalService', () => {
       ),
       create: vi.fn((value: Partial<VirusTotalVerdict>) => ({ id: 1, createdAt: new Date(), ...value })),
       save: vi.fn(async (row: Partial<VirusTotalVerdict>) => {
-        if (!rows.includes(row as never)) rows.push(row as never);
+        if (!rows.includes(row as never)) {
+          rows.push(row as never);
+        }
         return row;
       }),
     };

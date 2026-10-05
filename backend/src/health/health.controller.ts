@@ -40,8 +40,10 @@ export class HealthController {
           details[key] = result[key];
           info[key] = { status: 'up' };
         } catch (err) {
-          // Failed indicators throw with their partial result attached; fall
-          // back to a bare marker when the error carries no result at all.
+          /**
+           * Failed indicators throw with their partial result attached; fall
+           * back to a bare marker when the error carries no result at all.
+           */
           const result = (err instanceof Error && 'result' in err
             ? (err as { result: HealthIndicatorResult }).result
             : undefined) ?? {
@@ -69,9 +71,7 @@ export class HealthController {
       { key: 'db', run: () => this.db.pingCheck('db') },
       { key: 'heap', run: async () => checkHeap('heap') },
     ]);
-    if (result.status === 'error') {
-      throw new HttpException(result, HttpStatus.SERVICE_UNAVAILABLE);
-    }
+    if (result.status === 'error') throw new HttpException(result, HttpStatus.SERVICE_UNAVAILABLE);
     return result;
   }
 
@@ -83,9 +83,7 @@ export class HealthController {
       { key: 'db', run: () => this.db.pingCheck('db') },
       { key: 'redis', run: () => this.redis.pingCheck('redis') },
     ]);
-    if (result.status === 'error') {
-      throw new HttpException(result, HttpStatus.SERVICE_UNAVAILABLE);
-    }
+    if (result.status === 'error') throw new HttpException(result, HttpStatus.SERVICE_UNAVAILABLE);
     return result;
   }
 

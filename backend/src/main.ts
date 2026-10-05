@@ -12,8 +12,10 @@ import { checkEnvironment } from './utils/functions';
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
 async function bootstrap(): Promise<void> {
-  // Fastify accepts a boolean or an address/CIDR here. This code maps the
-  // env strings "true"/"false" to booleans and passes other values through.
+  /**
+   * Fastify accepts a boolean or an address/CIDR here. This code maps the
+   * env strings "true"/"false" to booleans and passes other values through.
+   */
   const trustProxyEnv = process.env.CAUR_TRUST_PROXY;
   const trustProxy = trustProxyEnv === 'true' ? true : trustProxyEnv === 'false' ? false : trustProxyEnv;
 
@@ -28,9 +30,11 @@ async function bootstrap(): Promise<void> {
   const configService: ConfigService = app.get<ConfigService>(ConfigService);
   checkEnvironment(configService);
 
-  // Two fastify majors' type declarations coexist in the dependency tree
-  // (@nestjs/platform-fastify pins an older one than @fastify/helmet expects),
-  // so the plugin is narrowed to exactly what the adapter's register() takes.
+  /**
+   * Two fastify majors' type declarations coexist in the dependency tree
+   * (@nestjs/platform-fastify pins an older one than @fastify/helmet expects),
+   * so the plugin is narrowed to exactly what the adapter's register() takes.
+   */
   type AdapterPlugin = Parameters<FastifyAdapter['register']>[0];
   fastifyAdapter.register(helmet as unknown as AdapterPlugin, {
     // The Scalar API reference loads its assets from cdn.jsdelivr.net

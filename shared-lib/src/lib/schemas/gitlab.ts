@@ -295,8 +295,10 @@ export interface MergeRequestWebhookBodyDto {
   repository?: { name: string; url: string; description: string; homepage: string };
 }
 
-// Only object_kind is validated. GitLab owns this payload shape; a schema drift
-// here must never make the endpoint drop a live webhook with a 400.
+/**
+ * Only object_kind is validated. GitLab owns this payload shape; a schema drift
+ * here must never make the endpoint drop a live webhook with a 400.
+ */
 export const gitlabWebhookBodySchema = z.discriminatedUnion('object_kind', [
   z.looseObject({ object_kind: z.literal('pipeline') }),
   z.looseObject({ object_kind: z.literal('merge_request') }),

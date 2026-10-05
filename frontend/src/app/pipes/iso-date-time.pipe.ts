@@ -6,14 +6,10 @@ import { Pipe, PipeTransform } from '@angular/core';
 @Pipe({ name: 'isoDateTime' })
 export class IsoDateTimePipe implements PipeTransform {
   transform(value: string | Date | number | null | undefined): string | null {
-    if (value == null) {
-      return null;
-    }
+    if (value == null) return null;
 
     const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return null;
-    }
+    if (Number.isNaN(date.getTime())) return null;
 
     return date.toISOString();
   }

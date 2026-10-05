@@ -10,9 +10,9 @@ import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-privacy-policy',
+  imports: [Panel, Divider, TitleComponent, PrimeTemplate, TranslocoDirective],
   templateUrl: './privacy-policy.component.html',
   styleUrl: './privacy-policy.component.css',
-  imports: [Panel, Divider, TitleComponent, PrimeTemplate, TranslocoDirective],
 })
 export class PrivacyPolicyComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

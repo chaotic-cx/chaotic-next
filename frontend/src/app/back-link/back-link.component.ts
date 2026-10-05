@@ -43,14 +43,14 @@ export class BackLinkComponent {
   readonly fallback = input.required<string>();
   readonly label = input.required<string>();
 
-  // The router creates this component before it records the current navigation,
-  // so a value here means that an earlier page of this app exists in the history.
+  /**
+   * The router creates this component before it records the current navigation,
+   * so a value here means that an earlier page of this app exists in the history.
+   */
   private readonly cameFromApp = untracked(this.router.lastSuccessfulNavigation) !== null;
 
   protected goBack(event: MouseEvent): void {
-    if (isModifiedClick(event)) {
-      return;
-    }
+    if (isModifiedClick(event)) return;
 
     event.preventDefault();
     if (this.cameFromApp) {

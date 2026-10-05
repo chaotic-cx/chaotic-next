@@ -60,42 +60,38 @@ export class NewsfeedComponent {
   entityToHtml(message: Message): string {
     let returnValue: string;
 
-    if (!message.text) {
-      return '';
-    } else if (typeof message.text === 'string') {
+    if (!message.text) return '';
+    if (typeof message.text === 'string') {
       returnValue = message.text;
     } else {
       returnValue = message.text
         .map((item) => {
-          if (typeof item === 'string') {
-            return item;
-          } else {
-            switch (item.type) {
-              case 'text_link':
-                return item.href
-                  ? `<a class="text-ctp-mauve" href="${item.href}" target="_blank">${item.text}</a>`
-                  : item.text;
-              case 'bold':
-                return `<strong>${item.text}</strong>`;
-              case 'code':
-                return `<code>${item.text}</code>`;
-              case 'italic':
-                return `<em>${item.text}</em>`;
-              case 'pre':
-                return `<pre>${item.text}</pre>`;
-              case 'strikethrough':
-                return `<s>${item.text}</s>`;
-              case 'underline':
-                return `<u>${item.text}</u>`;
-              case 'mention':
-                return `<a class="text-ctp-mauve" href="https://t.me/${item.text.replace('@', '')}" target="_blank">${item.text}</a>`;
-              case 'email':
-                return `<a class="text-ctp-mauve" href="mailto:${item.text}">${item.text}</a>`;
-              case 'phone_number':
-                return `<a class="text-ctp-mauve" href="tel:${item.text}">${item.text}</a>`;
-              default:
-                return item.text;
-            }
+          if (typeof item === 'string') return item;
+          switch (item.type) {
+            case 'text_link':
+              return item.href
+                ? `<a class="text-ctp-mauve" href="${item.href}" target="_blank">${item.text}</a>`
+                : item.text;
+            case 'bold':
+              return `<strong>${item.text}</strong>`;
+            case 'code':
+              return `<code>${item.text}</code>`;
+            case 'italic':
+              return `<em>${item.text}</em>`;
+            case 'pre':
+              return `<pre>${item.text}</pre>`;
+            case 'strikethrough':
+              return `<s>${item.text}</s>`;
+            case 'underline':
+              return `<u>${item.text}</u>`;
+            case 'mention':
+              return `<a class="text-ctp-mauve" href="https://t.me/${item.text.replace('@', '')}" target="_blank">${item.text}</a>`;
+            case 'email':
+              return `<a class="text-ctp-mauve" href="mailto:${item.text}">${item.text}</a>`;
+            case 'phone_number':
+              return `<a class="text-ctp-mauve" href="tel:${item.text}">${item.text}</a>`;
+            default:
+              return item.text;
           }
         })
         .join('');

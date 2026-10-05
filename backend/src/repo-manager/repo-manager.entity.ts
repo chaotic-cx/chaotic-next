@@ -84,8 +84,10 @@ export class PackageBump {
   @ManyToOne(() => Package, (pkg) => pkg.id, { cascade: true })
   pkg!: Package;
 
-  // Reference a pkg.id from the Package or ArchlinuxPackage entities, resolved
-  // By the triggerFrom field
+  /**
+   * Reference a pkg.id from the Package or ArchlinuxPackage entities, resolved
+   * By the triggerFrom field
+   */
   @Column({ type: 'int' })
   trigger!: number;
 

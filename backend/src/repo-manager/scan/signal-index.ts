@@ -165,8 +165,10 @@ export class SignalIndex {
       await this.analysisRepository.update(where, { pluginOf });
     }
 
-    // A newly scanned package may provide a soname another scanned package
-    // was flagged missing for. Arch is reference data and never judged broken.
+    /**
+     * A newly scanned package may provide a soname another scanned package
+     * was flagged missing for. Arch is reference data and never judged broken.
+     */
     await this.recomputeBroken(
       scanned.filter((pkg) => pkg.pkgType === TriggerType.CHAOTIC).map(({ pkgType, pkgId }) => ({ pkgType, pkgId })),
       { freshlyScanned: true },
@@ -282,9 +284,7 @@ export class SignalIndex {
       brokenSince: true,
     };
 
-    if (filter === undefined) {
-      return this.analysisRepository.find({ where: { pkgType: CHAOTIC_PKG_TYPE }, select });
-    }
+    if (filter === undefined) return this.analysisRepository.find({ where: { pkgType: CHAOTIC_PKG_TYPE }, select });
 
     const chaoticEntries = filter.filter((entry) => entry.pkgType === TriggerType.CHAOTIC);
     if (chaoticEntries.length === 0) return [];
@@ -405,8 +405,10 @@ export class SignalIndex {
 
     const cache = await this.loadDirectoryCache();
 
-    // Drop each affected key's previous contribution so a re-scan of the same
-    // package cannot leave stale directories behind.
+    /**
+     * Drop each affected key's previous contribution so a re-scan of the same
+     * package cannot leave stale directories behind.
+     */
     for (const pkg of packages) {
       const triggerType = triggerTypeOf(pkg.pkgType);
       const key = encodeOwnerKey(triggerType, pkg.pkgId);
@@ -485,15 +487,19 @@ export class SignalIndex {
    * the imported Chaotic packages.
    */
   async refreshAfterImport(analyses: ImportedAnalysis[]): Promise<void> {
-    // Rebuild the directory index from the DB: it incrementally accumulates
-    // owner contributions, and rows the importer replaced or removed would
-    // otherwise linger as stale owners on shared directories forever.
+    /**
+     * Rebuild the directory index from the DB: it incrementally accumulates
+     * owner contributions, and rows the importer replaced or removed would
+     * otherwise linger as stale owners on shared directories forever.
+     */
     this.directoryCache = null;
     await this.updateDirectoryIndex(analyses);
 
-    // pluginOf depends on the directory index of OTHER packages: an import that
-    // extends one owner (kwin gaining plugin directories) must re-derive every
-    // stored consumer of the touched namespaces, not only the changed rows.
+    /**
+     * pluginOf depends on the directory index of OTHER packages: an import that
+     * extends one owner (kwin gaining plugin directories) must re-derive every
+     * stored consumer of the touched namespaces, not only the changed rows.
+     */
     const touched = [...new Set(analyses.map((a) => a.pkgType))];
 
     for (const pkgType of touched) {

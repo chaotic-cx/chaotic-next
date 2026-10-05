@@ -19,9 +19,11 @@ export const OBFUSCATION_RULES: Rule[] = [
     name: 'Eval of dynamic strings',
     severity: 'warning',
     description: 'Evaluates dynamically built strings. Static review cannot follow these strings.',
-    // `eval "depends+=(…)"` is a packaging idiom for option-dependent arrays,
-    // `eval "cat <<EOF"` and `eval "package_*"` are packaging helpers,
-    // `--eval` flags belong to interpreters, so none counts as dynamic eval.
+    /**
+     * `eval "depends+=(…)"` is a packaging idiom for option-dependent arrays,
+     * `eval "cat <<EOF"` and `eval "package_*"` are packaging helpers,
+     * `--eval` flags belong to interpreters, so none counts as dynamic eval.
+     */
     pattern: /(?<![-\w])eval\b(?!\s*"?\s*(?:make|check|opt)?depends\+?=)(?!\s*"?\s*cat\s+<<)(?!\s*"?\s*package_)/,
     informational: true,
     countsTowardMalwareScan: false,
@@ -57,8 +59,10 @@ export const OBFUSCATION_RULES: Rule[] = [
           /(?<!\w+\s)source\s+['"]?[^'";\s]+\.(?:md|rst|adoc)\b/.source,
           // POSIX dot-source of a doc file, e.g. `. evil.txt`.
           /\.\s+(?!['"])[^'";\s]+\.(?:md|txt|rst)\b/.source,
-          // Direct execution of a doc file, e.g. `./docs.md` at a command position,
-          // or `exec ./install.md`.
+          /**
+           * Direct execution of a doc file, e.g. `./docs.md` at a command position,
+           * or `exec ./install.md`.
+           */
           /(?:^|[;&|()])\s*\.\/[^'"\s]+\.(?:md|txt|rst|adoc|html)\b|\bexec\s+\.\/[^'"\s]+\.(?:md|txt|rst|adoc|html)\b/
             .source,
           // chmod with an explicit execute mode applied to a doc file.
@@ -96,8 +100,10 @@ export const OBFUSCATION_RULES: Rule[] = [
     severity: 'critical',
     description:
       'Contains a zero-width or invisible Unicode character that can hide payload fragments from human review.',
-    // ZWJ/ZWNJ (200C-200D) and bidi marks (200E-200F) are legitimate orthographic
-    // characters in many scripts, so only truly invisible ones are flagged.
+    /**
+     * ZWJ/ZWNJ (200C-200D) and bidi marks (200E-200F) are legitimate orthographic
+     * characters in many scripts, so only truly invisible ones are flagged.
+     */
     pattern: /[\u200B\u2060\uFEFF]/,
     scanComments: true,
   }),

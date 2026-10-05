@@ -280,7 +280,9 @@ describe('RepoManager.checkPackageDepsAfterDeployment', () => {
       packages: [deployed, consumer],
       bumpAndPush: async (needsRebuild) => {
         order.push('start');
-        if (order.length === 1) await new Promise<void>((resolve) => (releaseFirst = resolve));
+        if (order.length === 1) {
+          await new Promise<void>((resolve) => (releaseFirst = resolve));
+        }
         order.push('end');
         return needsRebuild;
       },

@@ -51,8 +51,10 @@ export const PERSISTENCE_RULES: Rule[] = [
     countsTowardMalwareScan: false,
     check(change) {
       if (change.deleted_file || !INSTALL_SCRIPT_PATTERN.test(change.new_path)) return null;
-      // Modifications of an existing scriptlet are CAUR-INSTALL-CHANGED's job;
-      // full-file scans have no removed lines and flag the shipped scriptlet.
+      /**
+       * Modifications of an existing scriptlet are CAUR-INSTALL-CHANGED's job;
+       * full-file scans have no removed lines and flag the shipped scriptlet.
+       */
       if (removedLineTexts(change).length > 0) return null;
       if (!addedLines(change)[0]) return null;
       return {
@@ -86,8 +88,10 @@ export const PERSISTENCE_RULES: Rule[] = [
       if (change.deleted_file) return null;
       const binary = hasBinaryContent(change) || (change.new_file && hasBinaryExtension(change.new_path));
       if (!binary) return null;
-      // Unknown or executable binary content stays critical; data blobs like committed
-      // patch archives are merely unreviewable and drop to a warning.
+      /**
+       * Unknown or executable binary content stays critical; data blobs like committed
+       * patch archives are merely unreviewable and drop to a warning.
+       */
       const severity = DATA_BINARY_EXTENSIONS.has(fileExtension(change.new_path)) ? 'warning' : undefined;
       return { line: 1, match: change.new_path, note: 'Binary content', severity };
     },

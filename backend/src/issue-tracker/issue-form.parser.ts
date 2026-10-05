@@ -9,8 +9,10 @@ import spdxParse from 'spdx-expression-parse';
 
 const REQUEST_TITLE_PATTERN = /^\[(Request|Rebuild|Issue)]\s+([\w@.+-]+(?:\s*[, ]\s*[\w@.+-]+)?)\s*$/;
 
-// Requesters mix up both AUR URL shapes and often paste them without a
-// scheme; the name resolves through the AUR RPC either way.
+/**
+ * Requesters mix up both AUR URL shapes and often paste them without a
+ * scheme; the name resolves through the AUR RPC either way.
+ */
 const AUR_PKGBASE_URL = /^(?:https?:\/\/)?aur\.archlinux\.org\/(?:pkgbase|packages)\/([A-Za-z0-9_.@+-]+)\/?\s*$/;
 
 /** One `### Label` section of a rendered issue-form body. */

@@ -29,14 +29,10 @@ export class TranslatedTitleStrategy extends TitleStrategy {
     if (titleKey === undefined) return undefined;
 
     const routeTitle = this.transloco.translate(titleKey);
-    if (titleKey === HOME_TITLE_KEY) {
-      return routeTitle;
-    }
+    if (titleKey === HOME_TITLE_KEY) return routeTitle;
 
     const record = this.recordTitle.name();
-    if (record === undefined) {
-      return this.transloco.translate('routes.titleFormat', { page: routeTitle });
-    }
+    if (record === undefined) return this.transloco.translate('routes.titleFormat', { page: routeTitle });
 
     const page = this.transloco.translate('routes.recordTitleFormat', { record, page: routeTitle });
     return this.transloco.translate('routes.titleFormat', { page });
@@ -47,12 +43,16 @@ export class TranslatedTitleStrategy extends TitleStrategy {
 
     effect(() => {
       const documentTitle = this.documentTitle();
-      if (documentTitle !== undefined) this.title.setTitle(documentTitle);
+      if (documentTitle !== undefined) {
+        this.title.setTitle(documentTitle);
+      }
     });
   }
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
     const titleKey = this.buildTitle(snapshot);
-    if (titleKey !== undefined) this.titleKey.set(titleKey);
+    if (titleKey !== undefined) {
+      this.titleKey.set(titleKey);
+    }
   }
 }

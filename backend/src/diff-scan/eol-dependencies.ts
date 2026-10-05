@@ -155,9 +155,11 @@ export async function checkEolDependencies(pkgbuildText: string): Promise<DiffSc
   for (const dependency of dependencies) {
     if (dependency.includes('$')) continue;
     const constraint = parseDependencyConstraint(dependency);
-    // A name-encoded major (`electron39`) pins the product version whatever
-    // the operators around it say. A bare `>=` floor is not the version the
-    // package builds against, so it is never an EOL candidate.
+    /**
+     * A name-encoded major (`electron39`) pins the product version whatever
+     * the operators around it say. A bare `>=` floor is not the version the
+     * package builds against, so it is never an EOL candidate.
+     */
     const encoded = nameEncodedVersion(constraint.name);
     let name = constraint.name;
     let version: string | null = null;

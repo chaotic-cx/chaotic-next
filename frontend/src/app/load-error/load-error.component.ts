@@ -29,9 +29,7 @@ const COPY_LABEL_KEYS: Record<CopyState, string> = {
  */
 function hintFailure(error: unknown): RequestFailure | null {
   const failure = requestFailure(error);
-  if (failure === 'offline' || error instanceof HttpErrorResponse) {
-    return failure;
-  }
+  if (failure === 'offline' || error instanceof HttpErrorResponse) return failure;
 
   return null;
 }
@@ -159,9 +157,7 @@ export class LoadErrorComponent {
 
   protected readonly hintKey = computed(() => {
     const kind = this.kind();
-    if (kind === null) {
-      return null;
-    }
+    if (kind === null) return null;
 
     return HINT_KEYS[kind] ?? null;
   });

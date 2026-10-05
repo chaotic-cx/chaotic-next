@@ -56,17 +56,25 @@ export function errorMessage(error: unknown): string {
 }
 
 export function formatDuration(totalSeconds: number): string {
-  // Sub-second precision is noise in a human-readable duration; round before
-  // splitting so the seconds part never carries over into 60.
+  /**
+   * Sub-second precision is noise in a human-readable duration; round before
+   * splitting so the seconds part never carries over into 60.
+   */
   const rounded = Math.round(totalSeconds);
   const hours = Math.floor(rounded / 3600);
   const minutes = Math.floor((rounded % 3600) / 60);
   const seconds = rounded % 60;
 
   const parts: string[] = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+  if (hours > 0) {
+    parts.push(`${hours}h`);
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes}m`);
+  }
+  if (seconds > 0 || parts.length === 0) {
+    parts.push(`${seconds}s`);
+  }
   return parts.join(' ');
 }
 
@@ -186,7 +194,9 @@ export function updateSeoTags(meta: Meta, seo: SeoTags): void {
   meta.updateTag({ property: 'og:title', content: seo.title });
   meta.updateTag({ property: 'og:description', content: seo.description });
   meta.updateTag({ property: 'og:url', content: seo.url });
-  if (seo.image) meta.updateTag({ property: 'og:image', content: seo.image });
+  if (seo.image) {
+    meta.updateTag({ property: 'og:image', content: seo.image });
+  }
 }
 
 /** Must run in an injection context (component constructor or field initializer). */

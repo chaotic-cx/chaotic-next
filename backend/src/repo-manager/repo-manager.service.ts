@@ -122,8 +122,10 @@ export class RepoManagerService implements OnModuleInit {
       }),
     );
 
-    // The Arch mirror also serves as the build mirror. Poll its `lastupdate`
-    // file so we notice repo re-syncs near-instantly (default every minute).
+    /**
+     * The Arch mirror also serves as the build mirror. Poll its `lastupdate`
+     * file so we notice repo re-syncs near-instantly (default every minute).
+     */
     const pollWithThis = this.pollMirrorLastUpdate.bind(this);
     this.schedulerRegistry.addCronJob(
       'mirror-lastupdate-poll',
@@ -311,7 +313,9 @@ export class RepoManagerService implements OnModuleInit {
     }
     for (const pkg of chaoticPkgs) {
       provided.add(pkg.pkgname);
-      if (pkg.pkgbaseName) provided.add(pkg.pkgbaseName);
+      if (pkg.pkgbaseName) {
+        provided.add(pkg.pkgbaseName);
+      }
       for (const name of pkg.metadata?.provides ?? []) provided.add(strip(name));
     }
     const reports: MissingDependencyReport[] = [];
@@ -366,9 +370,7 @@ export class RepoManagerService implements OnModuleInit {
    */
   async bumpSelectedPackages(pkgnames: string[], actorGroups: string[]): Promise<BumpPackagesResult> {
     const uniqueNames = [...new Set(pkgnames.map((name) => name.trim()).filter(Boolean))];
-    if (uniqueNames.length === 0) {
-      throw new BadRequestException('No packages provided', { errorCode: 'NO_PACKAGES' });
-    }
+    if (uniqueNames.length === 0) throw new BadRequestException('No packages provided', { errorCode: 'NO_PACKAGES' });
 
     const pkgs = await this.packageRepository.find({
       where: { pkgname: In(uniqueNames), isActive: true },
@@ -381,9 +383,7 @@ export class RepoManagerService implements OnModuleInit {
       list.push(pkg);
       byRepo.set(pkg.repo.id, list);
     }
-    if (byRepo.size === 0) {
-      throw new NotFoundException('No active packages matched the selection');
-    }
+    if (byRepo.size === 0) throw new NotFoundException('No active packages matched the selection');
 
     for (const repoPkgs of byRepo.values()) {
       const repoName = repoPkgs[0]?.repo?.name;
@@ -396,8 +396,10 @@ export class RepoManagerService implements OnModuleInit {
       }
     }
 
-    // The commit must carry the reason each package is broken (missing sonames),
-    // not just that it was bumped manually.
+    /**
+     * The commit must carry the reason each package is broken (missing sonames),
+     * not just that it was bumped manually.
+     */
     const brokenReasons = await this.loadBrokenReasons([...byRepo.values()].flat());
     const skipped: string[] = [];
 
@@ -413,9 +415,11 @@ export class RepoManagerService implements OnModuleInit {
       let reader: RepoReader | undefined;
       try {
         reader = await this.readerFactory.open(repo);
-        // The `.CI/config` lives under the repo's pkgbase directory. A broken
-        // report can name a built sub-package that is not a real directory, so
-        // only bump packages whose directory actually exists in the repo.
+        /**
+         * The `.CI/config` lives under the repo's pkgbase directory. A broken
+         * report can name a built sub-package that is not a real directory, so
+         * only bump packages whose directory actually exists in the repo.
+         */
         const dirs = new Set(await reader.listPackageDirs());
         const needsRebuild: RepoUpdateRunParams[] = [];
         for (const pkg of repoPkgs) {
@@ -474,9 +478,11 @@ export class RepoManagerService implements OnModuleInit {
   }
 
   async getDependencyGraph(): Promise<DependencyEdge[]> {
-    // Select only the columns the graph needs; the full rows carry large jsonb
-    // payloads (files/exportedSymbols/vtables) that would otherwise be loaded
-    // for every analysis on every call.
+    /**
+     * Select only the columns the graph needs; the full rows carry large jsonb
+     * payloads (files/exportedSymbols/vtables) that would otherwise be loaded
+     * for every analysis on every call.
+     */
     const analyses = await this.elfAnalysisRepository.find({
       select: {
         pkgType: true,
@@ -520,14 +526,14 @@ export class RepoManagerService implements OnModuleInit {
       relations: { repo: true },
       order: { lastUpdated: 'DESC' },
     });
-    if (pkgs.length === 0) {
-      throw new NotFoundException(`Package not found: ${pkgname}`);
-    }
+    if (pkgs.length === 0) throw new NotFoundException(`Package not found: ${pkgname}`);
 
-    // A pkgname can map to several package rows (e.g. duplicate/renamed repo
-    // entries), and only one of them carries the current ELF analysis. Look
-    // across all of them and use the newest analysis; a lone findOne() can pick
-    // a row with no analysis and wrongly report an empty dependency graph.
+    /**
+     * A pkgname can map to several package rows (e.g. duplicate/renamed repo
+     * entries), and only one of them carries the current ELF analysis. Look
+     * across all of them and use the newest analysis; a lone findOne() can pick
+     * a row with no analysis and wrongly report an empty dependency graph.
+     */
     const analyses = await this.elfAnalysisRepository.find({
       where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: In(pkgs.map((pkg) => pkg.id)) },
     });
@@ -537,16 +543,20 @@ export class RepoManagerService implements OnModuleInit {
       return latest;
     }, undefined);
 
-    // Base the report on the package that owns the analysis (for metadata deps
-    // and explicit triggers); otherwise fall back to the most recently updated.
+    /**
+     * Base the report on the package that owns the analysis (for metadata deps
+     * and explicit triggers); otherwise fall back to the most recently updated.
+     */
     const pkg = pkgs.find((candidate) => candidate.id === analysis?.pkgId) ?? pkgs[0];
 
     const explicitTriggers = await this.explicitTriggersFor(pkg);
 
-    // Only packages the package actually depends on can trigger its rebuild:
-    // a soname provider or plugin owner that isn't in metadata.deps cannot be
-    // the cause of a BROKEN_DEPS/PLUGIN bump. When no deps are recorded (e.g.
-    // test seeds) the filter is a no-op and all providers are returned.
+    /**
+     * Only packages the package actually depends on can trigger its rebuild:
+     * a soname provider or plugin owner that isn't in metadata.deps cannot be
+     * the cause of a BROKEN_DEPS/PLUGIN bump. When no deps are recorded (e.g.
+     * test seeds) the filter is a no-op and all providers are returned.
+     */
     const deps = new Set(pkg.metadata?.deps ?? []);
 
     const sonameDependencies = analysis ? await this.sonameDependenciesFor(analysis.neededSonames, deps) : [];
@@ -701,8 +711,10 @@ export class RepoManagerService implements OnModuleInit {
     try {
       await this.repoManager.pullArchlinuxPackages();
 
-      // When the signal scanner is enabled, download the changed packages from
-      // the mirror and scan them before computing rebuild triggers.
+      /**
+       * When the signal scanner is enabled, download the changed packages from
+       * the mirror and scan them before computing rebuild triggers.
+       */
       let hasMissedBreaks = false;
       if (this.configService.get<boolean>('repoMan.signalScanEnabled')) {
         await this.repoManager.scanChangedArchPackages();

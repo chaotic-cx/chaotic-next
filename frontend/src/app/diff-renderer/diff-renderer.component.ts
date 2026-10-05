@@ -17,9 +17,9 @@ const CHANGE_LABEL_KEYS: Partial<Record<DiffLineType, string>> = {
 
 @Component({
   selector: 'chaotic-diff-renderer',
+  imports: [NgTemplateOutlet, TranslocoDirective],
   templateUrl: './diff-renderer.component.html',
   styleUrl: './diff-renderer.component.css',
-  imports: [NgTemplateOutlet, TranslocoDirective],
   preserveWhitespaces: false,
 })
 export class DiffRendererComponent {
@@ -86,7 +86,9 @@ export class DiffRendererComponent {
           added.segments = allChangedSegments(added.content);
           result.push(added);
         }
-        if (inHunk) newLineNumber++;
+        if (inHunk) {
+          newLineNumber++;
+        }
       } else if (raw.startsWith('-') && !raw.startsWith('---')) {
         pendingRemoved.push({
           type: 'removed',
@@ -94,7 +96,9 @@ export class DiffRendererComponent {
           content: stripDiffMarker(raw),
           oldLineNumber: inHunk ? oldLineNumber : undefined,
         });
-        if (inHunk) oldLineNumber++;
+        if (inHunk) {
+          oldLineNumber++;
+        }
       } else {
         flushPendingRemoved();
         result.push({

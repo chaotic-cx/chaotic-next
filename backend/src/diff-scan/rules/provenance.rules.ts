@@ -121,9 +121,7 @@ function checksumNote(parsed: ParsedPkgbuild): string | null {
   for (const name of CHECKSUM_ARRAYS) {
     const sums = extractArray(parsed.text, name);
     if (sums === null || sums.length === 0) continue;
-    if (!STRONG_CHECKSUM_ARRAYS.includes(name)) {
-      return `sources are only covered by weak checksums (${name})`;
-    }
+    if (!STRONG_CHECKSUM_ARRAYS.includes(name)) return `sources are only covered by weak checksums (${name})`;
     return skippedChecksumNote(parsed.entries, sums);
   }
   return 'no checksum array covers the downloaded sources';

@@ -152,8 +152,8 @@ export class RepoManagerController {
   }
 
   @Get('dependencies/:pkgname')
-  @ApiParam({ name: 'pkgname', description: 'Package name' })
   @ApiOperation({ summary: 'List what can cause a package to be rebuilt via our system, per trigger channel.' })
+  @ApiParam({ name: 'pkgname', description: 'Package name' })
   @ApiOkResponse({
     description: 'Rebuild trigger sources for the package.',
     schema: schemaResponse(packageRebuildTriggerSourcesSchema).schema,

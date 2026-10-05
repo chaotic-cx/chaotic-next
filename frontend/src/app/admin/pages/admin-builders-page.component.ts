@@ -352,9 +352,7 @@ export class AdminBuildersPageComponent {
 
   protected reviewConflict(): void {
     const latest = this.conflict.review();
-    if (latest === null) {
-      return;
-    }
+    if (latest === null) return;
 
     this.editing.set(latest);
     this.fillForm(latest);
@@ -374,9 +372,7 @@ export class AdminBuildersPageComponent {
       }
 
       const unchanged = await this.conflict.confirmUnchanged(() => this.service.findBuilder(current));
-      if (!unchanged) {
-        return;
-      }
+      if (!unchanged) return;
 
       const saved = await this.service.updateBuilder(current.id, this.toFormData(this.model()));
       if (saved) {

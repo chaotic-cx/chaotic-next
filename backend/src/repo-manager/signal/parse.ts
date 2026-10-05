@@ -29,7 +29,9 @@ export function parseTarVerboseList(output: string): { path: string; mode: strin
   const entries: { path: string; mode: string }[] = [];
   for (const line of output.split('\n')) {
     const match = TAR_VERBOSE_LINE.exec(line);
-    if (match) entries.push({ path: match[2], mode: match[1] });
+    if (match) {
+      entries.push({ path: match[2], mode: match[1] });
+    }
   }
   return entries;
 }
@@ -58,8 +60,12 @@ export function parseUndefinedSymbols(output: string): string[] {
     if (!match) continue;
     let name = match[1].trim();
     const at = name.indexOf('@');
-    if (at !== -1) name = name.slice(0, at);
-    if (name) symbols.push(name);
+    if (at !== -1) {
+      name = name.slice(0, at);
+    }
+    if (name) {
+      symbols.push(name);
+    }
   }
   return symbols;
 }
@@ -70,7 +76,9 @@ export function parseDefinedSymbols(output: string): string[] {
     const trimmed = line.trim();
     if (!trimmed) continue;
     const match = /^\S+\s+[A-Za-z]\s+(.+)$/.exec(trimmed);
-    if (match) symbols.push(match[1].trim());
+    if (match) {
+      symbols.push(match[1].trim());
+    }
   }
   return symbols;
 }
@@ -108,7 +116,9 @@ export function parseReadelfVersionInfo(output: string): {
       // The BASE entry is named after the library itself, not a version node.
       if (/Flags:\s*BASE/.test(trimmed)) continue;
       const name = /Name:\s+(\S+)/.exec(trimmed);
-      if (name) defined.push(name[1]);
+      if (name) {
+        defined.push(name[1]);
+      }
     } else if (inNeed) {
       const file = /File:\s+(\S+)/.exec(trimmed);
       if (file) {
@@ -116,7 +126,9 @@ export function parseReadelfVersionInfo(output: string): {
         continue;
       }
       const name = /Name:\s+(\S+)/.exec(trimmed);
-      if (name && currentFile) (needed[currentFile] ??= []).push(name[1]);
+      if (name && currentFile) {
+        (needed[currentFile] ??= []).push(name[1]);
+      }
     }
   }
   return { defined, needed };
@@ -259,7 +271,9 @@ export function latestAnalysisByKey<T extends { version: string }>(
   for (const row of analyses) {
     const key = keyOf(row);
     const existing = latest.get(key);
-    if (!existing || compareArchVersions(row.version, existing.version) > 0) latest.set(key, row);
+    if (!existing || compareArchVersions(row.version, existing.version) > 0) {
+      latest.set(key, row);
+    }
   }
   return latest;
 }

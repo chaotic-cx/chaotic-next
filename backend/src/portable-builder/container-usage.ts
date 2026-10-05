@@ -74,7 +74,7 @@ export function usageFromStats(stats: ContainerStats): ContainerUsage {
 }
 
 function calculateMemoryUsage(memoryStats: ContainerStats['memory_stats']): number {
-  if (!memoryStats || !memoryStats.usage) return 0;
+  if (!memoryStats?.usage) return 0;
   const stats = memoryStats.stats as Record<string, number> | undefined;
   const inactiveFile = stats?.inactive_file ?? stats?.total_inactive_file ?? 0;
   return Math.max(0, memoryStats.usage - inactiveFile);

@@ -2,9 +2,7 @@ import { inject } from '@angular/core';
 import { TRANSLOCO_SCOPE, type TranslocoScope } from '@jsverse/transloco';
 
 function scopeName(scope: TranslocoScope): string | undefined {
-  if (typeof scope === 'string') {
-    return scope;
-  }
+  if (typeof scope === 'string') return scope;
 
   return scope?.scope;
 }
@@ -16,9 +14,7 @@ function scopeName(scope: TranslocoScope): string | undefined {
  */
 export function injectProvidedScopeNames(): string[] {
   const provided: TranslocoScope | TranslocoScope[] | null = inject(TRANSLOCO_SCOPE, { optional: true });
-  if (provided === null) {
-    return [];
-  }
+  if (provided === null) return [];
 
   let scopes: TranslocoScope[] = [provided];
   if (Array.isArray(provided)) {

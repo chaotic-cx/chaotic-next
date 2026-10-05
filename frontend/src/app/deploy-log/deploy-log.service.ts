@@ -34,13 +34,9 @@ const STATUS_OPTIONS: StatusOption[] = Object.entries(BUILD_STATUS_ICONS).map(([
 const DEFAULT_SORT_FIELD: BuildSortField = 'timestamp';
 
 function hasDefaultStatuses(statuses: BuildStatus[] | undefined): boolean {
-  if (statuses === undefined) {
-    return true;
-  }
+  if (statuses === undefined) return true;
 
-  if (statuses.length !== DEFAULT_DEPLOYMENT_STATUSES.length) {
-    return false;
-  }
+  if (statuses.length !== DEFAULT_DEPLOYMENT_STATUSES.length) return false;
 
   return statuses.every((status) => DEFAULT_DEPLOYMENT_STATUSES.includes(status));
 }
@@ -115,8 +111,10 @@ export class DeployLogService {
   );
 
   setSearch(value: string): void {
-    // A new search invalidates the current offset; a stale persisted table
-    // position would otherwise request a page beyond the filtered results.
+    /**
+     * A new search invalidates the current offset; a stale persisted table
+     * position would otherwise request a page beyond the filtered results.
+     */
     this.pagination.resetPage();
     this.searchValue.set(value);
   }

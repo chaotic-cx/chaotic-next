@@ -94,8 +94,10 @@ export class BuildStatusService {
     this.appService.getStatusChecksResourceRequest(),
   );
   private readonly queueStatsResource = httpResource<StatsObject>(() => this.appService.getQueueStatsResourceRequest());
-  // A queue refresh creates new arrays. Comparing items keeps the averages requests stable,
-  // so the estimates do not blank out while the same packages are fetched again.
+  /**
+   * A queue refresh creates new arrays. Comparing items keeps the averages requests stable,
+   * so the estimates do not blank out while the same packages are fetched again.
+   */
   private readonly queuedPackageNames = computed(
     () => [...this.activeQueue().map((pkg) => pkg.name), ...this.waitingQueue().map((pkg) => pkg.name)],
     { equal: sameItems },
@@ -136,9 +138,7 @@ export class BuildStatusService {
 
     if (this.loadingQueue()) return '';
 
-    if (this.queueFailed()) {
-      return this.transloco.translate('buildStatus.liveSummary.unavailable');
-    }
+    if (this.queueFailed()) return this.transloco.translate('buildStatus.liveSummary.unavailable');
 
     return this.transloco.translate('buildStatus.liveSummary.text', {
       running: this.runningBuildsText(this.activeQueue().length),
@@ -257,7 +257,9 @@ export class BuildStatusService {
         const ms = Date.parse(job.started_at);
         if (Number.isNaN(ms)) continue;
         const short = job.name; // already short after toView()
-        if (!map.has(short)) map.set(short, ms);
+        if (!map.has(short)) {
+          map.set(short, ms);
+        }
       }
     }
     return map;
@@ -284,16 +286,22 @@ export class BuildStatusService {
   });
 
   constructor() {
-    // pipelineData is fed from both this resource and live SSE 'pipeline'
-    // events (see BuildStatusComponent), so it cannot be a pure computed; the
-    // effect only seeds it from the resource while events mutate it.
+    /**
+     * pipelineData is fed from both this resource and live SSE 'pipeline'
+     * events (see BuildStatusComponent), so it cannot be a pure computed; the
+     * effect only seeds it from the resource while events mutate it.
+     */
     effect(() => {
       const pipelines = resourceValue(this.pipelinesResource);
-      if (pipelines) this.transformPipelineData(pipelines);
+      if (pipelines) {
+        this.transformPipelineData(pipelines);
+      }
     });
-    // activeFirstSeen records the first wall-clock appearance of each build and
-    // must persist across queue changes, so it is not pure-derivable. This
-    // effect writes only its own target signal (untracked), avoiding a loop.
+    /**
+     * activeFirstSeen records the first wall-clock appearance of each build and
+     * must persist across queue changes, so it is not pure-derivable. This
+     * effect writes only its own target signal (untracked), avoiding a loop.
+     */
     effect(() => this.trackFirstSeenActive());
 
     const tick = window.setInterval(() => this.now.set(Date.now()), ESTIMATE_TICK_MS);
@@ -415,17 +423,13 @@ export class BuildStatusService {
   }
 
   private runningBuildsText(count: number): string {
-    if (count === 1) {
-      return this.transloco.translate('buildStatus.liveSummary.buildsRunningOne', { count });
-    }
+    if (count === 1) return this.transloco.translate('buildStatus.liveSummary.buildsRunningOne', { count });
 
     return this.transloco.translate('buildStatus.liveSummary.buildsRunningOther', { count });
   }
 
   private idleBuildersText(count: number): string {
-    if (count === 1) {
-      return this.transloco.translate('buildStatus.liveSummary.buildersOne', { count });
-    }
+    if (count === 1) return this.transloco.translate('buildStatus.liveSummary.buildersOne', { count });
 
     return this.transloco.translate('buildStatus.liveSummary.buildersOther', { count });
   }
@@ -486,10 +490,14 @@ export class BuildStatusService {
     const nowMs = Date.now();
     for (const pkg of active) {
       const seen = previous.get(pkg.rawName);
-      if (seen === undefined) changed = true;
+      if (seen === undefined) {
+        changed = true;
+      }
       next.set(pkg.rawName, seen ?? nowMs);
     }
-    if (changed || previous.size !== next.size) this.activeFirstSeen.set(next);
+    if (changed || previous.size !== next.size) {
+      this.activeFirstSeen.set(next);
+    }
   }
 
   getPackageBuilds(): void {
@@ -515,8 +523,12 @@ export class BuildStatusService {
   applyQueueEvent(event: ChaoticEvent): void {
     const refreshesBuilds = event.type === 'build' || event.type === 'queue_promoted';
     const refreshesQueue = refreshesBuilds || event.type === 'queue';
-    if (refreshesBuilds) this.refreshPackageBuilds();
-    if (refreshesQueue) this.refreshQueueStats();
+    if (refreshesBuilds) {
+      this.refreshPackageBuilds();
+    }
+    if (refreshesQueue) {
+      this.refreshQueueStats();
+    }
   }
 
   async promote(pkgbase: string, arch = 'x86_64', targetRepo = 'chaotic-aur'): Promise<void> {

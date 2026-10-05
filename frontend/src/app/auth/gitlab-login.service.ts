@@ -18,8 +18,10 @@ const POPUP_FEATURES = 'width=600,height=700';
 export const AUTH_CALLBACK_MESSAGE = 'auth-callback';
 export const AUTH_ERROR_MESSAGE = 'auth-error';
 export const AUTH_RESULT_KEY = 'auth-result';
-// ngx-better-auth's internal cross-tab session-sync channel. Writing a session
-// event from the popup triggers the opener's session refetch without a reload.
+/**
+ * ngx-better-auth's internal cross-tab session-sync channel. Writing a session
+ * event from the popup triggers the opener's session refetch without a reload.
+ */
 export const AUTH_SESSION_SYNC_KEY = 'better-auth.message';
 
 export const DEFAULT_LOGIN_REDIRECT = '/admin/overview';
@@ -39,9 +41,7 @@ export class PopupBlockedError extends Error {
  * Translation key for a failed sign-in start: a blocked pop-up or any other failure.
  */
 export function loginFailedMessageKey(error: unknown): string {
-  if (error instanceof PopupBlockedError) {
-    return marker('auth.loginFailed.popupBlocked');
-  }
+  if (error instanceof PopupBlockedError) return marker('auth.loginFailed.popupBlocked');
 
   return marker('auth.loginFailed.message');
 }
@@ -66,9 +66,7 @@ export class GitlabLoginService {
     localStorage.removeItem(AUTH_RESULT_KEY);
     const popup = window.open('', POPUP_WINDOW_NAME, POPUP_FEATURES);
 
-    if (!popup) {
-      return throwError(() => new PopupBlockedError());
-    }
+    if (!popup) return throwError(() => new PopupBlockedError());
 
     const callbackURL = window.location.origin + AUTH_CALLBACK_PATH;
 

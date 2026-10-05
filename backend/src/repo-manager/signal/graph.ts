@@ -205,9 +205,11 @@ export function findBrokenDependencies(opts: {
 }): BrokenDependency[] {
   const deps: BrokenDependency[] = [];
   const base = new Set(opts.baseSonames ?? BASE_SYSTEM_SONAMES);
-  // A package never breaks itself: a needed soname matching one of its own
-  // shipped files (e.g. LibreOffice's bundled libmergedlo.so resolved via
-  // rpath) is not a missing dependency.
+  /**
+   * A package never breaks itself: a needed soname matching one of its own
+   * shipped files (e.g. LibreOffice's bundled libmergedlo.so resolved via
+   * rpath) is not a missing dependency.
+   */
   const shipped = new Set(opts.files.map(sonameBasename));
 
   if (opts.checkSonames !== false) {
@@ -257,7 +259,9 @@ export function findVersionNodeBreaks(opts: {
   for (const [soname, needed] of Object.entries(opts.neededVersionNodes ?? {})) {
     const provided = new Set(opts.providerVersionNodes?.[soname] ?? []);
     const missing = [...new Set(needed)].filter((node) => !provided.has(node) && !PRIVATE_VERSION_NODE.test(node));
-    if (missing.length > 0) breaks.push({ soname, versionNodes: missing });
+    if (missing.length > 0) {
+      breaks.push({ soname, versionNodes: missing });
+    }
   }
   return breaks;
 }

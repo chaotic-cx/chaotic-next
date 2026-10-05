@@ -1,11 +1,11 @@
 import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { LoadingService } from './loading.service';
 
-@Injectable()
+@Service()
 export class HttpRequestInterceptor implements HttpInterceptor {
   private readonly loading = inject(LoadingService);
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;

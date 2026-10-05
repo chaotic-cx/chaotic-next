@@ -155,7 +155,9 @@ export class RouterService implements OnModuleInit {
         .addSelect(groupColumn, groupAlias)
         .addSelect('SUM(hit.count)::text', 'count')
         .where('hit.day >= :cutoff', { cutoff: utcCutoffDaysAgo(clampedDays) });
-      if (repo) query.andWhere('hit.repo = :repo', { repo });
+      if (repo) {
+        query.andWhere('hit.repo = :repo', { repo });
+      }
       return query
         .groupBy('hit.day')
         .addGroupBy(groupColumn)
@@ -204,7 +206,9 @@ export class RouterService implements OnModuleInit {
       .select('hit.userAgent', 'ua')
       .addSelect('SUM(hit.count)', 'count')
       .where('hit.day >= :cutoff', { cutoff });
-    if (repo) topQuery.andWhere('hit.repo = :repo', { repo });
+    if (repo) {
+      topQuery.andWhere('hit.repo = :repo', { repo });
+    }
     const topAgents = await topQuery
       .groupBy('hit.userAgent')
       .orderBy('count', 'DESC')
@@ -221,7 +225,9 @@ export class RouterService implements OnModuleInit {
       .addSelect('SUM(hit.count)::text', 'count')
       .where('hit.day >= :cutoff', { cutoff })
       .andWhere('hit.userAgent IN (:...agents)', { agents });
-    if (repo) trendQuery.andWhere('hit.repo = :repo', { repo });
+    if (repo) {
+      trendQuery.andWhere('hit.repo = :repo', { repo });
+    }
     return trendQuery
       .groupBy('hit.day')
       .addGroupBy('hit.userAgent')

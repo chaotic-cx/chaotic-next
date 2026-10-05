@@ -87,8 +87,10 @@ export const PIPELINE_REQUEST_REASONS = [
 ] as const;
 export type PipelineRequestReason = (typeof PIPELINE_REQUEST_REASONS)[number];
 
-// Regex constraints of the pipeline's spec:inputs section, shared by the
-// backend validation and the frontend signal-forms validators.
+/**
+ * Regex constraints of the pipeline's spec:inputs section, shared by the
+ * backend validation and the frontend signal-forms validators.
+ */
 export const PIPELINE_PACKAGES_REGEX = /^(?:[\w@.+/-]+(?::[\w@.+/-]+)*)?$/;
 export const PIPELINE_ADD_PACKAGES_REGEX =
   /^([\w@.+/-]+\/(aur|(https?|git):\/\/\S+)(\s[\w@.+/-]+\/(aur|(https?|git):\/\/\S+))*)?$/;

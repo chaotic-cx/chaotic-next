@@ -39,14 +39,13 @@ describe('applyBuilderClass', () => {
 
 describe('applyPackageBump', () => {
   // Real .CI/config from pkgbuilds/mesa-tkg-git — bump line in the middle, real source URL.
-  const mesaConfig =
-    [
-      'CI_ON_TRIGGER=daily',
-      'BUILDER_CACHE_SOURCES=true',
-      'CI_PACKAGE_BUMP=26.2.0_devel.221337.b860e0132f9-1/1',
-      'CI_REBUILD_TRIGGERS=libxml2:libdisplay-info',
-      'CI_PKGBUILD_SOURCE=https://github.com/Frogging-Family/mesa-git.git',
-    ].join('\n') + '\n';
+  const mesaConfig = `${[
+    'CI_ON_TRIGGER=daily',
+    'BUILDER_CACHE_SOURCES=true',
+    'CI_PACKAGE_BUMP=26.2.0_devel.221337.b860e0132f9-1/1',
+    'CI_REBUILD_TRIGGERS=libxml2:libdisplay-info',
+    'CI_PKGBUILD_SOURCE=https://github.com/Frogging-Family/mesa-git.git',
+  ].join('\n')}\n`;
   const mesaVersion = '26.2.0_devel.221337.b860e0132f9';
 
   it('increments the counter for the same version and preserves every other line byte-for-byte', () => {
@@ -59,14 +58,13 @@ describe('applyPackageBump', () => {
   });
 
   it('preserves the real key order across a bump (pkgbuilds/kicad-git config)', () => {
-    const original =
-      [
-        'BUILDER_CACHE_SOURCES=true',
-        'CI_PACKAGE_BUMP=10.99.0.r2148.g26c2468-1/1',
-        'CI_REBUILD_TRIGGERS=boost:poppler:protobuf',
-        'CI_PKGBUILD_SOURCE=aur',
-        'BUILDER_CLASS=9',
-      ].join('\n') + '\n';
+    const original = `${[
+      'BUILDER_CACHE_SOURCES=true',
+      'CI_PACKAGE_BUMP=10.99.0.r2148.g26c2468-1/1',
+      'CI_REBUILD_TRIGGERS=boost:poppler:protobuf',
+      'CI_PKGBUILD_SOURCE=aur',
+      'BUILDER_CLASS=9',
+    ].join('\n')}\n`;
 
     expect(applyPackageBump(original, '10.99.0.r2148.g26c2468', 1)).toBe(
       original.replace('CI_PACKAGE_BUMP=10.99.0.r2148.g26c2468-1/1', 'CI_PACKAGE_BUMP=10.99.0.r2148.g26c2468-1/2'),

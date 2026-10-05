@@ -421,13 +421,9 @@ export class AdminPackageElfAnalysisPageComponent {
   }
 
   protected binaryLabelKey(row: AdminPackageElfAnalysis): string {
-    if (!row.hasCompiledCode) {
-      return marker('admin.elfAnalysis.binary.none');
-    }
+    if (!row.hasCompiledCode) return marker('admin.elfAnalysis.binary.none');
 
-    if (row.isSourceCompiled) {
-      return marker('admin.elfAnalysis.binary.fromSource');
-    }
+    if (row.isSourceCompiled) return marker('admin.elfAnalysis.binary.fromSource');
 
     return marker('admin.elfAnalysis.binary.prebuilt');
   }
@@ -479,9 +475,7 @@ export class AdminPackageElfAnalysisPageComponent {
 
   protected reviewConflict(): void {
     const latest = this.conflict.review();
-    if (latest === null) {
-      return;
-    }
+    if (latest === null) return;
 
     this.editing.set(latest);
     this.fillForm(latest);
@@ -507,9 +501,7 @@ export class AdminPackageElfAnalysisPageComponent {
       }
 
       const unchanged = await this.conflict.confirmUnchanged(() => this.service.findElfAnalysis(current));
-      if (!unchanged) {
-        return;
-      }
+      if (!unchanged) return;
 
       const saved = await this.service.updateElfAnalysis(current.id, this.toFormData(this.model()));
       if (saved) {

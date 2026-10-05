@@ -63,7 +63,9 @@ export class ActiveBuildsComponent {
     const views = new Map<string, EtaView>();
     for (const pkg of this.sortedQueue()) {
       const view = this.etaView(pkg.rawName);
-      if (view) views.set(pkg.rawName, view);
+      if (view) {
+        views.set(pkg.rawName, view);
+      }
     }
     return views;
   });

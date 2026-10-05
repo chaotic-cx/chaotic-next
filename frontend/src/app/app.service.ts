@@ -86,8 +86,10 @@ export class AppService {
     onMessage: (data) => this.handleFrame(data),
     namedEvents: ['ping'],
     onNamedEvent: () => {
-      // The backend heartbeat is a named event, so it never reaches onmessage;
-      // it is still proof of a live connection.
+      /**
+       * The backend heartbeat is a named event, so it never reaches onmessage;
+       * it is still proof of a live connection.
+       */
       this.lastSseFrameAt = Date.now();
       this.internalSseConnected.set(true);
     },
@@ -145,7 +147,9 @@ export class AppService {
   private handleFrame(data: string): void {
     this.lastSseFrameAt = Date.now();
     const event: unknown = JSON.parse(data);
-    if (isChaoticEvent(event)) this.chaoticSse$.next(event);
+    if (isChaoticEvent(event)) {
+      this.chaoticSse$.next(event);
+    }
   }
 
   private daysParams(days?: number): HttpParams {

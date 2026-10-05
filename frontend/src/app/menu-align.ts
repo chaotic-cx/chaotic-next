@@ -7,9 +7,7 @@ import type { Menu } from '@openng/optimus-ui/menu';
 export function alignMenuEnd(menu: Menu): void {
   const popup: HTMLElement | undefined = menu.container;
   const button: HTMLElement | undefined = menu.target;
-  if (popup === undefined || button === undefined) {
-    return;
-  }
+  if (popup === undefined || button === undefined) return;
 
   const buttonRight = button.getBoundingClientRect().right + window.scrollX;
   const popupLeft = Math.max(0, buttonRight - popup.offsetWidth);

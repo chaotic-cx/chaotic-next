@@ -153,9 +153,7 @@ export class MrOverviewService {
         return;
       }
 
-      if (this.reportRejectedAction(error)) {
-        return;
-      }
+      if (this.reportRejectedAction(error)) return;
 
       this.messageToastService.error(
         this.transloco.translate('reviewQueue.toast.approveFailed.title'),
@@ -206,9 +204,7 @@ export class MrOverviewService {
       );
       return true;
     } catch (error) {
-      if (this.reportRejectedAction(error)) {
-        return false;
-      }
+      if (this.reportRejectedAction(error)) return false;
 
       this.messageToastService.error(
         this.transloco.translate('reviewQueue.toast.flagFailedTitle'),
@@ -229,14 +225,10 @@ export class MrOverviewService {
    */
   private reportRejectedAction(error: unknown): boolean {
     const status = httpStatus(error);
-    if (status === undefined) {
-      return false;
-    }
+    if (status === undefined) return false;
 
     const toast = ACTION_REJECTED_TOASTS.get(status);
-    if (toast === undefined) {
-      return false;
-    }
+    if (toast === undefined) return false;
 
     this.showToast('warn', toast);
     return true;

@@ -232,8 +232,10 @@ export function isNotifiable(scan: BuildFailureScan): boolean {
 const MAX_SNIPPET_LENGTH = 200;
 const MAX_DETAIL_LENGTH = 120;
 
-// ANSI color codes plus the OSC sequences (e.g. `\x1B]3008;...\x07`) that
-// hyperlinks render as in the raw log.
+/**
+ * ANSI color codes plus the OSC sequences (e.g. `\x1B]3008;...\x07`) that
+ * hyperlinks render as in the raw log.
+ */
 // eslint-disable-next-line no-control-regex
 const ANSI_ESCAPE_PATTERN = /\x1B(?:\[[0-9;]*[a-zA-Z]|][^\x07]*\x07)/g;
 

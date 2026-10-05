@@ -19,9 +19,7 @@ export interface ChartTable {
 }
 
 function chartLabelText(label: unknown): string {
-  if (Array.isArray(label)) {
-    return label.join(' ');
-  }
+  if (Array.isArray(label)) return label.join(' ');
 
   return String(label ?? '');
 }
@@ -29,17 +27,11 @@ function chartLabelText(label: unknown): string {
 // A missing data point is unknown, which is not the same as zero.
 
 function chartValueText(value: unknown): string {
-  if (value === null || value === undefined) {
-    return MISSING_VALUE;
-  }
+  if (value === null || value === undefined) return MISSING_VALUE;
 
-  if (typeof value === 'number') {
-    return value.toLocaleString();
-  }
+  if (typeof value === 'number') return value.toLocaleString();
 
-  if (typeof value === 'object' && 'y' in value) {
-    return chartValueText(value.y);
-  }
+  if (typeof value === 'object' && 'y' in value) return chartValueText(value.y);
 
   return String(value);
 }
@@ -90,8 +82,10 @@ export class ChartCardComponent {
 
   protected readonly showTable = signal(false);
 
-  // The chart redraws on every new object. JSON compares by value; Chart.js mutates what it gets,
-  // so it receives a parsed copy. Chart inputs here hold plain values only.
+  /**
+   * The chart redraws on every new object. JSON compares by value; Chart.js mutates what it gets,
+   * so it receives a parsed copy. Chart inputs here hold plain values only.
+   */
   private readonly dataJson = computed(() => JSON.stringify(this.data()));
   private readonly optionsJson = computed(() => JSON.stringify(this.options()));
 
@@ -103,9 +97,7 @@ export class ChartCardComponent {
   // Falls back to the dataset names when the parent passes no label.
   protected readonly title = computed(() => {
     const label = this.label();
-    if (label) {
-      return label;
-    }
+    if (label) return label;
 
     return this.table()
       .series.filter((name) => name !== '')

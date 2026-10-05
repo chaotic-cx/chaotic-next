@@ -88,7 +88,7 @@ export class AurAuthService {
     this.loginPromise ??= this.login().finally(() => {
       this.loginPromise = null;
     });
-    return await this.loginPromise;
+    return this.loginPromise;
   }
 
   private async login(): Promise<boolean> {

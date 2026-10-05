@@ -30,7 +30,6 @@ import { TranslocoDirective } from '@jsverse/transloco';
       }
     </div>
   `,
-  styleUrls: ['./text-action.css'],
   styles: `
     .empty-state__message {
       display: inline-flex;
@@ -47,6 +46,7 @@ import { TranslocoDirective } from '@jsverse/transloco';
       color: var(--chaotic-fg-muted);
     }
   `,
+  styleUrls: ['./text-action.css'],
 })
 export class EmptyStateComponent {
   readonly message = input<string>();

@@ -365,7 +365,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
     const openIids = new Set(openMrs.map((mr) => mr.iid));
     for (const iid of this.mrDataCache.keys()) {
-      if (!openIids.has(iid)) this.mrDataCache.delete(iid);
+      if (!openIids.has(iid)) {
+        this.mrDataCache.delete(iid);
+      }
     }
 
     const staleMrs = openMrs.filter((mr) => {
@@ -374,8 +376,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     });
     this.pino.info({ staleCount: staleMrs.length, totalCount: openMrs.length }, 'Fetching diffs for stale MRs');
 
-    // One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
-    // the whole batch: its diffs just come back empty.
+    /**
+     * One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
+     * the whole batch: its diffs just come back empty.
+     */
     const diffsByIid = new Map<number, MergeRequestDiffSchema[]>();
     await mapWithConcurrency(
       staleMrs,
@@ -389,8 +393,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       DIFF_FETCH_CONCURRENCY,
     );
 
-    // Enrichment (VirusTotal/maintainers) lives on the previous snapshot and must
-    // survive rebuilds, otherwise the enrichment crons would redo all lookups.
+    /**
+     * Enrichment (VirusTotal/maintainers) lives on the previous snapshot and must
+     * survive rebuilds, otherwise the enrichment crons would redo all lookups.
+     */
     const previous = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
     const previousById = new Map(previous?.map((mr) => [mr.id, mr]) ?? []);
 
@@ -497,8 +503,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       this.pino.debug({ mrIid: mr.iid, label: verdict.label, score: verdict.score }, 'Applying auto-flag verdict');
 
       try {
-        // addLabels only appends; sending the full list would race against label
-        // changes since our snapshot was taken and could wipe e.g. human-review.
+        /**
+         * addLabels only appends; sending the full list would race against label
+         * changes since our snapshot was taken and could wipe e.g. human-review.
+         */
         await this.api.MergeRequests.edit(this.chaoticId, mr.iid, {
           addLabels: verdict.label,
         });
@@ -637,13 +645,12 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
   /** A package is only re-checked while its MR keeps changing; a takeover on a dormant MR resurfaces with new activity. */
   private async enrichMaintainerInfo(mrs: MergeRequestWithDiffs[]): Promise<void> {
-    const pending = mrs.filter((mr) => {
-      return (
+    const pending = mrs.filter(
+      (mr) =>
         mrPkgnames(mr.title).length > 0 &&
         mr.maintainers === undefined &&
-        this.maintainerCheckedAt.get(mr.iid) !== mr.updated_at
-      );
-    });
+        this.maintainerCheckedAt.get(mr.iid) !== mr.updated_at,
+    );
     const pkgnames = [...new Set(pending.flatMap((mr) => mrPkgnames(mr.title)))];
     if (pkgnames.length === 0) return;
 
@@ -683,7 +690,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
     const openIids = new Set(mrs.map((mr) => mr.iid));
     for (const iid of this.maintainerCheckedAt.keys()) {
-      if (!openIids.has(iid)) this.maintainerCheckedAt.delete(iid);
+      if (!openIids.has(iid)) {
+        this.maintainerCheckedAt.delete(iid);
+      }
     }
 
     if (changed) {
@@ -749,7 +758,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     try {
       const scannable = newMr.filter((mr) => mr.diffs.length > 0);
       for (const mr of newMr) {
-        if (mr.diffs.length === 0) this.pendingNotificationIids.add(mr.iid);
+        if (mr.diffs.length === 0) {
+          this.pendingNotificationIids.add(mr.iid);
+        }
       }
       const deferred = newMr.length - scannable.length;
       if (deferred > 0) {
@@ -757,8 +768,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       }
       if (scannable.length === 0) return;
 
-      // MRs without a parseable "chore(update): <pkgname>" title stay silent:
-      // a notification without a package name is not actionable.
+      /**
+       * MRs without a parseable "chore(update): <pkgname>" title stay silent:
+       * a notification without a package name is not actionable.
+       */
       const notifyable = scannable.flatMap((mr) => {
         const pkgs = mrPkgnames(mr.title);
         return pkgs.length === 0 ? [] : pkgs.map((pkg) => ({ mr, pkg }));
@@ -807,8 +820,12 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     const ready: MergeRequestWithDiffs[] = [];
     for (const iid of this.pendingNotificationIids) {
       const mr = byIid.get(iid);
-      if (!mr || mr.diffs.length > 0) this.pendingNotificationIids.delete(iid);
-      if (mr?.diffs.length) ready.push(mr);
+      if (!mr || mr.diffs.length > 0) {
+        this.pendingNotificationIids.delete(iid);
+      }
+      if (mr?.diffs.length) {
+        ready.push(mr);
+      }
     }
 
     if (ready.length === 0) return;
@@ -1100,7 +1117,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
     for (const mr of mrs) {
       const reason = latest.get(mr.iid);
-      if (reason !== undefined) mr.flagReason = reason;
+      if (reason !== undefined) {
+        mr.flagReason = reason;
+      }
     }
   }
 

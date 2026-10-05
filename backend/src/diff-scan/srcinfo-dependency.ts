@@ -41,9 +41,7 @@ export function parseSrcinfoDepLine(text: string): SrcinfoDepMatch | null {
   const rawValue = match[2].trim();
   const depName = cleanDepName(rawValue);
 
-  if (!depName || !DEP_NAME_PATTERN.test(depName)) {
-    return null;
-  }
+  if (!depName || !DEP_NAME_PATTERN.test(depName)) return null;
 
   return { type, rawValue, depName };
 }
@@ -68,9 +66,7 @@ export async function isDependencyPresent(
   archPkgRepo?: Repository<ArchlinuxPackage>,
   packageRepo?: Repository<Package>,
 ): Promise<boolean> {
-  if (!archPkgRepo && !packageRepo) {
-    return true;
-  }
+  if (!archPkgRepo && !packageRepo) return true;
 
   if (archPkgRepo) {
     const archDirect = await archPkgRepo.findOne({ where: { pkgname: depName }, select: { id: true } });
@@ -96,9 +92,7 @@ export async function isDependencyPresent(
       if (archProvides) return true;
     } catch {
       const allArch = await archPkgRepo.find({ select: { metadata: true } });
-      if (allArch.some((a) => a.metadata?.provides?.some((p) => cleanDepName(p) === depName))) {
-        return true;
-      }
+      if (allArch.some((a) => a.metadata?.provides?.some((p) => cleanDepName(p) === depName))) return true;
     }
   }
 
@@ -114,9 +108,7 @@ export async function isDependencyPresent(
       if (chaoticProvides) return true;
     } catch {
       const allChaotic = await packageRepo.find({ where: { isActive: true }, select: { metadata: true } });
-      if (allChaotic.some((p) => p.metadata?.provides?.some((pr) => cleanDepName(pr) === depName))) {
-        return true;
-      }
+      if (allChaotic.some((p) => p.metadata?.provides?.some((pr) => cleanDepName(pr) === depName))) return true;
     }
   }
 
@@ -136,7 +128,9 @@ export function selfProvidedDepNames(change: Pick<MergeRequestDiffSchema, 'diff'
     const match = text.match(SRCINFO_PACKAGE_DECLARATION_PATTERN);
     if (!match) continue;
     const name = cleanDepName(match[1]);
-    if (name && DEP_NAME_PATTERN.test(name)) names.add(name);
+    if (name && DEP_NAME_PATTERN.test(name)) {
+      names.add(name);
+    }
   }
   return names;
 }
@@ -146,9 +140,7 @@ export async function scanSrcinfoDependencies(
   isDepPresent: (depName: string) => Promise<boolean>,
   fetchAurDependencies?: AurDependencyFetcher,
 ): Promise<DiffScanFinding[]> {
-  if (!isSrcinfoFile(change.new_path) || change.deleted_file) {
-    return [];
-  }
+  if (!isSrcinfoFile(change.new_path) || change.deleted_file) return [];
 
   const findings: DiffScanFinding[] = [];
   const checkedDeps = new Set<string>();

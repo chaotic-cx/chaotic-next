@@ -4,8 +4,10 @@ import { type ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 
 export function generateNodeId(): string {
-  // HOSTNAME separates hosts. PIDs are unique among all simultaneously running
-  // processes of one host, so two live brokers never share a nodeID.
+  /**
+   * HOSTNAME separates hosts. PIDs are unique among all simultaneously running
+   * processes of one host, so two live brokers never share a nodeID.
+   */
   if (process.env.HOSTNAME) return `${process.env.HOSTNAME}-${process.pid}`;
   return `backend-${process.pid}`;
 }
@@ -15,9 +17,7 @@ export function checkEnvironment(configService: ConfigService): void {
     configService.get<string>('NODE_ENV') === 'development' ? requiredEnvVarsDev : requiredEnvVarsProd;
   const missingEnvVars: string[] = required.filter((envVar) => !configService.get<string>(envVar));
 
-  if (missingEnvVars.length > 0) {
-    throw new Error(`Missing environment variables: ${missingEnvVars.join(', ')}`);
-  }
+  if (missingEnvVars.length > 0) throw new Error(`Missing environment variables: ${missingEnvVars.join(', ')}`);
 }
 
 export function nDaysInPast(n: number): Date {
@@ -90,9 +90,7 @@ export function encryptAesRaw(value: string, key: string): string {
 
 export function decryptAesRaw(value: string, key: string): string {
   const salted = Buffer.from(value, 'base64');
-  if (salted.length < 16 || !salted.subarray(0, 8).equals(SALTED_PREFIX)) {
-    throw new Error('Invalid encrypted data');
-  }
+  if (salted.length < 16 || !salted.subarray(0, 8).equals(SALTED_PREFIX)) throw new Error('Invalid encrypted data');
   const { key: derivedKey, iv } = evpBytesToKey(key, salted.subarray(8, 16));
   const decipher = createDecipheriv('aes-256-cbc', derivedKey, iv);
   const decrypted = Buffer.concat([decipher.update(salted.subarray(16)), decipher.final()]);

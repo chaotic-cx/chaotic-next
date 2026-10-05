@@ -161,9 +161,11 @@ export class ArchMirrorService {
 
         this.pino.debug({ pkgname: pkg.pkgname, version: pkg.version }, 'Scanning changed Arch package');
 
-        // Determine which repo serves this package by probing the mirror.
-        // Probe core/extra concurrently (instead of sequentially) and prefer the
-        // first match in ARCH_REPOS order.
+        /**
+         * Determine which repo serves this package by probing the mirror.
+         * Probe core/extra concurrently (instead of sequentially) and prefer the
+         * first match in ARCH_REPOS order.
+         */
         const probeRepo = async (candidate: string): Promise<string | undefined> => {
           try {
             const head = await this.httpService.axiosRef({
@@ -288,8 +290,10 @@ export class ArchMirrorService {
       await saveInBatches(this.archPkgRepository, archToUpdate);
       const result: IndexResult = await this.indexCandidates(candidates, tempDir);
 
-      // Newly-indexed providers can resolve other packages' missing sonames, so
-      // refresh every broken flag against the now-complete index.
+      /**
+       * Newly-indexed providers can resolve other packages' missing sonames, so
+       * refresh every broken flag against the now-complete index.
+       */
       await this.signalScanService.recomputeBroken();
       this.pino.info(
         { scanned: result.scanned, skipped: result.skipped, failed: result.failed },
@@ -389,7 +393,7 @@ export class ArchMirrorService {
     const workDirsPromises: PromiseSettledResult<RepoWorkDir>[] = await Promise.allSettled(
       databases.map(async (repo): Promise<RepoWorkDir> => {
         try {
-          if (!repo || !repo.path) throw new Error('Database entry has no path');
+          if (!repo?.path) throw new Error('Database entry has no path');
 
           const workDir = repo.path.replace(/\/[^/]+\.files$/, '');
 
@@ -421,8 +425,10 @@ export class ArchMirrorService {
       return;
     }
 
-    // One query and one bulk insert resolve all missing Arch packages. A
-    // per-package loop would issue N serialized round-trips.
+    /**
+     * One query and one bulk insert resolve all missing Arch packages. A
+     * per-package loop would issue N serialized round-trips.
+     */
     const archByName = await bulkGetOrCreateArch(
       currentArchVersions.map((p) => p.name).filter((n): n is string => !!n),
       this.archPkgRepository,

@@ -52,7 +52,9 @@ export class ChartBuildFailuresOverTimeComponent {
     for (const row of rows) {
       const day = formatDay(row.day);
       daySet.add(day);
-      if (!byPackage.has(row.pkgname)) byPackage.set(row.pkgname, new Map());
+      if (!byPackage.has(row.pkgname)) {
+        byPackage.set(row.pkgname, new Map());
+      }
       byPackage.get(row.pkgname)?.set(day, parseCount(row.count));
     }
     const labels = [...daySet].reverse();

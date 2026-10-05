@@ -150,7 +150,9 @@ export class PackageListComponent {
 
     effect(() => {
       const q = this.search();
-      if (q) this.searchModel.update((model) => ({ ...model, query: q }));
+      if (q) {
+        this.searchModel.update((model) => ({ ...model, query: q }));
+      }
     });
 
     effect(() => {
@@ -187,7 +189,9 @@ export class PackageListComponent {
 
   private applySearch(query: string): void {
     const table = this.pkgTable();
-    if (table) table.first = 0;
+    if (table) {
+      table.first = 0;
+    }
     this.packageListService.setSearch(query);
     void this.router.navigate([], {
       queryParams: { search: query || null },
@@ -198,7 +202,9 @@ export class PackageListComponent {
   onRepoFilter(repoId: number | null): void {
     const repoName = repoId === null ? null : this.repoNameById(repoId);
     const table = this.pkgTable();
-    if (table) table.first = 0;
+    if (table) {
+      table.first = 0;
+    }
     this.packageListService.setRepoFilter(repoName);
     void this.router.navigate([], {
       queryParams: { repo: repoName },

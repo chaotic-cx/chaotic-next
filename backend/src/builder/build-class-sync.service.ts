@@ -56,7 +56,9 @@ export class BuildClassSyncService {
         this.pino.warn({ err, pkgname: pkg.pkgname }, 'Build class sync failed');
         return false;
       });
-      if (changed) synced += 1;
+      if (changed) {
+        synced += 1;
+      }
     }
     this.pino.info({ synced, total: packages.length }, 'Full build class rescan finished');
   }
@@ -74,15 +76,11 @@ export class BuildClassSyncService {
 
   async adjustPackageBuildClass(pkgname: string): Promise<AdjustBuildClassResponse> {
     const pkg = await this.packageRepository.findOne({ where: { pkgname }, relations: { repo: true } });
-    if (!pkg) {
-      throw new NotFoundException(`Package not found: ${pkgname}`);
-    }
+    if (!pkg) throw new NotFoundException(`Package not found: ${pkgname}`);
 
     const pkgbase = pkg.pkgbaseName ?? pkg.pkgname;
     const outcome = await this.resolveBuildClass(pkg.repo?.name ?? '', pkgbase);
-    if (outcome === null) {
-      throw new NotFoundException(`Could not read or create .CI/config for ${pkgbase}`);
-    }
+    if (outcome === null) throw new NotFoundException(`Could not read or create .CI/config for ${pkgbase}`);
     if (this.alignRowWithConfig(pkg, outcome.finalClass, pkgbase)) {
       await this.packageRepository.save(pkg);
     }
@@ -155,9 +153,7 @@ export class BuildClassSyncService {
       this.pino.debug({ err, pkgbase }, 'Could not derive a build class suggestion');
       return null;
     }
-    if (suggestion?.suggestedBuildClass === null || suggestion === undefined || suggestion.samples < 1) {
-      return null;
-    }
+    if (suggestion?.suggestedBuildClass === null || suggestion === undefined || suggestion.samples < 1) return null;
     return snapBuildClassToEven(suggestion.suggestedBuildClass);
   }
 

@@ -86,8 +86,10 @@ export interface ParsedPkgbuild {
 }
 
 export function parseSourceEntry(resolved: string): SourceEntry {
-  // Quoting never survives makepkg's own expansion, so interior quote pairs
-  // around a `filename::url` rename ("$file"::"$url") are removed as well.
+  /**
+   * Quoting never survives makepkg's own expansion, so interior quote pairs
+   * around a `filename::url` rename ("$file"::"$url") are removed as well.
+   */
   const stripped = resolved.replace(/["']/g, '');
   const separator = FILENAME_URL_SEPARATOR.exec(stripped);
   const fileName = separator?.[1] ?? null;
@@ -127,7 +129,9 @@ export function extractScalarVars(pkgbuildText: string): Map<string, string> {
 
   for (const rawLine of pkgbuildText.split('\n')) {
     if (insideFunction) {
-      if (FUNCTION_BODY_END.test(rawLine)) insideFunction = false;
+      if (FUNCTION_BODY_END.test(rawLine)) {
+        insideFunction = false;
+      }
       continue;
     }
     const line = stripInlineComment(rawLine);
@@ -154,7 +158,9 @@ export function extractScalarVars(pkgbuildText: string): Map<string, string> {
     }
 
     const scalar = line.match(SCALAR_ASSIGNMENT);
-    if (scalar?.[1] !== undefined && scalar[3] !== undefined) vars.set(scalar[1], unquote(scalar[3]));
+    if (scalar?.[1] !== undefined && scalar[3] !== undefined) {
+      vars.set(scalar[1], unquote(scalar[3]));
+    }
   }
   return expandVarReferences(vars);
 }
@@ -168,7 +174,9 @@ export function stripInlineComment(line: string): string {
   for (let index = 0; index < line.length; index++) {
     const char = line[index];
     if (quote !== null) {
-      if (char === quote) quote = null;
+      if (char === quote) {
+        quote = null;
+      }
       continue;
     }
     if (char === '"' || char === "'") {
@@ -189,7 +197,9 @@ function captureFirstArrayElement(vars: Map<string, string>, name: string, rest:
     .filter(Boolean);
   if (!vars.has(name)) {
     const head = tokens[0];
-    if (head !== undefined) vars.set(name, unquote(head));
+    if (head !== undefined) {
+      vars.set(name, unquote(head));
+    }
   }
   return closingIndex === -1 ? name : null;
 }
@@ -241,9 +251,7 @@ export function substituteVars(template: string, vars: ReadonlyMap<string, strin
       const name = bareName ?? bracedName;
       if (name === undefined) return match;
       const value = vars.get(name) ?? MAKEPKG_DEFAULTS.get(name);
-      if (bareName !== undefined || operation === '' || operation === undefined) {
-        return value ?? `\u0000${match}`;
-      }
+      if (bareName !== undefined || operation === '' || operation === undefined) return value ?? `\u0000${match}`;
       return applyParameterOperation(match, operation, value);
     },
   );
@@ -259,8 +267,10 @@ function applyParameterOperation(match: string, operation: string, value: string
   }
   if (value === undefined) return `\u0000${match}`;
 
-  // Braced substring operations always start with the separating colon:
-  // `${var:N}` / `${var:N:M}` slice from an offset, `${var::N}` keeps N leading characters.
+  /**
+   * Braced substring operations always start with the separating colon:
+   * `${var:N}` / `${var:N:M}` slice from an offset, `${var::N}` keeps N leading characters.
+   */
   const substring = operation.match(/^:(:?)(-?\d+)(?::(-?\d+))?$/);
   if (substring !== null) {
     const [emptyOffset, firstRaw, lengthRaw] = [substring[1], substring[2], substring[3]];
@@ -269,8 +279,10 @@ function applyParameterOperation(match: string, operation: string, value: string
     return emptyOffset !== '' ? bashPrefix(value, first) : bashRange(value, first, lengthRaw);
   }
 
-  // `${var#pat}` / `${var##pat}` strip a prefix, `${var%pat}` / `${var%%pat}` a suffix.
-  // Patterns may contain bash globs (`${pkgver%.*}`), matched like filename expansion.
+  /**
+   * `${var#pat}` / `${var##pat}` strip a prefix, `${var%pat}` / `${var%%pat}` a suffix.
+   * Patterns may contain bash globs (`${pkgver%.*}`), matched like filename expansion.
+   */
   const anchored = operation.match(/^(#{1,2}|%{1,2})(.+)$/);
   if (anchored !== null) {
     const stripped = stripByGlob(value, anchored[2], anchored[1].startsWith('#'), anchored[1].length === 2);
@@ -305,12 +317,16 @@ function stripByGlob(value: string, pattern: string, isPrefix: boolean, longest:
     else if (char === '?') source += '[\\s\\S]';
     else source += char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
-  // Try the shortest removed span first; longest flips the order. The removed
-  // span for prefix strips grows from the left, for suffix strips from the right.
-  // A non-matching pattern falls through the loop to null.
+  /**
+   * Try the shortest removed span first; longest flips the order. The removed
+   * span for prefix strips grows from the left, for suffix strips from the right.
+   * A non-matching pattern falls through the loop to null.
+   */
   const lengths: number[] = [];
   for (let length = 0; length <= value.length; length++) lengths.push(length);
-  if (longest) lengths.reverse();
+  if (longest) {
+    lengths.reverse();
+  }
   for (const length of lengths) {
     const candidate = isPrefix ? value.slice(0, length) : value.slice(value.length - length);
     if (new RegExp(`^${source}$`).test(candidate)) {
@@ -356,7 +372,9 @@ export function parseSrcinfoVariables(change: MergeRequestDiffSchema): ReadonlyM
     const match = text.match(SRCINFO_KEY_VALUE);
     if (!match) continue;
     const name = match[1];
-    if (!variables.has(name)) variables.set(name, unquote(match[2].trim()));
+    if (!variables.has(name)) {
+      variables.set(name, unquote(match[2].trim()));
+    }
   }
   return variables;
 }
@@ -367,17 +385,23 @@ export function parsePkgbuild(change: MergeRequestDiffSchema): ParsedPkgbuild | 
   const text = numberedLines.map(([, line]) => line).join('\n');
   const vars = extractScalarVars(text);
 
-  // A package's `.SRCINFO` always carries its literal url/pkgver, but GitLab
-  // only sends the changed hunks, so the PKGBUILD's own `url=` line may sit
-  // outside them. Fold the sibling `.SRCINFO` scalars in as a fallback so
-  // host resolution still happens for untouched declarations (see
-  // registerSrcinfoVariables). PKGBUILD assignments win on conflict.
+  /**
+   * A package's `.SRCINFO` always carries its literal url/pkgver, but GitLab
+   * only sends the changed hunks, so the PKGBUILD's own `url=` line may sit
+   * outside them. Fold the sibling `.SRCINFO` scalars in as a fallback so
+   * host resolution still happens for untouched declarations (see
+   * registerSrcinfoVariables). PKGBUILD assignments win on conflict.
+   */
   for (const [name, value] of SRCINFO_VARIABLES.get(change) ?? []) {
-    if (!vars.has(name)) vars.set(name, value);
+    if (!vars.has(name)) {
+      vars.set(name, value);
+    }
   }
 
-  // Resolve variables up front so host detection works for "$url/..." style
-  // sources and findings display the actual URL instead of the template.
+  /**
+   * Resolve variables up front so host detection works for "$url/..." style
+   * sources and findings display the actual URL instead of the template.
+   */
   const entries = (extractArray(text, 'source') ?? []).map((raw) => {
     const entry = parseSourceEntry(substituteVars(raw, vars) ?? raw);
     // The unresolved template is what appears verbatim in the file; use it to locate the line.

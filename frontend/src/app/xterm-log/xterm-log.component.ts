@@ -150,7 +150,9 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   constructor() {
     injectLazyStylesheet('xterm');
     effect(() => {
-      if (this.clearSignal()) this.resetTerminal();
+      if (this.clearSignal()) {
+        this.resetTerminal();
+      }
     });
 
     effect(() => {
@@ -164,7 +166,9 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       const length = this.chunk().length;
 
       // A shorter chunk list than already written means that the host started a new log.
-      if (length < this.consumedLength) this.resetTerminal();
+      if (length < this.consumedLength) {
+        this.resetTerminal();
+      }
 
       this.receivedLength = length;
       this.scheduleFlush();
@@ -217,7 +221,9 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   }
 
   private clearFlushTimer(): void {
-    if (this.flushTimer !== undefined) window.clearTimeout(this.flushTimer);
+    if (this.flushTimer !== undefined) {
+      window.clearTimeout(this.flushTimer);
+    }
     this.flushTimer = undefined;
   }
 
@@ -239,7 +245,9 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       this.terminal.write(normalized, () => this.afterWrite());
     }
 
-    if (this.consumedLength < this.receivedLength) this.scheduleFlush();
+    if (this.consumedLength < this.receivedLength) {
+      this.scheduleFlush();
+    }
   }
 
   private afterWrite(): void {
@@ -289,7 +297,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     const host = this.terminalDiv()?.nativeElement;
     if (!terminal || !gutterEl || !host) return;
     const screen = host.querySelector('.xterm-screen') as HTMLElement | null;
-    if (!screen || !screen.clientHeight) return;
+    if (!screen?.clientHeight) return;
     this.gutterRows = terminal.rows;
     this.gutterCellHeightPx = screen.clientHeight / terminal.rows;
     this.gutterTopOffsetPx = screen.getBoundingClientRect().top - gutterEl.getBoundingClientRect().top;
@@ -354,7 +362,9 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     const starts: number[] = [];
     for (let i = 0; i < buffer.length; i++) {
       const line = buffer.getLine(i);
-      if (!line || !line.isWrapped) starts.push(i);
+      if (!line?.isWrapped) {
+        starts.push(i);
+      }
     }
     this.logicalLineStarts = starts;
   }

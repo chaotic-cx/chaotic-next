@@ -29,6 +29,8 @@ export class MobileNavComponent {
   }
 
   protected onEscape(): void {
-    if (this.visible()) this.closed.emit();
+    if (this.visible()) {
+      this.closed.emit();
+    }
   }
 }

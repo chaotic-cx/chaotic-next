@@ -78,6 +78,8 @@ export class HomeComponent {
   }
 
   onKeyUp(event: KeyboardEvent): void {
-    if (event.key === 'Enter') this.onSearchEnter();
+    if (event.key === 'Enter') {
+      this.onSearchEnter();
+    }
   }
 }

@@ -7,7 +7,6 @@ import { ChartReviewStatsComponent } from '../charts/reviews/chart-review-stats/
 @Component({
   selector: 'chaotic-stats-update-review-page',
   imports: [TranslocoDirective, Card, ChartReviewStatsComponent, ChartReviewOverTimeComponent],
-  styleUrl: './stats-chart-page.css',
   template: `
     <div class="flex flex-col gap-4" *transloco="let t; prefix: 'stats.pages.updateReview'">
       <p-card [style]="{ overflow: 'hidden' }" [header]="t('reviewStats')">
@@ -27,5 +26,6 @@ import { ChartReviewStatsComponent } from '../charts/reviews/chart-review-stats/
       </p-card>
     </div>
   `,
+  styleUrl: './stats-chart-page.css',
 })
 export class StatsUpdateReviewPageComponent {}

@@ -376,9 +376,7 @@ export class AdminReposPageComponent {
 
   protected reviewConflict(): void {
     const latest = this.conflict.review();
-    if (latest === null) {
-      return;
-    }
+    if (latest === null) return;
 
     this.editing.set(latest);
     this.fillForm(latest);
@@ -398,9 +396,7 @@ export class AdminReposPageComponent {
       }
 
       const unchanged = await this.conflict.confirmUnchanged(() => this.service.findRepo(current.id));
-      if (!unchanged) {
-        return;
-      }
+      if (!unchanged) return;
 
       const saved = await this.service.updateRepo(current.id, this.toFormData(this.model()));
       if (saved) {

@@ -57,8 +57,10 @@ export class PackageListService {
   readonly packageList = computed<Package[]>(() => (this.page()?.items ?? []).filter((pkg) => pkg.version));
 
   setSearch(value: string): void {
-    // A new search invalidates the current offset; a stale persisted table
-    // position would otherwise request a page beyond the filtered results.
+    /**
+     * A new search invalidates the current offset; a stale persisted table
+     * position would otherwise request a page beyond the filtered results.
+     */
     this.pagination.resetPage();
     this.searchValue.set(value);
   }

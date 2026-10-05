@@ -108,7 +108,9 @@ async function main(): Promise<void> {
   const [kindArg, ...nameArgs] = process.argv.slice(2);
   const kind = REPO_KINDS.find((candidate) => candidate === kindArg);
   const pkgnames = nameArgs.flatMap((arg) => arg.split(',')).filter(Boolean);
-  if (!kind || pkgnames.length === 0) usage();
+  if (!kind || pkgnames.length === 0) {
+    usage();
+  }
 
   const app = await bootstrapScript(['debug', 'log', 'warn', 'error']);
   const service = app.get(SignalScanService);

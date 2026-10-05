@@ -41,9 +41,7 @@ export const VT_VERDICT_LABELS: Record<VtVerdict, string> = {
 };
 
 export function vtEngines(report: VtIndicatorReport): TranslatableText {
-  if (!report.stats) {
-    return { key: marker('aurScan.vt.noEngineData') };
-  }
+  if (!report.stats) return { key: marker('aurScan.vt.noEngineData') };
 
   const flagged = report.stats.malicious + report.stats.suspicious;
 
@@ -54,9 +52,7 @@ export function vtEngines(report: VtIndicatorReport): TranslatableText {
 }
 
 export function findingCount(count: number): TranslatableText {
-  if (count === 1) {
-    return { key: marker('aurScan.findingCountOne'), params: { count } };
-  }
+  if (count === 1) return { key: marker('aurScan.findingCountOne'), params: { count } };
 
   return { key: marker('aurScan.findingCountOther'), params: { count } };
 }
@@ -105,9 +101,7 @@ const MONTH_YEAR = new Intl.DateTimeFormat(BROWSER_LOCALE, { month: 'short', yea
  */
 export function maintainerSince(maintainer: AurMaintainerInfo): string | null {
   const date = new Date(maintainer.registeredDate);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
+  if (Number.isNaN(date.getTime())) return null;
 
   return MONTH_YEAR.format(date);
 }
@@ -116,9 +110,7 @@ export function maintainerSummary(maintainer: AurMaintainerInfo): TranslatableTe
   const since = maintainerSince(maintainer);
   const counts = { packages: maintainer.packagesMaintained, votes: maintainer.totalVotes };
 
-  if (since === null) {
-    return { key: marker('aurScan.maintainers.summaryUnknownSince'), params: counts };
-  }
+  if (since === null) return { key: marker('aurScan.maintainers.summaryUnknownSince'), params: counts };
 
   return { key: marker('aurScan.maintainers.summary'), params: { ...counts, since } };
 }
@@ -137,9 +129,7 @@ export function maintainerChangeSummary(change: AurMaintainerChange): Translatab
     parts.push(`-${change.removed.join(', ')}`);
   }
 
-  if (parts.length === 0) {
-    return null;
-  }
+  if (parts.length === 0) return null;
 
   return {
     key: marker('aurScan.maintainerChange.summary'),
