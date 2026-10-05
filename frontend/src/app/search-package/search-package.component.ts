@@ -18,17 +18,19 @@ import {
   CHAOTIC_AUR_REPO,
   formatPkgrel,
   Package,
+  type Paginated,
   PKGNAME_PATTERN,
   ParsedPackageMetadata,
   SpecificPackageMetrics,
 } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
-import { AutoComplete, AutoCompleteCompleteEvent } from '@openng/optimus-ui/autocomplete';
+import { AutoComplete } from '@openng/optimus-ui/autocomplete';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { RequestFailure, requestFailure } from '../api-errors';
-import { AppService } from '../app.service';
+import { AppService, pkgnamesInRepo } from '../app.service';
+import { createSuggestions } from '../autocomplete-suggestions';
 import { ChartPackageAverageBuildTimeComponent } from '../stats/charts/packages/chart-package-average-build-time/chart-package-average-build-time.component';
 import { ChartPackageBuildStatsComponent } from '../stats/charts/packages/chart-package-build-stats/chart-package-build-stats.component';
 import { ChartPackageResourceStatsComponent } from '../stats/charts/packages/chart-package-resource-stats/chart-package-resource-stats.component';
@@ -137,8 +139,11 @@ export class SearchPackageComponent {
     pattern(schemaPath.query, PKGNAME_PATTERN, { message: this.transloco.translate('searchPackage.invalidName') });
   });
 
-  protected readonly suggestions = signal<string[]>([]);
-  private suggestionGeneration = 0;
+  protected readonly suggestions = createSuggestions({
+    minLength: MIN_SUGGESTION_QUERY_LENGTH,
+    request: (query) => this.appService.getPkgnameSuggestionsRequest(query),
+    toNames: (page: Paginated<Package>) => pkgnamesInRepo(page, this.repo()),
+  });
 
   private readonly packageResource = httpResource<Package>(() => {
     const name = this.currentPackageName();
@@ -219,22 +224,6 @@ export class SearchPackageComponent {
       if (!this.scrollToResults || !this.hasSearchData()) return;
       this.resultsSection()?.nativeElement.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
     });
-  }
-
-  async searchSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
-    const query = event.query.trim();
-    if (query.length < MIN_SUGGESTION_QUERY_LENGTH) {
-      this.suggestions.set([]);
-      return;
-    }
-    const generation = ++this.suggestionGeneration;
-    try {
-      const names = await this.appService.fetchPkgnameSuggestions(query, this.repo());
-      if (generation !== this.suggestionGeneration) return;
-      this.suggestions.set(names);
-    } catch {
-      if (generation === this.suggestionGeneration) this.suggestions.set([]);
-    }
   }
 
   selectPackage(query: string): void {

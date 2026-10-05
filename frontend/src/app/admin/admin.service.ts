@@ -1,4 +1,4 @@
-import { HttpClient, httpResource, type HttpResourceRef } from '@angular/common/http';
+import { HttpClient, httpResource, type HttpResourceRef, type HttpResourceRequest } from '@angular/common/http';
 import { computed, DestroyRef, inject, Service, signal, type Signal } from '@angular/core';
 import {
   AdminPackageElfAnalysis,
@@ -10,7 +10,6 @@ import {
   Package as PackageDto,
   PackageBump,
   Paginated,
-  PipelineScheduleOption,
   PipelineTriggerAction,
   PKG_TYPE_CHAOTIC,
   PkgType,
@@ -603,7 +602,7 @@ export class AdminService {
 
   async triggerRepoRun(): Promise<void> {
     await this.runMutation(
-      () => this.http.get(`${this.backendUrl}/repo/run`),
+      () => this.http.post(`${this.backendUrl}/repo/run`, {}),
       this.transloco.translate('admin.service.repoRun.success'),
       this.transloco.translate('admin.service.repoRun.error'),
     );
@@ -611,7 +610,7 @@ export class AdminService {
 
   async triggerSignalScan(): Promise<void> {
     await this.runMutation(
-      () => this.http.get(`${this.backendUrl}/repo/signal-scan`),
+      () => this.http.post(`${this.backendUrl}/repo/signal-scan`, {}),
       this.transloco.translate('admin.service.signalScan.success'),
       this.transloco.translate('admin.service.signalScan.error'),
     );
@@ -709,39 +708,25 @@ export class AdminService {
     );
   }
 
-  async getAurSuggestions(query: string): Promise<string[]> {
+  getAurSuggestionsRequest(query: string): HttpResourceRequest | undefined {
     const parsed = aurSuggestionsQuerySchema.safeParse({ q: query.trim() });
-    if (!parsed.success) return [];
-    try {
-      return await lastValueFrom(
-        this.http.get<string[]>(`${this.backendUrl}/aur/suggestions`, { params: parsed.data }),
-      );
-    } catch {
-      return [];
-    }
+    if (!parsed.success) return undefined;
+
+    return { url: `${this.backendUrl}/aur/suggestions`, params: parsed.data };
   }
 
-  async packageExists(pkgname: string): Promise<boolean> {
+  getPackageUrl(pkgname: string): string | undefined {
     const trimmed = pkgname.trim();
-    if (!trimmed) return false;
-    try {
-      await lastValueFrom(this.http.get(`${this.backendUrl}/builder/package/${encodeURIComponent(trimmed)}`));
-      return true;
-    } catch {
-      return false;
-    }
+    if (!trimmed) return undefined;
+
+    return `${this.backendUrl}/builder/package/${encodeURIComponent(trimmed)}`;
   }
 
-  async getSchedules(repo: string): Promise<PipelineScheduleOption[]> {
+  getSchedulesRequest(repo: string): HttpResourceRequest | undefined {
     const parsed = schedulesQuerySchema.safeParse({ repo });
-    if (!parsed.success) return [];
-    try {
-      return await lastValueFrom(
-        this.http.get<PipelineScheduleOption[]>(`${this.backendUrl}/gitlab/schedules`, { params: parsed.data }),
-      );
-    } catch {
-      return [];
-    }
+    if (!parsed.success) return undefined;
+
+    return { url: `${this.backendUrl}/gitlab/schedules`, params: parsed.data };
   }
 
   /**
@@ -769,6 +754,7 @@ export class AdminService {
   }
 
   async findRepo(id: number): Promise<Repo | undefined> {
+    // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot conflict check when a dialog saves
     const repos = await lastValueFrom(this.http.get<Repo[]>(`${this.backendUrl}/admin/repos`));
     return repos.find((repo) => repo.id === id);
   }
@@ -782,6 +768,7 @@ export class AdminService {
     params: QueryParams,
     id: number,
   ): Promise<T | undefined> {
+    // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot conflict check when a dialog saves
     const page = await lastValueFrom(this.http.get<Paginated<T>>(url, { params }));
     return page.items.find((item) => item.id === id);
   }
@@ -848,6 +835,7 @@ export class AdminService {
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, RESCAN_POLL_INTERVAL_MS));
       try {
+        // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- bounded poll loop inside one rescan action
         const job = await lastValueFrom(this.http.get<RescanJob>(`${this.backendUrl}/admin/rescan/${jobId}`));
         if (job.status === 'done') return job;
       } catch {

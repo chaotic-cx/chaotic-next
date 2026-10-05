@@ -1,9 +1,18 @@
+import dr460nf1r3 from '@dr460nf1r3/eslint-rules';
 import nx from '@nx/eslint-plugin';
 
 export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
+  ...dr460nf1r3.configs.full,
+  {
+    files: ['**/*.ts'],
+    rules: {
+      '@dr460nf1r3/prefer-mutation': 'off',
+      '@dr460nf1r3/prefer-query-method': 'off',
+    },
+  },
   {
     ignores: ['**/dist', '**/node_modules', '**/vite.config.*.timestamp*', '**/vitest.config.*.timestamp*'],
   },

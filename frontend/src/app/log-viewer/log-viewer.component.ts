@@ -1,4 +1,5 @@
-import { Component, computed, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import { httpResource } from '@angular/common/http';
+import { Component, computed, effect, ElementRef, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -77,10 +78,20 @@ export class LogViewerComponent {
 
   private readonly jobListEl = viewChild<ElementRef<HTMLDivElement>>('jobList');
 
-  protected readonly jobs = signal<GitlabJob[]>([]);
-  protected readonly jobsState = signal<JobsState>('loading');
-  protected readonly jobsFailure = signal<RequestFailure>('server');
-  protected readonly jobsError = signal<unknown>(undefined);
+  private readonly jobsResource = httpResource<GitlabJob[]>(() => {
+    const raw = this.pipelineId();
+
+    return raw ? this.logService.getJobsUrl(Number(raw)) : undefined;
+  });
+
+  protected readonly jobs = computed(() => (this.jobsResource.hasValue() ? this.jobsResource.value() : []));
+  protected readonly jobsError = computed(() => this.jobsResource.error());
+  protected readonly jobsFailure = computed<RequestFailure>(() => requestFailure(this.jobsError()));
+  protected readonly jobsState = computed<JobsState>(() => {
+    if (this.jobsError()) return 'failed';
+
+    return this.jobsResource.hasValue() ? 'ready' : 'loading';
+  });
   protected readonly selectedJobId = signal<number | undefined>(undefined);
   protected readonly scrollToLine = signal<number | undefined>(undefined);
   protected readonly runningStatuses = RUNNING_STATUSES;
@@ -114,7 +125,14 @@ export class LogViewerComponent {
 
     effect(() => {
       const raw = this.pipelineId();
-      if (raw) void this.loadPipeline(Number(raw));
+      if (raw) untracked(() => this.resetPipeline(Number(raw)));
+    });
+
+    effect(() => {
+      if (!this.jobsResource.hasValue()) return;
+
+      const jobs = this.jobsResource.value();
+      untracked(() => this.selectInitialJob(jobs));
     });
 
     // When a job is (auto-)selected, bring its chip into view in the stage bar.
@@ -156,8 +174,7 @@ export class LogViewerComponent {
   }
 
   protected retryPipeline(): void {
-    const raw = this.pipelineId();
-    if (raw) void this.loadPipeline(Number(raw));
+    this.jobsResource.reload();
   }
 
   protected retryStream(): void {
@@ -165,10 +182,8 @@ export class LogViewerComponent {
     if (job) this.selectJob(job);
   }
 
-  private async loadPipeline(pipelineId: number): Promise<void> {
+  private resetPipeline(pipelineId: number): void {
     this.logStream.reset();
-    this.jobs.set([]);
-    this.jobsState.set('loading');
     this.selectedJobId.set(undefined);
     this.scrollToLine.set(undefined);
 
@@ -178,20 +193,9 @@ export class LogViewerComponent {
       keywords: this.transloco.translate('logViewer.seo.keywords'),
       url: this.router.url,
     });
+  }
 
-    let jobs: GitlabJob[];
-    try {
-      jobs = await this.logService.getJobs(pipelineId);
-    } catch (error) {
-      this.jobsError.set(error);
-      this.jobsFailure.set(requestFailure(error));
-      this.jobsState.set('failed');
-      return;
-    }
-
-    this.jobs.set(jobs);
-    this.jobsState.set('ready');
-
+  private selectInitialJob(jobs: GitlabJob[]): void {
     const requestedJob = this.requestedJobId();
     const initial =
       jobs.find((job) => job.id === requestedJob) ?? (requestedJob === undefined ? pickInitialJob(jobs) : undefined);

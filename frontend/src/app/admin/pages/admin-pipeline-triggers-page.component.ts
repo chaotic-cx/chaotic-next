@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -302,38 +303,37 @@ export class AdminPipelineTriggersPageComponent {
   );
 
   readonly scheduleDialogVisible = signal(false);
-  readonly scheduleOptions = signal<{ label: string; value: number }[]>([]);
   readonly selectedScheduleId = signal<number | null>(null);
   readonly selectedRepo = signal<string | null>(null);
-  readonly schedulesLoading = signal(false);
+
+  private readonly schedulesResource = httpResource<PipelineScheduleOption[]>(() => {
+    const repo = this.selectedRepo();
+
+    return repo ? this.service.getSchedulesRequest(repo) : undefined;
+  });
+
+  readonly schedulesLoading = this.schedulesResource.isLoading;
+  readonly scheduleOptions = computed(() => {
+    const schedules = this.schedulesResource.hasValue() ? this.schedulesResource.value() : [];
+
+    return schedules.map((schedule) => ({
+      label:
+        schedule.description ??
+        this.transloco.translate('admin.pipelineTriggers.scheduleDialog.fallbackLabel', { id: schedule.id }),
+      value: schedule.id,
+    }));
+  });
   readonly isSubmitting = signal(false);
 
   async openScheduleDialog(): Promise<void> {
     this.selectedScheduleId.set(null);
     this.selectedRepo.set(null);
-    this.scheduleOptions.set([]);
     this.scheduleDialogVisible.set(true);
   }
 
-  async onRepoChange(repo: string): Promise<void> {
+  onRepoChange(repo: string): void {
     this.selectedRepo.set(repo);
     this.selectedScheduleId.set(null);
-    this.schedulesLoading.set(true);
-    try {
-      const schedules = await this.service.getSchedules(repo);
-      this.scheduleOptions.set(
-        schedules.map((schedule: PipelineScheduleOption) => ({
-          label:
-            schedule.description ??
-            this.transloco.translate('admin.pipelineTriggers.scheduleDialog.fallbackLabel', { id: schedule.id }),
-          value: schedule.id,
-        })),
-      );
-    } catch {
-      this.scheduleOptions.set([]);
-    } finally {
-      this.schedulesLoading.set(false);
-    }
   }
 
   async triggerRunSchedule(): Promise<void> {

@@ -1,4 +1,5 @@
 import eslintNestJs from '@darraghor/eslint-plugin-nestjs-typed';
+import { testRules } from '@dr460nf1r3/eslint-rules';
 import tsParser from '@typescript-eslint/parser';
 import baseConfig from '../eslint.config.mjs';
 
@@ -32,5 +33,9 @@ export default [
     rules: {
       '@darraghor/nestjs-typed/injectable-should-be-provided': 'off',
     },
+  },
+  {
+    files: ['**/*.ts'],
+    rules: testRules,
   },
 ];
