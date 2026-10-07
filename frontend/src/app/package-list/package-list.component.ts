@@ -103,6 +103,7 @@ export class PackageListComponent {
 
   protected stripPrefix(value?: string): string {
     if (!value) return '';
+
     return value.replace(/(^.*:\/\/|\/$)/g, '');
   }
 
@@ -113,7 +114,6 @@ export class PackageListComponent {
 
   protected readonly packageColumns = computed<ColumnDef[]>(() => {
     this.activeTranslation();
-
     return [
       { key: 'name', label: this.transloco.translate('packageList.columns.name') },
       { key: 'version', label: this.transloco.translate('packageList.columns.version') },
@@ -170,6 +170,7 @@ export class PackageListComponent {
 
   protected focusSearchOnShortcut(event: KeyboardEvent): void {
     if (!event.ctrlKey || event.key.toLowerCase() !== 'f') return;
+
     event.preventDefault();
     this.searchInput()?.nativeElement.focus();
     this.searchInput()?.nativeElement.select();
@@ -192,6 +193,7 @@ export class PackageListComponent {
     if (table) {
       table.first = 0;
     }
+
     this.packageListService.setSearch(query);
     void this.router.navigate([], {
       queryParams: { search: query || null },
@@ -205,6 +207,7 @@ export class PackageListComponent {
     if (table) {
       table.first = 0;
     }
+
     this.packageListService.setRepoFilter(repoName);
     void this.router.navigate([], {
       queryParams: { repo: repoName },
@@ -225,5 +228,9 @@ export class PackageListComponent {
 
   openDetail(pkg: Package) {
     void this.router.navigate(['/stats'], { queryParams: { search: pkg.pkgname, repo: pkg.reponame } });
+  }
+
+  openDeployments(pkg: Package) {
+    void this.router.navigate(['/deployments'], { queryParams: { repo: pkg.reponame, pkgname: pkg.pkgname } });
   }
 }

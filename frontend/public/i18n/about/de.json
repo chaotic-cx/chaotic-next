@@ -55,8 +55,6 @@
     "manualDownloads": "Manuelle Downloads",
     "infraToolbox": "Infra-Toolbox",
     "statusPage": "Statusseite",
-    "buildLogs": "Build-Logs",
-    "buildLogsText": "Logs",
     "signingKeys": "Signing-Keys"
   },
   "specialThanks": {

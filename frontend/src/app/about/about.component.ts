@@ -43,11 +43,6 @@ const USEFUL_LINKS: UsefulLink[] = [
   },
   { labelKey: marker('about.usefulLinks.statusPage'), text: 'uptime.chaotic.cx', href: 'https://uptime.chaotic.cx' },
   {
-    labelKey: marker('about.usefulLinks.buildLogs'),
-    textKey: marker('about.usefulLinks.buildLogsText'),
-    href: 'https://builds.garudalinux.org/repos/chaotic-aur/logs/',
-  },
-  {
     labelKey: marker('about.usefulLinks.signingKeys'),
     text: 'chaotic.gpg',
     href: 'https://aur.chaotic.cx/chaotic.gpg',
