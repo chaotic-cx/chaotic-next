@@ -11,6 +11,23 @@ import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import { chartResource, type ChartConfig, pieChartOptions } from '../../chart-config';
 
+const MAX_NAME_LENGTH = 50;
+
+/** First parenthesized comment naming the platform, e.g. `(X11; Linux x86_64)`. */
+const PLATFORM_COMMENT_PATTERN = /\([^()]*linux[^()]*\)/i;
+
+/**
+ * User agents carry platform and trailer tokens nobody reads on a chart
+ * (`pacman/7.1.0 (Linux x86_64) libalpm/15.0.0`). Everything runs on Linux,
+ * so the platform comment and anything behind it goes. Names without a
+ * platform comment keep the plain length truncation.
+ */
+export function shortenUserAgentName(name: string): string {
+  const platformComment = PLATFORM_COMMENT_PATTERN.exec(name);
+  if (platformComment) return name.substring(0, platformComment.index).trimEnd();
+  return name.length > MAX_NAME_LENGTH ? `${name.substring(0, MAX_NAME_LENGTH)}...` : name;
+}
+
 @Component({
   selector: 'chaotic-chart-useragent',
   imports: [ChartCardComponent, InputNumber, FormsModule],
@@ -35,14 +52,13 @@ export class ChartUseragentComponent {
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
     this.activeTranslation();
 
-    // Don't display more than 30 user agents and truncate overly long ones.
+    // Don't display more than 30 user agents and shorten overly long ones.
     const maxUserAgents = 30;
-    const maxNameLength = 50;
     const relevantData = this.chart
       .data()
       .slice(0, Math.min(maxUserAgents, this.statsService.userAgentMetricRange()))
       .map((entry) => ({
-        name: entry.name.length > maxNameLength ? `${entry.name.substring(0, maxNameLength)}...` : entry.name,
+        name: shortenUserAgentName(entry.name),
         count: entry.count,
       }));
 

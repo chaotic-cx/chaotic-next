@@ -268,7 +268,7 @@ export class DeployLogComponent {
     this.deployLogService.setRepoFilter(undefined);
     this.deployLogService.setStatusFilter(undefined);
     void this.router.navigate([], {
-      queryParams: { search: null, repo: null, builder: null, status: null },
+      queryParams: { search: null, repo: null, builder: null, status: null, pkgname: null },
       queryParamsHandling: 'merge',
     });
     this.cdr.markForCheck();
@@ -307,7 +307,7 @@ export class DeployLogComponent {
     }
     this.deployLogService.setSearch(query);
     void this.router.navigate([], {
-      queryParams: { search: query || null },
+      queryParams: { search: query || null, pkgname: null },
       queryParamsHandling: 'merge',
     });
     this.cdr.markForCheck();

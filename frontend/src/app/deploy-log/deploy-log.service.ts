@@ -62,7 +62,9 @@ export class DeployLogService {
   readonly repoFilter = signal<string | undefined>(this.route.snapshot.queryParamMap.get('repo') ?? undefined);
   readonly statusFilter = signal<BuildStatus[] | undefined>(this.initialStatusFilter());
 
-  readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
+  readonly searchValue = signal<string>(
+    this.route.snapshot.queryParamMap.get('pkgname') ?? this.route.snapshot.queryParamMap.get('search') ?? '',
+  );
 
   private readonly buildersResource = httpResource<Builder[]>(() =>
     this.appConfig.backendUrl ? `${this.appConfig.backendUrl}/builder/builders` : undefined,

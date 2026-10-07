@@ -62,7 +62,12 @@ export function applyChartTheme(): void {
   const defaults = Chart.defaults;
   defaults.font.family = FONT_FAMILY;
   defaults.font.size = FONT_SIZE_PX;
-  defaults.animation = { duration: prefersReducedMotion() ? 0 : ANIMATION_MS, easing: 'easeOutQuart' };
+  /**
+   * Merge, never replace: assigning a fresh object would drop the `type`/`fn`
+   * keys Chart.js needs to pick an interpolator, and every color animation
+   * would then crash with `this._fn is not a function`.
+   */
+  defaults.set('animation', { duration: prefersReducedMotion() ? 0 : ANIMATION_MS, easing: 'easeOutQuart' });
 
   defaults.elements.line.borderWidth = LINE_WIDTH_PX;
   defaults.elements.line.tension = LINE_TENSION;

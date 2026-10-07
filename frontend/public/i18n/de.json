@@ -624,7 +624,9 @@
       "statsLabel": "Statistiken für {{pkgname}}",
       "statsTooltip": "Paketstatistiken ansehen",
       "pkgbuildLabel": "PKGBUILD von {{pkgname}} ansehen",
-      "pkgbuildTooltip": "PKGBUILD ansehen"
+      "pkgbuildTooltip": "PKGBUILD ansehen",
+      "deploymentsLabel": "Deployments von {{pkgname}} ansehen",
+      "deploymentsTooltip": "Paket-Deployments ansehen"
     },
     "loadError": "Pakete konnten nicht geladen werden.",
     "noMatchQuery": {
@@ -1027,10 +1029,17 @@
         "label": "Builds pro Tag"
       },
       "failedHotspots": {
-        "label": "Fehlgeschlagene Builds"
+        "countOne": "{{count}} Paket mit Fehlschlägen",
+        "countOther": "{{count}} Pakete mit Fehlschlägen",
+        "failuresCountOne": "{{count}} Fehlschlag",
+        "failuresCountOther": "{{count}} Fehlschläge",
+        "empty": "Keine fehlgeschlagenen Builds im Zeitraum."
       },
       "flakyPackages": {
-        "label": "Fehlerrate (%)"
+        "countOne": "{{count}} flaky Paket",
+        "countOther": "{{count}} flaky Pakete",
+        "detail": "{{failures}} von {{attempts}} fehlgeschlagen",
+        "empty": "Keine flaky Pakete im Zeitraum."
       },
       "heavyPackages": {
         "label": "Durchschnittliche Build-Dauer (Minuten)"

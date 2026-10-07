@@ -41,7 +41,7 @@ const USEFUL_LINKS: UsefulLink[] = [
     text: 'github.com/chaotic-aur/toolbox',
     href: 'https://github.com/chaotic-aur/toolbox',
   },
-  { labelKey: marker('about.usefulLinks.statusPage'), text: 'uptimes.chaotic.cx', href: 'https://uptimes.chaotic.cx' },
+  { labelKey: marker('about.usefulLinks.statusPage'), text: 'uptime.chaotic.cx', href: 'https://uptime.chaotic.cx' },
   {
     labelKey: marker('about.usefulLinks.buildLogs'),
     textKey: marker('about.usefulLinks.buildLogsText'),
@@ -67,8 +67,8 @@ const SPECIAL_THANKS: Thanks[] = [
   { nameKey: marker('about.specialThanks.garudaStaffers') },
   { nameKey: marker('about.specialThanks.mirrorProviders') },
   { name: 'Tk-Glitch (TkG)', href: 'https://github.com/Tk-Glitch' },
-  { name: 'Kodehawa', href: 'https://github.com/Kodehawa' },
-  { name: 'Figue', href: 'https://aur.archlinux.org/account/figue' },
+  { name: 'Kodehawa' },
+  { name: 'Figue', href: 'https://aur.archlinux.org/packages/?maintainer=figue' },
   { name: 'Benjamim Gois', href: 'https://github.com/benjamimgois' },
   {
     name: 'Dr Juan Carlos Ponce Campuzano',
