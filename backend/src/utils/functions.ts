@@ -9,6 +9,7 @@ export function generateNodeId(): string {
    * processes of one host, so two live brokers never share a nodeID.
    */
   if (process.env.HOSTNAME) return `${process.env.HOSTNAME}-${process.pid}`;
+
   return `backend-${process.pid}`;
 }
 
@@ -16,7 +17,6 @@ export function checkEnvironment(configService: ConfigService): void {
   const required: string[] =
     configService.get<string>('NODE_ENV') === 'development' ? requiredEnvVarsDev : requiredEnvVarsProd;
   const missingEnvVars: string[] = required.filter((envVar) => !configService.get<string>(envVar));
-
   if (missingEnvVars.length > 0) throw new Error(`Missing environment variables: ${missingEnvVars.join(', ')}`);
 }
 
@@ -77,6 +77,7 @@ function evpBytesToKey(password: string, salt: Buffer): { key: Buffer; iv: Buffe
     previous = createHash('md5').update(hashInput).digest();
     derived = Buffer.concat([derived, previous]);
   }
+
   return { key: derived.subarray(0, keyLen), iv: derived.subarray(keyLen, keyLen + ivLen) };
 }
 
@@ -91,6 +92,7 @@ export function encryptAesRaw(value: string, key: string): string {
 export function decryptAesRaw(value: string, key: string): string {
   const salted = Buffer.from(value, 'base64');
   if (salted.length < 16 || !salted.subarray(0, 8).equals(SALTED_PREFIX)) throw new Error('Invalid encrypted data');
+
   const { key: derivedKey, iv } = evpBytesToKey(key, salted.subarray(8, 16));
   const decipher = createDecipheriv('aes-256-cbc', derivedKey, iv);
   const decrypted = Buffer.concat([decipher.update(salted.subarray(16)), decipher.final()]);
@@ -135,6 +137,7 @@ export async function mapWithConcurrency<T, R>(
     }
   });
   await Promise.all(workers);
+
   return results;
 }
 
@@ -145,16 +148,7 @@ export function yieldToEventLoop(): Promise<void> {
 
 export function errorCode(err: unknown): string | undefined {
   if (typeof err !== 'object' || err === null || !('code' in err)) return undefined;
+
   const code = (err as { code: unknown }).code;
   return typeof code === 'string' ? code : undefined;
-}
-
-/**
- * We must not merge MRs while scheduled build pipelines are running.
- * Scheduled (every 3 hours) between HH:30 and HH:40 UTC.
- */
-export function isOnSchedulePipelineRunning(date = new Date()): boolean {
-  const utcHours = date.getUTCHours();
-  const utcMinutes = date.getUTCMinutes();
-  return utcHours % 3 === 0 && utcMinutes >= 30 && utcMinutes <= 40;
 }
