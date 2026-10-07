@@ -31,6 +31,6 @@ export class AurController {
         errorCode: 'INVALID_QUERY',
       });
     }
-    return await this.aurService.getSuggestions(q.trim());
+    return this.aurService.getSuggestions(q.trim());
   }
 }

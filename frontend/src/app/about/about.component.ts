@@ -1,145 +1,122 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgOptimizedImage } from '@angular/common';
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import type { TeamList } from '@chaotic-next/shared-lib';
-import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from '@openng/optimus-ui/accordion';
-import { PrimeTemplate } from '@openng/optimus-ui/api';
-import { Card } from '@openng/optimus-ui/card';
-import { Panel } from '@openng/optimus-ui/panel';
-import { Ripple } from '@openng/optimus-ui/ripple';
+import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
+import { MATRIX_ROOM_ALIAS, MATRIX_ROOM_URL } from '../community-links';
 import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
+interface UsefulLink {
+  labelKey: string;
+  text?: string;
+  textKey?: string;
+  href: string;
+}
+
+const USEFUL_LINKS: UsefulLink[] = [
+  { labelKey: marker('about.usefulLinks.newsChannel'), text: 't.me/s/chaotic_aur', href: 'https://t.me/s/chaotic_aur' },
+  {
+    labelKey: marker('about.usefulLinks.communityChat'),
+    text: 't.me/chaotic_aur_sac',
+    href: 'https://t.me/s/chaotic_aur_sac',
+  },
+  {
+    labelKey: marker('about.usefulLinks.matrixBridge'),
+    text: MATRIX_ROOM_ALIAS,
+    href: MATRIX_ROOM_URL,
+  },
+  {
+    labelKey: marker('about.usefulLinks.packageList'),
+    text: 'pkgs.org',
+    href: 'https://archlinux.pkgs.org/rolling/chaotic-aur-x86_64/',
+  },
+  {
+    labelKey: marker('about.usefulLinks.manualDownloads'),
+    text: 'builds.garudalinux.org',
+    href: 'https://builds.garudalinux.org/repos/chaotic-aur/x86_64/',
+  },
+  {
+    labelKey: marker('about.usefulLinks.infraToolbox'),
+    text: 'github.com/chaotic-aur/toolbox',
+    href: 'https://github.com/chaotic-aur/toolbox',
+  },
+  { labelKey: marker('about.usefulLinks.statusPage'), text: 'uptime.chaotic.cx', href: 'https://uptime.chaotic.cx' },
+  {
+    labelKey: marker('about.usefulLinks.signingKeys'),
+    text: 'chaotic.gpg',
+    href: 'https://aur.chaotic.cx/chaotic.gpg',
+  },
+];
+
+// Proper names stay in `name`; descriptive entries use `nameKey` for translation.
+interface Thanks {
+  name?: string;
+  nameKey?: string;
+  noteKey?: string;
+  href?: string;
+}
+
+const SPECIAL_THANKS: Thanks[] = [
+  { name: 'Librewish (Shrinivas Kumbhar)', noteKey: marker('about.specialThanks.librewishNote') },
+  { nameKey: marker('about.specialThanks.garudaStaffers') },
+  { nameKey: marker('about.specialThanks.mirrorProviders') },
+  { name: 'Tk-Glitch (TkG)', href: 'https://github.com/Tk-Glitch' },
+  { name: 'Kodehawa' },
+  { name: 'Figue', href: 'https://aur.archlinux.org/packages/?maintainer=figue' },
+  { name: 'Benjamim Gois', href: 'https://github.com/benjamimgois' },
+  {
+    name: 'Dr Juan Carlos Ponce Campuzano',
+    noteKey: marker('about.specialThanks.aizawaNote'),
+    href: 'https://www.patreon.com/jcponce',
+  },
+  { name: 'BlackStarMuzic', noteKey: marker('about.specialThanks.cleanLogoNote') },
+  { nameKey: marker('about.specialThanks.discordServers') },
+  { name: 'André, Gabriel Olivato and Maiser', href: 'https://github.com/olivatooo' },
+  { nameKey: marker('about.specialThanks.aurMaintainers') },
+  { nameKey: marker('about.specialThanks.projectHelpers') },
+];
+
+interface TeamMember {
+  name: string;
+  github: string;
+  roleKey: string;
+}
+
+const TEAM: TeamMember[] = [
+  { name: 'Nico Jensch', github: 'dr460nf1r3', roleKey: marker('about.team.roles.leadMaintainer') },
+  { name: 'TNE', github: 'JustTNE', roleKey: marker('about.team.roles.infraMaintainer') },
+  { name: 'Pedro H. Lara Campos', github: 'PedroHLC', roleKey: marker('about.team.roles.founder') },
+  { name: 'Paulo Matias', github: 'thotypous', roleKey: marker('about.team.roles.formerTuCoFounder') },
+  { name: 'Technetium1', github: 'technetium1', roleKey: marker('about.team.roles.packageMaintenance') },
+  { name: 'xiota', github: 'xiota', roleKey: marker('about.team.roles.packageMaintenance') },
+  { name: 'Yumi', github: 'a0xz', roleKey: marker('about.team.roles.mirrorManagement') },
+  { name: 'Joëlle van Essen', github: 'JoelleJS', roleKey: marker('about.team.roles.packageReviews') },
+  { name: 'SolarAquarion', github: 'SolarAquarion', roleKey: marker('about.team.roles.packageMaintenance') },
+  { name: 'LordKitsuna', github: 'lordkitsuna', roleKey: marker('about.team.roles.formerKernelBuilder') },
+  { name: 'João Figueiredo', github: 'IslandC0der', roleKey: marker('about.team.roles.kdeGitPackages') },
+  { name: 'Alexjp', github: 'alexjp', roleKey: marker('about.team.roles.kdeGitPackages') },
+  { name: 'Rustem B.', github: 'RustemB', roleKey: marker('about.team.roles.packageMaintenance') },
+];
+
 @Component({
   selector: 'chaotic-about',
-  imports: [
-    NgOptimizedImage,
-    Ripple,
-    Panel,
-    Card,
-    Accordion,
-    AccordionPanel,
-    AccordionHeader,
-    AccordionContent,
-    TitleComponent,
-    RouterLink,
-    PrimeTemplate,
-  ],
+  imports: [NgOptimizedImage, TitleComponent, RouterLink, TranslocoDirective],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',
 })
-export class AboutComponent implements OnInit {
-  private readonly observer = inject(BreakpointObserver);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
+export class AboutComponent {
+  private readonly transloco = inject(TranslocoService);
 
-  protected readonly isWide = signal<boolean>(true);
-
-  team: TeamList = [
-    {
-      name: 'Nico Jensch',
-      github: 'dr460nf1r3',
-      role: 'Lead Maintainer',
-    },
-    {
-      name: 'TNE',
-      github: 'JustTNE',
-      role: 'Infra maintainer',
-    },
-    {
-      name: 'Pedro H. Lara Campos',
-      github: 'PedroHLC',
-      role: 'Founder',
-    },
-    {
-      name: 'Paulo Matias',
-      github: 'thotypous',
-      role: 'Former TU, Co-founder',
-    },
-    {
-      name: 'Technetium1',
-      github: 'technetium1',
-      role: 'Package maintenance',
-    },
-    {
-      name: 'xiota',
-      github: 'xiota',
-      role: 'Package maintenance',
-    },
-    {
-      name: 'Yumi',
-      github: 'a0xz',
-      role: 'Mirror management',
-    },
-    {
-      name: 'Joëlle van Essen',
-      github: 'JoelleJS',
-      role: 'Package reviews',
-    },
-    {
-      name: 'SolarAquarion',
-      github: 'SolarAquarion',
-      role: 'Package maintenance',
-    },
-    {
-      name: 'LordKitsuna',
-      github: 'lordkitsuna',
-      role: 'Former kernel builder',
-    },
-    {
-      name: 'João Figueiredo',
-      github: 'IslandC0der',
-      role: 'KDE git packages',
-    },
-    {
-      name: 'Alexjp',
-      github: 'alexjp',
-      role: 'KDE git packages',
-    },
-    {
-      name: 'Rustem B.',
-      github: 'RustemB',
-      role: 'Package maintenance',
-    },
-  ];
+  readonly usefulLinks = USEFUL_LINKS;
+  readonly specialThanks = SPECIAL_THANKS;
+  readonly team = TEAM;
 
   constructor() {
-    for (const member of this.team) {
-      member.avatarUrl = `/assets/avatars/${member.github}.webp`;
-    }
-
     setPageSeo(
-      'About us · Chaotic-AUR',
-      'Learn more about the Chaotic-AUR team and project',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.about') }),
+      this.transloco.translate('about.seo.description'),
+      this.transloco.translate('about.seo.keywords'),
     );
-
-    this.observer
-      .observe(['(min-width: 768px)'])
-      .pipe(takeUntilDestroyed())
-      .subscribe((result) => {
-        this.isWide.set(result.matches);
-      });
-  }
-
-  ngOnInit() {
-    this.route.fragment
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((fragment) => this.scrollToFragment(fragment));
-  }
-
-  scrollTo(id: string): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      fragment: id,
-    });
-  }
-
-  private scrollToFragment(fragment: string | null): void {
-    if (!fragment) return;
-    document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

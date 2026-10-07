@@ -1,10 +1,11 @@
 import { Component, computed, inject } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { AppService } from '../../../../app.service';
-import { parseCount, shuffleArray } from '../../../../functions';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { parseCount } from '../../../../functions';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, axisChartOptions, singleSeriesColor } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-builders-amount',
@@ -15,12 +16,17 @@ import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../ch
 export class ChartBuildersAmountComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly chart = chartResource<{ name: string; count: string }[]>(() =>
     this.appService.getBuildersAmountResourceRequest(this.statsService.timeRangeDays() ?? undefined),
   );
 
   readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
+    this.activeTranslation();
+
     const data = this.chart.data();
     const labels: string[] = [];
     const values: number[] = [];
@@ -35,12 +41,13 @@ export class ChartBuildersAmountComponent {
         datasets: [
           {
             data: values,
-            label: 'Builds per builder',
-            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
+            label: this.transloco.translate('stats.charts.buildersAmount.label'),
+            backgroundColor: singleSeriesColor(),
+            borderRadius: 4,
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>(),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y', showLegend: false }),
     };
   });
 }

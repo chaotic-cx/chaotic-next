@@ -1,18 +1,13 @@
 import { Component, computed, inject } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
+import type { AccentName } from '@catppuccin/palette';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
+import { cycledColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, formatDay, axisChartOptions } from '../../chart-config';
 
-const UA_COLORS = [
-  flavors.mocha.colors.mauve.hex,
-  flavors.mocha.colors.blue.hex,
-  flavors.mocha.colors.green.hex,
-  flavors.mocha.colors.peach.hex,
-  flavors.mocha.colors.red.hex,
-];
+const UA_COLOR_NAMES: readonly AccentName[] = ['mauve', 'blue', 'green', 'peach', 'red'];
 
 @Component({
   selector: 'chaotic-chart-downloaders-trend',
@@ -38,7 +33,9 @@ export class ChartDownloadersTrendComponent {
     const series = new Map(agents.map((a) => [a, [] as number[]]));
     for (const row of rows) {
       const day = formatDay(row.day);
-      if (!labels.includes(day)) labels.push(day);
+      if (!labels.includes(day)) {
+        labels.push(day);
+      }
       series.get(row.userAgent)?.push(parseCount(row.count));
     }
     return {
@@ -47,12 +44,12 @@ export class ChartDownloadersTrendComponent {
         datasets: agents.map((agent, i) => ({
           label: agent,
           data: series.get(agent) ?? [],
-          backgroundColor: UA_COLORS[i % UA_COLORS.length],
-          borderColor: UA_COLORS[i % UA_COLORS.length],
+          backgroundColor: cycledColor(UA_COLOR_NAMES, i),
+          borderColor: cycledColor(UA_COLOR_NAMES, i),
           fill: false,
         })),
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
   });
 }

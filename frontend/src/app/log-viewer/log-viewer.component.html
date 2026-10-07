@@ -1,56 +1,80 @@
-<chaotic-title [subtitle]="subtitle()" title="Pipeline logs" />
+<div class="chaotic-page" *transloco="let t; prefix: 'logViewer'">
+  <chaotic-back-link [label]="t('back')" fallback="/status" />
+  <chaotic-title
+    [subtitle]="selectedJob()?.name ?? t('noJobSelected')"
+    [title]="pipelineId() ? t('heading', { pipelineId: pipelineId() }) : t('title')"
+  />
 
-<div class="log-viewer">
-  @if (error()) {
-    <p class="log-error">{{ error() }}</p>
-  }
-
-  @if (jobs().length > 0) {
-    <div class="log-toolbar">
-      <div class="job-list" #jobList>
-        @for (job of jobs(); track job.id) {
-          <button
-            class="job-chip"
-            [class.job-chip-selected]="job.id === selectedJobId()"
-            [class.job-running]="runningStatuses.has(job.status)"
-            [class.job-failed]="job.status === 'failed'"
-            [class.job-success]="job.status === 'success'"
-            (click)="selectJob(job)"
-            type="button"
-          >
-            <span class="job-name">{{ job.name }}</span>
-            <span class="job-status">{{ job.status }}</span>
-          </button>
-        }
-      </div>
-      <p-select
-        class="job-select w-full min-w-0"
-        [options]="jobOptions()"
-        [ngModel]="selectedJobId()"
-        [ngModelOptions]="{ standalone: true }"
-        (ngModelChange)="onJobSelect($event)"
-        optionLabel="label"
-        optionValue="value"
-        appendTo="body"
-      />
-      @if (streaming()) {
-        <span class="live-badge">● live</span>
+  <div class="log-viewer">
+    @switch (jobsState()) {
+      @case ('loading') {
+        <div class="log-toolbar skeleton-reveal" [attr.aria-label]="t('loadingJobs')" role="status">
+          @for (chip of jobSkeletonChips; track chip) {
+            <span class="chaotic-skeleton job-chip-skeleton" aria-hidden="true"></span>
+          }
+        </div>
       }
-    </div>
-  }
+      @case ('failed') {
+        <chaotic-load-error
+          [message]="t(jobsFailureKeys[jobsFailure()], { pipelineId: pipelineId() })"
+          [error]="jobsError()"
+          (retry)="retryPipeline()"
+        />
+      }
+      @default {
+        @if (jobs().length === 0) {
+          <p class="chaotic-card__empty" role="status">{{ t('noJobs') }}</p>
+        } @else {
+          <div class="log-toolbar">
+            <div class="job-list" #jobList>
+              @for (job of jobs(); track job.id) {
+                <button
+                  class="job-chip"
+                  [class.job-chip-selected]="job.id === selectedJobId()"
+                  [class.job-running]="runningStatuses.has(job.status)"
+                  [class.job-failed]="job.status === 'failed'"
+                  [class.job-success]="job.status === 'success'"
+                  [attr.aria-pressed]="job.id === selectedJobId()"
+                  [title]="job.name"
+                  (click)="selectJob(job)"
+                  type="button"
+                >
+                  <span class="job-name">{{ job.name }}</span>
+                  <span class="job-status">{{ jobStatusLabel(job.status) }}</span>
+                </button>
+              }
+            </div>
+            <p-select
+              class="job-select w-full min-w-0"
+              [options]="jobOptions()"
+              [ngModel]="selectedJobId()"
+              [ngModelOptions]="{ standalone: true }"
+              [ariaLabel]="t('jobSelectLabel')"
+              (ngModelChange)="onJobSelect($event)"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+            />
+            @if (logStream.live()) {
+              <span class="live-badge">{{ t('live') }}</span>
+            }
+          </div>
+        }
+      }
+    }
 
-  <div class="log-panel-wrap">
-    @if (loading()) {
-      <div class="log-loading">
-        <p-progress-spinner ariaLabel="Loading logs" />
+    @if (selectedJob()) {
+      <chaotic-log-stream-status [state]="logStream.state()" (retry)="retryStream()" />
+    }
+
+    @if (jobsState() === 'loading' || jobs().length > 0) {
+      <div class="log-panel-wrap">
+        <chaotic-xterm-log
+          [chunk]="logStream.chunks()"
+          [scrollToLine]="scrollToLine()"
+          (lineClick)="onLineClick($event)"
+        />
       </div>
-    } @else {
-      <chaotic-xterm-log
-        [chunk]="logChunks()"
-        [clearSignal]="clearSignal()"
-        [scrollToLine]="scrollToLine()"
-        (lineClick)="onLineClick($event)"
-      />
     }
   </div>
 </div>

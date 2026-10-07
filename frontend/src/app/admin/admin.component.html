@@ -1,42 +1,48 @@
-<chaotic-title title="Admin" subtitle="Manage packages, repositories, builders and analysis data." />
+<div class="chaotic-page admin-shell" *transloco="let t">
+  <nav class="admin-nav" #nav [attr.aria-label]="t('admin.layout.navLabel')">
+    <p class="admin-nav__title">{{ t('admin.layout.title') }}</p>
+    @if (indicator(); as box) {
+      <span
+        class="admin-nav__indicator"
+        [style.--indicator-top.px]="box.top"
+        [style.--indicator-left.px]="box.left"
+        [style.--indicator-width]="box.width"
+        [style.--indicator-height.px]="box.height"
+        aria-hidden="true"
+      ></span>
+    }
+    @for (group of groups; track group.labelKey) {
+      <div class="admin-nav__group">
+        @if (group.labelKey; as groupLabelKey) {
+          <p class="admin-nav__group-label">{{ t(groupLabelKey) }}</p>
+        }
+        <ul class="admin-nav__list">
+          @for (item of group.items; track item.path) {
+            <li>
+              <a
+                class="admin-nav__link"
+                #navLink
+                [routerLink]="item.path"
+                [attr.data-path]="item.path"
+                routerLinkActive="is-active"
+                ariaCurrentWhenActive="page"
+              >
+                <i [class]="item.icon" aria-hidden="true"></i>
+                {{ t(item.labelKey) }}
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </nav>
 
-<div class="flex flex-1 flex-col">
-  <div class="admin-tabs-container min-w-0">
-    <p-tabs [value]="activeTab()" (valueChange)="navigate($event)">
-      <p-tablist>
-        <p-tab pTooltip="Manage packages" tooltipPosition="bottom" value="packages">Packages</p-tab>
-        <p-tab pTooltip="Manage Arch Linux packages" tooltipPosition="bottom" value="arch">Arch packages</p-tab>
-        <p-tab pTooltip="Manage repositories" tooltipPosition="bottom" value="repos">Repos</p-tab>
-        <p-tab pTooltip="Manage builders" tooltipPosition="bottom" value="builders">Builders</p-tab>
-        <p-tab pTooltip="View merge-request review actions" tooltipPosition="bottom" value="mr-actions">
-          MR actions
-        </p-tab>
-        <p-tab pTooltip="View triggered pipelines" tooltipPosition="bottom" value="pipeline-triggers">
-          Pipeline triggers
-        </p-tab>
-        <p-tab pTooltip="View package rebuild bumps" tooltipPosition="bottom" value="package-bumps">
-          Package bumps
-        </p-tab>
-        <p-tab pTooltip="Manage package ELF analysis rows" tooltipPosition="bottom" value="package-elf-analysis">
-          ELF analysis
-        </p-tab>
-        <p-tab
-          pTooltip="Trigger repo manager operations and view broken packages"
-          tooltipPosition="bottom"
-          value="repo-operations"
-        >
-          Repo operations
-        </p-tab>
-        <p-tab
-          pTooltip="View internal logs of the Chaotic manager instance"
-          tooltipPosition="bottom"
-          value="manager-logs"
-        >
-          Manager logs
-        </p-tab>
-      </p-tablist>
-    </p-tabs>
-    <div class="p-tabpanels min-w-0">
+  <div class="admin-main">
+    <header class="admin-header">
+      <h1 class="admin-header__title">{{ t(activeItem().labelKey) }}</h1>
+      <p class="admin-header__desc">{{ t(activeItem().descriptionKey) }}</p>
+    </header>
+    <div class="admin-content">
       <router-outlet />
     </div>
   </div>

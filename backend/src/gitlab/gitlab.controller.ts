@@ -42,6 +42,9 @@ import {
   gitlabWebhookBodySchema,
   MergeRequestWithDiffs,
   mergeRequestWithDiffsSchema,
+  mergeRequestCountsSchema,
+  countReviewQueue,
+  MergeRequestCounts,
   offsetQuerySchema,
   type GitlabWebhookBodyDto,
   PipelineScheduleOption,
@@ -193,8 +196,8 @@ export class GitlabController {
   @Post('mr-scan')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Run the merge request security scan now (auto-flag labels and VirusTotal checks).' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiCreatedResponse({ description: 'Merge request scan triggered.' })
   mrScan(): void {
     void this.gitlabMergeRequestService.handleAutoFlagRefresh();
@@ -205,11 +208,11 @@ export class GitlabController {
   @Throttle({ default: { ttl: AUR_SCAN_THROTTLE_TTL_MS, limit: AUR_SCAN_THROTTLE_LIMIT } })
   @UseGuards(AuthGuard)
   @OptionalAuth()
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({
     summary:
       'Scan an AUR package: PKGBUILD sources and static rules for everyone, VirusTotal checks for authenticated sessions.',
   })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiCreatedResponse({
     description: 'The scan result; VirusTotal reports follow via GET once completed.',
     schema: schemaResponse(aurPackageScanSchema).schema,
@@ -248,8 +251,8 @@ export class GitlabController {
   }
 
   @Get('aur-scan/:packageName')
-  @ApiParam({ name: 'packageName', description: 'AUR package name' })
   @ApiOperation({ summary: 'Fetch the current AUR package scan result.' })
+  @ApiParam({ name: 'packageName', description: 'AUR package name' })
   @ApiOkResponse({ description: 'The current scan result.', schema: schemaResponse(aurPackageScanSchema).schema })
   async getAurScan(@Param('packageName') packageName: string): Promise<AurPackageScan> {
     const scan = this.aurScanService.getScan(packageName);
@@ -258,9 +261,9 @@ export class GitlabController {
   }
 
   @Sse('aur-scan/:packageName/stream')
-  @ApiParam({ name: 'packageName', description: 'AUR package name' })
   @SkipThrottle()
   @ApiOperation({ summary: 'Stream AUR package scan updates until the scan completes.' })
+  @ApiParam({ name: 'packageName', description: 'AUR package name' })
   @ApiOkResponse({ description: 'Stream of AurScanStreamChunk messages', type: Object })
   streamAurScan(@Param('packageName') packageName: string): Observable<SseMessage<AurScanStreamChunk>> {
     return this.aurScanService.streamScan(packageName);
@@ -276,7 +279,7 @@ export class GitlabController {
   async searchAur(@Query({ schema: aurSearchQuerySchema }) query: AurSearchQueryDto): Promise<string[]> {
     const arg = query.arg;
     if (!arg || arg.length < 3) return [];
-    return await this.aurScanService.searchAur(arg);
+    return this.aurScanService.searchAur(arg);
   }
 
   @Get('pipelines')
@@ -286,7 +289,7 @@ export class GitlabController {
     schema: schemaResponseArray(pipelineWithExternalStatusSchema).schema,
   })
   async getLastPipelines(): Promise<PipelineWithExternalStatus[]> {
-    return await this.gitlabPipelineService.getLastPipelines();
+    return this.gitlabPipelineService.getLastPipelines();
   }
 
   @Get('pipelines/:pipelineId/jobs')
@@ -296,17 +299,17 @@ export class GitlabController {
   async getPipelineJobs(
     @Param('pipelineId', { schema: gitlabIdParamSchema }) pipelineId: number,
   ): Promise<GitlabJob[]> {
-    return await this.gitlabJobTraceService.listPipelineJobs(pipelineId);
+    return this.gitlabJobTraceService.listPipelineJobs(pipelineId);
   }
 
   @Sse('pipelines/:pipelineId/jobs/:jobId/trace')
   @SkipThrottle()
   @ApiOperation({ summary: 'Stream the live trace of a GitLab pipeline job over SSE.' })
-  @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
   @ApiQuery({ name: 'offset', required: false, description: 'Resume from this character offset', type: Number })
   @ApiHeaders([
     { name: 'last-event-id', required: false, description: 'Native EventSource reconnect: last received frame id' },
   ])
+  @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
   async streamJobTrace(
     @Param('pipelineId', { schema: gitlabIdParamSchema }) pipelineId: number,
     @Param('jobId', { schema: gitlabIdParamSchema }) jobId: number,
@@ -316,7 +319,7 @@ export class GitlabController {
   ): Promise<Observable<SseMessage<GitlabLogChunk>>> {
     const headerOffset = Number(lastEventId);
     const resumeAt = offset > 0 ? offset : Number.isInteger(headerOffset) && headerOffset > 0 ? headerOffset : 0;
-    return await this.gitlabJobTraceService.getJobTraceStream(pipelineId, jobId, resumeAt);
+    return this.gitlabJobTraceService.getJobTraceStream(pipelineId, jobId, resumeAt);
   }
 
   @Get('merge-requests')
@@ -326,14 +329,21 @@ export class GitlabController {
     schema: schemaResponseArray(mergeRequestWithDiffsSchema).schema,
   })
   async getOpenMergeRequests(): Promise<MergeRequestWithDiffs[]> {
-    return await this.gitlabMergeRequestService.getOpenMergeRequests();
+    return this.gitlabMergeRequestService.getOpenMergeRequests();
+  }
+
+  @Get('merge-requests/counts')
+  @ApiOperation({ summary: 'Count the review queue merge requests that wait for a review or are on hold.' })
+  @ApiOkResponse({ description: 'Review queue counts', schema: schemaResponse(mergeRequestCountsSchema).schema })
+  async getMergeRequestCounts(): Promise<MergeRequestCounts> {
+    return countReviewQueue(await this.gitlabMergeRequestService.getOpenMergeRequests());
   }
 
   @Get('schedules')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireRepoGroup()
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Get the active pipeline schedules of the given repository.' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiQuery({ name: 'repo', description: 'Repository name', example: 'chaotic-aur' })
   @ApiOkResponse({
     description: 'List of active pipeline schedules',
@@ -342,7 +352,7 @@ export class GitlabController {
   async getSchedules(
     @Query({ schema: schedulesQuerySchema }) query: SchedulesQueryDto,
   ): Promise<PipelineScheduleOption[]> {
-    return await this.gitlabPipelineService.listPipelineSchedules(query.repo);
+    return this.gitlabPipelineService.listPipelineSchedules(query.repo);
   }
 
   @Get('review-stats')
@@ -350,7 +360,7 @@ export class GitlabController {
   @ApiQuery({ name: 'days', required: false, type: Number, description: 'Optional time range in days' })
   @ApiOkResponse({ description: 'Merge request review statistics', schema: schemaResponse(reviewStatsSchema).schema })
   async getReviewStats(@Query({ schema: daysQuerySchema }) query: DaysQueryDto) {
-    return await this.gitlabMergeRequestService.getReviewStats(query.days);
+    return this.gitlabMergeRequestService.getReviewStats(query.days);
   }
 
   @Get('review-stats/over-time')
@@ -361,20 +371,20 @@ export class GitlabController {
     schema: schemaResponse(reviewStatsOverTimeSchema).schema,
   })
   async getReviewStatsOverTime(@Query({ schema: daysQuerySchema }) query: DaysQueryDto) {
-    return await this.gitlabMergeRequestService.getReviewStatsOverTime(query.days);
+    return this.gitlabMergeRequestService.getReviewStatsOverTime(query.days);
   }
 
   @Post('approve')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Approve a merge request.' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOkResponse({ description: 'Merge request approved.', schema: schemaResponse(approveMrResponseSchema).schema })
   async approve(
     @Session() session: UserSession<typeof auth>,
     @Body({ schema: approveMrBodySchema }) body: ApproveMrDto,
   ): Promise<ApproveMrResponseShared> {
-    return await this.gitlabMergeRequestService.approveMergeRequest(body.iid, body.sha, {
+    return this.gitlabMergeRequestService.approveMergeRequest(body.iid, body.sha, {
       userId: session.user.id,
       userName: session.user.name,
     });
@@ -383,9 +393,9 @@ export class GitlabController {
   @Post('flag')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
-  @ApiCookieAuth('better-auth.session_token')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Flag a merge request.' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiNoContentResponse({ description: 'Merge request flagged.' })
   async flag(
     @Session() session: UserSession<typeof auth>,
@@ -405,14 +415,14 @@ export class GitlabController {
   @Post('bump-packages')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireRepoGroup()
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Bump packages via a direct Git commit.' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOkResponse({ description: 'Bump commit created.', schema: schemaResponse(pipelineTriggerResultSchema).schema })
   async bumpPackages(
     @Session() session: UserSession<typeof auth>,
     @Body({ schema: bumpPackagesGitlabBodySchema }) body: BumpPackagesDto,
   ): Promise<PipelineTriggerResult> {
-    return await this.gitlabPackageOpsService.bumpPackages(body.packages, body.repo, body.ref ?? 'main', {
+    return this.gitlabPackageOpsService.bumpPackages(body.packages, body.repo, body.ref ?? 'main', {
       userId: session.user.id,
       userName: session.user.name,
     });
@@ -421,14 +431,14 @@ export class GitlabController {
   @Post('add-packages')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireRepoGroup()
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Add new packages via a direct Git commit.' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOkResponse({ description: 'Add commit created.', schema: schemaResponse(pipelineTriggerResultSchema).schema })
   async addPackages(
     @Session() session: UserSession<typeof auth>,
     @Body({ schema: addPackagesBodySchema }) body: AddPackagesDto,
   ): Promise<PipelineTriggerResult> {
-    return await this.gitlabPackageOpsService.addPackages(
+    return this.gitlabPackageOpsService.addPackages(
       body.packages,
       body.repo,
       body.request_origin,
@@ -445,14 +455,14 @@ export class GitlabController {
   @Post('drop-packages')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireRepoGroup()
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Drop packages via a direct Git commit.' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOkResponse({ description: 'Drop commit created.', schema: schemaResponse(pipelineTriggerResultSchema).schema })
   async dropPackages(
     @Session() session: UserSession<typeof auth>,
     @Body({ schema: dropPackagesBodySchema }) body: DropPackagesDto,
   ): Promise<PipelineTriggerResult> {
-    return await this.gitlabPackageOpsService.dropPackages(body.packages, body.repo, body.ref ?? 'main', {
+    return this.gitlabPackageOpsService.dropPackages(body.packages, body.repo, body.ref ?? 'main', {
       userId: session.user.id,
       userName: session.user.name,
     });
@@ -461,8 +471,8 @@ export class GitlabController {
   @Post('run-schedule')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireRepoGroup()
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Trigger a GitLab pipeline schedule directly via API.' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOkResponse({
     description: 'Pipeline schedule triggered.',
     schema: schemaResponse(pipelineTriggerResultSchema).schema,
@@ -471,7 +481,7 @@ export class GitlabController {
     @Session() session: UserSession<typeof auth>,
     @Body({ schema: runScheduleBodySchema }) body: RunScheduleDto,
   ): Promise<PipelineTriggerResult> {
-    return await this.gitlabPipelineService.runSchedule(body.scheduleId, body.repo, {
+    return this.gitlabPipelineService.runSchedule(body.scheduleId, body.repo, {
       userId: session.user.id,
       userName: session.user.name,
     });
@@ -480,15 +490,15 @@ export class GitlabController {
   @Post('trigger')
   @UseGuards(AuthGuard, RequireGroupGuard)
   @RequireGroups(GITLAB_GROUP_CHAOTIC_AUR)
-  @ApiCookieAuth('better-auth.session_token')
   @ApiOperation({ summary: 'Trigger a custom pipeline with the given inputs.' })
+  @ApiCookieAuth('better-auth.session_token')
   @ApiOkResponse({ description: 'Pipeline triggered.', schema: schemaResponse(pipelineTriggerResultSchema).schema })
   async triggerPipeline(
     @Session() session: UserSession<typeof auth>,
     @Body({ schema: triggerPipelineBodySchema }) body: TriggerPipelineDto,
   ): Promise<PipelineTriggerResult> {
     const { ref, inputs } = validatePipelineTriggerInputs(body);
-    return await this.gitlabPipelineService.triggerPipelineRun(inputs, ref, {
+    return this.gitlabPipelineService.triggerPipelineRun(inputs, ref, {
       userId: session.user.id,
       userName: session.user.name,
     });

@@ -9,7 +9,7 @@
     "logLevel": "debug"
   },
   "^/backend/": {
-    "target": "http://localhost:3000",
+    "target": "https://backend.chaotic.cx",
     "secure": false,
     "pathRewrite": {
       "^/backend": ""

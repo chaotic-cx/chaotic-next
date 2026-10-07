@@ -6,23 +6,17 @@
   min-height: 0;
 }
 
-.log-error {
-  color: var(--ctp-mocha-red);
-  font-size: 0.875rem;
-  padding-left: 0.5rem;
-}
-
 .log-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.875rem;
-  border: 1px solid var(--ctp-mocha-surface1);
-  border-radius: 0.75rem;
+  border: 1px solid var(--catppuccin-color-surface1);
+  border-radius: var(--chaotic-radius-md);
   background: transparent;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
 }
 
 .toolbar-right {
@@ -56,19 +50,19 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--ctp-mocha-text);
+  color: var(--catppuccin-color-text);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: var(--chaotic-weight-semibold);
 }
 
 .builder-name i {
-  color: var(--ctp-mocha-mauve);
+  color: var(--catppuccin-color-mauve);
 }
 
 .live-badge {
-  color: var(--ctp-mocha-red);
+  color: var(--catppuccin-color-red);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: var(--chaotic-weight-bold);
   animation: live-pulse 1.6s ease-in-out infinite;
 }
 
@@ -77,19 +71,29 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--ctp-mocha-surface1);
-  border-radius: 0.5rem;
+  border: 1px solid var(--catppuccin-color-surface1);
+  border-radius: var(--chaotic-radius-sm);
   background: transparent;
-  color: var(--ctp-mocha-text);
+  color: var(--catppuccin-color-text);
   padding: 0.35rem 0.6rem;
   cursor: pointer;
   font-size: 0.875rem;
 }
 
+@media (pointer: coarse) {
+  .search-nav,
+  .download-btn {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
 .search-nav:hover,
-.download-btn:hover {
-  border-color: var(--ctp-mocha-mauve);
-  color: var(--ctp-mocha-mauve);
+.search-nav:focus-visible,
+.download-btn:hover,
+.download-btn:focus-visible {
+  border-color: var(--catppuccin-color-mauve);
+  color: var(--catppuccin-color-mauve);
 }
 
 @keyframes live-pulse {
@@ -100,26 +104,6 @@
   50% {
     opacity: 0.35;
   }
-}
-
-.log-note {
-  color: var(--ctp-mocha-subtext0);
-  font-size: 0.875rem;
-}
-
-.follow-button {
-  margin-left: auto;
-  border: 1px solid var(--ctp-mocha-surface1);
-  border-radius: 0.5rem;
-  background: transparent;
-  color: var(--ctp-mocha-text);
-  padding: 0.35rem 0.75rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-
-.follow-button:hover {
-  border-color: var(--ctp-mocha-mauve);
 }
 
 .log-panel-wrap {

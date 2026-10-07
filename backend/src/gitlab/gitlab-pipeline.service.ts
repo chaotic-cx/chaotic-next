@@ -21,6 +21,7 @@ import { PIPELINE_TRIGGERED_BY_VARIABLE } from './pipeline-trigger-inputs';
 import { PipelineTrigger } from './pipeline-trigger.entity';
 
 const SKIPPED_PIPELINE_STATUS = 'skipped';
+const SCHEDULE_PIPELINE_SOURCE = 'schedule';
 const PIPELINE_SCHEDULES_CACHE_TTL_MS = 5 * 60_000;
 const MAX_CACHED_PIPELINES = 40;
 const GITLAB_API_TIMEOUT_MS = 10_000;
@@ -181,6 +182,7 @@ export class GitlabPipelineService implements OnModuleInit {
         data: { type: 'pipeline', pipeline: [{ pipeline, commit: this.statusMap.get(attrs.id) ?? [] }] },
       });
     }
+
     return true;
   }
 
@@ -190,7 +192,6 @@ export class GitlabPipelineService implements OnModuleInit {
     const list = this.statusMap.get(event.pipeline_id) ?? [];
     const existingIndex = list.findIndex((status) => status.name === event.name);
     const existing = existingIndex >= 0 ? list[existingIndex] : undefined;
-
     const entry: ExternalCommitStatus = {
       id: existing?.id ?? this.statusIdCounter++,
       name: event.name,
@@ -202,7 +203,10 @@ export class GitlabPipelineService implements OnModuleInit {
       pipeline_id: event.pipeline_id,
     };
 
-    if (existingIndex >= 0) list.splice(existingIndex, 1);
+    if (existingIndex >= 0) {
+      list.splice(existingIndex, 1);
+    }
+
     list.push(entry);
     this.statusMap.set(event.pipeline_id, list);
 
@@ -211,6 +215,19 @@ export class GitlabPipelineService implements OnModuleInit {
       this.eventService.sseEvents$.next({
         data: { type: 'pipeline', pipeline: [{ pipeline, commit: list }] },
       });
+    }
+  }
+
+  async isScheduledPipelineRunning(): Promise<boolean> {
+    try {
+      const running: PipelineSchema[] = await this.api.Pipelines.all(this.chaoticId, {
+        scope: 'running',
+        perPage: 100,
+      });
+      return running.some((pipeline) => pipeline.source === SCHEDULE_PIPELINE_SOURCE);
+    } catch (err) {
+      this.pino.warn({ err }, 'Could not query running pipelines, assuming a scheduled one runs');
+      return true;
     }
   }
 
@@ -243,22 +260,22 @@ export class GitlabPipelineService implements OnModuleInit {
     if (token) {
       headers['PRIVATE-TOKEN'] = token;
     }
+
     const response = await fetch(url, { signal: AbortSignal.timeout(GITLAB_API_TIMEOUT_MS), headers });
     if (!response.ok) {
       throw new ServiceUnavailableException(`GitLab API returned ${response.status} for project ${projectId}`);
     }
+
     const commits = (await response.json()) as { id: string }[];
     const head = commits[0];
-    if (!head?.id) {
-      throw new ServiceUnavailableException('Could not fetch HEAD commit from GitLab');
-    }
+    if (!head?.id) throw new ServiceUnavailableException('Could not fetch HEAD commit from GitLab');
+
     return head.id;
   }
 
   async runSchedule(scheduleId: number, repoName: string, actor: MrActor): Promise<PipelineTriggerResult> {
     const gitlabProjectId = await this.gitlabApiService.getRepoGitlabProjectId(repoName);
     let lastPipeline: { id?: number; sha?: string } | undefined;
-
     if (scheduleId > 0) {
       this.pino.debug({ scheduleId, repoName }, 'Triggering pipeline schedule');
       const schedules = this.api.PipelineSchedules as unknown as Record<string, (...args: unknown[]) => unknown>;
@@ -318,7 +335,6 @@ export class GitlabPipelineService implements OnModuleInit {
         },
       ],
     });
-
     await this.pipelineTriggerRepository.insert({
       ref,
       commitSha: pipeline.sha ?? null,
@@ -373,6 +389,7 @@ export class GitlabPipelineService implements OnModuleInit {
       if (commit.id) {
         this.registerCommitSha(commit.id);
       }
+
       return true;
     } catch (err) {
       this.pino.warn({ err, pkgbase, repoName }, 'Committing .CI/config failed');

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import { packageSchema } from './package';
 
 export enum BuildStatus {

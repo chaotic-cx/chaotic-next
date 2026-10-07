@@ -1,0 +1,704 @@
+{
+  "layout": {
+    "title": "Admin",
+    "navLabel": "Admin sections",
+    "seo": {
+      "title": "Admin · Chaotic-AUR",
+      "description": "Administrative tools for the Chaotic-AUR backend",
+      "keywords": "Chaotic-AUR, Admin, Repository, Packages, Builders, Archlinux"
+    },
+    "groups": {
+      "packages": "Packages",
+      "infrastructure": "Infrastructure",
+      "activity": "Activity"
+    },
+    "nav": {
+      "overview": {
+        "label": "Overview",
+        "description": "Failing builds, broken packages and recent maintainer activity."
+      },
+      "packages": {
+        "label": "Chaotic packages",
+        "description": "Add, edit and rebuild packages of the Chaotic-AUR repositories."
+      },
+      "arch": {
+        "label": "Arch packages",
+        "description": "Reference data of the Arch Linux packages that trigger rebuilds."
+      },
+      "packageElfAnalysis": {
+        "label": "ELF analysis",
+        "description": "Sonames and symbols that the signal scanner indexed per package."
+      },
+      "packageBumps": {
+        "label": "Package bumps",
+        "description": "Rebuilds that the repo manager triggered and their causes."
+      },
+      "repos": {
+        "label": "Repositories",
+        "description": "Repository sources, git refs and GitLab connections."
+      },
+      "builders": {
+        "label": "Builders",
+        "description": "Build machines and their build classes."
+      },
+      "repoOperations": {
+        "label": "Repo operations",
+        "description": "Repo manager runs, rescans and the broken package report."
+      },
+      "mrActions": {
+        "label": "MR actions",
+        "description": "Merge request reviews that maintainers performed."
+      },
+      "pipelineTriggers": {
+        "label": "Pipeline triggers",
+        "description": "GitLab pipelines that maintainers started from this site."
+      },
+      "managerLogs": {
+        "label": "Manager logs",
+        "description": "Internal logs of the Chaotic manager instance."
+      }
+    }
+  },
+  "overview": {
+    "page": {
+      "healthLabel": "Repository health",
+      "failing": {
+        "label": "Failing packages",
+        "loadError": "Could not load failures",
+        "none": "Every package built on its last attempt",
+        "context": "{{rateLimited}} rate-limited · longest streak ×{{streak}}"
+      },
+      "mergeRequests": {
+        "label": "Merge requests to review",
+        "loadError": "Could not load merge requests",
+        "onHold": "{{count}} on hold"
+      },
+      "buildQueue": {
+        "label": "Build queue",
+        "buildingNow": "{{count}} building now"
+      },
+      "builders": {
+        "label": "Builders online",
+        "enabledBusy": "of {{enabled}} enabled · {{busy}} busy",
+        "busy": "{{busy}} busy"
+      },
+      "failures": {
+        "title": "Unresolved failures",
+        "hideSilenced": "Hide silenced",
+        "showSilenced": "Show {{count}} silenced",
+        "loadError": "Could not load unresolved failures.",
+        "empty": "Nothing is failing. Every package built on its last attempt."
+      }
+    },
+    "buildTrends": {
+      "windowDays": "{{days}} days",
+      "insightsLink": "Insights",
+      "flaky": {
+        "title": "Flakiest packages",
+        "loadError": "Could not load flaky packages.",
+        "empty": "No package failed and succeeded in turn.",
+        "detail": "{{percent}}% of {{attempts}}"
+      },
+      "builders": {
+        "title": "Builder load",
+        "loadError": "Could not load builder load.",
+        "empty": "No builds in the last {{days}} days.",
+        "detail": "{{count}} builds"
+      }
+    },
+    "failureTable": {
+      "columns": {
+        "package": "Package",
+        "status": "Status",
+        "streak": "Streak",
+        "lastFailure": "Last failure",
+        "actions": "Actions"
+      },
+      "rateLimited": {
+        "label": "Rate limited",
+        "tooltip": "Rate limited: the dispatcher skips it until its next retry"
+      },
+      "openLog": {
+        "label": "Open build log of {{pkgname}}",
+        "tooltip": "Open build log"
+      },
+      "silence": {
+        "silenceLabel": "Silence {{pkgname}}",
+        "unsilenceLabel": "Unsilence {{pkgname}}",
+        "silenceTooltip": "Silence until it fails again",
+        "unsilenceTooltip": "Unsilence"
+      }
+    },
+    "pipelineHealth": {
+      "title": "Pipelines",
+      "failedCount": "{{count}} with failed jobs",
+      "buildStatusLink": "Build status",
+      "loadError": "Could not load pipelines.",
+      "empty": "No pipelines ran recently."
+    },
+    "problemSection": {
+      "loadError": "Could not load.",
+      "empty": "Nothing to fix.",
+      "open": "Open"
+    },
+    "repoProblems": {
+      "title": "Repository problems",
+      "broken": {
+        "title": "Broken ELF links",
+        "empty": "Every package links against libraries that exist.",
+        "link": "Rescan"
+      },
+      "missing": {
+        "title": "Missing dependencies",
+        "empty": "Every dependency has a provider."
+      },
+      "uncovered": {
+        "title": "Breaks without a rebuild",
+        "empty": "Every break has a rebuild trigger.",
+        "detail": "broken {{since}}"
+      },
+      "overlap": {
+        "title": "Also in Arch",
+        "empty": "No chaotic-aur package duplicates an Arch package."
+      }
+    },
+    "recentActivity": {
+      "title": "Recent activity",
+      "allMrActions": "All MR actions",
+      "loadError": "Could not load recent activity.",
+      "empty": "No maintainer actions recorded yet.",
+      "mrVerbs": {
+        "approve": "approved",
+        "hold": "put on hold",
+        "dangerous": "flagged as dangerous",
+        "unknown": "{{action}}"
+      },
+      "pipelineVerbs": {
+        "none": "started a pipeline",
+        "bumpPackages": "bumped packages",
+        "schedulePackages": "scheduled packages",
+        "runSchedule": "ran a schedule",
+        "dropPackages": "dropped packages",
+        "addPackages": "added packages",
+        "unknown": "ran {{operation}}"
+      }
+    }
+  },
+  "service": {
+    "packageBump": {
+      "success": "Package bump triggered",
+      "error": "Could not trigger package bump."
+    },
+    "packageSchedule": {
+      "success": "Package build scheduled",
+      "error": "Could not schedule package build."
+    },
+    "packageDrop": {
+      "success": "Package drop triggered",
+      "error": "Could not trigger package drop."
+    },
+    "packageAdd": {
+      "success": "Package add triggered",
+      "error": "Could not trigger package add."
+    },
+    "scheduleRun": {
+      "success": "Schedule execution triggered",
+      "error": "Could not trigger schedule execution."
+    },
+    "packageUpdate": {
+      "success": "Package updated",
+      "error": "Could not update the package."
+    },
+    "packageDelete": {
+      "success": "Package deleted",
+      "error": "Could not delete the package."
+    },
+    "archPackageUpdate": {
+      "success": "Arch package updated",
+      "error": "Could not update the Arch package."
+    },
+    "archPackageDelete": {
+      "success": "Arch package deleted",
+      "error": "Could not delete the Arch package."
+    },
+    "repoUpdate": {
+      "success": "Repo updated",
+      "error": "Could not update the repo."
+    },
+    "repoDelete": {
+      "success": "Repo deleted",
+      "error": "Could not delete the repo."
+    },
+    "builderUpdate": {
+      "success": "Builder updated",
+      "error": "Could not update the builder."
+    },
+    "builderDelete": {
+      "success": "Builder deleted",
+      "error": "Could not delete the builder."
+    },
+    "elfAnalysisUpdate": {
+      "success": "ELF analysis updated",
+      "error": "Could not update the ELF analysis."
+    },
+    "elfAnalysisDelete": {
+      "success": "ELF analysis deleted",
+      "error": "Could not delete the ELF analysis."
+    },
+    "repoRun": {
+      "success": "Repo run started. It can take a while depending on load.",
+      "error": "Could not trigger the repo run."
+    },
+    "signalScan": {
+      "success": "Signal scan started. It can take a while depending on load.",
+      "error": "Could not trigger the signal scan."
+    },
+    "mrScan": {
+      "success": "Merge request scan started. It can take a while depending on load.",
+      "error": "Could not trigger the merge request scan."
+    },
+    "archMirrorIndex": {
+      "success": "Arch mirror index started. It can take a while depending on load.",
+      "error": "Could not trigger the Arch mirror index."
+    },
+    "chaoticRepoIndex": {
+      "success": "Chaotic repo index started. It can take a while depending on load.",
+      "error": "Could not trigger the Chaotic repo index."
+    },
+    "buildClassRescan": {
+      "success": "Build class rescan started. It runs in the background.",
+      "error": "Could not trigger the build class rescan."
+    },
+    "signalDerivationRecompute": {
+      "success": "Signal derivation recompute started. It runs in the background and can take a while.",
+      "error": "Could not trigger the signal derivation recompute."
+    },
+    "summary": {
+      "success": "Success",
+      "operationFailed": "Operation failed"
+    },
+    "activeOptions": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "buildClassAdjust": {
+      "adjustedSummary": "Build class adjusted",
+      "unchangedSummary": "Build class unchanged",
+      "adjustedDetail": "Adjusted build class of {{pkgbase}} to {{buildClass}}.",
+      "unchangedDetail": "{{pkgbase}} already matches its suggested class ({{buildClass}}).",
+      "error": "Could not adjust the build class of {{pkgname}}."
+    },
+    "rescan": {
+      "startedSummary": "Rescan started",
+      "startedDetail": "Rescanning {{packages}}.",
+      "startedDetailTruncated": "Rescanning {{packages}} and {{remaining}} more.",
+      "packageError": "Could not start the rescan of {{pkgname}}.",
+      "error": "Could not start the rescan.",
+      "stillRunningSummary": "Rescan still running",
+      "stillRunningDetail": "It keeps running in the background; check back later.",
+      "finishedSummary": "Rescan finished",
+      "finishedDetail": "{{count}} package(s) scanned successfully.",
+      "finishedWithFailuresSummary": "Rescan finished with failures",
+      "finishedWithFailuresDetail": "{{rescanned}} scanned, {{failedCount}} failed: {{failures}}"
+    },
+    "brokenBump": {
+      "success": "Bumped {{count}} package(s) and committed the changes.",
+      "error": "Could not bump the selected packages."
+    }
+  },
+  "operationList": {
+    "title": "Operations",
+    "hint": "Every operation runs in the background. A toast confirms the start.",
+    "starting": "Starting",
+    "confirmInBackground": "{{message}} The job runs in the background.",
+    "groups": {
+      "repoManager": "Repo manager",
+      "elfSignalIndex": "ELF signal index",
+      "mergeRequests": "Merge requests"
+    },
+    "actions": {
+      "run": "Run",
+      "rescan": "Rescan",
+      "scan": "Scan",
+      "index": "Index",
+      "recompute": "Recompute"
+    },
+    "repoRun": {
+      "label": "Repo run",
+      "description": "Check Arch for updates and bump the Chaotic packages that depend on them."
+    },
+    "buildClasses": {
+      "label": "Build classes",
+      "description": "Read the build class of every active package from its .CI/config again.",
+      "confirmHeader": "Rescan build classes",
+      "confirmMessage": "Read the build class of every active package from its .CI/config again?"
+    },
+    "signalScan": {
+      "label": "Changed Arch packages",
+      "description": "Scan the Arch packages that changed since the last scan for ELF signals."
+    },
+    "indexArch": {
+      "label": "Full Arch mirror",
+      "description": "Index every package of the Arch mirror. This takes long."
+    },
+    "indexChaotic": {
+      "label": "Full Chaotic repo",
+      "description": "Index every Chaotic-AUR package from the CDN mirror. This takes long."
+    },
+    "derivations": {
+      "label": "Signal derivations",
+      "description": "Rebuild the soname directory, pluginOf links and broken flags from stored analyses. No re-scan.",
+      "confirmHeader": "Recompute signal derivations",
+      "confirmMessage": "Rebuild the signal directory index, every pluginOf derivation and the broken flags from the stored analyses? No archives are scanned again."
+    },
+    "mrScan": {
+      "label": "Open merge requests",
+      "description": "Check open merge requests with the scan rules, auto-flag labels and VirusTotal."
+    },
+    "busyHint": "Another operation is starting. Wait for its confirmation."
+  },
+  "managerLogs": {
+    "status": {
+      "connected": "Connected",
+      "connecting": "Connecting",
+      "disconnected": "Disconnected"
+    },
+    "connectingAriaLabel": "Connecting to manager logs",
+    "streamEnded": "Log stream ended unexpectedly. Reload the page to retry."
+  },
+  "repoOperations": {
+    "brokenPackages": "Broken packages",
+    "rescanSelected": {
+      "label": "Rescan selected",
+      "tooltip": "Re-run the ELF signal analysis for the selected broken packages; may take a while"
+    },
+    "bumpSelected": {
+      "label": "Bump selected",
+      "tooltip": "Rebuild the selected broken packages and commit the changes"
+    },
+    "columns": {
+      "reasons": "Reasons"
+    },
+    "empty": "No broken packages found.",
+    "bumpConfirm": {
+      "message": "Rebuild {{count}} selected broken package(s)? This bumps their pkgrel and commits the changes.",
+      "header": "Bump selected packages",
+      "accept": "Bump"
+    },
+    "rescanConfirm": {
+      "message": "Re-run the ELF signal analysis for {{count}} selected package(s)? Each archive is downloaded and scanned in the background, so results are not immediate.",
+      "header": "Rescan selected packages",
+      "accept": "Rescan"
+    },
+    "loadError": "Could not load broken packages.",
+    "selectionHint": "Select packages to rescan or bump them."
+  },
+  "pages": {
+    "columns": {
+      "id": "ID",
+      "name": "Name",
+      "version": "Version",
+      "repo": "Repo",
+      "package": "Package",
+      "arch": "Arch",
+      "actions": "Actions",
+      "commit": "Commit",
+      "user": "User",
+      "created": "Created"
+    },
+    "active": "Active",
+    "inactive": "Inactive",
+    "activeStatus": "Active status",
+    "searchPkgname": "Search pkgname",
+    "searchName": "Search name",
+    "repoFilterLabel": "Filter by repository",
+    "editAriaLabel": "Edit {{name}}",
+    "deleteAriaLabel": "Delete {{name}}",
+    "form": {
+      "packageName": "Package name",
+      "packageNameRequired": "Package name is required",
+      "pkgrel": "Pkgrel"
+    },
+    "rescanElf": {
+      "label": "Rescan ELF signals",
+      "ariaLabel": "Rescan ELF signals {{name}}",
+      "confirmMessage": "Rescan ELF signals for <code>{{pkgname}}</code>? This will download and scan the package archive.",
+      "accept": "Rescan"
+    }
+  },
+  "archPackages": {
+    "empty": "No Arch packages match this search.",
+    "editDialog": {
+      "header": "Edit Arch package"
+    },
+    "deleteConfirm": {
+      "message": "Delete Arch package \"{{pkgname}}\"? This cannot be undone.",
+      "header": "Delete Arch package"
+    },
+    "loadError": "Could not load Arch packages.",
+    "firstRun": {
+      "message": "No Arch packages indexed yet.",
+      "hint": "Run “Full Arch mirror” under Repo operations to fill this list."
+    }
+  },
+  "builders": {
+    "columns": {
+      "description": "Description",
+      "class": "Class"
+    },
+    "empty": "No builders match these filters.",
+    "editDialog": {
+      "header": "Edit builder",
+      "nameRequired": "Builder name is required"
+    },
+    "deleteConfirm": {
+      "message": "Delete builder \"{{name}}\"? This cannot be undone.",
+      "header": "Delete builder"
+    },
+    "loadError": "Could not load builders.",
+    "firstRun": {
+      "message": "No builders registered yet."
+    }
+  },
+  "repos": {
+    "fields": {
+      "gitRef": "Git ref",
+      "repoUrl": "Repo URL",
+      "dbPath": "DB path",
+      "gitlabProjectId": "GitLab project ID",
+      "apiToken": "API token"
+    },
+    "empty": "No repositories match these filters.",
+    "editDialog": {
+      "header": "Edit repo",
+      "nameRequired": "Repo name is required",
+      "apiTokenKeepHint": "Leave blank to keep the current token.",
+      "apiTokenHint": "Used to authenticate to this repo. Encrypted at rest."
+    },
+    "deleteConfirm": {
+      "message": "Delete repo \"{{name}}\"? This cannot be undone.",
+      "header": "Delete repo"
+    },
+    "loadError": "Could not load repositories.",
+    "firstRun": {
+      "message": "No repositories configured yet."
+    }
+  },
+  "mrActions": {
+    "actions": {
+      "approve": "Approve",
+      "dangerous": "Dangerous",
+      "hold": "Hold"
+    },
+    "searchPlaceholder": "Search MR, commit, user, reason",
+    "columns": {
+      "mr": "MR",
+      "action": "Action",
+      "reason": "Reason"
+    },
+    "empty": "No MR actions match these filters.",
+    "loadError": "Could not load MR actions.",
+    "actionFilterLabel": "Filter by action",
+    "firstRun": {
+      "message": "No MR actions yet.",
+      "hint": "Approvals, holds and dangerous flags from the review queue appear here."
+    }
+  },
+  "packageBumps": {
+    "bumpTypes": {
+      "explicit": "Explicit",
+      "global": "Global",
+      "fromDeps": "From deps",
+      "fromDepsChaotic": "From deps (chaotic)",
+      "plugin": "Plugin",
+      "brokenDeps": "Broken deps",
+      "manual": "Manual"
+    },
+    "source": "Source",
+    "columns": {
+      "bumpType": "Bump type",
+      "trigger": "Trigger",
+      "triggeredBy": "Triggered by",
+      "details": "Details",
+      "timestamp": "Timestamp"
+    },
+    "empty": "No package bumps match these filters.",
+    "loadError": "Could not load package bumps.",
+    "bumpTypeFilterLabel": "Filter by bump type",
+    "sourceFilterLabel": "Filter by source",
+    "firstRun": {
+      "message": "No package bumps yet.",
+      "hint": "The repo manager records a bump each time that it schedules a rebuild."
+    }
+  },
+  "pipelineTriggers": {
+    "runSchedule": "Run schedule",
+    "searchPlaceholder": "Search pipeline, commit, user",
+    "operationFilterLabel": "Filter by operation",
+    "columns": {
+      "pipeline": "Pipeline",
+      "operation": "Operation",
+      "inputs": "Inputs",
+      "ref": "Ref"
+    },
+    "empty": "No pipeline triggers match these filters.",
+    "scheduleDialog": {
+      "title": "Run Schedule",
+      "repository": "Repository",
+      "selectRepository": "Select repository...",
+      "schedule": "Schedule",
+      "selectSchedule": "Select schedule...",
+      "selectRepositoryFirst": "Select repository first...",
+      "fallbackLabel": "Schedule #{{id}}"
+    },
+    "loadError": "Could not load pipeline triggers.",
+    "firstRun": {
+      "message": "No pipeline triggers yet.",
+      "hint": "Bumps, schedule runs, adds and drops started from the admin pages appear here."
+    }
+  },
+  "elfAnalysis": {
+    "packageType": "Package type",
+    "status": {
+      "broken": "Broken",
+      "ok": "OK"
+    },
+    "searchPlaceholder": "Search version or pkg id",
+    "columns": {
+      "binary": "Binary",
+      "status": "Status",
+      "scanned": "Scanned"
+    },
+    "binary": {
+      "none": "No ELF",
+      "fromSource": "ELF, from source",
+      "prebuilt": "ELF, prebuilt"
+    },
+    "empty": "No ELF analyses match these filters.",
+    "editDialog": {
+      "header": "Edit ELF analysis",
+      "packageId": "Package ID",
+      "versionRequired": "Version is required",
+      "brokenReasons": "Broken reasons",
+      "brokenReasonsHint": "Comma-separated reasons; leave empty when not broken.",
+      "rebuildTriggers": "Rebuild triggers",
+      "noRebuildTriggers": "No rebuild triggers found.",
+      "triggeredBy": "(triggered by {{name}})",
+      "rebuildTriggerSources": "Rebuild trigger sources",
+      "rebuildTriggersLoadError": "Could not load rebuild triggers."
+    },
+    "deleteConfirm": {
+      "message": "Delete ELF analysis row #{{id}} for {{version}}? This cannot be undone.",
+      "header": "Delete ELF analysis"
+    },
+    "loadError": "Could not load ELF analyses.",
+    "statusFilterLabel": "Filter by status",
+    "firstRun": {
+      "message": "No ELF analyses yet.",
+      "hint": "Start an ELF signal scan under Repo operations."
+    }
+  },
+  "packages": {
+    "requestReasons": {
+      "unset": "No specific reason.",
+      "request": "Requested by a user.",
+      "depends": "Required as a dependency.",
+      "dependsOptional": "Optional dependency.",
+      "dependsMake": "Make dependency.",
+      "dependsCheck": "Check dependency."
+    },
+    "addPackage": "Add package",
+    "allRepos": "All repos",
+    "columns": {
+      "pkgbase": "Pkgbase",
+      "buildClass": "Build class"
+    },
+    "buildClass": {
+      "unset": "unset",
+      "suggested": "suggested {{buildClass}}",
+      "buildCountOne": "{{count}} build",
+      "buildCountOther": "{{count}} builds",
+      "peakMemory": "peak {{value}}",
+      "cpuTime": "CPU {{value}}",
+      "diskIo": "disk {{value}}",
+      "duration": "took {{value}}",
+      "matchesSuggestion": "Matches the class suggested by resource usage",
+      "noSamples": "No resource usage samples yet",
+      "suggestsClass": "Resource usage suggests class {{buildClass}}"
+    },
+    "silenced": {
+      "label": "Silenced",
+      "tooltip": "Failure silenced until the next failing build"
+    },
+    "moreActionsAriaLabel": "More actions for {{name}}",
+    "empty": "No packages match these filters.",
+    "editDialog": {
+      "header": "Edit package",
+      "noRepo": "None",
+      "skipSignalScan": "Skip signal scan",
+      "silenceFailedBuild": "Silence failed build",
+      "silenceFailedBuildTooltip": "Hides the package from 'Failed builds with no more recent success' until it fails again"
+    },
+    "addDialog": {
+      "header": "Add AUR Package",
+      "openAurPage": "Open AUR package page",
+      "searchPlaceholder": "Search AUR package...",
+      "alreadyExists": "Package \"{{name}}\" already exists in the repository.",
+      "notInAur": "Package \"{{name}}\" does not exist in the AUR.",
+      "requestDetails": "Request details",
+      "requestOrigin": "Request origin",
+      "requestReason": "Request reason",
+      "customRequestReason": "Custom request reason",
+      "customRequestReasonPlaceholder": "Describe why this package is being added…",
+      "submit": "Add Package"
+    },
+    "rowMenu": {
+      "build": "Build",
+      "scheduleBuild": "Schedule build",
+      "dangerZone": "Danger zone",
+      "dropFromRepository": "Drop from repository",
+      "deleteRecord": "Delete record"
+    },
+    "bump": {
+      "label": "Bump",
+      "confirmHeader": "Bump package",
+      "confirmMessage": "Bump package <code>{{pkgname}}</code>? This will create a Git commit to increment its bump counter in <code>{{pkgname}}/.CI/config</code>."
+    },
+    "schedule": {
+      "confirmHeader": "Schedule package build",
+      "confirmMessage": "Schedule package <code>{{pkgname}}</code>? This will trigger a build on the manager.",
+      "accept": "Schedule"
+    },
+    "adjustBuildClass": {
+      "header": "Adjust build class",
+      "accept": "Adjust",
+      "noSuggestion": "none",
+      "confirmMessage": "Adjust the build class of <code>{{pkgname}}</code>? The suggestion is <code>{{suggestion}}</code>. An even class is committed to <code>{{pkgbase}}/.CI/config</code>; an odd class is manual and stays untouched."
+    },
+    "drop": {
+      "confirmHeader": "Drop package",
+      "confirmMessage": "Drop package <code>{{pkgname}}</code>? This will create a Git commit to delete <code>{{pkgname}}/.CI/config</code>.",
+      "accept": "Drop"
+    },
+    "deleteConfirm": {
+      "message": "Delete package <code>{{pkgname}}</code>? This cannot be undone.",
+      "header": "Delete package"
+    },
+    "loadError": "Could not load packages.",
+    "firstRun": {
+      "message": "No active packages yet.",
+      "hint": "Add a package from the AUR. It appears here after its add pipeline finishes."
+    }
+  },
+  "editConflict": {
+    "review": "Review changes",
+    "saveAnyway": "Save anyway",
+    "messages": {
+      "package": "This package changed since you opened it.",
+      "archPackage": "This Arch package changed since you opened it.",
+      "repo": "This repository changed since you opened it.",
+      "builder": "This builder changed since you opened it.",
+      "elfAnalysis": "This ELF analysis changed since you opened it."
+    }
+  }
+}

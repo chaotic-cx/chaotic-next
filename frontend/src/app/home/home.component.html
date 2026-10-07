@@ -1,153 +1,110 @@
-<div class="flex min-h-svh flex-col">
-  <div class="surface-section flex flex-1 items-center justify-center pb-8 md:py-8 md:px-6 lg:px-8">
-    <div class="hero-card mx-auto w-full max-w-4xl p-6 md:p-10">
-      <div class="text-center">
-        <a
-          class="hero-logo hero-enter mx-auto block cursor-pointer"
-          [style.width]="isWide() ? '360px' : '80%'"
-          style="--stagger: 0"
-          href="/aizawa/"
-          aria-label="Open the interactive Chaotic-AUR applet"
-        >
-          <img
-            class="hero-logo-img w-full"
-            priority
-            ngSrc="/assets/logo.svg"
-            alt="Chaotic-AUR logo"
-            width="741"
-            height="711"
-          />
-        </a>
-        <h1 class="hero-title-shimmer hero-enter mb-10 mt-20 text-3xl font-bold" style="--stagger: 1">Chaotic-AUR</h1>
-        <p class="hero-enter text-ctp-mauve my-10 text-2xl font-bold" style="--stagger: 2">
-          Semi-automated binary repository for AUR packages 👨🏻‍💻
-        </p>
-        <p class="hero-enter text-ctp-text my-5 text-xl" style="--stagger: 3">
-          Building AUR packages for you, so you don't have to!
-        </p>
-        <div class="hero-enter relative mx-auto my-6 w-full max-w-md" style="--stagger: 4">
-          <p-autoComplete
-            class="w-full"
-            [ngModel]="searchModel().query"
-            [suggestions]="suggestions()"
-            [delay]="300"
-            [minQueryLength]="3"
-            (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
-            (completeMethod)="searchSuggestions($event)"
-            (onSelect)="searchPackages($event.value)"
-            (onKeyUp)="onKeyUp($event)"
-            placeholder="Search packages"
-            appendTo="body"
-          />
-        </div>
-        <div
-          class="hero-enter mx-auto flex max-w-2xl flex-col items-stretch justify-center gap-3 sm:flex-row"
-          style="--stagger: 5"
-        >
-          <p-button
-            class="block min-w-0 flex-1 whitespace-nowrap px-5 py-3 font-bold"
-            styleClass="w-full"
-            label="Packages"
-            iconPos="right"
-            icon="pi pi-box"
-            routerLink="packages"
-            rounded
-            severity="secondary"
-            pTooltip="Browse the package repository"
-            tooltipPosition="bottom"
-          />
-          <p-button
-            class="block min-w-0 flex-1 whitespace-nowrap px-5 py-3 font-bold"
-            styleClass="w-full"
-            label="Start right away"
-            iconPos="right"
-            icon="pi pi-sparkles"
-            routerLink="docs"
-            rounded
-            pTooltip="Get started with Chaotic-AUR documentation"
-            tooltipPosition="bottom"
-          />
-          <p-button
-            class="block min-w-0 flex-1 whitespace-nowrap px-5 py-3 font-bold"
-            styleClass="w-full"
-            label="Build status"
-            iconPos="right"
-            icon="pi pi-chart-line"
-            routerLink="status"
-            rounded
-            severity="secondary"
-            pTooltip="View live build status"
-            tooltipPosition="bottom"
-          />
-        </div>
-        @if (!buildStatusService.loading()) {
-          <div
-            class="hero-enter mx-auto mt-12 flex max-w-3xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-ctp-subtext1"
-            style="--stagger: 6"
-          >
-            <span class="inline-flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full bg-ctp-flamingo"></span>
-              {{ buildStatusService.activeQueue().length }} active builds
-            </span>
-            <span class="inline-flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full bg-ctp-lavender"></span>
-              {{ buildStatusService.waitingQueue().length }} waiting
-            </span>
-            <span class="inline-flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full bg-ctp-green"></span>
-              last deployment {{ buildStatusService.latestDeployments()[0]?.timestamp | relativeTime }}
-            </span>
-          </div>
-        }
-        <div class="hero-enter mt-10 flex justify-center" style="--stagger: 7">
-          <a
-            class="inline-flex items-center gap-2 rounded-full bg-ctp-green/10 px-4 py-2 font-medium text-ctp-green transition-colors hover:bg-ctp-green/25"
-            href="https://t.me/chaotic_aur_sac"
-            target="_blank"
-            rel="noopener noreferrer"
-            pTooltip="Chat with us on Telegram — also bridged to Matrix"
-            tooltipPosition="bottom"
-          >
-            <i class="pi pi-users text-sm"></i>
-            Join our community
-          </a>
-        </div>
-        <span
-          class="hero-scroll-hint hero-enter mt-10 block font-bold text-primary pi pi-arrow-down cursor-pointer"
-          (click)="scrollToNews(newsSection)"
-          (keydown.enter)="scrollToNews(newsSection)"
-          style="--stagger: 7; font-size: 3rem"
-          tabindex="0"
-          role="button"
-          aria-label="Scroll to newsfeed"
-        ></span>
-      </div>
-    </div>
-  </div>
-
-  <div class="mx-auto mb-10 mt-20" #newsSection>
-    <chaotic-newsfeed />
-  </div>
-  <div class="mx-auto mb-10 mt-20 w-full max-w-4xl">
-    <chaotic-recently-added />
-  </div>
-  <div class="mx-auto mb-10 mt-20 w-full max-w-4xl px-3 sm:px-0">
-    <div class="my-5 text-center">
-      <h2 class="text-ctp-maroon text-2xl font-bold">
-        <a class="inline-flex items-center gap-2 transition-opacity hover:opacity-80" routerLink="/map">
-          <i class="pi-map pi" style="font-size: 1.25rem"></i> Mirror map
-        </a>
-      </h2>
-    </div>
-    @defer (on viewport) {
-      <chaotic-mirror-map [mirrors]="mirrorsService.mirrors()" [self]="mirrorsService.self()" [focus]="focus()" />
-    } @placeholder {
-      <div class="h-64"></div>
-    }
-    <p class="mx-auto mt-4 max-w-4xl text-center text-sm text-ctp-subtext1">
-      Where our mirrors are located. Pick a mirror from the overview to see details, or
-      <a class="text-ctp-mauve font-medium underline hover:text-ctp-pink" routerLink="/map">open the live traffic map</a
-      >.
+<div class="chaotic-page flex flex-col" *transloco="let t; prefix: 'home'">
+  <section class="home-hero chaotic-text-inset" aria-labelledby="home-title">
+    <a
+      class="home-hero__logo hero-enter"
+      [attr.aria-label]="t('hero.appletLabel')"
+      style="--stagger: 0"
+      href="/aizawa/"
+    >
+      @if (lightLogo()) {
+        <img priority ngSrc="/assets/logo-latte.svg" alt="" width="741" height="711" />
+      } @else {
+        <img priority ngSrc="/assets/logo.svg" alt="" width="741" height="711" />
+      }
+    </a>
+    <h1 class="home-hero__title hero-enter" id="home-title" style="--stagger: 1">
+      {{ t('hero.title') }}
+    </h1>
+    <p class="home-hero__lede hero-enter" style="--stagger: 2">
+      @let liveMirrorCount = mirrorsService.onlineMirrorCount();
+      @if (liveMirrorCount === null) {
+        {{ t('hero.lede') }}
+      } @else {
+        {{ t('hero.ledeWithMirrorCount', { count: liveMirrorCount }) }}
+      }
     </p>
-  </div>
+    <div class="home-hero__actions hero-enter" style="--stagger: 3">
+      <p-autoComplete
+        class="home-hero__search"
+        [fluid]="true"
+        [ngModel]="searchModel().query"
+        [suggestions]="suggestions.names()"
+        [delay]="300"
+        [minQueryLength]="3"
+        [ariaLabel]="t('search.ariaLabel')"
+        [placeholder]="t('search.placeholder')"
+        (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
+        (completeMethod)="suggestions.complete($event)"
+        (onSelect)="searchPackages($event.value)"
+        (onKeyUp)="onKeyUp($event)"
+        appendTo="body"
+      />
+    </div>
+    <a class="home-hero__setup hero-enter" style="--stagger: 4" routerLink="/docs" fragment="setup">
+      <span class="home-hero__setup-lead">{{ t('setup.lead') }}</span>
+      <!-- The no-break space keeps the arrow on the line of the last word. -->
+      {{ t('setup.text') }}&nbsp;<i class="pi pi-arrow-right" aria-hidden="true"></i>
+    </a>
+  </section>
+
+  <chaotic-pipeline-strip class="hero-enter" style="--stagger: 5" />
+
+  <section class="home-news" aria-labelledby="home-news-title">
+    <aside class="home-news__aside chaotic-text-inset">
+      <h2 class="chaotic-section-title" id="home-news-title">{{ t('news.title') }}</h2>
+      <p class="home-news__note">{{ t('news.note') }}</p>
+      <a class="home-news__community" href="https://t.me/chaotic_aur_sac" target="_blank" rel="noopener noreferrer">
+        <i class="pi pi-telegram" aria-hidden="true"></i>
+        {{ t('news.community') }}
+      </a>
+      <span class="home-news__hint">
+        {{ t('news.hint.intro') }}
+        <a [href]="matrixRoomUrl" target="_blank" rel="noopener noreferrer">{{ t('news.hint.linkText') }}</a
+        >{{ t('news.hint.outro') }}
+      </span>
+    </aside>
+    @defer (on viewport; prefetch on idle) {
+      <chaotic-newsfeed class="min-w-0" />
+    } @placeholder {
+      <div class="home-placeholder chaotic-skeleton h-96" aria-hidden="true"></div>
+    }
+  </section>
+
+  <section class="home-section" aria-labelledby="home-recent-title">
+    <div class="home-section__head chaotic-text-inset">
+      <h2 class="chaotic-section-title" id="home-recent-title">{{ t('recent.title') }}</h2>
+      <a class="home-section__link" routerLink="/packages">{{ t('recent.link') }}</a>
+    </div>
+    @defer (on viewport; prefetch on idle) {
+      <chaotic-recently-added />
+    } @placeholder {
+      <div class="home-placeholder chaotic-skeleton h-64" aria-hidden="true"></div>
+    }
+  </section>
+
+  <section class="home-section" aria-labelledby="home-map-title">
+    <div class="home-section__head chaotic-text-inset">
+      <h2 class="chaotic-section-title" id="home-map-title">{{ t('map.title') }}</h2>
+      <a class="home-section__link" routerLink="/map">{{ t('map.link') }}</a>
+    </div>
+    <p class="home-section__note chaotic-text-inset">{{ t('map.note') }}</p>
+    @if (mirrorsService.error()) {
+      <chaotic-load-error
+        class="mb-3 block"
+        [message]="mirrorsService.errorMessage()"
+        [error]="mirrorsService.error()"
+        (retry)="mirrorsService.reload()"
+      />
+    }
+    @defer (on viewport) {
+      <chaotic-mirror-map
+        [mirrors]="mirrorsService.mirrors()"
+        [self]="mirrorsService.self()"
+        [focus]="focus()"
+        [countsKnown]="mirrorsService.mirrorData() !== null"
+      />
+    } @placeholder {
+      <div class="home-placeholder chaotic-skeleton h-[28rem]" aria-hidden="true"></div>
+    }
+  </section>
 </div>

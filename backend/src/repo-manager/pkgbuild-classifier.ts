@@ -25,8 +25,10 @@ const KIND_DEP_REGEXES: readonly (readonly [string, RegExp])[] = [
 
 const KERNEL_MODULE_DEP_REGEX = /^(?:dkms|linux(?:-[a-z0-9]+)*-headers)$/;
 const NODEJS_DEP_REGEX = /^nodejs$/;
-// A native toolchain turns node build steps into an implementation detail
-// (Firefox runs pnpm; it is not a nodejs package).
+/**
+ * A native toolchain turns node build steps into an implementation detail
+ * (Firefox runs pnpm; it is not a nodejs package).
+ */
 const NATIVE_TOOLCHAIN_REGEX = /^(?:clang|clang\+\+|gcc|g\+\+|rust|cargo|go)$/;
 const SHELL_DEPENDS_REGEX = /^(?:bash|zsh|fish|dash|sh)$/;
 
@@ -81,7 +83,7 @@ export function extractArray(pkgbuildText: string, name: string, multiline = fal
 export function expandBraceAlternation(token: string): string[] {
   const brace = token.match(/^(.*)\{([^{}]+)\}(.*)$/);
   // Braces without a comma are literal in bash, so `${var}` passes through.
-  if (!brace || !brace[2].includes(',')) return [token];
+  if (!brace?.[2].includes(',')) return [token];
   const [, head, body, tail] = brace;
   return body.split(',').map((alternative) => `${head}${alternative}${tail}`);
 }
@@ -120,16 +122,12 @@ function collectAllDepends(pkgbuildText: string): { depends: string[]; makedepen
 }
 
 export function isSourceCompiledPackage(pkgbuildText?: string | null): boolean {
-  if (!pkgbuildText) {
-    return false;
-  }
+  if (!pkgbuildText) return false;
 
   const cleanText = stripComments(pkgbuildText);
   const { makedepends, allDepends } = collectAllDepends(cleanText);
 
-  if (isNodejsPackage(allDepends, makedepends, cleanText)) {
-    return false;
-  }
+  if (isNodejsPackage(allDepends, makedepends, cleanText)) return false;
 
   const hasCompilerInMakedepends = hasCompilerInList(makedepends);
   const hasCompilerInDepends = hasCompilerInList(allDepends);
@@ -152,39 +150,59 @@ export function isSourceCompiledPackage(pkgbuildText?: string | null): boolean {
  * build function.
  */
 export function classifyPkgbuild(pkgbuildText?: string | null): string[] {
-  if (!pkgbuildText) {
-    return [];
-  }
+  if (!pkgbuildText) return [];
   const cleanText = stripComments(pkgbuildText);
   const { depends, makedepends, allDepends } = collectAllDepends(cleanText);
   const pkgname = (pkgbuildText.match(PKGNAME_REGEX)?.[1] ?? '').replace(/^['"]+|['"]+$/g, '');
   const kinds: string[] = [];
 
-  if (matchesKind(depends, ELECTRON_REGEX)) kinds.push('electron');
+  if (matchesKind(depends, ELECTRON_REGEX)) {
+    kinds.push('electron');
+  }
   const hasNodeTooling = matchesKind(makedepends, NODEJS_PACKAGE_REGEX) || NODEJS_BUILD_REGEX.test(cleanText);
   const isNodeRuntime = matchesKind(allDepends, NODEJS_DEP_REGEX);
-  if (isNodeRuntime || (hasNodeTooling && !matchesKind(makedepends, NATIVE_TOOLCHAIN_REGEX))) kinds.push('nodejs');
+  if (isNodeRuntime || (hasNodeTooling && !matchesKind(makedepends, NATIVE_TOOLCHAIN_REGEX))) {
+    kinds.push('nodejs');
+  }
   if (matchesKind(allDepends, KERNEL_MODULE_DEP_REGEX) || matchesKind(makedepends, KERNEL_MODULE_DEP_REGEX)) {
     kinds.push('kernel-module');
   }
   for (const [kind, regex] of KIND_DEP_REGEXES) {
-    if (matchesKind(allDepends, regex)) kinds.push(kind);
+    if (matchesKind(allDepends, regex)) {
+      kinds.push(kind);
+    }
   }
   for (const [kind, regex] of KIND_BUILD_REGEXES) {
-    if (!kinds.includes(kind) && regex.test(cleanText)) kinds.push(kind);
+    if (!kinds.includes(kind) && regex.test(cleanText)) {
+      kinds.push(kind);
+    }
   }
   const isNodePackage = kinds.includes('nodejs') || kinds.includes('electron');
   const compiledNative =
     (hasCompilerInList(makedepends) || hasCompilerInList(allDepends) || hasBuildSystemIndicator(cleanText)) &&
     hasBuildFunction(cleanText) &&
     !NO_STRIP_REGEX.test(cleanText);
-  if (!isNodePackage && compiledNative) kinds.push('compiled');
-  if (FONT_NAME_REGEX.test(pkgname)) kinds.push('font');
-  if (THEME_NAME_REGEX.test(pkgname)) kinds.push('theme');
-  if (EXTENSION_NAME_REGEX.test(pkgname)) kinds.push('extension');
-  if (FIRMWARE_NAME_REGEX.test(pkgname)) kinds.push('firmware');
-  if (PREBUILT_NAME_REGEX.test(pkgname)) kinds.push('prebuilt');
-  if (kinds.length === 0 && matchesKind(allDepends, SHELL_DEPENDS_REGEX)) kinds.push('shell');
+  if (!isNodePackage && compiledNative) {
+    kinds.push('compiled');
+  }
+  if (FONT_NAME_REGEX.test(pkgname)) {
+    kinds.push('font');
+  }
+  if (THEME_NAME_REGEX.test(pkgname)) {
+    kinds.push('theme');
+  }
+  if (EXTENSION_NAME_REGEX.test(pkgname)) {
+    kinds.push('extension');
+  }
+  if (FIRMWARE_NAME_REGEX.test(pkgname)) {
+    kinds.push('firmware');
+  }
+  if (PREBUILT_NAME_REGEX.test(pkgname)) {
+    kinds.push('prebuilt');
+  }
+  if (kinds.length === 0 && matchesKind(allDepends, SHELL_DEPENDS_REGEX)) {
+    kinds.push('shell');
+  }
   if (kinds.length === 0 && !META_PKGBUILD_REGEX.test(cleanText) && !hasBuildFunction(cleanText)) {
     kinds.push('meta');
   }

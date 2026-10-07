@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** Mirrors the backend clamp so the schema documents and enforces the real bounds. */
 const MAX_AMOUNT = 100;

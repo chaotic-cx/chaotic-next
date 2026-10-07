@@ -189,9 +189,7 @@ export class BuilderDatabaseService extends Service {
   }
 
   async logBuild(ctx: Context<MoleculerBuildObject>): Promise<void> {
-    if (ctx.eventName && !BUILD_OUTCOME_EVENTS.has(ctx.eventName)) {
-      return;
-    }
+    if (ctx.eventName && !BUILD_OUTCOME_EVENTS.has(ctx.eventName)) return;
 
     const params = ctx.params;
 
@@ -234,8 +232,10 @@ export class BuilderDatabaseService extends Service {
       });
     }
 
-    // A finished build does not imply the repository databases already carry
-    // its packages, so update-triggering work waits for database.success.
+    /**
+     * A finished build does not imply the repository databases already carry
+     * its packages, so update-triggering work waits for database.success.
+     */
     if (params.status === BuildStatus.SUCCESS) {
       this.pino.debug(
         {
@@ -312,10 +312,12 @@ export class BuilderDatabaseService extends Service {
       this.bumpChain = this.bumpChain.then(() => this.runBumpCheck(build));
     }
 
-    // Re-emit build events with the now-correct version/pkgrel after the
-    // DB poll — the initial `builds.success` emission used a stale/NULL
-    // package row (race between build finish and repo DB pull). Frontend
-    // suppresses the `unknown` stub, so this is the real deployment toast.
+    /**
+     * Re-emit build events with the now-correct version/pkgrel after the
+     * DB poll — the initial `builds.success` emission used a stale/NULL
+     * package row (race between build finish and repo DB pull). Frontend
+     * suppresses the `unknown` stub, so this is the real deployment toast.
+     */
     for (const build of deployedBuilds) {
       const pkgname = build.pkgbase?.pkgname;
       const repo = build.repo;

@@ -1,4 +1,5 @@
 import { Service, signal } from '@angular/core';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { REPO_OPTIONS } from '../deploy-log/deploy-log.service';
 
 export const STATS_TABS = [
@@ -17,19 +18,19 @@ export function isStatsTab(value: string): value is StatsTab {
   return (STATS_TABS as readonly string[]).includes(value);
 }
 
-interface TimeRange {
-  label: string;
+export interface TimeRange {
+  labelKey: string;
   days: number | null;
 }
 
 const TIME_RANGES: TimeRange[] = [
-  { label: '7d', days: 7 },
-  { label: '30d', days: 30 },
-  { label: '90d', days: 90 },
-  { label: '6m', days: 180 },
-  { label: '1y', days: 365 },
-  { label: '2y', days: 730 },
-  { label: 'All', days: null },
+  { labelKey: marker('stats.timeRanges.days7'), days: 7 },
+  { labelKey: marker('stats.timeRanges.days30'), days: 30 },
+  { labelKey: marker('stats.timeRanges.days90'), days: 90 },
+  { labelKey: marker('stats.timeRanges.months6'), days: 180 },
+  { labelKey: marker('stats.timeRanges.years1'), days: 365 },
+  { labelKey: marker('stats.timeRanges.years2'), days: 730 },
+  { labelKey: marker('common.all'), days: null },
 ];
 
 @Service()
@@ -40,8 +41,6 @@ export class StatsService {
   readonly timeRangeOptions = TIME_RANGES;
 
   readonly selectedRepo = signal<string>('');
-
-  readonly repoOptions = [{ label: 'All', value: '' }, ...REPO_OPTIONS.map((repo) => ({ label: repo, value: repo }))];
 
   isValidRepo(value: string): boolean {
     return value === '' || REPO_OPTIONS.includes(value);

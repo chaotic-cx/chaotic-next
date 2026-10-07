@@ -1,17 +1,18 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { flavors } from '@catppuccin/palette';
 import type { UnresolvedFailedBuild } from '@chaotic-next/shared-lib';
 import { BUILD_RATE_LIMIT_FAILURE_STREAK, BUILD_RATE_LIMIT_RETRY_HOURS, BuildStatus } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
-import { backendErrorMessage } from '../../../../api-errors';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { isLogPurged, packageLogRouteFromUrl } from '../../../../functions';
-import { formatRelativeTime } from '../../../../pipes/relative-time.pipe';
+import { BUILD_STATUS_LABEL_KEYS } from '../../../../i18n/build-status-labels';
+import { RelativeTimePipe } from '../../../../pipes/relative-time.pipe';
 import { StatsService } from '../../../stats.service';
+import { LoadErrorComponent } from '../../../../load-error/load-error.component';
 import { chartResource } from '../../chart-config';
+import { FailureSilenceService } from './failure-silence.service';
 
 /**
  * Ranks failures worst-streak first. Every unresolved failure stays visible
@@ -29,11 +30,16 @@ export function visibleFailureRows(rows: UnresolvedFailedBuild[], showSilenced: 
     );
 }
 
+// CSS variables, so the dots follow the active flavour without a re-render.
 const STATUS_COLORS: Partial<Record<BuildStatus, string>> = {
-  [BuildStatus.FAILED]: flavors.mocha.colors.red.hex,
-  [BuildStatus.TIMED_OUT]: flavors.mocha.colors.peach.hex,
-  [BuildStatus.SOFTWARE_FAILURE]: flavors.mocha.colors.maroon.hex,
+  [BuildStatus.FAILED]: 'var(--catppuccin-color-red)',
+  [BuildStatus.TIMED_OUT]: 'var(--catppuccin-color-peach)',
+  [BuildStatus.SOFTWARE_FAILURE]: 'var(--catppuccin-color-maroon)',
 };
+
+export function failureStatusColor(status: BuildStatus): string {
+  return STATUS_COLORS[status] ?? 'var(--catppuccin-color-overlay1)';
+}
 
 const RATE_LIMIT_RETRY_MS = BUILD_RATE_LIMIT_RETRY_HOURS * 60 * 60 * 1000;
 
@@ -62,7 +68,7 @@ export function streakDurationLabel(startedIso: string, nowMs: number = Date.now
 
 @Component({
   selector: 'chaotic-chart-unresolved-failures',
-  imports: [RouterLink, Tooltip],
+  imports: [LoadErrorComponent, RelativeTimePipe, RouterLink, Tooltip, TranslocoDirective],
   templateUrl: './chart-unresolved-failures.component.html',
   styleUrl: './chart-unresolved-failures.component.css',
 })
@@ -70,7 +76,7 @@ export class ChartUnresolvedFailuresComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
   private readonly authService = inject(AuthService);
-  private readonly messageToastService = inject(MessageToastService);
+  private readonly failureSilence = inject(FailureSilenceService);
 
   readonly chart = chartResource<UnresolvedFailedBuild[]>(() =>
     this.appService.getUnresolvedFailedBuildsResourceRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
@@ -79,8 +85,7 @@ export class ChartUnresolvedFailuresComponent {
   readonly isLoggedIn = this.authService.isLoggedIn;
   readonly showSilenced = signal(false);
 
-  protected readonly formatRelativeTime = formatRelativeTime;
-  protected readonly busyPkgname = signal<string | null>(null);
+  protected readonly busyPkgname = this.failureSilence.busyPkgname;
 
   private readonly failures = computed(() => this.chart.data());
 
@@ -90,44 +95,20 @@ export class ChartUnresolvedFailuresComponent {
 
   readonly visibleRows = computed(() => visibleFailureRows(this.failures(), this.showSilenced()));
 
-  statusColor(status: BuildStatus): string {
-    return STATUS_COLORS[status] ?? flavors.mocha.colors.overlay1.hex;
-  }
+  readonly statusColor = failureStatusColor;
+
+  protected readonly statusLabelKeys = BUILD_STATUS_LABEL_KEYS;
 
   protected readonly isRateLimited = isRateLimited;
   protected readonly isLogPurged = isLogPurged;
   protected readonly packageLogRouteFromUrl = packageLogRouteFromUrl;
   protected readonly streakDurationLabel = streakDurationLabel;
 
-  protected streakTooltip(row: UnresolvedFailedBuild): string {
-    return `${row.consecutiveFailures} failed builds since ${formatRelativeTime(row.streakStartedAt)}`;
-  }
-
   isBusy(row: UnresolvedFailedBuild): boolean {
     return this.busyPkgname() === row.pkgname;
   }
 
-  async toggleSilence(row: UnresolvedFailedBuild): Promise<void> {
-    this.busyPkgname.set(row.pkgname);
-    const silencing = !row.silenced;
-    this.chart.resource.update((rows) =>
-      rows?.map((candidate) => (candidate.pkgname === row.pkgname ? { ...candidate, silenced: silencing } : candidate)),
-    );
-    try {
-      if (silencing) {
-        await this.appService.silenceUnresolvedFailedBuild(row.pkgname);
-        this.messageToastService.success('Failure silenced', `${row.pkgname} stays hidden until it fails again.`);
-      } else {
-        await this.appService.unsilenceUnresolvedFailedBuild(row.pkgname);
-      }
-    } catch (error) {
-      this.messageToastService.error(
-        'Operation failed',
-        backendErrorMessage(error, `Could not update ${row.pkgname}.`),
-      );
-      this.chart.resource.reload();
-    } finally {
-      this.busyPkgname.set(null);
-    }
+  toggleSilence(row: UnresolvedFailedBuild): Promise<void> {
+    return this.failureSilence.toggle(row, this.chart.resource);
   }
 }

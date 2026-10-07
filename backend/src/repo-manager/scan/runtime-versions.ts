@@ -13,7 +13,9 @@ export async function loadRuntimeVersions(
   const versions: Partial<Record<RuntimeName, string | null>> = {};
   for (const row of rows) {
     const runtime = RUNTIME_NAME_BY_PKGNAME.get(row.pkgname);
-    if (runtime) versions[runtime] = row.version ?? null;
+    if (runtime) {
+      versions[runtime] = row.version ?? null;
+    }
   }
   return versions;
 }

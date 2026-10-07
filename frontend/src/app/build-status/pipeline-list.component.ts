@@ -1,8 +1,10 @@
 import { DatePipe } from '@angular/common';
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { FlipListDirective } from '../animations/flip-list.directive';
+import { IsoDateTimePipe } from '../pipes/iso-date-time.pipe';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
 import type { PipelineView } from './build-status.service';
 
@@ -15,25 +17,26 @@ const STATUS_DOT_CLASS: Record<string, string> = {
 };
 
 const FALLBACK_DOT_CLASS = 'bg-ctp-subtext0';
+const SUCCESS_DOT_CLASS = 'bg-ctp-green';
+const FAILED_DOT_CLASS = 'bg-ctp-red';
 
 @Component({
   selector: 'chaotic-pipeline-list',
-  imports: [DatePipe, RouterLink, Tooltip, RelativeTimePipe, FlipListDirective],
+  imports: [DatePipe, RouterLink, Tooltip, IsoDateTimePipe, RelativeTimePipe, FlipListDirective, TranslocoDirective],
   templateUrl: './pipeline-list.component.html',
 })
 export class PipelineListComponent {
   readonly pipelines = input<PipelineView[]>([]);
-  readonly loading = input<boolean>(true);
 
   readonly openPipeline = output<number>();
 
-  readonly STAGGER_CAP = 8;
+  statusDotClass(view: PipelineView): string {
+    if (view.failedJobs > 0) return FAILED_DOT_CLASS;
 
-  statusDotClass(status: string): string {
-    const partial = status.match(/^(\d+)\/(\d+) successful$/);
-    if (partial) return partial[1] === partial[2] ? 'bg-ctp-green' : 'bg-ctp-red';
-    if (status.includes('success')) return 'bg-ctp-green';
-    if (status.includes('failed')) return 'bg-ctp-red';
-    return STATUS_DOT_CLASS[status] ?? FALLBACK_DOT_CLASS;
+    if (view.status.includes('success')) return SUCCESS_DOT_CLASS;
+
+    if (view.status.includes('failed')) return FAILED_DOT_CLASS;
+
+    return STATUS_DOT_CLASS[view.status] ?? FALLBACK_DOT_CLASS;
   }
 }

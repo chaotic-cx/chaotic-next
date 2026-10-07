@@ -47,6 +47,7 @@ export class ResilientSseStream {
       ...options,
     };
     document.addEventListener('visibilitychange', this.onVisibilityChange);
+    window.addEventListener('online', this.onOnline);
   }
 
   /** True while an EventSource exists (open or reconnecting), false when parked or closed. */
@@ -57,6 +58,7 @@ export class ResilientSseStream {
   open(): void {
     if (this.closed) return;
     this.disconnect();
+    // ui-craft-detect-ignore-next-line -- transport only. Each component that renders a stream owns its role="status" region.
     const source = new EventSource(this.options.url(), { withCredentials: true });
     this.source = source;
 
@@ -67,21 +69,27 @@ export class ResilientSseStream {
 
     source.onmessage = (event) => {
       // A delivered frame proves the connection is healthy again.
-      if (event.data !== '') this.attempts = 0;
+      if (event.data !== '') {
+        this.attempts = 0;
+      }
       this.options.onMessage(event.data);
     };
 
     for (const eventType of this.options.namedEvents ?? []) {
       source.addEventListener(eventType, (event: MessageEvent) => {
-        if (event.data !== '') this.attempts = 0;
+        if (event.data !== '') {
+          this.attempts = 0;
+        }
         this.options.onNamedEvent?.(eventType, event.data);
       });
     }
 
     source.onerror = () => {
       this.options.onError?.();
-      // Backgrounded tabs get their connections dropped by the browser; park
-      // the stream so the visibility handler re-opens it once focused again.
+      /**
+       * Backgrounded tabs get their connections dropped by the browser; park
+       * the stream so the visibility handler re-opens it once focused again.
+       */
       if (document.visibilityState !== 'visible') {
         this.park();
         return;
@@ -99,16 +107,21 @@ export class ResilientSseStream {
 
   /** Stops the stream permanently; neither reconnects nor reacts to visibility changes. */
   close(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
+    if (this.reconnectTimer !== undefined) {
+      window.clearTimeout(this.reconnectTimer);
+    }
     this.reconnectTimer = undefined;
     this.closed = true;
     this.disconnect();
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    window.removeEventListener('online', this.onOnline);
   }
 
   /** Drops the connection without giving up: reconnect/visibility may resume later. */
   private park(): void {
-    if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
+    if (this.reconnectTimer !== undefined) {
+      window.clearTimeout(this.reconnectTimer);
+    }
     this.reconnectTimer = undefined;
     this.disconnect();
   }
@@ -131,5 +144,17 @@ export class ResilientSseStream {
       this.attempts = 0;
       this.open();
     }
+  };
+
+  /**
+   * The network is back: reconnect a dropped stream at once with a fresh attempt budget,
+   * instead of waiting for the next backoff timer. A live stream stays as it is.
+   */
+  private readonly onOnline = (): void => {
+    if (this.closed || this.source || document.visibilityState !== 'visible') return;
+
+    this.attempts = 0;
+    this.park();
+    this.open();
   };
 }

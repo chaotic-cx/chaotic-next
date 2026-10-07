@@ -1,0 +1,193 @@
+.mr-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chaotic-space-lg);
+  min-width: 0;
+}
+
+.mr-detail__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chaotic-space-xs);
+}
+
+.mr-detail__reason {
+  font-size: var(--chaotic-text-xs);
+  color: var(--catppuccin-color-subtext1);
+  overflow-wrap: anywhere;
+}
+
+.mr-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-subtext1);
+}
+
+/* Trailing dots, so a wrapped line never starts with one. */
+.mr-detail__meta > :not(:last-child)::after {
+  content: '·';
+  margin-inline: var(--chaotic-space-sm);
+  color: var(--chaotic-fg-faint);
+}
+
+.mr-detail__meta a {
+  color: var(--catppuccin-color-mauve);
+}
+
+.mr-detail__meta a .pi {
+  font-size: 0.7em;
+}
+
+.mr-detail__meta a.mr-detail__meta-custom {
+  color: var(--catppuccin-color-yellow);
+}
+
+.mr-scan {
+  --scan-hue: var(--catppuccin-color-green);
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-md);
+}
+
+.mr-scan[data-tone='info'] {
+  --scan-hue: var(--catppuccin-color-sapphire);
+}
+
+.mr-scan[data-tone='warn'] {
+  --scan-hue: var(--catppuccin-color-yellow);
+}
+
+.mr-scan[data-tone='danger'] {
+  --scan-hue: var(--catppuccin-color-red);
+}
+
+.mr-scan__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--chaotic-space-sm);
+  min-height: 2.75rem;
+  padding: var(--chaotic-space-sm) var(--chaotic-space-md);
+  font-size: var(--chaotic-text-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.mr-scan__summary::-webkit-details-marker {
+  display: none;
+}
+
+.mr-scan__summary:focus-visible {
+  outline: 2px solid var(--catppuccin-color-mauve);
+  outline-offset: -2px;
+  border-radius: var(--chaotic-radius-md);
+}
+
+.mr-scan__icon,
+.mr-scan__verdict {
+  color: var(--scan-hue);
+}
+
+.mr-scan__verdict {
+  margin-inline-start: auto;
+}
+
+.mr-scan__chevron {
+  font-size: var(--chaotic-text-xs);
+  color: var(--catppuccin-color-subtext0);
+  transition: transform var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.mr-scan[open] .mr-scan__chevron {
+  transform: rotate(180deg);
+}
+
+.mr-scan-facts {
+  display: grid;
+  gap: var(--chaotic-space-lg);
+  padding: var(--chaotic-space-md);
+  border-top: 1px solid var(--chaotic-border);
+}
+
+@media (min-width: 1024px) {
+  .mr-scan-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mr-file__header {
+  position: sticky;
+  top: var(--mr-file-header-top);
+  z-index: var(--chaotic-z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--chaotic-space-sm);
+  padding: var(--chaotic-space-xs) var(--chaotic-space-md);
+  border-bottom: 1px solid var(--chaotic-border);
+  font-size: var(--chaotic-text-xs);
+  font-weight: var(--chaotic-weight-regular);
+  color: var(--catppuccin-color-subtext1);
+  background: var(--chaotic-surface-sticky);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+.mr-file__header code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mr-file__header .pi {
+  font-size: var(--chaotic-text-xs);
+  color: var(--catppuccin-color-subtext0);
+}
+
+.mr-file > :not(.mr-file__header) {
+  margin-top: var(--chaotic-space-xs);
+}
+
+.mr-head {
+  display: flex;
+  align-items: center;
+  gap: var(--chaotic-space-2xs);
+  margin-bottom: var(--chaotic-space-sm);
+}
+
+.mr-head__title {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-size: var(--chaotic-text-lg);
+  font-weight: var(--chaotic-weight-semibold);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.mr-head__title a:hover,
+.mr-head__title a:focus-visible {
+  color: var(--catppuccin-color-mauve);
+}
+
+.mr-head__icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--chaotic-radius-sm);
+  color: var(--catppuccin-color-subtext1);
+  touch-action: manipulation;
+}
+
+.mr-head__icon:focus-visible {
+  outline: 2px solid var(--catppuccin-color-mauve);
+  outline-offset: -2px;
+}
+
+.mr-head__steps {
+  display: flex;
+  flex: none;
+}
+
+.mr-head__icon--step {
+  width: 2.25rem;
+}

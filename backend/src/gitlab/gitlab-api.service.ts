@@ -9,7 +9,7 @@ import { Repository } from 'typeorm';
 
 export async function gitlabRawFileToString(raw: string | Blob): Promise<string> {
   if (typeof raw === 'string') return raw;
-  return await raw.text();
+  return raw.text();
 }
 
 @Injectable()
@@ -48,9 +48,7 @@ export class GitlabApiService implements OnModuleInit {
         this.pino.warn({ err }, 'Could not decrypt chaotic-aur apiToken');
       }
     }
-    if (!token) {
-      throw new Error('No chaotic-aur apiToken configured');
-    }
+    if (!token) throw new Error('No chaotic-aur apiToken configured');
 
     this.api = new Gitlab({ token });
   }
@@ -73,9 +71,7 @@ export class GitlabApiService implements OnModuleInit {
 
   async getDecryptedToken(repoName: string): Promise<string> {
     const repo = await this.repoRepository.findOne({ where: { name: repoName } });
-    if (!repo?.apiToken) {
-      throw new ServiceUnavailableException(`Repo ${repoName} has no apiToken`);
-    }
+    if (!repo?.apiToken) throw new ServiceUnavailableException(`Repo ${repoName} has no apiToken`);
     return decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
   }
 }

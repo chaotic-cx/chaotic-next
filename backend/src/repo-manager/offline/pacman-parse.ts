@@ -137,7 +137,7 @@ export async function parsePacmanDatabases(workDirs: (RepoWorkDir | null)[]): Pr
   const batchSize = 100;
   const yieldEveryBatches = 5;
   for (const dir of workDirs) {
-    if (!dir || !dir.path) continue;
+    if (!dir?.path) continue;
     try {
       const allPkgDirs: string[] = await listPackageDirs(dir.path);
       const currentPathRegex = new RegExp(`/${dir.path}/`);

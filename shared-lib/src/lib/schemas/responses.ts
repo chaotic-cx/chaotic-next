@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   aurMaintainerChangeSchema as aurMaintainerChangeLink,
   aurMaintainerInfoSchema as aurMaintainerInfoLink,
@@ -252,6 +252,12 @@ export const simpleUserSchema = z.object({
   web_url: z.string().describe('Profile page URL'),
   state: z.string().describe('Account state (active, blocked, etc.)'),
 });
+
+export const mergeRequestCountsSchema = z.object({
+  toReview: z.number().int().describe('Review queue merge requests without approval and without a hold'),
+  onHold: z.number().int().describe('Review queue merge requests that are on hold'),
+});
+export type MergeRequestCounts = z.infer<typeof mergeRequestCountsSchema>;
 
 export const mergeRequestWithDiffsSchema = z.object({
   id: z.number().describe('GitLab merge request ID'),

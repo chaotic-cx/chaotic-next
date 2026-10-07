@@ -38,8 +38,8 @@ export class EntityLookupService {
     }
     try {
       return await this.packageRepository.save({
-        pkgname: pkgname,
-        repo: repo,
+        pkgname,
+        repo,
         lastUpdated: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         isActive: true,
@@ -56,7 +56,7 @@ export class EntityLookupService {
     if (existing) return existing;
     try {
       return await this.builderRepository.save({
-        name: name,
+        name,
         isActive: false,
         description: `Added on ${new Date().toISOString()}`,
       });
@@ -86,7 +86,9 @@ export class EntityLookupService {
     const names = [...new Set(entries.map((e) => e.pkgname))];
     const existing = await this.packageRepository.find({ where: { pkgname: In(names) }, relations: { repo: true } });
     for (const pkg of existing) {
-      if (pkg.repo) byKey.set(`${pkg.repo.name}:${pkg.pkgname}`, pkg);
+      if (pkg.repo) {
+        byKey.set(`${pkg.repo.name}:${pkg.pkgname}`, pkg);
+      }
     }
 
     const toCreate: { pkgname: string; repo: Repo }[] = [];
@@ -113,7 +115,9 @@ export class EntityLookupService {
         ),
       );
       for (const row of Array.isArray(created) ? created : [created]) {
-        if (row.repo) byKey.set(`${row.repo.name}:${row.pkgname}`, row);
+        if (row.repo) {
+          byKey.set(`${row.repo.name}:${row.pkgname}`, row);
+        }
       }
     } catch (err) {
       if (!isUniqueViolation(err)) throw err;

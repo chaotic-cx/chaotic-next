@@ -1,0 +1,25 @@
+{
+  "heading": "Memorial — {{year}} Edition",
+  "terminals": {
+    "title": "Terminal Setups",
+    "badge": "Terminal",
+    "imageAlt": "Terminal by {{author}}"
+  },
+  "desktops": {
+    "title": "Desktop Showcases",
+    "badge": "Desktop",
+    "imageAlt": "Desktop by {{author}}"
+  },
+  "edition2021": {
+    "description": "Memorial of Chaotic-AUR, celebrating the third birthday of Chaotic-AUR",
+    "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial",
+    "subtitle": "These screenshots have been collected by the community as celebration of the 3rd birthday of Chaotic-AUR.",
+    "crossLinkLabel": "View Memorial — 2024 Edition"
+  },
+  "edition2024": {
+    "description": "Memorial of Chaotic-AUR 2024, celebrating the sixth birthday of Chaotic-AUR",
+    "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial",
+    "subtitle": "Celebrating the sixth birthday of Chaotic-AUR with community screenshot contributions and the launch of our <a class=\"text-ctp-peach hover:underline\" href=\"https://gitlab.com/chaotic-aur/pkgbuilds\" target=\"_blank\" rel=\"noopener noreferrer\">new build system infra 4.0 🎉</a>",
+    "crossLinkLabel": "View Memorial — 2021 Edition"
+  }
+}

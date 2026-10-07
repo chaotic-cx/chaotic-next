@@ -6,7 +6,7 @@
   "sourceRoot": "frontend/src",
   "tags": [],
   "targets": {
-    "build": {
+    "build-angular": {
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
@@ -32,7 +32,19 @@
             "output": "/"
           }
         ],
-        "styles": ["frontend/src/styles.css"],
+        "styles": [
+          "frontend/src/styles.css",
+          {
+            "input": "node_modules/maplibre-gl/dist/maplibre-gl.css",
+            "bundleName": "maplibre",
+            "inject": false
+          },
+          {
+            "input": "node_modules/@xterm/xterm/css/xterm.css",
+            "bundleName": "xterm",
+            "inject": false
+          }
+        ],
         "scripts": []
       },
       "configurations": {
@@ -64,6 +76,25 @@
           "extractLicenses": false,
           "sourceMap": true
         }
+      },
+      "cache": true
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        {
+          "target": "build-angular",
+          "params": "forward"
+        }
+      ],
+      "outputs": ["{workspaceRoot}/dist/frontend"],
+      "defaultConfiguration": "production",
+      "options": {
+        "command": "transloco-optimize dist/frontend/browser/i18n"
+      },
+      "configurations": {
+        "production": {},
+        "development": {}
       }
     },
     "serve": {
@@ -72,11 +103,12 @@
       "continuous": true,
       "configurations": {
         "production": {
-          "buildTarget": "frontend:build:production"
+          "buildTarget": "frontend:build-angular:production"
         },
         "development": {
-          "buildTarget": "frontend:build:development",
-          "port": 4201
+          "buildTarget": "frontend:build-angular:development",
+          "port": 4201,
+          "proxyConfig": "frontend/proxy.conf.json"
         }
       }
     },

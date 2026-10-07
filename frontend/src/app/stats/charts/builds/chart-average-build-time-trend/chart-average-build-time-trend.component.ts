@@ -1,10 +1,13 @@
 import { Component, computed, inject } from '@angular/core';
-import { BuildStatus, isBuildStatus, STATUS_DISPLAY_NAMES } from '@chaotic-next/shared-lib';
+import { BuildStatus, isBuildStatus } from '@chaotic-next/shared-lib';
+import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { BUILD_STATUS_LABEL_KEYS } from '../../../../i18n/build-status-labels';
+import { seriesColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, formatDay, axisChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-average-build-time-trend',
@@ -15,12 +18,16 @@ import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions } fro
 export class ChartAverageBuildTimeTrendComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly chart = chartResource<{ day: string; status: string; average: string }[]>(() =>
     this.appService.getAverageBuildTimePerDayResourceRequest(this.statsService.timeRangeDays() ?? ALL_TIME_DAYS),
   );
 
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
+    this.activeTranslation();
+
     const rows = this.chart.data();
     const statuses = [...new Set(rows.map((r) => Number(r.status)))]
       .filter(isBuildStatus)
@@ -46,14 +53,15 @@ export class ChartAverageBuildTimeTrendComponent {
       data: {
         labels,
         datasets: statuses.map((status, i) => ({
-          label: STATUS_DISPLAY_NAMES[status],
-          data: labels.map((day) => series.get(status)?.get(day) ?? 0),
-          backgroundColor: CATPPUCCIN_FLAVOURS[i % CATPPUCCIN_FLAVOURS.length],
-          borderColor: CATPPUCCIN_FLAVOURS[i % CATPPUCCIN_FLAVOURS.length],
+          label: this.transloco.translate(BUILD_STATUS_LABEL_KEYS[status]),
+          // A day without builds of this status has no average; null leaves a gap instead of a false 0.
+          data: labels.map((day) => series.get(status)?.get(day) ?? null),
+          backgroundColor: seriesColor(i),
+          borderColor: seriesColor(i),
           fill: false,
         })),
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
   });
 }

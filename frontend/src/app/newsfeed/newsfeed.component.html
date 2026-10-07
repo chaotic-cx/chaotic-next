@@ -1,14 +1,23 @@
-<div class="mx-auto max-w-4xl">
-  <h2 class="text-ctp-maroon my-5 text-center text-2xl font-bold">
-    <i class="pi-info-circle pi" style="font-size: 1.25rem"></i> Latest news
-  </h2>
+<div class="min-w-0" *transloco="let t; prefix: 'newsfeed'">
+  @if (loading()) {
+    <div class="flex flex-col gap-4" aria-hidden="true">
+      @for (_ of skeletonPanels; track $index) {
+        <div class="news-skeleton chaotic-skeleton"></div>
+      }
+    </div>
+    <chaotic-slow-loading-hint />
+  } @else if (newsResource.error()) {
+    <chaotic-load-error [message]="t('loadError')" [error]="newsResource.error()" (retry)="newsResource.reload()" />
+  } @else if (newsList().length === 0) {
+    <chaotic-empty-state [message]="t('empty')" icon="pi-megaphone" />
+  }
   <div class="flex flex-col gap-4">
     @for (news of visibleNews(); track news.data.id; let index = $index) {
       <p-panel class="min-w-0" [style.--stagger]="index % staggerStep" animate.enter="finding-item-enter">
         <ng-template pTemplate="header">
           <div class="flex flex-col gap-0.5">
-            <span class="text-ctp-maroon font-bold">{{ news.data.author || 'Maintainer' }}</span>
-            <span class="text-sm opacity-80">{{ news.data.date | date: 'short' }}</span>
+            <span class="font-semibold text-ctp-text">{{ news.data.author || t('defaultAuthor') }}</span>
+            <span class="text-sm text-ctp-subtext0">{{ news.data.date | date: 'short' }}</span>
           </div>
         </ng-template>
         <div class="news-content max-w-full overflow-x-auto wrap-break-word" [innerHTML]="news.html"></div>
@@ -16,10 +25,10 @@
     }
   </div>
   @if (hasMore()) {
-    <div class="mt-6 text-center">
+    <div class="mt-4">
       <p-button
+        [label]="t('showMore')"
         (onClick)="showMore()"
-        label="Show more news"
         icon="pi pi-angle-down"
         iconPos="right"
         size="small"

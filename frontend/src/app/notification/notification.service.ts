@@ -66,6 +66,7 @@ export class NotificationService {
     let subscribed: boolean;
     try {
       const status = await lastValueFrom(
+        // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot check inside the subscription reconcile flow
         this.http.get<SubscriptionStatusDto>(`${this.appConfig.backendUrl}/notifications/subscriptions/me`),
       );
       subscribed = status.subscribed;
@@ -96,9 +97,11 @@ export class NotificationService {
         applicationServerKey: applicationServerKeyFrom(this.appConfig.vapidPublicKey),
       });
 
-      // The backend only accepts subscriptions from authenticated sessions.
-      // During the login click the permission prompt runs before any session
-      // exists, so wait for the cookie instead of posting right away.
+      /**
+       * The backend only accepts subscriptions from authenticated sessions.
+       * During the login click the permission prompt runs before any session
+       * exists, so wait for the cookie instead of posting right away.
+       */
       const authenticated = await firstValueFrom(this.waitForSession());
       if (!authenticated) {
         console.warn('Push subscription skipped: no authenticated session appeared within the timeout');
@@ -109,8 +112,10 @@ export class NotificationService {
       localStorage.setItem(NOTIFICATIONS_SUBSCRIBED_KEY, String(ok));
       this.notificationsEnabled.set(ok);
     } catch (err) {
-      // A swallowed error here looks identical to "user declined" and is near
-      // impossible to diagnose; surface it instead.
+      /**
+       * A swallowed error here looks identical to "user declined" and is near
+       * impossible to diagnose; surface it instead.
+       */
       console.warn('Push subscription failed', err);
       this.notificationsEnabled.set(false);
     }

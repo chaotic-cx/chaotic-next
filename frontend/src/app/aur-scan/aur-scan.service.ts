@@ -1,19 +1,27 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { inject, Service, signal } from '@angular/core';
+import { HttpClient, httpResource } from '@angular/common/http';
+import { computed, inject, Service, signal, untracked } from '@angular/core';
 import {
   type AurPackageScan,
   type AurScanMetrics,
   type AurScanStreamChunk,
   aurScanStreamChunkSchema,
 } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
 import { lastValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
+import { requestFailure } from '../api-errors';
 import { ResilientSseStream } from '../sse-stream';
 
-const HTTP_TOO_MANY_REQUESTS = 429;
-const GENERIC_SCAN_ERROR_MESSAGE = 'Could not scan the AUR package. Does it exist?';
-const RATE_LIMITED_SCAN_ERROR_MESSAGE = 'Too many scans have been started. Please wait a minute and try again.';
+/**
+ * Why a scan has no result.
+ * `rateLimited`: too many scans started. `request`: the scan request failed.
+ * `streamLost`: the scan started, but its progress stream dropped.
+ */
+export type ScanFailureReason = 'rateLimited' | 'request' | 'streamLost';
+
+export interface ScanFailure {
+  reason: ScanFailureReason;
+  error: unknown;
+}
 
 export function isScanSettled(scan: AurPackageScan | undefined): boolean {
   return scan?.status === 'done' || scan?.status === 'failed';
@@ -23,51 +31,96 @@ export function isScanSettled(scan: AurPackageScan | undefined): boolean {
 export class AurScanService {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
   private readonly http = inject(HttpClient);
-  private readonly messageToastService = inject(MessageToastService);
 
   readonly scans = signal<ReadonlyMap<string, AurPackageScan>>(new Map());
-  readonly metrics = signal<AurScanMetrics | null>(null);
+  readonly failures = signal<ReadonlyMap<string, ScanFailure>>(new Map());
+  private readonly metricsRequested = signal(false);
+  private readonly metricsResource = httpResource<AurScanMetrics>(() =>
+    this.metricsRequested() ? `${this.backendUrl}/gitlab/aur-scan/metrics` : undefined,
+  );
+  readonly metrics = computed(() => (this.metricsResource.hasValue() ? this.metricsResource.value() : null));
 
   private readonly streams = new Map<string, ResilientSseStream>();
 
   scanOf(packageName: string): AurPackageScan | undefined {
-    return this.scans().get(packageName.trim().toLowerCase());
+    return this.scans().get(scanKey(packageName));
   }
 
-  async loadMetrics(): Promise<void> {
-    try {
-      this.metrics.set(await this.getMetrics());
-    } catch {
-      this.metrics.set(null);
+  failureOf(packageName: string): ScanFailure | undefined {
+    return this.failures().get(scanKey(packageName));
+  }
+
+  /**
+   * Starts a failed scan again. A lost stream only reconnects, because the scan itself runs on.
+   */
+  retry(packageName: string): void {
+    const failure = this.failureOf(packageName);
+    this.clearFailure(packageName);
+
+    const scan = this.scanOf(packageName);
+    if (failure?.reason === 'streamLost' && scan) {
+      this.openStream(scan.packageName);
+      return;
     }
+
+    void this.startScan(packageName);
+  }
+
+  /**
+   * The admin pages share this service, so the metrics load only after the scan page asks for them.
+   * Every later visit refreshes them.
+   */
+  loadMetrics(): void {
+    if (untracked(this.metricsRequested)) {
+      this.metricsResource.reload();
+      return;
+    }
+
+    this.metricsRequested.set(true);
   }
 
   async startScan(packageName: string): Promise<void> {
     const name = packageName.trim();
-    if (!name || this.scanOf(name)) return;
+    if (!name || this.scanOf(name) || this.failureOf(name)) return;
 
     try {
       const scan = await lastValueFrom(
         this.http.post<AurPackageScan>(`${this.backendUrl}/gitlab/aur-scan`, { package: name }),
       );
       this.store(scan);
-      this.metrics.update((m) => (m ? { ...m, total: m.total + 1, anonymous: m.anonymous + 1 } : m));
+      this.countStartedScan();
 
-      if (!isScanSettled(scan)) this.openStream(scan.packageName);
+      if (!isScanSettled(scan)) {
+        this.openStream(scan.packageName);
+      }
     } catch (error) {
-      this.messageToastService.error('Scan failed', this.errorMessageFor(error));
+      const reason = requestFailure(error) === 'rateLimited' ? 'rateLimited' : 'request';
+      this.setFailure(name, { reason, error });
       console.error('AUR scan failed:', error);
     }
   }
 
-  private errorMessageFor(error: unknown): string {
-    return error instanceof HttpErrorResponse && error.status === HTTP_TOO_MANY_REQUESTS
-      ? RATE_LIMITED_SCAN_ERROR_MESSAGE
-      : GENERIC_SCAN_ERROR_MESSAGE;
+  private countStartedScan(): void {
+    if (!this.metricsResource.hasValue()) return;
+
+    const metrics = this.metricsResource.value();
+    this.metricsResource.value.set({ ...metrics, total: metrics.total + 1, anonymous: metrics.anonymous + 1 });
+  }
+
+  private setFailure(packageName: string, failure: ScanFailure): void {
+    this.failures.update((failures) => new Map(failures).set(scanKey(packageName), failure));
+  }
+
+  private clearFailure(packageName: string): void {
+    this.failures.update((failures) => {
+      const next = new Map(failures);
+      next.delete(scanKey(packageName));
+      return next;
+    });
   }
 
   private openStream(packageName: string): void {
-    const key = packageName.toLowerCase();
+    const key = scanKey(packageName);
     if (this.streams.has(key)) return;
 
     const stream = new ResilientSseStream({
@@ -76,29 +129,33 @@ export class AurScanService {
         const chunk = parseChunk(data);
         if (!chunk) return;
         this.store(chunk.scan);
-        if (chunk.complete) this.closeStream(chunk.scan.packageName);
+        if (chunk.complete) {
+          this.closeStream(chunk.scan.packageName);
+        }
       },
-      // A settled scan closes its own stream; exhaustion only frees the key
-      // so a fresh startScan can open a new one.
-      onErrorExhausted: () => this.streams.delete(key),
+      // A settled scan closes its own stream. Exhaustion frees the key and reports the lost stream.
+      onErrorExhausted: () => {
+        this.streams.delete(key);
+        this.setFailure(packageName, { reason: 'streamLost', error: undefined });
+      },
     });
     this.streams.set(key, stream);
     stream.open();
   }
 
   private closeStream(packageName: string): void {
-    const key = packageName.toLowerCase();
+    const key = scanKey(packageName);
     this.streams.get(key)?.close();
     this.streams.delete(key);
   }
 
   private store(scan: AurPackageScan): void {
-    this.scans.update((scans) => new Map(scans).set(scan.packageName.toLowerCase(), scan));
+    this.scans.update((scans) => new Map(scans).set(scanKey(scan.packageName), scan));
   }
+}
 
-  async getMetrics(): Promise<AurScanMetrics> {
-    return lastValueFrom(this.http.get<AurScanMetrics>(`${this.backendUrl}/gitlab/aur-scan/metrics`));
-  }
+function scanKey(packageName: string): string {
+  return packageName.trim().toLowerCase();
 }
 
 function parseChunk(raw: string): AurScanStreamChunk | null {

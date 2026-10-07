@@ -48,9 +48,7 @@ function depsContains(deps: Set<string>, pkgname: string): boolean {
   if (deps.has(pkgname)) return true;
 
   for (const alias of PACKAGE_ALIASES[pkgname] ?? []) {
-    if (deps.has(alias)) {
-      return true;
-    }
+    if (deps.has(alias)) return true;
   }
 
   return false;
@@ -483,8 +481,10 @@ export class TriggerDetector {
 
     this.pino.debug({ analyses: rows.length, packages: pkgIds.length }, 'Loaded latest Chaotic analyses');
 
-    // Keep the newest version per package by Arch version order, not DB string
-    // order (which misorders e.g. 2:13 vs 2:9 or 1.10 vs 1.9).
+    /**
+     * Keep the newest version per package by Arch version order, not DB string
+     * order (which misorders e.g. 2:13 vs 2:9 or 1.10 vs 1.9).
+     */
     const latest = latestAnalysisByKey(rows, (row) => String(row.pkgId));
 
     for (const [key, row] of latest) {
@@ -514,9 +514,11 @@ export class TriggerDetector {
       for (const entry of indexEntry.symbolBreaks) {
         if (!isPlugin && !neededSonames.has(entry.soname)) continue;
 
-        // A consumer that ships its own copy of the library (e.g. python39
-        // bundling libpython3.9.so.1.0) resolves those symbols locally, not
-        // against the owner's updated soname, so it is not a break victim.
+        /**
+         * A consumer that ships its own copy of the library (e.g. python39
+         * bundling libpython3.9.so.1.0) resolves those symbols locally, not
+         * against the owner's updated soname, so it is not a break victim.
+         */
         if (this.selfProvidesLibrary(consumer, entry.soname)) continue;
 
         for (const symbol of entry.lostSymbols) {
@@ -1159,10 +1161,12 @@ function ownerBreakEntry(
 ): PluginBreakIndexEntry | null {
   const symbolBreaks: PluginBreakEntry[] = [];
   for (const [soname, previousSymbols] of Object.entries(previous.exportedSymbols ?? {})) {
-    // A soname rename (python 3.13->3.14 renames libpython3.13 to 3.14) is a
-    // BROKEN_DEPS/soname concern, not symbol loss: only the exported *set* of a
-    // still-present soname may have changed. Without this a single rename would
-    // be reported as hundreds of fake symbol breaks.
+    /**
+     * A soname rename (python 3.13->3.14 renames libpython3.13 to 3.14) is a
+     * BROKEN_DEPS/soname concern, not symbol loss: only the exported *set* of a
+     * still-present soname may have changed. Without this a single rename would
+     * be reported as hundreds of fake symbol breaks.
+     */
     if (!(soname in current.exportedSymbols)) continue;
 
     const currentSet = new Set(current.exportedSymbols?.[soname] ?? []);

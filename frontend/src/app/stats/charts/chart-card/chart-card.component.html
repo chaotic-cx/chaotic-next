@@ -1,9 +1,83 @@
-<div [class]="containerClass()" [style.height.px]="height()">
+<div *transloco="let t; prefix: 'stats.chartCard'" [class]="containerClass()" [style.height.px]="height()">
   @if (hasData()) {
-    <p-chart [class]="chartClass()" [data]="data()" [options]="options()" [responsive]="true" [type]="type()" />
-  } @else if (loading()) {
+    @if (failed()) {
+      <p class="chart-card__stale chaotic-stale-notice" role="status">
+        <span class="chaotic-stale-notice__dot" aria-hidden="true"></span>
+        {{ t('staleData') }}
+        <button class="chart-card__stale-retry" *transloco="let tr" (click)="retry.emit()" type="button">
+          {{ tr('common.tryAgain') }}
+        </button>
+      </p>
+    }
+    <button
+      class="chart-card__table-toggle"
+      [class.chart-card__table-toggle--hidden]="!showTable()"
+      (click)="toggleTable()"
+      type="button"
+    >
+      @if (showTable()) {
+        {{ t('showChart') }}
+      } @else {
+        {{ t('showTable') }}
+      }
+    </button>
+
+    @if (showTable()) {
+      <div class="chart-card__table">
+        <!-- ui-craft-detect-ignore-next-line -- .chart-card__table scrolls, and its sticky header lives in the component CSS. -->
+        <table class="w-full text-left text-xs">
+          <caption class="sr-only">
+            {{
+              title()
+            }}
+          </caption>
+          <thead>
+            <tr class="text-ctp-subtext0">
+              <th class="px-2 py-1 font-semibold" scope="col">{{ t('labelColumn') }}</th>
+              @for (name of table().series; track $index) {
+                <th class="px-2 py-1 text-right font-semibold" scope="col">{{ name }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of table().rows; track $index) {
+              <tr class="border-t border-ctp-surface0 text-ctp-text">
+                <th class="px-2 py-1 font-medium" scope="row">{{ row.label }}</th>
+                @for (value of row.values; track $index) {
+                  <td class="px-2 py-1 text-right tabular-nums">{{ value }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p-chart
+        [class]="chartClass()"
+        [attr.aria-label]="
+          table().rows.length === 1
+            ? t('summaryOne', { title: title(), count: table().rows.length })
+            : t('summaryOther', { title: title(), count: table().rows.length })
+        "
+        [data]="chartData()"
+        [options]="chartOptions()"
+        [responsive]="true"
+        [type]="type()"
+        role="img"
+      />
+    }
+  } @else if (failed()) {
     <div class="absolute inset-0 flex items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+      <chaotic-load-error [message]="t('loadError')" (retry)="retry.emit()" />
+    </div>
+  } @else if (loading()) {
+    <div class="chart-card__skeleton chaotic-skeleton" [attr.aria-label]="t('loading')" role="status"></div>
+    <div class="absolute inset-x-0 bottom-2">
+      <chaotic-slow-loading-hint />
+    </div>
+  } @else {
+    <div class="absolute inset-0 flex items-center justify-center">
+      <chaotic-empty-state [message]="t('noData')" icon="pi-chart-line" />
     </div>
   }
 </div>

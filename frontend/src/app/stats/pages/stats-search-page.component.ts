@@ -5,12 +5,12 @@ import { SearchPackageComponent } from '../../search-package/search-package.comp
 @Component({
   selector: 'chaotic-stats-search-page',
   imports: [Card, SearchPackageComponent],
-  styleUrl: './stats-chart-page.css',
   template: `
-    <p-card [style]="{ overflow: 'hidden', height: 'auto' }" animate.enter="ctp-scale-enter">
+    <p-card [style]="{ overflow: 'hidden', height: 'auto' }">
       <chaotic-search-package [search]="search()" />
     </p-card>
   `,
+  styleUrl: './stats-chart-page.css',
 })
 export class StatsSearchPageComponent {
   readonly search = input<string>();

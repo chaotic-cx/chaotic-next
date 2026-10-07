@@ -28,7 +28,7 @@ export type MirrorFile = { content: string } | { binary: true };
 @Injectable()
 export class AurMirrorService implements OnModuleInit {
   private ready = false;
-  private syncing = false;
+  private syncInFlight: Promise<void> | null = null;
   private readonly branchFetchedAt = new Map<string, number>();
 
   constructor(
@@ -62,16 +62,21 @@ export class AurMirrorService implements OnModuleInit {
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async sync(): Promise<void> {
-    if (!this.ready || this.syncing) return;
-    this.syncing = true;
+    if (!this.ready) return;
+
+    this.syncInFlight ??= this.fetchAll().finally(() => {
+      this.syncInFlight = null;
+    });
+    await this.syncInFlight;
+  }
+
+  private async fetchAll(): Promise<void> {
     try {
       await this.git(['fetch', '--depth=1', 'origin'], FULL_FETCH_TIMEOUT_MS);
       this.branchFetchedAt.clear();
       this.pino.debug('AUR mirror sync finished');
     } catch (err) {
       this.pino.warn({ err }, 'AUR mirror sync failed');
-    } finally {
-      this.syncing = false;
     }
   }
 
@@ -107,7 +112,9 @@ export class AurMirrorService implements OnModuleInit {
     for (const path of paths.slice(0, MAX_FILES_PER_PACKAGE)) {
       const file = await this.readTextFile(packageBase, path);
       if (!file || 'binary' in file) {
-        if (file) skippedBinaryFiles.push(path);
+        if (file) {
+          skippedBinaryFiles.push(path);
+        }
         continue;
       }
       files.push({ name: path, content: file.content });
@@ -133,8 +140,10 @@ export class AurMirrorService implements OnModuleInit {
     if (!this.ready || !PACKAGE_BASE_PATTERN.test(packageBase)) return false;
     try {
       if (await this.hasFreshRef(packageBase)) return true;
-      // Explicit destination ref: the opportunistic remote-tracking update of
-      // a bare `fetch origin <branch>` is lost while a full sync fetch runs concurrently
+      /**
+       * Explicit destination ref: the opportunistic remote-tracking update of
+       * a bare `fetch origin <branch>` is lost while a full sync fetch runs concurrently
+       */
       for (let attempt = 1; ; attempt++) {
         try {
           await this.git(
@@ -193,7 +202,9 @@ function looksTextual(bytes: Uint8Array): boolean {
   let controlBytes = 0;
   for (const byte of sample) {
     if (byte === 0) return false;
-    if (byte < 7 || (byte > 13 && byte < 32)) controlBytes++;
+    if (byte < 7 || (byte > 13 && byte < 32)) {
+      controlBytes++;
+    }
   }
   return sample.length === 0 || controlBytes / sample.length < CONTROL_BYTE_RATIO_LIMIT;
 }

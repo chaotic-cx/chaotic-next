@@ -1,0 +1,72 @@
+{
+  "seo": {
+    "description": "Learn more about the Chaotic-AUR team and project",
+    "keywords": "Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR about"
+  },
+  "title": "About us",
+  "subtitle": "Chaotic-AUR is a binary repository for Arch Linux, run by a team of volunteers who pre-build AUR packages.",
+  "team": {
+    "title": "The team",
+    "githubProfile": "GitHub profile of {{name}}",
+    "roles": {
+      "leadMaintainer": "Lead Maintainer",
+      "infraMaintainer": "Infra maintainer",
+      "founder": "Founder",
+      "formerTuCoFounder": "Former TU, Co-founder",
+      "packageMaintenance": "Package maintenance",
+      "mirrorManagement": "Mirror management",
+      "packageReviews": "Package reviews",
+      "formerKernelBuilder": "Former kernel builder",
+      "kdeGitPackages": "KDE git packages"
+    }
+  },
+  "buildInfrastructure": {
+    "title": "Build infrastructure",
+    "sources": "Most packages build automatically from their <a href=\"https://aur.archlinux.org\" rel=\"noopener\" target=\"_blank\">AUR</a> source. Some exceptions live in <a href=\"https://github.com/chaotic-aur/packages\" rel=\"noopener\" target=\"_blank\">our package repository</a>.",
+    "mainNode": "The main node runs in Hetzner's Finnish datacenter on an <a href=\"https://www.hetzner.com/dedicated-rootserver/ex44/\" rel=\"noopener\" target=\"_blank\">EX44</a>, with hardware from Garuda Linux."
+  },
+  "contact": {
+    "title": "Get in touch",
+    "channels": "For questions and support, use our issue trackers or the Telegram group. For private matters, pick one of <a href=\"https://keyoxide.org/D245D484F3578CB17FD6DA6B67DB29BFF3C96757\" rel=\"noopener\" target=\"_blank\">these channels</a>.",
+    "issues": "Open <a href=\"https://github.com/chaotic-aur/packages/issues\" rel=\"noopener\" target=\"_blank\">an issue</a> for enhancements, database corruptions and other requests. Report build bugs to the AUR package maintainers."
+  },
+  "mirrors": {
+    "title": "Mirrors",
+    "mirrorList": {
+      "intro": "The",
+      "linkText": "mirror list",
+      "outro": "shows every mirror and its status."
+    },
+    "syncthing": "We distribute files with <a href=\"https://syncthing.net/\" rel=\"noopener\" target=\"_blank\">Syncthing</a>.",
+    "hostMirror": "To host a mirror yourself, contact us through any of the channels above."
+  },
+  "memorial": {
+    "title": "Memorial",
+    "text": "For our 3rd and 6th birthday, the community shared their desktop and terminal screenshots.",
+    "edition2024": "2024 edition",
+    "edition2021": "2021 edition"
+  },
+  "usefulLinks": {
+    "title": "Useful links",
+    "newsChannel": "News channel",
+    "communityChat": "Community chat",
+    "matrixBridge": "Matrix bridge",
+    "packageList": "Package list",
+    "manualDownloads": "Manual downloads",
+    "infraToolbox": "Infra toolbox",
+    "statusPage": "Status page",
+    "signingKeys": "Signing keys"
+  },
+  "specialThanks": {
+    "title": "Special thanks",
+    "garudaStaffers": "Garuda Linux staffers",
+    "mirrorProviders": "All current and past mirror providers",
+    "discordServers": "Frogging Family and Linux Gaming Dev Discord servers",
+    "aurMaintainers": "AUR package maintainers, Arch Linux TUs and staffers",
+    "projectHelpers": "Everybody who helped with the projects we pre-build",
+    "librewishNote": "former co-maintainer, Garuda Linux founder",
+    "aizawaNote": "creator of the Aizawa applet and our logo",
+    "cleanLogoNote": "clean version of our logo"
+  },
+  "dedication": "In memory of our colleague Rustem Bakirov, a proactive co-maintainer who left us in December 2021 at the age of 20."
+}

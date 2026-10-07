@@ -1,0 +1,208 @@
+:host {
+  display: block;
+}
+
+.pipeline-strip {
+  padding: 1rem var(--chaotic-inset);
+}
+
+.pipeline-strip__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.25rem 0 1rem;
+}
+
+.pipeline-strip__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
+}
+
+.pipeline-strip__live {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--chaotic-radius-pill);
+  background: var(--catppuccin-color-green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--catppuccin-color-green) 20%, transparent);
+}
+
+.pipeline-strip__live.is-offline {
+  background: var(--catppuccin-color-overlay0);
+  box-shadow: none;
+}
+
+.pipeline-strip__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--catppuccin-color-subtext1);
+  transition: color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.pipeline-strip__more:hover,
+.pipeline-strip__more:focus-visible {
+  color: var(--catppuccin-color-mauve);
+}
+
+.pipeline-strip__stages {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.pipeline-stage {
+  --stage-padding: 0.75rem;
+  --stage-border: 1px;
+  --stage-count-size: 1.75rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--stage-padding);
+  border-radius: var(--chaotic-radius-md);
+  background: color-mix(in srgb, var(--catppuccin-color-crust) 45%, transparent);
+  border: var(--stage-border) solid var(--chaotic-border);
+}
+
+@media (min-width: 768px) {
+  .pipeline-strip__stages {
+    --stage-gap: 1.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--stage-gap);
+  }
+
+  .pipeline-stage {
+    --stage-padding: 1rem;
+  }
+
+  /* Chevron between stages, drawn by two borders of a rotated square. */
+  .pipeline-stage + .pipeline-stage::before {
+    content: '';
+    position: absolute;
+    top: calc(var(--stage-padding) + var(--stage-count-size) / 2);
+    left: calc(var(--stage-gap) / -2 - var(--stage-border));
+    width: 0.5rem;
+    height: 0.5rem;
+    border: solid var(--catppuccin-color-surface2);
+    border-width: 2px 2px 0 0;
+    translate: -75% -50%;
+    rotate: 45deg;
+  }
+}
+
+.pipeline-stage--active {
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 7%, var(--catppuccin-color-crust) 40%);
+  border-color: color-mix(in srgb, var(--catppuccin-color-mauve) 35%, transparent);
+}
+
+.pipeline-stage__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.pipeline-stage__label {
+  font-size: 0.8125rem;
+  font-weight: var(--chaotic-weight-medium);
+  color: var(--chaotic-fg-muted);
+}
+
+.pipeline-stage__count {
+  font-size: var(--stage-count-size);
+  font-weight: var(--chaotic-weight-semibold);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--catppuccin-color-text);
+}
+
+.pipeline-stage--active .pipeline-stage__count {
+  color: var(--catppuccin-color-mauve);
+}
+
+.pipeline-stage__since {
+  font-size: 0.8125rem;
+  color: var(--catppuccin-color-subtext1);
+}
+
+.pipeline-stage__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.875rem;
+  font-size: 0.875rem;
+}
+
+.pipeline-row--skeleton {
+  margin-block: 0.3rem;
+  min-height: 1.25rem;
+}
+
+.pipeline-row__status {
+  flex: none;
+  font-size: 0.8125rem;
+}
+
+.pipeline-row__name {
+  min-width: 0;
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--catppuccin-color-text);
+}
+
+.pipeline-row__name:hover,
+.pipeline-row__name:focus-visible {
+  color: var(--catppuccin-color-mauve);
+}
+
+@media (pointer: coarse) {
+  .pipeline-strip__more {
+    min-height: 2.75rem;
+  }
+
+  .pipeline-row__name {
+    /* line-height keeps the ellipsis working while the tap target grows. */
+    min-height: 2.75rem;
+    line-height: 2.75rem;
+  }
+}
+
+.pipeline-row__meta {
+  flex: none;
+  max-width: 45%;
+  font-size: 0.75rem;
+  color: var(--chaotic-fg-faint);
+}
+
+.pipeline-stage__empty {
+  padding-block: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--chaotic-fg-faint);
+}
+
+.pipeline-stage__overflow {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--chaotic-fg-muted);
+}
+
+.pipeline-stage__overflow--link:hover,
+.pipeline-stage__overflow--link:focus-visible {
+  color: var(--catppuccin-color-mauve);
+}

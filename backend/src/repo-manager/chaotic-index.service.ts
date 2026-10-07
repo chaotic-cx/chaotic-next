@@ -46,8 +46,10 @@ export class ChaoticIndexService {
       const parsed: ParsedPackage[] = await this.archMirror.parsePacmanDatabases([workDir]);
 
       const baseUrl: string = dbUrl.replace(/\/[^/]+$/, '');
-      // A single repo backs this whole database; resolve it once instead of per
-      // package, then bulk-resolve every package row in one query + insert.
+      /**
+       * A single repo backs this whole database; resolve it once instead of per
+       * package, then bulk-resolve every package row in one query + insert.
+       */
       const repo: Repo = await this.lookup.getOrCreateRepo(dbName);
       const chaoticEntries = parsed.flatMap((pkg) =>
         pkg.name && pkg.metaData?.filename ? [{ pkgname: pkg.name, repo }] : [],
@@ -85,8 +87,10 @@ export class ChaoticIndexService {
       await saveInBatches(this.packagesRepository, toUpdate);
 
       const result: IndexResult = await this.archMirror.indexCandidates(candidates, tempDir);
-      // Newly-indexed providers can resolve other packages' missing sonames, so
-      // refresh every broken flag against the now-complete index.
+      /**
+       * Newly-indexed providers can resolve other packages' missing sonames, so
+       * refresh every broken flag against the now-complete index.
+       */
       await this.signalScanService.recomputeBroken();
       this.pino.info(
         { scanned: result.scanned, skipped: result.skipped, failed: result.failed },
@@ -110,29 +114,29 @@ export class ChaoticIndexService {
           const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
           tempDirs.push(tempDir);
           this.pino.debug({ tempDir }, 'Created temporary directory');
-          return await this.archMirror.pullDatabases(repo.dbPath, tempDir, repo.name);
+          return this.archMirror.pullDatabases(repo.dbPath, tempDir, repo.name);
         }),
       );
 
       this.pino.debug('Done pulling all Chaotic-AUR databases');
       const workDirs: RepoWorkDir[] = [];
       for (const download of downloads) {
-        if (download.status === 'rejected') {
-          throw download.reason;
-        }
-        // A missing database would make the inactive pass below deactivate the
-        // whole repo, so an incomplete pull must abort the update.
-        if (!download.value) {
-          throw new Error(`Failed to pull database for one of: ${repoNames.join(', ')}`);
-        }
+        if (download.status === 'rejected') throw download.reason;
+        /**
+         * A missing database would make the inactive pass below deactivate the
+         * whole repo, so an incomplete pull must abort the update.
+         */
+        if (!download.value) throw new Error(`Failed to pull database for one of: ${repoNames.join(', ')}`);
         workDirs.push(download.value);
       }
       const currentChaoticVersions: ParsedPackage[] = await this.archMirror.parsePacmanDatabases(workDirs);
 
       this.pino.debug('Updating Chaotic database versions');
-      // Bulk-resolve every package row in one query + insert instead of one
-      // serialized getOrCreatePackage() round-trip per package, and persist in batches
-      // (awaited) instead of fire-and-forget saves that can be lost on crash.
+      /**
+       * Bulk-resolve every package row in one query + insert instead of one
+       * serialized getOrCreatePackage() round-trip per package, and persist in batches
+       * (awaited) instead of fire-and-forget saves that can be lost on crash.
+       */
       const repoByName = new Map(repos.map((r) => [r.name, r] as const));
       const chaoticEntries: { pkgname: string; repo: Repo }[] = [];
       for (const pkg of currentChaoticVersions) {
@@ -164,8 +168,10 @@ export class ChaoticIndexService {
       await saveInBatches(this.packagesRepository, toUpdate);
       this.pino.info('Finished updating Chaotic database versions');
 
-      // Lastly, set any non-existing packages to inactive. The database can contain inactive
-      // packages that are not in the Chaotic-AUR database anymore.
+      /**
+       * Lastly, set any non-existing packages to inactive. The database can contain inactive
+       * packages that are not in the Chaotic-AUR database anymore.
+       */
       this.pino.debug('Setting non-existing packages to inactive');
       // O(1) membership via a Set instead of an O(N*M) scan over currentChaoticVersions.
       const currentKeys = new Set(currentChaoticVersions.map((p) => `${p.repoName}:${p.name}`));
@@ -180,11 +186,13 @@ export class ChaoticIndexService {
       }
       await saveInBatches(this.packagesRepository, toDeactivate);
 
-      // Drop inactive rows that merely duplicate an active package in another
-      // repo (e.g. stale garuda rows left over from when garuda mirrored the
-      // chaotic-aur DB). These are version-less rows created by the bulk import
-      // that never represented a real package, so removing them keeps the
-      // repository table clean instead of letting junk accumulate.
+      /**
+       * Drop inactive rows that merely duplicate an active package in another
+       * repo (e.g. stale garuda rows left over from when garuda mirrored the
+       * chaotic-aur DB). These are version-less rows created by the bulk import
+       * that never represented a real package, so removing them keeps the
+       * repository table clean instead of letting junk accumulate.
+       */
       const duplicates = findDuplicateInactiveRows(allChaoticVersionsInDb);
       if (duplicates.length > 0) {
         const ids = duplicates.map((pkg) => pkg.id);

@@ -15,19 +15,31 @@ import { APP_CONFIG } from '../../environments/app-config.token';
 import { type EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
 import { BUILD_STATUS_ICONS } from '../status-icons';
-import { isLogPurged, resourceValue } from '../functions';
+import { isLogPurged, loadingWithoutValue, resourceFailed, resourceValue, retainedResourceValue } from '../functions';
 import { createLazyTablePagination } from '../table-pagination';
 
 export const REPO_OPTIONS = ['chaotic-aur', 'garuda'];
 
-const STATUS_OPTIONS: { label: string; value: BuildStatus; icon: string }[] = Object.entries(BUILD_STATUS_ICONS).map(
-  ([key, icon]) => {
-    const value = Number(key) as BuildStatus;
-    return { label: STATUS_LABELS[value], value, icon };
-  },
-);
+export interface StatusOption {
+  value: BuildStatus;
+  icon: string;
+}
+
+const STATUS_OPTIONS: StatusOption[] = Object.entries(BUILD_STATUS_ICONS).map(([key, icon]) => {
+  const value = Number(key) as BuildStatus;
+
+  return { value, icon };
+});
 
 const DEFAULT_SORT_FIELD: BuildSortField = 'timestamp';
+
+function hasDefaultStatuses(statuses: BuildStatus[] | undefined): boolean {
+  if (statuses === undefined) return true;
+
+  if (statuses.length !== DEFAULT_DEPLOYMENT_STATUSES.length) return false;
+
+  return statuses.every((status) => DEFAULT_DEPLOYMENT_STATUSES.includes(status));
+}
 
 const STATUS_BY_LABEL = new Map(
   Object.entries(STATUS_LABELS).map(([key, label]) => [label, Number(key) as BuildStatus]),
@@ -50,7 +62,9 @@ export class DeployLogService {
   readonly repoFilter = signal<string | undefined>(this.route.snapshot.queryParamMap.get('repo') ?? undefined);
   readonly statusFilter = signal<BuildStatus[] | undefined>(this.initialStatusFilter());
 
-  readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
+  readonly searchValue = signal<string>(
+    this.route.snapshot.queryParamMap.get('pkgname') ?? this.route.snapshot.queryParamMap.get('search') ?? '',
+  );
 
   private readonly buildersResource = httpResource<Builder[]>(() =>
     this.appConfig.backendUrl ? `${this.appConfig.backendUrl}/builder/builders` : undefined,
@@ -72,10 +86,26 @@ export class DeployLogService {
     }),
   );
 
-  readonly loading = computed(() => this.resource.isLoading());
-  readonly total = computed(() => resourceValue(this.resource)?.total ?? 0);
+  private readonly page = retainedResourceValue(this.resource);
+  readonly loading = loadingWithoutValue(this.resource, this.page);
+  readonly failed = resourceFailed(this.resource);
+  readonly error = this.resource.error;
+
+  readonly filtersActive = computed(
+    () =>
+      this.searchValue() !== '' ||
+      this.builderFilter() !== undefined ||
+      this.repoFilter() !== undefined ||
+      !hasDefaultStatuses(this.statusFilter()),
+  );
+
+  retry(): void {
+    this.resource.reload();
+  }
+
+  readonly total = computed(() => this.page()?.total ?? 0);
   readonly packageList = computed<Build[]>(() =>
-    (resourceValue(this.resource)?.items ?? []).map((build) => ({
+    (this.page()?.items ?? []).map((build) => ({
       ...build,
       statusText: STATUS_LABELS[build.status],
       logUrl: isLogPurged(build.timestamp) ? 'purged' : build.logUrl,
@@ -83,8 +113,10 @@ export class DeployLogService {
   );
 
   setSearch(value: string): void {
-    // A new search invalidates the current offset; a stale persisted table
-    // position would otherwise request a page beyond the filtered results.
+    /**
+     * A new search invalidates the current offset; a stale persisted table
+     * position would otherwise request a page beyond the filtered results.
+     */
     this.pagination.resetPage();
     this.searchValue.set(value);
   }

@@ -145,7 +145,9 @@ describe('BuilderService silence handling', () => {
     const buildsQb: Record<string, ReturnType<typeof vi.fn>> = {};
     const chainable = new Proxy(buildsQb, {
       get(target, prop: string) {
-        if (!(prop in target)) target[prop] = vi.fn(() => chainable);
+        if (!(prop in target)) {
+          target[prop] = vi.fn(() => chainable);
+        }
         return target[prop];
       },
     });

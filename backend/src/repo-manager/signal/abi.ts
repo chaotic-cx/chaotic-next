@@ -21,7 +21,9 @@ export function extractVtableSlots(relocations: RelocationEntry[], symbols: NmSy
       .sort((a, b) => a.offset - b.offset)
       .map((r) => r.symbol)
       .filter((name): name is string => name !== undefined && !name.startsWith('_ZTI'));
-    if (slots.length > 0) result.push({ symbol: vtable.name, slots });
+    if (slots.length > 0) {
+      result.push({ symbol: vtable.name, slots });
+    }
   }
   return result;
 }
@@ -67,7 +69,9 @@ export function findVtableBreaks(
   const consumerImportSet = new Set(consumerImports);
   for (const { vtable, shiftedSlots } of findVtableDrifts(oldVtables, newVtables)) {
     for (const slot of shiftedSlots) {
-      if (consumerImportSet.has(slot)) breaks.push({ vtable, slot });
+      if (consumerImportSet.has(slot)) {
+        breaks.push({ vtable, slot });
+      }
     }
   }
   return breaks;

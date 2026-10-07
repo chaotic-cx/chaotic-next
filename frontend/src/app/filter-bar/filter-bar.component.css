@@ -1,0 +1,72 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chaotic-space-sm);
+}
+
+.filter-bar__search {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .filter-bar {
+    flex-wrap: nowrap;
+  }
+
+  .filter-bar__search {
+    flex: 0 0 16rem;
+  }
+}
+
+.filter-bar__toggle {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--chaotic-space-xs);
+  min-height: 2.75rem;
+  padding-inline: var(--chaotic-space-md);
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-md);
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-text);
+  background: var(--chaotic-surface);
+  touch-action: manipulation;
+}
+
+.filter-bar__toggle:focus-visible {
+  outline: 2px solid var(--catppuccin-color-mauve);
+  outline-offset: 2px;
+}
+
+.filter-bar__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--chaotic-radius-pill);
+  background: var(--catppuccin-color-mauve);
+}
+
+.filter-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chaotic-space-md);
+}
+
+.filter-sheet__body ::ng-deep :is(p-select, p-multi-select, p-multiselect, .p-select, .p-multiselect) {
+  width: 100%;
+}
+
+.filter-sheet__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--chaotic-space-lg);
+  padding-bottom: env(safe-area-inset-bottom);
+}

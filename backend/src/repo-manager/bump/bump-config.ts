@@ -41,12 +41,16 @@ export function applyPackageBump(
   const lines = configText.split('\n');
   const idx = lines.findIndex((line) => line.startsWith(`${BUMP_KEY}=`));
 
-  // The `.CI/config` base is `version-pkgrel` (integer pkgrel); the `/counter`
-  // suffix is the Chaotic-AUR rebuild indicator and is what gets incremented.
+  /**
+   * The `.CI/config` base is `version-pkgrel` (integer pkgrel); the `/counter`
+   * suffix is the Chaotic-AUR rebuild indicator and is what gets incremented.
+   */
   if (idx >= 0) {
     if (version == null || pkgrel == null) {
-      // A never-rebuilt package may have no tracked version; the recorded base
-      // is the only truth — rewrite it as "null-0" and we deploy a garbage build.
+      /**
+       * A never-rebuilt package may have no tracked version; the recorded base
+       * is the only truth — rewrite it as "null-0" and we deploy a garbage build.
+       */
       lines[idx] = bumpCounter(lines[idx]);
       return lines.join('\n');
     }
@@ -95,8 +99,6 @@ function nextBumpCount(bumpLine: string, newBase: string): number {
   if (slash < 0) return 1; // no counter → start fresh
   const existingBase = value.slice(0, slash);
   const existingCounter = value.slice(slash + 1);
-  if (existingBase === newBase && /^\d+$/.test(existingCounter)) {
-    return Number(existingCounter) + 1;
-  }
+  if (existingBase === newBase && /^\d+$/.test(existingCounter)) return Number(existingCounter) + 1;
   return 1;
 }

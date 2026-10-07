@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const pushSubscriptionBodySchema = z.strictObject({
   endpoint: z.string().min(1).max(500).describe('Push service endpoint URL (HTTPS, allowlisted provider)'),

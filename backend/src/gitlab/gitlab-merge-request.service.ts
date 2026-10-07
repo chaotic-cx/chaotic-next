@@ -8,7 +8,15 @@ import {
 } from '@chaotic-next/shared-lib';
 import { type MergeRequestDiffSchema, MergeRequestSchema } from '@gitbeaker/core';
 import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { BadRequestException, Inject, Injectable, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  OnApplicationShutdown,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
@@ -16,6 +24,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { In, MoreThan, Repository } from 'typeorm';
+import { gitlabErrorStatus } from '../api/all-exceptions.filter';
 import { AurScanService } from '../diff-scan/aur-scan.service';
 import { DiffScanService, type DiffScanVerdict, type MrAutoFlagLabel } from '../diff-scan/diff-scan.service';
 import { extractIndicators } from '../diff-scan/indicators';
@@ -24,15 +33,9 @@ import { EventService } from '../events/event.service';
 import { NotificationService } from '../notifications/notification.service';
 import { cachedResult } from '../utils/cache';
 import { CACHE_TTL_MS, MAX_DAYS_WINDOW } from '../utils/constants';
-import {
-  clampInt,
-  errorMessage,
-  isOnSchedulePipelineRunning,
-  mapWithConcurrency,
-  nDaysInPast,
-  sleep,
-} from '../utils/functions';
+import { clampInt, errorMessage, mapWithConcurrency, nDaysInPast, sleep } from '../utils/functions';
 import { GitlabApiService } from './gitlab-api.service';
+import { GitlabPipelineService } from './gitlab-pipeline.service';
 import { type MrActor } from './interfaces';
 import { MrAction, MrActionType } from './mr-action.entity';
 import { fetchPackageInfo } from './mr-package-info';
@@ -46,7 +49,12 @@ const DEFERRED_MERGE_MAX_AGE_DAYS = 1;
 const MAX_DEFERRED_MERGE_ATTEMPTS = 5;
 const MERGE_STATUS_SETTLE_TIMEOUT_MS = CACHE_TTL_MS;
 const MERGE_STATUS_SETTLE_POLL_MS = 3_000;
+const MAX_MERGEABILITY_RECHECKS = 3;
 const BLOCKING_MERGE_LABELS = ['hold'] as const;
+
+function isRecheckingMergeability(mr: Pick<MergeRequestSchema, 'detailed_merge_status'>): boolean {
+  return mr.detailed_merge_status === 'checking' || mr.detailed_merge_status === 'unchecked';
+}
 
 type DetailedMergeStatus = MergeRequestSchema['detailed_merge_status'] | 'commits_status';
 
@@ -69,6 +77,7 @@ const MERGE_BLOCKER_DESCRIPTIONS: Record<Exclude<DetailedMergeStatus, 'mergeable
 
 function describeMergeBlocker(status?: string): string {
   if (!status) return 'unknown reason';
+
   return status in MERGE_BLOCKER_DESCRIPTIONS
     ? MERGE_BLOCKER_DESCRIPTIONS[status as keyof typeof MERGE_BLOCKER_DESCRIPTIONS]
     : status;
@@ -144,6 +153,7 @@ function changedMergeRequests(
 function mrPkgnames(title: string): string[] {
   const match = title.match(/^chore\(update\): ([\w@.+-]+(?:\s*[, ]\s*[\w@.+-]+)?)$/);
   if (!match) return [];
+
   const raw = match[1] as string;
   return raw
     .split(/\s*[, ]\s*/)
@@ -181,6 +191,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     private readonly notificationService: NotificationService,
     @InjectRepository(MrAction)
     private readonly mrActionRepository: Repository<MrAction>,
+    private readonly gitlabPipelineService: GitlabPipelineService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -197,6 +208,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
   private async restoreDiskCache(): Promise<void> {
     if (!existsSync(this.CACHE_FILE_PATH)) return;
+
     try {
       const raw = await readFile(this.CACHE_FILE_PATH, 'utf-8');
       const mrs = JSON.parse(raw) as MergeRequestWithDiffs[];
@@ -211,6 +223,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
   private async saveDiskCache(): Promise<void> {
     if (this.lastKnownMrs.length === 0) return;
+
     try {
       await mkdir(join(process.cwd(), 'tmp'), { recursive: true });
       await writeFile(this.CACHE_FILE_PATH, JSON.stringify(this.lastKnownMrs), 'utf-8');
@@ -221,22 +234,20 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   }
 
   /**
-   * Processes deferred MR merges right after the scheduled pipeline window (HH:30 - HH:40) ends.
-   * Runs at minutes 41, 43, and 45 every 3 hours UTC. Stops retrying an MR after
-   * repeated failures.
+   * Merges deferred MRs once no scheduled pipeline runs anymore. Rechecks
+   * every 5 minutes until done. Stops retrying an MR after repeated failures.
    */
-  @Cron('41,43,45 */3 * * *')
+  @Cron('*/5 * * * *')
   async processDeferredMerges(): Promise<void> {
-    if (isOnSchedulePipelineRunning()) return;
-
     try {
       const recentApprovedActions = await this.mrActionRepository.find({
         where: { action: 'approve', createdAt: MoreThan(nDaysInPast(DEFERRED_MERGE_MAX_AGE_DAYS)) },
         order: { createdAt: 'DESC' },
         take: 50,
       });
-
       if (recentApprovedActions.length === 0) return;
+
+      if (await this.gitlabPipelineService.isScheduledPipelineRunning()) return;
 
       const openMrs = await this.api.MergeRequests.all({ state: 'opened', projectId: this.chaoticId });
       const openMrsByIid = new Map(openMrs.map((mr) => [mr.iid, mr]));
@@ -245,6 +256,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       const processedIids = new Set<number>();
       for (const action of recentApprovedActions) {
         if (processedIids.has(action.mergeRequestIid)) continue;
+
         processedIids.add(action.mergeRequestIid);
 
         const openMr = openMrsByIid.get(action.mergeRequestIid);
@@ -309,6 +321,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       this.pino.debug('Auto-flag refresh already running, skipping');
       return;
     }
+
     this.isAutoFlaggingMrs = true;
 
     try {
@@ -340,9 +353,11 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       this.pino.debug('Joining in-flight open MR fetch');
       return this.fetchInFlight;
     }
+
     this.fetchInFlight = this.fetchOpenMergeRequests().finally(() => {
       this.fetchInFlight = undefined;
     });
+
     return this.fetchInFlight;
   }
 
@@ -356,7 +371,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
     const openIids = new Set(openMrs.map((mr) => mr.iid));
     for (const iid of this.mrDataCache.keys()) {
-      if (!openIids.has(iid)) this.mrDataCache.delete(iid);
+      if (!openIids.has(iid)) {
+        this.mrDataCache.delete(iid);
+      }
     }
 
     const staleMrs = openMrs.filter((mr) => {
@@ -365,8 +382,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     });
     this.pino.info({ staleCount: staleMrs.length, totalCount: openMrs.length }, 'Fetching diffs for stale MRs');
 
-    // One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
-    // the whole batch: its diffs just come back empty.
+    /**
+     * One MR whose diff fails to load (e.g. a transient GitLab 500) must not fail
+     * the whole batch: its diffs just come back empty.
+     */
     const diffsByIid = new Map<number, MergeRequestDiffSchema[]>();
     await mapWithConcurrency(
       staleMrs,
@@ -380,11 +399,12 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       DIFF_FETCH_CONCURRENCY,
     );
 
-    // Enrichment (VirusTotal/maintainers) lives on the previous snapshot and must
-    // survive rebuilds, otherwise the enrichment crons would redo all lookups.
+    /**
+     * Enrichment (VirusTotal/maintainers) lives on the previous snapshot and must
+     * survive rebuilds, otherwise the enrichment crons would redo all lookups.
+     */
     const previous = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
     const previousById = new Map(previous?.map((mr) => [mr.id, mr]) ?? []);
-
     const data = await Promise.all(
       openMrs.map(async (mr) => {
         const previousMr = previousById.get(mr.id);
@@ -392,6 +412,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         if (cached !== undefined && cached.updatedAt === mr.updated_at) {
           return toMergeRequestWithDiffs(mr, cached.diffs, cached.scanFindings, previousMr);
         }
+
         const diffs = diffsByIid.get(mr.iid) ?? [];
         const scanFindings = await this.diffScanService.scanDiffs(
           diffs,
@@ -405,10 +426,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
           { mrIid: mr.iid, changedFileCount: diffs.length, findingCount: scanFindings.length, ruleIds },
           'Diff scan results',
         );
+
         return toMergeRequestWithDiffs(mr, diffs, scanFindings, previousMr);
       }),
     );
-
     await this.attachFlagReasons(data);
 
     this.lastKnownMrs = data;
@@ -430,6 +451,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   private serialize<T>(fn: () => Promise<T>): Promise<T> {
     const result = this.chain.then(fn);
     this.chain = result.catch(() => undefined);
+
     return result;
   }
 
@@ -462,6 +484,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       this.eventService.sseEvents$.next({
         data: { type: 'merge_request', mr: changedMergeRequests(currentData, newData), hasNewMr },
       });
+
       return true;
     });
   }
@@ -469,13 +492,13 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   async autoFlagMergeRequests(mrs: MergeRequestWithDiffs[]): Promise<void> {
     let changed = false;
     const flaggedMrs: MergeRequestWithDiffs[] = [];
-
     for (const mr of mrs) {
       const verdict = this.diffScanService.autoFlagVerdict(mr.scanFindings);
       if (!verdict) {
         if (mr.scanFindings && mr.scanFindings.length > 0) {
           this.pino.debug({ mrIid: mr.iid }, 'Scan score below label thresholds, leaving MR unlabelled');
         }
+
         continue;
       }
       if (this.hasAutoFlagLabel(mr.labels, verdict.label)) {
@@ -485,11 +508,14 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         );
         continue;
       }
+
       this.pino.debug({ mrIid: mr.iid, label: verdict.label, score: verdict.score }, 'Applying auto-flag verdict');
 
       try {
-        // addLabels only appends; sending the full list would race against label
-        // changes since our snapshot was taken and could wipe e.g. human-review.
+        /**
+         * addLabels only appends; sending the full list would race against label
+         * changes since our snapshot was taken and could wipe e.g. human-review.
+         */
         await this.api.MergeRequests.edit(this.chaoticId, mr.iid, {
           addLabels: verdict.label,
         });
@@ -511,6 +537,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
   private hasAutoFlagLabel(labels: string[], label: MrAutoFlagLabel): boolean {
     if (labels.includes(label)) return true;
+
     return label === 'suspicious' && labels.includes('malware');
   }
 
@@ -526,7 +553,6 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       .slice(0, MAX_VERDICT_NOTE_FINDINGS);
     const attempted = new Set<DiffScanFinding>(anchorCandidates);
     const summary = verdict.findings.filter((finding) => !attempted.has(finding));
-
     for (const finding of anchorCandidates) {
       const body = [
         `🤖 **${finding.ruleId} — ${finding.ruleName}** (${finding.severity})`,
@@ -584,6 +610,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       this.pino.debug('VirusTotal enrichment already running, skipping');
       return;
     }
+
     this.isEnrichingVt = true;
 
     try {
@@ -593,6 +620,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
           this.pino.debug({ mrIid: mr.iid }, 'VirusTotal reports already present, skipping');
           continue;
         }
+
         const indicators = extractIndicators(mr.diffs);
         if (indicators.length === 0) {
           this.pino.debug({ mrIid: mr.iid }, 'No indicators worth checking on VirusTotal');
@@ -606,6 +634,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
           this.pino.debug({ mrIid: mr.iid }, 'No VirusTotal reports (lookups failed or nothing known)');
           continue;
         }
+
         this.pino.debug(
           { mrIid: mr.iid, verdicts: reports.map((report) => `${report.type}=${report.verdict}`) },
           'VirusTotal verdicts',
@@ -628,13 +657,12 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
   /** A package is only re-checked while its MR keeps changing; a takeover on a dormant MR resurfaces with new activity. */
   private async enrichMaintainerInfo(mrs: MergeRequestWithDiffs[]): Promise<void> {
-    const pending = mrs.filter((mr) => {
-      return (
+    const pending = mrs.filter(
+      (mr) =>
         mrPkgnames(mr.title).length > 0 &&
         mr.maintainers === undefined &&
-        this.maintainerCheckedAt.get(mr.iid) !== mr.updated_at
-      );
-    });
+        this.maintainerCheckedAt.get(mr.iid) !== mr.updated_at,
+    );
     const pkgnames = [...new Set(pending.flatMap((mr) => mrPkgnames(mr.title)))];
     if (pkgnames.length === 0) return;
 
@@ -674,7 +702,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
     const openIids = new Set(mrs.map((mr) => mr.iid));
     for (const iid of this.maintainerCheckedAt.keys()) {
-      if (!openIids.has(iid)) this.maintainerCheckedAt.delete(iid);
+      if (!openIids.has(iid)) {
+        this.maintainerCheckedAt.delete(iid);
+      }
     }
 
     if (changed) {
@@ -700,6 +730,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     for (const [pkgname, mrsForPkg] of byPkgname) {
       const info = await fetchPackageInfo(this.api, this.chaoticId, pkgname, this.pino);
       if (!info) continue;
+
       for (const mr of mrsForPkg) {
         mr.packageInfo = info;
         changedMrs.push(mr);
@@ -707,6 +738,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     }
 
     if (changedMrs.length === 0) return;
+
     await this.cacheManager.set(this.CACHE_KEY_MRS, mrs);
     this.eventService.sseEvents$.next({ data: { type: 'merge_request', mr: changedMrs, hasNewMr: false } });
   }
@@ -729,6 +761,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         ].join('\n'),
       );
       this.pino.debug({ mrIid: iid }, 'Posted VirusTotal note');
+
       return true;
     } catch (err) {
       this.pino.warn({ err, mrIid: iid }, 'Could not post VirusTotal note');
@@ -740,16 +773,21 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     try {
       const scannable = newMr.filter((mr) => mr.diffs.length > 0);
       for (const mr of newMr) {
-        if (mr.diffs.length === 0) this.pendingNotificationIids.add(mr.iid);
+        if (mr.diffs.length === 0) {
+          this.pendingNotificationIids.add(mr.iid);
+        }
       }
+
       const deferred = newMr.length - scannable.length;
       if (deferred > 0) {
         this.pino.warn({ count: deferred }, 'Deferred notifying about new MRs: their diffs were unavailable');
       }
       if (scannable.length === 0) return;
 
-      // MRs without a parseable "chore(update): <pkgname>" title stay silent:
-      // a notification without a package name is not actionable.
+      /**
+       * MRs without a parseable "chore(update): <pkgname>" title stay silent:
+       * a notification without a package name is not actionable.
+       */
       const notifyable = scannable.flatMap((mr) => {
         const pkgs = mrPkgnames(mr.title);
         return pkgs.length === 0 ? [] : pkgs.map((pkg) => ({ mr, pkg }));
@@ -764,6 +802,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         .map(({ mr, pkg }) => {
           const findings = mr.scanFindings?.length ?? 0;
           if (findings === 0) return pkg;
+
           const detail = findings === 1 ? '1 finding' : `${findings} findings`;
           return `${pkg} (${detail})`;
         })
@@ -780,9 +819,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
           data: { onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: targetUrl } } },
         },
       };
-
       const attempted = await this.notificationService.broadcast(notificationPayload, 'mr-review');
       if (attempted === 0) return;
+
       this.pino.info({ count: attempted }, 'Sent notifications to subscribers');
     } catch (error) {
       this.pino.error({ err: error }, 'Error notifying subscribers');
@@ -798,11 +837,16 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     const ready: MergeRequestWithDiffs[] = [];
     for (const iid of this.pendingNotificationIids) {
       const mr = byIid.get(iid);
-      if (!mr || mr.diffs.length > 0) this.pendingNotificationIids.delete(iid);
-      if (mr?.diffs.length) ready.push(mr);
+      if (!mr || mr.diffs.length > 0) {
+        this.pendingNotificationIids.delete(iid);
+      }
+      if (mr?.diffs.length) {
+        ready.push(mr);
+      }
     }
 
     if (ready.length === 0) return;
+
     this.pino.info({ count: ready.length }, 'Flushing deferred new-MR notifications whose diffs are available now');
     await this.notifySubscribers(ready);
   }
@@ -855,14 +899,31 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     if (days !== undefined) {
       query.andWhere('mr.createdAt >= :cutoff', { cutoff: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
     }
+
     return query;
+  }
+
+  /**
+   * GitLab answers 401 when the bot account already approved the merge request.
+   * That 401 becomes a 409, so the frontend can tell it from an expired session.
+   */
+  private async approveOnGitlab(iid: number, sha: string): Promise<void> {
+    try {
+      await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha });
+    } catch (error) {
+      if (gitlabErrorStatus(error) === HttpStatus.UNAUTHORIZED) {
+        throw new ConflictException(`Merge request !${iid} is already approved`, { cause: error });
+      }
+
+      throw error;
+    }
   }
 
   async approveMergeRequest(iid: number, sha: string, actor: MrActor): Promise<{ deferred: boolean }> {
     const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
     const targetSha = mr.sha ?? sha;
-    await this.api.MergeRequestApprovals.approve(this.chaoticId, iid, { sha: targetSha });
+    await this.approveOnGitlab(iid, targetSha);
 
     if (!labels.includes('approved')) {
       await this.api.MergeRequests.edit(this.chaoticId, iid, {
@@ -876,7 +937,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     const cachedMrs = await this.cacheManager.get<MergeRequestWithDiffs[]>(this.CACHE_KEY_MRS);
     const previousMr = cachedMrs?.find((candidate) => candidate.id === mr.id);
 
-    const deferred = isOnSchedulePipelineRunning();
+    const deferred = await this.gitlabPipelineService.isScheduledPipelineRunning();
     try {
       if (deferred) {
         this.pino.info(
@@ -905,6 +966,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       });
       void this.refreshOpenMergeRequests();
     }
+
     return { deferred };
   }
 
@@ -922,7 +984,11 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         this.pino.warn({ err: error, mrIid: iid }, 'Initial merge failed');
       }
 
-      const mr = await this.waitForSettledMergeStatus(iid);
+      let mr = await this.waitForSettledMergeStatus(iid);
+      for (let round = 1; round < MAX_MERGEABILITY_RECHECKS && isRecheckingMergeability(mr); round++) {
+        mr = await this.waitForSettledMergeStatus(iid);
+      }
+
       const headSha = mr.sha ?? sha;
 
       if (await this.hasNoChanges(iid)) {
@@ -945,6 +1011,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       });
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
+
       throw new BadRequestException(`Could not merge MR !${iid}: ${errorMessage(err)}`, {
         errorCode: 'MERGE_FAILED',
       });
@@ -981,6 +1048,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         errorCode: 'CLOSE_FAILED',
       });
     }
+
     throw new BadRequestException(`MR !${iid} contains no changes against its target branch. The service closed it.`, {
       errorCode: 'EMPTY_MR_CLOSED',
     });
@@ -1004,13 +1072,13 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       await sleep(MERGE_STATUS_SETTLE_POLL_MS);
       mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     }
+
     return mr;
   }
 
   async flagMergeRequest(iid: number, label: MrActionType, actor: MrActor, reason: string): Promise<void> {
     const mr = await this.api.MergeRequests.show(this.chaoticId, iid);
     const labels = toLabelStrings(mr.labels);
-
     if (!labels.includes(label)) {
       await this.api.MergeRequests.edit(this.chaoticId, iid, {
         addLabels: label,
@@ -1065,6 +1133,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
     const latest = new Map<number, FlagReason>();
     for (const row of rows) {
       if (row.reason === null || latest.has(row.mergeRequestIid)) continue;
+
       latest.set(row.mergeRequestIid, {
         action: row.action as FlagReason['action'],
         text: row.reason,
@@ -1075,7 +1144,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
     for (const mr of mrs) {
       const reason = latest.get(mr.iid);
-      if (reason !== undefined) mr.flagReason = reason;
+      if (reason !== undefined) {
+        mr.flagReason = reason;
+      }
     }
   }
 

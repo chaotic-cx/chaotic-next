@@ -1,21 +1,27 @@
 .recently-added-section {
   background: none;
-  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
+  border: 1px solid var(--p-panel-border-color, var(--catppuccin-color-crust));
   border-radius: var(--p-panel-border-radius, 12px);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  padding: 1.5rem;
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+  padding: 1rem var(--chaotic-inset);
 }
 
 .recent-card {
-  background: var(--p-card-background, rgba(30, 30, 46, 0.6));
-  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
+  background: var(--chaotic-surface);
+  border: 1px solid var(--p-panel-border-color, var(--catppuccin-color-crust));
   border-radius: var(--p-panel-border-radius, 12px);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  transition: border-color 0.15s ease;
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+  transition: border-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.recent-card:hover {
-  border-color: var(--ctp-mocha-maroon);
+.recent-card:hover,
+.recent-card:focus-visible {
+  border-color: color-mix(in srgb, var(--catppuccin-color-mauve) 50%, transparent);
+}
+
+.recent-skeleton {
+  height: 6rem;
+  border-radius: var(--chaotic-radius-md);
 }

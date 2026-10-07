@@ -1,10 +1,11 @@
 import { Component, computed, inject } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { AppService } from '../../../../app.service';
-import { shuffleArray } from '../../../../functions';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { seriesColors } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, pieChartOptions } from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-review-stats',
@@ -15,12 +16,17 @@ import { chartResource, type ChartConfig, mochaPieChartOptions } from '../../cha
 export class ChartReviewStatsComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly chart = chartResource<{ username: string; reviews: number }[]>(() =>
     this.appService.getUpdateReviewStatsResourceRequest(this.statsService.timeRangeDays() ?? undefined),
   );
 
   readonly chartConfig = computed<ChartConfig<'pie'>>(() => {
+    this.activeTranslation();
+
     const reviewStats = this.chart
       .data()
       .sort((a, b) => b.reviews - a.reviews)
@@ -40,12 +46,12 @@ export class ChartReviewStatsComponent {
         datasets: [
           {
             data,
-            label: 'Reviews',
-            backgroundColor: shuffleArray(CATPPUCCIN_FLAVOURS),
+            label: this.transloco.translate('stats.charts.reviewStats.label'),
+            backgroundColor: seriesColors(),
           },
         ],
       },
-      options: mochaPieChartOptions(),
+      options: pieChartOptions(),
     };
   });
 }

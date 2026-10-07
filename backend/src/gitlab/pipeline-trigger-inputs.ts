@@ -69,7 +69,9 @@ export function validatePipelineTriggerInputs(body: unknown): ValidatedPipelineT
     inputs.packages = assertValidString(record.packages, 'packages', PIPELINE_PACKAGES_REGEX);
   } else {
     const packages = optionalString(record, 'packages', PIPELINE_PACKAGES_REGEX);
-    if (packages !== undefined) inputs.packages = packages;
+    if (packages !== undefined) {
+      inputs.packages = packages;
+    }
   }
 
   if (operation === PipelineOperation.RUN_SCHEDULE) {
@@ -86,10 +88,14 @@ export function validatePipelineTriggerInputs(body: unknown): ValidatedPipelineT
         errorCode: 'INVALID_REQUEST_REASON',
       });
     }
-    if (requestReason !== undefined) inputs.request_reason = requestReason;
+    if (requestReason !== undefined) {
+      inputs.request_reason = requestReason;
+    }
 
     const customRequestReason = optionalString(record, 'custom_request_reason');
-    if (customRequestReason !== undefined) inputs.custom_request_reason = customRequestReason;
+    if (customRequestReason !== undefined) {
+      inputs.custom_request_reason = customRequestReason;
+    }
   }
 
   return { ref, inputs };

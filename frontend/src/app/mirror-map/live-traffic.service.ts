@@ -93,7 +93,14 @@ export class LiveTrafficService {
         this.isConnected.set(true);
         this.isConnecting.set(false);
       },
+      onError: () => {
+        // The stream retries on its own; show that it reconnects instead of a stale "connected".
+        this.isConnected.set(false);
+        this.isConnecting.set(true);
+      },
       onErrorExhausted: () => {
+        // The stream gave up, so a later connect() must be able to open a new one.
+        this.stream = null;
         this.resetConnectionState();
       },
     });

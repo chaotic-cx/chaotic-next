@@ -20,7 +20,7 @@ import { IssueTrackerService } from './issue-tracker.service';
 const SIGNATURE_PREFIX = 'sha256=';
 
 export function verifyWebhookSignature(rawBody: Buffer, signature: string | undefined, secret: string): boolean {
-  if (signature === undefined || !signature.startsWith(SIGNATURE_PREFIX)) return false;
+  if (!signature?.startsWith(SIGNATURE_PREFIX)) return false;
   const expected = createHmac('sha256', secret).update(rawBody).digest();
   const provided = Buffer.from(signature.slice(SIGNATURE_PREFIX.length), 'hex');
   return expected.length === provided.length && timingSafeEqual(expected, provided);
@@ -53,6 +53,8 @@ export class IssueTrackerController {
     @Req() request: RawBodyRequest<FastifyRequest>,
     @Headers('x-github-event') event: string | undefined,
     @Headers('x-hub-signature-256') signature: string | undefined,
+    // GitHub owns the payload shape: the signature check runs first, then safeParse ignores unknown events.
+    // eslint-disable-next-line @dr460nf1r3/require-body-schema -- a schema pipe would reject before the signature check
     @Body() body: unknown,
   ): Promise<void> {
     const rawBody = request.rawBody;

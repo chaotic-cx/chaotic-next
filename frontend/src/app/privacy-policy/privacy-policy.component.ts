@@ -1,28 +1,30 @@
 import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Divider } from '@openng/optimus-ui/divider';
 import { Panel } from '@openng/optimus-ui/panel';
-import { setPageSeo } from '../functions';
+import { preferredScrollBehavior, setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
 
 @Component({
   selector: 'chaotic-privacy-policy',
+  imports: [Panel, Divider, TitleComponent, PrimeTemplate, TranslocoDirective],
   templateUrl: './privacy-policy.component.html',
   styleUrl: './privacy-policy.component.css',
-  imports: [Panel, Divider, TitleComponent, PrimeTemplate],
 })
 export class PrivacyPolicyComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly transloco = inject(TranslocoService);
 
   constructor() {
     setPageSeo(
-      'Privacy Policy · Chaotic-AUR',
-      'Privacy Policy for Chaotic-AUR, a repository of packages for Arch Linux',
-      'Chaotic-AUR, Privacy Policy, Data Protection, GDPR',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.privacy') }),
+      this.transloco.translate('privacyPolicy.seo.description'),
+      this.transloco.translate('privacyPolicy.seo.keywords'),
     );
   }
 
@@ -34,7 +36,7 @@ export class PrivacyPolicyComponent implements OnInit {
 
   private scrollToFragment(fragment: string | null): void {
     if (!fragment) return;
-    document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById(fragment)?.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
   }
 
   scrollTo(id: string): void {

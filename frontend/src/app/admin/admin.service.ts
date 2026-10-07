@@ -1,5 +1,5 @@
-import { HttpClient, httpResource } from '@angular/common/http';
-import { computed, inject, Service, signal } from '@angular/core';
+import { HttpClient, httpResource, type HttpResourceRef, type HttpResourceRequest } from '@angular/common/http';
+import { computed, DestroyRef, inject, Service, signal, type Signal } from '@angular/core';
 import {
   AdminPackageElfAnalysis,
   AdjustBuildClassResponse,
@@ -10,7 +10,6 @@ import {
   Package as PackageDto,
   PackageBump,
   Paginated,
-  PipelineScheduleOption,
   PipelineTriggerAction,
   PKG_TYPE_CHAOTIC,
   PkgType,
@@ -32,6 +31,7 @@ import {
   listMrActionsQuerySchema,
   listPackageBumpsQuerySchema,
   listPipelineTriggersQuerySchema,
+  MAX_PER_PAGE,
   rescanPackagesBodySchema,
   runScheduleBodySchema,
   scheduleBuildBodySchema,
@@ -39,17 +39,26 @@ import {
   updateArchPackageBodySchema,
   updatePackageBodySchema,
 } from '@chaotic-next/shared-lib';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
+import { TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { backendErrorMessage } from '../api-errors';
-import { debouncedSignal, resourceSignal, resourceValue } from '../functions';
-import { parseQueryParams } from '../utils/api-params';
+import {
+  debouncedSignal,
+  loadingWithoutValue,
+  resourceFailed,
+  resourceSignal,
+  retainedResourceValue,
+} from '../functions';
+import { injectActiveTranslation } from '../i18n/active-translation';
+import { parseQueryParams, type QueryParams } from '../utils/api-params';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
 const RESCAN_POLL_TIMEOUT_MS = 120_000;
 const RESCAN_POLL_INTERVAL_MS = 1_000;
+const RESCAN_NAMED_LIMIT = 3;
 
 export interface PackageFormData {
   pkgname: string;
@@ -96,27 +105,56 @@ export interface ElfAnalysisFormData {
 
 export const DEFAULT_ADMIN_PER_PAGE = 25;
 
+export const DEFAULT_PACKAGE_ACTIVE_FILTER = 'true';
+
+export type AdminList =
+  | 'packages'
+  | 'archPackages'
+  | 'repos'
+  | 'builders'
+  | 'mrActions'
+  | 'pipelineTriggers'
+  | 'packageBumps'
+  | 'elfAnalysis'
+  | 'brokenReports';
+
 export interface ActiveOption {
   label: string;
   value: 'true' | 'false';
 }
 
-export const ACTIVE_OPTIONS: ActiveOption[] = [
-  { label: 'Active', value: 'true' },
-  { label: 'Inactive', value: 'false' },
-];
+/**
+ * Error state of one admin list, for the inline load error and its retry.
+ */
+export interface AdminListStatus {
+  failed: Signal<boolean>;
+  error: Signal<unknown>;
+  reload(): void;
+}
+
+function listStatus(resource: HttpResourceRef<unknown>): AdminListStatus {
+  return {
+    failed: resourceFailed(resource),
+    error: resource.error,
+    reload: () => {
+      resource.reload();
+    },
+  };
+}
 
 @Service()
 export class AdminService {
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
   private readonly http = inject(HttpClient);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly packagePage = signal(1);
   readonly packagePerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly packageQuery = signal('');
   readonly packageRepoFilter = signal<number | undefined>(undefined);
-  readonly packageActiveFilter = signal<'true' | 'false' | undefined>('true');
+  readonly packageActiveFilter = signal<'true' | 'false' | undefined>(DEFAULT_PACKAGE_ACTIVE_FILTER);
   readonly archPage = signal(1);
   readonly archPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly archQuery = signal('');
@@ -152,7 +190,35 @@ export class AdminService {
   readonly brokenPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly brokenSelection = signal<BrokenPackageReport[]>([]);
 
-  readonly activeOptions = ACTIVE_OPTIONS;
+  readonly activeOptions = computed<ActiveOption[]>(() => {
+    this.activeTranslation();
+
+    return [
+      { label: this.transloco.translate('admin.service.activeOptions.active'), value: 'true' },
+      { label: this.transloco.translate('admin.service.activeOptions.inactive'), value: 'false' },
+    ];
+  });
+
+  /** How many live components use each list. A list only loads while its count is above zero. */
+  private readonly listUsers = signal<ReadonlyMap<AdminList, number>>(new Map());
+
+  /** Loads the given lists while the calling component lives. Call it from a constructor. */
+  useLists(lists: AdminList[], destroyRef = inject(DestroyRef)): void {
+    this.changeListUsers(lists, 1);
+    destroyRef.onDestroy(() => this.changeListUsers(lists, -1));
+  }
+
+  private changeListUsers(lists: AdminList[], delta: number): void {
+    this.listUsers.update((current) => {
+      const next = new Map(current);
+      for (const list of lists) next.set(list, (next.get(list) ?? 0) + delta);
+      return next;
+    });
+  }
+
+  private whenActive<T>(list: AdminList, request: () => T): T | undefined {
+    return (this.listUsers().get(list) ?? 0) > 0 ? request() : undefined;
+  }
 
   private readonly debouncedPackageQuery = debouncedSignal(this.packageQuery, SEARCH_DEBOUNCE_MS);
   private readonly debouncedArchQuery = debouncedSignal(this.archQuery, SEARCH_DEBOUNCE_MS);
@@ -162,113 +228,135 @@ export class AdminService {
   private readonly debouncedPackageBumpQuery = debouncedSignal(this.packageBumpQuery, SEARCH_DEBOUNCE_MS);
   private readonly debouncedElfAnalysisQuery = debouncedSignal(this.elfAnalysisQuery, SEARCH_DEBOUNCE_MS);
 
-  private readonly packagesResource = httpResource<Paginated<PackageDto>>(() => ({
-    url: `${this.backendUrl}/admin/packages`,
-    params: parseQueryParams(listAdminPackagesQuerySchema, {
-      page: this.packagePage(),
-      perPage: this.packagePerPage(),
-      q: this.debouncedPackageQuery(),
-      repoId: this.packageRepoFilter(),
-      active: this.packageActiveFilter(),
-    }),
-  }));
-
-  private readonly archPackagesResource = httpResource<Paginated<ArchPackage>>(() => ({
-    url: `${this.backendUrl}/admin/arch-packages`,
-    params: parseQueryParams(listArchPackagesQuerySchema, {
-      page: this.archPage(),
-      perPage: this.archPerPage(),
-      q: this.debouncedArchQuery(),
-    }),
-  }));
-
-  private readonly reposResource = httpResource<Repo[]>(() => `${this.backendUrl}/admin/repos`);
-
-  private readonly buildersResource = httpResource<Paginated<Builder>>(() => ({
-    url: `${this.backendUrl}/admin/builders`,
-    params: parseQueryParams(listBuildersQuerySchema, {
-      page: this.builderPage(),
-      perPage: this.builderPerPage(),
-      q: this.debouncedBuilderQuery(),
-      active: this.builderActiveFilter(),
-    }),
-  }));
-
-  private readonly mrActionsResource = httpResource<Paginated<MrAction>>(() => ({
-    url: `${this.backendUrl}/admin/mr-actions`,
-    params: parseQueryParams(listMrActionsQuerySchema, {
-      page: this.mrActionPage(),
-      perPage: this.mrActionPerPage(),
-      q: this.debouncedMrActionQuery(),
-      action: this.mrActionActionFilter(),
-    }),
-  }));
-
-  private readonly pipelineTriggersResource = httpResource<Paginated<PipelineTriggerAction>>(() => ({
-    url: `${this.backendUrl}/admin/pipeline-triggers`,
-    params: parseQueryParams(listPipelineTriggersQuerySchema, {
-      page: this.pipelineTriggerPage(),
-      perPage: this.pipelineTriggerPerPage(),
-      q: this.debouncedPipelineTriggerQuery(),
-      operation: this.pipelineTriggerOperationFilter(),
-    }),
-  }));
-
-  private readonly packageBumpsResource = httpResource<Paginated<PackageBump>>(() => ({
-    url: `${this.backendUrl}/admin/package-bumps`,
-    params: parseQueryParams(listPackageBumpsQuerySchema, {
-      page: this.packageBumpPage(),
-      perPage: this.packageBumpPerPage(),
-      q: this.debouncedPackageBumpQuery(),
-      bumpType: this.packageBumpTypeFilter(),
-      triggerFrom: this.packageBumpSourceFilter(),
-    }),
-  }));
-
-  private readonly elfAnalysisResource = httpResource<Paginated<AdminPackageElfAnalysis>>(() => ({
-    url: `${this.backendUrl}/admin/package-elf-analysis`,
-    params: parseQueryParams(listElfAnalysisQuerySchema, {
-      page: this.elfAnalysisPage(),
-      perPage: this.elfAnalysisPerPage(),
-      q: this.debouncedElfAnalysisQuery(),
-      pkgType: this.elfAnalysisPkgTypeFilter(),
-      broken: this.elfAnalysisBrokenFilter() === undefined ? undefined : String(this.elfAnalysisBrokenFilter()),
-    }),
-  }));
-
-  readonly packages = resourceSignal(this.packagesResource);
-  readonly packagesTotal = computed(() => resourceValue(this.packagesResource)?.total ?? 0);
-  readonly packagesLoading = this.packagesResource.isLoading;
-
-  readonly archPackages = resourceSignal(this.archPackagesResource);
-  readonly archPackagesTotal = computed(() => resourceValue(this.archPackagesResource)?.total ?? 0);
-  readonly archPackagesLoading = this.archPackagesResource.isLoading;
-
-  readonly repos = resourceSignal(this.reposResource);
-  readonly reposLoading = this.reposResource.isLoading;
-  readonly reposById = computed(
-    () => new Map((resourceValue(this.reposResource) ?? []).map((repo) => [repo.id, repo])),
+  private readonly packagesResource = httpResource<Paginated<PackageDto>>(() =>
+    this.whenActive('packages', () => ({
+      url: `${this.backendUrl}/admin/packages`,
+      params: parseQueryParams(listAdminPackagesQuerySchema, {
+        page: this.packagePage(),
+        perPage: this.packagePerPage(),
+        q: this.debouncedPackageQuery(),
+        repoId: this.packageRepoFilter(),
+        active: this.packageActiveFilter(),
+      }),
+    })),
   );
 
-  readonly builders = resourceSignal(this.buildersResource);
-  readonly buildersTotal = computed(() => resourceValue(this.buildersResource)?.total ?? 0);
-  readonly buildersLoading = this.buildersResource.isLoading;
+  private readonly archPackagesResource = httpResource<Paginated<ArchPackage>>(() =>
+    this.whenActive('archPackages', () => ({
+      url: `${this.backendUrl}/admin/arch-packages`,
+      params: parseQueryParams(listArchPackagesQuerySchema, {
+        page: this.archPage(),
+        perPage: this.archPerPage(),
+        q: this.debouncedArchQuery(),
+      }),
+    })),
+  );
 
-  readonly mrActions = resourceSignal(this.mrActionsResource);
-  readonly mrActionsTotal = computed(() => resourceValue(this.mrActionsResource)?.total ?? 0);
-  readonly mrActionsLoading = this.mrActionsResource.isLoading;
+  private readonly reposResource = httpResource<Repo[]>(() =>
+    this.whenActive('repos', () => `${this.backendUrl}/admin/repos`),
+  );
 
-  readonly pipelineTriggers = resourceSignal(this.pipelineTriggersResource);
-  readonly pipelineTriggersTotal = computed(() => resourceValue(this.pipelineTriggersResource)?.total ?? 0);
-  readonly pipelineTriggersLoading = this.pipelineTriggersResource.isLoading;
+  private readonly buildersResource = httpResource<Paginated<Builder>>(() =>
+    this.whenActive('builders', () => ({
+      url: `${this.backendUrl}/admin/builders`,
+      params: parseQueryParams(listBuildersQuerySchema, {
+        page: this.builderPage(),
+        perPage: this.builderPerPage(),
+        q: this.debouncedBuilderQuery(),
+        active: this.builderActiveFilter(),
+      }),
+    })),
+  );
 
-  readonly packageBumps = resourceSignal(this.packageBumpsResource);
-  readonly packageBumpsTotal = computed(() => resourceValue(this.packageBumpsResource)?.total ?? 0);
-  readonly packageBumpsLoading = this.packageBumpsResource.isLoading;
+  private readonly mrActionsResource = httpResource<Paginated<MrAction>>(() =>
+    this.whenActive('mrActions', () => ({
+      url: `${this.backendUrl}/admin/mr-actions`,
+      params: parseQueryParams(listMrActionsQuerySchema, {
+        page: this.mrActionPage(),
+        perPage: this.mrActionPerPage(),
+        q: this.debouncedMrActionQuery(),
+        action: this.mrActionActionFilter(),
+      }),
+    })),
+  );
 
-  readonly elfAnalysis = resourceSignal(this.elfAnalysisResource);
-  readonly elfAnalysisTotal = computed(() => resourceValue(this.elfAnalysisResource)?.total ?? 0);
-  readonly elfAnalysisLoading = this.elfAnalysisResource.isLoading;
+  private readonly pipelineTriggersResource = httpResource<Paginated<PipelineTriggerAction>>(() =>
+    this.whenActive('pipelineTriggers', () => ({
+      url: `${this.backendUrl}/admin/pipeline-triggers`,
+      params: parseQueryParams(listPipelineTriggersQuerySchema, {
+        page: this.pipelineTriggerPage(),
+        perPage: this.pipelineTriggerPerPage(),
+        q: this.debouncedPipelineTriggerQuery(),
+        operation: this.pipelineTriggerOperationFilter(),
+      }),
+    })),
+  );
+
+  private readonly packageBumpsResource = httpResource<Paginated<PackageBump>>(() =>
+    this.whenActive('packageBumps', () => ({
+      url: `${this.backendUrl}/admin/package-bumps`,
+      params: parseQueryParams(listPackageBumpsQuerySchema, {
+        page: this.packageBumpPage(),
+        perPage: this.packageBumpPerPage(),
+        q: this.debouncedPackageBumpQuery(),
+        bumpType: this.packageBumpTypeFilter(),
+        triggerFrom: this.packageBumpSourceFilter(),
+      }),
+    })),
+  );
+
+  private readonly elfAnalysisResource = httpResource<Paginated<AdminPackageElfAnalysis>>(() =>
+    this.whenActive('elfAnalysis', () => ({
+      url: `${this.backendUrl}/admin/package-elf-analysis`,
+      params: parseQueryParams(listElfAnalysisQuerySchema, {
+        page: this.elfAnalysisPage(),
+        perPage: this.elfAnalysisPerPage(),
+        q: this.debouncedElfAnalysisQuery(),
+        pkgType: this.elfAnalysisPkgTypeFilter(),
+        broken: this.elfAnalysisBrokenFilter() === undefined ? undefined : String(this.elfAnalysisBrokenFilter()),
+      }),
+    })),
+  );
+
+  readonly packages = retainedResourceValue(this.packagesResource);
+  readonly packagesTotal = computed(() => this.packages()?.total ?? 0);
+  readonly packagesLoading = loadingWithoutValue(this.packagesResource, this.packages);
+  readonly packagesStatus = listStatus(this.packagesResource);
+
+  readonly archPackages = retainedResourceValue(this.archPackagesResource);
+  readonly archPackagesTotal = computed(() => this.archPackages()?.total ?? 0);
+  readonly archPackagesLoading = loadingWithoutValue(this.archPackagesResource, this.archPackages);
+  readonly archPackagesStatus = listStatus(this.archPackagesResource);
+
+  readonly repos = retainedResourceValue(this.reposResource);
+  readonly reposLoading = loadingWithoutValue(this.reposResource, this.repos);
+  readonly reposStatus = listStatus(this.reposResource);
+  readonly reposById = computed(() => new Map((this.repos() ?? []).map((repo) => [repo.id, repo])));
+
+  readonly builders = retainedResourceValue(this.buildersResource);
+  readonly buildersTotal = computed(() => this.builders()?.total ?? 0);
+  readonly buildersLoading = loadingWithoutValue(this.buildersResource, this.builders);
+  readonly buildersStatus = listStatus(this.buildersResource);
+
+  readonly mrActions = retainedResourceValue(this.mrActionsResource);
+  readonly mrActionsTotal = computed(() => this.mrActions()?.total ?? 0);
+  readonly mrActionsLoading = loadingWithoutValue(this.mrActionsResource, this.mrActions);
+  readonly mrActionsStatus = listStatus(this.mrActionsResource);
+
+  readonly pipelineTriggers = retainedResourceValue(this.pipelineTriggersResource);
+  readonly pipelineTriggersTotal = computed(() => this.pipelineTriggers()?.total ?? 0);
+  readonly pipelineTriggersLoading = loadingWithoutValue(this.pipelineTriggersResource, this.pipelineTriggers);
+  readonly pipelineTriggersStatus = listStatus(this.pipelineTriggersResource);
+
+  readonly packageBumps = retainedResourceValue(this.packageBumpsResource);
+  readonly packageBumpsTotal = computed(() => this.packageBumps()?.total ?? 0);
+  readonly packageBumpsLoading = loadingWithoutValue(this.packageBumpsResource, this.packageBumps);
+  readonly packageBumpsStatus = listStatus(this.packageBumpsResource);
+
+  readonly elfAnalysis = retainedResourceValue(this.elfAnalysisResource);
+  readonly elfAnalysisTotal = computed(() => this.elfAnalysis()?.total ?? 0);
+  readonly elfAnalysisLoading = loadingWithoutValue(this.elfAnalysisResource, this.elfAnalysis);
+  readonly elfAnalysisStatus = listStatus(this.elfAnalysisResource);
 
   readonly elfAnalysisBumpsFor = signal<number | undefined>(undefined);
 
@@ -279,6 +367,7 @@ export class AdminService {
 
   readonly elfAnalysisBumps = resourceSignal(this.elfAnalysisBumpsResource);
   readonly elfAnalysisBumpsLoading = this.elfAnalysisBumpsResource.isLoading;
+  readonly elfAnalysisBumpsStatus = listStatus(this.elfAnalysisBumpsResource);
 
   setElfAnalysisBumpsFor(id: number | undefined): void {
     this.elfAnalysisBumpsFor.set(id);
@@ -301,8 +390,8 @@ export class AdminService {
           `${this.backendUrl}/gitlab/bump-packages`,
           bumpPackagesGitlabBodySchema.parse({ packages, repo, ref }),
         ),
-      'Package bump triggered',
-      'Could not trigger package bump.',
+      this.transloco.translate('admin.service.packageBump.success'),
+      this.transloco.translate('admin.service.packageBump.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -315,15 +404,13 @@ export class AdminService {
           {},
         ),
       );
-      const detail = result.adjusted
-        ? `Adjusted build class of ${result.pkgbase} to ${result.buildClass}.`
-        : `${result.pkgbase} already matches its suggested class (${result.buildClass}).`;
-      this.messageToastService.success('Success', detail);
+      this.reportBuildClassAdjustment(result);
       this.packagesResource.reload();
     } catch (error) {
-      const detail = `Could not adjust the build class of ${pkg.pkgname}.`;
-      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
-      console.error(detail, error);
+      this.reportFailure(
+        this.transloco.translate('admin.service.buildClassAdjust.error', { pkgname: pkg.pkgname }),
+        error,
+      );
     }
   }
 
@@ -339,8 +426,8 @@ export class AdminService {
             target_repo: reponame,
           }),
         ),
-      'Package build scheduled',
-      'Could not schedule package build.',
+      this.transloco.translate('admin.service.packageSchedule.success'),
+      this.transloco.translate('admin.service.packageSchedule.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -352,8 +439,8 @@ export class AdminService {
           `${this.backendUrl}/gitlab/drop-packages`,
           dropPackagesBodySchema.parse({ packages, repo, ref }),
         ),
-      'Package drop triggered',
-      'Could not trigger package drop.',
+      this.transloco.translate('admin.service.packageDrop.success'),
+      this.transloco.translate('admin.service.packageDrop.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -365,8 +452,8 @@ export class AdminService {
     requestReason?: string,
     customRequestReason?: string,
     ref = 'main',
-  ): Promise<void> {
-    await this.runMutation(
+  ): Promise<boolean> {
+    return this.runMutation(
       () =>
         this.http.post(
           `${this.backendUrl}/gitlab/add-packages`,
@@ -379,31 +466,33 @@ export class AdminService {
             ref,
           }),
         ),
-      'Package add triggered',
-      'Could not trigger package add.',
+      this.transloco.translate('admin.service.packageAdd.success'),
+      this.transloco.translate('admin.service.packageAdd.error'),
       () => this.packagesResource.reload(),
     );
   }
 
-  async runSchedule(scheduleId: number, repo: string): Promise<void> {
-    await this.runMutation(
+  async runSchedule(scheduleId: number, repo: string): Promise<boolean> {
+    return this.runMutation(
       () => this.http.post(`${this.backendUrl}/gitlab/run-schedule`, runScheduleBodySchema.parse({ scheduleId, repo })),
-      'Schedule execution triggered',
-      'Could not trigger schedule execution.',
+      this.transloco.translate('admin.service.scheduleRun.success'),
+      this.transloco.translate('admin.service.scheduleRun.error'),
       () => this.pipelineTriggersResource.reload(),
     );
   }
 
-  async updatePackage(id: number, data: Partial<PackageFormData>): Promise<void> {
-    // failureSilenced is form-only display state; the update contract does not
-    // carry it (silencing happens through the failed-build silence endpoint).
+  async updatePackage(id: number, data: Partial<PackageFormData>): Promise<boolean> {
+    /**
+     * failureSilenced is form-only display state; the update contract does not
+     * carry it (silencing happens through the failed-build silence endpoint).
+     */
     const payload = { ...data };
     delete payload.failureSilenced;
-    await this.runMutation(
+    return this.runMutation(
       () =>
         this.http.patch(`${this.backendUrl}/admin/packages/${id}`, updatePackageBodySchema.partial().parse(payload)),
-      'Package updated',
-      'Could not update the package.',
+      this.transloco.translate('admin.service.packageUpdate.success'),
+      this.transloco.translate('admin.service.packageUpdate.error'),
       () => this.packagesResource.reload(),
     );
   }
@@ -411,21 +500,21 @@ export class AdminService {
   async deletePackage(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/packages/${id}`),
-      'Package deleted',
-      'Could not delete the package.',
+      this.transloco.translate('admin.service.packageDelete.success'),
+      this.transloco.translate('admin.service.packageDelete.error'),
       () => this.packagesResource.reload(),
     );
   }
 
-  async updateArchPackage(id: number, data: Partial<ArchPackageFormData>): Promise<void> {
-    await this.runMutation(
+  async updateArchPackage(id: number, data: Partial<ArchPackageFormData>): Promise<boolean> {
+    return this.runMutation(
       () =>
         this.http.patch(
           `${this.backendUrl}/admin/arch-packages/${id}`,
           updateArchPackageBodySchema.partial().parse(data),
         ),
-      'Arch package updated',
-      'Could not update the Arch package.',
+      this.transloco.translate('admin.service.archPackageUpdate.success'),
+      this.transloco.translate('admin.service.archPackageUpdate.error'),
       () => this.archPackagesResource.reload(),
     );
   }
@@ -433,17 +522,17 @@ export class AdminService {
   async deleteArchPackage(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/arch-packages/${id}`),
-      'Arch package deleted',
-      'Could not delete the Arch package.',
+      this.transloco.translate('admin.service.archPackageDelete.success'),
+      this.transloco.translate('admin.service.archPackageDelete.error'),
       () => this.archPackagesResource.reload(),
     );
   }
 
-  async updateRepo(id: number, data: Partial<RepoFormData>): Promise<void> {
-    await this.runMutation(
+  async updateRepo(id: number, data: Partial<RepoFormData>): Promise<boolean> {
+    return this.runMutation(
       () => this.http.patch(`${this.backendUrl}/admin/repos/${id}`, createRepoBodySchema.partial().parse(data)),
-      'Repo updated',
-      'Could not update the repo.',
+      this.transloco.translate('admin.service.repoUpdate.success'),
+      this.transloco.translate('admin.service.repoUpdate.error'),
       () => this.reposResource.reload(),
     );
   }
@@ -451,17 +540,17 @@ export class AdminService {
   async deleteRepo(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/repos/${id}`),
-      'Repo deleted',
-      'Could not delete the repo.',
+      this.transloco.translate('admin.service.repoDelete.success'),
+      this.transloco.translate('admin.service.repoDelete.error'),
       () => this.reposResource.reload(),
     );
   }
 
-  async updateBuilder(id: number, data: Partial<BuilderFormData>): Promise<void> {
-    await this.runMutation(
+  async updateBuilder(id: number, data: Partial<BuilderFormData>): Promise<boolean> {
+    return this.runMutation(
       () => this.http.patch(`${this.backendUrl}/admin/builders/${id}`, createBuilderBodySchema.partial().parse(data)),
-      'Builder updated',
-      'Could not update the builder.',
+      this.transloco.translate('admin.service.builderUpdate.success'),
+      this.transloco.translate('admin.service.builderUpdate.error'),
       () => this.buildersResource.reload(),
     );
   }
@@ -469,21 +558,21 @@ export class AdminService {
   async deleteBuilder(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/builders/${id}`),
-      'Builder deleted',
-      'Could not delete the builder.',
+      this.transloco.translate('admin.service.builderDelete.success'),
+      this.transloco.translate('admin.service.builderDelete.error'),
       () => this.buildersResource.reload(),
     );
   }
 
-  async updateElfAnalysis(id: number, data: Partial<ElfAnalysisFormData>): Promise<void> {
-    await this.runMutation(
+  async updateElfAnalysis(id: number, data: Partial<ElfAnalysisFormData>): Promise<boolean> {
+    return this.runMutation(
       () =>
         this.http.patch(
           `${this.backendUrl}/admin/package-elf-analysis/${id}`,
           createElfAnalysisBodySchema.partial().parse(data),
         ),
-      'ELF analysis updated',
-      'Could not update the ELF analysis.',
+      this.transloco.translate('admin.service.elfAnalysisUpdate.success'),
+      this.transloco.translate('admin.service.elfAnalysisUpdate.error'),
       () => this.elfAnalysisResource.reload(),
     );
   }
@@ -491,90 +580,95 @@ export class AdminService {
   async deleteElfAnalysis(id: number): Promise<void> {
     await this.runMutation(
       () => this.http.delete(`${this.backendUrl}/admin/package-elf-analysis/${id}`),
-      'ELF analysis deleted',
-      'Could not delete the ELF analysis.',
+      this.transloco.translate('admin.service.elfAnalysisDelete.success'),
+      this.transloco.translate('admin.service.elfAnalysisDelete.error'),
       () => this.elfAnalysisResource.reload(),
     );
   }
 
-  private readonly brokenReportsResource = httpResource<Paginated<BrokenPackageReport>>(() => ({
-    url: `${this.backendUrl}/repo/broken`,
-    params: parseQueryParams(brokenPackagesQuerySchema, {
-      page: this.brokenPage(),
-      perPage: this.brokenPerPage(),
-    }),
-  }));
+  private readonly brokenReportsResource = httpResource<Paginated<BrokenPackageReport>>(() =>
+    this.whenActive('brokenReports', () => ({
+      url: `${this.backendUrl}/repo/broken`,
+      params: parseQueryParams(brokenPackagesQuerySchema, {
+        page: this.brokenPage(),
+        perPage: this.brokenPerPage(),
+      }),
+    })),
+  );
 
-  readonly brokenReports = computed(() => resourceValue(this.brokenReportsResource)?.items ?? []);
-  readonly brokenReportsTotal = computed(() => resourceValue(this.brokenReportsResource)?.total ?? 0);
-  readonly brokenReportsLoading = this.brokenReportsResource.isLoading;
+  private readonly brokenReportsPage = retainedResourceValue(this.brokenReportsResource);
+  readonly brokenReports = computed(() => this.brokenReportsPage()?.items ?? []);
+  readonly brokenReportsTotal = computed(() => this.brokenReportsPage()?.total ?? 0);
+  readonly brokenReportsLoading = loadingWithoutValue(this.brokenReportsResource, this.brokenReportsPage);
+  readonly brokenReportsStatus = listStatus(this.brokenReportsResource);
 
   async triggerRepoRun(): Promise<void> {
     await this.runMutation(
-      () => this.http.get(`${this.backendUrl}/repo/run`),
-      'Repo run started. It can take a while depending on load.',
-      'Could not trigger the repo run.',
+      () => this.http.post(`${this.backendUrl}/repo/run`, {}),
+      this.transloco.translate('admin.service.repoRun.success'),
+      this.transloco.translate('admin.service.repoRun.error'),
     );
   }
 
   async triggerSignalScan(): Promise<void> {
     await this.runMutation(
-      () => this.http.get(`${this.backendUrl}/repo/signal-scan`),
-      'Signal scan started. It can take a while depending on load.',
-      'Could not trigger the signal scan.',
+      () => this.http.post(`${this.backendUrl}/repo/signal-scan`, {}),
+      this.transloco.translate('admin.service.signalScan.success'),
+      this.transloco.translate('admin.service.signalScan.error'),
     );
   }
 
   async triggerMrScan(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/gitlab/mr-scan`, {}),
-      'Merge request scan started. It can take a while depending on load.',
-      'Could not trigger the merge request scan.',
+      this.transloco.translate('admin.service.mrScan.success'),
+      this.transloco.translate('admin.service.mrScan.error'),
     );
   }
 
   async indexArchMirror(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/repo/index/arch`, {}),
-      'Arch mirror index started. It can take a while depending on load.',
-      'Could not trigger the Arch mirror index.',
+      this.transloco.translate('admin.service.archMirrorIndex.success'),
+      this.transloco.translate('admin.service.archMirrorIndex.error'),
     );
   }
 
   async indexChaoticRepo(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/repo/index/chaotic`, {}),
-      'Chaotic repo index started. It can take a while depending on load.',
-      'Could not trigger the Chaotic repo index.',
+      this.transloco.translate('admin.service.chaoticRepoIndex.success'),
+      this.transloco.translate('admin.service.chaoticRepoIndex.error'),
     );
   }
 
   async rescanBuildClasses(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/admin/rescan-build-classes`, {}),
-      'Build class rescan started. It runs in the background.',
-      'Could not trigger the build class rescan.',
+      this.transloco.translate('admin.service.buildClassRescan.success'),
+      this.transloco.translate('admin.service.buildClassRescan.error'),
     );
   }
 
   async recomputeSignalDerivations(): Promise<void> {
     await this.runMutation(
       () => this.http.post(`${this.backendUrl}/admin/recompute-signal-derivations`, {}),
-      'Signal derivation recompute started. It runs in the background and can take a while.',
-      'Could not trigger the signal derivation recompute.',
+      this.transloco.translate('admin.service.signalDerivationRecompute.success'),
+      this.transloco.translate('admin.service.signalDerivationRecompute.error'),
     );
   }
 
   async rescanPackage(pkgname: string, pkgType: PkgType): Promise<void> {
     try {
       const jobId = await this.startRescan([{ pkgname, pkgType }]);
-      this.messageToastService.success('Success', `Rescan of ${pkgname} started.`);
+      this.messageToastService.success(
+        this.transloco.translate('admin.service.rescan.startedSummary'),
+        this.rescanStartedDetail([pkgname]),
+      );
       const job = await this.waitForRescan(jobId);
       this.reportRescanOutcome(job);
     } catch (error) {
-      const detail = `Could not start the rescan of ${pkgname}.`;
-      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
-      console.error(detail, error);
+      this.reportFailure(this.transloco.translate('admin.service.rescan.packageError', { pkgname }), error);
     }
   }
 
@@ -587,14 +681,15 @@ export class AdminService {
     try {
       const jobId = await this.startRescan(packages);
       this.brokenSelection.set([]);
-      this.messageToastService.success('Success', `Rescan of ${packages.length} package(s) started.`);
+      this.messageToastService.success(
+        this.transloco.translate('admin.service.rescan.startedSummary'),
+        this.rescanStartedDetail(packages.map((pkg) => pkg.pkgname)),
+      );
       const job = await this.waitForRescan(jobId);
       this.reportRescanOutcome(job);
       this.brokenReportsResource.reload();
     } catch (error) {
-      const detail = 'Could not start the rescan.';
-      this.messageToastService.error('Operation failed', backendErrorMessage(error, detail));
-      console.error(detail, error);
+      this.reportFailure(this.transloco.translate('admin.service.rescan.error'), error);
     }
   }
 
@@ -606,8 +701,8 @@ export class AdminService {
           `${this.backendUrl}/repo/broken/bump`,
           bumpPackagesBodySchema.parse({ pkgnames }),
         ),
-      `Bumped ${pkgnames.length} package(s) and committed the changes.`,
-      'Could not bump the selected packages.',
+      this.transloco.translate('admin.service.brokenBump.success', { count: pkgnames.length }),
+      this.transloco.translate('admin.service.brokenBump.error'),
       () => {
         this.brokenSelection.set([]);
         this.brokenReportsResource.reload();
@@ -615,55 +710,116 @@ export class AdminService {
     );
   }
 
-  async getAurSuggestions(query: string): Promise<string[]> {
+  getAurSuggestionsRequest(query: string): HttpResourceRequest | undefined {
     const parsed = aurSuggestionsQuerySchema.safeParse({ q: query.trim() });
-    if (!parsed.success) return [];
-    try {
-      return await lastValueFrom(
-        this.http.get<string[]>(`${this.backendUrl}/aur/suggestions`, { params: parsed.data }),
-      );
-    } catch {
-      return [];
-    }
+    if (!parsed.success) return undefined;
+
+    return { url: `${this.backendUrl}/aur/suggestions`, params: parsed.data };
   }
 
-  async packageExists(pkgname: string): Promise<boolean> {
+  getPackageUrl(pkgname: string): string | undefined {
     const trimmed = pkgname.trim();
-    if (!trimmed) return false;
-    try {
-      await lastValueFrom(this.http.get(`${this.backendUrl}/builder/package/${encodeURIComponent(trimmed)}`));
-      return true;
-    } catch {
-      return false;
-    }
+    if (!trimmed) return undefined;
+
+    return `${this.backendUrl}/builder/package/${encodeURIComponent(trimmed)}`;
   }
 
-  async getSchedules(repo: string): Promise<PipelineScheduleOption[]> {
+  getSchedulesRequest(repo: string): HttpResourceRequest | undefined {
     const parsed = schedulesQuerySchema.safeParse({ repo });
-    if (!parsed.success) return [];
-    try {
-      return await lastValueFrom(
-        this.http.get<PipelineScheduleOption[]>(`${this.backendUrl}/gitlab/schedules`, { params: parsed.data }),
-      );
-    } catch {
-      return [];
-    }
+    if (!parsed.success) return undefined;
+
+    return { url: `${this.backendUrl}/gitlab/schedules`, params: parsed.data };
   }
 
+  /**
+   * Current state of a package, for the conflict check of the edit dialog.
+   */
+  findPackage(pkg: PackageDto): Promise<PackageDto | undefined> {
+    const params = parseQueryParams(listAdminPackagesQuerySchema, { q: pkg.pkgname, perPage: MAX_PER_PAGE });
+    return this.findOnListPage(`${this.backendUrl}/admin/packages`, params, pkg.id);
+  }
+
+  findArchPackage(pkg: ArchPackage): Promise<ArchPackage | undefined> {
+    const params = parseQueryParams(listArchPackagesQuerySchema, { q: pkg.pkgname, perPage: MAX_PER_PAGE });
+    return this.findOnListPage(`${this.backendUrl}/admin/arch-packages`, params, pkg.id);
+  }
+
+  findBuilder(builder: Builder): Promise<Builder | undefined> {
+    const params = parseQueryParams(listBuildersQuerySchema, { q: builder.name, perPage: MAX_PER_PAGE });
+    return this.findOnListPage(`${this.backendUrl}/admin/builders`, params, builder.id);
+  }
+
+  findElfAnalysis(row: AdminPackageElfAnalysis): Promise<AdminPackageElfAnalysis | undefined> {
+    const query = row.pkgname ?? String(row.pkgId);
+    const params = parseQueryParams(listElfAnalysisQuerySchema, { q: query, perPage: MAX_PER_PAGE });
+    return this.findOnListPage(`${this.backendUrl}/admin/package-elf-analysis`, params, row.id);
+  }
+
+  async findRepo(id: number): Promise<Repo | undefined> {
+    // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot conflict check when a dialog saves
+    const repos = await lastValueFrom(this.http.get<Repo[]>(`${this.backendUrl}/admin/repos`));
+    return repos.find((repo) => repo.id === id);
+  }
+
+  /**
+   * The list endpoints have no single-record route, so a record is looked up by name on the first list page.
+   * Resolves to undefined when the record is not on that page.
+   */
+  private async findOnListPage<T extends { id: number }>(
+    url: string,
+    params: QueryParams,
+    id: number,
+  ): Promise<T | undefined> {
+    // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot conflict check when a dialog saves
+    const page = await lastValueFrom(this.http.get<Paginated<T>>(url, { params }));
+    return page.items.find((item) => item.id === id);
+  }
+
+  /**
+   * Runs a write request and reports the outcome in a toast.
+   * Resolves to false on failure, so a dialog can stay open with the user's input.
+   */
   private async runMutation(
     request: () => Observable<unknown>,
     successDetail: string,
     errorDetail: string,
     onSuccess?: () => void,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       await lastValueFrom(request());
-      this.messageToastService.success('Success', successDetail);
-      onSuccess?.();
     } catch (error) {
-      this.messageToastService.error('Operation failed', backendErrorMessage(error, errorDetail));
-      console.error(errorDetail, error);
+      this.reportFailure(errorDetail, error);
+      return false;
     }
+
+    this.messageToastService.success(this.transloco.translate('admin.service.summary.success'), successDetail);
+    onSuccess?.();
+    return true;
+  }
+
+  private reportFailure(detail: string, error: unknown): void {
+    this.messageToastService.error(
+      this.transloco.translate('admin.service.summary.operationFailed'),
+      backendErrorMessage(error, detail),
+    );
+    console.error(detail, error);
+  }
+
+  private reportBuildClassAdjustment(result: AdjustBuildClassResponse): void {
+    const params = { pkgbase: result.pkgbase, buildClass: result.buildClass };
+
+    if (result.adjusted) {
+      this.messageToastService.success(
+        this.transloco.translate('admin.service.buildClassAdjust.adjustedSummary'),
+        this.transloco.translate('admin.service.buildClassAdjust.adjustedDetail', params),
+      );
+      return;
+    }
+
+    this.messageToastService.success(
+      this.transloco.translate('admin.service.buildClassAdjust.unchangedSummary'),
+      this.transloco.translate('admin.service.buildClassAdjust.unchangedDetail', params),
+    );
   }
 
   private async startRescan(packages: { pkgname: string; pkgType: string; repo?: string }[]): Promise<string> {
@@ -681,6 +837,7 @@ export class AdminService {
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, RESCAN_POLL_INTERVAL_MS));
       try {
+        // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- bounded poll loop inside one rescan action
         const job = await lastValueFrom(this.http.get<RescanJob>(`${this.backendUrl}/admin/rescan/${jobId}`));
         if (job.status === 'done') return job;
       } catch {
@@ -692,16 +849,39 @@ export class AdminService {
 
   private reportRescanOutcome(job: RescanJob | null): void {
     if (!job) {
-      this.messageToastService.info('Rescan still running', 'It keeps running in the background; check back later.');
+      this.messageToastService.info(
+        this.transloco.translate('admin.service.rescan.stillRunningSummary'),
+        this.transloco.translate('admin.service.rescan.stillRunningDetail'),
+      );
       return;
     }
+
     if (job.failed.length === 0) {
-      this.messageToastService.success('Rescan finished', `${job.rescanned} package(s) scanned successfully.`);
+      this.messageToastService.success(
+        this.transloco.translate('admin.service.rescan.finishedSummary'),
+        this.transloco.translate('admin.service.rescan.finishedDetail', { count: job.rescanned }),
+      );
       return;
     }
+
     this.messageToastService.warn(
-      'Rescan finished with failures',
-      `${job.rescanned} scanned, ${job.failed.length} failed: ${job.failed.join('; ')}`,
+      this.transloco.translate('admin.service.rescan.finishedWithFailuresSummary'),
+      this.transloco.translate('admin.service.rescan.finishedWithFailuresDetail', {
+        rescanned: job.rescanned,
+        failedCount: job.failed.length,
+        failures: job.failed.join('; '),
+      }),
     );
+  }
+
+  private rescanStartedDetail(pkgnames: string[]): string {
+    if (pkgnames.length <= RESCAN_NAMED_LIMIT) {
+      return this.transloco.translate('admin.service.rescan.startedDetail', { packages: pkgnames.join(', ') });
+    }
+
+    const named = pkgnames.slice(0, RESCAN_NAMED_LIMIT).join(', ');
+    const remaining = pkgnames.length - RESCAN_NAMED_LIMIT;
+
+    return this.transloco.translate('admin.service.rescan.startedDetailTruncated', { packages: named, remaining });
   }
 }

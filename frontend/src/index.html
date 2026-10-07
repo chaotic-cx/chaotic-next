@@ -1,10 +1,34 @@
 <!doctype html>
-<html class="dark-mode" lang="en">
+<html class="dark-mode mocha" lang="en" style="color-scheme: dark">
   <head>
     <meta charset="utf-8" />
     <meta content="Chaotic-AUR - automated binary repo 👨🏻‍💻" property="og:title" />
     <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport" />
-    <meta content="#c6a0f6" name="theme-color" />
+    <meta content="#cba6f7" name="theme-color" />
+    <script>
+      // Applies the stored or system theme before Angular boots, so the page never flashes the wrong flavour.
+      // ThemeService (app/theme-switcher) owns the theme after boot. Keep the storage key and colours in sync.
+      (function () {
+        var preference = 'system';
+        try {
+          preference = localStorage.getItem('theme') || 'system';
+        } catch (error) {
+          // Storage is not available.
+        }
+
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var isDark = preference === 'dark' || (preference !== 'light' && prefersDark);
+        if (isDark) {
+          return;
+        }
+
+        var root = document.documentElement;
+        root.classList.remove('dark-mode', 'mocha');
+        root.classList.add('latte');
+        root.style.colorScheme = 'light';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#8839ef');
+      })();
+    </script>
 
     <title>Chaotic-AUR</title>
     <base href="/" />
@@ -15,6 +39,9 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link href="https://builds.garudalinux.org" rel="preconnect" />
+    <link href="https://backend.chaotic.cx" rel="preconnect" crossorigin />
+    <link href="https://status.chaotic.cx" rel="preconnect" crossorigin />
+    <link href="/i18n/en.json" rel="preload" as="fetch" crossorigin />
     <meta content="yes" name="mobile-web-app-capable" />
     <meta content="yes" name="apple-mobile-web-app-capable" />
     <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style" />

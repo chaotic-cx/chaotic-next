@@ -5,7 +5,7 @@ import { isPackageSortField, Package, type PackageSortField, Paginated, Repo } f
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { type EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
-import { resourceSignal, resourceValue } from '../functions';
+import { loadingWithoutValue, resourceFailed, resourceSignal, retainedResourceValue } from '../functions';
 import { createLazyTablePagination } from '../table-pagination';
 
 const DEFAULT_SORT_FIELD: PackageSortField = 'pkgname';
@@ -44,15 +44,23 @@ export class PackageListService {
     });
   });
 
-  readonly loading = computed(() => this.resource.isLoading());
-  readonly total = computed(() => resourceValue(this.resource)?.total ?? 0);
-  readonly packageList = computed<Package[]>(() =>
-    (resourceValue(this.resource)?.items ?? []).filter((pkg) => pkg.version),
-  );
+  private readonly page = retainedResourceValue(this.resource);
+  readonly loading = loadingWithoutValue(this.resource, this.page);
+  readonly failed = resourceFailed(this.resource);
+  readonly error = this.resource.error;
+
+  retry(): void {
+    this.resource.reload();
+  }
+
+  readonly total = computed(() => this.page()?.total ?? 0);
+  readonly packageList = computed<Package[]>(() => (this.page()?.items ?? []).filter((pkg) => pkg.version));
 
   setSearch(value: string): void {
-    // A new search invalidates the current offset; a stale persisted table
-    // position would otherwise request a page beyond the filtered results.
+    /**
+     * A new search invalidates the current offset; a stale persisted table
+     * position would otherwise request a page beyond the filtered results.
+     */
     this.pagination.resetPage();
     this.searchValue.set(value);
   }

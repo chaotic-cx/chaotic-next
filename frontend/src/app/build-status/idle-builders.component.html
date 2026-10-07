@@ -1,35 +1,32 @@
-@if (buildStatusService.idleQueue().length > 0) {
-  <section class="flex flex-col">
-    <chaotic-build-status-section
-      title="Idle builders"
-      subtitle="Currently idle builders"
-      icon="pi-list"
-      iconClass="text-ctp-peach"
-    />
-    <ul class="max-h-[32rem] divide-y divide-white/5 overflow-y-auto pr-1" animate.enter="content-fade" chaoticFlipList>
-      @for (pkg of buildStatusService.idleQueue(); track pkg.rawName; let index = $index) {
-        <li
-          class="flex items-center justify-between gap-3 py-2.5"
-          [style.--stagger]="index"
-          animate.enter="pipeline-item-enter"
-        >
-          <span class="min-w-0 truncate font-medium">{{ pkg.name }}</span>
-          <span class="shrink-0 text-sm text-ctp-subtext1">{{ pkg.build_class | buildClass }}</span>
+<section class="chaotic-card" *transloco="let t; prefix: 'buildStatus.idle'">
+  <chaotic-build-status-section
+    [count]="buildStatusService.queueCountKnown() ? buildStatusService.idleQueue().length : undefined"
+    [title]="t('title')"
+    icon="pi-server"
+  />
+  @if (buildStatusService.loadingQueue()) {
+    <div class="flex flex-wrap gap-2 p-4" aria-hidden="true">
+      @for (_ of skeletonChips; track $index) {
+        <span class="chaotic-skeleton h-8 w-28"></span>
+      }
+    </div>
+  } @else if (buildStatusService.queueFailed()) {
+    <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.refreshQueueStats()" />
+  } @else if (buildStatusService.idleQueue().length === 0) {
+    <chaotic-empty-state [message]="t('empty')" icon="pi-server" />
+  } @else {
+    <ul class="flex flex-wrap gap-2 p-4">
+      @for (builder of buildStatusService.idleQueue(); track builder.rawName) {
+        <li class="builder-chip">
+          <span class="builder-chip__dot" aria-hidden="true"></span>
+          <span class="font-medium text-ctp-text">{{ builder.name }}</span>
+          @if (builder.build_class | buildClass; as buildClass) {
+            @if (buildClass !== builder.name) {
+              <span class="text-ctp-subtext0">{{ buildClass }}</span>
+            }
+          }
         </li>
       }
     </ul>
-  </section>
-} @else {
-  <section class="flex flex-col">
-    <chaotic-build-status-section
-      title="Idle builders"
-      subtitle="Currently idle builders"
-      icon="pi-list"
-      iconClass="text-ctp-subtext0"
-    />
-    <div class="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center text-ctp-subtext0">
-      <i class="pi pi-server text-3xl"></i>
-      <span class="text-sm font-medium">No idle builders</span>
-    </div>
-  </section>
-}
+  }
+</section>

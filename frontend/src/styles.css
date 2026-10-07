@@ -1,8 +1,19 @@
-/* Catppuccin variables and fonts */
-@import '@catppuccin/palette/css/catppuccin.css' layer(base);
-@import '@catppuccin/highlightjs/css/catppuccin-mocha.css' layer(base);
-@import '@xterm/xterm/css/xterm.css' layer(base);
-@import 'maplibre-gl/dist/maplibre-gl.css' layer(base);
+/*
+ * Theme contract
+ *
+ * The flavour class on <html> selects the palette: `mocha` (dark) or `latte` (light).
+ * Dark mode also sets `dark-mode`, the one switch for PrimeNG (darkModeSelector) and Tailwind `dark:`.
+ * ThemeService and the pre-boot script in index.html set these classes together.
+ * @catppuccin/tailwindcss defines `--catppuccin-color-*` for each flavour class, and the `ctp-*` utilities read them.
+ * Component CSS uses `var(--catppuccin-color-*)` for palette colours and the `--chaotic-*` tokens below for roles.
+ * Never use flavour-specific names such as `--ctp-mocha-*`.
+ *
+ * Token families (all `--chaotic-*`): radius, surface and border, foreground, accent ink, shadow, blur,
+ * type scale and leading, weight, duration and easing, z-index, space.
+ */
+
+/* Fonts and highlight.js token colours (mapped to the active flavour on `code` below) */
+@import '@catppuccin/highlightjs/css/catppuccin-variables.css' layer(base);
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/inter';
 
@@ -15,6 +26,13 @@
 @import '@catppuccin/tailwindcss/mocha.css';
 @plugin '@openng/optimus-ui-tailwindcss';
 
+/* Tailwind `dark:` follows the same class as PrimeNG's darkModeSelector, not the OS setting, so a manual theme choice applies to both. */
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
+
+@theme {
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+}
+
 /* Xterm overrides */
 .xterm .xterm-viewport,
 .xterm-scrollable-element {
@@ -24,7 +42,7 @@
 }
 
 .suggestion-list {
-  scrollbar-color: var(--ctp-mocha-surface0) rgba(24, 24, 37, 0.5);
+  scrollbar-color: var(--catppuccin-color-surface0) color-mix(in srgb, var(--catppuccin-color-mantle) 50%, transparent);
 }
 
 ng-terminal,
@@ -36,6 +54,13 @@ ng-terminal,
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* The helper textarea is invisible, so keyboard focus is shown on the terminal itself. */
+.xterm:has(.xterm-helper-textarea:focus-visible) {
+  outline: 2px solid var(--catppuccin-color-mauve) !important;
+  outline-offset: 2px;
+  border-radius: var(--chaotic-radius-sm);
 }
 
 @media screen and (max-width: 640px) {
@@ -58,17 +83,123 @@ ng-terminal,
   top: calc(env(safe-area-inset-top) + 8px);
 }
 
+/*
+ * The header bar is a box like the cards, so its logo starts on the text line.
+ * The right-hand icons have their own inset, so the visible icon ends on the same line.
+ */
+.garuda-shell-menubar.p-menubar {
+  padding-inline: var(--chaotic-inset) calc(var(--chaotic-inset) - var(--chaotic-bar-icon-inset));
+}
+
 .garuda-shell__dropdown:not(.garuda-shell-relative) {
   top: calc(env(safe-area-inset-top) + 68px);
+}
+
+/* Every right-hand bar action gets one box size, one icon size and one gap, so the icons sit evenly spaced. */
+:root {
+  --chaotic-bar-action-size: 2rem;
+  --chaotic-bar-icon-size: 0.875rem;
+  --chaotic-bar-icon-inset: calc((var(--chaotic-bar-action-size) - var(--chaotic-bar-icon-size)) / 2);
+}
+
+.chaotic-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--chaotic-space-2xs);
+}
+
+/* The doubled class outranks the global `.p-button:not(.p-button-icon-only)` size rule further down. */
+.chaotic-bar-actions .p-button.p-button,
+.chaotic-bar-action {
+  min-width: var(--chaotic-bar-action-size);
+  min-height: var(--chaotic-bar-action-size);
+  height: var(--chaotic-bar-action-size);
+  padding-block: 0;
+  padding-inline: var(--chaotic-bar-icon-inset);
+}
+
+.chaotic-bar-action .pi {
+  font-size: inherit;
+}
+
+.chaotic-bar-action {
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--chaotic-radius-pill);
+  font-size: var(--chaotic-bar-icon-size);
+  transition: background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.chaotic-bar-action:hover,
+.chaotic-bar-action:focus-visible {
+  background: var(--catppuccin-color-surface0);
 }
 
 @media (pointer: coarse) {
   .garuda-shell-menubar .p-button,
   .p-menubar-end .p-button,
-  .p-menubar-end .p-avatar {
+  .p-menubar-end .p-avatar,
+  .chaotic-bar-actions .p-button.p-button,
+  .chaotic-bar-action {
     min-width: 2.75rem;
     min-height: 2.75rem;
   }
+}
+
+/* The logo stays on the text line. On touch screens the tap area grows to the right of it. */
+.chaotic-home-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Touch screens: the PrimeNG controls and the header home link get the 44px tap size. */
+@media (pointer: coarse) {
+  .chaotic-home-link,
+  .p-toast-close-button.p-toast-close-button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .p-select.p-select {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+
+  .p-tablist-nav-button.p-tablist-nav-button {
+    width: 2.75rem;
+  }
+
+  /* The stacked stepper arrows sit side by side, so each one can be 44px. */
+  .p-inputnumber-stacked .p-inputnumber-button-group {
+    flex-direction: row;
+  }
+
+  .p-inputnumber-stacked .p-inputnumber-button.p-inputnumber-button,
+  .p-inputnumber-stacked .p-inputnumber-input.p-inputnumber-input {
+    min-height: 2.75rem;
+  }
+
+  .p-inputnumber-stacked .p-inputnumber-button.p-inputnumber-button {
+    min-width: 2.75rem;
+  }
+}
+
+/* Phones: an open review queue MR has a fixed action bar that the back-to-top button would cover. */
+@media (max-width: 767.98px) {
+  body:has(.mr-layout--detail) .p-scrolltop {
+    display: none;
+  }
+
+  body:has(.mr-layout--detail) .chaotic-footer {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* The shell's back-to-top button stays clear of the home indicator and rounded corners. */
+.p-scrolltop.p-scrolltop {
+  inset-block-end: calc(env(safe-area-inset-bottom) + 1.25rem);
+  inset-inline-end: calc(env(safe-area-inset-right) + 1.25rem);
 }
 
 @media (max-width: 960px) {
@@ -81,13 +212,13 @@ ng-terminal,
   }
 }
 
-.mobile-nav-trigger {
+.mobile-nav-trigger.chaotic-icon-btn {
   display: none;
 }
 
 @media (max-width: 960px) {
-  .mobile-nav-trigger {
-    display: inline-flex;
+  .mobile-nav-trigger.chaotic-icon-btn {
+    display: inline-grid;
   }
 }
 
@@ -97,6 +228,25 @@ ng-terminal,
   font-feature-settings:
     'liga' 1,
     'calt' 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The skeleton delay is timing, not motion, so it stays. */
+  .chaotic-skeleton,
+  .skeleton-reveal {
+    animation-delay: var(--chaotic-skeleton-delay) !important;
+  }
 }
 
 @supports (font-variation-settings: normal) {
@@ -105,26 +255,794 @@ ng-terminal,
   }
 }
 
+:root {
+  /* Radius */
+  --chaotic-radius-sm: 6px;
+  --chaotic-radius-md: 10px;
+  --chaotic-radius-lg: 14px;
+  --chaotic-radius-pill: 9999px;
+
+  /* Type scale: each size has a matching line height */
+  --chaotic-text-xs: 0.75rem;
+  --chaotic-leading-xs: 1rem;
+  --chaotic-text-sm: 0.8125rem;
+  --chaotic-leading-sm: 1.25rem;
+  --chaotic-text-base: 0.875rem;
+  --chaotic-leading-base: 1.375rem;
+  --chaotic-text-md: 0.9375rem;
+  --chaotic-leading-md: 1.5rem;
+  --chaotic-text-lg: 1.125rem;
+  --chaotic-leading-lg: 1.625rem;
+  --chaotic-text-xl: 1.375rem;
+  --chaotic-leading-xl: 1.2;
+  --chaotic-text-2xl: 1.625rem;
+  --chaotic-leading-2xl: 1.2;
+  --chaotic-text-display: 1.75rem;
+  --chaotic-leading-display: 1.1;
+  --chaotic-tracking-tight: -0.02em;
+
+  /* Weights: only these four */
+  --chaotic-weight-regular: 400;
+  --chaotic-weight-medium: 500;
+  --chaotic-weight-semibold: 600;
+  --chaotic-weight-bold: 700;
+
+  /* Motion: no transition runs longer than the max duration */
+  --chaotic-duration-fast: 120ms;
+  --chaotic-duration-base: 200ms;
+  --chaotic-duration-slow: 300ms;
+  --chaotic-duration-max: 400ms;
+  --chaotic-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --chaotic-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Exits only */
+  --chaotic-ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+
+  /*
+   * Z-index, lowest to highest. PrimeNG overlays, dialogs and toasts use their own z-index manager.
+   * The Garuda shell top bar sits at 1000, so the mobile nav drawer stays below it.
+   */
+  --chaotic-z-base: 0;
+  --chaotic-z-raised: 1;
+  --chaotic-z-sticky: 2;
+  --chaotic-z-overlay: 10;
+  --chaotic-z-popover: 30;
+  --chaotic-z-drawer: 900;
+  --chaotic-z-floating: 999;
+  --chaotic-z-top: 10000;
+
+  /* Space: the same steps as the Tailwind scale (2xs = 1, xs = 1.5, sm = 2, md = 3, lg = 4, xl = 6, 2xl = 8) */
+  --chaotic-space-2xs: 0.25rem;
+  --chaotic-space-xs: 0.375rem;
+  --chaotic-space-sm: 0.5rem;
+  --chaotic-space-md: 0.75rem;
+  --chaotic-space-lg: 1rem;
+  --chaotic-space-xl: 1.5rem;
+  --chaotic-space-2xl: 2rem;
+
+  /*
+   * Accent ink: accent hues used as text. Mocha keeps the pure hue. Latte mixes the light-fill hues toward text
+   * (see --chaotic-accent-ink-weight and --chaotic-accent-ink-weight-light-hue), so they reach about 4.5:1.
+   * Latte red and mauve pass as they are. Latte blue passes on surfaces (4.7:1), not on the bare base canvas (4.3:1).
+   */
+  --chaotic-ink-green: color-mix(
+    in srgb,
+    var(--catppuccin-color-green) var(--chaotic-accent-ink-weight),
+    var(--chaotic-fg)
+  );
+  --chaotic-ink-yellow: color-mix(
+    in srgb,
+    var(--catppuccin-color-yellow) var(--chaotic-accent-ink-weight-light-hue),
+    var(--chaotic-fg)
+  );
+  --chaotic-ink-pink: color-mix(
+    in srgb,
+    var(--catppuccin-color-pink) var(--chaotic-accent-ink-weight-light-hue),
+    var(--chaotic-fg)
+  );
+  --chaotic-ink-peach: color-mix(
+    in srgb,
+    var(--catppuccin-color-peach) var(--chaotic-accent-ink-weight),
+    var(--chaotic-fg)
+  );
+  --chaotic-ink-teal: color-mix(
+    in srgb,
+    var(--catppuccin-color-teal) var(--chaotic-accent-ink-weight),
+    var(--chaotic-fg)
+  );
+  --chaotic-ink-sky: color-mix(
+    in srgb,
+    var(--catppuccin-color-sky) var(--chaotic-accent-ink-weight-light-hue),
+    var(--chaotic-fg)
+  );
+  --chaotic-ink-sapphire: color-mix(
+    in srgb,
+    var(--catppuccin-color-sapphire) var(--chaotic-accent-ink-weight),
+    var(--chaotic-fg)
+  );
+  --chaotic-ink-lavender: color-mix(
+    in srgb,
+    var(--catppuccin-color-lavender) var(--chaotic-accent-ink-weight),
+    var(--chaotic-fg)
+  );
+
+  --chaotic-blur: 2px;
+  /* Fast responses never flash a skeleton. The box keeps its space, so nothing shifts. */
+  --chaotic-skeleton-delay: 200ms;
+  --chaotic-page-max: 96rem;
+  /*
+   * Two alignment lines. Boxes (header bar, banner, cards, panels) start at the shell edge.
+   * All text starts one inset further in: inside a box the inset is its padding, outside a box it is a margin.
+   */
+  --chaotic-inset: 1rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --chaotic-inset: 1.25rem;
+  }
+}
+
+/*
+ * Mocha (dark): the base canvas is the darkest layer that people see.
+ * Surfaces are translucent mantle, so the blur over the circuit background stays visible.
+ */
+.mocha {
+  color-scheme: dark;
+  --chaotic-surface: color-mix(in srgb, var(--catppuccin-color-mantle) 53%, transparent);
+  --chaotic-surface-raised: color-mix(in srgb, var(--catppuccin-color-surface0) 45%, var(--catppuccin-color-mantle));
+  --chaotic-surface-overlay: color-mix(in srgb, var(--catppuccin-color-mantle) 94%, transparent);
+  /* Opaque surface for sticky bars. */
+  --chaotic-surface-sticky: color-mix(in srgb, var(--catppuccin-color-mantle) 53%, var(--catppuccin-color-base));
+  --chaotic-border: color-mix(in srgb, var(--catppuccin-color-surface1) 55%, transparent);
+  --chaotic-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.25), 0 8px 24px -12px rgb(0 0 0 / 0.45);
+  --chaotic-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.45);
+  --chaotic-icon-shadow: drop-shadow(0 0 2px rgb(0 0 0 / 0.8));
+  --chaotic-circuit-color: color-mix(in srgb, var(--catppuccin-color-mauve) 3%, transparent);
+  /* Dark-only icon sprites (for example the map controls) are inverted to read on dark surfaces. */
+  --chaotic-icon-invert: 1;
+
+  --chaotic-fg: var(--catppuccin-color-text);
+  --chaotic-fg-muted: var(--catppuccin-color-subtext0);
+  --chaotic-fg-faint: var(--catppuccin-color-overlay1);
+  /* Accent text keeps the pure palette hue on dark surfaces. */
+  --chaotic-accent-ink-weight: 100%;
+  --chaotic-accent-ink-weight-light-hue: 100%;
+}
+
+/*
+ * Latte (light): the base canvas is the lowest layer. Surfaces are lighter than the canvas,
+ * translucent so the blur stays visible, with cool text-tinted shadows instead of black ones.
+ */
+.latte {
+  color-scheme: light;
+  --chaotic-surface: rgb(255 255 255 / 0.58);
+  --chaotic-surface-raised: color-mix(in srgb, white 80%, var(--catppuccin-color-base));
+  --chaotic-surface-overlay: color-mix(in srgb, white 92%, transparent);
+  --chaotic-surface-sticky: color-mix(in srgb, white 58%, var(--catppuccin-color-base));
+  --chaotic-border: color-mix(in srgb, var(--catppuccin-color-surface1) 70%, transparent);
+  --chaotic-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.7) inset, 0 1px 2px color-mix(in srgb, var(--catppuccin-color-text) 8%, transparent),
+    0 8px 24px -12px color-mix(in srgb, var(--catppuccin-color-text) 22%, transparent);
+  --chaotic-shadow-overlay:
+    0 1px 2px color-mix(in srgb, var(--catppuccin-color-text) 10%, transparent),
+    0 12px 32px color-mix(in srgb, var(--catppuccin-color-text) 18%, transparent);
+  --chaotic-icon-shadow: none;
+  --chaotic-circuit-color: color-mix(in srgb, var(--catppuccin-color-mauve) 4.5%, transparent);
+  --chaotic-icon-invert: 0;
+
+  --chaotic-fg: var(--catppuccin-color-text);
+  /* Latte subtext0 and overlay1 are below 4.5:1 on the base canvas, so they mix toward text. */
+  --chaotic-fg-muted: color-mix(in srgb, var(--catppuccin-color-subtext0) 75%, var(--catppuccin-color-text));
+  --chaotic-fg-faint: color-mix(in srgb, var(--catppuccin-color-overlay1) 45%, var(--catppuccin-color-text));
+  /* Latte accents are tuned for fills. As text on light surfaces, they mix toward text to reach about 4.5:1. */
+  --chaotic-accent-ink-weight: 45%;
+  /* Yellow, pink and sky are the lightest Latte hues. They need more text in the mix to reach 4.5:1 on base. */
+  --chaotic-accent-ink-weight-light-hue: 35%;
+}
+
+/*
+ * Accent text utilities in Latte. Each colour mixes toward text by --chaotic-accent-ink-weight,
+ * so status words stay readable on light surfaces. Fills (`bg-ctp-*`) keep the pure palette.
+ * They sit in the utilities layer with low specificity, so hover and other variants still win.
+ */
+@layer utilities {
+  :where(.latte) .text-ctp-green {
+    color: var(--chaotic-ink-green);
+  }
+
+  :where(.latte) .text-ctp-yellow {
+    color: var(--chaotic-ink-yellow);
+  }
+
+  :where(.latte) .text-ctp-pink {
+    color: var(--chaotic-ink-pink);
+  }
+
+  :where(.latte) .text-ctp-peach {
+    color: var(--chaotic-ink-peach);
+  }
+
+  :where(.latte) .text-ctp-teal {
+    color: var(--chaotic-ink-teal);
+  }
+
+  :where(.latte) .text-ctp-sky {
+    color: var(--chaotic-ink-sky);
+  }
+
+  :where(.latte) .text-ctp-sapphire {
+    color: var(--chaotic-ink-sapphire);
+  }
+
+  :where(.latte) .text-ctp-lavender {
+    color: var(--chaotic-ink-lavender);
+  }
+
+  :where(.latte) .text-ctp-subtext0 {
+    color: var(--chaotic-fg-muted);
+  }
+
+  :where(.latte) :is(.text-ctp-overlay0, .text-ctp-overlay1, .text-ctp-overlay2) {
+    color: var(--chaotic-fg-faint);
+  }
+}
+
+/* highlight.js reads `--ctp-*` names. Inside code, they map to the active flavour. */
+code {
+  --ctp-base: var(--catppuccin-color-base);
+  --ctp-blue: var(--catppuccin-color-blue);
+  --ctp-flamingo: var(--catppuccin-color-flamingo);
+  --ctp-green: var(--catppuccin-color-green);
+  --ctp-mauve: var(--catppuccin-color-mauve);
+  --ctp-overlay2: var(--catppuccin-color-overlay2);
+  --ctp-peach: var(--catppuccin-color-peach);
+  --ctp-pink: var(--catppuccin-color-pink);
+  --ctp-red: var(--catppuccin-color-red);
+  --ctp-sapphire: var(--catppuccin-color-sapphire);
+  --ctp-sky: var(--catppuccin-color-sky);
+  --ctp-subtext0: var(--catppuccin-color-subtext0);
+  --ctp-subtext1: var(--catppuccin-color-subtext1);
+  --ctp-teal: var(--catppuccin-color-teal);
+  --ctp-text: var(--catppuccin-color-text);
+  --ctp-yellow: var(--catppuccin-color-yellow);
+}
+
+.chaotic-page {
+  width: 100%;
+  max-width: var(--chaotic-page-max);
+  margin-inline: auto;
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+}
+
+/* Loose text outside a box sits on the same line as the text inside the boxes. */
+.chaotic-text-inset {
+  padding-inline: var(--chaotic-inset);
+}
+
+.chaotic-surface {
+  background: var(--chaotic-surface);
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-lg);
+  box-shadow: var(--chaotic-shadow);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+.chaotic-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--chaotic-surface);
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-lg);
+  box-shadow: var(--chaotic-shadow);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+.chaotic-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 3rem;
+  padding: 0.625rem var(--chaotic-inset);
+  border-bottom: 1px solid var(--chaotic-border);
+}
+
+.chaotic-card__title {
+  font-size: var(--chaotic-text-md);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
+}
+
+.chaotic-card__count {
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: var(--chaotic-radius-pill);
+  background: var(--catppuccin-color-surface0);
+  font-size: var(--chaotic-text-xs);
+  font-weight: var(--chaotic-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--catppuccin-color-subtext1);
+}
+
+.chaotic-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.375rem 1rem;
+  border-top: 1px solid var(--chaotic-border);
+  font-size: var(--chaotic-text-sm);
+  color: var(--chaotic-fg-muted);
+}
+
+.chaotic-card__link {
+  margin-left: auto;
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-subtext1);
+  transition: color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.chaotic-card__link:hover,
+.chaotic-card__link:focus-visible {
+  color: var(--catppuccin-color-mauve);
+}
+
+.chaotic-mini-list {
+  display: flex;
+  flex-direction: column;
+  padding-block: 0.375rem;
+}
+
+.chaotic-mini-list > li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  min-height: 2.25rem;
+  padding: 0.4375rem 1rem;
+  font-size: var(--chaotic-text-base);
+}
+
+.chaotic-mini-list__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-text);
+}
+
+.chaotic-mini-list__meta {
+  min-width: 0;
+  max-width: 55%;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--chaotic-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--chaotic-fg-faint);
+}
+
+.chaotic-card__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.75rem 1rem;
+  font-size: var(--chaotic-text-base);
+  color: var(--chaotic-fg-muted);
+}
+
+.chaotic-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 1rem;
+  transition: background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.chaotic-row + .chaotic-row {
+  border-top: 1px solid color-mix(in srgb, var(--catppuccin-color-surface0) 70%, transparent);
+}
+
+.chaotic-row:hover {
+  background: color-mix(in srgb, var(--catppuccin-color-surface0) 35%, transparent);
+}
+
+.chaotic-row__name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--chaotic-text-sm);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
+}
+
+a.chaotic-row__name:hover,
+a.chaotic-row__name:focus-visible {
+  color: var(--catppuccin-color-mauve);
+}
+
+.chaotic-row__meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--chaotic-text-xs);
+  color: var(--chaotic-fg-muted);
+}
+
+.chaotic-skeleton {
+  border-radius: var(--chaotic-radius-sm);
+  background: color-mix(in srgb, var(--catppuccin-color-surface0) 55%, transparent);
+  animation:
+    chaotic-skeleton-reveal 1ms var(--chaotic-skeleton-delay) both,
+    chaotic-pulse 1.8s ease-in-out var(--chaotic-skeleton-delay) infinite;
+}
+
+/* Wraps a composed skeleton, so the whole group appears after the same delay. */
+.skeleton-reveal {
+  animation: chaotic-skeleton-reveal 1ms var(--chaotic-skeleton-delay) both;
+}
+
+.skeleton-slow-note {
+  font-size: var(--chaotic-text-sm);
+  color: var(--chaotic-fg-muted);
+}
+
+@keyframes chaotic-skeleton-reveal {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
+}
+
+@keyframes chaotic-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.chaotic-slow-hint {
+  padding: 0.5rem 1rem;
+  font-size: var(--chaotic-text-sm);
+  text-align: center;
+  color: var(--chaotic-fg-muted);
+}
+
+.chaotic-slow-hint:empty {
+  display: none;
+}
+
+.chaotic-stale-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--chaotic-text-xs);
+  font-weight: var(--chaotic-weight-medium);
+  color: var(--chaotic-ink-yellow);
+}
+
+.chaotic-stale-notice__dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: var(--chaotic-radius-pill);
+  background: currentColor;
+}
+
+.chaotic-connection-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  /* A box like the cards: its edge at the shell edge, its text on the inset line. */
+  max-width: var(--chaotic-page-max);
+  margin: 0.5rem auto 0;
+  padding: 0.5rem var(--chaotic-inset);
+  border: 1px solid color-mix(in srgb, var(--catppuccin-color-yellow) 40%, transparent);
+  border-radius: var(--chaotic-radius-md);
+  background: color-mix(in srgb, var(--catppuccin-color-yellow) 10%, var(--chaotic-surface));
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-text);
+}
+
+.chaotic-icon-btn {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--chaotic-radius-sm);
+  color: var(--chaotic-fg-muted);
+  cursor: pointer;
+  transition:
+    color var(--chaotic-duration-fast) var(--chaotic-ease-out),
+    background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.chaotic-icon-btn:hover:not(:disabled),
+.chaotic-icon-btn:focus-visible:not(:disabled) {
+  background: var(--catppuccin-color-surface0);
+  color: var(--catppuccin-color-text);
+}
+
+.chaotic-icon-btn--danger {
+  color: var(--catppuccin-color-red);
+}
+
+.chaotic-icon-btn--danger:hover:not(:disabled),
+.chaotic-icon-btn--danger:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--catppuccin-color-red) 14%, transparent);
+  color: var(--catppuccin-color-red);
+}
+
+.chaotic-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (pointer: coarse) {
+  .chaotic-icon-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+.chaotic-disclosure__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chaotic-disclosure__toggle:hover,
+.chaotic-disclosure__toggle:focus-visible {
+  background: color-mix(in srgb, var(--catppuccin-color-surface0) 35%, transparent);
+}
+
+.chaotic-file {
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-md);
+  background: color-mix(in srgb, var(--catppuccin-color-crust) 55%, transparent);
+}
+
+.chaotic-file__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--chaotic-border);
+  background: color-mix(in srgb, var(--catppuccin-color-mantle) 80%, transparent);
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-text);
+}
+
+.chaotic-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .chaotic-stats {
+    grid-template-columns: repeat(var(--stats-columns, 4), minmax(0, 1fr));
+  }
+}
+
+.chaotic-stats__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 1rem 1.25rem;
+  border-color: var(--chaotic-border);
+}
+
+.chaotic-stats__item + .chaotic-stats__item {
+  border-left: 1px solid var(--chaotic-border);
+}
+
+@media (max-width: 767.98px) {
+  .chaotic-stats__item:nth-child(3) {
+    border-left: 0;
+  }
+
+  .chaotic-stats__item:nth-child(n + 3) {
+    border-top: 1px solid var(--chaotic-border);
+  }
+}
+
+.chaotic-stats__item--primary {
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 8%, transparent);
+}
+
+.chaotic-stats dt {
+  font-size: var(--chaotic-text-sm);
+  color: var(--chaotic-fg-muted);
+}
+
+.chaotic-stats dd {
+  font-size: var(--chaotic-text-display);
+  font-weight: var(--chaotic-weight-semibold);
+  line-height: var(--chaotic-leading-display);
+  letter-spacing: var(--chaotic-tracking-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--catppuccin-color-text);
+}
+
+.chaotic-stats__item--primary dd {
+  color: var(--catppuccin-color-mauve);
+}
+
+/* Compact text buttons app-wide (brief: about 36px tall, 13px label). Icon-only buttons keep their square size. */
+.p-button:not(.p-button-icon-only) {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.875rem;
+  font-size: var(--chaotic-text-sm);
+  font-weight: var(--chaotic-weight-semibold);
+}
+
 .hero-card {
   background: none;
-  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
-  border-radius: var(--p-panel-border-radius, 12px);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  will-change: backdrop-filter;
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-lg);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+:root {
+  --chaotic-focus-ring: 2px solid var(--catppuccin-color-mauve);
+  --chaotic-focus-ring-offset: 2px;
+}
+
+:where(a, button, [role='button'], summary, [tabindex]):focus-visible {
+  outline: var(--chaotic-focus-ring);
+  outline-offset: var(--chaotic-focus-ring-offset);
+}
+
+:where(a, button, [role='button'], summary, [tabindex]):where(:focus-visible) {
+  border-radius: var(--chaotic-radius-sm);
+}
+
+:root .p-button:focus-visible,
+:root .p-tab:not(.p-disabled):focus-visible,
+:root .p-tablist-nav-button:focus-visible,
+:root .p-menubar-button:focus-visible,
+:root .p-menubar-root-list:focus-visible .p-menubar-item.p-focus > .p-menubar-item-content {
+  outline: var(--chaotic-focus-ring);
+  outline-offset: var(--chaotic-focus-ring-offset);
+}
+
+/* The theme injects its variables at runtime with `:root`; the doubled `:root` wins over them. */
+:root:root {
+  --p-form-field-background: var(--chaotic-surface);
+  --p-form-field-filled-background: var(--chaotic-surface);
+  --p-form-field-border-color: var(--chaotic-border);
+  --p-form-field-border-radius: var(--chaotic-radius-md);
+  --p-overlay-select-border-radius: var(--chaotic-radius-md);
+
+  --p-overlay-select-background: var(--chaotic-surface-overlay);
+  --p-overlay-select-border-color: var(--chaotic-border);
+  --p-select-overlay-background: var(--chaotic-surface-overlay);
+  --p-multiselect-overlay-background: var(--chaotic-surface-overlay);
+
+  --p-autocomplete-background: var(--chaotic-surface);
+  --p-autocomplete-filled-background: var(--chaotic-surface);
+  --p-autocomplete-filled-hover-background: var(--chaotic-surface);
+  --p-autocomplete-filled-focus-background: var(--chaotic-surface);
+  --p-autocomplete-border-color: var(--chaotic-border);
+  --p-autocomplete-dropdown-background: var(--chaotic-surface);
+  --p-autocomplete-overlay-background: var(--chaotic-surface-overlay);
+  --p-autocomplete-overlay-border-color: var(--chaotic-border);
+  --p-autocomplete-overlay-border-radius: var(--chaotic-radius-md);
+}
+
+.p-menu.p-menu-overlay {
+  border-color: var(--chaotic-border);
+  background: var(--chaotic-surface-overlay);
+}
+
+.p-menu.p-menu-overlay,
+.p-select-overlay,
+.p-multiselect-overlay,
+.p-autocomplete-overlay {
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+/* The overlay takes the width of its widest option; long package names must not push it past the viewport. */
+.p-autocomplete-overlay {
+  max-width: calc(100vw - 2rem);
+}
+
+.p-autocomplete-option {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Form fields already turn their border mauve on focus. An inset shadow thickens that border
+ * instead of adding a second, offset ring around it.
+ */
+:root .p-inputtext:enabled:focus,
+:root .p-select:not(.p-disabled).p-focus,
+:root .p-multiselect:not(.p-disabled).p-focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--p-primary-color);
+}
+
+/* Optimus UI sets no focused item when focus comes from the logo link inside the menubar. */
+:root .p-menubar-root-list:focus-visible:not(:has(.p-menubar-item.p-focus)) {
+  outline: var(--chaotic-focus-ring);
+  outline-offset: var(--chaotic-focus-ring-offset);
+  border-radius: var(--chaotic-radius-sm);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+.chaotic-section-title {
+  font-size: var(--chaotic-text-xl);
+  font-weight: var(--chaotic-weight-semibold);
+  letter-spacing: var(--chaotic-tracking-tight);
+  line-height: var(--chaotic-leading-xl);
+  color: var(--catppuccin-color-text);
+}
+
+@media (min-width: 768px) {
+  .chaotic-section-title {
+    font-size: var(--chaotic-text-2xl);
+  }
 }
 
 /*`Custom classes`*/
 body {
   @apply selection:bg-primary selection:text-surface-0;
+  color: var(--chaotic-fg);
   font-optical-sizing: auto;
 }
 
 html {
+  position: relative;
   scrollbar-width: thin;
-  scrollbar-color: var(--ctp-mocha-surface2) transparent;
-  background: var(--ctp-mocha-base)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 304 304' width='304' height='304'%3E%3Cpath fill='%23cba6f7' fill-opacity='0.05' d='M44.1 224a5 5 0 1 1 0 2H0v-2h44.1zm160 48a5 5 0 1 1 0 2H82v-2h122.1zm57.8-46a5 5 0 1 1 0-2H304v2h-42.1zm0 16a5 5 0 1 1 0-2H304v2h-42.1zm6.2-114a5 5 0 1 1 0 2h-86.2a5 5 0 1 1 0-2h86.2zm-256-48a5 5 0 1 1 0 2H0v-2h12.1zm185.8 34a5 5 0 1 1 0-2h86.2a5 5 0 1 1 0 2h-86.2zM258 12.1a5 5 0 1 1-2 0V0h2v12.1zm-64 208a5 5 0 1 1-2 0v-54.2a5 5 0 1 1 2 0v54.2zm48-198.2V80h62v2h-64V21.9a5 5 0 1 1 2 0zm16 16V64h46v2h-48V37.9a5 5 0 1 1 2 0zm-128 96V208h16v12.1a5 5 0 1 1-2 0V210h-16v-76.1a5 5 0 1 1 2 0zm-5.9-21.9a5 5 0 1 1 0 2H114v48H85.9a5 5 0 1 1 0-2H112v-48h12.1zm-6.2 130a5 5 0 1 1 0-2H176v-74.1a5 5 0 1 1 2 0V242h-60.1zm-16-64a5 5 0 1 1 0-2H114v48h10.1a5 5 0 1 1 0 2H112v-48h-10.1zM66 284.1a5 5 0 1 1-2 0V274H50v30h-2v-32h18v12.1zM236.1 176a5 5 0 1 1 0 2H226v94h48v32h-2v-30h-48v-98h12.1zm25.8-30a5 5 0 1 1 0-2H274v44.1a5 5 0 1 1-2 0V146h-10.1zm-64 96a5 5 0 1 1 0-2H208v-80h16v-14h-42.1a5 5 0 1 1 0-2H226v18h-16v80h-12.1zm86.2-210a5 5 0 1 1 0 2H272V0h2v32h10.1zM98 101.9V146H53.9a5 5 0 1 1 0-2H96v-42.1a5 5 0 1 1 2 0zM53.9 34a5 5 0 1 1 0-2H80V0h2v34H53.9zm60.1 3.9V66H82v64H69.9a5 5 0 1 1 0-2H80V64h32V37.9a5 5 0 1 1 2 0zM101.9 82a5 5 0 1 1 0-2H128V37.9a5 5 0 1 1 2 0V82h-28.1zm16-64a5 5 0 1 1 0-2H146v44.1a5 5 0 1 1-2 0V18h-26.1zm102.2 270a5 5 0 1 1 0 2H98v14h-2v-16h124.1zM242 149.9V160h16v34h-16v62h48v48h-2v-46h-48v-66h16v-30h-16v-12.1a5 5 0 1 1 2 0zM53.9 18a5 5 0 1 1 0-2H64V2H48V0h18v18H53.9zm112 32a5 5 0 1 1 0-2H192V0h50v2h-48v48h-28.1zm-48-48a5 5 0 0 1-9.8-2h2.07a3 3 0 1 0 5.66 0H178v34h-18V21.9a5 5 0 1 1 2 0V32h14V2h-58.1zm0 96a5 5 0 1 1 0-2H137l32-32h39V21.9a5 5 0 1 1 2 0V66h-40.17l-32 32H117.9zm28.1 90.1a5 5 0 1 1-2 0v-76.51L175.59 80H224V21.9a5 5 0 1 1 2 0V82h-49.59L146 112.41v75.69zm16 32a5 5 0 1 1-2 0v-99.51L184.59 96H300.1a5 5 0 0 1 3.9-3.9v2.07a3 3 0 0 0 0 5.66v2.07a5 5 0 0 1-3.9-3.9H185.41L162 121.41v98.69zm-144-64a5 5 0 1 1-2 0v-3.51l48-48V48h32V0h2v50H66v55.41l-48 48v2.69zM50 53.9v43.51l-48 48V208h26.1a5 5 0 1 1 0 2H0v-65.41l48-48V53.9a5 5 0 1 1 2 0zm-16 16V89.41l-34 34v-2.82l32-32V69.9a5 5 0 1 1 2 0zM12.1 32a5 5 0 1 1 0 2H9.41L0 43.41V40.6L8.59 32h3.51zm265.8 18a5 5 0 1 1 0-2h18.69l7.41-7.41v2.82L297.41 50H277.9zm-16 160a5 5 0 1 1 0-2H288v-71.41l16-16v2.82l-14 14V210h-28.1zm-208 32a5 5 0 1 1 0-2H64v-22.59L40.59 194H21.9a5 5 0 1 1 0-2H41.41L66 216.59V242H53.9zm150.2 14a5 5 0 1 1 0 2H96v-56.6L56.6 162H37.9a5 5 0 1 1 0-2h19.5L98 200.6V256h106.1zm-150.2 2a5 5 0 1 1 0-2H80v-46.59L48.59 178H21.9a5 5 0 1 1 0-2H49.41L82 208.59V258H53.9zM34 39.8v1.61L9.41 66H0v-2h8.59L32 40.59V0h2v39.8zM2 300.1a5 5 0 0 1 3.9 3.9H3.83A3 3 0 0 0 0 302.17V256h18v48h-2v-46H2v42.1zM34 241v63h-2v-62H0v-2h34v1zM17 18H0v-2h16V0h2v18h-1zm273-2h14v2h-16V0h2v16zm-32 273v15h-2v-14h-14v14h-2v-16h18v1zM0 92.1A5.02 5.02 0 0 1 6 97a5 5 0 0 1-6 4.9v-2.07a3 3 0 1 0 0-5.66V92.1zM80 272h2v32h-2v-32zm37.9 32h-2.07a3 3 0 0 0-5.66 0h-2.07a5 5 0 0 1 9.8 0zM5.9 0A5.02 5.02 0 0 1 0 5.9V3.83A3 3 0 0 0 3.83 0H5.9zm294.2 0h2.07A3 3 0 0 0 304 3.83V5.9a5 5 0 0 1-3.9-5.9zm3.9 300.1v2.07a3 3 0 0 0-1.83 1.83h-2.07a5 5 0 0 1 3.9-3.9zM97 100a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-48 32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 48a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-64a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 96a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-144a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-96 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm96 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-64a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-32 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM49 36a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-32 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM33 68a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-48a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 240a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-64a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm80-176a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 48a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm112 176a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 180a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 84a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 64a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'%3E%3C/path%3E%3C/svg%3E");
+  scrollbar-color: var(--catppuccin-color-surface2) transparent;
+  background: var(--catppuccin-color-base);
+}
+
+/* The circuit pattern is a mask, so one SVG serves both flavours. --chaotic-circuit-color sets its colour and strength. */
+html::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--chaotic-circuit-color);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 304 304' width='304' height='304'%3E%3Cpath fill='%23000' d='M44.1 224a5 5 0 1 1 0 2H0v-2h44.1zm160 48a5 5 0 1 1 0 2H82v-2h122.1zm57.8-46a5 5 0 1 1 0-2H304v2h-42.1zm0 16a5 5 0 1 1 0-2H304v2h-42.1zm6.2-114a5 5 0 1 1 0 2h-86.2a5 5 0 1 1 0-2h86.2zm-256-48a5 5 0 1 1 0 2H0v-2h12.1zm185.8 34a5 5 0 1 1 0-2h86.2a5 5 0 1 1 0 2h-86.2zM258 12.1a5 5 0 1 1-2 0V0h2v12.1zm-64 208a5 5 0 1 1-2 0v-54.2a5 5 0 1 1 2 0v54.2zm48-198.2V80h62v2h-64V21.9a5 5 0 1 1 2 0zm16 16V64h46v2h-48V37.9a5 5 0 1 1 2 0zm-128 96V208h16v12.1a5 5 0 1 1-2 0V210h-16v-76.1a5 5 0 1 1 2 0zm-5.9-21.9a5 5 0 1 1 0 2H114v48H85.9a5 5 0 1 1 0-2H112v-48h12.1zm-6.2 130a5 5 0 1 1 0-2H176v-74.1a5 5 0 1 1 2 0V242h-60.1zm-16-64a5 5 0 1 1 0-2H114v48h10.1a5 5 0 1 1 0 2H112v-48h-10.1zM66 284.1a5 5 0 1 1-2 0V274H50v30h-2v-32h18v12.1zM236.1 176a5 5 0 1 1 0 2H226v94h48v32h-2v-30h-48v-98h12.1zm25.8-30a5 5 0 1 1 0-2H274v44.1a5 5 0 1 1-2 0V146h-10.1zm-64 96a5 5 0 1 1 0-2H208v-80h16v-14h-42.1a5 5 0 1 1 0-2H226v18h-16v80h-12.1zm86.2-210a5 5 0 1 1 0 2H272V0h2v32h10.1zM98 101.9V146H53.9a5 5 0 1 1 0-2H96v-42.1a5 5 0 1 1 2 0zM53.9 34a5 5 0 1 1 0-2H80V0h2v34H53.9zm60.1 3.9V66H82v64H69.9a5 5 0 1 1 0-2H80V64h32V37.9a5 5 0 1 1 2 0zM101.9 82a5 5 0 1 1 0-2H128V37.9a5 5 0 1 1 2 0V82h-28.1zm16-64a5 5 0 1 1 0-2H146v44.1a5 5 0 1 1-2 0V18h-26.1zm102.2 270a5 5 0 1 1 0 2H98v14h-2v-16h124.1zM242 149.9V160h16v34h-16v62h48v48h-2v-46h-48v-66h16v-30h-16v-12.1a5 5 0 1 1 2 0zM53.9 18a5 5 0 1 1 0-2H64V2H48V0h18v18H53.9zm112 32a5 5 0 1 1 0-2H192V0h50v2h-48v48h-28.1zm-48-48a5 5 0 0 1-9.8-2h2.07a3 3 0 1 0 5.66 0H178v34h-18V21.9a5 5 0 1 1 2 0V32h14V2h-58.1zm0 96a5 5 0 1 1 0-2H137l32-32h39V21.9a5 5 0 1 1 2 0V66h-40.17l-32 32H117.9zm28.1 90.1a5 5 0 1 1-2 0v-76.51L175.59 80H224V21.9a5 5 0 1 1 2 0V82h-49.59L146 112.41v75.69zm16 32a5 5 0 1 1-2 0v-99.51L184.59 96H300.1a5 5 0 0 1 3.9-3.9v2.07a3 3 0 0 0 0 5.66v2.07a5 5 0 0 1-3.9-3.9H185.41L162 121.41v98.69zm-144-64a5 5 0 1 1-2 0v-3.51l48-48V48h32V0h2v50H66v55.41l-48 48v2.69zM50 53.9v43.51l-48 48V208h26.1a5 5 0 1 1 0 2H0v-65.41l48-48V53.9a5 5 0 1 1 2 0zm-16 16V89.41l-34 34v-2.82l32-32V69.9a5 5 0 1 1 2 0zM12.1 32a5 5 0 1 1 0 2H9.41L0 43.41V40.6L8.59 32h3.51zm265.8 18a5 5 0 1 1 0-2h18.69l7.41-7.41v2.82L297.41 50H277.9zm-16 160a5 5 0 1 1 0-2H288v-71.41l16-16v2.82l-14 14V210h-28.1zm-208 32a5 5 0 1 1 0-2H64v-22.59L40.59 194H21.9a5 5 0 1 1 0-2H41.41L66 216.59V242H53.9zm150.2 14a5 5 0 1 1 0 2H96v-56.6L56.6 162H37.9a5 5 0 1 1 0-2h19.5L98 200.6V256h106.1zm-150.2 2a5 5 0 1 1 0-2H80v-46.59L48.59 178H21.9a5 5 0 1 1 0-2H49.41L82 208.59V258H53.9zM34 39.8v1.61L9.41 66H0v-2h8.59L32 40.59V0h2v39.8zM2 300.1a5 5 0 0 1 3.9 3.9H3.83A3 3 0 0 0 0 302.17V256h18v48h-2v-46H2v42.1zM34 241v63h-2v-62H0v-2h34v1zM17 18H0v-2h16V0h2v18h-1zm273-2h14v2h-16V0h2v16zm-32 273v15h-2v-14h-14v14h-2v-16h18v1zM0 92.1A5.02 5.02 0 0 1 6 97a5 5 0 0 1-6 4.9v-2.07a3 3 0 1 0 0-5.66V92.1zM80 272h2v32h-2v-32zm37.9 32h-2.07a3 3 0 0 0-5.66 0h-2.07a5 5 0 0 1 9.8 0zM5.9 0A5.02 5.02 0 0 1 0 5.9V3.83A3 3 0 0 0 3.83 0H5.9zm294.2 0h2.07A3 3 0 0 0 304 3.83V5.9a5 5 0 0 1-3.9-5.9zm3.9 300.1v2.07a3 3 0 0 0-1.83 1.83h-2.07a5 5 0 0 1 3.9-3.9zM97 100a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-48 32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 48a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-64a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 96a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-144a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-96 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm96 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-64a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-32 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM49 36a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-32 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM33 68a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-48a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 240a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-64a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm80-176a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 48a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm112 176a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-16 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 180a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0-32a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 84a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm32 64a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm16-16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'%3E%3C/path%3E%3C/svg%3E")
+    repeat;
+  pointer-events: none;
 }
 
 html::-webkit-scrollbar {
@@ -132,12 +1050,14 @@ html::-webkit-scrollbar {
 }
 
 html::-webkit-scrollbar-thumb {
-  border-radius: 9999px;
-  background: var(--ctp-mocha-surface2);
+  border-radius: var(--chaotic-radius-pill);
+  background: var(--catppuccin-color-surface2);
 }
 
-p {
-  @apply text-color wrap-break-word;
+@layer base {
+  p {
+    @apply text-color wrap-break-word;
+  }
 }
 
 code,
@@ -146,13 +1066,9 @@ tt,
 kbd,
 samp {
   font-style: normal;
-  font-weight: 400;
-  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: var(--chaotic-weight-regular);
+  font-family: var(--font-mono);
   font-optical-sizing: auto;
-}
-
-.chaotic-list-regular {
-  @apply my-4 block list-inside list-disc space-y-1 text-left;
 }
 
 .chaotic-panel {
@@ -162,37 +1078,19 @@ samp {
   text-wrap: pretty;
 }
 
-.chaotic-container-text {
-  @apply container mx-auto max-w-(--breakpoint-xl) px-5 text-center align-middle md:px-10 lg:px-20;
-}
-
-.chaotic-tab-content {
-  @apply p-4;
-}
-
-@media (max-width: 1100px) {
-  chaotic-build-status .chaotic-tab-content {
-    padding: 0;
-  }
-}
-
-.chaotic-container-wide {
-  @apply container text-center align-middle;
-}
-
-.chaotic-container-wide-center {
-  @apply container mx-auto text-center align-middle;
-}
-
-.chaotic-container-regular {
-  @apply container mx-auto px-2 text-center align-middle md:max-w-[80%];
+.p-panel-content-container,
+.p-panel-content-wrapper,
+.p-panel-content {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .p-panel {
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
   background: none !important;
-  will-change: backdrop-filter;
+  border-color: var(--chaotic-border) !important;
+  border-radius: var(--chaotic-radius-lg) !important;
 }
 
 .p-confirmdialog .p-confirmdialog-footer {
@@ -219,8 +1117,19 @@ samp {
 }
 
 .p-toast {
-  padding-left: 20px;
-  max-width: calc(100vw - 20px);
+  --chaotic-toast-gutter: 20px;
+  padding-left: var(--chaotic-toast-gutter);
+  max-width: calc(100vw - var(--chaotic-toast-gutter));
+}
+
+.p-toast.p-toast-top-right,
+.p-toast.p-toast-top-left {
+  top: calc(env(safe-area-inset-top) + var(--chaotic-toast-gutter));
+}
+
+.p-toast.p-toast-top-right,
+.p-toast.p-toast-bottom-right {
+  right: calc(env(safe-area-inset-right) + var(--chaotic-toast-gutter));
 }
 
 @media (max-width: 640px) {
@@ -254,51 +1163,52 @@ samp {
 .p-card,
 .p-tabs,
 .p-datatable {
-  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
-  border-radius: var(--p-panel-border-radius, 12px);
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-lg);
 }
 
 .p-datatable {
   background: var(--p-card-background);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
 }
 
 .p-card {
   height: 100%;
 }
 
-chaotic-build-status .p-card {
-  background: unset;
-  padding-top: 1rem;
-}
-
-chaotic-build-status :where(ul, div) {
+chaotic-build-status :where(ul, div),
+.chaotic-thin-scroll {
   scrollbar-width: thin;
-  scrollbar-color: var(--ctp-mocha-surface1) transparent;
+  scrollbar-color: var(--catppuccin-color-surface1) transparent;
 }
 
-chaotic-build-status :where(ul, div)::-webkit-scrollbar {
+chaotic-build-status :where(ul, div)::-webkit-scrollbar,
+.chaotic-thin-scroll::-webkit-scrollbar {
   width: 0.5rem;
   height: 0.5rem;
 }
 
-chaotic-build-status :where(ul, div)::-webkit-scrollbar-track {
+chaotic-build-status :where(ul, div)::-webkit-scrollbar-track,
+.chaotic-thin-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
-chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb {
-  background: var(--ctp-mocha-surface1);
-  border-radius: 9999px;
+chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb,
+.chaotic-thin-scroll::-webkit-scrollbar-thumb {
+  background: var(--catppuccin-color-surface1);
+  border-radius: var(--chaotic-radius-pill);
 }
 
-chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb:hover {
-  background: var(--ctp-mocha-surface2);
+/* ui-craft-detect-ignore-next-line -- a scrollbar thumb takes no keyboard focus */
+chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb:hover,
+.chaotic-thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--catppuccin-color-surface2);
 }
 
 .p-card-body {
-  padding-inline: unset !important;
-  @apply mx-auto max-w-11/12 p-0 md:p-5;
+  @apply py-0 md:py-5;
+  padding-inline: var(--chaotic-inset) !important;
 }
 
 .p-card-header {
@@ -309,11 +1219,10 @@ chaotic-build-status :where(ul, div)::-webkit-scrollbar-thumb:hover {
   padding-bottom: 1.25rem !important;
 }
 
-p-scroll-top {
-  @apply fixed z-999;
-}
-
 .p-inputtext,
+.p-autocomplete-input,
+.p-select,
+.p-multiselect,
 .p-button,
 .p-panel,
 .p-tabs,
@@ -321,17 +1230,253 @@ p-scroll-top {
 .p-card,
 .p-stepper,
 .table-container {
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+p-scroll-top {
+  position: fixed;
+  z-index: var(--chaotic-z-floating);
 }
 
 .table-container {
-  border-radius: var(--p-panel-border-radius, 12px);
+  border-radius: var(--chaotic-radius-lg);
   overflow-x: auto;
   overflow-y: hidden;
-  max-width: calc(100vw - 2rem);
+  max-width: 100%;
   overscroll-behavior-x: contain;
   @apply mx-auto;
+}
+
+/* Keeps absolute cell content such as .sr-only inside the scroller, which would otherwise widen the card. */
+.p-datatable-table-container {
+  position: relative;
+  overflow-x: auto;
+}
+
+.p-paginator {
+  container-type: inline-size;
+}
+
+@container (max-width: 36rem) {
+  .p-paginator-content {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: var(--chaotic-space-2xs);
+  }
+
+  .p-paginator-first,
+  .p-paginator-last,
+  .p-paginator-pages {
+    display: none !important;
+  }
+
+  .p-paginator-current {
+    margin-inline-end: auto;
+    padding-inline: 0;
+    font-size: var(--chaotic-text-sm);
+    white-space: nowrap;
+  }
+}
+
+@media (pointer: coarse) {
+  .p-paginator .p-paginator-prev,
+  .p-paginator .p-paginator-next,
+  .p-paginator .p-paginator-first,
+  .p-paginator .p-paginator-last,
+  .p-paginator .p-paginator-page {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+.p-drawer.filter-sheet {
+  height: auto;
+  max-height: 85dvh;
+  border-radius: var(--chaotic-radius-lg) var(--chaotic-radius-lg) 0 0;
+}
+
+@media (pointer: coarse) {
+  .p-multiselect.p-multiselect,
+  input.p-inputtext.p-inputtext {
+    min-height: 2.75rem;
+  }
+
+  .p-select-option.p-select-option,
+  .p-multiselect-option.p-multiselect-option {
+    min-height: 2.75rem;
+  }
+}
+
+/* Shown only in the stacked table layout. */
+.stack-only {
+  display: none;
+}
+
+/* Set by `chaoticFillViewport`: the element fills the viewport below its own top edge. */
+@media (min-width: 768px) {
+  .chaotic-fill-viewport {
+    height: calc(100dvh - var(--chaotic-fill-top, 18rem) - var(--chaotic-space-lg));
+    min-height: 24rem;
+  }
+}
+
+/*
+ * `chaotic-stack` tables show rows as blocks on narrow screens. Cell roles: stack-title, stack-sub,
+ * stack-meta (one line, dot-joined), stack-body, stack-hide; `data-label` prefixes a value, `stack-empty` hides it.
+ */
+.chaotic-stack {
+  container: chaotic-stack / inline-size;
+  --chaotic-stack-actions-width: 6.5rem;
+}
+
+@container chaotic-stack (max-width: 40rem) {
+  .chaotic-stack .p-datatable-table,
+  .chaotic-stack .p-datatable-thead,
+  .chaotic-stack .p-datatable-tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .chaotic-stack .p-datatable-thead > tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--chaotic-space-sm);
+    padding: var(--chaotic-space-md) var(--chaotic-inset);
+    border-bottom: 1px solid var(--chaotic-border);
+  }
+
+  .chaotic-stack .p-datatable-thead > tr > th {
+    display: none;
+  }
+
+  .chaotic-stack .p-datatable-thead > tr:not(:has(> th.p-datatable-sortable-column)) {
+    display: none;
+  }
+
+  .chaotic-stack .p-datatable-thead > tr > th.p-datatable-sortable-column {
+    display: block;
+    padding: var(--chaotic-space-xs) var(--chaotic-space-md) !important;
+    border: 1px solid var(--chaotic-border);
+    border-radius: var(--chaotic-radius-pill);
+    min-width: 0 !important;
+  }
+
+  .chaotic-stack .p-datatable-thead > tr > th.p-datatable-column-sorted {
+    border-color: var(--catppuccin-color-mauve);
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--chaotic-space-sm);
+    row-gap: var(--chaotic-space-2xs);
+    padding: var(--chaotic-space-md) var(--chaotic-inset);
+    border-bottom: 1px solid var(--chaotic-border);
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr:last-child {
+    border-bottom: 0;
+  }
+
+  /* The doubled class outranks page-level `:host ::ng-deep` cell padding. */
+  .chaotic-stack.chaotic-stack .p-datatable-tbody > tr > td {
+    display: block;
+    flex: 1 0 100%;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0;
+    background: transparent !important;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-title {
+    order: 0;
+    padding-inline-end: var(--chaotic-stack-actions-width) !important;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-title .truncate {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr:not(:has(> td.cell-actions)) > td.stack-title {
+    padding-inline-end: 0 !important;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-sub {
+    order: 1;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-meta {
+    order: 2;
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+    font-size: var(--chaotic-text-sm);
+    color: var(--catppuccin-color-subtext0);
+  }
+
+  /* Trailing dots, so a wrapped line never starts with one. */
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-meta:has(~ td.stack-meta)::after {
+    content: '·';
+    margin-inline-start: var(--chaotic-space-sm);
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td[data-label]::before {
+    content: attr(data-label) ':';
+    margin-inline-end: var(--chaotic-space-2xs);
+    color: var(--catppuccin-color-subtext0);
+  }
+
+  .chaotic-stack .stack-only {
+    display: inline-block;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-body {
+    order: 3;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-hide,
+  .chaotic-stack .p-datatable-tbody > tr > td:has(> .stack-empty) {
+    display: none;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td.cell-actions {
+    position: absolute;
+    inset-block-start: var(--chaotic-space-xs);
+    inset-inline-end: var(--chaotic-inset);
+    width: auto;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr > td[colspan] {
+    padding: var(--chaotic-space-md) 0 !important;
+  }
+
+  .chaotic-stack .skeleton-row {
+    height: var(--chaotic-stack-row-height, auto) !important;
+    padding-block: var(--chaotic-space-md);
+  }
+}
+
+.p-datatable-thead > tr > th {
+  padding: 0.75rem 1rem !important;
+  font-size: var(--chaotic-text-sm);
+  font-weight: var(--chaotic-weight-semibold);
+  white-space: nowrap;
+  color: var(--catppuccin-color-subtext1) !important;
+}
+
+.p-datatable-tbody > tr > td {
+  padding: 0.625rem 1rem !important;
+  font-size: var(--chaotic-text-base);
+  vertical-align: middle;
+}
+
+.p-datatable-tbody > tr:hover > td {
+  background: color-mix(in srgb, var(--catppuccin-color-surface0) 30%, transparent);
 }
 
 .p-datatable-thead > tr > th.cell-actions {
@@ -341,6 +1486,18 @@ p-scroll-top {
 .p-datatable-tbody > tr > td.cell-actions {
   vertical-align: middle;
   text-align: right;
+  white-space: nowrap;
+}
+
+.p-datatable-thead > tr > th.cell-actions,
+.p-datatable-tbody > tr > td.cell-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.p-datatable .p-tag {
+  justify-content: center;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -383,12 +1540,17 @@ body > app-root > chaotic-footer > div > p-card > div {
   @apply text-ctp-text;
 }
 
+.p-panel-header,
+.p-panel-content {
+  padding-inline: var(--chaotic-inset);
+}
+
 .p-tab {
   margin-left: auto !important;
   margin-right: auto !important;
   /* Fallback while theme tokens load, so an unmounted-style button does not
      flash white text (color-scheme: dark unstyled button renders white). */
-  color: var(--ctp-subtext1);
+  color: var(--catppuccin-color-subtext1);
   background: transparent;
   /* Take the label color immediately instead of animating from an initial
      light value on remount (kills the white dip in the tab titles). */
@@ -402,15 +1564,32 @@ body > app-root > chaotic-footer > div > p-card > div {
   transition: none !important;
 }
 
+/*
+ * Form controls and their placeholders use the same text size as tables and small buttons.
+ * The theme injects `.p-inputtext`, `.p-textarea` and `.p-select-label { font-size: 1rem }`
+ * at runtime, after this file. The extra element or parent selector makes these rules win.
+ */
+input.p-inputtext,
+textarea.p-textarea,
+.p-select .p-select-label,
+.p-select-option,
+.p-select-filter,
+.p-multiselect-label,
+.p-multiselect-option,
+.p-multiselect-filter,
+.p-multiselect-display-chip .p-chip {
+  font-size: var(--chaotic-text-base);
+}
+
 .p-tablist,
 .p-datatable-header,
 .p-stepper .p-steplist {
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--chaotic-radius-lg) var(--chaotic-radius-lg) 0 0;
 }
 
 .p-tabpanels,
 .p-stepper .p-steppanels {
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 var(--chaotic-radius-lg) var(--chaotic-radius-lg);
 }
 
 @media (max-width: 640px) {
@@ -425,31 +1604,38 @@ body > app-root > chaotic-footer > div > p-card > div {
   }
 
   .p-step-title {
-    font-size: 0.75rem;
+    font-size: var(--chaotic-text-xs);
     white-space: nowrap;
   }
 }
 
 .p-menubar-item-icon {
-  color: var(--ctp-mocha-mauve) !important;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+  color: var(--catppuccin-color-mauve) !important;
+  filter: var(--chaotic-icon-shadow);
 }
 
 .p-menu-item-icon {
-  color: var(--ctp-mocha-mauve) !important;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+  color: var(--catppuccin-color-mauve) !important;
+  filter: var(--chaotic-icon-shadow);
 }
 
 .p-menubar-item-icon-active-color {
-  color: var(--ctp-mocha-maroon) !important;
+  color: var(--catppuccin-color-maroon) !important;
 }
 
-.content-wrapper {
-  container-type: inline-size;
-  width: 100%;
-  max-width: calc(2 * var(--padding-body) + var(--website-max-width));
-  padding: var(--space-md) var(--padding-body);
-  margin-inline: auto;
+.mr-overview-panel.p-panel,
+.mr-overview-panel > .p-panel {
+  border: 1px solid var(--chaotic-border) !important;
+  background: var(--chaotic-surface) !important;
+  box-shadow: var(--chaotic-shadow);
+}
+
+.mr-overview-panel .p-panel-header {
+  border-bottom: 1px solid var(--chaotic-border);
+}
+
+.mr-overview-panel .p-panel-content {
+  padding-top: 1rem !important;
 }
 
 .mr-overview-panel > div > .p-panel-content {
@@ -461,33 +1647,35 @@ body > app-root > chaotic-footer > div > p-card > div {
   padding: unset !important;
 }
 
-.hover\:chaotic-grow-l:hover {
-  @apply transition ease-in-out hover:scale-125;
+.p-menu.row-menu {
+  min-width: 13rem;
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-md);
+  background: var(--chaotic-surface-overlay);
+  box-shadow: var(--chaotic-shadow-overlay);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
 }
 
-.hover\:chaotic-grow-s:hover {
-  @apply transition ease-in-out hover:scale-105;
+.row-menu .p-menu-submenu-label {
+  padding-top: 0.625rem;
+  font-size: var(--chaotic-text-xs);
+  font-weight: var(--chaotic-weight-medium);
+  color: var(--chaotic-fg-faint);
 }
 
-@media screen and (min-width: 720px) {
-  #pkgTable > .p-datatable,
-  #deployTable > .p-datatable {
-    width: calc(100vw - 2rem);
-  }
+.row-menu .p-menu-item-icon {
+  color: var(--chaotic-fg-muted) !important;
+  filter: none;
 }
 
-.p-progress-bar {
-  width: calc(100vw - 20rem);
-  height: 25px;
+.row-menu .p-menu-item-label {
+  font-size: var(--chaotic-text-base);
 }
 
-.p-autocomplete-list {
-  background: var(--ctp-mocha-crust);
-  border-radius: var(--p-autocomplete-border-radius);
-}
-
-.p-autocomplete-option {
-  background: var(--ctp-mocha-base);
+.row-menu .row-menu__danger .p-menu-item-label,
+.row-menu .row-menu__danger .p-menu-item-icon {
+  color: var(--catppuccin-color-red) !important;
 }
 
 .chaotic-lazy-viewport:not(:has(*)) {
@@ -500,7 +1688,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .chaotic-diff-placeholder {
-  @apply bg-ctp-surface0/40 animate-pulse rounded-lg;
+  @apply bg-ctp-surface0/40 animate-pulse;
   min-height: 8rem;
 }
 
@@ -516,7 +1704,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .ctp-item-enter {
-  animation: ctp-item-enter 0.25s ease-out;
+  animation: ctp-item-enter var(--chaotic-duration-base) var(--chaotic-ease-out);
 }
 
 @keyframes ctp-item-leave {
@@ -529,7 +1717,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .ctp-item-leave {
-  animation: ctp-item-leave 0.18s ease-in;
+  animation: ctp-item-leave var(--chaotic-duration-base) var(--chaotic-ease-in);
 }
 
 @keyframes queue-section-enter {
@@ -542,7 +1730,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .queue-section-enter {
-  animation: queue-section-enter 0.6s ease-out;
+  animation: queue-section-enter var(--chaotic-duration-slow) var(--chaotic-ease-out);
 }
 
 @keyframes queue-section-leave {
@@ -557,7 +1745,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .queue-section-leave {
-  animation: queue-section-leave 0.2s ease-in;
+  animation: queue-section-leave var(--chaotic-duration-base) var(--chaotic-ease-in);
 }
 
 @keyframes queue-item-enter {
@@ -570,7 +1758,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .queue-item-enter {
-  animation: queue-item-enter 0.5s ease-out;
+  animation: queue-item-enter var(--chaotic-duration-slow) var(--chaotic-ease-out);
 }
 
 @keyframes pipeline-item-enter {
@@ -585,7 +1773,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .pipeline-item-enter {
-  animation: pipeline-item-enter 0.5s ease-out both;
+  animation: pipeline-item-enter var(--chaotic-duration-slow) var(--chaotic-ease-out) both;
   animation-delay: calc(min(var(--stagger, 0), 8) * 80ms);
 }
 
@@ -601,7 +1789,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .ctp-scale-enter {
-  animation: ctp-scale-enter 0.3s ease-out;
+  animation: ctp-scale-enter var(--chaotic-duration-slow) var(--chaotic-ease-out);
 }
 
 @keyframes ctp-fade-enter {
@@ -614,7 +1802,7 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .ctp-fade-enter {
-  animation: ctp-fade-enter 0.15s ease-out;
+  animation: ctp-fade-enter var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
 @keyframes finding-item-enter {
@@ -629,6 +1817,73 @@ body > app-root > chaotic-footer > div > p-card > div {
 }
 
 .finding-item-enter {
-  animation: finding-item-enter 0.25s ease-out both;
+  animation: finding-item-enter var(--chaotic-duration-base) var(--chaotic-ease-out) both;
   animation-delay: calc(min(var(--stagger, 0), 8) * 35ms);
+}
+
+.garuda-shell-menubar,
+.garuda-shell__dropdown {
+  backdrop-filter: blur(var(--chaotic-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--chaotic-blur)) !important;
+}
+
+/* Labelled groups of package chips: dependencies in the package sheet and rebuild trigger sources. */
+.pkg-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.pkg-group__label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: var(--chaotic-weight-medium);
+  color: var(--chaotic-fg-muted);
+}
+
+.pkg-group__count {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--chaotic-fg-faint);
+}
+
+.pkg-group__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.pkg-group__empty {
+  font-size: 0.8125rem;
+  color: var(--chaotic-fg-muted);
+}
+
+.pkg-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  max-width: 100%;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--chaotic-radius-sm);
+  background: color-mix(in srgb, var(--catppuccin-color-surface0) 55%, transparent);
+  font-size: 0.8125rem;
+}
+
+.pkg-chip__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  color: var(--catppuccin-color-text);
+}
+
+.pkg-chip__note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--chaotic-fg-muted);
 }

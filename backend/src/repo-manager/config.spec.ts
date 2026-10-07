@@ -107,7 +107,9 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
       for (const dir of packageDirs) {
         try {
           const triggers = parseRebuildTriggers(await readConfigText(dir));
-          if (triggers.includes('kwin')) kwinConsumers.push(dir);
+          if (triggers.includes('kwin')) {
+            kwinConsumers.push(dir);
+          }
         } catch {
           // ignore missing
         }
@@ -127,7 +129,9 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
       for (const dir of packageDirs) {
         try {
           const triggers = parseRebuildTriggers(await readConfigText(dir));
-          if (triggers.includes('boost')) boostConsumers.push(dir);
+          if (triggers.includes('boost')) {
+            boostConsumers.push(dir);
+          }
         } catch {
           // ignore missing
         }
@@ -156,7 +160,9 @@ describe('CI_REBUILD_TRIGGERS parsing (real pkgbuilds)', () => {
       for (const name of packageDirs) {
         try {
           const triggers = parseRebuildTriggers(await readConfigText(name));
-          if (triggers.includes(trigger)) result.push(name);
+          if (triggers.includes(trigger)) {
+            result.push(name);
+          }
         } catch {
           // ignore missing
         }

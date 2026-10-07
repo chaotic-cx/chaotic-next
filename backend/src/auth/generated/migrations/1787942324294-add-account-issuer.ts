@@ -3,10 +3,12 @@ import { type MigrationInterface, type QueryRunner } from 'typeorm';
 export class AddAccountIssuer1787942324294 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "account" ADD COLUMN IF NOT EXISTS "issuer" text`);
-    // Better Auth 1.7 scopes account identity by issuer. Existing rows were
-    // created before the column existed, so backfill from providerId using the
-    // same synthetic issuers Better Auth derives (local:credential for
-    // password accounts, local:oauth:<providerId> for OAuth accounts).
+    /**
+     * Better Auth 1.7 scopes account identity by issuer. Existing rows were
+     * created before the column existed, so backfill from providerId using the
+     * same synthetic issuers Better Auth derives (local:credential for
+     * password accounts, local:oauth:<providerId> for OAuth accounts).
+     */
     await queryRunner.query(`
       UPDATE "account"
       SET "issuer" = CASE

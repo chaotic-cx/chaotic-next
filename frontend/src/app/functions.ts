@@ -1,10 +1,11 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
+import { computed, DestroyRef, inject, linkedSignal, signal, type Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { type ParamMap, Router } from '@angular/router';
 import type { ChaoticEvent, GitlabLogChunk } from '@chaotic-next/shared-lib';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { MISSING_VALUE } from './table-columns/missing-value';
 
 const CHAOTIC_EVENT_TYPES = new Set(['build', 'pipeline', 'merge_request', 'queue', 'queue_promoted']);
 
@@ -33,17 +34,6 @@ export function isChaoticEvent(value: unknown): value is ChaoticEvent {
   return typeof type === 'string' && CHAOTIC_EVENT_TYPES.has(type);
 }
 
-export function shuffleArray<T>(array: readonly T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i >= 0; i--) {
-    const j: number = Math.floor(Math.random() * (i + 1));
-    const temp = shuffled[i];
-    shuffled[i] = shuffled[j];
-    shuffled[j] = temp;
-  }
-  return shuffled;
-}
-
 export function castTo<T>(value: unknown): T {
   return value as T;
 }
@@ -66,24 +56,32 @@ export function errorMessage(error: unknown): string {
 }
 
 export function formatDuration(totalSeconds: number): string {
-  // Sub-second precision is noise in a human-readable duration; round before
-  // splitting so the seconds part never carries over into 60.
+  /**
+   * Sub-second precision is noise in a human-readable duration; round before
+   * splitting so the seconds part never carries over into 60.
+   */
   const rounded = Math.round(totalSeconds);
   const hours = Math.floor(rounded / 3600);
   const minutes = Math.floor((rounded % 3600) / 60);
   const seconds = rounded % 60;
 
   const parts: string[] = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+  if (hours > 0) {
+    parts.push(`${hours}h`);
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes}m`);
+  }
+  if (seconds > 0 || parts.length === 0) {
+    parts.push(`${seconds}s`);
+  }
   return parts.join(' ');
 }
 
 const BYTE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB'] as const;
 
 export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes)) return 'n/a';
+  if (!Number.isFinite(bytes)) return MISSING_VALUE;
   let value = Math.abs(bytes);
   let unitIndex = 0;
   while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
@@ -99,7 +97,7 @@ export function formatBytes(bytes: number): string {
 const NANOSECONDS_PER_SECOND = 1_000_000_000;
 
 export function formatCpuTime(nanoseconds: number): string {
-  if (!Number.isFinite(nanoseconds)) return 'n/a';
+  if (!Number.isFinite(nanoseconds)) return MISSING_VALUE;
   return formatDuration(nanoseconds / NANOSECONDS_PER_SECOND);
 }
 
@@ -130,20 +128,56 @@ export function resourceValue<T>(resource: { hasValue(): boolean; value(): T }):
   return resource.hasValue() ? resource.value() : undefined;
 }
 
+/** Keeps the last loaded value while a resource loads again, so lists do not blank out between requests. */
+export function retainedResourceValue<T>(resource: { hasValue(): boolean; value(): T }): Signal<T | undefined> {
+  return linkedSignal<T | undefined, T | undefined>({
+    source: () => resourceValue(resource),
+    computation: (next, previous) => next ?? previous?.value,
+  });
+}
+
+/** Equality for signals that hold short lists: the same items in the same order count as unchanged. */
+export function sameItems<T>(a: readonly T[], b: readonly T[]): boolean {
+  return a.length === b.length && a.every((item, index) => item === b[index]);
+}
+
+/** True only while a resource loads and no earlier value exists to show in the meantime. */
+export function loadingWithoutValue(resource: { isLoading(): boolean }, value: Signal<unknown>): Signal<boolean> {
+  return computed(() => resource.isLoading() && value() === undefined);
+}
+
 export function debouncedSignal<T>(source: Signal<T>, delayMs: number): Signal<T> {
   return toSignal(toObservable(source).pipe(debounceTime(delayMs), distinctUntilChanged()), {
     initialValue: source(),
   });
 }
 
+/**
+ * True when the user asked for reduced motion.
+ * JS-driven animations ignore the CSS media rule, so they must check this.
+ */
+export function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** Smooth scrolling unless the user asked for reduced motion; JS-driven scrolls ignore the CSS media rule. */
+export function preferredScrollBehavior(): ScrollBehavior {
+  return prefersReducedMotion() ? 'auto' : 'smooth';
+}
+
+/** True once the resource's last request failed. Lets templates show an error state instead of an empty one. */
+export function resourceFailed(resource: { status(): string }): Signal<boolean> {
+  return computed(() => resource.status() === 'error');
+}
+
 export function resourceSignal<T>(resource: { hasValue(): boolean; value(): T }): Signal<T | undefined> {
   return computed(() => resourceValue(resource));
 }
 
-export function copyLineLink(line: number): void {
+export function copyLineLink(line: number): Promise<void> {
   const url = new URL(window.location.href);
   url.searchParams.set('line', String(line));
-  void navigator.clipboard.writeText(url.toString());
+  return navigator.clipboard.writeText(url.toString());
 }
 
 export interface SeoTags {
@@ -160,7 +194,9 @@ export function updateSeoTags(meta: Meta, seo: SeoTags): void {
   meta.updateTag({ property: 'og:title', content: seo.title });
   meta.updateTag({ property: 'og:description', content: seo.description });
   meta.updateTag({ property: 'og:url', content: seo.url });
-  if (seo.image) meta.updateTag({ property: 'og:image', content: seo.image });
+  if (seo.image) {
+    meta.updateTag({ property: 'og:image', content: seo.image });
+  }
 }
 
 /** Must run in an injection context (component constructor or field initializer). */
@@ -168,7 +204,7 @@ export function setPageSeo(title: string, description: string, keywords = ''): v
   updateSeoTags(inject(Meta), { title, description, keywords, url: inject(Router).url });
 }
 
-const MOBILE_BREAKPOINT = '(max-width: 768px)';
+const MOBILE_BREAKPOINT = '(max-width: 767.98px)';
 const MAX_LABEL_LENGTH = 15;
 
 export function isMobileSignal(): Signal<boolean> {

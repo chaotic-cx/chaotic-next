@@ -1,23 +1,23 @@
 @if (pageCount() > 1) {
-  <div class="flex items-center justify-center gap-2">
+  <nav class="flex items-center gap-1" *transloco="let t" [attr.aria-label]="t('common.pagination')">
     <button
-      class="queue-page-btn cursor-pointer"
+      class="chaotic-icon-btn"
       [disabled]="page() <= 1"
+      [attr.aria-label]="t('common.previousPage')"
       (click)="goTo(page() - 1)"
       type="button"
-      aria-label="Previous page"
     >
-      <i class="pi pi-angle-left"></i>
+      <i class="pi pi-angle-left" aria-hidden="true"></i>
     </button>
-    <span class="text-sm text-ctp-subtext1">{{ page() }} / {{ pageCount() }}</span>
+    <span class="min-w-12 text-center text-xs tabular-nums text-ctp-subtext1">{{ page() }} / {{ pageCount() }}</span>
     <button
-      class="queue-page-btn cursor-pointer"
+      class="chaotic-icon-btn"
       [disabled]="page() >= pageCount()"
+      [attr.aria-label]="t('common.nextPage')"
       (click)="goTo(page() + 1)"
       type="button"
-      aria-label="Next page"
     >
-      <i class="pi pi-angle-right"></i>
+      <i class="pi pi-angle-right" aria-hidden="true"></i>
     </button>
-  </div>
+  </nav>
 }

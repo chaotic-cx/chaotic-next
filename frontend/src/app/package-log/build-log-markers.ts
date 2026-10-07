@@ -49,14 +49,18 @@ export function findBuildLogMarkers(buffer: string, prior: BuildLogMarkers): Bui
 
   if (markers.builder === undefined) {
     const builder = buffer.match(/Executing build on host ([^\s.,]+)/);
-    if (builder?.[1]) markers.builder = builder[1];
+    if (builder?.[1]) {
+      markers.builder = builder[1];
+    }
   }
 
   if (markers.buildStartMs === undefined) {
     const start = buffer.match(/Processing build job at (\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2}) UTC/);
     if (start?.[1]) {
       const ms = parseLogTimestamp(start[1]);
-      if (Number.isFinite(ms)) markers.buildStartMs = ms;
+      if (Number.isFinite(ms)) {
+        markers.buildStartMs = ms;
+      }
     }
   }
 

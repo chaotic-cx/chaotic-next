@@ -1,5 +1,8 @@
+import dr460nf1r3 from '@dr460nf1r3/eslint-rules';
 import nx from '@nx/eslint-plugin';
 import baseConfig from '../eslint.config.mjs';
+
+const typeCheckedConfigs = [...dr460nf1r3.configs['type-checked'], ...dr460nf1r3.configs['angular-type-checked']];
 
 export default [
   ...baseConfig,
@@ -33,33 +36,11 @@ export default [
           style: 'kebab-case',
         },
       ],
-      '@angular-eslint/contextual-decorator': 'error',
-      '@angular-eslint/inject-at-top': 'error',
-      '@angular-eslint/no-async-lifecycle-method': 'error',
-      '@angular-eslint/no-implicit-take-until-destroyed': 'error',
-      '@angular-eslint/prefer-host-metadata-property': 'error',
-      '@angular-eslint/prefer-output-emitter-ref': 'error',
-      '@angular-eslint/prefer-output-readonly': 'error',
-      '@angular-eslint/prefer-service-decorator': 'error',
-      '@angular-eslint/prefer-signal-model': 'error',
-      '@angular-eslint/prefer-signals': 'error',
-      '@angular-eslint/relative-url-prefix': 'error',
-      '@angular-eslint/use-injectable-provided-in': 'error',
-      '@angular-eslint/use-pipe-transform-interface': 'error',
     },
   },
-  {
-    files: ['**/*.html'],
-    ignores: ['**/index.html'],
-    rules: {
-      '@angular-eslint/template/prefer-at-empty': 'error',
-      '@angular-eslint/template/prefer-built-in-pipes': 'error',
-      '@angular-eslint/template/prefer-class-binding': 'error',
-      '@angular-eslint/template/prefer-control-flow': 'error',
-      '@angular-eslint/template/prefer-self-closing-tags': 'error',
-      '@angular-eslint/template/prefer-template-literal': 'error',
-      '@angular-eslint/template/require-switch-default': 'error',
-      '@angular-eslint/template/use-track-by-function': 'error',
-    },
-  },
+  ...dr460nf1r3.configs.angular,
+  ...typeCheckedConfigs.map((config) => ({
+    ...config,
+    files: ['**/*.ts'],
+  })),
 ];

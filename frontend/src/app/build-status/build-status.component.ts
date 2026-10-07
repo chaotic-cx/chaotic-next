@@ -1,13 +1,13 @@
-import { CommonModule } from '@angular/common';
-import { Component, effect, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MessageToastService } from '@garudalinux/core';
-import { Card } from '@openng/optimus-ui/card';
-import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
+import { MessageToastService } from '@garudalinux/core/message-toast';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { AppService } from '../app.service';
-import { isMobileSignal, setPageSeo } from '../functions';
+import { setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
+import { StaleNoticeComponent } from '../ui-states/stale-notice.component';
+import { UnknownValueComponent } from '../ui-states/unknown-value.component';
 import { ActiveBuildsComponent } from './active-builds.component';
 import { BuildStatusDeploymentsComponent } from './build-status-deployments.component';
 import { BuildStatusPipelineDialogComponent } from './build-status-pipeline-dialog.component';
@@ -19,9 +19,6 @@ import { WaitingBuildsComponent } from './waiting-builds.component';
 @Component({
   selector: 'chaotic-build-status',
   imports: [
-    CommonModule,
-    Card,
-    ProgressSpinner,
     TitleComponent,
     BuildStatusPipelinesComponent,
     BuildStatusDeploymentsComponent,
@@ -29,8 +26,12 @@ import { WaitingBuildsComponent } from './waiting-builds.component';
     ActiveBuildsComponent,
     WaitingBuildsComponent,
     IdleBuildersComponent,
+    TranslocoDirective,
+    StaleNoticeComponent,
+    UnknownValueComponent,
   ],
   templateUrl: './build-status.component.html',
+  styleUrl: './build-status.component.css',
   providers: [MessageToastService],
 })
 export class BuildStatusComponent implements OnInit {
@@ -39,40 +40,25 @@ export class BuildStatusComponent implements OnInit {
   messageToastService = inject(MessageToastService);
   router = inject(Router);
   route = inject(ActivatedRoute);
+  private readonly transloco = inject(TranslocoService);
 
   readonly dialogData = signal<PipelineView | null>(null);
   readonly dialogVisible = signal<boolean>(false);
-  readonly contentEl = viewChild<ElementRef<HTMLDivElement>>('statusContent');
-  readonly isMobile = isMobileSignal();
 
   constructor() {
     setPageSeo(
-      'Build status',
-      'Current build status and queue information for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR build status',
+      this.transloco.translate('buildStatus.seo.title'),
+      this.transloco.translate('buildStatus.seo.description'),
+      this.transloco.translate('buildStatus.seo.keywords'),
     );
-    effect(() => {
-      if (this.buildStatusService.initialLoaded()) {
-        const el = this.contentEl()?.nativeElement;
-        if (el) this.buildStatusService.cardMinHeight.set(el.offsetHeight);
-      }
-    });
 
     this.appService.chaoticEvent.pipe(takeUntilDestroyed()).subscribe((event) => {
-      if (event.type === 'build') {
-        void this.buildStatusService.refreshPackageBuilds();
-        void this.buildStatusService.refreshQueueStats();
-      }
+      this.buildStatusService.applyQueueEvent(event);
       if (event.type === 'pipeline') {
         this.buildStatusService.applyPipelineDelta(event.pipeline);
         if (this.dialogVisible()) {
           this.refreshDialogData();
         }
-      }
-      if (event.type === 'queue') void this.buildStatusService.refreshQueueStats();
-      if (event.type === 'queue_promoted') {
-        void this.buildStatusService.refreshPackageBuilds();
-        void this.buildStatusService.refreshQueueStats();
       }
     });
 
@@ -103,7 +89,6 @@ export class BuildStatusComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.buildStatusService.beginNavigation();
     void this.updateAll();
   }
 

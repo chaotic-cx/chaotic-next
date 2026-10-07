@@ -233,6 +233,7 @@ export class BuildResourceUsage {
 @Index('IDX_build_repoId', ['repo'])
 @Index('IDX_build_timestamp', ['timestamp'])
 @Index('IDX_build_status', ['status'])
+@Index('IDX_build_pkgbaseId_status_id', ['pkgbase', 'status', 'id'])
 export class Build {
   @ApiProperty({ description: 'Build ID' })
   @PrimaryGeneratedColumn()

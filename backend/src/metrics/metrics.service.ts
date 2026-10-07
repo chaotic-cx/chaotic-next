@@ -167,9 +167,15 @@ export class MetricsService {
       .select(dimension, 'name')
       .addSelect('SUM(hit.count)::int', 'count')
       .where('hit.day >= :cutoff', { cutoff: params.cutoff });
-    if (params.repo) query.andWhere('hit.repo = :repo', { repo: params.repo });
-    if (params.pkgname) query.andWhere('hit.package = :pkg', { pkg: params.pkgname });
-    if (params.limit !== undefined) query.limit(params.limit);
+    if (params.repo) {
+      query.andWhere('hit.repo = :repo', { repo: params.repo });
+    }
+    if (params.pkgname) {
+      query.andWhere('hit.package = :pkg', { pkg: params.pkgname });
+    }
+    if (params.limit !== undefined) {
+      query.limit(params.limit);
+    }
     return query.groupBy(dimension).orderBy('count', 'DESC').getRawMany<T>();
   }
 

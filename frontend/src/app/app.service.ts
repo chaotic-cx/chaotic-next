@@ -1,5 +1,5 @@
-import { HttpClient, HttpParams, type HttpResourceRequest } from '@angular/common/http';
-import { inject, Service, signal } from '@angular/core';
+import { HttpClient, HttpParams, httpResource, type HttpResourceRequest } from '@angular/common/http';
+import { computed, inject, Service, signal } from '@angular/core';
 import {
   type BuildSortField,
   type BuildStatus,
@@ -69,7 +69,14 @@ export class AppService {
   private readonly internalSseSettled = signal(false);
   readonly sseSettled = this.internalSseSettled.asReadonly();
 
-  readonly backendVersion = signal<string | undefined>(undefined);
+  private readonly versionResource = httpResource<{ version: string }>(
+    () => `${this.appConfig.backendUrl}/health/version`,
+  );
+  readonly backendVersion = computed(() => {
+    if (this.versionResource.error()) return 'unknown';
+
+    return this.versionResource.hasValue() ? this.versionResource.value().version : undefined;
+  });
 
   private lastSseFrameAt = Date.now();
   private lastHealthProbeAt = 0;
@@ -79,8 +86,10 @@ export class AppService {
     onMessage: (data) => this.handleFrame(data),
     namedEvents: ['ping'],
     onNamedEvent: () => {
-      // The backend heartbeat is a named event, so it never reaches onmessage;
-      // it is still proof of a live connection.
+      /**
+       * The backend heartbeat is a named event, so it never reaches onmessage;
+       * it is still proof of a live connection.
+       */
       this.lastSseFrameAt = Date.now();
       this.internalSseConnected.set(true);
     },
@@ -99,7 +108,6 @@ export class AppService {
 
   constructor() {
     this.stream.open();
-    this.fetchVersion();
   }
 
   /**
@@ -128,6 +136,7 @@ export class AppService {
     if (Date.now() - this.lastHealthProbeAt < HEALTH_PROBE_MIN_GAP_MS) return;
     this.lastHealthProbeAt = Date.now();
     try {
+      // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot liveness probe, not page state
       await firstValueFrom(this.http.get(`${this.appConfig.backendUrl}/health`));
       this.internalSseConnected.set(true);
     } catch {
@@ -138,14 +147,9 @@ export class AppService {
   private handleFrame(data: string): void {
     this.lastSseFrameAt = Date.now();
     const event: unknown = JSON.parse(data);
-    if (isChaoticEvent(event)) this.chaoticSse$.next(event);
-  }
-
-  private fetchVersion(): void {
-    this.http.get<{ version: string }>(`${this.appConfig.backendUrl}/health/version`).subscribe({
-      next: (res) => this.backendVersion.set(res.version),
-      error: () => this.backendVersion.set('unknown'),
-    });
+    if (isChaoticEvent(event)) {
+      this.chaoticSse$.next(event);
+    }
   }
 
   private daysParams(days?: number): HttpParams {
@@ -225,8 +229,10 @@ export class AppService {
     return { url: `${this.appConfig.backendUrl}/builder/builds/failed/over-time/${amount}/${days}` };
   }
 
+  /** Without days, the backend applies its own lookback window, which keeps the query fast. */
   getUnresolvedFailedBuildsResourceRequest(days?: number): HttpResourceRequest {
-    return { url: `${this.appConfig.backendUrl}/builder/builds/failed/unresolved`, params: this.daysParams(days) };
+    const url = `${this.appConfig.backendUrl}/builder/builds/failed/unresolved`;
+    return days === undefined ? { url } : { url, params: this.daysParams(days) };
   }
 
   getMissingDependenciesResourceRequest(): HttpResourceRequest {
@@ -359,11 +365,17 @@ export class AppService {
     };
   }
 
+  getPkgnameSuggestionsRequest(query: string): HttpResourceRequest {
+    return this.getPackagesResourceRequest({ page: 1, perPage: MAX_PER_PAGE, q: query });
+  }
+
   /** Returns unique package names in `repo` that match `query`. */
   async fetchPkgnameSuggestions(query: string, repo: string): Promise<string[]> {
-    const request = this.getPackagesResourceRequest({ page: 1, perPage: MAX_PER_PAGE, q: query });
+    const request = this.getPkgnameSuggestionsRequest(query);
+    // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot existence check when the search input commits
     const result = await firstValueFrom(this.http.get<Paginated<Package>>(request.url, { params: request.params }));
-    return [...new Set((result.items ?? []).filter((pkg) => pkg.reponame === repo).map((pkg) => pkg.pkgname))];
+
+    return pkgnamesInRepo(result, repo);
   }
 
   getBuildsResourceRequest(params: BuildsQueryParams): HttpResourceRequest {
@@ -427,4 +439,9 @@ export class AppService {
       params: new HttpParams({ fromObject: parseQueryParams(aurSearchQuerySchema, { arg: query }) }),
     };
   }
+}
+
+/** Unique package names of a package page that belong to `repo`. */
+export function pkgnamesInRepo(page: Paginated<Package>, repo: string): string[] {
+  return [...new Set((page.items ?? []).filter((pkg) => pkg.reponame === repo).map((pkg) => pkg.pkgname))];
 }

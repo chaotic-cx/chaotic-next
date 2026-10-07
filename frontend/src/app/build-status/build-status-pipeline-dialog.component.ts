@@ -1,6 +1,7 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, computed, input, model } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Dialog } from '@openng/optimus-ui/dialog';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { RelativeTimePipe } from '../pipes/relative-time.pipe';
@@ -31,7 +32,7 @@ const UNKNOWN_STATUS: JobStatus = {
 
 @Component({
   selector: 'chaotic-build-status-pipeline-dialog',
-  imports: [CommonModule, RouterLink, Dialog, Tooltip, RelativeTimePipe],
+  imports: [DatePipe, RouterLink, Dialog, Tooltip, RelativeTimePipe, TranslocoDirective],
   templateUrl: './build-status-pipeline-dialog.component.html',
   styleUrl: './build-status-pipeline-dialog.component.css',
 })

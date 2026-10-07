@@ -77,9 +77,7 @@ export class RepoManager {
         this.changedArchPackages,
         this.settings,
       );
-      if (needsRebuild.length === 0) {
-        return { repo: repo.name, bumped: [], origin: TriggerType.ARCH };
-      }
+      if (needsRebuild.length === 0) return { repo: repo.name, bumped: [], origin: TriggerType.ARCH };
 
       const notYetBumped = await this.bump.dropAlreadyBumpedForArch(needsRebuild);
       const bumpedPackages: PackageBumpEntry[] = await this.bump.bumpAndPush(notYetBumped, reader, repo);

@@ -1,9 +1,18 @@
 import { Component, computed, inject, input } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
+import { seriesColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roundToTenth } from '../../chart-config';
+import {
+  axisChartOptions,
+  chartResource,
+  type ChartConfig,
+  formatDay,
+  hasPlottedValue,
+  roundToTenth,
+} from '../../chart-config';
 
 @Component({
   selector: 'chaotic-chart-package-average-build-time',
@@ -13,6 +22,9 @@ import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roun
 export class ChartPackageAverageBuildTimeComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly packageName = input.required<string>();
 
@@ -26,6 +38,8 @@ export class ChartPackageAverageBuildTimeComponent {
   });
 
   readonly chartConfig = computed<ChartConfig<'line'> | null>(() => {
+    this.activeTranslation();
+
     const rows = this.chart.data();
     if (rows.length === 0) return null;
 
@@ -40,25 +54,24 @@ export class ChartPackageAverageBuildTimeComponent {
       dataMap.set(formatDay(row.day), roundToTenth(Number(row.average)));
     }
 
-    return {
+    const config: ChartConfig<'line'> = {
       data: {
         labels,
         datasets: [
           {
-            label: `Average build time (minutes) for ${this.packageName()}`,
+            label: this.transloco.translate('stats.charts.packageAverageBuildTime.label', {
+              package: this.packageName(),
+            }),
             data: labels.map((day) => dataMap.get(day) ?? 0),
-            backgroundColor: CATPPUCCIN_FLAVOURS[0],
-            borderColor: CATPPUCCIN_FLAVOURS[0],
+            backgroundColor: seriesColor(0),
+            borderColor: seriesColor(0),
             fill: false,
           },
         ],
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
-  });
 
-  readonly loadingChart: ChartConfig<'line'> = {
-    data: { labels: [], datasets: [] },
-    options: mochaAxisChartOptions<'line'>(),
-  };
+    return hasPlottedValue(config) ? config : null;
+  });
 }

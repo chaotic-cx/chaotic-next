@@ -18,7 +18,9 @@ export function dnsmasqHosts(raw: string): string[] {
   const hosts: string[] = [];
   for (const line of raw.split('\n')) {
     const match = line.match(/^local=\/([^/]+)\/$/);
-    if (match) hosts.push(match[1]);
+    if (match) {
+      hosts.push(match[1]);
+    }
   }
   return hosts;
 }
@@ -28,7 +30,9 @@ export function hostsFileHosts(raw: string): string[] {
   const hosts: string[] = [];
   for (const line of raw.split('\n')) {
     const match = line.match(/^(?:\d{1,3}\.){3}\d{1,3}\s+(\S+)\s*$/);
-    if (match && !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(match[1])) hosts.push(match[1]);
+    if (match && !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(match[1])) {
+      hosts.push(match[1]);
+    }
   }
   return hosts;
 }
@@ -106,8 +110,10 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     name: 'Known malware host',
     severity: 'critical',
     description: 'Contacts a host that abuse.ch URLhaus currently lists as distributing malware.',
-    // Data-only rule: it stays inert until its first successful blocklist load;
-    // the last good payload is persisted and reused while the feed is unreachable.
+    /**
+     * Data-only rule: it stays inert until its first successful blocklist load;
+     * the last good payload is persisted and reused while the feed is unreachable.
+     */
     list: [],
     data: {
       url: MALWARE_HOST_BLOCKLIST_URL,
@@ -211,8 +217,10 @@ export const NETWORK_RULES: Rule<unknown>[] = [
     description: 'Downloads a package source over plain HTTP. An attacker can change the artifact on the way.',
     informational: true,
     countsTowardMalwareScan: false,
-    // Only the source= entries are judged; a plain-http url= homepage says
-    // nothing about how the build artifacts are fetched.
+    /**
+     * Only the source= entries are judged; a plain-http url= homepage says
+     * nothing about how the build artifacts are fetched.
+     */
     check(change) {
       const entry = parsePkgbuild(change)?.entries.find((candidate) => candidate.url.startsWith('http://'));
       return entry ? { line: entry.line, match: entry.raw } : null;

@@ -1,239 +1,292 @@
-<chaotic-title
-  title="Packages"
-  subtitle="This is the list of currently deployed in the repositories we supply. Make sure to check the repository the package is in."
-/>
+<div class="chaotic-page" *transloco="let t; prefix: 'packageList'">
+  <chaotic-title [title]="t('title')" [subtitle]="t('subtitle')" />
 
-<div class="table-container" animate.enter="ctp-fade-enter">
-  <p-table
-    id="pkgTable"
-    #pkgTable
-    [value]="packageListService.packageList()"
-    [rows]="25"
-    [rowsPerPageOptions]="[25, 50, 100, 200]"
-    [loading]="packageListService.loading()"
-    [showCurrentPageReport]="true"
-    [paginator]="true"
-    [lazy]="true"
-    [totalRecords]="packageListService.total()"
-    [sortOrder]="1"
-    (onLazyLoad)="onLazyLoad($event)"
-    dataKey="id"
-    sortField="pkgname"
-    stateStorage="local"
-    stateKey="package-list-table"
-    paginatorDropdownAppendTo="body"
-  >
-    <ng-template #caption>
-      <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-        <div class="flex flex-wrap items-center gap-2.5 sm:mr-auto">
-          <p-button
-            class="hidden sm:inline-flex"
-            [outlined]="true"
-            (click)="clear(pkgTable)"
-            size="small"
-            label="Clear"
-            icon="pi pi-filter-slash"
-            pTooltip="Clear all filters and search"
-            tooltipPosition="bottom"
-          />
-          <chaotic-column-toggle [columns]="packageColumns" tableKey="package-list-table" />
+  <div class="table-container" animate.enter="ctp-fade-enter">
+    <p-table
+      class="chaotic-stack"
+      id="pkgTable"
+      #pkgTable
+      [value]="packageListService.packageList()"
+      [rows]="pageSize"
+      [rowsPerPageOptions]="[25, 50, 100, 200]"
+      [paginator]="true"
+      [lazy]="true"
+      [totalRecords]="packageListService.total()"
+      [chaoticTableFailed]="packageListService.failed()"
+      [sortOrder]="1"
+      (onLazyLoad)="onLazyLoad($event)"
+      dataKey="id"
+      sortField="pkgname"
+      stateStorage="local"
+      stateKey="package-list-table"
+      paginatorDropdownAppendTo="body"
+      chaoticPageReport
+    >
+      <ng-template #caption>
+        <div class="flex flex-col gap-2.5 md:flex-row md:flex-nowrap md:items-center">
+          <div class="hidden flex-wrap items-center gap-2.5 md:mr-auto md:flex">
+            <chaotic-column-toggle [columns]="packageColumns()" tableKey="package-list-table" />
+            <chaotic-clear-filters [active]="filtersActive()" (clear)="clear(pkgTable)" />
+          </div>
+          <chaotic-filter-bar [active]="filtersActive()" (clear)="clear(pkgTable)">
+            <ng-template #filters let-placement>
+              @if (placement === 'sheet') {
+                <chaotic-column-toggle [columns]="packageColumns()" tableKey="package-list-table" />
+              }
+              <p-select
+                class="w-full md:w-40"
+                [options]="packageListService.repos() ?? []"
+                [ngModel]="packageListService.repoFilter()"
+                [placeholder]="t('allRepos')"
+                [ariaLabel]="t('repoFilterLabel')"
+                (ngModelChange)="onRepoFilter($event)"
+                optionLabel="name"
+                optionValue="id"
+                showClear
+                appendTo="body"
+              />
+            </ng-template>
+            <p-iconfield class="w-full" iconPosition="left">
+              <p-inputicon>
+                <i class="pi pi-search" aria-hidden="true"></i>
+              </p-inputicon>
+              <input
+                class="w-full"
+                #searchInput
+                [formField]="searchForm.query"
+                [placeholder]="t('searchPlaceholder')"
+                [attr.aria-label]="t('searchLabel')"
+                pInputText
+                type="text"
+              />
+            </p-iconfield>
+          </chaotic-filter-bar>
         </div>
-        <p-select
-          class="w-full sm:w-40"
-          [options]="packageListService.repos() ?? []"
-          [ngModel]="packageListService.repoFilter()"
-          (ngModelChange)="onRepoFilter($event)"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="All repos"
-          showClear
-          appendTo="body"
-        />
-        <p-iconfield class="w-full sm:w-64" iconPosition="left">
-          <p-inputicon>
-            <i class="pi pi-search"></i>
-          </p-inputicon>
-          <input
-            class="w-full"
-            #searchInput
-            [formField]="searchForm.query"
-            pInputText
-            type="text"
-            placeholder="Search keyword"
-          />
-        </p-iconfield>
-      </div>
-    </ng-template>
-    <ng-template #header>
-      <tr>
-        @if (columnVisibility.isVisible('package-list-table', 'name')) {
-          <th pSortableColumn="pkgname" style="min-width: 15rem">
-            <div class="flex items-center">
-              Name&nbsp;
-              <p-sortIcon field="pkgname" />
-            </div>
-          </th>
-        }
-        @if (columnVisibility.isVisible('package-list-table', 'version')) {
-          <th style="min-width: 10rem">
-            <div class="flex items-center">Version</div>
-          </th>
-        }
-        @if (columnVisibility.isVisible('package-list-table', 'lastUpdated')) {
-          <th pSortableColumn="lastUpdated" style="min-width: 10rem">
-            <div class="flex items-center">
-              Last updated&nbsp;
-              <p-sortIcon field="lastUpdated" />
-            </div>
-          </th>
-        }
-        @if (columnVisibility.isVisible('package-list-table', 'buildClass')) {
-          <th pSortableColumn="buildClass" style="min-width: 8rem">
-            <div class="flex items-center">
-              Build class&nbsp;
-              <p-sortIcon field="buildClass" />
-            </div>
-          </th>
-        }
-        @if (columnVisibility.isVisible('package-list-table', 'pkgbaseName')) {
-          <th pSortableColumn="pkgbaseName" style="min-width: 10rem">
-            <div class="flex items-center">
-              Pkgbase&nbsp;
-              <p-sortIcon field="pkgbaseName" />
-            </div>
-          </th>
-        }
-        @if (columnVisibility.isVisible('package-list-table', 'description')) {
-          <th style="min-width: 10rem">
-            <div class="flex items-center">Description</div>
-          </th>
-        }
-        @if (columnVisibility.isVisible('package-list-table', 'homepage')) {
-          <th style="min-width: 15rem; max-width: 20rem">
-            <div class="flex items-center">Homepage</div>
-          </th>
-        }
-        @if (columnVisibility.isVisible('package-list-table', 'repo')) {
-          <th pSortableColumn="repo" style="min-width: 5rem">
-            <div class="flex items-center">
-              Repository
-              <p-sortIcon field="repo" />
-            </div>
-          </th>
-        }
-        @if (columnVisibility.isVisible('package-list-table', 'actions')) {
-          <th class="cell-actions" style="min-width: 5rem">
-            <div class="flex items-center justify-end">PKGBUILD</div>
-          </th>
-        }
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-unTypedPkg>
-      @if (typed(unTypedPkg); as pkg) {
-        <tr [class.text-ctp-subtext0]="!pkg.isActive">
+      </ng-template>
+      <ng-template #header>
+        <tr>
           @if (columnVisibility.isVisible('package-list-table', 'name')) {
-            <td>
-              <span class="ml-1 align-middle">{{ pkg.pkgname }}</span>
-            </td>
+            <th pSortableColumn="pkgname" style="min-width: 10rem">
+              <div class="flex items-center">
+                {{ t('columns.name') }}&nbsp;
+                <p-sortIcon field="pkgname" />
+              </div>
+            </th>
           }
           @if (columnVisibility.isVisible('package-list-table', 'version')) {
-            <td>
-              <span class="ml-1 align-middle">{{
-                `${pkg.version}${pkg.pkgrel ? `-${formatPkgrel(pkg.pkgrel, pkg.bump ?? 0)}` : ''}`
-              }}</span>
-            </td>
+            <th style="min-width: 7rem">
+              <div class="flex items-center">{{ t('columns.version') }}</div>
+            </th>
           }
           @if (columnVisibility.isVisible('package-list-table', 'lastUpdated')) {
-            <td>
-              <span
-                class="ml-1 align-middle"
-                [pTooltip]="(pkg.lastUpdated | date: 'short') ?? undefined"
-                tooltipPosition="top"
-                >{{ pkg.lastUpdated | relativeTime }}</span
-              >
-            </td>
+            <th pSortableColumn="lastUpdated" style="min-width: 7rem">
+              <div class="flex items-center">
+                {{ t('columns.lastUpdated') }}&nbsp;
+                <p-sortIcon field="lastUpdated" />
+              </div>
+            </th>
           }
           @if (columnVisibility.isVisible('package-list-table', 'buildClass')) {
-            <td>
-              @if (pkg.buildClass !== null && pkg.buildClass !== undefined) {
-                <span
-                  class="ml-1 align-middle"
-                  pTooltip="How resource-hungry the package build is"
-                  tooltipPosition="top"
-                >
-                  {{ pkg.buildClass | buildClass }}
-                </span>
-              } @else {
-                <span class="ml-1 align-middle">-</span>
-              }
-            </td>
+            <th pSortableColumn="buildClass" style="min-width: 8rem">
+              <div class="flex items-center">
+                {{ t('columns.buildClass') }}&nbsp;
+                <p-sortIcon field="buildClass" />
+              </div>
+            </th>
           }
           @if (columnVisibility.isVisible('package-list-table', 'pkgbaseName')) {
-            <td>
-              @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
-                <span class="ml-1 align-middle">{{ pkg.pkgbaseName }}</span>
-              } @else {
-                <span class="ml-1 align-middle">-</span>
-              }
-            </td>
+            <th pSortableColumn="pkgbaseName" style="min-width: 10rem">
+              <div class="flex items-center">
+                {{ t('columns.pkgbaseName') }}&nbsp;
+                <p-sortIcon field="pkgbaseName" />
+              </div>
+            </th>
           }
           @if (columnVisibility.isVisible('package-list-table', 'description')) {
-            <td>
-              <span class="ml-1 align-middle">{{ pkg.metadata?.desc }}</span>
-            </td>
+            <th style="min-width: 14rem">
+              <div class="flex items-center">{{ t('columns.description') }}</div>
+            </th>
           }
           @if (columnVisibility.isVisible('package-list-table', 'homepage')) {
-            <td>
-              @if (pkg.metadata?.url; as url) {
-                <a class="ml-1 align-middle text-ctp-mauve" [href]="url" target="_blank" rel="noopener noreferrer">{{
-                  stripPrefix(url)
-                }}</a>
-              } @else {
-                <span class="ml-1 align-middle">n/a</span>
-              }
-            </td>
+            <th style="min-width: 9rem; max-width: 14rem">
+              <div class="flex items-center">{{ t('columns.homepage') }}</div>
+            </th>
           }
           @if (columnVisibility.isVisible('package-list-table', 'repo')) {
-            <td>
-              <span class="ml-1 align-middle">{{ pkg.reponame }}</span>
-            </td>
+            <th pSortableColumn="repo">
+              <div class="flex items-center">
+                {{ t('columns.repo') }}
+                <p-sortIcon field="repo" />
+              </div>
+            </th>
           }
           @if (columnVisibility.isVisible('package-list-table', 'actions')) {
-            <td class="cell-actions">
-              @if (pkg.isActive) {
-                <div class="flex flex-nowrap items-center gap-1 sm:gap-2">
-                  <p-button
-                    class="h-8"
-                    (click)="openDetail(pkg)"
-                    size="small"
-                    type="button"
-                    label="Details"
-                    outlined="true"
-                    pTooltip="View package statistics"
-                    tooltipPosition="left"
-                  />
-                  <p-button
-                    class="h-8"
-                    (click)="openPkgbuild(pkg)"
-                    size="small"
-                    type="button"
-                    label="Source"
-                    pTooltip="View the PKGBUILD source for this package"
-                    tooltipPosition="left"
-                  />
-                </div>
-              } @else {
-                <span class="ml-1 align-middle">N/A</span>
-              }
-            </td>
+            <th class="cell-actions w-24">
+              <span class="sr-only">{{ t('actionsHeader') }}</span>
+            </th>
           }
         </tr>
-      }
-    </ng-template>
-    <ng-template #emptymessage>
-      <tr>
-        <td colspan="9">No packages found.</td>
-      </tr>
-    </ng-template>
-  </p-table>
+      </ng-template>
+      <ng-template pTemplate="body" let-unTypedPkg>
+        @if (typed(unTypedPkg); as pkg) {
+          <tr [class.text-ctp-subtext0]="!pkg.isActive">
+            @if (columnVisibility.isVisible('package-list-table', 'name')) {
+              <td class="stack-title">
+                <span class="block max-w-xs truncate font-mono text-[0.8125rem] font-semibold" [title]="pkg.pkgname">{{
+                  pkg.pkgname
+                }}</span>
+              </td>
+            }
+            @if (columnVisibility.isVisible('package-list-table', 'version')) {
+              <td class="stack-sub">
+                <span class="font-mono text-xs break-all text-ctp-subtext1">{{
+                  `${pkg.version}${pkg.pkgrel ? `-${formatPkgrel(pkg.pkgrel, pkg.bump ?? 0)}` : ''}`
+                }}</span>
+              </td>
+            }
+            @if (columnVisibility.isVisible('package-list-table', 'lastUpdated')) {
+              <td class="stack-meta">
+                <time
+                  class="align-middle"
+                  [attr.datetime]="pkg.lastUpdated | isoDateTime"
+                  [pTooltip]="(pkg.lastUpdated | date: 'short') ?? undefined"
+                  tooltipPosition="top"
+                  >{{ pkg.lastUpdated | relativeTime
+                  }}<span class="sr-only"> ({{ pkg.lastUpdated | date: 'short' }})</span></time
+                >
+              </td>
+            }
+            @if (columnVisibility.isVisible('package-list-table', 'buildClass')) {
+              <td class="stack-meta" [attr.data-label]="t('columns.buildClass')">
+                @if (pkg.buildClass !== null && pkg.buildClass !== undefined) {
+                  <span class="align-middle" [pTooltip]="t('buildClassTooltip')" tooltipPosition="top">
+                    {{ pkg.buildClass | buildClass }}
+                  </span>
+                } @else {
+                  <span class="align-middle text-ctp-subtext0">{{ missingValue }}</span>
+                }
+              </td>
+            }
+            @if (columnVisibility.isVisible('package-list-table', 'pkgbaseName')) {
+              <td class="stack-meta" [attr.data-label]="t('columns.pkgbaseName')">
+                @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
+                  <span class="align-middle">{{ pkg.pkgbaseName }}</span>
+                } @else {
+                  <span class="align-middle text-ctp-subtext0">{{ missingValue }}</span>
+                }
+              </td>
+            }
+            @if (columnVisibility.isVisible('package-list-table', 'description')) {
+              <td class="stack-body">
+                @if (pkg.metadata?.desc; as desc) {
+                  <span class="line-clamp-2 text-ctp-subtext1" [title]="desc">{{ desc }}</span>
+                } @else {
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                }
+              </td>
+            }
+            @if (columnVisibility.isVisible('package-list-table', 'homepage')) {
+              <td class="stack-body">
+                @if (pkg.metadata?.url; as url) {
+                  <a
+                    class="block max-w-56 truncate text-ctp-mauve hover:underline focus-visible:underline"
+                    [href]="url"
+                    [title]="url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ stripPrefix(url) }}</a
+                  >
+                } @else {
+                  <span class="align-middle text-ctp-subtext0">{{ missingValue }}</span>
+                }
+              </td>
+            }
+            @if (columnVisibility.isVisible('package-list-table', 'repo')) {
+              <td class="stack-meta">
+                <span class="align-middle">{{ pkg.reponame }}</span>
+              </td>
+            }
+            @if (columnVisibility.isVisible('package-list-table', 'actions')) {
+              <td class="cell-actions">
+                @if (pkg.isActive) {
+                  <div class="flex flex-nowrap items-center justify-end gap-1">
+                    <button
+                      class="chaotic-icon-btn"
+                      [attr.aria-label]="t('actions.statsLabel', { pkgname: pkg.pkgname })"
+                      [pTooltip]="t('actions.statsTooltip')"
+                      (click)="openDetail(pkg)"
+                      type="button"
+                      tooltipPosition="left"
+                    >
+                      <i class="pi pi-chart-bar" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      class="chaotic-icon-btn"
+                      [attr.aria-label]="t('actions.pkgbuildLabel', { pkgname: pkg.pkgname })"
+                      [pTooltip]="t('actions.pkgbuildTooltip')"
+                      (click)="openPkgbuild(pkg)"
+                      type="button"
+                      tooltipPosition="left"
+                    >
+                      <i class="pi pi-file" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      class="chaotic-icon-btn"
+                      [attr.aria-label]="t('actions.deploymentsLabel', { pkgname: pkg.pkgname })"
+                      [pTooltip]="t('actions.deploymentsTooltip')"
+                      (click)="openDeployments(pkg)"
+                      type="button"
+                      tooltipPosition="left"
+                    >
+                      <i class="pi pi-history" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                } @else {
+                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </ng-template>
+      <ng-template #emptymessage>
+        @if (packageListService.loading()) {
+          <chaotic-table-skeleton-rows
+            [rowHeight]="rowHeights.packages"
+            [rows]="pageSize"
+            [columns]="packageColumns().length"
+          />
+        } @else {
+          <tr>
+            <td [attr.colspan]="packageColumns().length">
+              @if (packageListService.failed()) {
+                <chaotic-load-error
+                  [message]="t('loadError')"
+                  [error]="packageListService.error()"
+                  (retry)="packageListService.retry()"
+                />
+              } @else {
+                <chaotic-empty-state [filtered]="filtersActive()" (clearFilters)="clear(pkgTable)">
+                  @if (packageListService.searchValue(); as query) {
+                    <p>
+                      {{ t('noMatchQuery.start') }}
+                      <span
+                        class="inline-block max-w-xs truncate align-bottom font-mono text-ctp-text"
+                        [title]="query"
+                        >{{ query }}</span
+                      >{{ t('noMatchQuery.end') }}
+                    </p>
+                  } @else if (filtersActive()) {
+                    <p>{{ t('noMatchFilters') }}</p>
+                  } @else {
+                    <p>{{ t('empty') }}</p>
+                  }
+                </chaotic-empty-state>
+              }
+            </td>
+          </tr>
+        }
+      </ng-template>
+    </p-table>
+  </div>
 </div>
