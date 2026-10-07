@@ -37,21 +37,11 @@ const USEFUL_LINKS: UsefulLink[] = [
     href: 'https://builds.garudalinux.org/repos/chaotic-aur/x86_64/',
   },
   {
-    labelKey: marker('about.usefulLinks.infraToolbox'),
-    text: 'github.com/chaotic-aur/toolbox',
-    href: 'https://github.com/chaotic-aur/toolbox',
+    labelKey: marker('about.usefulLinks.chaoticManager'),
+    text: 'chaotic-manager.pages.dev',
+    href: 'https://chaotic-manager.pages.dev/',
   },
   { labelKey: marker('about.usefulLinks.statusPage'), text: 'uptime.chaotic.cx', href: 'https://uptime.chaotic.cx' },
-  {
-    labelKey: marker('about.usefulLinks.buildLogs'),
-    textKey: marker('about.usefulLinks.buildLogsText'),
-    href: 'https://builds.garudalinux.org/repos/chaotic-aur/logs/',
-  },
-  {
-    labelKey: marker('about.usefulLinks.signingKeys'),
-    text: 'chaotic.gpg',
-    href: 'https://aur.chaotic.cx/chaotic.gpg',
-  },
 ];
 
 // Proper names stay in `name`; descriptive entries use `nameKey` for translation.
