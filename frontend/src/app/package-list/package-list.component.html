@@ -230,6 +230,16 @@
                     >
                       <i class="pi pi-file" aria-hidden="true"></i>
                     </button>
+                    <button
+                      class="chaotic-icon-btn"
+                      [attr.aria-label]="t('actions.deploymentsLabel', { pkgname: pkg.pkgname })"
+                      [pTooltip]="t('actions.deploymentsTooltip')"
+                      (click)="openDeployments(pkg)"
+                      type="button"
+                      tooltipPosition="left"
+                    >
+                      <i class="pi pi-history" aria-hidden="true"></i>
+                    </button>
                   </div>
                 } @else {
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>

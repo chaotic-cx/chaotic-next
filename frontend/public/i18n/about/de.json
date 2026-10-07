@@ -53,11 +53,8 @@
     "matrixBridge": "Matrix-Bridge",
     "packageList": "Paketliste",
     "manualDownloads": "Manuelle Downloads",
-    "infraToolbox": "Infra-Toolbox",
-    "statusPage": "Statusseite",
-    "buildLogs": "Build-Logs",
-    "buildLogsText": "Logs",
-    "signingKeys": "Signing-Keys"
+    "chaoticManager": "Chaotic Manager",
+    "statusPage": "Statusseite"
   },
   "specialThanks": {
     "title": "Danke an",
