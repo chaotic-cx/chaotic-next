@@ -42,6 +42,9 @@ export const EXTERNAL_PROXY_THROTTLE_TTL_MS = 60_000;
 export const AUR_SEARCH_THROTTLE_LIMIT = 20;
 export const PIPELINE_JOBS_THROTTLE_LIMIT = 30;
 
+/** GitHub closes automated issues as "not planned", never "completed". */
+export const GITHUB_CLOSED_STATE_REASON = 'not_planned';
+
 /** Bounds for user-supplied query windows and pagination. */
 export const MAX_DAYS_WINDOW = 3650;
 /** Bit sample size (log2 registers) for per-day distinct-user HyperLogLog sketches. */

@@ -624,7 +624,9 @@
       "statsLabel": "View statistics for {{pkgname}}",
       "statsTooltip": "View package statistics",
       "pkgbuildLabel": "View the PKGBUILD of {{pkgname}}",
-      "pkgbuildTooltip": "View the PKGBUILD"
+      "pkgbuildTooltip": "View the PKGBUILD",
+      "deploymentsLabel": "View the deployments of {{pkgname}}",
+      "deploymentsTooltip": "View package deployments"
     },
     "loadError": "Could not load packages.",
     "noMatchQuery": {
@@ -1027,10 +1029,17 @@
         "label": "Builds per day"
       },
       "failedHotspots": {
-        "label": "Failed builds"
+        "countOne": "{{count}} package with failures",
+        "countOther": "{{count}} packages with failures",
+        "failuresCountOne": "{{count}} failure",
+        "failuresCountOther": "{{count}} failures",
+        "empty": "No failed builds in range."
       },
       "flakyPackages": {
-        "label": "Failure rate (%)"
+        "countOne": "{{count}} flaky package",
+        "countOther": "{{count}} flaky packages",
+        "detail": "{{failures}} of {{attempts}} failed",
+        "empty": "No flaky packages in range."
       },
       "heavyPackages": {
         "label": "Average Build Time (minutes)"

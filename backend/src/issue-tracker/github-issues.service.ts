@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { type Cache } from 'cache-manager';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { cachedResult } from '../utils/cache';
+import { GITHUB_CLOSED_STATE_REASON } from '../utils/constants';
 
 /**
  * Label names mirror the existing set on chaotic-aur/packages so the bot
@@ -96,7 +97,7 @@ export class GithubIssuesService {
   async closeIssue(issueNumber: number): Promise<void> {
     await this.request(`/repos/${this.owner}/${this.repo}/issues/${issueNumber}`, {
       method: 'PATCH',
-      body: JSON.stringify({ state: 'closed' }),
+      body: JSON.stringify({ state: 'closed', state_reason: GITHUB_CLOSED_STATE_REASON }),
     });
   }
 

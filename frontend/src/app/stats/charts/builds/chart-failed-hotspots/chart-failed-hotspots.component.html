@@ -1,9 +1,48 @@
-<chaotic-chart-card
-  [data]="chartConfig()!.data"
-  [options]="chartConfig()!.options"
-  [hasData]="chart.hasData()"
-  [loading]="chart.loading()"
-  [failed]="chart.failed()"
-  (retry)="chart.retry()"
-  type="bar"
-/>
+<div class="card flex h-[20rem] max-h-[60vh] flex-col text-left sm:h-[22rem]" *transloco="let t">
+  @if (chart.hasData()) {
+    <div class="flex items-center justify-between px-1 pb-2 text-left">
+      <span class="text-sm text-ctp-subtext0" aria-live="polite">
+        @if (visibleRows().length === 1) {
+          {{ t('stats.charts.failedHotspots.countOne', { count: visibleRows().length }) }}
+        } @else {
+          {{ t('stats.charts.failedHotspots.countOther', { count: visibleRows().length }) }}
+        }
+      </span>
+    </div>
+    <ul class="chaotic-thin-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1 text-left">
+      @for (row of visibleRows(); track row.pkgname) {
+        @defer (on viewport) {
+          <li class="flex min-w-0 items-center gap-2 rounded-lg bg-ctp-surface0/60 px-2.5 py-2 text-sm text-left">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-ctp-red" aria-hidden="true"></span>
+            <span class="min-w-0 truncate font-medium text-ctp-text" [title]="row.pkgname">{{ row.pkgname }}</span>
+            <span class="ml-auto shrink-0 rounded-md bg-ctp-surface1 px-1.5 py-0.5 text-xs text-ctp-red">
+              @if (row.count === '1') {
+                {{ t('stats.charts.failedHotspots.failuresCountOne', { count: row.count }) }}
+              } @else {
+                {{ t('stats.charts.failedHotspots.failuresCountOther', { count: row.count }) }}
+              }
+            </span>
+          </li>
+        } @placeholder {
+          <li class="h-9 rounded-lg bg-ctp-surface0/60" aria-hidden="true"></li>
+        }
+      }
+    </ul>
+    @if (visibleRows().length === 0) {
+      <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">
+        {{ t('stats.charts.failedHotspots.empty') }}
+      </p>
+    }
+  } @else if (chart.failed()) {
+    <chaotic-load-error (retry)="chart.retry()" />
+  } @else if (chart.loading()) {
+    <div class="flex flex-1 items-center justify-center">
+      <i
+        class="pi pi-spin pi-spinner text-ctp-overlay1"
+        [attr.aria-label]="t('common.loading')"
+        style="font-size: 1.5rem"
+        role="status"
+      ></i>
+    </div>
+  }
+</div>
