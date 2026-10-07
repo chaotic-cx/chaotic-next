@@ -131,7 +131,7 @@
     "@rspack/cli": "^2.2.3",
     "@rspack/core": "^2.2.3",
     "@rspack/dev-server": "^2.2.0",
-    "@schematics/angular": "22.1.7",
+    "@schematics/angular": "22.2.2",
     "@swc/core": "1.16.13",
     "@swc/helpers": "0.5.23",
     "@tailwindcss/postcss": "^4.3.3",
