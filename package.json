@@ -166,9 +166,9 @@
     "vite": "^8.2.1",
     "vitest": "~5.0.0"
   },
-  "packageManager": "pnpm@12.4.0+sha512.37536c26ed40ab4134b6511e09f6b27f3ebb45687468f2406ca3805279a4e5ca158c1931350ad9774d6ab2108d71b3dbaeb39943159294375e4d053e8e05685c",
+  "packageManager": "pnpm@12.11.2+sha512.25a51652a196785af5f28bda6dfe8dc582ebefa4ac1d180221ce1390231c5fb76637822ea4b6e4633ce74acdcb0a77f725af11bad38177fdeddaee818a955cb9",
   "engines": {
     "npm": "^26",
-    "pnpm": "^11.0.0"
+    "pnpm": "^12.0.0"
   }
 }
