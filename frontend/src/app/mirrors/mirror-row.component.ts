@@ -42,11 +42,11 @@ const STATUS_DOT_CLASSES: Record<MirrorStatus, string> = {
         </span>
       </div>
       <span class="flex shrink-0 items-center gap-2">
-        @if (mirror().official) {
-          <span class="mirror-badge" [pTooltip]="t('officialTooltip')" tooltipPosition="top">{{ t('official') }}</span>
-        }
         @if (mirror().geo_active) {
           <span class="mirror-badge" [pTooltip]="t('geoTooltip')" tooltipPosition="top">{{ t('geo') }}</span>
+        }
+        @if (mirror().official) {
+          <span class="mirror-badge" [pTooltip]="t('officialTooltip')" tooltipPosition="top">{{ t('official') }}</span>
         }
       </span>
       <span class="w-28 shrink-0 text-right text-xs text-ctp-subtext0 max-sm:hidden">
