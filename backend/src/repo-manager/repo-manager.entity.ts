@@ -37,6 +37,10 @@ export class ArchlinuxPackage {
   @Column({ type: 'int', nullable: true })
   pkgrel!: number | null;
 
+  @ApiProperty({ description: 'Minor rebuild number (fractional part of a non-integer pkgrel)' })
+  @Column({ type: 'int', default: 0 })
+  bump!: number;
+
   @ApiProperty({ description: 'Target architecture' })
   @Column({ type: 'varchar', nullable: true })
   arch!: string | null;

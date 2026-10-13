@@ -347,6 +347,7 @@ describe('RepoManagerService.run', () => {
       pullArchlinuxPackages: vi.fn(async () => undefined),
       scanChangedArchPackages: vi.fn(async () => undefined),
       selectScannedChanges: vi.fn(async () => undefined),
+      scanUnanalyzedChaoticPackages: vi.fn(async () => undefined),
       startRun: vi.fn(startRun),
       markChangesProcessed: vi.fn(async () => undefined),
     };

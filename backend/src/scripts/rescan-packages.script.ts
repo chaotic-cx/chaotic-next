@@ -2,6 +2,7 @@ import { Package } from '../builder/builder.entity';
 import { TriggerType } from '../interfaces/repo-manager';
 import { ArchlinuxPackage } from '../repo-manager/repo-manager.entity';
 import { SignalScanService, type ScanJob } from '../repo-manager/scan';
+import { releaseVersion } from '../repo-manager/signal';
 import { bootstrapScript, runScript } from '../utils/script-utils';
 import { downloadFile } from '../utils/download';
 import { HttpService } from '@nestjs/axios';
@@ -48,7 +49,8 @@ async function downloadToFile(http: HttpService, url: string, file: string): Pro
 
 async function buildArchJob(ctx: RescanContext, pkg: ArchlinuxPackage): Promise<ScanJob | null> {
   const filename = (pkg.metadata as { filename?: string } | null)?.filename;
-  if (!filename || !pkg.version) {
+  const version = releaseVersion(pkg);
+  if (!filename || !version) {
     console.warn(`Skipping ${pkg.pkgname}: no filename or version`);
     return null;
   }
@@ -67,7 +69,7 @@ async function buildArchJob(ctx: RescanContext, pkg: ArchlinuxPackage): Promise<
   const file = join(ctx.tempDir, filename);
   console.log(`Downloading ${pkg.pkgname} from ${url}...`);
   await downloadToFile(ctx.http, url, file);
-  return { file, pkgType: TriggerType.ARCH, pkgId: pkg.id, version: pkg.version };
+  return { file, pkgType: TriggerType.ARCH, pkgId: pkg.id, version };
 }
 
 async function buildChaoticJob(ctx: RescanContext, pkg: Package): Promise<ScanJob | null> {
@@ -77,7 +79,8 @@ async function buildChaoticJob(ctx: RescanContext, pkg: Package): Promise<ScanJo
   }
   const filename = (pkg.metadata as { filename?: string } | null)?.filename;
   const baseUrl = pkg.repo?.dbPath ? dirname(pkg.repo.dbPath) : '';
-  if (!baseUrl || !filename || !pkg.version) {
+  const version = releaseVersion(pkg);
+  if (!baseUrl || !filename || !version) {
     console.warn(`Skipping ${pkg.pkgname}: no download URL or version`);
     return null;
   }
@@ -85,7 +88,7 @@ async function buildChaoticJob(ctx: RescanContext, pkg: Package): Promise<ScanJo
   const file = join(ctx.tempDir, filename);
   console.log(`Downloading ${pkg.pkgname} from ${url}...`);
   await downloadToFile(ctx.http, url, file);
-  return { file, pkgType: TriggerType.CHAOTIC, pkgId: pkg.id, version: pkg.version };
+  return { file, pkgType: TriggerType.CHAOTIC, pkgId: pkg.id, version };
 }
 
 async function buildScanJobs(kind: RepoKind, pkgnames: string[], ctx: RescanContext): Promise<ScanJob[]> {

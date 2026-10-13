@@ -21,7 +21,7 @@ export interface ComputeRepositories {
 // Arguments and results must be structured-cloneable, because they cross the worker boundary.
 export interface ComputeOps {
   recomputeBroken(args: { filter?: BrokenFilterEntry[]; options?: RecomputeBrokenOptions }): Promise<void>;
-  refreshAfterScan(args: { scanned: ScannedPackage[] }): Promise<void>;
+  refreshAfterScan(args: { scanned: ScannedPackage[]; options: RecomputeBrokenOptions }): Promise<void>;
   refreshAfterImport(args: { analyses: ImportedAnalysis[] }): Promise<void>;
   recomputePluginOfPkgType(args: { pkgType: PackageElfPkgType }): Promise<void>;
   invalidateDirectoryIndex(args: Record<string, never>): Promise<void>;
@@ -29,6 +29,7 @@ export interface ComputeOps {
   deploymentTriggers(args: { deployedIds: number[]; consumerIds: number[] }): Promise<Map<number, DetectedTriggerDto>>;
   countUncoveredMissedBreaks(args: Record<string, never>): Promise<number>;
   rebuildCoverage(args: Record<string, never>): Promise<RebuildCoverageReport>;
+  unanalyzedChaoticIds(args: Record<string, never>): Promise<number[]>;
 }
 
 export type ComputeOpName = keyof ComputeOps;
@@ -40,7 +41,7 @@ export function createComputeOps(repos: ComputeRepositories, logger: ComputeLogg
   const detector = new TriggerDetector(repos.analyses, repos.archPackages, repos.packages, logger);
   return {
     recomputeBroken: ({ filter, options }) => index.recomputeBroken(filter, options),
-    refreshAfterScan: ({ scanned }) => index.refreshAfterScan(scanned),
+    refreshAfterScan: ({ scanned, options }) => index.refreshAfterScan(scanned, options),
     refreshAfterImport: ({ analyses }) => index.refreshAfterImport(analyses),
     recomputePluginOfPkgType: ({ pkgType }) => index.recomputePluginOfPkgType(pkgType),
     invalidateDirectoryIndex: async () => index.invalidateDirectoryIndex(),
@@ -48,5 +49,6 @@ export function createComputeOps(repos: ComputeRepositories, logger: ComputeLogg
     deploymentTriggers: ({ deployedIds, consumerIds }) => detector.deploymentTriggers(deployedIds, consumerIds),
     countUncoveredMissedBreaks: () => detector.countUncoveredMissedBreaks(),
     rebuildCoverage: () => detector.rebuildCoverage(),
+    unanalyzedChaoticIds: () => detector.unanalyzedChaoticIds(),
   };
 }

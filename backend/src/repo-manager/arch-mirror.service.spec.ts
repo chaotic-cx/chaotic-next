@@ -11,7 +11,9 @@ function archPackage(overrides: Partial<ArchlinuxPackage>): ArchlinuxPackage {
   return Object.assign(new ArchlinuxPackage(), {
     id: 1,
     pkgname: 'llvm-libs',
-    version: '22.1.8-1',
+    version: '22.1.8',
+    pkgrel: 1,
+    bump: 0,
     previousVersion: null,
     lastUpdated: null,
     triggersPending: false,
@@ -31,7 +33,7 @@ describe('recordVersionChange', () => {
   });
 
   it('keeps the baseline of an unprocessed change when the package changes again', () => {
-    const row = archPackage({ version: '23.1.1-1', previousVersion: '22.1.8-1', triggersPending: true });
+    const row = archPackage({ version: '23.1.1', previousVersion: '22.1.8-1', triggersPending: true });
 
     recordVersionChange(row);
 
@@ -42,12 +44,12 @@ describe('recordVersionChange', () => {
 describe('ArchMirrorService change tracking', () => {
   const settings: RepoSettings = { regenDatabase: false, abiDryRun: false };
 
-  function parsed(name: string, base: string, version: string, repoName = 'extra'): ParsedPackage {
+  function parsed(name: string, base: string, version: string, repoName = 'extra', pkgrel = 1): ParsedPackage {
     return {
       name,
       base,
       version,
-      pkgrel: 1,
+      pkgrel,
       bump: 0,
       repoName,
       metaData: { buildDate: '0', filename: `${name}-${version}.pkg.tar.zst` },
@@ -60,6 +62,8 @@ describe('ArchMirrorService change tracking', () => {
       seeded.map((row, index) => ({
         ...row,
         id: index + 1,
+        pkgrel: 1,
+        bump: 0,
         previousVersion: null,
         deactivatedAt: null,
         triggersPending: false,
@@ -91,8 +95,18 @@ describe('ArchMirrorService change tracking', () => {
     const pending = await sync(mirror, [parsed('llvm', 'llvm', '23.1.1'), parsed('llvm-libs', 'llvm', '23.1.1')]);
 
     expect(pending.map((pkg) => [pkg.pkgname, pkg.previousVersion, pkg.version])).toEqual([
-      ['llvm', '22.1.8', '23.1.1'],
-      ['llvm-libs', '22.1.8', '23.1.1'],
+      ['llvm', '22.1.8-1', '23.1.1'],
+      ['llvm-libs', '22.1.8-1', '23.1.1'],
+    ]);
+  });
+
+  it('tracks a pkgrel-only rebuild, which can change the shipped sonames', async () => {
+    const mirror = buildMirror([{ pkgname: 'haskell-syb', version: '0.7.4' }]);
+
+    const pending = await sync(mirror, [parsed('haskell-syb', 'haskell-syb', '0.7.4', 'extra', 37)]);
+
+    expect(pending.map((pkg) => [pkg.pkgname, pkg.previousVersion, pkg.pkgrel])).toEqual([
+      ['haskell-syb', '0.7.4-1', 37],
     ]);
   });
 
@@ -102,7 +116,7 @@ describe('ArchMirrorService change tracking', () => {
 
     const pending = await sync(mirror, [parsed('clang', 'clang', '23.1.1')]);
 
-    expect(pending.map((pkg) => [pkg.pkgname, pkg.previousVersion])).toEqual([['clang', '22.1.8']]);
+    expect(pending.map((pkg) => [pkg.pkgname, pkg.previousVersion])).toEqual([['clang', '22.1.8-1']]);
   });
 
   it('no longer reports a change once it is marked processed', async () => {
@@ -132,7 +146,7 @@ describe('ArchMirrorService change tracking', () => {
     const pending = await sync(mirror, everyRepo());
 
     expect(pending.map((pkg) => [pkg.pkgname, pkg.previousVersion, pkg.deactivatedAt !== null])).toEqual([
-      ['qt5-virtualkeyboard', '5.15.18', true],
+      ['qt5-virtualkeyboard', '5.15.18-1', true],
     ]);
   });
 

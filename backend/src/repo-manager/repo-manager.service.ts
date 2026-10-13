@@ -683,6 +683,7 @@ export class RepoManagerService implements OnModuleInit {
       if (this.configService.get<boolean>('repoMan.signalScanEnabled')) {
         await this.repoManager.scanChangedArchPackages();
         await this.repoManager.selectScannedChanges();
+        await this.repoManager.scanUnanalyzedChaoticPackages();
         // Fresh broken flags find breaks that an earlier change caused without a bump.
         await this.signalScanService.recomputeBroken();
         hasMissedBreaks = await this.repoManager.hasMissedBreaks();

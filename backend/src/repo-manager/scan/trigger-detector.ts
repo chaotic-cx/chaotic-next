@@ -29,6 +29,7 @@ import {
   formatConsumerAbiBreak,
   latestAnalysisByKey,
   pkgTypeOf,
+  releaseVersion,
   type RuntimeName,
   sameLibraryFamily,
 } from '../signal';
@@ -559,8 +560,9 @@ export class TriggerDetector {
 
     const currentVersions: { pkgId: number; version: string }[] = [];
     for (const pkg of relevantChanged) {
-      if (pkg.version && !isRemoved(pkg)) {
-        currentVersions.push({ pkgId: pkg.id, version: pkg.version });
+      const version = releaseVersion(pkg);
+      if (version && !isRemoved(pkg)) {
+        currentVersions.push({ pkgId: pkg.id, version });
       }
     }
 
@@ -627,7 +629,7 @@ export class TriggerDetector {
     const baselines: ProvidedAnalysis[] = [];
     for (const pkg of changed) {
       const ownRows = rows.filter((row) => row.pkgId === pkg.id);
-      const currentVersion = isRemoved(pkg) ? null : pkg.version;
+      const currentVersion = isRemoved(pkg) ? null : releaseVersion(pkg);
       const olderVersions = ownRows.map((row) => row.version).filter((version) => version !== currentVersion);
       const baselineVersion = pickBaselineVersion(olderVersions, pkg.previousVersion ?? '', currentVersion);
       const baseline = ownRows.find((row) => row.version === baselineVersion);
@@ -857,6 +859,16 @@ export class TriggerDetector {
     return uncovered.length;
   }
 
+  /**
+   * Active packages whose current release has no analysis, for example after a lost post-deployment scan.
+   */
+  async unanalyzedChaoticIds(): Promise<number[]> {
+    const active = await this.loadActiveChaoticPackages();
+    const latest = await this.loadLatestChaoticAnalyses(active.map((pkg) => pkg.id));
+
+    return unanalyzedPackages(active, latest).map((pkg) => pkg.id);
+  }
+
   async rebuildCoverage(): Promise<RebuildCoverageReport> {
     const active = await this.loadActiveChaoticPackages();
     const latest = await this.loadLatestChaoticAnalyses(active.map((pkg) => pkg.id));
@@ -869,9 +881,11 @@ export class TriggerDetector {
         brokenSince: brokenSince.toISOString(),
         reasons: analysis.brokenReasons,
       })),
-      unanalyzed: active
-        .filter((pkg) => !pkg.skipSignalScan && pkg.version && latest.get(pkg.id)?.version !== pkg.version)
-        .map((pkg) => ({ pkgname: pkg.pkgname, repoName: pkg.repo.name, version: pkg.version ?? undefined })),
+      unanalyzed: unanalyzedPackages(active, latest).map((pkg) => ({
+        pkgname: pkg.pkgname,
+        repoName: pkg.repo.name,
+        version: releaseVersion(pkg) ?? undefined,
+      })),
       removedProviderSonames: await this.findRemovedProviderSonames(active, latest),
     };
   }
@@ -885,6 +899,8 @@ export class TriggerDetector {
         pkgname: true,
         pkgbaseName: true,
         version: true,
+        pkgrel: true,
+        bump: true,
         skipSignalScan: true,
         repo: { id: true, name: true },
       },
@@ -996,7 +1012,9 @@ export class TriggerDetector {
   }
 
   /**
-   * The runtime package for a stale runtime directory, else the last provider of a missing soname. Never the consumer itself.
+   * The runtime package for a stale runtime directory, else the last provider of a missing soname.
+   * When no analysis ever provided that exact soname, the current Arch provider of the same library family is blamed.
+   * Never the consumer itself.
    */
   private async blameMissedBreak(
     deps: BrokenDependency[],
@@ -1010,8 +1028,25 @@ export class TriggerDetector {
       }
 
       if (dep.kind === 'soname' && dep.soname) {
-        const provider = await this.lastProviderOf(dep.soname, ownIds);
+        const provider =
+          (await this.lastProviderOf(dep.soname, ownIds)) ?? (await this.archFamilyProviderOf(dep.soname));
         if (provider) return provider;
+      }
+    }
+
+    return null;
+  }
+
+  private async archFamilyProviderOf(
+    soname: string,
+  ): Promise<{ owner: ChangedOwner; triggerFrom: TriggerType } | null> {
+    const { providedByPkgname, archProvidedSonames } = await this.loadSonameProviders();
+    for (const provided of archProvidedSonames) {
+      if (!sameLibraryFamily(provided, soname)) continue;
+
+      for (const pkgname of providedByPkgname.get(provided) ?? []) {
+        const owner = await this.archlinuxPackageRepository.findOne({ where: { pkgname, deactivatedAt: IsNull() } });
+        if (owner) return { owner, triggerFrom: TriggerType.ARCH };
       }
     }
 
@@ -1205,6 +1240,16 @@ function toOwnerDescriptor(pkg: ArchlinuxPackage): OwnerDescriptor {
     pkgId: pkg.id,
     pkgname: pkg.pkgname,
     previousVersion: pkg.previousVersion ?? undefined,
-    currentVersion: pkg.version ?? '',
+    currentVersion: releaseVersion(pkg) ?? '',
   };
+}
+
+/**
+ * The analysis key is the full release, so a pkgrel or bump rebuild without a scan shows up here too.
+ */
+function unanalyzedPackages(active: Package[], latest: Map<number, PackageElfAnalysis>): Package[] {
+  return active.filter((pkg) => {
+    const release = releaseVersion(pkg);
+    return !pkg.skipSignalScan && release !== null && latest.get(pkg.id)?.version !== release;
+  });
 }

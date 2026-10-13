@@ -22,22 +22,31 @@ import { extractPacmanDatabase, parsePacmanDatabases } from './offline/pacman-pa
 import { ArchlinuxPackage, bulkGetOrCreateArch, isRemoved, PackageElfAnalysis } from './repo-manager.entity';
 import { saveInBatches } from './save';
 import { type ScanJob, SignalScanService } from './scan';
-import { pkgTypeOf } from './signal';
+import { pkgTypeOf, releaseVersion } from './signal';
 
 const ARCH_REPOS = ['core', 'extra', 'multilib'] as const;
 const DEFAULT_MIRROR_URL = 'https://arch.mirror.constant.com';
 const ARCH_DATABASE_URL = (mirrorUrl: string, repo: string): string => `${mirrorUrl}/${repo}/os/x86_64/${repo}.files`;
 
 /**
- * While a change is pending, `previousVersion` keeps the last processed version, so a second update compares against the right baseline.
+ * While a change is pending, `previousVersion` keeps the last processed release, so a second update compares against the right baseline.
  */
 export function recordVersionChange(row: ArchlinuxPackage): void {
   if (!row.triggersPending) {
-    row.previousVersion = row.version;
+    row.previousVersion = releaseVersion(row);
   }
 
   row.triggersPending = true;
   row.lastUpdated = new Date();
+}
+
+function applyParsedRelease(row: ArchlinuxPackage, parsed: ParsedPackage): void {
+  row.version = parsed.version;
+  row.pkgrel = parsed.pkgrel;
+  row.bump = parsed.bump;
+  row.arch = ARCH;
+  row.metadata = parsed.metaData;
+  row.deactivatedAt = null;
 }
 
 /**
@@ -127,13 +136,13 @@ export class ArchMirrorService {
   }
 
   private async scannedPkgIds(packages: ArchlinuxPackage[]): Promise<Set<number>> {
-    const withVersion = packages.filter((pkg): pkg is ArchlinuxPackage & { version: string } => pkg.version !== null);
-    if (withVersion.length === 0) return new Set();
-
-    const rows = await this.elfAnalysisRepository.find({
-      where: withVersion.map((pkg) => ({ pkgType: pkgTypeOf(TriggerType.ARCH), pkgId: pkg.id, version: pkg.version })),
-      select: { pkgId: true },
+    const where = packages.flatMap((pkg) => {
+      const version = releaseVersion(pkg);
+      return version ? [{ pkgType: pkgTypeOf(TriggerType.ARCH), pkgId: pkg.id, version }] : [];
     });
+    if (where.length === 0) return new Set();
+
+    const rows = await this.elfAnalysisRepository.find({ where, select: { pkgId: true } });
 
     return new Set(rows.map((row) => row.pkgId));
   }
@@ -153,13 +162,13 @@ export class ArchMirrorService {
     try {
       for (const pkg of changed) {
         const filename = pkg.metadata?.filename;
-        const version = pkg.version;
+        const version = releaseVersion(pkg);
         if (!filename || !version) {
           this.pino.warn({ pkgname: pkg.pkgname }, 'No filename or version, skipping scan');
           continue;
         }
 
-        this.pino.debug({ pkgname: pkg.pkgname, version: pkg.version }, 'Scanning changed Arch package');
+        this.pino.debug({ pkgname: pkg.pkgname, version }, 'Scanning changed Arch package');
 
         // Determine which repo serves this package by probing the mirror.
         // Probe core/extra concurrently (instead of sequentially) and prefer the
@@ -254,20 +263,16 @@ export class ArchMirrorService {
         const archPkg = archByName.get(pkg.name);
         if (!archPkg) continue;
 
-        if (archPkg.version && archPkg.version !== pkg.version) {
+        if (archPkg.version && releaseVersion(archPkg) !== releaseVersion(pkg)) {
           recordVersionChange(archPkg);
         }
 
-        archPkg.version = pkg.version;
-        archPkg.arch = ARCH;
-        archPkg.pkgrel = pkg.pkgrel;
-        archPkg.metadata = pkg.metaData;
-        archPkg.deactivatedAt = null;
+        applyParsedRelease(archPkg, pkg);
         archToUpdate.push(archPkg);
 
         candidates.push({
           pkgId: archPkg.id,
-          version: pkg.version,
+          version: releaseVersion(pkg) ?? pkg.version,
           filename: pkg.metaData.filename,
           downloadUrl: `${mirrorUrl}/${pkg.repoName}/os/x86_64/${pkg.metaData.filename}`,
           pkgType: TriggerType.ARCH,
@@ -444,7 +449,8 @@ export class ArchMirrorService {
       const archPkg = archByName.get(pkg.name);
       if (!archPkg) continue;
 
-      if (!settings.regenDatabase && archPkg.version && archPkg.version === pkg.version) {
+      // A pkgrel-only rebuild is a change too: it can ship different sonames (Haskell ABI hashes).
+      if (!settings.regenDatabase && archPkg.version && releaseVersion(archPkg) === releaseVersion(pkg)) {
         if (archPkg.deactivatedAt !== null) {
           archPkg.deactivatedAt = null;
           markChanged(archPkg);
@@ -460,11 +466,7 @@ export class ArchMirrorService {
         recordVersionChange(archPkg);
       }
 
-      archPkg.version = pkg.version;
-      archPkg.arch = ARCH;
-      archPkg.pkgrel = pkg.pkgrel;
-      archPkg.metadata = pkg.metaData;
-      archPkg.deactivatedAt = null;
+      applyParsedRelease(archPkg, pkg);
       markChanged(archPkg);
     }
 

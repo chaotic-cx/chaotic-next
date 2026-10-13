@@ -41,6 +41,7 @@ import { AurScanMetric1789064731000 } from '../migrations/1789064731000-AurScanM
 import { MrActionReason1789137958000 } from '../migrations/1789137958000-MrActionReason';
 import { AddArchPackageTriggersPending1790881960429 } from '../migrations/1790881960429-AddArchPackageTriggersPending';
 import { AddAnalysisBrokenSince1790959740748 } from '../migrations/1790959740748-AddAnalysisBrokenSince';
+import { AddArchPackageBump1791900000000 } from '../migrations/1791900000000-AddArchPackageBump';
 import { AurScanMetric } from '../diff-scan/aur-scan-metric.entity';
 import { NotificationPreference } from '../notifications/notification-preference.entity';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
@@ -115,6 +116,7 @@ export const dataSourceOptions: DataSourceOptions = {
     MrActionReason1789137958000,
     AddArchPackageTriggersPending1790881960429,
     AddAnalysisBrokenSince1790959740748,
+    AddArchPackageBump1791900000000,
   ],
   migrationsRun: true,
   cache: true,

@@ -146,7 +146,7 @@ export class SignalIndex {
   /**
    * The index must contain the whole batch first. Else pluginOf depends on the scan order.
    */
-  async refreshAfterScan(scanned: ScannedPackage[]): Promise<void> {
+  async refreshAfterScan(scanned: ScannedPackage[], options: RecomputeBrokenOptions): Promise<void> {
     if (scanned.length === 0) return;
 
     await this.updateDirectoryIndex(scanned.map(({ pkgType, pkgId }) => ({ pkgType: pkgTypeOf(pkgType), pkgId })));
@@ -169,7 +169,7 @@ export class SignalIndex {
     // was flagged missing for. Arch is reference data and never judged broken.
     await this.recomputeBroken(
       scanned.filter((pkg) => pkg.pkgType === TriggerType.CHAOTIC).map(({ pkgType, pkgId }) => ({ pkgType, pkgId })),
-      { freshlyScanned: true },
+      options,
     );
   }
 
