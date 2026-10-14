@@ -96,6 +96,10 @@ export class RebuildTriggerService {
     return this.compute.run('rebuildCoverage', {});
   }
 
+  unanalyzedChaoticIds(): Promise<number[]> {
+    return this.compute.run('unanalyzedChaoticIds', {});
+  }
+
   /**
    * Build a rebuild entry for a detected trigger, or null in dry-run mode
    * (logged only) or when no triggering package could be blamed. The

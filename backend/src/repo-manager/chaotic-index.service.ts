@@ -11,6 +11,7 @@ import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } 
 import { ArchMirrorService } from './arch-mirror.service';
 import { saveInBatches } from './save';
 import { SignalScanService } from './scan';
+import { releaseVersion } from './signal';
 
 export const CHAOTIC_DATABASE_URL = 'https://builds.garudalinux.org/repos/chaotic-aur/x86_64/chaotic-aur.db';
 
@@ -76,7 +77,7 @@ export class ChaoticIndexService {
 
         candidates.push({
           pkgId: chaoticPkg.id,
-          version: pkg.version,
+          version: releaseVersion(pkg) ?? pkg.version,
           filename: pkg.metaData.filename,
           downloadUrl: `${baseUrl}/${pkg.metaData.filename}`,
           pkgType: TriggerType.CHAOTIC,

@@ -213,16 +213,16 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
     const kwin = await dataSource.query(
       `INSERT INTO archlinux_package ("pkgname", "version", "pkgrel", "arch", "previousVersion", "metadata")
        VALUES ($1, $2, $3, $4, $5, $6::jsonb) RETURNING id`,
-      ['kwin', '6.7.4', 4, 'x86_64', '6.7.3', '{}'],
+      ['kwin', '6.7.4', 4, 'x86_64', '6.7.3-4', '{}'],
     );
     const kwinId = kwin[0].id as number;
 
     for (const [name, prev, next] of [
-      ['haskell-old-time', '1.1.1.0', '1.1.1.1'],
-      ['haskell-syb', '0.7.4', '0.7.5'],
-      ['haskell-regex-compat', '0.95.2.2', '0.95.2.3'],
-      ['haskell-split', '0.2.5', '0.2.6'],
-      ['ffmpeg', '7.1-1', '8.0-1'],
+      ['haskell-old-time', '1.1.1.0-1', '1.1.1.1'],
+      ['haskell-syb', '0.7.4-1', '0.7.5'],
+      ['haskell-regex-compat', '0.95.2.2-1', '0.95.2.3'],
+      ['haskell-split', '0.2.5-1', '0.2.6'],
+      ['ffmpeg', '7.1-1', '8.0'],
     ] as const) {
       await dataSource.query(
         `INSERT INTO archlinux_package ("pkgname", "version", "pkgrel", "arch", "previousVersion", "metadata")
@@ -240,7 +240,7 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
     ];
     await dataSource.query(
       `INSERT INTO package_elf_analysis ("pkgType", "pkgId", "version", "files", "neededSonames", "providedSonames", "importedSymbols", "exportedSymbols", "pluginOf")
-       VALUES ('0', $1, '6.7.3', $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb)`,
+       VALUES ('0', $1, '6.7.3-4', $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb)`,
       [
         kwinId,
         '["usr/lib/libkwin.so.6.7.3"]',
@@ -255,7 +255,7 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
     );
     await dataSource.query(
       `INSERT INTO package_elf_analysis ("pkgType", "pkgId", "version", "files", "neededSonames", "providedSonames", "importedSymbols", "exportedSymbols", "pluginOf")
-       VALUES ('0', $1, '6.7.4', $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb)`,
+       VALUES ('0', $1, '6.7.4-4', $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb)`,
       [
         kwinId,
         '["usr/lib/libkwin.so.6.7.4"]',
@@ -275,7 +275,7 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
     const betterBlurId = betterBlur[0].id as number;
     await dataSource.query(
       `INSERT INTO package_elf_analysis ("pkgType", "pkgId", "version", "files", "neededSonames", "providedSonames", "importedSymbols", "exportedSymbols", "pluginOf")
-       VALUES ('1', $1, '2.5.1', $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb)`,
+       VALUES ('1', $1, '2.5.1-1', $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb)`,
       [
         betterBlurId,
         '["usr/lib/qt6/plugins/kwin/effects/plugins/better_blur_dx.so"]',
@@ -372,11 +372,10 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
 
     // The trigger needs onnxruntime's version history, which the seed schema
     // does not express; set it so the changed-set blames onnxruntime.
-    await dataSource.query(`UPDATE archlinux_package SET "version" = $1, "previousVersion" = $2 WHERE "pkgname" = $3`, [
-      '1.29.0-1',
-      '1.28.0-1',
-      'onnxruntime',
-    ]);
+    await dataSource.query(
+      `UPDATE archlinux_package SET "version" = $1, "pkgrel" = $2, "previousVersion" = $3 WHERE "pkgname" = $4`,
+      ['1.29.0', 1, '1.28.0-1', 'onnxruntime'],
+    );
     // getOrCreatePackage seeds no version/pkgrel; the bump needs them.
     await dataSource.query(`UPDATE package SET "version" = $1, "pkgrel" = $2 WHERE "pkgname" = $3`, [
       '0.4.0',

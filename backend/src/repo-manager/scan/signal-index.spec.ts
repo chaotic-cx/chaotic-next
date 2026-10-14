@@ -70,10 +70,13 @@ describe('SignalIndex.refreshAfterScan — plugin owners with files loaded on de
       }),
     ]);
 
-    await index.refreshAfterScan([
-      { pkgType: TriggerType.CHAOTIC, pkgId: 7, version: '1.0-1', hasCompiledCode: true, isSourceCompiled: true },
-      { pkgType: TriggerType.CHAOTIC, pkgId: 8, version: '1.0-1', hasCompiledCode: true, isSourceCompiled: true },
-    ]);
+    await index.refreshAfterScan(
+      [
+        { pkgType: TriggerType.CHAOTIC, pkgId: 7, version: '1.0-1', hasCompiledCode: true, isSourceCompiled: true },
+        { pkgType: TriggerType.CHAOTIC, pkgId: 8, version: '1.0-1', hasCompiledCode: true, isSourceCompiled: true },
+      ],
+      { freshlyScanned: true },
+    );
 
     expect(analyses.store.get('1|7|1.0-1')?.pluginOf).toEqual(['a42']);
     expect(analyses.store.get('1|8|1.0-1')?.pluginOf).toEqual([]);

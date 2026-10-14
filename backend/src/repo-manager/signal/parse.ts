@@ -3,6 +3,21 @@
  * plus small path helpers. Everything here maps strings to plain data.
  */
 import { type RuntimeName } from './graph';
+import { formatPkgrel } from '@chaotic-next/shared-lib';
+
+/**
+ * The full pacman release (`pkgver-pkgrel[.bump]`) of a package row. Analyses are keyed by this value,
+ * because a pkgrel-only rebuild can change the shipped sonames (Haskell libs embed an ABI hash).
+ */
+export function releaseVersion(pkg: {
+  version: string | null;
+  pkgrel: number | null;
+  bump?: number | null;
+}): string | null {
+  if (!pkg.version) return null;
+
+  return `${pkg.version}-${formatPkgrel(pkg.pkgrel ?? 0, pkg.bump ?? 0)}`;
+}
 
 export function parseFileList(output: string): string[] {
   return output

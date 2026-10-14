@@ -70,7 +70,9 @@ function createDetector(seed: {
 describe('TriggerDetector.detectArchTriggers', () => {
   it('keys a broken split output by its PKGBUILD directory', async () => {
     const detector = createDetector({
-      arch: [archPkg({ id: 30, pkgname: 'lib32-llvm-libs', previousVersion: '22.1.8-1', version: '23.1.1-1' })],
+      arch: [
+        archPkg({ id: 30, pkgname: 'lib32-llvm-libs', previousVersion: '22.1.8-1', version: '23.1.1', pkgrel: 1 }),
+      ],
       chaotic: [
         chaoticPkg({ id: 10, pkgname: 'mesa-tkg-git' }),
         chaoticPkg({
@@ -104,7 +106,8 @@ describe('TriggerDetector.detectArchTriggers', () => {
           id: 31,
           pkgname: 'qt5-virtualkeyboard',
           previousVersion: '5.15.18-1',
-          version: '5.15.18-1',
+          version: '5.15.18',
+          pkgrel: 1,
           deactivatedAt: new Date('2026-09-20T00:00:00Z'),
         }),
       ],
@@ -124,7 +127,7 @@ describe('TriggerDetector.detectArchTriggers', () => {
 
   it('compares against an older analysis when the previous version was never analyzed', async () => {
     const detector = createDetector({
-      arch: [archPkg({ id: 32, pkgname: 'libfoo', previousVersion: '2.0-1', version: '3.0-1' })],
+      arch: [archPkg({ id: 32, pkgname: 'libfoo', previousVersion: '2.0-1', version: '3.0', pkgrel: 1 })],
       chaotic: [
         chaoticPkg({ id: 13, pkgname: 'foo-viewer', metadata: { buildDate: '0', filename: 'x', deps: ['libfoo'] } }),
       ],
@@ -145,7 +148,7 @@ describe('TriggerDetector.detectArchTriggers', () => {
 
     function missedBreakSeed(bumps: { pkgId: number; timestamp: Date }[]) {
       return {
-        arch: [archPkg({ id: 1, pkgname: 'python', version: '3.13.1-1' })],
+        arch: [archPkg({ id: 1, pkgname: 'python', version: '3.13.1', pkgrel: 1 })],
         chaotic: [chaoticPkg({ id: 14, pkgname: 'python-tool' })],
         analyses: [
           analysis({
@@ -182,5 +185,78 @@ describe('TriggerDetector.detectArchTriggers', () => {
 
       expect((await createDetector(seed).detectArchTriggers(REPO_ID, [])).size).toBe(0);
     });
+  });
+
+  it('blames a pkgrel-only Arch rebuild that dropped the Haskell soname a consumer links', async () => {
+    const detector = createDetector({
+      arch: [archPkg({ id: 40, pkgname: 'haskell-syb', previousVersion: '0.7.4-28', version: '0.7.4', pkgrel: 33 })],
+      chaotic: [
+        chaoticPkg({
+          id: 15,
+          pkgname: 'bluespec-git',
+          metadata: { buildDate: '0', filename: 'x', deps: ['haskell-syb'] },
+        }),
+      ],
+      analyses: [
+        analysis({
+          pkgType: '0',
+          pkgId: 40,
+          version: '0.7.4-28',
+          providedSonames: ['libHSsyb-0.7.4-6GzGX-ghc9.6.7.so'],
+        }),
+        analysis({
+          pkgType: '0',
+          pkgId: 40,
+          version: '0.7.4-33',
+          providedSonames: ['libHSsyb-0.7.4-COKSG-ghc9.6.7.so'],
+        }),
+        analysis({ pkgId: 15, neededSonames: ['libHSsyb-0.7.4-6GzGX-ghc9.6.7.so'] }),
+      ],
+    });
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [40]);
+
+    expect(detected.get('bluespec-git')).toMatchObject({ bumpType: BumpType.BROKEN_DEPS, ownerId: 40 });
+  });
+
+  it('blames the current provider of the library family when no analysis provided the missing soname', async () => {
+    const detector = createDetector({
+      arch: [archPkg({ id: 41, pkgname: 'haskell-syb', version: '0.7.4', pkgrel: 37 })],
+      chaotic: [chaoticPkg({ id: 16, pkgname: 'bluespec-git' })],
+      analyses: [
+        analysis({
+          pkgType: '0',
+          pkgId: 41,
+          version: '0.7.4-37',
+          providedSonames: ['libHSsyb-0.7.4-8qjus-ghc9.6.7.so'],
+        }),
+        analysis({
+          pkgId: 16,
+          neededSonames: ['libHSsyb-0.7.4-6GzGX-ghc9.6.7.so'],
+          broken: true,
+          brokenReasons: ['missing soname libHSsyb-0.7.4-6GzGX-ghc9.6.7.so'],
+          brokenSince: new Date('2026-10-12T00:00:00Z'),
+        }),
+      ],
+    });
+
+    const detected = await detector.detectArchTriggers(REPO_ID, []);
+
+    expect(detected.get('bluespec-git')).toMatchObject({ bumpType: BumpType.BROKEN_DEPS, ownerId: 41 });
+  });
+});
+
+describe('TriggerDetector.unanalyzedChaoticIds', () => {
+  it('reports a bump rebuild whose release has no analysis, although its pkgver has one', async () => {
+    const detector = createDetector({
+      arch: [],
+      chaotic: [
+        chaoticPkg({ id: 20, pkgname: 'bluespec-git', version: 'r1137.d0ecddfd', pkgrel: 1, bump: 2 }),
+        chaoticPkg({ id: 21, pkgname: 'up-to-date', version: '1.0', pkgrel: 1, bump: 0 }),
+      ],
+      analyses: [analysis({ pkgId: 20, version: 'r1137.d0ecddfd-1' }), analysis({ pkgId: 21, version: '1.0-1' })],
+    });
+
+    expect(await detector.unanalyzedChaoticIds()).toEqual([20]);
   });
 });

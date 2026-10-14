@@ -4,7 +4,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Build, Package, Repo } from '../builder/builder.entity';
 import type {
   BumpResult,
@@ -23,9 +23,14 @@ import { ArchlinuxPackage } from './repo-manager.entity';
 import { type RepoReader, type RepoReaderFactory } from './repo-rw';
 import { acceptsSignalRebuild, type DetectedTrigger, RebuildTriggerService, SignalScanService } from './scan';
 import { groupByPkgbase, pkgbaseOf } from './scan/pkgbase-outputs';
+import { type RecomputeBrokenOptions } from './scan/signal-index';
+import { releaseVersion } from './signal';
 
 // How long a pending Arch change waits for a successful scan of its current version.
 export const UNSCANNED_CHANGE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+// Unanalyzed Chaotic releases scanned per run, so a backlog cannot stall a run.
+export const CATCH_UP_SCANS_PER_RUN = 25;
 
 function isUnscannedChangeExpired(pkg: ArchlinuxPackage, now: Date): boolean {
   if (pkg.lastUpdated === null) return true;
@@ -157,20 +162,42 @@ export class RepoManager {
     return uncovered > 0;
   }
 
+  /**
+   * A lost post-deployment scan leaves the analysis of an older release in place, so breaks of the current one go unseen.
+   * The scan is late, so a broken result counts as a break after the build and can trigger a rebuild.
+   */
+  scanUnanalyzedChaoticPackages(): Promise<void> {
+    return this.serializeDeploymentWork(async () => {
+      const ids = (await this.triggers.unanalyzedChaoticIds()).slice(0, CATCH_UP_SCANS_PER_RUN);
+      if (ids.length === 0) return;
+
+      const packages = await this.packagesRepository.find({ where: { id: In(ids) }, relations: { repo: true } });
+      this.pino.warn({ pkgnames: packages.map((pkg) => pkg.pkgname) }, 'Scanning Chaotic releases without analysis');
+      for (const pkg of packages) {
+        await this.scanBuiltChaoticPackage(pkg, pkg.repo.name, { freshlyScanned: false });
+      }
+    });
+  }
+
   async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
     await this.chaoticIndex.updateChaoticDatabaseVersions(repos);
   }
 
-  private async scanBuiltChaoticPackage(pkg: Package, repoName: string): Promise<void> {
+  private async scanBuiltChaoticPackage(
+    pkg: Package,
+    repoName: string,
+    options: RecomputeBrokenOptions = { freshlyScanned: true },
+  ): Promise<void> {
     if (pkg.skipSignalScan) {
       this.pino.info({ pkgname: pkg.pkgname }, 'Skipping scan: marked binary-only (skip signal scan)');
       return;
     }
 
     const filename: string | undefined = pkg.metadata?.filename;
-    if (!filename || !pkg.version) {
+    const version = releaseVersion(pkg);
+    if (!filename || !version) {
       this.pino.error(
-        { pkgname: pkg.pkgname, version: pkg.version, filename },
+        { pkgname: pkg.pkgname, version, filename },
         'No filename or version for built package, skipping scan',
       );
       return;
@@ -188,15 +215,19 @@ export class RepoManager {
     try {
       await downloadWithRetry(this.httpService.axiosRef, downloadUrl, downloadPath);
 
-      this.pino.info({ pkgname: pkg.pkgname, version: pkg.version }, 'Scanning built package for ELF signals');
-      const report = await this.signalScanService.scanPackages([
-        {
-          file: downloadPath,
-          pkgType: TriggerType.CHAOTIC,
-          pkgId: pkg.id,
-          version: pkg.version,
-        },
-      ]);
+      this.pino.info({ pkgname: pkg.pkgname, version }, 'Scanning built package for ELF signals');
+      const report = await this.signalScanService.scanPackages(
+        [
+          {
+            file: downloadPath,
+            pkgType: TriggerType.CHAOTIC,
+            pkgId: pkg.id,
+            version,
+          },
+        ],
+        1,
+        options,
+      );
 
       for (const { reason } of report.failed) {
         this.pino.error({ pkgname: pkg.pkgname, filename, reason }, 'Built package failed to scan');

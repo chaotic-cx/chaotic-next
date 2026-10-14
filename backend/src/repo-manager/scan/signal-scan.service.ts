@@ -56,8 +56,13 @@ export class SignalScanService {
 
   /**
    * Use a concurrency above 1 only for a full-repo index.
+   * A scan long after the build is not fresh: a broken result then counts as a break after the build.
    */
-  async scanPackages(jobs: ScanJob[], concurrency = 1): Promise<ScanReport> {
+  async scanPackages(
+    jobs: ScanJob[],
+    concurrency = 1,
+    options: RecomputeBrokenOptions = { freshlyScanned: true },
+  ): Promise<ScanReport> {
     if (jobs.length === 0) return { scanned: 0, failed: [] };
 
     const workers = Math.max(1, Math.min(concurrency, jobs.length));
@@ -107,6 +112,7 @@ export class SignalScanService {
     this.warnOnceAboutInlineScans();
 
     await this.compute.run('refreshAfterScan', {
+      options,
       scanned: scanned.map(({ job, hasCompiledCode, isSourceCompiled }) => ({
         pkgType: job.pkgType,
         pkgId: job.pkgId,

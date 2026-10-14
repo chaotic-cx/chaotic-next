@@ -34,7 +34,7 @@ import {
   PackageElfAnalysis,
 } from '../repo-manager/repo-manager.entity';
 import { type ScanReport, SignalScanService } from '../repo-manager/scan';
-import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE } from '../repo-manager/signal';
+import { ARCH_PKG_TYPE, CHAOTIC_PKG_TYPE, releaseVersion } from '../repo-manager/signal';
 import { downloadFile } from '../utils/download';
 import { encryptAes, errorMessage } from '../utils/functions';
 import { paginate, resolvePagination } from '../utils/pagination';
@@ -650,14 +650,13 @@ export class AdminService {
     if (!pkg) throw new NotFoundException('not found');
 
     const filename = (pkg.metadata as { filename?: string } | null)?.filename;
-    if (!filename || !pkg.version) throw new Error('no filename/version');
+    const version = releaseVersion(pkg);
+    if (!filename || !version) throw new Error('no filename/version');
 
     const file = join(tempDir, filename);
     await this.downloadPackage(secretMirrorUrl, pkg.pkgname, filename, file);
     throwOnScanFailure(
-      await this.signalScanService.scanPackages([
-        { file, pkgType: TriggerType.ARCH, pkgId: pkg.id, version: pkg.version },
-      ]),
+      await this.signalScanService.scanPackages([{ file, pkgType: TriggerType.ARCH, pkgId: pkg.id, version }]),
     );
   }
 
@@ -674,14 +673,13 @@ export class AdminService {
     if (pkg.skipSignalScan) throw new Error('skip signal scan is enabled');
 
     const filename = (pkg.metadata as { filename?: string } | null)?.filename;
-    if (!filename || !pkg.version || !pkg.repo?.name) throw new Error('no filename/version/repo');
+    const version = releaseVersion(pkg);
+    if (!filename || !version || !pkg.repo?.name) throw new Error('no filename/version/repo');
 
     const file = join(tempDir, filename);
     await this.downloadPackage(secretMirrorUrl, pkg.repo.name, filename, file);
     throwOnScanFailure(
-      await this.signalScanService.scanPackages([
-        { file, pkgType: TriggerType.CHAOTIC, pkgId: pkg.id, version: pkg.version },
-      ]),
+      await this.signalScanService.scanPackages([{ file, pkgType: TriggerType.CHAOTIC, pkgId: pkg.id, version }]),
     );
   }
 
