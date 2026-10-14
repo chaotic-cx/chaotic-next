@@ -8,7 +8,7 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Select } from '@openng/optimus-ui/select';
 import { RequestFailure, requestFailure } from '../api-errors';
-import { BackLinkComponent } from '../back-link/back-link.component';
+import { FillViewportDirective } from '../fill-viewport.directive';
 import { preferredScrollBehavior, updateSeoTags } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { bindRecordTitle } from '../i18n/record-title';
@@ -16,6 +16,7 @@ import { LoadErrorComponent } from '../load-error/load-error.component';
 import { LogLineLink } from '../log-stream/log-line-link';
 import { createLogStream } from '../log-stream/log-stream';
 import { TitleComponent } from '../title/title.component';
+import { LogStreamConnectingComponent } from '../xterm-log/log-stream-connecting.component';
 import { LogStreamStatusComponent } from '../xterm-log/log-stream-status.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
 import { LogViewerService } from './log-viewer.service';
@@ -25,6 +26,12 @@ const RELEVANT_LOG_JOB_PATTERN = /commit|schedule/;
 const JOB_SKELETON_CHIPS = [0, 1, 2, 3];
 
 type JobsState = 'loading' | 'ready' | 'failed';
+type JobTone = 'running' | 'success' | 'danger' | 'neutral';
+
+const FINISHED_JOB_TONES: ReadonlyMap<string, JobTone> = new Map([
+  ['success', 'success'],
+  ['failed', 'danger'],
+]);
 
 // GitLab job statuses with a translated label. Other statuses show as GitLab sends them.
 const JOB_STATUS_KEYS: ReadonlyMap<string, string> = new Map([
@@ -54,9 +61,10 @@ const JOBS_FAILURE_KEYS: Record<RequestFailure, string> = {
 @Component({
   selector: 'chaotic-log-viewer',
   imports: [
-    BackLinkComponent,
+    FillViewportDirective,
     FormsModule,
     LoadErrorComponent,
+    LogStreamConnectingComponent,
     LogStreamStatusComponent,
     Select,
     TitleComponent,
@@ -80,7 +88,6 @@ export class LogViewerComponent {
 
   private readonly jobsResource = httpResource<GitlabJob[]>(() => {
     const raw = this.pipelineId();
-
     return raw ? this.logService.getJobsUrl(Number(raw)) : undefined;
   });
 
@@ -94,7 +101,6 @@ export class LogViewerComponent {
   });
   protected readonly selectedJobId = signal<number | undefined>(undefined);
   protected readonly scrollToLine = signal<number | undefined>(undefined);
-  protected readonly runningStatuses = RUNNING_STATUSES;
   protected readonly jobSkeletonChips = JOB_SKELETON_CHIPS;
   protected readonly jobsFailureKeys = JOBS_FAILURE_KEYS;
 
@@ -105,7 +111,6 @@ export class LogViewerComponent {
 
   protected readonly jobOptions = computed(() => {
     this.activeTranslation();
-
     return this.jobs().map((job) => ({ label: `${job.name} (${this.jobStatusLabel(job.status)})`, value: job.id }));
   });
 
@@ -139,7 +144,7 @@ export class LogViewerComponent {
     effect(() => {
       this.selectedJobId();
       this.jobs();
-      const el = this.jobListEl()?.nativeElement.querySelector('.job-chip-selected');
+      const el = this.jobListEl()?.nativeElement.querySelector('.job--selected');
       if (el) {
         el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'nearest', inline: 'center' });
       }
@@ -151,6 +156,12 @@ export class LogViewerComponent {
     if (key === undefined) return status;
 
     return this.transloco.translate(key);
+  }
+
+  protected jobTone(status: string): JobTone {
+    if (RUNNING_STATUSES.has(status)) return 'running';
+
+    return FINISHED_JOB_TONES.get(status) ?? 'neutral';
   }
 
   protected selectJob(job: GitlabJob): void {
@@ -211,6 +222,7 @@ export class LogViewerComponent {
   private requestedJobId(): number | undefined {
     const raw = this.route.snapshot.queryParamMap.get('job');
     if (raw === null) return undefined;
+
     const id = Number(raw);
     return Number.isInteger(id) ? id : undefined;
   }
@@ -218,6 +230,7 @@ export class LogViewerComponent {
   private requestedLine(): number | undefined {
     const raw = this.route.snapshot.queryParamMap.get('line');
     if (raw === null) return undefined;
+
     const line = Number(raw);
     return Number.isInteger(line) && line > 0 ? line : undefined;
   }
@@ -243,6 +256,7 @@ export class LogViewerComponent {
 export function pickInitialJob(jobs: GitlabJob[]): GitlabJob | undefined {
   const running = jobs.find((job) => job.status === 'running');
   if (running) return running;
+
   const relevant = jobs.filter((job) => RELEVANT_LOG_JOB_PATTERN.test(`${job.name} ${job.stage}`));
   return (
     relevant.find((job) => /commit/.test(`${job.name} ${job.stage}`)) ??

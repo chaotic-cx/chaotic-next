@@ -168,7 +168,7 @@ function staleRuntimeDependencies(
   return deps;
 }
 
-function sonameVersionPrefix(soname: string): string {
+export function sonameVersionPrefix(soname: string): string {
   const idx = soname.indexOf('.so.');
   return idx === -1 ? soname : soname.slice(0, idx + 3);
 }

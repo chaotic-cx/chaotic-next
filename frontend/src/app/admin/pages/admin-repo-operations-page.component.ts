@@ -1,19 +1,39 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { BROKEN_FIXABILITIES, type BrokenFixability, brokenFixabilitySchema } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { ConfirmationService } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
+import { Select } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
+import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { injectActiveTranslation } from '../../i18n/active-translation';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { MISSING_VALUE } from '../../table-columns/missing-value';
 import { TablePageReportDirective } from '../../table-page-report.directive';
 import { AdminService } from '../admin.service';
 import { AdminOperationListComponent } from './admin-operation-list.component';
-import { createAdminPagination, type StatefulTableRef } from '../admin-url-sync';
+import { createAdminPagination, patchQueryParams, restoreQueryParams, type StatefulTableRef } from '../admin-url-sync';
 import { TABLE_ROW_HEIGHTS } from '../../table-skeleton/table-row-heights';
 import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-rows.component';
+
+type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | null | undefined;
+
+const FIXABILITY_SEVERITY: Record<BrokenFixability, TagSeverity> = {
+  rebuild: 'success',
+  pkgbuildChange: 'warn',
+  noFix: 'danger',
+};
+
+const FIXABILITY_LABEL_KEYS: Record<BrokenFixability, string> = {
+  rebuild: marker('admin.repoOperations.fixability.rebuild'),
+  pkgbuildChange: marker('admin.repoOperations.fixability.pkgbuildChange'),
+  noFix: marker('admin.repoOperations.fixability.noFix'),
+};
 
 @Component({
   selector: 'chaotic-admin-repo-operations-page',
@@ -22,9 +42,12 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
     AdminOperationListComponent,
     Button,
     EmptyStateComponent,
+    FormsModule,
     LoadErrorComponent,
+    Select,
     TableModule,
     TablePageReportDirective,
+    TagModule,
     Tooltip,
     TranslocoDirective,
   ],
@@ -88,6 +111,21 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
             paginatorDropdownAppendTo="body"
             chaoticPageReport
           >
+            <ng-template #caption>
+              <div class="flex flex-wrap items-center gap-2.5 sm:justify-end">
+                <p-select
+                  [options]="fixabilityOptions()"
+                  [ngModel]="service.brokenFixabilityFilter()"
+                  [placeholder]="t('admin.repoOperations.fixability.placeholder')"
+                  [ariaLabel]="t('admin.repoOperations.fixability.filterLabel')"
+                  (ngModelChange)="setFixabilityFilter($event)"
+                  optionLabel="label"
+                  optionValue="value"
+                  showClear
+                  appendTo="body"
+                />
+              </div>
+            </ng-template>
             <ng-template #header>
               <tr>
                 <th style="width: 3rem"><p-tableHeaderCheckbox /></th>
@@ -108,9 +146,23 @@ import { TableSkeletonRowsComponent } from '../../table-skeleton/table-skeleton-
                   {{ report.repoName || missingValue }}
                 </td>
                 <td class="text-ctp-subtext stack-body">
-                  <span class="line-clamp-2" [title]="report.reasons.join(', ')">{{
-                    report.reasons.join(', ') || missingValue
-                  }}</span>
+                  @if (report.issues.length > 0) {
+                    <div class="flex flex-wrap gap-1">
+                      @for (issue of report.issues; track issue.reason) {
+                        <p-tag
+                          [value]="issue.reason"
+                          [severity]="fixabilitySeverity(issue.fixability)"
+                          [pTooltip]="t(fixabilityLabelKey(issue.fixability))"
+                          [attr.aria-label]="issue.reason + ': ' + t(fixabilityLabelKey(issue.fixability))"
+                          tooltipPosition="top"
+                        />
+                      }
+                    </div>
+                  } @else {
+                    <span class="line-clamp-2" [title]="report.reasons.join(', ')">{{
+                      report.reasons.join(', ') || missingValue
+                    }}</span>
+                  }
                 </td>
               </tr>
             </ng-template>
@@ -154,16 +206,44 @@ export class AdminRepoOperationsPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly transloco = inject(TranslocoService);
+  private readonly activeTranslation = injectActiveTranslation();
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
   protected readonly missingValue = MISSING_VALUE;
 
   readonly pagination = createAdminPagination({ router: this.router, route: this.route });
+
+  readonly fixabilityOptions = computed(() => {
+    this.activeTranslation();
+
+    return BROKEN_FIXABILITIES.map((fixability) => ({
+      label: this.transloco.translate(FIXABILITY_LABEL_KEYS[fixability]),
+      value: fixability,
+    }));
+  });
 
   constructor() {
     this.service.useLists(['brokenReports']);
     this.pagination.restoreFromQuery(this.route);
     this.service.brokenPage.set(this.pagination.page());
     this.service.brokenPerPage.set(this.pagination.perPage());
+    restoreQueryParams(this.route, {
+      fixability: (raw) => this.service.brokenFixabilityFilter.set(brokenFixabilitySchema.safeParse(raw).data),
+    });
+  }
+
+  protected fixabilitySeverity(fixability: BrokenFixability): TagSeverity {
+    return FIXABILITY_SEVERITY[fixability];
+  }
+
+  protected fixabilityLabelKey(fixability: BrokenFixability): string {
+    return FIXABILITY_LABEL_KEYS[fixability];
+  }
+
+  setFixabilityFilter(value: BrokenFixability | null | undefined): void {
+    this.service.brokenFixabilityFilter.set(value ?? undefined);
+    this.pagination.resetPage();
+    this.service.brokenPage.set(this.pagination.page());
+    patchQueryParams(this.router, this.route, { fixability: value ?? null });
   }
 
   confirmBump(): void {

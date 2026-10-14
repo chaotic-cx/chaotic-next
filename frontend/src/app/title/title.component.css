@@ -17,7 +17,14 @@
   }
 }
 
+.chaotic-page-header__row {
+  display: flex;
+  align-items: center;
+  gap: var(--chaotic-space-md);
+}
+
 .chaotic-page-header__title {
+  min-width: 0;
   color: var(--catppuccin-color-text);
   font-size: 1.5rem;
   font-weight: var(--chaotic-weight-semibold);

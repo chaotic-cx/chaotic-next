@@ -376,7 +376,6 @@ export function buildAnalysis(opts: {
     broken: false,
     brokenReasons: [],
     hasCompiledCode,
-    isSourceCompiled: false,
     scannedAt: new Date().toISOString(),
   };
 }

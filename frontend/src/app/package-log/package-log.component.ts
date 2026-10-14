@@ -16,13 +16,14 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
-import { BackLinkComponent } from '../back-link/back-link.component';
 import { BuildStatusService } from '../build-status/build-status.service';
+import { FillViewportDirective } from '../fill-viewport.directive';
 import { formatDuration, isLogPurged, updateSeoTags } from '../functions';
 import { bindRecordTitle } from '../i18n/record-title';
 import { LogLineLink } from '../log-stream/log-line-link';
 import { createLogStream } from '../log-stream/log-stream';
 import { TitleComponent } from '../title/title.component';
+import { LogStreamConnectingComponent } from '../xterm-log/log-stream-connecting.component';
 import { LogStreamState, LogStreamStatusComponent } from '../xterm-log/log-stream-status.component';
 import { XtermLogComponent } from '../xterm-log/xterm-log.component';
 import {
@@ -37,10 +38,11 @@ import { PackageLogService } from './package-log.service';
 @Component({
   selector: 'chaotic-package-log',
   imports: [
-    BackLinkComponent,
+    FillViewportDirective,
     IconField,
     InputIcon,
     InputText,
+    LogStreamConnectingComponent,
     LogStreamStatusComponent,
     TitleComponent,
     TranslocoDirective,
@@ -86,6 +88,7 @@ export class PackageLogComponent implements OnDestroy {
   protected readonly elapsedLabel = computed(() => {
     const reason = this.endReason();
     if (reason !== undefined && reason !== 'success') return undefined;
+
     return formatDuration(this.elapsed());
   });
 
@@ -97,10 +100,12 @@ export class PackageLogComponent implements OnDestroy {
     if (elapsed) {
       parts.push(elapsed);
     }
+
     const remaining = this.remainingLabel();
     if (remaining) {
       parts.push(remaining);
     }
+
     return parts.join(' · ');
   });
 
@@ -140,6 +145,7 @@ export class PackageLogComponent implements OnDestroy {
 
   protected onGlobalKeydown(event: KeyboardEvent): void {
     if (!event.ctrlKey) return;
+
     const key = event.key.toLowerCase();
     if (key === 'f') {
       event.preventDefault();
@@ -222,7 +228,6 @@ export class PackageLogComponent implements OnDestroy {
       buildEndMs: this.buildEndMs(),
     };
     const markers = findBuildLogMarkers(this.scanBuffer, prior);
-
     if (markers.builder !== undefined && prior.builder === undefined) {
       this.builder.set(markers.builder);
     }
@@ -258,23 +263,29 @@ export class PackageLogComponent implements OnDestroy {
     const tick = () => {
       const start = this.buildStartMs();
       if (start === undefined) return;
+
       const end = this.buildEndMs();
       if (end !== undefined) {
         this.elapsed.set(elapsedSecondsBetween(start, end));
         this.stopElapsedTimer();
+
         return;
       }
+
       this.elapsed.set(elapsedSecondsBetween(start, Date.now()));
     };
+
     if (this.elapsedTimer !== undefined) {
       window.clearInterval(this.elapsedTimer);
     }
+
     tick();
     this.elapsedTimer = window.setInterval(tick, 1000);
   }
 
   private stopElapsedTimer(): void {
     if (this.elapsedTimer === undefined) return;
+
     window.clearInterval(this.elapsedTimer);
     this.elapsedTimer = undefined;
   }
@@ -282,6 +293,7 @@ export class PackageLogComponent implements OnDestroy {
   private requestedLine(): number | undefined {
     const raw = this.route.snapshot.queryParamMap.get('line');
     if (raw === null) return undefined;
+
     const line = Number(raw);
     return Number.isInteger(line) && line > 0 ? line : undefined;
   }

@@ -8,17 +8,21 @@ import { saveInBatches } from '../save';
 import {
   ARCH_PKG_TYPE,
   CHAOTIC_PKG_TYPE,
+  classifyBrokenDependency,
   collectPluginCandidates,
   decodeOwnerKey,
   derivePluginOf,
   type DirectoryIndex,
   encodeOwnerKey,
   findBrokenDependencies,
+  type FixabilityContext,
   formatBrokenDependency,
   isPackageMetadata,
   latestAnalysisByKey,
   MIN_PROVIDED_SONAMES,
   pkgTypeOf,
+  type RuntimeName,
+  sonameStems,
   triggerTypeOf,
 } from '../signal';
 import { latestActiveAnalysesByPackage } from './latest-analyses';
@@ -29,6 +33,10 @@ export interface ScannedPackage {
   pkgId: number;
   version: string;
   hasCompiledCode: boolean;
+}
+
+interface ConsumerInfo {
+  pkgname: string;
   isSourceCompiled: boolean;
 }
 
@@ -46,11 +54,28 @@ const YIELD_EVERY = 10;
 export type ImportedAnalysis = Pick<PackageElfAnalysis, 'pkgType' | 'pkgId' | 'version'>;
 type BrokenFlagUpdate = Pick<
   PackageElfAnalysis,
-  'id' | 'pkgType' | 'pkgId' | 'version' | 'broken' | 'brokenReasons' | 'brokenSince'
+  | 'id'
+  | 'pkgType'
+  | 'pkgId'
+  | 'version'
+  | 'broken'
+  | 'brokenReasons'
+  | 'brokenSince'
+  | 'brokenIssues'
+  | 'brokenReasonsAsBuilt'
 >;
 type BrokenCandidate = Pick<
   PackageElfAnalysis,
-  'id' | 'pkgType' | 'pkgId' | 'version' | 'neededSonames' | 'providedSonames' | 'files' | 'scannedAt' | 'brokenSince'
+  | 'id'
+  | 'pkgType'
+  | 'pkgId'
+  | 'version'
+  | 'neededSonames'
+  | 'providedSonames'
+  | 'files'
+  | 'scannedAt'
+  | 'brokenSince'
+  | 'brokenReasonsAsBuilt'
 >;
 
 export interface RecomputeBrokenOptions {
@@ -73,6 +98,61 @@ function brokenSinceAfterCheck(
   if (options.freshlyScanned) return analysis.scannedAt;
 
   return analysis.brokenSince ?? now;
+}
+
+/**
+ * The first check after the scan of a version records its reasons as built.
+ * Later checks and rescans of the same version keep that record.
+ */
+function reasonsAsBuiltAfterCheck(
+  analysis: BrokenCandidate,
+  reasons: string[],
+  options: RecomputeBrokenOptions,
+): string[] | null {
+  if (options.freshlyScanned && analysis.brokenReasonsAsBuilt === null) return reasons;
+
+  return analysis.brokenReasonsAsBuilt;
+}
+
+interface BrokenCheckContext {
+  provided: Set<string>;
+  stems: Set<string>;
+  runtimes: Partial<Record<RuntimeName, string | null>>;
+  checkSonames: boolean;
+  sourceCompiledIds: Set<number>;
+  now: Date;
+  options: RecomputeBrokenOptions;
+}
+
+function checkBroken(analysis: BrokenCandidate, ctx: BrokenCheckContext): BrokenFlagUpdate {
+  const deps = findBrokenDependencies({
+    neededSonames: analysis.neededSonames,
+    files: analysis.files,
+    providedSonames: ctx.provided,
+    runtimes: ctx.runtimes,
+    checkSonames: ctx.checkSonames,
+    selfProvidedSonames: analysis.providedSonames,
+  });
+  const reasons = deps.map(formatBrokenDependency);
+  const broken = reasons.length > 0;
+  const brokenReasonsAsBuilt = reasonsAsBuiltAfterCheck(analysis, reasons, ctx.options);
+  const fixability: FixabilityContext = {
+    sonameStems: ctx.stems,
+    reasonsAsBuilt: new Set(brokenReasonsAsBuilt),
+    isSourceCompiled: ctx.sourceCompiledIds.has(analysis.pkgId),
+  };
+
+  return {
+    id: analysis.id,
+    pkgType: analysis.pkgType,
+    pkgId: analysis.pkgId,
+    version: analysis.version,
+    broken,
+    brokenReasons: reasons,
+    brokenSince: brokenSinceAfterCheck(analysis, broken, ctx.now, ctx.options),
+    brokenIssues: deps.map((dep) => classifyBrokenDependency(dep, fixability)),
+    brokenReasonsAsBuilt,
+  };
 }
 
 type PluginOfUpdate = Pick<PackageElfAnalysis, 'id' | 'pkgType' | 'pkgId' | 'version' | 'pluginOf'>;
@@ -150,16 +230,17 @@ export class SignalIndex {
     if (scanned.length === 0) return;
 
     await this.updateDirectoryIndex(scanned.map(({ pkgType, pkgId }) => ({ pkgType: pkgTypeOf(pkgType), pkgId })));
-    const pkgnameById = await this.loadPkgnameMap(scanned);
+    const consumers = await this.loadConsumerInfo(scanned);
     for (const pkg of scanned) {
       const where = { pkgType: pkgTypeOf(pkg.pkgType), pkgId: pkg.pkgId, version: pkg.version };
       const row = await this.analysisRepository.findOne({ where, select: { files: true } });
       if (!row) continue;
 
+      const consumer = consumers.get(encodeOwnerKey(pkg.pkgType, pkg.pkgId));
       const pluginOf = await this.pluginOfFor(row.files, {
-        consumerPkgname: pkgnameById.get(pkg.pkgId) ?? null,
+        consumerPkgname: consumer?.pkgname ?? null,
         hasCompiledCode: pkg.hasCompiledCode,
-        isSourceCompiled: pkg.isSourceCompiled,
+        isSourceCompiled: consumer?.isSourceCompiled ?? false,
       });
 
       await this.analysisRepository.update(where, { pluginOf });
@@ -202,15 +283,24 @@ export class SignalIndex {
     const notSkipped = [...latest.values()].filter((analysis) => !skipIds.has(analysis.pkgId));
     if (notSkipped.length === 0) return;
 
-    const [provided, runtimes] = await Promise.all([
+    const [provided, runtimes, sourceCompiledIds] = await Promise.all([
       this.getProvidedSonames(),
       loadRuntimeVersions(this.archlinuxPackageRepository),
+      this.loadSourceCompiledIds(notSkipped.map((analysis) => analysis.pkgId)),
     ]);
     this.pino.debug({ providedSonames: provided.size, runtimes }, 'Broken-deps context');
 
+    const ctx: BrokenCheckContext = {
+      provided,
+      stems: sonameStems(provided),
+      runtimes,
+      checkSonames: provided.size >= MIN_PROVIDED_SONAMES,
+      sourceCompiledIds,
+      now: new Date(),
+      options,
+    };
+
     let changed = 0;
-    const now = new Date();
-    const checkSonames = provided.size >= MIN_PROVIDED_SONAMES;
     const updates: BrokenFlagUpdate[] = [];
     const total = notSkipped.length;
     const step = Math.max(1, Math.floor(total / PROGRESS_STEPS));
@@ -219,29 +309,12 @@ export class SignalIndex {
         await yieldToEventLoop();
       }
 
-      const analysis = notSkipped[i];
-      const reasons = findBrokenDependencies({
-        neededSonames: analysis.neededSonames,
-        files: analysis.files,
-        providedSonames: provided,
-        runtimes,
-        checkSonames,
-        selfProvidedSonames: analysis.providedSonames,
-      }).map(formatBrokenDependency);
-      const broken = reasons.length > 0;
-      if (broken) {
+      const update = checkBroken(notSkipped[i], ctx);
+      if (update.broken) {
         changed++;
       }
 
-      updates.push({
-        id: analysis.id,
-        pkgType: analysis.pkgType,
-        pkgId: analysis.pkgId,
-        version: analysis.version,
-        broken,
-        brokenReasons: reasons,
-        brokenSince: brokenSinceAfterCheck(analysis, broken, now, options),
-      });
+      updates.push(update);
 
       if ((i + 1) % step === 0) {
         this.pino.debug({ current: i + 1, total }, 'Recomputed broken flags');
@@ -256,6 +329,17 @@ export class SignalIndex {
   private async loadSkipSignalScanIds(): Promise<Set<number>> {
     const rows = await this.packageRepository.find({
       where: { skipSignalScan: true },
+      select: { id: true },
+    });
+
+    return new Set(rows.map((row) => row.id));
+  }
+
+  private async loadSourceCompiledIds(pkgIds: number[]): Promise<Set<number>> {
+    if (pkgIds.length === 0) return new Set();
+
+    const rows = await this.packageRepository.find({
+      where: { id: In(pkgIds), isSourceCompiled: true },
       select: { id: true },
     });
 
@@ -282,6 +366,7 @@ export class SignalIndex {
       files: true,
       scannedAt: true,
       brokenSince: true,
+      brokenReasonsAsBuilt: true,
     };
 
     if (filter === undefined) return this.analysisRepository.find({ where: { pkgType: CHAOTIC_PKG_TYPE }, select });
@@ -372,13 +457,19 @@ export class SignalIndex {
   private async findPkgnameRows(
     archIds: number[],
     chaoticIds: number[],
-  ): Promise<{ archPkgs: { id: number; pkgname: string }[]; chaoticPkgs: { id: number; pkgname: string }[] }> {
+  ): Promise<{
+    archPkgs: Pick<ArchlinuxPackage, 'id' | 'pkgname'>[];
+    chaoticPkgs: Pick<Package, 'id' | 'pkgname' | 'isSourceCompiled'>[];
+  }> {
     const [archPkgs, chaoticPkgs] = await Promise.all([
       archIds.length
         ? this.archlinuxPackageRepository.find({ where: { id: In(archIds) }, select: { id: true, pkgname: true } })
         : Promise.resolve([]),
       chaoticIds.length
-        ? this.packageRepository.find({ where: { id: In(chaoticIds) }, select: { id: true, pkgname: true } })
+        ? this.packageRepository.find({
+            where: { id: In(chaoticIds) },
+            select: { id: true, pkgname: true, isSourceCompiled: true },
+          })
         : Promise.resolve([]),
     ]);
 
@@ -464,14 +555,28 @@ export class SignalIndex {
     return this.analysisRepository.find({ where: { pkgType, pkgId: In(ids) }, select });
   }
 
-  private async loadPkgnameMap(entries: { pkgType: TriggerType; pkgId: number }[]): Promise<Map<number, string>> {
+  /**
+   * Keyed by owner key, because Arch and Chaotic package ids overlap.
+   * Arch packages count as not compiled from source.
+   */
+  private async loadConsumerInfo(
+    entries: { pkgType: TriggerType; pkgId: number }[],
+  ): Promise<Map<string, ConsumerInfo>> {
     const { archPkgs, chaoticPkgs } = await this.findPkgnameRows(
       entries.filter((e) => e.pkgType === TriggerType.ARCH).map((e) => e.pkgId),
       entries.filter((e) => e.pkgType === TriggerType.CHAOTIC).map((e) => e.pkgId),
     );
-    const map = new Map<number, string>();
-    for (const pkg of [...archPkgs, ...chaoticPkgs]) {
-      map.set(pkg.id, pkg.pkgname);
+
+    const map = new Map<string, ConsumerInfo>();
+    for (const pkg of archPkgs) {
+      map.set(encodeOwnerKey(TriggerType.ARCH, pkg.id), { pkgname: pkg.pkgname, isSourceCompiled: false });
+    }
+
+    for (const pkg of chaoticPkgs) {
+      map.set(encodeOwnerKey(TriggerType.CHAOTIC, pkg.id), {
+        pkgname: pkg.pkgname,
+        isSourceCompiled: pkg.isSourceCompiled,
+      });
     }
 
     return map;
@@ -531,14 +636,14 @@ export class SignalIndex {
   ): Promise<void> {
     if (analyses.length === 0) return;
 
-    const pkgnameById = await this.loadPkgnameMap(
+    const consumers = await this.loadConsumerInfo(
       analyses.map((a) => ({ pkgType: triggerTypeOf(a.pkgType), pkgId: a.pkgId })),
     );
 
     let derived = 0;
     for (let offset = 0; offset < analyses.length; offset += PLUGIN_OF_BATCH_SIZE) {
       const batch = analyses.slice(offset, offset + PLUGIN_OF_BATCH_SIZE);
-      const toSave = await this.derivePluginOfBatch(batch, pkgnameById);
+      const toSave = await this.derivePluginOfBatch(batch, consumers);
       await saveInBatches(this.analysisRepository, toSave, ANALYSIS_SAVE_BATCH);
 
       derived += toSave.length;
@@ -548,7 +653,7 @@ export class SignalIndex {
 
   private async derivePluginOfBatch(
     batch: Pick<PackageElfAnalysis, 'pkgType' | 'pkgId' | 'version'>[],
-    pkgnameById: Map<number, string>,
+    consumers: Map<string, ConsumerInfo>,
   ): Promise<PluginOfUpdate[]> {
     const rows = await this.analysisRepository.find({
       where: batch.map(({ pkgType, pkgId, version }) => ({ pkgType, pkgId, version })),
@@ -560,7 +665,6 @@ export class SignalIndex {
         files: true,
         providedSonames: true,
         neededSonames: true,
-        isSourceCompiled: true,
       },
     });
 
@@ -570,10 +674,11 @@ export class SignalIndex {
         await yieldToEventLoop();
       }
 
+      const consumer = consumers.get(encodeOwnerKey(triggerTypeOf(analysis.pkgType), analysis.pkgId));
       const pluginOf = await this.pluginOfFor(analysis.files, {
-        consumerPkgname: pkgnameById.get(analysis.pkgId) ?? null,
+        consumerPkgname: consumer?.pkgname ?? null,
         hasCompiledCode: analysis.providedSonames.length > 0 || analysis.neededSonames.length > 0,
-        isSourceCompiled: analysis.isSourceCompiled,
+        isSourceCompiled: consumer?.isSourceCompiled ?? false,
       });
 
       const { id, pkgType, pkgId, version } = analysis;

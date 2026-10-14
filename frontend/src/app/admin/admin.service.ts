@@ -4,6 +4,7 @@ import {
   AdminPackageElfAnalysis,
   AdjustBuildClassResponse,
   ArchPackage,
+  BrokenFixability,
   BrokenPackageReport,
   Builder,
   MrAction,
@@ -189,6 +190,7 @@ export class AdminService {
   readonly brokenPage = signal(1);
   readonly brokenPerPage = signal(DEFAULT_ADMIN_PER_PAGE);
   readonly brokenSelection = signal<BrokenPackageReport[]>([]);
+  readonly brokenFixabilityFilter = signal<BrokenFixability | undefined>(undefined);
 
   readonly activeOptions = computed<ActiveOption[]>(() => {
     this.activeTranslation();
@@ -592,6 +594,7 @@ export class AdminService {
       params: parseQueryParams(brokenPackagesQuerySchema, {
         page: this.brokenPage(),
         perPage: this.brokenPerPage(),
+        fixability: this.brokenFixabilityFilter(),
       }),
     })),
   );

@@ -1,34 +1,33 @@
 .package-log {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
   flex: 1;
   min-height: 0;
 }
 
-.log-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.875rem;
-  border: 1px solid var(--catppuccin-color-surface1);
-  border-radius: var(--chaotic-radius-md);
-  background: transparent;
-  backdrop-filter: blur(var(--chaotic-blur));
-  -webkit-backdrop-filter: blur(var(--chaotic-blur));
-}
-
 .toolbar-right {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-left: auto;
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chaotic-space-sm);
+  margin-left: auto;
 }
 
 .search-field {
   width: 16rem;
+}
+
+.builder-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--chaotic-space-sm);
+  font-size: var(--chaotic-text-sm);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
+}
+
+.builder-name i {
+  color: var(--catppuccin-color-mauve);
 }
 
 @media (max-width: 640px) {
@@ -36,80 +35,11 @@
     display: none;
   }
 
-  .hide-download,
   .download-btn {
-    display: none !important;
+    display: none;
   }
 
   .search-field {
     width: 11rem;
   }
-}
-
-.builder-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--catppuccin-color-text);
-  font-size: 0.875rem;
-  font-weight: var(--chaotic-weight-semibold);
-}
-
-.builder-name i {
-  color: var(--catppuccin-color-mauve);
-}
-
-.live-badge {
-  color: var(--catppuccin-color-red);
-  font-size: 0.75rem;
-  font-weight: var(--chaotic-weight-bold);
-  animation: live-pulse 1.6s ease-in-out infinite;
-}
-
-.search-nav,
-.download-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--catppuccin-color-surface1);
-  border-radius: var(--chaotic-radius-sm);
-  background: transparent;
-  color: var(--catppuccin-color-text);
-  padding: 0.35rem 0.6rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-
-@media (pointer: coarse) {
-  .search-nav,
-  .download-btn {
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-  }
-}
-
-.search-nav:hover,
-.search-nav:focus-visible,
-.download-btn:hover,
-.download-btn:focus-visible {
-  border-color: var(--catppuccin-color-mauve);
-  color: var(--catppuccin-color-mauve);
-}
-
-@keyframes live-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-.log-panel-wrap {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: calc(100dvh - 260px);
 }

@@ -969,6 +969,7 @@ describe('brokenDepsForConsumer — dropped soname still shipped by a compat pac
         ['libclang-cpp.so.22.1', new Set(['clang22'])],
         ['libclang-cpp.so.23.1', new Set(['clang'])],
       ]),
+      providedSonameStems: new Set(['libclang-cpp.so']),
       archProvidedSonames: new Set(['libclang-cpp.so.22.1', 'libclang-cpp.so.23.1']),
       runtimes: {},
       previousProvidedByPkg: new Map([[10, new Set(['libclang-cpp.so.22.1'])]]),
@@ -1017,6 +1018,17 @@ describe('brokenDepsForConsumer — dropped soname still shipped by a compat pac
 
   it('flags a consumer without dependencies, because nothing installs the compat package for it', () => {
     expect(brokenDeps([])?.archPkg.pkgname).toBe('clang');
+  });
+
+  it('skips the rebuild when no package ships another version of the library', () => {
+    const withoutSuccessor = { ...(compatContext() as object), providedSonameStems: new Set<string>() };
+    const result = (
+      createService() as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[] | null): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, withoutSuccessor, ['clang', 'llvm-libs']);
+
+    expect(result).toBeNull();
   });
 });
 

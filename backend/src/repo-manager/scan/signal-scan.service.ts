@@ -15,13 +15,11 @@ export interface ScanJob {
   pkgType: TriggerType;
   pkgId: number;
   version: string;
-  isSourceCompiled?: boolean;
 }
 
 interface ScannedEntry {
   job: ScanJob;
   hasCompiledCode: boolean;
-  isSourceCompiled: boolean;
 }
 
 export interface ScanFailure {
@@ -81,7 +79,6 @@ export class SignalScanService {
 
           const { analysis } = attempt;
           const hasCompiledCode = analysis.providedSonames.length > 0 || analysis.neededSonames.length > 0;
-          const isSourceCompiled = job.isSourceCompiled ?? false;
           await this.analysisRepository.upsert(
             {
               pkgType: pkgTypeOf(job.pkgType),
@@ -99,11 +96,10 @@ export class SignalScanService {
               directDirectories: analysis.directDirectories,
               pluginOf: [],
               hasCompiledCode: analysis.hasCompiledCode,
-              isSourceCompiled,
             },
             ['pkgType', 'pkgId', 'version'],
           );
-          return { job, hasCompiledCode, isSourceCompiled };
+          return { job, hasCompiledCode };
         },
         workers,
       )
@@ -113,12 +109,11 @@ export class SignalScanService {
 
     await this.compute.run('refreshAfterScan', {
       options,
-      scanned: scanned.map(({ job, hasCompiledCode, isSourceCompiled }) => ({
+      scanned: scanned.map(({ job, hasCompiledCode }) => ({
         pkgType: job.pkgType,
         pkgId: job.pkgId,
         version: job.version,
         hasCompiledCode,
-        isSourceCompiled,
       })),
     });
 

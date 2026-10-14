@@ -107,7 +107,6 @@ describe('Bump pipeline (e2e, real PostgreSQL)', () => {
     const pinoStub = { info: () => undefined, debug: () => undefined } as never;
     return new BumpService(
       dataSource.getRepository(Package),
-      dataSource.getRepository(PackageElfAnalysis),
       writer,
       new EntityLookupService(
         dataSource.getRepository(Package),

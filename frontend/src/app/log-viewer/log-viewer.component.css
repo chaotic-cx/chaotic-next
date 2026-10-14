@@ -1,7 +1,6 @@
 .log-viewer {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
   flex: 1;
   min-height: 0;
 }
@@ -9,69 +8,71 @@
 .job-list {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.5rem;
+  gap: var(--chaotic-space-2xs);
   flex: 1;
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--catppuccin-color-surface2) transparent;
-  padding-bottom: 0.125rem;
 }
 
-.job-list::-webkit-scrollbar {
-  height: 6px;
-}
-
-.job-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.job-list::-webkit-scrollbar-thumb {
-  background: var(--catppuccin-color-surface2);
-  border-radius: var(--chaotic-radius-pill);
-}
-
-.job-chip {
+.job {
+  --job-tone: var(--catppuccin-color-overlay0);
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.75rem;
-  border-radius: var(--chaotic-radius-sm);
-  border: 1px solid var(--catppuccin-color-surface1);
-  background: var(--catppuccin-color-surface0);
+  gap: var(--chaotic-space-sm);
+  padding: var(--chaotic-space-xs) var(--chaotic-space-md);
+  border-radius: var(--chaotic-radius-md);
+  font-size: var(--chaotic-text-sm);
   color: var(--catppuccin-color-text);
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition:
-    border-color var(--chaotic-duration-fast) var(--chaotic-ease-out),
-    background var(--chaotic-duration-fast) var(--chaotic-ease-out);
+  touch-action: manipulation;
+  transition: background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.job-chip:hover,
-.job-chip:focus-visible {
-  border-color: var(--catppuccin-color-mauve);
+@media (hover: hover) {
+  .job:hover {
+    background: color-mix(in srgb, var(--catppuccin-color-surface0) 40%, transparent);
+  }
 }
 
-.job-chip-selected {
-  border-color: var(--catppuccin-color-mauve);
-  background: color-mix(in srgb, var(--catppuccin-color-mauve) 18%, var(--catppuccin-color-surface0));
-  box-shadow: inset 0 -2px 0 var(--catppuccin-color-mauve);
+.job:focus-visible {
+  outline: 2px solid var(--catppuccin-color-mauve);
+  outline-offset: -2px;
+}
+
+.job--selected,
+.job--selected:hover {
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 14%, transparent);
 }
 
 @media (pointer: coarse) {
-  .job-chip {
+  .job {
     min-height: 2.75rem;
   }
 }
 
-.job-chip-skeleton {
-  flex: none;
-  width: 7rem;
-  height: 2.125rem;
-  border-radius: var(--chaotic-radius-sm);
+.job[data-tone='running'] {
+  --job-tone: var(--catppuccin-color-mauve);
 }
 
-.job-name {
+.job[data-tone='success'] {
+  --job-tone: var(--catppuccin-color-green);
+}
+
+.job[data-tone='danger'] {
+  --job-tone: var(--catppuccin-color-red);
+}
+
+.job__dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--chaotic-radius-pill);
+  background: var(--job-tone);
+}
+
+.job__name {
   max-width: 16rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -79,35 +80,17 @@
   font-weight: var(--chaotic-weight-semibold);
 }
 
-.job-status {
+.job__status {
   white-space: nowrap;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: var(--chaotic-text-xs);
+  color: var(--catppuccin-color-subtext0);
 }
 
-.job-running .job-status {
-  color: var(--catppuccin-color-mauve);
-}
-
-.job-failed .job-status {
-  color: var(--catppuccin-color-red);
-}
-
-.job-success .job-status {
-  color: var(--chaotic-ink-green);
-}
-
-.log-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.875rem;
-  border: 1px solid var(--catppuccin-color-surface1);
+.job-skeleton {
+  flex: none;
+  width: 7rem;
+  height: 2rem;
   border-radius: var(--chaotic-radius-md);
-  background: transparent;
-  backdrop-filter: blur(var(--chaotic-blur));
-  -webkit-backdrop-filter: blur(var(--chaotic-blur));
 }
 
 .job-select {
@@ -115,10 +98,6 @@
 }
 
 @media (max-width: 767.98px) {
-  .log-toolbar {
-    flex-wrap: wrap;
-  }
-
   .job-list {
     display: none;
   }
@@ -126,29 +105,4 @@
   .job-select {
     display: flex;
   }
-}
-
-.live-badge {
-  color: var(--catppuccin-color-red);
-  font-size: 0.75rem;
-  font-weight: var(--chaotic-weight-bold);
-  animation: live-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes live-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-.log-panel-wrap {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: calc(100dvh - 260px);
 }

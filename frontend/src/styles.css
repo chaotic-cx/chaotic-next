@@ -1314,11 +1314,60 @@ p-scroll-top {
 }
 
 /* Set by `chaoticFillViewport`: the element fills the viewport below its own top edge. */
+.chaotic-fill-viewport {
+  --chaotic-fill-height: calc(100dvh - var(--chaotic-fill-top, 18rem) - var(--chaotic-space-lg));
+}
+
 @media (min-width: 768px) {
   .chaotic-fill-viewport {
-    height: calc(100dvh - var(--chaotic-fill-top, 18rem) - var(--chaotic-space-lg));
+    height: var(--chaotic-fill-height);
     min-height: 24rem;
   }
+}
+
+/* Log panels have one column, so they fill the viewport at every width. */
+.chaotic-log-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 20rem;
+  overflow: hidden;
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-lg);
+  background: var(--chaotic-surface);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+.chaotic-log-panel__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chaotic-space-sm);
+  padding: var(--chaotic-space-sm) var(--chaotic-space-md);
+  border-bottom: 1px solid var(--chaotic-border);
+}
+
+.chaotic-log-panel__live {
+  font-size: var(--chaotic-text-xs);
+  font-weight: var(--chaotic-weight-bold);
+  color: var(--catppuccin-color-red);
+  animation: chaotic-live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes chaotic-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.chaotic-log-panel.chaotic-fill-viewport {
+  height: var(--chaotic-fill-height);
 }
 
 /*

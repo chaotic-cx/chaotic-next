@@ -122,6 +122,10 @@ export class Package {
   @Column({ type: 'boolean', nullable: false, default: false })
   skipSignalScan!: boolean;
 
+  @ApiProperty({ description: 'Whether the PKGBUILD compiles from source instead of repackaging prebuilt binaries' })
+  @Column({ type: 'boolean', nullable: false, default: false })
+  isSourceCompiled!: boolean;
+
   @ApiProperty({ description: 'Current package version' })
   @Column({ type: 'varchar', nullable: true })
   version!: string;

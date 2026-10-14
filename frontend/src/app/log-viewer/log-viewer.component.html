@@ -1,46 +1,52 @@
 <div class="chaotic-page" *transloco="let t; prefix: 'logViewer'">
-  <chaotic-back-link [label]="t('back')" fallback="/status" />
   <chaotic-title
     [subtitle]="selectedJob()?.name ?? t('noJobSelected')"
     [title]="pipelineId() ? t('heading', { pipelineId: pipelineId() }) : t('title')"
-  />
+  >
+    @if (selectedJob()) {
+      <chaotic-log-stream-connecting [state]="logStream.state()" chaoticTitleAside />
+    }
+  </chaotic-title>
 
   <div class="log-viewer">
-    @switch (jobsState()) {
-      @case ('loading') {
-        <div class="log-toolbar skeleton-reveal" [attr.aria-label]="t('loadingJobs')" role="status">
-          @for (chip of jobSkeletonChips; track chip) {
-            <span class="chaotic-skeleton job-chip-skeleton" aria-hidden="true"></span>
-          }
-        </div>
-      }
-      @case ('failed') {
-        <chaotic-load-error
-          [message]="t(jobsFailureKeys[jobsFailure()], { pipelineId: pipelineId() })"
-          [error]="jobsError()"
-          (retry)="retryPipeline()"
-        />
-      }
-      @default {
-        @if (jobs().length === 0) {
-          <p class="chaotic-card__empty" role="status">{{ t('noJobs') }}</p>
+    @if (jobsState() === 'failed') {
+      <chaotic-load-error
+        [message]="t(jobsFailureKeys[jobsFailure()], { pipelineId: pipelineId() })"
+        [error]="jobsError()"
+        (retry)="retryPipeline()"
+      />
+    } @else if (jobsState() === 'ready' && jobs().length === 0) {
+      <p class="chaotic-card__empty" role="status">{{ t('noJobs') }}</p>
+    }
+
+    @if (selectedJob()) {
+      <chaotic-log-stream-status [state]="logStream.state()" (retry)="retryStream()" />
+    }
+
+    @if (jobsState() === 'loading' || jobs().length > 0) {
+      <section class="chaotic-log-panel" [attr.aria-label]="t('title')" chaoticFillViewport>
+        @if (jobsState() === 'loading') {
+          <div class="chaotic-log-panel__toolbar skeleton-reveal" [attr.aria-label]="t('loadingJobs')" role="status">
+            @for (chip of jobSkeletonChips; track chip) {
+              <span class="chaotic-skeleton job-skeleton" aria-hidden="true"></span>
+            }
+          </div>
         } @else {
-          <div class="log-toolbar">
+          <div class="chaotic-log-panel__toolbar">
             <div class="job-list" #jobList>
               @for (job of jobs(); track job.id) {
                 <button
-                  class="job-chip"
-                  [class.job-chip-selected]="job.id === selectedJobId()"
-                  [class.job-running]="runningStatuses.has(job.status)"
-                  [class.job-failed]="job.status === 'failed'"
-                  [class.job-success]="job.status === 'success'"
+                  class="job"
+                  [class.job--selected]="job.id === selectedJobId()"
+                  [attr.data-tone]="jobTone(job.status)"
                   [attr.aria-pressed]="job.id === selectedJobId()"
                   [title]="job.name"
                   (click)="selectJob(job)"
                   type="button"
                 >
-                  <span class="job-name">{{ job.name }}</span>
-                  <span class="job-status">{{ jobStatusLabel(job.status) }}</span>
+                  <span class="job__dot" aria-hidden="true"></span>
+                  <span class="job__name">{{ job.name }}</span>
+                  <span class="job__status">{{ jobStatusLabel(job.status) }}</span>
                 </button>
               }
             </div>
@@ -56,25 +62,16 @@
               appendTo="body"
             />
             @if (logStream.live()) {
-              <span class="live-badge">{{ t('live') }}</span>
+              <span class="chaotic-log-panel__live">{{ t('live') }}</span>
             }
           </div>
         }
-      }
-    }
-
-    @if (selectedJob()) {
-      <chaotic-log-stream-status [state]="logStream.state()" (retry)="retryStream()" />
-    }
-
-    @if (jobsState() === 'loading' || jobs().length > 0) {
-      <div class="log-panel-wrap">
         <chaotic-xterm-log
           [chunk]="logStream.chunks()"
           [scrollToLine]="scrollToLine()"
           (lineClick)="onLineClick($event)"
         />
-      </div>
+      </section>
     }
   </div>
 </div>

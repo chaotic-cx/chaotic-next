@@ -379,6 +379,13 @@
     "columns": {
       "reasons": "Gründe"
     },
+    "fixability": {
+      "placeholder": "Fix",
+      "filterLabel": "Nach Fix filtern",
+      "rebuild": "Rebuild behebt es",
+      "pkgbuildChange": "PKGBUILD-Änderung nötig",
+      "noFix": "Kein Fix möglich"
+    },
     "empty": "Keine kaputten Pakete gefunden.",
     "bumpConfirm": {
       "message": "{{count}} ausgewählte kaputte Paket(e) neu bauen? Das erhöht pkgrel und committed die Änderungen.",

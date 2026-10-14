@@ -2,6 +2,7 @@ import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { APP_CONFIG } from '../../../environments/app-config.token';
+import { FillViewportDirective } from '../../fill-viewport.directive';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { ResilientSseStream } from '../../sse-stream';
 import { XtermLogComponent } from '../../xterm-log/xterm-log.component';
@@ -11,7 +12,7 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
 
 @Component({
   selector: 'chaotic-admin-manager-logs-page',
-  imports: [LoadErrorComponent, ProgressSpinner, TranslocoDirective, XtermLogComponent],
+  imports: [FillViewportDirective, LoadErrorComponent, ProgressSpinner, TranslocoDirective, XtermLogComponent],
   template: `
     <ng-container *transloco="let t; prefix: 'admin.managerLogs'">
       <p class="log-status" [class.is-live]="streaming()" role="status">
@@ -30,11 +31,11 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
       }
 
       @if (streaming() || logChunks().length > 0) {
-        <div class="log-panel-wrap log-panel-wrap--viewport">
+        <div class="chaotic-log-panel" chaoticFillViewport>
           <chaotic-xterm-log [chunk]="logChunks()" [clearSignal]="clearSignal()" />
         </div>
       } @else if (loading()) {
-        <div class="log-panel-wrap items-center justify-center">
+        <div class="chaotic-log-panel items-center justify-center">
           <p-progress-spinner [ariaLabel]="t('connectingAriaLabel')" />
         </div>
       }
@@ -45,19 +46,6 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
       :host {
         display: flex;
         flex-direction: column;
-      }
-
-      .log-panel-wrap {
-        display: flex;
-        flex-direction: column;
-        min-height: 20rem;
-      }
-
-      .log-panel-wrap--viewport {
-        --log-panel-viewport-offset: 21.875rem;
-        --log-panel-min-height: 25rem;
-
-        height: max(calc(100dvh - var(--log-panel-viewport-offset)), var(--log-panel-min-height));
       }
 
       .log-status {

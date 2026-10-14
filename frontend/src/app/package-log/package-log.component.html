@@ -1,67 +1,71 @@
 <div class="chaotic-page" *transloco="let t; prefix: 'packageLog'">
-  <chaotic-back-link [label]="t('back')" fallback="/deployments" />
-  <chaotic-title [subtitle]="subtitle() ?? t('subtitle')" [title]="pkgname() || t('title')" />
+  <chaotic-title [subtitle]="subtitle() ?? t('subtitle')" [title]="pkgname() || t('title')">
+    <chaotic-log-stream-connecting [state]="logStream.state()" chaoticTitleAside />
+  </chaotic-title>
 
   <div class="package-log">
     <chaotic-log-stream-status [state]="logStream.state()" (retry)="retryStream()" />
 
-    @if (builder() || logStream.live()) {
-      <div class="log-toolbar">
-        @if (builder(); as host) {
-          <span class="builder-name">
-            <i class="pi pi-server"></i>
-            {{ host }}
-          </span>
-        }
-        <div class="toolbar-right">
-          @if (logStream.live()) {
-            <span class="live-badge">{{ t('live') }}</span>
+    <section class="chaotic-log-panel" [attr.aria-label]="t('title')" chaoticFillViewport>
+      @if (builder() || logStream.live()) {
+        <div class="chaotic-log-panel__toolbar">
+          @if (builder(); as host) {
+            <span class="builder-name">
+              <i class="pi pi-server" aria-hidden="true"></i>
+              {{ host }}
+            </span>
           }
-          <button
-            class="download-btn"
-            [class.hide-download]="searchQuery()"
-            [attr.aria-label]="t('downloadLog')"
-            (click)="downloadLog()"
-            type="button"
-          >
-            <i class="pi pi-download"></i>
-          </button>
-          @if (searchQuery()) {
-            <button class="search-nav" [attr.aria-label]="t('previousMatch')" (click)="searchPrevious()" type="button">
-              <i class="pi pi-angle-up"></i>
+          <div class="toolbar-right">
+            @if (logStream.live()) {
+              <span class="chaotic-log-panel__live">{{ t('live') }}</span>
+            }
+            <button
+              class="chaotic-icon-btn download-btn"
+              [attr.aria-label]="t('downloadLog')"
+              (click)="downloadLog()"
+              type="button"
+            >
+              <i class="pi pi-download" aria-hidden="true"></i>
             </button>
-            <button class="search-nav" [attr.aria-label]="t('nextMatch')" (click)="searchNext()" type="button">
-              <i class="pi pi-angle-down"></i>
-            </button>
-          }
-          <p-iconfield class="search-field" iconPosition="left">
-            <p-inputicon>
-              <i class="pi pi-search"></i>
-            </p-inputicon>
-            <input
-              class="w-full"
-              #searchInput
-              [value]="searchQuery()"
-              [attr.aria-label]="t('searchLabel')"
-              [placeholder]="t('searchBuffer')"
-              (input)="onSearch($any($event.target).value)"
-              (keydown.enter)="searchNext()"
-              (keydown.shift.enter)="searchPrevious()"
-              pInputText
-              type="text"
-            />
-          </p-iconfield>
+            @if (searchQuery()) {
+              <button
+                class="chaotic-icon-btn"
+                [attr.aria-label]="t('previousMatch')"
+                (click)="searchPrevious()"
+                type="button"
+              >
+                <i class="pi pi-angle-up" aria-hidden="true"></i>
+              </button>
+              <button class="chaotic-icon-btn" [attr.aria-label]="t('nextMatch')" (click)="searchNext()" type="button">
+                <i class="pi pi-angle-down" aria-hidden="true"></i>
+              </button>
+            }
+            <p-iconfield class="search-field" iconPosition="left">
+              <p-inputicon>
+                <i class="pi pi-search" aria-hidden="true"></i>
+              </p-inputicon>
+              <input
+                class="w-full"
+                #searchInput
+                [value]="searchQuery()"
+                [attr.aria-label]="t('searchLabel')"
+                [placeholder]="t('searchBuffer')"
+                (input)="onSearch($any($event.target).value)"
+                (keydown.enter)="searchNext()"
+                (keydown.shift.enter)="searchPrevious()"
+                pInputText
+                type="text"
+              />
+            </p-iconfield>
+          </div>
         </div>
-      </div>
-    }
-
-    <div class="log-panel-wrap">
+      }
       <chaotic-xterm-log
         #term
         [chunk]="logStream.chunks()"
         [scrollToLine]="scrollToLine()"
         (lineClick)="onLineClick($event)"
       />
-    </div>
+    </section>
   </div>
 </div>

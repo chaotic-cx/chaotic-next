@@ -75,7 +75,7 @@ export class RepoManagerController {
   getBrokenPackages(
     @Query({ schema: brokenPackagesQuerySchema }) query: BrokenPackagesQueryDto,
   ): Promise<Paginated<BrokenPackageReport>> {
-    return this.repoManager.getBrokenPackages(query.page, query.perPage);
+    return this.repoManager.getBrokenPackages(query.page, query.perPage, query.fixability);
   }
 
   @Get('rebuild-coverage')

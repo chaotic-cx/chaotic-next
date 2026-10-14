@@ -1,6 +1,7 @@
 import { Package } from '../builder/builder.entity';
 import { BumpType, TriggerType } from '../interfaces/repo-manager';
 import {
+  type BrokenIssue,
   type PackageElfAnalysis as PackageElfAnalysisType,
   type ParsedPackageMetadata,
 } from '@chaotic-next/shared-lib';
@@ -174,11 +175,20 @@ export class PackageElfAnalysis {
   @Column({ type: 'timestamp', nullable: true })
   brokenSince!: Date | null;
 
-  @Column({ type: 'boolean', default: false })
-  hasCompiledCode!: boolean;
+  /** The broken reasons with what fixes each one. Empty when not broken. */
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  brokenIssues!: BrokenIssue[];
+
+  /**
+   * The broken reasons at the first scan of this version. A rebuild cannot fix
+   * these, because the build already ran without them resolved.
+   * Null until the first broken check after the scan.
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  brokenReasonsAsBuilt!: string[] | null;
 
   @Column({ type: 'boolean', default: false })
-  isSourceCompiled!: boolean;
+  hasCompiledCode!: boolean;
 
   @CreateDateColumn()
   scannedAt!: Date;
@@ -200,7 +210,6 @@ export class PackageElfAnalysis {
       broken: this.broken,
       brokenReasons: this.brokenReasons,
       hasCompiledCode: this.hasCompiledCode,
-      isSourceCompiled: this.isSourceCompiled,
       scannedAt: this.scannedAt.toISOString(),
     };
   }

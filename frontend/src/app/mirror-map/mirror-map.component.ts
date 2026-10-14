@@ -48,7 +48,6 @@ function gradedColor(hex: string): string {
   const green = parseInt(hex.slice(3, 5), 16) / CHANNEL_MAX;
   const blue = parseInt(hex.slice(5, 7), 16) / CHANNEL_MAX;
   const crossWeight = 1 - GRADE_SATURATION;
-
   const saturatedRed =
     (LUMA_RED + (1 - LUMA_RED) * GRADE_SATURATION) * red +
     LUMA_GREEN * crossWeight * green +
@@ -61,9 +60,7 @@ function gradedColor(hex: string): string {
     LUMA_RED * crossWeight * red +
     LUMA_GREEN * crossWeight * green +
     (LUMA_BLUE + (1 - LUMA_BLUE) * GRADE_SATURATION) * blue;
-
   const channels = [contrasted(saturatedRed), contrasted(saturatedGreen), contrasted(saturatedBlue)];
-
   return `#${channels.map(hexChannel).join('')}`;
 }
 
@@ -92,7 +89,6 @@ function mapColors(palette: CatppuccinColors): MapColors {
 function createCatppuccinStyle(projection: 'globe' | 'flat', palette: CatppuccinColors): StyleSpecification {
   const isGlobe = projection === 'globe';
   const colors = mapColors(palette);
-
   return {
     version: 8,
     name: `Catppuccin ${isGlobe ? 'Globe' : 'Flat'}`,
@@ -273,7 +269,6 @@ interface MirrorPopupLabels {
 
 function mirrorPopupHtml(mirror: Mirror, labels: MirrorPopupLabels): string {
   const officialIcon = `<i class="pi pi-verified" style="color: var(--catppuccin-color-blue)" role="img" aria-label="${labels.official}" title="${labels.official}"></i>`;
-
   return `
     <b>${mirror.subdomain}</b>
     <span style="opacity: 0.7">| ${labels.status}</span>
@@ -303,7 +298,9 @@ function circleCoveragePolygon(position: [number, number], radiusKm: number, ste
       );
     ring.push([(lng2 * 180) / Math.PI, (lat2 * 180) / Math.PI]);
   }
+
   ring.push([...ring[0]]);
+
   return {
     type: 'Feature',
     properties: {},
@@ -314,12 +311,14 @@ function circleCoveragePolygon(position: [number, number], radiusKm: number, ste
 function markerPosition(mirror: Mirror, self: MirrorSelf | undefined): [number, number] | null {
   const rawLatLon = mirror.geo_active && self?.latlon ? self.latlon : mirror.latlon;
   if (!rawLatLon) return null;
+
   const position: [number, number] = [rawLatLon[1], rawLatLon[0]];
   return isValidPosition(position) ? position : null;
 }
 
 function isValidPosition(position: [number, number] | null): position is [number, number] {
   if (!position) return false;
+
   const [lng, lat] = position;
   return Number.isFinite(lng) && Number.isFinite(lat) && lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90;
 }
@@ -608,11 +607,12 @@ export class MirrorMapComponent implements OnDestroy {
     for (const mirror of this.mirrors()) {
       counts[mirrorStatus(mirror)]++;
     }
+
     return counts;
   });
 
   constructor() {
-    injectLazyStylesheet('maplibre');
+    void injectLazyStylesheet('maplibre');
     document.addEventListener('visibilitychange', this.onVisibilityChange);
 
     effect(() => {
@@ -636,7 +636,6 @@ export class MirrorMapComponent implements OnDestroy {
       const proj = this.projection();
       const custom = this.customStyleUrl();
       const targetStyle = custom || createCatppuccinStyle(proj, themePalette());
-
       if (this.map) {
         this.map.setStyle(targetStyle);
       }
@@ -669,7 +668,6 @@ export class MirrorMapComponent implements OnDestroy {
 
     const proj = this.projection();
     const initialStyle = this.customStyleUrl() || createCatppuccinStyle(proj, themePalette());
-
     this.map = new MaplibreMap({
       container,
       style: initialStyle,
@@ -681,6 +679,7 @@ export class MirrorMapComponent implements OnDestroy {
           const separator = url.includes('?') ? '&' : '?';
           return { url: `${url}${separator}ngsw-bypass=true` };
         }
+
         return { url };
       },
     });
@@ -714,6 +713,7 @@ export class MirrorMapComponent implements OnDestroy {
     if (this.map.getSource(CIRCLE_SOURCE_ID)) {
       this.map.setPaintProperty(CIRCLE_FILL_LAYER_ID, 'fill-color', circleColor);
       this.map.setPaintProperty(CIRCLE_OUTLINE_LAYER_ID, 'line-color', circleColor);
+
       return;
     }
 
@@ -801,6 +801,7 @@ export class MirrorMapComponent implements OnDestroy {
 
   private triggerTrafficPing(hit: TrafficHit): void {
     if (!this.map || prefersReducedMotion()) return;
+
     this.addTrafficLayers();
 
     const coords = getCountryCoordinates(hit.countryCode);
@@ -820,7 +821,6 @@ export class MirrorMapComponent implements OnDestroy {
     const startLng = targetLng - deltaLng;
     const startLat = Math.min(84, targetLat + deltaLat);
     const now = performance.now();
-
     this.activePings.push({
       id: hit.id,
       targetLng,
@@ -837,7 +837,6 @@ export class MirrorMapComponent implements OnDestroy {
         (hit.hostname.includes('geo-mirror') && m.geo_active) ||
         (m.official && m.healthy),
     );
-
     const targetPos = targetMirror ? markerPosition(targetMirror, this.self()) : null;
     if (targetPos) {
       this.activeArcs.push({
@@ -920,7 +919,6 @@ export class MirrorMapComponent implements OnDestroy {
     const colors = this.traffic();
     const meteorFeatures: Feature[] = [];
     const pingFeatures: Feature[] = [];
-
     this.activePings = this.activePings.filter((ping) => {
       const elapsed = now - ping.createdAt;
       if (elapsed > TOTAL_PING_DURATION_MS) return false;
@@ -1011,7 +1009,6 @@ export class MirrorMapComponent implements OnDestroy {
 
         // Primary shockwave
         const shockRadius = 6 + Math.sqrt(factor) * SHOCKWAVE_MAX_RADIUS;
-
         pingFeatures.push({
           type: 'Feature',
           geometry: {
@@ -1081,7 +1078,6 @@ export class MirrorMapComponent implements OnDestroy {
 
       const points: [number, number][] = [];
       const maxStep = Math.min(ARC_STEP_COUNT, Math.ceil(progress * ARC_STEP_COUNT) + 1);
-
       for (let s = 0; s <= maxStep; s++) {
         const t = s / ARC_STEP_COUNT;
         const lng = arc.source[0] + (arc.target[0] - arc.source[0]) * t;
@@ -1104,6 +1100,7 @@ export class MirrorMapComponent implements OnDestroy {
           },
         });
       }
+
       return true;
     });
 
@@ -1118,7 +1115,6 @@ export class MirrorMapComponent implements OnDestroy {
     const self = this.self();
     const currentSubdomains = new Set<string>();
     const circleFeatures: Feature[] = [];
-
     if (showMirrors) {
       for (const mirror of mirrors) {
         const position = markerPosition(mirror, self);
@@ -1127,7 +1123,6 @@ export class MirrorMapComponent implements OnDestroy {
         currentSubdomains.add(mirror.subdomain);
         const status = mirrorStatus(mirror);
         const existing = this.markers.get(mirror.subdomain);
-
         if (existing) {
           existing.setLngLat(position);
           const element = existing.getElement();
@@ -1136,6 +1131,7 @@ export class MirrorMapComponent implements OnDestroy {
           if (svgPath) {
             svgPath.setAttribute('fill', markerColor(status));
           }
+
           element.setAttribute('aria-label', this.markerLabel(mirror, status));
           existing.getPopup().setHTML(this.popupHtml(mirror, status));
         } else {
@@ -1164,7 +1160,6 @@ export class MirrorMapComponent implements OnDestroy {
         ),
       )
       .addTo(this.map);
-
     const element = mapMarker.getElement();
     element.classList.toggle('marker-active', status === 'active');
     element.setAttribute('aria-label', this.markerLabel(mirror, status));
@@ -1228,7 +1223,6 @@ export class MirrorMapComponent implements OnDestroy {
 
     const focus = this.focus();
     let target: [number, number] | null = null;
-
     if (isValidPosition(focus)) {
       target = focus;
     } else if (!this.lastFocus) {

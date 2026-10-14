@@ -1,5 +1,6 @@
 import {
   type ArchOverlapReport,
+  type BrokenFixability,
   type BumpPackagesResult,
   type MissingDependencyReport,
   type RebuildCoverageReport,
@@ -60,6 +61,7 @@ import {
   type DependencyNode,
   latestAnalysisByKey,
   pkgTypeOf,
+  worstFixability,
 } from './signal';
 
 /** The cron scheduler runs on German time so runs align with Arch mirror syncs. */
@@ -243,11 +245,15 @@ export class RepoManagerService implements OnModuleInit {
     return this.repoManager.indexChaoticRepo();
   }
 
-  async getBrokenPackages(page?: number, perPage?: number): Promise<Paginated<BrokenPackageReport>> {
+  async getBrokenPackages(
+    page?: number,
+    perPage?: number,
+    fixability?: BrokenFixability,
+  ): Promise<Paginated<BrokenPackageReport>> {
     const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
     const allChaotic = await this.elfAnalysisRepository.find({
       where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC) },
-      select: { pkgId: true, version: true, broken: true, brokenReasons: true },
+      select: { pkgId: true, version: true, broken: true, brokenReasons: true, brokenIssues: true },
     });
     const latest = latestAnalysisByKey(allChaotic, (row) => String(row.pkgId));
     const brokenAnalyses = [...latest.values()].filter((a) => a.broken);
@@ -269,10 +275,13 @@ export class RepoManagerService implements OnModuleInit {
           version: analysis.version,
           repoName: pkg?.repo?.name,
           reasons: analysis.brokenReasons,
+          issues: analysis.brokenIssues,
+          fixability: worstFixability(analysis.brokenIssues),
           skipSignalScan: pkg?.skipSignalScan ?? false,
         };
       })
-      .filter((report) => !report.skipSignalScan);
+      .filter((report) => !report.skipSignalScan)
+      .filter((report) => fixability === undefined || report.fixability === fixability);
 
     const total = allBrokenReports.length;
     allBrokenReports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));

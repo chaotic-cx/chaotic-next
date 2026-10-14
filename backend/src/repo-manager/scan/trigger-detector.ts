@@ -27,11 +27,13 @@ import {
   findVtableDrifts,
   formatBrokenDependency,
   formatConsumerAbiBreak,
+  hasSuccessor,
   latestAnalysisByKey,
   pkgTypeOf,
   releaseVersion,
   type RuntimeName,
   sameLibraryFamily,
+  sonameStems,
 } from '../signal';
 import { pickBaselineVersion } from './baseline-version';
 import { DependencyClosure, type DependencyRecord } from './dependency-closure';
@@ -116,6 +118,8 @@ interface BrokenDepsContext {
   changed: ChangedOwner[];
   // soname -> set of provider pkgnames (real providers, latest analysis per package).
   providedByPkgname: Map<string, Set<string>>;
+  // Stems of all provided sonames, to tell whether a rebuild has a successor to link against.
+  providedSonameStems: Set<string>;
   // pacman installs these transitively, so they always count as provided.
   archProvidedSonames: Set<string>;
   runtimes: Partial<Record<RuntimeName, string | null>>;
@@ -612,6 +616,7 @@ export class TriggerDetector {
     return {
       changed,
       providedByPkgname,
+      providedSonameStems: sonameStems(providedByPkgname.keys()),
       archProvidedSonames,
       runtimes,
       previousProvidedByPkg,
@@ -806,6 +811,14 @@ export class TriggerDetector {
 
     if (relevant.length === 0 || !cause) return null;
 
+    if (!relevant.some((dep) => hasSuccessor(dep, ctx.providedSonameStems))) {
+      this.pino.info(
+        { pkgId: consumer.pkgId, version: consumer.version, reasons: relevant.map(formatBrokenDependency) },
+        'No rebuild fixes the broken dependencies, skipping',
+      );
+      return null;
+    }
+
     return { deps: relevant, archPkg: cause };
   }
 
@@ -834,7 +847,12 @@ export class TriggerDetector {
       const alreadyBumped = await this.bumpedSince(bumpedPkgId, brokenSince);
       if (alreadyBumped) continue;
 
-      const deps = await this.currentBrokenDependencies(analysis);
+      const { deps, stems } = await this.currentBrokenDependencies(analysis);
+      if (!deps.some((dep) => hasSuccessor(dep, stems))) {
+        this.pino.info({ pkgname: output.pkgname }, 'No rebuild fixes the missed break, skipping');
+        continue;
+      }
+
       const culprit = await this.blameMissedBreak(deps, outputs);
       if (!culprit) {
         this.pino.warn({ pkgname: output.pkgname }, 'Broken package has no package to blame, skipping rebuild');
@@ -999,18 +1017,22 @@ export class TriggerDetector {
     return bumps.length > 0;
   }
 
-  private async currentBrokenDependencies(consumer: PackageElfAnalysis): Promise<BrokenDependency[]> {
+  private async currentBrokenDependencies(
+    consumer: PackageElfAnalysis,
+  ): Promise<{ deps: BrokenDependency[]; stems: Set<string> }> {
     const [{ providedByPkgname }, runtimes] = await Promise.all([
       this.loadSonameProviders(),
       loadRuntimeVersions(this.archlinuxPackageRepository),
     ]);
-    return findBrokenDependencies({
+    const deps = findBrokenDependencies({
       neededSonames: consumer.neededSonames,
       files: consumer.files,
       providedSonames: new Set(providedByPkgname.keys()),
       runtimes,
       selfProvidedSonames: consumer.providedSonames,
     });
+
+    return { deps, stems: sonameStems(providedByPkgname.keys()) };
   }
 
   /**

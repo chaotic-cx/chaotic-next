@@ -432,7 +432,6 @@
       "description": "Live build logs of a Chaotic-AUR pipeline job",
       "keywords": "Chaotic-AUR, GitLab, pipeline, log, build"
     },
-    "back": "Back",
     "heading": "Pipeline #{{pipelineId}}",
     "loadingJobs": "Loading jobs",
     "noJobs": "This pipeline has no jobs yet.",
@@ -654,8 +653,7 @@
       "title": "{{pkgname}} build log · Chaotic-AUR",
       "description": "Build log of a Chaotic-AUR package",
       "keywords": "Chaotic-AUR, build, log, package"
-    },
-    "back": "Back"
+    }
   },
   "pipes": {
     "relativeTime": {

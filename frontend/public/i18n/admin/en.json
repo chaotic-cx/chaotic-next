@@ -379,6 +379,13 @@
     "columns": {
       "reasons": "Reasons"
     },
+    "fixability": {
+      "placeholder": "Fix",
+      "filterLabel": "Filter by what fixes the package",
+      "rebuild": "Rebuild fixes it",
+      "pkgbuildChange": "Needs a PKGBUILD change",
+      "noFix": "No fix possible"
+    },
     "empty": "No broken packages found.",
     "bumpConfirm": {
       "message": "Rebuild {{count}} selected broken package(s)? This bumps their pkgrel and commits the changes.",
