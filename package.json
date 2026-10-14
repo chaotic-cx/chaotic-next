@@ -101,8 +101,8 @@
     "zod-openapi": "^6.0.2"
   },
   "devDependencies": {
-    "@analogjs/vite-plugin-angular": "~2.7.2",
-    "@analogjs/vitest-angular": "~2.7.2",
+    "@analogjs/vite-plugin-angular": "~2.8.0",
+    "@analogjs/vitest-angular": "~2.8.0",
     "@angular-devkit/core": "22.1.7",
     "@angular-devkit/schematics": "22.1.7",
     "@angular-eslint/eslint-plugin": "22.5.0",
