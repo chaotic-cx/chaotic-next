@@ -23,6 +23,7 @@ import { APP_CONFIG } from '../environments/app-config.token';
 import { type EnvironmentModel } from '../environments/environment.model';
 import { type ResourceMetricKey } from './stats/charts/chart-resource-metrics';
 import { isChaoticEvent } from './functions';
+import { injectIsBrowser } from './platform';
 import { ResilientSseStream, SSE_RECONNECT_DELAY_MS } from './sse-stream';
 import { parseQueryParams } from './utils/api-params';
 
@@ -48,17 +49,18 @@ export interface BuildsQueryParams {
 
 export const ALL_TIME_DAYS = 3650;
 
-/** The backend emits a heartbeat every 15s; three missed ones mean a dead link. */
+// The backend emits a heartbeat every 15s. Three missed ones mean a dead link.
 const SSE_HEARTBEAT_MS = 15_000;
 const SSE_STALE_AFTER_MS = 3 * SSE_HEARTBEAT_MS;
 const WATCHDOG_TICK_MS = 5_000;
-/** Minimum gap between health probes; errors reconnect about once per second. */
+// Minimum gap between health probes. Errors reconnect about once per second.
 const HEALTH_PROBE_MIN_GAP_MS = 5_000;
 
 @Service()
 export class AppService {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
   private readonly http = inject(HttpClient);
+  private readonly isBrowser = injectIsBrowser();
 
   chaoticSse$ = new Subject<ChaoticEvent>();
   chaoticEvent = this.chaoticSse$.asObservable();
@@ -69,8 +71,8 @@ export class AppService {
   private readonly internalSseSettled = signal(false);
   readonly sseSettled = this.internalSseSettled.asReadonly();
 
-  private readonly versionResource = httpResource<{ version: string }>(
-    () => `${this.appConfig.backendUrl}/health/version`,
+  private readonly versionResource = httpResource<{ version: string }>(() =>
+    this.isBrowser ? `${this.appConfig.backendUrl}/health/version` : undefined,
   );
   readonly backendVersion = computed(() => {
     if (this.versionResource.error()) return 'unknown';
@@ -80,34 +82,40 @@ export class AppService {
 
   private lastSseFrameAt = Date.now();
   private lastHealthProbeAt = 0;
-  private readonly watchdogTimer = setInterval(() => this.watchdogTick(), WATCHDOG_TICK_MS);
-  private readonly stream = new ResilientSseStream({
-    url: () => `${this.appConfig.backendUrl}/sse?ngsw-bypass`,
-    onMessage: (data) => this.handleFrame(data),
-    namedEvents: ['ping'],
-    onNamedEvent: () => {
-      /**
-       * The backend heartbeat is a named event, so it never reaches onmessage;
-       * it is still proof of a live connection.
-       */
-      this.lastSseFrameAt = Date.now();
-      this.internalSseConnected.set(true);
-    },
-    onOpen: () => {
-      this.lastSseFrameAt = Date.now();
-      this.internalSseSettled.set(true);
-      this.internalSseConnected.set(true);
-    },
-    onError: () => {
-      this.internalSseSettled.set(true);
-      void this.probeHealth();
-    },
-    maxAttempts: Number.MAX_SAFE_INTEGER,
-    delayMs: SSE_RECONNECT_DELAY_MS,
-  });
+  private readonly stream = this.isBrowser ? this.createStream() : undefined;
 
   constructor() {
+    if (!this.stream) return;
+
+    setInterval(() => this.watchdogTick(), WATCHDOG_TICK_MS);
     this.stream.open();
+  }
+
+  private createStream(): ResilientSseStream {
+    return new ResilientSseStream({
+      url: () => `${this.appConfig.backendUrl}/sse?ngsw-bypass`,
+      onMessage: (data) => this.handleFrame(data),
+      namedEvents: ['ping'],
+      onNamedEvent: () => {
+        /**
+         * The backend heartbeat is a named event, so it never reaches onmessage.
+         * It is still proof of a live connection.
+         */
+        this.lastSseFrameAt = Date.now();
+        this.internalSseConnected.set(true);
+      },
+      onOpen: () => {
+        this.lastSseFrameAt = Date.now();
+        this.internalSseSettled.set(true);
+        this.internalSseConnected.set(true);
+      },
+      onError: () => {
+        this.internalSseSettled.set(true);
+        void this.probeHealth();
+      },
+      maxAttempts: Number.MAX_SAFE_INTEGER,
+      delayMs: SSE_RECONNECT_DELAY_MS,
+    });
   }
 
   /**
@@ -117,15 +125,16 @@ export class AppService {
    * backend by its health endpoint.
    */
   private watchdogTick(): void {
-    if (!this.stream.isOpen) return;
+    if (!this.stream?.isOpen) return;
     if (Date.now() - this.lastSseFrameAt <= SSE_STALE_AFTER_MS) return;
+
     void this.probeHealth();
     this.lastSseFrameAt = Date.now();
-    this.stream.open();
+    this.stream?.open();
   }
 
   /**
-   * The health endpoint decides backend liveness; a failed probe flags the
+   * The health endpoint decides backend liveness. A failed probe flags the
    * backend down for the guard, a successful one keeps or restores the ok
    * state even while SSE is still reconnecting. A connected stream that still
    * delivers frames is its own liveness proof — probing while healthy would
@@ -134,6 +143,7 @@ export class AppService {
   private async probeHealth(): Promise<void> {
     if (this.internalSseConnected() && Date.now() - this.lastSseFrameAt <= SSE_STALE_AFTER_MS) return;
     if (Date.now() - this.lastHealthProbeAt < HEALTH_PROBE_MIN_GAP_MS) return;
+
     this.lastHealthProbeAt = Date.now();
     try {
       // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot liveness probe, not page state
@@ -374,7 +384,6 @@ export class AppService {
     const request = this.getPkgnameSuggestionsRequest(query);
     // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot existence check when the search input commits
     const result = await firstValueFrom(this.http.get<Paginated<Package>>(request.url, { params: request.params }));
-
     return pkgnamesInRepo(result, repo);
   }
 

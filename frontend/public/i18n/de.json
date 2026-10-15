@@ -358,17 +358,19 @@
     "hero": {
       "appletLabel": "Das interaktive Chaotic-AUR-Applet öffnen",
       "title": "Wir bauen AUR-Pakete für dich, damit du es nicht musst.",
-      "lede": "Chaotic-AUR ist ein halbautomatisches Binary-Repository für Arch Linux: AUR-Pakete, fertig gebaut, signiert und über Mirrors weltweit verfügbar.",
-      "ledeWithMirrorCount": "Chaotic-AUR ist ein halbautomatisches Binary-Repository für Arch Linux: AUR-Pakete, fertig gebaut, signiert und über {{count}} Mirrors weltweit verfügbar."
+      "lede": "Chaotic-AUR ist ein halbautomatisches Binary-Repository für Arch Linux: AUR-Pakete, fertig gebaut, signiert und über Mirrors weltweit verfügbar."
     },
     "search": {
       "ariaLabel": "Pakete suchen",
-      "placeholder": "Pakete suchen, z. B. firedragon",
-      "invalidName": "Ungültiger Paketname"
+      "placeholder": "Pakete suchen, z. B. brave-bin",
+      "invalidName": "Ungültiger Paketname",
+      "popular": "Beliebt:",
+      "popularLabel": "Beliebte Pakete"
     },
-    "setup": {
-      "lead": "Neu hier?",
-      "text": "Repo in fünf Schritten einrichten"
+    "install": {
+      "title": "Chaotic-AUR zu pacman hinzufügen",
+      "summary": "Fünf Schritte: Key vertrauen, Keyring installieren, Repository aktivieren.",
+      "guideLink": "Zur Anleitung"
     },
     "news": {
       "title": "Neuigkeiten",
@@ -589,7 +591,6 @@
   "newsfeed": {
     "defaultAuthor": "Maintainer",
     "showMore": "Weitere Neuigkeiten",
-    "loadError": "Die Neuigkeiten konnten nicht geladen werden.",
     "empty": "Noch keine Neuigkeiten. Ankündigungen der Maintainer erscheinen hier."
   },
   "notFound": {

@@ -33,8 +33,3 @@
   word-break: break-all;
   overflow-wrap: anywhere;
 }
-
-.news-skeleton {
-  height: 8.5rem;
-  border-radius: var(--chaotic-radius-lg);
-}

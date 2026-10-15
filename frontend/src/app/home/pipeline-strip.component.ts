@@ -49,8 +49,6 @@ export class PipelineStripComponent {
   );
   protected readonly lastDeployment = computed(() => this.buildStatusService.latestDeployments()[0]);
 
-  protected readonly sseConnected = this.appService.sseConnected;
-
   protected retryAll(): void {
     this.buildStatusService.refreshQueueStats();
     this.buildStatusService.refreshPackageBuilds();

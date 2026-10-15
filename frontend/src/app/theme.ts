@@ -9,8 +9,10 @@ export const DARK_FLAVOUR: Flavour = 'mocha';
 /**
  * Reads the flavour class that the pre-boot script in index.html sets on <html>.
  * Without that class, the app starts in the dark flavour.
+ * The prerender build has no document, so it also uses the dark flavour.
  */
 function documentFlavour(): Flavour {
+  if (typeof document === 'undefined') return DARK_FLAVOUR;
   if (document.documentElement.classList.contains(LIGHT_FLAVOUR)) return LIGHT_FLAVOUR;
 
   return DARK_FLAVOUR;

@@ -1,5 +1,6 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
+import { injectIsBrowser } from '../platform';
 
 /**
  * App-wide notice while the browser reports that it has no network connection.
@@ -19,9 +20,13 @@ import { TranslocoDirective } from '@jsverse/transloco';
   `,
 })
 export class ConnectionBannerComponent {
-  protected readonly offline = signal(!navigator.onLine);
+  private readonly isBrowser = injectIsBrowser();
+
+  protected readonly offline = signal(this.isBrowser && !navigator.onLine);
 
   constructor() {
+    if (!this.isBrowser) return;
+
     const update = (): void => this.offline.set(!navigator.onLine);
     window.addEventListener('online', update);
     window.addEventListener('offline', update);

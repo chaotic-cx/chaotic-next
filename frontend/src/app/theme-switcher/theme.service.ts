@@ -1,5 +1,6 @@
 import { DestroyRef, inject, Service, signal } from '@angular/core';
 import { flavors } from '@catppuccin/palette';
+import { injectIsBrowser } from '../platform';
 import { DARK_FLAVOUR, flavour, type Flavour, LIGHT_FLAVOUR, setActiveFlavour } from '../theme';
 import {
   readStoredThemePreference,
@@ -30,7 +31,6 @@ const THEME_COLOR: Record<Flavour, string> = {
 function applyFlavourToDocument(next: Flavour): void {
   const root = document.documentElement;
   const isDark = next === DARK_FLAVOUR;
-
   root.classList.toggle(DARK_FLAVOUR, isDark);
   root.classList.toggle(LIGHT_FLAVOUR, !isDark);
   root.classList.toggle(DARK_MODE_CLASS, isDark);
@@ -46,7 +46,11 @@ function applyFlavourToDocument(next: Flavour): void {
  */
 @Service()
 export class ThemeService {
-  private readonly darkScheme = window.matchMedia(DARK_SCHEME_QUERY);
+  /**
+   * Undefined while prerendering. The pre-boot script in index.html applies the
+   * flavour to the prerendered page, and this service takes over after hydration.
+   */
+  private readonly darkScheme = injectIsBrowser() ? window.matchMedia(DARK_SCHEME_QUERY) : undefined;
 
   private readonly currentPreference = signal<ThemePreference>(readStoredThemePreference());
 
@@ -55,9 +59,12 @@ export class ThemeService {
   readonly flavour = flavour;
 
   constructor() {
+    const darkScheme = this.darkScheme;
+    if (!darkScheme) return;
+
     const onSchemeChange = (): void => this.apply();
-    this.darkScheme.addEventListener('change', onSchemeChange);
-    inject(DestroyRef).onDestroy(() => this.darkScheme.removeEventListener('change', onSchemeChange));
+    darkScheme.addEventListener('change', onSchemeChange);
+    inject(DestroyRef).onDestroy(() => darkScheme.removeEventListener('change', onSchemeChange));
 
     this.apply();
   }
@@ -69,6 +76,8 @@ export class ThemeService {
   }
 
   private apply(): void {
+    if (!this.darkScheme) return;
+
     const next = resolveFlavour(this.currentPreference(), this.darkScheme.matches);
     applyFlavourToDocument(next);
     setActiveFlavour(next);

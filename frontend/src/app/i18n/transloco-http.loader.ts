@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { type Translation, type TranslocoLoader } from '@jsverse/transloco';
 
-const TRANSLATIONS_PATH = '/i18n';
+export const TRANSLATIONS_PATH = '/i18n';
 
 @Service()
 export class TranslocoHttpLoader implements TranslocoLoader {

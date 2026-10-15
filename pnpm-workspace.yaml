@@ -37,3 +37,6 @@ minimumReleaseAgeExclude:
   - '@typescript-eslint/eslint-plugin@8.71.1'
   - '@typescript-eslint/type-utils@8.71.1'
   - typescript-eslint@8.71.1
+patchedDependencies:
+  '@garudalinux/core@2.1.0': patches/@garudalinux__core@2.1.0.patch
+  '@openng/optimus-ui@2.0.2': patches/@openng__optimus-ui@2.0.2.patch

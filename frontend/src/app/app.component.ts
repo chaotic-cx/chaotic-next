@@ -20,6 +20,7 @@ import { LoadingService } from './loading/loading.service';
 import { lightLogo } from './logo';
 import { MobileNavComponent } from './mobile-nav/mobile-nav.component';
 import { NavActiveCurrentDirective } from './nav-active-current.directive';
+import { injectIsBrowser } from './platform';
 import { ThemeSwitcherComponent } from './theme-switcher/theme-switcher.component';
 import { ConnectionBannerComponent } from './ui-states/connection-banner.component';
 import { UpdateService } from './update/update.service';
@@ -60,6 +61,7 @@ export class AppComponent implements OnInit {
   protected readonly lightLogo = lightLogo;
 
   private readonly activeTranslation = injectActiveTranslation();
+  private readonly isBrowser = injectIsBrowser();
 
   protected readonly mobileNavOpen = signal(false);
 
@@ -75,7 +77,6 @@ export class AppComponent implements OnInit {
 
   private readonly homeItem = computed<MenuItem>(() => {
     this.activeTranslation();
-
     return {
       icon: 'pi pi-home',
       label: this.transloco.translate('nav.home.label'),
@@ -86,7 +87,6 @@ export class AppComponent implements OnInit {
 
   private readonly primaryItems = computed<MenuItem[]>(() => {
     this.activeTranslation();
-
     return [
       {
         icon: 'pi pi-book',
@@ -123,7 +123,6 @@ export class AppComponent implements OnInit {
 
   private readonly secondaryItems = computed<MenuItem[]>(() => {
     this.activeTranslation();
-
     return [
       {
         icon: 'pi pi-chart-bar',
@@ -164,13 +163,16 @@ export class AppComponent implements OnInit {
   ]);
 
   ngOnInit() {
-    void this.loadLocale();
+    if (this.isBrowser) {
+      void this.loadLocale();
+    }
 
     this.updateMetaTags();
 
     this.appService.chaoticEvent.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
       if (event.type === 'build' && event.status === BuildStatus.SUCCESS) {
         if (!event.version || event.version === 'unknown') return;
+
         const validRoutesRegex = /^\/(status|deployments|packages)(\?.*|#.*)?$/;
         if (!this.router.url || validRoutesRegex.test(this.router.url)) {
           this.messageToastService.success(
@@ -201,7 +203,6 @@ export class AppComponent implements OnInit {
 
   private async loadLocale(): Promise<void> {
     const lang = navigator.language.split('-')[0];
-
     try {
       const localeModule = await import(`@angular/common/locales/${lang}.mjs`);
       registerLocaleData(localeModule.default, lang);

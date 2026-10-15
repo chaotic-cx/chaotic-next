@@ -29,7 +29,7 @@ const COPIED_LINE_KEYS: CopiedLabelKeys = {
   imports: [Highlight, TranslocoDirective],
   template: `
     <div class="code-block" *transloco="let t">
-      <pre><code [highlight]="code()" [language]="language()"></code></pre>
+      <pre><code [highlight]="code()" [language]="language()">{{ code() }}</code></pre>
       <div class="code-block__actions">
         <span class="code-block__language">{{ language() }}</span>
         <button
@@ -151,6 +151,8 @@ const COPIED_LINE_KEYS: CopiedLabelKeys = {
       }
     }
   `,
+  // highlight.js rewrites the code element in the browser, so the client renders this block anew.
+  host: { ngSkipHydration: 'true' },
 })
 export class CodeBlockComponent {
   private readonly messageToastService = inject(MessageToastService);
@@ -170,7 +172,6 @@ export class CodeBlockComponent {
       .split('\n')
       .filter((line) => line.trim() !== '').length;
     const keys = this.language() === SHELL_LANGUAGE ? COPIED_COMMAND_KEYS : COPIED_LINE_KEYS;
-
     if (lineCount === 1) return this.transloco.translate(keys.one);
 
     return this.transloco.translate(keys.other, { count: lineCount });

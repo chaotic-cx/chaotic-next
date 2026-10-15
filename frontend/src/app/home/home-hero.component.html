@@ -1,0 +1,51 @@
+<ng-container *transloco="let t; prefix: 'home'">
+  <section class="home-hero chaotic-text-inset" aria-labelledby="home-title">
+    <a
+      class="home-hero__logo hero-enter"
+      [attr.aria-label]="t('hero.appletLabel')"
+      style="--stagger: 0"
+      href="/aizawa/"
+    >
+      @if (lightLogo()) {
+        <img priority ngSrc="/assets/logo-latte.svg" alt="" width="741" height="711" />
+      } @else {
+        <img priority ngSrc="/assets/logo.svg" alt="" width="741" height="711" />
+      }
+    </a>
+    <h1 class="home-hero__title hero-enter" id="home-title" style="--stagger: 1">
+      {{ t('hero.title') }}
+    </h1>
+    <p class="home-hero__lede hero-enter" style="--stagger: 2">{{ t('hero.lede') }}</p>
+    <div class="home-hero__actions hero-enter" style="--stagger: 3">
+      <p-autoComplete
+        class="home-hero__search"
+        [fluid]="true"
+        [ngModel]="searchModel().query"
+        [suggestions]="suggestions.names()"
+        [delay]="300"
+        [minQueryLength]="3"
+        [ariaLabel]="t('search.ariaLabel')"
+        [placeholder]="t('search.placeholder')"
+        (ngModelChange)="searchModel.update((m) => ({ ...m, query: $event ?? '' }))"
+        (completeMethod)="suggestions.complete($event)"
+        (onSelect)="searchPackages($event.value)"
+        (onKeyUp)="onKeyUp($event)"
+        appendTo="body"
+      />
+    </div>
+    <nav class="home-popular hero-enter" [attr.aria-label]="t('search.popularLabel')" style="--stagger: 4">
+      <span class="home-popular__label">{{ t('search.popular') }}</span>
+      @for (name of popularPackages; track name) {
+        <a class="home-popular__chip" [queryParams]="{ search: name }" routerLink="/stats/search">{{ name }}</a>
+      }
+    </nav>
+  </section>
+
+  <aside class="home-setup hero-enter" style="--stagger: 5" aria-labelledby="home-setup-title">
+    <div class="home-setup__text">
+      <h2 class="home-setup__title" id="home-setup-title">{{ t('install.title') }}</h2>
+      <p class="home-setup__summary">{{ t('install.summary') }}</p>
+    </div>
+    <a class="home-setup__link" routerLink="/docs" fragment="setup">{{ t('install.guideLink') }}</a>
+  </aside>
+</ng-container>

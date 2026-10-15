@@ -2,6 +2,7 @@ import { inject, Service } from '@angular/core';
 import { type PreloadingStrategy, type Route } from '@angular/router';
 import { AuthService } from 'ngx-better-auth';
 import { Observable, of, switchMap } from 'rxjs';
+import { injectIsBrowser } from './platform';
 
 export const PRELOAD_DATA_KEY = 'preload';
 export const SKIP_PRELOAD_DATA: Readonly<Record<string, PreloadMode>> = Object.freeze({
@@ -30,6 +31,7 @@ interface NetworkInformationLike {
 function isConstrainedNetwork(): boolean {
   const connection = (navigator as Navigator & { connection?: NetworkInformationLike }).connection;
   if (!connection) return false;
+
   return connection.saveData === true || SLOW_CONNECTION_TYPES.has(connection.effectiveType ?? '');
 }
 
@@ -40,10 +42,12 @@ function whenIdle(): Observable<void> {
       subscriber.next();
       subscriber.complete();
     };
+
     if ('requestIdleCallback' in window) {
       const handle = window.requestIdleCallback(done, { timeout: IDLE_PRELOAD_TIMEOUT_MS });
       return () => window.cancelIdleCallback(handle);
     }
+
     const handle = setTimeout(done, IDLE_PRELOAD_TIMEOUT_MS);
     return () => clearTimeout(handle);
   });
@@ -52,11 +56,13 @@ function whenIdle(): Observable<void> {
 @Service()
 export class SelectivePreloadStrategy implements PreloadingStrategy {
   private readonly authService = inject(AuthService);
+  private readonly isBrowser = injectIsBrowser();
 
   preload(route: Route, load: () => Observable<unknown>): Observable<unknown> {
     const mode = route.data?.[PRELOAD_DATA_KEY] as PreloadMode | undefined;
-    if (mode === false || isConstrainedNetwork()) return of(null);
+    if (!this.isBrowser || mode === false || isConstrainedNetwork()) return of(null);
     if (mode === 'authenticated' && !this.authService.isLoggedIn()) return of(null);
+
     return whenIdle().pipe(switchMap(() => load()));
   }
 }

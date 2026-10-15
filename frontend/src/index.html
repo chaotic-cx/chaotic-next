@@ -29,6 +29,49 @@
         document.querySelector('meta[name="theme-color"]').setAttribute('content', '#8839ef');
       })();
     </script>
+    <script>
+      // Prerendered pages hold English text. For any other language, the page stays hidden until Angular shows the
+      // translation, so visitors never see the English text switch. revealTranslatedPage (app/i18n) removes the style.
+      // The rule is created here, not in styles.css: the critical CSS step drops rules that match nothing at build time.
+      // Keep the storage key and the language list in sync with app/i18n/languages.ts.
+      (function () {
+        var PENDING_STYLE_ID = 'i18n-pending';
+        var DEFAULT_LANGUAGE = 'en';
+        var AVAILABLE_LANGUAGES = [DEFAULT_LANGUAGE, 'de'];
+        // If the app fails to start, show the English page rather than a blank one.
+        var REVEAL_FALLBACK_MS = 3000;
+
+        var stored = null;
+        try {
+          stored = localStorage.getItem('language');
+        } catch (error) {
+          // Storage is not available.
+        }
+
+        var browser = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+        var candidates = [stored, browser.split(/[-_]/)[0]];
+        var language = DEFAULT_LANGUAGE;
+        for (var index = 0; index < candidates.length; index++) {
+          if (AVAILABLE_LANGUAGES.indexOf(candidates[index]) !== -1) {
+            language = candidates[index];
+            break;
+          }
+        }
+
+        if (language === DEFAULT_LANGUAGE) {
+          return;
+        }
+
+        // Visibility keeps the layout, so nothing shifts on reveal.
+        var style = document.createElement('style');
+        style.id = PENDING_STYLE_ID;
+        style.textContent = 'chaotic-root { visibility: hidden; }';
+        document.head.appendChild(style);
+        setTimeout(function () {
+          style.remove();
+        }, REVEAL_FALLBACK_MS);
+      })();
+    </script>
 
     <title>Chaotic-AUR</title>
     <base href="/" />

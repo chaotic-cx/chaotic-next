@@ -202,13 +202,24 @@ ng-terminal,
   inset-inline-end: calc(env(safe-area-inset-right) + 1.25rem);
 }
 
+/*
+ * The shell injects a style tag at runtime that hides its toggle and the PrimeNG menubar button.
+ * PrimeNG also switches the menubar to its mobile layout with JavaScript.
+ * Prerendered pages need both before any script runs, so they live here as static rules.
+ * The app uses its own mobile nav, so these menubar controls never show.
+ */
+.garuda-shell__dropdown-toggle,
+.garuda-shell a.p-menubar-button {
+  display: none !important;
+}
+
 @media (max-width: 960px) {
   .garuda-shell__dropdown {
     display: none !important;
   }
 
-  .garuda-shell__dropdown-toggle {
-    display: none !important;
+  .garuda-shell-menubar .p-menubar-root-list {
+    display: none;
   }
 }
 
@@ -391,6 +402,8 @@ ng-terminal,
   --chaotic-surface: color-mix(in srgb, var(--catppuccin-color-mantle) 53%, transparent);
   --chaotic-surface-raised: color-mix(in srgb, var(--catppuccin-color-surface0) 45%, var(--catppuccin-color-mantle));
   --chaotic-surface-overlay: color-mix(in srgb, var(--catppuccin-color-mantle) 94%, transparent);
+  /* Recessed cards inside an outlined section frame. */
+  --chaotic-surface-inset: color-mix(in srgb, var(--catppuccin-color-crust) 45%, transparent);
   /* Opaque surface for sticky bars. */
   --chaotic-surface-sticky: color-mix(in srgb, var(--catppuccin-color-mantle) 53%, var(--catppuccin-color-base));
   --chaotic-border: color-mix(in srgb, var(--catppuccin-color-surface1) 55%, transparent);
@@ -419,6 +432,7 @@ ng-terminal,
   --chaotic-surface: rgb(255 255 255 / 0.58);
   --chaotic-surface-raised: color-mix(in srgb, white 80%, var(--catppuccin-color-base));
   --chaotic-surface-overlay: color-mix(in srgb, white 92%, transparent);
+  --chaotic-surface-inset: color-mix(in srgb, var(--catppuccin-color-crust) 45%, transparent);
   --chaotic-surface-sticky: color-mix(in srgb, white 58%, var(--catppuccin-color-base));
   --chaotic-border: color-mix(in srgb, var(--catppuccin-color-surface1) 70%, transparent);
   --chaotic-shadow:
@@ -518,6 +532,15 @@ code {
 /* Loose text outside a box sits on the same line as the text inside the boxes. */
 .chaotic-text-inset {
   padding-inline: var(--chaotic-inset);
+}
+
+/* An outlined, unfilled frame around a home section's cards. The cards inside carry the fill. */
+.chaotic-section-frame {
+  border: 1px solid var(--p-panel-border-color, var(--catppuccin-color-crust));
+  border-radius: var(--p-panel-border-radius, 12px);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+  padding: 1rem var(--chaotic-inset);
 }
 
 .chaotic-surface {

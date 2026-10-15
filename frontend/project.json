@@ -14,6 +14,8 @@
         "outputPath": "dist/frontend",
         "index": "frontend/src/index.html",
         "browser": "frontend/src/main.ts",
+        "server": "frontend/src/main.server.ts",
+        "outputMode": "static",
         "polyfills": [],
         "tsConfig": "frontend/tsconfig.app.json",
         "assets": [
@@ -90,10 +92,22 @@
       "outputs": ["{workspaceRoot}/dist/frontend"],
       "defaultConfiguration": "production",
       "options": {
-        "command": "transloco-optimize dist/frontend/browser/i18n"
+        "commands": [
+          "transloco-optimize dist/frontend/browser/i18n",
+          "cp dist/frontend/browser/not-found/index.html dist/frontend/browser/404.html",
+          "cp dist/frontend/browser/app-shell/index.html dist/frontend/browser/index.csr.html"
+        ],
+        "parallel": false
       },
       "configurations": {
-        "production": {},
+        "production": {
+          "commands": [
+            "transloco-optimize dist/frontend/browser/i18n",
+            "cp dist/frontend/browser/not-found/index.html dist/frontend/browser/404.html",
+            "cp dist/frontend/browser/app-shell/index.html dist/frontend/browser/index.csr.html",
+            "ngsw-config dist/frontend/browser frontend/ngsw-config.json"
+          ]
+        },
         "development": {}
       }
     },

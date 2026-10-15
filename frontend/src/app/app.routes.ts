@@ -9,6 +9,8 @@ import { AUTH_PRELOAD_DATA, SKIP_PRELOAD_DATA } from './preload.strategy';
 
 const TRANSLATION_SCOPE_RESOLVE = { translations: translationScopeResolver };
 
+export const APP_SHELL_PATH = 'app-shell';
+
 export const routes: Routes = [
   {
     title: marker('routes.home'),
@@ -266,6 +268,15 @@ export const routes: Routes = [
           import('./admin/pages/admin-manager-logs-page.component').then((c) => c.AdminManagerLogsPageComponent),
       },
     ],
+  },
+  {
+    /**
+     * Only for the build: its prerendered HTML becomes index.csr.html, the first page of every client-rendered route.
+     * withAppShell() cannot do this, because in static output it writes to index.html, which holds the prerendered home.
+     */
+    path: APP_SHELL_PATH,
+    data: SKIP_PRELOAD_DATA,
+    loadComponent: () => import('./app-shell/app-shell.component').then((c) => c.AppShellComponent),
   },
   {
     title: marker('routes.backendDown'),

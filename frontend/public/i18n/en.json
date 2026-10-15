@@ -358,17 +358,19 @@
     "hero": {
       "appletLabel": "Open the interactive Chaotic-AUR applet",
       "title": "Building AUR packages for you, so you don't have to.",
-      "lede": "Chaotic-AUR is a semi-automated binary repository for Arch Linux. AUR packages built, signed and mirrored worldwide.",
-      "ledeWithMirrorCount": "Chaotic-AUR is a semi-automated binary repository for Arch Linux. AUR packages built, signed and served from {{count}} mirrors worldwide."
+      "lede": "Chaotic-AUR is a semi-automated binary repository for Arch Linux. AUR packages built, signed and mirrored worldwide."
     },
     "search": {
       "ariaLabel": "Search packages",
-      "placeholder": "Search packages, e.g. firedragon",
-      "invalidName": "Invalid package name"
+      "placeholder": "Search packages, e.g. brave-bin",
+      "invalidName": "Invalid package name",
+      "popular": "Popular:",
+      "popularLabel": "Popular packages"
     },
-    "setup": {
-      "lead": "New here?",
-      "text": "Add the repository in five steps"
+    "install": {
+      "title": "Add Chaotic-AUR to pacman",
+      "summary": "Five steps: trust the key, install the keyring, enable the repository.",
+      "guideLink": "Setup guide"
     },
     "news": {
       "title": "Latest news",
@@ -589,7 +591,6 @@
   "newsfeed": {
     "defaultAuthor": "Maintainer",
     "showMore": "Show more news",
-    "loadError": "Could not load the news.",
     "empty": "No news yet. Announcements from the maintainers appear here."
   },
   "notFound": {
