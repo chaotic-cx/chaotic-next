@@ -1,4 +1,3 @@
-import { httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
@@ -15,7 +14,8 @@ import { APP_CONFIG } from '../../environments/app-config.token';
 import { type EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
 import { BUILD_STATUS_ICONS } from '../status-icons';
-import { isLogPurged, loadingWithoutValue, resourceFailed, resourceValue, retainedResourceValue } from '../functions';
+import { isLogPurged, loadingWithoutValue, resourceFailed } from '../functions';
+import { cachedHttpResource } from '../query-cache.service';
 import { createLazyTablePagination } from '../table-pagination';
 
 export const REPO_OPTIONS = ['chaotic-aur', 'garuda'];
@@ -27,7 +27,6 @@ export interface StatusOption {
 
 const STATUS_OPTIONS: StatusOption[] = Object.entries(BUILD_STATUS_ICONS).map(([key, icon]) => {
   const value = Number(key) as BuildStatus;
-
   return { value, icon };
 });
 
@@ -66,14 +65,12 @@ export class DeployLogService {
     this.route.snapshot.queryParamMap.get('pkgname') ?? this.route.snapshot.queryParamMap.get('search') ?? '',
   );
 
-  private readonly buildersResource = httpResource<Builder[]>(() =>
-    this.appConfig.backendUrl ? `${this.appConfig.backendUrl}/builder/builders` : undefined,
+  private readonly buildersQuery = cachedHttpResource<Builder[]>(() =>
+    this.appConfig.backendUrl ? { url: `${this.appConfig.backendUrl}/builder/builders` } : undefined,
   );
-  readonly builderOptions = computed<string[]>(() =>
-    (resourceValue(this.buildersResource) ?? []).map((builder) => builder.name),
-  );
+  readonly builderOptions = computed<string[]>(() => (this.buildersQuery.value() ?? []).map((builder) => builder.name));
 
-  private readonly resource = httpResource<Paginated<Build>>(() =>
+  private readonly buildsQuery = cachedHttpResource<Paginated<Build>>(() =>
     this.appService.getBuildsResourceRequest({
       page: this.pagination.page(),
       perPage: this.pagination.perPage(),
@@ -86,10 +83,10 @@ export class DeployLogService {
     }),
   );
 
-  private readonly page = retainedResourceValue(this.resource);
-  readonly loading = loadingWithoutValue(this.resource, this.page);
-  readonly failed = resourceFailed(this.resource);
-  readonly error = this.resource.error;
+  private readonly page = this.buildsQuery.value;
+  readonly loading = loadingWithoutValue(this.buildsQuery.resource, this.page);
+  readonly failed = resourceFailed(this.buildsQuery.resource);
+  readonly error = this.buildsQuery.resource.error;
 
   readonly filtersActive = computed(
     () =>
@@ -100,7 +97,7 @@ export class DeployLogService {
   );
 
   retry(): void {
-    this.resource.reload();
+    this.buildsQuery.resource.reload();
   }
 
   readonly total = computed(() => this.page()?.total ?? 0);
@@ -114,7 +111,7 @@ export class DeployLogService {
 
   setSearch(value: string): void {
     /**
-     * A new search invalidates the current offset; a stale persisted table
+     * A new search invalidates the current offset. A stale persisted table
      * position would otherwise request a page beyond the filtered results.
      */
     this.pagination.resetPage();
@@ -132,9 +129,7 @@ export class DeployLogService {
   }
 
   private initialBuilderFilter(): string[] | undefined {
-    const params = this.route.snapshot.queryParamMap;
-    const rawAll = typeof params.getAll === 'function' ? params.getAll('builder') : [];
-    const values = rawAll.length > 0 ? rawAll : params.get('builder') ? [params.get('builder') as string] : [];
+    const values = this.queryParamValues('builder');
     const expanded = values.map((value) => value.trim()).filter(Boolean);
     return expanded.length > 0 ? expanded : undefined;
   }
@@ -155,6 +150,7 @@ export class DeployLogService {
 
   statusByLabels(labels: string[] | undefined): BuildStatus[] | undefined {
     if (!labels || labels.length === 0) return undefined;
+
     const statuses = labels
       .map((label) => label.trim())
       .filter(Boolean)
@@ -164,15 +160,23 @@ export class DeployLogService {
   }
 
   private initialStatusFilter(): BuildStatus[] | undefined {
-    const params = this.route.snapshot.queryParamMap;
-    const rawAll = typeof params.getAll === 'function' ? params.getAll('status') : [];
-    const labels = rawAll.length > 0 ? rawAll : params.get('status') ? [params.get('status') as string] : [];
+    const labels = this.queryParamValues('status');
     const parsed = this.statusByLabels(labels);
     if (parsed !== undefined) return parsed;
+
     return [...DEFAULT_DEPLOYMENT_STATUSES];
   }
 
+  private queryParamValues(name: string): string[] {
+    const params = this.route.snapshot.queryParamMap;
+    const all = typeof params.getAll === 'function' ? params.getAll(name) : [];
+    if (all.length > 0) return all;
+
+    const single = params.get(name);
+    return single === null ? [] : [single];
+  }
+
   reload(): void {
-    this.resource.reload();
+    this.buildsQuery.refresh();
   }
 }

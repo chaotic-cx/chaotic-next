@@ -1442,7 +1442,10 @@ p-scroll-top {
 
   .chaotic-stack .p-datatable-tbody > tr > td.stack-title {
     order: 0;
+    margin-block-end: var(--chaotic-space-2xs);
     padding-inline-end: var(--chaotic-stack-actions-width) !important;
+    font-weight: var(--chaotic-weight-semibold);
+    color: var(--catppuccin-color-maroon);
   }
 
   .chaotic-stack .p-datatable-tbody > tr > td.stack-title .truncate {

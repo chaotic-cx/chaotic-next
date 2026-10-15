@@ -168,17 +168,17 @@
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'builder')) {
-              <td class="stack-meta">
+              <td class="stack-meta builder-cell">
                 <span>{{ build.builder?.name ?? missingValue }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'repo')) {
-              <td class="stack-meta">
+              <td class="stack-meta repo-cell">
                 <span>{{ build.repo?.name ?? missingValue }}</span>
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'outcome')) {
-              <td class="stack-sub">
+              <td class="stack-sub outcome-cell">
                 <span class="inline-flex items-center gap-1">
                   <i [class]="`pi ${statusIconClass(build.status)}`" aria-hidden="true"></i>
                   <span>{{ t(statusLabelKeys[build.status]) }}</span>
@@ -186,7 +186,7 @@
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'failureTags')) {
-              <td class="stack-body">
+              <td class="stack-body failure-tags-cell">
                 @if (build.failureTags?.length) {
                   <span class="flex flex-wrap items-center gap-1">
                     @for (tag of build.failureTags; track tag) {

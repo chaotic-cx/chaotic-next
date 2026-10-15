@@ -1,3 +1,46 @@
 :host .chaotic-stack {
   --chaotic-stack-actions-width: 3.5rem;
 }
+
+/*
+ * Stacked rows: outcome with failure tags, then builder and repo, then the remaining meta.
+ * The ::before and ::after pseudo-elements force the line breaks around builder and repo.
+ */
+@container chaotic-stack (max-width: 40rem) {
+  :host .chaotic-stack.chaotic-stack td.outcome-cell {
+    flex: 0 1 auto;
+  }
+
+  :host .chaotic-stack.chaotic-stack td.failure-tags-cell {
+    order: 1;
+    flex: 1 1 auto;
+  }
+
+  :host .chaotic-stack.chaotic-stack tr:has(> td.builder-cell, > td.repo-cell)::before,
+  :host .chaotic-stack.chaotic-stack tr:has(> td.builder-cell, > td.repo-cell)::after {
+    content: '';
+    flex-basis: 100%;
+  }
+
+  :host .chaotic-stack.chaotic-stack tr::before {
+    order: 2;
+  }
+
+  :host .chaotic-stack.chaotic-stack td.builder-cell,
+  :host .chaotic-stack.chaotic-stack td.repo-cell {
+    order: 3;
+  }
+
+  :host .chaotic-stack.chaotic-stack tr::after {
+    order: 4;
+  }
+
+  :host .chaotic-stack.chaotic-stack td.stack-meta:not(.builder-cell, .repo-cell) {
+    order: 5;
+  }
+
+  :host .chaotic-stack.chaotic-stack td.repo-cell::after,
+  :host .chaotic-stack.chaotic-stack td.builder-cell:not(:has(~ td.repo-cell))::after {
+    content: none;
+  }
+}
