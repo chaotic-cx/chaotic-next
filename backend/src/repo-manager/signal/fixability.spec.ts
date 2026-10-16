@@ -23,6 +23,13 @@ describe('hasSuccessor', () => {
     expect(hasSuccessor(soname('libsoup-2.4.so.1'), stems)).toBe(false);
   });
 
+  it('finds a Haskell library with another version hash', () => {
+    const haskellStems = sonameStems(['libHSsyb-0.7.4-COKSG-ghc9.6.7.so']);
+
+    expect(hasSuccessor(soname('libHSsyb-0.7.4-6GzGX-ghc9.6.7.so'), haskellStems)).toBe(true);
+    expect(hasSuccessor(soname('libHSaeson-2.2.3-Ab12C-ghc9.6.7.so'), haskellStems)).toBe(false);
+  });
+
   it('finds no successor for an unversioned soname that nobody ships', () => {
     expect(hasSuccessor(soname('libImageProcessor.so'), stems)).toBe(false);
   });

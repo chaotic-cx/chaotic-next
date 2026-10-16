@@ -5,6 +5,7 @@ import {
   type BrokenIssue,
 } from '@chaotic-next/shared-lib';
 import { type BrokenDependency, formatBrokenDependency, sonameVersionPrefix } from './graph';
+import { HASKELL_SONAME_PREFIX, haskellPackageName } from './parse';
 
 const FIXABILITY = brokenFixabilitySchema.enum;
 
@@ -17,13 +18,22 @@ export interface FixabilityContext {
 }
 
 /**
- * The provided sonames without their version suffix: `libjsoncpp.so.27`
- * becomes `libjsoncpp.so`.
+ * A soname without its version: `libjsoncpp.so.27` becomes `libjsoncpp.so`.
+ * A Haskell soname keeps its version and hash in the name, so
+ * `libHSsyb-0.7.4-6GzGX-ghc9.6.7.so` becomes `libHSsyb`.
+ */
+function successorStem(soname: string): string {
+  const haskell = haskellPackageName(soname);
+  return haskell ? `${HASKELL_SONAME_PREFIX}${haskell}` : sonameVersionPrefix(soname);
+}
+
+/**
+ * The stems of the provided sonames, see successorStem.
  */
 export function sonameStems(providedSonames: Iterable<string>): Set<string> {
   const stems = new Set<string>();
   for (const soname of providedSonames) {
-    stems.add(sonameVersionPrefix(soname));
+    stems.add(successorStem(soname));
   }
 
   return stems;
@@ -38,7 +48,7 @@ export function sonameStems(providedSonames: Iterable<string>): Set<string> {
 export function hasSuccessor(dep: BrokenDependency, stems: ReadonlySet<string>): boolean {
   if (dep.kind !== 'soname' || !dep.soname) return true;
 
-  return stems.has(sonameVersionPrefix(dep.soname));
+  return stems.has(successorStem(dep.soname));
 }
 
 /**
@@ -49,7 +59,6 @@ export function hasSuccessor(dep: BrokenDependency, stems: ReadonlySet<string>):
 export function classifyBrokenDependency(dep: BrokenDependency, ctx: FixabilityContext): BrokenIssue {
   const reason = formatBrokenDependency(dep);
   const rebuildFixes = hasSuccessor(dep, ctx.sonameStems) && !ctx.reasonsAsBuilt.has(reason);
-
   return { reason, fixability: fixabilityOf(rebuildFixes, ctx.isSourceCompiled) };
 }
 

@@ -37,6 +37,7 @@ const TAR_VERBOSE_LINE =
 
 export function isExecutableRegularFile(mode: string): boolean {
   if (mode.length !== 10 || mode[0] !== '-') return false;
+
   return mode[3] === 'x' || mode[3] === 's' || mode[6] === 'x' || mode[6] === 's' || mode[9] === 'x' || mode[9] === 's';
 }
 
@@ -48,6 +49,7 @@ export function parseTarVerboseList(output: string): { path: string; mode: strin
       entries.push({ path: match[2], mode: match[1] });
     }
   }
+
   return entries;
 }
 
@@ -60,11 +62,13 @@ export function parseReadelfDynamic(output: string): { needed: string[]; soname:
       needed.push(neededMatch[1]);
       continue;
     }
+
     const sonameMatch = /\(SONAME\)\s+Library soname: \[([^\]]+)\]/.exec(line);
     if (sonameMatch) {
       soname = sonameMatch[1];
     }
   }
+
   return { needed, soname };
 }
 
@@ -73,6 +77,7 @@ export function parseUndefinedSymbols(output: string): string[] {
   for (const line of output.split('\n')) {
     const match = /^\s*[UwV]\s+(.+)$/.exec(line);
     if (!match) continue;
+
     let name = match[1].trim();
     const at = name.indexOf('@');
     if (at !== -1) {
@@ -82,6 +87,7 @@ export function parseUndefinedSymbols(output: string): string[] {
       symbols.push(name);
     }
   }
+
   return symbols;
 }
 
@@ -90,11 +96,13 @@ export function parseDefinedSymbols(output: string): string[] {
   for (const line of output.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
+
     const match = /^\S+\s+[A-Za-z]\s+(.+)$/.exec(trimmed);
     if (match) {
       symbols.push(match[1].trim());
     }
   }
+
   return symbols;
 }
 
@@ -130,6 +138,7 @@ export function parseReadelfVersionInfo(output: string): {
     if (inDef) {
       // The BASE entry is named after the library itself, not a version node.
       if (/Flags:\s*BASE/.test(trimmed)) continue;
+
       const name = /Name:\s+(\S+)/.exec(trimmed);
       if (name) {
         defined.push(name[1]);
@@ -140,12 +149,14 @@ export function parseReadelfVersionInfo(output: string): {
         currentFile = file[1];
         continue;
       }
+
       const name = /Name:\s+(\S+)/.exec(trimmed);
       if (name && currentFile) {
         (needed[currentFile] ??= []).push(name[1]);
       }
     }
   }
+
   return { defined, needed };
 }
 
@@ -171,17 +182,21 @@ export function parseReadelfRelocations(output: string): RelocationEntry[] {
     let line = lines[i].trim();
     const match = /^([0-9a-f]{8,16})\s+[0-9a-f]+\s+(\S+)\s+([0-9a-f]+)\s+(\S+)/.exec(line);
     if (!match) continue;
+
     // Consume wrapped continuation lines (they only extend the symbol column).
     while (i + 1 < lines.length && !/^[0-9a-f]{8,16}\s+[0-9a-f]+\s+R_/.test(lines[i + 1].trim())) {
       line += lines[++i].trim();
     }
+
     const entry: RelocationEntry = { offset: parseInt(match[1], 16), type: match[2] };
     const symbol = match[4];
     if (symbol !== '' && !/^[0-9a-f]+\+$/.test(symbol)) {
       entry.symbol = symbol.replace(/@.*/, '').trim();
     }
+
     entries.push(entry);
   }
+
   return entries;
 }
 
@@ -210,6 +225,7 @@ export function parseNmSymbolsWithSize(output: string): NmSymbolWithSize[] {
       });
     }
   }
+
   return symbols;
 }
 
@@ -220,6 +236,7 @@ export function dedupe(values: string[]): string[] {
 export function parentDirectory(path: string): string | null {
   const idx = path.lastIndexOf('/');
   if (idx === -1) return null;
+
   return path.slice(0, idx);
 }
 
@@ -232,6 +249,7 @@ export function ancestorDirectories(path: string): string[] {
     acc = acc ? `${acc}/${part}` : part;
     dirs.push(acc);
   }
+
   return dirs;
 }
 
@@ -259,16 +277,26 @@ export const RUNTIME_INTERPRETER_PREFIX: Partial<Record<RuntimeName, string>> = 
 /** The interpreter prefixes as a list, used for family matching. */
 const RUNTIME_SONAME_PREFIXES: readonly string[] = Object.values(RUNTIME_INTERPRETER_PREFIX);
 
+export const HASKELL_SONAME_PREFIX = 'libHS';
+
+/**
+ * The Haskell package name in `libHS<pkg>-<ver>-<hash>-ghc<ver>.so`.
+ * Null for a soname that is not a Haskell library.
+ */
+export function haskellPackageName(soname: string): string | null {
+  if (!soname.startsWith(HASKELL_SONAME_PREFIX)) return null;
+
+  const [name] = soname.slice(HASKELL_SONAME_PREFIX.length).split('-');
+  return name || null;
+}
+
 export function sameLibraryFamily(a: string, b: string): boolean {
   if (libraryBaseName(a) === libraryBaseName(b)) return true;
   if (RUNTIME_SONAME_PREFIXES.some((prefix) => a.startsWith(prefix) && b.startsWith(prefix))) return true;
 
-  // haskell: libHS<pkg>-<ver>-<hash>-ghc<ver>.so — hash/ver must not hide break
-  if (a.startsWith('libHS') && b.startsWith('libHS')) {
-    const pkgA = a.slice(5).split('-')[0];
-    const pkgB = b.slice(5).split('-')[0];
-    if (pkgA && pkgA === pkgB) return true;
-  }
+  // The version and hash in a Haskell soname must not hide a break.
+  const haskellA = haskellPackageName(a);
+  if (haskellA && haskellA === haskellPackageName(b)) return true;
 
   // boost split: boost headers vs boost-libs sonames
   return (
@@ -290,6 +318,7 @@ export function latestAnalysisByKey<T extends { version: string }>(
       latest.set(key, row);
     }
   }
+
   return latest;
 }
 
@@ -313,12 +342,14 @@ function compareSegments(a: string, b: string): number {
       const bc = j < lenB ? b[j] : '';
       if (ac < bc) return -1;
       if (ac > bc) return 1;
+
       i++;
       j++;
       continue;
     }
     if (aNum && !bNum) return 1;
     if (!aNum && bNum) return -1;
+
     // Both numeric: consume the full run and compare by value.
     let na = 0;
     let nb = 0;
@@ -326,12 +357,15 @@ function compareSegments(a: string, b: string): number {
       na = na * 10 + Number(a[i]);
       i++;
     }
+
     while (j < lenB && /\d/.test(b[j])) {
       nb = nb * 10 + Number(b[j]);
       j++;
     }
+
     if (na !== nb) return na > nb ? 1 : -1;
   }
+
   return 0;
 }
 
@@ -341,7 +375,9 @@ export function compareArchVersions(a: string, b: string): number {
   const epochA = pa.epoch === '' ? 0 : Number(pa.epoch);
   const epochB = pb.epoch === '' ? 0 : Number(pb.epoch);
   if (epochA !== epochB) return epochA > epochB ? 1 : -1;
+
   const ver = compareSegments(pa.version, pb.version);
   if (ver !== 0) return ver;
+
   return compareSegments(pa.pkgrel, pb.pkgrel);
 }
