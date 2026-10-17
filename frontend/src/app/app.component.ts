@@ -1,7 +1,6 @@
 import { NgOptimizedImage, registerLocaleData } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Meta } from '@angular/platform-browser';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { BuildStatus, formatPkgrel } from '@chaotic-next/shared-lib';
 import { MessageToastService } from '@garudalinux/core/message-toast';
@@ -21,6 +20,7 @@ import { lightLogo } from './logo';
 import { MobileNavComponent } from './mobile-nav/mobile-nav.component';
 import { NavActiveCurrentDirective } from './nav-active-current.directive';
 import { injectIsBrowser } from './platform';
+import { SeoService } from './seo.service';
 import { ShellBarOffsetDirective } from './shell-bar-offset.directive';
 import { ThemeSwitcherComponent } from './theme-switcher/theme-switcher.component';
 import { ConnectionBannerComponent } from './ui-states/connection-banner.component';
@@ -54,7 +54,7 @@ export class AppComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly messageToastService = inject(MessageToastService);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
   private readonly _updateService = inject(UpdateService);
@@ -190,17 +190,11 @@ export class AppComponent implements OnInit {
   }
 
   private updateMetaTags() {
-    const description = this.transloco.translate('app.meta.description');
-    const keywords = this.transloco.translate('app.meta.keywords');
-    const ogTitle = this.transloco.translate('app.meta.ogTitle');
-
-    this.meta.addTag({ name: 'description', content: description });
-    this.meta.addTag({ name: 'keywords', content: keywords });
-    this.meta.addTag({ property: 'og:title', content: ogTitle });
-    this.meta.addTag({ property: 'og:description', content: description });
-    this.meta.addTag({ property: 'og:image', content: '/assets/logo_400.png' });
-    this.meta.addTag({ property: 'og:site_name', content: 'Chaotic-AUR' });
-    this.meta.addTag({ property: 'og:url', content: 'https://aur.chaotic.cx' });
+    this.seo.applySiteDefaults({
+      title: this.transloco.translate('app.meta.ogTitle'),
+      description: this.transloco.translate('app.meta.description'),
+      keywords: this.transloco.translate('app.meta.keywords'),
+    });
   }
 
   private async loadLocale(): Promise<void> {

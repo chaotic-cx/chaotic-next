@@ -10,7 +10,6 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { IconField } from '@openng/optimus-ui/iconfield';
@@ -18,10 +17,11 @@ import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
 import { BuildStatusService } from '../build-status/build-status.service';
 import { FillViewportDirective } from '../fill-viewport.directive';
-import { formatDuration, isLogPurged, updateSeoTags } from '../functions';
+import { formatDuration, isLogPurged } from '../functions';
 import { bindRecordTitle } from '../i18n/record-title';
 import { LogLineLink } from '../log-stream/log-line-link';
 import { createLogStream } from '../log-stream/log-stream';
+import { SeoService } from '../seo.service';
 import { TitleComponent } from '../title/title.component';
 import { LogStreamConnectingComponent } from '../xterm-log/log-stream-connecting.component';
 import { LogStreamState, LogStreamStatusComponent } from '../xterm-log/log-stream-status.component';
@@ -57,7 +57,7 @@ import { PackageLogService } from './package-log.service';
 export class PackageLogComponent implements OnDestroy {
   private readonly buildStatusService = inject(BuildStatusService);
   private readonly logService = inject(PackageLogService);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
@@ -169,7 +169,7 @@ export class PackageLogComponent implements OnDestroy {
     this.endReason.set(undefined);
     this.scrollToLine.set(this.requestedLine());
 
-    updateSeoTags(this.meta, {
+    this.seo.update({
       title: this.transloco.translate('packageLog.seo.title', { pkgname }),
       description: this.transloco.translate('packageLog.seo.description'),
       keywords: this.transloco.translate('packageLog.seo.keywords'),

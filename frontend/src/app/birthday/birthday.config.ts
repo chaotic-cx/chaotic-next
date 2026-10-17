@@ -35,6 +35,7 @@ export const TIMELINE: TimelineEntry[] = [
   { date: '2021-02-05', precision: 'day', textKey: marker('memorial.edition2026.timeline.router') },
   { date: '2021-02-18', precision: 'day', textKey: marker('memorial.edition2026.timeline.syncthing') },
   { date: '2021-07-14', precision: 'day', textKey: marker('memorial.edition2026.timeline.realtimeMetrics') },
+  { date: '2021-08', precision: 'month', textKey: marker('memorial.edition2026.timeline.silkyNetwork') },
   { date: '2021-09-03', precision: 'day', textKey: marker('memorial.edition2026.timeline.geoRouting') },
   { date: '2021-10-18', precision: 'day', textKey: marker('memorial.edition2026.timeline.memorial3') },
   { date: '2022-01-22', precision: 'day', textKey: marker('memorial.edition2026.timeline.dockerMirror') },

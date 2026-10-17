@@ -95,7 +95,8 @@
         "commands": [
           "transloco-optimize dist/frontend/browser/i18n",
           "cp dist/frontend/browser/not-found/index.html dist/frontend/browser/404.html",
-          "cp dist/frontend/browser/app-shell/index.html dist/frontend/browser/index.csr.html"
+          "cp dist/frontend/browser/app-shell/index.html dist/frontend/browser/index.csr.html",
+          "node tools/generate-sitemap.mjs"
         ],
         "parallel": false
       },
@@ -105,6 +106,7 @@
             "transloco-optimize dist/frontend/browser/i18n",
             "cp dist/frontend/browser/not-found/index.html dist/frontend/browser/404.html",
             "cp dist/frontend/browser/app-shell/index.html dist/frontend/browser/index.csr.html",
+            "node tools/generate-sitemap.mjs",
             "ngsw-config dist/frontend/browser frontend/ngsw-config.json"
           ]
         },

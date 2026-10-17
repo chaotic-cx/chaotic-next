@@ -369,7 +369,7 @@
     },
     "install": {
       "title": "Chaotic-AUR zu pacman hinzufügen",
-      "summary": "Fünf Schritte: Key vertrauen, Keyring installieren, Repository aktivieren.",
+      "summary": "Ein paar Schritte: Key vertrauen, Keyring installieren, Repository aktivieren.",
       "guideLink": "Zur Anleitung"
     },
     "news": {

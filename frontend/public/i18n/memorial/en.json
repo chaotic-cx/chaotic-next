@@ -42,6 +42,7 @@
       "router": "The mirror router goes live on Heroku, together with the website at chaotic.cx.",
       "syncthing": "Mirrors start to sync with Syncthing.",
       "realtimeMetrics": "The router counts downloads in real time, with the country of each download.",
+      "silkyNetwork": "The Silky Network begins providing many new mirrors for Chaotic-AUR.",
       "geoRouting": "Mirror health checks and geo routing send each user to a near, healthy mirror.",
       "memorial3": "The community celebrates the 3rd birthday with the first memorial.",
       "dockerMirror": "A Docker setup makes it easy to host a mirror.",

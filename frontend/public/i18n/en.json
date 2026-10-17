@@ -369,7 +369,7 @@
     },
     "install": {
       "title": "Add Chaotic-AUR to pacman",
-      "summary": "Five steps: trust the key, install the keyring, enable the repository.",
+      "summary": "A few steps: trust the key, install the keyring, enable the repository.",
       "guideLink": "Setup guide"
     },
     "news": {

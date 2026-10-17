@@ -1,7 +1,6 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, ElementRef, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GitlabJob } from '@chaotic-next/shared-lib';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
@@ -9,12 +8,13 @@ import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Select } from '@openng/optimus-ui/select';
 import { RequestFailure, requestFailure } from '../api-errors';
 import { FillViewportDirective } from '../fill-viewport.directive';
-import { preferredScrollBehavior, updateSeoTags } from '../functions';
+import { preferredScrollBehavior } from '../functions';
 import { injectActiveTranslation } from '../i18n/active-translation';
 import { bindRecordTitle } from '../i18n/record-title';
 import { LoadErrorComponent } from '../load-error/load-error.component';
 import { LogLineLink } from '../log-stream/log-line-link';
 import { createLogStream } from '../log-stream/log-stream';
+import { SeoService } from '../seo.service';
 import { TitleComponent } from '../title/title.component';
 import { LogStreamConnectingComponent } from '../xterm-log/log-stream-connecting.component';
 import { LogStreamStatusComponent } from '../xterm-log/log-stream-status.component';
@@ -76,7 +76,7 @@ const JOBS_FAILURE_KEYS: Record<RequestFailure, string> = {
 })
 export class LogViewerComponent {
   private readonly logService = inject(LogViewerService);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
@@ -202,7 +202,7 @@ export class LogViewerComponent {
     this.selectedJobId.set(undefined);
     this.scrollToLine.set(undefined);
 
-    updateSeoTags(this.meta, {
+    this.seo.update({
       title: this.transloco.translate('logViewer.seo.title', { pipelineId }),
       description: this.transloco.translate('logViewer.seo.description'),
       keywords: this.transloco.translate('logViewer.seo.keywords'),
