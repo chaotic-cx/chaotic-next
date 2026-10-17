@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import { MAX_QUERY_LENGTH, MIN_QUERY_LENGTH } from '../types/core';
 
 export const aurSuggestionsQuerySchema = z.strictObject({

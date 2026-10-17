@@ -3,6 +3,8 @@
   [options]="chartConfig()!.options"
   [hasData]="chart.hasData()"
   [loading]="chart.loading()"
+  [failed]="chart.failed()"
   [containerClass]="'card relative flex h-[24rem] sm:h-[18rem] justify-center'"
+  (retry)="chart.retry()"
   type="bar"
 />

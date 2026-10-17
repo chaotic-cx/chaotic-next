@@ -7,3 +7,4 @@ export * from './parse';
 export * from './plugin';
 export * from './abi';
 export * from './graph';
+export * from './fixability';

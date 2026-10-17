@@ -4,8 +4,10 @@ import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { DiffScanService } from '../diff-scan/diff-scan.service';
 import { NotificationService } from '../notifications/notification.service';
+import { CACHE_TTL_MS } from '../utils/constants';
 import { GitlabApiService } from './gitlab-api.service';
 import { GitlabMergeRequestService } from './gitlab-merge-request.service';
+import { GitlabPipelineService } from './gitlab-pipeline.service';
 import { MrAction } from './mr-action.entity';
 
 const ACTOR = { userId: 'test-user', userName: 'Test User' };
@@ -23,6 +25,7 @@ function createApiService(api: Record<string, unknown> = {}): GitlabApiService {
   );
   (service as unknown as { chaoticId: string }).chaoticId = 'test-project-id';
   (service as unknown as { api: unknown }).api = api;
+
   return service;
 }
 
@@ -46,6 +49,7 @@ function createService(
   sseNext: ReturnType<typeof vi.fn>;
   vtReportOn: ReturnType<typeof vi.fn>;
   maintainerStatusFor: ReturnType<typeof vi.fn>;
+  isScheduledPipelineRunning: ReturnType<typeof vi.fn>;
 } {
   const mrEdit = vi.fn().mockResolvedValue({});
   const noteCreate = vi.fn().mockResolvedValue({});
@@ -55,6 +59,7 @@ function createService(
   const sseNext = vi.fn();
   const mrActionRepository = { insert: vi.fn(), find: vi.fn() };
   const broadcast = vi.fn().mockResolvedValue(1);
+  const isScheduledPipelineRunning = vi.fn().mockResolvedValue(false);
 
   const apiService = createApiService({
     MergeRequests: { edit: mrEdit },
@@ -83,7 +88,9 @@ function createService(
     { sseEvents$: { next: sseNext } } as never,
     { broadcast } as unknown as NotificationService,
     mrActionRepository as unknown as Repository<MrAction>,
+    { isScheduledPipelineRunning } as unknown as GitlabPipelineService,
   );
+
   return {
     service,
     apiService,
@@ -97,6 +104,7 @@ function createService(
     sseNext,
     vtReportOn: virustotal.reportOn,
     maintainerStatusFor: aurScan.maintainerStatusFor,
+    isScheduledPipelineRunning,
   };
 }
 
@@ -413,7 +421,8 @@ describe('GitlabMergeRequestService.getOpenMergeRequests', () => {
 
 describe('GitlabMergeRequestService.approveMergeRequest', () => {
   it('approves MR on GitLab but defers merge execution while scheduled pipeline is running', async () => {
-    const { service } = createService();
+    const { service, isScheduledPipelineRunning } = createService();
+    isScheduledPipelineRunning.mockResolvedValue(true);
     const show = vi.fn().mockResolvedValue({ iid: 1, sha: 'abc123', labels: ['human-review'] });
     const mrEdit = vi.fn().mockResolvedValue({});
     const mrAccept = vi.fn().mockResolvedValue({});
@@ -427,23 +436,16 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
-    vi.useFakeTimers();
-
-    // 03:35 UTC - inside scheduled pipeline window
-    vi.setSystemTime(new Date('2026-08-21T03:35:00Z'));
-    try {
-      const result = await service.approveMergeRequest(1, 'abc123', ACTOR);
-      expect(result).toEqual({ deferred: true });
-      expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
-      expect(mrAccept).not.toHaveBeenCalled();
-      expect(mrActionInsert).toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
+    const result = await service.approveMergeRequest(1, 'abc123', ACTOR);
+    expect(result).toEqual({ deferred: true });
+    expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+    expect(mrAccept).not.toHaveBeenCalled();
+    expect(mrActionInsert).toHaveBeenCalled();
   });
 
   it('broadcasts the approved MR over SSE when the merge is deferred', async () => {
-    const { service, cacheGet, sseNext } = createService();
+    const { service, cacheGet, sseNext, isScheduledPipelineRunning } = createService();
+    isScheduledPipelineRunning.mockResolvedValue(true);
     cacheGet.mockResolvedValue([
       {
         id: 1,
@@ -468,22 +470,16 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-21T03:35:00Z'));
-    try {
-      const result = await service.approveMergeRequest(1, 'abc123', ACTOR);
-      expect(result).toEqual({ deferred: true });
+    const result = await service.approveMergeRequest(1, 'abc123', ACTOR);
+    expect(result).toEqual({ deferred: true });
 
-      expect(sseNext).toHaveBeenCalledTimes(1);
-      const event = sseNext.mock.calls[0][0] as {
-        data: { type: string; mr: MergeRequestWithDiffs[]; hasNewMr: boolean };
-      };
-      expect(event.data.type).toBe('merge_request');
-      expect(event.data.hasNewMr).toBe(false);
-      expect(event.data.mr[0].labels).toEqual(['human-review', 'approved']);
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(sseNext).toHaveBeenCalledTimes(1);
+    const event = sseNext.mock.calls[0][0] as {
+      data: { type: string; mr: MergeRequestWithDiffs[]; hasNewMr: boolean };
+    };
+    expect(event.data.type).toBe('merge_request');
+    expect(event.data.hasNewMr).toBe(false);
+    expect(event.data.mr[0].labels).toEqual(['human-review', 'approved']);
   });
 
   it('broadcasts the already-merged MR over SSE', async () => {
@@ -513,19 +509,50 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-    try {
-      await service.approveMergeRequest(1, 'abc123', ACTOR);
-      expect(mrAccept).toHaveBeenCalled();
+    await service.approveMergeRequest(1, 'abc123', ACTOR);
+    expect(mrAccept).toHaveBeenCalled();
 
-      expect(sseNext).toHaveBeenCalledTimes(1);
-      const event = sseNext.mock.calls[0][0] as {
-        data: { type: string; mr: MergeRequestWithDiffs[]; hasNewMr: boolean };
-      };
-      expect(event.data.type).toBe('merge_request');
-      expect(event.data.hasNewMr).toBe(false);
-      expect(event.data.mr[0].labels).toEqual(['human-review', 'approved']);
+    expect(sseNext).toHaveBeenCalledTimes(1);
+    const event = sseNext.mock.calls[0][0] as {
+      data: { type: string; mr: MergeRequestWithDiffs[]; hasNewMr: boolean };
+    };
+    expect(event.data.type).toBe('merge_request');
+    expect(event.data.hasNewMr).toBe(false);
+    expect(event.data.mr[0].labels).toEqual(['human-review', 'approved']);
+  });
+
+  it('waits out a mergeability recheck after fast merges, then merges', async () => {
+    const { service } = createService();
+    let showCalls = 0;
+    const show = vi.fn().mockImplementation(async () => {
+      showCalls++;
+      if (showCalls === 1) return { iid: 1, sha: 'abc123', labels: ['human-review'] };
+      if (showCalls <= 13) return { iid: 1, sha: 'abc123', detailed_merge_status: 'checking' };
+
+      return { iid: 1, sha: 'abc123', detailed_merge_status: 'mergeable' };
+    });
+    const mrAccept = vi.fn().mockRejectedValueOnce(new Error('Branch cannot be merged')).mockResolvedValue({});
+    setApi(service, {
+      MergeRequests: {
+        show,
+        edit: vi.fn().mockResolvedValue({}),
+        accept: mrAccept,
+        allDiffs: vi.fn().mockResolvedValue([{ new_path: 'moon/PKGBUILD' }]),
+      },
+      MergeRequestApprovals: { approve: vi.fn().mockResolvedValue({}) },
+      MergeRequestNotes: { create: vi.fn().mockResolvedValue({}) },
+    });
+    (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
+
+    vi.useFakeTimers();
+    try {
+      const pending = service.approveMergeRequest(1, 'abc123', ACTOR);
+      await vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 10_000);
+      const result = await pending;
+
+      expect(result).toEqual({ deferred: false });
+      expect(mrAccept).toHaveBeenCalledTimes(2);
+      expect(mrAccept).toHaveBeenLastCalledWith('test-project-id', 1, { sha: 'abc123' });
     } finally {
       vi.useRealTimers();
     }
@@ -546,17 +573,10 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
-    vi.useFakeTimers();
-    // 03:00 UTC - outside scheduled pipeline window
-    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-    try {
-      await service.approveMergeRequest(1, 'abc123', ACTOR);
+    await service.approveMergeRequest(1, 'abc123', ACTOR);
 
-      expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
-      expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+    expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
   });
 
   it('approves regular MRs, posts comment, records action, and merges', async () => {
@@ -574,26 +594,19 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
-    vi.useFakeTimers();
-    // 03:00 UTC - outside scheduled pipeline window
-    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-    try {
-      await service.approveMergeRequest(1, 'abc123', ACTOR);
+    await service.approveMergeRequest(1, 'abc123', ACTOR);
 
-      expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
-      expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved' });
-      expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, '**✅ Approved by** Test User.');
-      expect(mrActionInsert).toHaveBeenCalledWith({
-        mergeRequestIid: 1,
-        action: 'approve',
-        commitSha: 'abc123',
-        reason: null,
-        ...ACTOR,
-      });
-      expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(approvalsApprove).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
+    expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved' });
+    expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, '**✅ Approved by** Test User.');
+    expect(mrActionInsert).toHaveBeenCalledWith({
+      mergeRequestIid: 1,
+      action: 'approve',
+      commitSha: 'abc123',
+      reason: null,
+      ...ACTOR,
+    });
+    expect(mrAccept).toHaveBeenCalledWith('test-project-id', 1, { sha: 'abc123' });
   });
 
   it('never rebases and reports a descriptive error for unmergeable MRs', async () => {
@@ -620,16 +633,9 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
-    vi.useFakeTimers();
-    // 03:00 UTC - outside scheduled pipeline window
-    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-    try {
-      await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
-      expect(mrRebase).not.toHaveBeenCalled();
-      expect(mrAccept).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
+    await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
+    expect(mrRebase).not.toHaveBeenCalled();
+    expect(mrAccept).toHaveBeenCalledTimes(1);
   });
 
   it.each(['ci_still_running', 'ci_must_pass', 'commits_status'])(
@@ -655,15 +661,9 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
       });
       (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-      try {
-        await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
-        expect(mrRebase).not.toHaveBeenCalled();
-        expect(mrAccept).toHaveBeenCalledTimes(1);
-      } finally {
-        vi.useRealTimers();
-      }
+      await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
+      expect(mrRebase).not.toHaveBeenCalled();
+      expect(mrAccept).toHaveBeenCalledTimes(1);
     },
   );
 
@@ -689,17 +689,10 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: vi.fn() };
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-
-    try {
-      await expect(service.approveMergeRequest(1, 'fc7085b2', ACTOR)).rejects.toThrow('contains no changes');
-      expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { stateEvent: 'close' });
-      expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, expect.stringContaining('Closed automatically'));
-      expect(allDiffs).toHaveBeenCalledWith('test-project-id', 1);
-    } finally {
-      vi.useRealTimers();
-    }
+    await expect(service.approveMergeRequest(1, 'fc7085b2', ACTOR)).rejects.toThrow('contains no changes');
+    expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { stateEvent: 'close' });
+    expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, expect.stringContaining('Closed automatically'));
+    expect(allDiffs).toHaveBeenCalledWith('test-project-id', 1);
   });
 
   it('labels, comments, and records the approval right away even when the merge fails', async () => {
@@ -724,23 +717,16 @@ describe('GitlabMergeRequestService.approveMergeRequest', () => {
     });
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = { insert: mrActionInsert };
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-
-    try {
-      await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
-      expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved' });
-      expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, '**✅ Approved by** Test User.');
-      expect(mrActionInsert).toHaveBeenCalledWith({
-        mergeRequestIid: 1,
-        action: 'approve',
-        commitSha: 'abc123',
-        reason: null,
-        ...ACTOR,
-      });
-    } finally {
-      vi.useRealTimers();
-    }
+    await expect(service.approveMergeRequest(1, 'abc123', ACTOR)).rejects.toThrow('Cannot merge MR !1');
+    expect(mrEdit).toHaveBeenCalledWith('test-project-id', 1, { addLabels: 'approved' });
+    expect(noteCreate).toHaveBeenCalledWith('test-project-id', 1, '**✅ Approved by** Test User.');
+    expect(mrActionInsert).toHaveBeenCalledWith({
+      mergeRequestIid: 1,
+      action: 'approve',
+      commitSha: 'abc123',
+      reason: null,
+      ...ACTOR,
+    });
   });
 });
 
@@ -751,7 +737,7 @@ function setApi(service: GitlabMergeRequestService, api: Record<string, unknown>
 
 describe('GitlabMergeRequestService.processDeferredMerges', () => {
   function deferredSetup() {
-    const { service } = createService();
+    const { service, isScheduledPipelineRunning } = createService();
     const mrAccept = vi.fn().mockRejectedValue(new Error('405 Method Not Allowed'));
     const noteCreate = vi.fn().mockResolvedValue({});
     const show = vi.fn().mockResolvedValue({
@@ -768,31 +754,39 @@ describe('GitlabMergeRequestService.processDeferredMerges', () => {
     (service as unknown as { mrActionRepository: unknown }).mrActionRepository = {
       find: vi.fn().mockResolvedValue([{ mergeRequestIid: 7, commitSha: 'sha7', createdAt: new Date() }]),
     };
-    return { service, mrAccept, noteCreate };
+
+    return { service, mrAccept, noteCreate, isScheduledPipelineRunning };
   }
 
   it('stops retrying a deferred merge after repeated failures and leaves a warning note', async () => {
     const { service, mrAccept, noteCreate } = deferredSetup();
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-    try {
-      for (let attempt = 0; attempt < 5; attempt++) {
-        await service.processDeferredMerges();
-      }
-      expect(mrAccept).toHaveBeenCalledTimes(5);
-
+    for (let attempt = 0; attempt < 5; attempt++) {
       await service.processDeferredMerges();
-
-      expect(mrAccept).toHaveBeenCalledTimes(5);
-      expect(noteCreate).toHaveBeenCalledWith(
-        'test-project-id',
-        7,
-        expect.stringContaining('must merge this merge request manually'),
-      );
-    } finally {
-      vi.useRealTimers();
     }
+
+    expect(mrAccept).toHaveBeenCalledTimes(5);
+
+    await service.processDeferredMerges();
+
+    expect(mrAccept).toHaveBeenCalledTimes(5);
+    expect(noteCreate).toHaveBeenCalledWith(
+      'test-project-id',
+      7,
+      expect.stringContaining('must merge this merge request manually'),
+    );
+  });
+
+  it('keeps deferring while a scheduled pipeline runs and merges once it finishes', async () => {
+    const { service, mrAccept, isScheduledPipelineRunning } = deferredSetup();
+    isScheduledPipelineRunning.mockResolvedValue(true);
+
+    await service.processDeferredMerges();
+    expect(mrAccept).not.toHaveBeenCalled();
+
+    isScheduledPipelineRunning.mockResolvedValue(false);
+    await service.processDeferredMerges();
+    expect(mrAccept).toHaveBeenCalledWith('test-project-id', 7, { sha: 'sha7' });
   });
 
   it('merges human-approved MRs labeled malware, but still skips held ones', async () => {
@@ -812,16 +806,9 @@ describe('GitlabMergeRequestService.processDeferredMerges', () => {
       },
     });
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-21T03:00:00Z'));
-
-    try {
-      await service.processDeferredMerges();
-      expect(mrAccept).toHaveBeenCalledWith('test-project-id', 7, { sha: 'sha7' });
-      expect(mrAccept).not.toHaveBeenCalledWith('test-project-id', 8, expect.anything());
-    } finally {
-      vi.useRealTimers();
-    }
+    await service.processDeferredMerges();
+    expect(mrAccept).toHaveBeenCalledWith('test-project-id', 7, { sha: 'sha7' });
+    expect(mrAccept).not.toHaveBeenCalledWith('test-project-id', 8, expect.anything());
   });
 });
 

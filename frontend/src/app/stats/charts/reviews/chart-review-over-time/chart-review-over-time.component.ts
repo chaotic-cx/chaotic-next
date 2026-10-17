@@ -1,9 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { AppService } from '../../../../app.service';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { seriesColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, mochaAxisChartOptions } from '../../chart-config';
+import { chartResource, type ChartConfig, axisChartOptions } from '../../chart-config';
 
 const BOT_USERNAME = 'temeraire-cx';
 const SERVICE_ACCOUNT_PREFIXES = ['gitlab_', 'project_'];
@@ -35,7 +35,7 @@ export class ChartReviewOverTimeComponent {
     for (const row of data) reviewsByCell.set(`${row.date}\u0000${row.username}`, row.reviews);
 
     const datasets = usernames.map((username, index) => {
-      const color = CATPPUCCIN_FLAVOURS[index % CATPPUCCIN_FLAVOURS.length];
+      const color = seriesColor(index);
       return {
         label: username,
         data: dates.map((date) => reviewsByCell.get(`${date}\u0000${username}`) ?? 0),
@@ -51,7 +51,7 @@ export class ChartReviewOverTimeComponent {
         datasets,
       },
       options: {
-        ...mochaAxisChartOptions<'line'>({ indexAxis: 'x' }),
+        ...axisChartOptions<'line'>({ indexAxis: 'x' }),
         aspectRatio: 2,
       },
     };

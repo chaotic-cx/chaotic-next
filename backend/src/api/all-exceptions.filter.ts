@@ -4,23 +4,26 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
 const GITLAB_STATUS_REGEX = /^(\d{3})\s/;
 
+/**
+ * HTTP status of a failed GitLab API call, or undefined for every other exception.
+ */
+export function gitlabErrorStatus(exception: unknown): number | undefined {
+  if (typeof exception !== 'object' || exception === null) return undefined;
+  const candidate = exception as { name?: unknown; message?: unknown };
+  if (candidate.name !== 'GitbeakerRequestError' || typeof candidate.message !== 'string') return undefined;
+  return Number(candidate.message.match(GITLAB_STATUS_REGEX)?.[1]) || undefined;
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   constructor(@InjectPinoLogger(AllExceptionsFilter.name) private readonly pino: PinoLogger) {}
-
-  private static gitlabErrorStatus(exception: unknown): number | undefined {
-    if (typeof exception !== 'object' || exception === null) return undefined;
-    const candidate = exception as { name?: unknown; message?: unknown };
-    if (candidate.name !== 'GitbeakerRequestError' || typeof candidate.message !== 'string') return undefined;
-    return Number(candidate.message.match(GITLAB_STATUS_REGEX)?.[1]) || undefined;
-  }
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
     const request = ctx.getRequest<FastifyRequest>();
 
-    const gitlabStatus = AllExceptionsFilter.gitlabErrorStatus(exception);
+    const gitlabStatus = gitlabErrorStatus(exception);
     const status =
       gitlabStatus ?? (exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR);
 

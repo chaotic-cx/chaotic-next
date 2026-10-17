@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Package, Repo } from '../../builder/builder.entity';
 import type { EntityLookupService } from '../../builder/entity-lookup.service';
 import { BumpType, type RepoUpdateRunParams, TriggerType } from '../../interfaces/repo-manager';
-import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager.entity';
+import { ArchlinuxPackage, PackageBump } from '../repo-manager.entity';
 import type { RepoReader, RepoWriter } from '../repo-rw';
 import { BumpService } from './bump.service';
 
@@ -17,13 +17,7 @@ function buildService(manager: Record<string, unknown>, repoWriter: Partial<Repo
   const lookup = {
     getOrCreatePackage: vi.fn(async () => ({ version: '1.0', pkgrel: 1 })),
   } as unknown as EntityLookupService;
-  return new BumpService(
-    packagesRepository,
-    {} as Repository<PackageElfAnalysis>,
-    repoWriter as RepoWriter,
-    lookup,
-    pinoStub,
-  );
+  return new BumpService(packagesRepository, repoWriter as RepoWriter, lookup, pinoStub);
 }
 
 function entry(pkgId: number, triggerFrom = TriggerType.ARCH, archPkgId = 10): RepoUpdateRunParams {

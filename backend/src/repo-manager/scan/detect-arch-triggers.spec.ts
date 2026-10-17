@@ -99,7 +99,7 @@ describe('TriggerDetector.detectArchTriggers', () => {
     });
   });
 
-  it('rebuilds the consumers of a package that left the Arch repos', async () => {
+  it('does not rebuild the consumers of a package that left the Arch repos without a successor', async () => {
     const detector = createDetector({
       arch: [
         archPkg({
@@ -122,7 +122,7 @@ describe('TriggerDetector.detectArchTriggers', () => {
 
     const detected = await detector.detectArchTriggers(REPO_ID, [31]);
 
-    expect(detected.get('insync')).toMatchObject({ bumpType: BumpType.BROKEN_DEPS, ownerId: 31 });
+    expect(detected.has('insync')).toBe(false);
   });
 
   it('compares against an older analysis when the previous version was never analyzed', async () => {

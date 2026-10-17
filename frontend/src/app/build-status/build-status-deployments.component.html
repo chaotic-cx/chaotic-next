@@ -1,74 +1,77 @@
-<section class="flex min-h-0 flex-1 flex-col">
-  <chaotic-build-status-section
-    title="Latest deployments"
-    subtitle="Most recently built packages"
-    icon="pi-server"
-    iconClass="text-ctp-green"
-  />
-  @if (!buildStatusService.loadingDeployments()) {
-    <ul
-      class="min-h-0 flex-1 divide-y divide-white/5 overflow-y-auto pr-1"
-      animate.enter="content-fade"
-      chaoticFlipList
-    >
-      @for (deployment of paginatedDeployments(); track deployment.id; let index = $index) {
-        <li
-          class="flex items-center justify-between gap-3 py-2.5"
-          [style.--stagger]="index"
-          animate.enter="pipeline-item-enter"
-        >
+<section class="chaotic-card" *transloco="let t">
+  <chaotic-build-status-section [title]="t('buildStatus.deployments.title')" icon="pi-box">
+    <a class="text-xs text-ctp-subtext0 hover:text-ctp-mauve focus-visible:text-ctp-mauve" routerLink="/deployments">{{
+      t('buildStatus.deployments.viewAll')
+    }}</a>
+  </chaotic-build-status-section>
+  @if (buildStatusService.loadingDeployments() && paginatedDeployments().length === 0) {
+    <ul aria-hidden="true">
+      @for (_ of skeletonRows; track $index) {
+        <li class="chaotic-row"><span class="chaotic-skeleton h-6 flex-1"></span></li>
+      }
+    </ul>
+  } @else if (buildStatusService.deploymentsFailed() && paginatedDeployments().length === 0) {
+    <chaotic-load-error
+      [message]="t('buildStatus.deployments.loadError')"
+      (retry)="buildStatusService.refreshPackageBuilds()"
+    />
+  } @else if (paginatedDeployments().length === 0) {
+    <chaotic-empty-state [message]="t('buildStatus.deployments.empty')" icon="pi-box" />
+  } @else {
+    <ul chaoticFlipList>
+      @for (deployment of paginatedDeployments(); track deployment.id) {
+        <li class="chaotic-row" animate.enter="ctp-fade-enter">
+          <i class="pi shrink-0 text-sm {{ statusIconClass(deployment.status) }}" aria-hidden="true"></i>
           <div class="min-w-0 flex-1">
-            <span class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <i [class]="`pi ${statusIconClass(deployment.status)}`"></i>
-              <a
-                class="wrap-break-word cursor-pointer font-medium"
-                [routerLink]="['/stats/search']"
-                [queryParams]="{ search: deployment.pkgbase.pkgname }"
-                >{{ deployment.pkgbase.pkgname }}</a
-              >
-              @if (deployment.failureTags?.length) {
-                <span class="inline-flex flex-wrap items-center gap-1">
-                  @for (tag of deployment.failureTags; track tag) {
-                    <span
-                      class="rounded-full bg-ctp-red/15 px-1.5 py-0.5 text-[11px] font-medium text-ctp-red"
-                      [pTooltip]="tagDescription(tag)"
-                      tooltipPosition="top"
-                      >{{ tag }}</span
-                    >
-                  }
-                </span>
+            <a
+              class="chaotic-row__name"
+              [routerLink]="['/stats/search']"
+              [queryParams]="{ search: deployment.pkgbase.pkgname }"
+              [title]="deployment.pkgbase.pkgname"
+              >{{ deployment.pkgbase.pkgname }}</a
+            >
+            <span class="chaotic-row__meta">
+              <span [pTooltip]="(deployment.timestamp | date: 'short') ?? undefined" tooltipPosition="top">{{
+                deployment.timestamp | relativeTime
+              }}</span>
+              @if (deployment.repo?.name; as repoName) {
+                · {{ repoName }}
               }
             </span>
-            @if (deployment.repo?.name; as repoName) {
-              <span class="block text-sm text-ctp-subtext1">{{ repoName }}</span>
+            @if (deployment.failureTags?.length) {
+              <span class="mt-1 flex flex-wrap gap-1">
+                @for (tag of deployment.failureTags; track tag) {
+                  @let descriptionKey = tagDescriptionKey(tag);
+                  <span
+                    class="rounded-full bg-ctp-red/15 px-1.5 py-0.5 text-xs font-medium text-ctp-red"
+                    [pTooltip]="descriptionKey ? t(descriptionKey) : tag"
+                    tooltipPosition="top"
+                    >{{ tag }}</span
+                  >
+                }
+              </span>
             }
           </div>
-          <div class="flex shrink-0 items-center gap-3">
-            <span
-              class="whitespace-nowrap text-xs text-ctp-subtext1"
-              [pTooltip]="(deployment.timestamp | date: 'short') ?? undefined"
-              tooltipPosition="top"
-              >{{ deployment.timestamp | relativeTime }}</span
-            >
-            <a
-              class="cursor-pointer text-ctp-mauve hover:text-ctp-text"
-              [routerLink]="packageLogRouteFromUrl(deployment.logUrl ?? '')"
-              pTooltip="Open build log"
-              tooltipPosition="left"
-              aria-label="Open build log for {{ deployment.pkgbase.pkgname }}"
-            >
-              <i class="pi pi-bars"></i>
-            </a>
-          </div>
+          <a
+            class="chaotic-icon-btn"
+            [routerLink]="packageLogRouteFromUrl(deployment.logUrl ?? '')"
+            [pTooltip]="t('buildStatus.deployments.openLog')"
+            [attr.aria-label]="t('buildStatus.deployments.openLogAriaLabel', { name: deployment.pkgbase.pkgname })"
+            tooltipPosition="left"
+          >
+            <i class="pi pi-align-left" aria-hidden="true"></i>
+          </a>
         </li>
       }
     </ul>
+    @if (pageCount() > 1) {
+      <footer class="chaotic-card__footer justify-end!">
+        <chaotic-build-status-pager
+          [page]="currentPage()"
+          [pageCount]="pageCount()"
+          (pageChange)="selectPage($event)"
+        />
+      </footer>
+    }
   }
-
-  <chaotic-build-status-pager
-    class="mt-4 shrink-0"
-    [page]="currentPage()"
-    [pageCount]="pageCount()"
-    (pageChange)="selectPage($event)"
-  />
 </section>

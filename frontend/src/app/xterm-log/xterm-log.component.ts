@@ -1,42 +1,61 @@
-import { Component, effect, ElementRef, input, OnDestroy, OnInit, output, viewChild } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
+import { Component, effect, ElementRef, inject, input, OnDestroy, OnInit, output, viewChild } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { Terminal } from '@xterm/xterm';
+import { type ITheme, Terminal } from '@xterm/xterm';
+import { injectLazyStylesheet } from '../lazy-stylesheet';
+import { flavour, LIGHT_FLAVOUR, themePalette } from '../theme';
 
-const { mocha } = flavors;
 const DEFAULT_FONT_SIZE = 12;
 const SCROLLBACK_LINES = 9999999;
 const PIXELS_PER_SCROLL_LINE = 16;
-const SCROLLBAR_COLOR = mocha.colors.rosewater.hex;
 const LINE_NUMBER_TOP_OFFSET_PX = 1;
 const GUTTER_MIN_FONT_SIZE_PX = 10;
+const TRANSPARENT_BACKGROUND = '#00000000';
+const TERMINAL_FONT_FAMILY = "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
 
-const XTERM_THEME = {
-  background: 'rgba(0, 0, 0, 0)',
-  black: mocha.colors.surface1.hex,
-  blue: mocha.colors.blue.hex,
-  brightBlack: mocha.colors.overlay0.hex,
-  brightBlue: mocha.colors.blue.hex,
-  brightCyan: mocha.colors.teal.hex,
-  brightGreen: mocha.colors.green.hex,
-  brightMagenta: mocha.colors.pink.hex,
-  brightRed: mocha.colors.red.hex,
-  brightWhite: mocha.colors.overlay2.hex,
-  brightYellow: mocha.colors.yellow.hex,
-  cursor: mocha.colors.rosewater.hex,
-  cursorAccent: mocha.colors.rosewater.hex,
-  cyan: mocha.colors.teal.hex,
-  foreground: mocha.colors.text.hex,
-  green: mocha.colors.green.hex,
-  magenta: mocha.colors.pink.hex,
-  red: mocha.colors.red.hex,
-  white: mocha.colors.overlay1.hex,
-  yellow: mocha.colors.yellow.hex,
-};
+// `document.fonts.ready` does not wait for a font that no element uses yet, so the font is requested here.
+async function loadTerminalFont(): Promise<void> {
+  try {
+    await document.fonts.load(`${DEFAULT_FONT_SIZE}px ${TERMINAL_FONT_FAMILY}`);
+  } catch {
+    // The fallback monospace font is measured instead.
+  }
+}
+
+/**
+ * ANSI colours from the active flavour. Latte maps the "white" and "black" slots to readable
+ * text tones, because logs print white text that would vanish on a light surface.
+ */
+function xtermTheme(): ITheme {
+  const palette = themePalette();
+  const isLight = flavour() === LIGHT_FLAVOUR;
+  return {
+    background: TRANSPARENT_BACKGROUND,
+    black: isLight ? palette.subtext1.hex : palette.surface1.hex,
+    blue: palette.blue.hex,
+    brightBlack: isLight ? palette.overlay1.hex : palette.overlay0.hex,
+    brightBlue: palette.blue.hex,
+    brightCyan: palette.teal.hex,
+    brightGreen: palette.green.hex,
+    brightMagenta: palette.pink.hex,
+    brightRed: palette.red.hex,
+    brightWhite: isLight ? palette.subtext1.hex : palette.overlay2.hex,
+    brightYellow: palette.yellow.hex,
+    cursor: palette.rosewater.hex,
+    cursorAccent: palette.rosewater.hex,
+    cyan: palette.teal.hex,
+    foreground: palette.text.hex,
+    green: palette.green.hex,
+    magenta: palette.pink.hex,
+    red: palette.red.hex,
+    white: isLight ? palette.subtext0.hex : palette.overlay1.hex,
+    yellow: palette.yellow.hex,
+  };
+}
 
 @Component({
   selector: 'chaotic-xterm-log',
@@ -62,12 +81,8 @@ const XTERM_THEME = {
         position: relative;
         display: flex;
         flex-direction: row;
-        border: 1px solid var(--ctp-mocha-surface1);
-        border-radius: 0.75rem;
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
         overflow: hidden;
-        padding: 0.75rem;
+        padding: var(--chaotic-space-md);
       }
 
       :host ::ng-deep .xterm-viewport,
@@ -89,7 +104,7 @@ const XTERM_THEME = {
       :host ::ng-deep .terminal-gutter .line-num {
         border: none;
         background: transparent;
-        color: var(--ctp-mocha-text);
+        color: var(--catppuccin-color-text);
         font-family: inherit;
         width: 100%;
         text-align: center;
@@ -98,8 +113,9 @@ const XTERM_THEME = {
         user-select: none;
       }
 
-      :host ::ng-deep .terminal-gutter .line-num:hover {
-        color: var(--ctp-mocha-mauve);
+      :host ::ng-deep .terminal-gutter .line-num:hover,
+      :host ::ng-deep .terminal-gutter .line-num:focus-visible {
+        color: var(--catppuccin-color-mauve);
       }
 
       .terminal-host {
@@ -118,6 +134,8 @@ const XTERM_THEME = {
   ],
 })
 export class XtermLogComponent implements OnInit, OnDestroy {
+  private readonly transloco = inject(TranslocoService);
+
   readonly chunk = input<string[]>([]);
   readonly clearSignal = input<boolean>(false);
   readonly scrollToLine = input<number | undefined>(undefined);
@@ -132,27 +150,49 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   private serializeAddon?: SerializeAddon;
   private searchAddon?: SearchAddon;
   private resizeObserver?: ResizeObserver;
+  private readonly stylesheetLoaded: Promise<void>;
+  private destroyed = false;
 
   constructor() {
+    this.stylesheetLoaded = injectLazyStylesheet('xterm');
     effect(() => {
       if (this.clearSignal()) {
-        this.receivedLength = 0;
-        this.consumedLength = 0;
-        this.flushScheduled = false;
-        this.lineScrolled = false;
-        this.logicalLineStarts = [];
-        this.lastMappedLength = -1;
-        this.lastMappedCols = -1;
-        this.clearFlushTimer();
-        this.terminal?.clear();
-        this.terminal?.reset();
+        this.resetTerminal();
       }
     });
 
     effect(() => {
-      this.receivedLength = this.chunk().length;
+      const theme = xtermTheme();
+      if (this.terminal) {
+        this.terminal.options.theme = theme;
+      }
+    });
+
+    effect(() => {
+      const length = this.chunk().length;
+
+      // A shorter chunk list than already written means that the host started a new log.
+      if (length < this.consumedLength) {
+        this.resetTerminal();
+      }
+
+      this.receivedLength = length;
       this.scheduleFlush();
     });
+  }
+
+  private resetTerminal(): void {
+    this.receivedLength = 0;
+    this.consumedLength = 0;
+    this.flushScheduled = false;
+    this.lineScrolled = false;
+    this.following = true;
+    this.logicalLineStarts = [];
+    this.lastMappedLength = -1;
+    this.lastMappedCols = -1;
+    this.clearFlushTimer();
+    this.terminal?.clear();
+    this.terminal?.reset();
   }
 
   private receivedLength = 0;
@@ -160,6 +200,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   private flushScheduled = false;
   private flushTimer: number | undefined;
   private lineScrolled = false;
+  private following = true;
 
   /** Buffer row where each logical (un-wrapped) line starts; re-mapped on re-wrap. */
   private logicalLineStarts: number[] = [];
@@ -179,6 +220,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   private scheduleFlush(): void {
     if (this.flushScheduled) return;
+
     this.flushScheduled = true;
     this.flushTimer = window.setTimeout(() => {
       this.flushScheduled = false;
@@ -188,12 +230,16 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   }
 
   private clearFlushTimer(): void {
-    if (this.flushTimer !== undefined) window.clearTimeout(this.flushTimer);
+    if (this.flushTimer !== undefined) {
+      window.clearTimeout(this.flushTimer);
+    }
+
     this.flushTimer = undefined;
   }
 
   private flush(): void {
     if (!this.terminal || this.receivedLength <= this.consumedLength) return;
+
     const chunks = this.chunk();
 
     let bytes = 0;
@@ -203,6 +249,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       end++;
       if (bytes >= XtermLogComponent.MAX_FLUSH_BYTES) break;
     }
+
     const delta = chunks.slice(this.consumedLength, end).join('');
     this.consumedLength = end;
     const normalized = this.normalizeChunk(delta);
@@ -210,34 +257,56 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       this.terminal.write(normalized, () => this.afterWrite());
     }
 
-    if (this.consumedLength < this.receivedLength) this.scheduleFlush();
+    if (this.consumedLength < this.receivedLength) {
+      this.scheduleFlush();
+    }
   }
 
   private afterWrite(): void {
-    if (!this.terminal || this.lineScrolled) return;
-    const line = this.scrollToLine();
-    this.ensureLogicalLineMapping();
-    const bufferRow = line === undefined ? undefined : this.logicalLineStarts[line - 1];
-    if (bufferRow === undefined) {
+    if (!this.terminal) return;
+    if (this.scrollToRequestedLine()) return;
+
+    if (this.following) {
       this.terminal.scrollToBottom();
-      return;
     }
+  }
+
+  private scrollToRequestedLine(): boolean {
+    const line = this.scrollToLine();
+    if (!this.terminal || this.lineScrolled || line === undefined) return false;
+
+    this.ensureLogicalLineMapping();
+    const bufferRow = this.logicalLineStarts[line - 1];
+    if (bufferRow === undefined) return false;
+
     this.highlightLine(bufferRow);
     this.terminal.scrollToLine(bufferRow);
     this.lineScrolled = true;
+    this.updateFollowing();
     this.updateLineNumbers();
+
+    return true;
+  }
+
+  private updateFollowing(): void {
+    const buffer = this.terminal?.buffer.active;
+    if (!buffer) return;
+
+    this.following = buffer.viewportY >= buffer.baseY;
   }
 
   private highlightLine(bufferIndex: number): void {
     if (!this.terminal) return;
+
     const cursor = this.terminal.buffer.active.baseY + this.terminal.buffer.active.cursorY;
     try {
       const marker = this.terminal.registerMarker(bufferIndex - cursor);
       if (!marker) return;
+
       this.terminal.registerDecoration({
         marker,
         layer: 'bottom',
-        backgroundColor: mocha.colors.surface0.hex,
+        backgroundColor: themePalette().surface0.hex,
         width: this.terminal.cols,
       });
     } catch {
@@ -250,6 +319,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       event.target instanceof HTMLElement ? (event.target.closest('.line-num') as HTMLElement | null) : null;
     const raw = target?.dataset['line'];
     if (!raw) return;
+
     this.lineClick.emit(Number(raw));
   };
 
@@ -259,8 +329,10 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     const gutterEl = this.gutter()?.nativeElement;
     const host = this.terminalDiv()?.nativeElement;
     if (!terminal || !gutterEl || !host) return;
+
     const screen = host.querySelector('.xterm-screen') as HTMLElement | null;
-    if (!screen || !screen.clientHeight) return;
+    if (!screen?.clientHeight) return;
+
     this.gutterRows = terminal.rows;
     this.gutterCellHeightPx = screen.clientHeight / terminal.rows;
     this.gutterTopOffsetPx = screen.getBoundingClientRect().top - gutterEl.getBoundingClientRect().top;
@@ -275,10 +347,11 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     const terminal = this.terminal;
     const gutterEl = this.gutter()?.nativeElement;
     if (!terminal || !gutterEl || this.gutterRows === 0) return;
+
     this.ensureLogicalLineMapping();
     const start = terminal.buffer.active.viewportY;
-
     if (start === this.lastGutterViewportStart && this.gutterButtons.length > 0) return;
+
     this.lastGutterViewportStart = start;
 
     if (this.gutterButtons.length !== this.gutterRows) {
@@ -295,6 +368,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
         this.gutterButtons.push(button);
         fragment.appendChild(button);
       }
+
       gutterEl.appendChild(fragment);
     }
 
@@ -307,7 +381,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       button.textContent = logicalLine === undefined ? '' : String(logicalLine);
       if (logicalLine !== undefined) {
         button.dataset['line'] = String(logicalLine);
-        button.setAttribute('aria-label', `Line ${logicalLine}`);
+        button.setAttribute('aria-label', this.transloco.translate('xtermLog.lineLabel', { line: logicalLine }));
       } else {
         delete button.dataset['line'];
         button.removeAttribute('aria-label');
@@ -318,20 +392,26 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   private ensureLogicalLineMapping(): void {
     const buffer = this.terminal?.buffer.active;
     if (!buffer) return;
+
     const cols = this.terminal?.cols ?? 0;
     if (buffer.length === this.lastMappedLength && cols === this.lastMappedCols) return;
+
     this.lastMappedLength = buffer.length;
     this.lastMappedCols = cols;
     const starts: number[] = [];
     for (let i = 0; i < buffer.length; i++) {
       const line = buffer.getLine(i);
-      if (!line || !line.isWrapped) starts.push(i);
+      if (!line?.isWrapped) {
+        starts.push(i);
+      }
     }
+
     this.logicalLineStarts = starts;
   }
 
   private logicalNumberForRow(bufferRow: number, wrapped: boolean | undefined): number | undefined {
     if (wrapped) return undefined;
+
     const starts = this.logicalLineStarts;
     let low = 0;
     let high = starts.length;
@@ -340,11 +420,13 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       if (starts[mid] <= bufferRow) low = mid + 1;
       else high = mid;
     }
+
     return low > 0 ? low : undefined;
   }
 
   private scheduleGutterUpdate(): void {
     if (this.gutterUpdateRaf) return;
+
     this.gutterUpdateRaf = requestAnimationFrame(() => {
       this.gutterUpdateRaf = 0;
       this.updateLineNumbers();
@@ -352,12 +434,15 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    requestAnimationFrame(() => {
-      this.initTerminal();
+    void Promise.all([this.stylesheetLoaded, loadTerminalFont()]).then(() => {
+      if (this.destroyed) return;
+
+      requestAnimationFrame(() => this.initTerminal());
     });
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.resizeObserver?.disconnect();
     this.terminal?.dispose();
   }
@@ -378,11 +463,13 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   findNext(query: string): void {
     if (!query) return;
+
     this.searchAddon?.findNext(query);
   }
 
   findPrevious(query: string): void {
     if (!query) return;
+
     this.searchAddon?.findPrevious(query);
   }
 
@@ -396,13 +483,14 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
     this.terminal = new Terminal({
       allowProposedApi: true,
+      allowTransparency: true,
       disableStdin: true,
       scrollback: SCROLLBACK_LINES,
       convertEol: true,
-      fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
+      fontFamily: TERMINAL_FONT_FAMILY,
       fontSize: DEFAULT_FONT_SIZE,
       lineHeight: 1.2,
-      theme: XTERM_THEME,
+      theme: xtermTheme(),
     });
 
     this.fitAddon = new FitAddon();
@@ -438,7 +526,10 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
     this.terminal.open(container);
 
-    this.terminal.onScroll(() => this.scheduleGutterUpdate());
+    this.terminal.onScroll(() => {
+      this.updateFollowing();
+      this.scheduleGutterUpdate();
+    });
     this.terminal.onResize(() => {
       this.lastGutterViewportStart = -1;
       this.updateLineNumbers();
@@ -483,7 +574,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     if (viewport) {
       viewport.setAttribute(
         'style',
-        `scrollbar-color: ${SCROLLBAR_COLOR} transparent; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;`,
+        `scrollbar-color: var(--catppuccin-color-rosewater) transparent; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;`,
       );
     }
 

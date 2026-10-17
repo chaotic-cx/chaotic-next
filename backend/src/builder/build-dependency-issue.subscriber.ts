@@ -3,6 +3,7 @@ import { Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntitySubscriberInterface, EventSubscriber, InsertEvent, Repository } from 'typeorm';
+import { GITHUB_CLOSED_STATE_REASON } from '../utils/constants';
 import { Build } from './builder.entity';
 import { isFailingStatus } from './unresolved-failures';
 
@@ -70,7 +71,7 @@ export class BuildDependencyIssueSubscriber implements EntitySubscriberInterface
   private async closeIssue(issueNumber: number): Promise<void> {
     await this.githubRequest(`/repos/${this.githubOwner}/${this.githubRepo}/issues/${issueNumber}`, {
       method: 'PATCH',
-      body: JSON.stringify({ state: 'closed' }),
+      body: JSON.stringify({ state: 'closed', state_reason: GITHUB_CLOSED_STATE_REASON }),
     });
   }
 

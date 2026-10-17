@@ -1,0 +1,81 @@
+<div class="failure-table-wrap" *transloco="let t; prefix: 'admin.overview.failureTable'">
+  <!-- ui-craft-detect-ignore-next-line -- overflow (.failure-table-wrap) and the sticky header live in the component CSS. -->
+  <table class="failure-table">
+    <colgroup>
+      <col />
+      <col class="col-status" />
+      <col class="col-streak" />
+      <col class="col-time" />
+      <col class="col-actions" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">{{ t('columns.package') }}</th>
+        <th class="cell-status" scope="col">{{ t('columns.status') }}</th>
+        <th class="is-numeric" scope="col">{{ t('columns.streak') }}</th>
+        <th class="is-numeric" scope="col">{{ t('columns.lastFailure') }}</th>
+        <th scope="col">
+          <span class="sr-only">{{ t('columns.actions') }}</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.pkgname) {
+        <tr [class.is-silenced]="row.silenced">
+          <td>
+            <span class="failure-name">
+              <span class="status-dot" [style.background]="statusColor(row.status)" aria-hidden="true"></span>
+              <a [routerLink]="['/stats/search']" [queryParams]="{ search: row.pkgname }">{{ row.pkgname }}</a>
+              @if (isRateLimited(row)) {
+                <i
+                  class="pi pi-bolt text-ctp-yellow"
+                  [attr.aria-label]="t('rateLimited.label')"
+                  [pTooltip]="t('rateLimited.tooltip')"
+                  tooltipPosition="top"
+                ></i>
+              }
+            </span>
+          </td>
+          <td class="failure-status cell-status">{{ row.statusText }}</td>
+          <td class="is-numeric">
+            ×{{ row.consecutiveFailures }}
+            <span class="failure-since">{{ streakDurationLabel(row.streakStartedAt) }}</span>
+          </td>
+          <td class="is-numeric failure-since">{{ row.timestamp | relativeTime }}</td>
+          <td>
+            <span class="failure-actions">
+              @if (row.logUrl && !isLogPurged(row.timestamp)) {
+                <a
+                  class="chaotic-icon-btn"
+                  [routerLink]="packageLogRouteFromUrl(row.logUrl)"
+                  [attr.aria-label]="t('openLog.label', { pkgname: row.pkgname })"
+                  [pTooltip]="t('openLog.tooltip')"
+                  tooltipPosition="left"
+                >
+                  <i class="pi pi-align-left" aria-hidden="true"></i>
+                </a>
+              }
+              @if (canSilence()) {
+                <button
+                  class="chaotic-icon-btn"
+                  [disabled]="busy()"
+                  [attr.aria-label]="
+                    row.silenced
+                      ? t('silence.unsilenceLabel', { pkgname: row.pkgname })
+                      : t('silence.silenceLabel', { pkgname: row.pkgname })
+                  "
+                  [pTooltip]="row.silenced ? t('silence.unsilenceTooltip') : t('silence.silenceTooltip')"
+                  (click)="toggleSilence.emit(row)"
+                  type="button"
+                  tooltipPosition="left"
+                >
+                  <i [class]="row.silenced ? 'pi pi-bell' : 'pi pi-bell-slash'" aria-hidden="true"></i>
+                </button>
+              }
+            </span>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

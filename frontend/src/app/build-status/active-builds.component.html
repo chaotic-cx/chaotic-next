@@ -1,138 +1,79 @@
-@if (sortedQueue().length > 0) {
-  <section class="flex flex-col">
-    <chaotic-build-status-section
-      title="Active builds"
-      subtitle="These are currently ongoing builds"
-      icon="pi-spin pi-spinner"
-      iconClass="text-ctp-flamingo"
-    />
-    <ul class="max-h-[26rem] divide-y divide-white/5 overflow-y-auto pr-1" animate.enter="content-fade" chaoticFlipList>
-      @for (pkg of sortedQueue(); track pkg.rawName; let index = $index) {
-        <li
-          class="flex items-center justify-between gap-3 py-2.5"
-          [style.--stagger]="index"
-          animate.enter="pipeline-item-enter"
-        >
-          <span class="min-w-0 flex-1">
-            <a
-              class="block cursor-pointer truncate font-semibold"
-              [routerLink]="['/stats/search']"
-              [queryParams]="{ search: pkg.name }"
-              >{{ pkg.name }}</a
+<section class="chaotic-card" *transloco="let t; prefix: 'buildStatus.active'">
+  <chaotic-build-status-section
+    [count]="buildStatusService.queueCountKnown() ? sortedQueue().length : undefined"
+    [iconClass]="sortedQueue().length > 0 ? 'pi-spin text-ctp-mauve' : 'text-ctp-subtext0'"
+    [title]="t('title')"
+    icon="pi-cog"
+  />
+  @if (buildStatusService.loadingQueue()) {
+    <ul aria-hidden="true">
+      @for (_ of skeletonRows; track $index) {
+        <li class="chaotic-row"><span class="chaotic-skeleton h-8 flex-1"></span></li>
+      }
+    </ul>
+  } @else if (buildStatusService.queueFailed()) {
+    <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.refreshQueueStats()" />
+  } @else if (sortedQueue().length === 0) {
+    <chaotic-empty-state [message]="t('empty')" icon="pi-moon">
+      <a class="text-ctp-mauve hover:underline focus-visible:underline" routerLink="/deployments" emptyStateAction>{{
+        t('emptyAction')
+      }}</a>
+    </chaotic-empty-state>
+  } @else {
+    <ul class="max-h-[30rem] overflow-y-auto" chaoticFlipList>
+      @for (pkg of sortedQueue(); track pkg.rawName) {
+        <li class="chaotic-row" animate.enter="ctp-fade-enter">
+          <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <a
+                class="chaotic-row__name"
+                [routerLink]="['/stats/search']"
+                [queryParams]="{ search: pkg.name }"
+                [title]="pkg.name"
+                >{{ pkg.name }}</a
+              >
+              @if (etaViews().get(pkg.rawName); as eta) {
+                <span
+                  class="shrink-0 whitespace-nowrap text-xs tabular-nums"
+                  [class]="etaToneClasses[eta.tone]"
+                  [pTooltip]="eta.tooltip"
+                  tooltipPosition="top"
+                  >{{ eta.label }}</span
+                >
+              }
+            </div>
+            <div
+              class="build-progress"
+              [class.is-overtime]="etaViews().get(pkg.rawName)?.tone === 'danger'"
+              [class.is-indeterminate]="!buildStatusService.activeProgress().has(pkg.rawName)"
+              [attr.aria-label]="t('progressAriaLabel', { name: pkg.name })"
+              [attr.aria-valuenow]="progressPercent(pkg.rawName)"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
             >
-            <span class="block text-sm text-ctp-subtext1">
-              Node: {{ pkg.node }} &middot; {{ pkg.build_class | buildClass }}
+              <span [style.transform]="progressTransform(pkg.rawName)"></span>
+            </div>
+            <span class="chaotic-row__meta">
+              {{ pkg.node }} · {{ pkg.build_class | buildClass }} ·
+              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as startedLabel) {
+                <span [pTooltip]="buildStatusService.estimateTooltip()" tooltipPosition="top">{{ startedLabel }}</span>
+              } @else {
+                <chaotic-unknown-value />
+              }
             </span>
-          </span>
-          <span class="flex shrink-0 items-center gap-2">
-            @if (buildStatusService.activeIsUnknown().get(pkg.rawName)) {
-              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
-                <span
-                  class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
-                  [pTooltip]="estimateTooltip"
-                  tooltipPosition="top"
-                  >{{ started }}</span
-                >
-              } @else {
-                <span class="whitespace-nowrap text-right text-sm text-ctp-subtext1">unknown start</span>
-              }
-              <span
-                class="whitespace-nowrap text-right text-sm font-semibold text-ctp-yellow"
-                [pTooltip]="buildStatusService.activeUnknownTooltip"
-                tooltipPosition="top"
-                >· unknown time left</span
-              >
-            } @else if (buildStatusService.activeEtaIsFallback().get(pkg.rawName)) {
-              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
-                <span
-                  class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
-                  [pTooltip]="estimateTooltip"
-                  tooltipPosition="top"
-                  >{{ started }}</span
-                >
-              } @else {
-                <span class="whitespace-nowrap text-right text-sm text-ctp-subtext1">unknown start</span>
-              }
-              @if (buildStatusService.activeEtaLabels().get(pkg.rawName); as eta) {
-                <span
-                  class="whitespace-nowrap text-right text-sm text-ctp-yellow"
-                  [pTooltip]="
-                    buildStatusService.activeEtaTooltips().get(pkg.rawName) ??
-                    buildStatusService.activeEtaFallbackTooltip
-                  "
-                  tooltipPosition="top"
-                  >· {{ eta }}</span
-                >
-              } @else {
-                <span
-                  class="whitespace-nowrap text-right text-sm font-semibold text-ctp-yellow"
-                  [pTooltip]="buildStatusService.activeUnknownTooltip"
-                  tooltipPosition="top"
-                  >· unknown time left</span
-                >
-              }
-            } @else if (buildStatusService.activeOvertimeLabels().get(pkg.rawName); as overtime) {
-              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
-                <span
-                  class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
-                  [pTooltip]="estimateTooltip"
-                  tooltipPosition="top"
-                  >{{ started }}</span
-                >
-              } @else {
-                <span class="whitespace-nowrap text-right text-sm text-ctp-subtext1">unknown start</span>
-              }
-              <span
-                class="whitespace-nowrap text-right text-sm font-semibold text-ctp-red"
-                [pTooltip]="buildStatusService.activeOvertimeTooltips().get(pkg.rawName) ?? overtimeTooltip"
-                tooltipPosition="top"
-                >· {{ overtime }}</span
-              >
-            } @else {
-              @if (buildStatusService.activeStartedLabels().get(pkg.rawName); as started) {
-                <span
-                  class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
-                  [pTooltip]="estimateTooltip"
-                  tooltipPosition="top"
-                  >{{ started }}</span
-                >
-              } @else {
-                <span class="whitespace-nowrap text-right text-sm text-ctp-subtext1">unknown start</span>
-              }
-              @if (buildStatusService.activeEtaLabels().get(pkg.rawName); as eta) {
-                <span
-                  class="whitespace-nowrap text-right text-sm text-ctp-subtext1"
-                  [pTooltip]="buildStatusService.activeEtaTooltips().get(pkg.rawName) ?? estimateTooltip"
-                  tooltipPosition="top"
-                  >· {{ eta }}</span
-                >
-              }
-            }
-            <a
-              class="cursor-pointer text-ctp-mauve hover:text-ctp-text"
-              [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
-              pTooltip="Open live build log"
-              tooltipPosition="left"
-              aria-label="Open live build log for {{ pkg.name }}"
-            >
-              <i class="pi pi-bars"></i>
-            </a>
-          </span>
+          </div>
+          <a
+            class="chaotic-icon-btn"
+            [routerLink]="packageLogRouteFromUrl(pkg.liveLogUrl)"
+            [pTooltip]="t('openLog')"
+            [attr.aria-label]="t('openLogAriaLabel', { name: pkg.name })"
+            tooltipPosition="left"
+          >
+            <i class="pi pi-align-left" aria-hidden="true"></i>
+          </a>
         </li>
       }
     </ul>
-  </section>
-} @else {
-  <section class="flex flex-col">
-    <chaotic-build-status-section
-      title="Active builds"
-      subtitle="These are currently ongoing builds"
-      icon="pi-spinner"
-      iconClass="text-ctp-subtext0"
-    />
-    <div class="flex min-h-[5rem] flex-1 flex-col items-center justify-center gap-2 py-6 text-center text-ctp-subtext0">
-      <i class="pi pi-moon text-3xl"></i>
-      <span class="text-sm font-medium">No running builds at the moment</span>
-    </div>
-  </section>
-}
+  }
+</section>

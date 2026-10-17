@@ -1,9 +1,10 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { InputNumber } from '@openng/optimus-ui/inputnumber';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { isMobileSignal, parseCount, truncateLabel } from '../../../../functions';
-import { CATPPUCCIN_FLAVOURS } from '../../../../theme';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
 import {
@@ -11,20 +12,24 @@ import {
   chartRowHeight,
   clampAmount,
   type ChartConfig,
-  mochaAxisChartOptions,
+  axisChartOptions,
+  singleSeriesColor,
   roundToTenth,
 } from '../../chart-config';
 import { RESOURCE_METRICS, type ResourceMetricKey } from '../../chart-resource-metrics';
 
 @Component({
   selector: 'chaotic-chart-heavy-packages-resource',
-  imports: [ChartCardComponent, InputNumber, FormsModule],
+  imports: [ChartCardComponent, InputNumber, FormsModule, TranslocoDirective],
   templateUrl: './chart-heavy-packages-resource.component.html',
   styleUrl: './chart-heavy-packages-resource.component.css',
 })
 export class ChartHeavyPackagesResourceComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly metric = input.required<ResourceMetricKey>();
 
@@ -49,6 +54,8 @@ export class ChartHeavyPackagesResourceComponent {
   });
 
   protected readonly chartConfig = computed<ChartConfig<'bar'>>(() => {
+    this.activeTranslation();
+
     const data = this.chart.data();
     const metric = this.metricDef();
     return {
@@ -56,13 +63,16 @@ export class ChartHeavyPackagesResourceComponent {
         labels: data.map((d) => (this.isMobile() ? truncateLabel(d.pkgname) : d.pkgname)),
         datasets: [
           {
-            label: `${metric.label} per build (${metric.unit})`,
+            label: this.transloco.translate('stats.charts.heavyPackagesResource.label', {
+              metric: this.transloco.translate(metric.labelKey),
+              unit: metric.unit,
+            }),
             data: data.map((d) => roundToTenth(parseCount(d.average) * metric.scale)),
-            backgroundColor: CATPPUCCIN_FLAVOURS,
+            backgroundColor: singleSeriesColor(),
           },
         ],
       },
-      options: mochaAxisChartOptions<'bar'>({ indexAxis: 'y' }),
+      options: axisChartOptions<'bar'>({ indexAxis: 'y' }),
     };
   });
 

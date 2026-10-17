@@ -1,6 +1,7 @@
 import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '../types/core';
+import { brokenFixabilitySchema } from '../types/package';
 import { pageQuerySchema, perPageQuerySchema } from './common';
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const bumpPackagesBodySchema = z.strictObject({
   pkgnames: z.array(z.string()).min(1).describe('Package names to bump'),
@@ -11,6 +12,7 @@ export type BumpPackagesBodyDto = z.infer<typeof bumpPackagesBodySchema>;
 export const brokenPackagesQuerySchema = z.strictObject({
   page: pageQuerySchema.optional(),
   perPage: perPageQuerySchema.optional(),
+  fixability: brokenFixabilitySchema.optional().describe('Only packages whose worst reason has this fixability'),
 });
 
 export type BrokenPackagesQueryDto = z.infer<typeof brokenPackagesQuerySchema>;

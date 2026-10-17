@@ -91,14 +91,18 @@ export class AurScanService {
     const current = this.getScan(packageName);
     if (!current) throw new NotFoundException(`No scan recorded for "${packageName}"`);
 
-    // Scans can stay quiet for a long time (e.g. VirusTotal lookups), so the
-    // stream needs keepalives to survive proxy idle timeouts.
+    /**
+     * Scans can stay quiet for a long time (e.g. VirusTotal lookups), so the
+     * stream needs keepalives to survive proxy idle timeouts.
+     */
     return withSseKeepalive(
       new Observable<SseMessage<AurScanStreamChunk>>((subscriber) => {
         const emit = (scan: AurPackageScan): void => {
           const settled = scan.status === 'done' || scan.status === 'failed';
           subscriber.next({ data: { scan: { ...scan }, complete: settled } });
-          if (settled) subscriber.complete();
+          if (settled) {
+            subscriber.complete();
+          }
         };
 
         emit(current);
@@ -388,9 +392,7 @@ export class AurScanService {
     if (!info?.PackageBase) throw new NotFoundException(`No AUR package named "${packageName}"`);
 
     const mirrored = await this.aurMirror?.readTextFile(info.PackageBase, 'PKGBUILD');
-    if (mirrored && 'content' in mirrored) {
-      return { info, packageBase: info.PackageBase, text: mirrored.content };
-    }
+    if (mirrored && 'content' in mirrored) return { info, packageBase: info.PackageBase, text: mirrored.content };
 
     const pkgbuild = await this.fetchAur(`${AUR_FILE_URL}/PKGBUILD?h=${encodeURIComponent(info.PackageBase)}`);
     if (pkgbuild.status >= HTTP_SERVER_ERROR_MIN) {
@@ -406,7 +408,7 @@ export class AurScanService {
       (username) => username !== '',
     );
     const fallbackDate = new Date(unixSecondsToMs(info.FirstSubmitted ?? 0));
-    return await Promise.all(usernames.map((username) => this.maintainerProfile(username, fallbackDate)));
+    return Promise.all(usernames.map((username) => this.maintainerProfile(username, fallbackDate)));
   }
 
   private async maintainerProfile(username: string, fallbackDate: Date): Promise<AurMaintainerInfo> {
@@ -427,8 +429,10 @@ export class AurScanService {
 
       const results = response.ok ? (((await response.json()) as AurRpcSearchResponse).results ?? []) : [];
 
-      // Real account age comes from the scraped AUR profile; until it is
-      // available, the maintainer's oldest package submission approximates it.
+      /**
+       * Real account age comes from the scraped AUR profile; until it is
+       * available, the maintainer's oldest package submission approximates it.
+       */
       const registeredDate =
         (await this.aurAuthService.getMaintainerRegistrationDate(username)) ??
         new Date(
@@ -541,7 +545,7 @@ export class AurScanService {
   }
 
   private async fetchAur(url: string): Promise<Response> {
-    return await this.aurResponses.run(url, () =>
+    return this.aurResponses.run(url, () =>
       fetch(url, {
         headers: { 'user-agent': 'chaotic-next/aur-scan' },
         signal: AbortSignal.timeout(AUR_FETCH_TIMEOUT_MS),
@@ -587,7 +591,9 @@ export class AurScanService {
     const recent = [...this.scans.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
     while (recent.length > MAX_RECENT_SCANS) {
       const evicted = recent.shift();
-      if (evicted) this.scans.delete(evicted.packageName.toLowerCase());
+      if (evicted) {
+        this.scans.delete(evicted.packageName.toLowerCase());
+      }
     }
   }
 }
@@ -611,7 +617,9 @@ function looksTextual(bytes: Uint8Array): boolean {
   let controlBytes = 0;
   for (const byte of sample) {
     if (byte === 0) return false;
-    if (byte < 7 || (byte > 13 && byte < 32)) controlBytes++;
+    if (byte < 7 || (byte > 13 && byte < 32)) {
+      controlBytes++;
+    }
   }
   return sample.length === 0 || controlBytes / sample.length < CONTROL_BYTE_RATIO_LIMIT;
 }

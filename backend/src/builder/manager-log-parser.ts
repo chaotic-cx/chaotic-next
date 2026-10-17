@@ -40,9 +40,7 @@ export function parseManagerLogEvent(dataLine: string): string | undefined {
   const payload = dataLine.slice(6);
   try {
     const parsed = JSON.parse(payload) as ManagerLogEntry;
-    if (parsed.mod && FILTERED_MODULES.has(parsed.mod)) {
-      return undefined;
-    }
+    if (parsed.mod && FILTERED_MODULES.has(parsed.mod)) return undefined;
     if (parsed.msg) {
       const ts = parsed.ts ? `${DIM}${formatTimestamp(parsed.ts)}${RESET}` : '';
       const level = parsed.level ? padLevel(parsed.level) : '';
@@ -58,6 +56,6 @@ export function parseManagerLogEvent(dataLine: string): string | undefined {
     }
     return undefined;
   } catch {
-    return payload + '\n';
+    return `${payload}\n`;
   }
 }

@@ -1,0 +1,228 @@
+{
+  "heading": "Memorial — Ausgabe {{year}}",
+  "terminals": {
+    "title": "Terminal-Setups",
+    "badge": "Terminal",
+    "imageAlt": "Terminal von {{author}}"
+  },
+  "desktops": {
+    "title": "Desktop-Showcases",
+    "badge": "Desktop",
+    "imageAlt": "Desktop von {{author}}"
+  },
+  "edition2021": {
+    "description": "Das Memorial zum dritten Geburtstag von Chaotic-AUR",
+    "keywords": "Chaotic-AUR, Repository, Pakete, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR Pakete, Chaotic-AUR Repository, Chaotic-AUR Memorial",
+    "subtitle": "Die Community hat diese Screenshots zur Feier des 3. Geburtstags von Chaotic-AUR gesammelt."
+  },
+  "edition2024": {
+    "description": "Das Memorial 2024 zum sechsten Geburtstag von Chaotic-AUR",
+    "keywords": "Chaotic-AUR, Repository, Pakete, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR Pakete, Chaotic-AUR Repository, Chaotic-AUR Memorial",
+    "subtitle": "Wir feiern den sechsten Geburtstag von Chaotic-AUR mit Screenshots aus der Community und dem Start unserer <a class=\"text-ctp-peach hover:underline\" href=\"https://gitlab.com/chaotic-aur/pkgbuilds\" target=\"_blank\" rel=\"noopener noreferrer\">neuen Build-Infra 4.0 🎉</a>"
+  },
+  "edition2026": {
+    "description": "Acht Jahre Chaotic-AUR: unsere Geschichte seit 2018 und Fun Facts aus der Commit-Historie",
+    "keywords": "Chaotic-AUR, Repository, Pakete, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR Geburtstag, Chaotic-AUR Geschichte, Chaotic-AUR Memorial",
+    "subtitle": "Seit {{year}} baut ein Team aus Freiwilligen AUR-Pakete für dich. Das ist unsere Geschichte.",
+    "timelineTitle": "Timeline",
+    "timeline": {
+      "founded": "PedroHLC startet Chaotic-AUR.",
+      "infra1": "infra 1.0 geht live: erste Build-Skripte, repoctl und statische Seiten.",
+      "ipfs": "Das Repository läuft auch als IPFS-Peer. Nach sechs Wochen ist das Experiment wieder vorbei.",
+      "tkg": "Die TkG-Kernel landen im Repository.",
+      "architectures": "Support für weitere Architekturen und Arch-basierte Distributionen kommt dazu.",
+      "firstMirror": "BangL betreibt den ersten Community-Mirror.",
+      "zst": "Alle Pakete werden ab jetzt mit zstd komprimiert.",
+      "interfere": "Mit interfere startet ein eigenes Repository, das kaputte AUR-Pakete vor dem Build repariert.",
+      "garuda": "Chaotic-AUR baut ab jetzt auch die Pakete von Garuda Linux.",
+      "toolbox": "Die Toolbox (infra 2.0) startet. Bugs und Paketwünsche laufen ab jetzt über chaotic-aur/packages auf GitHub.",
+      "infra1Death": "„Last commit and the death of infra1.0“",
+      "infra3": "Infra 3.0 bringt Routinen, den Keyring und Tools zum Aufräumen.",
+      "ufscar": "Der HPC-Cluster der UFSCar baut ab jetzt mit.",
+      "router": "Der Mirror-Router geht auf Heroku live, zusammen mit der Website chaotic.cx.",
+      "syncthing": "Die Mirrors synchronisieren sich ab jetzt per Syncthing.",
+      "realtimeMetrics": "Der Router zählt Downloads in Echtzeit, inklusive Herkunftsland.",
+      "geoRouting": "Health-Checks und Geo-Routing leiten jeden Nutzer zum nächstgelegenen Mirror, der online ist.",
+      "memorial3": "Zum 3. Geburtstag teilt die Community ihre Setups im ersten Memorial.",
+      "dockerMirror": "Mit einem Docker-Setup lässt sich ein eigener Mirror schnell aufsetzen.",
+      "ansible": "Eine Ansible-Rolle setzt den Main Node und die Cluster-Nodes auf.",
+      "multiRepoRouter": "Der Router liefert jetzt mehrere Repositories über dasselbe Mirror-Netzwerk aus.",
+      "mirrorMap": "Die erste Mirror-Karte geht online.",
+      "r2Cdn": "Ein CDN-Mirror auf Cloudflare R2 kommt dazu.",
+      "nyx": "Mit Chaotic-Nyx gibt es das Ganze jetzt auch für NixOS.",
+      "pkgrelIncrementer": "Der pkgrel-Incrementer baut Haskell-Pakete automatisch neu, sobald sich ihre Abhängigkeiten ändern.",
+      "infra4": "Mit Chaotic-AUR 4.0 laufen die Builds auf GitLab CI.",
+      "toolboxEnd": "Der letzte Commit in der Toolbox.",
+      "chaoticNext": "Die Arbeit an dieser Website beginnt.",
+      "homeMap": "Mirror-Karte und Deployment-Log kommen auf die Website.",
+      "memorial6": "Zum 6. Geburtstag gibt es das zweite Memorial.",
+      "repoManager": "Download-Metriken, der Repo-Manager für automatische Rebuilds und der neue Router in TypeScript gehen live.",
+      "primeng": "Die Website bekommt ihr erstes großes Redesign.",
+      "humanReview": "Manuelles Review startet: Größere Updates von AUR-Maintainern, die nicht auf unserer Trusted-Liste stehen, werden vor dem Merge geprüft.",
+      "flyio": "Der Router zieht von Heroku zu fly.io um.",
+      "highCaution": "High-Caution-Modus: Die Trusted-Liste ist abgeschaltet. Ab jetzt werden alle größeren AUR-Updates vor dem Merge geprüft.",
+      "optimus": "Angular 22, AUR-Scans und Failure-Tags kommen dazu.",
+      "ghaBuilders": "GitHub-Actions-Runner bauen ab jetzt als zusätzliche Nodes mit.",
+      "uiRework": "Zum 8. Geburtstag: ein weiteres UI-Rework der Website, inklusive SSG und Mehrsprachigkeit."
+    },
+    "funFacts": {
+      "title": "Fun Facts",
+      "note": "Ausgewertet aus der Git-Historie unserer Repositories."
+    },
+    "thanks": "Danke an alle Maintainer, Mirror-Betreiber, Contributor und Nutzer. Auf die nächsten acht Jahre!",
+    "fastfetch": {
+      "uptime": {
+        "label": "Uptime",
+        "value": "{{years}} Jahre, seit dem 18.10.2018"
+      },
+      "commits": {
+        "label": "Commits",
+        "value": "{{total}} in 18 Repositories"
+      },
+      "humans": {
+        "label": "Menschen vs. Bots",
+        "value": "{{humans}} von Menschen, {{bots}} von Bots"
+      },
+      "recordYear": {
+        "label": "Rekordjahr",
+        "value": "2026, bisher {{count}} Commits von Menschen"
+      },
+      "busiestDay": {
+        "label": "Aktivster Tag",
+        "value": "18.01.2025, {{count}} Commits durch einen Massen-Rebuild"
+      },
+      "mirrors": {
+        "label": "Mirrors",
+        "value": "{{mirrors}} in {{countries}} Ländern"
+      },
+      "nightShift": {
+        "label": "Nachtschicht",
+        "value": "{{count}} Commits zwischen Mitternacht und 6 Uhr (Ortszeit)"
+      },
+      "favoriteDay": {
+        "label": "Lieblingstag",
+        "value": "Sonntag, {{count}} Commits"
+      },
+      "christmas": {
+        "label": "Weihnachten",
+        "value": "{{count}} Commits am 25. Dezember, jedes Jahr seit 2021"
+      },
+      "biggestCommit": {
+        "label": "Größter Commit",
+        "value": "{{lines}} geänderte Zeilen, ein Reformat an Heiligabend 2024"
+      },
+      "streak": {
+        "label": "Längste Serie",
+        "value": "{{days}} Tage am Stück (xiota)"
+      },
+      "topWord": {
+        "label": "Häufigstes Wort",
+        "value": "„drop“, {{count}}-mal"
+      },
+      "cleanups": {
+        "label": "Aufräumen",
+        "value": "{{count}}× „no longer needed“"
+      },
+      "kernelParties": {
+        "label": "Kernel-Partys",
+        "value": "{{count}} neue Kernel-Versionen gefeiert"
+      },
+      "oops": {
+        "label": "Oops",
+        "value": "{{count}} Commits"
+      },
+      "rip": {
+        "label": "RIP",
+        "value": "{{count}} Dinge für tot erklärt"
+      },
+      "reverts": {
+        "label": "Reverts",
+        "value": "{{count}} Commits"
+      },
+      "typos": {
+        "label": "Typos",
+        "value": "{{count}} Commits"
+      },
+      "fixStreak": {
+        "label": "Fix-Serie",
+        "value": "{{count}}× „fix“ hintereinander"
+      },
+      "shortest": {
+        "label": "Kürzeste Commit-Message",
+        "value": "„g“"
+      },
+      "emoji": {
+        "label": "Emoji",
+        "value": "nur {{count}} in allen Commits von Menschen"
+      },
+      "ciBot": {
+        "label": "CI-Bot",
+        "value": "{{count}} Commits von Chaotic CI"
+      },
+      "pkgrelBumps": {
+        "label": "PKGREL_BUMPS",
+        "value": "{{count}}× „Update PKGREL_BUMPS“"
+      },
+      "hyprlandPortal": {
+        "label": "Hyprland-Portal",
+        "value": "{{count}} Commits für ein einziges Interfere"
+      }
+    },
+    "heroTitle": "Jahre Chaotic-AUR",
+    "timelinePrevious": "Vorheriges Jahr",
+    "timelineNext": "Nächstes Jahr",
+    "timelineRegion": "Timeline, seitlich scrollbar",
+    "shell": {
+      "title": "Geburtstags-Shell",
+      "outputLabel": "Ausgabe der Shell",
+      "inputLabel": "Befehl",
+      "help": {
+        "intro": "Verfügbare Befehle:",
+        "footer": "Ein paar Befehle stehen nicht in dieser Liste. Viel Spaß beim Suchen!"
+      },
+      "commands": {
+        "help": "Zeige diese Liste",
+        "clear": "Leere den Bildschirm",
+        "fastfetch": "Zeige die Fun Facts",
+        "journalctl": "Zeige die Timeline",
+        "gitLog": "Zeige unsere liebsten Commit-Messages",
+        "mirrors": "Zähle die Mirrors",
+        "uptime": "Zeige, wie lange Chaotic-AUR schon online ist",
+        "makeCake": "Backe einen Geburtstagskuchen",
+        "pacman": "Aktualisiere das System",
+        "cowsay": "Lass die Kuh sprechen",
+        "sudo": "Führe einen Befehl als root aus",
+        "rm": "Lösche das Repository",
+        "whoami": "Zeige, wer du bist",
+        "date": "Zeige Datum und Uhrzeit",
+        "echo": "Gib den Text aus",
+        "history": "Zeige deine letzten Befehle",
+        "exit": "Verlasse die Shell"
+      },
+      "output": {
+        "welcome": "Willkommen in der Geburtstags-Shell von Chaotic-AUR. Wir werden heute {{age}}!",
+        "hint": "Gib {{command}} ein, um zu sehen, was du tun kannst.",
+        "notFound": "{{command}}: Befehl nicht gefunden",
+        "gitUsage": "Versuche es mit git log.",
+        "cake": "Alles Gute zum {{age}}. Geburtstag, Chaotic-AUR! Wünsch dir was.",
+        "pacmanDone": "Es gibt nichts zu tun. Chaotic-AUR hat alle deine Updates schon gebaut.",
+        "rmDenied": "Netter Versuch. Das Repository bleibt, wo es ist.",
+        "sudoDenied": "Du stehst nicht in der sudoers-Datei. Dieser Vorfall wird der Geburtstagsparty gemeldet.",
+        "whoami": "Du. Einer der Menschen, für die sich Chaotic-AUR lohnt.",
+        "exit": "An einem Geburtstag gibt es keinen Ausgang. Nimm erst ein Stück Kuchen: make cake",
+        "mirrorsMap": "Die Karte auf der Startseite zeigt sie live.",
+        "cowsayDefault": "Alles Gute zum {{age}}. Geburtstag, Chaotic-AUR!",
+        "aurHelper": "{{helper}} brauchst du hier nicht. Chaotic-AUR hat das Paket schon für dich gebaut.",
+        "vim": "Vim ist nicht gestartet. Das ist gut so, denn niemand weiß, wie man es wieder verlässt.",
+        "quitVim": "Du bist nicht in Vim, aber gute Reflexe.",
+        "neofetch": "neofetch ist archiviert. Versuche es mit {{command}}.",
+        "konami": "+30 Leben. Alles Gute zum Geburtstag!"
+      }
+    }
+  },
+  "links": {
+    "edition2021": "Zum Memorial 2021",
+    "edition2024": "Zum Memorial 2024",
+    "edition2026": "Zum Memorial 2026"
+  }
+}

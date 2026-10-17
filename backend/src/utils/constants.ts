@@ -26,6 +26,9 @@ export const CACHE_TTL_MS = 30_000;
 /** Long-lived TTL for expensive router/metrics aggregations, refreshed by the rollup cron. */
 export const METRICS_CACHE_TTL_MS = 21_600_000;
 
+// Repo reports read every active package. Five minutes bounds staleness for edits outside a repo run.
+export const REPORT_CACHE_TTL_MS = 300_000;
+
 /** Global API throttling: 100 requests per minute per client. */
 export const THROTTLE_TTL_MS = 60_000;
 export const THROTTLE_LIMIT = 100;
@@ -38,6 +41,9 @@ export const AUR_SCAN_THROTTLE_LIMIT = 5;
 export const EXTERNAL_PROXY_THROTTLE_TTL_MS = 60_000;
 export const AUR_SEARCH_THROTTLE_LIMIT = 20;
 export const PIPELINE_JOBS_THROTTLE_LIMIT = 30;
+
+/** GitHub closes automated issues as "not planned", never "completed". */
+export const GITHUB_CLOSED_STATE_REASON = 'not_planned';
 
 /** Bounds for user-supplied query windows and pagination. */
 export const MAX_DAYS_WINDOW = 3650;

@@ -1,19 +1,31 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
 import { BuildStatusService } from './build-status.service';
 import { PipelineListComponent } from './pipeline-list.component';
 
-const PIPELINES_PAGE_SIZE = 8;
+const PIPELINES_PAGE_SIZE = 6;
+const SKELETON_ROW_COUNT = 4;
 
 @Component({
   selector: 'chaotic-build-status-pipelines',
-  imports: [BuildStatusSectionComponent, PipelineListComponent, BuildStatusPager],
+  imports: [
+    LoadErrorComponent,
+    BuildStatusSectionComponent,
+    PipelineListComponent,
+    BuildStatusPager,
+    TranslocoDirective,
+    EmptyStateComponent,
+  ],
   templateUrl: './build-status-pipelines.component.html',
 })
 export class BuildStatusPipelinesComponent {
   readonly buildStatusService = inject(BuildStatusService);
   readonly openPipeline = output<number>();
+  readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
 
   private readonly page = signal(1);
 

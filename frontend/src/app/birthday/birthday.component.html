@@ -1,0 +1,118 @@
+<div class="chaotic-page" *transloco="let t">
+  <header class="birthday-hero chaotic-text-inset">
+    <div class="birthday-hero__numeral" aria-hidden="true">
+      <span class="birthday-hero__digit">{{ age }}</span>
+    </div>
+
+    <div class="birthday-hero__copy">
+      <h1 class="birthday-hero__title">
+        <span class="sr-only">{{ age }}</span>
+        {{ t('memorial.edition2026.heroTitle') }}
+      </h1>
+      <p class="birthday-hero__lede">{{ t('memorial.edition2026.subtitle', { year: foundingYear }) }}</p>
+      <p class="birthday-hero__span" aria-hidden="true">
+        <span>{{ foundingYear }}</span>
+        <span class="birthday-hero__line"></span>
+        <span>{{ currentYear }}</span>
+      </p>
+    </div>
+  </header>
+
+  <section class="birthday-section" aria-labelledby="birthday-timeline-title">
+    <div class="birthday-section__head chaotic-text-inset">
+      <h2 class="chaotic-section-title" id="birthday-timeline-title">{{ t('memorial.edition2026.timelineTitle') }}</h2>
+      <div class="birthday-scroll-buttons">
+        <button
+          class="birthday-scroll-button"
+          [attr.aria-label]="t('memorial.edition2026.timelinePrevious')"
+          [disabled]="atStart()"
+          (click)="scrollYears(-1)"
+          type="button"
+        >
+          <i class="pi pi-chevron-left" aria-hidden="true"></i>
+        </button>
+        <button
+          class="birthday-scroll-button"
+          [attr.aria-label]="t('memorial.edition2026.timelineNext')"
+          [disabled]="atEnd()"
+          (click)="scrollYears(1)"
+          type="button"
+        >
+          <i class="pi pi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrolls sideways inside its box. Focusable, so arrow keys scroll it too. -->
+    <div
+      class="birthday-scroller"
+      #scroller
+      [class.is-at-start]="atStart()"
+      [class.is-at-end]="atEnd()"
+      [attr.aria-label]="t('memorial.edition2026.timelineRegion')"
+      (scroll)="updateScrollEdges()"
+      role="region"
+      tabindex="0"
+    >
+      <ol class="birthday-years" #years>
+        @for (group of timeline(); track group.year) {
+          <li class="birthday-year">
+            <h3 class="birthday-year__label">{{ group.year }}</h3>
+            <ol class="birthday-year__items">
+              @for (item of group.items; track item.textKey) {
+                <li class="birthday-entry">
+                  <time class="birthday-entry__date" [attr.datetime]="item.dateTime">{{ item.dateLabel }}</time>
+                  <p class="birthday-entry__text">{{ t(item.textKey) }}</p>
+                </li>
+              }
+            </ol>
+          </li>
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="birthday-section" aria-labelledby="birthday-facts-title">
+    <div class="chaotic-text-inset">
+      <h2 class="chaotic-section-title" id="birthday-facts-title">{{ t('memorial.edition2026.funFacts.title') }}</h2>
+      <p class="birthday-section__note">{{ t('memorial.edition2026.funFacts.note') }}</p>
+    </div>
+
+    <div class="birthday-terminals">
+      <div class="birthday-terminal">
+        <div class="birthday-terminal__bar" aria-hidden="true">
+          <span class="birthday-terminal__dot birthday-terminal__dot--red"></span>
+          <span class="birthday-terminal__dot birthday-terminal__dot--yellow"></span>
+          <span class="birthday-terminal__dot birthday-terminal__dot--green"></span>
+          <span class="birthday-terminal__title">{{ terminal.fastfetchTitle }}</span>
+        </div>
+
+        <div class="birthday-terminal__body">
+          <chaotic-birthday-fastfetch />
+        </div>
+      </div>
+
+      <div class="birthday-terminal birthday-terminal--shell">
+        <div class="birthday-terminal__bar" aria-hidden="true">
+          <span class="birthday-terminal__dot birthday-terminal__dot--red"></span>
+          <span class="birthday-terminal__dot birthday-terminal__dot--yellow"></span>
+          <span class="birthday-terminal__dot birthday-terminal__dot--green"></span>
+          <span class="birthday-terminal__title">{{ terminal.shellTitle }}</span>
+        </div>
+
+        <div class="birthday-terminal__body">
+          <h3 class="sr-only">{{ t('memorial.edition2026.shell.title') }}</h3>
+          <chaotic-birthday-shell />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="birthday-thanks chaotic-text-inset">{{ t('memorial.edition2026.thanks') }}</p>
+
+  <div class="birthday-crosslink">
+    @for (link of memorialLinks; track link.path) {
+      <a [routerLink]="link.path">{{ t(link.labelKey) }}</a>
+    }
+  </div>
+</div>

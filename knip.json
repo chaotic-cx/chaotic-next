@@ -6,6 +6,7 @@
     "backend/src/scripts/*.ts",
     "backend-e2e/src/test/*.ts",
     "frontend/src/environments/environment.prod.ts",
+    "frontend/src/main.server.ts",
     "frontend/src/main.ts",
     "shared-lib/src/index.ts"
   ],
@@ -24,6 +25,7 @@
     "@catppuccin/*",
     "@eslint/*",
     "@fontsource-variable/*",
+    "@jsverse/transloco-optimize",
     "@nx/*",
     "@openng/icons",
     "@openng/optimus-ui-tailwindcss",

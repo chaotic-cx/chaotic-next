@@ -1,5 +1,6 @@
 import {
   type ArchOverlapReport,
+  type BrokenFixability,
   type BumpPackagesResult,
   type MissingDependencyReport,
   type RebuildCoverageReport,
@@ -7,6 +8,7 @@ import {
   RepoStatus,
 } from '@chaotic-next/shared-lib';
 import { HttpService } from '@nestjs/axios';
+import { type Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
   ConflictException,
@@ -37,6 +39,8 @@ import {
   SonameDependency,
   TriggerType,
 } from '../interfaces/repo-manager';
+import { cachedResult } from '../utils/cache';
+import { REPORT_CACHE_TTL_MS } from '../utils/constants';
 import { bumpTypeToText } from '../utils/functions';
 import { paginate, resolvePagination } from '../utils/pagination';
 import { ArchMirrorService } from './arch-mirror.service';
@@ -57,6 +61,7 @@ import {
   type DependencyNode,
   latestAnalysisByKey,
   pkgTypeOf,
+  worstFixability,
 } from './signal';
 
 /** The cron scheduler runs on German time so runs align with Arch mirror syncs. */
@@ -64,6 +69,10 @@ const CRON_TIME_ZONE = 'Europe/Berlin';
 
 // Daily scan of the Chaotic packages without a current analysis, for example after a failed post-deploy scan.
 const CHAOTIC_ANALYSIS_BACKFILL_CRON = '0 4 * * *';
+
+const MISSING_DEPS_CACHE_KEY = 'repo-report:missing-deps';
+const ARCH_OVERLAP_CACHE_KEY = 'repo-report:arch-overlap';
+const REPORT_CACHE_KEYS = [MISSING_DEPS_CACHE_KEY, ARCH_OVERLAP_CACHE_KEY];
 
 @Injectable()
 export class RepoManagerService implements OnModuleInit {
@@ -90,6 +99,7 @@ export class RepoManagerService implements OnModuleInit {
     private schedulerRegistry: SchedulerRegistry,
     @Inject(REPO_WRITER) private repoWriter: RepoWriter,
     @Inject(REPO_READER_FACTORY) private readerFactory: RepoReaderFactory,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   onModuleInit(): void {
@@ -114,8 +124,10 @@ export class RepoManagerService implements OnModuleInit {
       }),
     );
 
-    // The Arch mirror also serves as the build mirror. Poll its `lastupdate`
-    // file so we notice repo re-syncs near-instantly (default every minute).
+    /**
+     * The Arch mirror also serves as the build mirror. Poll its `lastupdate`
+     * file so we notice repo re-syncs near-instantly (default every minute).
+     */
     const pollWithThis = this.pollMirrorLastUpdate.bind(this);
     this.schedulerRegistry.addCronJob(
       'mirror-lastupdate-poll',
@@ -233,11 +245,15 @@ export class RepoManagerService implements OnModuleInit {
     return this.repoManager.indexChaoticRepo();
   }
 
-  async getBrokenPackages(page?: number, perPage?: number): Promise<Paginated<BrokenPackageReport>> {
+  async getBrokenPackages(
+    page?: number,
+    perPage?: number,
+    fixability?: BrokenFixability,
+  ): Promise<Paginated<BrokenPackageReport>> {
     const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
     const allChaotic = await this.elfAnalysisRepository.find({
       where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC) },
-      select: { pkgId: true, version: true, broken: true, brokenReasons: true },
+      select: { pkgId: true, version: true, broken: true, brokenReasons: true, brokenIssues: true },
     });
     const latest = latestAnalysisByKey(allChaotic, (row) => String(row.pkgId));
     const brokenAnalyses = [...latest.values()].filter((a) => a.broken);
@@ -259,10 +275,13 @@ export class RepoManagerService implements OnModuleInit {
           version: analysis.version,
           repoName: pkg?.repo?.name,
           reasons: analysis.brokenReasons,
+          issues: analysis.brokenIssues,
+          fixability: worstFixability(analysis.brokenIssues),
           skipSignalScan: pkg?.skipSignalScan ?? false,
         };
       })
-      .filter((report) => !report.skipSignalScan);
+      .filter((report) => !report.skipSignalScan)
+      .filter((report) => fixability === undefined || report.fixability === fixability);
 
     const total = allBrokenReports.length;
     allBrokenReports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));
@@ -274,7 +293,23 @@ export class RepoManagerService implements OnModuleInit {
     return this.rebuildTriggerService.rebuildCoverage();
   }
 
-  async getMissingDependencies(): Promise<MissingDependencyReport[]> {
+  getMissingDependencies(): Promise<MissingDependencyReport[]> {
+    return cachedResult(this.cacheManager, MISSING_DEPS_CACHE_KEY, REPORT_CACHE_TTL_MS, () =>
+      this.computeMissingDependencies(),
+    );
+  }
+
+  getArchOverlap(): Promise<ArchOverlapReport[]> {
+    return cachedResult(this.cacheManager, ARCH_OVERLAP_CACHE_KEY, REPORT_CACHE_TTL_MS, () =>
+      this.computeArchOverlap(),
+    );
+  }
+
+  private async clearReportCache(): Promise<void> {
+    await Promise.all(REPORT_CACHE_KEYS.map((key) => this.cacheManager.del(key)));
+  }
+
+  private async computeMissingDependencies(): Promise<MissingDependencyReport[]> {
     const strip = (raw: string): string => raw.split('=')[0].split('<')[0].split('>')[0].trim();
     const [archPkgs, chaoticPkgs] = await Promise.all([
       this.archlinuxPackageRepository.find({ where: { deactivatedAt: IsNull() } }),
@@ -287,7 +322,9 @@ export class RepoManagerService implements OnModuleInit {
     }
     for (const pkg of chaoticPkgs) {
       provided.add(pkg.pkgname);
-      if (pkg.pkgbaseName) provided.add(pkg.pkgbaseName);
+      if (pkg.pkgbaseName) {
+        provided.add(pkg.pkgbaseName);
+      }
       for (const name of pkg.metadata?.provides ?? []) provided.add(strip(name));
     }
     const reports: MissingDependencyReport[] = [];
@@ -312,7 +349,7 @@ export class RepoManagerService implements OnModuleInit {
     return reports;
   }
 
-  async getArchOverlap(): Promise<ArchOverlapReport[]> {
+  private async computeArchOverlap(): Promise<ArchOverlapReport[]> {
     const [archPkgs, chaoticPkgs] = await Promise.all([
       this.archlinuxPackageRepository.find({ where: { deactivatedAt: IsNull() } }),
       this.packageRepository.find({ where: { isActive: true }, relations: { repo: true } }),
@@ -342,9 +379,7 @@ export class RepoManagerService implements OnModuleInit {
    */
   async bumpSelectedPackages(pkgnames: string[], actorGroups: string[]): Promise<BumpPackagesResult> {
     const uniqueNames = [...new Set(pkgnames.map((name) => name.trim()).filter(Boolean))];
-    if (uniqueNames.length === 0) {
-      throw new BadRequestException('No packages provided', { errorCode: 'NO_PACKAGES' });
-    }
+    if (uniqueNames.length === 0) throw new BadRequestException('No packages provided', { errorCode: 'NO_PACKAGES' });
 
     const pkgs = await this.packageRepository.find({
       where: { pkgname: In(uniqueNames), isActive: true },
@@ -357,9 +392,7 @@ export class RepoManagerService implements OnModuleInit {
       list.push(pkg);
       byRepo.set(pkg.repo.id, list);
     }
-    if (byRepo.size === 0) {
-      throw new NotFoundException('No active packages matched the selection');
-    }
+    if (byRepo.size === 0) throw new NotFoundException('No active packages matched the selection');
 
     for (const repoPkgs of byRepo.values()) {
       const repoName = repoPkgs[0]?.repo?.name;
@@ -372,8 +405,10 @@ export class RepoManagerService implements OnModuleInit {
       }
     }
 
-    // The commit must carry the reason each package is broken (missing sonames),
-    // not just that it was bumped manually.
+    /**
+     * The commit must carry the reason each package is broken (missing sonames),
+     * not just that it was bumped manually.
+     */
     const brokenReasons = await this.loadBrokenReasons([...byRepo.values()].flat());
     const skipped: string[] = [];
 
@@ -389,9 +424,11 @@ export class RepoManagerService implements OnModuleInit {
       let reader: RepoReader | undefined;
       try {
         reader = await this.readerFactory.open(repo);
-        // The `.CI/config` lives under the repo's pkgbase directory. A broken
-        // report can name a built sub-package that is not a real directory, so
-        // only bump packages whose directory actually exists in the repo.
+        /**
+         * The `.CI/config` lives under the repo's pkgbase directory. A broken
+         * report can name a built sub-package that is not a real directory, so
+         * only bump packages whose directory actually exists in the repo.
+         */
         const dirs = new Set(await reader.listPackageDirs());
         const needsRebuild: RepoUpdateRunParams[] = [];
         for (const pkg of repoPkgs) {
@@ -450,9 +487,11 @@ export class RepoManagerService implements OnModuleInit {
   }
 
   async getDependencyGraph(): Promise<DependencyEdge[]> {
-    // Select only the columns the graph needs; the full rows carry large jsonb
-    // payloads (files/exportedSymbols/vtables) that would otherwise be loaded
-    // for every analysis on every call.
+    /**
+     * Select only the columns the graph needs; the full rows carry large jsonb
+     * payloads (files/exportedSymbols/vtables) that would otherwise be loaded
+     * for every analysis on every call.
+     */
     const analyses = await this.elfAnalysisRepository.find({
       select: {
         pkgType: true,
@@ -496,14 +535,14 @@ export class RepoManagerService implements OnModuleInit {
       relations: { repo: true },
       order: { lastUpdated: 'DESC' },
     });
-    if (pkgs.length === 0) {
-      throw new NotFoundException(`Package not found: ${pkgname}`);
-    }
+    if (pkgs.length === 0) throw new NotFoundException(`Package not found: ${pkgname}`);
 
-    // A pkgname can map to several package rows (e.g. duplicate/renamed repo
-    // entries), and only one of them carries the current ELF analysis. Look
-    // across all of them and use the newest analysis; a lone findOne() can pick
-    // a row with no analysis and wrongly report an empty dependency graph.
+    /**
+     * A pkgname can map to several package rows (e.g. duplicate/renamed repo
+     * entries), and only one of them carries the current ELF analysis. Look
+     * across all of them and use the newest analysis; a lone findOne() can pick
+     * a row with no analysis and wrongly report an empty dependency graph.
+     */
     const analyses = await this.elfAnalysisRepository.find({
       where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: In(pkgs.map((pkg) => pkg.id)) },
     });
@@ -513,16 +552,20 @@ export class RepoManagerService implements OnModuleInit {
       return latest;
     }, undefined);
 
-    // Base the report on the package that owns the analysis (for metadata deps
-    // and explicit triggers); otherwise fall back to the most recently updated.
+    /**
+     * Base the report on the package that owns the analysis (for metadata deps
+     * and explicit triggers); otherwise fall back to the most recently updated.
+     */
     const pkg = pkgs.find((candidate) => candidate.id === analysis?.pkgId) ?? pkgs[0];
 
     const explicitTriggers = await this.explicitTriggersFor(pkg);
 
-    // Only packages the package actually depends on can trigger its rebuild:
-    // a soname provider or plugin owner that isn't in metadata.deps cannot be
-    // the cause of a BROKEN_DEPS/PLUGIN bump. When no deps are recorded (e.g.
-    // test seeds) the filter is a no-op and all providers are returned.
+    /**
+     * Only packages the package actually depends on can trigger its rebuild:
+     * a soname provider or plugin owner that isn't in metadata.deps cannot be
+     * the cause of a BROKEN_DEPS/PLUGIN bump. When no deps are recorded (e.g.
+     * test seeds) the filter is a no-op and all providers are returned.
+     */
     const deps = new Set(pkg.metadata?.deps ?? []);
 
     const sonameDependencies = analysis ? await this.sonameDependenciesFor(analysis.neededSonames, deps) : [];
@@ -677,8 +720,10 @@ export class RepoManagerService implements OnModuleInit {
     try {
       await this.repoManager.pullArchlinuxPackages();
 
-      // When the signal scanner is enabled, download the changed packages from
-      // the mirror and scan them before computing rebuild triggers.
+      /**
+       * When the signal scanner is enabled, download the changed packages from
+       * the mirror and scan them before computing rebuild triggers.
+       */
       let hasMissedBreaks = false;
       if (this.configService.get<boolean>('repoMan.signalScanEnabled')) {
         await this.repoManager.scanChangedArchPackages();
@@ -705,6 +750,7 @@ export class RepoManagerService implements OnModuleInit {
       }
     } finally {
       this.repoManager.status = RepoStatus.INACTIVE;
+      await this.clearReportCache();
     }
   }
 

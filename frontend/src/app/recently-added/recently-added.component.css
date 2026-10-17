@@ -1,21 +1,25 @@
-.recently-added-section {
-  background: none;
-  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
-  border-radius: var(--p-panel-border-radius, 12px);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  padding: 1.5rem;
-}
-
+/* Same recessed card as the pipeline stages, so both home sections read as one system. */
 .recent-card {
-  background: var(--p-card-background, rgba(30, 30, 46, 0.6));
-  border: 1px solid var(--p-panel-border-color, var(--ctp-mocha-crust));
-  border-radius: var(--p-panel-border-radius, 12px);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  transition: border-color 0.15s ease;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  background: var(--chaotic-surface-inset);
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-md);
+  transition: border-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
 }
 
-.recent-card:hover {
-  border-color: var(--ctp-mocha-maroon);
+.recent-card__meta {
+  justify-self: end;
+}
+
+.recent-card:hover,
+.recent-card:focus-visible {
+  border-color: color-mix(in srgb, var(--catppuccin-color-mauve) 50%, transparent);
+}
+
+.recent-skeleton {
+  height: 5.25rem;
+  border-radius: var(--chaotic-radius-md);
 }

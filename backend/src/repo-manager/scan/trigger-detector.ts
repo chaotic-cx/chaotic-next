@@ -27,15 +27,17 @@ import {
   findVtableDrifts,
   formatBrokenDependency,
   formatConsumerAbiBreak,
+  hasSuccessor,
   latestAnalysisByKey,
   pkgTypeOf,
   releaseVersion,
   type RuntimeName,
   sameLibraryFamily,
+  sonameStems,
 } from '../signal';
 import { pickBaselineVersion } from './baseline-version';
 import { DependencyClosure, type DependencyRecord } from './dependency-closure';
-import { latestActiveAnalysesByPackage } from './latest-analyses';
+import { type ActiveAnalysis, analysisKey, latestActiveAnalysesByPackage } from './latest-analyses';
 import { groupByPkgbase, pkgbaseOf, recordedDeps } from './pkgbase-outputs';
 import { loadRuntimeVersions } from './runtime-versions';
 
@@ -49,9 +51,7 @@ function depsContains(deps: Set<string>, pkgname: string): boolean {
   if (deps.has(pkgname)) return true;
 
   for (const alias of PACKAGE_ALIASES[pkgname] ?? []) {
-    if (deps.has(alias)) {
-      return true;
-    }
+    if (deps.has(alias)) return true;
   }
 
   return false;
@@ -99,6 +99,7 @@ export function summarizeDetails(details: string[]): string[] {
 
   const kept = details.slice(0, ABI_BREAK_DETAILS_LIMIT);
   kept.push(`... ${details.length - ABI_BREAK_DETAILS_LIMIT} more`);
+
   return kept;
 }
 
@@ -118,13 +119,19 @@ interface BrokenDepsContext {
   changed: ChangedOwner[];
   // soname -> set of provider pkgnames (real providers, latest analysis per package).
   providedByPkgname: Map<string, Set<string>>;
+  // Stems of all provided sonames, to tell whether a rebuild has a successor to link against.
+  providedSonameStems: Set<string>;
   // pacman installs these transitively, so they always count as provided.
   archProvidedSonames: Set<string>;
   runtimes: Partial<Record<RuntimeName, string | null>>;
   previousProvidedByPkg: Map<number, Set<string>>;
   currentProvidedByPkg: Map<number, Set<string>>;
+  // Version nodes each changed pkg provided before the change, per soname.
+  previousVersionNodesByPkg: Map<number, Record<string, string[]>>;
   // Current version nodes each changed pkg provides, per soname.
   currentVersionNodesByPkg: Map<number, Record<string, string[]>>;
+  // soname -> provider pkgname -> version nodes, for sonames that a changed pkg versioned before.
+  versionNodesByProvider: Map<string, Map<string, Set<string>>>;
   // Sonames that a changed pkg provided before the change and does not provide now.
   droppedSonames: Set<string>;
   // Null only in tests.
@@ -209,6 +216,7 @@ export class TriggerDetector {
     }
 
     this.pino.info({ count: detected.size, repoId }, 'Found packages to rebuild');
+
     return detected;
   }
 
@@ -321,7 +329,6 @@ export class TriggerDetector {
     }
 
     const analyses = await this.elfAnalysisRepository.find({ where: versionsToLoad });
-
     const byVersion = new Map(analyses.map((a) => [`${a.pkgType}|${a.pkgId}|${a.version}`, a]));
 
     const pairs = new Map<string, { previous?: PackageElfAnalysis; current?: PackageElfAnalysis }>();
@@ -434,7 +441,6 @@ export class TriggerDetector {
         where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: pkg.id, version: In(Object.values(versions)) },
         select: { pkgId: true, version: true, providedSonames: true, providedVersionNodes: true },
       });
-
       const previous = rows.find((row) => row.version === versions.previous);
       const current = rows.find((row) => row.version === versions.current);
       if (!previous || !current) continue;
@@ -484,10 +490,11 @@ export class TriggerDetector {
 
     this.pino.debug({ analyses: rows.length, packages: pkgIds.length }, 'Loaded latest Chaotic analyses');
 
-    // Keep the newest version per package by Arch version order, not DB string
-    // order (which misorders e.g. 2:13 vs 2:9 or 1.10 vs 1.9).
+    /**
+     * Keep the newest version per package by Arch version order, not DB string
+     * order (which misorders e.g. 2:13 vs 2:9 or 1.10 vs 1.9).
+     */
     const latest = latestAnalysisByKey(rows, (row) => String(row.pkgId));
-
     for (const [key, row] of latest) {
       map.set(Number(key), row);
     }
@@ -515,9 +522,11 @@ export class TriggerDetector {
       for (const entry of indexEntry.symbolBreaks) {
         if (!isPlugin && !neededSonames.has(entry.soname)) continue;
 
-        // A consumer that ships its own copy of the library (e.g. python39
-        // bundling libpython3.9.so.1.0) resolves those symbols locally, not
-        // against the owner's updated soname, so it is not a break victim.
+        /**
+         * A consumer that ships its own copy of the library (e.g. python39
+         * bundling libpython3.9.so.1.0) resolves those symbols locally, not
+         * against the owner's updated soname, so it is not a break victim.
+         */
         if (this.selfProvidesLibrary(consumer, entry.soname)) continue;
 
         for (const symbol of entry.lostSymbols) {
@@ -570,7 +579,6 @@ export class TriggerDetector {
       this.loadBaselineAnalyses(relevantChanged),
       this.loadProvidedSonameAnalyses(currentVersions),
     ]);
-
     this.pino.debug(
       { changed: relevantChanged.length, previousAnalyses: previousRows.length },
       'Broken-deps context loaded',
@@ -588,13 +596,15 @@ export class TriggerDetector {
     currentRows: ProvidedAnalysis[],
     runtimes: Partial<Record<RuntimeName, string | null>>,
   ): Promise<BrokenDepsContext> {
-    const [{ providedByPkgname, archProvidedSonames }, dependencyClosure] = await Promise.all([
+    const [{ providedByPkgname, archProvidedSonames, active }, dependencyClosure] = await Promise.all([
       this.loadSonameProviders(),
       this.loadDependencyClosure(),
     ]);
     const previousProvidedByPkg = new Map<number, Set<string>>();
+    const previousVersionNodesByPkg = new Map<number, Record<string, string[]>>();
     for (const row of previousRows) {
       previousProvidedByPkg.set(row.pkgId, new Set(row.providedSonames));
+      previousVersionNodesByPkg.set(row.pkgId, row.providedVersionNodes ?? {});
     }
 
     const currentProvidedByPkg = new Map<number, Set<string>>();
@@ -610,14 +620,67 @@ export class TriggerDetector {
     return {
       changed,
       providedByPkgname,
+      providedSonameStems: sonameStems(providedByPkgname.keys()),
       archProvidedSonames,
       runtimes,
       previousProvidedByPkg,
       currentProvidedByPkg,
+      previousVersionNodesByPkg,
       currentVersionNodesByPkg,
+      versionNodesByProvider: await this.loadVersionNodeProviders(active, versionedSonames(previousRows)),
       droppedSonames: findDroppedSonames(previousProvidedByPkg, currentProvidedByPkg),
       dependencyClosure,
     };
+  }
+
+  /**
+   * Current version nodes of every active provider of the given sonames.
+   */
+  private async loadVersionNodeProviders(
+    active: Map<string, ActiveAnalysis>,
+    sonames: Set<string>,
+  ): Promise<Map<string, Map<string, Set<string>>>> {
+    const bySoname = new Map<string, Map<string, Set<string>>>();
+    if (sonames.size === 0) return bySoname;
+
+    const providers = [...active.values()].filter(({ analysis }) =>
+      analysis.providedSonames.some((soname) => sonames.has(soname)),
+    );
+    const pkgnameByKey = new Map(providers.map(({ pkgname, analysis }) => [analysisKey(analysis), pkgname]));
+    for (const row of await this.loadVersionNodeRows(providers.map(({ analysis }) => analysis))) {
+      const pkgname = pkgnameByKey.get(analysisKey(row));
+      if (pkgname === undefined) continue;
+
+      for (const soname of sonames) {
+        const nodes = row.providedVersionNodes?.[soname];
+        if (!nodes) continue;
+
+        const byProvider = bySoname.get(soname) ?? new Map<string, Set<string>>();
+        byProvider.set(pkgname, new Set(nodes));
+        bySoname.set(soname, byProvider);
+      }
+    }
+
+    return bySoname;
+  }
+
+  private async loadVersionNodeRows(analyses: PackageElfAnalysis[]): Promise<PackageElfAnalysis[]> {
+    const rows: PackageElfAnalysis[] = [];
+    for (let offset = 0; offset < analyses.length; offset += ANALYSIS_QUERY_BATCH_SIZE) {
+      const batch = analyses.slice(offset, offset + ANALYSIS_QUERY_BATCH_SIZE);
+      rows.push(
+        ...(await this.elfAnalysisRepository.find({
+          where: batch.map((analysis) => ({
+            pkgType: analysis.pkgType,
+            pkgId: analysis.pkgId,
+            version: analysis.version,
+          })),
+          select: { pkgType: true, pkgId: true, version: true, providedVersionNodes: true },
+        })),
+      );
+    }
+
+    return rows;
   }
 
   private async loadBaselineAnalyses(changed: ArchlinuxPackage[]): Promise<ProvidedAnalysis[]> {
@@ -654,7 +717,6 @@ export class TriggerDetector {
       deps: pkg.metadata?.deps ?? [],
       provides: pkg.metadata?.provides ?? [],
     }));
-
     return new DependencyClosure(records);
   }
 
@@ -690,6 +752,7 @@ export class TriggerDetector {
   private async loadSonameProviders(): Promise<{
     providedByPkgname: Map<string, Set<string>>;
     archProvidedSonames: Set<string>;
+    active: Map<string, ActiveAnalysis>;
   }> {
     const latest = await latestActiveAnalysesByPackage(
       this.elfAnalysisRepository,
@@ -712,7 +775,7 @@ export class TriggerDetector {
       }
     }
 
-    return { providedByPkgname: bySoname, archProvidedSonames };
+    return { providedByPkgname: bySoname, archProvidedSonames, active: latest };
   }
 
   /**
@@ -804,6 +867,14 @@ export class TriggerDetector {
 
     if (relevant.length === 0 || !cause) return null;
 
+    if (!relevant.some((dep) => hasSuccessor(dep, ctx.providedSonameStems))) {
+      this.pino.info(
+        { pkgId: consumer.pkgId, version: consumer.version, reasons: relevant.map(formatBrokenDependency) },
+        'No rebuild fixes the broken dependencies, skipping',
+      );
+      return null;
+    }
+
     return { deps: relevant, archPkg: cause };
   }
 
@@ -827,12 +898,16 @@ export class TriggerDetector {
         where: { pkgname: pkgbaseDir, repo: { id: repoId } },
         select: { id: true },
       });
-
       const bumpedPkgId = pkgbasePkg ? pkgbasePkg.id : output.id;
       const alreadyBumped = await this.bumpedSince(bumpedPkgId, brokenSince);
       if (alreadyBumped) continue;
 
-      const deps = await this.currentBrokenDependencies(analysis);
+      const { deps, stems } = await this.currentBrokenDependencies(analysis);
+      if (!deps.some((dep) => hasSuccessor(dep, stems))) {
+        this.pino.info({ pkgname: output.pkgname }, 'No rebuild fixes the missed break, skipping');
+        continue;
+      }
+
       const culprit = await this.blameMissedBreak(deps, outputs);
       if (!culprit) {
         this.pino.warn({ pkgname: output.pkgname }, 'Broken package has no package to blame, skipping rebuild');
@@ -855,7 +930,6 @@ export class TriggerDetector {
     const active = await this.loadActiveChaoticPackages();
     const latest = await this.loadLatestChaoticAnalyses(active.map((pkg) => pkg.id));
     const uncovered = await this.findUncoveredMissedBreaks(active, latest);
-
     return uncovered.length;
   }
 
@@ -865,7 +939,6 @@ export class TriggerDetector {
   async unanalyzedChaoticIds(): Promise<number[]> {
     const active = await this.loadActiveChaoticPackages();
     const latest = await this.loadLatestChaoticAnalyses(active.map((pkg) => pkg.id));
-
     return unanalyzedPackages(active, latest).map((pkg) => pkg.id);
   }
 
@@ -983,7 +1056,6 @@ export class TriggerDetector {
       where: { pkgType: pkgTypeOf(TriggerType.ARCH), pkgId: In(pkgIds) },
       select: { pkgId: true, version: true, providedSonames: true, providedVersionNodes: true },
     });
-
     return [...latestAnalysisByKey(rows, (row) => String(row.pkgId)).values()];
   }
 
@@ -993,22 +1065,24 @@ export class TriggerDetector {
       select: { id: true },
       take: 1,
     });
-
     return bumps.length > 0;
   }
 
-  private async currentBrokenDependencies(consumer: PackageElfAnalysis): Promise<BrokenDependency[]> {
+  private async currentBrokenDependencies(
+    consumer: PackageElfAnalysis,
+  ): Promise<{ deps: BrokenDependency[]; stems: Set<string> }> {
     const [{ providedByPkgname }, runtimes] = await Promise.all([
       this.loadSonameProviders(),
       loadRuntimeVersions(this.archlinuxPackageRepository),
     ]);
-    return findBrokenDependencies({
+    const deps = findBrokenDependencies({
       neededSonames: consumer.neededSonames,
       files: consumer.files,
       providedSonames: new Set(providedByPkgname.keys()),
       runtimes,
       selfProvidedSonames: consumer.providedSonames,
     });
+    return { deps, stems: sonameStems(providedByPkgname.keys()) };
   }
 
   /**
@@ -1168,23 +1242,72 @@ function findVersionNodeCulprit(
   ctx: BrokenDepsContext,
   reachable: Set<string> | null,
 ): { culprit: ChangedOwner; versionNodes: string[] } | null {
-  const restrictToDeps = reachable !== null && reachable.size > 0;
+  const definedElsewhere = versionNodesFromOtherProviders(soname, ctx, reachable);
   for (const pkg of ctx.changed) {
     if (!ctx.previousProvidedByPkg.get(pkg.id)?.has(soname)) continue;
 
     if (!(ctx.currentProvidedByPkg.get(pkg.id)?.has(soname) ?? false)) continue;
 
-    if (restrictToDeps && !depsContains(reachable, pkg.pkgname)) continue;
+    if (reachable !== null && !depsContains(reachable, pkg.pkgname)) continue;
 
+    const dropped = droppedVersionNodes(pkg.id, soname, ctx);
     const missing = findVersionNodeBreaks({
-      neededVersionNodes: { [soname]: requiredNodes },
-      providerVersionNodes: ctx.currentVersionNodesByPkg.get(pkg.id) ?? {},
+      neededVersionNodes: { [soname]: requiredNodes.filter((node) => dropped.has(node)) },
+      providerVersionNodes: { [soname]: [...definedElsewhere] },
     });
-
     if (missing.length > 0) return { culprit: pkg, versionNodes: missing[0].versionNodes };
   }
 
   return null;
+}
+
+/**
+ * Only nodes that the package defined before and does not define now break the
+ * consumer. A package that never defined them (julia ships a private
+ * libstdc++.so.6) is not to blame.
+ */
+function droppedVersionNodes(pkgId: number, soname: string, ctx: BrokenDepsContext): Set<string> {
+  const current = new Set(ctx.currentVersionNodesByPkg.get(pkgId)?.[soname] ?? []);
+  const previous = ctx.previousVersionNodesByPkg.get(pkgId)?.[soname] ?? [];
+  return new Set(previous.filter((node) => !current.has(node)));
+}
+
+/**
+ * Version nodes that a provider in the consumer's dependency closure still
+ * defines (gcc-libs keeps GLIBCXX_* when a bundled copy loses them). Consumers
+ * without recorded deps keep the lenient any-provider rule.
+ */
+function versionNodesFromOtherProviders(
+  soname: string,
+  ctx: BrokenDepsContext,
+  reachable: Set<string> | null,
+): Set<string> {
+  const changedNames = new Set(ctx.changed.map((pkg) => pkg.pkgname));
+  const nodes = new Set<string>();
+  for (const [pkgname, provided] of ctx.versionNodesByProvider.get(soname) ?? []) {
+    if (changedNames.has(pkgname)) continue;
+
+    if (reachable !== null && !depsContains(reachable, pkgname)) continue;
+
+    for (const node of provided) {
+      nodes.add(node);
+    }
+  }
+
+  return nodes;
+}
+
+function versionedSonames(rows: ProvidedAnalysis[]): Set<string> {
+  const sonames = new Set<string>();
+  for (const row of rows) {
+    for (const [soname, nodes] of Object.entries(row.providedVersionNodes ?? {})) {
+      if (nodes.length > 0) {
+        sonames.add(soname);
+      }
+    }
+  }
+
+  return sonames;
 }
 
 function ownerBreakEntry(
@@ -1194,10 +1317,12 @@ function ownerBreakEntry(
 ): PluginBreakIndexEntry | null {
   const symbolBreaks: PluginBreakEntry[] = [];
   for (const [soname, previousSymbols] of Object.entries(previous.exportedSymbols ?? {})) {
-    // A soname rename (python 3.13->3.14 renames libpython3.13 to 3.14) is a
-    // BROKEN_DEPS/soname concern, not symbol loss: only the exported *set* of a
-    // still-present soname may have changed. Without this a single rename would
-    // be reported as hundreds of fake symbol breaks.
+    /**
+     * A soname rename (python 3.13->3.14 renames libpython3.13 to 3.14) is a
+     * BROKEN_DEPS/soname concern, not symbol loss: only the exported *set* of a
+     * still-present soname may have changed. Without this a single rename would
+     * be reported as hundreds of fake symbol breaks.
+     */
     if (!(soname in current.exportedSymbols)) continue;
 
     const currentSet = new Set(current.exportedSymbols?.[soname] ?? []);

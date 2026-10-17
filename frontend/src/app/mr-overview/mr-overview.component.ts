@@ -1,6 +1,16 @@
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { Component, computed, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DatePipe, Location, NgTemplateOutlet } from '@angular/common';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  OnInit,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
@@ -14,28 +24,55 @@ import {
   PKGBUILD_SOURCE_AUR,
   type VtIndicatorReport,
 } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
+import { MenuItem } from '@openng/optimus-ui/api';
 import { Button } from '@openng/optimus-ui/button';
+import type { ButtonSeverity } from '@openng/optimus-ui/types/button';
 import { Dialog } from '@openng/optimus-ui/dialog';
-import { Panel } from '@openng/optimus-ui/panel';
-import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
+import { Menu } from '@openng/optimus-ui/menu';
 import { TableModule } from '@openng/optimus-ui/table';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@openng/optimus-ui/tabs';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { Textarea } from '@openng/optimus-ui/textarea';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { filter } from 'rxjs';
 import { AppService } from '../app.service';
-import { setPageSeo } from '../functions';
-import { presenter } from '../aur-scan/scan-presenter';
+import { isMobileSignal, preferredScrollBehavior, prefersReducedMotion, setPageSeo } from '../functions';
+import { ScanFindingRowComponent } from '../aur-scan/scan-finding-row.component';
+import { presenter, type TranslatableText } from '../aur-scan/scan-presenter';
 import { DiffRendererComponent } from '../diff-renderer/diff-renderer.component';
+import { FillViewportDirective } from '../fill-viewport.directive';
+import { injectActiveTranslation } from '../i18n/active-translation';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { TitleComponent } from '../title/title.component';
 import { MrOverviewService } from './mr-overview.service';
 
+type RowTone = 'hold' | 'danger' | 'warn' | 'info' | 'success';
+
+interface QueueGroup {
+  key: 'aur' | 'packages' | 'hold';
+  labelKey: string;
+  mrs: MergeRequestWithDiffs[];
+}
+
 interface ScanSummary {
   tagSeverity: 'danger' | 'warn' | 'info';
-  label: string;
-  hasCritical: boolean;
+  label: TranslatableText;
+}
+
+interface ActionButton {
+  labelKey: string;
+  tooltipKey: string;
+  severity: ButtonSeverity;
+  disabled: boolean;
+  loading: boolean;
+}
+
+interface PackageLink {
+  isCustom: boolean;
+  url: string;
+  tooltip: TranslatableText;
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -43,25 +80,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
 }
 
-const NO_FOCUSED_PANEL = -1;
-const FIRST_PANEL_INDEX = 0;
-const AUR_UPDATES_TAB = '0';
-const PACKAGE_UPDATES_TAB = '1';
-const ON_HOLD_TAB = '2';
-const HIGHLIGHT_RENDER_DELAY_MS = 100;
-const FLASH_DURATION_MS = 1800;
-
-const TAB_QUERY_PARAMS: Record<'0' | '1' | '2', string> = {
-  [AUR_UPDATES_TAB]: 'aur',
-  [PACKAGE_UPDATES_TAB]: 'packages',
-  [ON_HOLD_TAB]: 'hold',
-};
-
-function tabFromQueryParam(value: string): '0' | '1' | '2' {
-  if (value === TAB_QUERY_PARAMS[PACKAGE_UPDATES_TAB]) return PACKAGE_UPDATES_TAB;
-  if (value === TAB_QUERY_PARAMS[ON_HOLD_TAB]) return ON_HOLD_TAB;
-  return AUR_UPDATES_TAB;
-}
+const FIRST_INDEX = 0;
+const FLASH_CLASS = 'new-mr-flash';
 
 function parseNewMrIids(raw: string | null): number[] {
   if (!raw) return [];
@@ -87,31 +107,54 @@ export function newMrChipDecision(
   return { dot: present.length > 0, highlightIid: present[0] ?? null };
 }
 
+type MrAction = 'approve' | 'dangerous' | 'hold';
+
+const SKELETON_ROW_COUNT = 6;
+
+// Diffs that render in the same frame as an MR switch, so the first screen shows no placeholder.
+const EAGER_DIFF_COUNT = 3;
+
+const MR_ACTIONS: readonly MrAction[] = ['approve', 'dangerous', 'hold'];
+
+const MR_MENU_ITEM_CLASSES: Record<Exclude<MrAction, 'approve'>, string> = {
+  dangerous: 'mr-menu-danger',
+  hold: 'mr-menu-warn',
+};
+
+const MR_ACTION_STYLE_CLASSES: Record<MrAction, string> = {
+  approve: 'mr-btn-approve',
+  dangerous: 'mr-btn-danger',
+  hold: 'mr-btn-warn',
+};
+
 @Component({
   selector: 'chaotic-mr-overview',
   imports: [
     TitleComponent,
     TableModule,
     DiffRendererComponent,
-    ProgressSpinner,
-    Panel,
+    FillViewportDirective,
+    ScanFindingRowComponent,
+    LoadErrorComponent,
     Button,
     DatePipe,
     Dialog,
+    Menu,
     FormsModule,
     NgTemplateOutlet,
     Textarea,
     Tooltip,
     RouterLink,
     TagModule,
-    Tab,
-    TabList,
-    TabPanel,
-    TabPanels,
-    Tabs,
+    TranslocoDirective,
   ],
   templateUrl: './mr-overview.component.html',
-  styleUrl: './mr-overview.component.css',
+  styleUrls: [
+    './mr-overview.component.css',
+    './mr-overview-list.css',
+    './mr-overview-detail.css',
+    './mr-overview-actions.css',
+  ],
   host: {
     '(document:keydown)': 'onKeydown($event)',
   },
@@ -120,23 +163,35 @@ export class MrOverviewComponent implements OnInit {
   private readonly appService = inject(AppService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly location = inject(Location);
   private readonly router = inject(Router);
   private readonly hostElement = inject(ElementRef).nativeElement as HTMLElement;
+  private readonly injector = inject(Injector);
+  private readonly transloco = inject(TranslocoService);
   protected readonly mrOverviewService = inject(MrOverviewService);
 
-  /** Stagger caps the entry delay so long finding lists do not feel sluggish. */
-  protected readonly findingStaggerCap = 8;
+  private readonly activeTranslation = injectActiveTranslation();
 
-  /** Finding row a diff renderer should reveal, if any. */
+  // Finding row a diff renderer should reveal, if any.
   private readonly diffScrollTarget = signal<{ iid: number; path: string; line: number } | null>(null);
 
   readonly isLoggedIn = this.authService.isLoggedIn;
 
-  /** Index of the MR panel currently focused by j/k navigation, -1 when none. */
-  protected readonly focusedIndex = signal(NO_FOCUSED_PANEL);
+  protected readonly isMobile = isMobileSignal();
+  private readonly queryParams = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
 
-  /** Which tab the j/k navigation operates on: 0 = AUR, 1 = package updates, 2 = on hold. */
-  protected readonly activeTabValue = signal<'0' | '1' | '2'>(AUR_UPDATES_TAB);
+  private readonly selectedIid = computed(() => {
+    const iid = Number(this.queryParams().get('mr'));
+    return Number.isInteger(iid) && iid > 0 ? iid : null;
+  });
+
+  // Fallback index when the selected MR leaves the list.
+  private readonly lastSelectedIndex = signal(FIRST_INDEX);
+
+  // Whether this page pushed the phone detail onto history, so back can pop it.
+  private detailPushedToHistory = false;
 
   /** Pending flag dialog: which MR and label the reason is collected for. */
   protected readonly flagDialog = signal<{ mr: MergeRequestWithDiffs; label: 'dangerous' | 'hold' } | null>(null);
@@ -164,9 +219,9 @@ export class MrOverviewComponent implements OnInit {
 
   constructor() {
     setPageSeo(
-      'Review queue · Chaotic-AUR',
-      'Review and approve pending merge requests for Chaotic-AUR',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR update review, Chaotic-AUR review queue',
+      this.transloco.translate('reviewQueue.seo.title'),
+      this.transloco.translate('reviewQueue.seo.description'),
+      this.transloco.translate('reviewQueue.seo.keywords'),
     );
     this.appService.chaoticEvent
       .pipe(
@@ -174,7 +229,9 @@ export class MrOverviewComponent implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
-        if (event.hasNewMr) this.hasNewMr.set(true);
+        if (event.hasNewMr) {
+          this.hasNewMr.set(true);
+        }
         const currentMrs = untracked(this.mrOverviewService.mergeRequests);
         const updatedById = new Map(event.mr.map((mr) => [mr.id, mr]));
         const updatedMrs = currentMrs.map((currentMr) => {
@@ -220,8 +277,12 @@ export class MrOverviewComponent implements OnInit {
         const loaded = await this.mrOverviewService.loadOpenMrs();
         const rendered = new Set(untracked(this.mrOverviewService.mergeRequests).map((mr) => mr.iid));
         const decision = newMrChipDecision(iids, loaded, rendered);
-        if (decision.dot !== null) this.hasNewMr.set(decision.dot);
-        if (decision.highlightIid !== null) this.highlightLinkedMr(decision.highlightIid);
+        if (decision.dot !== null) {
+          this.hasNewMr.set(decision.dot);
+        }
+        if (decision.highlightIid !== null) {
+          this.highlightLinkedMr(decision.highlightIid);
+        }
         if (!loaded) return;
         this.pendingNewMrIids.update((pending) => pending.filter((iid) => !iids.includes(iid)));
       }
@@ -233,60 +294,171 @@ export class MrOverviewComponent implements OnInit {
   private highlightLinkedMr(iid: number): void {
     const mr = untracked(this.mrOverviewService.mergeRequests).find((candidate) => candidate.iid === iid);
     if (!mr) return;
-    if (mr.labels.includes('hold')) this.activeTabValue.set(ON_HOLD_TAB);
-    else this.activeTabValue.set(mr.labels.includes('nvchecker') ? PACKAGE_UPDATES_TAB : AUR_UPDATES_TAB);
+
+    this.selectMr(mr);
 
     // Let Angular render the freshly loaded list before touching the DOM.
-    window.setTimeout(() => this.flashMrPanel(iid), HIGHLIGHT_RENDER_DELAY_MS);
+    afterNextRender(() => this.flashMrRow(iid), { injector: this.injector });
   }
 
-  private flashMrPanel(iid: number): void {
-    const panel = this.hostElement.querySelector<HTMLElement>(`[data-mr-panel][data-mr-iid="${iid}"]`);
-    if (!panel) return;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    panel.classList.add('new-mr-flash');
-    window.setTimeout(() => panel.classList.remove('new-mr-flash'), FLASH_DURATION_MS);
+  private flashMrRow(iid: number): void {
+    const row = this.listRow(iid);
+    if (!row) return;
+    row.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'nearest' });
+    // Reduced motion runs no animation, so no animationend event would remove the class.
+    if (prefersReducedMotion()) return;
+
+    // animationend bubbles, so an animation inside the row must not end the flash early.
+    const removeFlash = (event: AnimationEvent): void => {
+      if (event.target !== row) return;
+
+      row.classList.remove(FLASH_CLASS);
+      row.removeEventListener('animationend', removeFlash);
+    };
+
+    row.classList.add(FLASH_CLASS);
+    row.addEventListener('animationend', removeFlash);
   }
 
-  private readonly focusedMrs = computed<MergeRequestWithDiffs[]>(() => {
-    const tab = this.activeTabValue();
-    if (tab === ON_HOLD_TAB) return this.holdMrs();
-    return tab === AUR_UPDATES_TAB ? this.packageMrs() : this.nvcheckerMrs();
+  protected readonly queueGroups = computed<QueueGroup[]>(() => {
+    const groups: QueueGroup[] = [
+      { key: 'aur', labelKey: marker('reviewQueue.groups.aur'), mrs: this.packageMrs() },
+      { key: 'packages', labelKey: marker('reviewQueue.groups.packages'), mrs: this.nvcheckerMrs() },
+      { key: 'hold', labelKey: marker('reviewQueue.onHold'), mrs: this.holdMrs() },
+    ];
+    return groups.filter((group) => group.mrs.length > 0);
   });
 
-  protected onKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'j' && event.key !== 'k' && event.key !== 'Enter' && event.key !== ' ') return;
-    if (isEditableTarget(event.target)) return;
+  protected readonly queueMrs = computed<MergeRequestWithDiffs[]>(() =>
+    this.queueGroups().flatMap((group) => group.mrs),
+  );
 
-    if (event.key === 'j' || event.key === 'k') {
-      event.preventDefault();
-      if (this.focusedIndex() === NO_FOCUSED_PANEL) this.focusFirstMr();
-      else this.moveFocus(event.key === 'j' ? 1 : -1);
+  // Wide screens always show one MR; phones show the list until one is opened.
+  protected readonly selectedMr = computed<MergeRequestWithDiffs | null>(() => {
+    const mrs = this.queueMrs();
+    const selected = mrs.find((mr) => mr.iid === this.selectedIid());
+    if (selected) return selected;
+    if (this.isMobile() || mrs.length === 0) return null;
+
+    const fallbackIndex = Math.min(this.lastSelectedIndex(), mrs.length - 1);
+    return mrs[fallbackIndex] ?? null;
+  });
+
+  // A one-item list, so each MR gets a fresh detail view.
+  protected readonly selectedMrList = computed(() => {
+    const mr = this.selectedMr();
+    return mr ? [mr] : [];
+  });
+
+  protected readonly detailOpen = computed(() => this.isMobile() && this.selectedMr() !== null);
+
+  // On phones, opening from the list pushes a history entry so back returns to the list; stepping replaces it.
+  protected selectMr(mr: MergeRequestWithDiffs, stepping = false): void {
+    this.lastSelectedIndex.set(Math.max(FIRST_INDEX, this.queueMrs().indexOf(mr)));
+    const opensDetailView = this.isMobile() && !stepping;
+    if (opensDetailView) {
+      this.detailPushedToHistory = true;
+    }
+
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mr: mr.iid },
+      queryParamsHandling: 'merge',
+      replaceUrl: !opensDetailView,
+      scroll: 'manual',
+    });
+
+    afterNextRender(() => this.revealDetail(), { injector: this.injector });
+  }
+
+  protected closeDetail(): void {
+    if (this.detailPushedToHistory) {
+      this.detailPushedToHistory = false;
+      this.location.back();
       return;
     }
 
-    // Enter/Space only toggle the focused MR's findings when the panel itself
-    // has focus, so activating buttons or links inside it is never hijacked.
-    if (event.target === this.focusedPanel(this.focusedIndex())) {
-      this.toggleFocusedFindings();
-      event.preventDefault();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mr: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private revealDetail(): void {
+    const detail = this.hostElement.querySelector<HTMLElement>('.mr-detail');
+    if (!detail || detail.getBoundingClientRect().top >= 0) return;
+    detail.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+  }
+
+  protected onKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'j' && event.key !== 'k') return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isEditableTarget(event.target)) return;
+
+    event.preventDefault();
+    this.moveSelection(event.key === 'j' ? 1 : -1);
+  }
+
+  private moveSelection(delta: number): void {
+    const next = this.stepMr(delta);
+    if (!next) return;
+    afterNextRender(() => this.listRow(next.iid)?.focus(), { injector: this.injector });
+  }
+
+  // Wraps around at both ends.
+  protected stepMr(delta: number): MergeRequestWithDiffs | null {
+    const mrs = this.queueMrs();
+    if (mrs.length === 0) return null;
+
+    const current = this.selectedMr();
+    const currentIndex = current ? mrs.indexOf(current) : FIRST_INDEX - delta;
+    const next = mrs[(currentIndex + delta + mrs.length) % mrs.length];
+    if (!next) return null;
+
+    this.selectMr(next, true);
+    return next;
+  }
+
+  private readonly moreMenuTarget = signal<{ mr: MergeRequestWithDiffs; actions: MrAction[] } | null>(null);
+
+  protected readonly moreMenuItems = computed<MenuItem[]>(() => {
+    this.activeTranslation();
+    const target = this.moreMenuTarget();
+    if (!target) return [];
+
+    const items: MenuItem[] = [];
+    for (const action of target.actions) {
+      if (action === 'approve') continue;
+      const button = this.actionButton(target.mr, action);
+      items.push({
+        label: this.transloco.translate(button.labelKey),
+        disabled: button.disabled,
+        styleClass: MR_MENU_ITEM_CLASSES[action],
+        command: () => this.runAction(target.mr, action),
+      });
     }
+
+    return items;
+  });
+
+  protected openMoreMenu(menu: Menu, event: Event, mr: MergeRequestWithDiffs, actions: MrAction[]): void {
+    this.moreMenuTarget.set({ mr, actions });
+    menu.toggle(event);
   }
 
-  private focusFirstMr(): void {
-    this.focusedIndex.set(FIRST_PANEL_INDEX);
-    this.focusedPanel(FIRST_PANEL_INDEX)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    this.focusedPanel(FIRST_PANEL_INDEX)?.focus();
+  private listRow(iid: number): HTMLElement | null {
+    return this.hostElement.querySelector<HTMLElement>(`[data-mr-row][data-mr-iid="${iid}"]`);
   }
 
-  private moveFocus(delta: number): void {
-    const count = this.focusedMrs().length;
-    if (count === 0) return;
-    const next = (this.focusedIndex() + delta + count) % count;
-    this.focusedIndex.set(next);
-    const panel = this.focusedPanel(next);
-    panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    panel?.focus();
+  protected rowTone(mr: MergeRequestWithDiffs): RowTone {
+    if (mr.labels.includes('hold')) return 'hold';
+    return this.scanSummary(mr)?.tagSeverity ?? 'success';
+  }
+
+  protected scanNeedsReview(mr: MergeRequestWithDiffs): boolean {
+    return this.scanFindings(mr).length > 0 || this.maintainerChange(mr) !== null;
   }
 
   protected async refreshMrs(): Promise<void> {
@@ -300,37 +472,7 @@ export class MrOverviewComponent implements OnInit {
     this.hasNewMr.set(false);
   }
 
-  protected onTabChange(value: string | number | undefined): void {
-    const tab =
-      value === PACKAGE_UPDATES_TAB ? PACKAGE_UPDATES_TAB : value === ON_HOLD_TAB ? ON_HOLD_TAB : AUR_UPDATES_TAB;
-    this.activeTabValue.set(tab);
-    this.focusedIndex.set(NO_FOCUSED_PANEL);
-    this.hasNewMr.set(false);
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab: TAB_QUERY_PARAMS[tab] },
-      queryParamsHandling: 'merge',
-    });
-  }
-
-  private focusedPanel(index: number): HTMLElement | null {
-    const panels = this.hostElement.querySelectorAll<HTMLElement>('[data-mr-panel]');
-    return panels[index] ?? null;
-  }
-
-  private toggleFocusedFindings(): void {
-    const panel = this.focusedPanel(this.focusedIndex());
-    if (!panel) return;
-    const fieldset = panel.querySelector<HTMLElement>('[data-scan-fieldset]');
-    fieldset?.click();
-  }
-
   ngOnInit() {
-    const tabParam = this.route.snapshot.queryParamMap.get('tab');
-    if (tabParam !== null) {
-      this.activeTabValue.set(tabFromQueryParam(tabParam));
-    }
-
     void this.mrOverviewService.loadOpenMrs();
   }
 
@@ -353,11 +495,17 @@ export class MrOverviewComponent implements OnInit {
     this.flagDialog.set({ mr, label: reason.action });
   }
 
-  protected flagDialogTitle(): string {
+  protected readonly flagDialogTitle = computed(() => {
+    this.activeTranslation();
+
     const pending = this.flagDialog();
     if (!pending) return '';
-    return pending.label === 'dangerous' ? `Flag !${pending.mr.iid} as dangerous` : `Put !${pending.mr.iid} on hold`;
-  }
+
+    const params = { iid: pending.mr.iid };
+    if (pending.label === 'dangerous') return this.transloco.translate('reviewQueue.flagDialog.titleDangerous', params);
+
+    return this.transloco.translate('reviewQueue.flagDialog.titleHold', params);
+  });
 
   protected flagReasonValid(): boolean {
     return this.flagReason().trim().length > 0;
@@ -367,14 +515,23 @@ export class MrOverviewComponent implements OnInit {
     const pending = this.flagDialog();
     if (!pending || !this.flagReasonValid()) return;
     const ok = await this.mrOverviewService.flag(pending.mr, pending.label, this.flagReason().trim());
-    if (ok) this.closeFlagDialog();
+    if (ok) {
+      this.closeFlagDialog();
+    }
   }
 
-  protected flagReasonLine(mr: MergeRequestWithDiffs): string | null {
+  protected flagReasonLine(mr: MergeRequestWithDiffs): TranslatableText | null {
     const reason = mr.flagReason;
     if (!reason) return null;
-    const author = reason.userName ? ` — ${reason.userName}` : '';
-    return `“${reason.text}”${author}`;
+
+    if (reason.userName) {
+      return {
+        key: marker('reviewQueue.flagReason.withAuthor'),
+        params: { text: reason.text, author: reason.userName },
+      };
+    }
+
+    return { key: marker('reviewQueue.flagReason.withoutAuthor'), params: { text: reason.text } };
   }
 
   isLoading(mr: MergeRequestWithDiffs, action: 'approve' | 'flag:dangerous' | 'flag:hold' | 'any'): boolean {
@@ -396,37 +553,56 @@ export class MrOverviewComponent implements OnInit {
   }
 
   /** Display config for a review action button, shared by the mobile and desktop layouts. */
-  protected actionButton(
-    mr: MergeRequestWithDiffs,
-    action: 'approve' | 'dangerous' | 'hold',
-  ): { label: string; icon: string; severity: string; disabled: boolean; loading: boolean; tooltip: string } {
+  protected readonly actionStyleClass = MR_ACTION_STYLE_CLASSES;
+  protected readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
+  protected readonly eagerDiffCount = EAGER_DIFF_COUNT;
+
+  protected actionsFor(mr: MergeRequestWithDiffs): MrAction[] {
+    const onHold = mr.labels.includes('hold');
+    const autoUpdate = mr.labels.includes('nvchecker') && !onHold;
+
+    return MR_ACTIONS.filter((action) => !(action === 'hold' && onHold) && !(action === 'dangerous' && autoUpdate));
+  }
+
+  protected runAction(mr: MergeRequestWithDiffs, action: MrAction): void {
+    if (action === 'approve') {
+      void this.mrOverviewService.approve(mr);
+      return;
+    }
+    this.openFlagDialog(mr, action);
+  }
+
+  protected actionButton(mr: MergeRequestWithDiffs, action: MrAction): ActionButton {
     switch (action) {
       case 'approve':
         return {
-          label: mr.labels.includes('approved') ? 'Already approved' : 'Approve update',
-          icon: 'pi pi-check',
+          labelKey: mr.labels.includes('approved')
+            ? marker('reviewQueue.actions.approve.done')
+            : marker('reviewQueue.actions.approve.label'),
           severity: 'success',
           disabled: this.actionsDisabled(mr),
           loading: this.isLoading(mr, 'approve'),
-          tooltip: 'Approve this merge request for auto-merge',
+          tooltipKey: marker('reviewQueue.actions.approve.tooltip'),
         };
       case 'dangerous':
         return {
-          label: mr.labels.includes('dangerous') ? 'Already flagged' : 'Flag as dangerous',
-          icon: 'pi pi-exclamation-triangle',
+          labelKey: mr.labels.includes('dangerous')
+            ? marker('reviewQueue.actions.dangerous.done')
+            : marker('reviewQueue.actions.dangerous.label'),
           severity: 'danger',
           disabled: this.actionsDisabled(mr),
           loading: this.isLoading(mr, 'flag:dangerous'),
-          tooltip: 'Flag this merge request as dangerous and prevent auto-merge',
+          tooltipKey: marker('reviewQueue.actions.dangerous.tooltip'),
         };
       case 'hold':
         return {
-          label: mr.labels.includes('hold') ? 'Already on hold' : 'Hold for now',
-          icon: 'pi pi-pause',
+          labelKey: mr.labels.includes('hold')
+            ? marker('reviewQueue.actions.hold.done')
+            : marker('reviewQueue.actions.hold.label'),
           severity: 'warn',
           disabled: this.actionsDisabled(mr) || mr.labels.includes('hold'),
           loading: this.isLoading(mr, 'flag:hold'),
-          tooltip: 'Put this merge request on hold for later review',
+          tooltipKey: marker('reviewQueue.actions.hold.tooltip'),
         };
     }
   }
@@ -453,34 +629,31 @@ export class MrOverviewComponent implements OnInit {
     const findings = mr.scanFindings ?? [];
     if (findings.length === 0) return null;
     const worst = findings.reduce((a, b) => (this.severityOrder[a.severity] <= this.severityOrder[b.severity] ? a : b));
-    const label = `${findings.length} finding${findings.length === 1 ? '' : 's'}`;
+
     return {
       tagSeverity: this.presenter.findingSeverity[worst.severity],
-      label,
-      hasCritical: worst.severity === 'critical',
+      label: this.presenter.findingCount(findings.length),
     };
   }
 
-  private readonly findingsOpen = signal<ReadonlyMap<number, boolean>>(new Map());
-
-  /** Whether the scan-findings card is expanded; defaults to open when a finding is critical. */
-  protected isFindingsOpen(mr: MergeRequestWithDiffs): boolean {
-    return this.findingsOpen().get(mr.iid) ?? this.scanSummary(mr)?.hasCritical ?? false;
-  }
-
-  protected toggleFindings(mr: MergeRequestWithDiffs): void {
-    const next = new Map(this.findingsOpen());
-    next.set(mr.iid, !this.isFindingsOpen(mr));
-    this.findingsOpen.set(next);
+  protected hasScanDetails(mr: MergeRequestWithDiffs): boolean {
+    return (
+      this.scanFindings(mr).length > 0 ||
+      this.vtReports(mr).length > 0 ||
+      this.maintainers(mr).length > 0 ||
+      this.maintainerChange(mr) !== null
+    );
   }
 
   protected scrollToFinding(mr: MergeRequestWithDiffs, finding: DiffScanFinding): void {
-    // The finding cards live above the diffs; jump to the file section first
-    // so the deferred diff renderer mounts, then it reveals the exact line.
+    /**
+     * The finding cards live above the diffs; jump to the file section first
+     * so the deferred diff renderer mounts, then it reveals the exact line.
+     */
     this.diffScrollTarget.set({ iid: mr.iid, path: finding.file, line: finding.line ?? -1 });
     const sectionId = this.diffSectionId(mr.iid, finding.file);
     this.hostElement.querySelector(`[data-diff-section="${sectionId}"]`)?.scrollIntoView({
-      behavior: 'smooth',
+      behavior: preferredScrollBehavior(),
       block: 'start',
     });
   }
@@ -547,21 +720,23 @@ export class MrOverviewComponent implements OnInit {
     return `https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/${pkgname}/.CI`;
   }
 
-  protected packageLink(mr: MergeRequestWithDiffs): { label: string; url: string; tooltip: string } | null {
+  protected packageLink(mr: MergeRequestWithDiffs): PackageLink | null {
     const info = mr.packageInfo;
     if (!info) return null;
+
     const isCustom = info.pkgbuildSource !== '' && info.pkgbuildSource !== PKGBUILD_SOURCE_AUR;
     if (isCustom) {
       return {
-        label: 'Custom',
+        isCustom,
         url: `https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/main/${info.pkgname}`,
-        tooltip: `PKGBUILD maintained in the pkgbuilds repo (${info.pkgbuildSource})`,
+        tooltip: { key: marker('reviewQueue.packageLink.customTooltip'), params: { source: info.pkgbuildSource } },
       };
     }
+
     return {
-      label: 'AUR',
+      isCustom,
       url: `https://aur.archlinux.org/packages/${info.pkgname}`,
-      tooltip: `Open the AUR page for ${info.pkgname}`,
+      tooltip: { key: marker('reviewQueue.packageLink.aurTooltip'), params: { pkgname: info.pkgname } },
     };
   }
 }

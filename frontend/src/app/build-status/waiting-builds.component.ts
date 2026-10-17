@@ -1,20 +1,34 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { FlipListDirective } from '../animations/flip-list.directive';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { BuildClassPipe } from '../pipes/build-class.pipe';
 import { BuildStatusPager } from './build-status-pager.component';
 import { BuildStatusSectionComponent } from './build-status-section.component';
-import { BUILD_ESTIMATE_TOOLTIP, BuildStatusService } from './build-status.service';
+import { BuildStatusService } from './build-status.service';
 import { paginateByStartTime } from './queue-estimates';
 
-const WAITING_PAGE_SIZE = 6;
+const WAITING_PAGE_SIZE = 8;
+const SKELETON_ROW_COUNT = 4;
 
 @Component({
   selector: 'chaotic-build-status-waiting-builds',
-  imports: [BuildStatusSectionComponent, BuildStatusPager, BuildClassPipe, Tooltip, FlipListDirective, RouterLink],
+  imports: [
+    LoadErrorComponent,
+    BuildStatusSectionComponent,
+    BuildStatusPager,
+    BuildClassPipe,
+    Tooltip,
+    FlipListDirective,
+    RouterLink,
+    TranslocoDirective,
+    EmptyStateComponent,
+  ],
   templateUrl: './waiting-builds.component.html',
   styleUrl: './waiting-builds.component.css',
 })
@@ -22,9 +36,10 @@ export class WaitingBuildsComponent {
   readonly buildStatusService = inject(BuildStatusService);
   private readonly authService = inject(AuthService);
   private readonly messageToastService = inject(MessageToastService);
-  readonly estimateTooltip = BUILD_ESTIMATE_TOOLTIP;
+  private readonly transloco = inject(TranslocoService);
 
   readonly isLoggedIn = this.authService.isLoggedIn;
+  readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
   readonly promoting = signal<string | null>(null);
 
   private readonly page = signal(1);
@@ -34,6 +49,8 @@ export class WaitingBuildsComponent {
   );
 
   readonly currentPage = computed(() => Math.min(this.page(), this.pageCount()));
+
+  readonly pageOffset = computed(() => (this.currentPage() - 1) * WAITING_PAGE_SIZE);
 
   readonly paginatedQueue = computed(() =>
     paginateByStartTime(
@@ -58,10 +75,16 @@ export class WaitingBuildsComponent {
     this.promoting.set(pkgName);
     try {
       await this.buildStatusService.promote(pkgbase, 'x86_64', repo);
-      this.messageToastService.success('Build promoted', `${pkgName} has been promoted to the front of the queue.`);
+      this.messageToastService.success(
+        this.transloco.translate('buildStatus.waiting.promoteSuccess.title'),
+        this.transloco.translate('buildStatus.waiting.promoteSuccess.message', { name: pkgName }),
+      );
       this.buildStatusService.refreshQueueStats();
     } catch {
-      this.messageToastService.error('Promote failed', `Could not promote ${pkgName}.`);
+      this.messageToastService.error(
+        this.transloco.translate('buildStatus.waiting.promoteError.title'),
+        this.transloco.translate('buildStatus.waiting.promoteError.message', { name: pkgName }),
+      );
     } finally {
       this.promoting.set(null);
     }

@@ -4,12 +4,33 @@
 }
 
 .chaotic-footer ::ng-deep .p-card {
-  background: rgb(from var(--ctp-mocha-base) r g b / 0.8);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: rgb(from var(--catppuccin-color-base) r g b / 0.8);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
   border-radius: 0;
 }
 
 .chaotic-footer ::ng-deep .p-card-body {
   padding: var(--spacing) calc(var(--spacing) * 2) !important;
+}
+
+@media (pointer: coarse) {
+  .chaotic-footer nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
+
+.chaotic-footer__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--chaotic-space-xs);
+}
+
+.chaotic-footer__icon {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  font-size: 0.875rem;
 }

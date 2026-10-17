@@ -170,7 +170,9 @@ export function stubGitlabApi(app: NestFastifyApplication): void {
     group: string | symbol,
     method: string | symbol,
   ) => {
-    if (!(method in target)) target[method] = notMocked(group, method);
+    if (!(method in target)) {
+      target[method] = notMocked(group, method);
+    }
   };
   const groups = {} as Record<string | symbol, Record<string | symbol, unknown>>;
   const stub = new Proxy(groups, {

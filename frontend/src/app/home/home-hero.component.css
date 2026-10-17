@@ -1,0 +1,201 @@
+:host {
+  display: contents;
+}
+
+/* Search-first hero: everything centered on one column, the search is the main element. */
+.home-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding-block: clamp(1.5rem, 12vh - 2rem, 7rem) 2rem;
+  text-align: center;
+}
+
+.home-hero__logo {
+  display: block;
+  width: 5.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.home-hero__title {
+  max-width: 20ch;
+  font-size: clamp(1.875rem, 1.3rem + 2.4vw, 3rem);
+  font-weight: var(--chaotic-weight-semibold);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  color: var(--catppuccin-color-text);
+}
+
+.home-hero__lede {
+  max-width: 38rem;
+  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
+  line-height: 1.55;
+  text-wrap: balance;
+  color: var(--chaotic-fg-muted);
+}
+
+.home-hero__actions {
+  width: 100%;
+  max-width: 42rem;
+  margin-top: 0.75rem;
+}
+
+.home-hero__search ::ng-deep input {
+  box-sizing: border-box;
+  height: 3.5rem;
+  padding-block: 0;
+  padding-inline: 1.25rem;
+  border-radius: var(--chaotic-radius-lg);
+  /* The hero search is the page's main control, so it is larger than the other inputs. */
+  font-size: 1.125rem;
+  text-align: left;
+  box-shadow: var(--chaotic-shadow);
+}
+
+.home-popular {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--chaotic-fg-muted);
+}
+
+.home-popular__label {
+  margin-inline-end: 0.25rem;
+}
+
+.home-popular__chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-pill);
+  font-family: 'JetBrains Mono Variable', monospace;
+  color: var(--catppuccin-color-text);
+  transition: border-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.home-popular__chip:hover,
+.home-popular__chip:focus-visible {
+  border-color: var(--catppuccin-color-mauve);
+}
+
+/*
+ * Phones: a smaller logo and search, and the chips as one swipeable row instead of a ragged wrap.
+ * 16px is the smallest input text size that keeps iOS from zooming in on focus.
+ */
+@media (max-width: 639px) {
+  .home-hero__logo {
+    width: 4rem;
+  }
+
+  .home-hero__search ::ng-deep input {
+    height: 3rem;
+    padding-inline: 1rem;
+    font-size: 1rem;
+  }
+
+  /* Capped at the hero width, so the unwrapped row scrolls instead of widening the page. */
+  .home-popular {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .home-popular__chip {
+    flex: none;
+    min-height: 2.75rem;
+  }
+
+  .home-setup__link {
+    justify-self: stretch;
+    justify-content: center;
+  }
+}
+
+/* Slim setup strip: one line of context and the way to the guide. */
+.home-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  gap: 0.875rem 1.5rem;
+  width: 100%;
+  max-width: 56rem;
+  box-sizing: border-box;
+  margin: clamp(1.5rem, 5vw, 3.5rem) auto 0;
+  padding: 0.875rem 1.25rem;
+  background: var(--chaotic-surface-inset);
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-lg);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+/* From tablet width: text on the left, the guide button centered on the right. */
+@media (min-width: 640px) {
+  .home-setup {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .home-setup__link {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+}
+
+.home-setup__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.home-setup__title {
+  font-size: 1rem;
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
+}
+
+.home-setup__summary {
+  font-size: 0.875rem;
+  color: var(--chaotic-fg-muted);
+}
+
+.home-setup__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-inline: 1rem;
+  border-radius: var(--chaotic-radius-md);
+  background: var(--catppuccin-color-mauve);
+  font-weight: var(--chaotic-weight-semibold);
+  white-space: nowrap;
+  color: var(--catppuccin-color-crust);
+  transition: background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.home-setup__link:hover,
+.home-setup__link:focus-visible {
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 85%, white);
+}
+
+.hero-enter {
+  animation: hero-enter var(--chaotic-duration-slow) var(--chaotic-ease-out) both;
+  animation-delay: calc(var(--stagger, 0) * 60ms);
+}
+
+@keyframes hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}

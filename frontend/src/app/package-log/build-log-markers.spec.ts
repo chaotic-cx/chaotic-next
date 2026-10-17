@@ -158,7 +158,9 @@ describe('streaming chunk accumulation', () => {
     for (const chunk of chunks) {
       buffer += chunk;
       markers = findBuildLogMarkers(buffer, markers);
-      if (buffer.length > SCAN_BUFFER_LENGTH) buffer = buffer.slice(-SCAN_BUFFER_LENGTH);
+      if (buffer.length > SCAN_BUFFER_LENGTH) {
+        buffer = buffer.slice(-SCAN_BUFFER_LENGTH);
+      }
     }
     return markers;
   }

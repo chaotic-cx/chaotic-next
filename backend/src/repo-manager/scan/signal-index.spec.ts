@@ -26,7 +26,8 @@ function analysis(overrides: Partial<PackageElfAnalysis>): PackageElfAnalysis {
     broken: false,
     brokenReasons: [],
     brokenSince: null,
-    isSourceCompiled: true,
+    brokenIssues: [],
+    brokenReasonsAsBuilt: null,
     scannedAt: new Date('2026-09-01T00:00:00Z'),
     ...overrides,
   } as PackageElfAnalysis;
@@ -50,8 +51,8 @@ describe('SignalIndex.refreshAfterScan — plugin owners with files loaded on de
   it('flags a plugin of kwin, but not a fork that ships a file of kwin', async () => {
     const { index, analyses, packages } = createIndex();
     packages.seed([
-      { id: 7, pkgname: 'kwin-effects-blur', isActive: true } as Package,
-      { id: 8, pkgname: 'kwin-blur-fork', isActive: true } as Package,
+      { id: 7, pkgname: 'kwin-effects-blur', isActive: true, isSourceCompiled: true } as Package,
+      { id: 8, pkgname: 'kwin-blur-fork', isActive: true, isSourceCompiled: true } as Package,
     ]);
     analyses.seed([
       analysis({
@@ -72,8 +73,8 @@ describe('SignalIndex.refreshAfterScan — plugin owners with files loaded on de
 
     await index.refreshAfterScan(
       [
-        { pkgType: TriggerType.CHAOTIC, pkgId: 7, version: '1.0-1', hasCompiledCode: true, isSourceCompiled: true },
-        { pkgType: TriggerType.CHAOTIC, pkgId: 8, version: '1.0-1', hasCompiledCode: true, isSourceCompiled: true },
+        { pkgType: TriggerType.CHAOTIC, pkgId: 7, version: '1.0-1', hasCompiledCode: true },
+        { pkgType: TriggerType.CHAOTIC, pkgId: 8, version: '1.0-1', hasCompiledCode: true },
       ],
       { freshlyScanned: true },
     );
@@ -122,5 +123,50 @@ describe('SignalIndex.recomputeBroken — start of the broken state', () => {
 
     expect(after?.broken).toBe(false);
     expect(after?.brokenSince).toBeNull();
+  });
+});
+
+describe('SignalIndex.recomputeBroken — fixability of the broken reasons', () => {
+  // python is at 3.13, so a shipped python3.12 directory is a stale runtime.
+  const staleRuntime = ['usr/lib/python3.12/site-packages/pkg/__init__.py'];
+  const staleReason = 'python 3.12 shipped but python is 3.13 (usr/lib/python3.12/site-packages/pkg/__init__.py)';
+
+  async function recompute(seed: Partial<PackageElfAnalysis>, freshlyScanned: boolean, isSourceCompiled: boolean) {
+    const { index, analyses, packages } = createIndex();
+    packages.seed([{ id: 5, pkgname: 'consumer', isActive: true, isSourceCompiled } as Package]);
+    analyses.seed([analysis({ pkgId: 5, files: staleRuntime, ...seed })]);
+    await index.recomputeBroken([{ pkgType: TriggerType.CHAOTIC, pkgId: 5 }], { freshlyScanned });
+    return analyses.store.get('1|5|1.0-1');
+  }
+
+  it('records the reasons of the first scan as built in', async () => {
+    const after = await recompute({}, true, true);
+
+    expect(after?.brokenReasonsAsBuilt).toEqual([staleReason]);
+  });
+
+  it('needs a PKGBUILD change for a source package that is broken as built', async () => {
+    const after = await recompute({}, true, true);
+
+    expect(after?.brokenIssues).toEqual([{ reason: staleReason, fixability: 'pkgbuildChange' }]);
+  });
+
+  it('has no fix for a prebuilt package that is broken as built', async () => {
+    const after = await recompute({}, true, false);
+
+    expect(after?.brokenIssues).toEqual([{ reason: staleReason, fixability: 'noFix' }]);
+  });
+
+  it('fixes a break after the build with a rebuild', async () => {
+    const after = await recompute({ brokenReasonsAsBuilt: [] }, false, false);
+
+    expect(after?.brokenIssues).toEqual([{ reason: staleReason, fixability: 'rebuild' }]);
+  });
+
+  it('keeps the record of the first scan on a rescan', async () => {
+    const after = await recompute({ brokenReasonsAsBuilt: [] }, true, true);
+
+    expect(after?.brokenReasonsAsBuilt).toEqual([]);
+    expect(after?.brokenIssues).toEqual([{ reason: staleReason, fixability: 'rebuild' }]);
   });
 });

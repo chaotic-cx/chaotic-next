@@ -1,8 +1,10 @@
 import { Component, effect, inject, OnDestroy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { parseFocusQuery, setPageSeo } from '../functions';
+import { LoadErrorComponent } from '../load-error/load-error.component';
 import { LiveTrafficService } from '../mirror-map/live-traffic.service';
 import { MirrorMapComponent } from '../mirror-map/mirror-map.component';
 import { MirrorsService } from '../mirrors/mirrors.service';
@@ -11,20 +13,27 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
 
 @Component({
   selector: 'chaotic-map',
-  imports: [TitleComponent, MirrorMapComponent, LiveTrafficFeedComponent],
+  imports: [TitleComponent, MirrorMapComponent, LiveTrafficFeedComponent, LoadErrorComponent, TranslocoDirective],
   template: `
-    <div class="mx-auto flex w-full flex-1 flex-col">
-      <chaotic-title
-        title="Mirror map"
-        subtitleHtml="Where our mirrors are located. Pick a mirror from the overview to see details."
-      />
+    <div class="mx-auto flex w-full flex-1 flex-col" *transloco="let t; prefix: 'map'">
+      <chaotic-title [title]="t('title')" [subtitleHtml]="t('subtitle')" />
+
+      @if (mirrorsService.error()) {
+        <chaotic-load-error
+          class="mb-3 block"
+          [message]="mirrorsService.errorMessage()"
+          [error]="mirrorsService.error()"
+          (retry)="mirrorsService.reload()"
+        />
+      }
 
       <chaotic-mirror-map
-        class="backdrop-blur-xs w-full flex-1"
+        class="backdrop-blur-(--chaotic-blur) w-full flex-1"
         [fillHeight]="true"
         [mirrors]="mirrorsService.mirrors()"
         [self]="mirrorsService.self()"
         [focus]="focus()"
+        [countsKnown]="mirrorsService.mirrorData() !== null"
         [livePingsEnabled]="true"
         [showHits]="trafficService.showHits()"
         [showMirrors]="trafficService.showMirrors()"
@@ -42,7 +51,7 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
-        min-height: calc(100vh - 130px);
+        min-height: calc(100dvh - 130px);
         width: 100%;
       }
     `,
@@ -51,6 +60,7 @@ import { LiveTrafficFeedComponent } from './live-traffic-feed.component';
 export class MapComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly mirrorsService = inject(MirrorsService);
   protected readonly trafficService = inject(LiveTrafficService);
@@ -61,10 +71,11 @@ export class MapComponent implements OnDestroy {
 
   constructor() {
     setPageSeo(
-      'Mirror map · Chaotic-AUR',
-      'Map of Chaotic-AUR mirrors and live traffic.',
-      'Chaotic-AUR, Mirrors, Map, Repository, Archlinux, AUR, Live Traffic',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.mirrorMap') }),
+      this.transloco.translate('map.seo.description'),
+      this.transloco.translate('map.seo.keywords'),
     );
+
     this.trafficService.connect();
     const params = this.route.snapshot.queryParamMap;
     if (params.has('hits')) {

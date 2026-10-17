@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import type { MergeRequestWithDiffs, PipelineWithExternalStatus } from './gitlab';
 import { BuildStatus } from './build';
 import { moleculerCurrentQueueObjectSchema } from './queue';

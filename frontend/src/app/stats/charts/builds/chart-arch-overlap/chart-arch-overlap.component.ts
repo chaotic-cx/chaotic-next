@@ -1,6 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import type { ArchOverlapReport } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { AppService } from '../../../../app.service';
+import { LoadErrorComponent } from '../../../../load-error/load-error.component';
 import { chartResource } from '../../chart-config';
 
 export function visibleArchOverlapRows(rows: ArchOverlapReport[]): ArchOverlapReport[] {
@@ -9,8 +11,8 @@ export function visibleArchOverlapRows(rows: ArchOverlapReport[]): ArchOverlapRe
 
 @Component({
   selector: 'chaotic-chart-arch-overlap',
+  imports: [LoadErrorComponent, TranslocoDirective],
   templateUrl: './chart-arch-overlap.component.html',
-  styleUrl: './chart-arch-overlap.component.css',
 })
 export class ChartArchOverlapComponent {
   private readonly appService = inject(AppService);

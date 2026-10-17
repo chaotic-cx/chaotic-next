@@ -63,7 +63,9 @@ export function extractIndicators(diffs: MergeRequestDiffSchema[]): ScanIndicato
       pkgbuild.entries.forEach((entry, index) => {
         if (entry.isVcs) return;
         const url = checkableSource(entry.raw, pkgbuild.vars);
-        if (url) add({ type: 'url', value: url, context: `${change.new_path} (source)` });
+        if (url) {
+          add({ type: 'url', value: url, context: `${change.new_path} (source)` });
+        }
         const hash = checksums?.[index]?.replace(/["']/g, '') ?? '';
         if (SHA256.test(hash)) {
           add({ type: 'file', value: hash, context: `${change.new_path} (source checksum)` });
@@ -75,7 +77,9 @@ export function extractIndicators(diffs: MergeRequestDiffSchema[]): ScanIndicato
     for (const line of addedLines(change)) {
       for (const match of line.text.matchAll(ADDED_URL)) {
         const url = checkableUrl(match[0]);
-        if (url) add({ type: 'url', value: url, context: `${change.new_path}:${line.line}` });
+        if (url) {
+          add({ type: 'url', value: url, context: `${change.new_path}:${line.line}` });
+        }
       }
     }
   }

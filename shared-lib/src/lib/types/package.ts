@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import { buildClassSuggestionSchema } from './core';
 
 export const parsedPackageMetadataSchema = z.object({
@@ -134,11 +134,6 @@ export const packageElfAnalysisSchema = z.object({
    * can be analyzed for ABI compatibility.
    */
   hasCompiledCode: z.boolean(),
-  /**
-   * Whether this package is compiled from source (as opposed to being a
-   * binary package that repackages prebuilt binaries).
-   */
-  isSourceCompiled: z.boolean(),
   scannedAt: z.string(),
 });
 export type PackageElfAnalysis = z.infer<typeof packageElfAnalysisSchema>;
@@ -158,6 +153,21 @@ export const adminPackageElfAnalysisSchema = z.object({
 export type AdminPackageElfAnalysis = z.infer<typeof adminPackageElfAnalysisSchema>;
 
 /**
+ * What fixes a broken reason, ordered from the best to the worst outcome: a
+ * rebuild, a change to the PKGBUILD or upstream, or nothing (a prebuilt binary
+ * links a library that no package ships).
+ */
+export const BROKEN_FIXABILITIES = ['rebuild', 'pkgbuildChange', 'noFix'] as const;
+export const brokenFixabilitySchema = z.enum(BROKEN_FIXABILITIES);
+export type BrokenFixability = z.infer<typeof brokenFixabilitySchema>;
+
+export const brokenIssueSchema = z.object({
+  reason: z.string().describe('Reason the package is flagged broken'),
+  fixability: brokenFixabilitySchema.describe('What fixes this reason'),
+});
+export type BrokenIssue = z.infer<typeof brokenIssueSchema>;
+
+/**
  * One package flagged broken by the ELF signal scanner. Only Chaotic packages
  * are ever reported: Arch packages are reference data and never judged broken.
  */
@@ -167,6 +177,8 @@ export const brokenPackageReportSchema = z.object({
   version: z.string().describe('Package version'),
   repoName: z.string().optional().describe('Repository name'),
   reasons: z.array(z.string()).describe('Reasons the package is flagged broken'),
+  issues: z.array(brokenIssueSchema).describe('Reasons the package is flagged broken, with what fixes each one'),
+  fixability: brokenFixabilitySchema.describe('Fixability of the worst reason'),
 });
 export type BrokenPackageReport = z.infer<typeof brokenPackageReportSchema>;
 

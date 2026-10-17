@@ -1,25 +1,40 @@
+import { marker } from '@jsverse/transloco-keys-manager/marker';
+
+export interface MemorialLink {
+  path: string;
+  labelKey: string;
+}
+
 export interface MemorialConfig {
   year: number;
-  description: string;
-  keywords: string;
-  subtitle?: string;
-  subtitleHtml?: string;
-  crossLink: string;
-  crossLinkLabel: string;
+  descriptionKey: string;
+  keywordsKey: string;
+  subtitleKey: string;
+  crossLinks: MemorialLink[];
   desktops: string[];
   terms: string[];
   specialDesktops: string[];
   specialTerms: string[];
 }
 
+export const MEMORIAL_2021_LINK: MemorialLink = { path: '/memorial', labelKey: marker('memorial.links.edition2021') };
+
+export const MEMORIAL_2024_LINK: MemorialLink = {
+  path: '/memorial-v2',
+  labelKey: marker('memorial.links.edition2024'),
+};
+
+export const MEMORIAL_2026_LINK: MemorialLink = {
+  path: '/memorial-v3',
+  labelKey: marker('memorial.links.edition2026'),
+};
+
 export const MEMORIAL_2021: MemorialConfig = {
   year: 2021,
-  description: 'Memorial of Chaotic-AUR, celebrating the third birthday of Chaotic-AUR',
-  keywords:
-    'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
-  subtitle: 'These screenshots have been collected by the community as celebration of the 3rd birthday of Chaotic-AUR.',
-  crossLink: '/memorial-v2',
-  crossLinkLabel: 'View Memorial — 2024 Edition',
+  descriptionKey: marker('memorial.edition2021.description'),
+  keywordsKey: marker('memorial.edition2021.keywords'),
+  subtitleKey: marker('memorial.edition2021.subtitle'),
+  crossLinks: [MEMORIAL_2026_LINK, MEMORIAL_2024_LINK],
   desktops: [
     'PROxZIMA.png',
     'alexjp.jpg',
@@ -88,14 +103,10 @@ export const MEMORIAL_2021: MemorialConfig = {
 
 export const MEMORIAL_2024: MemorialConfig = {
   year: 2024,
-  description: 'Memorial of Chaotic-AUR 2024, celebrating the sixth birthday of Chaotic-AUR',
-  keywords:
-    'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR memorial',
-  subtitleHtml:
-    'Celebrating the sixth birthday of Chaotic-AUR with community screenshot contributions ' +
-    'and the launch of our <a class="text-ctp-peach hover:underline" href="https://gitlab.com/chaotic-aur/pkgbuilds" target="_blank" rel="noopener noreferrer">new build system infra 4.0 🎉</a>',
-  crossLink: '/memorial',
-  crossLinkLabel: 'View Memorial — 2021 Edition',
+  descriptionKey: marker('memorial.edition2024.description'),
+  keywordsKey: marker('memorial.edition2024.keywords'),
+  subtitleKey: marker('memorial.edition2024.subtitle'),
+  crossLinks: [MEMORIAL_2026_LINK, MEMORIAL_2021_LINK],
   desktops: [
     'AnkurAlpha.png',
     'FameWolf.jpg',

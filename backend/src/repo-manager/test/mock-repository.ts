@@ -1,3 +1,4 @@
+import { type Cache } from '@nestjs/cache-manager';
 import {
   type DeepPartial,
   type FindManyOptions,
@@ -111,7 +112,9 @@ export function createMockRepository<T extends object>(opts: MockRepositoryOptio
     },
     async update(criteria: FindOptionsWhere<T>, partial: DeepPartial<T>): Promise<void> {
       for (const [key, entity] of store) {
-        if (matches(entity, criteria)) store.set(key, { ...entity, ...partial } as T);
+        if (matches(entity, criteria)) {
+          store.set(key, { ...entity, ...partial } as T);
+        }
       }
     },
     async save(entities: T | T[]): Promise<unknown> {
@@ -127,7 +130,9 @@ export function createMockRepository<T extends object>(opts: MockRepositoryOptio
     },
     async delete(criteria: FindOptionsWhere<T>): Promise<void> {
       for (const [key, entity] of store) {
-        if (matches(entity, criteria)) store.delete(key);
+        if (matches(entity, criteria)) {
+          store.delete(key);
+        }
       }
     },
     async clear(): Promise<void> {
@@ -151,4 +156,13 @@ export function createMockRepository<T extends object>(opts: MockRepositoryOptio
   };
 
   return api as unknown as MockRepository<T>;
+}
+
+/** A cache that never holds a value, so every lookup runs the real computation. */
+export function createPassThroughCache(): Cache {
+  return {
+    get: async () => undefined,
+    set: async () => undefined,
+    del: async () => true,
+  } as unknown as Cache;
 }

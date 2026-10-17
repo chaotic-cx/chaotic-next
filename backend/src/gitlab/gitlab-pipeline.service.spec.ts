@@ -58,6 +58,7 @@ function createService(apiObject: Record<string, unknown> = {}): {
     pipelineTriggerRepository as unknown as Repository<PipelineTrigger>,
     {} as Repository<Repo>,
   );
+
   return { service, apiService, pipelineTriggerRepository, sseNext };
 }
 
@@ -255,6 +256,41 @@ function pipelineTriggerInsertOf(service: GitlabPipelineService): ReturnType<typ
   return (service as unknown as { pipelineTriggerRepository: { insert: ReturnType<typeof vi.fn> } })
     .pipelineTriggerRepository.insert;
 }
+
+describe('GitlabPipelineService.isScheduledPipelineRunning', () => {
+  it('returns true while a schedule-triggered pipeline runs', async () => {
+    const pipelinesAll = vi.fn().mockResolvedValue([
+      { id: 1, source: 'push', status: 'running' },
+      { id: 2, source: 'schedule', status: 'running' },
+    ]);
+    const { service } = createService({ Pipelines: { all: pipelinesAll } });
+
+    await expect(service.isScheduledPipelineRunning()).resolves.toBe(true);
+    expect(pipelinesAll).toHaveBeenCalledWith('test-project-id', { scope: 'running', perPage: 100 });
+  });
+
+  it('returns false when only other sources run', async () => {
+    const { service } = createService({
+      Pipelines: { all: vi.fn().mockResolvedValue([{ id: 1, source: 'push', status: 'running' }]) },
+    });
+
+    await expect(service.isScheduledPipelineRunning()).resolves.toBe(false);
+  });
+
+  it('returns false when nothing runs', async () => {
+    const { service } = createService({ Pipelines: { all: vi.fn().mockResolvedValue([]) } });
+
+    await expect(service.isScheduledPipelineRunning()).resolves.toBe(false);
+  });
+
+  it('defers on API errors instead of merging blindly', async () => {
+    const { service } = createService({
+      Pipelines: { all: vi.fn().mockRejectedValue(new Error('GitLab unavailable')) },
+    });
+
+    await expect(service.isScheduledPipelineRunning()).resolves.toBe(true);
+  });
+});
 
 describe('GitlabPipelineService.triggerPipelineRun', () => {
   it('does not record an audit row when the GitLab call fails', async () => {

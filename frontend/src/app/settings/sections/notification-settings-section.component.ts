@@ -2,27 +2,44 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { type NotificationPreferenceDto, type NotificationType } from '@chaotic-next/shared-lib';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { PrimeTemplate } from '@openng/optimus-ui/api';
 import { Panel } from '@openng/optimus-ui/panel';
 import { ToggleSwitchModule } from '@openng/optimus-ui/toggleswitch';
 import { firstValueFrom } from 'rxjs';
 import { APP_CONFIG } from '../../../environments/app-config.token';
+import { LoadErrorComponent } from '../../load-error/load-error.component';
+import { areNotificationsSupported } from '../../notification/notification.service';
 
-const TYPE_LABELS: Record<NotificationType, string> = {
-  'build-failure': 'Build failures (only non-transient)',
-  'mr-review': 'Merge request reviews',
+const TYPE_LABEL_KEYS: Record<NotificationType, string> = {
+  'build-failure': marker('settings.notifications.types.buildFailure'),
+  'mr-review': marker('settings.notifications.types.mrReview'),
 };
+
+const SKELETON_ROW_COUNT = 2;
+
+/**
+ * Why the browser cannot show push notifications, or null when it can.
+ */
+function notificationBlockerKey(): string | null {
+  if (!areNotificationsSupported()) return marker('settings.notifications.unsupported');
+
+  if (Notification.permission === 'denied') return marker('settings.notifications.blocked');
+
+  return null;
+}
 
 @Component({
   selector: 'chaotic-notification-settings-section',
+  imports: [FormsModule, PrimeTemplate, Panel, ToggleSwitchModule, TranslocoDirective, LoadErrorComponent],
   templateUrl: './notification-settings-section.component.html',
-  imports: [FormsModule, PrimeTemplate, Panel, ToggleSwitchModule],
 })
 export class NotificationSettingsSectionComponent {
   private readonly http = inject(HttpClient);
   private readonly backendUrl = inject(APP_CONFIG).backendUrl;
 
-  readonly typeLabels = TYPE_LABELS;
+  readonly typeLabelKeys = TYPE_LABEL_KEYS;
   readonly saving = signal(false);
   readonly saveFailed = signal(false);
 
@@ -30,6 +47,9 @@ export class NotificationSettingsSectionComponent {
     url: `${this.backendUrl}/notifications/preferences`,
     method: 'GET',
   }));
+
+  protected readonly skeletonRows = Array.from({ length: SKELETON_ROW_COUNT });
+  protected readonly browserHintKey = notificationBlockerKey();
 
   async setEnabled(type: NotificationType, enabled: boolean): Promise<void> {
     this.preferencesResource.update((prefs) =>

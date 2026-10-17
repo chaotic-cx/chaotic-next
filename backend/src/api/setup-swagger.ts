@@ -21,8 +21,10 @@ export function provideSwagger(app: INestApplication): void {
     .setContact('Chaotic-AUR developers', 'https://aur.chaotic.cx/about', 'root@chaotic.cx')
     .addCookieAuth('better-auth.session_token')
     .setOpenAPIVersion('3.2.0')
-    // OpenAPI 3.2 tag hierarchy: parent/kind come from the Tag Object and only
-    // take effect when declared here, not on @ApiTags().
+    /**
+     * OpenAPI 3.2 tag hierarchy: parent/kind come from the Tag Object and only
+     * take effect when declared here, not on @ApiTags().
+     */
     .addTag('Packages', 'Package, build and repository data.')
     .addTag('builder', 'Build and package statistics.', undefined, { parent: 'Packages' })
     .addTag('repo', 'Repo manager and ELF signal index.', undefined, { parent: 'Packages' })
@@ -48,9 +50,11 @@ export function provideSwagger(app: INestApplication): void {
 
   const adapter = app.getHttpAdapter();
 
-  // The reference UI must be an exact-path fastify route: registering it via
-  // `app.use('/api/docs', ...)` creates an onRequest hook whose prefix match
-  // also swallows /api/docs/json and answers it with HTML.
+  /**
+   * The reference UI must be an exact-path fastify route: registering it via
+   * `app.use('/api/docs', ...)` creates an onRequest hook whose prefix match
+   * also swallows /api/docs/json and answers it with HTML.
+   */
   if (adapter instanceof FastifyAdapter) {
     const fastify = adapter.getInstance();
     const sendSpec = (req: unknown, reply: { send: (data: unknown) => void }) => {
@@ -72,8 +76,10 @@ export function provideSwagger(app: INestApplication): void {
       telemetry: false,
     });
     fastify.get('/api/docs', (req: FastifyRequest, reply: FastifyReply) => {
-      // The reference handler writes to the raw response, so fastify must not
-      // attempt its own send afterwards.
+      /**
+       * The reference handler writes to the raw response, so fastify must not
+       * attempt its own send afterwards.
+       */
       reply.hijack();
       return reference(req, reply.raw);
     });

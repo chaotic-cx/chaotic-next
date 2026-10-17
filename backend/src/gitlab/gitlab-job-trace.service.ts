@@ -69,8 +69,10 @@ export class GitlabJobTraceService {
     return withSseKeepalive(
       new Observable<SseMessage<GitlabLogChunk>>((subscriber) => {
         const client: JobTraceClient = {
-          // Seeds from the resume point so a reconnecting client only receives
-          // bytes appended after its last received chunk.
+          /**
+           * Seeds from the resume point so a reconnecting client only receives
+           * bytes appended after its last received chunk.
+           */
           lastOffset: Math.max(resumeAt, 0),
           next: (message) => subscriber.next(message),
           complete: () => subscriber.complete(),
@@ -100,14 +102,18 @@ export class GitlabJobTraceService {
     const entry = this.jobTraces.get(key);
     if (!entry) return;
     entry.clients.delete(client);
-    if (entry.clients.size === 0) this.disposeJobTrace(key);
+    if (entry.clients.size === 0) {
+      this.disposeJobTrace(key);
+    }
   }
 
   private sendJobTraceChunk(entry: JobTraceEntry, client: JobTraceClient): void {
     if (entry.trace.length <= client.lastOffset) return;
     const offset = entry.trace.length;
-    // The id carries the offset so the browser's native EventSource reconnect
-    // resumes via Last-Event-ID without manual bookkeeping.
+    /**
+     * The id carries the offset so the browser's native EventSource reconnect
+     * resumes via Last-Event-ID without manual bookkeeping.
+     */
     client.next({
       id: String(offset),
       data: { offset, text: entry.trace.slice(client.lastOffset), complete: false, status: entry.status ?? '' },
@@ -135,7 +141,9 @@ export class GitlabJobTraceService {
           client.complete();
         }
       }
-      if (TERMINAL_JOB_STATUSES.includes(entry.status)) this.disposeJobTrace(key);
+      if (TERMINAL_JOB_STATUSES.includes(entry.status)) {
+        this.disposeJobTrace(key);
+      }
     } catch (error) {
       for (const client of [...entry.clients]) client.error(error);
       this.disposeJobTrace(key);
@@ -145,7 +153,9 @@ export class GitlabJobTraceService {
   private disposeJobTrace(key: string): void {
     const entry = this.jobTraces.get(key);
     if (!entry) return;
-    if (entry.timer !== undefined) clearInterval(entry.timer);
+    if (entry.timer !== undefined) {
+      clearInterval(entry.timer);
+    }
     this.jobTraces.delete(key);
   }
 }

@@ -122,6 +122,10 @@ export class Package {
   @Column({ type: 'boolean', nullable: false, default: false })
   skipSignalScan!: boolean;
 
+  @ApiProperty({ description: 'Whether the PKGBUILD compiles from source instead of repackaging prebuilt binaries' })
+  @Column({ type: 'boolean', nullable: false, default: false })
+  isSourceCompiled!: boolean;
+
   @ApiProperty({ description: 'Current package version' })
   @Column({ type: 'varchar', nullable: true })
   version!: string;
@@ -233,6 +237,7 @@ export class BuildResourceUsage {
 @Index('IDX_build_repoId', ['repo'])
 @Index('IDX_build_timestamp', ['timestamp'])
 @Index('IDX_build_status', ['status'])
+@Index('IDX_build_pkgbaseId_status_id', ['pkgbase', 'status', 'id'])
 export class Build {
   @ApiProperty({ description: 'Build ID' })
   @PrimaryGeneratedColumn()

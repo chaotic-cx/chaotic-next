@@ -1,31 +1,62 @@
-<chaotic-title title="Build status" subtitleHtml="Currently running pipelines and build queue." />
+<div class="chaotic-page" *transloco="let t; prefix: 'buildStatus.page'">
+  <chaotic-title [title]="t('title')" [subtitle]="t('subtitle')" />
+  <chaotic-stale-notice />
 
-<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 sm:px-2.5">
-  <p-card>
-    @if (!buildStatusService.initialLoaded() && !isMobile()) {
-      <div class="flex items-center justify-center" [style.min-height.px]="buildStatusService.cardMinHeight() ?? 980">
-        <p-progress-spinner
-          [style]="{ width: '3rem', height: '3rem' }"
-          ariaLabel="Loading build status"
-          strokeWidth="4"
-        />
-      </div>
-    } @else {
-      <div class="flex min-h-[980px] flex-col text-left" #statusContent>
-        <div class="grid min-h-0 flex-1 grid-cols-1 gap-8 lg:grid-cols-2">
-          <div class="flex min-h-0 flex-col gap-8">
-            <chaotic-build-status-active-builds class="flex flex-none flex-col" />
-            <chaotic-build-status-waiting-builds class="flex min-h-0 flex-1 flex-col" />
-            <chaotic-build-status-idle-builders class="flex flex-none flex-col" />
-          </div>
-          <div class="flex min-h-0 flex-col gap-8">
-            <chaotic-build-status-pipelines class="flex min-h-0 flex-1 flex-col" (openPipeline)="showDialog($event)" />
-            <chaotic-build-status-deployments class="flex min-h-0 flex-1 flex-col" />
-          </div>
-        </div>
-      </div>
-    }
-  </p-card>
+  <p class="sr-only" role="status" aria-live="polite">{{ buildStatusService.liveSummary() }}</p>
+  <dl class="chaotic-stats chaotic-surface" [attr.aria-label]="t('summaryAriaLabel')">
+    <div class="chaotic-stats__item chaotic-stats__item--primary">
+      <dt>{{ t('building') }}</dt>
+      <dd>
+        @if (buildStatusService.queueCountKnown()) {
+          {{ buildStatusService.activeQueue().length }}
+        } @else {
+          <chaotic-unknown-value />
+        }
+      </dd>
+    </div>
+    <div class="chaotic-stats__item">
+      <dt>{{ t('queued') }}</dt>
+      <dd>
+        @if (buildStatusService.queueCountKnown()) {
+          {{ buildStatusService.waitingQueue().length }}
+        } @else {
+          <chaotic-unknown-value />
+        }
+      </dd>
+    </div>
+    <div class="chaotic-stats__item">
+      <dt>{{ t('idleBuilders') }}</dt>
+      <dd>
+        @if (buildStatusService.queueCountKnown()) {
+          {{ buildStatusService.idleQueue().length }}
+        } @else {
+          <chaotic-unknown-value />
+        }
+      </dd>
+    </div>
+    <div class="chaotic-stats__item">
+      <dt>{{ t('queueClearsIn') }}</dt>
+      <dd>
+        @if (buildStatusService.queueClearEta(); as eta) {
+          {{ eta }}
+        } @else {
+          <chaotic-unknown-value />
+        }
+      </dd>
+    </div>
+  </dl>
+
+  <div class="status-grid">
+    <div class="status-grid__main">
+      <chaotic-build-status-active-builds />
+      <chaotic-build-status-waiting-builds />
+      <chaotic-build-status-deployments />
+    </div>
+    <div class="status-grid__side">
+      <chaotic-build-status-idle-builders />
+      <chaotic-build-status-pipelines (openPipeline)="showDialog($event)" />
+    </div>
+  </div>
 </div>
 
 <chaotic-build-status-pipeline-dialog [(visible)]="dialogVisible" [data]="dialogData()" />

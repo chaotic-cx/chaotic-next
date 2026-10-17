@@ -33,8 +33,10 @@ export function unresolvedFailedBuildFromRow(row: UnresolvedFailureRow): Unresol
   const timestamp = new Date(row.timestamp);
   if (Number.isNaN(timestamp.getTime())) return null;
 
-  // A listed row always has at least one failing build, so the streak start
-  // falls back to the latest failure when the aggregate came back empty.
+  /**
+   * A listed row always has at least one failing build, so the streak start
+   * falls back to the latest failure when the aggregate came back empty.
+   */
   const streakStartMs = row.streakStartedAt === null ? null : new Date(row.streakStartedAt).getTime();
   return {
     pkgname: row.pkgname,
@@ -69,9 +71,7 @@ export function shouldBuildDecision(
     if (!BUILD_FAILURE_STATUSES.includes(status as BuildStatus)) break;
     consecutiveFailures++;
   }
-  if (consecutiveFailures < BUILD_RATE_LIMIT_FAILURE_STREAK) {
-    return { shouldBuild: true, consecutiveFailures };
-  }
+  if (consecutiveFailures < BUILD_RATE_LIMIT_FAILURE_STREAK) return { shouldBuild: true, consecutiveFailures };
   const cooldownOver = newestBuildAgeMs !== null && newestBuildAgeMs >= SHOULD_BUILD_RETRY_MS;
   return { shouldBuild: cooldownOver, consecutiveFailures };
 }

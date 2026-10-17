@@ -1,5 +1,5 @@
-<div class="mx-auto max-w-4xl">
-  <chaotic-title title="Settings" subtitle="Manage your account preferences." />
+<div class="chaotic-page" *transloco="let t; prefix: 'settings'">
+  <chaotic-title [title]="t('title')" [subtitle]="t('subtitle')" />
 
   <div class="mt-5">
     <chaotic-notification-settings-section />

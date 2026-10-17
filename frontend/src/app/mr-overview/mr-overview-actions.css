@@ -1,0 +1,118 @@
+::ng-deep .mr-btn-approve {
+  --mr-accent: var(--catppuccin-color-green);
+}
+
+::ng-deep .mr-btn-danger {
+  --mr-accent: var(--catppuccin-color-red);
+}
+
+::ng-deep .mr-btn-warn {
+  --mr-accent: var(--catppuccin-color-yellow);
+}
+
+::ng-deep .mr-btn-approve,
+::ng-deep .mr-btn-danger,
+::ng-deep .mr-btn-warn,
+::ng-deep .mr-btn-approve:not(:disabled):hover,
+::ng-deep .mr-btn-approve:not(:disabled):focus-visible,
+::ng-deep .mr-btn-danger:not(:disabled):hover,
+::ng-deep .mr-btn-danger:not(:disabled):focus-visible,
+::ng-deep .mr-btn-warn:not(:disabled):hover,
+::ng-deep .mr-btn-warn:not(:disabled):focus-visible,
+::ng-deep .mr-btn-approve:disabled,
+::ng-deep .mr-btn-approve[disabled],
+::ng-deep .mr-btn-danger:disabled,
+::ng-deep .mr-btn-danger[disabled],
+::ng-deep .mr-btn-warn:disabled,
+::ng-deep .mr-btn-warn[disabled] {
+  color: var(--mr-accent) !important;
+  border-color: var(--mr-accent) !important;
+}
+
+::ng-deep .mr-btn-approve:not(:disabled):hover,
+::ng-deep .mr-btn-approve:not(:disabled):focus-visible,
+::ng-deep .mr-btn-danger:not(:disabled):hover,
+::ng-deep .mr-btn-danger:not(:disabled):focus-visible,
+::ng-deep .mr-btn-warn:not(:disabled):hover,
+::ng-deep .mr-btn-warn:not(:disabled):focus-visible {
+  background: color-mix(in srgb, var(--mr-accent) 15%, transparent) !important;
+}
+
+::ng-deep .mr-btn-approve:disabled,
+::ng-deep .mr-btn-approve[disabled],
+::ng-deep .mr-btn-danger:disabled,
+::ng-deep .mr-btn-danger[disabled],
+::ng-deep .mr-btn-warn:disabled,
+::ng-deep .mr-btn-warn[disabled] {
+  opacity: 0.5 !important;
+}
+
+::ng-deep .p-button.mr-btn-icon-inline {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+::ng-deep .p-button.mr-btn-icon-inline .p-button-icon {
+  margin: 0;
+}
+
+.mr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--chaotic-space-sm);
+  padding: var(--chaotic-space-md);
+  border-top: 1px solid var(--chaotic-border);
+  background: var(--chaotic-surface-sticky);
+}
+
+.mr-actions--signed-out {
+  justify-content: center;
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-subtext0);
+}
+
+@media (max-width: 767.98px) {
+  .mr-layout--detail .mr-detail-pane {
+    padding-inline: var(--chaotic-space-md);
+  }
+
+  .mr-layout--detail .mr-head {
+    margin-inline-start: calc(-1 * var(--chaotic-space-md));
+  }
+
+  .mr-layout--detail .mr-head__title {
+    flex: 1 1 0;
+    font-size: var(--chaotic-text-md);
+  }
+
+  .mr-layout--detail .mr-detail__header {
+    padding-inline-start: var(--chaotic-space-md);
+  }
+
+  .mr-actions {
+    flex-wrap: nowrap;
+    padding: var(--chaotic-space-sm) 0;
+  }
+}
+
+/* Outlined secondary reads as disabled here. */
+::ng-deep .p-button.mr-btn-more {
+  color: var(--catppuccin-color-text);
+  border-color: var(--chaotic-border);
+}
+
+/* The menu popup is appended to body. */
+::ng-deep .mr-menu-warn .p-menu-item-label {
+  color: var(--chaotic-ink-yellow);
+}
+
+::ng-deep .mr-menu-danger .p-menu-item-label {
+  color: var(--catppuccin-color-red);
+}

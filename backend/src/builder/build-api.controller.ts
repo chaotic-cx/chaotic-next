@@ -134,13 +134,13 @@ export class BuildApiController {
   }
 
   @Sse('manager/logs')
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Proxy manager log stream from the build server as server-sent events.' })
   @ApiHeaders([
     { name: 'last-event-id', required: false, description: 'Native EventSource reconnect: last received frame id' },
   ])
-  @SkipThrottle()
-  @ApiOperation({ summary: 'Proxy manager log stream from the build server as server-sent events.' })
-  @ApiOkResponse({ description: 'SSE stream of manager logs' })
   @ApiQuery({ name: 'lastEventId', required: false, description: 'Sequence number to resume from', type: Number })
+  @ApiOkResponse({ description: 'SSE stream of manager logs' })
   getManagerLogs(
     @Query('lastEventId') lastEventId?: number,
     // Native EventSource reconnects replay the last received frame id here.
@@ -173,21 +173,29 @@ export class BuildApiController {
   private addManagerLogClient(client: ProxySseClient<string> & { resumeFrom?: number }): void {
     this.managerLogClients.add(client);
     for (const frame of this.managerLogBuffer) {
-      if (client.resumeFrom === undefined || Number(frame.id) > client.resumeFrom) client.next(frame);
+      if (client.resumeFrom === undefined || Number(frame.id) > client.resumeFrom) {
+        client.next(frame);
+      }
     }
-    if (!this.managerLogsUpstream) void this.streamManagerLogs();
+    if (!this.managerLogsUpstream) {
+      void this.streamManagerLogs();
+    }
   }
 
   private removeManagerLogClient(client: ProxySseClient<string> & { resumeFrom?: number }): void {
     this.managerLogClients.delete(client);
-    if (this.managerLogClients.size === 0) this.managerLogsUpstream?.abort();
+    if (this.managerLogClients.size === 0) {
+      this.managerLogsUpstream?.abort();
+    }
   }
 
   private broadcastManagerLogFrame(message: string): void {
     this.managerLogSequence += 1;
     const frame: SseMessage<string> = { id: String(this.managerLogSequence), data: message };
     this.managerLogBuffer.push(frame);
-    if (this.managerLogBuffer.length > MANAGER_LOG_BUFFER_FRAMES) this.managerLogBuffer.shift();
+    if (this.managerLogBuffer.length > MANAGER_LOG_BUFFER_FRAMES) {
+      this.managerLogBuffer.shift();
+    }
 
     for (const client of [...this.managerLogClients]) client.next(frame);
   }
@@ -221,7 +229,9 @@ export class BuildApiController {
           const dataLine = event.split('\n').find((line) => line.startsWith('data: '));
           if (!dataLine) continue;
           const message = parseManagerLogEvent(dataLine);
-          if (message !== undefined) this.broadcastManagerLogFrame(message);
+          if (message !== undefined) {
+            this.broadcastManagerLogFrame(message);
+          }
         }
       }
     } catch (error) {

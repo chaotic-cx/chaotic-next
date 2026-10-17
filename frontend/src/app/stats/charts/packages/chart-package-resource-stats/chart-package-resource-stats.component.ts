@@ -1,29 +1,55 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { flavors } from '@catppuccin/palette';
+import type { AccentName } from '@catppuccin/palette';
 import type { PackageResourceDayRow } from '@chaotic-next/shared-lib';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { ALL_TIME_DAYS, AppService } from '../../../../app.service';
 import { parseCount } from '../../../../functions';
+import { injectActiveTranslation } from '../../../../i18n/active-translation';
 import { StatsService } from '../../../stats.service';
+import { LoadErrorComponent } from '../../../../load-error/load-error.component';
+import { paletteColor } from '../../../../theme';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, mochaAxisChartOptions, roundToTenth } from '../../chart-config';
+import {
+  axisChartOptions,
+  chartResource,
+  type ChartConfig,
+  formatDay,
+  hasPlottedValue,
+  roundToTenth,
+} from '../../chart-config';
 import { RESOURCE_METRIC_ORDER, RESOURCE_METRICS, type ResourceMetricKey } from '../../chart-resource-metrics';
 
 type ResourceDayValueKey = Exclude<keyof PackageResourceDayRow, 'day' | 'samples'>;
 
 interface ResourceSeries {
   rowKey: ResourceDayValueKey;
-  label: string;
-  color: string;
+  labelKey: string;
+  colorName: AccentName;
 }
 
 const METRIC_SERIES: Record<ResourceMetricKey, ResourceSeries[]> = {
   memory: [
-    { rowKey: 'avg_memory_bytes', label: 'Average memory', color: flavors.mocha.colors.lavender.hex },
-    { rowKey: 'peak_memory_bytes', label: 'Peak memory', color: flavors.mocha.colors.blue.hex },
+    {
+      rowKey: 'avg_memory_bytes',
+      labelKey: marker('stats.charts.packageResourceStats.averageMemory'),
+      colorName: 'lavender',
+    },
+    {
+      rowKey: 'peak_memory_bytes',
+      labelKey: marker('stats.charts.packageResourceStats.peakMemory'),
+      colorName: 'blue',
+    },
   ],
-  cpu: [{ rowKey: 'cpu_time_ns', label: 'CPU time', color: flavors.mocha.colors.green.hex }],
-  disk: [{ rowKey: 'disk_io_bytes', label: 'Disk I/O', color: flavors.mocha.colors.yellow.hex }],
-  network: [{ rowKey: 'network_io_bytes', label: 'Network I/O', color: flavors.mocha.colors.teal.hex }],
+  cpu: [{ rowKey: 'cpu_time_ns', labelKey: marker('stats.resourceMetrics.cpu'), colorName: 'green' }],
+  disk: [{ rowKey: 'disk_io_bytes', labelKey: marker('stats.resourceMetrics.disk'), colorName: 'yellow' }],
+  network: [
+    {
+      rowKey: 'network_io_bytes',
+      labelKey: marker('stats.resourceMetrics.network'),
+      colorName: 'teal',
+    },
+  ],
 };
 
 export interface PackageResourceChart {
@@ -33,13 +59,16 @@ export interface PackageResourceChart {
 
 @Component({
   selector: 'chaotic-chart-package-resource-stats',
-  imports: [ChartCardComponent],
+  imports: [ChartCardComponent, LoadErrorComponent, TranslocoDirective],
   templateUrl: './chart-package-resource-stats.component.html',
   styleUrl: './chart-package-resource-stats.component.css',
 })
 export class ChartPackageResourceStatsComponent {
   private readonly appService = inject(AppService);
   private readonly statsService = inject(StatsService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly activeTranslation = injectActiveTranslation();
 
   readonly packageName = input.required<string>();
 
@@ -52,15 +81,16 @@ export class ChartPackageResourceStatsComponent {
     );
   });
 
-  /** One chart per metric; empty until the package has sampled builds, so
-   * nothing renders without data. */
+  // One chart per metric that has sampled values. Metrics that stay at zero get no chart.
   protected readonly charts = computed<PackageResourceChart[]>(() => {
+    this.activeTranslation();
+
     const rows = this.chart.data();
     if (rows.length === 0) return [];
     return RESOURCE_METRIC_ORDER.map((key) => ({
       key,
       config: this.buildChartConfig(key, rows),
-    }));
+    })).filter((entry) => hasPlottedValue(entry.config));
   });
 
   private buildChartConfig(metricKey: ResourceMetricKey, rows: PackageResourceDayRow[]): ChartConfig<'line'> {
@@ -71,15 +101,18 @@ export class ChartPackageResourceStatsComponent {
     return {
       data: {
         labels,
-        datasets: METRIC_SERIES[metricKey].map(({ rowKey, label, color }) => ({
-          label: `${label} (${metric.unit})`,
+        datasets: METRIC_SERIES[metricKey].map(({ rowKey, labelKey, colorName }) => ({
+          label: this.transloco.translate('stats.charts.packageResourceStats.label', {
+            series: this.transloco.translate(labelKey),
+            unit: metric.unit,
+          }),
           data: sorted.map((row) => roundToTenth(parseCount(row[rowKey]) * metric.scale)),
-          backgroundColor: color,
-          borderColor: color,
+          backgroundColor: paletteColor(colorName),
+          borderColor: paletteColor(colorName),
           fill: false as const,
         })),
       },
-      options: mochaAxisChartOptions<'line'>(),
+      options: axisChartOptions<'line'>(),
     };
   }
 }
