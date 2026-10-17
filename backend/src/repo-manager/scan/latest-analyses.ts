@@ -9,14 +9,17 @@ export interface ActiveAnalysis {
   analysis: PackageElfAnalysis;
 }
 
+export function analysisKey(analysis: Pick<PackageElfAnalysis, 'pkgType' | 'pkgId'>): string {
+  return `${analysis.pkgType}:${analysis.pkgId}`;
+}
+
 export async function latestAnalysesByPackage(
   repository: Repository<PackageElfAnalysis>,
 ): Promise<Map<string, PackageElfAnalysis>> {
   const analyses = await repository.find({
     select: { pkgType: true, pkgId: true, version: true, providedSonames: true },
   });
-
-  return latestAnalysisByKey(analyses, (analysis) => `${analysis.pkgType}:${analysis.pkgId}`);
+  return latestAnalysisByKey(analyses, analysisKey);
 }
 
 /**
@@ -34,11 +37,11 @@ export async function latestActiveAnalysesByPackage(
   ]);
   const nameByKey = new Map<string, string>();
   for (const pkg of archPkgs) {
-    nameByKey.set(`${pkgTypeOf(TriggerType.ARCH)}:${pkg.id}`, pkg.pkgname);
+    nameByKey.set(analysisKey({ pkgType: pkgTypeOf(TriggerType.ARCH), pkgId: pkg.id }), pkg.pkgname);
   }
 
   for (const pkg of chaoticPkgs) {
-    nameByKey.set(`${pkgTypeOf(TriggerType.CHAOTIC)}:${pkg.id}`, pkg.pkgname);
+    nameByKey.set(analysisKey({ pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: pkg.id }), pkg.pkgname);
   }
 
   const active = new Map<string, ActiveAnalysis>();
