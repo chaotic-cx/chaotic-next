@@ -5,6 +5,7 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { MATRIX_ROOM_ALIAS, MATRIX_ROOM_URL } from '../community-links';
 import { setPageSeo } from '../functions';
+import { MEMORIAL_2021_LINK, MEMORIAL_2024_LINK, MEMORIAL_2026_LINK } from '../memorial/memorial.configs';
 import { TitleComponent } from '../title/title.component';
 
 interface UsefulLink {
@@ -44,7 +45,7 @@ const USEFUL_LINKS: UsefulLink[] = [
   { labelKey: marker('about.usefulLinks.statusPage'), text: 'uptime.chaotic.cx', href: 'https://uptime.chaotic.cx' },
 ];
 
-// Proper names stay in `name`; descriptive entries use `nameKey` for translation.
+// Proper names stay in `name`. Descriptive entries use `nameKey` for translation.
 interface Thanks {
   name?: string;
   nameKey?: string;
@@ -106,6 +107,9 @@ export class AboutComponent {
   readonly usefulLinks = USEFUL_LINKS;
   readonly specialThanks = SPECIAL_THANKS;
   readonly team = TEAM;
+  readonly memorial2026Path = MEMORIAL_2026_LINK.path;
+  readonly memorial2024Path = MEMORIAL_2024_LINK.path;
+  readonly memorial2021Path = MEMORIAL_2021_LINK.path;
 
   constructor() {
     setPageSeo(

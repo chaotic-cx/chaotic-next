@@ -406,6 +406,12 @@
       "noDeployments": "No recent deployments",
       "more": "+{{count}} more",
       "allDeployments": "All deployments"
+    },
+    "birthdayBanner": {
+      "label": "Birthday",
+      "text": "Chaotic-AUR turns {{age}}! Thank you for being part of it.",
+      "link": "See our story",
+      "dismiss": "Hide birthday banner"
     }
   },
   "languageSwitcher": {
@@ -812,7 +818,8 @@
     "admin": "Admin",
     "backendDown": "Backend unavailable",
     "notFound": "Not found",
-    "recordTitleFormat": "{{record}} · {{page}}"
+    "recordTitleFormat": "{{record}} · {{page}}",
+    "memorial2026": "Memorial 2026"
   },
   "searchPackage": {
     "placeholder": "Package name in {{repo}}, e.g. firedragon",

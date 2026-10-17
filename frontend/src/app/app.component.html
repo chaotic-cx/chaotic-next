@@ -1,6 +1,6 @@
 <div class="background flex min-h-svh flex-col" *transloco="let t; prefix: 'app'">
   <a class="skip-link" (click)="skipToContent($event, mainContent)" href="#content">{{ t('skipToContent') }}</a>
-  <garuda-shell class="flex-1 p-2" [menuItems]="menuItems()" chaoticNavActiveCurrent>
+  <garuda-shell class="flex-1 p-2" [menuItems]="menuItems()" chaoticNavActiveCurrent chaoticShellBarOffset>
     <div class="flex items-center gap-2" garudaShellBarStart>
       <a class="chaotic-home-link" [attr.aria-label]="t('goHome')" routerLink="/">
         @if (lightLogo()) {

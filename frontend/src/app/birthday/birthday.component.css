@@ -1,0 +1,339 @@
+/* Hero: the giant numeral is the one signature element of the page. */
+.birthday-hero {
+  display: grid;
+  justify-items: center;
+  gap: var(--chaotic-space-md);
+  margin-top: var(--chaotic-space-xl);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .birthday-hero {
+    grid-template-columns: auto minmax(0, 34rem);
+    justify-content: center;
+    align-items: center;
+    gap: var(--chaotic-space-2xl);
+    text-align: left;
+  }
+}
+
+.birthday-hero__numeral {
+  display: grid;
+  font-family: var(--font-mono);
+}
+
+.birthday-hero__digit {
+  font-size: clamp(6rem, 4rem + 9vw, 11rem);
+  font-weight: var(--chaotic-weight-bold);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--catppuccin-color-text);
+}
+
+.birthday-hero__copy {
+  display: grid;
+  gap: var(--chaotic-space-sm);
+}
+
+.birthday-hero__title {
+  font-size: clamp(var(--chaotic-text-2xl), 1.5rem + 2.5vw, var(--chaotic-text-display));
+  font-weight: var(--chaotic-weight-bold);
+  letter-spacing: var(--chaotic-tracking-tight);
+  line-height: 1.05;
+  text-wrap: balance;
+  color: var(--catppuccin-color-text);
+}
+
+.birthday-hero__lede {
+  font-size: var(--chaotic-text-lg);
+  color: var(--chaotic-fg-muted);
+  text-wrap: pretty;
+}
+
+.birthday-hero__span {
+  display: flex;
+  align-items: center;
+  gap: var(--chaotic-space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--chaotic-text-sm);
+  color: var(--chaotic-fg-faint);
+}
+
+.birthday-hero__line {
+  flex: 1;
+  min-width: 3rem;
+  height: 2px;
+  border-radius: var(--chaotic-radius-pill);
+  background: linear-gradient(90deg, var(--catppuccin-color-mauve), var(--catppuccin-color-peach));
+}
+
+.birthday-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--chaotic-space-md);
+  margin-top: clamp(3rem, 6vw, 5rem);
+}
+
+.birthday-section__note {
+  margin-top: var(--chaotic-space-2xs);
+  font-size: var(--chaotic-text-sm);
+  color: var(--chaotic-fg-muted);
+}
+
+.birthday-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--chaotic-space-sm);
+}
+
+/* Timeline: one column per year, scrolled sideways inside its own box. */
+.birthday-scroll-buttons {
+  display: flex;
+  gap: var(--chaotic-space-xs);
+}
+
+.birthday-scroll-button {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-pill);
+  background: var(--chaotic-surface);
+  color: var(--catppuccin-color-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    border-color var(--chaotic-duration-fast) var(--chaotic-ease-out),
+    color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.birthday-scroll-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .birthday-scroll-button:not(:disabled):hover {
+    border-color: var(--catppuccin-color-mauve);
+    color: var(--catppuccin-color-mauve);
+  }
+}
+
+/*
+ * Phones show one year in the middle. The fades cover only the side gaps, so the year in focus is never dimmed.
+ * Wider screens snap the years to the left edge, and the start fade stays inside the inset.
+ */
+.birthday-scroller {
+  --year-width: min(82vw, 18rem);
+  --side-gap: calc((100% - var(--year-width)) / 2);
+  --fade-start: var(--side-gap);
+  --fade-end: var(--side-gap);
+
+  position: relative;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 var(--fade-start),
+    #000 calc(100% - var(--fade-end)),
+    transparent
+  );
+}
+
+.birthday-scroller.is-at-start {
+  --fade-start: 0rem;
+}
+
+.birthday-scroller.is-at-end {
+  --fade-end: 0rem;
+}
+
+.birthday-scroller:focus-visible,
+.birthday-scroll-button:focus-visible {
+  outline: 2px solid var(--catppuccin-color-mauve);
+  outline-offset: 2px;
+}
+
+.birthday-years {
+  display: flex;
+  padding: var(--chaotic-space-2xs) var(--side-gap) var(--chaotic-space-md);
+}
+
+.birthday-year {
+  flex: none;
+  width: var(--year-width);
+  padding-inline: calc(var(--chaotic-space-lg) / 2);
+  scroll-snap-align: center;
+}
+
+@media (min-width: 640px) {
+  .birthday-scroller {
+    --fade-start: var(--chaotic-inset);
+    --fade-end: 2.5rem;
+
+    scroll-padding-inline: var(--chaotic-inset);
+  }
+
+  .birthday-years {
+    padding-inline: var(--chaotic-inset);
+  }
+
+  .birthday-year {
+    padding-inline: 0 var(--chaotic-space-lg);
+    scroll-snap-align: start;
+  }
+}
+
+.birthday-year__label {
+  display: flex;
+  align-items: center;
+  gap: var(--chaotic-space-sm);
+  margin-bottom: var(--chaotic-space-md);
+  font-size: var(--chaotic-text-2xl);
+  font-weight: var(--chaotic-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--catppuccin-color-mauve);
+}
+
+/* The rule after each year joins the columns into one line. */
+.birthday-year__label::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  margin-right: calc(-1 * var(--chaotic-space-lg));
+  background: var(--chaotic-border);
+}
+
+.birthday-year__items {
+  display: grid;
+  gap: var(--chaotic-space-md);
+}
+
+.birthday-entry {
+  display: grid;
+  gap: var(--chaotic-space-2xs);
+  padding-left: var(--chaotic-space-sm);
+  border-left: 2px solid color-mix(in srgb, var(--catppuccin-color-mauve) 35%, transparent);
+}
+
+.birthday-entry__date {
+  font-size: var(--chaotic-text-xs);
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--chaotic-fg-faint);
+}
+
+.birthday-entry__text {
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-text);
+  text-wrap: pretty;
+}
+
+/* Fun facts: two terminal windows, fastfetch and the birthday shell. Side by side once both fit. */
+.birthday-terminals {
+  display: grid;
+  gap: var(--chaotic-space-md);
+}
+
+@media (min-width: 1280px) {
+  .birthday-terminals {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+/* Stronger than --chaotic-blur, so the terminal reads as frosted glass over the page pattern. */
+.birthday-terminal {
+  --birthday-terminal-blur: blur(12px);
+
+  overflow: hidden;
+  border: 1px solid var(--chaotic-border);
+  border-radius: var(--chaotic-radius-lg);
+  background: color-mix(in srgb, var(--catppuccin-color-crust) 25%, transparent);
+  box-shadow: var(--chaotic-shadow);
+  backdrop-filter: var(--birthday-terminal-blur);
+  -webkit-backdrop-filter: var(--birthday-terminal-blur);
+  font-family: var(--font-mono);
+  font-size: var(--chaotic-text-sm);
+  color: var(--catppuccin-color-text);
+}
+
+.birthday-terminal__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem var(--chaotic-inset);
+  border-bottom: 1px solid var(--chaotic-border);
+  background: color-mix(in srgb, var(--catppuccin-color-mantle) 35%, transparent);
+}
+
+.birthday-terminal__dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--chaotic-radius-pill);
+}
+
+.birthday-terminal__dot--red {
+  background: var(--catppuccin-color-red);
+}
+
+.birthday-terminal__dot--yellow {
+  background: var(--catppuccin-color-yellow);
+}
+
+.birthday-terminal__dot--green {
+  background: var(--catppuccin-color-green);
+}
+
+.birthday-terminal__title {
+  flex: 1;
+  margin-right: 2.5rem;
+  text-align: center;
+  font-size: var(--chaotic-text-xs);
+  color: var(--chaotic-fg-faint);
+}
+
+.birthday-terminal__body {
+  display: grid;
+  gap: var(--chaotic-space-md);
+  padding: var(--chaotic-space-md) var(--chaotic-inset) var(--chaotic-space-lg);
+}
+
+/* Side by side, the shell fills the height that the fastfetch window sets. */
+@media (min-width: 1280px) {
+  .birthday-terminal--shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .birthday-terminal--shell .birthday-terminal__body {
+    flex: 1;
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+
+.birthday-thanks {
+  margin-top: clamp(3rem, 6vw, 5rem);
+  font-size: var(--chaotic-text-lg);
+  text-align: center;
+  text-wrap: balance;
+  color: var(--catppuccin-color-text);
+}
+
+.birthday-crosslink {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 var(--chaotic-space-lg);
+  margin: var(--chaotic-space-md) 0 var(--chaotic-space-xl);
+}
+
+.birthday-crosslink a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--catppuccin-color-mauve);
+}

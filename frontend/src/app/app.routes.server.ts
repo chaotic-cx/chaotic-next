@@ -13,6 +13,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'code-of-conduct', renderMode: RenderMode.Prerender },
   { path: 'memorial', renderMode: RenderMode.Prerender },
   { path: 'memorial-v2', renderMode: RenderMode.Prerender },
+  { path: 'memorial-v3', renderMode: RenderMode.Prerender },
   { path: 'not-found', renderMode: RenderMode.Prerender },
   { path: APP_SHELL_PATH, renderMode: RenderMode.Prerender },
   { path: '**', renderMode: RenderMode.Client },

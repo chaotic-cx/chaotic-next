@@ -1,0 +1,19 @@
+<ng-container *transloco="let t; prefix: 'home.birthdayBanner'">
+  @if (visible()) {
+    <aside
+      class="birthday-toast"
+      [attr.aria-label]="t('label')"
+      animate.enter="birthday-toast--enter"
+      animate.leave="birthday-toast--leave"
+    >
+      <i class="pi pi-gift birthday-toast__icon" aria-hidden="true"></i>
+      <p class="birthday-toast__text">
+        <span class="birthday-toast__title">{{ t('text', { age }) }}</span>
+        <a class="birthday-toast__link" [routerLink]="memorialPath">{{ t('link') }}</a>
+      </p>
+      <button class="birthday-toast__close" [attr.aria-label]="t('dismiss')" (click)="dismiss()" type="button">
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </aside>
+  }
+</ng-container>

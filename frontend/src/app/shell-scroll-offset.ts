@@ -1,7 +1,7 @@
 import { ViewportScroller } from '@angular/common';
 import { inject, provideAppInitializer } from '@angular/core';
 
-const SHELL_BAR_SELECTOR = '.garuda-shell-menubar';
+export const SHELL_BAR_SELECTOR = '.garuda-shell-menubar';
 const ANCHOR_GAP_PX = 16;
 
 // The router anchor scroll ignores scroll-margin-top, so the fixed shell bar would cover the target.

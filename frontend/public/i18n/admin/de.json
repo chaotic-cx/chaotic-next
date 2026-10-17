@@ -83,11 +83,11 @@
         "busy": "{{busy}} bauen gerade"
       },
       "failures": {
-        "title": "Ungelöste Fehler",
+        "title": "Offene Fehler",
         "hideSilenced": "Stummgeschaltete ausblenden",
         "showSilenced": "{{count}} stummgeschaltete anzeigen",
-        "loadError": "Ungelöste Fehler konnten nicht geladen werden.",
-        "empty": "Nichts schlägt fehl. Alle Pakete haben zuletzt erfolgreich gebaut."
+        "loadError": "Offene Fehler konnten nicht geladen werden.",
+        "empty": "Keine fehlgeschlagenen Builds. Alle Pakete haben zuletzt erfolgreich gebaut."
       }
     },
     "buildTrends": {
@@ -154,12 +154,12 @@
       },
       "uncovered": {
         "title": "Kaputt ohne Rebuild",
-        "empty": "Für jeden Bruch gibt es einen Rebuild-Trigger.",
+        "empty": "Jedes kaputte Paket hat einen Rebuild-Trigger.",
         "detail": "kaputt ({{since}})"
       },
       "overlap": {
         "title": "Auch in Arch",
-        "empty": "Kein chaotic-aur-Paket dupliziert ein Arch-Paket."
+        "empty": "Kein chaotic-aur-Paket gibt es auch in den Arch-Repos."
       }
     },
     "recentActivity": {
@@ -175,7 +175,7 @@
       },
       "pipelineVerbs": {
         "none": "hat eine Pipeline gestartet",
-        "bumpPackages": "hat Rebuilds ausgelöst",
+        "bumpPackages": "hat Pakete bumped",
         "schedulePackages": "hat Builds eingeplant",
         "runSchedule": "hat einen Zeitplan ausgeführt",
         "dropPackages": "hat Pakete entfernt",
@@ -202,8 +202,8 @@
       "error": "Hinzufügen des Pakets konnte nicht gestartet werden."
     },
     "scheduleRun": {
-      "success": "Ausführung des Zeitplans ausgelöst",
-      "error": "Ausführung des Zeitplans konnte nicht ausgelöst werden."
+      "success": "Zeitplan gestartet",
+      "error": "Zeitplan konnte nicht gestartet werden."
     },
     "packageUpdate": {
       "success": "Paket aktualisiert",
@@ -270,8 +270,8 @@
       "error": "Rescan der Build-Klassen konnte nicht gestartet werden."
     },
     "signalDerivationRecompute": {
-      "success": "Neuberechnung der Signal-Ableitungen gestartet. Läuft im Hintergrund und kann dauern.",
-      "error": "Neuberechnung der Signal-Ableitungen konnte nicht gestartet werden."
+      "success": "Abgeleitete Signaldaten werden neu berechnet. Das läuft im Hintergrund und kann dauern.",
+      "error": "Neuberechnung der abgeleiteten Signaldaten konnte nicht gestartet werden."
     },
     "summary": {
       "success": "Erfolgreich",
@@ -346,10 +346,10 @@
       "description": "Jedes Chaotic-AUR-Paket vom CDN-Mirror indexieren. Das dauert lange."
     },
     "derivations": {
-      "label": "Signal-Ableitungen",
+      "label": "Abgeleitete Signaldaten",
       "description": "Soname-Verzeichnis, pluginOf-Links und Broken-Flags aus den gespeicherten Analysen neu aufbauen. Kein Rescan.",
-      "confirmHeader": "Signal-Ableitungen neu berechnen",
-      "confirmMessage": "Signal-Verzeichnisindex, alle pluginOf-Ableitungen und Broken-Flags aus den gespeicherten Analysen neu aufbauen? Es wird kein Archiv neu gescannt."
+      "confirmHeader": "Abgeleitete Signaldaten neu berechnen",
+      "confirmMessage": "Signal-Index, alle pluginOf-Zuordnungen und Broken-Flags aus den gespeicherten Analysen neu aufbauen? Es werden keine Archive neu gescannt."
     },
     "mrScan": {
       "label": "Offene Merge Requests",
@@ -508,7 +508,7 @@
     "actionFilterLabel": "Nach Aktion filtern",
     "firstRun": {
       "message": "Noch keine MR-Aktionen.",
-      "hint": "Hier erscheinen Freigaben, Holds und Dangerous-Markierungen aus der Review-Queue."
+      "hint": "Hier erscheinen Freigaben, Holds und Markierungen als gefährlich aus der Review-Queue."
     }
   },
   "packageBumps": {
@@ -561,7 +561,7 @@
     "loadError": "Pipeline-Trigger konnten nicht geladen werden.",
     "firstRun": {
       "message": "Noch keine Pipeline-Trigger.",
-      "hint": "Hier erscheinen Bumps, Schedule-Runs, Adds und Drops, die im Admin-Bereich gestartet wurden."
+      "hint": "Hier erscheinen Bumps, ausgeführte Zeitpläne sowie hinzugefügte und entfernte Pakete, die im Admin-Bereich gestartet wurden."
     }
   },
   "elfAnalysis": {
@@ -578,7 +578,7 @@
     },
     "binary": {
       "none": "Kein ELF",
-      "fromSource": "ELF, aus dem Source gebaut",
+      "fromSource": "ELF, aus dem Quellcode gebaut",
       "prebuilt": "ELF, prebuilt"
     },
     "empty": "Keine ELF-Analysen passen zu diesen Filtern.",
@@ -586,8 +586,8 @@
       "header": "ELF-Analyse bearbeiten",
       "packageId": "Paket-ID",
       "versionRequired": "Version fehlt",
-      "brokenReasons": "Gründe für kaputt",
-      "brokenReasonsHint": "Gründe kommagetrennt, leer lassen, wenn nicht kaputt.",
+      "brokenReasons": "Gründe, warum das Paket kaputt ist",
+      "brokenReasonsHint": "Gründe durch Kommas trennen. Leer lassen, wenn das Paket nicht kaputt ist.",
       "rebuildTriggers": "Rebuild-Trigger",
       "noRebuildTriggers": "Keine Rebuild-Trigger gefunden.",
       "triggeredBy": "(ausgelöst von {{name}})",
@@ -622,7 +622,7 @@
     },
     "buildClass": {
       "unset": "nicht gesetzt",
-      "suggested": "vorgeschlagen {{buildClass}}",
+      "suggested": "Vorschlag: {{buildClass}}",
       "buildCountOne": "{{count}} Build",
       "buildCountOther": "{{count}} Builds",
       "peakMemory": "Peak {{value}}",

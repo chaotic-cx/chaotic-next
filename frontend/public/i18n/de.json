@@ -40,9 +40,9 @@
       "scanning": "Quellen werden gescannt…"
     },
     "errors": {
-      "rateLimited": "Zu viele Scans gestartet. Warte eine Minute und versuch es noch mal.",
+      "rateLimited": "Zu viele Scans gestartet. Warte eine Minute und versuche es erneut.",
       "request": "Der Scan konnte nicht gestartet werden.",
-      "streamLost": "Die Verbindung zum Scan ist abgebrochen. Der Scan läuft weiter. Verbinde dich neu, um das Ergebnis zu sehen."
+      "streamLost": "Die Verbindung zum Scan ist abgebrochen. Der Scan läuft weiter. Stelle die Verbindung neu her, um das Ergebnis zu sehen."
     },
     "details": "Quellen: {{sources}} · Gescannt: {{scanned}} · Stimmen: {{votes}} · Beliebtheit: {{popularity}} · Seit {{year}}",
     "pkgTypes": "Pakettypen",
@@ -66,7 +66,7 @@
     },
     "vt": {
       "indicators": "VirusTotal-Indikatoren",
-      "pending": "Die Ergebnisse erscheinen, sobald jeder Indikator geprüft ist.",
+      "pending": "Die Ergebnisse erscheinen, sobald alle Indikatoren geprüft sind.",
       "flaggedCount": "{{count}} von VirusTotal markiert",
       "enginesFlagged": "{{flagged}}/{{total}} Engines schlagen an",
       "noEngineData": "keine Engine-Daten"
@@ -79,7 +79,7 @@
       "votes": "Stimmen",
       "novice": "Neu",
       "summary": "{{packages}} Paket(e) · seit {{since}} · {{votes}} Stimmen",
-      "summaryUnknownSince": "{{packages}} Paket(e) · seit unbekannt · {{votes}} Stimmen",
+      "summaryUnknownSince": "{{packages}} Paket(e) · Beginn unbekannt · {{votes}} Stimmen",
       "orphaned": "Kein Maintainer. Dieses Paket ist im AUR verwaist."
     },
     "maintainerChange": {
@@ -125,7 +125,7 @@
     },
     "logoutFailed": {
       "title": "Abmeldung fehlgeschlagen",
-      "message": "Abmelden hat nicht geklappt. Versuche es noch mal."
+      "message": "Die Abmeldung ist fehlgeschlagen. Versuche es erneut."
     },
     "callback": {
       "unavailable": "Anmeldung nicht verfügbar",
@@ -236,7 +236,7 @@
         "metadata": "Metadaten- oder pkgver-Problem",
         "interfere": "Interfere-Prepare fehlgeschlagen (unser Tooling)",
         "silent": "Silent: behebt sich von selbst",
-        "transient": "Sporadisch: klappt meist beim nächsten Versuch"
+        "transient": "Flaky: läuft beim nächsten Versuch meist durch"
       }
     },
     "pipelines": {
@@ -406,6 +406,12 @@
       "noDeployments": "Keine neuen Deployments",
       "more": "+{{count}} weitere",
       "allDeployments": "Alle Deployments"
+    },
+    "birthdayBanner": {
+      "label": "Geburtstag",
+      "text": "Chaotic-AUR wird {{age}}! Danke, dass du dabei bist.",
+      "link": "Unsere Geschichte",
+      "dismiss": "Banner ausblenden"
     }
   },
   "languageSwitcher": {
@@ -481,7 +487,7 @@
     "markerLabel": "Mirror {{mirror}}, {{status}}",
     "status": {
       "active": "Aktiv",
-      "healthy": "Healthy",
+      "healthy": "Online",
       "down": "Down"
     },
     "popup": {
@@ -491,7 +497,7 @@
     "controls": {
       "zoomIn": "Vergrößern",
       "zoomOut": "Verkleinern",
-      "resetBearing": "Ziehen zum Drehen, Klick richtet nach Norden aus",
+      "resetBearing": "Ziehen, um die Karte zu drehen. Klicken, um nach Norden auszurichten.",
       "toggleAttribution": "Quellenangabe ein-/ausblenden",
       "mapFeedback": "Feedback zur Karte"
     }
@@ -508,12 +514,12 @@
     "hint": {
       "online": "Aktuell",
       "outdated": "Wird vom GEO-Mirror nicht genutzt, direkte Requests liefern einen Fehler",
-      "offline": "Der Aktualitäts-Check schlägt komplett fehl"
+      "offline": "Der Check, ob der Mirror aktuell ist, schlägt komplett fehl"
     },
     "geo": {
       "title": "GEO-Mirror",
       "recommended": "Empfohlen",
-      "description": "Leitet jeden Request automatisch an den nächsten erreichbaren Mirror weiter."
+      "description": "Leitet jeden Request automatisch an den nächstgelegenen Mirror weiter, der online ist."
     },
     "cdn": {
       "title": "CDN-Mirror",
@@ -594,7 +600,7 @@
     "empty": "Noch keine Neuigkeiten. Ankündigungen der Maintainer erscheinen hier."
   },
   "notFound": {
-    "subtitle": "Diese Seite gibt es nicht. Überprüfe die Adresse oder geh zurück zur Startseite.",
+    "subtitle": "Diese Seite gibt es nicht. Überprüfe die Adresse oder kehre zur Startseite zurück.",
     "title": "Seite nicht gefunden",
     "linksLabel": "Hilfreiche Links",
     "home": "Startseite",
@@ -731,7 +737,7 @@
         "tooltip": "Diesen Merge Request als gefährlich markieren und Auto-Merge verhindern"
       },
       "hold": {
-        "label": "Erstmal auf Hold",
+        "label": "Vorerst auf Hold setzen",
         "done": "Bereits auf Hold",
         "tooltip": "Diesen Merge Request für ein späteres Review auf Hold setzen"
       }
@@ -743,15 +749,15 @@
     "flagDialog": {
       "titleDangerous": "!{{iid}} als gefährlich markieren",
       "titleHold": "!{{iid}} auf Hold setzen",
-      "reasonLabel": "Grund (Pflicht, sichtbar im Tab „On Hold“)",
-      "reasonPlaceholder": "Warum wird dieses Update zurückgehalten oder ist gefährlich?",
+      "reasonLabel": "Grund (Pflichtfeld, sichtbar im Tab „On Hold“)",
+      "reasonPlaceholder": "Warum ist dieses Update gefährlich oder auf Hold?",
       "confirmHold": "Auf Hold setzen"
     },
     "toast": {
       "approved": {
         "title": "Freigabe erfolgreich",
         "message": "Merge Request freigegeben und merged.",
-        "deferredMessage": "Merge Request freigegeben. Der Merge läuft, sobald die geplante Pipeline durch ist."
+        "deferredMessage": "Merge Request freigegeben. Der Merge startet, sobald die geplante Pipeline abgeschlossen ist."
       },
       "alreadyApproved": {
         "title": "Bereits freigegeben",
@@ -783,7 +789,7 @@
     },
     "listLabel": "Merge Requests",
     "backToList": "Alle Merge Requests",
-    "keyboardHint": "Mit j und k durch die Liste wechseln.",
+    "keyboardHint": "Mit j und k bewegst du dich durch die Queue.",
     "more": "Mehr",
     "previousMr": "Vorheriger Merge Request",
     "nextMr": "Nächster Merge Request"
@@ -812,7 +818,8 @@
     "admin": "Admin",
     "backendDown": "Backend nicht verfügbar",
     "notFound": "Seite nicht gefunden",
-    "recordTitleFormat": "{{record}} · {{page}}"
+    "recordTitleFormat": "{{record}} · {{page}}",
+    "memorial2026": "Memorial 2026"
   },
   "searchPackage": {
     "placeholder": "Paketname in {{repo}}, z. B. firedragon",
@@ -872,9 +879,9 @@
       "loadError": "Deine Benachrichtigungseinstellungen konnten nicht geladen werden.",
       "saveFailed": "Speichern fehlgeschlagen. Deine Einstellungen wurden wiederhergestellt.",
       "unsupported": "Dieser Browser unterstützt keine Push-Benachrichtigungen. Deine Auswahl gilt trotzdem auf anderen Geräten.",
-      "blocked": "Dein Browser blockiert Benachrichtigungen für diese Seite. Erlaube sie in den Seiteneinstellungen, um sie zu erhalten.",
+      "blocked": "Dein Browser blockiert Benachrichtigungen für diese Seite. Erlaube sie in den Website-Einstellungen deines Browsers.",
       "types": {
-        "buildFailure": "Fehlgeschlagene Builds (ohne sporadische)",
+        "buildFailure": "Fehlgeschlagene Builds (nur dauerhafte Fehler)",
         "mrReview": "Merge-Request-Reviews"
       }
     }
@@ -910,7 +917,7 @@
       },
       "resourceUsage": {
         "label": "Ressourcennutzung",
-        "tooltip": "Die schwersten Pakete nach Container-Ressourcen"
+        "tooltip": "Pakete mit dem höchsten Ressourcenverbrauch im Container"
       },
       "additions": {
         "label": "Pakete",
@@ -946,7 +953,7 @@
         "buildersAmount": "Builds pro Builder",
         "buildsPerDay": "Builds pro Tag",
         "popularPackages": "Beliebte Pakete",
-        "heavyPackages": "Schwere Pakete",
+        "heavyPackages": "Pakete mit der längsten Build-Dauer",
         "packagesPerBuildClass": "Pakete pro Build-Klasse",
         "pkgbaseComposition": "Einzel- vs. Split-Pakete"
       },
@@ -965,7 +972,7 @@
         "averageBuildTimeTrend": "Durchschnittliche Build-Dauer (Minuten)",
         "throughput": "Queue-Durchsatz",
         "failedHotspots": "Hotspots fehlgeschlagener Builds",
-        "unresolvedFailures": "Fehlgeschlagene Builds ohne späteren Erfolg",
+        "unresolvedFailures": "Pakete, die weiterhin fehlschlagen",
         "missingDependencies": "Pakete mit fehlenden Abhängigkeiten",
         "archOverlap": "Pakete, die jetzt auch in den Arch-Repos sind",
         "buildFailuresOverTime": "Fehlgeschlagene Builds im Zeitverlauf",
@@ -1096,7 +1103,7 @@
       "missingDependencies": {
         "countOne": "{{count}} Paket mit fehlenden Abhängigkeiten",
         "countOther": "{{count}} Pakete mit fehlenden Abhängigkeiten",
-        "missingCount": "{{count}} fehlen",
+        "missingCount": "Fehlend: {{count}}",
         "depsLabel": "deps:",
         "makeDepsLabel": "makedeps:",
         "empty": "Keine fehlenden Abhängigkeiten."
@@ -1105,8 +1112,8 @@
         "ariaLabel": "Heatmap der Builder-Auslastung in den letzten {{days}} Tagen",
         "utcHour": "Stunde (UTC)",
         "cellTitle": "{{builder}} · {{hour}}:00 UTC — {{perDay}} Builds/Tag",
-        "summaryOne": "Durchschnittliche Builds pro Tag und UTC-Stunde über {{range}}. Spitze: {{max}} Build in einer Stunde.",
-        "summaryOther": "Durchschnittliche Builds pro Tag und UTC-Stunde über {{range}}. Spitze: {{max}} Builds in einer Stunde.",
+        "summaryOne": "Durchschnittliche Builds pro Tag und UTC-Stunde über {{range}}. Spitzenwert: {{max}} Build in einer Stunde.",
+        "summaryOther": "Durchschnittliche Builds pro Tag und UTC-Stunde über {{range}}. Spitzenwert: {{max}} Builds in einer Stunde.",
         "rangeAll": "den gesamten Verlauf",
         "rangeLastOne": "den letzten {{days}} Tag",
         "rangeLastOther": "die letzten {{days}} Tage",

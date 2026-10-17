@@ -21,6 +21,7 @@ import { lightLogo } from './logo';
 import { MobileNavComponent } from './mobile-nav/mobile-nav.component';
 import { NavActiveCurrentDirective } from './nav-active-current.directive';
 import { injectIsBrowser } from './platform';
+import { ShellBarOffsetDirective } from './shell-bar-offset.directive';
 import { ThemeSwitcherComponent } from './theme-switcher/theme-switcher.component';
 import { ConnectionBannerComponent } from './ui-states/connection-banner.component';
 import { UpdateService } from './update/update.service';
@@ -43,6 +44,7 @@ import { UpdateService } from './update/update.service';
     SessionExpiredBannerComponent,
     TranslocoDirective,
     NavActiveCurrentDirective,
+    ShellBarOffsetDirective,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',

@@ -1,25 +1,40 @@
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 
+export interface MemorialLink {
+  path: string;
+  labelKey: string;
+}
+
 export interface MemorialConfig {
   year: number;
   descriptionKey: string;
   keywordsKey: string;
   subtitleKey: string;
-  crossLink: string;
-  crossLinkLabelKey: string;
+  crossLinks: MemorialLink[];
   desktops: string[];
   terms: string[];
   specialDesktops: string[];
   specialTerms: string[];
 }
 
+export const MEMORIAL_2021_LINK: MemorialLink = { path: '/memorial', labelKey: marker('memorial.links.edition2021') };
+
+export const MEMORIAL_2024_LINK: MemorialLink = {
+  path: '/memorial-v2',
+  labelKey: marker('memorial.links.edition2024'),
+};
+
+export const MEMORIAL_2026_LINK: MemorialLink = {
+  path: '/memorial-v3',
+  labelKey: marker('memorial.links.edition2026'),
+};
+
 export const MEMORIAL_2021: MemorialConfig = {
   year: 2021,
   descriptionKey: marker('memorial.edition2021.description'),
   keywordsKey: marker('memorial.edition2021.keywords'),
   subtitleKey: marker('memorial.edition2021.subtitle'),
-  crossLink: '/memorial-v2',
-  crossLinkLabelKey: marker('memorial.edition2021.crossLinkLabel'),
+  crossLinks: [MEMORIAL_2026_LINK, MEMORIAL_2024_LINK],
   desktops: [
     'PROxZIMA.png',
     'alexjp.jpg',
@@ -91,8 +106,7 @@ export const MEMORIAL_2024: MemorialConfig = {
   descriptionKey: marker('memorial.edition2024.description'),
   keywordsKey: marker('memorial.edition2024.keywords'),
   subtitleKey: marker('memorial.edition2024.subtitle'),
-  crossLink: '/memorial',
-  crossLinkLabelKey: marker('memorial.edition2024.crossLinkLabel'),
+  crossLinks: [MEMORIAL_2026_LINK, MEMORIAL_2021_LINK],
   desktops: [
     'AnkurAlpha.png',
     'FameWolf.jpg',

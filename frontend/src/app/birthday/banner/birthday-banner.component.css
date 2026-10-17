@@ -1,0 +1,126 @@
+/*
+ * Floats above the page, so showing it late never moves the content.
+ * It sits below the shell bar, clear of the back-to-top button. The side insets match the shell padding.
+ */
+.birthday-toast {
+  position: fixed;
+  top: var(--chaotic-below-shell-bar);
+  right: max(0.5rem, env(safe-area-inset-right));
+  left: max(0.5rem, env(safe-area-inset-left));
+  z-index: var(--chaotic-z-popover);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--chaotic-space-sm);
+  padding: var(--chaotic-space-sm) var(--chaotic-space-2xs) var(--chaotic-space-sm) var(--chaotic-inset);
+  border: 1px solid color-mix(in srgb, var(--catppuccin-color-mauve) 35%, var(--chaotic-border));
+  border-radius: var(--chaotic-radius-lg);
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 8%, var(--chaotic-surface));
+  box-shadow: var(--chaotic-shadow);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+  color: var(--catppuccin-color-text);
+}
+
+@media (min-width: 640px) {
+  .birthday-toast {
+    left: auto;
+    width: 22rem;
+  }
+}
+
+.birthday-toast__icon {
+  flex: none;
+  margin-top: 0.1875rem;
+  font-size: 1.125rem;
+  color: var(--catppuccin-color-mauve);
+}
+
+.birthday-toast__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--chaotic-space-2xs);
+  min-width: 0;
+  font-size: var(--chaotic-text-sm);
+}
+
+.birthday-toast__title {
+  font-weight: var(--chaotic-weight-semibold);
+  text-wrap: balance;
+}
+
+.birthday-toast__link {
+  align-self: flex-start;
+  font-weight: var(--chaotic-weight-medium);
+  color: var(--catppuccin-color-mauve);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  touch-action: manipulation;
+}
+
+.birthday-toast__close {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--chaotic-bar-action-size);
+  height: var(--chaotic-bar-action-size);
+  border-radius: var(--chaotic-radius-pill);
+  font-size: var(--chaotic-bar-icon-size);
+  color: var(--chaotic-fg-muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    color var(--chaotic-duration-fast) var(--chaotic-ease-out),
+    background-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.birthday-toast__close:focus-visible {
+  outline: 2px solid var(--catppuccin-color-mauve);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .birthday-toast__close:hover {
+    background: var(--catppuccin-color-surface0);
+    color: var(--catppuccin-color-text);
+  }
+}
+
+.birthday-toast--enter {
+  animation: birthday-toast-enter 250ms var(--chaotic-ease-out) both;
+}
+
+.birthday-toast--leave {
+  animation: birthday-toast-leave 180ms var(--chaotic-ease-in) both;
+}
+
+@keyframes birthday-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem);
+  }
+}
+
+@keyframes birthday-toast-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+
+@keyframes birthday-toast-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .birthday-toast--enter {
+    animation-name: birthday-toast-fade;
+  }
+
+  .birthday-toast--leave {
+    animation-direction: reverse;
+    animation-name: birthday-toast-fade;
+  }
+}

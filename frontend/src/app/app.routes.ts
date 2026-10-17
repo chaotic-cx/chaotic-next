@@ -148,6 +148,14 @@ export const routes: Routes = [
     loadComponent: () => import('./map/map.component').then((c) => c.MapComponent),
   },
   {
+    title: marker('routes.memorial2026'),
+    providers: [provideTranslocoScope('memorial')],
+    resolve: TRANSLATION_SCOPE_RESOLVE,
+    path: 'memorial-v3',
+    data: SKIP_PRELOAD_DATA,
+    loadComponent: () => import('./birthday/birthday.component').then((c) => c.BirthdayComponent),
+  },
+  {
     title: marker('routes.memorial2024'),
     providers: [provideTranslocoScope('memorial')],
     resolve: TRANSLATION_SCOPE_RESOLVE,

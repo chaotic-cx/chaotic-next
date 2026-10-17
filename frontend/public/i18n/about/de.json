@@ -4,7 +4,7 @@
     "keywords": "Chaotic-AUR, Repository, Pakete, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR Pakete, Chaotic-AUR Repository, Über Chaotic-AUR"
   },
   "title": "Über uns",
-  "subtitle": "Chaotic-AUR ist ein Binary-Repository für Arch Linux, betrieben von einem Team Freiwilliger, das AUR-Pakete fertig gebaut bereitstellt.",
+  "subtitle": "Chaotic-AUR ist ein Binary-Repository für Arch Linux. Ein Team aus Freiwilligen baut dort AUR-Pakete, damit du sie nicht selbst bauen musst.",
   "team": {
     "title": "Das Team",
     "githubProfile": "GitHub-Profil von {{name}}",
@@ -23,12 +23,12 @@
   "buildInfrastructure": {
     "title": "Build-Infrastruktur",
     "sources": "Die meisten Pakete werden automatisch aus ihrer <a href=\"https://aur.archlinux.org\" rel=\"noopener\" target=\"_blank\">AUR</a>-Quelle gebaut. Einige Ausnahmen liegen in <a href=\"https://github.com/chaotic-aur/packages\" rel=\"noopener\" target=\"_blank\">unserem Paket-Repo</a>.",
-    "mainNode": "Der Main-Node läuft in Hetzners finnischem Rechenzentrum auf einem <a href=\"https://www.hetzner.com/dedicated-rootserver/ex44/\" rel=\"noopener\" target=\"_blank\">EX44</a>, auf Hardware von Garuda Linux."
+    "mainNode": "Der Main-Node ist ein <a href=\"https://www.hetzner.com/dedicated-rootserver/ex44/\" rel=\"noopener\" target=\"_blank\">EX44</a> im finnischen Rechenzentrum von Hetzner. Die Hardware stellt Garuda Linux bereit."
   },
   "contact": {
     "title": "Kontakt",
     "channels": "Für Fragen und Support nutze unsere Issue-Tracker oder die Telegram-Gruppe. Für private Anliegen wähle einen <a href=\"https://keyoxide.org/D245D484F3578CB17FD6DA6B67DB29BFF3C96757\" rel=\"noopener\" target=\"_blank\">dieser Kanäle</a>.",
-    "issues": "Mach <a href=\"https://github.com/chaotic-aur/packages/issues\" rel=\"noopener\" target=\"_blank\">ein Issue</a> auf für Verbesserungen, kaputte Datenbanken und andere Requests. Build-Bugs meldest du den Maintainern des AUR-Pakets."
+    "issues": "Erstelle <a href=\"https://github.com/chaotic-aur/packages/issues\" rel=\"noopener\" target=\"_blank\">ein Issue</a> für Verbesserungen, kaputte Datenbanken und andere Requests. Build-Bugs meldest du den Maintainern des AUR-Pakets."
   },
   "mirrors": {
     "title": "Mirrors",
@@ -42,7 +42,8 @@
   },
   "memorial": {
     "title": "Memorial",
-    "text": "Zu unserem 3. und 6. Geburtstag hat die Community Screenshots ihrer Desktops und Terminals geteilt.",
+    "text": "Zu unserem 3. und 6. Geburtstag hat die Community Screenshots ihrer Desktops und Terminals geteilt. Zum 8. Geburtstag blicken wir auf unsere Geschichte zurück.",
+    "edition2026": "Ausgabe 2026",
     "edition2024": "Ausgabe 2024",
     "edition2021": "Ausgabe 2021"
   },

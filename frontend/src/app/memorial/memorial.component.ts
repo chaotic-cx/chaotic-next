@@ -14,14 +14,22 @@ interface MemorialImage {
   preview: string;
 }
 
-function buildLinks(filenames: string[], specialTreatment: string[], folder: string, year: number): MemorialImage[] {
+interface GallerySource {
+  filenames: string[];
+  specialTreatment: string[];
+  folder: string;
+}
+
+function buildLinks(source: GallerySource, year: number): MemorialImage[] {
   const links: MemorialImage[] = [];
-  for (const filename of filenames) {
-    if (specialTreatment.includes(filename)) continue;
+  for (const filename of source.filenames) {
+    if (source.specialTreatment.includes(filename)) continue;
+
     const author = filename.replace(/\.(png|jpg|jpeg|webp)$/i, '');
-    const url = `/memorials/${year}/${folder}/${filename}.webp`;
+    const url = `/memorials/${year}/${source.folder}/${filename}.webp`;
     links.push({ author, full: url, preview: url });
   }
+
   return links;
 }
 
@@ -37,13 +45,18 @@ export class MemorialComponent {
 
   protected readonly config = this.route.snapshot.data['memorial'] as MemorialConfig;
 
-  readonly desktopLinks = buildLinks(this.config.desktops, this.config.specialDesktops, 'desktops', this.config.year);
+  readonly desktopLinks = buildLinks(
+    { filenames: this.config.desktops, specialTreatment: this.config.specialDesktops, folder: 'desktops' },
+    this.config.year,
+  );
 
-  readonly termLinks = buildLinks(this.config.terms, this.config.specialTerms, 'terminals', this.config.year);
+  readonly termLinks = buildLinks(
+    { filenames: this.config.terms, specialTreatment: this.config.specialTerms, folder: 'terminals' },
+    this.config.year,
+  );
 
   constructor() {
     const routeTitleKey = this.route.snapshot.title ?? '';
-
     setPageSeo(
       this.transloco.translate('routes.titleFormat', { page: this.transloco.translate(routeTitleKey) }),
       this.transloco.translate(this.config.descriptionKey),

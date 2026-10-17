@@ -40,7 +40,7 @@
     }
   },
   "reportingBugs": {
-    "text": "Melde Paket-Bugs zuerst in unserem <a href=\"https://github.com/chaotic-aur/packages/issues/new/choose\" rel=\"noopener\" target=\"_blank\">Bugtracker</a> oder kommentiere im AUR. Melde es erst Upstream, wenn klar ist, dass es kein Packaging-Problem ist. So werden Bugs schneller gefixt."
+    "text": "Melde Paket-Bugs zuerst in unserem <a href=\"https://github.com/chaotic-aur/packages/issues/new/choose\" rel=\"noopener\" target=\"_blank\">Bugtracker</a> oder kommentiere im AUR. Melde den Bug erst upstream, wenn klar ist, dass es kein Packaging-Problem ist. So werden Bugs schneller gefixt."
   },
   "packageBuilds": {
     "deployLog": {
@@ -60,12 +60,12 @@
   },
   "recommendations": {
     "ignoreUpdates": "Wenn du eine lokal gebaute Version eines Pakets behalten willst (zum Beispiel mit nativen Optimierungen), <a href=\"https://www.archlinux.org/pacman/pacman.conf.5.html\" rel=\"noopener\" target=\"_blank\">ignoriere seine Updates</a> in <code>/etc/pacman.conf</code>:",
-    "specificRepository": "Wenn du ein Paket aus einem bestimmten Repo installieren willst, stell dem Paketnamen den Repo-Namen voran:",
+    "specificRepository": "Wenn du ein Paket aus einem bestimmten Repo installieren willst, stelle dem Paketnamen den Repo-Namen voran:",
     "aurHelpers": "AUR-Helper wie <a href=\"https://github.com/Morganamilo/paru\" rel=\"noopener\" target=\"_blank\">paru</a> unterstützen dieselbe Syntax:"
   },
   "updateReviewProcess": {
     "mergeRequests": "Manche AUR-Updates ändern mehr als <code>pkgver</code>, <code>pkgrel</code> oder Checksummen. Für diese öffnet unser Build-System einen Merge Request im Repo <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds\" rel=\"noopener\" target=\"_blank\">pkgbuilds</a>. Pakete, die aus einem Git-Branch gebaut werden, aktualisieren sich automatisch, wenn sich nur ihr Upstream-Commit ändert. Der Branch <a href=\"https://gitlab.com/chaotic-aur/pkgbuilds/-/tree/state\" rel=\"noopener\" target=\"_blank\">state</a> trackt diese Commits. Eine Ausnahme sind AUR-Updates, die das PKGBUILD ändern.",
-    "humanApproval": "Das System markiert verdächtige Änderungen automatisch. Danach prüft ein Maintainer jeden Diff auf schädliche Änderungen. Ein Merge Request wird erst merged und deployed, wenn ein Mensch ihn überprüft hat.",
+    "humanApproval": "Das System markiert verdächtige Änderungen automatisch. Danach prüft ein Maintainer jeden Diff auf schädliche Änderungen. Ein Merge Request wird erst merged und deployed, wenn ein Maintainer ihn freigegeben hat.",
     "reviewQueue": {
       "intro": "Die",
       "linkText": "Review-Queue",
@@ -78,7 +78,7 @@
       "linkText": "AUR-Scanner",
       "outro": ". Er lädt das PKGBUILD und seine Quellen herunter und untersucht sie mit unseren statischen Sicherheitsregeln."
     },
-    "insights": "Er zeigt auch Infos zu den Maintainern, zum Beispiel neue Maintainer und verwaiste Pakete. Lies vor der Installation immer den Quellcode und das PKGBUILD. Der Scanner zeigt beides neben den Befunden an."
+    "insights": "Er zeigt auch Infos zu den Maintainern, zum Beispiel neue Maintainer und verwaiste Pakete. Lies vor der Installation immer den Quellcode und das PKGBUILD. Der Scanner zeigt beides neben den Ergebnissen des Scans an."
   },
   "publicApi": {
     "intro": "Chaotic-AUR bietet eine öffentliche JSON-API, mit der du Pakete, Builds, Metriken und den Repo-Zustand abfragen kannst. Die interaktive",

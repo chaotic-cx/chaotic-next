@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { AppService } from '../app.service';
+import { BirthdayBannerComponent } from '../birthday/banner/birthday-banner.component';
 import { MATRIX_ROOM_URL } from '../community-links';
 import { parseFocusQuery } from '../functions';
 import { LoadErrorComponent } from '../load-error/load-error.component';
@@ -17,6 +18,7 @@ import { PipelineStripComponent } from './pipeline-strip.component';
 @Component({
   selector: 'chaotic-home',
   imports: [
+    BirthdayBannerComponent,
     HomeHeroComponent,
     NewsfeedComponent,
     RecentlyAddedComponent,

@@ -16,61 +16,61 @@
     "positive": {
       "empathy": "Einfühlungsvermögen und Freundlichkeit gegenüber anderen Menschen zeigen",
       "respect": "Unterschiedliche Meinungen, Standpunkte und Erfahrungen respektieren",
-      "feedback": "Konstruktives Feedback geben und würdevoll annehmen",
+      "feedback": "Konstruktives Feedback geben und gelassen annehmen",
       "responsibility": "Verantwortung übernehmen und uns bei denjenigen entschuldigen, die von unseren Fehlern betroffen sind, und aus den Erfahrungen lernen",
-      "community": "Konzentration auf das, was nicht nur für uns als Individuen, sondern für die gesamte Gemeinschaft das Beste ist"
+      "community": "Sich auf das konzentrieren, was nicht nur für uns als Einzelne, sondern für die gesamte Gemeinschaft am besten ist"
     },
     "unacceptableIntro": "Beispiele für inakzeptables Verhalten sind:",
     "unacceptable": {
       "sexualized": "Die Verwendung sexualisierter Sprache, Bilder oder Symbolik sowie unerwünschte Versuche sexueller Annäherung",
       "trolling": "Beleidigende oder abwertende Kommentare, persönliche oder politische Angriffe und Trollen",
       "harassment": "Öffentliche oder private Belästigungen",
-      "privateInformation": "Das Veröffentlichen von privaten Informationen Anderer, wie zum Beispiel physische oder elektronische Adressen, ohne deren ausdrückliche Erlaubnis",
-      "inappropriate": "Anderes Verhalten, welches in einem professionellen Umfeld begründet als unangemessen betrachtet werden kann"
+      "privateInformation": "Das Veröffentlichen privater Informationen anderer Personen, zum Beispiel Post- oder E-Mail-Adressen, ohne deren ausdrückliche Erlaubnis",
+      "inappropriate": "Anderes Verhalten, das in einem professionellen Umfeld als unangemessen gilt"
     }
   },
   "enforcementResponsibilities": {
     "title": "Verantwortlichkeiten bei der Durchsetzung",
-    "clarify": "Die Gemeinschaftsleitung ist verantwortlich dafür, unsere Standards für ein akzeptables Verhalten klarzustellen und wird angemessen und fair korrigierende Maßnahmen ergreifen um auf jegliches Verhalten, das sie für unangemessen, bedrohlich oder beleidigend hält, zu reagieren.",
-    "moderate": "Die Gemeinschaftsleitung hat das Recht und die Verantwortung, Kommentare, Commits, Code, Wiki-Bearbeitungen, Support-Tickets und andere Beiträge, die nicht mit diesem Verhaltenskodex vereinbar sind, zu entfernen, zu bearbeiten oder abzulehnen, und wird die Gründe für eine Mäßigung mitteilen, wenn es angebracht ist."
+    "clarify": "Die Gemeinschaftsleitung ist dafür verantwortlich, unsere Standards für akzeptables Verhalten klarzustellen und durchzusetzen. Auf Verhalten, das sie für unangemessen, bedrohlich, beleidigend oder schädlich hält, reagiert sie mit angemessenen und fairen Maßnahmen.",
+    "moderate": "Die Gemeinschaftsleitung hat das Recht und die Verantwortung, Kommentare, Commits, Code, Wiki-Bearbeitungen, Issues und andere Beiträge zu entfernen, zu bearbeiten oder abzulehnen, wenn sie nicht mit diesem Verhaltenskodex vereinbar sind. Wenn es angebracht ist, nennt sie die Gründe für ihre Moderationsentscheidungen."
   },
   "scope": {
     "title": "Geltungsbereich",
-    "text": "Dieser Verhaltenskodex gilt für alle Gemeinschaftsbereiche und gilt auch, wenn eine Einzelperson die Gemeinschaft offiziell in öffentlichen Bereichen vertritt. Beispiele für die Repräsentation unserer Gemeinschaft sind die Verwendung einer offiziellen E-Mail-Adresse, das Posten über ein offizielles Social-Media-Konto oder das Auftreten als ernannte Vertretung bei einer Online-oder Offline-Veranstaltung."
+    "text": "Dieser Verhaltenskodex gilt in allen Bereichen der Gemeinschaft. Er gilt auch, wenn eine Person die Gemeinschaft offiziell in der Öffentlichkeit vertritt. Beispiele dafür sind eine offizielle E-Mail-Adresse, Posts über ein offizielles Social-Media-Konto oder das Auftreten als offizielle Vertretung bei einer Online- oder Offline-Veranstaltung."
   },
   "enforcement": {
     "title": "Durchsetzung",
-    "report": "Fälle von missbräuchlichem, belästigendem oder anderweitig inakzeptablem Verhalten können unter <a class=\"text-ctp-mauve\" href=\"mailto:coc@chaotic.cx\">coc@chaotic.cx</a> der für die Durchsetzung zuständigen Gemeinschaftsleitung gemeldet werden. Alle Beschwerden werden zeitnah und fair geprüft und ermittelt.",
+    "report": "Melde missbräuchliches, belästigendes oder anderweitig inakzeptables Verhalten an die Gemeinschaftsleitung unter <a class=\"text-ctp-mauve\" href=\"mailto:coc@chaotic.cx\">coc@chaotic.cx</a>. Wir prüfen alle Beschwerden zeitnah und fair.",
     "privacy": "Die gesamte Gemeinschaftsleitung ist verpflichtet, die Privatsphäre und die Sicherheit derjenigen, die einen Vorfall gemeldet haben, zu respektieren."
   },
   "enforcementGuidelines": {
     "title": "Durchsetzungsrichtlinien",
-    "intro": "Die Gemeinschaftsleitung wird sich bei der Bestimmung der Konsequenzen für jede Handlung, die ihrer Ansicht nach gegen diesen Verhaltenskodex verstößt, an diese Richtlinien über die Auswirkungen in der Gemeinschaft halten:",
+    "intro": "Wenn eine Handlung nach Ansicht der Gemeinschaftsleitung gegen diesen Verhaltenskodex verstößt, legt sie die Konsequenzen nach diesen Richtlinien fest:",
     "correction": {
-      "title": "1. Berichtigung",
+      "title": "1. Ermahnung",
       "impact": "<strong>Auswirkungen in der Gemeinschaft</strong>: Verwendung unangemessener Sprache oder anderes Verhalten, das in der Gemeinschaft als unprofessionell oder unwillkommen gilt.",
-      "consequence": "<strong>Folge</strong>: Eine private, schriftliche Verwarnung der Gemeinschaftsleitung, die Klarheit über die Art des Verstoßes und eine Erklärung dafür bietet, warum das Verhalten unangemessen war. Eine öffentliche Entschuldigung kann verlangt werden."
+      "consequence": "<strong>Folge</strong>: Eine private, schriftliche Verwarnung der Gemeinschaftsleitung. Sie benennt den Verstoß und erklärt, warum das Verhalten unangemessen war. Die Gemeinschaftsleitung kann eine öffentliche Entschuldigung verlangen."
     },
     "warning": {
       "title": "2. Verwarnung",
       "impact": "<strong>Auswirkungen in der Gemeinschaft</strong>: Eine Verletzung durch einen einzelnen Vorfall oder eine Reihe von Handlungen.",
-      "consequence": "<strong>Folge</strong>: Eine Warnung mit Konsequenzen bei wiederholtem Fehlverhalten. Keine Interaktion mit den beteiligten Personen, einschließlich unaufgeforderter Interaktion mit denjenigen, die den Verhaltenskodex durchsetzen, für einen bestimmten Zeitraum. Dazu gehört die Vermeidung von Interaktionen in Gemeinschaftsräumen sowie in externen Kanälen wie sozialen Medien. Ein Verstoß gegen diese Bedingungen kann zu einem vorübergehenden oder dauerhaften Verbot führen."
+      "consequence": "<strong>Folge</strong>: Eine Verwarnung mit Konsequenzen bei weiterem Fehlverhalten. Für einen bestimmten Zeitraum ist keine Interaktion mit den beteiligten Personen erlaubt. Das gilt auch für unaufgeforderte Kontakte mit der Gemeinschaftsleitung. Das gilt in den Bereichen der Gemeinschaft und in externen Kanälen wie Social Media. Ein Verstoß gegen diese Bedingungen kann zu einem vorübergehenden oder dauerhaften Ausschluss führen."
     },
     "temporaryBan": {
       "title": "3. Vorübergehender Ausschluss",
       "impact": "<strong>Auswirkungen in der Gemeinschaft</strong>: Eine schwerwiegende Verletzung von Gemeinschaftsstandards, einschließlich anhaltend unangemessenen Verhaltens.",
-      "consequence": "<strong>Folge</strong>: Ein zeitlich begrenztes Verbot jeglicher Art von Interaktion oder öffentlicher Kommunikation mit der Gemeinschaft. Während dieses Zeitraums ist keine öffentliche oder private Interaktion mit den beteiligten Personen erlaubt. Auch keine unaufgeforderte Interaktion mit denjenigen, die den Verhaltenskodex durchsetzen. Ein Verstoß gegen diese Bedingungen kann zu einem dauerhaften Verbot führen."
+      "consequence": "<strong>Folge</strong>: Ein zeitlich begrenzter Ausschluss von jeder Interaktion und öffentlichen Kommunikation mit der Gemeinschaft. In dieser Zeit ist keine öffentliche oder private Interaktion mit den beteiligten Personen erlaubt. Das gilt auch für unaufgeforderte Kontakte mit der Gemeinschaftsleitung. Ein Verstoß gegen diese Bedingungen kann zu einem dauerhaften Ausschluss führen."
     },
     "permanentBan": {
       "title": "4. Dauerhafter Ausschluss",
-      "impact": "<strong>Auswirkungen in der Gemeinschaft</strong>: Aufzeigen eines Musters von Verletzungen der Gemeinschaftsstandards, einschließlich anhaltend unangemessenen Verhaltens, Belästigung einer Person oder Aggression gegen oder Herabsetzung von Gruppen von Personen.",
-      "consequence": "<strong>Folge</strong>: Ein dauerhaftes Verbot jeglicher Art von öffentlicher Interaktion innerhalb der Gemeinschaft."
+      "impact": "<strong>Auswirkungen in der Gemeinschaft</strong>: Wiederholte Verstöße gegen die Gemeinschaftsstandards, zum Beispiel anhaltend unangemessenes Verhalten, die Belästigung einer Person oder Aggression gegen Gruppen von Personen und deren Herabsetzung.",
+      "consequence": "<strong>Folge</strong>: Ein dauerhafter Ausschluss von jeder öffentlichen Interaktion in der Gemeinschaft."
     }
   },
   "attribution": {
-    "title": "Bezug",
+    "title": "Quellen",
     "adaptedFrom": "Dieser Verhaltenskodex basiert auf dem <a class=\"text-ctp-mauve\" href=\"https://www.contributor-covenant.org/version/2/1/code_of_conduct.html\" rel=\"noopener\" target=\"_blank\">Contributor Covenant</a>, Version 2.1.",
-    "inspiredBy": "Community Impact Guidelines wurden von <a class=\"text-ctp-mauve\" href=\"https://github.com/mozilla/diversity\" rel=\"noopener\" target=\"_blank\">Mozillas Code of Conduct Enforcement Ladder</a> inspiriert.",
-    "faq": "Antworten auf häufig gestellte Fragen zu diesem Verhaltenskodex finden Sie in den <a class=\"text-ctp-mauve\" href=\"https://www.contributor-covenant.org/faq\" rel=\"noopener\" target=\"_blank\">häufig gestellten Fragen</a> (in Englisch). Andere Übersetzungen sind verfügbar unter <a class=\"text-ctp-mauve\" href=\"https://www.contributor-covenant.org/translations\" rel=\"noopener\" target=\"_blank\">https://www.contributor-covenant.org/translations</a>."
+    "inspiredBy": "Die Richtlinien zur Durchsetzung basieren auf <a class=\"text-ctp-mauve\" href=\"https://github.com/mozilla/diversity\" rel=\"noopener\" target=\"_blank\">Mozillas Code of Conduct Enforcement Ladder</a>.",
+    "faq": "Antworten auf häufige Fragen zu diesem Verhaltenskodex findest du in der <a class=\"text-ctp-mauve\" href=\"https://www.contributor-covenant.org/faq\" rel=\"noopener\" target=\"_blank\">FAQ</a> (auf Englisch). Übersetzungen in viele Sprachen gibt es auf der <a class=\"text-ctp-mauve\" href=\"https://www.contributor-covenant.org/translations\" rel=\"noopener\" target=\"_blank\">Website des Contributor Covenant</a>."
   }
 }

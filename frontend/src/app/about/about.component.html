@@ -74,8 +74,9 @@
       <div class="about-card__body">
         <p>{{ t('about.memorial.text') }}</p>
         <p class="flex flex-wrap gap-x-4 gap-y-1">
-          <a routerLink="/memorial-v2">{{ t('about.memorial.edition2024') }}</a>
-          <a routerLink="/memorial">{{ t('about.memorial.edition2021') }}</a>
+          <a [routerLink]="memorial2026Path">{{ t('about.memorial.edition2026') }}</a>
+          <a [routerLink]="memorial2024Path">{{ t('about.memorial.edition2024') }}</a>
+          <a [routerLink]="memorial2021Path">{{ t('about.memorial.edition2021') }}</a>
         </p>
       </div>
     </section>

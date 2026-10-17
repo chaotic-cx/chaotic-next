@@ -1,0 +1,146 @@
+/* The terminal frame on the page sets the font, size and padding. */
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  cursor: text;
+}
+
+/*
+ * Scrolls inside the terminal like real output. The prompt sits right after the last line, so a short session starts at the top.
+ * Relative, so .sr-only children stay inside it.
+ */
+.birthday-shell__screen {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+  height: 28rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.birthday-shell__output {
+  display: grid;
+  gap: 0.25rem;
+}
+
+/*
+ * Stacked, the window has a fixed height like a real terminal, also before any output.
+ * Side by side, the shell fills the height that the fastfetch window sets.
+ */
+@media (min-width: 1280px) {
+  :host,
+  .birthday-shell__screen {
+    flex: 1;
+  }
+
+  .birthday-shell__screen {
+    height: auto;
+    min-height: 20rem;
+    contain: size;
+  }
+}
+
+.birthday-shell__line {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.birthday-shell__line[data-tone='muted'] {
+  color: var(--chaotic-fg-faint);
+}
+
+.birthday-shell__line[data-tone='accent'] {
+  color: var(--catppuccin-color-mauve);
+}
+
+.birthday-shell__line[data-tone='success'] {
+  color: var(--catppuccin-color-green);
+}
+
+.birthday-shell__line[data-tone='error'] {
+  color: var(--catppuccin-color-red);
+}
+
+.birthday-shell__prompt {
+  flex: none;
+  font-weight: var(--chaotic-weight-bold);
+  color: var(--catppuccin-color-green);
+}
+
+.birthday-shell__entry {
+  display: grid;
+  gap: 0 1ch;
+}
+
+@media (min-width: 640px) {
+  .birthday-shell__entry {
+    grid-template-columns: 17ch minmax(0, 1fr);
+  }
+}
+
+.birthday-shell__term {
+  font-weight: var(--chaotic-weight-bold);
+  color: var(--catppuccin-color-mauve);
+}
+
+.birthday-shell__commit {
+  display: grid;
+  grid-template-columns: 8ch minmax(0, 1fr);
+  gap: 0 1ch;
+}
+
+.birthday-shell__hash {
+  grid-row: span 2;
+  color: var(--catppuccin-color-yellow);
+}
+
+.birthday-shell__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1ch;
+  font-size: var(--chaotic-text-xs);
+  color: var(--chaotic-fg-faint);
+}
+
+.birthday-shell__author {
+  color: var(--catppuccin-color-blue);
+}
+
+.birthday-shell__message {
+  quotes: none;
+}
+
+/*
+ * No ligatures, because JetBrains Mono joins characters such as `|-` and breaks the art.
+ * font-variant-ligatures: none does not turn off its contextual alternates in Chromium.
+ */
+.birthday-shell__art {
+  overflow-x: auto;
+  font: inherit;
+  font-feature-settings:
+    'calt' 0,
+    'liga' 0;
+  line-height: 1.25;
+  color: var(--catppuccin-color-peach);
+}
+
+.birthday-shell__form {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+}
+
+.birthday-shell__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  caret-color: var(--catppuccin-color-text);
+  outline: none;
+}

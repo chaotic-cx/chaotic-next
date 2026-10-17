@@ -112,7 +112,9 @@
       </section>
     </div>
   </p-card>
-  <div class="mt-4 text-center">
-    <a class="text-ctp-mauve" [routerLink]="config.crossLink">{{ t(config.crossLinkLabelKey) }}</a>
+  <div class="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2">
+    @for (link of config.crossLinks; track link.path) {
+      <a class="text-ctp-mauve" [routerLink]="link.path">{{ t(link.labelKey) }}</a>
+    }
   </div>
 </div>

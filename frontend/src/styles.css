@@ -91,8 +91,12 @@ ng-terminal,
   padding-inline: var(--chaotic-inset) calc(var(--chaotic-inset) - var(--chaotic-bar-icon-inset));
 }
 
+:root {
+  --chaotic-below-shell-bar: calc(env(safe-area-inset-top) + 68px);
+}
+
 .garuda-shell__dropdown:not(.garuda-shell-relative) {
-  top: calc(env(safe-area-inset-top) + 68px);
+  top: var(--chaotic-below-shell-bar);
 }
 
 /* Every right-hand bar action gets one box size, one icon size and one gap, so the icons sit evenly spaced. */
