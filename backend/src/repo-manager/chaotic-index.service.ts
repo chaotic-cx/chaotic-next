@@ -4,14 +4,15 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Package, Repo } from '../builder/builder.entity';
 import { EntityLookupService } from '../builder/entity-lookup.service';
 import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } from '../interfaces/repo-manager';
 import { ArchMirrorService } from './arch-mirror.service';
+import { PackageElfAnalysis } from './repo-manager.entity';
 import { saveInBatches } from './save';
 import { SignalScanService } from './scan';
-import { releaseVersion } from './signal';
+import { CHAOTIC_PKG_TYPE, releaseVersion } from './signal';
 
 export const CHAOTIC_DATABASE_URL = 'https://builds.garudalinux.org/repos/chaotic-aur/x86_64/chaotic-aur.db';
 
@@ -198,6 +199,7 @@ export class ChaoticIndexService {
       }
 
       await saveInBatches(this.packagesRepository, toDeactivate);
+      await this.deleteAnalyses(toDeactivate);
 
       /**
        * Drop inactive rows that merely duplicate an active package in another
@@ -224,6 +226,17 @@ export class ChaoticIndexService {
     } finally {
       await this.archMirror.cleanUp(tempDirs);
     }
+  }
+
+  private async deleteAnalyses(removed: Package[]): Promise<void> {
+    if (removed.length === 0) return;
+
+    const ids = removed.map((pkg) => pkg.id);
+    const result = await this.packagesRepository.manager
+      .getRepository(PackageElfAnalysis)
+      .delete({ pkgType: CHAOTIC_PKG_TYPE, pkgId: In(ids) });
+    this.signalScanService.invalidateDirectoryIndex();
+    this.pino.info({ count: result.affected ?? 0 }, 'Removed ELF analyses of inactive packages');
   }
 }
 

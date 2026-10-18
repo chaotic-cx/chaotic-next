@@ -52,13 +52,22 @@ export function hasSuccessor(dep: BrokenDependency, stems: ReadonlySet<string>):
 }
 
 /**
+ * A prebuilt package ships the upstream binary, so a rebuild does not change
+ * its linkage. A rebuild still moves its files into the current runtime directory.
+ */
+function rebuildRelinks(dep: BrokenDependency, isSourceCompiled: boolean): boolean {
+  return isSourceCompiled || dep.kind === 'runtime';
+}
+
+/**
  * A reason that was already present at the first scan survived a build, so a
  * rebuild does not fix it. Without a rebuild, a source package needs a
  * PKGBUILD or upstream change, and a prebuilt package has no fix.
  */
 export function classifyBrokenDependency(dep: BrokenDependency, ctx: FixabilityContext): BrokenIssue {
   const reason = formatBrokenDependency(dep);
-  const rebuildFixes = hasSuccessor(dep, ctx.sonameStems) && !ctx.reasonsAsBuilt.has(reason);
+  const rebuildFixes =
+    rebuildRelinks(dep, ctx.isSourceCompiled) && hasSuccessor(dep, ctx.sonameStems) && !ctx.reasonsAsBuilt.has(reason);
   return { reason, fixability: fixabilityOf(rebuildFixes, ctx.isSourceCompiled) };
 }
 

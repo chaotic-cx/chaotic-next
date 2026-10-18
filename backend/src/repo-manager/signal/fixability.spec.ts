@@ -54,10 +54,42 @@ describe('classifyBrokenDependency', () => {
     const issue = classifyBrokenDependency(soname('libjsoncpp.so.26'), {
       sonameStems: stems,
       reasonsAsBuilt: noneAsBuilt,
-      isSourceCompiled: false,
+      isSourceCompiled: true,
     });
 
     expect(issue).toEqual({ reason: 'missing soname libjsoncpp.so.26', fixability: 'rebuild' });
+  });
+
+  it('has no fix for a prebuilt package with a missing soname that has a successor', () => {
+    const issue = classifyBrokenDependency(soname('libjsoncpp.so.26'), {
+      sonameStems: stems,
+      reasonsAsBuilt: noneAsBuilt,
+      isSourceCompiled: false,
+    });
+
+    expect(issue.fixability).toBe('noFix');
+  });
+
+  it('has no fix for a prebuilt package with a re-versioned symbol', () => {
+    const dep: BrokenDependency = { kind: 'version', soname: 'libonnxruntime.so.1', versionNodes: ['VERS_1.28.0'] };
+    const issue = classifyBrokenDependency(dep, {
+      sonameStems: stems,
+      reasonsAsBuilt: noneAsBuilt,
+      isSourceCompiled: false,
+    });
+
+    expect(issue.fixability).toBe('noFix');
+  });
+
+  it('fixes a stale runtime directory of a prebuilt package by a rebuild', () => {
+    const dep: BrokenDependency = { kind: 'runtime', runtime: 'python', currentVersion: '3.13', pathVersion: '3.12' };
+    const issue = classifyBrokenDependency(dep, {
+      sonameStems: stems,
+      reasonsAsBuilt: noneAsBuilt,
+      isSourceCompiled: false,
+    });
+
+    expect(issue.fixability).toBe('rebuild');
   });
 
   it('needs a PKGBUILD change for a source package whose library family is gone', () => {
