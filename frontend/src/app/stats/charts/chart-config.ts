@@ -57,11 +57,11 @@ interface AxisChartConfig {
 export function axisChartOptions<TType extends ChartType>(config: AxisChartConfig = {}): ChartOptions<TType> {
   const { indexAxis = 'x', showLegend = true } = config;
   const colors = chartColorOptions();
-
   return {
     ...colors,
     maintainAspectRatio: false,
     indexAxis,
+    interaction: { axis: indexAxis },
     plugins: {
       ...colors.plugins,
       legend: { display: showLegend },
@@ -74,7 +74,6 @@ const SIDE_LEGEND_MIN_WIDTH_PX = 520;
 
 export function pieChartOptions<TType extends ChartType>(): ChartOptions<TType> {
   const colors = chartColorOptions();
-
   return {
     ...colors,
     maintainAspectRatio: false,
@@ -88,8 +87,10 @@ export function pieChartOptions<TType extends ChartType>(): ChartOptions<TType> 
 function placeLegendBySize(chart: Chart, size: { width: number }): void {
   const legend = chart.options.plugins?.legend;
   if (!legend) return;
+
   const position = size.width >= SIDE_LEGEND_MIN_WIDTH_PX ? 'right' : 'bottom';
   if (legend.position === position) return;
+
   legend.position = position;
   chart.update('none');
 }
@@ -145,7 +146,6 @@ export function groupOverTimeChart(rows: GroupOverTimeRow[], formatDay: (day: st
       fill: false as const,
     };
   });
-
   return { labels, datasets };
 }
 
@@ -162,7 +162,6 @@ function chartRequestKey(request: HttpResourceRequest | undefined): string | und
   if (!request) return undefined;
 
   const params = request.params instanceof HttpParams ? request.params : new HttpParams({ fromObject: request.params });
-
   return `${request.url}?${params.toString()}`;
 }
 
@@ -181,12 +180,10 @@ function rememberChartResponse(key: string, value: unknown): void {
 export function chartResource<T>(request: () => HttpResourceRequest | undefined) {
   const resource = httpResource<T>(request);
   const key = computed(() => chartRequestKey(request()));
-
   const cached = computed(() => {
     const currentKey = key();
     return currentKey === undefined ? undefined : (chartResponseCache.get(currentKey) as T | undefined);
   });
-
   const value = computed(() => resourceValue(resource) ?? cached());
 
   effect(() => {
