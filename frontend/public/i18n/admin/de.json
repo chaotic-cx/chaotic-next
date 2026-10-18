@@ -643,6 +643,7 @@
       "header": "Paket bearbeiten",
       "noRepo": "Keines",
       "skipSignalScan": "Signal-Scan überspringen",
+      "skipSignalScanTooltip": "Wird über CI_SIGNAL_SCAN_IGNORE in der .CI/config gesetzt",
       "silenceFailedBuild": "Fehlgeschlagenen Build stummschalten",
       "silenceFailedBuildTooltip": "Blendet das Paket in „Fehlgeschlagene Builds ohne späteren Erfolg“ aus, bis es wieder fehlschlägt"
     },

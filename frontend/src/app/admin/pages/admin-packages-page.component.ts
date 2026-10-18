@@ -68,7 +68,6 @@ const REQUEST_REASON_DESCRIPTION_KEYS: Record<PipelineRequestReason, string> = {
 interface PackageFormModel {
   pkgname: string;
   isActive: boolean;
-  skipSignalScan: boolean;
   failureSilenced: boolean;
   version: string;
   pkgrel: string;
@@ -414,10 +413,22 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
               <label class="text-ctp-text text-sm" for="pkgIsActive">{{ t('admin.pages.active') }}</label>
             </div>
             <div class="flex items-center gap-2">
-              <p-checkbox [formField]="packageForm.skipSignalScan" [binary]="true" inputId="pkgSkipScan" />
-              <label class="text-ctp-text text-sm" for="pkgSkipScan">{{
-                t('admin.packages.editDialog.skipSignalScan')
-              }}</label>
+              <p-checkbox
+                [ngModel]="editing()?.skipSignalScan ?? false"
+                [binary]="true"
+                [disabled]="true"
+                [pTooltip]="t('admin.packages.editDialog.skipSignalScanTooltip')"
+                inputId="pkgSkipScan"
+                tooltipPosition="top"
+              />
+              <label
+                class="text-ctp-text text-sm cursor-help"
+                [pTooltip]="t('admin.packages.editDialog.skipSignalScanTooltip')"
+                for="pkgSkipScan"
+                tooltipPosition="top"
+              >
+                {{ t('admin.packages.editDialog.skipSignalScan') }}
+              </label>
             </div>
             <div class="flex items-center gap-2">
               <p-checkbox
@@ -694,13 +705,13 @@ export class AdminPackagesPageComponent {
           })
         : null,
     ].filter((part) => part !== null);
-
     return [buildCount, ...metrics].join(' · ');
   }
 
   protected hasBuildClassMismatch(pkg: PackageDto): boolean {
     const suggested = pkg.buildClassSuggestion?.suggestedBuildClass;
     if (suggested === null || suggested === undefined) return false;
+
     return pkg.buildClass !== suggested;
   }
 
@@ -740,7 +751,6 @@ export class AdminPackagesPageComponent {
 
   readonly repoOptions = computed(() => {
     this.activeTranslation();
-
     return [
       { label: this.transloco.translate('admin.packages.editDialog.noRepo'), value: NO_REPO },
       ...(this.adminService.repos() ?? []).map((repo) => ({ label: repo.name, value: String(repo.id) })),
@@ -766,7 +776,6 @@ export class AdminPackagesPageComponent {
   private readonly existingPackageResource = httpResource(() => this.adminService.getPackageUrl(this.aurPackageName()));
   private readonly aurMatchesResource = httpResource<string[]>(() => {
     const name = this.aurPackageName();
-
     return name ? this.adminService.getAurSuggestionsRequest(name) : undefined;
   });
 
@@ -786,6 +795,7 @@ export class AdminPackagesPageComponent {
   readonly isScanOngoing = computed(() => {
     const pkg = this.aurPackageName();
     if (!pkg) return false;
+
     const scan = this.aurScanService.scanOf(pkg);
     return !!scan && !isScanSettled(scan);
   });
@@ -793,6 +803,7 @@ export class AdminPackagesPageComponent {
   readonly scanSettled = computed(() => {
     const pkg = this.aurPackageName();
     if (!pkg) return false;
+
     return isScanSettled(this.aurScanService.scanOf(pkg));
   });
 
@@ -800,6 +811,7 @@ export class AdminPackagesPageComponent {
     const pkg = this.aurPackageName();
     if (!pkg || this.isAdding()) return false;
     if (this.aurChecksPending() || this.isExistingPackage() || this.isAurMissing()) return false;
+
     return this.scanSettled();
   });
 
@@ -888,7 +900,6 @@ export class AdminPackagesPageComponent {
     this.model.set({
       pkgname: pkg.pkgname,
       isActive: pkg.isActive,
-      skipSignalScan: pkg.skipSignalScan ?? false,
       failureSilenced: pkg.failureSilenced ?? false,
       version: pkg.version ?? '',
       pkgrel: pkg.pkgrel === undefined ? '' : String(pkg.pkgrel),
@@ -975,7 +986,6 @@ export class AdminPackagesPageComponent {
       suggested !== null && suggested !== undefined
         ? String(suggested)
         : this.transloco.translate('admin.packages.adjustBuildClass.noSuggestion');
-
     this.confirmationService.confirm({
       message: this.transloco.translate('admin.packages.adjustBuildClass.confirmMessage', {
         pkgname: pkg.pkgname,
@@ -1044,7 +1054,6 @@ export class AdminPackagesPageComponent {
     return {
       pkgname: model.pkgname,
       isActive: model.isActive,
-      skipSignalScan: model.skipSignalScan,
       failureSilenced: model.failureSilenced,
       version: model.version === '' ? undefined : model.version,
       pkgrel: model.pkgrel === '' ? undefined : Number(model.pkgrel),
@@ -1064,7 +1073,6 @@ function emptyModel(): PackageFormModel {
   return {
     pkgname: '',
     isActive: true,
-    skipSignalScan: false,
     failureSilenced: false,
     version: '',
     pkgrel: '',

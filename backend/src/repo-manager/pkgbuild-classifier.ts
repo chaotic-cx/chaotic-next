@@ -69,6 +69,7 @@ export function extractArray(pkgbuildText: string, name: string, multiline = fal
   const inner = multiline ? '[\\s\\S]*?' : '[^)]*';
   const match = pkgbuildText.match(new RegExp(`(?:^|\\s)${name}\\s*=\\s*\\((${inner})\\)`, 'm'));
   if (!match) return null;
+
   return match[1]
     .split(/\s+/)
     .filter((entry) => entry.length > 0 && entry !== '\\')
@@ -84,6 +85,7 @@ export function expandBraceAlternation(token: string): string[] {
   const brace = token.match(/^(.*)\{([^{}]+)\}(.*)$/);
   // Braces without a comma are literal in bash, so `${var}` passes through.
   if (!brace?.[2].includes(',')) return [token];
+
   const [, head, body, tail] = brace;
   return body.split(',').map((alternative) => `${head}${alternative}${tail}`);
 }
@@ -126,18 +128,17 @@ export function isSourceCompiledPackage(pkgbuildText?: string | null): boolean {
 
   const cleanText = stripComments(pkgbuildText);
   const { makedepends, allDepends } = collectAllDepends(cleanText);
-
   if (isNodejsPackage(allDepends, makedepends, cleanText)) return false;
 
   const hasCompilerInMakedepends = hasCompilerInList(makedepends);
   const hasCompilerInDepends = hasCompilerInList(allDepends);
   const hasBuildFunc = hasBuildFunction(cleanText);
-  const hasNoStripOption = !NO_STRIP_REGEX.test(cleanText);
   const hasBuildSystem = hasBuildSystemIndicator(cleanText);
 
+  // `!strip` usually marks a repackaged binary, but a compiler in makedepends proves a real build.
+  const keepsStripOrCompiles = !NO_STRIP_REGEX.test(cleanText) || hasCompilerInMakedepends;
   const hasAnyCompiler = hasCompilerInMakedepends || hasCompilerInDepends || hasBuildSystem;
-
-  return hasAnyCompiler && hasBuildFunc && hasNoStripOption;
+  return hasAnyCompiler && hasBuildFunc && keepsStripOrCompiles;
 }
 
 /**
@@ -151,14 +152,15 @@ export function isSourceCompiledPackage(pkgbuildText?: string | null): boolean {
  */
 export function classifyPkgbuild(pkgbuildText?: string | null): string[] {
   if (!pkgbuildText) return [];
+
   const cleanText = stripComments(pkgbuildText);
   const { depends, makedepends, allDepends } = collectAllDepends(cleanText);
   const pkgname = (pkgbuildText.match(PKGNAME_REGEX)?.[1] ?? '').replace(/^['"]+|['"]+$/g, '');
   const kinds: string[] = [];
-
   if (matchesKind(depends, ELECTRON_REGEX)) {
     kinds.push('electron');
   }
+
   const hasNodeTooling = matchesKind(makedepends, NODEJS_PACKAGE_REGEX) || NODEJS_BUILD_REGEX.test(cleanText);
   const isNodeRuntime = matchesKind(allDepends, NODEJS_DEP_REGEX);
   if (isNodeRuntime || (hasNodeTooling && !matchesKind(makedepends, NATIVE_TOOLCHAIN_REGEX))) {
@@ -167,16 +169,19 @@ export function classifyPkgbuild(pkgbuildText?: string | null): string[] {
   if (matchesKind(allDepends, KERNEL_MODULE_DEP_REGEX) || matchesKind(makedepends, KERNEL_MODULE_DEP_REGEX)) {
     kinds.push('kernel-module');
   }
+
   for (const [kind, regex] of KIND_DEP_REGEXES) {
     if (matchesKind(allDepends, regex)) {
       kinds.push(kind);
     }
   }
+
   for (const [kind, regex] of KIND_BUILD_REGEXES) {
     if (!kinds.includes(kind) && regex.test(cleanText)) {
       kinds.push(kind);
     }
   }
+
   const isNodePackage = kinds.includes('nodejs') || kinds.includes('electron');
   const compiledNative =
     (hasCompilerInList(makedepends) || hasCompilerInList(allDepends) || hasBuildSystemIndicator(cleanText)) &&

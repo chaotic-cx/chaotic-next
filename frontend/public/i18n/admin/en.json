@@ -643,6 +643,7 @@
       "header": "Edit package",
       "noRepo": "None",
       "skipSignalScan": "Skip signal scan",
+      "skipSignalScanTooltip": "Set by CI_SIGNAL_SCAN_IGNORE in .CI/config",
       "silenceFailedBuild": "Silence failed build",
       "silenceFailedBuildTooltip": "Hides the package from 'Failed builds with no more recent success' until it fails again"
     },

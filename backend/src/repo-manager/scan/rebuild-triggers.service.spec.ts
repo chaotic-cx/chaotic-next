@@ -38,11 +38,12 @@ function service(options: {
   }));
   const triggers = new RebuildTriggerService(
     compute,
-    { readPackageConfig } as unknown as BumpService,
+    { readPackageConfig, syncSplitPackageFlags: vi.fn(async () => undefined) } as unknown as BumpService,
     { find: vi.fn(async () => options.archOwners ?? [llvmLibs]) } as unknown as Repository<ArchlinuxPackage>,
     { find: vi.fn(async () => []) } as unknown as Repository<Package>,
     pino,
   );
+
   return { triggers, readPackageConfig };
 }
 

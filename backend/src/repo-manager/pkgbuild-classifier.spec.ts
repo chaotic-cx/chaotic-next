@@ -91,6 +91,30 @@ describe('isSourceCompiledPackage', () => {
     });
   });
 
+  describe('Source compiled with !strip', () => {
+    it('benben: !strip with meson and ninja in makedepends', () => {
+      const pkgbuild = [
+        'pkgname=benben',
+        'pkgver=0.7.1',
+        'pkgrel=1',
+        'arch=("x86_64")',
+        'makedepends=(fossil git meson ninja sbcl)',
+        'options=(!strip)',
+        'source=("fossil+https://example.com/benben")',
+        '',
+        'build() {',
+        '  meson setup build benben',
+        '  meson compile -C build',
+        '}',
+        '',
+        'package() {',
+        '  meson install -C build --destdir "$pkgdir"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+  });
+
   describe('Packages with no build() or no compiler', () => {
     it('package() only: no build function', () => {
       const pkgbuild = [

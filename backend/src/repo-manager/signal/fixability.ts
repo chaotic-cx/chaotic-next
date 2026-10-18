@@ -9,6 +9,12 @@ import { HASKELL_SONAME_PREFIX, haskellPackageName } from './parse';
 
 const FIXABILITY = brokenFixabilitySchema.enum;
 
+/**
+ * Sonames of other operating systems, from binaries that upstream bundles for
+ * all platforms: a libc other than glibc's `libc.so.6`, and Solaris `libkstat`.
+ */
+const FOREIGN_SONAME_REGEXES: readonly RegExp[] = [/^libc\.so\.(?!6$)\d+$/, /^libkstat\.so(\.|$)/];
+
 export interface FixabilityContext {
   /** Stems of all provided sonames, see sonameStems. */
   sonameStems: ReadonlySet<string>;
@@ -59,13 +65,23 @@ function rebuildRelinks(dep: BrokenDependency, isSourceCompiled: boolean): boole
   return isSourceCompiled || dep.kind === 'runtime';
 }
 
+function isForeignSoname(dep: BrokenDependency): boolean {
+  if (dep.kind !== 'soname' || !dep.soname) return false;
+
+  const soname = dep.soname;
+  return FOREIGN_SONAME_REGEXES.some((regex) => regex.test(soname));
+}
+
 /**
  * A reason that was already present at the first scan survived a build, so a
  * rebuild does not fix it. Without a rebuild, a source package needs a
- * PKGBUILD or upstream change, and a prebuilt package has no fix.
+ * PKGBUILD or upstream change, and a prebuilt package has no fix. Linux never
+ * provides a foreign soname, so neither a rebuild nor a PKGBUILD change fixes it.
  */
 export function classifyBrokenDependency(dep: BrokenDependency, ctx: FixabilityContext): BrokenIssue {
   const reason = formatBrokenDependency(dep);
+  if (isForeignSoname(dep)) return { reason, fixability: FIXABILITY.noFix };
+
   const rebuildFixes =
     rebuildRelinks(dep, ctx.isSourceCompiled) && hasSuccessor(dep, ctx.sonameStems) && !ctx.reasonsAsBuilt.has(reason);
   return { reason, fixability: fixabilityOf(rebuildFixes, ctx.isSourceCompiled) };

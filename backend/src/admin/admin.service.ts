@@ -59,7 +59,6 @@ interface RescanJobRecord {
 export interface CreatePackageBody {
   pkgname: string;
   isActive?: boolean;
-  skipSignalScan?: boolean;
   version?: string;
   pkgrel?: number;
   bump?: number;
@@ -155,10 +154,10 @@ export class AdminService {
     if (conditions.length > 0) {
       query.where(conditions.join(' AND '), params);
     }
+
     query.orderBy('package.pkgname', 'ASC').skip(skip).take(safePerPage);
 
     const [rows, total] = await query.getManyAndCount();
-
     const suggestions = await this.resolveBuildClassSuggestions(rows.map((pkg) => pkg.pkgname));
     const items = rows.map((pkg) => toPackageDto(pkg, suggestions.get(pkg.pkgname) ?? null));
     return paginate(items, total, safePage, safePerPage);
@@ -183,9 +182,6 @@ export class AdminService {
     }
     if (body.isActive !== undefined) {
       pkg.isActive = body.isActive;
-    }
-    if (body.skipSignalScan !== undefined) {
-      pkg.skipSignalScan = body.skipSignalScan;
     }
     if (body.version !== undefined) {
       pkg.version = body.version;
@@ -318,6 +314,7 @@ export class AdminService {
     if (active !== undefined) {
       where.isActive = active;
     }
+
     const [items, total] = await this.builderRepository.findAndCount({
       where,
       order: { name: 'ASC' },
@@ -382,6 +379,7 @@ export class AdminService {
     if (extraFilter !== undefined) {
       conditions = (conditions.length ? conditions : [{}]).map((condition) => ({ ...condition, ...extraFilter }));
     }
+
     return conditions;
   }
 
@@ -449,7 +447,6 @@ export class AdminService {
     triggerFrom?: number,
   ): Promise<Paginated<PackageBump>> {
     const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
-
     const query = this.packageBumpRepository
       .createQueryBuilder('bump')
       .leftJoinAndSelect('bump.pkg', 'pkg')
@@ -467,9 +464,7 @@ export class AdminService {
     }
 
     const [rows, total] = await query.getManyAndCount();
-
     const triggerNames = await this.resolveTriggerNames(rows);
-
     const items = rows.map((row) => this.toPackageBumpDto(row, triggerNames));
     return paginate(items, total, safePage, safePerPage);
   }
@@ -499,8 +494,8 @@ export class AdminService {
     if (analysis.pkgType === PKG_TYPE_CHAOTIC) {
       query.orWhere('bump.pkgId = :pkgId', { pkgId: analysis.pkgId });
     }
-    const rows = await query.orderBy('bump.timestamp', 'DESC').getMany();
 
+    const rows = await query.orderBy('bump.timestamp', 'DESC').getMany();
     const triggerNames = await this.resolveTriggerNames(rows);
     return rows.map((row) => this.toPackageBumpDto(row, triggerNames));
   }
@@ -527,11 +522,13 @@ export class AdminService {
         conditions.push(`(analysis.pkgType = '${PKG_TYPE_CHAOTIC}' AND analysis.pkgId IN (:...chaoticIds))`);
         params.chaoticIds = resolvedIds.chaotic;
       }
+
       const numericId = /^\d+$/.test(q) ? Number(q) : undefined;
       if (numericId !== undefined) {
         conditions.push(`analysis.pkgId = :numericId`);
         params.numericId = numericId;
       }
+
       query.where(`(${conditions.join(' OR ')})`, params);
     }
     if (pkgType !== undefined) {
@@ -544,9 +541,7 @@ export class AdminService {
     query.skip(skip).take(safePerPage).orderBy('analysis.scannedAt', 'DESC');
 
     const [rows, total] = await query.getManyAndCount();
-
     const packages = await this.resolveElfPackages(rows);
-
     const items = rows.map((row) => this.toElfAnalysisView(row, packages.get(packageKey(row.pkgType, row.pkgId))));
     return paginate(items, total, safePage, safePerPage);
   }
@@ -582,6 +577,7 @@ export class AdminService {
 
   startRescanPackages(packages: RescanPackageInput[]): { started: number; jobId: string } {
     if (packages.length === 0) throw new BadRequestException('No packages provided', { errorCode: 'NO_PACKAGES' });
+
     const secretMirrorUrl = this.configService.get<string>('app.secretMirrorUrl');
     if (!secretMirrorUrl) {
       throw new ConflictException('SECRET_MIRROR_URL is not configured', { errorCode: 'NOT_CONFIGURED' });
@@ -611,12 +607,14 @@ export class AdminService {
         this.activeRescanJobId = null;
         this.trimRescanJobHistory();
       });
+
     return { started: packages.length, jobId: job.jobId };
   }
 
   getRescanJob(jobId: string): RescanJob {
     const job = this.rescanJobs.get(jobId);
     if (!job) throw new NotFoundException(`Rescan job ${jobId} not found`);
+
     return {
       jobId: job.jobId,
       status: job.finishedAt === null ? 'running' : 'done',
@@ -637,6 +635,7 @@ export class AdminService {
         errorCode: 'RECOMPUTE_IN_PROGRESS',
       });
     }
+
     this.signalRecomputeRunning = true;
     void this.runSignalDerivationRecompute();
   }
@@ -674,7 +673,6 @@ export class AdminService {
     secretMirrorUrl: string,
   ): Promise<void> {
     const tempDir = await mkdtemp(join(tmpdir(), 'admin-rescan-'));
-
     try {
       for (const entry of packages) {
         try {
@@ -683,6 +681,7 @@ export class AdminService {
           } else {
             await this.rescanChaoticPackage(entry, secretMirrorUrl, tempDir);
           }
+
           job.rescanned++;
         } catch (err: unknown) {
           /**
@@ -694,6 +693,7 @@ export class AdminService {
           this.pino.warn({ err, pkgname: entry.pkgname, reason }, 'Rescan failed');
         }
       }
+
       await this.signalScanService.recomputeBroken();
     } finally {
       const { rm } = await import('node:fs/promises');
@@ -776,6 +776,7 @@ export class AdminService {
     ]);
     const names = new Map<number, string>();
     for (const pkg of [...arch, ...chaotic]) names.set(pkg.id, pkg.pkgname);
+
     return names;
   }
 
@@ -815,6 +816,7 @@ export class AdminService {
         });
       }
     }
+
     return packages;
   }
 
@@ -840,6 +842,7 @@ export class AdminService {
   private async findRepo(id: number): Promise<Repo> {
     const repo = await this.repoRepository.findOne({ where: { id } });
     if (!repo) throw new NotFoundException(`Repo ${id} not found`);
+
     return repo;
   }
 
@@ -857,6 +860,7 @@ export class AdminService {
       ) {
         throw new ConflictException(`${label} is still referenced by other rows and cannot be deleted`);
       }
+
       throw error;
     }
   }

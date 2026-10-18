@@ -64,7 +64,6 @@ const RESCAN_NAMED_LIMIT = 3;
 export interface PackageFormData {
   pkgname: string;
   isActive: boolean;
-  skipSignalScan: boolean;
   version?: string;
   pkgrel?: number;
   bump?: number;
@@ -194,7 +193,6 @@ export class AdminService {
 
   readonly activeOptions = computed<ActiveOption[]>(() => {
     this.activeTranslation();
-
     return [
       { label: this.transloco.translate('admin.service.activeOptions.active'), value: 'true' },
       { label: this.transloco.translate('admin.service.activeOptions.inactive'), value: 'false' },
@@ -214,6 +212,7 @@ export class AdminService {
     this.listUsers.update((current) => {
       const next = new Map(current);
       for (const list of lists) next.set(list, (next.get(list) ?? 0) + delta);
+
       return next;
     });
   }
@@ -490,6 +489,7 @@ export class AdminService {
      */
     const payload = { ...data };
     delete payload.failureSilenced;
+
     return this.runMutation(
       () =>
         this.http.patch(`${this.backendUrl}/admin/packages/${id}`, updatePackageBodySchema.partial().parse(payload)),
@@ -797,6 +797,7 @@ export class AdminService {
 
     this.messageToastService.success(this.transloco.translate('admin.service.summary.success'), successDetail);
     onSuccess?.();
+
     return true;
   }
 
@@ -810,7 +811,6 @@ export class AdminService {
 
   private reportBuildClassAdjustment(result: AdjustBuildClassResponse): void {
     const params = { pkgbase: result.pkgbase, buildClass: result.buildClass };
-
     if (result.adjusted) {
       this.messageToastService.success(
         this.transloco.translate('admin.service.buildClassAdjust.adjustedSummary'),
@@ -847,6 +847,7 @@ export class AdminService {
         // Transient poll failures are tolerated; the deadline bounds the wait.
       }
     }
+
     return null;
   }
 
@@ -884,7 +885,6 @@ export class AdminService {
 
     const named = pkgnames.slice(0, RESCAN_NAMED_LIMIT).join(', ');
     const remaining = pkgnames.length - RESCAN_NAMED_LIMIT;
-
     return this.transloco.translate('admin.service.rescan.startedDetailTruncated', { packages: named, remaining });
   }
 }

@@ -9,7 +9,7 @@ import {
 } from '../../interfaces/repo-manager';
 import { isSourceCompiledPackage } from '../pkgbuild-classifier';
 import { ArchlinuxPackage, PackageBump } from '../repo-manager.entity';
-import { REPO_WRITER, type BumpCommitAction, type RepoReader, type RepoWriter } from '../repo-rw';
+import { type BumpCommitAction, REPO_WRITER, type RepoReader, type RepoWriter } from '../repo-rw';
 import { applyPackageBump, parseCiConfig } from './bump-config';
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -223,10 +223,34 @@ export class BumpService {
     if (pkg.skipSignalScan !== skipSignalScan || pkg.isSourceCompiled !== isSourceCompiled) {
       pkg.skipSignalScan = skipSignalScan;
       pkg.isSourceCompiled = isSourceCompiled;
-      this.savePackageInBackground(pkg);
+
+      // syncSplitPackageFlags copies these flags after the loop, so the save must finish first.
+      await this.packagesRepository.save(pkg);
     }
 
     return { configs, pkgInDb: pkg };
+  }
+
+  /**
+   * Only the pkgbase row gets the flags from the PKGBUILD and `.CI/config`. The
+   * ELF analyses belong to the binary rows, so a split package (`freeipa-client`
+   * of `freeipa`) copies the flags from its pkgbase row.
+   */
+  async syncSplitPackageFlags(repo: Repo): Promise<void> {
+    const result = await this.packagesRepository.query(
+      `UPDATE "package" AS split
+       SET "isSourceCompiled" = base."isSourceCompiled",
+           "skipSignalScan" = base."skipSignalScan"
+       FROM "package" AS base
+       WHERE base."repoId" = $1
+         AND split."repoId" = base."repoId"
+         AND split."pkgbaseName" = base.pkgname
+         AND split.id <> base.id
+         AND (split."isSourceCompiled" <> base."isSourceCompiled"
+           OR split."skipSignalScan" <> base."skipSignalScan")`,
+      [repo.id],
+    );
+    this.pino.debug({ repo: repo.name, result }, 'Synced pkgbase flags to split packages');
   }
 
   private savePackageInBackground(pkg: Package): void {

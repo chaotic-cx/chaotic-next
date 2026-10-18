@@ -81,6 +81,26 @@ describe('classifyBrokenDependency', () => {
     expect(issue.fixability).toBe('noFix');
   });
 
+  it('has no fix for a foreign libc in a source package', () => {
+    const issue = classifyBrokenDependency(soname('libc.so.8'), {
+      sonameStems: sonameStems(['libc.so.6']),
+      reasonsAsBuilt: noneAsBuilt,
+      isSourceCompiled: true,
+    });
+
+    expect(issue.fixability).toBe('noFix');
+  });
+
+  it('has no fix for the Solaris libkstat', () => {
+    const issue = classifyBrokenDependency(soname('libkstat.so.1'), {
+      sonameStems: stems,
+      reasonsAsBuilt: noneAsBuilt,
+      isSourceCompiled: true,
+    });
+
+    expect(issue.fixability).toBe('noFix');
+  });
+
   it('fixes a stale runtime directory of a prebuilt package by a rebuild', () => {
     const dep: BrokenDependency = { kind: 'runtime', runtime: 'python', currentVersion: '3.13', pathVersion: '3.12' };
     const issue = classifyBrokenDependency(dep, {

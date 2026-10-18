@@ -24,7 +24,6 @@ export type CreateElfAnalysisBodyDto = z.infer<typeof createElfAnalysisBodySchem
 export const updatePackageBodySchema = z.strictObject({
   pkgname: z.string().min(1).describe('Package name'),
   isActive: z.boolean().describe('Whether the package is active'),
-  skipSignalScan: z.boolean().describe('Exclude the package from ELF signal scanning'),
   version: z.string().describe('Package version'),
   pkgrel: z.number().int().describe('Package release number'),
   bump: z.number().int().describe('Bump counter'),

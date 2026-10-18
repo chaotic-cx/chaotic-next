@@ -75,7 +75,9 @@ export class RebuildTriggerService {
       }
     }
 
+    await this.bumpService.syncSplitPackageFlags(repo);
     this.pino.info({ count: needsRebuild.length, repo: repo.name }, 'Found packages to rebuild');
+
     return needsRebuild;
   }
 
@@ -142,7 +144,6 @@ export class RebuildTriggerService {
       triggers.filter((trigger) => trigger.triggerFrom === from).map((trigger) => trigger.ownerId);
     const archIds = idsOf(TriggerType.ARCH);
     const chaoticIds = idsOf(TriggerType.CHAOTIC);
-
     const [archOwners, chaoticOwners] = await Promise.all([
       archIds.length ? this.archlinuxPackageRepository.find({ where: { id: In(archIds) } }) : [],
       chaoticIds.length ? this.packagesRepository.find({ where: { id: In(chaoticIds) } }) : [],
