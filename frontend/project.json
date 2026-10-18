@@ -70,7 +70,14 @@
             }
           ],
           "outputHashing": "all",
-          "optimization": true,
+          "optimization": {
+            "scripts": true,
+            "fonts": true,
+            "styles": {
+              "minify": true,
+              "inlineCritical": false
+            }
+          },
           "serviceWorker": "frontend/ngsw-config.json"
         },
         "development": {
