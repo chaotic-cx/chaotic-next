@@ -222,6 +222,7 @@
       "empty": "Keine neuen Deployments",
       "openLog": "Build-Log öffnen",
       "openLogAriaLabel": "Build-Log für {{name}} öffnen",
+      "moreTagsAriaLabel": "{{count}} weitere Fehler-Tags: {{tags}}",
       "failureTags": {
         "dependency": "Fehlende Abhängigkeit",
         "compile": "Kompilierfehler",

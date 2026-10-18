@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { type Build } from '@chaotic-next/shared-lib';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
@@ -16,6 +17,7 @@ import { BuildStatusService } from './build-status.service';
 
 const DEPLOYMENTS_PAGE_SIZE = 6;
 const SKELETON_ROW_COUNT = 4;
+const VISIBLE_TAG_COUNT = 2;
 
 const FAILURE_TAG_DESCRIPTION_KEYS: Record<string, string> = {
   dependency: marker('buildStatus.deployments.failureTags.dependency'),
@@ -49,6 +51,7 @@ const FAILURE_TAG_DESCRIPTION_KEYS: Record<string, string> = {
     EmptyStateComponent,
   ],
   templateUrl: './build-status-deployments.component.html',
+  styleUrl: './build-status-deployments.component.css',
 })
 export class BuildStatusDeploymentsComponent {
   readonly buildStatusService = inject(BuildStatusService);
@@ -76,5 +79,13 @@ export class BuildStatusDeploymentsComponent {
 
   tagDescriptionKey(tag: string): string | undefined {
     return FAILURE_TAG_DESCRIPTION_KEYS[tag];
+  }
+
+  visibleTagsOf(deployment: Build): string[] {
+    return (deployment.failureTags ?? []).slice(0, VISIBLE_TAG_COUNT);
+  }
+
+  hiddenTagsOf(deployment: Build): string[] {
+    return (deployment.failureTags ?? []).slice(VISIBLE_TAG_COUNT);
   }
 }

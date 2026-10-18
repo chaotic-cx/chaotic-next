@@ -38,20 +38,32 @@
                 · {{ repoName }}
               }
             </span>
-            @if (deployment.failureTags?.length) {
-              <span class="mt-1 flex flex-wrap gap-1">
-                @for (tag of deployment.failureTags; track tag) {
-                  @let descriptionKey = tagDescriptionKey(tag);
-                  <span
-                    class="rounded-full bg-ctp-red/15 px-1.5 py-0.5 text-xs font-medium text-ctp-red"
-                    [pTooltip]="descriptionKey ? t(descriptionKey) : tag"
-                    tooltipPosition="top"
-                    >{{ tag }}</span
-                  >
-                }
-              </span>
-            }
           </div>
+          @if (deployment.failureTags?.length) {
+            @let hiddenTags = hiddenTagsOf(deployment);
+            <span class="flex shrink-0 items-center gap-1">
+              @for (tag of visibleTagsOf(deployment); track tag) {
+                @let descriptionKey = tagDescriptionKey(tag);
+                <span class="failure-tag" [pTooltip]="descriptionKey ? t(descriptionKey) : tag" tooltipPosition="top">{{
+                  tag
+                }}</span>
+              }
+              @if (hiddenTags.length > 0) {
+                <span
+                  class="failure-tag"
+                  [pTooltip]="hiddenTags.join(', ')"
+                  [attr.aria-label]="
+                    t('buildStatus.deployments.moreTagsAriaLabel', {
+                      count: hiddenTags.length,
+                      tags: hiddenTags.join(', '),
+                    })
+                  "
+                  tooltipPosition="top"
+                  >+{{ hiddenTags.length }}</span
+                >
+              }
+            </span>
+          }
           <a
             class="chaotic-icon-btn"
             [routerLink]="packageLogRouteFromUrl(deployment.logUrl ?? '')"

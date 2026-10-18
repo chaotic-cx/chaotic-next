@@ -222,6 +222,7 @@
       "empty": "No recent deployments",
       "openLog": "Open build log",
       "openLogAriaLabel": "Open build log for {{name}}",
+      "moreTagsAriaLabel": "{{count}} more failure tags: {{tags}}",
       "failureTags": {
         "dependency": "Missing dependency",
         "compile": "Compile error",
