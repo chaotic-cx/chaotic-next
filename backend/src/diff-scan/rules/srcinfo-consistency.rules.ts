@@ -116,7 +116,9 @@ function parsePkgbuildContent(lines: string[]): PkgbuildContent {
 
   for (const rawLine of lines) {
     if (insideFunction) {
-      if (FUNCTION_BODY_END.test(rawLine)) insideFunction = false;
+      if (FUNCTION_BODY_END.test(rawLine)) {
+        insideFunction = false;
+      }
       continue;
     }
     const text = stripInlineComment(rawLine);
@@ -175,7 +177,9 @@ function parsePkgbuildContent(lines: string[]): PkgbuildContent {
 }
 
 function markConditional(conditionalNames: Set<string>, conditional: boolean, name: string): void {
-  if (conditional) conditionalNames.add(name);
+  if (conditional) {
+    conditionalNames.add(name);
+  }
 }
 
 function assignList(lists: Map<string, string[]>, name: string, values: string[], appended: boolean): void {
@@ -291,7 +295,9 @@ function resolveList(values: string[], scalars: ReadonlyMap<string, string>): st
   for (const value of values) {
     const expanded = substituteVars(value, scalars);
     if (expanded === null) return null;
-    if (expanded !== '') resolved.push(expanded);
+    if (expanded !== '') {
+      resolved.push(expanded);
+    }
   }
   return resolved;
 }

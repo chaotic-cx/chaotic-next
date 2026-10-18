@@ -1,11 +1,151 @@
-.p-accordionpanel:not(.p-disabled).p-accordionpanel-active > .p-accordionheader {
-  color: var(--ctp-mocha-maroon);
+.about-section {
+  margin-bottom: 1rem;
+  scroll-margin-top: 6rem;
 }
 
-.p-accordionheader {
-  color: var(--ctp-mocha-text);
+#team-members {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 3rem;
 }
 
-p-panel {
-  scroll-margin-top: 5rem;
+.about-team {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+.about-member {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  height: 100%;
+  padding: 0.875rem 1rem;
+  transition: border-color var(--chaotic-duration-fast) var(--chaotic-ease-out);
+}
+
+.about-member:hover,
+.about-member:focus-visible {
+  border-color: color-mix(in srgb, var(--catppuccin-color-mauve) 50%, transparent);
+}
+
+.about-member__avatar {
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--chaotic-radius-pill);
+  object-fit: cover;
+}
+
+.about-member__name {
+  display: block;
+  font-weight: var(--chaotic-weight-semibold);
+  color: var(--catppuccin-color-text);
+}
+
+.about-member__role {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--chaotic-fg-muted);
+}
+
+/* Two cards per row on phones leave too little width for the row layout, so each card stacks. */
+@media (max-width: 639px) {
+  .about-team {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .about-member {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.875rem 0.625rem;
+    text-align: center;
+  }
+
+  .about-member__name,
+  .about-member__role {
+    overflow-wrap: anywhere;
+  }
+
+  .about-member__github {
+    display: none;
+  }
+}
+
+.about-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+  .about-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.about-grid > section {
+  scroll-margin-top: 6rem;
+}
+
+.about-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.about-card__body ::ng-deep a,
+.about-links a,
+.about-thanks a {
+  color: var(--catppuccin-color-mauve);
+}
+
+.about-card__body ::ng-deep a:hover,
+.about-card__body ::ng-deep a:focus-visible,
+.about-links a:hover,
+.about-links a:focus-visible,
+.about-thanks a:hover,
+.about-thanks a:focus-visible {
+  text-decoration: underline;
+}
+
+.about-links {
+  padding: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.about-links dt {
+  font-size: 0.8125rem;
+  color: var(--chaotic-fg-muted);
+}
+
+.about-links dd {
+  overflow-wrap: anywhere;
+  font-size: 0.9375rem;
+}
+
+.about-thanks {
+  padding: 1rem 1.25rem 1.25rem;
+  columns: 18rem 3;
+  column-gap: 2rem;
+  font-size: 0.9375rem;
+}
+
+.about-thanks li {
+  break-inside: avoid;
+  padding-block: 0.25rem;
+}
+
+.about-dedication {
+  margin-top: 2rem;
+  padding-block: 1rem 2rem;
+  border-top: 1px solid var(--chaotic-border);
+  font-size: 0.875rem;
+  color: var(--chaotic-fg-muted);
 }

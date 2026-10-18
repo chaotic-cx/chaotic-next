@@ -41,7 +41,7 @@ import { AurScanMetric1789064731000 } from '../migrations/1789064731000-AurScanM
 import { MrActionReason1789137958000 } from '../migrations/1789137958000-MrActionReason';
 import { AddArchPackageTriggersPending1790881960429 } from '../migrations/1790881960429-AddArchPackageTriggersPending';
 import { AddAnalysisBrokenSince1790959740748 } from '../migrations/1790959740748-AddAnalysisBrokenSince';
-import { AddArchPackageBump1791900000000 } from '../migrations/1791900000000-AddArchPackageBump';
+import { AddBuildPkgbaseStatusIndex1791017025764 } from '../migrations/1791017025764-AddBuildPkgbaseStatusIndex';
 import { AurScanMetric } from '../diff-scan/aur-scan-metric.entity';
 import { NotificationPreference } from '../notifications/notification-preference.entity';
 import { NotificationSubscription } from '../notifications/notification-subscription.entity';
@@ -52,6 +52,8 @@ import { RouterHitDaily } from '../router/router-hit-daily.entity';
 import { RouterHit } from '../router/router-hit.entity';
 import { pgConnectionOptions } from './pg-options';
 import { type DataSourceOptions } from 'typeorm';
+import { AddBrokenFixability1792001573016 } from '../migrations/1792001573016-AddBrokenFixability';
+import { AddArchPackageBump1791900000000 } from '../migrations/1791900000000-AddArchPackageBump';
 
 export const dataSourceOptions: DataSourceOptions = {
   ...pgConnectionOptions,
@@ -116,6 +118,8 @@ export const dataSourceOptions: DataSourceOptions = {
     MrActionReason1789137958000,
     AddArchPackageTriggersPending1790881960429,
     AddAnalysisBrokenSince1790959740748,
+    AddBuildPkgbaseStatusIndex1791017025764,
+    AddBrokenFixability1792001573016,
     AddArchPackageBump1791900000000,
   ],
   migrationsRun: true,

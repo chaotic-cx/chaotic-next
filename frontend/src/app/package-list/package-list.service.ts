@@ -1,11 +1,11 @@
-import { httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { isPackageSortField, Package, type PackageSortField, Paginated, Repo } from '@chaotic-next/shared-lib';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { type EnvironmentModel } from '../../environments/environment.model';
 import { AppService } from '../app.service';
-import { resourceSignal, resourceValue } from '../functions';
+import { loadingWithoutValue, resourceFailed } from '../functions';
+import { cachedHttpResource } from '../query-cache.service';
 import { createLazyTablePagination } from '../table-pagination';
 
 const DEFAULT_SORT_FIELD: PackageSortField = 'pkgname';
@@ -27,13 +27,14 @@ export class PackageListService {
 
   readonly searchValue = signal<string>(this.route.snapshot.queryParamMap.get('search') ?? '');
 
-  private readonly reposResource = httpResource<Repo[]>(() =>
-    this.appConfig.backendUrl ? `${this.appConfig.backendUrl}/builder/repos` : undefined,
+  private readonly reposQuery = cachedHttpResource<Repo[]>(() =>
+    this.appConfig.backendUrl ? { url: `${this.appConfig.backendUrl}/builder/repos` } : undefined,
   );
-  readonly repos = resourceSignal(this.reposResource);
+  readonly repos = this.reposQuery.value;
 
-  private readonly resource = httpResource<Paginated<Package>>(() => {
+  private readonly packagesQuery = cachedHttpResource<Paginated<Package>>(() => {
     if (this.repoName() && !this.repos()) return undefined;
+
     return this.appService.getPackagesResourceRequest({
       page: this.pagination.page(),
       perPage: this.pagination.perPage(),
@@ -44,15 +45,23 @@ export class PackageListService {
     });
   });
 
-  readonly loading = computed(() => this.resource.isLoading());
-  readonly total = computed(() => resourceValue(this.resource)?.total ?? 0);
-  readonly packageList = computed<Package[]>(() =>
-    (resourceValue(this.resource)?.items ?? []).filter((pkg) => pkg.version),
-  );
+  private readonly page = this.packagesQuery.value;
+  readonly loading = loadingWithoutValue(this.packagesQuery.resource, this.page);
+  readonly failed = resourceFailed(this.packagesQuery.resource);
+  readonly error = this.packagesQuery.resource.error;
+
+  retry(): void {
+    this.packagesQuery.resource.reload();
+  }
+
+  readonly total = computed(() => this.page()?.total ?? 0);
+  readonly packageList = computed<Package[]>(() => (this.page()?.items ?? []).filter((pkg) => pkg.version));
 
   setSearch(value: string): void {
-    // A new search invalidates the current offset; a stale persisted table
-    // position would otherwise request a page beyond the filtered results.
+    /**
+     * A new search invalidates the current offset. A stale persisted table
+     * position would otherwise request a page beyond the filtered results.
+     */
     this.pagination.resetPage();
     this.searchValue.set(value);
   }

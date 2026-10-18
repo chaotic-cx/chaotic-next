@@ -123,6 +123,9 @@
             detect-private-keys.enable = true;
             eslint = {
               enable = true;
+              # Type-aware rules build a full TypeScript program per process. Parallel
+              # batches would start one per CPU core and exhaust the RAM.
+              require_serial = true;
               settings = {
                 binPath = "./node_modules/.bin/eslint";
                 extensions = "\\.(ts|js|mjs|html)$";

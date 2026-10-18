@@ -131,7 +131,9 @@ export class VirustotalService {
     if (existing) {
       existing.context = report.context;
       existing.verdict = report.verdict;
-      if (stats) Object.assign(existing, statsToColumns(stats));
+      if (stats) {
+        Object.assign(existing, statsToColumns(stats));
+      }
       await this.verdictRepository.save(existing);
       return;
     }
@@ -157,7 +159,9 @@ export class VirustotalService {
   async purgeExpiredVerdicts(): Promise<void> {
     try {
       const purged = await this.purgeOlderThan(VERDICT_RETENTION_MS);
-      if (purged > 0) this.pino.info({ count: purged }, 'Purged expired VirusTotal verdicts');
+      if (purged > 0) {
+        this.pino.info({ count: purged }, 'Purged expired VirusTotal verdicts');
+      }
     } catch (err: unknown) {
       this.pino.error({ err }, 'Failed to purge expired VirusTotal verdicts');
     }
@@ -172,7 +176,7 @@ export class VirustotalService {
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ url }).toString(),
     });
-    if (submit === null || !submit.ok) {
+    if (!submit?.ok) {
       this.pino.warn({ url, status: submit?.status ?? 'network error' }, 'VirusTotal URL submission failed');
       return null;
     }
@@ -184,7 +188,7 @@ export class VirustotalService {
     for (let attempt = 0; attempt < ANALYSIS_POLL_ATTEMPTS; attempt++) {
       await sleep(pollIntervalMs);
       const analysis = await this.vtFetch(`/analyses/${analysisId}`, { method: 'GET' });
-      if (analysis === null || !analysis.ok) continue;
+      if (!analysis?.ok) continue;
       const attributes = ((await analysis.json()) as VtAnalysisResponse).data?.attributes;
       if (attributes?.status === 'completed') return normalizeStats(attributes.stats);
       this.pino.debug({ analysisId, status: attributes?.status ?? 'unknown status' }, 'Analysis not finished yet');

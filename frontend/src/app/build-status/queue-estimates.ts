@@ -126,7 +126,9 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
     const elapsedMinutes = Math.max(0, (nowMs - build.startedMs) / MS_PER_MINUTE);
     const remaining = Math.max(0, average - elapsedMinutes);
     const overtime = elapsedMinutes - average;
-    if (overtime >= OVERTIME_THRESHOLD_MINUTES) activeOvertime.set(build.rawName, overtime);
+    if (overtime >= OVERTIME_THRESHOLD_MINUTES) {
+      activeOvertime.set(build.rawName, overtime);
+    }
     activeFinish.set(build.rawName, remaining);
     builders.push({ freeMinutes: remaining, buildClass: build.buildClass, builderName: build.builderName });
   }
@@ -147,13 +149,9 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
     waitingStart: new Map<string, number>(),
     queueClear: undefined,
   };
-  if (builders.length === 0 || waiting.length === 0) {
-    return { ...empty, queueClear: maxOf(activeFinish.values()) };
-  }
+  if (builders.length === 0 || waiting.length === 0) return { ...empty, queueClear: maxOf(activeFinish.values()) };
   // Without any historical data there is no basis for an estimate at all.
-  if (activeFinish.size === 0 && !waiting.some((pkg) => avgOf(pkg.rawName) !== undefined)) {
-    return empty;
-  }
+  if (activeFinish.size === 0 && !waiting.some((pkg) => avgOf(pkg.rawName) !== undefined)) return empty;
 
   // Assign each waiting build to the earliest-free builder that can run its class.
   const waitingStart = new Map<string, number>();
@@ -183,7 +181,9 @@ export function computeQueueEstimates(input: QueueEstimatesInput): QueueEstimate
 function earliestFree(builders: Builder[]): Builder {
   let earliest = builders[0];
   for (const builder of builders) {
-    if (builder.freeMinutes < earliest.freeMinutes) earliest = builder;
+    if (builder.freeMinutes < earliest.freeMinutes) {
+      earliest = builder;
+    }
   }
   return earliest;
 }

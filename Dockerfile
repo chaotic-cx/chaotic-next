@@ -9,6 +9,7 @@ WORKDIR /build
 RUN apk add --no-cache --virtual builds-deps build-base pnpm git
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY patches ./patches
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     --mount=type=cache,target=/root/.cache/pnpm \
@@ -21,7 +22,8 @@ ENV APP_VERSION=${APP_VERSION}
 
 RUN --mount=type=cache,target=/root/.nx \
     pnpm exec nx run backend:build:production && \
-    cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml
+    cp pnpm-workspace.yaml dist/backend/pnpm-workspace.yaml && \
+    sed -i '/^patchedDependencies:/,$d' dist/backend/pnpm-workspace.yaml
 
 WORKDIR /build/dist/backend
 

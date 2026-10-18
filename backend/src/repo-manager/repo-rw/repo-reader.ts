@@ -64,12 +64,8 @@ export class GitlabRepoReaderFactory implements RepoReaderFactory {
   constructor(private readonly configService: ConfigService) {}
 
   async open(repo: Repo): Promise<RepoReader> {
-    if (!repo.gitlabProjectId) {
-      throw new Error(`Repo ${repo.name} has no gitlabProjectId; cannot read repo tree`);
-    }
-    if (!repo.apiToken) {
-      throw new Error(`Repo ${repo.name} has no api token; cannot read repo tree`);
-    }
+    if (!repo.gitlabProjectId) throw new Error(`Repo ${repo.name} has no gitlabProjectId; cannot read repo tree`);
+    if (!repo.apiToken) throw new Error(`Repo ${repo.name} has no api token; cannot read repo tree`);
     const token = decryptAes(repo.apiToken, this.configService.getOrThrow<string>('app.dbKey'));
     const api = new Gitlab({ token });
     const blob = await api.Repositories.showArchive(repo.gitlabProjectId, {
@@ -92,8 +88,10 @@ export class GitlabRepoReaderFactory implements RepoReaderFactory {
       await rm(archive, { force: true });
     }
 
-    // GitLab archives wrap the repo in a single leading directory (e.g.
-    // `pkgbuilds-main/`); use it as the read root when present.
+    /**
+     * GitLab archives wrap the repo in a single leading directory (e.g.
+     * `pkgbuilds-main/`); use it as the read root when present.
+     */
     const entries = await readdir(tempDir);
     const root =
       entries.length === 1 && (await stat(join(tempDir, entries[0]))).isDirectory()

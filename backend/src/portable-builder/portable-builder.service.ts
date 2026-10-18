@@ -41,7 +41,9 @@ export class CappedLogBuffer {
   append(chunk: string): void {
     if (!this.headFull) {
       this.head += chunk;
-      if (Buffer.byteLength(this.head) >= this.headBytes) this.headFull = true;
+      if (Buffer.byteLength(this.head) >= this.headBytes) {
+        this.headFull = true;
+      }
       return;
     }
     this.tail.push(chunk);
@@ -96,7 +98,9 @@ export class PortableBuilderService implements OnModuleInit, OnModuleDestroy {
       this.pino.warn({ err }, 'Leftover container sweep failed');
       return 0;
     });
-    if (leftovers > 0) this.pino.warn({ count: leftovers }, 'Removed leftover build containers');
+    if (leftovers > 0) {
+      this.pino.warn({ count: leftovers }, 'Removed leftover build containers');
+    }
     await this.builds.update(
       { status: In(PORTABLE_BUILD_ACTIVE_STATUSES.filter((status) => status !== 'queued')) },
       { status: 'failed', error: 'Interrupted by backend restart', finishedAt: new Date() },
@@ -110,9 +114,7 @@ export class PortableBuilderService implements OnModuleInit, OnModuleDestroy {
 
   async enqueue(pkgbase: string, issueNumber: number | null = null): Promise<PortableBuild> {
     const normalized = pkgbase.trim().toLowerCase();
-    if (!PKGBASE_PATTERN.test(normalized)) {
-      throw new BadRequestException(`'${pkgbase}' is not a valid AUR pkgbase`);
-    }
+    if (!PKGBASE_PATTERN.test(normalized)) throw new BadRequestException(`'${pkgbase}' is not a valid AUR pkgbase`);
     const active = await this.builds.exists({
       where: { pkgbase: normalized, status: In(PORTABLE_BUILD_ACTIVE_STATUSES) },
     });
@@ -154,8 +156,12 @@ export class PortableBuilderService implements OnModuleInit, OnModuleDestroy {
     status: PortableBuildStatus | undefined,
   ): Promise<{ builds: PortableBuild[]; total: number }> {
     const where: ObjectLiteral = {};
-    if (pkgbase !== undefined) where.pkgbase = pkgbase;
-    if (status !== undefined) where.status = status;
+    if (pkgbase !== undefined) {
+      where.pkgbase = pkgbase;
+    }
+    if (status !== undefined) {
+      where.status = status;
+    }
     const [builds, total] = await this.builds.findAndCount({
       where,
       order: { id: 'DESC' },
@@ -258,10 +264,14 @@ export class PortableBuilderService implements OnModuleInit, OnModuleDestroy {
       await this.finish(build, 'failed', logBuffer, null, errorMessage(err));
     } finally {
       const file = logFile;
-      if (file) await new Promise((resolve) => file.end(resolve));
+      if (file) {
+        await new Promise((resolve) => file.end(resolve));
+      }
       await this.cleanupJobDir(jobDir);
       const finalBuild = await this.builds.findOneBy({ id: build.id });
-      if (finalBuild) this.jobFinished.next(finalBuild);
+      if (finalBuild) {
+        this.jobFinished.next(finalBuild);
+      }
     }
   }
 
@@ -285,8 +295,10 @@ export class PortableBuilderService implements OnModuleInit, OnModuleDestroy {
     pkgbuildsDir: string,
     appendToLog: (chunk: string) => void,
   ): Promise<void> {
-    // The clone runs as root inside the container; handing the tree to the host user afterwards
-    // keeps job directory cleanup on the host possible.
+    /**
+     * The clone runs as root inside the container; handing the tree to the host user afterwards
+     * keeps job directory cleanup on the host possible.
+     */
     const hostUid = process.getuid?.() ?? 0;
     const container = await this.docker.createBuildContainer({
       image: this.config.image,
@@ -301,9 +313,7 @@ export class PortableBuilderService implements OnModuleInit, OnModuleDestroy {
     });
 
     const exitCode = await this.docker.startAndWait(container, appendToLog);
-    if (exitCode !== 0) {
-      throw new Error(`Cloning ${AUR_URL}/${pkgbase}.git failed with exit code ${exitCode}`);
-    }
+    if (exitCode !== 0) throw new Error(`Cloning ${AUR_URL}/${pkgbase}.git failed with exit code ${exitCode}`);
 
     // The AUR git backend hands out empty repositories for unknown names.
     const pkgbuildPath = path.join(pkgbuildsDir, pkgbase, 'PKGBUILD');

@@ -1,0 +1,14 @@
+# The Claude Code sandbox mounts these paths for each command and removes them after.
+# Without this list, the Nx daemon watcher rebuilds the project graph in a loop.
+/.bashrc
+/.bash_profile
+/.zshrc
+/.zprofile
+/.profile
+/.gitconfig
+/.gitmodules
+/.ripgreprc
+/.mcp.json
+/.vscode
+/.idea
+/.claude

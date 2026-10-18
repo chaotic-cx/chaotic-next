@@ -56,6 +56,7 @@ function breakIndex(): Map<string, PluginBreakIndexEntry> {
     ],
     vtableDrifts: [],
   });
+
   return index;
 }
 
@@ -71,6 +72,7 @@ function createService(): TriggerDetector {
     error: vi.fn(),
     fatal: vi.fn(),
   } as unknown as PinoLogger;
+
   return new TriggerDetector(stubRepo, stubArchRepo, stubPackageRepo, stubPino);
 }
 
@@ -92,6 +94,7 @@ function createMockService(): {
     fatal: vi.fn(),
   } as unknown as PinoLogger;
   const service = new TriggerDetector(analysisRepo, stubArchRepo, stubPackageRepo, stubPino);
+
   return { service, analysisRepo };
 }
 
@@ -172,7 +175,9 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
     runtimes: Partial<Record<'python' | 'perl' | 'ruby' | 'ghc', string | null>>;
     previousProvidedByPkg: Map<number, Set<string>>;
     currentProvidedByPkg: Map<number, Set<string>>;
+    previousVersionNodesByPkg: Map<number, Record<string, string[]>>;
     currentVersionNodesByPkg: Map<number, Record<string, string[]>>;
+    versionNodesByProvider: Map<string, Map<string, Set<string>>>;
     droppedSonames: Set<string>;
     dependencyClosure: null;
   } {
@@ -183,6 +188,7 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
       version: '1.29.0-1',
     } as ArchlinuxPackage;
     const empty = new Map<string, Set<string>>();
+
     return {
       changed: [onnx],
       providedByPkgname: empty,
@@ -190,7 +196,9 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
       runtimes: {},
       previousProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
       currentProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      previousVersionNodesByPkg: new Map([[222, { 'libonnxruntime.so.1': ['VERS_1.28.0'] }]]),
       currentVersionNodesByPkg: new Map([[222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }]]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: null,
     };
@@ -211,10 +219,11 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
           deps: string[],
         ): { deps: { kind: 'version'; soname: string; versionNodes: string[] }[]; archPkg: ArchlinuxPackage } | null;
       }
-    ).brokenDepsForConsumer(consumer, onnxContext(), []);
+    ).brokenDepsForConsumer(consumer, onnxContext(), ['onnxruntime']);
 
     expect(result).not.toBeNull();
     if (!result) return;
+
     expect(result.archPkg.pkgname).toBe('onnxruntime');
     expect(result.deps).toEqual([{ kind: 'version', soname: 'libonnxruntime.so.1', versionNodes: ['VERS_1.28.0'] }]);
   });
@@ -250,7 +259,9 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
       runtimes: {},
       previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
       currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      previousVersionNodesByPkg: new Map([[999, { 'libjli.so': ['SUNWprivate_1.1', 'VERS_1.28.0'] }]]),
       currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: null,
     };
@@ -282,7 +293,9 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
       runtimes: {},
       previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
       currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      previousVersionNodesByPkg: new Map([[999, { 'libjli.so': ['SUNWprivate_1.1', 'VERS_1.28.0'] }]]),
       currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: null,
     };
@@ -311,7 +324,9 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
       runtimes: {},
       previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
       currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      previousVersionNodesByPkg: new Map([[999, { 'libjli.so': ['SUNWprivate_1.1', 'VERS_1.28.0'] }]]),
       currentVersionNodesByPkg: new Map([[999, { 'libjli.so': [] }]]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: null,
     };
@@ -324,7 +339,7 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
   });
 
   it('does not blame an irrelevant package when consumer deps are unknown', () => {
-    // When consumer deps are empty and an irrelevant package (smolvm-like)
+    // When consumer deps are unknown and an irrelevant package (smolvm-like)
     // provides the soname but did NOT drop version nodes, it must NOT be
     // blamed. Only a package that actually dropped the required nodes counts.
     const service = createService();
@@ -357,18 +372,23 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
         [777, new Set(['libcrypto.so.3'])],
         [222, new Set(['libonnxruntime.so.1'])],
       ]),
+      previousVersionNodesByPkg: new Map([
+        [777, { 'libcrypto.so.3': ['OPENSSL_3.2.0', 'OPENSSL_3.3.0', 'OPENSSL_3.4.0'] }],
+        [222, { 'libonnxruntime.so.1': ['VERS_1.28.0'] }],
+      ]),
       currentVersionNodesByPkg: new Map([
         [777, { 'libcrypto.so.3': ['OPENSSL_3.2.0', 'OPENSSL_3.3.0', 'OPENSSL_3.4.0'] }],
         [222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }],
       ]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: null,
     };
     const result = (
       service as unknown as {
-        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[]): unknown;
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[] | null): unknown;
       }
-    ).brokenDepsForConsumer(consumer, ctx, []);
+    ).brokenDepsForConsumer(consumer, ctx, null);
     // smolvm provides libcrypto.so.3 but did NOT drop the required nodes
     expect(result).toBeNull();
   });
@@ -394,7 +414,9 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
       runtimes: {},
       previousProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
       currentProvidedByPkg: new Map([[222, new Set(['libonnxruntime.so.1'])]]),
+      previousVersionNodesByPkg: new Map([[222, { 'libonnxruntime.so.1': ['VERS_1.28.0'] }]]),
       currentVersionNodesByPkg: new Map([[222, { 'libonnxruntime.so.1': ['VERS_1.29.0'] }]]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: null,
     };
@@ -403,12 +425,13 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
         brokenDepsForConsumer(
           c: PackageElfAnalysis,
           ctx: unknown,
-          deps: string[],
+          deps: string[] | null,
         ): { deps: unknown[]; archPkg: ArchlinuxPackage } | null;
       }
-    ).brokenDepsForConsumer(consumer, ctx, []);
+    ).brokenDepsForConsumer(consumer, ctx, null);
     expect(result).not.toBeNull();
     if (!result) return;
+
     expect(result.archPkg.pkgname).toBe('onnxruntime');
   });
 
@@ -445,10 +468,15 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
         [777, new Set(['libcrypto.so.3'])],
         [444, new Set(['libcrypto.so.3'])],
       ]),
+      previousVersionNodesByPkg: new Map([
+        [777, { 'libcrypto.so.3': ['OPENSSL_3.2.0', 'OPENSSL_3.3.0'] }],
+        [444, { 'libcrypto.so.3': ['OPENSSL_3.2.0', 'OPENSSL_3.3.0'] }],
+      ]),
       currentVersionNodesByPkg: new Map([
         [777, { 'libcrypto.so.3': ['OPENSSL_3.3.0'] }],
         [444, { 'libcrypto.so.3': ['OPENSSL_3.4.0'] }],
       ]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: null,
     };
@@ -464,6 +492,7 @@ describe('brokenDepsForConsumer — version-node break (onnxruntime style)', () 
     ).brokenDepsForConsumer(consumer, ctx, ['openssl']);
     expect(result).not.toBeNull();
     if (!result) return;
+
     expect(result.archPkg.pkgname).toBe('openssl');
   });
 
@@ -554,7 +583,9 @@ Version needs section '.gnu.version_r' contains 1 entry:
       runtimes: {},
       previousProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
       currentProvidedByPkg: new Map([[999, new Set(['libjli.so'])]]),
+      previousVersionNodesByPkg: new Map([[999, { 'libjli.so': ['SUNWprivate_1.1'] }]]),
       currentVersionNodesByPkg: new Map([[999, provider21.providedVersionNodes]]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: null,
     };
@@ -969,11 +1000,14 @@ describe('brokenDepsForConsumer — dropped soname still shipped by a compat pac
         ['libclang-cpp.so.22.1', new Set(['clang22'])],
         ['libclang-cpp.so.23.1', new Set(['clang'])],
       ]),
+      providedSonameStems: new Set(['libclang-cpp.so']),
       archProvidedSonames: new Set(['libclang-cpp.so.22.1', 'libclang-cpp.so.23.1']),
       runtimes: {},
       previousProvidedByPkg: new Map([[10, new Set(['libclang-cpp.so.22.1'])]]),
       currentProvidedByPkg: new Map([[10, new Set(['libclang-cpp.so.23.1'])]]),
+      previousVersionNodesByPkg: new Map([[10, {}]]),
       currentVersionNodesByPkg: new Map([[10, {}]]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set(['libclang-cpp.so.22.1']),
       dependencyClosure: new DependencyClosure([
         { pkgname: 'clang', deps: ['llvm-libs'], provides: [] },
@@ -1017,6 +1051,17 @@ describe('brokenDepsForConsumer — dropped soname still shipped by a compat pac
 
   it('flags a consumer without dependencies, because nothing installs the compat package for it', () => {
     expect(brokenDeps([])?.archPkg.pkgname).toBe('clang');
+  });
+
+  it('skips the rebuild when no package ships another version of the library', () => {
+    const withoutSuccessor = { ...(compatContext() as object), providedSonameStems: new Set<string>() };
+    const result = (
+      createService() as unknown as {
+        brokenDepsForConsumer(c: PackageElfAnalysis, ctx: unknown, deps: string[] | null): unknown;
+      }
+    ).brokenDepsForConsumer(consumer, withoutSuccessor, ['clang', 'llvm-libs']);
+
+    expect(result).toBeNull();
   });
 });
 
@@ -1082,7 +1127,9 @@ describe('brokenDepsForConsumer — version node dropped by a transitive depende
       runtimes: {},
       previousProvidedByPkg: new Map([[30, new Set(['libLLVM.so.22.1'])]]),
       currentProvidedByPkg: new Map([[30, new Set(['libLLVM.so.22.1'])]]),
+      previousVersionNodesByPkg: new Map([[30, { 'libLLVM.so.22.1': ['LLVM_22.1.7'] }]]),
       currentVersionNodesByPkg: new Map([[30, { 'libLLVM.so.22.1': ['LLVM_22.1.8'] }]]),
+      versionNodesByProvider: new Map(),
       droppedSonames: new Set<string>(),
       dependencyClosure: new DependencyClosure([
         { pkgname: 'llvm', deps: ['llvm-libs'], provides: [] },
@@ -1109,6 +1156,66 @@ describe('brokenDepsForConsumer — version node dropped by a transitive depende
 
   it('does not blame a provider outside the dependency closure', () => {
     expect(brokenDeps(['mesa'])).toBeNull();
+  });
+});
+
+describe('brokenDepsForConsumer — private bundled copy of a system library (julia)', () => {
+  // julia ships its own libstdc++.so.6 outside the linker path. Consumers load
+  // the one from gcc-libs, so a julia update must not flag them.
+  const julia = { id: 40, pkgname: 'julia', previousVersion: '1.12.0-1', version: '1.12.1-1' } as ArchlinuxPackage;
+  const neededNodes = ['CXXABI_1.3', 'GLIBCXX_3.4'];
+  const consumer = makeConsumer({
+    pluginOf: [],
+    neededSonames: ['libstdc++.so.6'],
+    neededVersionNodes: { 'libstdc++.so.6': neededNodes },
+  });
+
+  function context(previousJuliaNodes: string[]): unknown {
+    return {
+      changed: [julia],
+      providedByPkgname: new Map([['libstdc++.so.6', new Set(['gcc-libs', 'julia'])]]),
+      archProvidedSonames: new Set(['libstdc++.so.6']),
+      runtimes: {},
+      previousProvidedByPkg: new Map([[40, new Set(['libstdc++.so.6'])]]),
+      currentProvidedByPkg: new Map([[40, new Set(['libstdc++.so.6'])]]),
+      previousVersionNodesByPkg: new Map([[40, { 'libstdc++.so.6': previousJuliaNodes }]]),
+      currentVersionNodesByPkg: new Map([[40, {}]]),
+      versionNodesByProvider: new Map([['libstdc++.so.6', new Map([['gcc-libs', new Set(neededNodes)]])]]),
+      droppedSonames: new Set<string>(),
+      dependencyClosure: new DependencyClosure([
+        { pkgname: 'qt5-base', deps: ['gcc-libs'], provides: [] },
+        { pkgname: 'gcc-libs', deps: [], provides: [] },
+        { pkgname: 'julia', deps: [], provides: [] },
+      ]),
+    };
+  }
+
+  function brokenDeps(previousJuliaNodes: string[], deps: string[] | null): { archPkg: ArchlinuxPackage } | null {
+    return (
+      createService() as unknown as {
+        brokenDepsForConsumer(
+          c: PackageElfAnalysis,
+          ctx: unknown,
+          deps: string[] | null,
+        ): { archPkg: ArchlinuxPackage } | null;
+      }
+    ).brokenDepsForConsumer(consumer, context(previousJuliaNodes), deps);
+  }
+
+  it('does not blame a provider that never defined the needed nodes', () => {
+    expect(brokenDeps([], null)).toBeNull();
+  });
+
+  it('does not blame a dropped node that a reachable provider still defines', () => {
+    expect(brokenDeps(neededNodes, ['julia', 'qt5-base'])).toBeNull();
+  });
+
+  it('blames a dropped node when no reachable provider defines it', () => {
+    expect(brokenDeps(neededNodes, ['julia'])?.archPkg.pkgname).toBe('julia');
+  });
+
+  it('does not blame any provider when the consumer has no deps', () => {
+    expect(brokenDeps(neededNodes, [])).toBeNull();
   });
 });
 

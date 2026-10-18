@@ -1,0 +1,32 @@
+<div class="birthday-fastfetch-screen" *transloco="let t">
+  <p class="birthday-fastfetch-prompt" aria-hidden="true">{{ terminal.command }}</p>
+
+  <div class="birthday-fastfetch">
+    @if (lightLogo()) {
+      <img class="birthday-fastfetch__logo" ngSrc="/assets/logo-latte.svg" alt="" width="741" height="711" />
+    } @else {
+      <img class="birthday-fastfetch__logo" ngSrc="/assets/logo.svg" alt="" width="741" height="711" />
+    }
+
+    <div class="birthday-fastfetch__info">
+      <p class="birthday-fastfetch__host">
+        <span>{{ terminal.user }}</span
+        >&#64;<span>{{ terminal.host }}</span>
+      </p>
+      <hr class="birthday-fastfetch__rule" />
+      <dl class="birthday-fastfetch__rows">
+        @for (row of rows(); track row.labelKey) {
+          <div class="birthday-fastfetch__row">
+            <dt>{{ t(row.labelKey) }}</dt>
+            <dd>{{ t(row.valueKey, row.params) }}</dd>
+          </div>
+        }
+      </dl>
+      <div class="birthday-fastfetch__palette" aria-hidden="true">
+        @for (color of palette; track color) {
+          <span [style.background]="`var(--catppuccin-color-${color})`"></span>
+        }
+      </div>
+    </div>
+  </div>
+</div>

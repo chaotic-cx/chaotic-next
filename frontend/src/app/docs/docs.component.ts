@@ -1,29 +1,51 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { MessageToastService } from '@garudalinux/core';
-import { PrimeTemplate } from '@openng/optimus-ui/api';
-import { Divider } from '@openng/optimus-ui/divider';
-import { Panel } from '@openng/optimus-ui/panel';
-import { Tooltip } from '@openng/optimus-ui/tooltip';
-import { Highlight } from 'ngx-highlightjs';
+import { Location } from '@angular/common';
+import { afterNextRender, Component, DestroyRef, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { marker } from '@jsverse/transloco-keys-manager/marker';
 import { APP_CONFIG } from '../../environments/app-config.token';
 import { EnvironmentModel } from '../../environments/environment.model';
-import { setPageSeo } from '../functions';
+import { preferredScrollBehavior, setPageSeo } from '../functions';
 import { TitleComponent } from '../title/title.component';
+import { CodeBlockComponent } from './code-block.component';
+
+interface DocsSection {
+  id: string;
+  titleKey: string;
+}
+
+const DOCS_SECTIONS: DocsSection[] = [
+  { id: 'setup', titleKey: marker('docs.sections.setup') },
+  { id: 'important', titleKey: marker('docs.sections.reportingBugs') },
+  { id: 'package-builds', titleKey: marker('docs.sections.packageBuilds') },
+  { id: 'requesting-new-packages', titleKey: marker('docs.sections.requestingNewPackages') },
+  { id: 'recommendations', titleKey: marker('docs.sections.recommendations') },
+  { id: 'update-review-process', titleKey: marker('docs.sections.updateReviewProcess') },
+  { id: 'aur-package-scan', titleKey: marker('docs.sections.aurPackageScan') },
+  { id: 'public-api', titleKey: marker('docs.sections.publicApi') },
+  { id: 'further-information', titleKey: marker('docs.sections.furtherInformation') },
+];
+
+// A section counts as active once its top passes the upper third of the viewport.
+const SCROLLSPY_ROOT_MARGIN = '0px 0px -66% 0px';
+const SCROLLSPY_RESUME_FALLBACK_MS = 1200;
 
 @Component({
   selector: 'chaotic-docs',
+  imports: [TitleComponent, RouterLink, CodeBlockComponent, TranslocoDirective],
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.css',
-  imports: [Panel, Divider, TitleComponent, RouterLink, Highlight, Tooltip, PrimeTemplate],
 })
-export class DocsComponent implements OnInit {
+export class DocsComponent {
   private readonly appConfig: EnvironmentModel = inject(APP_CONFIG);
-  private readonly messageToastService = inject(MessageToastService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly transloco = inject(TranslocoService);
+
+  readonly sections = DOCS_SECTIONS;
+  readonly activeSection = signal<string>(DOCS_SECTIONS[0].id);
+
+  private scrollspyPaused = false;
 
   readonly appendRepo = '[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist';
   readonly ignorePkg = 'IgnorePkg = ...';
@@ -33,51 +55,56 @@ export class DocsComponent implements OnInit {
   readonly installRepoPackages =
     "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'\n" +
     "$ sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'";
-  readonly powerpillUsage = '$ sudo pacman -Sy && sudo powerpill -Su && paru -Su';
   readonly receiveKeys: string;
   readonly syncMirrors = '$ sudo pacman -Syu';
   readonly apiDocsUrl = `${this.appConfig.backendUrl}/api/docs`;
 
   constructor() {
     setPageSeo(
-      'Get started · Chaotic-AUR',
-      'Documentation for Chaotic-AUR, a repository of packages for Arch Linux',
-      'Chaotic-AUR, Repository, Packages, Archlinux, AUR, Arch User Repository, Chaotic, Chaotic-AUR packages, Chaotic-AUR repository, Chaotic-AUR documentation',
+      this.transloco.translate('routes.titleFormat', { page: this.transloco.translate('routes.docs') }),
+      this.transloco.translate('docs.seo.description'),
+      this.transloco.translate('docs.seo.keywords'),
     );
     this.receiveKeys =
       `$ sudo pacman-key --recv-key ${this.appConfig.primaryKey} --keyserver keyserver.ubuntu.com\n` +
       `$ sudo pacman-key --lsign-key ${this.appConfig.primaryKey}`;
+
+    afterNextRender(() => this.observeSections());
   }
 
-  ngOnInit() {
-    this.route.fragment
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((fragment) => this.scrollToFragment(fragment));
+  jumpTo(event: MouseEvent, id: string): void {
+    event.preventDefault();
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    this.activeSection.set(id);
+    this.pauseScrollspy();
+    target.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+    this.location.replaceState(`${this.location.path(false)}#${id}`);
   }
 
-  private scrollToFragment(fragment: string | null): void {
-    if (!fragment) return;
-    document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  private pauseScrollspy(): void {
+    this.scrollspyPaused = true;
+    const resume = (): void => {
+      this.scrollspyPaused = false;
+      window.clearTimeout(fallback);
+    };
+    const fallback = window.setTimeout(resume, SCROLLSPY_RESUME_FALLBACK_MS);
+    window.addEventListener('scrollend', resume, { once: true });
   }
 
-  scrollTo(id: string): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      fragment: id,
-    });
-  }
-
-  copyText(text: string) {
-    if (!navigator.clipboard) return;
-
-    navigator.clipboard
-      .writeText(text.replaceAll('$ ', ''))
-      .then(() => {
-        this.messageToastService.info('Copied', 'The text has been copied to your clipboard');
-      })
-      .catch((err) => {
-        this.messageToastService.error('Copied', 'Failed copying to clipboard');
-        console.error(err);
-      });
+  private observeSections(): void {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (this.scrollspyPaused) return;
+        const visible = entries.find((entry) => entry.isIntersecting);
+        if (visible) {
+          this.activeSection.set(visible.target.id);
+        }
+      },
+      { rootMargin: SCROLLSPY_ROOT_MARGIN },
+    );
+    document.querySelectorAll('[data-docs-section]').forEach((section) => observer.observe(section));
+    this.destroyRef.onDestroy(() => observer.disconnect());
   }
 }

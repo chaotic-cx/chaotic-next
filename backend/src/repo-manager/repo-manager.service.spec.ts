@@ -14,7 +14,7 @@ import { RepoManagerService } from './repo-manager.service';
 import { ArchlinuxPackage, PackageElfAnalysis } from './repo-manager.entity';
 import type { RepoReaderFactory, RepoWriter } from './repo-rw';
 import { RebuildTriggerService, SignalScanService } from './scan';
-import { createMockRepository, MockRepository } from './test/mock-repository';
+import { createMockRepository, createPassThroughCache, MockRepository } from './test/mock-repository';
 
 describe('RepoManagerService.getBrokenPackages', () => {
   it('returns only the latest version per package, not stale broken versions', async () => {
@@ -83,6 +83,7 @@ describe('RepoManagerService.getBrokenPackages', () => {
         version: '2.0-1',
         broken: true,
         brokenReasons: ['missing soname libfoo.so.2'],
+        brokenIssues: [{ reason: 'missing soname libfoo.so.2', fixability: 'rebuild' }],
       },
     ]);
 
@@ -149,9 +150,9 @@ describe('RepoManagerService.getBrokenPackages', () => {
     ]);
 
     elfAnalysisRepository.seed([
-      { pkgType: '1', pkgId: 1, version: '1.0', broken: true, brokenReasons: ['reason-z'] },
-      { pkgType: '1', pkgId: 2, version: '1.0', broken: true, brokenReasons: ['reason-a'] },
-      { pkgType: '1', pkgId: 3, version: '1.0', broken: true, brokenReasons: ['reason-b'] },
+      { pkgType: '1', pkgId: 1, version: '1.0', broken: true, brokenReasons: ['reason-z'], brokenIssues: [] },
+      { pkgType: '1', pkgId: 2, version: '1.0', broken: true, brokenReasons: ['reason-a'], brokenIssues: [] },
+      { pkgType: '1', pkgId: 3, version: '1.0', broken: true, brokenReasons: ['reason-b'], brokenIssues: [] },
     ]);
 
     const service = buildService(packageRepository, archlinuxPackageRepository, elfAnalysisRepository);
@@ -194,10 +195,31 @@ describe('RepoManagerService.getBrokenPackages', () => {
     ]);
 
     elfAnalysisRepository.seed([
-      { pkgType: '1', pkgId: 1, version: '1.0', broken: true, brokenReasons: ['missing libc.so.8'] },
-      { pkgType: '1', pkgId: 2, version: '1.0', broken: true, brokenReasons: ['missing libtinfo.so.5'] },
-      { pkgType: '1', pkgId: 3, version: '1.0', broken: true, brokenReasons: ['missing libpcap.so.0.8'] },
-      { pkgType: '1', pkgId: 4, version: '1.0', broken: true, brokenReasons: ['missing libboost.so'] },
+      { pkgType: '1', pkgId: 1, version: '1.0', broken: true, brokenReasons: ['missing libc.so.8'], brokenIssues: [] },
+      {
+        pkgType: '1',
+        pkgId: 2,
+        version: '1.0',
+        broken: true,
+        brokenReasons: ['missing libtinfo.so.5'],
+        brokenIssues: [],
+      },
+      {
+        pkgType: '1',
+        pkgId: 3,
+        version: '1.0',
+        broken: true,
+        brokenReasons: ['missing libpcap.so.0.8'],
+        brokenIssues: [],
+      },
+      {
+        pkgType: '1',
+        pkgId: 4,
+        version: '1.0',
+        broken: true,
+        brokenReasons: ['missing libboost.so'],
+        brokenIssues: [],
+      },
     ]);
 
     const service = buildService(packageRepository, archlinuxPackageRepository, elfAnalysisRepository);
@@ -206,6 +228,49 @@ describe('RepoManagerService.getBrokenPackages', () => {
     expect(result.items).toHaveLength(2);
     expect(result.items.map((i) => i.pkgname)).toEqual(['eclipse-java-bin', 'real-broken-pkg']);
     expect(result.total).toBe(2);
+  });
+
+  it('filters broken packages by the fixability of their worst reason', async () => {
+    const packageRepository = createMockRepository<Package>({ keyOf: (p) => String(p.id) });
+    const archlinuxPackageRepository = createMockRepository<ArchlinuxPackage>({ keyOf: (p) => String(p.id) });
+    const elfAnalysisRepository = createMockRepository<PackageElfAnalysis>({
+      keyOf: (a) => `${a.pkgType}:${a.pkgId}:${a.version}`,
+    });
+
+    packageRepository.seed([
+      { id: 1, pkgname: 'luanti-git', isActive: true, repo: { id: 1, name: 'chaotic-aur' } as Repo },
+      { id: 2, pkgname: 'zoom', isActive: true, repo: { id: 1, name: 'chaotic-aur' } as Repo },
+    ]);
+
+    elfAnalysisRepository.seed([
+      {
+        pkgType: '1',
+        pkgId: 1,
+        version: '1.0',
+        broken: true,
+        brokenReasons: ['missing soname libjsoncpp.so.26'],
+        brokenIssues: [{ reason: 'missing soname libjsoncpp.so.26', fixability: 'rebuild' }],
+      },
+      {
+        pkgType: '1',
+        pkgId: 2,
+        version: '1.0',
+        broken: true,
+        brokenReasons: ['missing soname libjsoncpp.so.26', 'missing soname libQt6Bodymovin.so.6'],
+        brokenIssues: [
+          { reason: 'missing soname libjsoncpp.so.26', fixability: 'rebuild' },
+          { reason: 'missing soname libQt6Bodymovin.so.6', fixability: 'noFix' },
+        ],
+      },
+    ]);
+
+    const service = buildService(packageRepository, archlinuxPackageRepository, elfAnalysisRepository);
+    const rebuildable = await service.getBrokenPackages(undefined, undefined, 'rebuild');
+    const unfixable = await service.getBrokenPackages(undefined, undefined, 'noFix');
+
+    expect(rebuildable.items.map((i) => i.pkgname)).toEqual(['luanti-git']);
+    expect(unfixable.items.map((i) => i.pkgname)).toEqual(['zoom']);
+    expect(unfixable.items[0].fixability).toBe('noFix');
   });
 });
 
@@ -312,6 +377,7 @@ function buildService(
     {} as SchedulerRegistry,
     {} as RepoWriter,
     {} as RepoReaderFactory,
+    createPassThroughCache(),
   );
 }
 
@@ -339,6 +405,7 @@ describe('RepoManagerService.run', () => {
       {} as SchedulerRegistry,
       {} as RepoWriter,
       {} as RepoReaderFactory,
+      createPassThroughCache(),
     );
     const manager = {
       status: RepoStatus.INACTIVE,

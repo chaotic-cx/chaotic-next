@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import { PKG_TYPE_ARCH, PKG_TYPE_CHAOTIC } from '../types/core';
 import { INT4_MAX, pageQuerySchema, perPageQuerySchema } from './common';
 

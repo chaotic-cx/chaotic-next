@@ -30,12 +30,12 @@ export class PackageLogsController {
   constructor(private readonly configService: ConfigService) {}
 
   @Sse(':pkgname/:timestamp')
-  @ApiParam({ name: 'pkgname', description: 'Package name' })
-  @ApiParam({ name: 'timestamp', description: 'Build timestamp' })
   @SkipThrottle()
   @ApiOperation({ summary: 'Stream a package build log from the build server.' })
-  @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
+  @ApiParam({ name: 'pkgname', description: 'Package name' })
+  @ApiParam({ name: 'timestamp', description: 'Build timestamp' })
   @ApiQuery({ name: 'offset', required: false, description: 'Resume from this character offset', type: Number })
+  @ApiOkResponse({ description: 'Stream of GitlabLogChunk messages', type: Object })
   getPackageLog(
     @Param('pkgname') pkgname: string,
     @Param('timestamp') timestamp: string,
@@ -47,8 +47,10 @@ export class PackageLogsController {
 
     return new Observable((subscriber) => {
       const client: PackageLogClient = {
-        // Chunks report an absolute cumulative character offset so a resumed
-        // client can reconnect again without receiving duplicates.
+        /**
+         * Chunks report an absolute cumulative character offset so a resumed
+         * client can reconnect again without receiving duplicates.
+         */
         lastOffset: Math.max(offset, DEFAULT_RESUME_OFFSET),
         next: (message) => subscriber.next(message),
         complete: () => subscriber.complete(),
@@ -75,7 +77,9 @@ export class PackageLogsController {
     const entry = this.packageLogs.get(key);
     if (!entry) return;
     entry.clients.delete(client);
-    if (entry.clients.size === 0) this.disposeEntry(key);
+    if (entry.clients.size === 0) {
+      this.disposeEntry(key);
+    }
   }
 
   private sendPackageLogChunk(entry: PackageLogEntry, client: PackageLogClient): void {
@@ -91,8 +95,10 @@ export class PackageLogsController {
     const entry = this.packageLogs.get(key);
     if (!entry) return;
 
-    // Aborting on teardown cancels the upstream fetch so the last disconnecting
-    // client does not leave the build-server connection dangling.
+    /**
+     * Aborting on teardown cancels the upstream fetch so the last disconnecting
+     * client does not leave the build-server connection dangling.
+     */
     const upstream = new AbortController();
     entry.controller = upstream;
 

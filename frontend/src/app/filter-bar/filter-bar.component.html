@@ -1,0 +1,48 @@
+<div class="filter-bar" *transloco="let t; prefix: 'common'">
+  @if (!isMobile()) {
+    <ng-container [ngTemplateOutlet]="filters()" [ngTemplateOutletContext]="{ $implicit: 'inline' }" />
+  }
+
+  <div class="filter-bar__search">
+    <ng-content />
+  </div>
+
+  @if (isMobile()) {
+    <button
+      class="filter-bar__toggle"
+      [attr.aria-expanded]="sheetOpen()"
+      (click)="sheetOpen.set(true)"
+      type="button"
+      aria-haspopup="dialog"
+    >
+      <i class="pi pi-sliders-h" aria-hidden="true"></i>
+      {{ t('filters') }}
+      @if (active()) {
+        <span class="filter-bar__dot" aria-hidden="true"></span>
+        <span class="sr-only">({{ t('filtersActive') }})</span>
+      }
+    </button>
+
+    <p-drawer
+      [visible]="sheetOpen()"
+      [header]="t('filters')"
+      [blockScroll]="true"
+      [appendTo]="'body'"
+      (visibleChange)="sheetOpen.set($event)"
+      position="bottom"
+      styleClass="filter-sheet"
+    >
+      <div class="filter-sheet__body">
+        <ng-container [ngTemplateOutlet]="filters()" [ngTemplateOutletContext]="{ $implicit: 'sheet' }" />
+      </div>
+      <ng-template #footer>
+        <div class="filter-sheet__footer">
+          @if (active()) {
+            <button class="text-action" (click)="clearFilters()" type="button">{{ t('clearFilters') }}</button>
+          }
+          <p-button [label]="t('showResults')" (onClick)="sheetOpen.set(false)" size="small" type="button" />
+        </div>
+      </ng-template>
+    </p-drawer>
+  }
+</div>

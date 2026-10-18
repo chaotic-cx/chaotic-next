@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 
 const CLOUDFLARE_PAGES_DEPLOYMENTS = /^https:\/\/([a-z0-9-]+\.)?caur-frontend\.pages\.dev$/;
 
@@ -23,6 +23,9 @@ export type PkgType = '0' | '1';
 export const PKG_TYPE_ARCH = '0' as const satisfies PkgType;
 export const PKG_TYPE_CHAOTIC = '1' as const satisfies PkgType;
 
+/** Name of the main Chaotic-AUR package repository. */
+export const CHAOTIC_AUR_REPO = 'chaotic-aur';
+
 export type PackageKey = `${PkgType}:${number}`;
 export function packageKey(pkgType: PkgType, id: number): PackageKey {
   return `${pkgType}:${id}`;
@@ -35,9 +38,10 @@ export const BUILD_CLASS_MIN = 0;
 export const BUILD_CLASS_MAX = 10;
 
 export const BUILD_CLASS_TIER_NAMES = ['None', 'Light', 'Medium', 'Heavy', 'Very Heavy'] as const;
+export type BuildClassTierName = (typeof BUILD_CLASS_TIER_NAMES)[number];
 const BUILD_CLASS_TIER_UPPER_BOUNDS = [1, 4, 6, 8, BUILD_CLASS_MAX];
 
-export function buildClassTierName(buildClass: number): string {
+export function buildClassTierName(buildClass: number): BuildClassTierName {
   const tierIndex = BUILD_CLASS_TIER_UPPER_BOUNDS.findIndex((upperBound) => buildClass <= upperBound);
   return BUILD_CLASS_TIER_NAMES[tierIndex === -1 ? BUILD_CLASS_TIER_NAMES.length - 1 : tierIndex];
 }

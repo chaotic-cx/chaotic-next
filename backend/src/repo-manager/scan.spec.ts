@@ -210,7 +210,10 @@ describeTools('SignalScanService end-to-end', () => {
       for (const soname of Object.keys(old.exportedSymbols)) {
         const oldSyms = old.exportedSymbols[soname] ?? [];
         const newSyms = new Set(current.exportedSymbols[soname] ?? []);
-        for (const s of oldSyms) if (!newSyms.has(s)) lost.push(s);
+        for (const s of oldSyms)
+          if (!newSyms.has(s)) {
+            lost.push(s);
+          }
       }
       // kwin 6.7.0 -> 6.7.4 dropped exactly 4 exported symbols (verified empirically).
       expect(lost.length).toBe(4);

@@ -1,0 +1,71 @@
+<ng-container *transloco="let t">
+  <!-- The prompt follows the last output line inside the scroll area, as in a real terminal. -->
+  <div class="birthday-shell__screen" #screen>
+    <div class="birthday-shell__output" [attr.aria-label]="t('memorial.edition2026.shell.outputLabel')" role="log">
+      @for (entry of lines(); track entry.id) {
+        @let line = entry.line;
+        @switch (line.kind) {
+          @case ('command') {
+            <p class="birthday-shell__line">
+              <span class="birthday-shell__prompt">{{ prompt }}</span> {{ line.text }}
+            </p>
+          }
+          @case ('text') {
+            <p class="birthday-shell__line" [attr.data-tone]="line.tone">{{ line.text }}</p>
+          }
+          @case ('message') {
+            <p class="birthday-shell__line" [attr.data-tone]="line.tone">{{ t(line.key, line.params) }}</p>
+          }
+          @case ('entry') {
+            <p class="birthday-shell__line birthday-shell__entry">
+              <span class="birthday-shell__term">{{ line.term }}</span>
+              <span>{{ t(line.key) }}</span>
+            </p>
+          }
+          @case ('fact') {
+            <p class="birthday-shell__line birthday-shell__entry">
+              <span class="birthday-shell__term">{{ t(line.row.labelKey) }}</span>
+              <span>{{ t(line.row.valueKey, line.row.params) }}</span>
+            </p>
+          }
+          @case ('commit') {
+            <p class="birthday-shell__line birthday-shell__commit">
+              <span class="birthday-shell__hash">{{ line.quote.hash }}</span>
+              <span class="birthday-shell__meta">
+                <time [attr.datetime]="line.quote.date">{{ line.quote.date }}</time>
+                <span class="birthday-shell__author">{{ line.quote.author }}</span>
+                <span>({{ line.quote.repo }})</span>
+              </span>
+              <q class="birthday-shell__message">{{ line.quote.message }}</q>
+            </p>
+          }
+          @case ('art') {
+            <pre class="birthday-shell__art" aria-hidden="true">{{ line.text }}</pre>
+            @if (line.spokenText) {
+              <p class="sr-only">{{ line.spokenText }}</p>
+            }
+          }
+          @default {}
+        }
+      }
+    </div>
+
+    <form class="birthday-shell__form" (submit)="submit($event)">
+      <label class="birthday-shell__prompt" for="birthday-shell-input">
+        <span aria-hidden="true">{{ prompt }}</span>
+        <span class="sr-only">{{ t('memorial.edition2026.shell.inputLabel') }}</span>
+      </label>
+      <input
+        class="birthday-shell__input"
+        id="birthday-shell-input"
+        #input
+        (keydown)="handleKey($event)"
+        autocapitalize="off"
+        autocomplete="off"
+        enterkeyhint="send"
+        spellcheck="false"
+        type="text"
+      />
+    </form>
+  </div>
+</ng-container>

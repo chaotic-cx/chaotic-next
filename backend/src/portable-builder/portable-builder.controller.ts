@@ -54,8 +54,8 @@ export class PortableBuilderController {
 
   @Get('builds/:id/log')
   @ApiOperation({ summary: 'Download the full, uncapped build log.' })
-  @ApiOkResponse({ description: 'The full build log', schema: { type: 'string', format: 'binary' } })
   @ApiProduces('text/plain')
+  @ApiOkResponse({ description: 'The full build log', schema: { type: 'string', format: 'binary' } })
   async getLog(
     @Param('id', { schema: idParamSchema }) id: number,
     @Res() reply: FastifyReply,
@@ -67,8 +67,8 @@ export class PortableBuilderController {
 
   @Get('builds/:id/artifacts/:name')
   @ApiOperation({ summary: 'Download one built package artifact.' })
-  @ApiOkResponse({ description: 'The package artifact', schema: { type: 'string', format: 'binary' } })
   @ApiProduces('application/octet-stream')
+  @ApiOkResponse({ description: 'The package artifact', schema: { type: 'string', format: 'binary' } })
   async getArtifact(
     @Param('id', { schema: idParamSchema }) id: number,
     @Param('name') name: string,

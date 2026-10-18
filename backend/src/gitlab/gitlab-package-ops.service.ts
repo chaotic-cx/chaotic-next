@@ -111,7 +111,7 @@ export class GitlabPackageOpsService {
       if (requestReason && requestReason !== 'unset') {
         configLines.push(`CI_REQUEST_REASON=${requestReason.trim()}`);
       }
-      if (customRequestReason && customRequestReason.trim()) {
+      if (customRequestReason?.trim()) {
         configLines.push(`CI_CUSTOM_REQUEST_REASON=${customRequestReason.trim()}`);
       }
       const ciConfigContent = `${configLines.join('\n')}\n`;
@@ -198,9 +198,7 @@ export class GitlabPackageOpsService {
       }
 
       const dbPkg = await this.packageRepository.findOne({ where: { pkgname } });
-      if (!dbPkg) {
-        throw new NotFoundException(`Package '${pkgname}' not found`);
-      }
+      if (!dbPkg) throw new NotFoundException(`Package '${pkgname}' not found`);
 
       const version = dbPkg.version;
       const pkgrel = dbPkg.pkgrel;

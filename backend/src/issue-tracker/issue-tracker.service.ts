@@ -291,7 +291,9 @@ export class IssueTrackerService implements OnModuleInit {
     if (build.resourceStats) {
       lines.push(`- Container usage: ${formatContainerUsage(resourceStatsToUsage(build.resourceStats))}`);
       const suggested = suggestBuildClass(toAverages(build.resourceStats));
-      if (suggested !== null) lines.push(`- Suggested build class: ${buildClassLabel(suggested)}`);
+      if (suggested !== null) {
+        lines.push(`- Suggested build class: ${buildClassLabel(suggested)}`);
+      }
     }
     const scan = build.scan;
     if (scan) {
@@ -377,8 +379,12 @@ export class IssueTrackerService implements OnModuleInit {
         for (const kind of scan?.pkgTypes ?? []) kinds.add(kind);
 
         if (scan && !this.isBeforeCutoff(requestDate ?? scan.packageMeta.firstSubmitted)) {
-          if (scan.findings.some((finding) => finding.ruleId === EOL_RULE_ID)) hasEolDependency = true;
-          if (scan.packageMeta.orphaned) hasOrphaned = true;
+          if (scan.findings.some((finding) => finding.ruleId === EOL_RULE_ID)) {
+            hasEolDependency = true;
+          }
+          if (scan.packageMeta.orphaned) {
+            hasOrphaned = true;
+          }
         }
       }
 
@@ -386,8 +392,12 @@ export class IssueTrackerService implements OnModuleInit {
       await this.github.createComment(issueNumber, `${SCAN_RESULTS_HEADER}\n\n${summaries.join('\n\n')}`);
 
       const labels = [...kinds].map(kindLabel);
-      if (hasEolDependency) labels.push(LIBRARY_EOL_LABEL);
-      if (hasOrphaned) labels.push(ORPHANED_LABEL);
+      if (hasEolDependency) {
+        labels.push(LIBRARY_EOL_LABEL);
+      }
+      if (hasOrphaned) {
+        labels.push(ORPHANED_LABEL);
+      }
       if (labels.length > 0) {
         await this.github.addLabels(issueNumber, labels).catch(() => undefined);
       }

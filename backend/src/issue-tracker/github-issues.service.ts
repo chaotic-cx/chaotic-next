@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { type Cache } from 'cache-manager';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { cachedResult } from '../utils/cache';
+import { GITHUB_CLOSED_STATE_REASON } from '../utils/constants';
 
 /**
  * Label names mirror the existing set on chaotic-aur/packages so the bot
@@ -96,7 +97,7 @@ export class GithubIssuesService {
   async closeIssue(issueNumber: number): Promise<void> {
     await this.request(`/repos/${this.owner}/${this.repo}/issues/${issueNumber}`, {
       method: 'PATCH',
-      body: JSON.stringify({ state: 'closed' }),
+      body: JSON.stringify({ state: 'closed', state_reason: GITHUB_CLOSED_STATE_REASON }),
     });
   }
 
@@ -225,7 +226,9 @@ export class GithubIssuesService {
         for (const result of results) {
           const pkgName = (result as { Name?: unknown }).Name;
           const pkgBase = (result as { PackageBase?: unknown }).PackageBase;
-          if (typeof pkgName === 'string' && typeof pkgBase === 'string') byName.set(pkgName.toLowerCase(), pkgBase);
+          if (typeof pkgName === 'string' && typeof pkgBase === 'string') {
+            byName.set(pkgName.toLowerCase(), pkgBase);
+          }
         }
       }
       for (const name of toFetch) {
@@ -277,7 +280,9 @@ export class GithubIssuesService {
           for (const dep of deps) {
             if (typeof dep !== 'string') continue;
             const name = dep.match(/^[\w@.+-]+/)?.[0]?.toLowerCase();
-            if (name) depends.get(base)?.add(name);
+            if (name) {
+              depends.get(base)?.add(name);
+            }
           }
         }
       }

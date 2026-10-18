@@ -13,10 +13,12 @@ const MAX_TAR_BUFFER = 1 << 28;
 /** Per-tool time budget so a single stuck readelf/nm cannot hang a whole scan. */
 const TOOL_TIMEOUT_MS = 5 * 60 * 1000;
 
-// Large GHC/Haskell shared objects (e.g. libHSAgda-*.so) can produce hundreds
-// of MB of readelf/nm output; keep the buffers generous so real packages never
-// trip the "stdout maxBuffer length exceeded" error. The utils are awaited per
-// candidate, so memory stays bounded to one candidate's outputs at a time.
+/**
+ * Large GHC/Haskell shared objects (e.g. libHSAgda-*.so) can produce hundreds
+ * of MB of readelf/nm output; keep the buffers generous so real packages never
+ * trip the "stdout maxBuffer length exceeded" error. The utils are awaited per
+ * candidate, so memory stays bounded to one candidate's outputs at a time.
+ */
 const TOOL_OPTS: ExecFileOptionsWithStringEncoding = { maxBuffer: 1 << 28, timeout: TOOL_TIMEOUT_MS, encoding: 'utf8' };
 const RELOC_TOOL_OPTS: ExecFileOptionsWithStringEncoding = {
   maxBuffer: 1 << 30,
@@ -65,11 +67,13 @@ export function isNonZeroExit(err: unknown): boolean {
  */
 const ELF64_RE = /Class:\s+ELF64/;
 const X86_64_RE = /Machine:\s+Advanced Micro Devices X86-64/;
-// Linux ELF objects carry either the generic System V ABI or the GNU ABI
-// (statically linked or GNU-extension binaries; readelf prints "UNIX - GNU").
-// Solaris (`UNIX - Solaris`), FreeBSD/OpenBSD and other OS-specific ABIs
-// identify foreign binaries even when they share the x86_64 machine type
-// (e.g. JNA's bundled sunos-* libs).
+/**
+ * Linux ELF objects carry either the generic System V ABI or the GNU ABI
+ * (statically linked or GNU-extension binaries; readelf prints "UNIX - GNU").
+ * Solaris (`UNIX - Solaris`), FreeBSD/OpenBSD and other OS-specific ABIs
+ * identify foreign binaries even when they share the x86_64 machine type
+ * (e.g. JNA's bundled sunos-* libs).
+ */
 const LINUX_ABI_RE = /OS\/ABI:\s+UNIX - (?:System V|GNU)/;
 
 export function isHostElf(readelfHeader: string): boolean {
@@ -117,9 +121,11 @@ async function extractCandidates(file: string, workDir: string, candidates: Set<
     return null;
   } catch (err) {
     if (!isNonZeroExit(err)) throw err;
-    // bsdtar exits non-zero when a member is missing; since candidates came
-    // from the listing this should not happen, but surface it rather than
-    // silently producing a partial scan.
+    /**
+     * bsdtar exits non-zero when a member is missing; since candidates came
+     * from the listing this should not happen, but surface it rather than
+     * silently producing a partial scan.
+     */
     return `Extraction failed for ${file}: ${errorMessage(err)}`;
   }
 }
@@ -135,9 +141,11 @@ interface CandidateOutputs {
 async function scanCandidate(candidate: string, workDir: string): Promise<CandidateOutputs | null> {
   const out = join(workDir, candidate);
   const { stdout: header } = await execFileP('readelf', ['-h', out], TOOL_OPTS);
-  // Skip foreign-platform ELF objects (Solaris JVM libs, ARM loaders,
-  // BSD kvm): the host linker never loads them, so their DT_NEEDED
-  // entries must not count against the package.
+  /**
+   * Skip foreign-platform ELF objects (Solaris JVM libs, ARM loaders,
+   * BSD kvm): the host linker never loads them, so their DT_NEEDED
+   * entries must not count against the package.
+   */
   if (!isHostElf(header)) return null;
 
   const tools: Promise<{ stdout: string }>[] = [
@@ -199,10 +207,12 @@ export async function scanArchive(file: string, maxCandidates = MAX_ELF_CANDIDAT
           result.nmSizesByFile.set(candidate, outputs.shared.nmSizes);
         }
       } catch (err) {
-        // readelf/nm exit non-zero on non-ELF input (e.g. a script carrying
-        // an executable bit); that's expected and skipped. Anything else
-        // (timeout, ENOMEM, maxBuffer) is surfaced as a warning and the scan
-        // of the remaining candidates continues.
+        /**
+         * readelf/nm exit non-zero on non-ELF input (e.g. a script carrying
+         * an executable bit); that's expected and skipped. Anything else
+         * (timeout, ENOMEM, maxBuffer) is surfaced as a warning and the scan
+         * of the remaining candidates continues.
+         */
         if (!isNonZeroExit(err)) {
           result.warnings.push(`Tool failure on ${candidate} in ${file}: ${errorMessage(err)}`);
         }

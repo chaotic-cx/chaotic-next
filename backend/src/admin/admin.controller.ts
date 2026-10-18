@@ -340,8 +340,8 @@ export class AdminController {
   }
 
   @Get('rescan/:jobId')
-  @ApiParam({ name: 'jobId', description: 'Rescan job id returned by POST /admin/rescan' })
   @ApiOperation({ summary: 'Status and outcome of a background ELF signal rescan job.' })
+  @ApiParam({ name: 'jobId', description: 'Rescan job id returned by POST /admin/rescan' })
   @ApiOkResponse({ description: 'The rescan job state', schema: schemaResponse(rescanJobSchema).schema })
   getRescanStatus(@Param('jobId') jobId: string): RescanJob {
     return this.adminService.getRescanJob(jobId);

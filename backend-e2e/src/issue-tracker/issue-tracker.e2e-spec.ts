@@ -114,7 +114,9 @@ describe('Issue tracker webhook (e2e)', () => {
     if (!rawHeaders['x-hub-signature-256'] && payload !== undefined) {
       rawHeaders['x-hub-signature-256'] = sign(payload);
     }
-    if (!rawHeaders['x-github-event']) rawHeaders['x-github-event'] = 'issues';
+    if (!rawHeaders['x-github-event']) {
+      rawHeaders['x-github-event'] = 'issues';
+    }
     return e2e.inject({ method: 'POST', url: '/issue-tracker/webhook', payload, headers: rawHeaders });
   }
 

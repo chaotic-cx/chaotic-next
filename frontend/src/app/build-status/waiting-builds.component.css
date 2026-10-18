@@ -1,5 +1,13 @@
-@reference "../../styles.css"
-
 .queue-page-list {
   overflow-anchor: none;
+}
+
+.queue-position {
+  flex: none;
+  width: 1.75rem;
+  font-size: 0.75rem;
+  font-weight: var(--chaotic-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--chaotic-fg-faint);
 }

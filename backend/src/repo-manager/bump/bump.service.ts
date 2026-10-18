@@ -8,9 +8,8 @@ import {
   TriggerType,
 } from '../../interfaces/repo-manager';
 import { isSourceCompiledPackage } from '../pkgbuild-classifier';
-import { ArchlinuxPackage, PackageBump, PackageElfAnalysis } from '../repo-manager.entity';
+import { ArchlinuxPackage, PackageBump } from '../repo-manager.entity';
 import { REPO_WRITER, type BumpCommitAction, type RepoReader, type RepoWriter } from '../repo-rw';
-import { CHAOTIC_PKG_TYPE } from '../signal/plugin';
 import { applyPackageBump, parseCiConfig } from './bump-config';
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -48,8 +47,6 @@ export class BumpService {
   constructor(
     @InjectRepository(Package)
     private readonly packagesRepository: Repository<Package>,
-    @InjectRepository(PackageElfAnalysis)
-    private readonly elfAnalysisRepository: Repository<PackageElfAnalysis>,
     @Inject(REPO_WRITER)
     private readonly repoWriter: RepoWriter,
     private readonly lookup: EntityLookupService,
@@ -184,9 +181,11 @@ export class BumpService {
     reader: RepoReader,
     opts: { pkgbaseDir: string; repo?: Repo; pkgInDb?: Package },
   ): Promise<PackageConfig> {
-    // When the caller already has the package row (e.g. a batch loop over
-    // allPackages), pass it in to skip a getOrCreatePackage() round-trip per call —
-    // otherwise this is a mutex-guarded find+relations on every iteration.
+    /**
+     * When the caller already has the package row (e.g. a batch loop over
+     * allPackages), pass it in to skip a getOrCreatePackage() round-trip per call —
+     * otherwise this is a mutex-guarded find+relations on every iteration.
+     */
     const { pkgbaseDir, repo, pkgInDb } = opts;
     let pkg = pkgInDb;
     if (!pkg) {
@@ -208,23 +207,14 @@ export class BumpService {
 
     const pkgbuildText = await reader.readFile(`${pkgbaseDir}/PKGBUILD`).catch(() => '');
     const skipSignalScan = isCiFlagEnabled(configs, CI_FLAG_SIGNAL_SCAN_IGNORE);
-    if (pkg.skipSignalScan !== skipSignalScan) {
+    const isSourceCompiled = isSourceCompiledPackage(pkgbuildText);
+    if (pkg.skipSignalScan !== skipSignalScan || pkg.isSourceCompiled !== isSourceCompiled) {
       pkg.skipSignalScan = skipSignalScan;
+      pkg.isSourceCompiled = isSourceCompiled;
       this.savePackageInBackground(pkg);
     }
 
-    const isSourceCompiled = isSourceCompiledPackage(pkgbuildText);
-    await this.updateSourceCompiledFlag(pkg, isSourceCompiled);
-
     return { configs, pkgInDb: pkg };
-  }
-
-  private async updateSourceCompiledFlag(pkg: Package, isSourceCompiled: boolean): Promise<void> {
-    try {
-      await this.elfAnalysisRepository.update({ pkgType: CHAOTIC_PKG_TYPE, pkgId: pkg.id }, { isSourceCompiled });
-    } catch (err: unknown) {
-      this.pino.debug({ err, pkgname: pkg.pkgname }, 'Failed to update isSourceCompiled');
-    }
   }
 
   private savePackageInBackground(pkg: Package): void {

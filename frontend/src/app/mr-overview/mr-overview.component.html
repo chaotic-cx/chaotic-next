@@ -1,490 +1,424 @@
-<chaotic-title
-  title="Update review"
-  subtitleHtml="Package updates currently queued for human review with the option to approve the MR for auto-merge."
-/>
+<ng-container *transloco="let t">
+  <div class="chaotic-page">
+    <chaotic-title [title]="t('reviewQueue.title')" [subtitle]="t('reviewQueue.subtitle')" />
 
-<div class="chaotic-container-wide-center md:chaotic-container-regular px-0.5 text-left! sm:px-2.5">
-  <p-tabs [value]="activeTabValue()" (valueChange)="onTabChange($event)">
-    <p-tablist>
-      <p-tab value="0">
-        @if (hasNewMr()) {
-          <button
-            class="mr-1 inline-flex cursor-pointer items-center"
-            (click)="refreshMrs()"
-            pTooltip="A new merge request has arrived and needs review. Click to refresh."
-            tooltipPosition="top"
-            aria-label="Refresh merge requests"
-          >
-            <i class="pi pi-circle-fill text-ctp-red"></i>
-          </button>
-        }
-        AUR updates ({{ packageMrs().length }})
-      </p-tab>
-      <p-tab value="1">Package updates ({{ nvcheckerMrs().length }})</p-tab>
-      <p-tab value="2">On hold ({{ holdMrs().length }})</p-tab>
-    </p-tablist>
-    <p-tabpanels>
-      <p-tabpanel value="0">
-        <ng-container
-          *ngTemplateOutlet="
-            tabBody;
-            context: {
-              $implicit: packageMrs(),
-              empty: 'No open AUR update requests found.',
-              hideHold: false,
-              hideDangerous: false,
-            }
-          "
-        />
-      </p-tabpanel>
-      <p-tabpanel value="1">
-        <ng-container
-          *ngTemplateOutlet="
-            tabBody;
-            context: {
-              $implicit: nvcheckerMrs(),
-              empty: 'No open package update requests found.',
-              hideHold: false,
-              hideDangerous: true,
-            }
-          "
-        />
-      </p-tabpanel>
-      <p-tabpanel value="2">
-        <ng-container
-          *ngTemplateOutlet="
-            tabBody;
-            context: {
-              $implicit: holdMrs(),
-              empty: 'No merge requests on hold.',
-              hideHold: true,
-              hideDangerous: false,
-            }
-          "
-        />
-      </p-tabpanel>
-    </p-tabpanels>
-  </p-tabs>
-</div>
-
-<ng-template #tabBody let-mrs let-empty="empty" let-hideHold="hideHold" let-hideDangerous="hideDangerous">
-  @if (mrOverviewService.isLoading()) {
-    <div class="flex justify-center my-10">
-      <p-progress-spinner ariaLabel="loading" />
-    </div>
-  } @else if (mrs.length === 0) {
-    <div class="flex flex-col items-center gap-2 mt-5 text-center">
-      <p class="text-ctp-text">{{ empty }}</p>
-      <a class="text-ctp-mauve" href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
-        >You can also browse all merge requests on GitLab.
-      </a>
-      <i class="text-ctp-maroon pi pi-verified mt-5" style="font-size: 5rem"></i>
-    </div>
-  } @else {
-    <ng-container *ngTemplateOutlet="mrList; context: { mrs, hideHold, hideDangerous }" />
-  }
-</ng-template>
-
-<ng-template #mrList let-mrs="mrs" let-hideHold="hideHold" let-hideDangerous="hideDangerous">
-  @for (mr of mrs; track mr.id; let i = $index) {
-    <p-panel
-      class="mr-overview-panel"
-      [class.mt-5]="i > 0"
-      [class.mr-focused]="focusedIndex() === i"
-      [class.mr-approved]="mr.labels.includes('approved')"
-      [attr.data-mr-panel]="''"
-      [attr.data-mr-iid]="mr.iid"
-      [attr.tabindex]="focusedIndex() === i ? 0 : -1"
-      animate.enter="ctp-item-enter"
-      animate.leave="ctp-item-leave"
-    >
-      <ng-template #header>
-        <div class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div class="min-w-0">
-            <a class="cursor-pointer wrap-break-word text-ctp-mauve" [href]="mr.web_url">{{
-              mr.title + (mr.labels.includes('hold') ? ' [ON HOLD]' : '')
-            }}</a>
-            @if (flagReasonLine(mr); as reasonLine) {
-              <p class="wrap-break-word text-ctp-subtext text-xs">
-                {{ reasonLine }}
-                @if (mr.flagReason; as reason) {
-                  <span class="text-ctp-subtext0"> · {{ reason.createdAt | date: 'short' }}</span>
-                }
-                @if (isLoggedIn()) {
-                  <p-button
-                    [disabled]="isLoading(mr, 'any')"
-                    (onClick)="editFlagReason(mr)"
-                    icon="pi pi-pencil"
-                    aria-label="Edit flag reason"
-                    pTooltip="Edit flag reason"
-                    tooltipPosition="top"
-                    severity="secondary"
-                    size="small"
-                    text
-                    styleClass="mr-btn-icon-inline"
-                  />
-                }
-              </p>
+    <section class="mr-queue" [attr.aria-label]="t('reviewQueue.title')">
+      @if (mrOverviewService.isLoading()) {
+        <div class="mr-layout" [attr.aria-label]="t('reviewQueue.loading')" role="status" chaoticFillViewport>
+          <div class="mr-list">
+            @for (_ of skeletonRows; track $index) {
+              <div class="chaotic-skeleton mr-skeleton-row"></div>
             }
           </div>
-          <div class="mr-chips flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
-            @if (packageLink(mr); as link) {
-              <a [href]="link.url" [pTooltip]="link.tooltip" target="_blank" rel="noopener" tooltipPosition="top">
-                <p-tag
-                  [severity]="link.label === 'Custom' ? 'warn' : 'info'"
-                  [value]="link.label"
-                  icon="pi pi-external-link"
-                />
-              </a>
+          <div class="chaotic-skeleton mr-skeleton-detail"></div>
+        </div>
+      } @else if (mrOverviewService.loadFailed() && queueMrs().length === 0) {
+        <chaotic-load-error [message]="t('reviewQueue.loadError')" (retry)="refreshMrs()" />
+      } @else if (queueMrs().length === 0) {
+        <div class="flex flex-col items-center gap-3 py-12 text-center">
+          <i class="pi pi-verified text-ctp-green" style="font-size: 2.5rem" aria-hidden="true"></i>
+          <p class="font-medium text-ctp-text">{{ t('reviewQueue.empty') }}</p>
+          <a
+            class="text-sm text-ctp-subtext1 underline underline-offset-4 hover:text-ctp-mauve focus-visible:text-ctp-mauve"
+            href="https://gitlab.com/chaotic-aur/pkgbuilds/-/merge_requests"
+            >{{ t('reviewQueue.browseOnGitlab') }}</a
+          >
+        </div>
+      } @else {
+        @if (mrOverviewService.loadFailed()) {
+          <p class="mr-refresh-failed chaotic-stale-notice" role="status">
+            <span class="chaotic-stale-notice__dot" aria-hidden="true"></span>
+            {{ t('reviewQueue.refreshFailed') }}
+            <button class="mr-refresh-failed__retry" (click)="refreshMrs()" type="button">
+              {{ t('common.tryAgain') }}
+            </button>
+          </p>
+        }
+        <div class="mr-layout" [class.mr-layout--detail]="detailOpen()" chaoticFillViewport>
+          <ng-container *ngTemplateOutlet="mrList" />
+          <div class="mr-detail-pane">
+            <!-- Outside the per-MR detail, so switching MRs does not rebuild it. -->
+            @if (selectedMr(); as mr) {
+              <header class="mr-head">
+                @if (detailOpen()) {
+                  <button
+                    class="mr-head__icon"
+                    [attr.aria-label]="t('reviewQueue.backToList')"
+                    (click)="closeDetail()"
+                    type="button"
+                  >
+                    <i class="pi pi-chevron-left" aria-hidden="true"></i>
+                  </button>
+                }
+                <h2 class="mr-head__title" [id]="`mr-title-${mr.iid}`">
+                  <a [href]="mr.web_url" target="_blank" rel="noopener">{{ mr.title }}</a>
+                  @if (mr.labels.includes('hold')) {
+                    <p-tag class="ml-2 align-middle" [value]="t('reviewQueue.onHold')" severity="warn" />
+                  }
+                </h2>
+                @if (detailOpen()) {
+                  <span class="mr-head__steps">
+                    <button
+                      class="mr-head__icon mr-head__icon--step"
+                      [attr.aria-label]="t('reviewQueue.previousMr')"
+                      (click)="stepMr(-1)"
+                      type="button"
+                    >
+                      <i class="pi pi-chevron-up" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      class="mr-head__icon mr-head__icon--step"
+                      [attr.aria-label]="t('reviewQueue.nextMr')"
+                      (click)="stepMr(1)"
+                      type="button"
+                    >
+                      <i class="pi pi-chevron-down" aria-hidden="true"></i>
+                    </button>
+                  </span>
+                }
+              </header>
             }
-            @if (ciOverrideFiles(mr).length > 0) {
-              <a
-                [href]="ciFolderUrl(mr)"
-                target="_blank"
-                rel="noopener"
-                pTooltip="This package applies .CI interfere/build override files. Open the .CI folder."
-                tooltipPosition="top"
-              >
-                <p-tag [value]="ciOverrideFiles(mr).join(', ')" severity="info" icon="pi pi-folder" />
-              </a>
+            @for (mr of selectedMrList(); track mr.iid) {
+              <ng-container *ngTemplateOutlet="mrDetail; context: { mr }" />
             }
-            @if (isAurManaged(mr)) {
-              <p-tag
-                severity="info"
-                value="AUR managed"
-                icon="pi pi-arrow-up-right"
-                pTooltip="The CI auto-pushes this package's AUR repo."
-                tooltipPosition="top"
-              />
-            }
-            @if (isNvchecker(mr)) {
-              <p-tag
-                severity="info"
-                value="Auto-updated"
-                icon="pi pi-refresh"
-                pTooltip="Versions are auto-checked via nvchecker."
-                tooltipPosition="top"
-              />
-            }
-            @if (rebuildTriggers(mr).length > 0) {
-              <p-tag
-                [value]="`Rebuilds on: ${rebuildTriggers(mr).join(', ')}`"
-                severity="info"
-                icon="pi pi-sync"
-                pTooltip="This package is rebuilt when these libraries change."
-                tooltipPosition="top"
-              />
+            @if (selectedMr(); as mr) {
+              <ng-container *ngTemplateOutlet="actionBar; context: { mr }" />
             }
           </div>
         </div>
-      </ng-template>
+      }
+    </section>
+  </div>
 
-      <div class="chaotic-lazy-viewport">
-        @if (scanSummary(mr); as summary) {
-          <section class="mb-5 rounded-lg border border-ctp-crust bg-ctp-mantle/40">
-            <header
-              class="flex cursor-pointer items-center justify-between gap-2 border-ctp-crust px-3 py-2"
-              [attr.data-scan-fieldset]="''"
-              [attr.aria-expanded]="isFindingsOpen(mr)"
-              (click)="toggleFindings(mr)"
-              (keydown.enter)="toggleFindings(mr)"
-              (keydown.space)="toggleFindings(mr)"
-              role="button"
-              tabindex="0"
-            >
-              <span class="flex items-center gap-2 text-sm font-semibold text-ctp-text">
-                <i class="pi pi-shield text-ctp-mauve"></i>
-                Security scan
-              </span>
-              <div class="flex items-center gap-2">
-                <p-tag [severity]="summary.tagSeverity" [value]="summary.label" />
-                <i
-                  [class]="
-                    isFindingsOpen(mr) ? 'pi pi-chevron-up text-ctp-subtext' : 'pi pi-chevron-down text-ctp-subtext'
-                  "
-                ></i>
-              </div>
-            </header>
-            <div
-              class="grid transition-[grid-template-rows] duration-150 ease-in-out"
-              [class.grid-rows-[1fr]]="isFindingsOpen(mr)"
-              [class.grid-rows-[0fr]]="!isFindingsOpen(mr)"
-            >
-              <div class="overflow-hidden">
-                <div class="flex flex-col gap-2 px-3 py-2">
-                  @for (finding of scanFindings(mr); track $index; let index = $index) {
-                    <div
-                      class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-ctp-surface1/60 bg-ctp-surface0/30 p-4 text-left backdrop-blur-xs transition-all duration-200 hover:border-ctp-mauve/40 hover:bg-ctp-surface0/50 hover:shadow-md"
-                      [style.--stagger]="index > findingStaggerCap ? findingStaggerCap : index"
-                      (click)="scrollToFinding(mr, finding)"
-                      (keydown.enter)="scrollToFinding(mr, finding)"
-                      animate.enter="finding-item-enter"
-                      role="button"
-                      tabindex="0"
-                    >
-                      <div class="flex items-center justify-between gap-3">
-                        <span
-                          class="min-w-0 wrap-break-word font-semibold text-sm"
-                          [class.text-ctp-red]="finding.severity === 'critical'"
-                          [class.text-ctp-peach]="finding.severity === 'warning'"
-                          [class.text-ctp-subtext0]="finding.severity === 'info'"
-                          [pTooltip]="finding.description"
-                          tooltipPosition="top"
-                        >
-                          {{ finding.ruleName }}
-                        </span>
-                        <code class="shrink-0 whitespace-nowrap text-ctp-sky text-xs">
-                          {{ fileLocation(mr, finding) }}
-                        </code>
-                      </div>
-                      <code class="break-all text-ctp-subtext text-xs">{{ finding.match }}</code>
-                    </div>
-                  }
-
-                  @if (vtReports(mr).length) {
-                    <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
-                      <span class="text-sm font-semibold">VirusTotal indicators</span>
-                      @for (report of vtReports(mr); track $index) {
-                        <div class="flex flex-col gap-y-1 sm:flex-row sm:items-center sm:gap-x-2">
-                          <div class="flex min-w-0 items-center gap-2">
-                            <span class="min-w-0 break-all text-xs font-semibold">{{ report.value }}</span>
-                          </div>
-                          <span class="hidden text-ctp-subtext0 sm:inline">·</span>
-                          <div class="flex items-center flex-wrap gap-x-2 sm:flex-nowrap">
-                            <code class="whitespace-nowrap text-xs text-ctp-sky">{{ report.context }}</code>
-                            <span class="text-xs text-ctp-subtext">{{ presenter.vtEngines(report) }}</span>
-                          </div>
-                        </div>
-                      }
-                    </div>
-                  }
-
-                  @if (maintainers(mr).length || maintainerChange(mr)) {
-                    <div class="mt-4 flex flex-col gap-1.5 border-t border-ctp-surface0 pt-3">
-                      <span class="text-sm font-semibold">Maintainers</span>
-                      @for (maintainer of maintainers(mr); track maintainer.username) {
-                        <div class="flex flex-col gap-y-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
-                          <div class="flex min-w-0 items-center gap-2">
-                            @if (maintainer.novice) {
-                              <p-tag severity="warn" value="New" />
-                            }
-                            <span class="text-xs font-semibold">{{ maintainer.username }}</span>
-                          </div>
-                          <span class="text-xs text-ctp-subtext">{{ presenter.maintainerSummary(maintainer) }}</span>
-                        </div>
-                      }
-                      @if (maintainerChange(mr); as change) {
-                        <div class="flex flex-wrap items-center gap-2">
-                          @if (presenter.tookOverByNovice(change, maintainers(mr))) {
-                            <p-tag severity="danger" value="New maintainer took over" />
-                          } @else {
-                            <p-tag severity="warn" value="Maintainer changed" />
-                          }
-                          <span class="text-xs text-ctp-subtext">{{ presenter.maintainerChangeSummary(change) }}</span>
-                        </div>
-                      }
-                    </div>
-                  }
-                </div>
-              </div>
-            </div>
-          </section>
-        }
-
-        @if (mr.diffs && mr.diffs.length > 0) {
-          @for (change of mr.diffs; track change.new_path) {
-            <section
-              class="mb-5 overflow-x-auto rounded-lg border border-ctp-crust bg-ctp-mantle/40 chaotic-lazy-viewport"
-              [attr.data-diff-section]="diffSectionId(mr.iid, change.new_path)"
-            >
-              <header class="flex flex-wrap items-center gap-2 border-b border-ctp-crust px-3 py-2">
-                <code class="min-w-0 flex-1 break-all font-mono text-sm text-ctp-text">{{
-                  stripPkgPrefix(mr, change.new_path)
-                }}</code>
-              </header>
-              @defer (on viewport; prefetch on idle) {
-                <chaotic-diff-renderer
-                  [diff]="change.diff"
-                  [findingsByLine]="findingsByLine(mr, change.new_path)"
-                  [scrollToLine]="targetLineFor(mr, change.new_path)"
-                  (scrolled)="clearDiffScroll()"
-                />
-              } @placeholder {
-                <div class="chaotic-diff-placeholder" aria-hidden="true"></div>
-              }
-            </section>
-          }
-        } @else {
-          <span class="text-ctp-text">No changes</span>
-        }
-
-        @if (isLoggedIn()) {
+  <ng-template #actionBar let-mr="mr">
+    @if (isLoggedIn()) {
+      <div class="mr-actions">
+        @if (isMobile()) {
           @let approve = actionButton(mr, 'approve');
-          @let dangerous = actionButton(mr, 'dangerous');
-          @let hold = actionButton(mr, 'hold');
-
-          <div
-            class="mt-4 grid place-items-center px-12 pb-4 md:hidden"
-            [class.grid-cols-3]="!hideHold && !hideDangerous"
-            [class.grid-cols-2]="hideHold || hideDangerous"
-          >
+          <p-button
+            [label]="t('reviewQueue.more')"
+            (onClick)="openMoreMenu(moreMenu, $event, mr, actionsFor(mr))"
+            icon="pi pi-chevron-down"
+            iconPos="right"
+            severity="secondary"
+            size="small"
+            variant="outlined"
+            styleClass="mr-btn-more"
+            aria-haspopup="menu"
+          />
+          <p-button
+            class="ml-auto"
+            [disabled]="approve.disabled"
+            [label]="t(approve.labelKey)"
+            [loading]="approve.loading"
+            (onClick)="runAction(mr, 'approve')"
+            severity="success"
+            size="small"
+          />
+        } @else {
+          @for (action of actionsFor(mr); track action) {
+            @let button = actionButton(mr, action);
             <p-button
-              [disabled]="approve.disabled"
-              [loading]="approve.loading"
-              [icon]="approve.icon"
-              [attr.aria-label]="approve.label"
-              [pTooltip]="approve.tooltip"
-              (onClick)="mrOverviewService.approve(mr)"
-              severity="success"
+              [disabled]="button.disabled"
+              [label]="t(button.labelKey)"
+              [loading]="button.loading"
+              [pTooltip]="t(button.tooltipKey)"
+              [styleClass]="actionStyleClass[action]"
+              [severity]="button.severity"
+              (onClick)="runAction(mr, action)"
               size="small"
               variant="outlined"
-              styleClass="mr-btn-icon"
               tooltipPosition="top"
             />
-            @if (!hideDangerous) {
-              <p-button
-                [disabled]="dangerous.disabled"
-                [loading]="dangerous.loading"
-                [icon]="dangerous.icon"
-                [attr.aria-label]="dangerous.label"
-                [pTooltip]="dangerous.tooltip"
-                (onClick)="openFlagDialog(mr, 'dangerous')"
-                severity="danger"
-                size="small"
-                variant="outlined"
-                styleClass="mr-btn-icon"
-                tooltipPosition="top"
-              />
-            }
-            @if (!hideHold) {
-              <p-button
-                [disabled]="hold.disabled"
-                [loading]="hold.loading"
-                [icon]="hold.icon"
-                [attr.aria-label]="hold.label"
-                [pTooltip]="hold.tooltip"
-                (onClick)="openFlagDialog(mr, 'hold')"
-                severity="warn"
-                size="small"
-                variant="outlined"
-                styleClass="mr-btn-icon"
-                tooltipPosition="top"
-              />
-            }
-          </div>
-
-          <div
-            class="hidden pb-4 md:grid grid-cols-1 gap-2 md:gap-10 md:justify-self-center"
-            [class.md:grid-cols-3]="!hideHold && !hideDangerous"
-            [class.md:grid-cols-2]="hideHold || hideDangerous"
-          >
-            <div class="w-full min-w-0">
-              <p-button
-                [disabled]="approve.disabled"
-                [label]="approve.label"
-                [loading]="approve.loading"
-                [icon]="approve.icon"
-                [pTooltip]="approve.tooltip"
-                (onClick)="mrOverviewService.approve(mr)"
-                severity="success"
-                size="small"
-                variant="outlined"
-                styleClass="w-50 mr-btn-approve"
-                tooltipPosition="top"
-              />
-            </div>
-
-            @if (!hideDangerous) {
-              <div class="w-full min-w-0">
-                <p-button
-                  [disabled]="dangerous.disabled"
-                  [label]="dangerous.label"
-                  [loading]="dangerous.loading"
-                  [icon]="dangerous.icon"
-                  [pTooltip]="dangerous.tooltip"
-                  (onClick)="openFlagDialog(mr, 'dangerous')"
-                  severity="danger"
-                  size="small"
-                  variant="outlined"
-                  styleClass="w-50 mr-btn-danger"
-                  tooltipPosition="top"
-                />
-              </div>
-            }
-
-            @if (!hideHold) {
-              <div class="w-full min-w-0">
-                <p-button
-                  [disabled]="hold.disabled"
-                  [label]="hold.label"
-                  [loading]="hold.loading"
-                  [icon]="hold.icon"
-                  [pTooltip]="hold.tooltip"
-                  (onClick)="openFlagDialog(mr, 'hold')"
-                  severity="warn"
-                  size="small"
-                  variant="outlined"
-                  styleClass="w-50 mr-btn-warn"
-                  tooltipPosition="top"
-                />
-              </div>
-            }
-          </div>
-        } @else {
-          <p class="text-ctp-subtext text-center text-sm pb-2">
-            <a class="text-ctp-mauve" routerLink="/login">Sign in</a> to approve, flag or hold updates.
-          </p>
+          }
         }
       </div>
-    </p-panel>
-  }
-</ng-template>
+    } @else {
+      <p class="mr-actions mr-actions--signed-out">
+        <a class="text-ctp-mauve" routerLink="/login">{{ t('reviewQueue.signInPrompt.link') }}</a>
+        {{ t('reviewQueue.signInPrompt.outro') }}
+      </p>
+    }
+  </ng-template>
 
-<p-dialog
-  [visible]="flagDialog() !== null"
-  [modal]="true"
-  [appendTo]="'body'"
-  [style]="{ 'width': '32rem', 'max-width': '94vw' }"
-  [header]="flagDialogTitle()"
-  (onHide)="closeFlagDialog()"
->
-  @if (flagDialog(); as pending) {
-    <div class="flex flex-col gap-3">
-      <label class="flex flex-col gap-1">
-        <span class="text-ctp-text text-sm">Reason (required, visible in the On Hold tab)</span>
-        <textarea
-          [maxlength]="flagReasonMaxLength"
-          [ngModel]="flagReason()"
-          (ngModelChange)="flagReason.set($event)"
-          pTextarea
-          rows="4"
-          placeholder="Why is this update held back or dangerous?"
-        ></textarea>
-        <span class="text-ctp-subtext0 text-xs self-end">{{ flagReason().length }}/{{ flagReasonMaxLength }}</span>
-      </label>
-      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <p-button
-          (onClick)="closeFlagDialog()"
-          type="button"
-          severity="secondary"
-          text
-          label="Cancel"
-          size="small"
-          styleClass="w-full sm:w-auto"
-        />
-        <p-button
-          [disabled]="
-            !flagReasonValid() || isLoading(pending.mr, pending.label === 'dangerous' ? 'flag:dangerous' : 'flag:hold')
-          "
-          [loading]="isLoading(pending.mr, pending.label === 'dangerous' ? 'flag:dangerous' : 'flag:hold')"
-          [icon]="pending.label === 'dangerous' ? 'pi pi-exclamation-triangle' : 'pi pi-pause'"
-          [severity]="pending.label === 'dangerous' ? 'danger' : 'warn'"
-          [label]="pending.label === 'dangerous' ? 'Flag as dangerous' : 'Put on hold'"
-          (onClick)="confirmFlag()"
-          size="small"
-          styleClass="w-full sm:w-auto"
-        />
+  <ng-template #mrList>
+    <nav class="mr-list" [attr.aria-label]="t('reviewQueue.listLabel')">
+      @if (hasNewMr()) {
+        <button class="mr-list__new" [pTooltip]="t('reviewQueue.newMr.tooltip')" (click)="refreshMrs()" type="button">
+          <span class="mr-list__new-dot" aria-hidden="true"></span>
+          {{ t('reviewQueue.newMr.refresh') }}
+        </button>
+      }
+      @for (group of queueGroups(); track group.key) {
+        <section class="mr-group" [attr.aria-labelledby]="`mr-group-${group.key}`">
+          <h2 class="mr-group__title" [id]="`mr-group-${group.key}`">
+            {{ t(group.labelKey) }} <span class="mr-group__count">{{ group.mrs.length }}</span>
+          </h2>
+          <ul class="mr-list__items">
+            @for (mr of group.mrs; track mr.id) {
+              <li>
+                <button
+                  class="mr-row"
+                  [class.mr-row--selected]="selectedMr()?.iid === mr.iid"
+                  [attr.aria-current]="selectedMr()?.iid === mr.iid ? 'true' : null"
+                  [attr.data-mr-row]="''"
+                  [attr.data-mr-iid]="mr.iid"
+                  [attr.data-tone]="rowTone(mr)"
+                  (click)="selectMr(mr)"
+                  type="button"
+                  animate.leave="ctp-item-leave"
+                >
+                  <span class="mr-row__dot" aria-hidden="true"></span>
+                  <span class="mr-row__text">
+                    <span class="mr-row__title">{{ mr.title }}</span>
+                    <span class="mr-row__meta">
+                      @if (mr.labels.includes('hold') && flagReasonLine(mr); as reasonLine) {
+                        {{ t(reasonLine.key, reasonLine.params) }}
+                      } @else {
+                        @if (packageLink(mr); as link) {
+                          <span>{{ link.isCustom ? t('reviewQueue.packageLink.custom') : 'AUR' }}</span>
+                        }
+                        @if (isNvchecker(mr)) {
+                          <span>{{ t('reviewQueue.chips.autoUpdated') }}</span>
+                        }
+                        @if (scanSummary(mr); as summary) {
+                          <span>{{ t(summary.label.key, summary.label.params) }}</span>
+                        }
+                      }
+                    </span>
+                  </span>
+                  @if (mr.labels.includes('approved')) {
+                    <i class="pi pi-check mr-row__approved" [pTooltip]="t('reviewQueue.actions.approve.done')"></i>
+                    <span class="sr-only">{{ t('reviewQueue.actions.approve.done') }}</span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+      <p class="mr-list__hint">{{ t('reviewQueue.keyboardHint') }}</p>
+    </nav>
+  </ng-template>
+
+  <ng-template #mrDetail let-mr="mr">
+    <article class="mr-detail" [attr.aria-labelledby]="`mr-title-${mr.iid}`">
+      <header class="mr-detail__header">
+        @if (flagReasonLine(mr); as reasonLine) {
+          <p class="mr-detail__reason">
+            {{ t(reasonLine.key, reasonLine.params) }}
+            @if (mr.flagReason; as reason) {
+              <span class="text-ctp-subtext0"> · {{ reason.createdAt | date: 'short' }}</span>
+            }
+            @if (isLoggedIn()) {
+              <p-button
+                [disabled]="isLoading(mr, 'any')"
+                [attr.aria-label]="t('reviewQueue.editFlagReason')"
+                [pTooltip]="t('reviewQueue.editFlagReason')"
+                (onClick)="editFlagReason(mr)"
+                icon="pi pi-pencil"
+                tooltipPosition="top"
+                severity="secondary"
+                size="small"
+                text
+                styleClass="mr-btn-icon-inline"
+              />
+            }
+          </p>
+        }
+
+        <p class="mr-detail__meta">
+          @if (packageLink(mr); as link) {
+            <a
+              [class.mr-detail__meta-custom]="link.isCustom"
+              [href]="link.url"
+              [pTooltip]="t(link.tooltip.key, link.tooltip.params)"
+              target="_blank"
+              rel="noopener"
+              tooltipPosition="top"
+              >{{ link.isCustom ? t('reviewQueue.packageLink.custom') : 'AUR' }}
+              <i class="pi pi-external-link" aria-hidden="true"></i
+            ></a>
+          }
+          @if (ciOverrideFiles(mr).length > 0) {
+            <a
+              [href]="ciFolderUrl(mr)"
+              [pTooltip]="t('reviewQueue.chips.ciOverrideTooltip')"
+              target="_blank"
+              rel="noopener"
+              tooltipPosition="top"
+              ><i class="pi pi-folder" aria-hidden="true"></i> {{ ciOverrideFiles(mr).join(', ') }}</a
+            >
+          }
+          @if (isAurManaged(mr)) {
+            <span [pTooltip]="t('reviewQueue.chips.aurManagedTooltip')" tooltipPosition="top">{{
+              t('reviewQueue.chips.aurManaged')
+            }}</span>
+          }
+          @if (isNvchecker(mr)) {
+            <span [pTooltip]="t('reviewQueue.chips.autoUpdatedTooltip')" tooltipPosition="top">{{
+              t('reviewQueue.chips.autoUpdated')
+            }}</span>
+          }
+          @if (rebuildTriggers(mr).length > 0) {
+            <span [pTooltip]="t('reviewQueue.chips.rebuildsOnTooltip')" tooltipPosition="top">{{
+              t('reviewQueue.chips.rebuildsOn', { triggers: rebuildTriggers(mr).join(', ') })
+            }}</span>
+          }
+        </p>
+      </header>
+
+      @if (hasScanDetails(mr)) {
+        <details
+          class="mr-scan"
+          [attr.data-tone]="scanSummary(mr)?.tagSeverity ?? 'success'"
+          [open]="scanNeedsReview(mr)"
+        >
+          <summary class="mr-scan__summary">
+            <i class="pi pi-shield mr-scan__icon" aria-hidden="true"></i>
+            <span class="font-semibold">{{ t('reviewQueue.securityScan') }}</span>
+            <span class="mr-scan__verdict">
+              @if (scanSummary(mr); as summary) {
+                {{ t(summary.label.key, summary.label.params) }}
+              } @else {
+                {{ t('aurScan.noFindings') }}
+              }
+            </span>
+            <i class="pi pi-chevron-down mr-scan__chevron" aria-hidden="true"></i>
+          </summary>
+          @if (scanFindings(mr).length) {
+            <div class="flex flex-col p-1.5">
+              @for (finding of scanFindings(mr); track $index) {
+                <chaotic-scan-finding-row
+                  [finding]="finding"
+                  [location]="fileLocation(mr, finding)"
+                  (activate)="scrollToFinding(mr, finding)"
+                />
+              }
+            </div>
+          }
+          @if (vtReports(mr).length || maintainers(mr).length || maintainerChange(mr)) {
+            <div class="mr-scan-facts">
+              @if (vtReports(mr).length) {
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <h3 class="text-xs font-semibold text-ctp-subtext1">{{ t('aurScan.vt.indicators') }}</h3>
+                  @for (report of vtReports(mr); track $index) {
+                    @let engines = presenter.vtEngines(report);
+                    <p class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+                      <span class="break-all font-semibold text-ctp-text">{{ report.value }}</span>
+                      <code class="text-ctp-sky">{{ report.context }}</code>
+                      <span class="text-ctp-subtext0">{{ t(engines.key, engines.params) }}</span>
+                    </p>
+                  }
+                </div>
+              }
+              @if (maintainers(mr).length || maintainerChange(mr)) {
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <h3 class="text-xs font-semibold text-ctp-subtext1">{{ t('aurScan.maintainers.title') }}</h3>
+                  @for (maintainer of maintainers(mr); track maintainer.username) {
+                    <p class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                      <span class="font-semibold text-ctp-text">{{ maintainer.username }}</span>
+                      @if (maintainer.novice) {
+                        <p-tag [value]="t('aurScan.maintainers.novice')" severity="warn" />
+                      }
+                      @let maintainerText = presenter.maintainerSummary(maintainer);
+                      <span class="text-ctp-subtext0">{{ t(maintainerText.key, maintainerText.params) }}</span>
+                    </p>
+                  }
+                  @if (maintainerChange(mr); as change) {
+                    <p class="flex flex-wrap items-center gap-2 text-xs">
+                      @if (presenter.tookOverByNovice(change, maintainers(mr))) {
+                        <p-tag [value]="t('aurScan.maintainerChange.noviceTookOver')" severity="danger" />
+                      } @else {
+                        <p-tag [value]="t('aurScan.maintainerChange.changed')" severity="warn" />
+                      }
+                      @if (presenter.maintainerChangeSummary(change); as changeSummary) {
+                        <span class="text-ctp-subtext0">{{ t(changeSummary.key, changeSummary.params) }}</span>
+                      }
+                    </p>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </details>
+      }
+
+      @if (mr.diffs && mr.diffs.length > 0) {
+        @for (change of mr.diffs; track change.new_path) {
+          <section class="mr-file" [attr.data-diff-section]="diffSectionId(mr.iid, change.new_path)">
+            <h3 class="mr-file__header">
+              <i class="pi pi-file" aria-hidden="true"></i>
+              <code>{{ stripPkgPrefix(mr, change.new_path) }}</code>
+            </h3>
+            @defer (on viewport; when $index < eagerDiffCount; prefetch on idle) {
+              <chaotic-diff-renderer
+                [diff]="change.diff"
+                [findingsByLine]="findingsByLine(mr, change.new_path)"
+                [scrollToLine]="targetLineFor(mr, change.new_path)"
+                (scrolled)="clearDiffScroll()"
+              />
+            } @placeholder {
+              <div class="chaotic-diff-placeholder" aria-hidden="true"></div>
+            }
+          </section>
+        }
+      } @else {
+        <p class="py-4 text-sm text-ctp-subtext0">{{ t('reviewQueue.noFileChanges') }}</p>
+      }
+    </article>
+  </ng-template>
+
+  <p-menu #moreMenu [model]="moreMenuItems()" [popup]="true" appendTo="body" />
+
+  <p-dialog
+    [visible]="flagDialog() !== null"
+    [modal]="true"
+    [appendTo]="'body'"
+    [style]="{ 'width': '32rem', 'max-width': '94vw' }"
+    [header]="flagDialogTitle()"
+    (onHide)="closeFlagDialog()"
+  >
+    @if (flagDialog(); as pending) {
+      <div class="flex flex-col gap-3">
+        <label class="flex flex-col gap-1">
+          <span class="text-ctp-text text-sm">{{ t('reviewQueue.flagDialog.reasonLabel') }}</span>
+          <textarea
+            [maxlength]="flagReasonMaxLength"
+            [ngModel]="flagReason()"
+            [placeholder]="t('reviewQueue.flagDialog.reasonPlaceholder')"
+            (ngModelChange)="flagReason.set($event)"
+            pTextarea
+            rows="4"
+          ></textarea>
+          <span class="text-ctp-subtext0 text-xs self-end">{{ flagReason().length }}/{{ flagReasonMaxLength }}</span>
+        </label>
+        <div class="flex flex-wrap justify-end gap-2">
+          <p-button
+            [label]="t('common.cancel')"
+            (onClick)="closeFlagDialog()"
+            type="button"
+            severity="secondary"
+            text
+            size="small"
+          />
+          <p-button
+            [disabled]="
+              !flagReasonValid() ||
+              isLoading(pending.mr, pending.label === 'dangerous' ? 'flag:dangerous' : 'flag:hold')
+            "
+            [loading]="isLoading(pending.mr, pending.label === 'dangerous' ? 'flag:dangerous' : 'flag:hold')"
+            [severity]="pending.label === 'dangerous' ? 'danger' : 'warn'"
+            [label]="
+              pending.label === 'dangerous'
+                ? t('reviewQueue.actions.dangerous.label')
+                : t('reviewQueue.flagDialog.confirmHold')
+            "
+            (onClick)="confirmFlag()"
+            size="small"
+          />
+        </div>
       </div>
-    </div>
-  }
-</p-dialog>
+    }
+  </p-dialog>
+</ng-container>

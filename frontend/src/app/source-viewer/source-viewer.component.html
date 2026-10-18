@@ -1,18 +1,17 @@
-<div class="source-viewer">
+<div class="source-viewer" [style.--line-number-width]="lineNumberWidth()">
   <pre><code>
     @for (line of lines(); track line.number) {
       @if (findingsFor(line.number); as findings) {
-        <div
+        <button
           class="line flagged"
           [attr.data-line]="line.number"
+          [attr.aria-expanded]="expandedLine() === line.number"
           [class.expanded]="expandedLine() === line.number"
-          role="button"
-          tabindex="0"
           (click)="toggle(line.number)"
-          (keydown.enter)="toggle(line.number)"
+          type="button"
         >
           <span class="line-number">{{ line.number }}</span><span class="line-content" [innerHTML]="line.html"></span>
-        </div>
+        </button>
         @if (expandedLine() === line.number) {
           <div class="findings">
             @for (finding of findings; track finding.ruleId) {

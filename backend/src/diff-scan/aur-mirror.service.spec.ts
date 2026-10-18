@@ -55,6 +55,7 @@ describe('AurMirrorService', () => {
       expect(files?.files.map((file) => file.name).sort()).toEqual(['PKGBUILD', 'helper.install']);
       expect(files?.skippedBinaryFiles).toEqual(['blob.bin']);
     } finally {
+      await service.sync();
       await cleanup();
       await rm(mirrorPath, { recursive: true, force: true });
     }
@@ -72,6 +73,7 @@ describe('AurMirrorService', () => {
       expect(await service.readTextFile('testpkg', '../evil')).toBeUndefined();
       expect(await service.readTextFile('evil;rm -rf', 'PKGBUILD')).toBeUndefined();
     } finally {
+      await service.sync();
       await cleanup();
       await rm(mirrorPath, { recursive: true, force: true });
     }

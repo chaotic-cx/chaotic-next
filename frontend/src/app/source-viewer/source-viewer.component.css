@@ -1,10 +1,10 @@
 @reference '../../styles.css';
 
 .source-viewer {
-  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
-  border-radius: 0.25rem;
+  font-family: var(--font-mono);
   max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   @apply text-left;
 }
 
@@ -23,12 +23,14 @@ code {
 .line {
   @apply m-0 flex w-full items-start gap-2 text-xs leading-tight;
   white-space: pre;
-  color: var(--ctp-mocha-text);
+  color: var(--catppuccin-color-text);
 }
 
 .line-number {
-  @apply w-5 shrink-0 text-right select-none;
-  color: var(--ctp-mocha-overlay0);
+  @apply shrink-0 text-right select-none;
+  min-width: 1.25rem;
+  width: var(--line-number-width);
+  color: var(--chaotic-fg-faint);
 }
 
 .line-content {
@@ -36,27 +38,32 @@ code {
 }
 
 .flagged {
-  background: rgba(249, 226, 175, 0.18);
-  box-shadow: inset 2px 0 0 var(--ctp-mocha-yellow);
+  padding: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--catppuccin-color-yellow) 18%, transparent);
+  box-shadow: inset 2px 0 0 var(--catppuccin-color-yellow);
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
 .flagged:hover,
+.flagged:focus-visible,
 .flagged.expanded {
-  background: rgba(249, 226, 175, 0.28);
+  background: color-mix(in srgb, var(--catppuccin-color-yellow) 28%, transparent);
 }
 
 .findings {
   @apply m-0 pr-1 pl-2;
   background: transparent;
-  border-left: 2px solid var(--ctp-mocha-yellow);
+  border-left: 2px solid var(--catppuccin-color-yellow);
   white-space: normal;
   padding-top: 0.25rem;
 }
 
 .finding {
   @apply flex flex-col gap-0.5 py-1;
-  border-bottom: 1px solid var(--ctp-mocha-surface0);
+  border-bottom: 1px solid var(--catppuccin-color-surface0);
 }
 
 .finding:last-child {
@@ -64,13 +71,13 @@ code {
 }
 
 .finding-rule {
-  color: var(--ctp-mocha-yellow);
-  font-weight: 600;
+  color: var(--chaotic-ink-yellow);
+  font-weight: var(--chaotic-weight-semibold);
   font-size: 0.75rem;
 }
 
 .finding-description {
-  color: var(--ctp-mocha-subtext);
+  color: var(--chaotic-fg-muted);
   font-size: 0.7rem;
   white-space: normal;
   word-break: break-word;

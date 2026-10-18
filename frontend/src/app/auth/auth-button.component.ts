@@ -1,12 +1,13 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MessageToastService } from '@garudalinux/core';
+import { MessageToastService } from '@garudalinux/core/message-toast';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Avatar } from '@openng/optimus-ui/avatar';
 import { Button } from '@openng/optimus-ui/button';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { AuthService } from 'ngx-better-auth';
 import { finalize } from 'rxjs/operators';
-import { GitlabLoginService } from './gitlab-login.service';
+import { DEFAULT_LOGIN_REDIRECT, GitlabLoginService, loginFailedMessageKey } from './gitlab-login.service';
 
 function initialsOf(name: string | null | undefined): string {
   return (name ?? '?')
@@ -19,7 +20,7 @@ function initialsOf(name: string | null | undefined): string {
 
 @Component({
   selector: 'chaotic-auth-button',
-  imports: [Button, RouterLink, Tooltip, Avatar],
+  imports: [Button, RouterLink, Tooltip, Avatar, TranslocoDirective],
   templateUrl: './auth-button.component.html',
   styleUrl: './auth-button.component.css',
 })
@@ -27,6 +28,7 @@ export class AuthButtonComponent {
   private readonly authService = inject(AuthService);
   private readonly gitlabLoginService = inject(GitlabLoginService);
   private readonly messageToastService = inject(MessageToastService);
+  private readonly transloco = inject(TranslocoService);
 
   readonly isLoggedIn = this.authService.isLoggedIn;
   readonly isLoginLoading = signal(false);
@@ -57,11 +59,14 @@ export class AuthButtonComponent {
   login(): void {
     this.isLoginLoading.set(true);
     this.gitlabLoginService
-      .login('/')
+      .login(DEFAULT_LOGIN_REDIRECT)
       .pipe(finalize(() => this.isLoginLoading.set(false)))
       .subscribe({
-        error: () => {
-          this.messageToastService.error('Login failed', 'Could not start the GitLab sign-in flow.');
+        error: (error: unknown) => {
+          this.messageToastService.error(
+            this.transloco.translate('auth.loginFailed.title'),
+            this.transloco.translate(loginFailedMessageKey(error)),
+          );
         },
       });
   }
@@ -73,7 +78,10 @@ export class AuthButtonComponent {
       .pipe(finalize(() => this.isLogoutLoading.set(false)))
       .subscribe({
         error: () => {
-          this.messageToastService.error('Logout failed', 'Could not sign out. Please try again.');
+          this.messageToastService.error(
+            this.transloco.translate('auth.logoutFailed.title'),
+            this.transloco.translate('auth.logoutFailed.message'),
+          );
         },
       });
   }

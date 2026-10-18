@@ -1,0 +1,1 @@
+export const OVERVIEW_SKELETON_ROWS = 5;

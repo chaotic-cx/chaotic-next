@@ -103,6 +103,11 @@ const FK_VIOLATION_CODE = '23503';
 const RESTRICT_VIOLATION_CODE = '23001';
 const INTEGRITY_VIOLATION_CODES = new Set([FK_VIOLATION_CODE, RESTRICT_VIOLATION_CODE]);
 
+interface ElfPackageInfo {
+  pkgname: string;
+  isSourceCompiled: boolean;
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -173,12 +178,24 @@ export class AdminService {
     const pkg = await this.packageRepository.findOne({ where: { id }, relations: { repo: true } });
     if (!pkg) throw new NotFoundException(`Package ${id} not found`);
 
-    if (body.pkgname !== undefined) pkg.pkgname = body.pkgname;
-    if (body.isActive !== undefined) pkg.isActive = body.isActive;
-    if (body.skipSignalScan !== undefined) pkg.skipSignalScan = body.skipSignalScan;
-    if (body.version !== undefined) pkg.version = body.version;
-    if (body.pkgrel !== undefined) pkg.pkgrel = body.pkgrel;
-    if (body.bump !== undefined) pkg.bump = body.bump;
+    if (body.pkgname !== undefined) {
+      pkg.pkgname = body.pkgname;
+    }
+    if (body.isActive !== undefined) {
+      pkg.isActive = body.isActive;
+    }
+    if (body.skipSignalScan !== undefined) {
+      pkg.skipSignalScan = body.skipSignalScan;
+    }
+    if (body.version !== undefined) {
+      pkg.version = body.version;
+    }
+    if (body.pkgrel !== undefined) {
+      pkg.pkgrel = body.pkgrel;
+    }
+    if (body.bump !== undefined) {
+      pkg.bump = body.bump;
+    }
     if (body.repoId !== undefined) {
       pkg.repo = body.repoId ? await this.findRepo(body.repoId) : (null as unknown as Repo);
     }
@@ -207,10 +224,18 @@ export class AdminService {
     const pkg = await this.archPackageRepository.findOne({ where: { id } });
     if (!pkg) throw new NotFoundException(`Arch package ${id} not found`);
 
-    if (body.pkgname !== undefined) pkg.pkgname = body.pkgname;
-    if (body.version !== undefined) pkg.version = body.version;
-    if (body.pkgrel !== undefined) pkg.pkgrel = body.pkgrel;
-    if (body.arch !== undefined) pkg.arch = body.arch;
+    if (body.pkgname !== undefined) {
+      pkg.pkgname = body.pkgname;
+    }
+    if (body.version !== undefined) {
+      pkg.version = body.version;
+    }
+    if (body.pkgrel !== undefined) {
+      pkg.pkgrel = body.pkgrel;
+    }
+    if (body.arch !== undefined) {
+      pkg.arch = body.arch;
+    }
 
     return this.archPackageRepository.save(pkg);
   }
@@ -252,14 +277,30 @@ export class AdminService {
     const repo = await this.repoRepository.findOne({ where: { id } });
     if (!repo) throw new NotFoundException(`Repo ${id} not found`);
 
-    if (body.name !== undefined) repo.name = body.name;
-    if (body.repoUrl !== undefined) repo.repoUrl = body.repoUrl;
-    if (body.isActive !== undefined) repo.isActive = body.isActive;
-    if (body.gitRef !== undefined) repo.gitRef = body.gitRef;
-    if (body.dbPath !== undefined) repo.dbPath = body.dbPath;
-    if (body.status !== undefined) repo.status = body.status;
-    if (body.gitlabProjectId !== undefined) repo.gitlabProjectId = body.gitlabProjectId;
-    if (body.apiToken !== undefined && body.apiToken !== '') repo.apiToken = this.encryptRepoToken(body.apiToken);
+    if (body.name !== undefined) {
+      repo.name = body.name;
+    }
+    if (body.repoUrl !== undefined) {
+      repo.repoUrl = body.repoUrl;
+    }
+    if (body.isActive !== undefined) {
+      repo.isActive = body.isActive;
+    }
+    if (body.gitRef !== undefined) {
+      repo.gitRef = body.gitRef;
+    }
+    if (body.dbPath !== undefined) {
+      repo.dbPath = body.dbPath;
+    }
+    if (body.status !== undefined) {
+      repo.status = body.status;
+    }
+    if (body.gitlabProjectId !== undefined) {
+      repo.gitlabProjectId = body.gitlabProjectId;
+    }
+    if (body.apiToken !== undefined && body.apiToken !== '') {
+      repo.apiToken = this.encryptRepoToken(body.apiToken);
+    }
 
     return this.repoRepository.save(repo);
   }
@@ -271,8 +312,12 @@ export class AdminService {
   async listBuilders(page?: number, perPage?: number, q?: string, active?: boolean): Promise<Paginated<Builder>> {
     const { page: safePage, perPage: safePerPage, skip } = resolvePagination(page, perPage);
     const where: Record<string, unknown> = {};
-    if (q) where.name = ILike(`%${q}%`);
-    if (active !== undefined) where.isActive = active;
+    if (q) {
+      where.name = ILike(`%${q}%`);
+    }
+    if (active !== undefined) {
+      where.isActive = active;
+    }
     const [items, total] = await this.builderRepository.findAndCount({
       where,
       order: { name: 'ASC' },
@@ -295,10 +340,18 @@ export class AdminService {
     const builder = await this.builderRepository.findOne({ where: { id } });
     if (!builder) throw new NotFoundException(`Builder ${id} not found`);
 
-    if (body.name !== undefined) builder.name = body.name;
-    if (body.description !== undefined) builder.description = body.description;
-    if (body.builderClass !== undefined) builder.builderClass = body.builderClass;
-    if (body.isActive !== undefined) builder.isActive = body.isActive;
+    if (body.name !== undefined) {
+      builder.name = body.name;
+    }
+    if (body.description !== undefined) {
+      builder.description = body.description;
+    }
+    if (body.builderClass !== undefined) {
+      builder.builderClass = body.builderClass;
+    }
+    if (body.isActive !== undefined) {
+      builder.isActive = body.isActive;
+    }
 
     return this.builderRepository.save(builder);
   }
@@ -438,9 +491,11 @@ export class AdminService {
         pkgId: analysis.pkgId,
         triggerType,
       });
-    // "bump.pkgId" is always a Chaotic package, so only Chaotic analyses can be
-    // the rebuilt package; an Arch row's pkgId lives in a separate id sequence
-    // that can collide with Chaotic ids.
+    /**
+     * "bump.pkgId" is always a Chaotic package, so only Chaotic analyses can be
+     * the rebuilt package; an Arch row's pkgId lives in a separate id sequence
+     * that can collide with Chaotic ids.
+     */
     if (analysis.pkgType === PKG_TYPE_CHAOTIC) {
       query.orWhere('bump.pkgId = :pkgId', { pkgId: analysis.pkgId });
     }
@@ -490,20 +545,9 @@ export class AdminService {
 
     const [rows, total] = await query.getManyAndCount();
 
-    const names = await this.resolveElfPackageNames(rows);
+    const packages = await this.resolveElfPackages(rows);
 
-    const items: AdminPackageElfAnalysis[] = rows.map((row) => ({
-      id: row.id,
-      pkgType: row.pkgType,
-      pkgId: row.pkgId,
-      pkgname: names.get(packageKey(row.pkgType, row.pkgId)),
-      version: row.version,
-      broken: row.broken,
-      brokenReasons: row.brokenReasons ?? [],
-      hasCompiledCode: row.hasCompiledCode,
-      isSourceCompiled: row.isSourceCompiled,
-      scannedAt: row.scannedAt.toISOString(),
-    }));
+    const items = rows.map((row) => this.toElfAnalysisView(row, packages.get(packageKey(row.pkgType, row.pkgId))));
     return paginate(items, total, safePage, safePerPage);
   }
 
@@ -511,13 +555,25 @@ export class AdminService {
     const row = await this.elfAnalysisRepository.findOne({ where: { id } });
     if (!row) throw new NotFoundException(`Package ELF analysis ${id} not found`);
 
-    if (body.pkgType !== undefined) row.pkgType = body.pkgType;
-    if (body.pkgId !== undefined) row.pkgId = body.pkgId;
-    if (body.version !== undefined) row.version = body.version;
-    if (body.broken !== undefined) row.broken = body.broken;
-    if (body.brokenReasons !== undefined) row.brokenReasons = body.brokenReasons;
+    if (body.pkgType !== undefined) {
+      row.pkgType = body.pkgType;
+    }
+    if (body.pkgId !== undefined) {
+      row.pkgId = body.pkgId;
+    }
+    if (body.version !== undefined) {
+      row.version = body.version;
+    }
+    if (body.broken !== undefined) {
+      row.broken = body.broken;
+    }
+    if (body.brokenReasons !== undefined) {
+      row.brokenReasons = body.brokenReasons;
+    }
 
-    return this.toElfAnalysisView(await this.elfAnalysisRepository.save(row));
+    const saved = await this.elfAnalysisRepository.save(row);
+    const packages = await this.resolveElfPackages([saved]);
+    return this.toElfAnalysisView(saved, packages.get(packageKey(saved.pkgType, saved.pkgId)));
   }
 
   async deleteElfAnalysis(id: number): Promise<void> {
@@ -629,8 +685,10 @@ export class AdminService {
           }
           job.rescanned++;
         } catch (err: unknown) {
-          // The HTTP response only acknowledges the job; per-package failures
-          // are recorded on the job (and logged) for GET /admin/rescan/:jobId.
+          /**
+           * The HTTP response only acknowledges the job; per-package failures
+           * are recorded on the job (and logged) for GET /admin/rescan/:jobId.
+           */
           const reason = `${entry.pkgname}: ${errorMessage(err)}`;
           job.failed.push(reason);
           this.pino.warn({ err, pkgname: entry.pkgname, reason }, 'Rescan failed');
@@ -733,37 +791,44 @@ export class AdminService {
     };
   }
 
-  /** Resolve package names for ELF rows, keyed by packageKey(pkgType, pkgId). */
-  private async resolveElfPackageNames(rows: PackageElfAnalysis[]): Promise<Map<PackageKey, string>> {
-    const names = new Map<PackageKey, string>();
-    if (rows.length === 0) return names;
+  /**
+   * Resolve the packages of ELF rows, keyed by packageKey(pkgType, pkgId).
+   * Arch packages count as not compiled from source.
+   */
+  private async resolveElfPackages(rows: PackageElfAnalysis[]): Promise<Map<PackageKey, ElfPackageInfo>> {
+    const packages = new Map<PackageKey, ElfPackageInfo>();
+    if (rows.length === 0) return packages;
 
     const archIds = rows.filter((row) => row.pkgType === PKG_TYPE_ARCH).map((row) => row.pkgId);
     const chaoticIds = rows.filter((row) => row.pkgType === PKG_TYPE_CHAOTIC).map((row) => row.pkgId);
 
     if (archIds.length > 0) {
       for (const pkg of await this.archPackageRepository.find({ where: { id: In(archIds) } })) {
-        names.set(packageKey(PKG_TYPE_ARCH, pkg.id), pkg.pkgname);
+        packages.set(packageKey(PKG_TYPE_ARCH, pkg.id), { pkgname: pkg.pkgname, isSourceCompiled: false });
       }
     }
     if (chaoticIds.length > 0) {
       for (const pkg of await this.packageRepository.find({ where: { id: In(chaoticIds) } })) {
-        names.set(packageKey(PKG_TYPE_CHAOTIC, pkg.id), pkg.pkgname);
+        packages.set(packageKey(PKG_TYPE_CHAOTIC, pkg.id), {
+          pkgname: pkg.pkgname,
+          isSourceCompiled: pkg.isSourceCompiled,
+        });
       }
     }
-    return names;
+    return packages;
   }
 
-  private toElfAnalysisView(row: PackageElfAnalysis): AdminPackageElfAnalysis {
+  private toElfAnalysisView(row: PackageElfAnalysis, pkg: ElfPackageInfo | undefined): AdminPackageElfAnalysis {
     return {
       id: row.id,
       pkgType: row.pkgType,
       pkgId: row.pkgId,
+      pkgname: pkg?.pkgname,
       version: row.version,
       broken: row.broken,
       brokenReasons: row.brokenReasons ?? [],
       hasCompiledCode: row.hasCompiledCode,
-      isSourceCompiled: row.isSourceCompiled,
+      isSourceCompiled: pkg?.isSourceCompiled ?? false,
       scannedAt: row.scannedAt.toISOString(),
     };
   }

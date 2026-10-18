@@ -3,7 +3,12 @@
   align-items: center;
 }
 
-@media (max-width: 767px) {
+/* An avatar fills its whole box, so it gets the same inset the icon buttons have around their glyphs. */
+.auth-actions + .auth-avatar {
+  margin-inline-start: var(--chaotic-bar-icon-inset);
+}
+
+@media (max-width: 767.98px) {
   :host:not(.in-drawer) .auth-actions {
     display: none;
   }

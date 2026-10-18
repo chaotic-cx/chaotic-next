@@ -1,15 +1,17 @@
-<div class="card flex h-[20rem] flex-col">
+<div class="card flex h-[20rem] flex-col" *transloco="let t">
   @if (chart.hasData()) {
     <div class="min-h-0 flex-1 overflow-x-auto pb-1">
       <div
         class="grid h-full min-w-[44rem] gap-[3px]"
         [style.grid-template-columns]="'7rem repeat(24, minmax(0, 1fr))'"
-        [attr.aria-label]="`Builder utilization heatmap over the last ${days} days`"
+        [attr.aria-label]="t('stats.charts.builderUtilization.ariaLabel', { days: days() })"
         role="img"
       >
-        <span class="self-center text-xs text-ctp-subtext0" aria-hidden="true">UTC hour</span>
-        @for (label of hourLabels(); track $index) {
-          <span class="text-center text-[10px] text-ctp-subtext0">{{ label }}</span>
+        <span class="self-center text-xs text-ctp-subtext0" aria-hidden="true">{{
+          t('stats.charts.builderUtilization.utcHour')
+        }}</span>
+        @for (label of hourLabels; track $index) {
+          <span class="text-center text-[0.625rem] text-ctp-subtext0">{{ label }}</span>
         }
         @for (row of grid().rows; track row.builder) {
           <span class="min-w-0 truncate self-center text-right text-xs text-ctp-subtext0" [title]="row.builder">
@@ -19,23 +21,39 @@
             <div
               class="h-full min-h-6 rounded-sm"
               [style.background]="cellBackground(cell.count)"
-              [title]="cellTitle(row, cell)"
+              [title]="
+                t('stats.charts.builderUtilization.cellTitle', {
+                  builder: row.builder,
+                  hour: formatHour(cell.hour),
+                  perDay: buildsPerDay(cell),
+                })
+              "
             ></div>
           }
         }
       </div>
     </div>
     <p class="pt-2 text-xs text-ctp-subtext0">
-      Average builds per day and UTC hour over {{ rangeLabel() }}. Peak day: {{ grid().max }} build{{
-        grid().max === 1 ? '' : 's'
-      }}
-      in one hour.
+      @if (grid().max === 1) {
+        {{ t('stats.charts.builderUtilization.summaryOne', { range: rangeLabel(), max: grid().max }) }}
+      } @else {
+        {{ t('stats.charts.builderUtilization.summaryOther', { range: rangeLabel(), max: grid().max }) }}
+      }
     </p>
+  } @else if (chart.failed()) {
+    <chaotic-load-error (retry)="chart.retry()" />
   } @else if (chart.loading()) {
     <div class="flex flex-1 items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+      <i
+        class="pi pi-spin pi-spinner text-ctp-overlay1"
+        [attr.aria-label]="t('common.loading')"
+        style="font-size: 1.5rem"
+        role="status"
+      ></i>
     </div>
   } @else {
-    <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">No builder activity recorded.</p>
+    <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">
+      {{ t('stats.charts.builderUtilization.empty') }}
+    </p>
   }
 </div>

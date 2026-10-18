@@ -1,11 +1,15 @@
-<div class="card flex h-[20rem] max-h-[60vh] flex-col text-left sm:h-[22rem]">
+<div class="card flex h-[20rem] max-h-[60vh] flex-col text-left sm:h-[22rem]" *transloco="let t">
   @if (chart.hasData()) {
     <div class="flex items-center justify-between px-1 pb-2 text-left">
-      <span class="text-sm text-ctp-subtext0">
-        {{ visibleRows().length }} package{{ visibleRows().length === 1 ? '' : 's' }} also in Arch repos
+      <span class="text-sm text-ctp-subtext0" aria-live="polite">
+        @if (visibleRows().length === 1) {
+          {{ t('stats.charts.archOverlap.countOne', { count: visibleRows().length }) }}
+        } @else {
+          {{ t('stats.charts.archOverlap.countOther', { count: visibleRows().length }) }}
+        }
       </span>
     </div>
-    <ul class="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1 text-left" aria-live="polite">
+    <ul class="chaotic-thin-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1 text-left">
       @for (row of visibleRows(); track row.pkgname) {
         @defer (on viewport) {
           <li class="flex flex-col gap-1.5 rounded-lg bg-ctp-surface0/60 px-2.5 py-2 text-sm text-left">
@@ -21,12 +25,14 @@
             </div>
             <div class="flex flex-wrap items-baseline gap-1.5 text-xs leading-relaxed">
               @if (row.chaoticVersion) {
-                <span class="rounded bg-ctp-surface1/70 px-1 py-0.5 text-ctp-subtext0"
-                  >chaotic: {{ row.chaoticVersion }}</span
-                >
+                <span class="rounded bg-ctp-surface1/70 px-1 py-0.5 text-ctp-subtext0">{{
+                  t('stats.charts.archOverlap.chaoticVersion', { version: row.chaoticVersion })
+                }}</span>
               }
               @if (row.archVersion) {
-                <span class="rounded bg-ctp-surface1/70 px-1 py-0.5 text-ctp-blue">arch: {{ row.archVersion }}</span>
+                <span class="rounded bg-ctp-surface1/70 px-1 py-0.5 text-ctp-blue">{{
+                  t('stats.charts.archOverlap.archVersion', { version: row.archVersion })
+                }}</span>
               }
             </div>
           </li>
@@ -36,11 +42,20 @@
       }
     </ul>
     @if (visibleRows().length === 0) {
-      <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">No Arch overlap.</p>
+      <p class="flex flex-1 items-center justify-center text-sm text-ctp-overlay1">
+        {{ t('stats.charts.archOverlap.empty') }}
+      </p>
     }
+  } @else if (chart.failed()) {
+    <chaotic-load-error (retry)="chart.retry()" />
   } @else if (chart.loading()) {
     <div class="flex flex-1 items-center justify-center">
-      <i class="pi pi-spin pi-spinner text-ctp-flamingo" style="font-size: 3rem"></i>
+      <i
+        class="pi pi-spin pi-spinner text-ctp-overlay1"
+        [attr.aria-label]="t('common.loading')"
+        style="font-size: 1.5rem"
+        role="status"
+      ></i>
     </div>
   }
 </div>

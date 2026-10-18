@@ -1,8 +1,13 @@
-import { Component, effect, ElementRef, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, input, output, signal } from '@angular/core';
 import { type DiffScanFinding } from '@chaotic-next/shared-lib';
 import { HighlightJS } from 'ngx-highlightjs';
+import { lineFlashKeyframes } from '../animations/line-flash';
+import { prefersReducedMotion } from '../functions';
 
 const DEFAULT_LANGUAGE = 'bash';
+const FLASH_DURATION_MS = 1500;
+// The flash starts once the smooth scroll arrives.
+const FLASH_DELAY_MS = 400;
 
 interface SourceLine {
   html: string;
@@ -28,6 +33,9 @@ export class SourceViewerComponent {
   protected readonly expandedLine = signal<number | null>(null);
   protected readonly lines = signal<SourceLine[]>([]);
 
+  // The line number column fits the longest number, so files with 1000+ lines stay aligned.
+  protected readonly lineNumberWidth = computed(() => `${String(this.lines().length).length}ch`);
+
   private highlightToken = 0;
 
   constructor() {
@@ -51,20 +59,11 @@ export class SourceViewerComponent {
     this.scrolled.emit();
     if (!row) return;
 
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = prefersReducedMotion();
     row.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
     if (reducedMotion) return;
 
-    // Start flashing once the smooth scroll has arrived.
-    row.animate(
-      [
-        { boxShadow: 'inset 0 0 0 999px rgba(203, 166, 247, 0)' },
-        { boxShadow: 'inset 0 0 0 999px rgba(203, 166, 247, 0.38)', offset: 0.2 },
-        { boxShadow: 'inset 0 0 0 999px rgba(203, 166, 247, 0.38)', offset: 0.65 },
-        { boxShadow: 'inset 0 0 0 999px rgba(203, 166, 247, 0)' },
-      ],
-      { duration: 1500, delay: 400, easing: 'ease-out' },
-    );
+    row.animate(lineFlashKeyframes(), { duration: FLASH_DURATION_MS, delay: FLASH_DELAY_MS, easing: 'ease-out' });
   }
 
   protected findingsFor(lineNumber: number): DiffScanFinding[] | undefined {

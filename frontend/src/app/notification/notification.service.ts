@@ -20,6 +20,7 @@ function applicationServerKeyFrom(vapidPublicKey: string): Uint8Array<ArrayBuffe
   const raw = atob(vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/'));
   const key = new Uint8Array(raw.length);
   for (let index = 0; index < raw.length; index += 1) key[index] = raw.charCodeAt(index);
+
   return key;
 }
 
@@ -33,6 +34,8 @@ export class NotificationService {
   readonly notificationsEnabled = signal(false);
 
   constructor() {
+    if (!this.isSupported) return;
+
     const stored = localStorage.getItem(NOTIFICATIONS_SUBSCRIBED_KEY) === 'true';
     this.notificationsEnabled.set(this.isSupported && Notification.permission === 'granted' && stored);
 
@@ -42,12 +45,14 @@ export class NotificationService {
   async requestPermissionAndSubscribe(): Promise<void> {
     if (!this.isSupported || this.notificationsEnabled()) return;
     if (!(await this.requestPermission())) return;
+
     await this.subscribe();
   }
 
   private async requestPermission(): Promise<boolean> {
     try {
       if (Notification.permission === 'denied') return false;
+
       return (await Notification.requestPermission()) === 'granted';
     } catch {
       return false;
@@ -63,9 +68,11 @@ export class NotificationService {
    */
   private async reconcileSubscription(): Promise<void> {
     if (!this.isSupported || Notification.permission !== 'granted') return;
+
     let subscribed: boolean;
     try {
       const status = await lastValueFrom(
+        // eslint-disable-next-line @dr460nf1r3/prefer-http-resource -- one-shot check inside the subscription reconcile flow
         this.http.get<SubscriptionStatusDto>(`${this.appConfig.backendUrl}/notifications/subscriptions/me`),
       );
       subscribed = status.subscribed;
@@ -73,11 +80,14 @@ export class NotificationService {
       console.warn('Push subscription state check failed', err);
       return;
     }
+
     if (subscribed) {
       localStorage.setItem(NOTIFICATIONS_SUBSCRIBED_KEY, 'true');
       this.notificationsEnabled.set(true);
+
       return;
     }
+
     this.notificationsEnabled.set(false);
     await this.subscribe();
   }
@@ -96,21 +106,27 @@ export class NotificationService {
         applicationServerKey: applicationServerKeyFrom(this.appConfig.vapidPublicKey),
       });
 
-      // The backend only accepts subscriptions from authenticated sessions.
-      // During the login click the permission prompt runs before any session
-      // exists, so wait for the cookie instead of posting right away.
+      /**
+       * The backend only accepts subscriptions from authenticated sessions.
+       * During the login click the permission prompt runs before any session
+       * exists, so wait for the cookie instead of posting right away.
+       */
       const authenticated = await firstValueFrom(this.waitForSession());
       if (!authenticated) {
         console.warn('Push subscription skipped: no authenticated session appeared within the timeout');
         this.notificationsEnabled.set(false);
+
         return;
       }
+
       const ok = await this.sendSubscriptionToServer(subscription);
       localStorage.setItem(NOTIFICATIONS_SUBSCRIBED_KEY, String(ok));
       this.notificationsEnabled.set(ok);
     } catch (err) {
-      // A swallowed error here looks identical to "user declined" and is near
-      // impossible to diagnose; surface it instead.
+      /**
+       * A swallowed error here looks identical to "user declined" and is near
+       * impossible to diagnose. Surface it instead.
+       */
       console.warn('Push subscription failed', err);
       this.notificationsEnabled.set(false);
     }
@@ -128,6 +144,7 @@ export class NotificationService {
   private async sendSubscriptionToServer(subscription: PushSubscription): Promise<boolean> {
     const parsed = pushSubscriptionBodySchema.safeParse(subscription.toJSON());
     if (!parsed.success) return false;
+
     try {
       await lastValueFrom(this.http.post(`${this.appConfig.backendUrl}/notifications/subscribe`, parsed.data));
       return true;

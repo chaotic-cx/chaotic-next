@@ -1,0 +1,46 @@
+diff --git a/fesm2022/garudalinux-core-footer.mjs b/fesm2022/garudalinux-core-footer.mjs
+index 58829ec..575d2b9 100644
+--- a/fesm2022/garudalinux-core-footer.mjs
++++ b/fesm2022/garudalinux-core-footer.mjs
+@@ -13,7 +13,7 @@ class Footer {
+     ...(ngDevMode ? [{ debugName: "totalItems" }] : /* istanbul ignore next */ []));
+     popupService = inject(PopupService);
+     dropdownOpen;
+-    ismobile = signal(window.innerWidth < 960, /* @ts-ignore */
++    ismobile = signal(typeof window !== 'undefined' && window.innerWidth < 960, /* @ts-ignore */
+     ...(ngDevMode ? [{ debugName: "ismobile" }] : /* istanbul ignore next */ []));
+     ngOnInit() {
+         this.totalItems.set(this.footerItems()?.length ?? 0);
+diff --git a/fesm2022/garudalinux-core-shell.mjs b/fesm2022/garudalinux-core-shell.mjs
+index df9e720..12b85ee 100644
+--- a/fesm2022/garudalinux-core-shell.mjs
++++ b/fesm2022/garudalinux-core-shell.mjs
+@@ -49,7 +49,7 @@ class ShellComponent {
+     ...(ngDevMode ? [{ debugName: "contentPadding" }] : /* istanbul ignore next */ []));
+     dropdownOpen = signal(false, /* @ts-ignore */
+     ...(ngDevMode ? [{ debugName: "dropdownOpen" }] : /* istanbul ignore next */ []));
+-    ismobile = signal(window.innerWidth < 960, /* @ts-ignore */
++    ismobile = signal(typeof window !== 'undefined' && window.innerWidth < 960, /* @ts-ignore */
+     ...(ngDevMode ? [{ debugName: "ismobile" }] : /* istanbul ignore next */ []));
+     dropdownButton = contentChild(ShellBarDropdownToggleDirective, /* @ts-ignore */
+     ...(ngDevMode ? [{ debugName: "dropdownButton" }] : /* istanbul ignore next */ []));
+@@ -61,6 +61,9 @@ class ShellComponent {
+     closeMenuUnregister;
+     navigationSubscription;
+     ngOnInit() {
++        // Prerendering has no document. The browser runs this setup after hydration.
++        if (typeof document === 'undefined')
++            return;
+         // hide prime-ng menu button
+         if (document.getElementById(MENU_TOGGLE_GLOBAL_STYLE_ID) === null) {
+             const styleElement = document.createElement('style');
+@@ -118,7 +121,8 @@ class ShellComponent {
+         this.closeMenuUnregister = undefined;
+         this.navigationSubscription?.unsubscribe();
+         this.navigationSubscription = undefined;
+-        document.body.classList.remove('is-transitioning');
++        if (typeof document !== 'undefined')
++            document.body.classList.remove('is-transitioning');
+     }
+     onResize(event) {
+         const mobile = event.target.innerWidth < 960;

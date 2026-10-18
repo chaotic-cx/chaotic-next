@@ -26,22 +26,22 @@ describe('Repo-manager trigger endpoints (e2e, real PostgreSQL)', () => {
     await app.close();
   });
 
-  describe('GET /repo/run', () => {
+  describe('POST /repo/run', () => {
     it('triggers repoManager.run() and returns 204', async () => {
       const spy = vi.spyOn(repoManagerService, 'run').mockResolvedValue(undefined);
 
-      const res = await app.inject({ method: 'GET', url: '/repo/run' });
+      const res = await app.inject({ method: 'POST', url: '/repo/run' });
 
       expect(res.statusCode).toBe(204);
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('GET /repo/signal-scan', () => {
+  describe('POST /repo/signal-scan', () => {
     it('triggers repoManager.triggerSignalScan() and returns 204', async () => {
       const spy = vi.spyOn(repoManagerService, 'triggerSignalScan').mockResolvedValue(undefined);
 
-      const res = await app.inject({ method: 'GET', url: '/repo/signal-scan' });
+      const res = await app.inject({ method: 'POST', url: '/repo/signal-scan' });
 
       expect(res.statusCode).toBe(204);
       expect(spy).toHaveBeenCalledTimes(1);

@@ -3,5 +3,7 @@
   [options]="chartConfig()!.options"
   [hasData]="chart.hasData()"
   [loading]="chart.loading()"
+  [failed]="chart.failed()"
+  (retry)="chart.retry()"
   containerClass="card relative flex h-[30rem] justify-center"
 />

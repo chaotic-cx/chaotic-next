@@ -1,10 +1,85 @@
-:host {
-  animation: ctp-item-enter 0.25s ease-out;
-}
-
 p-chart,
 p-chart canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.chart-card__skeleton {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--chaotic-radius-md);
+}
+
+.chart-card__table-toggle {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: var(--chaotic-z-raised);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--chaotic-radius-sm);
+  background: var(--catppuccin-color-surface0);
+  color: var(--catppuccin-color-text);
+  font-size: var(--chaotic-text-xs);
+  cursor: pointer;
+}
+
+.chart-card__table-toggle--hidden:not(:focus-visible) {
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.chart-card__table {
+  position: absolute;
+  inset: 2.5rem 0 0;
+  overflow: auto;
+}
+
+.chart-card__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--chaotic-z-sticky);
+  background: var(--chaotic-surface-overlay);
+  backdrop-filter: blur(var(--chaotic-blur));
+  -webkit-backdrop-filter: blur(var(--chaotic-blur));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    animation: none;
+  }
+}
+
+/* A failed refresh keeps the last loaded chart visible and says so. */
+.chart-card__stale {
+  position: absolute;
+  bottom: 0.25rem;
+  left: 0.5rem;
+  z-index: var(--chaotic-z-raised);
+  flex-wrap: wrap;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--chaotic-radius-sm);
+  background: var(--chaotic-surface-overlay);
+}
+
+.chart-card__stale-retry {
+  color: var(--catppuccin-color-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.chart-card__stale-retry:hover,
+.chart-card__stale-retry:focus-visible {
+  color: var(--catppuccin-color-mauve);
+}
+
+@media (pointer: coarse) {
+  .chart-card__stale-retry {
+    min-height: 2.75rem;
+  }
 }

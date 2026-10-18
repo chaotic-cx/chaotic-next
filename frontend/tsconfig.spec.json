@@ -4,6 +4,13 @@
     "outDir": "../dist/out-tsc",
     "types": ["vitest/globals", "vitest/importMeta", "vite/client", "node", "vitest"]
   },
-  "include": ["vite.config.ts", "vite.config.mts", "vitest.config.ts", "vitest.config.mts", "src/**/*.ts"],
+  "include": [
+    "vite.config.ts",
+    "vite.config.mts",
+    "vitest.config.ts",
+    "vitest.config.mts",
+    "transloco.config.ts",
+    "src/**/*.ts"
+  ],
   "files": ["src/test-setup.ts"]
 }
