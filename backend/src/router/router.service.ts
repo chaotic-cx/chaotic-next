@@ -201,19 +201,23 @@ export class RouterService implements OnModuleInit {
     const agentRepository = this.dataSource.getRepository(RouterHitDailyAgent);
     const cutoff = utcCutoffDaysAgo(clampedDays);
 
-    const topQuery = agentRepository
-      .createQueryBuilder('hit')
-      .select('hit.userAgent', 'ua')
-      .addSelect('SUM(hit.count)', 'count')
-      .where('hit.day >= :cutoff', { cutoff });
-    if (repo) {
-      topQuery.andWhere('hit.repo = :repo', { repo });
-    }
-    const topAgents = await topQuery
-      .groupBy('hit.userAgent')
-      .orderBy('count', 'DESC')
-      .limit(TOP_USER_AGENTS)
-      .getRawMany<{ ua: string }>();
+    // Union of each day's top agents, not the top over the whole range: a new pacman
+    // version that took over recently would never beat the old one's yearly total.
+    const topAgents = await this.dataSource.query<{ ua: string }[]>(
+      `
+        SELECT DISTINCT ranked.ua
+        FROM (
+          SELECT
+            "user_agent" AS ua,
+            ROW_NUMBER() OVER (PARTITION BY "day" ORDER BY SUM("count") DESC) AS rank
+          FROM "router_hits_daily_agents"
+          WHERE "day" >= $1 AND ($2::text = '' OR "repo" = $2::text)
+          GROUP BY "day", "user_agent"
+        ) ranked
+        WHERE ranked.rank <= $3
+      `,
+      [cutoff, repo, TOP_USER_AGENTS],
+    );
 
     const agents = topAgents.map((row) => row.ua);
     if (agents.length === 0) return [];

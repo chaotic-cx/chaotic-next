@@ -170,6 +170,7 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
   private readonly CACHE_FILE_PATH = join(process.cwd(), IS_PRODUCTION ? 'backend-config' : 'tmp', 'mr_cache.json');
 
   private isAutoFlaggingMrs = false;
+  private isProcessingDeferredMerges = false;
   private isEnrichingVt = false;
 
   private readonly vtNotedMrIids = new Set<number>();
@@ -235,10 +236,17 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
 
   /**
    * Merges deferred MRs once no scheduled pipeline runs anymore. Rechecks
-   * every 5 minutes until done. Stops retrying an MR after repeated failures.
+   * every 5 minutes until done, and runs right away when a scheduled pipeline
+   * finishes. Stops retrying an MR after repeated failures.
    */
   @Cron('*/5 * * * *')
   async processDeferredMerges(): Promise<void> {
+    if (this.isProcessingDeferredMerges) {
+      this.pino.debug('Deferred merge run already in progress, skipping');
+      return;
+    }
+
+    this.isProcessingDeferredMerges = true;
     try {
       const recentApprovedActions = await this.mrActionRepository.find({
         where: { action: 'approve', createdAt: MoreThan(nDaysInPast(DEFERRED_MERGE_MAX_AGE_DAYS)) },
@@ -247,7 +255,10 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
       });
       if (recentApprovedActions.length === 0) return;
 
-      if (await this.gitlabPipelineService.isScheduledPipelineRunning()) return;
+      if (await this.gitlabPipelineService.isScheduledPipelineRunning()) {
+        this.pino.info('Deferred merges wait, a scheduled pipeline still runs');
+        return;
+      }
 
       const openMrs = await this.api.MergeRequests.all({ state: 'opened', projectId: this.chaoticId });
       const openMrsByIid = new Map(openMrs.map((mr) => [mr.iid, mr]));
@@ -295,7 +306,9 @@ export class GitlabMergeRequestService implements OnModuleInit, OnApplicationShu
         void this.refreshOpenMergeRequests();
       }
     } catch (err) {
-      this.pino.debug({ err }, 'Could not query database for deferred MR merges');
+      this.pino.error({ err }, 'Deferred merge run failed');
+    } finally {
+      this.isProcessingDeferredMerges = false;
     }
   }
 

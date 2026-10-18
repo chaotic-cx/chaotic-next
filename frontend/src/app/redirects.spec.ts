@@ -4,7 +4,7 @@ import { routes } from './app.routes';
 import { serverRoutes } from './app.routes.server';
 import redirectsFile from '../../public/_redirects?raw';
 
-const CLIENT_SHELL = '/index.csr.html';
+const CLIENT_SHELL = '/csr-shell';
 const REWRITE_STATUS = '200';
 const WILDCARD_PATH = '**';
 

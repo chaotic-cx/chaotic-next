@@ -32,3 +32,75 @@
 
 /manifest.webmanifest
   Cache-Control: public, max-age=31536000, immutable
+
+/csr-shell
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/status
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/deployments
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/packages
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/aur-scan
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/stats
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/stats/*
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/review-queue
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/update-review
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/logs/*
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/mirrors
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/map
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/settings
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/login
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/auth/*
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/admin
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/admin/*
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300
+
+/backend-down
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, must-revalidate, max-age=300

@@ -5,7 +5,7 @@ import { parseCount } from '../../../../functions';
 import { cycledColor } from '../../../../theme';
 import { StatsService } from '../../../stats.service';
 import { ChartCardComponent } from '../../chart-card/chart-card.component';
-import { chartResource, type ChartConfig, formatDay, axisChartOptions } from '../../chart-config';
+import { axisChartOptions, type ChartConfig, chartResource, formatDay } from '../../chart-config';
 
 const UA_COLOR_NAMES: readonly AccentName[] = ['mauve', 'blue', 'green', 'peach', 'red'];
 
@@ -29,15 +29,18 @@ export class ChartDownloadersTrendComponent {
   readonly chartConfig = computed<ChartConfig<'line'>>(() => {
     const rows = this.chart.data();
     const agents = [...new Set(rows.map((r) => r.userAgent))];
-    const labels: string[] = [];
-    const series = new Map(agents.map((a) => [a, [] as number[]]));
+    const days = [...new Set(rows.map((r) => r.day))];
+    const labels = days.map((day) => formatDay(day));
+    const dayIndex = new Map(days.map((day, i) => [day, i]));
+    const series = new Map(agents.map((a) => [a, Array.from<number | null>({ length: days.length }).fill(null)]));
     for (const row of rows) {
-      const day = formatDay(row.day);
-      if (!labels.includes(day)) {
-        labels.push(day);
+      const index = dayIndex.get(row.day);
+      const values = series.get(row.userAgent);
+      if (index !== undefined && values) {
+        values[index] = parseCount(row.count);
       }
-      series.get(row.userAgent)?.push(parseCount(row.count));
     }
+
     return {
       data: {
         labels,

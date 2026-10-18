@@ -22,6 +22,7 @@ import { PipelineTrigger } from './pipeline-trigger.entity';
 
 const SKIPPED_PIPELINE_STATUS = 'skipped';
 const SCHEDULE_PIPELINE_SOURCE = 'schedule';
+const SETTLED_JOB_STATUSES: ReadonlySet<string> = new Set(['success', 'failed', 'canceled', 'skipped', 'manual']);
 const PIPELINE_SCHEDULES_CACHE_TTL_MS = 5 * 60_000;
 const MAX_CACHED_PIPELINES = 40;
 const GITLAB_API_TIMEOUT_MS = 10_000;
@@ -224,7 +225,20 @@ export class GitlabPipelineService implements OnModuleInit {
         scope: 'running',
         perPage: 100,
       });
-      return running.some((pipeline) => pipeline.source === SCHEDULE_PIPELINE_SOURCE);
+      const scheduled = running.filter((pipeline) => pipeline.source === SCHEDULE_PIPELINE_SOURCE);
+      for (const pipeline of scheduled) {
+        const jobs = await this.api.Jobs.all(this.chaoticId, { pipelineId: pipeline.id });
+        const activeJobs = jobs.filter((job) => !SETTLED_JOB_STATUSES.has(job.status));
+        if (activeJobs.length > 0) {
+          this.pino.debug(
+            { pipelineId: pipeline.id, jobs: activeJobs.map((job) => `${job.name}:${job.status}`) },
+            'Scheduled pipeline still has active CI jobs',
+          );
+          return true;
+        }
+      }
+
+      return false;
     } catch (err) {
       this.pino.warn({ err }, 'Could not query running pipelines, assuming a scheduled one runs');
       return true;

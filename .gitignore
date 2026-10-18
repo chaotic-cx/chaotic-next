@@ -40,10 +40,6 @@ backend/src/repo-manager/__fixtures__/*.pkg.tar.zst
 # too large to vendor into this repo)
 pkgbuilds/
 
-# Generated signal-scan dumps (via /repo/signals/export); multi-GB, regenerable
-seed*.json
-seed*.json.partial
-
 # System Files
 .DS_Store
 Thumbs.db
@@ -68,3 +64,4 @@ vitest.config.*.timestamp*
 
 # Others
 data/
+.gitmodules
