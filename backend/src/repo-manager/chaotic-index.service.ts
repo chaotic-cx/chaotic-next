@@ -4,14 +4,15 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Package, Repo } from '../builder/builder.entity';
 import { EntityLookupService } from '../builder/entity-lookup.service';
 import { IndexCandidate, IndexResult, ParsedPackage, RepoWorkDir, TriggerType } from '../interfaces/repo-manager';
 import { ArchMirrorService } from './arch-mirror.service';
+import { PackageElfAnalysis } from './repo-manager.entity';
 import { saveInBatches } from './save';
 import { SignalScanService } from './scan';
-import { releaseVersion } from './signal';
+import { CHAOTIC_PKG_TYPE, releaseVersion } from './signal';
 
 export const CHAOTIC_DATABASE_URL = 'https://builds.garudalinux.org/repos/chaotic-aur/x86_64/chaotic-aur.db';
 
@@ -44,6 +45,7 @@ export class ChaoticIndexService {
           ?.replace(/\.(files|db)$/, '') ?? 'chaotic-aur';
       const workDir = await this.archMirror.pullDatabases(dbUrl, tempDir, dbName);
       if (!workDir) throw new Error(`Failed to pull database ${dbUrl}`);
+
       const parsed: ParsedPackage[] = await this.archMirror.parsePacmanDatabases([workDir]);
 
       const baseUrl: string = dbUrl.replace(/\/[^/]+$/, '');
@@ -61,8 +63,10 @@ export class ChaoticIndexService {
       const toUpdate: Package[] = [];
       for (const pkg of parsed) {
         if (!pkg.name || !pkg.metaData?.filename) continue;
+
         const chaoticPkg = chaoticByKey.get(`${repo.name}:${pkg.name}`);
         if (!chaoticPkg) continue;
+
         chaoticPkg.version = pkg.version;
         chaoticPkg.pkgrel = pkg.pkgrel;
         chaoticPkg.bump = pkg.bump;
@@ -85,6 +89,7 @@ export class ChaoticIndexService {
           pkgType: TriggerType.CHAOTIC,
         });
       }
+
       await saveInBatches(this.packagesRepository, toUpdate);
 
       const result: IndexResult = await this.archMirror.indexCandidates(candidates, tempDir);
@@ -97,6 +102,7 @@ export class ChaoticIndexService {
         { scanned: result.scanned, skipped: result.skipped, failed: result.failed },
         'Full Chaotic repo index done',
       );
+
       return result;
     } finally {
       await this.archMirror.cleanUp([tempDir]);
@@ -105,16 +111,15 @@ export class ChaoticIndexService {
 
   async updateChaoticDatabaseVersions(repos: Repo[]): Promise<void> {
     const repoNames: string[] = repos.map((repo) => repo.name);
-
     this.pino.info({ repoNames }, 'Updating database');
     const tempDirs: string[] = [];
-
     try {
       const downloads: PromiseSettledResult<RepoWorkDir | null>[] = await Promise.allSettled(
         repos.map(async (repo) => {
           const tempDir: string = await mkdtemp(join(tmpdir(), 'chaotic-'));
           tempDirs.push(tempDir);
           this.pino.debug({ tempDir }, 'Created temporary directory');
+
           return this.archMirror.pullDatabases(repo.dbPath, tempDir, repo.name);
         }),
       );
@@ -128,8 +133,10 @@ export class ChaoticIndexService {
          * whole repo, so an incomplete pull must abort the update.
          */
         if (!download.value) throw new Error(`Failed to pull database for one of: ${repoNames.join(', ')}`);
+
         workDirs.push(download.value);
       }
+
       const currentChaoticVersions: ParsedPackage[] = await this.archMirror.parsePacmanDatabases(workDirs);
 
       this.pino.debug('Updating Chaotic database versions');
@@ -142,17 +149,22 @@ export class ChaoticIndexService {
       const chaoticEntries: { pkgname: string; repo: Repo }[] = [];
       for (const pkg of currentChaoticVersions) {
         if (!pkg.name) continue;
+
         const repo = repoByName.get(pkg.repoName);
         if (!repo) continue;
+
         chaoticEntries.push({ pkgname: pkg.name, repo });
       }
+
       const chaoticByKey = await this.lookup.bulkGetOrCreatePackages(chaoticEntries);
 
       const toUpdate: Package[] = [];
       for (const pkg of currentChaoticVersions) {
         if (!pkg.name) continue;
+
         const repo = repoByName.get(pkg.repoName);
         if (!repo) continue;
+
         const chaoticPkg = chaoticByKey.get(`${repo.name}:${pkg.name}`);
         if (!chaoticPkg) continue;
 
@@ -166,6 +178,7 @@ export class ChaoticIndexService {
         chaoticPkg.repo = repo;
         toUpdate.push(chaoticPkg);
       }
+
       await saveInBatches(this.packagesRepository, toUpdate);
       this.pino.info('Finished updating Chaotic database versions');
 
@@ -174,8 +187,7 @@ export class ChaoticIndexService {
        * packages that are not in the Chaotic-AUR database anymore.
        */
       this.pino.debug('Setting non-existing packages to inactive');
-      // O(1) membership via a Set instead of an O(N*M) scan over currentChaoticVersions.
-      const currentKeys = new Set(currentChaoticVersions.map((p) => `${p.repoName}:${p.name}`));
+      const currentKeys = currentPackageKeys(currentChaoticVersions);
       const allChaoticVersionsInDb: Package[] = await this.packagesRepository.find({
         relations: {
           repo: true,
@@ -185,7 +197,9 @@ export class ChaoticIndexService {
       for (const pkg of toDeactivate) {
         this.pino.info({ pkgname: pkg.pkgname, repo: pkg.repo?.name ?? 'unknown' }, 'Setting package to inactive');
       }
+
       await saveInBatches(this.packagesRepository, toDeactivate);
+      await this.deleteAnalyses(toDeactivate);
 
       /**
        * Drop inactive rows that merely duplicate an active package in another
@@ -207,10 +221,22 @@ export class ChaoticIndexService {
           .andWhere(`NOT EXISTS (SELECT 1 FROM "build" b WHERE b."pkgbaseId" = "package".id)`)
           .execute();
       }
+
       this.pino.debug('Finished setting non-existing packages to inactive');
     } finally {
       await this.archMirror.cleanUp(tempDirs);
     }
+  }
+
+  private async deleteAnalyses(removed: Package[]): Promise<void> {
+    if (removed.length === 0) return;
+
+    const ids = removed.map((pkg) => pkg.id);
+    const result = await this.packagesRepository.manager
+      .getRepository(PackageElfAnalysis)
+      .delete({ pkgType: CHAOTIC_PKG_TYPE, pkgId: In(ids) });
+    this.signalScanService.invalidateDirectoryIndex();
+    this.pino.info({ count: result.affected ?? 0 }, 'Removed ELF analyses of inactive packages');
   }
 }
 
@@ -218,6 +244,23 @@ export class ChaoticIndexService {
 export function markActive(pkg: Package): void {
   pkg.isActive = true;
   pkg.removedAt = null;
+}
+
+/**
+ * Rows are keyed by binary pkgname or by pkgbase (bump and build events use the
+ * pkgbase directory), so both names count as present in the repo.
+ */
+export function currentPackageKeys(packages: ParsedPackage[]): Set<string> {
+  const keys = new Set<string>();
+  for (const pkg of packages) {
+    keys.add(`${pkg.repoName}:${pkg.name}`);
+
+    if (pkg.base) {
+      keys.add(`${pkg.repoName}:${pkg.base}`);
+    }
+  }
+
+  return keys;
 }
 
 /**
@@ -234,6 +277,7 @@ export function deactivateMissing(allPackages: Package[], currentKeys: Set<strin
       toDeactivate.push(pkg);
     }
   }
+
   return toDeactivate;
 }
 

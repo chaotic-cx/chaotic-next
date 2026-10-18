@@ -12,3 +12,69 @@ index e6004ad..6fe94a2 100644
              this.host.nativeElement.removeAttribute('autofocus');
          }
          else {
+diff --git a/fesm2022/openng-optimus-ui-basecomponent.mjs b/fesm2022/openng-optimus-ui-basecomponent.mjs
+index 7746fed..dcfc718 100644
+--- a/fesm2022/openng-optimus-ui-basecomponent.mjs
++++ b/fesm2022/openng-optimus-ui-basecomponent.mjs
+@@ -289,8 +289,11 @@ class BaseComponent {
+     _loadThemeStyles() {
+         if (this.$unstyled() || this.config?.theme() === 'none')
+             return;
++        // The loaded flags are module state. Prerendering renders all routes in one process, so the
++        // server ignores them and fills every document. useStyle reuses existing style elements by name.
++        const isServer = isPlatformServer(this.platformId);
+         // common
+-        if (!Theme.isStyleNameLoaded('common')) {
++        if (isServer || !Theme.isStyleNameLoaded('common')) {
+             const { primitive, semantic, global, style } = this.$style?.getCommonTheme?.() || {};
+             this.baseStyle.load(primitive?.css, { name: 'primitive-variables', ...this.$styleOptions });
+             this.baseStyle.load(semantic?.css, { name: 'semantic-variables', ...this.$styleOptions });
+@@ -299,14 +302,14 @@ class BaseComponent {
+             Theme.setLoadedStyleName('common');
+         }
+         // component
+-        if (!Theme.isStyleNameLoaded(this.$style?.name) && this.$style?.name) {
++        if ((isServer || !Theme.isStyleNameLoaded(this.$style?.name)) && this.$style?.name) {
+             const { css, style } = this.$style?.getComponentTheme?.() || {};
+             this.$style?.load(css, { name: `${this.$style?.name}-variables`, ...this.$styleOptions });
+             this.$style?.loadStyle({ name: `${this.$style?.name}-style`, ...this.$styleOptions }, style);
+             Theme.setLoadedStyleName(this.$style?.name);
+         }
+         // layer order
+-        if (!Theme.isStyleNameLoaded('layer-order')) {
++        if (isServer || !Theme.isStyleNameLoaded('layer-order')) {
+             const layerOrder = this.$style?.getLayerOrderThemeCSS?.();
+             this.baseStyle.load(layerOrder, { name: 'layer-order', first: true, ...this.$styleOptions });
+             Theme.setLoadedStyleName('layer-order');
+diff --git a/fesm2022/openng-optimus-ui-config.mjs b/fesm2022/openng-optimus-ui-config.mjs
+index b2ad775..7abcf2e 100644
+--- a/fesm2022/openng-optimus-ui-config.mjs
++++ b/fesm2022/openng-optimus-ui-config.mjs
+@@ -2,7 +2,7 @@ import * as i0 from '@angular/core';
+ import { signal, inject, effect, untracked, Injectable, PLATFORM_ID, InjectionToken, provideAppInitializer, makeEnvironmentProviders } from '@angular/core';
+ import { FilterMatchMode } from '@openng/optimus-ui/api';
+ import { Subject } from 'rxjs';
+-import { DOCUMENT } from '@angular/common';
++import { DOCUMENT, isPlatformServer } from '@angular/common';
+ import { ThemeService, Theme } from '@openng/optimus-ui-styled';
+ import { BaseStyle } from '@openng/optimus-ui/base';
+ 
+@@ -15,6 +15,7 @@ class ThemeProvider {
+     isThemeChanged = false;
+     document = inject(DOCUMENT);
+     baseStyle = inject(BaseStyle);
++    isServer = isPlatformServer(inject(PLATFORM_ID));
+     constructor() {
+         effect(() => {
+             ThemeService.on('theme:change', (newTheme) => {
+@@ -48,8 +49,8 @@ class ThemeProvider {
+     loadCommonTheme() {
+         if (this.theme() === 'none')
+             return;
+-        // common
+-        if (!Theme.isStyleNameLoaded('common')) {
++        // common. The server ignores the module-wide loaded flag, see BaseComponent._loadThemeStyles.
++        if (this.isServer || !Theme.isStyleNameLoaded('common')) {
+             const { primitive, semantic, global, style } = this.baseStyle.getCommonTheme?.() || {};
+             const styleOptions = { nonce: this.csp?.()?.nonce };
+             this.baseStyle.load(primitive?.css, { name: 'primitive-variables', ...styleOptions });

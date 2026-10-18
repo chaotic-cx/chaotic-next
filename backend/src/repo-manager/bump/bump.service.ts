@@ -33,6 +33,10 @@ function archChangeTime(entry: RepoUpdateRunParams): Date | null {
   return entry.archPkg.lastUpdated;
 }
 
+function isPrebuiltBinary(entry: RepoUpdateRunParams): boolean {
+  return NON_SOURCE_PKGNAME_FRAGMENTS.some((fragment) => entry.pkg.pkgname.includes(fragment));
+}
+
 export function isCiFlagEnabled(configs: Record<string, string | undefined>, key: string): boolean {
   return configs[key] === '1';
 }
@@ -60,6 +64,7 @@ export class BumpService {
       repo,
     );
     await this.recordBumps(prepared);
+
     return prepared.map(({ entry }) => entry);
   }
 
@@ -69,7 +74,6 @@ export class BumpService {
 
     const changeTimes = archTriggered.map((entry) => archChangeTime(entry)?.getTime() ?? Number.POSITIVE_INFINITY);
     const earliestChange = new Date(Math.min(...changeTimes));
-
     const earlierBumps = await this.packagesRepository.manager.find(PackageBump, {
       where: {
         pkg: { id: In(archTriggered.map((entry) => entry.pkg.id)) },
@@ -78,8 +82,17 @@ export class BumpService {
       relations: { pkg: true },
       select: { id: true, timestamp: true, pkg: { id: true } },
     });
+    const notYetBumped = needsRebuild.filter((entry) => !this.wasBumpedAfterChange(entry, earlierBumps));
+    this.logSkipped(needsRebuild, notYetBumped, 'Skipped packages with a bump after the Arch change');
 
-    return needsRebuild.filter((entry) => !this.wasBumpedAfterChange(entry, earlierBumps));
+    return notYetBumped;
+  }
+
+  private logSkipped(before: RepoUpdateRunParams[], after: RepoUpdateRunParams[], message: string): void {
+    const skipped = before.filter((entry) => !after.includes(entry)).map((entry) => entry.pkg.pkgname);
+    if (skipped.length === 0) return;
+
+    this.pino.info({ count: skipped.length, pkgnames: skipped }, message);
   }
 
   private wasBumpedAfterChange(entry: RepoUpdateRunParams, earlierBumps: PackageBump[]): boolean {
@@ -90,10 +103,11 @@ export class BumpService {
   }
 
   private async prepareBumps(needsRebuild: RepoUpdateRunParams[], reader: RepoReader): Promise<PreparedBump[]> {
-    const prepared: PreparedBump[] = [];
-    for (const param of needsRebuild) {
-      if (NON_SOURCE_PKGNAME_FRAGMENTS.some((fragment) => param.pkg.pkgname.includes(fragment))) continue;
+    const sourceBuilt = needsRebuild.filter((param) => !isPrebuiltBinary(param));
+    this.logSkipped(needsRebuild, sourceBuilt, 'Skipped prebuilt binary packages');
 
+    const prepared: PreparedBump[] = [];
+    for (const param of sourceBuilt) {
       const existing = prepared.find(({ entry }) => entry.pkg.pkgname === param.pkg.pkgname);
       if (existing) {
         this.pino.warn({ trigger: existing.entry.triggerName, pkgname: param.pkg.pkgname }, 'Already bumped, skipping');
@@ -121,7 +135,6 @@ export class BumpService {
         triggerName,
         details: param.details,
       };
-
       prepared.push({ param, entry });
       param.gotBumped = true;
     }
@@ -197,7 +210,6 @@ export class BumpService {
     const currentTriggersInDb: { pkgname: string; archVersion: string }[] = pkg.bumpTriggers ?? [];
 
     const configText = await reader.readFile(`${pkgbaseDir}/.CI/config`).catch(() => '');
-
     const configs = parseCiConfig(configText);
     if (!configs['CI_REBUILD_TRIGGERS'] && currentTriggersInDb.length > 0) {
       this.pino.debug({ pkgbaseDir }, 'Removing rebuild triggers from database');

@@ -3,8 +3,15 @@ import { PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 import { Package, Repo } from '../builder/builder.entity';
 import { EntityLookupService } from '../builder/entity-lookup.service';
+import { ParsedPackage } from '../interfaces/repo-manager';
 import { ArchMirrorService } from './arch-mirror.service';
-import { ChaoticIndexService, deactivateMissing, findDuplicateInactiveRows, markActive } from './chaotic-index.service';
+import {
+  ChaoticIndexService,
+  currentPackageKeys,
+  deactivateMissing,
+  findDuplicateInactiveRows,
+  markActive,
+} from './chaotic-index.service';
 import { SignalScanService } from './scan';
 
 function repo(name: string): Repo {
@@ -66,6 +73,36 @@ describe('deactivateMissing', () => {
   });
 });
 
+describe('currentPackageKeys', () => {
+  it('includes both the binary pkgname and the pkgbase', () => {
+    const parsed = [
+      { name: 'jdk23-openjdk', base: 'java23-openjdk', repoName: 'chaotic-aur' },
+      { name: 'ttf-symbola', base: 'font-symbola', repoName: 'chaotic-aur' },
+    ] as ParsedPackage[];
+
+    const keys = currentPackageKeys(parsed);
+
+    expect([...keys].sort()).toEqual([
+      'chaotic-aur:font-symbola',
+      'chaotic-aur:java23-openjdk',
+      'chaotic-aur:jdk23-openjdk',
+      'chaotic-aur:ttf-symbola',
+    ]);
+  });
+
+  it('keeps a pkgbase row active when only its split packages are in the repo', () => {
+    const pkgbaseRow = pkg({ id: 1, pkgname: 'java23-openjdk', repo: repo('chaotic-aur') });
+    const keys = currentPackageKeys([
+      { name: 'jdk23-openjdk', base: 'java23-openjdk', repoName: 'chaotic-aur' } as ParsedPackage,
+    ]);
+
+    const result = deactivateMissing([pkgbaseRow], keys, () => new Date(FIXED_NOW));
+
+    expect(result).toEqual([]);
+    expect(pkgbaseRow.isActive).toBe(true);
+  });
+});
+
 describe('markActive', () => {
   it('reactivates a package and clears its removal time', () => {
     const p = pkg({ id: 1, pkgname: 'back', isActive: false, removedAt: '2026-01-01T00:00:00.000Z' });
@@ -98,6 +135,7 @@ describe('updateChaoticDatabaseVersions', () => {
       {} as EntityLookupService,
       { info: vi.fn(), debug: vi.fn(), error: vi.fn() } as unknown as PinoLogger,
     );
+
     return { service, save: packagesRepository.save, find: packagesRepository.find };
   }
 
