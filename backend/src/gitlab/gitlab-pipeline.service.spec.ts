@@ -258,15 +258,34 @@ function pipelineTriggerInsertOf(service: GitlabPipelineService): ReturnType<typ
 }
 
 describe('GitlabPipelineService.isScheduledPipelineRunning', () => {
-  it('returns true while a schedule-triggered pipeline runs', async () => {
+  it('returns true while a schedule-triggered pipeline has active CI jobs', async () => {
     const pipelinesAll = vi.fn().mockResolvedValue([
       { id: 1, source: 'push', status: 'running' },
       { id: 2, source: 'schedule', status: 'running' },
     ]);
-    const { service } = createService({ Pipelines: { all: pipelinesAll } });
+    const jobsAll = vi.fn().mockResolvedValue([
+      { name: 'fetch-gitlab', status: 'success' },
+      { name: 'manage-pkgbuilds', status: 'running' },
+    ]);
+    const { service } = createService({ Pipelines: { all: pipelinesAll }, Jobs: { all: jobsAll } });
 
     await expect(service.isScheduledPipelineRunning()).resolves.toBe(true);
     expect(pipelinesAll).toHaveBeenCalledWith('test-project-id', { scope: 'running', perPage: 100 });
+    expect(jobsAll).toHaveBeenCalledWith('test-project-id', { pipelineId: 2 });
+  });
+
+  it('returns false when only external build stages keep the scheduled pipeline running', async () => {
+    const { service } = createService({
+      Pipelines: { all: vi.fn().mockResolvedValue([{ id: 2, source: 'schedule', status: 'running' }]) },
+      Jobs: {
+        all: vi.fn().mockResolvedValue([
+          { name: 'manage-pkgbuilds', status: 'success' },
+          { name: 'deploy', status: 'manual' },
+        ]),
+      },
+    });
+
+    await expect(service.isScheduledPipelineRunning()).resolves.toBe(false);
   });
 
   it('returns false when only other sources run', async () => {

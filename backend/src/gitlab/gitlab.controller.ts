@@ -188,6 +188,7 @@ export class GitlabController {
 
     if (body.object_kind === 'pipeline') {
       await this.gitlabPipelineService.handlePipelineWebhook(body);
+      void this.gitlabMergeRequestService.processDeferredMerges();
     } else {
       await this.gitlabMergeRequestService.handleMergeRequestWebhook();
     }

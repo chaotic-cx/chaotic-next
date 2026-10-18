@@ -36,7 +36,8 @@ function createService(rawMany: unknown[], rawOne: unknown = undefined) {
     getRawOne: vi.fn().mockResolvedValue(rawOne),
   };
   const repository = { createQueryBuilder: vi.fn(() => qb) };
-  const dataSource = { getRepository: vi.fn(() => repository) } as unknown as DataSource;
+  const query = vi.fn().mockResolvedValue([]);
+  const dataSource = { getRepository: vi.fn(() => repository), query } as unknown as DataSource;
   const cache = {
     get: vi.fn().mockResolvedValue(undefined),
     set: vi.fn().mockResolvedValue(undefined),
@@ -47,7 +48,7 @@ function createService(rawMany: unknown[], rawOne: unknown = undefined) {
     error: () => undefined,
     debug: () => undefined,
   } as unknown as PinoLogger;
-  return { service: new RouterService(pino, dataSource, cache as never), qb, repository, cache };
+  return { service: new RouterService(pino, dataSource, cache as never), qb, repository, cache, query };
 }
 
 describe('RouterService', () => {
@@ -112,10 +113,24 @@ describe('RouterService', () => {
 
   it('returns the user-agent trend and filters it by repo', async () => {
     const rows = [{ day: '2026-08-01', userAgent: 'pacman/7.0.0', count: '5' }];
-    const { service, qb } = createService(rows);
+    const { service, qb, query } = createService(rows);
+    query.mockResolvedValue([{ ua: 'pacman/7.0.0' }, { ua: 'pacman/7.1.0' }]);
     await expect(service.getUserAgentTrend(30, 'chaotic-aur')).resolves.toEqual(rows);
-    expect(qb.limit).toHaveBeenCalledWith(5);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('PARTITION BY "day"'), [
+      utcDayStart(nDaysInPast(30)),
+      'chaotic-aur',
+      5,
+    ]);
+    expect(qb.andWhere).toHaveBeenCalledWith('hit.userAgent IN (:...agents)', {
+      agents: ['pacman/7.0.0', 'pacman/7.1.0'],
+    });
     expect(qb.andWhere).toHaveBeenCalledWith('hit.repo = :repo', { repo: 'chaotic-aur' });
+  });
+
+  it('returns no user-agent trend when no agent ranks', async () => {
+    const { service, qb } = createService([]);
+    await expect(service.getUserAgentTrend(30)).resolves.toEqual([]);
+    expect(qb.getRawMany).not.toHaveBeenCalled();
   });
 
   it('clamps days below the minimum to the minimum', async () => {
