@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 
 /**
- * Prerendered into index.csr.html, the page that every client-rendered route gets first.
+ * Prerendered into csr-shell, the page that every client-rendered route gets first.
  * It shows the site frame with a generic page skeleton until the routed page replaces it.
  */
 @Component({

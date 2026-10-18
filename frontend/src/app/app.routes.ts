@@ -279,7 +279,7 @@ export const routes: Routes = [
   },
   {
     /**
-     * Only for the build: its prerendered HTML becomes index.csr.html, the first page of every client-rendered route.
+     * Only for the build: its prerendered HTML becomes csr-shell, the first page of every client-rendered route.
      * withAppShell() cannot do this, because in static output it writes to index.html, which holds the prerendered home.
      */
     path: APP_SHELL_PATH,

@@ -1,20 +1,20 @@
 # Client-rendered routes get the client shell. Prerendered routes (see app.routes.server.ts) have their own HTML file.
 # Unknown paths get 404.html, the prerendered not-found page, with a 404 status.
 # Keep this list in sync with app.routes.ts. redirects.spec.ts checks it.
-/status /index.csr.html 200
-/deployments /index.csr.html 200
-/packages /index.csr.html 200
-/aur-scan /index.csr.html 200
-/stats /index.csr.html 200
-/stats/* /index.csr.html 200
-/review-queue /index.csr.html 200
-/update-review /index.csr.html 200
-/logs/* /index.csr.html 200
-/mirrors /index.csr.html 200
-/map /index.csr.html 200
-/settings /index.csr.html 200
-/login /index.csr.html 200
-/auth/* /index.csr.html 200
-/admin /index.csr.html 200
-/admin/* /index.csr.html 200
-/backend-down /index.csr.html 200
+/status /csr-shell 200
+/deployments /csr-shell 200
+/packages /csr-shell 200
+/aur-scan /csr-shell 200
+/stats /csr-shell 200
+/stats/* /csr-shell 200
+/review-queue /csr-shell 200
+/update-review /csr-shell 200
+/logs/* /csr-shell 200
+/mirrors /csr-shell 200
+/map /csr-shell 200
+/settings /csr-shell 200
+/login /csr-shell 200
+/auth/* /csr-shell 200
+/admin /csr-shell 200
+/admin/* /csr-shell 200
+/backend-down /csr-shell 200

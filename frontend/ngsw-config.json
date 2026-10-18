@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@angular/service-worker/config/schema.json",
-  "index": "/index.csr.html",
+  "index": "/csr-shell",
   "assetGroups": [
     {
       "name": "app",
