@@ -3887,5 +3887,62 @@
         "text": " became better than ever before due to better highlighting and some automated scans raising awareness for general things to be looked out for. I'm planning to expand this even further in the future.\n  - Most of the maintenance tasks can generally now be done from within the website, via GitLab SSO, which is also a great help. No more fiddling around with GitLabs web interface while on the run!\n\nBesides our schedule pipeline, which does most of the heavy lifting in regard of updating our PKGBUILDs from various sources, and opening MRs for us to review received some parallelization which allows it to finish in <5 minutes instead of 20-30 🚀"
       }
     ]
+  },
+  {
+    "id": 676,
+    "type": "message",
+    "date": "2026-10-18T13:57:41",
+    "date_unixtime": "1792324661",
+    "edited": "2026-10-18T13:58:09",
+    "edited_unixtime": "1792324689",
+    "from": "Chaotic-AUR",
+    "from_id": "channel1293714071",
+    "author": "Nιƈσ",
+    "text": [
+      {
+        "type": "text_link",
+        "text": "Chaotic-AUR turns 8 years old today!",
+        "href": "https://aur.chaotic.cx/memorial-v3"
+      },
+      " ",
+      {
+        "type": "custom_emoji",
+        "text": "🎉",
+        "document_id": ""
+      },
+      "\n\nToday, we celebrate another year of Chaotic-AUR, and it is greater than ever. Today, another iteration of our web presence went live, along with a dedicated birthday event page featuring data which was compiled from a variety of our git repositories and news channel.\n\nI'm personally quite happy that we are able to provide AUR packages to everyone securely and in a controlled way, which the most recent AUR malware incidents have proven to be necessary. The times of unsupervised building of packages are gone. Experience has shown that package update reviews are, in fact, very manageable, also due to the fact that our setup makes this really easy and accessible on one single page instead of having to navigate around numerous pull requests.\n\nThe long-standing problem of having to find out about packages that need a rebuild via a bug report is also mostly solved these days: while there are still occasional things to fine-tune, the repository is generally able to automatically find and self-heal a lot of packages without having to explicitly declare a rebuild trigger.\n\nThanks to everyone who was part of the journey, and to many more years! 🤗"
+    ],
+    "text_entities": [
+      {
+        "type": "text_link",
+        "text": "Chaotic-AUR turns 8 years old today!",
+        "href": "https://aur.chaotic.cx/memorial-v3"
+      },
+      {
+        "type": "plain",
+        "text": " "
+      },
+      {
+        "type": "custom_emoji",
+        "text": "🎉",
+        "document_id": ""
+      },
+      {
+        "type": "plain",
+        "text": "\n\nToday, we celebrate another year of Chaotic-AUR, and it is greater than ever. Today, another iteration of our web presence went live, along with a dedicated birthday event page featuring data which was compiled from a variety of our git repositories and news channel.\n\nI'm personally quite happy that we are able to provide AUR packages to everyone securely and in a controlled way, which the most recent AUR malware incidents have proven to be necessary. The times of unsupervised building of packages are gone. Experience has shown that package update reviews are, in fact, very manageable, also due to the fact that our setup makes this really easy and accessible on one single page instead of having to navigate around numerous pull requests.\n\nThe long-standing problem of having to find out about packages that need a rebuild via a bug report is also mostly solved these days: while there are still occasional things to fine-tune, the repository is generally able to automatically find and self-heal a lot of packages without having to explicitly declare a rebuild trigger.\n\nThanks to everyone who was part of the journey, and to many more years! 🤗"
+      }
+    ],
+    "reactions": [
+      {
+        "type": "emoji",
+        "count": 7,
+        "emoji": "🎉"
+      },
+      {
+        "type": "emoji",
+        "count": 1,
+        "emoji": "❤"
+      }
+    ]
   }
 ]
