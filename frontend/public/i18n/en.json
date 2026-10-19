@@ -161,7 +161,10 @@
       "building": "Building",
       "queued": "Queued",
       "idleBuilders": "Idle builders",
-      "queueClearsIn": "Queue clears in"
+      "queueClearsIn": "Queue clears in",
+      "buildsFinishIn": "Builds finish in",
+      "queueStatus": "Queue status",
+      "allBuildsDone": "All builds done"
     },
     "liveSummary": {
       "unavailable": "Build status is unavailable.",
@@ -195,6 +198,7 @@
       "title": "Queue",
       "clearsIn": "Clears in <span class=\"font-medium tabular-nums text-ctp-text\">{{eta}}</span>",
       "blocked": "No idle builder matches the queued classes",
+      "noBuilders": "No builders online",
       "loadError": "Could not load the queue.",
       "empty": "The queue is empty",
       "startsIn": "starts in {{eta}}",
@@ -213,7 +217,8 @@
     "idle": {
       "title": "Idle builders",
       "loadError": "Could not load builders.",
-      "empty": "All builders are busy"
+      "empty": "All builders are busy",
+      "offline": "No builders online"
     },
     "deployments": {
       "title": "Latest deployments",
@@ -404,6 +409,7 @@
       "unavailable": "Unavailable",
       "queueEmpty": "Queue is empty",
       "buildersIdle": "All builders are idle",
+      "buildersOffline": "No builders online",
       "noDeployments": "No recent deployments",
       "more": "+{{count}} more",
       "allDeployments": "All deployments"

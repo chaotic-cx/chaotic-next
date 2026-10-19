@@ -35,9 +35,11 @@
       </dd>
     </div>
     <div class="chaotic-stats__item">
-      <dt>{{ t('queueClearsIn') }}</dt>
+      <dt>{{ buildStatusService.queueEtaLabel() }}</dt>
       <dd>
-        @if (buildStatusService.queueClearEta(); as eta) {
+        @if (buildStatusService.queueDone()) {
+          {{ t('allBuildsDone') }}
+        } @else if (buildStatusService.queueClearEta(); as eta) {
           {{ eta }}
         } @else {
           <chaotic-unknown-value />

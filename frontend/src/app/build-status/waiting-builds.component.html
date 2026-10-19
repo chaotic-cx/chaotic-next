@@ -14,7 +14,7 @@
       ></span>
     } @else if (isBlocked()) {
       <span class="text-xs text-ctp-yellow" [pTooltip]="buildStatusService.estimateTooltip()" tooltipPosition="top">{{
-        t('blocked')
+        buildStatusService.idleQueue().length === 0 ? t('noBuilders') : t('blocked')
       }}</span>
     }
   </chaotic-build-status-section>

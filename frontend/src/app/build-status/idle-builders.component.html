@@ -13,7 +13,10 @@
   } @else if (buildStatusService.queueFailed()) {
     <chaotic-load-error [message]="t('loadError')" (retry)="buildStatusService.refreshQueueStats()" />
   } @else if (buildStatusService.idleQueue().length === 0) {
-    <chaotic-empty-state [message]="t('empty')" icon="pi-server" />
+    <chaotic-empty-state
+      [message]="buildStatusService.activeQueue().length === 0 ? t('offline') : t('empty')"
+      icon="pi-server"
+    />
   } @else {
     <ul class="flex flex-wrap gap-2 p-4">
       @for (builder of buildStatusService.idleQueue(); track builder.rawName) {

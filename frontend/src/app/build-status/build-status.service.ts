@@ -25,8 +25,8 @@ import { injectActiveTranslation } from '../i18n/active-translation';
 import {
   computeQueueEstimates,
   formatEta,
-  OVERTIME_THRESHOLD_MINUTES,
   overallAverageMinutes,
+  OVERTIME_THRESHOLD_MINUTES,
   type PackageBuildAverage,
   type QueueEstimates,
 } from './queue-estimates';
@@ -112,12 +112,14 @@ export class BuildStatusService {
   private readonly averagesResource = httpResource<PackageAverageRow[]>(() => {
     const names = this.queuedPackageNames();
     if (names.length === 0) return undefined;
+
     return this.appService.getPackageAverageBuildTimesResourceRequest(names);
   });
   private readonly builderAveragesResource = httpResource<PackageAverageRow[]>(() => {
     const names = this.queuedPackageNames();
     const builders = this.queueBuilderNames();
     if (names.length === 0 || builders.length === 0) return undefined;
+
     return this.appService.getPackageAverageBuildTimesResourceRequest(names, undefined, builders);
   });
 
@@ -153,7 +155,6 @@ export class BuildStatusService {
 
   readonly pipelineWithStatus = computed<PipelineView[]>(() => {
     this.activeTranslation();
-
     return this.pipelineData().map((pipeline) => this.toView(pipeline));
   });
 
@@ -201,13 +202,16 @@ export class BuildStatusService {
     const map = new Map<string, Map<string, number>>();
     for (const row of this.builderAveragesValue() ?? []) {
       if (!row.builder) continue;
+
       let inner = map.get(row.pkgname);
       if (!inner) {
         inner = new Map<string, number>();
         map.set(row.pkgname, inner);
       }
+
       inner.set(row.builder, Number(row.average_build_time));
     }
+
     return map;
   });
 
@@ -215,13 +219,16 @@ export class BuildStatusService {
     const map = new Map<string, Map<string, number>>();
     for (const row of this.builderAveragesValue() ?? []) {
       if (!row.builder) continue;
+
       let inner = map.get(row.pkgname);
       if (!inner) {
         inner = new Map<string, number>();
         map.set(row.pkgname, inner);
       }
+
       inner.set(row.builder, Number(row.samples));
     }
+
     return map;
   });
 
@@ -254,14 +261,17 @@ export class BuildStatusService {
     for (const view of this.pipelineWithStatus()) {
       for (const job of view.commit) {
         if (job.status !== 'running' || !job.started_at) continue;
+
         const ms = Date.parse(job.started_at);
         if (Number.isNaN(ms)) continue;
+
         const short = job.name; // already short after toView()
         if (!map.has(short)) {
           map.set(short, ms);
         }
       }
     }
+
     return map;
   });
 
@@ -316,11 +326,13 @@ export class BuildStatusService {
     for (const pkg of this.activeQueue()) {
       const startedMs = pkg.startedAt ?? this.pipelineStartedAt().get(pkg.name);
       if (startedMs === undefined) continue;
+
       const date = new Date(startedMs);
       const hh = String(date.getHours()).padStart(2, '0');
       const mm = String(date.getMinutes()).padStart(2, '0');
       labels.set(pkg.rawName, this.transloco.translate('buildStatus.active.startedAt', { time: `${hh}:${mm}` }));
     }
+
     return labels;
   });
 
@@ -334,6 +346,7 @@ export class BuildStatusService {
 
       labels.set(pkgname, this.transloco.translate('buildStatus.active.timeLeft', { eta: formatEta(minutes) }));
     }
+
     return labels;
   });
 
@@ -344,11 +357,12 @@ export class BuildStatusService {
     const labels = new Map<string, string>();
     const isFallback = this.activeEtaIsFallback();
     const isUnknown = this.activeIsUnknown();
-
     for (const [pkgname, minutes] of this.estimates().activeOvertime) {
       if (isFallback.get(pkgname) || isUnknown.get(pkgname)) continue;
+
       labels.set(pkgname, this.transloco.translate('buildStatus.active.overtime', { eta: formatEta(minutes) }));
     }
+
     return labels;
   });
 
@@ -360,6 +374,7 @@ export class BuildStatusService {
     for (const [pkgname, minutes] of this.estimates().waitingStart) {
       labels.set(pkgname, this.transloco.translate('buildStatus.waiting.startsIn', { eta: formatEta(minutes) }));
     }
+
     return labels;
   });
 
@@ -371,6 +386,7 @@ export class BuildStatusService {
         : this.estimateTooltip();
       map.set(pkg.rawName, this.withSamples(base, this.samplesFor(pkg.rawName, pkg.node)));
     }
+
     return map;
   });
 
@@ -378,8 +394,10 @@ export class BuildStatusService {
     const map = new Map<string, string>();
     for (const pkg of this.activeQueue()) {
       if (!this.estimates().activeOvertime.has(pkg.rawName)) continue;
+
       map.set(pkg.rawName, this.withSamples(this.overtimeTooltip(), this.samplesFor(pkg.rawName, pkg.node)));
     }
+
     return map;
   });
 
@@ -388,6 +406,7 @@ export class BuildStatusService {
     for (const [pkgname] of this.estimates().waitingStart) {
       map.set(pkgname, this.withSamples(this.estimateTooltip(), this.samplesFor(pkgname)));
     }
+
     return map;
   });
 
@@ -401,13 +420,16 @@ export class BuildStatusService {
         progress.set(pkg.rawName, 1);
         continue;
       }
+
       const startedMs = estimates.activeStartedAt.get(pkg.rawName);
       const remainingMinutes = estimates.activeFinish.get(pkg.rawName);
       if (startedMs === undefined || remainingMinutes === undefined) continue;
+
       const elapsedMinutes = Math.max(0, (nowMs - startedMs) / MS_PER_MINUTE);
       const totalMinutes = elapsedMinutes + remainingMinutes;
       progress.set(pkg.rawName, totalMinutes > 0 ? Math.min(1, elapsedMinutes / totalMinutes) : 1);
     }
+
     return progress;
   });
 
@@ -415,6 +437,24 @@ export class BuildStatusService {
     const minutes = this.estimates().queueClear;
     return minutes === undefined ? undefined : formatEta(minutes);
   });
+
+  private readonly queueClearsInLabel = translateSignal('buildStatus.page.queueClearsIn');
+  private readonly buildsFinishInLabel = translateSignal('buildStatus.page.buildsFinishIn');
+  private readonly queueStatusLabel = translateSignal('buildStatus.page.queueStatus');
+
+  /** The queue clears while packages wait; after that only the running builds finish. */
+  readonly queueEtaLabel = computed(() => {
+    if (this.queueDone()) return this.queueStatusLabel();
+    if (this.waitingQueue().length > 0) return this.queueClearsInLabel();
+    if (this.activeQueue().length > 0) return this.buildsFinishInLabel();
+
+    return this.queueClearsInLabel();
+  });
+
+  /** True when the queue is known and neither builds run nor packages wait. */
+  readonly queueDone = computed(
+    () => this.queueCountKnown() && this.waitingQueue().length === 0 && this.activeQueue().length === 0,
+  );
 
   private withSamples(tooltip: string, samples: number | undefined): string {
     if (samples === undefined) return tooltip;
@@ -441,6 +481,7 @@ export class BuildStatusService {
       const perBuilder = lookup.byBuilder.get(short)?.get(builderName);
       if (perBuilder !== undefined) return perBuilder;
     }
+
     return lookup.byName.get(short) ?? lookup.overall;
   }
 
@@ -451,8 +492,10 @@ export class BuildStatusService {
       const perBuilder = lookup.byBuilderSamples.get(short)?.get(builderName);
       if (perBuilder !== undefined) return perBuilder;
     }
+
     const perPkg = lookup.byNameSamples.get(short);
     if (perPkg !== undefined) return perPkg;
+
     return lookup.overallSamples > 0 ? lookup.overallSamples : undefined;
   }
 
@@ -466,6 +509,7 @@ export class BuildStatusService {
       const hasPkg = lookup.byName.has(short);
       map.set(pkg.rawName, !hasBuilder && hasPkg);
     }
+
     return map;
   });
 
@@ -478,6 +522,7 @@ export class BuildStatusService {
       const hasPkg = lookup.byName.has(short);
       map.set(pkg.rawName, !hasBuilder && !hasPkg && lookup.overall !== undefined);
     }
+
     return map;
   });
 
@@ -493,8 +538,10 @@ export class BuildStatusService {
       if (seen === undefined) {
         changed = true;
       }
+
       next.set(pkg.rawName, seen ?? nowMs);
     }
+
     if (changed || previous.size !== next.size) {
       this.activeFirstSeen.set(next);
     }
@@ -550,9 +597,11 @@ export class BuildStatusService {
       this.transformPipelineData(delta);
       return;
     }
+
     const current = this.pipelineData();
     const byId = new Map(current.map((pipeline) => [pipeline.pipeline.id, pipeline]));
     for (const pipeline of delta) byId.set(pipeline.pipeline.id, pipeline);
+
     const merged = [...byId.values()].sort((a, b) => b.pipeline.id - a.pipeline.id).slice(0, MAX_VISIBLE_PIPELINES);
     this.pipelineData.set(merged);
   }
@@ -560,7 +609,6 @@ export class BuildStatusService {
   private toView(pipeline: PipelineWithExternalStatus): PipelineView {
     const failedJobs = pipeline.commit.filter((job) => job.status === 'failed').length;
     const status = pipeline.pipeline.status === 'canceled' ? 'success' : pipeline.pipeline.status;
-
     return {
       pipeline: pipeline.pipeline,
       commit: pipeline.commit.map((job) => ({ ...job, name: job.name.split(': ')[1] ?? job.name })),

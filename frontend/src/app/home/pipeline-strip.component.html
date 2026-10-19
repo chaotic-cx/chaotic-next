@@ -60,7 +60,9 @@
       } @else if (buildStatusService.queueFailed()) {
         <p class="pipeline-stage__empty text-ctp-red">{{ t('unavailable') }}</p>
       } @else if (active().length === 0) {
-        <p class="pipeline-stage__empty">{{ t('buildersIdle') }}</p>
+        <p class="pipeline-stage__empty">
+          {{ buildStatusService.idleQueue().length === 0 ? t('buildersOffline') : t('buildersIdle') }}
+        </p>
       } @else {
         <ul class="pipeline-stage__list">
           @for (pkg of active(); track pkg.rawName) {
