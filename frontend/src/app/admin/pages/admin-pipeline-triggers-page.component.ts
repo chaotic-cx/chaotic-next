@@ -28,6 +28,8 @@ import {
 import { AdminService } from '../admin.service';
 import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { FilterBarComponent } from '../../filter-bar/filter-bar.component';
+import { isMobileSignal } from '../../functions';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { MISSING_VALUE } from '../../table-columns/missing-value';
 import { TablePageReportDirective } from '../../table-page-report.directive';
@@ -50,6 +52,7 @@ const REPO_OPTIONS = [
     ClearFiltersComponent,
     Dialog,
     EmptyStateComponent,
+    FilterBarComponent,
     FormsModule,
     IconField,
     InputIcon,
@@ -82,43 +85,54 @@ const REPO_OPTIONS = [
           chaoticPageReport
         >
           <ng-template #caption>
-            <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
-                <p-button
-                  [label]="t('admin.pipelineTriggers.runSchedule')"
-                  (onClick)="openScheduleDialog()"
-                  icon="pi pi-play"
-                  text
-                  severity="primary"
-                  size="small"
-                />
-                <p-select
-                  [options]="operationOptions"
-                  [ngModel]="service.pipelineTriggerOperationFilter()"
-                  [placeholder]="t('admin.pipelineTriggers.columns.operation')"
-                  [ariaLabel]="t('admin.pipelineTriggers.operationFilterLabel')"
-                  (ngModelChange)="setOperationFilter($event)"
-                  optionLabel="label"
-                  optionValue="value"
-                  showClear
-                  appendTo="body"
-                />
-                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
-              </div>
-              <p-iconfield class="w-full sm:w-64" iconPosition="left">
-                <p-inputicon>
-                  <i class="pi pi-search" aria-hidden="true"></i>
-                </p-inputicon>
-                <input
-                  class="w-full"
-                  [value]="service.pipelineTriggerQuery()"
-                  [placeholder]="t('admin.pipelineTriggers.searchPlaceholder')"
-                  [attr.aria-label]="t('admin.pipelineTriggers.searchPlaceholder')"
-                  (input)="onSearch($event)"
-                  pInputText
-                  type="text"
-                />
-              </p-iconfield>
+            <div class="flex items-center gap-2.5">
+              <p-button
+                class="order-last md:order-none"
+                [label]="isMobile() ? undefined : t('admin.pipelineTriggers.runSchedule')"
+                [ariaLabel]="t('admin.pipelineTriggers.runSchedule')"
+                (onClick)="openScheduleDialog()"
+                icon="pi pi-play"
+                text
+                severity="primary"
+                size="small"
+              />
+              <chaotic-filter-bar
+                class="min-w-0 flex-1 md:flex-none md:ml-auto"
+                [active]="filtersActive()"
+                (clear)="clearFilters()"
+              >
+                <ng-template #filters let-placement>
+                  <p-select
+                    class="w-full md:w-auto"
+                    [options]="operationOptions"
+                    [ngModel]="service.pipelineTriggerOperationFilter()"
+                    [placeholder]="t('admin.pipelineTriggers.columns.operation')"
+                    [ariaLabel]="t('admin.pipelineTriggers.operationFilterLabel')"
+                    (ngModelChange)="setOperationFilter($event)"
+                    optionLabel="label"
+                    optionValue="value"
+                    showClear
+                    appendTo="body"
+                  />
+                  @if (placement === 'inline') {
+                    <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
+                  }
+                </ng-template>
+                <p-iconfield class="w-full" iconPosition="left">
+                  <p-inputicon>
+                    <i class="pi pi-search" aria-hidden="true"></i>
+                  </p-inputicon>
+                  <input
+                    class="w-full"
+                    [value]="service.pipelineTriggerQuery()"
+                    [placeholder]="t('admin.pipelineTriggers.searchPlaceholder')"
+                    [attr.aria-label]="t('admin.pipelineTriggers.searchPlaceholder')"
+                    (input)="onSearch($event)"
+                    pInputText
+                    type="text"
+                  />
+                </p-iconfield>
+              </chaotic-filter-bar>
             </div>
           </ng-template>
           <ng-template #header>
@@ -135,7 +149,7 @@ const REPO_OPTIONS = [
           </ng-template>
           <ng-template pTemplate="body" let-trigger>
             <tr>
-              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ trigger.id }}</td>
+              <td class="stack-meta"><span class="stack-only">#</span>{{ trigger.id }}</td>
               <td class="stack-title">
                 @if (trigger.pipelineId) {
                   @if (trigger.webUrl) {
@@ -154,24 +168,34 @@ const REPO_OPTIONS = [
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td class="stack-sub">
-                <p-tag [value]="trigger.operation" [severity]="trigger.operation === 'None' ? 'secondary' : 'info'" />
+              <td class="stack-tags">
+                <div class="flex flex-wrap items-center gap-1">
+                  <p-tag [value]="trigger.operation" [severity]="trigger.operation === 'None' ? 'secondary' : 'info'" />
+                </div>
               </td>
               <td class="stack-body">
                 <code class="line-clamp-2 text-sm" [title]="formatInputs(trigger)">{{ formatInputs(trigger) }}</code>
               </td>
               <td class="stack-meta" [attr.data-label]="t('admin.pipelineTriggers.columns.ref')">
-                {{ trigger.ref || missingValue }}
+                @if (trigger.ref) {
+                  {{ trigger.ref }}
+                } @else {
+                  <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
+                }
               </td>
               <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.commit')">
                 @if (trigger.commitSha) {
                   <code class="text-sm">{{ shortSha(trigger.commitSha) }}</code>
                 } @else {
-                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                  <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
               <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.user')">
-                <span class="font-medium">{{ trigger.userName || missingValue }}</span>
+                @if (trigger.userName) {
+                  <span class="font-medium">{{ trigger.userName }}</span>
+                } @else {
+                  <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
+                }
               </td>
               <td class="stack-meta">{{ trigger.createdAt | date: 'short' }}</td>
             </tr>
@@ -288,6 +312,7 @@ export class AdminPipelineTriggersPageComponent {
   private readonly transloco = inject(TranslocoService);
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
   protected readonly missingValue = MISSING_VALUE;
+  protected readonly isMobile = isMobileSignal();
 
   protected readonly filtersActive = computed(
     () => this.service.pipelineTriggerQuery() !== '' || this.service.pipelineTriggerOperationFilter() !== undefined,
@@ -308,14 +333,12 @@ export class AdminPipelineTriggersPageComponent {
 
   private readonly schedulesResource = httpResource<PipelineScheduleOption[]>(() => {
     const repo = this.selectedRepo();
-
     return repo ? this.service.getSchedulesRequest(repo) : undefined;
   });
 
   readonly schedulesLoading = this.schedulesResource.isLoading;
   readonly scheduleOptions = computed(() => {
     const schedules = this.schedulesResource.hasValue() ? this.schedulesResource.value() : [];
-
     return schedules.map((schedule) => ({
       label:
         schedule.description ??

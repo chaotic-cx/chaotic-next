@@ -18,6 +18,7 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { FilterBarComponent } from '../../filter-bar/filter-bar.component';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { MISSING_VALUE } from '../../table-columns/missing-value';
 import { TablePageReportDirective } from '../../table-page-report.directive';
@@ -64,6 +65,7 @@ function builderConflictFields(builder: Builder): Record<string, unknown> {
     ClearFiltersComponent,
     Dialog,
     EmptyStateComponent,
+    FilterBarComponent,
     FormField,
     FormsModule,
     IconField,
@@ -98,35 +100,44 @@ function builderConflictFields(builder: Builder): Record<string, unknown> {
           chaoticPageReport
         >
           <ng-template #caption>
-            <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
-                <p-select
-                  [options]="service.activeOptions()"
-                  [ngModel]="service.builderActiveFilter()"
-                  [placeholder]="t('admin.pages.activeStatus')"
-                  [ariaLabel]="t('admin.pages.activeStatus')"
-                  (ngModelChange)="setActiveFilter($event)"
-                  optionLabel="label"
-                  optionValue="value"
-                  showClear
-                  appendTo="body"
-                />
-                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
-              </div>
-              <p-iconfield class="w-full sm:w-64" iconPosition="left">
-                <p-inputicon>
-                  <i class="pi pi-search" aria-hidden="true"></i>
-                </p-inputicon>
-                <input
-                  class="w-full"
-                  [value]="service.builderQuery()"
-                  [placeholder]="t('admin.pages.searchName')"
-                  [attr.aria-label]="t('admin.pages.searchName')"
-                  (input)="onSearch($event)"
-                  pInputText
-                  type="text"
-                />
-              </p-iconfield>
+            <div class="flex items-center gap-2.5">
+              <chaotic-filter-bar
+                class="min-w-0 flex-1 md:flex-none md:ml-auto"
+                [active]="filtersActive()"
+                (clear)="clearFilters()"
+              >
+                <ng-template #filters let-placement>
+                  <p-select
+                    class="w-full md:w-auto"
+                    [options]="service.activeOptions()"
+                    [ngModel]="service.builderActiveFilter()"
+                    [placeholder]="t('admin.pages.activeStatus')"
+                    [ariaLabel]="t('admin.pages.activeStatus')"
+                    (ngModelChange)="setActiveFilter($event)"
+                    optionLabel="label"
+                    optionValue="value"
+                    showClear
+                    appendTo="body"
+                  />
+                  @if (placement === 'inline') {
+                    <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
+                  }
+                </ng-template>
+                <p-iconfield class="w-full" iconPosition="left">
+                  <p-inputicon>
+                    <i class="pi pi-search" aria-hidden="true"></i>
+                  </p-inputicon>
+                  <input
+                    class="w-full"
+                    [value]="service.builderQuery()"
+                    [placeholder]="t('admin.pages.searchName')"
+                    [attr.aria-label]="t('admin.pages.searchName')"
+                    (input)="onSearch($event)"
+                    pInputText
+                    type="text"
+                  />
+                </p-iconfield>
+              </chaotic-filter-bar>
             </div>
           </ng-template>
           <ng-template #header>
@@ -143,7 +154,7 @@ function builderConflictFields(builder: Builder): Record<string, unknown> {
           </ng-template>
           <ng-template pTemplate="body" let-builder>
             <tr>
-              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ builder.id }}</td>
+              <td class="stack-meta"><span class="stack-only">#</span>{{ builder.id }}</td>
               <td class="stack-title">
                 <span class="block max-w-xs truncate" [title]="builder.name">{{ builder.name }}</span>
               </td>
@@ -151,18 +162,24 @@ function builderConflictFields(builder: Builder): Record<string, unknown> {
                 @if (builder.description) {
                   <span class="line-clamp-2" [title]="builder.description">{{ builder.description }}</span>
                 } @else {
-                  {{ missingValue }}
+                  <span class="stack-empty">{{ missingValue }}</span>
                 }
               </td>
               <td class="stack-meta" [attr.data-label]="t('admin.builders.columns.class')">
-                {{ builder.builderClass || missingValue }}
-              </td>
-              <td class="stack-meta">
-                @if (builder.isActive) {
-                  <p-tag [value]="t('admin.pages.active')" severity="success" />
+                @if (builder.builderClass) {
+                  {{ builder.builderClass }}
                 } @else {
-                  <p-tag [value]="t('admin.pages.inactive')" severity="secondary" />
+                  <span class="stack-empty">{{ missingValue }}</span>
                 }
+              </td>
+              <td class="stack-tags">
+                <div class="flex flex-wrap items-center gap-1">
+                  @if (builder.isActive) {
+                    <p-tag [value]="t('admin.pages.active')" severity="success" />
+                  } @else {
+                    <p-tag [value]="t('admin.pages.inactive')" severity="secondary" />
+                  }
+                </div>
               </td>
               <td class="cell-actions">
                 <div class="flex items-center justify-end gap-1">

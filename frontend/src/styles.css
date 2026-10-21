@@ -998,6 +998,15 @@ a.chaotic-row__name:focus-visible {
   -webkit-backdrop-filter: blur(var(--chaotic-blur));
 }
 
+.admin-switcher__menu .p-menu-item-link-active,
+.admin-switcher__menu .p-menu-item-link-active .p-menu-item-icon {
+  color: var(--catppuccin-color-mauve);
+}
+
+.admin-switcher__menu .p-menu-item-link-active {
+  background: color-mix(in srgb, var(--catppuccin-color-mauve) 10%, transparent);
+}
+
 /* The overlay takes the width of its widest option; long package names must not push it past the viewport. */
 .p-autocomplete-overlay {
   max-width: calc(100vw - 2rem);
@@ -1398,15 +1407,16 @@ p-scroll-top {
 }
 
 /*
- * `chaotic-stack` tables show rows as blocks on narrow screens. Cell roles: stack-title, stack-sub,
- * stack-meta (one line, dot-joined), stack-body, stack-hide; `data-label` prefixes a value, `stack-empty` hides it.
+ * `chaotic-stack` tables show rows as cards on narrow screens and tablets. Cell roles, in card order:
+ * stack-title, stack-sub and stack-tags (one line), stack-meta (dot-joined, wraps), stack-body, stack-hide.
+ * `data-label` prefixes a value, `stack-empty` hides it.
  */
 .chaotic-stack {
   container: chaotic-stack / inline-size;
   --chaotic-stack-actions-width: 6.5rem;
 }
 
-@container chaotic-stack (max-width: 40rem) {
+@container chaotic-stack (max-width: 56rem) {
   .chaotic-stack .p-datatable-table,
   .chaotic-stack .p-datatable-thead,
   .chaotic-stack .p-datatable-tbody {
@@ -1447,14 +1457,28 @@ p-scroll-top {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    column-gap: var(--chaotic-space-sm);
+    column-gap: var(--chaotic-space-md);
     row-gap: var(--chaotic-space-2xs);
-    padding: var(--chaotic-space-md) var(--chaotic-inset);
-    border-bottom: 1px solid var(--chaotic-border);
+    overflow: hidden;
+    padding: var(--chaotic-space-md) var(--chaotic-inset) var(--chaotic-space-md) 0;
+    border: 0;
+    border-inline-start: var(--chaotic-inset) solid transparent;
+    background-image: linear-gradient(var(--chaotic-border), var(--chaotic-border));
+    background-origin: border-box;
+    background-position: bottom;
+    background-repeat: no-repeat;
+    background-size: 100% 1px;
   }
 
   .chaotic-stack .p-datatable-tbody > tr:last-child {
-    border-bottom: 0;
+    background-image: none;
+  }
+
+  .chaotic-stack .p-datatable-tbody > tr::after {
+    content: '';
+    order: 2;
+    flex-basis: 100%;
+    margin-block-start: calc(var(--chaotic-space-2xs) * -1);
   }
 
   /* The doubled class outranks page-level `:host ::ng-deep` cell padding. */
@@ -1485,12 +1509,38 @@ p-scroll-top {
     padding-inline-end: 0 !important;
   }
 
-  .chaotic-stack .p-datatable-tbody > tr > td.stack-sub {
+  .chaotic-stack.chaotic-stack .p-datatable-tbody > tr > td:is(.stack-sub, .stack-tags) {
     order: 1;
+    flex: 0 1 auto;
   }
 
-  .chaotic-stack .p-datatable-tbody > tr > td.stack-meta {
-    order: 2;
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--chaotic-space-2xs);
+  }
+
+  .chaotic-stack.chaotic-stack .p-datatable-tbody > tr:not(:has(> td.stack-sub)) > td.stack-title {
+    flex: 0 1 auto;
+    padding-inline-end: 0 !important;
+  }
+
+  .chaotic-stack.chaotic-stack .p-datatable-tbody > tr:not(:has(> td.stack-sub)) > td.stack-tags {
+    flex: 1 1 0;
+    margin-block-end: var(--chaotic-space-2xs);
+  }
+
+  .chaotic-stack.chaotic-stack
+    .p-datatable-tbody
+    > tr:not(:has(> td.stack-sub)):has(> td.cell-actions)
+    > td.stack-tags {
+    padding-inline-end: var(--chaotic-stack-actions-width) !important;
+  }
+
+  .chaotic-stack.chaotic-stack .p-datatable-tbody > tr > td.stack-meta {
+    position: relative;
+    order: 3;
     display: flex;
     align-items: center;
     flex: 0 1 auto;
@@ -1498,10 +1548,12 @@ p-scroll-top {
     color: var(--catppuccin-color-subtext0);
   }
 
-  /* Trailing dots, so a wrapped line never starts with one. */
-  .chaotic-stack .p-datatable-tbody > tr > td.stack-meta:has(~ td.stack-meta)::after {
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-meta::after {
     content: '·';
-    margin-inline-start: var(--chaotic-space-sm);
+    position: absolute;
+    inset-inline-end: 100%;
+    width: var(--chaotic-space-md);
+    text-align: center;
   }
 
   .chaotic-stack .p-datatable-tbody > tr > td[data-label]::before {
@@ -1514,12 +1566,16 @@ p-scroll-top {
     display: inline-block;
   }
 
-  .chaotic-stack .p-datatable-tbody > tr > td.stack-body {
-    order: 3;
+  .chaotic-stack .table-only {
+    display: none;
   }
 
-  .chaotic-stack .p-datatable-tbody > tr > td.stack-hide,
-  .chaotic-stack .p-datatable-tbody > tr > td:has(> .stack-empty) {
+  .chaotic-stack .p-datatable-tbody > tr > td.stack-body {
+    order: 4;
+  }
+
+  .chaotic-stack.chaotic-stack .p-datatable-tbody > tr > td.stack-hide,
+  .chaotic-stack.chaotic-stack .p-datatable-tbody > tr > td:has(> .stack-empty) {
     display: none;
   }
 

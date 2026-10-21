@@ -1,7 +1,9 @@
 import { Component, effect, ElementRef, inject, input, output } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { MenuItem } from '@openng/optimus-ui/api';
+import { filter } from 'rxjs';
 import { AuthButtonComponent } from '../auth/auth-button.component';
 
 @Component({
@@ -23,9 +25,22 @@ export class MobileNavComponent {
   constructor() {
     effect(() => {
       if (!this.visible()) return;
+
       // The menu renders in the same change detection pass; focus it once it is in the DOM.
       setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.mobile-nav__link')?.focus());
     });
+
+    // Links in the auth row, like Admin and Settings, do not emit `closed` themselves.
+    inject(Router)
+      .events.pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        if (this.visible()) {
+          this.closed.emit();
+        }
+      });
   }
 
   protected onEscape(): void {

@@ -1,4 +1,29 @@
 <div class="chaotic-page admin-shell" *transloco="let t">
+  <div class="admin-switcher">
+    <button
+      class="admin-switcher__button"
+      [attr.aria-label]="t('admin.layout.switcherLabel', { section: t(activeItem().labelKey) })"
+      [attr.aria-expanded]="switcherOpen()"
+      (click)="switcherMenu.toggle($event)"
+      type="button"
+      aria-haspopup="menu"
+    >
+      <i [class]="activeItem().icon" aria-hidden="true"></i>
+      <span class="admin-switcher__label">{{ t(activeItem().labelKey) }}</span>
+      <i class="pi pi-chevron-down admin-switcher__chevron" aria-hidden="true"></i>
+    </button>
+    <p-menu
+      #switcherMenu
+      [model]="switcherItems()"
+      [popup]="true"
+      [ariaLabel]="t('admin.layout.navLabel')"
+      (onShow)="onSwitcherShow(switcherMenu)"
+      (onHide)="switcherOpen.set(false)"
+      appendTo="body"
+      styleClass="admin-switcher__menu"
+    />
+  </div>
+
   <nav class="admin-nav" #nav [attr.aria-label]="t('admin.layout.navLabel')">
     <p class="admin-nav__title">{{ t('admin.layout.title') }}</p>
     @if (indicator(); as box) {

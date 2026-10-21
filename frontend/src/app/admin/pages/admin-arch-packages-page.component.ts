@@ -86,9 +86,9 @@ function archPackageConflictFields(pkg: ArchPackage): Record<string, unknown> {
           chaoticPageReport
         >
           <ng-template #caption>
-            <div class="flex flex-wrap items-center justify-end gap-2.5">
+            <div class="flex items-center justify-end gap-2.5">
               <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
-              <p-iconfield class="w-full sm:w-64" iconPosition="left">
+              <p-iconfield class="min-w-0 flex-1 md:w-64 md:flex-none" iconPosition="left">
                 <p-inputicon>
                   <i class="pi pi-search" aria-hidden="true"></i>
                 </p-inputicon>
@@ -117,7 +117,7 @@ function archPackageConflictFields(pkg: ArchPackage): Record<string, unknown> {
           </ng-template>
           <ng-template pTemplate="body" let-pkg>
             <tr>
-              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ pkg.id }}</td>
+              <td class="stack-meta"><span class="stack-only">#</span>{{ pkg.id }}</td>
               <td class="stack-title">
                 <span class="block max-w-xs truncate" [title]="pkg.pkgname">{{ pkg.pkgname }}</span>
               </td>
@@ -125,11 +125,15 @@ function archPackageConflictFields(pkg: ArchPackage): Record<string, unknown> {
                 @if (pkg.version) {
                   {{ pkg.version }}{{ pkg.pkgrel ? '-' + pkg.pkgrel : '' }}
                 } @else {
-                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                  <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.arch')">
-                {{ pkg.arch ?? missingValue }}
+              <td class="stack-meta">
+                @if (pkg.arch) {
+                  {{ pkg.arch }}
+                } @else {
+                  <span class="stack-empty">{{ missingValue }}</span>
+                }
               </td>
               <td class="cell-actions">
                 <div class="flex items-center justify-end gap-1">

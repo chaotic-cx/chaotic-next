@@ -18,6 +18,7 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { FilterBarComponent } from '../../filter-bar/filter-bar.component';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { MISSING_VALUE } from '../../table-columns/missing-value';
 import { AdminService, RepoFormData } from '../admin.service';
@@ -64,6 +65,7 @@ function repoConflictFields(repo: Repo): Record<string, unknown> {
     ClearFiltersComponent,
     Dialog,
     EmptyStateComponent,
+    FilterBarComponent,
     FormField,
     FormsModule,
     IconField,
@@ -81,35 +83,44 @@ function repoConflictFields(repo: Repo): Record<string, unknown> {
       <div class="table-container">
         <p-table class="chaotic-stack" [value]="filteredRepos()" dataKey="id">
           <ng-template #caption>
-            <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
-                <p-select
-                  [options]="service.activeOptions()"
-                  [ngModel]="activeFilter()"
-                  [placeholder]="t('admin.pages.activeStatus')"
-                  [ariaLabel]="t('admin.pages.activeStatus')"
-                  (ngModelChange)="onActiveChange($event)"
-                  optionLabel="label"
-                  optionValue="value"
-                  showClear
-                  appendTo="body"
-                />
-                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
-              </div>
-              <p-iconfield class="w-full sm:w-64" iconPosition="left">
-                <p-inputicon>
-                  <i class="pi pi-search" aria-hidden="true"></i>
-                </p-inputicon>
-                <input
-                  class="w-full"
-                  [value]="query()"
-                  [placeholder]="t('admin.pages.searchName')"
-                  [attr.aria-label]="t('admin.pages.searchName')"
-                  (input)="onSearch($event)"
-                  pInputText
-                  type="text"
-                />
-              </p-iconfield>
+            <div class="flex items-center gap-2.5">
+              <chaotic-filter-bar
+                class="min-w-0 flex-1 md:flex-none md:ml-auto"
+                [active]="filtersActive()"
+                (clear)="clearFilters()"
+              >
+                <ng-template #filters let-placement>
+                  <p-select
+                    class="w-full md:w-auto"
+                    [options]="service.activeOptions()"
+                    [ngModel]="activeFilter()"
+                    [placeholder]="t('admin.pages.activeStatus')"
+                    [ariaLabel]="t('admin.pages.activeStatus')"
+                    (ngModelChange)="onActiveChange($event)"
+                    optionLabel="label"
+                    optionValue="value"
+                    showClear
+                    appendTo="body"
+                  />
+                  @if (placement === 'inline') {
+                    <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
+                  }
+                </ng-template>
+                <p-iconfield class="w-full" iconPosition="left">
+                  <p-inputicon>
+                    <i class="pi pi-search" aria-hidden="true"></i>
+                  </p-inputicon>
+                  <input
+                    class="w-full"
+                    [value]="query()"
+                    [placeholder]="t('admin.pages.searchName')"
+                    [attr.aria-label]="t('admin.pages.searchName')"
+                    (input)="onSearch($event)"
+                    pInputText
+                    type="text"
+                  />
+                </p-iconfield>
+              </chaotic-filter-bar>
             </div>
           </ng-template>
           <ng-template #header>
@@ -126,26 +137,32 @@ function repoConflictFields(repo: Repo): Record<string, unknown> {
           </ng-template>
           <ng-template pTemplate="body" let-repo>
             <tr>
-              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ repo.id }}</td>
+              <td class="stack-meta"><span class="stack-only">#</span>{{ repo.id }}</td>
               <td class="stack-title">
                 <span class="block max-w-xs truncate" [title]="repo.name">{{ repo.name }}</span>
               </td>
               <td class="stack-meta" [attr.data-label]="t('admin.repos.fields.gitRef')">
-                {{ repo.gitRef || missingValue }}
+                @if (repo.gitRef) {
+                  {{ repo.gitRef }}
+                } @else {
+                  <span class="stack-empty">{{ missingValue }}</span>
+                }
               </td>
               <td class="text-ctp-subtext stack-body">
                 @if (repo.repoUrl) {
                   <span class="block max-w-md truncate" [title]="repo.repoUrl">{{ repo.repoUrl }}</span>
                 } @else {
-                  {{ missingValue }}
+                  <span class="stack-empty">{{ missingValue }}</span>
                 }
               </td>
-              <td class="stack-meta">
-                @if (repo.isActive) {
-                  <p-tag [value]="t('admin.pages.active')" severity="success" />
-                } @else {
-                  <p-tag [value]="t('admin.pages.inactive')" severity="secondary" />
-                }
+              <td class="stack-tags">
+                <div class="flex flex-wrap items-center gap-1">
+                  @if (repo.isActive) {
+                    <p-tag [value]="t('admin.pages.active')" severity="success" />
+                  } @else {
+                    <p-tag [value]="t('admin.pages.inactive')" severity="secondary" />
+                  }
+                </div>
               </td>
               <td class="cell-actions">
                 <div class="flex items-center justify-end gap-1">

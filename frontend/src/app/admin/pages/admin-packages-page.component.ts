@@ -34,7 +34,8 @@ import { ClearFiltersComponent } from '../../empty-state/clear-filters.component
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { BuildClassPipe } from '../../pipes/build-class.pipe';
-import { formatBytes, formatCpuTime, formatDuration } from '../../functions';
+import { FilterBarComponent } from '../../filter-bar/filter-bar.component';
+import { formatBytes, formatCpuTime, formatDuration, isMobileSignal } from '../../functions';
 import { injectActiveTranslation } from '../../i18n/active-translation';
 import {
   createAdminPagination,
@@ -107,6 +108,7 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
     ClearFiltersComponent,
     Dialog,
     EmptyStateComponent,
+    FilterBarComponent,
     FormField,
     FormsModule,
     IconField,
@@ -142,54 +144,66 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
           chaoticPageReport
         >
           <ng-template #caption>
-            <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
-                <p-button
-                  [label]="t('admin.packages.addPackage')"
-                  (onClick)="openAddAurDialog()"
-                  icon="pi pi-plus"
-                  text
-                  severity="primary"
-                  size="small"
-                />
-                <p-select
-                  [options]="adminService.repos() ?? []"
-                  [ngModel]="adminService.packageRepoFilter()"
-                  [placeholder]="t('admin.packages.allRepos')"
-                  [ariaLabel]="t('admin.pages.repoFilterLabel')"
-                  (ngModelChange)="onRepoChange($event)"
-                  optionLabel="name"
-                  optionValue="id"
-                  showClear
-                  appendTo="body"
-                />
-                <p-select
-                  [options]="adminService.activeOptions()"
-                  [ngModel]="adminService.packageActiveFilter()"
-                  [placeholder]="t('admin.pages.activeStatus')"
-                  [ariaLabel]="t('admin.pages.activeStatus')"
-                  (ngModelChange)="onActiveChange($event)"
-                  optionLabel="label"
-                  optionValue="value"
-                  showClear
-                  appendTo="body"
-                />
-                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
-              </div>
-              <p-iconfield class="w-full sm:w-64" iconPosition="left">
-                <p-inputicon>
-                  <i class="pi pi-search" aria-hidden="true"></i>
-                </p-inputicon>
-                <input
-                  class="w-full"
-                  [value]="adminService.packageQuery()"
-                  [placeholder]="t('admin.pages.searchPkgname')"
-                  [attr.aria-label]="t('admin.pages.searchPkgname')"
-                  (input)="onSearch($event)"
-                  pInputText
-                  type="text"
-                />
-              </p-iconfield>
+            <div class="flex items-center gap-2.5">
+              <p-button
+                class="order-last md:order-none"
+                [label]="isMobile() ? undefined : t('admin.packages.addPackage')"
+                [ariaLabel]="t('admin.packages.addPackage')"
+                (onClick)="openAddAurDialog()"
+                icon="pi pi-plus"
+                text
+                severity="primary"
+                size="small"
+              />
+              <chaotic-filter-bar
+                class="min-w-0 flex-1 md:flex-none md:ml-auto"
+                [active]="filtersActive()"
+                (clear)="clearFilters()"
+              >
+                <ng-template #filters let-placement>
+                  <p-select
+                    class="w-full md:w-auto"
+                    [options]="adminService.repos() ?? []"
+                    [ngModel]="adminService.packageRepoFilter()"
+                    [placeholder]="t('admin.packages.allRepos')"
+                    [ariaLabel]="t('admin.pages.repoFilterLabel')"
+                    (ngModelChange)="onRepoChange($event)"
+                    optionLabel="name"
+                    optionValue="id"
+                    showClear
+                    appendTo="body"
+                  />
+                  <p-select
+                    class="w-full md:w-auto"
+                    [options]="adminService.activeOptions()"
+                    [ngModel]="adminService.packageActiveFilter()"
+                    [placeholder]="t('admin.pages.activeStatus')"
+                    [ariaLabel]="t('admin.pages.activeStatus')"
+                    (ngModelChange)="onActiveChange($event)"
+                    optionLabel="label"
+                    optionValue="value"
+                    showClear
+                    appendTo="body"
+                  />
+                  @if (placement === 'inline') {
+                    <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
+                  }
+                </ng-template>
+                <p-iconfield class="w-full" iconPosition="left">
+                  <p-inputicon>
+                    <i class="pi pi-search" aria-hidden="true"></i>
+                  </p-inputicon>
+                  <input
+                    class="w-full"
+                    [value]="adminService.packageQuery()"
+                    [placeholder]="t('admin.pages.searchPkgname')"
+                    [attr.aria-label]="t('admin.pages.searchPkgname')"
+                    (input)="onSearch($event)"
+                    pInputText
+                    type="text"
+                  />
+                </p-iconfield>
+              </chaotic-filter-bar>
             </div>
           </ng-template>
           <ng-template #header>
@@ -208,7 +222,7 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
           </ng-template>
           <ng-template pTemplate="body" let-pkg>
             <tr>
-              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.id')">{{ pkg.id }}</td>
+              <td class="stack-meta"><span class="stack-only">#</span>{{ pkg.id }}</td>
               <td class="stack-title">
                 <span class="block max-w-xs truncate" [title]="pkg.pkgname">{{ pkg.pkgname }}</span>
               </td>
@@ -219,7 +233,7 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
                   <span class="text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.repo')">
+              <td class="stack-meta">
                 @if (pkg.reponame) {
                   <button
                     class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
@@ -229,14 +243,18 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
                     {{ pkg.reponame }}
                   </button>
                 } @else {
-                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                  <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
-              <td class="stack-meta" [attr.data-label]="t('admin.packages.columns.pkgbase')">
+              <td
+                class="stack-meta"
+                [class.stack-hide]="pkg.pkgbaseName === pkg.pkgname"
+                [attr.data-label]="t('admin.packages.columns.pkgbase')"
+              >
                 @if (pkg.pkgbaseName !== null && pkg.pkgbaseName !== undefined) {
                   {{ pkg.pkgbaseName }}
                 } @else {
-                  <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                  <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
                 }
               </td>
               <td class="stack-meta" [attr.data-label]="t('admin.packages.columns.buildClass')">
@@ -254,7 +272,7 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
                   @if (pkg.buildClassSuggestion; as suggestion) {
                     @if (suggestion.suggestedBuildClass !== null) {
                       <span
-                        class="text-xs text-ctp-overlay1"
+                        class="table-only text-xs text-ctp-overlay1"
                         [pTooltip]="buildClassSuggestionTooltip(suggestion)"
                         tooltipPosition="left"
                         >{{
@@ -267,20 +285,22 @@ function packageConflictFields(pkg: PackageDto): Record<string, unknown> {
                   }
                 </div>
               </td>
-              <td class="stack-meta">
-                @if (pkg.isActive) {
-                  <p-tag [value]="t('admin.pages.active')" severity="success" />
-                } @else {
-                  <p-tag [value]="t('admin.pages.inactive')" severity="secondary" />
-                }
-                @if (pkg.failureSilenced) {
-                  <p-tag
-                    [value]="t('admin.packages.silenced.label')"
-                    [pTooltip]="t('admin.packages.silenced.tooltip')"
-                    severity="warn"
-                    tooltipPosition="left"
-                  />
-                }
+              <td class="stack-tags">
+                <div class="flex flex-wrap items-center gap-1">
+                  @if (pkg.isActive) {
+                    <p-tag [value]="t('admin.pages.active')" severity="success" />
+                  } @else {
+                    <p-tag [value]="t('admin.pages.inactive')" severity="secondary" />
+                  }
+                  @if (pkg.failureSilenced) {
+                    <p-tag
+                      [value]="t('admin.packages.silenced.label')"
+                      [pTooltip]="t('admin.packages.silenced.tooltip')"
+                      severity="warn"
+                      tooltipPosition="left"
+                    />
+                  }
+                </div>
               </td>
               <td class="cell-actions">
                 <div class="flex flex-nowrap items-center justify-end gap-1">
@@ -613,6 +633,7 @@ export class AdminPackagesPageComponent {
   protected readonly rowHeights = TABLE_ROW_HEIGHTS;
   protected readonly formatPkgrel = formatPkgrel;
   protected readonly missingValue = MISSING_VALUE;
+  protected readonly isMobile = isMobileSignal();
 
   protected readonly filtersActive = computed(
     () =>

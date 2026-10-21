@@ -36,18 +36,15 @@
 }
 
 @media (max-width: 899px) {
-  .metric--hero {
-    grid-column: 1 / -1;
-    border-bottom-width: 1px;
+  .metric {
+    padding: 0.875rem 1rem;
   }
 
-  .metric:nth-child(2) {
+  .metric:nth-child(odd) {
     border-left-width: 0;
   }
 
-  .metric:nth-child(4) {
-    grid-column: 1 / -1;
-    border-left-width: 0;
+  .metric:nth-child(n + 3) {
     border-top-width: 1px;
   }
 }
@@ -96,6 +93,17 @@
   font-size: var(--chaotic-text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--chaotic-fg-faint);
+}
+
+@media (max-width: 899px) {
+  .metric--hero .metric__value {
+    font-size: var(--chaotic-text-xl);
+    line-height: var(--chaotic-leading-xl);
+  }
+
+  .metric__context {
+    white-space: normal;
+  }
 }
 
 .overview-grid {

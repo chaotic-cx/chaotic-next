@@ -18,6 +18,7 @@ import { TableModule } from '@openng/optimus-ui/table';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { FilterBarComponent } from '../../filter-bar/filter-bar.component';
 import { injectActiveTranslation } from '../../i18n/active-translation';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { PackageTriggerSourcesComponent } from '../../package-trigger-sources/package-trigger-sources.component';
@@ -74,6 +75,7 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
     ClearFiltersComponent,
     Dialog,
     EmptyStateComponent,
+    FilterBarComponent,
     FormField,
     FormsModule,
     IconField,
@@ -110,9 +112,10 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
           chaoticPageReport
         >
           <ng-template #caption>
-            <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-              <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
+            <chaotic-filter-bar class="md:ml-auto md:w-fit" [active]="filtersActive()" (clear)="clearFilters()">
+              <ng-template #filters let-placement>
                 <p-select
+                  class="w-full md:w-auto"
                   [options]="pkgTypeOptions"
                   [ngModel]="service.elfAnalysisPkgTypeFilter()"
                   [placeholder]="t('admin.elfAnalysis.packageType')"
@@ -124,6 +127,7 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
                   appendTo="body"
                 />
                 <p-select
+                  class="w-full md:w-auto"
                   [options]="brokenOptions()"
                   [ngModel]="service.elfAnalysisBrokenFilter()"
                   [placeholder]="t('admin.elfAnalysis.status.broken')"
@@ -134,9 +138,11 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
                   showClear
                   appendTo="body"
                 />
-                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
-              </div>
-              <p-iconfield class="w-full sm:w-64" iconPosition="left">
+                @if (placement === 'inline') {
+                  <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
+                }
+              </ng-template>
+              <p-iconfield class="w-full" iconPosition="left">
                 <p-inputicon>
                   <i class="pi pi-search" aria-hidden="true"></i>
                 </p-inputicon>
@@ -150,7 +156,7 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
                   type="text"
                 />
               </p-iconfield>
-            </div>
+            </chaotic-filter-bar>
           </ng-template>
           <ng-template #header>
             <tr>
@@ -185,11 +191,17 @@ function elfAnalysisConflictFields(row: AdminPackageElfAnalysis): Record<string,
                   <span class="text-xs text-ctp-overlay1">{{ pkgTypeLabel(row.pkgType) }} · #{{ row.pkgId }}</span>
                 </div>
               </td>
-              <td class="stack-sub">{{ row.version || missingValue }}</td>
+              <td class="stack-sub">
+                @if (row.version) {
+                  {{ row.version }}
+                } @else {
+                  <span class="stack-empty">{{ missingValue }}</span>
+                }
+              </td>
               <td class="text-ctp-subtext1 stack-meta" [attr.data-label]="t('admin.elfAnalysis.columns.binary')">
                 {{ t(binaryLabelKey(row)) }}
               </td>
-              <td class="stack-body">
+              <td class="stack-tags">
                 <div class="flex flex-col gap-0.5">
                   <span class="inline-flex items-center gap-2">
                     <span
@@ -408,7 +420,6 @@ export class AdminPackageElfAnalysisPageComponent {
   readonly pkgTypeOptions = PKG_TYPE_OPTIONS;
   readonly brokenOptions = computed(() => {
     this.activeTranslation();
-
     return [
       { label: this.transloco.translate('admin.elfAnalysis.status.broken'), value: true },
       { label: this.transloco.translate('admin.elfAnalysis.status.ok'), value: false },

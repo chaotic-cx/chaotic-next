@@ -10,11 +10,16 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type MenuItem } from '@openng/optimus-ui/api';
+import { Menu } from '@openng/optimus-ui/menu';
+import { filter } from 'rxjs';
 import { setPageSeo } from '../functions';
-import { ADMIN_NAV, findAdminNavItem } from './admin-nav';
+import { injectActiveTranslation } from '../i18n/active-translation';
+import { matchMenuWidth } from '../menu-align';
+import { ADMIN_NAV, type AdminNavItem, findAdminNavItem } from './admin-nav';
 
 interface IndicatorBox {
   top: number;
@@ -25,7 +30,7 @@ interface IndicatorBox {
 
 @Component({
   selector: 'chaotic-admin',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, TranslocoDirective],
+  imports: [Menu, RouterLink, RouterLinkActive, RouterOutlet, TranslocoDirective],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css',
 })
@@ -34,10 +39,12 @@ export class AdminComponent {
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly activeTranslation = injectActiveTranslation();
 
   private readonly routerEvents = toSignal(this.router.events, { initialValue: null });
   private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
   private readonly links = viewChildren<ElementRef<HTMLAnchorElement>>('navLink');
+  private readonly switcherMenu = viewChild.required<Menu>('switcherMenu');
 
   protected readonly groups = ADMIN_NAV;
 
@@ -45,6 +52,16 @@ export class AdminComponent {
     void this.routerEvents();
     return findAdminNavItem(this.route.firstChild?.snapshot?.url?.[0]?.path);
   });
+
+  protected readonly switcherItems = computed<MenuItem[]>(() => {
+    this.activeTranslation();
+    return ADMIN_NAV.map((group) => ({
+      label: this.transloco.translate(group.labelKey ?? 'admin.layout.title'),
+      items: group.items.map((item) => this.toMenuItem(item)),
+    }));
+  });
+
+  protected readonly switcherOpen = signal(false);
 
   protected readonly indicator = signal<IndicatorBox | null>(null);
   private pendingIndicatorFrame: number | null = null;
@@ -63,6 +80,27 @@ export class AdminComponent {
     afterNextRender(() => {
       this.observeNavResize();
     });
+
+    // A navbar link to another admin page keeps this component, and with it the open popup.
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.switcherMenu().hide());
+  }
+
+  protected onSwitcherShow(menu: Menu): void {
+    matchMenuWidth(menu);
+    this.switcherOpen.set(true);
+  }
+
+  private toMenuItem(item: AdminNavItem): MenuItem {
+    return {
+      label: this.transloco.translate(item.labelKey),
+      icon: item.icon,
+      routerLink: ['/admin', item.path],
+    };
   }
 
   private observeNavResize(): void {
@@ -92,7 +130,6 @@ export class AdminComponent {
   private updateIndicator(): void {
     const activePath = this.activeItem().path;
     const link = this.links().find((ref) => ref.nativeElement.dataset['path'] === activePath);
-
     if (link) {
       this.indicator.set(this.measure(link.nativeElement));
     } else {

@@ -23,6 +23,11 @@ export interface BarRow {
     </ul>
   `,
   styles: `
+    :host {
+      display: block;
+      container: bar-list / inline-size;
+    }
+
     .bar-list {
       display: flex;
       flex-direction: column;
@@ -66,6 +71,24 @@ export interface BarRow {
       font-variant-numeric: tabular-nums;
       text-align: right;
       color: var(--chaotic-fg-faint);
+    }
+
+    @container bar-list (max-width: 32rem) {
+      .bar-list {
+        gap: 0.5rem;
+      }
+
+      .bar-row {
+        grid-template-columns: minmax(0, 1fr) 4.5rem;
+        row-gap: 0.25rem;
+        min-height: 0;
+      }
+
+      .bar-label {
+        grid-column: 1 / -1;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
     }
   `,
 })

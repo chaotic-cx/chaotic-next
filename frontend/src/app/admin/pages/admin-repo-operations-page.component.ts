@@ -60,11 +60,12 @@ const FIXABILITY_LABEL_KEYS: Record<BrokenFixability, string> = {
           <span class="p-panel-title block text-ctp-text">{{ t('admin.repoOperations.brokenPackages') }}</span>
           <div class="flex flex-wrap items-center gap-3">
             @if (service.brokenSelection().length === 0) {
-              <span class="text-[0.8125rem] text-ctp-overlay1" id="broken-selection-hint">{{
+              <span class="w-full text-[0.8125rem] text-ctp-overlay1 sm:w-auto" id="broken-selection-hint">{{
                 t('admin.repoOperations.selectionHint')
               }}</span>
             }
             <p-button
+              class="flex-1 sm:flex-none"
               [disabled]="service.brokenSelection().length === 0"
               [badge]="service.brokenSelection().length.toString()"
               [label]="t('admin.repoOperations.rescanSelected.label')"
@@ -73,9 +74,11 @@ const FIXABILITY_LABEL_KEYS: Record<BrokenFixability, string> = {
               icon="pi pi-microchip"
               size="small"
               severity="secondary"
+              styleClass="w-full"
               tooltipPosition="left"
             />
             <p-button
+              class="flex-1 sm:flex-none"
               [disabled]="service.brokenSelection().length === 0"
               [badge]="service.brokenSelection().length.toString()"
               [label]="t('admin.repoOperations.bumpSelected.label')"
@@ -84,6 +87,7 @@ const FIXABILITY_LABEL_KEYS: Record<BrokenFixability, string> = {
               icon="pi pi-arrow-up"
               size="small"
               severity="danger"
+              styleClass="w-full"
               tooltipPosition="left"
             />
           </div>
@@ -114,6 +118,7 @@ const FIXABILITY_LABEL_KEYS: Record<BrokenFixability, string> = {
             <ng-template #caption>
               <div class="flex flex-wrap items-center gap-2.5 sm:justify-end">
                 <p-select
+                  class="w-full sm:w-auto"
                   [options]="fixabilityOptions()"
                   [ngModel]="service.brokenFixabilityFilter()"
                   [placeholder]="t('admin.repoOperations.fixability.placeholder')"
@@ -137,13 +142,23 @@ const FIXABILITY_LABEL_KEYS: Record<BrokenFixability, string> = {
             </ng-template>
             <ng-template pTemplate="body" let-report>
               <tr [pSelectableRow]="report">
-                <td class="stack-meta"><p-tableCheckbox [value]="report" /></td>
+                <td class="stack-check"><p-tableCheckbox [value]="report" /></td>
                 <td class="stack-title">
                   <span class="block max-w-xs truncate" [title]="report.pkgname">{{ report.pkgname }}</span>
                 </td>
-                <td class="stack-sub">{{ report.version || missingValue }}</td>
-                <td class="stack-meta" [attr.data-label]="t('admin.pages.columns.repo')">
-                  {{ report.repoName || missingValue }}
+                <td class="stack-sub">
+                  @if (report.version) {
+                    {{ report.version }}
+                  } @else {
+                    <span class="stack-empty">{{ missingValue }}</span>
+                  }
+                </td>
+                <td class="stack-meta">
+                  @if (report.repoName) {
+                    {{ report.repoName }}
+                  } @else {
+                    <span class="stack-empty">{{ missingValue }}</span>
+                  }
                 </td>
                 <td class="text-ctp-subtext stack-body">
                   @if (report.issues.length > 0) {
@@ -199,6 +214,18 @@ const FIXABILITY_LABEL_KEYS: Record<BrokenFixability, string> = {
       </div>
     </div>
   `,
+  styles: `
+    @container chaotic-stack (max-width: 56rem) {
+      .chaotic-stack ::ng-deep .p-datatable-tbody > tr > td.stack-check {
+        order: 0;
+        flex: none;
+      }
+
+      .chaotic-stack ::ng-deep .p-datatable-tbody > tr > td.stack-check ~ td.stack-title {
+        flex: 1 1 0;
+      }
+    }
+  `,
 })
 export class AdminRepoOperationsPageComponent {
   readonly service = inject(AdminService);
@@ -214,7 +241,6 @@ export class AdminRepoOperationsPageComponent {
 
   readonly fixabilityOptions = computed(() => {
     this.activeTranslation();
-
     return BROKEN_FIXABILITIES.map((fixability) => ({
       label: this.transloco.translate(FIXABILITY_LABEL_KEYS[fixability]),
       value: fixability,

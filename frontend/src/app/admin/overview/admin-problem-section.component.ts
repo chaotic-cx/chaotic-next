@@ -44,8 +44,25 @@ export interface ProblemRow {
   styles: `
     :host {
       display: block;
+      container: problem-section / inline-size;
       padding-block: 0.75rem 0.25rem;
       border-bottom: 1px solid var(--chaotic-border);
+    }
+
+    @container problem-section (max-width: 32rem) {
+      .problem-list > li {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.125rem;
+      }
+
+      .problem-list .chaotic-mini-list__name,
+      .problem-list .chaotic-mini-list__meta {
+        max-width: none;
+        margin-left: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
     }
 
     :host(:last-child) {

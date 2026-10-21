@@ -24,6 +24,7 @@ import {
 import { AdminService } from '../admin.service';
 import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { FilterBarComponent } from '../../filter-bar/filter-bar.component';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { MISSING_VALUE } from '../../table-columns/missing-value';
 import { TablePageReportDirective } from '../../table-page-report.directive';
@@ -62,6 +63,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     ClearFiltersComponent,
     DatePipe,
     EmptyStateComponent,
+    FilterBarComponent,
     FormsModule,
     IconField,
     InputIcon,
@@ -94,9 +96,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         chaoticPageReport
       >
         <ng-template #caption>
-          <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-            <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
+          <chaotic-filter-bar class="md:ml-auto md:w-fit" [active]="filtersActive()" (clear)="clearFilters()">
+            <ng-template #filters let-placement>
               <p-select
+                class="w-full md:w-auto"
                 [options]="bumpTypeOptions()"
                 [ngModel]="service.packageBumpTypeFilter()"
                 [placeholder]="t('packageBumps.columns.bumpType')"
@@ -108,6 +111,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 appendTo="body"
               />
               <p-select
+                class="w-full md:w-auto"
                 [options]="sourceOptions"
                 [ngModel]="service.packageBumpSourceFilter()"
                 [placeholder]="t('packageBumps.source')"
@@ -118,9 +122,11 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 showClear
                 appendTo="body"
               />
-              <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
-            </div>
-            <p-iconfield class="w-full sm:w-64" iconPosition="left">
+              @if (placement === 'inline') {
+                <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
+              }
+            </ng-template>
+            <p-iconfield class="w-full" iconPosition="left">
               <p-inputicon>
                 <i class="pi pi-search" aria-hidden="true"></i>
               </p-inputicon>
@@ -134,7 +140,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 type="text"
               />
             </p-iconfield>
-          </div>
+          </chaotic-filter-bar>
         </ng-template>
         <ng-template #header>
           <tr>
@@ -149,7 +155,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         </ng-template>
         <ng-template pTemplate="body" let-bump>
           <tr>
-            <td class="stack-meta" [attr.data-label]="t('pages.columns.id')">{{ bump.id }}</td>
+            <td class="stack-meta"><span class="stack-only">#</span>{{ bump.id }}</td>
             <td class="stack-title">
               @if (bump.pkgname) {
                 <a
@@ -164,13 +170,15 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 <span class="text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
-            <td class="stack-meta" [attr.data-label]="t('packageBumps.columns.bumpType')">
-              <p-tag [value]="bumpTypeLabel(bump.bumpType)" severity="secondary" />
+            <td class="stack-tags">
+              <div class="flex flex-wrap items-center gap-1">
+                <p-tag [value]="bumpTypeLabel(bump.bumpType)" severity="secondary" />
+              </div>
             </td>
             <td class="stack-sub" [attr.data-label]="t('packageBumps.columns.trigger')">
               @if (bump.triggerName) {
                 <a
-                  class="block max-w-xs cursor-pointer truncate text-ctp-mauve hover:underline focus-visible:underline"
+                  class="inline-block max-w-xs cursor-pointer truncate align-bottom text-ctp-mauve hover:underline focus-visible:underline"
                   [routerLink]="triggerLink(bump.triggerFrom)"
                   [queryParams]="{ q: bump.triggerName }"
                   [title]="bump.triggerName"
@@ -178,7 +186,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                   {{ bump.triggerName }}
                 </a>
               } @else {
-                <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
             <td class="stack-meta" [attr.data-label]="t('packageBumps.columns.triggeredBy')">
@@ -189,7 +197,9 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               }
             </td>
             <td class="text-ctp-subtext stack-body">
-              <span class="line-clamp-2" [title]="detailsText(bump)">{{ detailsText(bump) }}</span>
+              <span class="line-clamp-2" [class.stack-empty]="!bump.details?.length" [title]="detailsText(bump)">{{
+                detailsText(bump)
+              }}</span>
             </td>
             <td class="stack-meta">{{ bump.timestamp | date: 'short' }}</td>
           </tr>
@@ -247,7 +257,6 @@ export class AdminPackageBumpsPageComponent {
 
   readonly bumpTypeOptions = computed(() => {
     this.activeTranslation();
-
     return BUMP_TYPES.map((bumpType) => ({
       label: this.transloco.translate(bumpType.labelKey),
       value: bumpType.value,
@@ -296,6 +305,7 @@ export class AdminPackageBumpsPageComponent {
   detailsText(bump: PackageBump): string {
     const details = bump.details ?? [];
     if (details.length === 0) return MISSING_VALUE;
+
     return details.join('; ');
   }
 

@@ -22,7 +22,7 @@
     <tbody>
       @for (row of rows(); track row.pkgname) {
         <tr [class.is-silenced]="row.silenced">
-          <td>
+          <td class="cell-name">
             <span class="failure-name">
               <span class="status-dot" [style.background]="statusColor(row.status)" aria-hidden="true"></span>
               <a [routerLink]="['/stats/search']" [queryParams]="{ search: row.pkgname }">{{ row.pkgname }}</a>
@@ -37,12 +37,12 @@
             </span>
           </td>
           <td class="failure-status cell-status">{{ row.statusText }}</td>
-          <td class="is-numeric">
+          <td class="is-numeric cell-streak">
             ×{{ row.consecutiveFailures }}
             <span class="failure-since">{{ streakDurationLabel(row.streakStartedAt) }}</span>
           </td>
-          <td class="is-numeric failure-since">{{ row.timestamp | relativeTime }}</td>
-          <td>
+          <td class="is-numeric failure-since cell-time">{{ row.timestamp | relativeTime }}</td>
+          <td class="cell-actions">
             <span class="failure-actions">
               @if (row.logUrl && !isLogPurged(row.timestamp)) {
                 <a

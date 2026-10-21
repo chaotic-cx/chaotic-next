@@ -14,6 +14,7 @@ import { TagModule } from '@openng/optimus-ui/tag';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { ClearFiltersComponent } from '../../empty-state/clear-filters.component';
 import { EmptyStateComponent } from '../../empty-state/empty-state.component';
+import { FilterBarComponent } from '../../filter-bar/filter-bar.component';
 import { commitUrl, mergeRequestUrl } from '../../gitlab-links';
 import { injectActiveTranslation } from '../../i18n/active-translation';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
@@ -56,6 +57,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     ClearFiltersComponent,
     DatePipe,
     EmptyStateComponent,
+    FilterBarComponent,
     FormsModule,
     IconField,
     InputIcon,
@@ -88,35 +90,44 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         chaoticPageReport
       >
         <ng-template #caption>
-          <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center">
-            <div class="flex flex-wrap items-center gap-2.5 sm:ml-auto">
-              <p-select
-                [options]="actionOptions()"
-                [ngModel]="service.mrActionActionFilter()"
-                [placeholder]="t('mrActions.columns.action')"
-                [ariaLabel]="t('mrActions.actionFilterLabel')"
-                (ngModelChange)="setActionFilter($event)"
-                optionLabel="label"
-                optionValue="value"
-                showClear
-                appendTo="body"
-              />
-              <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
-            </div>
-            <p-iconfield class="w-full sm:w-64" iconPosition="left">
-              <p-inputicon>
-                <i class="pi pi-search" aria-hidden="true"></i>
-              </p-inputicon>
-              <input
-                class="w-full"
-                [value]="service.mrActionQuery()"
-                [placeholder]="t('mrActions.searchPlaceholder')"
-                [attr.aria-label]="t('mrActions.searchPlaceholder')"
-                (input)="onSearch($event)"
-                pInputText
-                type="text"
-              />
-            </p-iconfield>
+          <div class="flex items-center gap-2.5">
+            <chaotic-filter-bar
+              class="min-w-0 flex-1 md:flex-none md:ml-auto"
+              [active]="filtersActive()"
+              (clear)="clearFilters()"
+            >
+              <ng-template #filters let-placement>
+                <p-select
+                  class="w-full md:w-auto"
+                  [options]="actionOptions()"
+                  [ngModel]="service.mrActionActionFilter()"
+                  [placeholder]="t('mrActions.columns.action')"
+                  [ariaLabel]="t('mrActions.actionFilterLabel')"
+                  (ngModelChange)="setActionFilter($event)"
+                  optionLabel="label"
+                  optionValue="value"
+                  showClear
+                  appendTo="body"
+                />
+                @if (placement === 'inline') {
+                  <chaotic-clear-filters [active]="filtersActive()" (clear)="clearFilters()" />
+                }
+              </ng-template>
+              <p-iconfield class="w-full" iconPosition="left">
+                <p-inputicon>
+                  <i class="pi pi-search" aria-hidden="true"></i>
+                </p-inputicon>
+                <input
+                  class="w-full"
+                  [value]="service.mrActionQuery()"
+                  [placeholder]="t('mrActions.searchPlaceholder')"
+                  [attr.aria-label]="t('mrActions.searchPlaceholder')"
+                  (input)="onSearch($event)"
+                  pInputText
+                  type="text"
+                />
+              </p-iconfield>
+            </chaotic-filter-bar>
           </div>
         </ng-template>
         <ng-template #header>
@@ -132,7 +143,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         </ng-template>
         <ng-template pTemplate="body" let-action>
           <tr>
-            <td class="stack-meta" [attr.data-label]="t('pages.columns.id')">{{ action.id }}</td>
+            <td class="stack-meta"><span class="stack-only">#</span>{{ action.id }}</td>
             <td class="stack-title">
               <a
                 class="cursor-pointer text-ctp-mauve hover:underline focus-visible:underline"
@@ -143,8 +154,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 !{{ action.mergeRequestIid }}
               </a>
             </td>
-            <td class="stack-sub">
-              <p-tag [value]="action.action" [severity]="severity(action)" />
+            <td class="stack-tags">
+              <div class="flex flex-wrap items-center gap-1">
+                <p-tag [value]="action.action" [severity]="severity(action)" />
+              </div>
             </td>
             <td class="stack-meta" [attr.data-label]="t('pages.columns.commit')">
               @if (action.commitSha) {
@@ -157,7 +170,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                   <code class="text-sm">{{ shortSha(action.commitSha) }}</code>
                 </a>
               } @else {
-                <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
             <td class="stack-body">
@@ -166,11 +179,15 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                   action.reason
                 }}</span>
               } @else {
-                <span class="text-ctp-subtext0">{{ missingValue }}</span>
+                <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
               }
             </td>
             <td class="stack-meta" [attr.data-label]="t('pages.columns.user')">
-              <span class="font-medium">{{ action.userName || missingValue }}</span>
+              @if (action.userName) {
+                <span class="font-medium">{{ action.userName }}</span>
+              } @else {
+                <span class="stack-empty text-ctp-subtext0">{{ missingValue }}</span>
+              }
             </td>
             <td class="stack-meta">{{ action.createdAt | date: 'short' }}</td>
           </tr>
@@ -225,7 +242,6 @@ export class AdminMrActionsPageComponent {
 
   readonly actionOptions = computed(() => {
     this.activeTranslation();
-
     return ACTION_OPTIONS.map((option) => ({
       label: this.transloco.translate(option.labelKey),
       value: option.value,

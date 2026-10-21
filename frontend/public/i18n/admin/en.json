@@ -2,6 +2,7 @@
   "layout": {
     "title": "Admin",
     "navLabel": "Admin sections",
+    "switcherLabel": "Switch admin section, current: {{ section }}",
     "seo": {
       "title": "Admin · Chaotic-AUR",
       "description": "Administrative tools for the Chaotic-AUR backend",

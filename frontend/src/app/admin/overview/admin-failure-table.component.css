@@ -46,17 +46,6 @@
   width: var(--failure-col-actions);
 }
 
-@media (max-width: 767px) {
-  .failure-table {
-    min-width: calc(var(--failure-col-name-min) + var(--failure-fixed-cols));
-  }
-
-  .col-status,
-  .cell-status {
-    display: none;
-  }
-}
-
 .failure-table th {
   position: sticky;
   top: 0;
@@ -148,4 +137,61 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.125rem;
+}
+
+@media (max-width: 767px) {
+  .failure-table,
+  .failure-table tbody {
+    display: block;
+    min-width: 0;
+  }
+
+  .failure-table colgroup,
+  .failure-table thead,
+  .failure-table .cell-status {
+    display: none;
+  }
+
+  .failure-table tbody tr {
+    display: grid;
+    grid-template-areas:
+      'name name actions'
+      'streak time actions';
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--chaotic-space-md);
+    row-gap: var(--chaotic-space-2xs);
+    padding: var(--chaotic-space-sm) var(--chaotic-space-lg);
+    border-bottom: 1px solid var(--chaotic-border);
+  }
+
+  .failure-table td {
+    height: auto;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .failure-table .cell-name {
+    grid-area: name;
+    white-space: normal;
+  }
+
+  .failure-name a {
+    overflow-wrap: anywhere;
+  }
+
+  .failure-table .cell-streak {
+    grid-area: streak;
+    text-align: left;
+    font-size: var(--chaotic-text-sm);
+  }
+
+  .failure-table .cell-time {
+    grid-area: time;
+    text-align: left;
+  }
+
+  .failure-table .cell-actions {
+    grid-area: actions;
+  }
 }
