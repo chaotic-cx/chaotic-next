@@ -13,6 +13,7 @@ import { MISSING_VALUE } from '../table-columns/missing-value';
 import { flavour, paletteColor, themePalette } from '../theme';
 import { UnknownValueComponent } from '../ui-states/unknown-value.component';
 import { getCountryCoordinates } from './country-coordinates';
+import { globeFitZoom } from './globe-fit';
 import { LiveTrafficService, type TrafficHit } from './live-traffic.service';
 
 const WORKER_URL = '/maplibre-gl-worker.mjs';
@@ -192,6 +193,10 @@ const CIRCLE_STEPS = 128;
 const FOCUS_ZOOM = 3;
 const FOCUS_SPEED = 1.2;
 const POPUP_OFFSET_PX = 25;
+
+const INITIAL_CENTER: [number, number] = [0, 30];
+const FLAT_INITIAL_ZOOM = 1.2;
+const GLOBE_FIT_TOLERANCE = 0.01;
 
 const TRAFFIC_METEORS_SOURCE_ID = 'traffic-meteors-source';
 const TRAFFIC_METEORS_LAYER_ID = 'traffic-meteors-layer';
@@ -600,6 +605,10 @@ export class MirrorMapComponent implements OnDestroy {
   private animationFrameId: number | null = null;
   private currentAppliedStyle: string | null = null;
 
+  private globeFitted = false;
+  private globeFitPending = false;
+  private resizePending = false;
+
   private readonly traffic = computed(() => trafficColors(themePalette()));
 
   readonly counts = computed(() => {
@@ -635,9 +644,13 @@ export class MirrorMapComponent implements OnDestroy {
     effect(() => {
       const proj = this.projection();
       const custom = this.customStyleUrl();
-      const targetStyle = custom || createCatppuccinStyle(proj, themePalette());
-      if (this.map) {
-        this.map.setStyle(targetStyle);
+      const styleKey = custom ?? `${proj}:${flavour()}`;
+      if (!this.map || styleKey === this.currentAppliedStyle) return;
+
+      this.currentAppliedStyle = styleKey;
+      this.map.setStyle(custom || createCatppuccinStyle(proj, themePalette()));
+      if (proj === 'globe') {
+        this.fitGlobe();
       }
     });
 
@@ -668,11 +681,16 @@ export class MirrorMapComponent implements OnDestroy {
 
     const proj = this.projection();
     const initialStyle = this.customStyleUrl() || createCatppuccinStyle(proj, themePalette());
+    this.currentAppliedStyle = this.customStyleUrl() ?? `${proj}:${flavour()}`;
+    this.globeFitted = proj === 'globe';
     this.map = new MaplibreMap({
       container,
       style: initialStyle,
-      center: [0, 30],
-      zoom: proj === 'globe' ? 0.95 : 1.2,
+      center: INITIAL_CENTER,
+      zoom:
+        proj === 'globe'
+          ? globeFitZoom(container.clientWidth, container.clientHeight, INITIAL_CENTER[1])
+          : FLAT_INITIAL_ZOOM,
       locale: this.controlLocale(),
       transformRequest: (url: string) => {
         if (url.includes('demotiles.maplibre.org')) {
@@ -686,7 +704,19 @@ export class MirrorMapComponent implements OnDestroy {
 
     this.map.addControl(new NavigationControl(), 'top-right');
 
-    this.resizeObserver = new ResizeObserver(() => this.map?.resize());
+    /**
+     * MapLibre drops its first resize entry when the style load already updated the transform,
+     * so the canvas keeps the size it had at construction. Watch the container ourselves.
+     */
+    this.resizeObserver = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (!width || !height || this.canvasMatches(width, height)) return;
+
+      this.resizePending = true;
+      this.flushResize();
+    });
+    this.resizeObserver.observe(container);
+
     const onReady = () => {
       this.addCircleLayers();
       this.addTrafficLayers();
@@ -704,6 +734,59 @@ export class MirrorMapComponent implements OnDestroy {
       this.addTrafficLayers();
       this.updateMap();
     });
+
+    // A resize re-fits only after the camera settles, so it never interrupts a focus flight.
+    this.map.on('resize', () => {
+      this.globeFitPending = this.globeFitted;
+    });
+    this.map.on('moveend', () => {
+      this.flushResize();
+      this.flushGlobeFit();
+    });
+    this.map.on('zoomend', () => {
+      if (!this.map) return;
+
+      this.globeFitted =
+        this.projection() === 'globe' &&
+        Math.abs(this.map.getZoom() - this.globeFitZoomAt(this.map.getCenter().lat)) < GLOBE_FIT_TOLERANCE;
+    });
+  }
+
+  private globeFitZoomAt(latitude: number): number {
+    const canvas = this.map?.getCanvas();
+    return globeFitZoom(canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0, latitude);
+  }
+
+  private canvasMatches(width: number, height: number): boolean {
+    const canvas = this.map?.getCanvas();
+    return !!canvas && Math.round(width) === canvas.clientWidth && Math.round(height) === canvas.clientHeight;
+  }
+
+  private flushResize(): void {
+    if (!this.resizePending || !this.map || this.map.isMoving()) return;
+
+    this.resizePending = false;
+    this.map.resize();
+  }
+
+  private flushGlobeFit(): void {
+    if (!this.globeFitPending) return;
+
+    this.globeFitPending = false;
+    if (!this.map || this.projection() !== 'globe') return;
+
+    const zoom = this.globeFitZoomAt(this.map.getCenter().lat);
+    this.globeFitted = true;
+    if (Math.abs(this.map.getZoom() - zoom) < GLOBE_FIT_TOLERANCE) return;
+
+    this.map.setZoom(zoom);
+  }
+
+  private fitGlobe(): void {
+    if (!this.map) return;
+
+    this.globeFitted = true;
+    this.map.setZoom(this.globeFitZoomAt(this.map.getCenter().lat));
   }
 
   private addCircleLayers(): void {
@@ -1235,6 +1318,7 @@ export class MirrorMapComponent implements OnDestroy {
     }
 
     if (target && (!this.lastFocus || !samePosition(target, this.lastFocus))) {
+      this.globeFitted = false;
       this.map.flyTo({ center: target, zoom: FOCUS_ZOOM, speed: FOCUS_SPEED });
       this.lastFocus = target;
     }
