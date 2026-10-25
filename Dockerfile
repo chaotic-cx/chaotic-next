@@ -6,7 +6,8 @@ ENV NODE_ENV=production
 WORKDIR /build
 
 # hadolint ignore=DL3018
-RUN apk add --no-cache --virtual builds-deps build-base pnpm git
+RUN apk add --no-cache --virtual builds-deps build-base git \
+    && npm install -g pnpm@12.9.0
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY patches ./patches
