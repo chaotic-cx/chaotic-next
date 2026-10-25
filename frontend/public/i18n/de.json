@@ -346,7 +346,9 @@
     "viewPackageStatistics": "Paketstatistiken ansehen",
     "loadError": "Deployments konnten nicht geladen werden.",
     "empty": "Keine Deployments passen zu diesen Filtern.",
-    "firstRunEmpty": "Noch keine Deployments. Abgeschlossene Builds erscheinen hier."
+    "firstRunEmpty": "Noch keine Deployments. Abgeschlossene Builds erscheinen hier.",
+    "openStoredLog": "Gespeichertes Build-Log öffnen",
+    "openStoredLogFor": "Gespeichertes Build-Log für {{pkgname}} öffnen"
   },
   "diffRenderer": {
     "fileDiff": "Datei-Diff",
@@ -1221,6 +1223,7 @@
     "copyFailed": {
       "title": "Kopieren fehlgeschlagen",
       "message": "Der Link zu Zeile {{line}} konnte nicht kopiert werden."
-    }
+    },
+    "unavailable": "Für diesen Build ist kein Log gespeichert."
   }
 }

@@ -148,6 +148,7 @@ describe('BuilderService silence handling', () => {
         if (!(prop in target)) {
           target[prop] = vi.fn(() => chainable);
         }
+
         return target[prop];
       },
     });
@@ -185,9 +186,11 @@ describe('BuilderService silence handling', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
       {} as EntityLookupService,
       {} as never,
     );
+
     return { service, buildsQb };
   }
 

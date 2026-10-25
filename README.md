@@ -78,7 +78,7 @@ See `backend/src/config/` for the full list. The most important ones:
 
 | Variable                                  | Default                            | Description                                                |
 | ----------------------------------------- | ---------------------------------- | ---------------------------------------------------------- |
-| `PG_HOST` / `PG_PORT`                     | `localhost` / `5432`               | PostgreSQL connection                                      |
+| `PG_HOST` / `PG_PORT`                     | `localhost` / `5433`               | PostgreSQL connection                                      |
 | `PG_USER` / `PG_PASSWORD` / `PG_DATABASE` | `chaotic`                          | PostgreSQL credentials                                     |
 | `NODE_ENV`                                | `development`                      | `production` disables TypeORM schema sync                  |
 | `CAUR_PORT`                               | `3000`                             | Backend listen port                                        |

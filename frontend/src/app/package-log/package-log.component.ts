@@ -15,6 +15,7 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { IconField } from '@openng/optimus-ui/iconfield';
 import { InputIcon } from '@openng/optimus-ui/inputicon';
 import { InputText } from '@openng/optimus-ui/inputtext';
+import { requestFailure } from '../api-errors';
 import { BuildStatusService } from '../build-status/build-status.service';
 import { FillViewportDirective } from '../fill-viewport.directive';
 import { formatDuration, isLogPurged } from '../functions';
@@ -64,6 +65,7 @@ export class PackageLogComponent implements OnDestroy {
 
   readonly pkgname = input<string>();
   readonly timestamp = input<string>();
+  readonly buildId = input<string>();
 
   protected readonly scrollToLine = signal<number | undefined>(undefined);
   protected readonly logStream = createLogStream({
@@ -95,7 +97,12 @@ export class PackageLogComponent implements OnDestroy {
   protected readonly subtitle = computed(() => {
     if (!this.pkgname()) return undefined;
 
-    const parts = [this.formattedTimestamp()];
+    const parts: string[] = [];
+    const timestamp = this.formattedTimestamp();
+    if (timestamp) {
+      parts.push(timestamp);
+    }
+
     const elapsed = this.elapsedLabel();
     if (elapsed) {
       parts.push(elapsed);
@@ -106,7 +113,15 @@ export class PackageLogComponent implements OnDestroy {
       parts.push(remaining);
     }
 
-    return parts.join(' · ');
+    return parts.length > 0 ? parts.join(' · ') : undefined;
+  });
+
+  protected readonly pageTitle = computed(() => {
+    const pkgname = this.pkgname();
+    if (pkgname) return pkgname;
+
+    const buildId = this.buildId();
+    return buildId ? `#${buildId}` : undefined;
   });
 
   /** Start time of the running build, from the live build queue, when the log is streaming. */
@@ -130,6 +145,7 @@ export class PackageLogComponent implements OnDestroy {
     bindRecordTitle(this.pkgname);
 
     effect(() => {
+      const buildId = this.buildId();
       const pkgname = this.pkgname();
       const timestamp = this.timestamp();
       /**
@@ -137,7 +153,9 @@ export class PackageLogComponent implements OnDestroy {
        * dependent only on the route inputs prevents any of those from retriggering
        * a reload (and reopening the EventSource).
        */
-      if (pkgname && timestamp) {
+      if (buildId) {
+        untracked(() => this.loadStoredLog(buildId));
+      } else if (pkgname && timestamp) {
         untracked(() => this.loadLog(pkgname));
       }
     });
@@ -179,6 +197,36 @@ export class PackageLogComponent implements OnDestroy {
     this.openStream();
   }
 
+  private loadStoredLog(rawId: string): void {
+    this.logStream.reset();
+    this.stopElapsedTimer();
+    this.scanBuffer = '';
+    this.builder.set(undefined);
+    this.endReason.set(undefined);
+    this.buildStartMs.set(undefined);
+    this.buildEndMs.set(undefined);
+    this.elapsed.set(0);
+    this.scrollToLine.set(this.requestedLine());
+
+    const buildId = Number(rawId);
+    if (!Number.isInteger(buildId) || buildId <= 0) {
+      this.logStream.state.set('unavailable');
+      return;
+    }
+
+    this.seo.update({
+      title: this.transloco.translate('packageLog.seo.title', { pkgname: this.pageTitle() ?? `#${buildId}` }),
+      description: this.transloco.translate('packageLog.seo.description'),
+      keywords: this.transloco.translate('packageLog.seo.keywords'),
+      url: this.router.url,
+    });
+
+    this.logService.getStoredLog(buildId).subscribe({
+      next: (text) => this.logStream.setComplete(text),
+      error: (err: unknown) => this.logStream.state.set(requestFailure(err) === 'notFound' ? 'unavailable' : 'failed'),
+    });
+  }
+
   private openStream(): void {
     const pkgname = this.pkgname();
     const timestamp = this.timestamp();
@@ -200,6 +248,12 @@ export class PackageLogComponent implements OnDestroy {
   }
 
   protected retryStream(): void {
+    const buildId = this.buildId();
+    if (buildId) {
+      this.loadStoredLog(buildId);
+      return;
+    }
+
     const pkgname = this.pkgname();
     if (pkgname) {
       this.loadLog(pkgname);

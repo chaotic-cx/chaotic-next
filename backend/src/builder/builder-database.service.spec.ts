@@ -71,6 +71,7 @@ function createService(buildRepo: BuildRepositoryStub): BuilderDatabaseService {
     sseSubject: new Subject<Partial<MessageEvent<ChaoticEvent>>>(),
     gitlabPipelineService: {} as never,
     buildClassSync: { syncFromDeployment: () => Promise.resolve() },
+    buildLog: { capture: () => Promise.resolve() },
     logger: pinoStub,
   };
   return new BuilderDatabaseService(options);
@@ -94,6 +95,7 @@ describe('BuilderDatabaseService.logBuild', () => {
     for (const status of Object.values(OUTCOME_BY_EVENT)) {
       expect(persisted).toContain(status);
     }
+
     expect(saved).toHaveLength(Object.keys(OUTCOME_BY_EVENT).length);
   });
 
@@ -127,11 +129,13 @@ describe('BuilderDatabaseService deferred deployment checks', () => {
       sseSubject: new Subject<Partial<MessageEvent<ChaoticEvent>>>(),
       gitlabPipelineService: {} as never,
       buildClassSync: { syncFromDeployment: () => Promise.resolve() },
+      buildLog: { capture: () => Promise.resolve() },
       logger: { ...pinoStub, warn: () => undefined } as unknown as PinoLogger,
     });
     (service as unknown as { pendingDeploymentChecks: unknown[] }).pendingDeploymentChecks = [
       { build: deployedBuild, pkgbase: 'paru', pkgname: 'paru', queuedAt: Date.now(), targetRepo: 'chaotic-aur' },
     ];
+
     return service;
   }
 

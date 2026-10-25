@@ -387,6 +387,48 @@ describe('Builder endpoints (e2e, real PostgreSQL)', () => {
     });
   });
 
+  describe('GET /builder/builds/:id/log', () => {
+    it('returns the stored log as plain text', async () => {
+      const build = await e2e.seedBuild({ logContent: '==> Starting build()...\n==> Build finished.' });
+
+      const res = await e2e.inject({ method: 'GET', url: `/builder/builds/${build.id}/log` });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toContain('text/plain');
+      expect(res.body).toBe('==> Starting build()...\n==> Build finished.');
+    });
+
+    it('returns 404 when the build has no stored log', async () => {
+      const build = await e2e.seedBuild({});
+
+      const res = await e2e.inject({ method: 'GET', url: `/builder/builds/${build.id}/log` });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 404 for an unknown build', async () => {
+      const res = await e2e.inject({ method: 'GET', url: '/builder/builds/999999/log' });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('rejects a non-numeric build id', async () => {
+      const res = await e2e.inject({ method: 'GET', url: '/builder/builds/not-a-number/log' });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('does not include the stored log in the build list', async () => {
+      await e2e.seedBuild({ logContent: 'secret build log' });
+
+      const res = await e2e.inject<Paginated<Record<string, unknown>>>({ method: 'GET', url: '/builder/builds' });
+
+      expect(res.statusCode).toBe(200);
+      const body = await res.json();
+      expect(body.items[0]).not.toHaveProperty('logContent');
+    });
+  });
+
   describe('GET /builder/latest', () => {
     it('returns the latest builds limited by amount', async () => {
       for (let i = 0; i < 3; i++) {

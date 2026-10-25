@@ -29,6 +29,7 @@ import {
   getLatestBuildsQuerySchema,
   getPackagesQuerySchema,
   heavyPackageSchema,
+  idParamSchema,
   isValidPkgname,
   latestForPackageQuerySchema,
   offsetQuerySchema,
@@ -74,10 +75,31 @@ import {
   type UnresolvedFailedBuild,
   unresolvedFailedBuildSchema,
 } from '@chaotic-next/shared-lib';
-import { BadRequestException, Controller, Delete, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProduces,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from '@thallesp/nestjs-better-auth';
+import type { FastifyReply } from 'fastify';
 
 @ApiTags('builder')
 @Controller('builder')
@@ -140,6 +162,18 @@ export class BuilderController {
       sort: query.sort,
       order: query.order,
     });
+  }
+
+  @Get('builds/:id/log')
+  @ApiOperation({ summary: 'Get the stored raw log of one build.' })
+  @ApiParam({ name: 'id', description: 'Build id' })
+  @ApiProduces('text/plain')
+  @ApiOkResponse({ description: 'Stored build log', schema: { type: 'string' } })
+  async getBuildLog(@Param('id', { schema: idParamSchema }) id: number, @Res() reply: FastifyReply): Promise<void> {
+    const content = await this.builderService.getBuildLog(id);
+    if (content === null) throw new NotFoundException('No log stored for this build');
+
+    return reply.type('text/plain; charset=utf-8').send(content);
   }
 
   @Get('latest')
@@ -372,6 +406,7 @@ export class BuilderController {
     if (!isValidPkgname(pkgbase)) {
       throw new BadRequestException(`Invalid package name: ${pkgbase}`, { errorCode: 'INVALID_PKGNAME' });
     }
+
     return this.builderService.getShouldBuild(pkgbase);
   }
 
@@ -407,6 +442,7 @@ export class BuilderController {
     if (!isValidPkgname(pkgname)) {
       throw new BadRequestException(`Invalid package name: ${pkgname}`, { errorCode: 'INVALID_PKGNAME' });
     }
+
     await this.builderService.silenceUnresolvedFailedBuild(pkgname);
   }
 
@@ -421,6 +457,7 @@ export class BuilderController {
     if (!isValidPkgname(pkgname)) {
       throw new BadRequestException(`Invalid package name: ${pkgname}`, { errorCode: 'INVALID_PKGNAME' });
     }
+
     await this.builderService.unsilenceUnresolvedFailedBuild(pkgname);
   }
 
@@ -526,6 +563,7 @@ export class BuilderController {
         },
       );
     }
+
     return this.builderService.getHeavyPackagesByResourceMetric({ metric, amount, days });
   }
 

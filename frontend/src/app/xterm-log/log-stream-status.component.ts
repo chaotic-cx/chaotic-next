@@ -8,8 +8,10 @@ import { LoadErrorComponent } from '../load-error/load-error.component';
  * `connecting`: no line arrived yet. `live`: lines arrive. `reconnecting`: the link dropped and comes back.
  * `failed`: every reconnect failed. `complete`: the log ended. `empty`: the log ended without a line.
  * `purged`: the log ended without a line, and the build is older than the log retention.
+ * `unavailable`: the build has no stored log.
  */
-export type LogStreamState = 'connecting' | 'live' | 'reconnecting' | 'failed' | 'complete' | 'empty' | 'purged';
+export type LogStreamState =
+  'connecting' | 'live' | 'reconnecting' | 'failed' | 'complete' | 'empty' | 'purged' | 'unavailable';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const LOG_RETENTION_DAYS = Math.round(LOG_RETENTION_MS / MS_PER_DAY);
@@ -23,16 +25,19 @@ const LOG_RETENTION_DAYS = Math.round(LOG_RETENTION_MS / MS_PER_DAY);
       <div role="status">
         @switch (state()) {
           @case ('reconnecting') {
-            <p class="log-stream-status log-stream-status--warn">
+            <p class="log-stream-status chaotic-text-inset log-stream-status--warn">
               <i class="pi pi-wifi" aria-hidden="true"></i>
               {{ t('reconnecting') }}
             </p>
           }
           @case ('empty') {
-            <p class="log-stream-status">{{ t('empty') }}</p>
+            <p class="log-stream-status chaotic-text-inset">{{ t('empty') }}</p>
           }
           @case ('purged') {
-            <p class="log-stream-status">{{ t('purged', { days: retentionDays }) }}</p>
+            <p class="log-stream-status chaotic-text-inset">{{ t('purged', { days: retentionDays }) }}</p>
+          }
+          @case ('unavailable') {
+            <p class="log-stream-status chaotic-text-inset">{{ t('unavailable') }}</p>
           }
           @default {
             <!-- A connecting, live, complete or failed log needs no status line. -->
@@ -50,8 +55,6 @@ const LOG_RETENTION_DAYS = Math.round(LOG_RETENTION_MS / MS_PER_DAY);
       display: flex;
       align-items: center;
       gap: var(--chaotic-space-sm);
-      /* Starts on the line of the terminal gutter: panel border plus terminal padding. */
-      padding-inline: calc(var(--chaotic-space-md) + 1px);
       font-size: var(--chaotic-text-base);
       color: var(--chaotic-fg-muted);
     }

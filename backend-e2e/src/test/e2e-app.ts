@@ -53,7 +53,7 @@ export type PackageSeed = Partial<
 >;
 
 export type BuildSeed = Partial<
-  Pick<Build, 'status' | 'arch' | 'logUrl' | 'commit' | 'timeToEnd' | 'replaced'> & {
+  Pick<Build, 'status' | 'arch' | 'logUrl' | 'logContent' | 'commit' | 'timeToEnd' | 'replaced'> & {
     pkgbase: Package;
     builder: Builder;
     repo: Repo;
@@ -165,6 +165,7 @@ export function stubGitlabApi(app: NestFastifyApplication): void {
   const notMocked = (group: string | symbol, method: string | symbol) => () => {
     throw new Error(`GitLab API call not mocked in e2e: ${String(group)}.${String(method)}`);
   };
+
   const ensureEndpoint = (
     target: Record<string | symbol, unknown>,
     group: string | symbol,
@@ -174,6 +175,7 @@ export function stubGitlabApi(app: NestFastifyApplication): void {
       target[method] = notMocked(group, method);
     }
   };
+
   const groups = {} as Record<string | symbol, Record<string | symbol, unknown>>;
   const stub = new Proxy(groups, {
     get: (target, group) => {
@@ -192,6 +194,7 @@ export function stubGitlabApi(app: NestFastifyApplication): void {
         });
         target[group] = endpoints;
       }
+
       return endpoints;
     },
   });
@@ -228,10 +231,12 @@ export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<E
               : [],
         };
         request.session = { user: request.user };
+
         return true;
       },
     });
   }
+
   const moduleRef = await testingModule.compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
@@ -317,6 +322,7 @@ export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<E
       } catch {
         // Ignore if BuilderService is not instantiated
       }
+
       await app.close();
     },
   };
@@ -365,6 +371,7 @@ async function saveUnique<T extends { id: number }>(
       const existing = await resolve();
       if (existing) return existing;
     }
+
     throw err;
   }
 }
@@ -383,6 +390,7 @@ async function seedBuilder(
     const existing = await repo.findOneBy({ name });
     if (existing) return existing;
   }
+
   return saveUnique(
     repo,
     () => repo.findOneBy({ name }),
@@ -407,6 +415,7 @@ async function seedRepo(dataSource: DataSource, overrides: RepoSeed | undefined,
     const existing = await repo.findOneBy({ name });
     if (existing) return existing;
   }
+
   return saveUnique(
     repo,
     () => repo.findOneBy({ name }),
@@ -441,6 +450,7 @@ async function seedPackage(
     const existing = await repo.findOne({ where: { pkgname, repo: { id: linkedRepo.id } } });
     if (existing) return existing;
   }
+
   return repo.save({
     pkgname,
     version: overrides?.version ?? real.version,
@@ -478,6 +488,7 @@ async function seedBuild(dataSource: DataSource, overrides: BuildSeed | undefine
     commit: overrides?.commit ?? '4a70b438f76d5c8f6f739ea110f8c071efe8067f',
     timeToEnd: overrides?.timeToEnd ?? 1.5,
     replaced: overrides?.replaced ?? false,
+    ...(overrides?.logContent === undefined ? {} : { logContent: overrides.logContent }),
     ...(overrides?.timestamp === undefined ? {} : { timestamp: overrides.timestamp }),
     resourceStats: overrides?.resourceStats
       ? Object.assign(new BuildResourceUsage(), overrides.resourceStats)
@@ -492,6 +503,7 @@ async function seedArchlinuxPackage(
   const repo = dataSource.getRepository(ArchlinuxPackage);
   const n = await repo.count();
   const real = ARCH_PACKAGES[n % ARCH_PACKAGES.length];
+
   return repo.save({
     pkgname: overrides?.pkgname ?? real.pkgname,
     version: overrides?.version ?? real.version,
@@ -508,6 +520,7 @@ async function seedNotificationSubscription(
 ): Promise<NotificationSubscription> {
   const repo = dataSource.getRepository(NotificationSubscription);
   const n = await repo.count();
+
   return repo.save({
     userId: overrides?.userId ?? 'e2e-user',
     endpoint: overrides?.endpoint ?? `https://fcm.googleapis.com/fcm/send/chaotic-test-${n}-${Date.now()}`,
@@ -541,6 +554,7 @@ async function seedAuthUser(dataSource: DataSource, overrides: AuthUserSeed | un
   const signature = createHmac('sha256', process.env.BETTER_AUTH_SECRET ?? '')
     .update(token)
     .digest('base64');
+
   return { userId, token, cookie: `better-auth.session_token=${token}.${signature}` };
 }
 
@@ -598,6 +612,7 @@ async function seedPipelineTrigger(
 ): Promise<PipelineTriggerEntity> {
   const repo = dataSource.getRepository(PipelineTriggerEntity);
   const operation = overrides?.operation ?? 'Bump Packages';
+
   return repo.save({
     pipelineId: overrides?.pipelineId ?? 6001,
     ref: overrides?.ref ?? 'main',
@@ -615,6 +630,7 @@ async function seedPackageBump(
 ): Promise<PackageBumpEntity> {
   const repo = dataSource.getRepository(PackageBumpEntity);
   const pkg = overrides?.pkg ?? (await seedPackage(dataSource, undefined, () => pkgCounterInternal++));
+
   return repo.save({
     pkg,
     bumpType: overrides?.bumpType ?? 1,
@@ -627,6 +643,7 @@ async function seedPackageBump(
 
 async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Promise<void> {
   if (rows.length === 0) return;
+
   const params: unknown[] = [];
   const values = rows
     .map((row, i) => {
@@ -642,6 +659,7 @@ async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Pr
         row.userAgent ?? null,
         row.timestamp ?? new Date(),
       );
+
       return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9})`;
     })
     .join(', ');
@@ -669,6 +687,7 @@ async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Pr
     const [dayMs, country, hostname, pkg] = key.split('|');
     const base = i * 5;
     mainParams.push(new Date(Number(dayMs)), country, hostname, pkg, count);
+
     return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
   });
   if (mainValues.length > 0) {
@@ -684,6 +703,7 @@ async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Pr
     const [dayMs, pkg, userAgent] = key.split('|');
     const base = i * 4;
     agentParams.push(new Date(Number(dayMs)), pkg, userAgent, count);
+
     return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
   });
   if (agentValues.length > 0) {
@@ -702,8 +722,10 @@ async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Pr
       ips = new Set<string>();
       ipsByDay.set(dayMs, ips);
     }
+
     ips.add(row.ip);
   }
+
   const userParams: unknown[] = [];
   const userPairs: string[] = [];
   for (const [dayMs, ips] of ipsByDay) {
@@ -713,6 +735,7 @@ async function seedRouterHits(dataSource: DataSource, rows: RouterHitSeed[]): Pr
       userPairs.push(`($${base + 1}::timestamp, $${base + 2})`);
     }
   }
+
   if (userPairs.length > 0) {
     await dataSource.query(
       `INSERT INTO "router_hits_daily_users" ("day", "sketch")

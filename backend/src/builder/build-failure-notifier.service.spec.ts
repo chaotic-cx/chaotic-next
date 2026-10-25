@@ -6,7 +6,8 @@ import { type NotificationService } from '../notifications/notification.service'
 import { type Repository } from 'typeorm';
 import { BuildStatus, type MoleculerBuildObject } from '../types/types';
 import { scanBuildLogForCause } from './build-failure-rules';
-import { BuildFailureNotifierService, parseLogRef } from './build-failure-notifier.service';
+import { BuildFailureNotifierService } from './build-failure-notifier.service';
+import { parseLogRef } from './build-log-url';
 import { Build } from './builder.entity';
 
 vi.mock('./build-failure-rules', async (importOriginal) => {

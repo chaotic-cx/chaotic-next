@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { NotificationService } from '../notifications/notification.service';
 import { MoleculerBuildObject } from '../types/types';
 import { type BuildFailureScan, isNotifiable, scanBuildLogForCause } from './build-failure-rules';
+import { type LogRef, parseLogRef, rawLogUrl } from './build-log-url';
 import { Build } from './builder.entity';
 import { isFailingStatus } from './unresolved-failures';
 
@@ -14,11 +15,6 @@ const NOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const LOG_FETCH_TIMEOUT_MS = 20 * 1000;
 const LOG_FETCH_MAX_BYTES = 512 * 1024;
 const MAX_BODY_LENGTH = 140;
-
-interface LogRef {
-  pkgname: string;
-  timestamp: string;
-}
 
 function toBody(scan: BuildFailureScan): string {
   const body = scan.detail ? `${scan.label}: ${scan.detail}` : scan.label;
@@ -43,11 +39,13 @@ async function fetchLogTail(url: string, maxBytes: number): Promise<string | nul
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
+
       tail += decoder.decode(value, { stream: true });
       if (tail.length > maxBytes) {
         tail = tail.slice(-maxBytes);
       }
     }
+
     return tail;
   } catch {
     return null;
@@ -105,6 +103,7 @@ export class BuildFailureNotifierService {
       this.pino.debug({ pkgname: logRef.pkgname, cause: scan.id }, 'Build failure notification already sent recently');
       return;
     }
+
     this.rememberNotified(logRef.pkgname, scan.id);
 
     await this.notificationService.broadcast(
@@ -115,7 +114,7 @@ export class BuildFailureNotifierService {
 
   private rawLogUrl(logRef: LogRef): string {
     const base = this.configService.getOrThrow<string>('app.garudaLogsUrl');
-    return `${base}/${encodeURIComponent(logRef.pkgname)}/${logRef.timestamp}`;
+    return rawLogUrl(base, logRef);
   }
 
   private async persistFailureTags(logUrl: string, scan: BuildFailureScan): Promise<void> {
@@ -148,21 +147,4 @@ export class BuildFailureNotifierService {
       },
     };
   }
-}
-
-/** Reads the package name and timestamp out of the build log URL. */
-export function parseLogRef(logUrl: string): LogRef | null {
-  try {
-    const url = new URL(logUrl);
-    const pkgname = url.searchParams.get('id') ?? url.searchParams.get('pkgname');
-    const timestamp = url.searchParams.get('timestamp');
-    if (pkgname !== null && timestamp !== null) return { pkgname, timestamp };
-  } catch {
-    // Malformed log URL; fall through to the path-based reading below.
-  }
-
-  const segments = logUrl.split('/').filter(Boolean);
-  const [pkgname, timestamp] = segments.slice(-2);
-  if (pkgname && timestamp) return { pkgname, timestamp };
-  return null;
 }

@@ -15,6 +15,7 @@ import {
 import { errorMessage } from '../utils/functions';
 import { BuildClassSyncService } from './build-class-sync.service';
 import { BuildFailureNotifierService } from './build-failure-notifier.service';
+import { BuildLogService } from './build-log.service';
 import { Build, BuildResourceUsage, Package } from './builder.entity';
 import { EntityLookupService } from './entity-lookup.service';
 import { moleculerConfigCommonService } from './moleculer.config';
@@ -29,6 +30,7 @@ export interface BuilderDatabaseServiceOptions {
   gitlabPipelineService: GitlabPipelineService;
   buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
   buildFailureNotifier?: Pick<BuildFailureNotifierService, 'handleFailedBuild'>;
+  buildLog: Pick<BuildLogService, 'capture'>;
   logger: PinoLogger;
 }
 
@@ -62,6 +64,7 @@ function finiteOrNull(value: unknown): number | null {
 function resourceUsageFromStats(stats: BuildResourceStats): BuildResourceUsage | undefined {
   const sampleCount = finiteOrNull(stats.sample_count);
   if (sampleCount === null) return undefined;
+
   const usage = new BuildResourceUsage();
   usage.avgMemoryBytes = finiteOrNull(stats.avg_memory_bytes);
   usage.cpuTimeNs = finiteOrNull(stats.cpu_time_ns);
@@ -73,6 +76,7 @@ function resourceUsageFromStats(stats: BuildResourceStats): BuildResourceUsage |
   usage.peakMemoryBytes = finiteOrNull(stats.peak_memory_bytes);
   usage.peakPids = finiteOrNull(stats.peak_pids);
   usage.sampleCount = sampleCount;
+
   return usage;
 }
 
@@ -90,6 +94,7 @@ export class BuilderDatabaseService extends Service {
   private readonly gitlabPipelineService: GitlabPipelineService;
   private readonly buildClassSync: Pick<BuildClassSyncService, 'syncFromDeployment'>;
   private readonly buildFailureNotifier?: Pick<BuildFailureNotifierService, 'handleFailedBuild'>;
+  private readonly buildLog: Pick<BuildLogService, 'capture'>;
   private readonly pino: PinoLogger;
 
   /**
@@ -111,6 +116,7 @@ export class BuilderDatabaseService extends Service {
     gitlabPipelineService,
     buildClassSync,
     buildFailureNotifier,
+    buildLog,
     logger,
   }: BuilderDatabaseServiceOptions) {
     super(broker);
@@ -120,6 +126,7 @@ export class BuilderDatabaseService extends Service {
     this.gitlabPipelineService = gitlabPipelineService;
     this.buildClassSync = buildClassSync;
     this.buildFailureNotifier = buildFailureNotifier;
+    this.buildLog = buildLog;
     this.pino = logger;
 
     this.parseServiceSchema({
@@ -192,7 +199,6 @@ export class BuilderDatabaseService extends Service {
     if (ctx.eventName && !BUILD_OUTCOME_EVENTS.has(ctx.eventName)) return;
 
     const params = ctx.params;
-
     if (!params.builder_name || !params.target_repo || !params.pkgname || params.status === undefined) {
       this.pino.warn(`Malformed build event '${ctx.eventName}': missing required fields, dropping entry`);
       return;
@@ -203,7 +209,6 @@ export class BuilderDatabaseService extends Service {
       this.lookup.getOrCreateRepo(params.target_repo),
     ]);
     const pkg: Package = await this.lookup.getOrCreatePackage(params.pkgname, repo);
-
     pkg.lastUpdated = new Date().toISOString();
 
     const build: Partial<Build> = {
@@ -219,7 +224,6 @@ export class BuilderDatabaseService extends Service {
       status: params.status,
       replaced: params.replaced,
     };
-
     if (params.resourceStats) {
       build.resourceStats = resourceUsageFromStats(params.resourceStats);
     }
@@ -255,7 +259,11 @@ export class BuilderDatabaseService extends Service {
     }
 
     try {
-      this.pino.debug(await this.dbConnections.build.save(build));
+      const saved = await this.dbConnections.build.save(build);
+      this.pino.debug(saved);
+      void this.buildLog.capture(saved.id, params.logUrl).catch((err: unknown) => {
+        this.pino.error(`Failed to capture build log for ${params.pkgname}: ${errorMessage(err)}`);
+      });
 
       if (isFailingStatus(params.status)) {
         await this.dbConnections.silencedFailure.delete({ pkgname: params.pkgname });
@@ -281,6 +289,7 @@ export class BuilderDatabaseService extends Service {
 
   private scanBuildFailureAndNotify(params: MoleculerBuildObject): void {
     if (!this.buildFailureNotifier) return;
+
     void this.buildFailureNotifier.handleFailedBuild(params).catch((err: unknown) => {
       this.pino.error(`Failed to scan build failure for ${params.pkgname}: ${errorMessage(err)}`);
     });
@@ -322,9 +331,11 @@ export class BuilderDatabaseService extends Service {
       const pkgname = build.pkgbase?.pkgname;
       const repo = build.repo;
       if (!pkgname || !repo) continue;
+
       try {
         const pkg = await this.lookup.getOrCreatePackage(pkgname, repo);
         if (!pkg.version || pkg.pkgrel == null) continue;
+
         const duration = typeof build.timeToEnd === 'number' ? build.timeToEnd : 0;
         this.sseSubject$.next({
           data: {
@@ -352,11 +363,14 @@ export class BuilderDatabaseService extends Service {
     if (this.refreshInFlight) {
       this.pino.warn('Scheduling Chaotic version update, another update is in progress');
       this.scheduledUpdate = true;
+
       return this.refreshInFlight;
     }
+
     this.refreshInFlight = this.refreshChaoticVersions().finally(() => {
       this.refreshInFlight = null;
     });
+
     return this.refreshInFlight;
   }
 
@@ -364,7 +378,6 @@ export class BuilderDatabaseService extends Service {
     const remaining: PendingDeploymentCheck[] = [];
     const taken: Partial<Build>[] = [];
     const now = Date.now();
-
     for (const pending of this.pendingDeploymentChecks) {
       if (now - pending.queuedAt >= PENDING_DEPLOYMENT_TIMEOUT_MS) {
         this.pino.warn(
@@ -380,6 +393,7 @@ export class BuilderDatabaseService extends Service {
     }
 
     this.pendingDeploymentChecks = remaining;
+
     return taken;
   }
 

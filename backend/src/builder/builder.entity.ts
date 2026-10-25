@@ -1,22 +1,22 @@
 import { BuildStatus } from '../types/types';
 import {
-  RepoStatus,
   type BuildClassSuggestion,
   type Package as PackageDto,
   type ParsedPackageMetadata,
+  RepoStatus,
 } from '@chaotic-next/shared-lib';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
   CreateDateColumn,
   Entity,
+  type EntitySubscriberInterface,
   EventSubscriber,
   Index,
+  type InsertEvent,
   ManyToOne,
   PrimaryGeneratedColumn,
   RelationId,
-  type EntitySubscriberInterface,
-  type InsertEvent,
   type UpdateResult,
 } from 'typeorm';
 
@@ -278,6 +278,9 @@ export class Build {
   @Column({ type: 'varchar', nullable: true })
   logUrl!: string;
 
+  @Column({ type: 'text', nullable: true, select: false })
+  logContent!: string | null;
+
   @ApiProperty({ description: 'Commit hash of the build' })
   @Column({ type: 'varchar', nullable: true })
   commit!: string;
@@ -336,6 +339,7 @@ export class UpdateLastBuilderActive implements EntitySubscriberInterface<Build>
   beforeInsert(event: InsertEvent<Build>): Promise<UpdateResult> | void {
     const builderId = event.entity.builder?.id;
     if (!builderId) return;
+
     return event.manager.update(Builder, { id: builderId }, { lastActive: new Date() });
   }
 }

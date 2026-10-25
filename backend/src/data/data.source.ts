@@ -54,6 +54,7 @@ import { pgConnectionOptions } from './pg-options';
 import { type DataSourceOptions } from 'typeorm';
 import { AddBrokenFixability1792001573016 } from '../migrations/1792001573016-AddBrokenFixability';
 import { AddArchPackageBump1791900000000 } from '../migrations/1791900000000-AddArchPackageBump';
+import { AddBuildLogContent1792924678889 } from '../migrations/1792924678889-AddBuildLogContent';
 
 export const dataSourceOptions: DataSourceOptions = {
   ...pgConnectionOptions,
@@ -121,6 +122,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AddBuildPkgbaseStatusIndex1791017025764,
     AddBrokenFixability1792001573016,
     AddArchPackageBump1791900000000,
+    AddBuildLogContent1792924678889,
   ],
   migrationsRun: true,
   cache: true,

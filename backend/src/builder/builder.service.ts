@@ -8,6 +8,7 @@ import { clampInt, generateNodeId, nDaysInPast, whitelistSort } from '../utils/f
 import { paginate, resolveOrder, resolvePagination } from '../utils/pagination';
 import { BuildClassSyncService } from './build-class-sync.service';
 import { BuildFailureNotifierService } from './build-failure-notifier.service';
+import { BuildLogService } from './build-log.service';
 import { BuilderDatabaseService } from './builder-database.service';
 import { Build, Builder, Package, Repo, SilencedBuildFailure, toPackageDto } from './builder.entity';
 import { brokerConfig } from './moleculer.config';
@@ -85,13 +86,13 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     private gitlabPipelineService: GitlabPipelineService,
     private buildClassSyncService: BuildClassSyncService,
     private buildFailureNotifierService: BuildFailureNotifierService,
+    private buildLogService: BuildLogService,
     private readonly lookup: EntityLookupService,
     @InjectPinoLogger(BuilderService.name) private readonly pino: PinoLogger,
   ) {
     const redisPassword: string | undefined = this.configService.get<string | undefined>('redis.password');
     const redisHost: string = this.configService.getOrThrow<string>('redis.host');
     const redisPort: number = this.configService.getOrThrow<number>('redis.port');
-
     try {
       const connection = new IORedis(redisPort, redisHost, {
         lazyConnect: true,
@@ -124,6 +125,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       this.pino.error('Broker init skipped: Redis connection could not be established');
       return;
     }
+
     const dbConnections = {
       build: this.buildRepository,
       builder: this.builderRepository,
@@ -131,7 +133,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       repo: this.repoRepository,
       silencedFailure: this.silencedFailureRepository,
     };
-
     try {
       await this.connection.connect();
 
@@ -146,6 +147,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
           gitlabPipelineService: this.gitlabPipelineService,
           buildClassSync: this.buildClassSyncService,
           buildFailureNotifier: this.buildFailureNotifierService,
+          buildLog: this.buildLogService,
           logger: this.pino,
         }),
       );
@@ -191,7 +193,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .addSelect('repo.name')
       .where('package.version IS NOT NULL')
       .andWhere('package.isActive = :isActive', { isActive: true });
-
     if (options.q) {
       query.andWhere(
         `(package.pkgname ILIKE :q OR package.version ILIKE :q OR package.metadata->>'desc' ILIKE :q OR package.metadata->>'url' ILIKE :q)`,
@@ -245,6 +246,18 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  async getBuildLog(id: number): Promise<string | null> {
+    const build = await this.buildRepository
+      .createQueryBuilder('build')
+      .select('build.id')
+      .addSelect('build.logContent')
+      .where('build.id = :id', { id })
+      .getOne();
+    if (!build) throw new NotFoundException('Build not found');
+
+    return build.logContent ?? null;
+  }
+
   async getBuilds(options: {
     page?: number;
     perPage?: number;
@@ -264,7 +277,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .addSelect('builder.name')
       .leftJoin('build.repo', 'repo')
       .addSelect('repo.name');
-
     if (options.builder !== undefined && options.builder.length > 0) {
       query.andWhere('builder.name IN (:...builders)', { builders: options.builder });
     }
@@ -327,7 +339,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .leftJoin('build.repo', 'repo')
       .addSelect('repo.name')
       .orderBy('build.id', 'DESC');
-
     if (options.status !== undefined) {
       query.where('build.status = :status', { status: options.status });
     }
@@ -375,7 +386,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
 
     const amount = clampInt(options.amount, 1, MAX_DAYS_WINDOW);
     const offset = clampInt(options.offset, 0, MAX_OFFSET);
-
     return this.buildRepository
       .createQueryBuilder('build')
       .select("DATE_TRUNC('day', build.timestamp) AS day")
@@ -401,7 +411,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     if (!requestedPackage) throw new NotFoundException('Package not found');
 
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
-
     return this.buildRepository
       .createQueryBuilder('build')
       .select("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC') AS day")
@@ -438,7 +447,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .innerJoin('build.pkgbase', 'pkgbase')
       .groupBy('pkgbase.pkgname')
       .orderBy('count', 'DESC');
-
     if (options.status !== undefined) {
       query.where('build.status = :status', { status: options.status });
     }
@@ -463,7 +471,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .addSelect('COUNT(*) AS count')
       .innerJoin('build.builder', 'builder')
       .groupBy('builder.name');
-
     if (days !== undefined) {
       query.where('build.timestamp > :date', { date: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
     }
@@ -546,6 +553,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     if (options.days !== undefined) {
       query.andWhere('build.timestamp > :date', { date: nDaysInPast(clampInt(options.days, 1, MAX_DAYS_WINDOW)) });
     }
+
     return query
       .groupBy('pkg.pkgname')
       .orderBy('count', 'DESC')
@@ -566,7 +574,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     const amount = clampInt(options.amount, 1, MAX_AMOUNT);
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
     const date = nDaysInPast(days);
-
     const top = await this.buildRepository
       .createQueryBuilder('build')
       .select('pkg.pkgname AS pkgname')
@@ -813,7 +820,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     if (!requestedPackage) throw new NotFoundException('Package not found');
 
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
-
     return this.buildRepository
       .createQueryBuilder('build')
       .select("DATE_TRUNC('day', build.timestamp AT TIME ZONE 'UTC') AS day")
@@ -845,7 +851,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
   }): Promise<{ pkgname: string; average: string }[]> {
     const amount = clampInt(options.amount, 1, MAX_AMOUNT);
     const days = clampInt(options.days, 1, MAX_DAYS_WINDOW);
-
     return this.buildRepository
       .createQueryBuilder('build')
       .select('pkg.pkgname AS pkgname')
@@ -891,7 +896,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .innerJoin('build.pkgbase', 'pkgbase')
       .groupBy('pkgbase.pkgname')
       .orderBy('count', 'DESC');
-
     if (days !== undefined) {
       query.where('build.timestamp > :date', { date: nDaysInPast(days) });
     }
@@ -907,7 +911,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .where('"timeToEnd" IS NOT NULL')
       .groupBy('status')
       .orderBy('average_build_time', 'DESC');
-
     if (days !== undefined) {
       query.andWhere('build.timestamp > :date', { date: nDaysInPast(clampInt(days, 1, MAX_DAYS_WINDOW)) });
     }
@@ -934,7 +937,6 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
       .andWhere('build.status = :successStatus', { successStatus: BuildStatus.SUCCESS })
       .groupBy('pkgbase.pkgname')
       .orderBy('pkgname', 'ASC');
-
     if (perBuilder) {
       query.innerJoin('build.builder', 'builder');
       query.andWhere('builder.name IN (:...builderNames)', { builderNames });
@@ -989,6 +991,7 @@ export class BuilderService implements OnModuleInit, OnModuleDestroy {
     if (!pkg?.version || pkg.pkgrel === null || pkg.pkgrel === undefined || !pkg.metadata) {
       throw new NotFoundException(`Package not found: ${name}`);
     }
+
     return pkg;
   }
 }

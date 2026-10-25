@@ -346,7 +346,9 @@
     "viewPackageStatistics": "View package statistics",
     "loadError": "Could not load deployments.",
     "empty": "No deployments match these filters.",
-    "firstRunEmpty": "No deployments yet. Finished builds appear here."
+    "firstRunEmpty": "No deployments yet. Finished builds appear here.",
+    "openStoredLog": "Open stored build log",
+    "openStoredLogFor": "Open stored build log for {{pkgname}}"
   },
   "diffRenderer": {
     "fileDiff": "File diff",
@@ -1221,6 +1223,7 @@
     "copyFailed": {
       "title": "Copy failed",
       "message": "Could not copy the link to line {{line}}."
-    }
+    },
+    "unavailable": "No stored log for this build."
   }
 }

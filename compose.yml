@@ -5,6 +5,7 @@ services:
     container_name: chaotic_db
     restart: always
     network_mode: host
+    command: ['-p', '5433']
     shm_size: 128mb
     environment:
       POSTGRES_DB: chaotic

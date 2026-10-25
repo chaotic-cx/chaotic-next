@@ -1,7 +1,9 @@
+const DEFAULT_PG_PORT = 5433;
+
 export const pgConnectionOptions = {
   type: 'postgres' as const,
   host: process.env.PG_HOST || 'localhost',
-  port: Number(process.env.PG_PORT) || 5432,
+  port: Number(process.env.PG_PORT) || DEFAULT_PG_PORT,
   username: process.env.PG_USER || 'chaotic',
   password: process.env.PG_PASSWORD || 'chaotic',
   database: process.env.PG_DATABASE || 'chaotic',

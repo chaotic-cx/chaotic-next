@@ -34,6 +34,12 @@ const ROUTER_HITS_RETENTION_DAYS = 3;
  */
 const ROUTER_HITS_BATCH_SIZE = 10_000;
 
+/**
+ * How long the raw build logs stay in the database. Builds older than this
+ * keep their row and metadata, only the captured log content is dropped.
+ */
+const BUILD_LOG_RETENTION_DAYS = 60;
+
 @Injectable()
 export class DatabaseCleanupService {
   constructor(
@@ -77,8 +83,8 @@ export class DatabaseCleanupService {
           .where('p.repoId IS NULL')
           .andWhere('b.id IS NULL')
           .getRawMany<{ id: number }>();
-
         if (candidates.length === 0) return;
+
         await this.deletePackages(
           manager,
           candidates.map((row) => row.id),
@@ -116,8 +122,8 @@ export class DatabaseCleanupService {
           .select('p.id', 'id')
           .where('p.pkgname !~ :validPattern', { validPattern: PKGNAME_PATTERN.source })
           .getRawMany<{ id: number }>();
-
         if (candidates.length === 0) return;
+
         await this.deletePackages(
           manager,
           candidates.map((row) => row.id),
@@ -171,8 +177,8 @@ export class DatabaseCleanupService {
           )
           .andWhere('EXISTS (SELECT 1 FROM "build" b WHERE b."pkgbaseId" = p.id)')
           .getRawMany<{ id: number }>();
-
         if (candidates.length === 0) return;
+
         await this.deletePackages(
           manager,
           candidates.map((row) => row.id),
@@ -217,11 +223,13 @@ export class DatabaseCleanupService {
       const toDelete: number[] = [];
       for (const list of byPackage.values()) {
         if (list.length <= KEEP_ANALYSIS_VERSIONS) continue;
+
         const sorted = [...list].sort((a, b) => compareArchVersions(b.version, a.version));
         for (const analysis of sorted.slice(KEEP_ANALYSIS_VERSIONS)) toDelete.push(analysis.id);
       }
 
       if (toDelete.length === 0) return;
+
       await this.analysisRepository.delete(toDelete);
       this.signalScanService.invalidateDirectoryIndex();
       this.pino.info({ count: toDelete.length }, 'Purged superseded analysis versions, keeping latest + previous');
@@ -257,11 +265,36 @@ export class DatabaseCleanupService {
         purged += deleted;
         if (deleted < ROUTER_HITS_BATCH_SIZE) break;
       }
+
       if (purged > 0) {
         this.pino.info({ count: purged, retentionDays: ROUTER_HITS_RETENTION_DAYS }, 'Purged old router hits');
       }
     } catch (err: unknown) {
       this.pino.error({ err }, 'Failed to purge old router hits');
+    }
+  }
+
+  /**
+   * Drop captured build logs older than the retention window. The build rows
+   * stay, only the content is set to null, so the deploy log keeps working.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async purgeOldBuildLogs(): Promise<void> {
+    const cutoff = nDaysInPast(BUILD_LOG_RETENTION_DAYS);
+    try {
+      const { affected } = await this.dataSource
+        .getRepository(Build)
+        .createQueryBuilder()
+        .update(Build)
+        .set({ logContent: null })
+        .where('timestamp < :cutoff', { cutoff })
+        .andWhere('"logContent" IS NOT NULL')
+        .execute();
+      if ((affected ?? 0) > 0) {
+        this.pino.info({ count: affected, retentionDays: BUILD_LOG_RETENTION_DAYS }, 'Purged old build logs');
+      }
+    } catch (err: unknown) {
+      this.pino.error({ err }, 'Failed to purge old build logs');
     }
   }
 

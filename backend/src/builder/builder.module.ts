@@ -8,6 +8,7 @@ import { BuildApiController } from './build-api.controller';
 import { BuildClassSuggesterService } from './build-class-suggester.service';
 import { BuildClassSyncService } from './build-class-sync.service';
 import { BuildFailureNotifierService } from './build-failure-notifier.service';
+import { BuildLogService } from './build-log.service';
 import { BuilderController } from './builder.controller';
 import { Build, Builder, Package, Repo, SilencedBuildFailure } from './builder.entity';
 import { BuildDependencyIssueSubscriber } from './build-dependency-issue.subscriber';
@@ -37,6 +38,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     BuildClassSuggesterService,
     BuildClassSyncService,
     BuildFailureNotifierService,
+    BuildLogService,
     BuildDependencyIssueSubscriber,
     DatabaseCleanupService,
     EntityLookupService,

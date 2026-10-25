@@ -136,6 +136,13 @@ export const routes: Routes = [
     loadComponent: () => import('./package-log/package-log.component').then((c) => c.PackageLogComponent),
   },
   {
+    title: marker('routes.packageLog'),
+    path: 'logs/build/:buildId',
+    data: SKIP_PRELOAD_DATA,
+    canActivate: [backendGuard],
+    loadComponent: () => import('./package-log/package-log.component').then((c) => c.PackageLogComponent),
+  },
+  {
     title: marker('routes.mirrors'),
     path: 'mirrors',
     loadComponent: () => import('./mirrors/mirrors.component').then((c) => c.MirrorsComponent),

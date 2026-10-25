@@ -146,6 +146,7 @@ describe('Builder broker event processing (e2e, real PostgreSQL)', () => {
       sseSubject,
       gitlabPipelineService: gitlabStub as never,
       buildClassSync: buildClassSyncStub,
+      buildLog: { capture: () => Promise.resolve() },
       logger: pinoStub,
     };
 

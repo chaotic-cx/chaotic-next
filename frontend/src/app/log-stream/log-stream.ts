@@ -37,15 +37,18 @@ export class LogStream {
 
   constructor(private readonly options: LogStreamOptions = {}) {}
 
-  /**
-   * Drops the current log and waits for a new one.
-   */
   reset(): void {
     this.close();
     this.chunks.set([]);
     this.state.set('connecting');
     this.completed = false;
     this.offset = 0;
+  }
+
+  setComplete(text: string): void {
+    this.reset();
+    this.chunks.set([text]);
+    this.state.set(text ? 'complete' : this.emptyState());
   }
 
   /**
@@ -77,6 +80,7 @@ export class LogStream {
       this.state.set(this.hasLines() ? 'complete' : this.emptyState());
       this.close();
       this.options.onEnd?.();
+
       return;
     }
 
@@ -125,5 +129,6 @@ export class LogStream {
 export function createLogStream(options: LogStreamOptions = {}): LogStream {
   const stream = new LogStream(options);
   inject(DestroyRef).onDestroy(() => stream.close());
+
   return stream;
 }

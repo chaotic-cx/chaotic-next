@@ -15,7 +15,7 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
   imports: [FillViewportDirective, LoadErrorComponent, ProgressSpinner, TranslocoDirective, XtermLogComponent],
   template: `
     <ng-container *transloco="let t; prefix: 'admin.managerLogs'">
-      <p class="log-status" [class.is-live]="streaming()" role="status">
+      <p class="log-status chaotic-text-inset" [class.is-live]="streaming()" role="status">
         <span class="log-status__dot" aria-hidden="true"></span>
         @if (streaming()) {
           {{ t('status.connected') }}

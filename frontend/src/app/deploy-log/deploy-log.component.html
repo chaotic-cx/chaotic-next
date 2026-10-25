@@ -153,7 +153,7 @@
             </th>
           }
           @if (columnVisibility.isVisible('deploy-log-table', 'actions')) {
-            <th class="cell-actions w-16">
+            <th class="cell-actions">
               <span class="sr-only">{{ t('common.actions') }}</span>
             </th>
           }
@@ -251,7 +251,17 @@
               </td>
             }
             @if (columnVisibility.isVisible('deploy-log-table', 'actions')) {
-              <td class="cell-actions w-16">
+              <td class="cell-actions">
+                <a
+                  class="chaotic-icon-btn"
+                  [routerLink]="['/logs/build', build.id]"
+                  [queryParams]="{ pkgname: build.pkgbase.pkgname }"
+                  [pTooltip]="t('deployLog.openStoredLog')"
+                  [attr.aria-label]="t('deployLog.openStoredLogFor', { pkgname: build.pkgbase.pkgname })"
+                  tooltipPosition="left"
+                >
+                  <i class="pi pi-align-left" aria-hidden="true"></i>
+                </a>
                 <button
                   class="chaotic-icon-btn"
                   [attr.aria-label]="t('deployLog.viewStatisticsFor', { pkgname: build.pkgbase.pkgname })"

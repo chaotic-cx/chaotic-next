@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RouterHit } from '../router/router-hit.entity';
 import { PackageBump, PackageElfAnalysis } from '../repo-manager/repo-manager.entity';
 import { SignalScanService } from '../repo-manager/scan';
-import { Package, SilencedBuildFailure } from './builder.entity';
+import { Build, Package, SilencedBuildFailure } from './builder.entity';
 import { DatabaseCleanupService } from './database-cleanup.service';
 
 function mockUpdateQueryBuilder({ affected }: { affected: number }) {
@@ -23,6 +23,7 @@ function mockUpdateQueryBuilder({ affected }: { affected: number }) {
     andWhere: vi.fn(() => qb),
     execute,
   };
+
   return qb;
 }
 
@@ -34,6 +35,7 @@ function mockDeleteQueryBuilder(affected: number) {
     andWhere: vi.fn(() => qb),
     execute,
   };
+
   return qb;
 }
 
@@ -75,6 +77,7 @@ function createService(options: { affected?: number; candidates?: { id: number }
     getRepository: vi.fn((entity) => {
       if (entity === PackageElfAnalysis) return elfAnalysisRepo;
       if (entity === PackageBump) return bumpRepo;
+
       return pkgRepo;
     }),
   };
@@ -317,6 +320,50 @@ describe('DatabaseCleanupService', () => {
     );
 
     await expect(service.purgeOldRouterHits()).resolves.toBeUndefined();
+  });
+
+  describe('purgeOldBuildLogs', () => {
+    it('nulls the captured log of builds older than the retention window', async () => {
+      const buildRepo = { createQueryBuilder: vi.fn(() => mockUpdateQueryBuilder({ affected: 4 })) };
+      const dataSource = {
+        getRepository: vi.fn((entity) => (entity === Build ? buildRepo : {})),
+      } as unknown as DataSource;
+      const service = new DatabaseCleanupService(
+        {} as unknown as Repository<Package>,
+        {} as unknown as Repository<PackageElfAnalysis>,
+        dataSource,
+        createSignalScanStub(),
+        pinoStub,
+      );
+
+      await service.purgeOldBuildLogs();
+
+      expect(dataSource.getRepository).toHaveBeenCalledWith(Build);
+      const qb = buildRepo.createQueryBuilder.mock.results[0]?.value;
+      expect(qb.set).toHaveBeenCalledWith({ logContent: null });
+      expect(qb.andWhere).toHaveBeenCalledWith('"logContent" IS NOT NULL');
+      expect(qb.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs and swallows purge errors', async () => {
+      const buildRepo = {
+        createQueryBuilder: vi.fn(() => {
+          throw new Error('db down');
+        }),
+      };
+      const dataSource = {
+        getRepository: vi.fn(() => buildRepo),
+      } as unknown as DataSource;
+      const service = new DatabaseCleanupService(
+        {} as unknown as Repository<Package>,
+        {} as unknown as Repository<PackageElfAnalysis>,
+        dataSource,
+        createSignalScanStub(),
+        pinoStub,
+      );
+
+      await expect(service.purgeOldBuildLogs()).resolves.toBeUndefined();
+    });
   });
 
   describe('purgeOrphanedFailureSilences', () => {

@@ -1,5 +1,5 @@
 <div class="chaotic-page" *transloco="let t; prefix: 'packageLog'">
-  <chaotic-title [subtitle]="subtitle() ?? t('subtitle')" [title]="pkgname() || t('title')">
+  <chaotic-title [subtitle]="buildId() ? undefined : (subtitle() ?? t('subtitle'))" [title]="pageTitle() ?? t('title')">
     <chaotic-log-stream-connecting [state]="logStream.state()" chaoticTitleAside />
   </chaotic-title>
 
