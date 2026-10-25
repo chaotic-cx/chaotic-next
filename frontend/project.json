@@ -10,6 +10,7 @@
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
+      "cache": true,
       "options": {
         "outputPath": "dist/frontend",
         "index": "frontend/src/index.html",
@@ -85,8 +86,7 @@
           "extractLicenses": false,
           "sourceMap": true
         }
-      },
-      "cache": true
+      }
     },
     "build": {
       "executor": "nx:run-commands",
@@ -133,10 +133,17 @@
           "port": 4201,
           "proxyConfig": "frontend/proxy.conf.json"
         }
+      },
+      "readyWhen": {
+        "signal": true
       }
     },
     "serve-static": {
       "executor": "@nx/web:file-server",
+      "readyWhen": {
+        "signal": true
+      },
+      "dependsOn": ["build"],
       "options": {
         "buildTarget": "frontend:build",
         "port": 4201,

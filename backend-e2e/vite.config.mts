@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import { swcPlugin } from '../tools/vitest/swc-plugin.mts';
+import { nxReadySignal } from '@nx/vite/plugins/nx-ready-signal.plugin';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
@@ -14,7 +15,7 @@ export default defineConfig({
   // @ts-expect-error Vite 8 fsModuleCache
   experimental: { fsModuleCache: true },
   define: { __VERSION__: JSON.stringify(appVersion.version) },
-  plugins: [swcPlugin()],
+  plugins: [swcPlugin(), nxReadySignal()],
   resolve: {
     alias: {
       '@chaotic-next/shared-lib': fileURLToPath(new URL('../shared-lib/src/index.ts', import.meta.url)),

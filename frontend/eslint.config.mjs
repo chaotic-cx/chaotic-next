@@ -7,7 +7,6 @@ const typeCheckedConfigs = [...dr460nf1r3.configs['type-checked'], ...dr460nf1r3
 export default [
   ...baseConfig,
   ...nx.configs['flat/angular'],
-  ...nx.configs['flat/angular-template'],
   {
     ignores: ['**/public/**'],
   },

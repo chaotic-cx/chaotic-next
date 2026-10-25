@@ -1,13 +1,14 @@
 import angular from '@analogjs/vite-plugin-angular';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+import { nxReadySignal } from '@nx/vite/plugins/nx-ready-signal.plugin';
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
   cacheDir: '../node_modules/.vite/frontend',
   // @ts-expect-error Vite 8 fsModuleCache
   experimental: { fsModuleCache: true },
-  plugins: [angular()],
+  plugins: [angular(), nxReadySignal()],
   resolve: {
     alias: {
       '@chaotic-next/shared-lib': fileURLToPath(new URL('../shared-lib/src/index.ts', import.meta.url)),
