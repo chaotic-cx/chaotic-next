@@ -140,7 +140,7 @@
     "@rspack/cli": "^2.2.9",
     "@rspack/core": "^2.2.9",
     "@rspack/dev-server": "^2.2.0",
-    "@schematics/angular": "22.2.4",
+    "@schematics/angular": "22.2.5",
     "@swc/core": "1.16.20",
     "@swc/helpers": "0.5.23",
     "@tailwindcss/postcss": "^4.3.3",
