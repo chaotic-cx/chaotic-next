@@ -306,6 +306,78 @@ describe('TriggerDetector.detectArchTriggers with strict plugin owners', () => {
   });
 });
 
+describe('TriggerDetector.detectArchTriggers with private API users', () => {
+  const QT_ID = 60;
+  const QT_GUI = 'libQt6Gui.so.6';
+
+  function qtSeed(qt: Partial<ArchlinuxPackage>, consumerNodes: string[]) {
+    return {
+      arch: [archPkg({ id: QT_ID, pkgname: 'qt6-base', ...qt })],
+      chaotic: [chaoticPkg({ id: 18, pkgname: 'qt6ct-kde' })],
+      analyses: [
+        analysis({
+          pkgType: '0',
+          pkgId: QT_ID,
+          version: `${qt.version}-${qt.pkgrel}`,
+          providedSonames: [QT_GUI],
+          providedVersionNodes: { [QT_GUI]: ['Qt_6', 'Qt_6.11', 'Qt_6_PRIVATE_API'] },
+        }),
+        analysis({
+          pkgId: 18,
+          neededSonames: [QT_GUI],
+          neededVersionNodes: { [QT_GUI]: consumerNodes },
+        }),
+      ],
+    };
+  }
+
+  it('bumps a package that links the private API of a changed library', async () => {
+    const detector = createDetector(
+      qtSeed({ previousVersion: '6.11.1-1', version: '6.11.2', pkgrel: 1 }, ['Qt_6', 'Qt_6_PRIVATE_API']),
+    );
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [QT_ID]);
+
+    expect(detected.get('qt6ct-kde')).toEqual({
+      bumpType: BumpType.PLUGIN,
+      triggerFrom: TriggerType.ARCH,
+      ownerId: QT_ID,
+      reason: 'private API of qt6-base updated',
+      details: [`${QT_GUI} (Qt_6_PRIVATE_API): 6.11.1-1 -> 6.11.2-1`],
+    });
+  });
+
+  it('bumps a private API user on a pkgrel-only change', async () => {
+    const detector = createDetector(
+      qtSeed({ previousVersion: '6.11.2-1', version: '6.11.2', pkgrel: 2 }, ['Qt_6_PRIVATE_API']),
+    );
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [QT_ID]);
+
+    expect(detected.get('qt6ct-kde')).toMatchObject({ bumpType: BumpType.PLUGIN, ownerId: QT_ID });
+  });
+
+  it('does not bump a package that links only the public API', async () => {
+    const detector = createDetector(
+      qtSeed({ previousVersion: '6.11.1-1', version: '6.11.2', pkgrel: 1 }, ['Qt_6', 'Qt_6.11']),
+    );
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [QT_ID]);
+
+    expect(detected.size).toBe(0);
+  });
+
+  it('does not bump for a library without a previous version', async () => {
+    const detector = createDetector(
+      qtSeed({ previousVersion: null, version: '6.11.2', pkgrel: 1 }, ['Qt_6_PRIVATE_API']),
+    );
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [QT_ID]);
+
+    expect(detected.size).toBe(0);
+  });
+});
+
 describe('TriggerDetector.unanalyzedChaoticIds', () => {
   it('reports a bump rebuild whose release has no analysis, although its pkgver has one', async () => {
     const detector = createDetector({

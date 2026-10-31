@@ -194,6 +194,7 @@ export class TriggerDetector {
     const strictOwners = changedStrictOwners(changed, strictPluginOwners);
     const pluginBreakIndex = await this.buildPluginBreakIndex(changedOwners);
     const brokenDepsCtx = await this.buildBrokenDepsContext(changed);
+    const privateApiProviders = privateApiProvidersOf(changed, brokenDepsCtx);
     const outputsByPkgbase = groupByPkgbase(await this.loadRepoOutputs(repoId));
     const consumerAnalyses = await this.loadLatestChaoticAnalyses(
       [...outputsByPkgbase.values()].flat().map((pkg) => pkg.id),
@@ -213,6 +214,10 @@ export class TriggerDetector {
       let trigger = this.archTriggerFor(outputs, consumerAnalyses, brokenDepsCtx, pluginBreakIndex, changed);
       if (!trigger) {
         trigger = strictOwnerTriggerFor(outputs, consumerAnalyses, strictOwners);
+      }
+
+      if (!trigger) {
+        trigger = privateApiTriggerFor(outputs, consumerAnalyses, privateApiProviders);
       }
 
       if (!trigger) {
@@ -1209,12 +1214,13 @@ function pluginBreakTrigger(
  */
 function changedStrictOwners(changed: ArchlinuxPackage[], strictPluginOwners: string[]): ArchlinuxPackage[] {
   const names = new Set(strictPluginOwners);
-  return changed.filter((pkg) => {
-    if (!names.has(pkg.pkgname) || isRemoved(pkg)) return false;
-    if (pkg.previousVersion === null) return false;
+  return changed.filter((pkg) => names.has(pkg.pkgname) && isReleaseChange(pkg));
+}
 
-    return pkg.previousVersion !== releaseVersion(pkg);
-  });
+function isReleaseChange(pkg: ArchlinuxPackage): boolean {
+  if (isRemoved(pkg) || pkg.previousVersion === null) return false;
+
+  return pkg.previousVersion !== releaseVersion(pkg);
 }
 
 function strictOwnerTriggerFor(
@@ -1238,6 +1244,70 @@ function strictOwnerTrigger(owner: ArchlinuxPackage): DetectedTrigger {
     triggerFrom: TriggerType.ARCH,
     reason: `${owner.pkgname} updated (strict plugin owner)`,
     details: [`${owner.pkgname}: ${owner.previousVersion} -> ${releaseVersion(owner)}`],
+  };
+}
+
+// Version node suffix that marks symbols without any ABI promise, e.g. `Qt_6_PRIVATE_API`.
+const PRIVATE_API_NODE_SUFFIX = '_PRIVATE_API';
+
+interface PrivateApiProvider {
+  owner: ArchlinuxPackage;
+  privateNodes: Set<string>;
+}
+
+/**
+ * Private API nodes keep their name across releases, so the version-node check cannot see their breaks.
+ * Keyed by soname.
+ */
+function privateApiProvidersOf(
+  changed: ArchlinuxPackage[],
+  ctx: BrokenDepsContext | null,
+): Map<string, PrivateApiProvider[]> {
+  const providers = new Map<string, PrivateApiProvider[]>();
+  if (!ctx) return providers;
+
+  for (const owner of changed.filter(isReleaseChange)) {
+    const nodesBySoname = ctx.currentVersionNodesByPkg.get(owner.id) ?? {};
+    for (const [soname, nodes] of Object.entries(nodesBySoname)) {
+      const privateNodes = new Set(nodes.filter((node) => node.endsWith(PRIVATE_API_NODE_SUFFIX)));
+      if (privateNodes.size === 0) continue;
+
+      const entries = providers.get(soname) ?? [];
+      entries.push({ owner, privateNodes });
+      providers.set(soname, entries);
+    }
+  }
+
+  return providers;
+}
+
+function privateApiTriggerFor(
+  outputs: Package[],
+  consumerAnalyses: Map<number, PackageElfAnalysis>,
+  providers: Map<string, PrivateApiProvider[]>,
+): DetectedTrigger | null {
+  if (providers.size === 0) return null;
+
+  for (const output of outputs) {
+    const neededNodes = consumerAnalyses.get(output.id)?.neededVersionNodes ?? {};
+    for (const [soname, nodes] of Object.entries(neededNodes)) {
+      for (const { owner, privateNodes } of providers.get(soname) ?? []) {
+        const node = nodes.find((needed) => privateNodes.has(needed));
+        if (node) return privateApiTrigger(owner, soname, node);
+      }
+    }
+  }
+
+  return null;
+}
+
+function privateApiTrigger(owner: ArchlinuxPackage, soname: string, node: string): DetectedTrigger {
+  return {
+    bumpType: BumpType.PLUGIN,
+    archPkg: owner,
+    triggerFrom: TriggerType.ARCH,
+    reason: `private API of ${owner.pkgname} updated`,
+    details: [`${soname} (${node}): ${owner.previousVersion} -> ${releaseVersion(owner)}`],
   };
 }
 

@@ -154,6 +154,12 @@ a listed package (pkgver or pkgrel) rebuilds every package whose `pluginOf`
 contains it (a `PLUGIN` bump). These bumps respect `REPOMANAGER_ABI_DRY_RUN`,
 `CI_REBUILD_IGNORE_ABI` and the skip-signal-scan flag.
 
+Private API has no ABI promise either. Qt marks its private symbols with the
+version node `Qt_6_PRIVATE_API`, and that name is the same in every release.
+When an Arch package changes its release, every package that links one of its
+`*_PRIVATE_API` nodes gets a `PLUGIN` bump. The same rules as for strict plugin
+owners apply. This check needs no setting.
+
 ## Database migrations
 
 The schema is managed with TypeORM migrations. They run **automatically at
