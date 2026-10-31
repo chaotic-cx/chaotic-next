@@ -35,4 +35,5 @@ export const envValidationSchema = z.looseObject({
   REPOMANAGER_ABI_DRY_RUN: z.enum(['true', 'false']).optional(),
   REPOMANAGER_REGEN_DB: z.enum(['true', 'false']).optional(),
   REPOMANAGER_SIGNAL_SCAN_ENABLED: z.enum(['true', 'false']).optional(),
+  REPOMANAGER_STRICT_PLUGIN_OWNERS: z.string().min(1).optional(),
 });

@@ -182,11 +182,16 @@ export class TriggerDetector {
   /**
    * Keyed by PKGBUILD directory. Every output of a PKGBUILD counts, so a broken split output (lib32-*, *-libs) is found too.
    */
-  async detectArchTriggers(repoId: number, changedIds: number[]): Promise<Map<string, DetectedTriggerDto>> {
+  async detectArchTriggers(
+    repoId: number,
+    changedIds: number[],
+    strictPluginOwners: string[] = [],
+  ): Promise<Map<string, DetectedTriggerDto>> {
     const changed = changedIds.length
       ? await this.archlinuxPackageRepository.find({ where: { id: In(changedIds) } })
       : [];
     const changedOwners = changed.filter((pkg) => !isRemoved(pkg)).map(toOwnerDescriptor);
+    const strictOwners = changedStrictOwners(changed, strictPluginOwners);
     const pluginBreakIndex = await this.buildPluginBreakIndex(changedOwners);
     const brokenDepsCtx = await this.buildBrokenDepsContext(changed);
     const outputsByPkgbase = groupByPkgbase(await this.loadRepoOutputs(repoId));
@@ -206,6 +211,10 @@ export class TriggerDetector {
       }
 
       let trigger = this.archTriggerFor(outputs, consumerAnalyses, brokenDepsCtx, pluginBreakIndex, changed);
+      if (!trigger) {
+        trigger = strictOwnerTriggerFor(outputs, consumerAnalyses, strictOwners);
+      }
+
       if (!trigger) {
         trigger = await this.missedBreakTriggerFor(pkgbaseDir, repoId, outputs, consumerAnalyses, missedBreaks);
       }
@@ -1191,6 +1200,44 @@ function pluginBreakTrigger(
     triggerFrom,
     reason: `plugin ABI break of ${owner.pkgname}`,
     details: Array.from(new Set(breaks.map(formatConsumerAbiBreak))),
+  };
+}
+
+/**
+ * Strict owners have no stable plugin ABI, so their plugins break without a visible symbol or vtable change.
+ * A new package (no previous version) is not a release change.
+ */
+function changedStrictOwners(changed: ArchlinuxPackage[], strictPluginOwners: string[]): ArchlinuxPackage[] {
+  const names = new Set(strictPluginOwners);
+  return changed.filter((pkg) => {
+    if (!names.has(pkg.pkgname) || isRemoved(pkg)) return false;
+    if (pkg.previousVersion === null) return false;
+
+    return pkg.previousVersion !== releaseVersion(pkg);
+  });
+}
+
+function strictOwnerTriggerFor(
+  outputs: Package[],
+  consumerAnalyses: Map<number, PackageElfAnalysis>,
+  strictOwners: ArchlinuxPackage[],
+): DetectedTrigger | null {
+  for (const output of outputs) {
+    const pluginOf = new Set(consumerAnalyses.get(output.id)?.pluginOf ?? []);
+    const owner = strictOwners.find((pkg) => pluginOf.has(encodeOwnerKey(TriggerType.ARCH, pkg.id)));
+    if (owner) return strictOwnerTrigger(owner);
+  }
+
+  return null;
+}
+
+function strictOwnerTrigger(owner: ArchlinuxPackage): DetectedTrigger {
+  return {
+    bumpType: BumpType.PLUGIN,
+    archPkg: owner,
+    triggerFrom: TriggerType.ARCH,
+    reason: `${owner.pkgname} updated (strict plugin owner)`,
+    details: [`${owner.pkgname}: ${owner.previousVersion} -> ${releaseVersion(owner)}`],
   };
 }
 

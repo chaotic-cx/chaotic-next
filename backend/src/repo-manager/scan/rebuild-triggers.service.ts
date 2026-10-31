@@ -55,7 +55,11 @@ export class RebuildTriggerService {
     const signalEnabled = settings.signalScanEnabled ?? false;
     const detected = signalEnabled
       ? await this.hydrate(
-          await this.compute.run('detectArchTriggers', { repoId: repo.id, changedIds: changed.map((pkg) => pkg.id) }),
+          await this.compute.run('detectArchTriggers', {
+            repoId: repo.id,
+            changedIds: changed.map((pkg) => pkg.id),
+            strictPluginOwners: settings.strictPluginOwners ?? [],
+          }),
         )
       : new Map<string, DetectedTrigger>();
 

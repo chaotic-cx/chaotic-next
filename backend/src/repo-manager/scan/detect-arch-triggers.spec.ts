@@ -64,6 +64,7 @@ function createDetector(seed: {
       ),
     },
   });
+
   return new TriggerDetector(analyses, archPackages, packages, logger);
 }
 
@@ -243,6 +244,65 @@ describe('TriggerDetector.detectArchTriggers', () => {
     const detected = await detector.detectArchTriggers(REPO_ID, []);
 
     expect(detected.get('bluespec-git')).toMatchObject({ bumpType: BumpType.BROKEN_DEPS, ownerId: 41 });
+  });
+});
+
+describe('TriggerDetector.detectArchTriggers with strict plugin owners', () => {
+  const KWIN_ID = 50;
+  const STRICT_OWNERS = ['kwin'];
+
+  function kwinSeed(kwin: Partial<ArchlinuxPackage>, pluginOf: string[] = [`a${KWIN_ID}`]) {
+    return {
+      arch: [archPkg({ id: KWIN_ID, pkgname: 'kwin', ...kwin })],
+      chaotic: [chaoticPkg({ id: 17, pkgname: 'kwin-effects-kinetic' })],
+      analyses: [analysis({ pkgId: 17, pluginOf })],
+    };
+  }
+
+  it('bumps a plugin of a strict owner on a pkgver change without an ABI break', async () => {
+    const detector = createDetector(kwinSeed({ previousVersion: '6.5.1-1', version: '6.5.2', pkgrel: 1 }));
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [KWIN_ID], STRICT_OWNERS);
+
+    expect(detected.get('kwin-effects-kinetic')).toEqual({
+      bumpType: BumpType.PLUGIN,
+      triggerFrom: TriggerType.ARCH,
+      ownerId: KWIN_ID,
+      reason: 'kwin updated (strict plugin owner)',
+      details: ['kwin: 6.5.1-1 -> 6.5.2-1'],
+    });
+  });
+
+  it('bumps a plugin of a strict owner on a pkgrel-only change', async () => {
+    const detector = createDetector(kwinSeed({ previousVersion: '6.5.2-1', version: '6.5.2', pkgrel: 2 }));
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [KWIN_ID], STRICT_OWNERS);
+
+    expect(detected.get('kwin-effects-kinetic')).toMatchObject({ bumpType: BumpType.PLUGIN, ownerId: KWIN_ID });
+  });
+
+  it('does not bump when the owner is not in the strict list', async () => {
+    const detector = createDetector(kwinSeed({ previousVersion: '6.5.1-1', version: '6.5.2', pkgrel: 1 }));
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [KWIN_ID], []);
+
+    expect(detected.size).toBe(0);
+  });
+
+  it('does not bump a package that is not a plugin of the strict owner', async () => {
+    const detector = createDetector(kwinSeed({ previousVersion: '6.5.1-1', version: '6.5.2', pkgrel: 1 }, []));
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [KWIN_ID], STRICT_OWNERS);
+
+    expect(detected.size).toBe(0);
+  });
+
+  it('does not bump for a strict owner without a previous version', async () => {
+    const detector = createDetector(kwinSeed({ previousVersion: null, version: '6.5.2', pkgrel: 1 }));
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [KWIN_ID], STRICT_OWNERS);
+
+    expect(detected.size).toBe(0);
   });
 });
 

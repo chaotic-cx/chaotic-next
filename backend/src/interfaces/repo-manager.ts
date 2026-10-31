@@ -28,6 +28,8 @@ export interface RepoSettings {
   signalScanEnabled?: boolean;
   /** Base URL for downloading packages from the build server (e.g. `https://builds.garudalinux.org/repos`). */
   secretMirrorUrl?: string;
+  /** Arch packages without a stable plugin ABI (e.g. kwin). Each release change rebuilds their plugins. */
+  strictPluginOwners?: string[];
 }
 
 export interface RepoUpdateRunParams {

@@ -12,4 +12,15 @@ export default registerAs('repoMan', () => ({
   mirrorUrl: process.env.REPOMANAGER_MIRROR_URL ?? 'https://arch.mirror.constant.com',
   mirrorPollInterval: process.env.REPOMANAGER_MIRROR_POLL ?? '0 * * * * *',
   signalScanEnabled: process.env.REPOMANAGER_SIGNAL_SCAN_ENABLED === 'true',
+  strictPluginOwners: parsePackageList(process.env.REPOMANAGER_STRICT_PLUGIN_OWNERS),
 }));
+
+// A colon-separated package list, like `CI_REBUILD_TRIGGERS` in `.CI/config`.
+function parsePackageList(value: string | undefined): string[] {
+  if (!value) return [];
+
+  return value
+    .split(':')
+    .map((name) => name.trim())
+    .filter(Boolean);
+}

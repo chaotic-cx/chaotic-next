@@ -153,6 +153,7 @@ export class RepoManagerService implements OnModuleInit {
 
     this.repoManager = this.createRepoManager();
     this.warnAboutAbiDryRun();
+    this.logStrictPluginOwners();
     this.pino.info({ count: this.repos.length }, 'RepoManager service initialized');
   }
 
@@ -166,6 +167,11 @@ export class RepoManagerService implements OnModuleInit {
     if (this.repoManager.isAbiDryRun()) {
       this.pino.warn('ABI dry-run is on: broken-dependency and plugin rebuilds are only logged, never bumped');
     }
+  }
+
+  private logStrictPluginOwners(): void {
+    const owners = this.configService.get<string[]>('repoMan.strictPluginOwners') ?? [];
+    this.pino.info({ owners }, 'Strict plugin owners: each release change rebuilds their plugins');
   }
 
   /**
@@ -207,13 +213,13 @@ export class RepoManagerService implements OnModuleInit {
         responseType: 'text',
       });
       const lastUpdate: string = String(response.data).trim();
-
       if (this.lastMirrorUpdate !== null && lastUpdate !== this.lastMirrorUpdate) {
         this.pino.info({ previous: this.lastMirrorUpdate, current: lastUpdate }, 'Mirror re-synced, triggering run');
         await this.run();
       } else if (this.lastMirrorUpdate === null) {
         this.pino.debug({ lastUpdate }, 'Initial mirror lastupdate recorded');
       }
+
       this.lastMirrorUpdate = lastUpdate;
     } catch (err: unknown) {
       this.pino.warn({ err }, 'Failed to poll mirror lastupdate');
@@ -228,6 +234,7 @@ export class RepoManagerService implements OnModuleInit {
       this.pino.warn('RepoManager is already active, skipping signal scan');
       return;
     }
+
     this.repoManager.status = RepoStatus.ACTIVE;
     try {
       await this.repoManager.pullArchlinuxPackages();
@@ -265,7 +272,6 @@ export class RepoManagerService implements OnModuleInit {
       relations: { repo: true },
     });
     const chaoticById = new Map(chaoticPkgs.map((p) => [p.id, p]));
-
     const allBrokenReports: BrokenPackageReport[] = brokenAnalyses
       .map((analysis) => {
         const pkg = chaoticById.get(analysis.pkgId);
@@ -282,7 +288,6 @@ export class RepoManagerService implements OnModuleInit {
       })
       .filter((report) => !report.skipSignalScan)
       .filter((report) => fixability === undefined || report.fixability === fixability);
-
     const total = allBrokenReports.length;
     allBrokenReports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));
     const items = allBrokenReports.slice(skip, skip + safePerPage);
@@ -320,13 +325,16 @@ export class RepoManagerService implements OnModuleInit {
       provided.add(pkg.pkgname);
       for (const name of pkg.metadata?.provides ?? []) provided.add(strip(name));
     }
+
     for (const pkg of chaoticPkgs) {
       provided.add(pkg.pkgname);
       if (pkg.pkgbaseName) {
         provided.add(pkg.pkgbaseName);
       }
+
       for (const name of pkg.metadata?.provides ?? []) provided.add(strip(name));
     }
+
     const reports: MissingDependencyReport[] = [];
     for (const pkg of chaoticPkgs) {
       const deps = (pkg.metadata?.deps ?? [])
@@ -338,6 +346,7 @@ export class RepoManagerService implements OnModuleInit {
         .map(strip)
         .filter((d) => !provided.has(d));
       if (deps.length === 0 && makeDeps.length === 0) continue;
+
       reports.push({
         pkgname: pkg.pkgname,
         version: pkg.version ?? undefined,
@@ -346,6 +355,7 @@ export class RepoManagerService implements OnModuleInit {
         missingMakeDeps: [...new Set(makeDeps)].sort(),
       });
     }
+
     return reports;
   }
 
@@ -356,10 +366,12 @@ export class RepoManagerService implements OnModuleInit {
     ]);
     const archByName = new Map<string, (typeof archPkgs)[number]>();
     for (const arch of archPkgs) archByName.set(arch.pkgname, arch);
+
     const reports: ArchOverlapReport[] = [];
     for (const pkg of chaoticPkgs) {
       const arch = archByName.get(pkg.pkgname);
       if (!arch) continue;
+
       reports.push({
         pkgname: pkg.pkgname,
         chaoticVersion: pkg.version ?? undefined,
@@ -367,7 +379,9 @@ export class RepoManagerService implements OnModuleInit {
         repoName: pkg.repo?.name ?? undefined,
       });
     }
+
     reports.sort((a, b) => a.pkgname.localeCompare(b.pkgname));
+
     return reports;
   }
 
@@ -388,15 +402,18 @@ export class RepoManagerService implements OnModuleInit {
     const byRepo = new Map<number, Package[]>();
     for (const pkg of pkgs) {
       if (!pkg.repo) continue;
+
       const list = byRepo.get(pkg.repo.id) ?? [];
       list.push(pkg);
       byRepo.set(pkg.repo.id, list);
     }
+
     if (byRepo.size === 0) throw new NotFoundException('No active packages matched the selection');
 
     for (const repoPkgs of byRepo.values()) {
       const repoName = repoPkgs[0]?.repo?.name;
       if (!repoName) continue;
+
       const requiredGroup = requiredGroupForRepo(repoName);
       if (requiredGroup && !actorGroups.includes(requiredGroup)) {
         throw new ForbiddenException(`Bumping '${repoName}' packages requires membership in '${requiredGroup}'`, {
@@ -436,6 +453,7 @@ export class RepoManagerService implements OnModuleInit {
             skipped.push(pkg.pkgname);
             continue;
           }
+
           const configText = await reader.readFile(`${pkg.pkgname}/.CI/config`).catch(() => '');
           const reasons = brokenReasons.get(pkg.id) ?? [];
           needsRebuild.push({
@@ -447,7 +465,9 @@ export class RepoManagerService implements OnModuleInit {
             details: reasons.length > 0 ? reasons : ['manual bump from admin UI'],
           });
         }
+
         if (needsRebuild.length === 0) continue;
+
         const bumpedEntries = await this.bumpService.bumpAndPush(needsRebuild, reader, repo);
         bumped.push(...bumpedEntries.map((entry) => entry.pkg.pkgname));
       } finally {
@@ -458,11 +478,13 @@ export class RepoManagerService implements OnModuleInit {
     if (skipped.length > 0) {
       this.pino.warn({ count: skipped.length, pkgnames: skipped }, 'Skipped packages without a repo directory');
     }
+
     return { bumped };
   }
 
   private async loadBrokenReasons(pkgs: Package[]): Promise<Map<number, string[]>> {
     if (pkgs.length === 0) return new Map();
+
     const rows = await this.elfAnalysisRepository.find({
       where: { pkgType: pkgTypeOf(TriggerType.CHAOTIC), pkgId: In(pkgs.map((p) => p.id)), broken: true },
       select: { pkgId: true, version: true, brokenReasons: true },
@@ -508,11 +530,11 @@ export class RepoManagerService implements OnModuleInit {
     const { archPkgs, chaoticPkgs } = await this.fetchPackagesByIds(archIds, chaoticIds);
     const nameById = new Map<string, string>();
     for (const pkg of archPkgs) nameById.set(`${ARCH_PKG_TYPE}:${pkg.id}`, pkg.pkgname);
+
     for (const pkg of chaoticPkgs) nameById.set(`${CHAOTIC_PKG_TYPE}:${pkg.id}`, pkg.pkgname);
 
     // Keep only the latest analysis per package.
     const latest = latestAnalysisByKey(analyses, (a) => `${a.pkgType}:${a.pkgId}`);
-
     const nodes: DependencyNode[] = [...latest.values()].map((analysis) => ({
       pkgType: analysis.pkgType,
       pkgId: analysis.pkgId,
@@ -520,7 +542,6 @@ export class RepoManagerService implements OnModuleInit {
       providedSonames: analysis.providedSonames,
       neededSonames: analysis.neededSonames,
     }));
-
     return buildDependencyGraph(nodes);
   }
 
@@ -549,6 +570,7 @@ export class RepoManagerService implements OnModuleInit {
     // Latest by Arch version order, not DB string order (2:13 vs 2:9, 1.10 vs 1.9).
     const analysis = analyses.reduce<PackageElfAnalysis | undefined>((latest, candidate) => {
       if (!latest || compareArchVersions(candidate.version, latest.version) > 0) return candidate;
+
       return latest;
     }, undefined);
 
@@ -557,7 +579,6 @@ export class RepoManagerService implements OnModuleInit {
      * and explicit triggers); otherwise fall back to the most recently updated.
      */
     const pkg = pkgs.find((candidate) => candidate.id === analysis?.pkgId) ?? pkgs[0];
-
     const explicitTriggers = await this.explicitTriggersFor(pkg);
 
     /**
@@ -567,10 +588,8 @@ export class RepoManagerService implements OnModuleInit {
      * test seeds) the filter is a no-op and all providers are returned.
      */
     const deps = new Set(pkg.metadata?.deps ?? []);
-
     const sonameDependencies = analysis ? await this.sonameDependenciesFor(analysis.neededSonames, deps) : [];
     const pluginOwners = analysis ? await this.pluginOwnersFor(analysis.pluginOf, pkg.id, deps) : [];
-
     return { pkgname, explicitTriggers, sonameDependencies, pluginOwners };
   }
 
@@ -595,6 +614,7 @@ export class RepoManagerService implements OnModuleInit {
 
   private async readConfiguredRebuildTriggers(pkg: Package): Promise<string[]> {
     if (!pkg.repo) return [];
+
     let reader: RepoReader;
     try {
       reader = await this.readerFactory.open(pkg.repo);
@@ -633,7 +653,6 @@ export class RepoManagerService implements OnModuleInit {
     }
 
     const nameByKey = await this.resolveAnalysisNames([...providerIds]);
-
     return needed
       .map((soname) => ({
         soname,
@@ -667,9 +686,11 @@ export class RepoManagerService implements OnModuleInit {
     for (const pkg of archPkgs) {
       nameByKey.set(`${ARCH_PKG_TYPE}:${pkg.id}`, { pkgname: pkg.pkgname, pkgType: 'arch' });
     }
+
     for (const pkg of chaoticPkgs) {
       nameByKey.set(`${CHAOTIC_PKG_TYPE}:${pkg.id}`, { pkgname: pkg.pkgname, pkgType: 'chaotic' });
     }
+
     return nameByKey;
   }
 
@@ -683,6 +704,7 @@ export class RepoManagerService implements OnModuleInit {
     for (const key of ownerKeys) {
       const match = /^([ac])(\d+)$/.exec(key);
       if (!match) continue;
+
       const decoded = {
         pkgType: match[1] === 'a' ? TriggerType.ARCH : TriggerType.CHAOTIC,
         pkgId: Number(match[2]),
@@ -710,7 +732,6 @@ export class RepoManagerService implements OnModuleInit {
   async run(): Promise<void> {
     const runId = randomUUID();
     const run = { runId, component: 'repoManager' };
-
     if (this.repoManager.status === RepoStatus.ACTIVE) {
       this.pino.warn(run, 'RepoManager is already active, skipping run');
       return;
@@ -768,6 +789,7 @@ export class RepoManagerService implements OnModuleInit {
         this.pino.error({ ...run, err, repo: repo.name }, 'Rebuild-trigger run failed for repo');
       }
     }
+
     return { results, allSucceeded };
   }
 
@@ -778,8 +800,8 @@ export class RepoManagerService implements OnModuleInit {
       mirrorUrl: this.configService.get<string>('repoMan.mirrorUrl'),
       signalScanEnabled: this.configService.get<boolean>('repoMan.signalScanEnabled') ?? false,
       secretMirrorUrl: this.configService.get<string>('app.secretMirrorUrl'),
+      strictPluginOwners: this.configService.get<string[]>('repoMan.strictPluginOwners') ?? [],
     };
-
     return new RepoManager(
       repoSettings,
       this.httpService,

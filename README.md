@@ -76,22 +76,23 @@ You can also target a single project, e.g. `pnpm exec nx test backend`.
 
 See `backend/src/config/` for the full list. The most important ones:
 
-| Variable                                  | Default                            | Description                                                |
-| ----------------------------------------- | ---------------------------------- | ---------------------------------------------------------- |
-| `PG_HOST` / `PG_PORT`                     | `localhost` / `5433`               | PostgreSQL connection                                      |
-| `PG_USER` / `PG_PASSWORD` / `PG_DATABASE` | `chaotic`                          | PostgreSQL credentials                                     |
-| `NODE_ENV`                                | `development`                      | `production` disables TypeORM schema sync                  |
-| `CAUR_PORT`                               | `3000`                             | Backend listen port                                        |
-| `CAUR_DB_KEY`                             | —                                  | AES key used to encrypt repo API tokens at rest            |
-| `REDIS_PASSWORD` / `REDIS_SSH_*`          | —                                  | Redis + SSH tunnel for Moleculer events                    |
-| `REPOMANAGER_SCHEDULE`                    | `0 * * * *`                        | Cron schedule for the repo-manager run                     |
-| `REPOMANAGER_MIRROR_URL`                  | `https://arch.mirror.constant.com` | Arch mirror used for the `.files` DBs and package archives |
-| `REPOMANAGER_MIRROR_POLL`                 | `0 * * * * *`                      | Cron schedule for mirror `lastupdate` polling              |
-| `REPOMANAGER_SIGNAL_SCAN_ENABLED`         | `false`                            | Enable the ELF signal scanner                              |
-| `REPOMANAGER_ABI_DRY_RUN`                 | `true`                             | Log plugin-ABI bumps instead of rebuilding                 |
-| `VIRUSTOTAL_API_KEY`                      | —                                  | Enables VirusTotal checks of MR sources and download URLs  |
-| `VIRUSTOTAL_REQUEST_SPACING_MS`           | `15000`                            | Pause between VirusTotal requests (free tier: 4/min)       |
-| `VIRUSTOTAL_POLL_INTERVAL_MS`             | `20000`                            | Pause between polls of a running VirusTotal URL analysis   |
+| Variable                                  | Default                            | Description                                                               |
+| ----------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------- |
+| `PG_HOST` / `PG_PORT`                     | `localhost` / `5433`               | PostgreSQL connection                                                     |
+| `PG_USER` / `PG_PASSWORD` / `PG_DATABASE` | `chaotic`                          | PostgreSQL credentials                                                    |
+| `NODE_ENV`                                | `development`                      | `production` disables TypeORM schema sync                                 |
+| `CAUR_PORT`                               | `3000`                             | Backend listen port                                                       |
+| `CAUR_DB_KEY`                             | —                                  | AES key used to encrypt repo API tokens at rest                           |
+| `REDIS_PASSWORD` / `REDIS_SSH_*`          | —                                  | Redis + SSH tunnel for Moleculer events                                   |
+| `REPOMANAGER_SCHEDULE`                    | `0 * * * *`                        | Cron schedule for the repo-manager run                                    |
+| `REPOMANAGER_MIRROR_URL`                  | `https://arch.mirror.constant.com` | Arch mirror used for the `.files` DBs and package archives                |
+| `REPOMANAGER_MIRROR_POLL`                 | `0 * * * * *`                      | Cron schedule for mirror `lastupdate` polling                             |
+| `REPOMANAGER_SIGNAL_SCAN_ENABLED`         | `false`                            | Enable the ELF signal scanner                                             |
+| `REPOMANAGER_ABI_DRY_RUN`                 | `true`                             | Log plugin-ABI bumps instead of rebuilding                                |
+| `REPOMANAGER_STRICT_PLUGIN_OWNERS`        | —                                  | Arch owners (e.g. `kwin:kwin-x11`) whose plugins rebuild on every release |
+| `VIRUSTOTAL_API_KEY`                      | —                                  | Enables VirusTotal checks of MR sources and download URLs                 |
+| `VIRUSTOTAL_REQUEST_SPACING_MS`           | `15000`                            | Pause between VirusTotal requests (free tier: 4/min)                      |
+| `VIRUSTOTAL_POLL_INTERVAL_MS`             | `20000`                            | Pause between polls of a running VirusTotal URL analysis                  |
 
 ## Repo manager and the ELF signal scanner
 
@@ -145,6 +146,13 @@ broken after an Arch update is rebuilt automatically (a `BROKEN_DEPS` bump).
 Only breaks introduced by the current run count, so long-standing issues don't
 cause rebuild loops. Like the plugin-ABI channel, this respects
 `REPOMANAGER_ABI_DRY_RUN` (log-only unless set to `false`).
+
+Some Arch packages have no stable plugin ABI. KWin is an example: its plugins
+break without a visible symbol or vtable change. List these packages in
+`REPOMANAGER_STRICT_PLUGIN_OWNERS`, separated by colons. Each release change of
+a listed package (pkgver or pkgrel) rebuilds every package whose `pluginOf`
+contains it (a `PLUGIN` bump). These bumps respect `REPOMANAGER_ABI_DRY_RUN`,
+`CI_REBUILD_IGNORE_ABI` and the skip-signal-scan flag.
 
 ## Database migrations
 

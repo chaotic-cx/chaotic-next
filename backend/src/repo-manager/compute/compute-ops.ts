@@ -25,7 +25,11 @@ export interface ComputeOps {
   refreshAfterImport(args: { analyses: ImportedAnalysis[] }): Promise<void>;
   recomputePluginOfPkgType(args: { pkgType: PackageElfPkgType }): Promise<void>;
   invalidateDirectoryIndex(args: Record<string, never>): Promise<void>;
-  detectArchTriggers(args: { repoId: number; changedIds: number[] }): Promise<Map<string, DetectedTriggerDto>>;
+  detectArchTriggers(args: {
+    repoId: number;
+    changedIds: number[];
+    strictPluginOwners: string[];
+  }): Promise<Map<string, DetectedTriggerDto>>;
   deploymentTriggers(args: { deployedIds: number[]; consumerIds: number[] }): Promise<Map<number, DetectedTriggerDto>>;
   countUncoveredMissedBreaks(args: Record<string, never>): Promise<number>;
   rebuildCoverage(args: Record<string, never>): Promise<RebuildCoverageReport>;
@@ -45,7 +49,8 @@ export function createComputeOps(repos: ComputeRepositories, logger: ComputeLogg
     refreshAfterImport: ({ analyses }) => index.refreshAfterImport(analyses),
     recomputePluginOfPkgType: ({ pkgType }) => index.recomputePluginOfPkgType(pkgType),
     invalidateDirectoryIndex: async () => index.invalidateDirectoryIndex(),
-    detectArchTriggers: ({ repoId, changedIds }) => detector.detectArchTriggers(repoId, changedIds),
+    detectArchTriggers: ({ repoId, changedIds, strictPluginOwners }) =>
+      detector.detectArchTriggers(repoId, changedIds, strictPluginOwners),
     deploymentTriggers: ({ deployedIds, consumerIds }) => detector.deploymentTriggers(deployedIds, consumerIds),
     countUncoveredMissedBreaks: () => detector.countUncoveredMissedBreaks(),
     rebuildCoverage: () => detector.rebuildCoverage(),
