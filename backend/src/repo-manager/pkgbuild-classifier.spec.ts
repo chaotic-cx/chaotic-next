@@ -288,6 +288,135 @@ describe('isSourceCompiledPackage', () => {
     });
   });
 
+  describe('Native builds with Node tooling', () => {
+    it('vicinae: cmake build with pnpm for the extension part', () => {
+      const pkgbuild = [
+        'pkgname=vicinae',
+        'arch=("x86_64")',
+        'makedepends=("cmake" "git" "pnpm" "nodejs")',
+        'source=("git+https://github.com/vicinaehq/vicinae.git")',
+        '',
+        'build() {',
+        '  pnpm install',
+        '  cmake -B build -S vicinae',
+        '  cmake --build build',
+        '}',
+        '',
+        'package() {',
+        '  DESTDIR="$pkgdir" cmake --install build',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+
+    it('apollo: gcc build with npm in makedepends for the web UI', () => {
+      const pkgbuild = [
+        'pkgname=apollo',
+        'arch=("x86_64")',
+        'makedepends=("npm" "git")',
+        'source=("git+https://github.com/ClassicOldSong/Apollo.git")',
+        '',
+        'build() {',
+        '  export CC=gcc',
+        '  gcc --version',
+        '  npm run build',
+        '  make -C build',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+
+    it('electron-forge app: `npm run make` is not a native build', () => {
+      const pkgbuild = [
+        'pkgname=ytmdesktop-git',
+        'arch=("x86_64")',
+        'makedepends=("npm" "git")',
+        'source=("git+https://github.com/ytmdesktop/ytmdesktop.git")',
+        '',
+        'build() {',
+        '  npm install',
+        '  npm run make',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
+  });
+
+  describe('!strip with a native build command', () => {
+    it('tclkit: !strip with make on a source tarball', () => {
+      const pkgbuild = [
+        'pkgname=tclkit',
+        'arch=(x86_64)',
+        'options=(!strip)',
+        'source=("https://example.com/kitgen-8.6.tar.gz")',
+        '',
+        'build() {',
+        '  make -f Makefile.linux',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+  });
+
+  describe('Python builds', () => {
+    it('native extension: setup.py in package() with a native arch', () => {
+      const pkgbuild = [
+        'pkgname=python-bempp-cl',
+        'arch=("x86_64")',
+        'makedepends=("python-setuptools")',
+        'source=("https://files.pythonhosted.org/packages/source/b/bempp-cl/bempp-cl-0.4.tar.gz")',
+        '',
+        'package() {',
+        '  python setup.py install --root="$pkgdir"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(true);
+    });
+
+    it('pure Python: setup.py with arch=(any)', () => {
+      const pkgbuild = [
+        'pkgname=python-pure',
+        'arch=("any")',
+        'makedepends=("python-setuptools")',
+        'source=("https://example.com/pure-1.0.tar.gz")',
+        '',
+        'package() {',
+        '  python setup.py install --root="$pkgdir"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
+  });
+
+  describe('Repackaged binaries', () => {
+    it('zoom: upstream pkg.tar.xz, no build function', () => {
+      const pkgbuild = [
+        'pkgname=zoom',
+        'arch=("x86_64")',
+        'options=(!strip)',
+        'source=("zoom-7.1.5_orig_x86_64.pkg.tar.xz::https://zoom.us/client/7.1.5/zoom_x86_64.pkg.tar.xz")',
+        '',
+        'package() {',
+        '  cp -dpr --no-preserve=ownership opt usr "$pkgdir"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
+
+    it('freedownloadmanager: upstream .deb, no build function', () => {
+      const pkgbuild = [
+        'pkgname=freedownloadmanager',
+        'arch=("x86_64")',
+        'source=("https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb")',
+        '',
+        'package() {',
+        '  bsdtar -xf data.tar.xz -C "$pkgdir"',
+        '}',
+      ].join('\n');
+      expect(isSourceCompiledPackage(pkgbuild)).toBe(false);
+    });
+  });
+
   describe('Boundary conditions', () => {
     it('null', () => {
       expect(isSourceCompiledPackage(null)).toBe(false);

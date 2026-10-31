@@ -29,7 +29,17 @@ const NODEJS_DEP_REGEX = /^nodejs$/;
  * A native toolchain turns node build steps into an implementation detail
  * (Firefox runs pnpm; it is not a nodejs package).
  */
-const NATIVE_TOOLCHAIN_REGEX = /^(?:clang|clang\+\+|gcc|g\+\+|rust|cargo|go)$/;
+const NATIVE_TOOLCHAIN_REGEX = /^(?:clang|clang\+\+|gcc|g\+\+|rust|cargo|go|go-pie|cmake|meson|ninja)$/;
+
+// `npm run make` and `electron-forge make` package an Electron app, so they do not count as a native build.
+const NATIVE_BUILD_COMMAND_REGEX =
+  /\b(?:cmake|meson|ninja|qmake6?|gcc|g\+\+|clang\+\+|clang|cargo\s+(?:build|install)|go\s+build|(?<!(?:run|forge|npx|pnpm|yarn|npm)\s+)make)\b/;
+
+// A Python build with a native arch means a C extension. Arch packages pure Python as `arch=(any)`.
+const PYTHON_BUILD_COMMAND_REGEX =
+  /\b(?:setup\.py\s+(?:build|install)|python3?\s+-m\s+(?:build|installer|pip)|pip3?\s+install)\b/;
+const ARCH_ANY_REGEX = /^arch\s*=\s*\(\s*['"]?any['"]?\s*\)/m;
+const PREBUILT_INSTALLER_SOURCE_REGEX = /\.(?:run|deb|rpm|AppImage)\b/;
 const SHELL_DEPENDS_REGEX = /^(?:bash|zsh|fish|dash|sh)$/;
 
 /** Kind → PKGBUILD build-command pattern; proves the ecosystem for statically linked builds. */
@@ -123,22 +133,58 @@ function collectAllDepends(pkgbuildText: string): { depends: string[]; makedepen
   return { depends, makedepends, allDepends: [...depends, ...dependsX8664, ...dependsI686] };
 }
 
+// The bodies of all functions whose name matches, e.g. `package` and `package_foo` of a split PKGBUILD.
+function functionBodies(pkgbuildText: string, namePattern: string): string {
+  const regex = new RegExp(`(?:^|\\n)\\s*${namePattern}\\s*\\(\\s*\\)\\s*\\{([\\s\\S]*?)\\n\\}`, 'g');
+  return [...pkgbuildText.matchAll(regex)].map((match) => match[1]).join('\n');
+}
+
+function isNativePythonBuild(pkgbuildText: string): boolean {
+  if (ARCH_ANY_REGEX.test(pkgbuildText)) return false;
+
+  const functions = `${functionBodies(pkgbuildText, 'build')}\n${functionBodies(pkgbuildText, 'package(?:_[\\w-]+)?')}`;
+  return PYTHON_BUILD_COMMAND_REGEX.test(functions);
+}
+
+function hasPrebuiltInstallerSource(pkgbuildText: string): boolean {
+  const sources = [
+    ...(extractArray(pkgbuildText, 'source', true) ?? []),
+    ...(extractArray(pkgbuildText, 'source_x86_64', true) ?? []),
+  ];
+  return sources.some((source) => PREBUILT_INSTALLER_SOURCE_REGEX.test(source));
+}
+
+/**
+ * `!strip` usually marks a repackaged binary. A compiler in makedepends proves a real build.
+ * A native build command proves it too, unless it only wraps a prebuilt installer (nvidia-340xx).
+ */
+function stripRuleAllowsBuild(
+  pkgbuildText: string,
+  hasCompilerInMakedepends: boolean,
+  runsNativeBuild: boolean,
+): boolean {
+  if (!NO_STRIP_REGEX.test(pkgbuildText) || hasCompilerInMakedepends) return true;
+
+  return runsNativeBuild && !hasPrebuiltInstallerSource(pkgbuildText);
+}
+
 export function isSourceCompiledPackage(pkgbuildText?: string | null): boolean {
   if (!pkgbuildText) return false;
 
   const cleanText = stripComments(pkgbuildText);
+  if (isNativePythonBuild(cleanText)) return true;
+
   const { makedepends, allDepends } = collectAllDepends(cleanText);
-  if (isNodejsPackage(allDepends, makedepends, cleanText)) return false;
+  const runsNativeBuild = NATIVE_BUILD_COMMAND_REGEX.test(functionBodies(cleanText, 'build'));
+  const hasNativeEvidence = runsNativeBuild || matchesKind(makedepends, NATIVE_TOOLCHAIN_REGEX);
+  if (isNodejsPackage(allDepends, makedepends, cleanText) && !hasNativeEvidence) return false;
 
   const hasCompilerInMakedepends = hasCompilerInList(makedepends);
   const hasCompilerInDepends = hasCompilerInList(allDepends);
   const hasBuildFunc = hasBuildFunction(cleanText);
   const hasBuildSystem = hasBuildSystemIndicator(cleanText);
-
-  // `!strip` usually marks a repackaged binary, but a compiler in makedepends proves a real build.
-  const keepsStripOrCompiles = !NO_STRIP_REGEX.test(cleanText) || hasCompilerInMakedepends;
   const hasAnyCompiler = hasCompilerInMakedepends || hasCompilerInDepends || hasBuildSystem;
-  return hasAnyCompiler && hasBuildFunc && keepsStripOrCompiles;
+  return hasAnyCompiler && hasBuildFunc && stripRuleAllowsBuild(cleanText, hasCompilerInMakedepends, runsNativeBuild);
 }
 
 /**
@@ -182,12 +228,7 @@ export function classifyPkgbuild(pkgbuildText?: string | null): string[] {
     }
   }
 
-  const isNodePackage = kinds.includes('nodejs') || kinds.includes('electron');
-  const compiledNative =
-    (hasCompilerInList(makedepends) || hasCompilerInList(allDepends) || hasBuildSystemIndicator(cleanText)) &&
-    hasBuildFunction(cleanText) &&
-    !NO_STRIP_REGEX.test(cleanText);
-  if (!isNodePackage && compiledNative) {
+  if (isSourceCompiledPackage(pkgbuildText)) {
     kinds.push('compiled');
   }
   if (FONT_NAME_REGEX.test(pkgname)) {

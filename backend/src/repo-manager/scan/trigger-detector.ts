@@ -541,7 +541,7 @@ export class TriggerDetector {
          * bundling libpython3.9.so.1.0) resolves those symbols locally, not
          * against the owner's updated soname, so it is not a break victim.
          */
-        if (this.selfProvidesLibrary(consumer, entry.soname)) continue;
+        if (providesLibraryFamily(consumer, entry.soname)) continue;
 
         for (const symbol of entry.lostSymbols) {
           if (consumerImports.has(symbol)) {
@@ -564,10 +564,6 @@ export class TriggerDetector {
     }
 
     return breaks;
-  }
-
-  private selfProvidesLibrary(consumer: PackageElfAnalysis, soname: string): boolean {
-    return (consumer.providedSonames ?? []).some((provided) => sameLibraryFamily(provided, soname));
   }
 
   private loadRepoOutputs(repoId: number): Promise<Package[]> {
@@ -870,7 +866,7 @@ export class TriggerDetector {
     for (const [soname, requiredNodes] of Object.entries(consumer.neededVersionNodes ?? {})) {
       if (requiredNodes.length === 0) continue;
 
-      if (this.selfProvidesLibrary(consumer, soname)) continue;
+      if (providesLibraryFamily(consumer, soname)) continue;
 
       const versionBreak = findVersionNodeCulprit(soname, requiredNodes, ctx, reachable);
       if (versionBreak) {
@@ -1289,8 +1285,13 @@ function privateApiTriggerFor(
   if (providers.size === 0) return null;
 
   for (const output of outputs) {
-    const neededNodes = consumerAnalyses.get(output.id)?.neededVersionNodes ?? {};
-    for (const [soname, nodes] of Object.entries(neededNodes)) {
+    const analysis = consumerAnalyses.get(output.id);
+    if (!analysis) continue;
+
+    for (const [soname, nodes] of Object.entries(analysis.neededVersionNodes ?? {})) {
+      // A package that bundles its own Qt (zoom) or is a Qt fork (qt6-base-headless) links its own copy.
+      if (providesLibraryFamily(analysis, soname)) continue;
+
       for (const { owner, privateNodes } of providers.get(soname) ?? []) {
         const node = nodes.find((needed) => privateNodes.has(needed));
         if (node) return privateApiTrigger(owner, soname, node);
@@ -1299,6 +1300,10 @@ function privateApiTriggerFor(
   }
 
   return null;
+}
+
+function providesLibraryFamily(analysis: PackageElfAnalysis, soname: string): boolean {
+  return (analysis.providedSonames ?? []).some((provided) => sameLibraryFamily(provided, soname));
 }
 
 function privateApiTrigger(owner: ArchlinuxPackage, soname: string, node: string): DetectedTrigger {

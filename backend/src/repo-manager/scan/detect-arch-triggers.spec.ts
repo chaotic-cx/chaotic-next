@@ -310,7 +310,7 @@ describe('TriggerDetector.detectArchTriggers with private API users', () => {
   const QT_ID = 60;
   const QT_GUI = 'libQt6Gui.so.6';
 
-  function qtSeed(qt: Partial<ArchlinuxPackage>, consumerNodes: string[]) {
+  function qtSeed(qt: Partial<ArchlinuxPackage>, consumerNodes: string[], consumerProvides: string[] = []) {
     return {
       arch: [archPkg({ id: QT_ID, pkgname: 'qt6-base', ...qt })],
       chaotic: [chaoticPkg({ id: 18, pkgname: 'qt6ct-kde' })],
@@ -325,6 +325,7 @@ describe('TriggerDetector.detectArchTriggers with private API users', () => {
         analysis({
           pkgId: 18,
           neededSonames: [QT_GUI],
+          providedSonames: consumerProvides,
           neededVersionNodes: { [QT_GUI]: consumerNodes },
         }),
       ],
@@ -370,6 +371,16 @@ describe('TriggerDetector.detectArchTriggers with private API users', () => {
   it('does not bump for a library without a previous version', async () => {
     const detector = createDetector(
       qtSeed({ previousVersion: null, version: '6.11.2', pkgrel: 1 }, ['Qt_6_PRIVATE_API']),
+    );
+
+    const detected = await detector.detectArchTriggers(REPO_ID, [QT_ID]);
+
+    expect(detected.size).toBe(0);
+  });
+
+  it('does not bump a package that bundles its own copy of the library', async () => {
+    const detector = createDetector(
+      qtSeed({ previousVersion: '6.11.1-1', version: '6.11.2', pkgrel: 1 }, ['Qt_6_PRIVATE_API'], [QT_GUI]),
     );
 
     const detected = await detector.detectArchTriggers(REPO_ID, [QT_ID]);
