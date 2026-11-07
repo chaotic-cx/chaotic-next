@@ -8,7 +8,7 @@ const SCROLLBACK_LIMIT = 100000000;
 const PIXELS_PER_SCROLL_LINE = 16;
 const LINE_NUMBER_TOP_OFFSET_PX = 1;
 const GUTTER_MIN_FONT_SIZE_PX = 10;
-const TRANSPARENT_BACKGROUND = '#00000000';
+const TRANSPARENT_COLOR = '#00000000';
 const TERMINAL_FONT_FAMILY = "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
 
 type SearchStep = 1 | -1;
@@ -43,7 +43,7 @@ function terminalTheme(): ITheme {
   const palette = themePalette();
   const isLight = flavour() === LIGHT_FLAVOUR;
   return {
-    background: TRANSPARENT_BACKGROUND,
+    background: TRANSPARENT_COLOR,
     black: isLight ? palette.subtext1.hex : palette.surface1.hex,
     blue: palette.blue.hex,
     brightBlack: isLight ? palette.overlay1.hex : palette.overlay0.hex,
@@ -54,8 +54,8 @@ function terminalTheme(): ITheme {
     brightRed: palette.red.hex,
     brightWhite: isLight ? palette.subtext1.hex : palette.overlay2.hex,
     brightYellow: palette.yellow.hex,
-    cursor: palette.rosewater.hex,
-    cursorAccent: palette.rosewater.hex,
+    cursor: TRANSPARENT_COLOR,
+    cursorAccent: TRANSPARENT_COLOR,
     cyan: palette.teal.hex,
     foreground: palette.text.hex,
     green: palette.green.hex,
@@ -137,6 +137,7 @@ function matchColumns(text: string, needle: string): number[] {
         min-width: 0;
         height: 100%;
         overflow: hidden;
+        caret-color: transparent;
       }
 
       @media (max-width: 640px) {
@@ -281,6 +282,8 @@ export class GhosttyLogComponent implements OnInit, OnDestroy {
     if (this.following) {
       this.terminal.scrollToBottom();
     }
+
+    this.scheduleGutterUpdate();
   }
 
   private scrollToRequestedLine(): boolean {
