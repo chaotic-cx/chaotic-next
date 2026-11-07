@@ -33,14 +33,6 @@
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
 }
 
-/* Xterm overrides */
-.xterm .xterm-viewport,
-.xterm-scrollable-element {
-  background-color: transparent !important;
-  -webkit-overflow-scrolling: touch !important;
-  pointer-events: auto !important;
-}
-
 .suggestion-list {
   scrollbar-color: var(--catppuccin-color-surface0) color-mix(in srgb, var(--catppuccin-color-mantle) 50%, transparent);
 }
@@ -48,23 +40,21 @@
 ng-terminal,
 .resize-box,
 .terminal-outer,
-.xterm,
-.xterm-screen,
-.xterm .xterm-helper-textarea {
+.terminal-host {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
 }
 
 /* The helper textarea is invisible, so keyboard focus is shown on the terminal itself. */
-.xterm:has(.xterm-helper-textarea:focus-visible) {
+.terminal-host:has(textarea:focus-visible) {
   outline: 2px solid var(--catppuccin-color-mauve) !important;
   outline-offset: 2px;
   border-radius: var(--chaotic-radius-sm);
 }
 
 @media screen and (max-width: 640px) {
-  .xterm-container {
+  .terminal-container {
     padding: 0.25rem !important;
     touch-action: none !important;
   }

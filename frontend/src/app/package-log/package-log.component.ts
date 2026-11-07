@@ -24,9 +24,9 @@ import { LogLineLink } from '../log-stream/log-line-link';
 import { createLogStream } from '../log-stream/log-stream';
 import { SeoService } from '../seo.service';
 import { TitleComponent } from '../title/title.component';
-import { LogStreamConnectingComponent } from '../xterm-log/log-stream-connecting.component';
-import { LogStreamState, LogStreamStatusComponent } from '../xterm-log/log-stream-status.component';
-import { XtermLogComponent } from '../xterm-log/xterm-log.component';
+import { LogStreamConnectingComponent } from '../ghostty-log/log-stream-connecting.component';
+import { LogStreamState, LogStreamStatusComponent } from '../ghostty-log/log-stream-status.component';
+import { GhosttyLogComponent } from '../ghostty-log/ghostty-log.component';
 import {
   BuildEndReason,
   BuildLogMarkers,
@@ -47,7 +47,7 @@ import { PackageLogService } from './package-log.service';
     LogStreamStatusComponent,
     TitleComponent,
     TranslocoDirective,
-    XtermLogComponent,
+    GhosttyLogComponent,
   ],
   templateUrl: './package-log.component.html',
   styleUrl: './package-log.component.css',
@@ -134,7 +134,7 @@ export class PackageLogComponent implements OnDestroy {
     return Number.isFinite(ms) && ms > 0 ? new Date(ms).toLocaleString(navigator.language) : (this.timestamp() ?? '');
   });
 
-  private readonly terminalRef = viewChild<XtermLogComponent>('term');
+  private readonly terminalRef = viewChild<GhosttyLogComponent>('term');
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   private elapsedTimer: number | undefined;

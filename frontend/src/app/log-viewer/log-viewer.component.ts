@@ -16,9 +16,9 @@ import { LogLineLink } from '../log-stream/log-line-link';
 import { createLogStream } from '../log-stream/log-stream';
 import { SeoService } from '../seo.service';
 import { TitleComponent } from '../title/title.component';
-import { LogStreamConnectingComponent } from '../xterm-log/log-stream-connecting.component';
-import { LogStreamStatusComponent } from '../xterm-log/log-stream-status.component';
-import { XtermLogComponent } from '../xterm-log/xterm-log.component';
+import { LogStreamConnectingComponent } from '../ghostty-log/log-stream-connecting.component';
+import { LogStreamStatusComponent } from '../ghostty-log/log-stream-status.component';
+import { GhosttyLogComponent } from '../ghostty-log/ghostty-log.component';
 import { LogViewerService } from './log-viewer.service';
 
 const RUNNING_STATUSES = new Set(['created', 'waiting_for_resource', 'preparing', 'pending', 'running']);
@@ -69,7 +69,7 @@ const JOBS_FAILURE_KEYS: Record<RequestFailure, string> = {
     Select,
     TitleComponent,
     TranslocoDirective,
-    XtermLogComponent,
+    GhosttyLogComponent,
   ],
   templateUrl: './log-viewer.component.html',
   styleUrls: ['./log-viewer.component.css'],

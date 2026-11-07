@@ -1,6 +1,6 @@
 import { DOCUMENT, inject } from '@angular/core';
 
-export type LazyStylesheet = 'maplibre' | 'xterm';
+export type LazyStylesheet = 'maplibre';
 
 const loadedStylesheets = new Map<LazyStylesheet, Promise<void>>();
 

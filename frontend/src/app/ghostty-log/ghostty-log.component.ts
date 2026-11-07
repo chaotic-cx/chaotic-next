@@ -1,21 +1,30 @@
 import { Component, effect, ElementRef, inject, input, OnDestroy, OnInit, output, viewChild } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
-import { FitAddon } from '@xterm/addon-fit';
-import { SearchAddon } from '@xterm/addon-search';
-import { SerializeAddon } from '@xterm/addon-serialize';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { WebglAddon } from '@xterm/addon-webgl';
-import { type ITheme, Terminal } from '@xterm/xterm';
-import { injectLazyStylesheet } from '../lazy-stylesheet';
+import { FitAddon, init, type ITheme, Terminal, UrlRegexProvider } from 'ghostty-web';
 import { flavour, LIGHT_FLAVOUR, themePalette } from '../theme';
 
 const DEFAULT_FONT_SIZE = 12;
-const SCROLLBACK_LINES = 9999999;
+const SCROLLBACK_LIMIT = 100000000;
 const PIXELS_PER_SCROLL_LINE = 16;
 const LINE_NUMBER_TOP_OFFSET_PX = 1;
 const GUTTER_MIN_FONT_SIZE_PX = 10;
 const TRANSPARENT_BACKGROUND = '#00000000';
 const TERMINAL_FONT_FAMILY = "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
+
+type SearchStep = 1 | -1;
+
+interface SearchMatch {
+  row: number;
+  col: number;
+}
+
+let ghosttyReady: Promise<void> | undefined;
+
+// The WASM module loads once. Every terminal shares it.
+function loadGhostty(): Promise<void> {
+  ghosttyReady ??= init();
+  return ghosttyReady;
+}
 
 // `document.fonts.ready` does not wait for a font that no element uses yet, so the font is requested here.
 async function loadTerminalFont(): Promise<void> {
@@ -30,7 +39,7 @@ async function loadTerminalFont(): Promise<void> {
  * ANSI colours from the active flavour. Latte maps the "white" and "black" slots to readable
  * text tones, because logs print white text that would vanish on a light surface.
  */
-function xtermTheme(): ITheme {
+function terminalTheme(): ITheme {
   const palette = themePalette();
   const isLight = flavour() === LIGHT_FLAVOUR;
   return {
@@ -57,10 +66,20 @@ function xtermTheme(): ITheme {
   };
 }
 
+/** Column of every case-insensitive, non-overlapping occurrence of `needle` in `text`. */
+function matchColumns(text: string, needle: string): number[] {
+  const columns: number[] = [];
+  for (let col = text.indexOf(needle); col !== -1; col = text.indexOf(needle, col + needle.length)) {
+    columns.push(col);
+  }
+
+  return columns;
+}
+
 @Component({
-  selector: 'chaotic-xterm-log',
+  selector: 'chaotic-ghostty-log',
   template: `
-    <div class="xterm-container">
+    <div class="terminal-container">
       <div class="terminal-gutter" #gutter></div>
       <div class="terminal-host" #terminalDiv></div>
     </div>
@@ -75,7 +94,7 @@ function xtermTheme(): ITheme {
         width: 100%;
       }
 
-      .xterm-container {
+      .terminal-container {
         flex: 1;
         min-height: 0;
         position: relative;
@@ -83,12 +102,7 @@ function xtermTheme(): ITheme {
         flex-direction: row;
         overflow: hidden;
         padding: var(--chaotic-space-md);
-      }
-
-      :host ::ng-deep .xterm-viewport,
-      :host ::ng-deep .xterm-scrollable-element,
-      :host ::ng-deep .xterm-screen {
-        background: transparent !important;
+        padding-right: 0;
       }
 
       .terminal-gutter {
@@ -133,7 +147,7 @@ function xtermTheme(): ITheme {
     `,
   ],
 })
-export class XtermLogComponent implements OnInit, OnDestroy {
+export class GhosttyLogComponent implements OnInit, OnDestroy {
   private readonly transloco = inject(TranslocoService);
 
   readonly chunk = input<string[]>([]);
@@ -147,14 +161,12 @@ export class XtermLogComponent implements OnInit, OnDestroy {
 
   private terminal?: Terminal;
   private fitAddon?: FitAddon;
-  private serializeAddon?: SerializeAddon;
-  private searchAddon?: SearchAddon;
   private resizeObserver?: ResizeObserver;
-  private readonly stylesheetLoaded: Promise<void>;
   private destroyed = false;
+  private searchQuery = '';
+  private searchIndex = -1;
 
   constructor() {
-    this.stylesheetLoaded = injectLazyStylesheet('xterm');
     effect(() => {
       if (this.clearSignal()) {
         this.resetTerminal();
@@ -162,7 +174,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     });
 
     effect(() => {
-      const theme = xtermTheme();
+      const theme = terminalTheme();
       if (this.terminal) {
         this.terminal.options.theme = theme;
       }
@@ -202,7 +214,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   private lineScrolled = false;
   private following = true;
 
-  /** Buffer row where each logical (un-wrapped) line starts; re-mapped on re-wrap. */
+  /** Buffer row where each logical (un-wrapped) line starts. Re-mapped on re-wrap. */
   private logicalLineStarts: number[] = [];
   private lastMappedLength = -1;
   private lastMappedCols = -1;
@@ -226,7 +238,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       this.flushScheduled = false;
       this.flushTimer = undefined;
       this.flush();
-    }, XtermLogComponent.FLUSH_DELAY_MS);
+    }, GhosttyLogComponent.FLUSH_DELAY_MS);
   }
 
   private clearFlushTimer(): void {
@@ -247,7 +259,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     while (end < chunks.length) {
       bytes += chunks[end].length;
       end++;
-      if (bytes >= XtermLogComponent.MAX_FLUSH_BYTES) break;
+      if (bytes >= GhosttyLogComponent.MAX_FLUSH_BYTES) break;
     }
 
     const delta = chunks.slice(this.consumedLength, end).join('');
@@ -280,7 +292,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     if (bufferRow === undefined) return false;
 
     this.highlightLine(bufferRow);
-    this.terminal.scrollToLine(bufferRow);
+    this.scrollToRow(bufferRow);
     this.lineScrolled = true;
     this.updateFollowing();
     this.updateLineNumbers();
@@ -289,29 +301,35 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   }
 
   private updateFollowing(): void {
-    const buffer = this.terminal?.buffer.active;
-    if (!buffer) return;
-
-    this.following = buffer.viewportY >= buffer.baseY;
-  }
-
-  private highlightLine(bufferIndex: number): void {
     if (!this.terminal) return;
 
-    const cursor = this.terminal.buffer.active.baseY + this.terminal.buffer.active.cursorY;
-    try {
-      const marker = this.terminal.registerMarker(bufferIndex - cursor);
-      if (!marker) return;
+    this.following = this.terminal.getViewportY() === 0;
+  }
 
-      this.terminal.registerDecoration({
-        marker,
-        layer: 'bottom',
-        backgroundColor: themePalette().surface0.hex,
-        width: this.terminal.cols,
-      });
-    } catch {
-      // Marker/decoration APIs can fail for out-of-range lines; ignore.
-    }
+  /**
+   * Buffer row at the top of the viewport. `buffer.active.viewportY` stays 0 in ghostty-web, so it is not used.
+   * Smooth scroll makes `getViewportY()` fractional. The renderer rounds it down, so the gutter does too.
+   */
+  private topRow(): number {
+    if (!this.terminal) return 0;
+
+    return this.terminal.getScrollbackLength() - Math.floor(this.terminal.getViewportY());
+  }
+
+  /** ghostty-web counts the scroll offset from the bottom, not a buffer row. */
+  private scrollToRow(row: number): void {
+    const terminal = this.terminal;
+    if (!terminal) return;
+
+    terminal.scrollToLine(Math.max(0, terminal.getScrollbackLength() - row));
+  }
+
+  /** ghostty-web has no line decorations. The selection marks the line instead. */
+  private highlightLine(bufferIndex: number): void {
+    const terminal = this.terminal;
+    if (!terminal) return;
+
+    terminal.select(0, bufferIndex, terminal.cols);
   }
 
   private readonly onGutterClick = (event: Event): void => {
@@ -323,14 +341,14 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     this.lineClick.emit(Number(raw));
   };
 
-  /** Reads gutter layout once; cached to avoid forced reflows per scroll. */
+  /** Reads gutter layout once. The result is cached to avoid forced reflows per scroll. */
   private measureGutter(): void {
     const terminal = this.terminal;
     const gutterEl = this.gutter()?.nativeElement;
     const host = this.terminalDiv()?.nativeElement;
     if (!terminal || !gutterEl || !host) return;
 
-    const screen = host.querySelector('.xterm-screen') as HTMLElement | null;
+    const screen = host.querySelector('canvas');
     if (!screen?.clientHeight) return;
 
     this.gutterRows = terminal.rows;
@@ -349,7 +367,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     if (!terminal || !gutterEl || this.gutterRows === 0) return;
 
     this.ensureLogicalLineMapping();
-    const start = terminal.buffer.active.viewportY;
+    const start = this.topRow();
     if (start === this.lastGutterViewportStart && this.gutterButtons.length > 0) return;
 
     this.lastGutterViewportStart = start;
@@ -381,7 +399,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       button.textContent = logicalLine === undefined ? '' : String(logicalLine);
       if (logicalLine !== undefined) {
         button.dataset['line'] = String(logicalLine);
-        button.setAttribute('aria-label', this.transloco.translate('xtermLog.lineLabel', { line: logicalLine }));
+        button.setAttribute('aria-label', this.transloco.translate('ghosttyLog.lineLabel', { line: logicalLine }));
       } else {
         delete button.dataset['line'];
         button.removeAttribute('aria-label');
@@ -434,7 +452,7 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    void Promise.all([this.stylesheetLoaded, loadTerminalFont()]).then(() => {
+    void Promise.all([loadGhostty(), loadTerminalFont()]).then(() => {
       if (this.destroyed) return;
 
       requestAnimationFrame(() => this.initTerminal());
@@ -451,8 +469,27 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     return text.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '');
   }
 
+  /** Writes the whole scrollback. Wrapped rows join the row above, so long lines stay whole. */
+  private bufferText(): string {
+    const buffer = this.terminal?.buffer.active;
+    if (!buffer) return '';
+
+    const lines: string[] = [];
+    for (let row = 0; row < buffer.length; row++) {
+      const line = buffer.getLine(row);
+      const text = line?.translateToString(true) ?? '';
+      if (line?.isWrapped && lines.length > 0) {
+        lines[lines.length - 1] += text;
+      } else {
+        lines.push(text);
+      }
+    }
+
+    return lines.join('\n');
+  }
+
   downloadLog(filename: string): void {
-    const text = this.serializeAddon?.serialize() ?? '';
+    const text = this.bufferText();
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -462,19 +499,51 @@ export class XtermLogComponent implements OnInit, OnDestroy {
   }
 
   findNext(query: string): void {
-    if (!query) return;
-
-    this.searchAddon?.findNext(query);
+    this.moveSearch(query, 1);
   }
 
   findPrevious(query: string): void {
-    if (!query) return;
-
-    this.searchAddon?.findPrevious(query);
+    this.moveSearch(query, -1);
   }
 
-  private isCoarsePointer(): boolean {
-    return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+  private moveSearch(query: string, step: SearchStep): void {
+    if (!query) return;
+
+    const matches = this.findMatches(query);
+    if (matches.length === 0) return;
+
+    if (query !== this.searchQuery) {
+      this.searchQuery = query;
+      this.searchIndex = step === 1 ? -1 : matches.length;
+    }
+
+    this.searchIndex = (this.searchIndex + step + matches.length) % matches.length;
+    this.revealMatch(matches[this.searchIndex], query.length);
+  }
+
+  private findMatches(query: string): SearchMatch[] {
+    const buffer = this.terminal?.buffer.active;
+    if (!buffer) return [];
+
+    const needle = query.toLowerCase();
+    const matches: SearchMatch[] = [];
+    for (let row = 0; row < buffer.length; row++) {
+      const text = buffer.getLine(row)?.translateToString(true).toLowerCase() ?? '';
+      for (const col of matchColumns(text, needle)) {
+        matches.push({ row, col });
+      }
+    }
+
+    return matches;
+  }
+
+  private revealMatch(match: SearchMatch, length: number): void {
+    if (!this.terminal) return;
+
+    this.terminal.select(match.col, match.row, length);
+    this.scrollToRow(match.row);
+    this.updateFollowing();
+    this.updateLineNumbers();
   }
 
   private initTerminal(): void {
@@ -482,49 +551,20 @@ export class XtermLogComponent implements OnInit, OnDestroy {
     if (!container) return;
 
     this.terminal = new Terminal({
-      allowProposedApi: true,
       allowTransparency: true,
       disableStdin: true,
-      scrollback: SCROLLBACK_LINES,
+      scrollback: SCROLLBACK_LIMIT,
       convertEol: true,
       fontFamily: TERMINAL_FONT_FAMILY,
       fontSize: DEFAULT_FONT_SIZE,
-      lineHeight: 1.2,
-      theme: xtermTheme(),
+      theme: terminalTheme(),
     });
 
     this.fitAddon = new FitAddon();
     this.terminal.loadAddon(this.fitAddon);
 
-    this.serializeAddon = new SerializeAddon();
-    this.terminal.loadAddon(this.serializeAddon);
-
-    this.searchAddon = new SearchAddon();
-    this.terminal.loadAddon(this.searchAddon);
-
-    this.terminal.loadAddon(
-      new WebLinksAddon((event, uri) => {
-        void event;
-        const link = document.createElement('a');
-        link.href = uri;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.click();
-      }),
-    );
-
-    try {
-      // WebGL rendering is heavy on mobile GPU/battery; fall back to canvas there.
-      if (!this.isCoarsePointer()) {
-        const webglAddon = new WebglAddon();
-        webglAddon.onContextLoss(() => webglAddon.dispose());
-        this.terminal.loadAddon(webglAddon);
-      }
-    } catch {
-      // Fallback to standard canvas renderer if WebGL unavailable
-    }
-
     this.terminal.open(container);
+    this.terminal.registerLinkProvider(new UrlRegexProvider(this.terminal));
 
     this.terminal.onScroll(() => {
       this.updateFollowing();
@@ -569,14 +609,6 @@ export class XtermLogComponent implements OnInit, OnDestroy {
       },
       { passive: false },
     );
-
-    const viewport = container.querySelector('.xterm-viewport') as HTMLElement | null;
-    if (viewport) {
-      viewport.setAttribute(
-        'style',
-        `scrollbar-color: var(--catppuccin-color-rosewater) transparent; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;`,
-      );
-    }
 
     this.fitAddon.fit();
     this.measureGutter();

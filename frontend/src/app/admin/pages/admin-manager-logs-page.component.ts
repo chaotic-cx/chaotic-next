@@ -5,14 +5,14 @@ import { APP_CONFIG } from '../../../environments/app-config.token';
 import { FillViewportDirective } from '../../fill-viewport.directive';
 import { LoadErrorComponent } from '../../load-error/load-error.component';
 import { ResilientSseStream } from '../../sse-stream';
-import { XtermLogComponent } from '../../xterm-log/xterm-log.component';
+import { GhosttyLogComponent } from '../../ghostty-log/ghostty-log.component';
 
 const ESC = String.fromCharCode(27);
 const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z${ESC}\\[0m `);
 
 @Component({
   selector: 'chaotic-admin-manager-logs-page',
-  imports: [FillViewportDirective, LoadErrorComponent, ProgressSpinner, TranslocoDirective, XtermLogComponent],
+  imports: [FillViewportDirective, LoadErrorComponent, ProgressSpinner, TranslocoDirective, GhosttyLogComponent],
   template: `
     <ng-container *transloco="let t; prefix: 'admin.managerLogs'">
       <p class="log-status chaotic-text-inset" [class.is-live]="streaming()" role="status">
@@ -32,7 +32,7 @@ const TIMESTAMP_RE = new RegExp(`^${ESC}\\[2m\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:
 
       @if (streaming() || logChunks().length > 0) {
         <div class="chaotic-log-panel" chaoticFillViewport>
-          <chaotic-xterm-log [chunk]="logChunks()" [clearSignal]="clearSignal()" />
+          <chaotic-ghostty-log [chunk]="logChunks()" [clearSignal]="clearSignal()" />
         </div>
       } @else if (loading()) {
         <div class="chaotic-log-panel items-center justify-center">

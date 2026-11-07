@@ -1,0 +1,60 @@
+diff --git a/dist/ghostty-web.js b/dist/ghostty-web.js
+index a4ca427b95288e70c782ce303013cd644893dcec..325bb807b64057f7d0ab3a44b703cff2662eb7ec 100644
+--- a/dist/ghostty-web.js
++++ b/dist/ghostty-web.js
+@@ -1385,7 +1385,7 @@ class $ {
+    * Resize canvas to fit terminal dimensions
+    */
+   resize(A, B) {
+-    const g = A * this.metrics.width, E = B * this.metrics.height;
++    const g = A * this.metrics.width + 8, E = B * this.metrics.height;
+     this.canvas.style.width = `${g}px`, this.canvas.style.height = `${E}px`, this.canvas.width = g * this.devicePixelRatio, this.canvas.height = E * this.devicePixelRatio, this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio), this.ctx.textBaseline = "alphabetic", this.ctx.textAlign = "left", this.ctx.fillStyle = this.theme.background, this.ctx.fillRect(0, 0, g, E);
+   }
+   // ==========================================================================
+@@ -1491,7 +1491,7 @@ class $ {
+    */
+   renderLine(A, B, g) {
+     const E = B * this.metrics.height;
+-    this.ctx.fillStyle = this.theme.background, this.ctx.fillRect(0, E, g * this.metrics.width, this.metrics.height);
++    this.ctx.clearRect(0, E, g * this.metrics.width, this.metrics.height), this.ctx.fillStyle = this.theme.background, this.ctx.fillRect(0, E, g * this.metrics.width, this.metrics.height);
+     for (let C = 0; C < A.length; C++) {
+       const I = A[C];
+       I.width !== 0 && this.renderCellBackground(I, C, B);
+@@ -1649,8 +1649,8 @@ class $ {
+    * @param opacity Opacity level (0-1) for fade in/out effect
+    */
+   renderScrollbar(A, B, g, E = 1) {
+-    const C = this.ctx, I = this.canvas.height / this.devicePixelRatio, D = this.canvas.width / this.devicePixelRatio, i = 8, w = D - i - 4, s = 4, N = I - s * 2;
+-    if (C.fillStyle = this.theme.background, C.fillRect(w - 2, 0, i + 6, I), E <= 0 || B === 0)
++    const C = this.ctx, I = this.canvas.height / this.devicePixelRatio, D = this.canvas.width / this.devicePixelRatio, i = 8, w = D - i, s = 4, N = I - s * 2;
++    if (C.clearRect(w, 0, i, I), C.fillStyle = this.theme.background, C.fillRect(w, 0, i, I), E <= 0 || B === 0)
+       return;
+     const k = B + g, M = Math.max(20, g / k * N), a = A / B, h = s + (N - M) * (1 - a);
+     C.fillStyle = `rgba(128, 128, 128, ${0.1 * E})`, C.fillRect(w, s, i, N);
+@@ -1712,7 +1712,7 @@ class $ {
+    * Clear entire canvas
+    */
+   clear() {
+-    this.ctx.fillStyle = this.theme.background, this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
++    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height), this.ctx.fillStyle = this.theme.background, this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+   }
+   /**
+    * Cleanup resources
+@@ -2180,7 +2180,7 @@ class IA {
+       const E = this.wasmTerm.getScrollbackLength();
+       if (E === 0)
+         return;
+-      const C = this.canvas.getBoundingClientRect(), I = g.clientX - C.left, D = g.clientY - C.top, i = C.width, w = C.height, s = 8, N = i - s - 4, k = 4;
++      const C = this.canvas.getBoundingClientRect(), I = g.clientX - C.left, D = g.clientY - C.top, i = C.width, w = C.height, s = 8, N = i - s, k = 4;
+       if (I >= N && I <= N + s) {
+         g.preventDefault(), g.stopPropagation(), g.stopImmediatePropagation();
+         const M = w - k * 2, a = this.rows, h = E + a, G = Math.max(20, a / h * M), U = this.viewportY / E, t = k + (M - G) * (1 - U);
+@@ -2834,7 +2834,7 @@ class IA {
+     return this.assertOpen(), this.wasmTerm.hasMouseTracking();
+   }
+ }
+-const QA = 2, BA = 1, gA = 15, EA = 100;
++const QA = 2, BA = 1, gA = 8, EA = 100;
+ class DA {
+   constructor() {
+     this._isResizing = !1;

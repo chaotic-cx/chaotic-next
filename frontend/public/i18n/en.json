@@ -1193,7 +1193,7 @@
       "message": "Could not install the new version."
     }
   },
-  "xtermLog": {
+  "ghosttyLog": {
     "lineLabel": "Line {{line}}"
   },
   "gitlabStatus": {

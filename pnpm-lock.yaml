@@ -165,6 +165,7 @@ settings:
 patchedDependencies:
   '@garudalinux/core@2.1.0': 9206d7261ba8c5dcbc09ad8ee4a67b369a2c8a978ddbbf7d2c130e152bc3305b
   '@openng/optimus-ui@2.0.2': 8db536acf77afdced21e69a68281ae66c54c95dbd544df9fd2b3135e2306d5f0
+  ghostty-web@0.4.0: 010f97df79538c7477b578cf3b284d4703c31cc66cf5f1d5d5c0f24eef14c226
 
 importers:
 
@@ -272,24 +273,6 @@ importers:
       '@thallesp/nestjs-better-auth':
         specifier: ^2.8.0
         version: 2.8.0(@nestjs/common@12.2.0(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@12.2.0(@nestjs/common@12.2.0(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(reflect-metadata@0.2.2)(rxjs@7.8.2))(better-auth@1.7.14(pg@8.23.1)(vitest@5.0.5))(qs@6.16.0)(typescript@6.0.3)
-      '@xterm/addon-fit':
-        specifier: ^0.11.0
-        version: 0.11.0
-      '@xterm/addon-search':
-        specifier: ^0.16.0
-        version: 0.16.0
-      '@xterm/addon-serialize':
-        specifier: ^0.14.0
-        version: 0.14.0
-      '@xterm/addon-web-links':
-        specifier: ^0.12.0
-        version: 0.12.0
-      '@xterm/addon-webgl':
-        specifier: ^0.19.0
-        version: 0.19.0
-      '@xterm/xterm':
-        specifier: ^6.0.0
-        version: 6.0.0
       axios:
         specifier: ^1.20.0
         version: 1.20.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
@@ -320,6 +303,9 @@ importers:
       fastify:
         specifier: ^5.12.7
         version: 5.12.7
+      ghostty-web:
+        specifier: ^0.4.0
+        version: 0.4.0(patch_hash=010f97df79538c7477b578cf3b284d4703c31cc66cf5f1d5d5c0f24eef14c226)
       highlight.js:
         specifier: ^11.12.0
         version: 11.12.0
@@ -6270,6 +6256,9 @@ packages:
   gettext-parser@8.0.0:
     resolution: {integrity: sha512-eFmhDi2xQ+2reMRY2AbJ2oa10uFOl1oyGbAKdCZiNOk94NJHi7aN0OBELSC9v35ZAPQdr+uRBi93/Gu4SlBdrA==}
     engines: {node: '>=18'}
+
+  ghostty-web@0.4.0:
+    resolution: {integrity: sha512-0puDBik2qapbD/QQBW9o5ZHfXnZBqZWx/ctBiVtKZ6ZLds4NYb+wZuw1cRLXZk9zYovIQ908z3rvFhexAvc5Hg==}
 
   gl-matrix@3.4.4:
     resolution: {integrity: sha512-latSnyDNt/8zYUB6VIJ6PCh2jBjJX6gnDsoCZ7LyW7GkqrD51EWwa9qCoGixj8YqBtETQK/xY7OmpTF8xz1DdQ==}
@@ -14985,6 +14974,8 @@ snapshots:
       encoding: 0.1.13
       readable-stream: 4.8.0
       safe-buffer: 5.2.1
+
+  ghostty-web@0.4.0(patch_hash=010f97df79538c7477b578cf3b284d4703c31cc66cf5f1d5d5c0f24eef14c226): {}
 
   gl-matrix@3.4.4: {}
 

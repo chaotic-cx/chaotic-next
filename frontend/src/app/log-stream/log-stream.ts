@@ -1,7 +1,7 @@
 import { computed, DestroyRef, inject, signal } from '@angular/core';
 import { parseLogChunk } from '../functions';
 import { ResilientSseStream } from '../sse-stream';
-import { LogStreamState } from '../xterm-log/log-stream-status.component';
+import { LogStreamState } from '../ghostty-log/log-stream-status.component';
 
 export interface LogStreamOptions {
   /**
